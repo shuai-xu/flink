@@ -26,32 +26,26 @@ import org.apache.flink.table.plan.rules.{FlinkBatchExecRuleSets, FlinkStreamExe
   * Defines a sequence of programs to optimize for stream table plan.
   */
 object FlinkStreamPrograms {
-  val QUERY_REWRITE = "query_rewrite"
+
+  val SUBQUERY_REWRITE = "subquery_rewrite"
+  val TABLE_FUNCTION_REWRITE = "table_function_rewrite"
   val DECORRELATE = "decorrelate"
   val TIME_INDICATOR = "time_indicator"
-  val NORMALIZATION = "normalization"
-  val FPD_PREPARE = "fpd_prepare"
-  val FPD = "filter_tablescan_pushdown"
-  val PRUNE_EMPTY = "prune_empty"
+  val DEFAULT_REWRITE = "default_rewrite"
+  val PREDICATE_PUSHDOWN = "predicate_pushdown"
   val JOIN_REORDER = "join_reorder"
-  val PPD_PREPARE = "ppd_prepare"
-  val PPD = "project_tablescan_pushdown"
   val WINDOW = "window"
   val LOGICAL = "logical"
-  val MICRO_BATCH = "micro_batch"
-  val TOPN = "topn"
-  val LAST_ROW = "last_row"
-  val AGG_SPLIT = "agg_split"
+  val LOGICAL_REWRITE = "logical_rewrite"
   val PHYSICAL = "physical"
-  val DECORATE = "decorate"
-  val POST = "post"
+  val PHYSICAL_REWRITE = "physical_rewrite"
 
   def buildPrograms(): FlinkChainedPrograms[StreamOptimizeContext] = {
     val programs = new FlinkChainedPrograms[StreamOptimizeContext]()
 
-    // convert queries before query decorrelation
+    // rewrite sub-queries to joins
     programs.addLast(
-      QUERY_REWRITE,
+      SUBQUERY_REWRITE,
       FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
         // rewrite RelTable before rewriting sub-queries
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
@@ -75,24 +69,33 @@ object FlinkStreamPrograms {
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
           .add(FlinkStreamExecRuleSets.TABLE_REF_RULES)
           .build(), "convert table references after sub-queries removed")
-        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
-          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
-          .setHepMatchOrder(HepMatchOrder.TOP_DOWN)
-          .add(FlinkStreamExecRuleSets.EXPAND_PLAN_RULES)
-          .build(), "Expand plan by replacing references to tables into a proper plan sub trees")
-        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
-          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-          .setHepMatchOrder(HepMatchOrder.TOP_DOWN)
-          .add(FlinkStreamExecRuleSets.POST_EXPAND_CLEAN_UP_RULES)
-          .build(), "post expand cleanup")
-        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
-          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-          .add(FlinkStreamExecRuleSets.REWRITE_RELNODE_RULES)
-          .build(), "relnode rewrite")
         .build())
 
-    // decorrelate
+    // rewrite special table function scan
+    programs.addLast(
+      TABLE_FUNCTION_REWRITE,
+      FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+            .add(FlinkStreamExecRuleSets.EXPAND_PLAN_RULES)
+            .build(), "convert correlate to temporal table join")
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+            .add(FlinkStreamExecRuleSets.POST_EXPAND_CLEAN_UP_RULES)
+            .build(), "convert enumerable table scan")
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+            .add(FlinkStreamExecRuleSets.UNNEST_RULES)
+            .build(), "convert unnest into table function scan")
+        .build())
+
+    // query decorrelation
     programs.addLast(
       DECORRELATE,
       FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
@@ -104,40 +107,33 @@ object FlinkStreamPrograms {
     // convert time indicators
     programs.addLast(TIME_INDICATOR, new FlinkRelTimeIndicatorProgram)
 
-    //  normalize the logical plan
+    // default rewrite, includes: predicate simplification, expression reduction, window
+    // properties rewrite, etc.
     programs.addLast(
-      NORMALIZATION,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkStreamExecRuleSets.STREAM_EXEC_NORM_RULES)
-        .build())
+        DEFAULT_REWRITE,
+          FlinkHepRuleSetProgramBuilder.newBuilder
+      .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+      .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+      .add(FlinkStreamExecRuleSets.STREAM_EXEC_DEFAULT_REWRITE_RULES)
+      .build())
 
-    // filter push down prepare
+    // rule based optimization: push down predicate(s) in where clause, so it only needs to read
+    // the required data
     programs.addLast(
-      FPD_PREPARE,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkStreamExecRuleSets.FILTER_PREPARE_RULES)
-        .build())
-
-    // filter push down
-    programs.addLast(
-      FPD,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkStreamExecRuleSets.FILTER_TABLESCAN_PUSHDOWN_RULES)
-        .build())
-
-    // prune empty results generated by FPD_PREPARE steps
-    programs.addLast(
-      PRUNE_EMPTY,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkStreamExecRuleSets.PRUNE_EMPTY_RULES)
+      PREDICATE_PUSHDOWN,
+      FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
+            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+            .add(FlinkStreamExecRuleSets.FILTER_PREPARE_RULES)
+            .build(), "filter rules")
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+            .add(FlinkStreamExecRuleSets.FILTER_TABLESCAN_PUSHDOWN_RULES)
+            .build(), "push filter to table scan")
         .build())
 
     // join reorder
@@ -149,30 +145,28 @@ object FlinkStreamPrograms {
         .add(FlinkStreamExecRuleSets.STREAM_EXEC_JOIN_REORDER)
         .build())
 
-    // project push down prepare
-    programs.addLast(
-      PPD_PREPARE,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkStreamExecRuleSets.PROJECT_RULES)
-        .build())
-
-    // project push down
-    programs.addLast(
-      PPD,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkStreamExecRuleSets.PROJECT_TABLESCAN_PUSHDOWN_RULES)
-        .build())
-
+    // window
     programs.addLast(
       WINDOW,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkStreamExecRuleSets.STREAM_EXEC_WINDOW_RULES)
+      FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
+            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+            .add(FlinkStreamExecRuleSets.PROJECT_RULES)
+            .build(), "project rules")
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+            .add(FlinkStreamExecRuleSets.PROJECT_TABLESCAN_PUSHDOWN_RULES)
+            .build(), "push project to table scan")
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+            .add(FlinkStreamExecRuleSets.STREAM_EXEC_WINDOW_RULES)
+            .build(), "window")
         .build())
 
     // optimize the logical Flink plan
@@ -183,32 +177,31 @@ object FlinkStreamPrograms {
         .setTargetTraits(Array(FlinkConventions.LOGICAL))
         .build())
 
+    // logical rewrite
     programs.addLast(
-      TOPN,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-      .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-      .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-      .add(FlinkStreamExecRuleSets.STREAM_EXEC_TOPN_RULES)
-      .build())
-
-    programs.addLast(
-      LAST_ROW,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkStreamExecRuleSets.STREAM_EXEC_LAST_ROW_RULES)
+      LOGICAL_REWRITE,
+      FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+            .add(FlinkStreamExecRuleSets.STREAM_EXEC_TOPN_RULES)
+            .build(), "topn")
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+            .add(FlinkStreamExecRuleSets.STREAM_EXEC_LAST_ROW_RULES)
+            .build(), "last_row")
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+            .setHepMatchOrder(HepMatchOrder.TOP_DOWN)
+            .add(FlinkStreamExecRuleSets.STREAM_EXEC_AGG_SPLIT_RULES)
+            .build(), "split agg")
         .build())
 
-    // agg split
-    programs.addLast(
-      AGG_SPLIT,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.TOP_DOWN)
-        .add(FlinkStreamExecRuleSets.STREAM_EXEC_AGG_SPLIT_RULES)
-        .build())
-
-    // optimize the physical Flink plan
+    // optimize the physical plan
     programs.addLast(
       PHYSICAL,
       FlinkVolcanoProgramBuilder.newBuilder
@@ -216,26 +209,25 @@ object FlinkStreamPrograms {
         .setTargetTraits(Array(FlinkConventions.STREAMEXEC))
         .build())
 
-    // decorate the optimized plan
+    // physical rewrite
     programs.addLast(
-      DECORATE,
-      FlinkDecorateProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkStreamExecRuleSets.STREAM_EXEC_DECORATE_RULES)
+      PHYSICAL_REWRITE,
+      FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
+        .addProgram(
+          FlinkDecorateProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+            .add(FlinkStreamExecRuleSets.STREAM_EXEC_DECORATE_RULES)
+            .build(), "decorate")
+        .addProgram(new FlinkMicroBatchAnalyseProgram, "micro batch")
+        .addProgram(
+          FlinkDecorateProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
+            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+            .add(FlinkStreamExecRuleSets.PHYSICAL_REWRITE)
+            .build(), "physical rewrite")
         .build())
 
-    // analyse micro batch
-    programs.addLast(MICRO_BATCH, new FlinkMicroBatchAnalyseProgram)
-
-    //use two stage agg optimize the plan
-    programs.addLast(
-      POST,
-      FlinkDecorateProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkStreamExecRuleSets.POST)
-        .build())
     programs
   }
 }

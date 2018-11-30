@@ -58,8 +58,7 @@ object FlinkStreamExecRuleSets {
   val POST_EXPAND_CLEAN_UP_RULES: RuleSet = RuleSets.ofList(
     EnumerableToLogicalTableScan.INSTANCE)
 
-  val REWRITE_RELNODE_RULES: RuleSet = RuleSets.ofList(
-    // unnest rule
+  val UNNEST_RULES: RuleSet = RuleSets.ofList(
     LogicalUnnestRule.INSTANCE
   )
 
@@ -256,7 +255,7 @@ object FlinkStreamExecRuleSets {
   /**
     * RuleSet to normalize plans for stream exec execution
     */
-  val STREAM_EXEC_NORM_RULES: RuleSet = RuleSets.ofList((
+  val STREAM_EXEC_DEFAULT_REWRITE_RULES: RuleSet = RuleSets.ofList((
       PREDICATE_SIMPLIFY_EXPRESSION_RULES.asScala ++
         REWRITE_COALESCE_RULES.asScala ++
         REDUCE_EXPRESSION_RULES.asScala ++
@@ -359,7 +358,7 @@ object FlinkStreamExecRuleSets {
   /**
     * RuleSet to optimize plans after stream exec execution.
     */
-  val POST: RuleSet = RuleSets.ofList(
+  val PHYSICAL_REWRITE: RuleSet = RuleSets.ofList(
     //optimize agg rule
     TwoStageOptimizedAggregateRule.INSTANCE,
     // incremental agg rule

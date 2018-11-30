@@ -147,7 +147,7 @@ class RewriteMultiJoinConditionRuleTest extends TableTestBatchExecBase {
         FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-          .add(FlinkBatchExecRuleSets.BATCH_EXEC_NORM_RULES)
+          .add(FlinkBatchExecRuleSets.BATCH_EXEC_DEFAULT_REWRITE_RULES)
           .build())
 
       // join reorder

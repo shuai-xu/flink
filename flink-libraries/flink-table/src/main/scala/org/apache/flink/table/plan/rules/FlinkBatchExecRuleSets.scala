@@ -48,11 +48,6 @@ object FlinkBatchExecRuleSets {
     SubQueryRemoveRule.PROJECT,
     SubQueryRemoveRule.JOIN)
 
-  val REWRITE_RELNODE_RULES: RuleSet = RuleSets.ofList(
-    // unnest rule
-    LogicalUnnestRule.INSTANCE
-  )
-
   /**
     * Convert table references before query decorrelation.
     */
@@ -144,6 +139,10 @@ object FlinkBatchExecRuleSets {
   val PROJECT_TABLESCAN_PUSHDOWN_RULES: RuleSet = RuleSets.ofList(
     // push a project down into the table scan
     PushProjectIntoTableSourceScanRule.INSTANCE
+  )
+
+  val SKEW_JOIN_REWRITE_RULES: RuleSet = RuleSets.ofList(
+    SkewedJoinRule.INSTANCE
   )
 
   val JOIN_COND_EQUAL_TRANSFER_RULES: RuleSet = RuleSets.ofList((
@@ -257,7 +256,7 @@ object FlinkBatchExecRuleSets {
   /**
     * RuleSet to normalize plans for batch exec execution
     */
-  val BATCH_EXEC_NORM_RULES: RuleSet = RuleSets.ofList((
+  val BATCH_EXEC_DEFAULT_REWRITE_RULES: RuleSet = RuleSets.ofList((
       PREDICATE_SIMPLIFY_EXPRESSION_RULES.asScala ++
           REWRITE_COALESCE_RULES.asScala ++
           REDUCE_EXPRESSION_RULES.asScala ++
@@ -279,8 +278,16 @@ object FlinkBatchExecRuleSets {
 
             // rules to convert catalog table to normal table.
             CatalogTableRules.BATCH_TABLE_SCAN_RULE,
-            CatalogTableRules.DIM_TABLE_SCAN_RULE
+            CatalogTableRules.DIM_TABLE_SCAN_RULE,
+
+            // unnest rule
+            LogicalUnnestRule.INSTANCE
           )).asJava)
+
+  val BATCH_EXEC_JOIN_PREDICATE_REWRITE_RULES: RuleSet = RuleSets.ofList(
+    JoinDependentFilterPushdownRule.INSTANCE,
+    JoinDeriveNullFilterRule.INSTANCE
+  )
 
   val BATCH_EXEC_WINDOW_RULES: RuleSet = RuleSets.ofList(
     // slices a project into sections which contain window agg functions and sections which do not.

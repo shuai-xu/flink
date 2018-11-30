@@ -79,7 +79,7 @@ abstract class ExpressionTestBase {
   private def hepPlanner = {
     val builder = new HepProgramBuilder
     builder.addMatchOrder(HepMatchOrder.BOTTOM_UP)
-    val it = FlinkBatchExecRuleSets.BATCH_EXEC_NORM_RULES.iterator()
+    val it = FlinkBatchExecRuleSets.BATCH_EXEC_DEFAULT_REWRITE_RULES.iterator()
     while (it.hasNext) {
       builder.addRuleInstance(it.next())
     }
@@ -223,8 +223,9 @@ abstract class ExpressionTestBase {
 
     val decorPlan = RelDecorrelator.decorrelateQuery(converted)
 
-    // normalize
-    val normalizedPlan = if (FlinkBatchExecRuleSets.BATCH_EXEC_NORM_RULES.iterator().hasNext) {
+    // default rewrite
+    val rewritePlan = if (FlinkBatchExecRuleSets.BATCH_EXEC_DEFAULT_REWRITE_RULES.iterator()
+      .hasNext) {
       val planner = hepPlanner
       planner.setRoot(decorPlan)
       planner.findBestExp
@@ -234,8 +235,8 @@ abstract class ExpressionTestBase {
 
     // convert to logical plan
     val logicalProps = converted.getTraitSet.replace(FlinkConventions.LOGICAL).simplify()
-    val logicalCalc = logicalOptProgram.run(context._2.getPlanner, normalizedPlan, logicalProps,
-      ImmutableList.of(), ImmutableList.of())
+    val logicalCalc = logicalOptProgram.run(context._2.getPlanner, rewritePlan, logicalProps,
+                                            ImmutableList.of(), ImmutableList.of())
 
     // convert to dataset plan
     val physicalProps = converted.getTraitSet.replace(FlinkConventions.BATCHEXEC).simplify()

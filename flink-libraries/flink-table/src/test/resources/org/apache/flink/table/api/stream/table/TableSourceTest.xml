@@ -132,14 +132,14 @@ StreamExecCalc(select=[rowtime, id, name, val])
 ]]>
     </Resource>
   </TestCase>
-    <TestCase name="testWithPkMultiRowUpdateTransposeWithCalc">
-        <Resource name="plan">
-            <![CDATA[
+  <TestCase name="testWithPkMultiRowUpdateTransposeWithCalc">
+    <Resource name="plan">
+      <![CDATA[
 StreamExecGroupAggregate(groupBy=[pk], select=[pk, COUNT_RETRACT(a) AS TMP_0])
   StreamExecExchange(distribution=[hash[pk]])
-    StreamExecLastRow(key=[pk], select=[pk, a])
-      StreamExecExchange(distribution=[hash[pk]])
-        StreamExecCalc(select=[pk, a])
+    StreamExecCalc(select=[pk, a])
+      StreamExecLastRow(key=[pk], select=[a, pk, c])
+        StreamExecExchange(distribution=[hash[pk]])
           StreamExecTableSourceScan(table=[[MyTable]], fields=[a, pk, c])
 ]]>
         </Resource>
@@ -147,9 +147,9 @@ StreamExecGroupAggregate(groupBy=[pk], select=[pk, COUNT_RETRACT(a) AS TMP_0])
             <![CDATA[
 StreamExecGroupAggregate(retract=[false], accMode=[Acc])
   StreamExecExchange(retract=[true], accMode=[AccRetract])
-    StreamExecLastRow(retract=[true], accMode=[AccRetract])
-      StreamExecExchange(retract=[true], accMode=[Acc])
-        StreamExecCalc(retract=[true], accMode=[Acc])
+    StreamExecCalc(retract=[true], accMode=[AccRetract])
+      StreamExecLastRow(retract=[true], accMode=[AccRetract])
+        StreamExecExchange(retract=[true], accMode=[Acc])
           StreamExecTableSourceScan(retract=[true], accMode=[Acc])
 ]]>
         </Resource>

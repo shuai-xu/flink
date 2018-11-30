@@ -222,7 +222,7 @@ class ModifiedMonotonicityTest extends TableTestBase {
 
     injectRules(
       util.tableEnv,
-      FlinkStreamPrograms.TOPN,
+      FlinkStreamPrograms.LOGICAL_REWRITE,
       RuleSets.ofList(TestFlinkLogicalLastRowRule.INSTANCE))
 
     val resultTable = util.tableEnv.scan("MyTable")
@@ -249,7 +249,7 @@ class ModifiedMonotonicityTest extends TableTestBase {
 
     injectRules(
       util.tableEnv,
-      FlinkStreamPrograms.TOPN,
+      FlinkStreamPrograms.LOGICAL_REWRITE,
       RuleSets.ofList(TestFlinkLogicalLastRowRule.INSTANCE))
 
     val resultTable = util.tableEnv.scan("MyTable")

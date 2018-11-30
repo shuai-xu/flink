@@ -386,6 +386,7 @@ class TableSourceTest extends TableTestBase {
     util.verifyPlan(t)
   }
 
+  // FIXME do calc before shuffle when refactoring stream cost.
   @Test
   def testWithPkMultiRowUpdateTransposeWithCalc(): Unit = {
     val util = streamTestUtil()
@@ -401,7 +402,7 @@ class TableSourceTest extends TableTestBase {
 
     injectRules(
       util.tableEnv,
-      FlinkStreamPrograms.TOPN,
+      FlinkStreamPrograms.LOGICAL_REWRITE,
       RuleSets.ofList(TestFlinkLogicalLastRowRule.INSTANCE))
 
     val resultTable = util.tableEnv.scan("MyTable")
@@ -426,7 +427,7 @@ class TableSourceTest extends TableTestBase {
 
     injectRules(
       util.tableEnv,
-      FlinkStreamPrograms.TOPN,
+      FlinkStreamPrograms.LOGICAL_REWRITE,
       RuleSets.ofList(TestFlinkLogicalLastRowRule.INSTANCE))
 
     val resultTable = util.tableEnv.scan("MyTable")

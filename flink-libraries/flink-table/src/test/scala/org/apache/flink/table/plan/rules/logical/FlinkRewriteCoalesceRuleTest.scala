@@ -19,13 +19,12 @@
 package org.apache.flink.table.plan.rules.logical
 
 import java.sql.Date
-
 import org.apache.calcite.plan.hep.HepMatchOrder
+import org.apache.calcite.tools.RuleSets
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfigBuilder
-import org.apache.flink.table.plan.optimize.FlinkBatchPrograms.{DECORRELATE,
-  NORMALIZATION, QUERY_REWRITE}
+import org.apache.flink.table.plan.optimize.FlinkBatchPrograms.{DECORRELATE, DEFAULT_REWRITE, SUBQUERY_REWRITE}
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 import org.apache.flink.table.util.TableTestBatchExecBase
@@ -39,7 +38,7 @@ class FlinkRewriteCoalesceRuleTest extends TableTestBatchExecBase {
     val programs = new FlinkChainedPrograms[BatchOptimizeContext]()
     // convert queries before query decorrelation
     programs.addLast(
-      QUERY_REWRITE,
+      SUBQUERY_REWRITE,
       FlinkGroupProgramBuilder.newBuilder[BatchOptimizeContext]
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
@@ -51,11 +50,6 @@ class FlinkRewriteCoalesceRuleTest extends TableTestBatchExecBase {
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
           .add(FlinkBatchExecRuleSets.TABLE_SUBQUERY_RULES)
           .build(), "sub-queries remove")
-        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
-          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-          .add(FlinkBatchExecRuleSets.REWRITE_RELNODE_RULES)
-          .build(), "relnode rewrite")
         .build()
     )
     // decorrelate
@@ -66,13 +60,13 @@ class FlinkRewriteCoalesceRuleTest extends TableTestBatchExecBase {
         .addProgram(new FlinkCorrelateVariablesValidationProgram, "correlate variables validation")
         .build()
     )
-    // normalize the logical plan
+    // default rewrite
     programs.addLast(
-      NORMALIZATION,
+      DEFAULT_REWRITE,
       FlinkHepRuleSetProgramBuilder.newBuilder
         .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
         .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkBatchExecRuleSets.BATCH_EXEC_NORM_RULES)
+        .add(FlinkBatchExecRuleSets.BATCH_EXEC_DEFAULT_REWRITE_RULES)
         .build())
 
     val calciteConfig = new CalciteConfigBuilder().replaceBatchPrograms(programs).build()

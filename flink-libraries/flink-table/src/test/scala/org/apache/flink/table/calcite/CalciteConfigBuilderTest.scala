@@ -36,7 +36,7 @@ class CalciteConfigBuilderTest {
 
     val builder = new CalciteConfigBuilder()
     val streamPrograms = FlinkStreamPrograms.buildPrograms()
-    streamPrograms.remove(FlinkStreamPrograms.DECORATE)
+    streamPrograms.remove(FlinkStreamPrograms.PHYSICAL_REWRITE)
     builder.replaceStreamPrograms(streamPrograms)
 
     val config = builder.build()

@@ -19,7 +19,7 @@
 package org.apache.flink.table.runtime.stream.table
 
 import java.lang.{Integer => JInt, Long => JLong}
-
+import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.runtime.SqlFunctions.{internalToTimestamp => toTimestamp}
 import org.apache.calcite.tools.RuleSets
 import org.apache.flink.table.runtime.utils._
@@ -34,7 +34,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{TableEnvironment, TableSchema, Types}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
-import org.apache.flink.table.plan.optimize.FlinkStreamPrograms
+import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.types.Row
@@ -204,11 +204,15 @@ class LastRowITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
 
   def injectLastRowRule(tEnv: TableEnvironment): Unit = {
     val builder = new CalciteConfigBuilder()
-    val programs = builder.getStreamPrograms
-    programs.getFlinkRuleSetProgram(FlinkStreamPrograms.TOPN)
-      .getOrElse(
-        throw new RuntimeException(s"${FlinkStreamPrograms.TOPN} does not exist"))
-      .add(RuleSets.ofList(TestFlinkLogicalLastRowRule.INSTANCE))
+    val programs: FlinkOptimizeProgram[_] = builder.getStreamPrograms
+      .get(FlinkStreamPrograms.LOGICAL_REWRITE)
+      .getOrElse(throw new RuntimeException(s"${FlinkStreamPrograms.LOGICAL_REWRITE} not exist"))
+
+    programs.asInstanceOf[FlinkGroupProgram[StreamOptimizeContext]].addProgram(
+      FlinkHepRuleSetProgramBuilder.newBuilder
+        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+        .add(RuleSets.ofList(TestFlinkLogicalLastRowRule.INSTANCE)).build(), "test logical lastRow")
 
     tEnv.getConfig.setCalciteConfig(builder.build())
   }

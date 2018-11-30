@@ -119,7 +119,7 @@ class FlinkRelMdStreamUniqueKeysTest extends TableTestBase {
 
     injectRules(
       util.tableEnv,
-      FlinkStreamPrograms.TOPN,
+      FlinkStreamPrograms.LOGICAL_REWRITE,
       RuleSets.ofList(TestFlinkLogicalLastRowRule.INSTANCE))
 
     val resultTable = util.tableEnv.scan("MyTable")

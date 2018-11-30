@@ -41,6 +41,8 @@ import org.junit.rules.{ExpectedException, TestName}
 import org.mockito.Mockito.{mock, when}
 import java.util
 import java.util.{ArrayList => JArrayList}
+import org.apache.calcite.plan.hep.HepMatchOrder
+import org.apache.flink.table.plan.optimize._
 
 /**
   * Test base for testing Table API / SQL plans.
@@ -68,13 +70,21 @@ abstract class TableTestBase {
       LogicalPlanFormatUtils.formatTempTableId(RelOptUtil.toString(actual.getRelNode)))
   }
 
-  def injectRules(tEnv: TableEnvironment, phrase: String, injectRuleSet: RuleSet): Unit = {
+  def injectRules(tEnv: TableEnvironment, phase: String, injectRuleSet: RuleSet): Unit = {
     val builder = new CalciteConfigBuilder()
     val programs = builder.getStreamPrograms
-    programs.getFlinkRuleSetProgram(phrase)
-      .getOrElse(
-        throw new RuntimeException(s"$phrase does not exist"))
-      .add(injectRuleSet)
+    programs.get(phase) match {
+      case Some(groupProg: FlinkGroupProgram[StreamOptimizeContext]) =>
+        groupProg.addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+            .add(injectRuleSet).build(), "test rules")
+      case Some(ruleSetProgram: FlinkHepRuleSetProgram[StreamOptimizeContext]) =>
+        ruleSetProgram.add(injectRuleSet)
+      case _ =>
+        throw new RuntimeException(s"$phase does not exist")
+    }
     tEnv.getConfig.setCalciteConfig(builder.build())
   }
 }
@@ -119,7 +129,6 @@ abstract class TableTestUtil {
     val expected = new TableSchema(fields.map(_._1).toArray, fields.map(_._2).toArray)
     assertEquals(expected, actual)
   }
-
 }
 
 case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
