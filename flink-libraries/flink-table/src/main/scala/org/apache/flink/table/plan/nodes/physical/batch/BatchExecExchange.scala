@@ -161,10 +161,10 @@ class BatchExecExchange(
   }
 
   private def getDataExchangeModeForExternalShuffle(tableConfig: TableConfig): DataExchangeMode = {
-    if (tableConfig.enableBatchExternalShuffle) {
+    if (tableConfig.isAllDataExchangeModeBatch) {
       DataExchangeMode.BATCH
     } else {
-      DataExchangeMode.PIPELINED
+      DataExchangeMode.AUTO
     }
   }
 

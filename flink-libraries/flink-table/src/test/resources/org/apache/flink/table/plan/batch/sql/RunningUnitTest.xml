@@ -217,12 +217,13 @@ SortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0])
 RelRunningUnit{
 	relStage(batchExecRel=BatchExecTableSourceScan(table=[[x, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
 	relStage(batchExecRel=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0
-	relStage(batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=0
 }
 RelRunningUnit{
 	relStage(batchExecRel=BatchExecTableSourceScan(table=[[z, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
 	relStage(batchExecRel=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0
-	relStage(batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=0
+}
+RelRunningUnit{
+	relStage(batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=0, depend type: DATA_TRIGGER =[batchExecRel=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0;]
 }
 RelRunningUnit{
 	relStage(batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=1, depend type: DATA_TRIGGER =[batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=0;]

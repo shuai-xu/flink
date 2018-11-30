@@ -112,7 +112,7 @@ public class RunningUnitKeeper {
 	public void setScheduleConfig(StreamGraphGenerator.Context context) {
 		if (supportRunningUnit &&
 				ExecResourceUtil.enableRunningUnitSchedule(tableConfig) &&
-				!tableConfig.enableBatchExternalShuffle()) {
+				!tableConfig.isAllDataExchangeModeBatch()) {
 			context.getConfiguration().setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, RunningUnitGraphManagerPlugin.class.getName());
 			try {
 				InstantiationUtil.writeObjectToConfig(runningUnits, context.getConfiguration(), RUNNING_UNIT_CONF_KEY);

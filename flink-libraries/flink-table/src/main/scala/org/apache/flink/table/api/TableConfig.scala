@@ -402,21 +402,13 @@ class TableConfig {
     }
   }
 
-  def enableBatchExternalShuffle: Boolean = {
-    parameters.getBoolean(
-      SQL_EXEC_EXTERNAL_SHUFFLE_ENABLED, SQL_EXEC_EXTERNAL_SHUFFLE_ENABLED_DEFAULT)
+  def isAllDataExchangeModeBatch: Boolean = {
+    parameters.getBoolean(SQL_EXEC_ALL_DATA_EXCHANGE_MODE_BATCH)
   }
 
   def enableRangePartition: Boolean = {
     parameters.getBoolean(
       SQL_EXEC_SORT_ENABLE_RANGE, SQL_EXEC_SORT_ENABLE_RANGE_DEFAULT)
-  }
-
-  def createShuffleProperties: ShuffleProperties = {
-    val shuffleMemorySize = parameters.getInteger(
-        TableConfig.SQL_EXEC_EXTERNAL_SHUFFLE_SORT_BUFFER_MEM,
-        TableConfig.SQL_EXEC_EXTERNAL_SHUFFLE_SORT_BUFFER_MEM_DEFAULT)
-    new ShuffleProperties(shuffleMemorySize)
   }
 
   /** Return max cnf node limit */
@@ -1057,19 +1049,11 @@ object TableConfig {
   val SQL_PHYSICAL_OPERATORS_DISABLED_DEFAULT: String = ""
 
   // =================================== Shuffle ===================================
-  /**
-    * If the external shuffle is enabled, the shuffle data will go through some external storage.
-    * And the shuffle data will be managed by Yarn Shuffle Service.
-    */
-  val SQL_EXEC_EXTERNAL_SHUFFLE_ENABLED = "sql.exec.external-shuffle.enabled"
-  val SQL_EXEC_EXTERNAL_SHUFFLE_ENABLED_DEFAULT: Boolean = false
 
-  /**
-    * Sets the buffer memory size for sort at shuffle stage. It is in MB. Default is 10MB.
-    */
-  val SQL_EXEC_EXTERNAL_SHUFFLE_SORT_BUFFER_MEM = "sql.exec.external-shuffle.sort.buffer-memory-mb"
-  val SQL_EXEC_EXTERNAL_SHUFFLE_SORT_BUFFER_MEM_DEFAULT = 10
-
+  val SQL_EXEC_ALL_DATA_EXCHANGE_MODE_BATCH: ConfigOption[JBoolean] = ConfigOptions
+      .key("sql.exec.all.data-exchange-mode.batch")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("Sets Whether all data-exchange-mode is batch.")
 
   // ================================== Collect Operator Metrics ======================
   /**

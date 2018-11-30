@@ -107,7 +107,8 @@ class RunningUnitTest extends TableTestBatchExecBase {
 
   @Test
   def testUnionAllWithExternalShuffle(): Unit = {
-    util.tableEnv.config.enableBatchExternalShuffle
+    util.tableEnv.config.getParameters.setBoolean(
+      TableConfig.SQL_EXEC_ALL_DATA_EXCHANGE_MODE_BATCH, true)
     util.addTable("z", CommonTestData.get3Source(Array("a", "b", "c")))
     val sqlQuery = "SELECT sum(a) FROM (" +
         "SELECT a, c FROM x UNION ALL (SELECT a, c FROM z))" +

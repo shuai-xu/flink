@@ -19,7 +19,7 @@
 package org.apache.flink.table.api
 
 import org.apache.flink.annotation.{InterfaceStability, VisibleForTesting}
-import org.apache.flink.api.common.JobExecutionResult
+import org.apache.flink.api.common.{ExecutionMode, JobExecutionResult}
 import org.apache.flink.api.common.accumulators.SerializedListAccumulator
 import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.configuration.Configuration
@@ -126,7 +126,6 @@ class BatchTableEnvironment(
     * @param jobName name for the job
     */
   override def execute(jobName: String): JobExecutionResult = {
-    mergeParameters()
     if (config.getSubsectionOptimization) {
       compile()
     }
@@ -136,7 +135,6 @@ class BatchTableEnvironment(
           "A program needs at least one sink that consumes data. ")
     }
     val result = executeInternal(transformations, Option.apply(jobName))
-    transformations.clear()
     sinkNodes.clear()
     result
   }
@@ -162,36 +160,42 @@ class BatchTableEnvironment(
     * @return A [[StreamGraph]] describing the whole job.
     */
   def generateStreamGraph(): StreamGraph = {
-    mergeParameters()
-    val context = StreamGraphGenerator.Context.buildBatchProperties(streamEnv)
-    ruKeeper.setScheduleConfig(context)
-    val streamGraph = StreamGraphGenerator.generate(context, transformations)
-
-    setQueryPlan()
-
-    setupOperatorMetricCollect()
-    ruKeeper.clear()
+    val streamGraph = generateStreamGraph(transformations, None)
     sinkNodes.clear()
-    transformations.clear()
     streamGraph
   }
 
-  private def executeInternal(streamingTransformations: ArrayBuffer[StreamTransformation[_]],
-      jobName: Option[String]): JobExecutionResult = {
+  private def generateStreamGraph(streamingTransformations: ArrayBuffer[StreamTransformation[_]],
+    jobName: Option[String]): StreamGraph = {
+    mergeParameters()
     val context = StreamGraphGenerator.Context.buildBatchProperties(streamEnv)
+    if (getConfig.isAllDataExchangeModeBatch) {
+      context.getExecutionConfig.setExecutionMode(ExecutionMode.BATCH)
+    } else {
+      context.getExecutionConfig.setExecutionMode(ExecutionMode.PIPELINED)
+    }
+
     ruKeeper.setScheduleConfig(context)
     jobName match {
       case Some(jn) => context.setJobName(jn)
       case None => context.setJobName(DEFAULT_JOB_NAME)
     }
     val streamGraph = StreamGraphGenerator.generate(context, streamingTransformations)
-
     setQueryPlan()
 
     setupOperatorMetricCollect()
+    ruKeeper.clear()
+
+    streamingTransformations.clear()
+    streamGraph
+  }
+
+  private def executeInternal(streamingTransformations: ArrayBuffer[StreamTransformation[_]],
+      jobName: Option[String]): JobExecutionResult = {
+    val streamGraph = generateStreamGraph(streamingTransformations, jobName)
+
     val result = streamEnv.execute(streamGraph)
     dumpPlanWithMetricsIfNeed(streamGraph, result)
-    ruKeeper.clear()
     result
   }
 
