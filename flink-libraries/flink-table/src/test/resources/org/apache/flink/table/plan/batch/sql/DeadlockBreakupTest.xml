@@ -63,7 +63,7 @@ LogicalProject(c=[$0], a=[$1], b=[$2], c0=[$3], a0=[$4], b0=[$5])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Calc(select=[c, a, b, c0, a1, b0])
+Calc(select=[c, a, b, c0, a1 AS a0, b0])
 +- NestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right])
    :- Exchange(distribution=[any], exchange_mode=[BATCH])
    :  +- Calc(select=[c, a, b, CAST(a) AS a0])
@@ -221,7 +221,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], a0=[$3], b0=[$4], c0=[$5])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Calc(select=[a, b, c, a1, b0, c0])
+Calc(select=[a, b, c, a1 AS a0, b0, c0])
 +- HashJoin(where=[=(a0, b0)], join=[a, b, c, a0, a1, b0, c0], joinType=[InnerJoin], isBroadcast=[true], build=[right])
    :- Exchange(distribution=[hash[a0]], exchange_mode=[BATCH])
    :  +- Calc(select=[a, b, c, CAST(a) AS a0])

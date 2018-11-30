@@ -122,7 +122,14 @@ object RowConverters {
       } else {
         // field index change (pojo)
         val mapping = convertOutputType match {
-          case ct: CompositeType[_] => ct.getFieldNames.map(inputTypeInfo.getFieldIndex)
+          case ct: CompositeType[_] => ct.getFieldNames.map {
+            name =>
+              val index = inputTypeInfo.getFieldIndex(name)
+              if (index < 0) {
+                throw new TableException(s"$name is not found in ${inputTypeInfo.getFieldNames}")
+              }
+              index
+          }
           case _ => Array(0)
         }
 

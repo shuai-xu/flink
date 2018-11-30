@@ -75,12 +75,12 @@ RelRunningUnit{
 }
 RelRunningUnit{
 	relStage(batchExecRel=BatchExecNestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right]), stageID=1, depend type: PRIORITY =[batchExecRel=BatchExecNestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right]), stageID=0;], depend type: DATA_TRIGGER =[batchExecRel=BatchExecCalc(select=[c, a, b, CAST(a) AS a0]), stageID=0;]
-	relStage(batchExecRel=BatchExecCalc(select=[c, a, b, c0, a1, b0]), stageID=0
+	relStage(batchExecRel=BatchExecCalc(select=[c, a, b, c0, a1 AS a0, b0]), stageID=0
 }]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Calc(select=[c, a, b, c0, a1, b0])
+Calc(select=[c, a, b, c0, a1 AS a0, b0])
 +- NestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right])
    :- Exchange(distribution=[any], exchange_mode=[BATCH])
    :  +- Calc(select=[c, a, b, CAST(a) AS a0])

@@ -187,10 +187,10 @@ LogicalProject(TMP_0=[$1])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[TMP_0])
-+- HashAggregate(isMerge=[true], groupBy=[$f2], select=[$f2, Final_SUM(sum$0) AS TMP_0])
-   +- Exchange(distribution=[hash[$f2]])
-      +- LocalHashAggregate(groupBy=[$f2], select=[$f2, Partial_SUM(a) AS sum$0])
-         +- Calc(select=[a, c, MyHashCode$(c) AS $f2])
++- HashAggregate(isMerge=[true], groupBy=[k], select=[k, Final_SUM(sum$0) AS TMP_0])
+   +- Exchange(distribution=[hash[k]])
+      +- LocalHashAggregate(groupBy=[k], select=[k, Partial_SUM(a) AS sum$0])
+         +- Calc(select=[a, c, MyHashCode$(c) AS k])
             +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
@@ -209,10 +209,10 @@ LogicalProject(TMP_0=[$1])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[TMP_0])
-+- HashAggregate(isMerge=[true], groupBy=[$f2], select=[$f2, Final_SUM(sum$0) AS TMP_0])
-   +- Exchange(distribution=[hash[$f2]])
-      +- LocalHashAggregate(groupBy=[$f2], select=[$f2, Partial_SUM(a) AS sum$0])
-         +- Calc(select=[a, c, UPPER(c) AS $f2])
++- HashAggregate(isMerge=[true], groupBy=[k], select=[k, Final_SUM(sum$0) AS TMP_0])
+   +- Exchange(distribution=[hash[k]])
+      +- LocalHashAggregate(groupBy=[k], select=[k, Partial_SUM(a) AS sum$0])
+         +- Calc(select=[a, c, UPPER(c) AS k])
             +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
