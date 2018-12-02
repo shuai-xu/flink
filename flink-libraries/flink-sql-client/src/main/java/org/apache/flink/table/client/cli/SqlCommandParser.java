@@ -97,6 +97,7 @@ public final class SqlCommandParser {
 		SHOW_DATABASES("show databases"),
 		SHOW_TABLES("show tables"),
 		SHOW_FUNCTIONS("show functions"),
+		USE("use"),
 		DESCRIBE("describe"),
 		EXPLAIN("explain"),
 		SELECT("select"),

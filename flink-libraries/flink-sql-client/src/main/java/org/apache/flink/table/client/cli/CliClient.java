@@ -317,6 +317,9 @@ public class CliClient {
 			case SHOW_FUNCTIONS:
 				callShowFunctions(cmdCall);
 				break;
+			case USE:
+				callUseDatabase(cmdCall);
+				break;
 			case DESCRIBE:
 				callDescribe(cmdCall);
 				break;
@@ -470,6 +473,16 @@ public class CliClient {
 			terminal.writer().println(CliStrings.messageInfo(CliStrings.MESSAGE_EMPTY).toAnsi());
 		} else {
 			functions.forEach((v) -> terminal.writer().println(v));
+		}
+		terminal.flush();
+	}
+
+	private void callUseDatabase(SqlCommandCall cmdCall) {
+		try {
+			executor.setDefaultDatabase(context, cmdCall.operands[0]);
+		} catch (SqlExecutionException e) {
+			printException(e);
+			return;
 		}
 		terminal.flush();
 	}

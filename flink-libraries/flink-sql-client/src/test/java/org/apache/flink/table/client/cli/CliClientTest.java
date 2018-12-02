@@ -123,6 +123,10 @@ public class CliClientTest extends TestLogger {
 		}
 
 		@Override
+		public void setDefaultDatabase(SessionContext session, String namePath) throws SqlExecutionException {
+		}
+
+		@Override
 		public TableSchema getTableSchema(
 				SessionContext session, String name) throws SqlExecutionException {
 			return null;

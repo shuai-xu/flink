@@ -248,6 +248,13 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   /**
+    * Get the default catalog name.
+    */
+  def getDefaultCatalogName(): String = {
+    catalogManager.getDefaultCatalogName
+  }
+
+  /**
     * Set a default catalog.
     *
     * @param name            Name of the catalog
@@ -263,6 +270,26 @@ abstract class TableEnvironment(val config: TableConfig) {
     * @param dbName          Name of the database
     */
   def setDefaultDatabase(catalogName: String, dbName: String): Unit = {
+    catalogManager.setDefaultDatabase(catalogName, dbName)
+  }
+
+  /**
+    * Set the default  database. If a catalog is not specified, the database is resolved relative
+    * to the current catalog.
+    * Note! This method does not support setting default catalog only.
+    *
+    * @param dbPath         name or path of the database
+    */
+  @varargs
+  def setDefaultDatabase(dbPath: String*): Unit = {
+    if (dbPath(0) == null || dbPath.length < 1 || dbPath.length > 2 || dbPath(0).isEmpty ||
+      (dbPath.length == 2 && dbPath(1).isEmpty)) {
+      throw new IllegalArgumentException(String.format("Invalid database path %s", dbPath))
+    }
+
+    val catalogName = if (dbPath.length == 1) getDefaultCatalogName() else dbPath(0)
+    val dbName = if (dbPath.length == 1) dbPath(0) else dbPath(1)
+
     catalogManager.setDefaultDatabase(catalogName, dbName)
   }
 

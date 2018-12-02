@@ -50,6 +50,41 @@ class TableEnvironmentTest extends TableTestBase {
 
     assert(tEnv.listDatabases().sameElements(Array("db1", "db2")))
     assert(tEnv.listTables().sameElements(Array("tb2")))
+
+    tEnv.setDefaultDatabase("db2")
+
+    assert(tEnv.listDatabases().sameElements(Array("db1", "db2")))
+    assert(tEnv.listTables().sameElements(Array("tb2")))
+
+    tEnv.setDefaultDatabase("default_catalog", "default")
+
+    assert(tEnv.listDatabases().sameElements(Array("default")))
+    assert(tEnv.listTables().sameElements(Array.empty[String]))
+  }
+
+  @Test(expected = classOf[IllegalArgumentException])
+  def testInvalidEmptyDbPath(): Unit = {
+    streamTestUtil().tableEnv.setDefaultDatabase("")
+  }
+
+  @Test(expected = classOf[IllegalArgumentException])
+  def testInvalidEmptyDbPath2(): Unit = {
+    streamTestUtil().tableEnv.setDefaultDatabase(".")
+  }
+
+  @Test(expected = classOf[IllegalArgumentException])
+  def testNullDbPath(): Unit = {
+    streamTestUtil().tableEnv.setDefaultDatabase(null)
+  }
+
+  @Test(expected = classOf[IllegalArgumentException])
+  def testNonExistCatalog(): Unit = {
+    streamTestUtil().tableEnv.setDefaultDatabase("non.exist.path")
+  }
+
+  @Test(expected = classOf[IllegalArgumentException])
+  def testNonExistDb(): Unit = {
+    streamTestUtil().tableEnv.setDefaultDatabase("default_catalog.nonexistdb")
   }
 
   // ----------------------------------------------------------------------------------------------

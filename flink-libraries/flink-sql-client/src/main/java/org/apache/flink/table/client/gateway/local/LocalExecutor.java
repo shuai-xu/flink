@@ -239,12 +239,26 @@ public class LocalExecutor implements Executor {
 	}
 
 	@Override
+	public void setDefaultDatabase(SessionContext session, String namePath) throws SqlExecutionException {
+		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
+			.createEnvironmentInstance()
+			.getTableEnvironment();
+
+		try {
+			tableEnv.setDefaultDatabase(namePath.split("\\."));
+		} catch (Throwable t) {
+			// catch everything such that the query does not crash the executor
+			throw new SqlExecutionException("No catalog and database with this name could be found.", t);
+		}
+	}
+
+	@Override
 	public TableSchema getTableSchema(SessionContext session, String name) throws SqlExecutionException {
 		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
 			.createEnvironmentInstance()
 			.getTableEnvironment();
 		try {
-			return tableEnv.scan(name).getSchema();
+			return tableEnv.scan(name.split("\\.")).getSchema();
 		} catch (Throwable t) {
 			// catch everything such that the query does not crash the executor
 			throw new SqlExecutionException("No table with this name could be found.", t);

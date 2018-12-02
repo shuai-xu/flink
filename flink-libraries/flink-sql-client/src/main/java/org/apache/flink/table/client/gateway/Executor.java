@@ -62,8 +62,16 @@ public interface Executor {
 	List<String> listUserDefinedFunctions(SessionContext session) throws SqlExecutionException;
 
 	/**
-	 * Returns the schema of a table. Throws an exception if the table could not be found. The
-	 * schema might contain time attribute types for helping the user during debugging a query.
+	 * Parse the namePath, and set the default  database.
+	 * If a catalog is not specified, the database is resolved relative to the current catalog.
+	 * Note! This method does not support setting default catalog only.
+	 */
+	void setDefaultDatabase(SessionContext session, String namePath) throws SqlExecutionException;
+
+	/**
+	 * Parse the table path, and returns the schema of a table.
+	 * Throws an exception if the table could not be found.
+	 * The schema might contain time attribute types for helping the user during debugging a query.
 	 */
 	TableSchema getTableSchema(SessionContext session, String name) throws SqlExecutionException;
 

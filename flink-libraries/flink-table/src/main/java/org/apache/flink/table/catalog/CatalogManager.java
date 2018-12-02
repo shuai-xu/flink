@@ -117,6 +117,10 @@ public class CatalogManager {
 		return catalogs.get(defaultCatalog);
 	}
 
+	public String getDefaultCatalogName() {
+		return defaultCatalog;
+	}
+
 	public void setDefaultDatabase(String catalogName, String dbName) {
 		checkArgument(!StringUtils.isNullOrWhitespaceOnly(catalogName), "catalogName cannot be null or empty");
 		checkArgument(!StringUtils.isNullOrWhitespaceOnly(dbName), "dbName cannot be null or empty");
