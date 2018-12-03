@@ -156,7 +156,9 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 					memoryManager,
 					memory,
 					ioManager,
-					typeSerializer);
+					typeSerializer,
+					numBytesOut,
+					numBuffersOut);
 			} else {
 				fileWriter = new PartitionMergeFileWriter<T>(
 					numberOfSubpartitions,
@@ -169,7 +171,9 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 					ioManager,
 					typeSerializer,
 					serializerManager,
-					parentTask);
+					parentTask,
+					numBytesOut,
+					numBuffersOut);
 			}
 
 			initialized = true;

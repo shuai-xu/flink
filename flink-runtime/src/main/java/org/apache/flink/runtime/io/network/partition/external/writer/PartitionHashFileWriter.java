@@ -21,6 +21,7 @@ package org.apache.flink.runtime.io.network.partition.external.writer;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.core.memory.MemorySegment;
+import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.io.disk.iomanager.BufferFileWriter;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.api.serialization.RecordSerializer;
@@ -66,6 +67,9 @@ public class PartitionHashFileWriter<T> implements PersistentFileWriter<T> {
 	private final BufferBuilder[] currentBufferBuilders;
 	private final long[] bytesWritten;
 
+	private final Counter numBytesOut;
+	private final Counter numBuffersOut;
+
 	public PartitionHashFileWriter(
 		int numPartitions,
 		String partitionDataRootPath,
@@ -73,6 +77,19 @@ public class PartitionHashFileWriter<T> implements PersistentFileWriter<T> {
 		List<MemorySegment> memory,
 		IOManager ioManager,
 		TypeSerializer<T> serializer) throws IOException {
+
+		this(numPartitions, partitionDataRootPath, memoryManager, memory, ioManager, serializer, null, null);
+	}
+
+	public PartitionHashFileWriter(
+		int numPartitions,
+		String partitionDataRootPath,
+		MemoryManager memoryManager,
+		List<MemorySegment> memory,
+		IOManager ioManager,
+		TypeSerializer<T> serializer,
+		Counter numBytesOut,
+		Counter numBuffersOut) throws IOException {
 
 		checkArgument(numPartitions > 0,
 			"The number of subpartitions should be larger than 0, but actually is: " + numPartitions);
@@ -102,6 +119,9 @@ public class PartitionHashFileWriter<T> implements PersistentFileWriter<T> {
 			fileWriters[i] = ioManager.createStreamFileWriter(ioManager.createChannel(new File(path)));
 			bytesWritten[i] = 0;
 		}
+
+		this.numBytesOut = numBytesOut;
+		this.numBuffersOut = numBuffersOut;
 	}
 
 	@Override
@@ -184,6 +204,14 @@ public class PartitionHashFileWriter<T> implements PersistentFileWriter<T> {
 
 			bytesWritten[partition] += buffer.getSize();
 			fileWriters[partition].writeBlock(buffer);
+
+			if (numBytesOut != null) {
+				numBytesOut.inc(buffer.getSize());
+			}
+
+			if (numBuffersOut != null) {
+				numBuffersOut.inc();
+			}
 
 			consumer.close();
 			currentBufferBuilders[partition] = null;

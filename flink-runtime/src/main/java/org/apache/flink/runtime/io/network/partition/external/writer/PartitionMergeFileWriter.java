@@ -29,6 +29,7 @@ import org.apache.flink.api.java.typeutils.runtime.TupleSerializer;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.memory.MemorySegment;
+import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.api.serialization.SerializerManager;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleUtils;
@@ -79,6 +80,25 @@ public class PartitionMergeFileWriter<T> implements PersistentFileWriter<T> {
 		TypeSerializer<T> serializer,
 		SerializerManager<SerializationDelegate<T>> serializerManager,
 		AbstractInvokable parentTask) throws IOException, MemoryAllocationException {
+
+		this(numPartitions, partitionDataRootPath, mergeFactor, enableAsyncMerging, mergeToOneFile,
+			memoryManager, memory, ioManager, serializer, serializerManager, parentTask, null, null);
+	}
+
+	public PartitionMergeFileWriter(
+		int numPartitions,
+		String partitionDataRootPath,
+		int mergeFactor,
+		boolean enableAsyncMerging,
+		boolean mergeToOneFile,
+		MemoryManager memoryManager,
+		List<MemorySegment> memory,
+		IOManager ioManager,
+		TypeSerializer<T> serializer,
+		SerializerManager<SerializationDelegate<T>> serializerManager,
+		AbstractInvokable parentTask,
+		Counter numBytesOut,
+		Counter numBuffersOut) throws IOException, MemoryAllocationException {
 		checkArgument(numPartitions > 0,
 			"The number of subpartitions should be larger than 0, but actually is: " + numPartitions);
 		checkArgument(mergeFactor >= 2, "Illegal merge factor: " + mergeFactor);
@@ -101,7 +121,7 @@ public class PartitionMergeFileWriter<T> implements PersistentFileWriter<T> {
 			keyPositions, comparators, serializers);
 
 		BufferSortedDataFileFactory<T> sortedDataFileFactory = new BufferSortedDataFileFactory<>(
-			partitionDataRootPath, typeSerializer, ioManager, serializerManager);
+			partitionDataRootPath, typeSerializer, ioManager, serializerManager, numBytesOut, numBuffersOut);
 
 		PartitionedBufferSortedDataFileFactory<T> partitionedBufferSortedDataFileFactory =
 			new PartitionedBufferSortedDataFileFactory<T>(sortedDataFileFactory, numPartitions);

@@ -17,6 +17,7 @@
  */
 
 package org.apache.flink.runtime.io.network.partition;
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.metrics.Counter;
@@ -89,7 +90,6 @@ public abstract class ResultPartition<T> implements ResultPartitionWriter<T> {
 	protected SerializationDelegate serializationDelegate;
 
 	protected AbstractInvokable parentTask;
-
 
 	// - Runtime state --------------------------------------------------------
 
@@ -191,5 +191,15 @@ public abstract class ResultPartition<T> implements ResultPartitionWriter<T> {
 	public void setMetricGroup(TaskIOMetricGroup metrics) {
 		numBytesOut = metrics.getNumBytesOutCounter();
 		numBuffersOut = metrics.getNumBuffersOutCounter();
+	}
+
+	@VisibleForTesting
+	public Counter getNumBytesOut() {
+		return numBytesOut;
+	}
+
+	@VisibleForTesting
+	public Counter getNumBuffersOut() {
+		return numBuffersOut;
 	}
 }

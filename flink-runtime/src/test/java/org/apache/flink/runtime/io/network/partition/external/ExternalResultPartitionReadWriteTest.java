@@ -59,6 +59,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.spy;
 
@@ -271,6 +272,10 @@ public class ExternalResultPartitionReadWriteTest {
 		}
 
 		resultPartition.finish();
+
+		assertTrue("The written bytes should be large than 0.", resultPartition.getNumBytesOut().getCount() > 0);
+		assertTrue("The number of written buffers should be large than 0.", resultPartition.getNumBuffersOut().getCount() > 0);
+
 		resultPartition.release();
 	}
 

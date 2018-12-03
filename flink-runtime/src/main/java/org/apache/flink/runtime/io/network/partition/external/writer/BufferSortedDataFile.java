@@ -22,6 +22,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.MemorySegment;
+import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.io.disk.ChannelBackendMutableObjectIterator;
 import org.apache.flink.runtime.io.disk.iomanager.BufferFileWriter;
 import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
@@ -54,6 +55,10 @@ public class BufferSortedDataFile<T> implements SortedDataFile<T> {
 
 	private final FixedLengthBufferPool bufferPool;
 	private final BufferFileWriter streamFileWriter;
+
+	private final Counter numBytesOut;
+	private final Counter numBuffersOut;
+
 	private BufferBuilder currentBufferBuilders;
 	private long bytesWritten;
 
@@ -61,7 +66,8 @@ public class BufferSortedDataFile<T> implements SortedDataFile<T> {
 
 	public BufferSortedDataFile(FileIOChannel.ID channelID, int fileId, TypeSerializer<T> serializer,
 								IOManager ioManager, List<MemorySegment> writeMemory,
-								SerializerManager<SerializationDelegate<T>> serializerManager) throws IOException {
+								SerializerManager<SerializationDelegate<T>> serializerManager,
+								Counter numBytesOut, Counter numBuffersOut) throws IOException {
 		this.channelID = channelID;
 		this.fileId = fileId;
 
@@ -71,6 +77,9 @@ public class BufferSortedDataFile<T> implements SortedDataFile<T> {
 
 		this.bufferPool = new FixedLengthBufferPool(writeMemory, false);
 		this.streamFileWriter = ioManager.createStreamFileWriter(channelID);
+
+		this.numBytesOut = numBytesOut;
+		this.numBuffersOut = numBuffersOut;
 	}
 
 	@Override
@@ -210,6 +219,14 @@ public class BufferSortedDataFile<T> implements SortedDataFile<T> {
 
 			streamFileWriter.writeBlock(buffer);
 			bytesWritten = bytesWritten + bufferSize;
+
+			if (numBytesOut != null) {
+				numBytesOut.inc(bufferSize);
+			}
+
+			if (numBuffersOut != null) {
+				numBuffersOut.inc();
+			}
 
 			bufferConsumer.close();
 			currentBufferBuilders = null;
