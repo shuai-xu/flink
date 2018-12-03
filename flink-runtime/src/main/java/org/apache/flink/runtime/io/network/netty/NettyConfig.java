@@ -23,6 +23,7 @@ import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.net.SSLUtils;
+import org.apache.flink.util.MathUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +34,7 @@ import java.net.InetAddress;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
+import static org.apache.flink.util.Preconditions.checkState;
 
 public class NettyConfig {
 
@@ -46,14 +48,6 @@ public class NettyConfig {
 	 */
 	public static final int PAGE_SIZE = 8192;
 
-	/**
-	 * Arenas allocate chunks of pageSize << maxOrder bytes. With these defaults, this results in
-	 * chunks of 16 MB.
-	 *
-	 * @see #PAGE_SIZE
-	 */
-	public static final int MAX_ORDER = 11;
-
 	// - Config keys ----------------------------------------------------------
 
 	public static final ConfigOption<Integer> NUM_ARENAS = ConfigOptions
@@ -61,6 +55,15 @@ public class NettyConfig {
 			.defaultValue(-1)
 			.withDeprecatedKeys("taskmanager.net.num-arenas")
 			.withDescription("The number of Netty arenas.");
+
+	/**
+	 * Arenas allocate chunks of pageSize << maxOrder bytes. With these defaults, this results in
+	 * chunks of 4 MB.
+	 */
+	public static final ConfigOption<Integer> MAX_ORDER = ConfigOptions
+		.key("taskmanager.network.netty.max-order")
+		.defaultValue(9)
+		.withDescription("The power of 2 of the number of pages in each chunk.");
 
 	public static final ConfigOption<Integer> NUM_THREADS_SERVER = ConfigOptions
 			.key("taskmanager.network.netty.server.numThreads")
@@ -167,12 +170,21 @@ public class NettyConfig {
 	}
 
 	public int getNumberOfArenas() {
-		final int nettyMemory = config.getInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY);
-		final int maxNumberOfArenas = Math.max(1, (int) (nettyMemory * 1024L * 1024L / getChunkSize()) - 1);
-
-		// default: number of slots
 		final int configValue = config.getInteger(NUM_ARENAS);
-		return configValue == -1 ? Math.min(numberOfSlots, maxNumberOfArenas) : configValue;
+		if (configValue != -1) {
+			return configValue;
+		}
+
+		final int nettyMemory = config.getInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY);
+		final int chunkSize = getChunkSize();
+
+		final int maxNumberOfArenas = (int) (nettyMemory * 1024L * 1024L / chunkSize) - 1;
+
+		checkState(maxNumberOfArenas >= 1,
+			"The configured nettyMemory is {} and cannot support for even one chunk with size {}",
+			nettyMemory, chunkSize);
+
+		return Math.min(numberOfSlots, maxNumberOfArenas);
 	}
 
 	public int getServerNumThreads() {
@@ -273,10 +285,17 @@ public class NettyConfig {
 				getSendAndReceiveBufferSize() == 0 ? def : man);
 	}
 
-	public static int getChunkSize() {
-		// Arenas allocate chunks of pageSize << maxOrder bytes. With these
-		// defaults, this results in chunks of 16 MB.
+	public int getMaxOrder() {
+		int maxOrder = config.getInteger(MAX_ORDER);
 
-		return PAGE_SIZE << MAX_ORDER;
+		// Assert the chunk size is not too small to fulfill the requirements of a single thread.
+		// We require the chunk size to be larger than 1MB based on the experiment results.
+		int minimumMaxOrder = 20 - MathUtils.log2strict(PAGE_SIZE);
+
+		return Math.max(minimumMaxOrder, maxOrder);
+	}
+
+	public int getChunkSize() {
+		return PAGE_SIZE << getMaxOrder();
 	}
 }

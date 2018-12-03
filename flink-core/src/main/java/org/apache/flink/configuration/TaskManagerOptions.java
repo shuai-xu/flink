@@ -97,7 +97,7 @@ public class TaskManagerOptions {
 	 */
 	public static final ConfigOption<Integer> TASK_MANAGER_PROCESS_NETTY_MEMORY =
 			key("taskmanager.process.netty.memory.mb")
-			.defaultValue(320)
+			.defaultValue(90)
 			.withDescription("The direct memory (in megabytes) used for netty framework in the task manager process.");
 
 	/**

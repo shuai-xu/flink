@@ -40,6 +40,7 @@ public class NettyConfigTest {
 		final int numSlots = 1;
 		config.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY.key(), nettyMemoryMB);
 		config.setInteger(NettyConfig.NUM_ARENAS.key(), numArenas);
+		config.setInteger(NettyConfig.MAX_ORDER, 9);
 
 		NettyConfig nettyConfig1 = createNettyConfig(numSlots, config);
 		// The num equals to configured value
@@ -52,7 +53,25 @@ public class NettyConfigTest {
 
 		NettyConfig nettyConfig3 = createNettyConfig(30, config);
 		// The num equals to min{numSlots, nettyMemory/chunkSize}
-		assertEquals(3, nettyConfig3.getNumberOfArenas());
+		assertEquals(18, nettyConfig3.getNumberOfArenas());
+	}
+
+	@Test
+	public void testNettyMaxOrderConfig() throws Exception {
+		final Configuration config = new Configuration();
+
+		final int[] configuredMaxOrder = new int[]{3, 7, 11, 13};
+		final int[] expectedMaxOrder = new int[]{7, 7, 11, 13};
+
+		for (int i = 0; i < configuredMaxOrder.length; ++i) {
+			config.setInteger(NettyConfig.MAX_ORDER, configuredMaxOrder[i]);
+			NettyConfig nettyConfig = createNettyConfig(1, config);
+			int effectiveMaxOrder = nettyConfig.getMaxOrder();
+
+			assertEquals("The " + i + " test configured " + configuredMaxOrder[i] +
+					" and expected to read " + expectedMaxOrder[i] + ", but we got " + effectiveMaxOrder,
+				expectedMaxOrder[i], effectiveMaxOrder);
+		}
 	}
 
 	private NettyConfig createNettyConfig(int numberOfSlots, Configuration config) throws Exception {

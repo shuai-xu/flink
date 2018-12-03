@@ -37,13 +37,12 @@ public class ExternalBlockShuffleService {
 
 	private final NettyBufferPool bufferPool;
 
-
 	public ExternalBlockShuffleService(Configuration configuration) throws Exception {
 		this.shuffleServiceConfiguration = ExternalBlockShuffleServiceConfiguration.fromConfiguration(configuration);
 		this.partitionProvider = new ExternalBlockResultPartitionManager(shuffleServiceConfiguration);
 
-		NettyConfig nettyConfig = shuffleServiceConfiguration.createNettyConfig();
-		bufferPool = new NettyBufferPool(nettyConfig.getNumberOfArenas());
+		NettyConfig nettyConfig = shuffleServiceConfiguration.getNettyConfig();
+		bufferPool = new NettyBufferPool(nettyConfig.getNumberOfArenas(), nettyConfig.getMaxOrder(), nettyConfig.getChunkSize());
 		server = new NettyServer(nettyConfig);
 	}
 

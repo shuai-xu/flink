@@ -24,6 +24,7 @@ import org.apache.flink.runtime.io.network.api.EndOfPartitionEvent;
 import org.apache.flink.runtime.io.network.api.serialization.EventSerializer;
 import org.apache.flink.runtime.io.network.netty.NettyBufferPool;
 
+import org.apache.flink.runtime.io.network.netty.NettyConfig;
 import org.apache.flink.shaded.netty4.io.netty.buffer.ByteBuf;
 
 import org.junit.Before;

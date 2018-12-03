@@ -20,6 +20,7 @@ package org.apache.flink.runtime.io.network.partition.external;
 
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.runtime.io.network.netty.NettyConfig;
 
@@ -52,6 +53,9 @@ public class ExternalBlockShuffleServiceConfiguration {
 
 	/** Flink configurations. */
 	private final Configuration configuration;
+
+	/** The config to the netty server. */
+	private final NettyConfig nettyConfig;
 
 	/** File system to deal with the files of result partition. */
 	private final FileSystem fileSystem;
@@ -90,6 +94,7 @@ public class ExternalBlockShuffleServiceConfiguration {
 
 	private ExternalBlockShuffleServiceConfiguration(
 		Configuration configuration,
+		NettyConfig nettyConfig,
 		FileSystem fileSystem,
 		Map<String, String> dirToDiskType,
 		Map<String, Integer> diskTypeToIOThreadNum,
@@ -104,6 +109,7 @@ public class ExternalBlockShuffleServiceConfiguration {
 		Class<?> subpartitionViewComparatorClass) {
 
 		this.configuration = configuration;
+		this.nettyConfig = nettyConfig;
 		this.fileSystem = fileSystem;
 		this.dirToDiskType = dirToDiskType;
 		this.diskTypeToIOThreadNum = diskTypeToIOThreadNum;
@@ -122,6 +128,10 @@ public class ExternalBlockShuffleServiceConfiguration {
 
 	Configuration getConfiguration() {
 		return configuration;
+	}
+
+	public NettyConfig getNettyConfig() {
+		return nettyConfig;
 	}
 
 	FileSystem getFileSystem() {
@@ -184,16 +194,19 @@ public class ExternalBlockShuffleServiceConfiguration {
 		}
 	}
 
-	NettyConfig createNettyConfig() {
+	private static NettyConfig createNettyConfig(Configuration configuration) {
 		final Integer port = configuration.getInteger(ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_PORT_KEY);
 		checkArgument(port != null && port > 0 && port < 65536,
 			"Invalid port number for ExternalBlockShuffleService: " + port);
 		final InetSocketAddress shuffleServiceInetSocketAddress = new InetSocketAddress(port);
 
+		final int memorySizePerBufferInBytes = configuration.getInteger(
+			ExternalBlockShuffleServiceOptions.MEMORY_SIZE_PER_BUFFER_IN_BYTES);
+
 		return new NettyConfig(
 			shuffleServiceInetSocketAddress.getAddress(),
 			shuffleServiceInetSocketAddress.getPort(),
-			memorySizePerBufferInBytes, 1, configuration);
+			memorySizePerBufferInBytes, Integer.MAX_VALUE, configuration);
 	}
 
 	/**
@@ -223,7 +236,6 @@ public class ExternalBlockShuffleServiceConfiguration {
 		// Direct memory used in shuffle service consists of two parts:
 		// 		(1) memory for buffers
 		// 		(2) memory for arenas in NettyServer
-		final long chunkSizeInBytes = NettyConfig.getChunkSize();
 		final long directMemoryLimitInBytes = ((long) configuration.getInteger(
 			ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_DIRECT_MEMORY_LIMIT_IN_MB)) << 20;
 
@@ -233,20 +245,18 @@ public class ExternalBlockShuffleServiceConfiguration {
 		final int minBufferNum = configuration.getInteger(ExternalBlockShuffleServiceOptions.MIN_BUFFER_NUMBER);
 		// Make sure that each disk IO thread has at least 2 buffers.
 		final int bufferNum = Math.max(diskIOThreadNum * 2, minBufferNum);
-		// Reserve one chunk for Netty arenas, since there should be at least one arena.
-		long leftDirectMemoryInBytes = directMemoryLimitInBytes - chunkSizeInBytes
-			- (long) memorySizePerBufferInBytes * bufferNum;
-		checkArgument(leftDirectMemoryInBytes >= 0,
-			"Direct memory configured is not enough, total direct memory: "
-				+ (directMemoryLimitInBytes >> 20) + " MB, arenaChunkSize: " + chunkSizeInBytes
-				+ " Bytes, segmentSize: " + memorySizePerBufferInBytes + " Bytes, minBufferNum: " + minBufferNum
-				+ ", bufferNum: " + bufferNum);
 
-		// 3.2 Auto-configure arenasNum base on the remaining memory.
+		checkArgument(directMemoryLimitInBytes >= (long) memorySizePerBufferInBytes * bufferNum,
+			"Direct memory configured is not enough, total direct memory: "
+				+ (directMemoryLimitInBytes >> 20) + " MB, segmentSize: " + memorySizePerBufferInBytes
+				+ " Bytes, minBufferNum: " + minBufferNum + ", bufferNum: " + bufferNum);
+
 		// We don't use up all the memory in case of OOM. Notice that we have reserved a chunk for Netty arenas before.
-		int arenasNum = Math.min((int) (0.8 * leftDirectMemoryInBytes / chunkSizeInBytes) + 1, nettyThreadNum);
-		configuration.setInteger(NettyConfig.NUM_ARENAS.key(), arenasNum);
-		LOG.info("Auto-configure " + NettyConfig.NUM_ARENAS.key() + " to " + arenasNum);
+		int nettyDirectMemorySize = (int) (0.8 * (directMemoryLimitInBytes - (long) memorySizePerBufferInBytes * bufferNum) / (1024.0 * 1024.0));
+		configuration.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY, nettyDirectMemorySize);
+		LOG.info("Auto-configure netty direct memory to " + nettyDirectMemorySize);
+
+		NettyConfig nettyConfig = createNettyConfig(configuration);
 
 		// 4. Parse and validate TTLs used for result partition recycling.
 		long consumedPartitionTTL = configuration.getInteger(
@@ -282,6 +292,7 @@ public class ExternalBlockShuffleServiceConfiguration {
 
 		return new ExternalBlockShuffleServiceConfiguration(
 			configuration,
+			nettyConfig,
 			FileSystem.getLocalFileSystem(),
 			dirToDiskType,
 			diskTypeToIOThreadNum,

@@ -146,8 +146,8 @@ public class ExternalBlockShuffleServiceConfigurationTest {
 		assertEquals(new Integer(999), externalBlockShuffleServiceConfiguration.getBufferNumber());
 		assertEquals(new Integer(4096), externalBlockShuffleServiceConfiguration.getMemorySizePerBufferInBytes());
 		assertEquals(new Integer(50), externalBlockShuffleServiceConfiguration.getTotalIOThreadNum());
-		assertEquals(50, configuration.getInteger(NettyConfig.NUM_THREADS_SERVER));
-		assertEquals(12, configuration.getInteger(NettyConfig.NUM_ARENAS));
+		assertEquals(50, externalBlockShuffleServiceConfiguration.getNettyConfig().getServerNumThreads());
+		assertEquals(49, externalBlockShuffleServiceConfiguration.getNettyConfig().getNumberOfArenas());
 		assertEquals(new Long(41000), externalBlockShuffleServiceConfiguration.getConsumedPartitionTTL());
 		assertEquals(new Long(42000), externalBlockShuffleServiceConfiguration.getPartialConsumedPartitionTTL());
 		assertEquals(new Long(43000), externalBlockShuffleServiceConfiguration.getUnconsumedPartitionTTL());

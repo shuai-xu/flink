@@ -22,6 +22,7 @@ import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.io.network.netty.NettyBufferPool;
 
+import org.apache.flink.runtime.io.network.netty.NettyConfig;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -165,7 +165,7 @@ public class YARNSessionITCase extends YarnTestBase {
 			getRunningContainers() >= 2);
 
 		// Check container resource
-		checkAllocatedContainers(2624, 1);
+		checkAllocatedContainers(2400, 1);
 
 		// Submit a job and the session has enough resource to execute
 		File exampleJarLocation = getTestJarPath("StreamingWordCount.jar");
@@ -277,7 +277,7 @@ public class YARNSessionITCase extends YarnTestBase {
 				getRunningContainers() >= 2);
 
 		// Check container resource
-		checkAllocatedContainers(3648, 1);
+		checkAllocatedContainers(3424, 1);
 
 		// Submit a job and the session has enough resource to execute
 		File exampleJarLocation = getTestJarPath("StreamingWordCount.jar");
@@ -388,7 +388,7 @@ public class YARNSessionITCase extends YarnTestBase {
 			getRunningContainers() >= 2);
 
 		// Check container resource
-		checkAllocatedContainers(2624, 1);
+		checkAllocatedContainers(2400, 1);
 
 		// Submit a job and the session has enough resource to execute
 		File exampleJarLocation = getTestJarPath("StreamingWordCount.jar");
@@ -507,7 +507,7 @@ public class YARNSessionITCase extends YarnTestBase {
 			getRunningContainers() >= 2);
 
 		// Check container resource
-		checkAllocatedContainers(2624, 1);
+		checkAllocatedContainers(2400, 1);
 
 		// Submit a job and the session has enough resource to execute
 		File exampleJarLocation = getTestJarPath("StreamingWordCount.jar");

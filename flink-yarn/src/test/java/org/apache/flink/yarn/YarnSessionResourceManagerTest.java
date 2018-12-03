@@ -169,7 +169,7 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 		verify(yarnClient, times(5)).addContainerRequest(containerRequestCaptor.capture());
 		AMRMClient.ContainerRequest request = containerRequestCaptor.getAllValues().get(0);
 		// Check memory allocated for YARN should contain managed and floating managed memory
-		assertEquals(1664, request.getCapability().getMemory());
+		assertEquals(1434, request.getCapability().getMemory());
 	}
 
 	@Test
