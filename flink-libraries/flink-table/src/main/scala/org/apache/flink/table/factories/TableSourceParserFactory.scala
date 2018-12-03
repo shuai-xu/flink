@@ -16,27 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.flink.connectors.orc;
+package org.apache.flink.table.factories
 
-import org.apache.flink.configuration.ConfigOption;
-
-import static org.apache.flink.configuration.ConfigOptions.key;
+import org.apache.flink.table.api.{RichTableSchema, TableSourceParser}
+import org.apache.flink.table.util.TableProperties
 
 /**
- * Orc Options.
- */
-public class OrcOptions {
-	public static final ConfigOption<String> FILE_PATH = key("filePath".toLowerCase())
-		.noDefaultValue();
-
-	public static final ConfigOption<Boolean> ENUMERATE_NESTED_FILES = key("enumerateNestedFiles".toLowerCase())
-		.defaultValue(true);
-
-	public static final ConfigOption<String> WRITE_MODE = key("writeMode".toLowerCase())
-		.defaultValue("None");
-
-	public static final ConfigOption<String> COMPRESSION_CODEC_NAME = key("compressionCodecName".toLowerCase())
-		.defaultValue("SNAPPY");
-
-	public static final String PARAMS_HELP_MSG = String.format("required params:%s", FILE_PATH);
+  * A factory to create configured table source parser instances in a streaming/batch environment
+  * based on string-based properties. See also [[TableSourceParser]] for more information.
+  */
+trait TableSourceParserFactory extends TableFactory {
+  def createParser(tableName: String,
+    tableSchema: RichTableSchema,
+    properties: TableProperties): TableSourceParser
 }

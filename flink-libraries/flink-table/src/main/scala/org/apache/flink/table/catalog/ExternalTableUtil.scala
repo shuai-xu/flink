@@ -18,11 +18,18 @@
 
 package org.apache.flink.table.catalog
 
-import org.apache.flink.factories.FlinkTableFactory
-import org.apache.flink.table.api.{RichTableSchema, TableProperties, TableSchema, TableSourceParser}
+import java.util
+
+import org.apache.flink.table.api.{RichTableSchema, TableSchema, TableSourceParser}
+import org.apache.flink.table.descriptors.ConnectorDescriptor
+import org.apache.flink.table.factories.{BatchTableSinkFactory, BatchTableSourceFactory,
+  DimensionTableSourceFactory, StreamTableSinkFactory, StreamTableSourceFactory,
+  TableFactoryService, TableSourceParserFactory}
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
-import org.apache.flink.table.util.Logging
+import org.apache.flink.table.util.{Logging, TableProperties}
+
+import scala.collection.JavaConversions._
 
 /**
   * The utility class is used to convert ExternalCatalogTable to TableSinkTable.
@@ -59,8 +66,9 @@ object ExternalTableUtil extends Logging {
       case Some(_: TableSource) =>
         null
       case None =>
-        val tableFactory = FlinkTableFactory.INSTANCE
-        val tableProperties = generateTableProperties(table, isStreaming)
+        val tableProperties = generateTableProperties(name, table, isStreaming)
+        val tableFactory = TableFactoryService.find(classOf[TableSourceParserFactory],
+          getToolDescriptor(getStorageType(name, tableProperties), tableProperties))
         tableFactory.createParser(
           name, table.richTableSchema, tableProperties)
     }
@@ -84,19 +92,22 @@ object ExternalTableUtil extends Logging {
       case Some(tableSource: TableSource) =>
         tableSource
       case None =>
-        val tableFactory = FlinkTableFactory.INSTANCE
-        val tableProperties = generateTableProperties(externalCatalogTable, isStreaming)
+        val tableProperties = generateTableProperties(name, externalCatalogTable, isStreaming)
         isDim match {
           case true =>
-            tableFactory.createDimensionTableSource(
-              name,
-              externalCatalogTable.richTableSchema,
-              tableProperties).asInstanceOf[TableSource]
+            val tableFactory = TableFactoryService.find(classOf[DimensionTableSourceFactory[_]],
+              getToolDescriptor(getStorageType(name, tableProperties), tableProperties))
+            tableFactory.createDimensionTableSource(tableProperties.toKeyLowerCase.toMap)
           case false =>
-            tableFactory.createTableSource(
-              name,
-              externalCatalogTable.richTableSchema,
-              tableProperties)
+            if (isStreaming) {
+              val tableFactory = TableFactoryService.find(classOf[StreamTableSourceFactory[_]],
+                getToolDescriptor(getStorageType(name, tableProperties), tableProperties))
+              tableFactory.createStreamTableSource(tableProperties.toKeyLowerCase.toMap)
+            } else {
+              val tableFactory = TableFactoryService.find(classOf[BatchTableSourceFactory[_]],
+                getToolDescriptor(getStorageType(name, tableProperties), tableProperties))
+              tableFactory.createBatchTableSource(tableProperties.toKeyLowerCase.toMap)
+            }
         }
     }
   }
@@ -111,19 +122,23 @@ object ExternalTableUtil extends Logging {
   def toTableSink(
       name: String,
       externalTable: ExternalCatalogTable,
-      isStreaming: Boolean): TableSink[Any] = {
+      isStreaming: Boolean): TableSink[_] = {
 
-    val tableFactory = FlinkTableFactory.INSTANCE
-    val tableProperties: TableProperties = generateTableProperties(externalTable, isStreaming)
-
-    tableFactory.createTableSink(
-      name,
-      externalTable.richTableSchema,
-      tableProperties).asInstanceOf[TableSink[Any]]
+    val tableProperties: TableProperties = generateTableProperties(name, externalTable, isStreaming)
+    if (isStreaming) {
+      val tableFactory = TableFactoryService.find(classOf[StreamTableSinkFactory[_]],
+        getToolDescriptor(getStorageType(name, tableProperties), tableProperties))
+      tableFactory.createStreamTableSink(tableProperties.toKeyLowerCase.toMap)
+    } else {
+      val tableFactory = TableFactoryService.find(classOf[BatchTableSinkFactory[_]],
+        getToolDescriptor(getStorageType(name, tableProperties), tableProperties))
+      tableFactory.createBatchTableSink(tableProperties.toKeyLowerCase.toMap)
+    }
   }
 
-  def generateTableProperties(
-      externalTable: ExternalCatalogTable, isStream: Boolean): TableProperties = {
+  def generateTableProperties(sqlTableName: String,
+    externalTable: ExternalCatalogTable,
+    isStream: Boolean): TableProperties = {
 
     val tableProperties = new TableProperties()
     tableProperties.addAll(externalTable.properties)
@@ -137,7 +152,40 @@ object ExternalTableUtil extends Logging {
           TableProperties.BLINK_ENVIRONMENT_TYPE_KEY,
           TableProperties.BLINK_ENVIRONMENT_BATCHEXEC_VALUE)
     }
-    tableProperties.setString("type", externalTable.tableType)
+    // we choose table factory based on the connector type.
+    tableProperties.setString(TableProperties.BLINK_CONNECTOR_TYPE_KEY, externalTable.tableType)
+    // put in internal arguments.
+    tableProperties.putTableNameIntoProperties(sqlTableName)
+    tableProperties.putSchemaIntoProperties(externalTable.richTableSchema)
     tableProperties
+  }
+
+  private def normalizeSupportedKeys(props: util.Map[String, String]): util.Map[String, String] = {
+    val ret = new util.HashMap[String, String]()
+    ret.putAll(props)
+    TableProperties.INTERNAL_KEYS foreach(ret.remove(_))
+    ret
+  }
+
+  private def getToolDescriptor(typeName: String, tableProperties: TableProperties)
+    : ToolConnectorDescriptor = {
+    new ToolConnectorDescriptor(typeName,
+      normalizeSupportedKeys(tableProperties.toKeyLowerCase.toMap))
+  }
+
+  private def getStorageType (tableName: String, properties: TableProperties): String = {
+    val typeName = properties.getString("type", null)
+    if (typeName != null) {
+      typeName.toUpperCase
+    } else {
+      throw new IllegalArgumentException("Property 'type' of table " + tableName + " is missing")
+    }
+  }
+}
+
+class ToolConnectorDescriptor(typeName: String, properties: util.Map[String, String])
+  extends ConnectorDescriptor(typeName, 1, false) {
+  override protected def toConnectorProperties: util.Map[String, String] = {
+    properties
   }
 }

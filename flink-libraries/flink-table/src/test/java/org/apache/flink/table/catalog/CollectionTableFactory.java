@@ -25,7 +25,6 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.io.CollectionInputFormat;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.factories.FlinkTableFactory;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -33,8 +32,6 @@ import org.apache.flink.streaming.api.functions.async.AsyncFunction;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableConfig;
-import org.apache.flink.table.api.TableFactory;
-import org.apache.flink.table.api.TableProperties;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.TableSourceParser;
 import org.apache.flink.table.api.types.DataType;
@@ -42,9 +39,17 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryString;
 import org.apache.flink.table.dataformat.GenericRow;
+import org.apache.flink.table.descriptors.SchemaValidator;
+import org.apache.flink.table.factories.BatchTableSinkFactory;
+import org.apache.flink.table.factories.BatchTableSourceFactory;
+import org.apache.flink.table.factories.DimensionTableSourceFactory;
+import org.apache.flink.table.factories.StreamTableSinkFactory;
+import org.apache.flink.table.factories.StreamTableSourceFactory;
+import org.apache.flink.table.factories.TableSourceParserFactory;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.sinks.AppendStreamTableSink;
 import org.apache.flink.table.sinks.BatchTableSink;
+import org.apache.flink.table.sinks.StreamTableSink;
 import org.apache.flink.table.sinks.TableSink;
 import org.apache.flink.table.sources.AbstractTableSource;
 import org.apache.flink.table.sources.AsyncConfig;
@@ -52,23 +57,42 @@ import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.DimensionTableSource;
 import org.apache.flink.table.sources.IndexKey;
 import org.apache.flink.table.sources.StreamTableSource;
-import org.apache.flink.table.sources.TableSource;
+import org.apache.flink.table.util.TableProperties;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.Preconditions;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import scala.Option;
 
+import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CONNECTOR_PROPERTY_VERSION;
+import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CONNECTOR_TYPE;
+
 /**
- * Factory of collection table.
+ * Factory of collection table which is only used for testing now.
  */
-public class CollectionTableFactory implements TableFactory {
+public class CollectionTableFactory<T1> implements StreamTableSourceFactory<T1>,
+	StreamTableSinkFactory<Row>,
+	TableSourceParserFactory,
+	DimensionTableSourceFactory<BaseRow>,
+	BatchTableSinkFactory<Row>,
+	BatchTableSourceFactory<Row> {
+
+	protected ClassLoader classLoader;
+
+	public void setClassLoader(ClassLoader cl) {
+		if (classLoader != null) {
+			this.classLoader = cl;
+		}
+	}
 
 	public static final List<Row> DATA = new LinkedList<>();
 
@@ -89,11 +113,6 @@ public class CollectionTableFactory implements TableFactory {
 	public static final int DIM = 2;
 	public static final int SINK = 3;
 
-	static {
-		FlinkTableFactory.DIRECTORY
-			.put("COLLECTION", CollectionTableFactory.class.getCanonicalName());
-	}
-
 	public static void initData(RowTypeInfo rowTypeInfo, Collection<Row> data) {
 		CollectionTableFactory.RESULT.clear();
 		CollectionTableFactory.DATA.clear();
@@ -104,17 +123,32 @@ public class CollectionTableFactory implements TableFactory {
 	}
 
 	@Override
-	public TableSource createTableSource(
-		String tableName, RichTableSchema schema, TableProperties properties) {
-		if (checkParam) {
-			Preconditions.checkArgument(properties.getInteger(TABLE_TYPE_KEY, -1) == SOURCE);
-		}
-		return new CollectionTableSource(tableName);
+	public Map<String, String> requiredContext() {
+		Map<String, String> context = new HashMap<>();
+		context.put(CONNECTOR_TYPE, "COLLECTION"); // COLLECTION
+		context.put(CONNECTOR_PROPERTY_VERSION, "1"); // backwards compatibility
+		return context;
 	}
 
 	@Override
-	public DimensionTableSource<?> createDimensionTableSource(
-		String tableName, RichTableSchema schema, TableProperties properties) {
+	public List<String> supportedProperties() {
+		List<String> ret = new ArrayList<>();
+		ret.add(TableProperties.TABLE_NAME);
+		ret.add(SchemaValidator.SCHEMA());
+		ret.add("tabletype");
+		return ret;
+	}
+
+	@Override
+	public StreamTableSource createStreamTableSource(Map<String, String> props) {
+		return getCollectionSource(props);
+	}
+
+	@Override
+	public DimensionTableSource<BaseRow> createDimensionTableSource(Map<String, String> props) {
+		TableProperties properties = new TableProperties();
+		properties.putProperties(props);
+		RichTableSchema schema = properties.readSchemaFromProperties(classLoader);
 		if (checkParam) {
 			Preconditions.checkArgument(properties.getInteger(TABLE_TYPE_KEY, -1) == DIM);
 		}
@@ -122,18 +156,45 @@ public class CollectionTableFactory implements TableFactory {
 	}
 
 	@Override
-	public TableSink<?> createTableSink(
-		String tableName, RichTableSchema schema, TableProperties properties) {
-		if (checkParam) {
-			Preconditions.checkArgument(properties.getInteger(TABLE_TYPE_KEY, -1) == SINK);
-		}
-		return new CollectionTableSink(tableName);
+	public StreamTableSink<Row> createStreamTableSink(Map<String, String> props) {
+		return getCollectionSink(props);
 	}
 
 	@Override
 	public TableSourceParser createParser(
 		String tableName, RichTableSchema schema, TableProperties properties) {
 		return parser;
+	}
+
+	@Override
+	public BatchTableSink<Row> createBatchTableSink(Map<String, String> props) {
+		return getCollectionSink(props);
+	}
+
+	@Override
+	public BatchTableSource<Row> createBatchTableSource(Map<String, String> props) {
+		return getCollectionSource(props);
+	}
+
+	private CollectionTableSource getCollectionSource(Map<String, String> props) {
+		TableProperties properties = new TableProperties();
+		properties.putProperties(props);
+		String tableName = properties.readTableNameFromProperties();
+
+		if (checkParam) {
+			Preconditions.checkArgument(properties.getInteger(TABLE_TYPE_KEY, -1) == SOURCE);
+		}
+		return new CollectionTableSource(tableName);
+	}
+
+	private CollectionTableSink getCollectionSink(Map<String, String> props) {
+		TableProperties properties = new TableProperties();
+		properties.putProperties(props);
+		String tableName = properties.readTableNameFromProperties();
+		if (checkParam) {
+			Preconditions.checkArgument(properties.getInteger(TABLE_TYPE_KEY, -1) == SINK);
+		}
+		return new CollectionTableSink(tableName);
 	}
 
 	/**

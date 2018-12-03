@@ -20,7 +20,6 @@ package org.apache.flink.streaming.connectors.rabbitmq;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.connectors.MetricUtils;
 import org.apache.flink.metrics.Meter;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.apache.flink.streaming.connectors.rabbitmq.common.RMQConnectionConfig;
@@ -155,8 +154,8 @@ public class RMQSink<IN> extends RichSinkFunction<IN> {
 			if (returnListener != null) {
 				channel.addReturnListener(returnListener);
 			}
-			bps = MetricUtils.registerOutBps(getRuntimeContext(), "rmq");
-			tps = MetricUtils.registerOutTps(getRuntimeContext());
+//			bps = MetricUtils.registerOutBps(getRuntimeContext(), "rmq");
+//			tps = MetricUtils.registerOutTps(getRuntimeContext());
 		} catch (IOException e) {
 			throw new RuntimeException("Error while creating the channel", e);
 		}
@@ -172,8 +171,8 @@ public class RMQSink<IN> extends RichSinkFunction<IN> {
 	public void invoke(IN value) {
 		try {
 			byte[] msg = schema.serialize(value);
-			tps.markEvent();
-			bps.markEvent();
+//			tps.markEvent();
+//			bps.markEvent();
 
 			if (publishOptions == null) {
 				channel.basicPublish("", queueName, null, msg);

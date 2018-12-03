@@ -16,24 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.connectors.rabbitmq.table;
+package org.apache.flink.table.factories
 
-import org.apache.flink.api.common.serialization.SerializationSchema;
-import org.apache.flink.types.Row;
+import java.util
+
+import org.apache.flink.table.sources.DimensionTableSource
 
 /**
- * String Serialization schema for RMQ Sink.
- */
-public class StringSerializationSchema implements SerializationSchema<Row> {
-
-	int msgIndex;
-
-	public StringSerializationSchema(int msgIndex) {
-		this.msgIndex = msgIndex;
-	}
-
-	@Override
-	public byte[] serialize(Row element) {
-		return element.getField(msgIndex).toString().getBytes();
-	}
+  * Factory to create {@link DimensionTableSource}.
+  */
+trait DimensionTableSourceFactory[T] extends TableFactory {
+  def createDimensionTableSource(properties: util.Map[String, String]): DimensionTableSource[T]
 }

@@ -18,8 +18,9 @@
 
 package org.apache.flink.table.factories
 
-import org.apache.flink.table.api.{BatchTableEnvironment, StreamTableEnvironment, TableEnvironment, TableException}
-import org.apache.flink.table.descriptors.{Descriptor, DescriptorProperties}
+import org.apache.flink.table.api.{BatchTableEnvironment, NoMatchingTableFactoryException,
+  StreamTableEnvironment, TableEnvironment, TableException}
+import org.apache.flink.table.descriptors.Descriptor
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
 
@@ -30,10 +31,24 @@ object TableFactoryUtil {
 
   /**
     * Returns a table source for a table environment.
+    *
+    * Note: This function is just for Java compatibility.
+    */
+  def findAndCreateTableSource[T](
+    tableEnvironment: TableEnvironment,
+    descriptor: Descriptor)
+  : TableSource = {
+
+    findAndCreateTableSource(tableEnvironment, descriptor, null)
+  }
+
+  /**
+    * Returns a table source for a table environment.
     */
   def findAndCreateTableSource[T](
       tableEnvironment: TableEnvironment,
-      descriptor: Descriptor)
+      descriptor: Descriptor,
+      classLoader: ClassLoader = null)
     : TableSource = {
 
     val javaMap = descriptor.toProperties
@@ -41,12 +56,12 @@ object TableFactoryUtil {
     tableEnvironment match {
       case _: BatchTableEnvironment =>
         TableFactoryService
-          .find(classOf[BatchTableSourceFactory[T]], javaMap)
+          .find(classOf[BatchTableSourceFactory[T]], javaMap, classLoader)
           .createBatchTableSource(javaMap)
 
       case _: StreamTableEnvironment =>
         TableFactoryService
-          .find(classOf[StreamTableSourceFactory[T]], javaMap)
+          .find(classOf[StreamTableSourceFactory[T]], javaMap, classLoader)
           .createStreamTableSource(javaMap)
 
       case e@_ =>
@@ -56,23 +71,45 @@ object TableFactoryUtil {
 
   /**
     * Returns a table sink for a table environment.
+    *
+    * Note: This function is just for Java compatibility.
+    */
+  def findAndCreateTableSink[T](
+    tableEnvironment: TableEnvironment,
+    descriptor: Descriptor)
+  : TableSink[T] = {
+
+    findAndCreateTableSink(tableEnvironment, descriptor, null)
+  }
+
+  /**
+    * Returns a table sink for a table environment.
     */
   def findAndCreateTableSink[T](
       tableEnvironment: TableEnvironment,
-      descriptor: Descriptor)
+      descriptor: Descriptor,
+      classLoader: ClassLoader = null)
     : TableSink[T] = {
 
     val javaMap = descriptor.toProperties
 
     tableEnvironment match {
       case _: BatchTableEnvironment =>
-        TableFactoryService
-          .find(classOf[BatchTableSinkFactory[T]], javaMap)
-          .createBatchTableSink(javaMap)
+        try {
+          TableFactoryService
+            .find(classOf[BatchTableSinkFactory[T]], javaMap, classLoader)
+            .createBatchTableSink(javaMap)
+        } catch {
+          case _: NoMatchingTableFactoryException =>
+            // fall back to compatible table sink
+            TableFactoryService
+              .find(classOf[BatchCompatibleTableSinkFactory[T]], javaMap, classLoader)
+              .createBatchCompatibleTableSink(javaMap)
+        }
 
       case _: StreamTableEnvironment =>
         TableFactoryService
-          .find(classOf[StreamTableSinkFactory[T]], javaMap)
+          .find(classOf[StreamTableSinkFactory[T]], javaMap, classLoader)
           .createStreamTableSink(javaMap)
 
       case e@_ =>

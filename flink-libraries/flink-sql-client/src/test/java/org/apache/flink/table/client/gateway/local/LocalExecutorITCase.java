@@ -308,6 +308,7 @@ public class LocalExecutorITCase extends TestLogger {
 		}
 	}
 
+	@Ignore
 	@Test(timeout = 30_000L)
 	public void testStreamQueryExecutionSink() throws Exception {
 		final String csvOutputPath = new File(tempFolder.newFolder().getAbsolutePath(), "test-out.csv").toURI().toString();
