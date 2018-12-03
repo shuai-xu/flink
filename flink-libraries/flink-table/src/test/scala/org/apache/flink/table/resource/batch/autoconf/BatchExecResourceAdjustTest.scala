@@ -42,19 +42,13 @@ class BatchExecResourceAdjustTest extends TableTestBatchExecBase {
 
   @Test
   def testAdjustAccordingToFewCPU(): Unit = {
-    setAdjustResource(util, 100, Long.MaxValue)
+    setAdjustResource(util, 100)
     testResource(util)
   }
 
   @Test
   def testAdjustAccordingToMuchResource(): Unit = {
-    setAdjustResource(util, Double.MaxValue, Long.MaxValue)
-    testResource(util)
-  }
-
-  @Test
-  def testAdjustAccordingToFewMem(): Unit = {
-    setAdjustResource(util, 100, 80000)
+    setAdjustResource(util, Double.MaxValue)
     testResource(util)
   }
 
@@ -88,11 +82,10 @@ class BatchExecResourceAdjustTest extends TableTestBatchExecBase {
 
   private def setAdjustResource(
       util: BatchExecTableTestUtil,
-      cpu: Double,
-      mem: Long): Unit = {
-    util.getTableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU_MEM,
-      cpu + "," + mem
+      cpu: Double): Unit = {
+    util.getTableEnv.getConfig.getParameters.setDouble(
+      TableConfig.SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU,
+      cpu
     )
   }
 }

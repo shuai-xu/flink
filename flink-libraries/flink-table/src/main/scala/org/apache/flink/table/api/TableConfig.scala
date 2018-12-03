@@ -22,10 +22,10 @@ import _root_.java.util.TimeZone
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import _root_.java.lang.{Boolean => JBoolean}
 import _root_.java.lang.{Long => JLong}
+import _root_.java.lang.{Double => JDouble}
 
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.configuration.{ConfigOption, ConfigOptions, Configuration, GlobalConfiguration}
-import org.apache.flink.streaming.api.graph.ShuffleProperties
 import org.apache.flink.table.api.OperatorType.OperatorType
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.sources.TableSource
@@ -984,13 +984,10 @@ object TableConfig {
     "sql.exec.infer-resource.operator.max-memory-mb"
   val SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB_DEFAULT: Int = 1024
 
-  /**
-    * Sets Whether to limit total cpu and memory of a runningUnit.
-    * If not set, do not limit resource, If set, cpu(double) and memory(in MB, long)
-    * need to be provided,
-    * for example: 0.5d,1024
-    */
-  val SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU_MEM = "sql.resource.runningUnit.total-cpu-mem"
+  val SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU: ConfigOption[JDouble] =
+    ConfigOptions.key("sql.resource.runningUnit.total-cpu")
+        .defaultValue(JDouble.valueOf(0d))
+        .withDescription("total cpu limit of a runningUnit. 0 means no limit.")
 
   // ================================ Schedule =================================
 

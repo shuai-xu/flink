@@ -19,7 +19,6 @@
 package org.apache.flink.table.util;
 
 import org.apache.flink.api.common.operators.ResourceSpec;
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.table.api.TableConfig;
 
@@ -370,7 +369,7 @@ public class ExecResourceUtil {
 
 		int preferMem = Math.max(Math.min(maxMem, memCostInMB), minMem);
 
-		int reservedMem = Math.max(Math.min(maxMem, (int) (memCostInMB * reservedDiscount)), minMem);
+		int reservedMem = Math.max((int) (preferMem * reservedDiscount), minMem);
 
 		return new Tuple3<>(reservedMem, preferMem, maxMem);
 	}
@@ -391,30 +390,6 @@ public class ExecResourceUtil {
 		return tConfig.getParameters().getBoolean(
 				TableConfig.SQL_SCHEDULE_RUNNING_UNIT_ENABLE(),
 				TableConfig.SQL_SCHEDULE_RUNNING_UNIT_ENABLE_DEFAULT());
-	}
-
-	/**
-	 * Gets total resource limit for a runningUnit.
-	 */
-	public static Tuple2<Double, Long> getRunningUnitResourceLimit(TableConfig tConfig) {
-		String resource = tConfig.getParameters().getString(
-				TableConfig.SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU_MEM(),
-				null
-		);
-		if (resource == null) {
-			return null;
-		}
-		String[] s = resource.split(",");
-		if (s.length != 2) {
-			throw new IllegalArgumentException(TableConfig.SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU_MEM() + " set illegal, need: double, long");
-		}
-		try {
-			double cpu = Double.valueOf(s[0].trim());
-			long mem = Long.valueOf(s[1].trim());
-			return new Tuple2<>(cpu, mem);
-		} catch (NumberFormatException ex) {
-			throw new IllegalArgumentException(TableConfig.SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU_MEM() + " set illegal, need: double, long", ex);
-		}
 	}
 
 	/**
