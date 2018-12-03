@@ -84,6 +84,11 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	 */
 	protected transient Map<String, InternalState> states;
 
+	/**
+	 * The state storages backend by the backend.
+	 */
+	protected transient Map<String, StateStorage> storages;
+
 	/** Registry for all opened streams, so they can be closed if the task using this backend is closed */
 	protected CloseableRegistry cancelStreamRegistry;
 
@@ -119,6 +124,7 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 		this.groups = Preconditions.checkNotNull(groups);
 		this.userClassLoader = Preconditions.checkNotNull(userClassLoader);
 		this.states = new HashMap<>();
+		this.storages = new HashMap<>();
 		this.cancelStreamRegistry = new CloseableRegistry();
 		this.kvStateRegistry = kvStateRegistry;
 	}
@@ -157,6 +163,15 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	 */
 	public Map<String, InternalState> getStates() {
 		return states;
+	}
+
+	/**
+	 * Returns the storages backend by the state backend.
+	 *
+	 * @return The storages backend by the state backend.
+	 */
+	public Map<String, StateStorage> getStorages() {
+		return storages;
 	}
 
 	//--------------------------------------------------------------------------
@@ -296,6 +311,11 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	@Override
 	public InternalState getInternalState(String stateName) {
 		return states.get(stateName);
+	}
+
+	@Override
+	public StateStorage getStateStorage(String storageName) {
+		return storages.get(storageName);
 	}
 
 	private void registQueryableStateIfNeeded(KeyedStateDescriptor descriptor, KeyedState state) {
