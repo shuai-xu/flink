@@ -185,25 +185,11 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     }
   }
 
-  private def calcSortMemory(
-      ratio: Double,
-      totalSortMemory: Long): (Long, Long) = {
-    if (leftSorted) {
-      (0, totalSortMemory)
-    } else if (rightSorted) {
-      (totalSortMemory, 0)
-    } else {
-      val leftMinMemory =
-        if (leftSorted) 0 else BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM
-      val leftMaxMemory =
-        totalSortMemory - (
-          if (rightSorted) 0 else BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM)
-      val leftInferMemory = (totalSortMemory * ratio).toLong
-
-      val leftMemory = Math.max(Math.min(leftMaxMemory, leftInferMemory), leftMinMemory)
-      val rightMemory = totalSortMemory - leftMemory
-      (leftMemory, rightMemory)
-    }
+  private def calcSortMemory(ratio: Double, totalSortMemory: Long): Long = {
+    val minGuaranteedMemory = BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM
+    val maxGuaranteedMemory = totalSortMemory - BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM
+    val inferLeftSortMemory = (totalSortMemory * ratio).toLong
+    Math.max(Math.min(inferLeftSortMemory, maxGuaranteedMemory), minGuaranteedMemory)
   }
 
   /**
@@ -236,33 +222,28 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     val externalBufferMemory = ExecResourceUtil.getExternalBufferManagedMemory(config)
     val externalBufferMemorySize = externalBufferMemory * ExecResourceUtil.SIZE_IN_MB
 
-    val mergeBufferMemory = ExecResourceUtil.getMergeJoinBufferManagedMemory(config)
-    val mergeBufferMemorySize = mergeBufferMemory * ExecResourceUtil.SIZE_IN_MB
-
     val perRequestSize =
       ExecResourceUtil.getPerRequestManagedMemory(config)* ExecResourceUtil.SIZE_IN_MB
     val infer = ExecResourceUtil.getInferMode(config).equals(InferMode.ALL)
 
     val totalReservedSortMemory = (resource.getReservedManagedMem -
-      externalBufferMemory * getExternalBufferNum -
-      mergeBufferMemory * (2 - getSortNum)) * ExecResourceUtil.SIZE_IN_MB
+      externalBufferMemory * getExternalBufferNum) * ExecResourceUtil.SIZE_IN_MB
 
     val totalMaxSortMemory = (resource.getMaxManagedMem -
-      externalBufferMemory * getExternalBufferNum -
-      mergeBufferMemory * (2 - getSortNum)) * ExecResourceUtil.SIZE_IN_MB
+      externalBufferMemory * getExternalBufferNum) * ExecResourceUtil.SIZE_IN_MB
 
     val leftRatio = if (infer) inferLeftRowCountRatio else 0.5d
 
-    val (leftReservedSortMemorySize, rightReservedSortMemorySize) =
-      calcSortMemory(leftRatio, totalReservedSortMemory)
-    val (leftMaxSortMemorySize, rightMaxSortMemorySize) =
-      calcSortMemory(leftRatio, totalMaxSortMemory)
+    val leftReservedSortMemorySize = calcSortMemory(leftRatio, totalReservedSortMemory)
+    val rightReservedSortMemorySize = totalReservedSortMemory - leftReservedSortMemorySize
+    val leftMaxSortMemorySize = calcSortMemory(leftRatio, totalMaxSortMemory)
+    val rightMaxSortMemorySize = totalMaxSortMemory - leftMaxSortMemorySize
 
     // sort code gen
     val operator = smjType match {
       case SortMergeJoinType.MergeJoin =>
         new MergeJoinOperator(
-          mergeBufferMemorySize, mergeBufferMemorySize,
+          leftReservedSortMemorySize, rightReservedSortMemorySize,
           flinkJoinType,
           condFunc,
           ProjectionCodeGenerator.generateProjection(
@@ -275,15 +256,21 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
           filterNulls)
 
       case SortMergeJoinType.SortLeftJoin | SortMergeJoinType.SortRightJoin =>
-        val (reservedSortMemory, maxSortMemory, sortKeys) = if (rightSorted) {
-          (leftReservedSortMemorySize, leftMaxSortMemorySize, leftAllKey.toArray)
+        val (reservedSortMemory, mergeBufferMemory, maxSortMemory, sortKeys) = if (rightSorted) {
+          (leftReservedSortMemorySize,
+              rightReservedSortMemorySize,
+              leftMaxSortMemorySize,
+              leftAllKey.toArray)
         } else {
-          (rightReservedSortMemorySize, rightMaxSortMemorySize, rightAllKey.toArray)
+          (rightReservedSortMemorySize,
+              leftReservedSortMemorySize,
+              rightMaxSortMemorySize,
+              rightAllKey.toArray)
         }
 
         new OneSideSortMergeJoinOperator(
           reservedSortMemory, maxSortMemory,
-          perRequestSize, mergeBufferMemorySize, externalBufferMemorySize,
+          perRequestSize, mergeBufferMemory, externalBufferMemorySize,
           flinkJoinType, rightSorted, condFunc,
           ProjectionCodeGenerator.generateProjection(
             CodeGeneratorContext(config), "OneSideSMJProjection",

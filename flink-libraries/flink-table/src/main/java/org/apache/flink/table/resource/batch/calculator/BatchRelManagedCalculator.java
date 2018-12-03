@@ -159,31 +159,14 @@ public class BatchRelManagedCalculator implements BatchExecRelVisitor<Void> {
 	@Override
 	public Void visit(BatchExecSortMergeJoinBase sortMergeJoin) {
 		visitChildren(sortMergeJoin);
-
-		int numOfSort = 0;
-		if (!sortMergeJoin.leftSorted()) {
-			numOfSort += 1;
-		}
-		if (!sortMergeJoin.rightSorted()) {
-			numOfSort += 1;
-		}
-
 		int externalBufferMemoryMb = ExecResourceUtil.getExternalBufferManagedMemory(
-			tConfig) * sortMergeJoin.getExternalBufferNum();
-		int mergeBufferMemoryMb = ExecResourceUtil.getMergeJoinBufferManagedMemory(tConfig);
-
+				tConfig) * sortMergeJoin.getExternalBufferNum();
 		int sortMemory = ExecResourceUtil.getSortBufferManagedMemory(tConfig);
-		int preferSortMemory = ExecResourceUtil.getSortBufferManagedPreferredMemory(tConfig);
-		int maxSortMemory = ExecResourceUtil.getSortBufferManagedMaxMemory(tConfig);
-
-		int reservedMemory =
-			sortMemory * numOfSort + mergeBufferMemoryMb * (2 - numOfSort) + externalBufferMemoryMb;
-		int preferMemory =
-			preferSortMemory * numOfSort + mergeBufferMemoryMb * (2 - numOfSort) + externalBufferMemoryMb;
-		int maxMemory =
-			maxSortMemory * numOfSort + mergeBufferMemoryMb * (2 - numOfSort) + externalBufferMemoryMb;
-
-		relResMap.get(sortMergeJoin).setManagedMem(reservedMemory, preferMemory, maxMemory);
+		int reservedMemory = sortMemory * 2 + externalBufferMemoryMb;
+		int preferSortMemory = ExecResourceUtil.getSortBufferManagedPreferredMemory(
+				tConfig);
+		int preferMemory = preferSortMemory * 2 + externalBufferMemoryMb;
+		relResMap.get(sortMergeJoin).setManagedMem(reservedMemory, preferMemory, preferMemory);
 		return null;
 	}
 

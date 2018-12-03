@@ -862,12 +862,6 @@ object TableConfig {
   val SQL_HASH_JOIN_BROADCAST_THRESHOLD = "sql.exec.hash-join.broadcast-threshold"
   val SQL_HASH_JOIN_BROADCAST_THRESHOLD_DEFAULT: Long = 1 * 1024 * 1024
 
-  val SQL_MERGE_JOIN_BUFFER_MEM: ConfigOption[Integer] =
-    ConfigOptions.key("sql.exec.merge-join.buffer-memory-mb")
-      .defaultValue(new Integer(64))
-      .withDescription(
-        "The default value for memory size of buffer in merge join.")
-
   // =================================== Aggregate ===================================
   /**
     * Sets the window elements buffer limit in size used in group window agg operator.

@@ -163,16 +163,6 @@ public class ExecResourceUtil {
 	}
 
 	/**
-	 * Gets the config managedMemory for external buffer in merge join.
-	 * @param tConfig TableConfig.
-	 * @return the config managedMemory for external buffer in merge join.
-	 */
-	public static int getMergeJoinBufferManagedMemory(TableConfig tConfig) {
-		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_MERGE_JOIN_BUFFER_MEM());
-	}
-
-	/**
 	 * Gets the config managedMemory for hashJoin table.
 	 * @param tConfig TableConfig.
 	 * @return the config managedMemory for hashJoin table.
