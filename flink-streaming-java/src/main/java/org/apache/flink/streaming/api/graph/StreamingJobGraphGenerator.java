@@ -389,7 +389,12 @@ public class StreamingJobGraphGenerator {
 			ChainingStreamNode node = layeredNodeMap.get(edge.getTargetId());
 
 			node.setInitNodeCountOfPath(maxPassingNodeNum);
-			node.chainTo(upstreamNode, edge, streamGraph.isMultiHeadChainMode(), streamGraph.isChainEagerlyEnabled());
+			node.chainTo(upstreamNode,
+					edge,
+					streamGraph.getStreamNode(edge.getSourceId()),
+					streamGraph.getStreamNode(edge.getTargetId()),
+					streamGraph.isMultiHeadChainMode(),
+					streamGraph.isChainEagerlyEnabled());
 		}
 	}
 
@@ -1166,7 +1171,12 @@ public class StreamingJobGraphGenerator {
 			isChainablePathMerged = true;
 		}
 
-		void chainTo(ChainingStreamNode upstreamNode, StreamEdge edge, boolean isMultiHeadChainMode, boolean isEagerChainingEnabled) {
+		void chainTo(ChainingStreamNode upstreamNode,
+					StreamEdge edge,
+					StreamNode sourceVertex,
+					StreamNode targetVertex,
+					boolean isMultiHeadChainMode,
+					boolean isEagerChainingEnabled) {
 			checkState(upstreamNode.isChainablePathMerged,
 				"The passing paths of the upstream node(nodeId: %s) have not been merged yet.", upstreamNode.nodeId);
 
@@ -1211,7 +1221,7 @@ public class StreamingJobGraphGenerator {
 						|| mergedNonChainablePath.intersects(upstreamNode.mergedChainablePath)) {
 						isChainable = false;
 					} else {
-						isChainable = isEdgeChainableOnMultiHeadMode(edge, isEagerChainingEnabled);
+						isChainable = isEdgeChainableOnMultiHeadMode(edge, sourceVertex, targetVertex, isEagerChainingEnabled);
 					}
 				}
 
@@ -1221,7 +1231,7 @@ public class StreamingJobGraphGenerator {
 					addNonChainablePath(upstreamNode);
 				}
 			} else {
-				isChainable = isEdgeChainable(edge, isEagerChainingEnabled);
+				isChainable = isEdgeChainable(edge, sourceVertex, targetVertex, isEagerChainingEnabled);
 			}
 
 			if (isChainable) {
@@ -1285,17 +1295,13 @@ public class StreamingJobGraphGenerator {
 			}
 		}
 
-		private boolean isEdgeChainable(StreamEdge edge, boolean chainEagerlyEnabled) {
-			StreamNode downStreamNode = edge.getTargetVertex();
+		private boolean isEdgeChainable(StreamEdge edge, StreamNode upstreamNode, StreamNode downStreamNode, boolean chainEagerlyEnabled) {
 
 			return downStreamNode.getInEdges().size() == 1
-				&& isEdgeChainableOnMultiHeadMode(edge, chainEagerlyEnabled);
+				&& isEdgeChainableOnMultiHeadMode(edge, upstreamNode, downStreamNode, chainEagerlyEnabled);
 		}
 
-		private boolean isEdgeChainableOnMultiHeadMode(StreamEdge edge, boolean chainEagerlyEnabled) {
-			StreamNode downStreamNode = edge.getTargetVertex();
-			StreamNode upstreamNode = edge.getSourceVertex();
-
+		private boolean isEdgeChainableOnMultiHeadMode(StreamEdge edge, StreamNode upstreamNode, StreamNode downStreamNode, boolean chainEagerlyEnabled) {
 			StreamOperator<?> downstreamOperator = downStreamNode.getOperator();
 			StreamOperator<?> upstreamOperator = upstreamNode.getOperator();
 

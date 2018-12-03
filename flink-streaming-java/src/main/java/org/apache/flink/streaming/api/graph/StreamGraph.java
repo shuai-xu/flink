@@ -748,8 +748,8 @@ public class StreamGraph extends StreamingPlan {
 	}
 
 	private void removeEdge(StreamEdge edge) {
-		edge.getSourceVertex().getOutEdges().remove(edge);
-		edge.getTargetVertex().getInEdges().remove(edge);
+		getStreamNode(edge.getSourceId()).getOutEdges().remove(edge);
+		getStreamNode(edge.getTargetId()).getInEdges().remove(edge);
 	}
 
 	private void removeVertex(StreamNode toRemove) {

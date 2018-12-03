@@ -167,7 +167,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				Lists.newArrayList(Tuple2.of("Source: source1", "map1")),
 				Sets.newHashSet("Source: source1"),
 				Sets.newHashSet("Source: source1"),
-				sourceTaskConfig);
+				sourceTaskConfig, streamGraph);
 
 			StreamConfig sourceConfig = sourceTaskConfig.getChainedHeadNodeConfigs().get(0);
 			assertEquals(0, sourceConfig.getCustomConfiguration(cl).keySet().size());
@@ -175,7 +175,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				Collections.emptyList(),
 				Lists.newArrayList(Tuple2.of("Source: source1", "map1")),
 				54321L,
-				sourceConfig, cl);
+				sourceConfig, cl, streamGraph);
 		}
 
 		// CHAIN(Map1 -> Filter[1,2]) vertex
@@ -200,7 +200,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				Lists.newArrayList(Tuple2.of("filter1", "map2"), Tuple2.of("filter2", "map2"), Tuple2.of("filter2", "Sink: print2")),
 				Sets.newHashSet("map1", "filter1", "filter2"),
 				Sets.newHashSet("map1"),
-				mapFilterTaskConfig);
+				mapFilterTaskConfig, streamGraph);
 
 			StreamConfig mapConfig = mapFilterTaskConfig.getChainedHeadNodeConfigs().get(0);
 			Configuration operatorConfig = mapConfig.getCustomConfiguration(cl);
@@ -210,7 +210,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				Lists.newArrayList(Tuple2.of("map1", "filter1"), Tuple2.of("map1", "filter2")),
 				Collections.emptyList(),
 				54321L,
-				mapConfig, cl);
+				mapConfig, cl, streamGraph);
 
 			List<StreamEdge> mapChainedOutEdges = mapConfig.getChainedOutputs(cl);
 
@@ -220,7 +220,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				Collections.emptyList(),
 				Lists.newArrayList(Tuple2.of("filter1", "map2")),
 				54321L,
-				filter1Config, cl);
+				filter1Config, cl, streamGraph);
 
 			StreamConfig filter2Config = mapFilterTaskConfig.getChainedNodeConfigs().get(mapChainedOutEdges.get(1).getTargetId());
 			assertEquals(0, filter2Config.getCustomConfiguration(cl).keySet().size());
@@ -228,7 +228,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				Collections.emptyList(),
 				Lists.newArrayList(Tuple2.of("filter2", "map2"), Tuple2.of("filter2", "Sink: print2")),
 				54321L,
-				filter2Config, cl);
+				filter2Config, cl, streamGraph);
 		}
 
 		// CHAIN(Map2 -> Print1) vertex
@@ -245,7 +245,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				Collections.emptyList(),
 				Sets.newHashSet("map2", "Sink: print1"),
 				Sets.newHashSet("map2"),
-				mapPrintTaskConfig);
+				mapPrintTaskConfig, streamGraph);
 
 			StreamConfig mapConfig = mapPrintTaskConfig.getChainedHeadNodeConfigs().get(0);
 			assertEquals(0, mapConfig.getCustomConfiguration(cl).keySet().size());
@@ -253,7 +253,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				Lists.newArrayList(Tuple2.of("map2", "Sink: print1")),
 				Collections.emptyList(),
 				54321L,
-				mapConfig, cl);
+				mapConfig, cl, streamGraph);
 
 			List<StreamEdge> mapChainedOutEdges = mapConfig.getChainedOutputs(cl);
 
@@ -263,7 +263,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				Collections.emptyList(),
 				Collections.emptyList(),
 				54321L,
-				printConfig, cl);
+				printConfig, cl, streamGraph);
 		}
 
 		// Print2 vertex
@@ -280,7 +280,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				Collections.emptyList(),
 				Sets.newHashSet("Sink: print2"),
 				Sets.newHashSet("Sink: print2"),
-				printTaskConfig);
+				printTaskConfig, streamGraph);
 
 			StreamConfig printConfig = printTaskConfig.getChainedHeadNodeConfigs().get(0);
 			assertEquals(0, printConfig.getCustomConfiguration(cl).keySet().size());
@@ -288,7 +288,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				Collections.emptyList(),
 				Collections.emptyList(),
 				54321L,
-				printConfig, cl);
+				printConfig, cl, streamGraph);
 		}
 	}
 
@@ -959,7 +959,8 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		List<Tuple2<String, String>> expectedOutEdges,
 		Set<String> expectedChainedNodes,
 		Set<String> expectedHeadNodes,
-		final StreamTaskConfigSnapshot vertexConfig) {
+		final StreamTaskConfigSnapshot vertexConfig,
+		final StreamGraph streamGraph) {
 
 		assertEquals(expectedTimeChar, vertexConfig.getTimeCharacteristic());
 		assertEquals(expectedCheckpointingEnabled, vertexConfig.isCheckpointingEnabled());
@@ -975,14 +976,16 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			.collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
 		for (int i = 0; i < vertexConfig.getInStreamEdgesOfChain().size(); i++) {
 			StreamEdge edge = vertexConfig.getInStreamEdgesOfChain().get(i);
-			assertEquals(expectedInEdgesKeys.get(i), edge.getSourceVertex().getOperatorName() + "|" + edge.getTargetVertex().getOperatorName());
+			assertEquals(expectedInEdgesKeys.get(i),
+					streamGraph.getStreamNode(edge.getSourceId()).getOperatorName() + "|" + streamGraph.getStreamNode(edge.getTargetId()).getOperatorName());
 		}
 
 		List<String> expectedOutEdgesKeys = expectedOutEdges.stream().map((tuple) -> tuple.f0 + "|" + tuple.f1)
 			.collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
 		for (int i = 0; i < vertexConfig.getOutStreamEdgesOfChain().size(); i++) {
 			StreamEdge edge = vertexConfig.getOutStreamEdgesOfChain().get(i);
-			assertEquals(expectedOutEdgesKeys.get(i), edge.getSourceVertex().getOperatorName() + "|" + edge.getTargetVertex().getOperatorName());
+			assertEquals(expectedOutEdgesKeys.get(i),
+					streamGraph.getStreamNode(edge.getSourceId()).getOperatorName() + "|" + streamGraph.getStreamNode(edge.getTargetId()).getOperatorName());
 		}
 
 		for (Map.Entry<Integer, StreamConfig> entry: vertexConfig.getChainedNodeConfigs().entrySet()) {
@@ -1003,7 +1006,8 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		List<Tuple2<String, String>> expectedNonChainedOutputs,
 		long expectedBufferTimeout,
 		final StreamConfig nodeConfig,
-		final ClassLoader classLoader) {
+		final ClassLoader classLoader,
+		final StreamGraph streamGraph) {
 
 		final List<StreamEdge> chainedOutEdges = nodeConfig.getChainedOutputs(classLoader);
 		final List<StreamEdge> nonChainedOutEdges = nodeConfig.getNonChainedOutputs(classLoader);
@@ -1020,14 +1024,16 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			.collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
 		for (int i = 0; i < chainedOutEdges.size(); i++) {
 			StreamEdge edge = chainedOutEdges.get(i);
-			assertEquals(expectedChainedOutEdgesKeys.get(i), edge.getSourceVertex().getOperatorName() + "|" + edge.getTargetVertex().getOperatorName());
+			assertEquals(expectedChainedOutEdgesKeys.get(i),
+					streamGraph.getStreamNode(edge.getSourceId()).getOperatorName() + "|" + streamGraph.getStreamNode(edge.getTargetId()).getOperatorName());
 		}
 
 		List<String> expectedNonChainedOutEdgesKeys = expectedNonChainedOutputs.stream().map((tuple) -> tuple.f0 + "|" + tuple.f1)
 			.collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
 		for (int i = 0; i < nonChainedOutEdges.size(); i++) {
 			StreamEdge edge = nonChainedOutEdges.get(i);
-			assertEquals(expectedNonChainedOutEdgesKeys.get(i), edge.getSourceVertex().getOperatorName() + "|" + edge.getTargetVertex().getOperatorName());
+			assertEquals(expectedNonChainedOutEdgesKeys.get(i),
+					streamGraph.getStreamNode(edge.getSourceId()).getOperatorName() + "|" + streamGraph.getStreamNode(edge.getTargetId()).getOperatorName());
 		}
 
 		assertEquals(expectedBufferTimeout, nodeConfig.getBufferTimeout());

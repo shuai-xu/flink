@@ -42,8 +42,8 @@ public class StreamEdge implements Serializable {
 
 	private final String edgeName;
 
-	private final StreamNode sourceVertex;
-	private final StreamNode targetVertex;
+	private final int sourceId;
+	private final int targetId;
 
 	/**
 	 * The type number of the input for co-tasks.
@@ -81,8 +81,8 @@ public class StreamEdge implements Serializable {
 	public StreamEdge(StreamNode sourceVertex, StreamNode targetVertex, int typeNumber,
 			List<String> selectedNames, StreamPartitioner<?> outputPartitioner, OutputTag outputTag,
 			DataExchangeMode dataExchangeMode) {
-		this.sourceVertex = sourceVertex;
-		this.targetVertex = targetVertex;
+		this.sourceId = sourceVertex.getId();
+		this.targetId = targetVertex.getId();
 		this.typeNumber = typeNumber;
 		this.selectedNames = selectedNames;
 		this.outputPartitioner = outputPartitioner;
@@ -99,20 +99,12 @@ public class StreamEdge implements Serializable {
 		return edgeID;
 	}
 
-	public StreamNode getSourceVertex() {
-		return sourceVertex;
-	}
-
-	public StreamNode getTargetVertex() {
-		return targetVertex;
-	}
-
 	public int getSourceId() {
-		return sourceVertex.getId();
+		return sourceId;
 	}
 
 	public int getTargetId() {
-		return targetVertex.getId();
+		return targetId;
 	}
 
 	public int getTypeNumber() {
@@ -164,7 +156,7 @@ public class StreamEdge implements Serializable {
 
 	@Override
 	public String toString() {
-		return "(" + sourceVertex + " -> " + targetVertex + ", typeNumber=" + typeNumber
+		return "(" + sourceId + " -> " + targetId + ", typeNumber=" + typeNumber
 				+ ", selectedNames=" + selectedNames + ", outputPartitioner=" + outputPartitioner
 				+ ", outputTag=" + outputTag + ", dataExchangeMode" + dataExchangeMode + ", edgeID=" + edgeID + ')';
 	}

@@ -114,7 +114,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			Collections.emptyList(),
 			Sets.newHashSet("Source: source1", "Source: source2", "map1", "Sink: sink1", "Sink: sink2"),
 			Sets.newHashSet("Source: source1", "Source: source2"),
-			taskonfig);
+			taskonfig, streamGraph);
 	}
 
 	/**
@@ -165,7 +165,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 				Lists.newArrayList(Tuple2.of("Source: source1", "map1"), Tuple2.of("Source: source1", "filter1")),
 				Sets.newHashSet("Source: source1"),
 				Sets.newHashSet("Source: source1"),
-				taskonfig);
+				taskonfig, streamGraph);
 		}
 
 		// CHAIN([Filter1 -> Map1, Map1 -> Sink1]) vertex
@@ -180,7 +180,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 				Collections.emptyList(),
 				Sets.newHashSet("filter1", "map1", "Sink: sink1"),
 				Sets.newHashSet("filter1", "map1"),
-				taskonfig);
+				taskonfig, streamGraph);
 		}
 	}
 
@@ -235,7 +235,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 				Lists.newArrayList(Tuple2.of("filter1", "process1"), Tuple2.of("map1", "filter2")),
 				Sets.newHashSet("Source: source1", "filter1", "map1"),
 				Sets.newHashSet("Source: source1"),
-				taskonfig);
+				taskonfig, streamGraph);
 		}
 
 		// CHAIN([Filter2 -> Process1, Process1 -> Sink1]) vertex
@@ -250,7 +250,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 				Collections.emptyList(),
 				Sets.newHashSet("filter2", "process1", "Sink: sink1"),
 				Sets.newHashSet("filter2", "process1"),
-				taskonfig);
+				taskonfig, streamGraph);
 		}
 	}
 
@@ -307,7 +307,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 				Lists.newArrayList(Tuple2.of("map1", "process1")),
 				Sets.newHashSet("Source: source1", "map1"),
 				Sets.newHashSet("Source: source1"),
-				taskonfig);
+				taskonfig, streamGraph);
 		}
 
 		// CHAIN(Source2 -> Map2) vertex
@@ -322,7 +322,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 				Lists.newArrayList(Tuple2.of("map2", "process1")),
 				Sets.newHashSet("Source: source2", "map2"),
 				Sets.newHashSet("Source: source2"),
-				taskonfig);
+				taskonfig, streamGraph);
 		}
 
 		// CHAIN(Process1 -> (Sink1, Sink2)) vertex
@@ -337,7 +337,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 				Collections.emptyList(),
 				Sets.newHashSet("process1", "Sink: sink1", "Sink: sink2"),
 				Sets.newHashSet("process1"),
-				taskonfig);
+				taskonfig, streamGraph);
 		}
 	}
 
@@ -413,7 +413,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 				Lists.newArrayList(Tuple2.of("filter1", "map1"), Tuple2.of("Source: source1", "map1"), Tuple2.of("filter2", "process1")),
 				Sets.newHashSet("Source: source1", "filter1", "filter2", "Sink: sink1"),
 				Sets.newHashSet("Source: source1"),
-				taskonfig);
+				taskonfig, streamGraph);
 		}
 
 		// CHAIN(Map1 -> Sink2) vertex
@@ -428,7 +428,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 				Collections.emptyList(),
 				Sets.newHashSet("map1", "Sink: sink2"),
 				Sets.newHashSet("map1"),
-				taskonfig);
+				taskonfig, streamGraph);
 		}
 
 		// CHAIN([(Source2, Source3) -> Map2, Map2 -> Process1, (Process1, Source4) -> Process2, Process2 -> Sink3]) vertex
@@ -443,7 +443,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 				Lists.newArrayList(Tuple2.of("process1", "process3"), Tuple2.of("map2", "process3")),
 				Sets.newHashSet("Source: source2", "Source: source3", "Source: source4", "map2", "process1", "process2", "Sink: sink3"),
 				Sets.newHashSet("Source: source2", "Source: source3", "Source: source4", "process1"),
-				taskonfig);
+				taskonfig, streamGraph);
 		}
 
 		// CHAIN(Process3 -> Sink4) vertex
@@ -458,7 +458,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 				Collections.emptyList(),
 				Sets.newHashSet("process3", "Sink: sink4"),
 				Sets.newHashSet("process3"),
-				taskonfig);
+				taskonfig, streamGraph);
 		}
 	}
 
@@ -529,7 +529,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 					Lists.newArrayList(Tuple2.of("filter1", "map1"), Tuple2.of("Source: source1", "map1")),
 					Sets.newHashSet("Source: source1", "filter1"),
 					Sets.newHashSet("Source: source1"),
-					taskonfig);
+					taskonfig, streamGraph);
 			}
 
 			// CHAIN(Map1 -> Sink1) vertex
@@ -544,7 +544,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 					Collections.emptyList(),
 					Sets.newHashSet("map1", "Sink: sink1"),
 					Sets.newHashSet("map1"),
-					taskonfig);
+					taskonfig, streamGraph);
 			}
 		}
 
@@ -603,7 +603,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 						Tuple2.of("filter1", "map1"), Tuple2.of("Source: source1", "map1")),
 					Sets.newHashSet("Source: source1", "filter1"),
 					Sets.newHashSet("Source: source1"),
-					taskonfig);
+					taskonfig, streamGraph);
 			}
 
 			// CHAIN([Map1 -> (Sink1, Map2), Map2 -> Sink2 ]) vertex
@@ -619,7 +619,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 					Collections.emptyList(),
 					Sets.newHashSet("map1", "Sink: sink1", "map2", "Sink: sink2"),
 					Sets.newHashSet("map1", "map2"),
-					taskonfig);
+					taskonfig, streamGraph);
 			}
 		}
 
@@ -675,7 +675,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 					Lists.newArrayList(Tuple2.of("filter1", "map1"), Tuple2.of("Source: source1", "map1")),
 					Sets.newHashSet("Source: source1", "Source: source2", "filter1"),
 					Sets.newHashSet("Source: source1", "Source: source2"),
-					taskonfig);
+					taskonfig, streamGraph);
 			}
 
 			// CHAIN(Map1 -> Sink1) vertex
@@ -690,7 +690,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 					Collections.emptyList(),
 					Sets.newHashSet("map1", "Sink: sink1"),
 					Sets.newHashSet("map1"),
-					taskonfig);
+					taskonfig, streamGraph);
 			}
 		}
 
@@ -746,7 +746,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 					Lists.newArrayList(Tuple2.of("filter2", "process1"), Tuple2.of("filter1", "process1")),
 					Sets.newHashSet("Source: source1", "map1", "filter1", "filter2"),
 					Sets.newHashSet("Source: source1"),
-					taskonfig);
+					taskonfig, streamGraph);
 			}
 
 			// CHAIN(Process1 -> Sink1) vertex
@@ -761,7 +761,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 					Collections.emptyList(),
 					Sets.newHashSet("process1", "Sink: sink1"),
 					Sets.newHashSet("process1"),
-					taskonfig);
+					taskonfig, streamGraph);
 			}
 		}
 
@@ -823,7 +823,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 						Tuple2.of("filter2", "process1"), Tuple2.of("filter1", "process1")),
 					Sets.newHashSet("Source: source1", "map1", "filter1", "filter2"),
 					Sets.newHashSet("Source: source1"),
-					taskonfig);
+					taskonfig, streamGraph);
 			}
 
 			// CHAIN([Process1 -> (Sink1, Process2), Process2 -> Sink2]) vertex
@@ -839,7 +839,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 					Collections.emptyList(),
 					Sets.newHashSet("process1", "Sink: sink1", "process2", "Sink: sink2"),
 					Sets.newHashSet("process1", "process2"),
-					taskonfig);
+					taskonfig, streamGraph);
 			}
 		}
 
@@ -898,7 +898,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 					Lists.newArrayList(Tuple2.of("filter2", "process1"), Tuple2.of("filter1", "process1")),
 					Sets.newHashSet("Source: source1", "Source: source2", "map1", "filter1", "filter2"),
 					Sets.newHashSet("Source: source1", "Source: source2"),
-					taskonfig);
+					taskonfig, streamGraph);
 			}
 
 			// CHAIN(Process1 -> Sink1) vertex
@@ -913,7 +913,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 					Collections.emptyList(),
 					Sets.newHashSet("process1", "Sink: sink1"),
 					Sets.newHashSet("process1"),
-					taskonfig);
+					taskonfig, streamGraph);
 			}
 		}
 
@@ -990,7 +990,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 						Tuple2.of("filter1", "map5"), Tuple2.of("map3", "map5"), Tuple2.of("map4", "filter2")),
 					Sets.newHashSet("Source: source1", "Source: source2", "map0", "map1", "map2", "map3", "map4", "filter1"),
 					Sets.newHashSet("Source: source1", "Source: source2"),
-					taskonfig);
+					taskonfig, streamGraph);
 			}
 
 			// CHAIN(Process1 -> Sink1) vertex
@@ -1005,7 +1005,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 					Collections.emptyList(),
 					Sets.newHashSet("process1", "Sink: sink1"),
 					Sets.newHashSet("process1"),
-					taskonfig);
+					taskonfig, streamGraph);
 			}
 
 			// CHAIN(Map5 -> Sink2) vertex
@@ -1020,7 +1020,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 					Collections.emptyList(),
 					Sets.newHashSet("map5", "Sink: sink2"),
 					Sets.newHashSet("map5"),
-					taskonfig);
+					taskonfig, streamGraph);
 			}
 
 			// CHAIN(Filter2 -> Sink3) vertex
@@ -1035,7 +1035,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 					Collections.emptyList(),
 					Sets.newHashSet("filter2", "Sink: sink3"),
 					Sets.newHashSet("filter2"),
-					taskonfig);
+					taskonfig, streamGraph);
 			}
 		}
 	}

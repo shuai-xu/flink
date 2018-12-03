@@ -23,7 +23,7 @@ import java.util
 import junit.framework.TestCase.assertTrue
 import junit.framework.TestCase.fail
 import org.apache.flink.runtime.io.network.DataExchangeMode
-import org.apache.flink.streaming.api.graph.{StreamEdge, StreamNode}
+import org.apache.flink.streaming.api.graph.{StreamEdge, StreamGraph, StreamNode}
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
@@ -87,7 +87,7 @@ class DataExchangeModeTest extends QueryTest {
     val streamGraph = tEnv.generateStreamGraph()
     val edgeSet = new util.HashSet[StreamEdge]()
     streamGraph.getSinkIDs.asScala.foreach(id => {
-      this.collectStreamEdges(streamGraph.getStreamNode(id), edgeSet)
+      this.collectStreamEdges(streamGraph, streamGraph.getStreamNode(id), edgeSet)
     })
     var autoNum: Int = 0
     var batchNum: Int = 0
@@ -108,11 +108,11 @@ class DataExchangeModeTest extends QueryTest {
     }
   }
 
-  private def collectStreamEdges(
+  private def collectStreamEdges(streamGraph: StreamGraph,
       streamNode: StreamNode, edgeSet: java.util.Set[StreamEdge]): Unit = {
     streamNode.getInEdges.asScala.foreach(e => {
       edgeSet.add(e)
-      collectStreamEdges(e.getSourceVertex, edgeSet)
+      collectStreamEdges(streamGraph, streamGraph.getStreamNode(e.getSourceId()), edgeSet)
     })
   }
 }

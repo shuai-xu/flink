@@ -199,7 +199,8 @@ public class IterateITCase extends AbstractTestBase {
 		assertEquals(2, graph.getIterationSourceSinkPairs().size());
 
 		for (Tuple2<StreamNode, StreamNode> sourceSinkPair: graph.getIterationSourceSinkPairs()) {
-			assertEquals(sourceSinkPair.f0.getOutEdges().get(0).getTargetVertex(), sourceSinkPair.f1.getInEdges().get(0).getSourceVertex());
+			assertEquals(graph.getStreamNode(sourceSinkPair.f0.getOutEdges().get(0).getTargetId()),
+					graph.getStreamNode(sourceSinkPair.f1.getInEdges().get(0).getSourceId()));
 		}
 	}
 
@@ -243,9 +244,9 @@ public class IterateITCase extends AbstractTestBase {
 		assertEquals(itSource.getParallelism(), itSink.getParallelism());
 
 		for (StreamEdge edge : itSource.getOutEdges()) {
-			if (edge.getTargetVertex().getOperatorName().equals("IterRebalanceMap")) {
+			if (graph.getStreamNode(edge.getTargetId()).getOperatorName().equals("IterRebalanceMap")) {
 				assertTrue(edge.getPartitioner() instanceof RebalancePartitioner);
-			} else if (edge.getTargetVertex().getOperatorName().equals("IterForwardMap")) {
+			} else if (graph.getStreamNode(edge.getTargetId()).getOperatorName().equals("IterForwardMap")) {
 				assertTrue(edge.getPartitioner() instanceof ForwardPartitioner);
 			}
 		}
@@ -330,16 +331,16 @@ public class IterateITCase extends AbstractTestBase {
 		assertEquals(itSource.getParallelism(), itSink.getParallelism());
 
 		for (StreamEdge edge : itSource.getOutEdges()) {
-			if (edge.getTargetVertex().getOperatorName().equals("map1")) {
+			if (graph.getStreamNode(edge.getTargetId()).getOperatorName().equals("map1")) {
 				assertTrue(edge.getPartitioner() instanceof ForwardPartitioner);
-				assertEquals(4, edge.getTargetVertex().getParallelism());
-			} else if (edge.getTargetVertex().getOperatorName().equals("shuffle")) {
+				assertEquals(4, graph.getStreamNode(edge.getTargetId()).getParallelism());
+			} else if (graph.getStreamNode(edge.getTargetId()).getOperatorName().equals("shuffle")) {
 				assertTrue(edge.getPartitioner() instanceof RebalancePartitioner);
-				assertEquals(2, edge.getTargetVertex().getParallelism());
+				assertEquals(2, graph.getStreamNode(edge.getTargetId()).getParallelism());
 			}
 		}
 		for (StreamEdge edge : itSink.getInEdges()) {
-			String tailName = edge.getSourceVertex().getOperatorName();
+			String tailName = graph.getStreamNode(edge.getSourceId()).getOperatorName();
 			if (tailName.equals("split")) {
 				assertTrue(edge.getPartitioner() instanceof ForwardPartitioner);
 				assertTrue(edge.getSelectedNames().contains("even"));
