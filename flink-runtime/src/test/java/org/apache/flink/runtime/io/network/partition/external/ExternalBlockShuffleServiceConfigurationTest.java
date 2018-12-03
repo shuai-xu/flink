@@ -45,14 +45,14 @@ public class ExternalBlockShuffleServiceConfigurationTest {
 
 		{
 			configuration.setString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS,
-				"/dump1/local-dir/, /dump2/local-dir/, [SSD]/dump3/local-dir/, [HDD]/dump4/local-dir/, /dump5/local-dir/");
+				"/dump1/local-dir/, /dump2/local-dir/, [SSD]/dump3/local-dir/, [NEW_DISK]/dump4/local-dir/, /dump5/local-dir/");
 			Map<String, String> dirToDiskType = ExternalBlockShuffleServiceConfiguration.parseDirToDiskType(
 				configuration);
 			Map<String, String> expectedDirToDiskType = new HashMap<String, String>() {{
 				put("/dump1/local-dir/", ExternalBlockShuffleServiceConfiguration.DEFAULT_DISK_TYPE);
 				put("/dump2/local-dir/", ExternalBlockShuffleServiceConfiguration.DEFAULT_DISK_TYPE);
 				put("/dump3/local-dir/", "SSD");
-				put("/dump4/local-dir/", "HDD");
+				put("/dump4/local-dir/", "NEW_DISK");
 				put("/dump5/local-dir/", ExternalBlockShuffleServiceConfiguration.DEFAULT_DISK_TYPE);
 			}};
 			assertEquals("Invalid dirToDiskType", expectedDirToDiskType, dirToDiskType);
@@ -77,13 +77,13 @@ public class ExternalBlockShuffleServiceConfigurationTest {
 		}
 
 		{
-			configuration.setString(ExternalBlockShuffleServiceOptions.IO_THREAD_NUM_FOR_DISK_TYPE, "SSD: 13, HDD: 4");
+			configuration.setString(ExternalBlockShuffleServiceOptions.IO_THREAD_NUM_FOR_DISK_TYPE, "SSD: 13, NEW_DISK: 4");
 			Map<String, Integer> diskTypeToIOThreadNum =
 				ExternalBlockShuffleServiceConfiguration.parseDiskTypeToIOThreadNum(configuration);
 			Map<String, Integer> expectedDiskTypeToIOThreadNum = new HashMap<String, Integer>() {{
 				put(ExternalBlockShuffleServiceConfiguration.DEFAULT_DISK_TYPE, defaultIOThreadNum);
 				put("SSD", 13);
-				put("HDD", 4);
+				put("NEW_DISK", 4);
 			}};
 			assertEquals("Invalid diskTypeToIOThreadNum", expectedDiskTypeToIOThreadNum, diskTypeToIOThreadNum);
 		}
@@ -91,7 +91,7 @@ public class ExternalBlockShuffleServiceConfigurationTest {
 		{
 			// Only test bad case here.
 			configuration.setString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS,
-				"/dump1/local-dir/, /dump2/local-dir/, [SSD]/dump3/local-dir/, [HDD]/dump4/local-dir/, /dump5/local-dir/");
+				"/dump1/local-dir/, /dump2/local-dir/, [SSD]/dump3/local-dir/, [NEW_DISK]/dump4/local-dir/, /dump5/local-dir/");
 			configuration.setString(ExternalBlockShuffleServiceOptions.IO_THREAD_NUM_FOR_DISK_TYPE, "SSD: 13, SATA: 4");
 			try {
 
@@ -111,9 +111,9 @@ public class ExternalBlockShuffleServiceConfigurationTest {
 		Configuration configuration = new Configuration();
 
 		configuration.setString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS,
-			"/dump1/local-dir/, /dump2/local-dir/, [SSD]/dump3/local-dir/, [HDD]/dump4/local-dir/, /dump5/local-dir/");
+			"/dump1/local-dir/, /dump2/local-dir/, [SSD]/dump3/local-dir/, [NEW_DISK]/dump4/local-dir/, /dump5/local-dir/");
 		configuration.setInteger(ExternalBlockShuffleServiceOptions.DEFAULT_IO_THREAD_NUM_PER_DISK, 11);
-		configuration.setString(ExternalBlockShuffleServiceOptions.IO_THREAD_NUM_FOR_DISK_TYPE, "SSD: 13, HDD: 4");
+		configuration.setString(ExternalBlockShuffleServiceOptions.IO_THREAD_NUM_FOR_DISK_TYPE, "SSD: 13, NEW_DISK: 4");
 		configuration.setInteger(ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_DIRECT_MEMORY_LIMIT_IN_MB, 256);
 		configuration.setInteger(ExternalBlockShuffleServiceOptions.MEMORY_SIZE_PER_BUFFER_IN_BYTES, 4096);
 		configuration.setInteger(ExternalBlockShuffleServiceOptions.MIN_BUFFER_NUMBER, 999);
@@ -132,7 +132,7 @@ public class ExternalBlockShuffleServiceConfigurationTest {
 						 put("/dump1/local-dir/", ExternalBlockShuffleServiceConfiguration.DEFAULT_DISK_TYPE);
 						 put("/dump2/local-dir/", ExternalBlockShuffleServiceConfiguration.DEFAULT_DISK_TYPE);
 						 put("/dump3/local-dir/", "SSD");
-						 put("/dump4/local-dir/", "HDD");
+						 put("/dump4/local-dir/", "NEW_DISK");
 						 put("/dump5/local-dir/", ExternalBlockShuffleServiceConfiguration.DEFAULT_DISK_TYPE);
 					 }},
 			externalBlockShuffleServiceConfiguration.getDirToDiskType());
@@ -140,7 +140,7 @@ public class ExternalBlockShuffleServiceConfigurationTest {
 						 {
 							 put(ExternalBlockShuffleServiceConfiguration.DEFAULT_DISK_TYPE, 11);
 							 put("SSD", 13);
-							 put("HDD", 4);
+							 put("NEW_DISK", 4);
 						 }},
 			externalBlockShuffleServiceConfiguration.getDiskTypeToIOThreadNum());
 		assertEquals(new Integer(999), externalBlockShuffleServiceConfiguration.getBufferNumber());

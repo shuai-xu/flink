@@ -27,9 +27,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -44,8 +46,7 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 public class ExternalBlockShuffleServiceConfiguration {
 	private static final Logger LOG = LoggerFactory.getLogger(ExternalBlockShuffleServiceConfiguration.class);
 
-	@VisibleForTesting
-	protected static final String DEFAULT_DISK_TYPE = "default";
+	public static final String DEFAULT_DISK_TYPE = "HDD";
 
 	private static final Pattern DISK_TYPE_REGEX = Pattern.compile("^(\\[(\\w*)\\])?(.+)$");
 
@@ -357,25 +358,40 @@ public class ExternalBlockShuffleServiceConfiguration {
 	public static Map<String, String> parseDirToDiskType(String strConfig) {
 		Map<String, String> dirToDiskType = new HashMap<>();
 
-		String[] dirConfigList = strConfig.split(",");
-		for (String strDirConfig : dirConfigList) {
-			strDirConfig = strDirConfig.trim();
-			if (!strDirConfig.isEmpty()) {
-				Matcher matcher = DISK_TYPE_REGEX.matcher(strDirConfig);
-				if (matcher.matches()) {
-					String diskType = matcher.group(2);
-					String dir = matcher.group(3);
-					dir = (dir != null) ? dir.trim() : null;
-					if (dir != null && !dir.isEmpty()) {
-						// To make it easier in further processing, make sure configured directory ends up with "/".
-						dir = !dir.endsWith("/") ? dir.concat("/") : dir;
-						dirToDiskType.put(dir,
-							(diskType != null && !diskType.isEmpty()) ? diskType.trim() : DEFAULT_DISK_TYPE);
-					}
+		List<String> nonEmptyDirConfigs = splitDiskConfigList(strConfig);
+
+		for (String strDirConfig : nonEmptyDirConfigs) {
+			Matcher matcher = DISK_TYPE_REGEX.matcher(strDirConfig);
+			if (matcher.matches()) {
+				String diskType = matcher.group(2);
+				String dir = matcher.group(3);
+				dir = (dir != null) ? dir.trim() : null;
+				if (dir != null && !dir.isEmpty()) {
+					// To make it easier in further processing, make sure configured directory ends up with "/".
+					dir = !dir.endsWith("/") ? dir.concat("/") : dir;
+					dirToDiskType.put(dir,
+						(diskType != null && !diskType.isEmpty()) ? diskType.trim() : DEFAULT_DISK_TYPE);
 				}
 			}
 		}
+
 		return dirToDiskType;
+	}
+
+	public static List<String> splitDiskConfigList(String strConfig) {
+		List<String> nonEmptyDirConfigs = new ArrayList<>();
+
+		String[] dirConfigList = strConfig.split(",");
+
+		for (String strDirConfig : dirConfigList) {
+			strDirConfig = strDirConfig.trim();
+
+			if (!strDirConfig.isEmpty()) {
+				nonEmptyDirConfigs.add(strDirConfig);
+			}
+		}
+
+		return nonEmptyDirConfigs;
 	}
 
 	/** Make sure that each directory has its corresponding IO thread configuration. */

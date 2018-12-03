@@ -31,7 +31,6 @@ import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleServiceConfiguration;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleServiceOptions;
-import org.apache.flink.runtime.io.network.partition.external.YarnLocalResultPartitionResolver;
 import org.apache.flink.runtime.security.SecurityConfiguration;
 import org.apache.flink.runtime.security.SecurityUtils;
 import org.apache.flink.runtime.taskexecutor.TaskManagerRunner;
@@ -43,6 +42,7 @@ import org.apache.flink.util.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -160,8 +160,7 @@ public class YarnTaskExecutorRunner {
 			}
 
 			// configure local directory for shuffle service
-			String yarnAppId = ENV.get(YarnConfigKeys.ENV_APP_ID);
-			configureLocalOutputDirs(configuration, localDirs, yarnClientUsername, yarnAppId);
+			configureLocalOutputDirs(configuration, localDirs);
 
 			// tell akka to die in case of an error
 			configuration.setBoolean(AkkaOptions.JVM_EXIT_ON_FATAL_ERROR, true);
@@ -212,28 +211,53 @@ public class YarnTaskExecutorRunner {
 		}
 	}
 
-	private static void configureLocalOutputDirs(Configuration configuration, String nmLocalDirs, String username, String appId) {
-		org.apache.hadoop.conf.Configuration hadoopConf = new org.apache.hadoop.conf.Configuration();
+	/**
+	 * Choose the shuffle service output directory according to the users' preferred disk types from appLocalDirs.
+	 * If appLocalDirs do not specify the disk types, it will try to parse the disk type from the local dirs configuration
+	 * of the hadoop configuration.
+	 *
+	 * @param configuration the hadoop configuration.
+	 * @param appLocalDirs the local directories parsed from environment variables. These directories contains application id.
+	 */
+	private static void configureLocalOutputDirs(Configuration configuration, String appLocalDirs) {
+		List<String> appDirs = ExternalBlockShuffleServiceConfiguration.splitDiskConfigList(appLocalDirs);
+		String expectedDiskType = configuration.getString(TaskManagerOptions.TASK_MANAGER_OUTPUT_LOCAL_DISK_TYPE).trim();
 
-		// Use nm-local-dirs if flink shuffle service's configuration is not set.
-		String flinkLocalDirs = hadoopConf.get(ExternalBlockShuffleServiceOptions.LOCAL_DIRS.key(), "");
-
-		String shuffleLocalDir = (flinkLocalDirs.isEmpty() ? nmLocalDirs : flinkLocalDirs);
-		if (shuffleLocalDir.isEmpty()) {
+		if (expectedDiskType.isEmpty()) {
+			configuration.setString(TaskManagerOptions.TASK_MANAGER_OUTPUT_LOCAL_OUTPUT_DIRS, StringUtils.join(appDirs, ","));
 			return;
 		}
 
-		String relativeAppDir = YarnLocalResultPartitionResolver.generateRelativeLocalAppDir(username, appId);
+		org.apache.hadoop.conf.Configuration hadoopConf = new org.apache.hadoop.conf.Configuration();
+		String flinkLocalDirs = hadoopConf.get(ExternalBlockShuffleServiceOptions.LOCAL_DIRS.key(), "");
+		String nmLocalDirs = hadoopConf.get(YarnConfiguration.NM_LOCAL_DIRS, "");
+		String effectiveLocalDirs = flinkLocalDirs.isEmpty() ? nmLocalDirs : flinkLocalDirs;
+		Map<String, String> localDirToDirTypes = ExternalBlockShuffleServiceConfiguration.parseDirToDiskType(effectiveLocalDirs);
 
-		String expectedDiskType = configuration.getString(TaskManagerOptions.TASK_MANAGER_OUTPUT_LOCAL_DISK_TYPE).trim();
 		List<String> chosenDirs = new ArrayList<>();
 
-		Map<String, String> dirToDirTypes = ExternalBlockShuffleServiceConfiguration.parseDirToDiskType(shuffleLocalDir);
-		for (Map.Entry<String, String> entry : dirToDirTypes.entrySet()) {
-			if (expectedDiskType.isEmpty() || (entry.getValue().equalsIgnoreCase(expectedDiskType))) {
-				chosenDirs.add(entry.getKey().endsWith("/") ? entry.getKey() : entry.getKey() + "/" + relativeAppDir + "/");
+		for (String appDir : appDirs) {
+			String appDirType = null;
+
+			// See if the prefix of the appDir has been configured in the local dir configuration.
+			for (Map.Entry<String, String> entry : localDirToDirTypes.entrySet()) {
+				if (appDir.startsWith(entry.getKey())) {
+					appDirType = entry.getValue();
+					break;
+				}
+			}
+
+			if (appDirType != null) {
+				if (appDirType.equalsIgnoreCase(expectedDiskType)) {
+					chosenDirs.add(appDir);
+				}
+			} else {
+				LOG.warn("Encounters an app dir {} whose parents are not configured in the local dir list in yarn", appDir);
 			}
 		}
+
+		LOG.info("configured flink local dir is {}, config yarn local dir is {}, appLocalDirs is {}, chosenDirs is {}",
+			flinkLocalDirs, nmLocalDirs, appLocalDirs, chosenDirs);
 
 		configuration.setString(TaskManagerOptions.TASK_MANAGER_OUTPUT_LOCAL_OUTPUT_DIRS, StringUtils.join(chosenDirs, ","));
 	}
