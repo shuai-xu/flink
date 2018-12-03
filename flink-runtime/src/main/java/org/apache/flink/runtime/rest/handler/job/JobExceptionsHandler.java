@@ -143,7 +143,7 @@ public class JobExceptionsHandler extends AbstractExecutionGraphHandler<JobExcep
 	}
 
 	private static JobExceptionsInfo.ExecutionExceptionInfo generateExecutionExceptionInfo(AccessExecutionJobVertex jobVertex, AccessExecutionVertex executionVertex, AccessExecution task) {
-		String t = task.getFailureCauseAsString();
+		String t = task != null ? task.getFailureCauseAsString() : null;
 		if (t != null && !t.equals(ExceptionUtils.STRINGIFIED_NULL_EXCEPTION)) {
 			TaskManagerLocation location = task.getAssignedResourceLocation();
 			String locationString = location != null ?
