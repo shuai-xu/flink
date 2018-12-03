@@ -25,6 +25,7 @@ import org.apache.flink.metrics.MeterView;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.metrics.SimpleCounter;
 import org.apache.flink.runtime.executiongraph.IOMetrics;
+import org.apache.flink.runtime.io.network.buffer.BufferPool;
 import org.apache.flink.runtime.io.network.partition.InternalResultPartition;
 import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
 import org.apache.flink.runtime.metrics.MetricNames;
@@ -185,19 +186,24 @@ public class TaskIOMetricGroup extends ProxyMetricGroup<TaskMetricGroup> {
 
 		@Override
 		public Float getValue() {
-			int usedBuffers = 0;
-			int bufferPoolSize = 0;
+			float maxUsage = 0;
 
 			for (SingleInputGate inputGate : task.getAllInputGates()) {
-				usedBuffers += inputGate.getBufferPool().bestEffortGetNumOfUsedBuffers();
-				bufferPoolSize += inputGate.getBufferPool().getNumBuffers();
+				BufferPool bufferPool = inputGate.getBufferPool();
+
+				int usedBuffers = bufferPool.bestEffortGetNumOfUsedBuffers();
+				int bufferPoolSize = bufferPool.getNumBuffers();
+
+				if (bufferPoolSize != 0) {
+					float currentPoolUsage = ((float) usedBuffers) / bufferPoolSize;
+
+					if (currentPoolUsage > maxUsage) {
+						maxUsage = currentPoolUsage;
+					}
+				}
 			}
 
-			if (bufferPoolSize != 0) {
-				return ((float) usedBuffers) / bufferPoolSize;
-			} else {
-				return 0.0f;
-			}
+			return maxUsage;
 		}
 	}
 
@@ -214,19 +220,23 @@ public class TaskIOMetricGroup extends ProxyMetricGroup<TaskMetricGroup> {
 
 		@Override
 		public Float getValue() {
-			int usedBuffers = 0;
-			int bufferPoolSize = 0;
+			float maxUsage = 0;
 
 			for (InternalResultPartition internalResultPartition : task.getInternalPartitions()) {
-				usedBuffers += internalResultPartition.getBufferPool().bestEffortGetNumOfUsedBuffers();
-				bufferPoolSize += internalResultPartition.getBufferPool().getNumBuffers();
+				BufferPool bufferPool = internalResultPartition.getBufferPool();
+
+				int usedBuffers = bufferPool.bestEffortGetNumOfUsedBuffers();
+				int bufferPoolSize = bufferPool.getNumBuffers();
+
+				if (bufferPoolSize != 0) {
+					float currentPoolUsage = ((float) usedBuffers) / bufferPoolSize;
+					if (currentPoolUsage > maxUsage) {
+						maxUsage = currentPoolUsage;
+					}
+				}
 			}
 
-			if (bufferPoolSize != 0) {
-				return ((float) usedBuffers) / bufferPoolSize;
-			} else {
-				return 0.0f;
-			}
+			return maxUsage;
 		}
 	}
 
