@@ -811,6 +811,77 @@ public class JobMasterTest extends TestLogger {
 	}
 
 	@Test
+	public void testInitInputSplitFailLeadToJobFail() throws Exception {
+		// build one node JobGraph
+		OperatorID sourceOperatorID = new OperatorID();
+
+		InputSplitSource<InputSplit> inputSplitSource = new InputSplitSource<InputSplit>() {
+				@Override
+				public InputSplit[] createInputSplits(int minNumSplits) throws Exception {
+					throw new Exception("Testing exception to simulate source fail.");
+				}
+
+				@Override
+				public InputSplitAssigner getInputSplitAssigner(InputSplit[] inputSplits) {
+					return null;
+				}
+		};
+
+		JobVertex source = new JobVertex("vertex1");
+		source.setParallelism(1);
+		source.setInputSplitSource(sourceOperatorID, inputSplitSource);
+		source.setInvokableClass(AbstractInvokable.class);
+
+		final JobGraph jobGraph = new JobGraph(source);
+		jobGraph.setAllowQueuedScheduling(true);
+
+		CompletableFuture<Void> jobFailedFuture = new CompletableFuture<>();
+
+		final JobMaster jobMaster = new JobMaster(
+				rpcService,
+				JobMasterConfiguration.fromConfiguration(configuration),
+				jmResourceId,
+				jobGraph,
+				haServices,
+				DefaultSlotPoolFactory.fromConfiguration(configuration, rpcService),
+				new TestingJobManagerSharedServicesBuilder().build(),
+				heartbeatServices,
+				blobServer,
+				UnregisteredJobManagerJobMetricGroupFactory.INSTANCE,
+				new OnCompletionActions() {
+					@Override
+					public void jobReachedGloballyTerminalState(ArchivedExecutionGraph executionGraph) {
+
+					}
+
+					@Override
+					public void jobFinishedByOther() {
+					}
+
+					@Override
+					public void jobMasterFailed(Throwable cause) {
+						jobFailedFuture.complete(null);
+					}
+				},
+				testingFatalErrorHandler,
+				JobMasterTest.class.getClassLoader());
+
+		CompletableFuture<Acknowledge> startFuture = jobMaster.start(jobMasterId, testingTimeout);
+
+		try {
+			// wait for the start to complete
+			startFuture.get(testingTimeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+			jobFailedFuture.get(2, TimeUnit.SECONDS);
+
+			// check if a concurrent error occurred
+			testingFatalErrorHandler.rethrowError();
+
+		} finally {
+			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
+		}
+	}
+
+	@Test
 	public void testRequestEmptyNextInputSplit() throws Exception {
 
 		JobVertex source = new JobVertex("vertex1");

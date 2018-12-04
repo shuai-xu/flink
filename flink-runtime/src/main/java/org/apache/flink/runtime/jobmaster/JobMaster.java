@@ -1350,6 +1350,9 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 			operationLogManager.start();
 			executionGraph.scheduleForExecution();
 		}
+		catch (JobException e) {
+			jobCompletionActions.jobMasterFailed(e);
+		}
 		catch (Throwable t) {
 			executionGraph.failGlobal(t);
 		}
