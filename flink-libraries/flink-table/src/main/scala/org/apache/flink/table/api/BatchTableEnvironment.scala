@@ -521,7 +521,7 @@ class BatchTableEnvironment(
     val diffObjPlan = optimizedPlan.accept(new SameRelObjectShuttle())
     // reuse sub-plan if enabled
     val reusedPlan = if (config.getSubPlanReuse) {
-      val context = new SubplanReuseContext(diffObjPlan, config)
+      val context = new SubplanReuseContext(config.getTableSourceReuse, diffObjPlan)
       diffObjPlan.accept(new SubplanReuseShuttle(context))
     } else {
       diffObjPlan

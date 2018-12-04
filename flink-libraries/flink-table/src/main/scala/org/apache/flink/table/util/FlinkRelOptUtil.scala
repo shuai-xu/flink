@@ -62,7 +62,8 @@ object FlinkRelOptUtil {
       // only print reuse info of physical plan
       val (subplanReuseContext, newRel) = if (isPhysicalRel && config.getSubPlanReuse) {
         val planWithoutSameRef = rel.accept(new SameRelObjectShuttle)
-        (Some(new SubplanReuseContext(planWithoutSameRef, config)), planWithoutSameRef)
+        (Some(new SubplanReuseContext(config.getTableSourceReuse, planWithoutSameRef)),
+          planWithoutSameRef)
       } else {
         (None, rel)
       }
