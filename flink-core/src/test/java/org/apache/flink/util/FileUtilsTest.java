@@ -18,6 +18,7 @@
 
 package org.apache.flink.util;
 
+import org.apache.flink.core.fs.FSDataOutputStream;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.testutils.CheckedThread;
@@ -30,8 +31,13 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.AccessDeniedException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Random;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -166,6 +172,49 @@ public class FileUtilsTest {
 		assertFalse(parent.exists());
 	}
 
+	@Test
+	public void testReadAllBytes() throws Exception {
+		TemporaryFolder tmpFolder = null;
+		try {
+			tmpFolder = new TemporaryFolder(new File(this.getClass().getResource("/").getPath()));
+			tmpFolder.create();
+
+			final int fileSize = 1024;
+			final String testFilePath = tmpFolder.getRoot().getAbsolutePath() + File.separator
+					+ this.getClass().getSimpleName() + "_" + fileSize + ".txt";
+
+			String expectedMD5 = generateTestFile(testFilePath, fileSize);
+
+			{
+				final int directBufferSize = 500;
+				final byte[] data = FileUtils.readAllBytes((new File(testFilePath)).toPath(), directBufferSize);
+				assertEquals(expectedMD5, md5Hex(data));
+			}
+
+			{
+				final int directBufferSize = 1024;
+				final byte[] data = FileUtils.readAllBytes((new File(testFilePath)).toPath(), directBufferSize);
+				assertEquals(expectedMD5, md5Hex(data));
+			}
+
+			{
+				final int directBufferSize = 2048;
+				final byte[] data = FileUtils.readAllBytes((new File(testFilePath)).toPath(), directBufferSize);
+				assertEquals(expectedMD5, md5Hex(data));
+			}
+
+			{
+				final int directBufferSize = -1;
+				final byte[] data = FileUtils.readAllBytes((new File(testFilePath)).toPath(), directBufferSize);
+				assertEquals(expectedMD5, md5Hex(data));
+			}
+		} finally {
+			if (tmpFolder != null) {
+				tmpFolder.delete();
+			}
+		}
+	}
+
 	// ------------------------------------------------------------------------
 	//  Utilities
 	// ------------------------------------------------------------------------
@@ -187,6 +236,51 @@ public class FileUtilsTest {
 				generateRandomDirs(subdir, numFiles, numDirs, depth - 1);
 			}
 		}
+	}
+
+	/**
+	 * Generates a random content file.
+	 *
+	 * @param outputFile the path of the output file
+	 * @param length the size of content to generate
+	 *
+	 * @return MD5 of the output file
+	 *
+	 * @throws IOException
+	 * @throws NoSuchAlgorithmException
+	 */
+	private static String generateTestFile(String outputFile, int length) throws IOException, NoSuchAlgorithmException {
+		Path outputFilePath = new Path(outputFile);
+
+		final FileSystem fileSystem = outputFilePath.getFileSystem();
+		try (final FSDataOutputStream fsDataOutputStream = fileSystem.create(outputFilePath, FileSystem.WriteMode.NO_OVERWRITE)) {
+			return writeRandomContent(fsDataOutputStream, length);
+		}
+	}
+
+	private static String writeRandomContent(OutputStream out, int length) throws IOException, NoSuchAlgorithmException {
+		MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+
+		Random random = new Random();
+		char startChar = 32, endChar = 127;
+		for (int i = 0; i < length; i++) {
+			int rnd = random.nextInt(endChar - startChar);
+			byte b = (byte) (startChar + rnd);
+
+			out.write(b);
+			messageDigest.update(b);
+		}
+
+		byte[] b = messageDigest.digest();
+		return org.apache.flink.util.StringUtils.byteToHexString(b);
+	}
+
+	private static String md5Hex(byte[] data) throws NoSuchAlgorithmException {
+		MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+		messageDigest.update(data);
+
+		byte[] b = messageDigest.digest();
+		return org.apache.flink.util.StringUtils.byteToHexString(b);
 	}
 
 	// ------------------------------------------------------------------------

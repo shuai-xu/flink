@@ -28,11 +28,15 @@ import org.apache.flink.util.function.ThrowingConsumer;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 import java.util.Random;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -52,6 +56,12 @@ public final class FileUtils {
 
 	/** The length of the random part of the filename. */
 	private static final int RANDOM_FILE_NAME_LENGTH = 12;
+
+	/** The maximum size of array to allocate. More see {@link Files#MAX_BUFFER_SIZE}. */
+	private static final int MAX_BUFFER_SIZE = Integer.MAX_VALUE - 8;
+
+	// buffer size used for reading and writing
+	private static final int BUFFER_SIZE = 8192;
 
 	// ------------------------------------------------------------------------
 
@@ -100,6 +110,79 @@ public final class FileUtils {
 
 	public static void writeFileUtf8(File file, String contents) throws IOException {
 		writeFile(file, contents, "UTF-8");
+	}
+
+	/**
+	 * Reads all the bytes from a file. Uses {@code directBufferSize} to limit
+	 * the size of the direct buffer used to read.
+	 *
+	 * @param path
+	 *        the path to the file
+	 * @param directBufferSize
+	 *        the size of direct buffer used to read
+	 * @return a byte array containing the bytes read from the file
+	 * @throws IOException
+	 *         if an I/O error occurs reading from the stream
+	 */
+	public static byte[] readAllBytes(java.nio.file.Path path, int directBufferSize) throws IOException {
+		try (SeekableByteChannel channel = Files.newByteChannel(path);
+			InputStream in = Channels.newInputStream(channel)) {
+			long size = channel.size();
+			if (size > (long) MAX_BUFFER_SIZE) {
+				throw new OutOfMemoryError("Required array size too large");
+			}
+
+			return read(in, (int) size, directBufferSize);
+		}
+	}
+
+	/**
+	 * Reads all the bytes from an input stream. Uses {@code initialSize} as a hint
+	 * about how many bytes the stream will have and uses {@code directBufferSize}
+	 * to limit the size of the direct buffer used to read.
+	 *
+	 * @param source
+	 *        the input stream to read from
+	 * @param initialSize
+	 *        the initial size of the byte array to allocate, use default {@link #BUFFER_SIZE}
+	 *        if <= 0
+	 * @param directBufferSize
+	 * @return a byte array containing the bytes read from the file
+	 * @throws IOException
+	 *         if an I/O error occurs reading from the stream
+	 */
+	public static byte[] read(InputStream source, int initialSize, int directBufferSize) throws IOException {
+		int capacity = initialSize;
+		byte[] buf = new byte[capacity];
+		int nread = 0;
+		int n;
+		directBufferSize = (directBufferSize <= 0) ? BUFFER_SIZE : directBufferSize;
+		for (; ;) {
+			// read to EOF which may read more or less than initialSize (eg: file
+			// is truncated while we are reading)
+			while ((n = source.read(buf, nread, Math.min(capacity - nread, directBufferSize))) > 0) {
+				nread += n;
+			}
+
+			// if last call to source.read() returned -1, we are done
+			// otherwise, try to read one more byte; if that failed we're done too
+			if (n < 0 || (n = source.read()) < 0) {
+				break;
+			}
+
+			// one more byte was read; need to allocate a larger buffer
+			if (capacity <= MAX_BUFFER_SIZE - capacity) {
+				capacity = Math.max(capacity << 1, BUFFER_SIZE);
+			} else {
+				if (capacity == MAX_BUFFER_SIZE) {
+					throw new OutOfMemoryError("Required array size too large");
+				}
+				capacity = MAX_BUFFER_SIZE;
+			}
+			buf = Arrays.copyOf(buf, capacity);
+			buf[nread++] = (byte) n;
+		}
+		return (capacity == nread) ? buf : Arrays.copyOf(buf, nread);
 	}
 
 	// ------------------------------------------------------------------------
