@@ -77,8 +77,6 @@ import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -221,11 +219,10 @@ public class StreamingJobGraphGenerator {
 	 * Sets up task chains from the source {@link StreamNode} instances.
 	 */
 	private void setChaining(Map<Integer, byte[]> hashes, List<Map<Integer, byte[]>> legacyHashes) {
-		final Map<Integer, ChainingStreamNode> layeredNodeMap = new HashMap<>(); // key: nodeId
-		final Map<Integer, List<ChainingStreamNode>> layersMap = new HashMap<>(); // key: layerNumber
+		final Map<Integer, ChainingStreamNode> chainingNodeMap = new HashMap<>(); // key: nodeId
+		final Map<Integer, List<ChainingStreamNode>> chainingLayerMap = new HashMap<>(); // key: layerNumber
 
-		final Map<Integer, ChainingStreamNode> splitMap;
-		final Collection<StreamNode> chainingHeadNodes;
+		final Map<Integer, ChainingStreamNode> chainedNodeMap;
 
 		/**
 		 *  Sorts source for the following purpose:
@@ -240,76 +237,55 @@ public class StreamingJobGraphGenerator {
 				}).thenComparingInt(id -> id))
 			.collect(Collectors.toList());
 
-		// layers nodes according to input dependence using depth-first traversal
+		// layer nodes according to input dependence using depth-first traversal
 		int currentLayerNumber = 0;
 		SequenceGenerator depthFirstSequenceGenerator = new SequenceGenerator();
-		final Map<Integer, Integer> traversedEdgeNumMap = new HashMap<>(); // key: nodeId
+		final Map<Integer, Integer> unvisitedInEdgeNumMap = new HashMap<>(); // key: nodeId
 		for (Integer sourceNodeId : sortedSourceIDs) {
-			layerNodes(sourceNodeId, currentLayerNumber, null, depthFirstSequenceGenerator, traversedEdgeNumMap, layeredNodeMap, layersMap);
+			layerNodes(sourceNodeId,
+					currentLayerNumber,
+					null,
+					depthFirstSequenceGenerator,
+					unvisitedInEdgeNumMap,
+					chainingNodeMap,
+					chainingLayerMap);
 		}
+		unvisitedInEdgeNumMap.clear();
 
-		traversedEdgeNumMap.clear();
-
-		// splits chains according to the specified strategy using breadth-first traversal
+		// split chains according to the specified strategy using breadth-first traversal
 		if (streamGraph.isChainingEnabled()) {
-			chainingHeadNodes = new ArrayList<>();
-
-			int maxPassingNodeNum = 0;
-			SequenceGenerator breadthFirstSequenceGenerator = new SequenceGenerator();
-			for (int i = 0; i < layersMap.size(); i++) {
-				List<ChainingStreamNode> nodes = layersMap.get(i);
-
-				maxPassingNodeNum += nodes.size();
-				for (ChainingStreamNode node : nodes) {
-					node.setBreadthFirstNumber(breadthFirstSequenceGenerator.get());
-
-					if (node.getLayer() == 0) {
-						StreamOperator<?> operator = streamGraph.getStreamNode(node.getNodeId()).getOperator();
-						node.setAllowMultiHeadChaining(
-							operator == null || operator instanceof StreamSource ? Boolean.FALSE : Boolean.TRUE);
-					}
-
-					splitChain(node.getNodeId(), layeredNodeMap, maxPassingNodeNum, chainingHeadNodes);
-				}
-			}
-
-			splitMap = Collections.unmodifiableMap(layeredNodeMap);
+			splitChain(chainingLayerMap, chainingNodeMap);
+			chainedNodeMap = Collections.unmodifiableMap(chainingNodeMap);
 		} else {
-			chainingHeadNodes = streamGraph.getStreamNodes();
-			splitMap = null;
+			chainedNodeMap = null;
 		}
 
-		// creates chains
+		// create chains
 		ChainCreationStorager storager = new ChainCreationStorager();
-		for (StreamNode startNode : chainingHeadNodes) {
-			Integer startNodeId = startNode.getId();
-			boolean isChainCreated = createChain(
-				startNodeId,
-				startNodeId,
-				new SequenceGenerator(),
-				splitMap,
-				hashes,
-				legacyHashes,
-				storager);
+		for (int i = 0; i < chainingLayerMap.size(); i++) {
+			for (ChainingStreamNode chainingNode : chainingLayerMap.get(i)) {
+				Integer startNodeId = chainingNode.getNodeId();
 
-			if (isChainCreated) {
-				for (Integer nodeId : storager.chainedNodeIdsInOrder) {
-					nodeToJobVertexMap.put(nodeId, storager.createdVertex);
+				if (createChain(startNodeId, startNodeId, new SequenceGenerator(), chainedNodeMap, hashes, legacyHashes, storager)) {
+					for (Integer nodeId : storager.chainedNodeIdsInOrder) {
+						nodeToJobVertexMap.put(nodeId, storager.createdVertex);
+					}
+					transitiveOutEdges.addAll(storager.chainOutEdgesInOrder);
+					chainedNodeIdsMap.put(startNodeId, new ArrayList<>(storager.chainedNodeIdsInOrder));
+
+					// add the job vertex to JobGraph
+					jobGraph.addVertex(storager.createdVertex);
 				}
-				transitiveOutEdges.addAll(storager.chainOutEdgesInOrder);
-				chainedNodeIdsMap.put(startNodeId, new ArrayList<>(storager.chainedNodeIdsInOrder));
 
-				// add the job vertex to JobGraph
-				jobGraph.addVertex(storager.createdVertex);
+				storager.clearChain();
 			}
-			storager.clear();
 		}
 
 		// Sorts output edges of all chains using depth-first.
 		// The sorting policy must be consistent with {@code ChainCreationStorager.chainInEdgesInOrder}
 		// and {@code ChainCreationStorager.chainOutEdgesInOrder} .
 		transitiveOutEdges.sort(
-			Comparator.comparingInt((StreamEdge o) -> layeredNodeMap.get(o.getTargetId()).getDepthFirstNumber())
+			Comparator.comparingInt((StreamEdge o) -> chainingNodeMap.get(o.getTargetId()).getDepthFirstNumber())
 				.thenComparingInt((o) -> streamGraph.getStreamNode(o.getTargetId()).getInEdges().indexOf(o))
 		);
 	}
@@ -319,90 +295,250 @@ public class StreamingJobGraphGenerator {
 			int currentLayerNumber,
 			@Nullable Integer upstreamNodeId,
 			SequenceGenerator depthFirstSequenceGenerator,
-			Map<Integer, Integer> traversedEdgeNumMap,
-			Map<Integer, ChainingStreamNode> layeredNodeMap,
-			Map<Integer, List<ChainingStreamNode>> layersMap) {
+			Map<Integer, Integer> unvisitedInEdgeNumMap,
+			Map<Integer, ChainingStreamNode> chainingNodeMap,
+			Map<Integer, List<ChainingStreamNode>> chainingLayerMap) {
 
-		StreamNode currentStreamNode = streamGraph.getStreamNode(currentNodeId);
+		StreamNode currentNode = streamGraph.getStreamNode(currentNodeId);
 
-		//
-		Integer traversalNum = -1;
+		Integer unvisitedInEdgeNum = -1;
 		if (upstreamNodeId == null) {
 			// the current node must be a zero-input head node
-			traversalNum = currentStreamNode.getInEdges().size();
-			checkState(traversalNum == 0);
-			traversedEdgeNumMap.put(currentNodeId, traversalNum);
-		} else if (Integer.valueOf(0).equals(traversedEdgeNumMap.get(upstreamNodeId))) {
-			traversalNum = traversedEdgeNumMap.get(currentNodeId);
-			if (traversalNum == null) {
-				traversalNum = currentStreamNode.getInEdges().size();
+			unvisitedInEdgeNum = currentNode.getInEdges().size();
+
+			checkState(unvisitedInEdgeNum == 0);
+			unvisitedInEdgeNumMap.put(currentNodeId, unvisitedInEdgeNum);
+		} else {
+			Integer upstreamUnvisitedInEdgeNum = unvisitedInEdgeNumMap.get(upstreamNodeId);
+			if (upstreamUnvisitedInEdgeNum != null && upstreamUnvisitedInEdgeNum == 0) {
+				unvisitedInEdgeNum = unvisitedInEdgeNumMap.get(currentNodeId);
+				if (unvisitedInEdgeNum == null) {
+					unvisitedInEdgeNum = currentNode.getInEdges().size();
+				}
+
+				checkState(unvisitedInEdgeNum > 0);
+				unvisitedInEdgeNumMap.put(currentNodeId, --unvisitedInEdgeNum);
 			}
-			checkState(traversalNum > 0);
-			traversedEdgeNumMap.put(currentNodeId, --traversalNum);
 		}
 
-		// recursively traversing
+		// traverse recursively
 		int maxLayerNumber = currentLayerNumber;
-		for (StreamEdge outEdge : currentStreamNode.getOutEdges()) {
-			int layerNumber = layerNodes(outEdge.getTargetId(), currentLayerNumber + 1, currentNodeId, depthFirstSequenceGenerator,
-				traversedEdgeNumMap, layeredNodeMap, layersMap);
+		for (StreamEdge outEdge : currentNode.getOutEdges()) {
+			int layerNumber = layerNodes(outEdge.getTargetId(),
+					currentLayerNumber + 1,
+					currentNodeId,
+					depthFirstSequenceGenerator,
+					unvisitedInEdgeNumMap,
+					chainingNodeMap,
+					chainingLayerMap);
+
 			maxLayerNumber = Math.max(maxLayerNumber, layerNumber);
 		}
 
-		// create ChainingStreamNode and set layer number for the current node
-		ChainingStreamNode currentLayeredNode = layeredNodeMap.get(currentNodeId);
-		if (currentLayeredNode == null) {
-			currentLayeredNode = new ChainingStreamNode(currentNodeId, depthFirstSequenceGenerator.get(), currentStreamNode.getInEdges().size());
-			layeredNodeMap.put(currentNodeId, currentLayeredNode);
-		}
-		currentLayeredNode.setLayer(currentLayerNumber);
+		// create a corresponding ChainingStreamNode for the current node
+		ChainingStreamNode currentChainingNode = chainingNodeMap.get(currentNodeId);
+		if (currentChainingNode == null) {
+			currentChainingNode = new ChainingStreamNode(currentNodeId,
+					depthFirstSequenceGenerator.get(),
+					currentNode.getInEdges().size());
 
-		// add the current node to layered list
-		if (traversalNum == 0) {
-			Integer layerNumber = currentLayeredNode.getLayer();
-			List<ChainingStreamNode> list = layersMap.get(layerNumber);
-			if (list == null) {
-				list = new ArrayList<>();
-				layersMap.put(layerNumber, list);
-			}
-			list.add(currentLayeredNode);
+			chainingNodeMap.put(currentNodeId, currentChainingNode);
+		}
+
+		// update the layer number of the current node
+		currentChainingNode.updateLayer(currentLayerNumber);
+
+		// add the current node to the layered list
+		if (unvisitedInEdgeNum == 0) {
+			chainingLayerMap.computeIfAbsent(currentChainingNode.getLayer(), k -> new ArrayList<>())
+					.add(currentChainingNode);
 		}
 
 		return maxLayerNumber;
 	}
 
-	private void splitChain(
-			Integer upstreamNodeId,
-			Map<Integer, ChainingStreamNode> layeredNodeMap,
-			int maxPassingNodeNum,
-			Collection<StreamNode> chainingHeadNodes) {
+	private void splitChain(Map<Integer, List<ChainingStreamNode>> chainingLayerMap, Map<Integer, ChainingStreamNode> chainingNodeMap) {
+		SequenceGenerator breadthFirstSequenceGenerator = new SequenceGenerator();
+		for (int i = 0; i < chainingLayerMap.size(); i++) {
+			for (ChainingStreamNode currentChainingNode : chainingLayerMap.get(i)) {
+				currentChainingNode.setBreadthFirstNumber(breadthFirstSequenceGenerator.get());
 
-		StreamNode upstreamStreamNode = streamGraph.getStreamNode(upstreamNodeId);
-		ChainingStreamNode upstreamNode = layeredNodeMap.get(upstreamNodeId);
+				if (currentChainingNode.getLayer() == 0) {
+					StreamOperator<?> operator = streamGraph.getStreamNode(currentChainingNode.getNodeId()).getOperator();
+					currentChainingNode.setAllowMultiHeadChaining(
+							operator == null || operator instanceof StreamSource ? Boolean.FALSE : Boolean.TRUE);
+				}
 
-		upstreamNode.mergeChainablePath();
-		if (upstreamNode.isChainHeadNode()) {
-			chainingHeadNodes.add(upstreamStreamNode);
+				StreamNode currentNode = streamGraph.getStreamNode(currentChainingNode.getNodeId());
+				for (StreamEdge edge : currentNode.getOutEdges()) {
+					ChainingStreamNode downstreamChainingNode = chainingNodeMap.get(edge.getTargetId());
+
+					downstreamChainingNode.chainTo(currentChainingNode,
+							edge,
+							streamGraph.getStreamNode(edge.getSourceId()),
+							streamGraph.getStreamNode(edge.getTargetId()),
+							streamGraph.isMultiHeadChainMode(),
+							streamGraph.isChainEagerlyEnabled());
+				}
+			}
 		}
 
-		for (StreamEdge edge : upstreamStreamNode.getOutEdges()) {
-			ChainingStreamNode node = layeredNodeMap.get(edge.getTargetId());
+		/*
+		   Checks cycles (treated as a undirected graph) and break off them in multi-head chaining mode
+		   for the following purpose:
+		   1. No cycle when connecting edges of the job graph.
+		   2. No deadlock occurs when dynamic selection reading,
+		      see {@code org.apache.flink.streaming.api.operators.TwoInputStreamOperator#processRecord1(StreamRecord)}
+		      and {@code org.apache.flink.streaming.api.operators.TwoInputStreamOperator#processRecord2(StreamRecord)}.
+		 */
+		if (streamGraph.isMultiHeadChainMode() && chainingLayerMap.size() > 0) {
+			Map<Integer, Integer> colorMap = new HashMap<>(); // key: nodeId, value: colorType (1, 2)
+			Map<Integer, Integer> partMap = new HashMap<>(); // key: nodeId, value: prevNodeId
 
-			node.setInitNodeCountOfPath(maxPassingNodeNum);
-			node.chainTo(upstreamNode,
-					edge,
-					streamGraph.getStreamNode(edge.getSourceId()),
-					streamGraph.getStreamNode(edge.getTargetId()),
-					streamGraph.isMultiHeadChainMode(),
-					streamGraph.isChainEagerlyEnabled());
+			Map<Integer, Set<Integer>> markMap = new HashMap<>(); // key: cycleNumber, value: nodeIds
+
+			int cycleNumber = 0;
+			for (ChainingStreamNode chainingNode : chainingLayerMap.get(0)) {
+				int nodeId = chainingNode.getNodeId();
+				if (colorMap.containsKey(nodeId)) {
+					continue;
+				}
+
+				// call DFS to mark the cycles
+				cycleNumber = markUndirectedGraphCycles(nodeId, null, colorMap, partMap, markMap, cycleNumber);
+			}
+
+			if (LOG.isDebugEnabled()) {
+				for (int i = 1; i <= markMap.size(); i++) {
+					LOG.debug("Found cycle " + i + " (treated as a undirected graph): " + markMap.get(i));
+				}
+			}
+
+			breakOffUndirectedGraphCycles(markMap, chainingNodeMap);
 		}
+	}
+
+	private int markUndirectedGraphCycles(
+		Integer nodeId,
+		Integer prevNodeId,
+		Map<Integer, Integer> colorMap,
+		Map<Integer, Integer> partMap,
+		Map<Integer, Set<Integer>> markMap,
+		int cycleNumber) {
+
+		int color = colorMap.getOrDefault(nodeId, 0);
+		if (color == 2) {
+			// completely visited vertex.
+
+			return cycleNumber;
+		} else if (color == 1) {
+			// seen vertex, but was not completely visited -> cycle detected.
+			// backtrack based on parents to find the complete cycle.
+
+			cycleNumber++;
+
+			Integer currentNodeId = prevNodeId;
+			markMap.computeIfAbsent(cycleNumber, k -> new HashSet<>()).add(currentNodeId);
+
+			// backtrack the vertex which are
+			// in the current cycle thats found
+			while (!currentNodeId.equals(nodeId)) {
+				currentNodeId = partMap.get(currentNodeId);
+				markMap.computeIfAbsent(cycleNumber, k -> new HashSet<>()).add(currentNodeId);
+			}
+
+			return cycleNumber;
+		}
+
+		partMap.put(nodeId, prevNodeId);
+
+		// partially visited.
+		colorMap.put(nodeId, 1);
+
+		// dfs on graph
+		StreamNode node = streamGraph.getStreamNode(nodeId);
+		for (List<StreamEdge> edgeList : new List[] {node.getInEdges(), node.getOutEdges()}) {
+			for (StreamEdge edge : edgeList) {
+				int sourceNodeId = edge.getSourceId();
+				Integer nextNodeId = (sourceNodeId == nodeId) ? edge.getTargetId() : sourceNodeId;
+
+				// if it has not been visited previously
+				if (partMap.containsKey(nodeId) && nextNodeId.equals(partMap.get(nodeId))) {
+					continue;
+				}
+				cycleNumber = markUndirectedGraphCycles(nextNodeId, nodeId, colorMap, partMap, markMap, cycleNumber);
+			}
+		}
+
+		// completely visited.
+		colorMap.put(nodeId, 2);
+		return cycleNumber;
+	}
+
+	private void breakOffUndirectedGraphCycles(
+		Map<Integer, Set<Integer>> markMap,
+		Map<Integer, ChainingStreamNode> chainingNodeMap) {
+
+		for (int i = 1; i <= markMap.size(); i++) {
+			Integer breakingOffNodeId = null;
+			int breakingOffNodeBFNumber = -1;
+
+			Set<Integer> cycleNodes = markMap.get(i);
+			for (Integer nodeId : cycleNodes) {
+				int nodeBFNumber = chainingNodeMap.get(nodeId).getBreadthFirstNumber();
+				if (breakingOffNodeId == null || breakingOffNodeBFNumber < nodeBFNumber) {
+					breakingOffNodeId = nodeId;
+					breakingOffNodeBFNumber = nodeBFNumber;
+				}
+			}
+
+			StreamNode breakingOffNode = streamGraph.getStreamNode(breakingOffNodeId);
+			if (breakingOffNode.getInEdges().size() < 2) {
+				throw new RuntimeException("The stream graph is cyclic.");
+			}
+			for (StreamEdge inEdge : breakingOffNode.getInEdges()) {
+				if (!isInputEdgeBrokenOff(inEdge, breakingOffNodeId, cycleNodes, chainingNodeMap)) {
+					ChainingStreamNode chainingNode = chainingNodeMap.get(breakingOffNodeId);
+					chainingNode.removeChainableToNode(inEdge.getSourceId());
+				}
+			}
+		}
+	}
+
+	private boolean isInputEdgeBrokenOff(
+		final StreamEdge edge,
+		final Integer breakingOffNodeId,
+		Set<Integer> cycleNodes,
+		Map<Integer, ChainingStreamNode> chainingNodeMap) {
+
+		Integer sourceId = edge.getSourceId();
+		if (sourceId.equals(breakingOffNodeId)) {
+			throw new RuntimeException("The stream graph is cyclic.");
+		}
+
+		if (!cycleNodes.contains(sourceId)) {
+			return false;
+		}
+
+		ChainingStreamNode targetChainingNode = chainingNodeMap.get(edge.getTargetId());
+		if (!targetChainingNode.isChainTo(sourceId)) {
+			return true;
+		}
+
+		for (StreamEdge nextEdge : streamGraph.getStreamNode(sourceId).getInEdges()) {
+			if (isInputEdgeBrokenOff(nextEdge, breakingOffNodeId, cycleNodes, chainingNodeMap)) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private boolean createChain(
 			Integer startNodeId,
 			Integer currentNodeId,
 			SequenceGenerator chainIndexGenerator,
-			@Nullable Map<Integer, ChainingStreamNode> splitMap,
+			@Nullable Map<Integer, ChainingStreamNode> chainedNodeMap,
 			Map<Integer, byte[]> hashes,
 			List<Map<Integer, byte[]>> legacyHashes,
 			ChainCreationStorager storager) {
@@ -418,7 +554,7 @@ public class StreamingJobGraphGenerator {
 
 		int chainIndex = chainIndexGenerator.get();
 		byte[] primaryHashBytes = hashes.get(currentNodeId);
-		boolean isHeadNode = (splitMap == null || splitMap.get(currentNodeId).isChainHeadNode());
+		boolean isHeadNode = (chainedNodeMap == null || chainedNodeMap.get(currentNodeId).isChainHeadNode());
 
 		List<StreamEdge> chainedOutputs = new ArrayList<>();
 		List<StreamEdge> nonChainedOutputs = new ArrayList<>();
@@ -428,9 +564,9 @@ public class StreamingJobGraphGenerator {
 		// going down
 		for (StreamEdge outEdge : currentStreamNode.getOutEdges()) {
 			Integer downstreamNodeId = outEdge.getTargetId();
-			ChainingStreamNode downstreamNode = (splitMap == null) ? null : splitMap.get(downstreamNodeId);
+			ChainingStreamNode downstreamNode = (chainedNodeMap == null) ? null : chainedNodeMap.get(downstreamNodeId);
 
-			if (splitMap == null || !downstreamNode.isChainTo(currentNodeId)) {
+			if (chainedNodeMap == null || !downstreamNode.isChainTo(currentNodeId)) {
 				nonChainedOutputs.add(outEdge);
 				continue;
 			}
@@ -441,7 +577,7 @@ public class StreamingJobGraphGenerator {
 				startNodeId,
 				downstreamNodeId,
 				chainIndexGenerator,
-				splitMap,
+				chainedNodeMap,
 				hashes,
 				legacyHashes,
 				storager);
@@ -451,10 +587,10 @@ public class StreamingJobGraphGenerator {
 		storager.chainedNameMap.put(currentNodeId, makeChainedName(currentStreamNode.getOperatorName(), chainedOutputs, storager.chainedNameMap));
 
 		// going up
-		if (splitMap != null) {
+		if (chainedNodeMap != null) {
 			for (StreamEdge inEdge : currentStreamNode.getInEdges()) {
 				Integer upstreamNodeId = inEdge.getSourceId();
-				ChainingStreamNode currentNode = splitMap.get(currentNodeId);
+				ChainingStreamNode currentNode = chainedNodeMap.get(currentNodeId);
 				if (!currentNode.isChainTo(upstreamNodeId)) {
 					continue;
 				}
@@ -463,11 +599,11 @@ public class StreamingJobGraphGenerator {
 					startNodeId,
 					upstreamNodeId,
 					chainIndexGenerator,
-					splitMap,
+					chainedNodeMap,
 					hashes,
 					legacyHashes,
 					storager);
-			}
+					}
 		}
 
 		/* The traversal is finished. */
@@ -488,10 +624,10 @@ public class StreamingJobGraphGenerator {
 
 		List<StreamEdge> nonChainedInputs = new ArrayList<>();
 		for (StreamEdge inEdge : currentStreamNode.getInEdges()) {
-			if (splitMap == null) {
+			if (chainedNodeMap == null) {
 				nonChainedInputs.add(inEdge);
 			} else {
-				ChainingStreamNode currentNode = splitMap.get(currentNodeId);
+				ChainingStreamNode currentNode = chainedNodeMap.get(currentNodeId);
 				if (!currentNode.isChainTo(inEdge.getSourceId())) {
 					nonChainedInputs.add(inEdge);
 				}
@@ -527,19 +663,19 @@ public class StreamingJobGraphGenerator {
 
 		// The chain is end, create job vertex and configuration.
 		if (currentNodeId.equals(startNodeId)) {
-			if (splitMap != null) {
+			if (chainedNodeMap != null) {
 				// sort related lists
 				storager.chainInEdgesInOrder.sort(
-					Comparator.comparingInt((StreamEdge o) -> splitMap.get(o.getTargetId()).getDepthFirstNumber())
+					Comparator.comparingInt((StreamEdge o) -> chainedNodeMap.get(o.getTargetId()).getDepthFirstNumber())
 						.thenComparingInt((o) -> streamGraph.getStreamNode(o.getTargetId()).getInEdges().indexOf(o))
 				);
 				storager.chainOutEdgesInOrder.sort(
-					Comparator.comparingInt((StreamEdge o) -> splitMap.get(o.getTargetId()).getDepthFirstNumber())
+					Comparator.comparingInt((StreamEdge o) -> chainedNodeMap.get(o.getTargetId()).getDepthFirstNumber())
 						.thenComparingInt((o) -> streamGraph.getStreamNode(o.getTargetId()).getInEdges().indexOf(o))
 				);
 
-				storager.chainedNodeIdsInOrder.sort(Comparator.comparingInt((o) -> splitMap.get(o).getDepthFirstNumber()));
-				storager.chainedHeadNodeIdsInOrder.sort(Comparator.comparingInt((o) -> splitMap.get(o).getBreadthFirstNumber()));
+				storager.chainedNodeIdsInOrder.sort(Comparator.comparingInt((o) -> chainedNodeMap.get(o).getDepthFirstNumber()));
+				storager.chainedHeadNodeIdsInOrder.sort(Comparator.comparingInt((o) -> chainedNodeMap.get(o).getBreadthFirstNumber()));
 			}
 
 			storager.createdVertex = createJobVertex(startNodeId, hashes, legacyHashes, storager);
@@ -670,7 +806,6 @@ public class StreamingJobGraphGenerator {
 		configCache.serializeTo(new StreamTaskConfig(config));
 	}
 
-	@SuppressWarnings("unchecked")
 	private static void setupNodeConfig(Integer nodeId,
 		List<StreamEdge> nonChainableInputs,
 		List<StreamEdge> chainableOutputs,
@@ -808,7 +943,7 @@ public class StreamingJobGraphGenerator {
 			JobVertex downstreamVertex = nodeToJobVertexMap.get(edge.getTargetId());
 
 			if (upstreamVertex.getID().equals(downstreamVertex.getID())) {
-				throw new RuntimeException("The graph is cyclic.");
+				throw new RuntimeException("The job graph is cyclic.");
 			}
 
 			StreamPartitioner<?> partitioner = edge.getPartitioner();
@@ -1052,7 +1187,7 @@ public class StreamingJobGraphGenerator {
 			this.chainedNodeIdsInOrder = new ArrayList<>();
 		}
 
-		public void clear() {
+		void clearChain() {
 			this.chainedConfigMap.clear();
 			this.chainedHeadNodeIdsInOrder.clear();
 			this.chainInEdgesInOrder.clear();
@@ -1084,14 +1219,6 @@ public class StreamingJobGraphGenerator {
 		private int layer = -1;
 		private int breadthFirstNumber = -1;
 
-		private int initNodeCountOfPath;
-		private Map<Integer, PassingPath> chainablePathMap;
-
-		private boolean isChainablePathMerged;
-		private PassingPath mergedChainablePath;
-
-		private PassingPath mergedNonChainablePath;
-
 		private Set<Integer> chainableToSet;
 
 		private Boolean allowMultiHeadChaining;
@@ -1122,24 +1249,16 @@ public class StreamingJobGraphGenerator {
 			return layer;
 		}
 
-		void setLayer(int layer) {
+		void updateLayer(int layer) {
 			this.layer = Math.max(this.layer, layer);
 		}
 
 		boolean isChainHeadNode() {
-			checkState(isChainablePathMerged, "Chainning of the current node(nodeId: %s) has not completed yet.", nodeId);
-
 			return inEdgeCount == 0 || inEdgeCount > (chainableToSet == null ? 0 : chainableToSet.size());
 		}
 
 		boolean isChainTo(Integer upstreamNodeId) {
-			checkState(isChainablePathMerged, "Chainning of the current node(nodeId: %s) has not completed yet.", nodeId);
-
 			return chainableToSet != null && chainableToSet.contains(upstreamNodeId);
-		}
-
-		void setInitNodeCountOfPath(int initNodeCountOfPath) {
-			this.initNodeCountOfPath = initNodeCountOfPath;
 		}
 
 		void setAllowMultiHeadChaining(Boolean allowMultiHeadChaining) {
@@ -1149,136 +1268,26 @@ public class StreamingJobGraphGenerator {
 			this.allowMultiHeadChaining = allowMultiHeadChaining;
 		}
 
-		void mergeChainablePath() {
-			checkState(!isChainablePathMerged, "The passing paths of the current node(nodeId: %s) have merged.", nodeId);
+		void chainTo(ChainingStreamNode upstreamChainingNode,
+			StreamEdge edge,
+			StreamNode sourceNode,
+			StreamNode targetNode,
+			boolean isMultiHeadChainMode,
+			boolean isEagerChainingEnabled) {
 
-			if (chainablePathMap == null || chainablePathMap.size() == 0) {
-				mergedChainablePath = null;
+			final boolean isChainable;
+			if (upstreamChainingNode.allowMultiHeadChaining && isMultiHeadChainMode) {
+				isChainable = isChainableOnMultiHeadMode(edge, sourceNode, targetNode, isEagerChainingEnabled);
 			} else {
-				for (PassingPath path : chainablePathMap.values()) {
-					if (path.isMarkedAsDeleted()) {
-						continue;
-					}
-					if (mergedChainablePath == null) {
-						mergedChainablePath = path;
-					} else {
-						mergedChainablePath.merge(path);
-					}
-				}
-			}
-
-			chainablePathMap = null;
-			isChainablePathMerged = true;
-		}
-
-		void chainTo(ChainingStreamNode upstreamNode,
-					StreamEdge edge,
-					StreamNode sourceVertex,
-					StreamNode targetVertex,
-					boolean isMultiHeadChainMode,
-					boolean isEagerChainingEnabled) {
-			checkState(upstreamNode.isChainablePathMerged,
-				"The passing paths of the upstream node(nodeId: %s) have not been merged yet.", upstreamNode.nodeId);
-
-			boolean isChainable = true;
-
-			if (upstreamNode.allowMultiHeadChaining && isMultiHeadChainMode) {
-				/**
-				 *  Checks paths overlapping for the following purpose:
-				 *  1. No cycle when connecting edges of the job graph.
-				 *  2. No deadlock occurs when dynamic selection reading,
-				 *     see {@link org.apache.flink.streaming.api.operators.TwoInputStreamOperator#processRecord1(StreamRecord)}
-				 *     and {@link org.apache.flink.streaming.api.operators.TwoInputStreamOperator#processRecord2(StreamRecord)}.
-				 */
-
-				if (chainablePathMap == null) { // lazy assignment
-					chainablePathMap = new HashMap<>(inEdgeCount);
-				}
-				for (Map.Entry<Integer, PassingPath> entry : chainablePathMap.entrySet()) {
-					PassingPath path = entry.getValue();
-
-					boolean isRemoveChainableNode = false;
-					if (path.exist(upstreamNode.breadthFirstNumber) || path.intersects(upstreamNode.mergedChainablePath)) {
-						isRemoveChainableNode = true;
-						isChainable = false;
-					} else if (path.intersects(upstreamNode.mergedNonChainablePath)) {
-						isRemoveChainableNode = true;
-					}
-
-					if (isRemoveChainableNode) {
-						Integer otherUpstreamNodeId = entry.getKey();
-
-						PassingPath removedPath = removeChainablePath(otherUpstreamNodeId);
-						addNonChainablePath(removedPath);
-
-						removeChainableToNode(otherUpstreamNodeId);
-					}
-				}
-
-				addNonChainablePath(upstreamNode.mergedNonChainablePath);
-				if (isChainable) {
-					if (mergedNonChainablePath.exist(upstreamNode.breadthFirstNumber)
-						|| mergedNonChainablePath.intersects(upstreamNode.mergedChainablePath)) {
-						isChainable = false;
-					} else {
-						isChainable = isEdgeChainableOnMultiHeadMode(edge, sourceVertex, targetVertex, isEagerChainingEnabled);
-					}
-				}
-
-				if (isChainable) {
-					addChainablePath(upstreamNode);
-				} else {
-					addNonChainablePath(upstreamNode);
-				}
-			} else {
-				isChainable = isEdgeChainable(edge, sourceVertex, targetVertex, isEagerChainingEnabled);
+				isChainable = isChainable(edge, sourceNode, targetNode, isEagerChainingEnabled);
 			}
 
 			if (isChainable) {
-				addChainableToNode(upstreamNode.nodeId);
+				addChainableToNode(upstreamChainingNode.nodeId);
 
-				setAllowMultiHeadChaining(upstreamNode.allowMultiHeadChaining);
+				setAllowMultiHeadChaining(upstreamChainingNode.allowMultiHeadChaining);
 			} else {
 				setAllowMultiHeadChaining(Boolean.TRUE);
-			}
-		}
-
-		private void addChainablePath(ChainingStreamNode upstreamNode) {
-			PassingPath newPath;
-			if (upstreamNode.mergedChainablePath != null) {
-				newPath = upstreamNode.mergedChainablePath.clone();
-			} else {
-				newPath = new PassingPath(initNodeCountOfPath);
-			}
-			newPath.add(upstreamNode.breadthFirstNumber);
-
-			chainablePathMap.put(upstreamNode.nodeId, newPath);
-		}
-
-		private PassingPath removeChainablePath(Integer upstreamNodeId) {
-			PassingPath path = null;
-
-			if (chainablePathMap != null) {
-				path = chainablePathMap.get(upstreamNodeId);
-				if (path != null) {
-					path.setMarkedAsDeleted(true);
-				}
-			}
-
-			return path;
-		}
-
-		private void addNonChainablePath(ChainingStreamNode upstreamNode) {
-			addNonChainablePath(upstreamNode.mergedChainablePath);
-			mergedNonChainablePath.add(upstreamNode.breadthFirstNumber);
-		}
-
-		private void addNonChainablePath(PassingPath path) {
-			if (mergedNonChainablePath == null) {
-				mergedNonChainablePath = new PassingPath(initNodeCountOfPath);
-			}
-			if (path != null) {
-				mergedNonChainablePath.merge(path);
 			}
 		}
 
@@ -1289,19 +1298,26 @@ public class StreamingJobGraphGenerator {
 			chainableToSet.add(upstreamNodeId);
 		}
 
-		private void removeChainableToNode(Integer upstreamNodeId) {
+		void removeChainableToNode(Integer upstreamNodeId) {
 			if (chainableToSet != null) {
 				chainableToSet.remove(upstreamNodeId);
 			}
 		}
 
-		private boolean isEdgeChainable(StreamEdge edge, StreamNode upstreamNode, StreamNode downStreamNode, boolean chainEagerlyEnabled) {
+		private boolean isChainable(StreamEdge edge,
+			StreamNode upstreamNode,
+			StreamNode downStreamNode,
+			boolean chainEagerlyEnabled) {
 
 			return downStreamNode.getInEdges().size() == 1
-				&& isEdgeChainableOnMultiHeadMode(edge, upstreamNode, downStreamNode, chainEagerlyEnabled);
+				&& isChainableOnMultiHeadMode(edge, upstreamNode, downStreamNode, chainEagerlyEnabled);
 		}
 
-		private boolean isEdgeChainableOnMultiHeadMode(StreamEdge edge, StreamNode upstreamNode, StreamNode downStreamNode, boolean chainEagerlyEnabled) {
+		private boolean isChainableOnMultiHeadMode(StreamEdge edge,
+			StreamNode upstreamNode,
+			StreamNode downStreamNode,
+			boolean chainEagerlyEnabled) {
+
 			StreamOperator<?> downstreamOperator = downStreamNode.getOperator();
 			StreamOperator<?> upstreamOperator = upstreamNode.getOperator();
 
@@ -1331,56 +1347,6 @@ public class StreamingJobGraphGenerator {
 
 		public int last() {
 			return sequence;
-		}
-	}
-
-	/**
-	 * The passing path to arrive a {@link StreamNode} from a root upstream node in DAG.
-	 */
-	private static class PassingPath {
-		private BitSet passingNodes;
-
-		private boolean isMarkedAsDeleted = false;
-
-		PassingPath(int initNodeCount) {
-			this.passingNodes = new BitSet(initNodeCount);
-		}
-
-		private PassingPath() {}
-
-		public boolean exist(int nodeNumber) {
-			return passingNodes.get(nodeNumber);
-		}
-
-		public void add(int nodeNumber) {
-			passingNodes.set(nodeNumber);
-		}
-
-		public void merge(PassingPath other) {
-			if (other != null) {
-				passingNodes.or(other.passingNodes);
-			}
-		}
-
-		public boolean intersects(PassingPath other) {
-			return other != null && passingNodes.intersects(other.passingNodes);
-		}
-
-		@SuppressWarnings("MethodDoesntCallSuperMethod")
-		@Override
-		public PassingPath clone() {
-			PassingPath clone = new PassingPath();
-			clone.passingNodes = (BitSet) passingNodes.clone();
-
-			return clone;
-		}
-
-		public boolean isMarkedAsDeleted() {
-			return isMarkedAsDeleted;
-		}
-
-		public void setMarkedAsDeleted(boolean markedAsDeleted) {
-			this.isMarkedAsDeleted = markedAsDeleted;
 		}
 	}
 }
