@@ -43,8 +43,9 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * query parsing and analysis.)
  */
 public class CatalogManager {
+	// Cannot use 'default' here because 'default' is a reserved keyword in Calcite query parser
 	public static final String DEFAULT_CATALOG_NAME = "default_catalog";
-	public static final String DEFAULT_DATABASE_NAME = "default";
+	public static final String DEFAULT_DATABASE_NAME = "default_db";
 
 	// The catalog to hold all registered and translated tables
 	// We disable caching here to prevent side effects

@@ -56,9 +56,10 @@ class TableEnvironmentTest extends TableTestBase {
     assert(tEnv.listDatabases().sameElements(Array("db1", "db2")))
     assert(tEnv.listTables().sameElements(Array("tb2")))
 
-    tEnv.setDefaultDatabase("default_catalog", "default")
+    tEnv.setDefaultDatabase(
+      CatalogManager.DEFAULT_CATALOG_NAME, CatalogManager.DEFAULT_DATABASE_NAME)
 
-    assert(tEnv.listDatabases().sameElements(Array("default")))
+    assert(tEnv.listDatabases().sameElements(Array(CatalogManager.DEFAULT_DATABASE_NAME)))
     assert(tEnv.listTables().sameElements(Array.empty[String]))
   }
 
@@ -84,7 +85,8 @@ class TableEnvironmentTest extends TableTestBase {
 
   @Test(expected = classOf[IllegalArgumentException])
   def testNonExistDb(): Unit = {
-    streamTestUtil().tableEnv.setDefaultDatabase("default_catalog.nonexistdb")
+    streamTestUtil().tableEnv.setDefaultDatabase(
+      String.format("%s.%s", CatalogManager.DEFAULT_CATALOG_NAME, "nonexistdb"))
   }
 
   // ----------------------------------------------------------------------------------------------
