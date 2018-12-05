@@ -62,6 +62,7 @@ import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, ExternalFunctionCatalog, FunctionCatalog}
+import org.apache.flink.util.Preconditions
 
 import _root_.scala.annotation.varargs
 import _root_.scala.collection.JavaConversions._
@@ -255,6 +256,13 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   /**
+    * Get the default database name.
+    */
+  def getDefaultDatabaseName(): String = {
+    catalogManager.getDefaultDatabaseName
+  }
+
+  /**
     * Set a default catalog.
     *
     * @param name            Name of the catalog
@@ -291,6 +299,33 @@ abstract class TableEnvironment(val config: TableConfig) {
     val dbName = if (dbPath.length == 1) dbPath(0) else dbPath(1)
 
     catalogManager.setDefaultDatabase(catalogName, dbName)
+  }
+
+  /**
+    * TODO: should replace getTable()
+    *
+    * @param paths catalog.db.table or db.table or table
+    * @return
+    */
+  def getTable2(paths: Array[String]): Option[org.apache.calcite.schema.Table] = {
+    var names = catalogManager.resolveTableName(paths : _*)
+    var catalogName = names(0)
+    var dbName = names(1)
+    var tableName = names(2)
+
+    val catalogSchema = catalogManager.getRootSchema.getSubSchema(catalogName)
+
+    if (catalogSchema == null) {
+      return Option.empty
+    } else {
+      val dbSchema = catalogSchema.getSubSchema(dbName)
+
+      if (dbSchema == null) {
+        return Option.empty
+      } else {
+        return Option(dbSchema.getTable(tableName))
+      }
+    }
   }
 
   // ------ APIs for old catalog architecture ------
@@ -825,6 +860,27 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   /**
+    * TODO: replace scan() when migration to new catalog architecture is finished
+    */
+  @throws[TableException]
+  @varargs
+  def scan2(tablePath: String*): Table = {
+    scanInternal2(catalogManager.resolveTableName(tablePath.toArray : _*)) match {
+      case Some(table) => table
+      case None => throw new TableException(s"Table '${tablePath.mkString(".")}' was not found.")
+    }
+  }
+
+  private[flink] def scanInternal2(tablePath: Array[String]): Option[Table] = {
+    val tableOpt = getTable2(tablePath)
+    if (tableOpt.nonEmpty) {
+      Some(new Table(this, CatalogNode(tablePath, tableOpt.get.getRowType(typeFactory))))
+    } else {
+      None
+    }
+  }
+
+  /**
     * Creates a table source and/or table sink from a descriptor.
     *
     * Descriptors allow for declaring the communication to external systems in an
@@ -1270,11 +1326,16 @@ abstract class TableEnvironment(val config: TableConfig) {
 
   /**
     * Register a [[ExternalCatalogTable]] to this table.
+    *
+    * TODO: this API should be removed from TableEnvironment. Registering tables should be
+    * delegated to catalog.
+    *
     * @param catalogPaths
     * @param tableName
     * @param externalTable
     * @param ignoreIfExists
     */
+  @deprecated
   def registerExternalTable(
       catalogPaths: Array[String],
       tableName: String,

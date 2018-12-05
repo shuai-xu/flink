@@ -258,7 +258,7 @@ public class LocalExecutor implements Executor {
 			.createEnvironmentInstance()
 			.getTableEnvironment();
 		try {
-			return tableEnv.scan(name.split("\\.")).getSchema();
+			return tableEnv.scan2(name.split("\\.")).getSchema();
 		} catch (Throwable t) {
 			// catch everything such that the query does not crash the executor
 			throw new SqlExecutionException("No table with this name could be found.", t);

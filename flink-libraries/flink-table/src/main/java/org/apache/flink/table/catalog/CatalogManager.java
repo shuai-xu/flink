@@ -25,6 +25,7 @@ import org.apache.flink.util.StringUtils;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -67,6 +68,9 @@ public class CatalogManager {
 		catalogs.put(DEFAULT_CATALOG_NAME, inMemoryCatalog);
 		defaultCatalog = DEFAULT_CATALOG_NAME;
 		defaultDb = DEFAULT_DATABASE_NAME;
+
+		// TODO: re-evaluate isStreaming
+		CatalogCalciteSchema.registerCatalog(rootSchema, DEFAULT_CATALOG_NAME, inMemoryCatalog, true);
 	}
 
 	/**
@@ -80,6 +84,11 @@ public class CatalogManager {
 		checkArgument(catalogs.keySet().contains(defaultCatalog), "defaultCatalog must be in catalogs");
 
 		this.defaultCatalog = defaultCatalog;
+
+		// TODO: re-evaluate isStreaming
+		for (Map.Entry<String, ReadableCatalog> e : catalogs.entrySet()) {
+			CatalogCalciteSchema.registerCatalog(rootSchema, e.getKey(), e.getValue(), true);
+		}
 	}
 
 	public void registerCatalog(String catalogName, ReadableCatalog catalog, boolean isStreaming) throws CatalogAlreadyExistException {
@@ -140,5 +149,48 @@ public class CatalogManager {
 
 	public SchemaPlus getRootSchema() {
 		return rootSchema;
+	}
+
+	/**
+	 * Returns the full name of the given table name.
+	 *
+	 * @param paths Table paths whose format can be among "catalog.db.table", "db.table", or "table"
+	 * @return An array of complete table path
+	 */
+	public String[] resolveTableName(String... paths) {
+		checkNotNull(paths, "paths cannot be null");
+		checkArgument(paths.length >= 1 && paths.length <= 3, "paths length has to be between 1 and 3");
+		checkArgument(!Arrays.stream(paths).anyMatch(p -> StringUtils.isNullOrWhitespaceOnly(p)),
+			"Paths contains null or while-space-only string");
+
+		if (paths.length == 3) {
+			return paths;
+		}
+
+		String catalogName;
+		String dbName;
+		String tableName;
+
+		if (paths.length == 1) {
+			catalogName = getDefaultCatalogName();
+			dbName = getDefaultDatabaseName();
+			tableName = paths[0];
+		} else {
+			catalogName = getDefaultCatalogName();
+			dbName = paths[0];
+			tableName = paths[1];
+		}
+
+		return new String[] {catalogName, dbName, tableName};
+	}
+
+	/**
+	 * Returns the full name of the given table name.
+	 *
+	 * @param paths Table paths whose format can be among "catalog.db.table", "db.table", or "table"
+	 * @return A string of complete table path
+	 */
+	public String resolveTableNameAsString(String[] paths) {
+		return String.join(".", resolveTableName(paths));
 	}
 }

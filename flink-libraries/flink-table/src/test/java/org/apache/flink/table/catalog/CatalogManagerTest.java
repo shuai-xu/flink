@@ -24,6 +24,8 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -86,5 +88,42 @@ public class CatalogManagerTest {
 	@Test(expected = IllegalArgumentException.class)
 	public void testSetNonExistDefaultDatabase() {
 		manager.setDefaultDatabase(CatalogManager.DEFAULT_CATALOG_NAME, "nonexist");
+	}
+
+	@Test
+	public void testResolveTableName() {
+		assertTrue(Arrays.equals(
+			new String[] {"1", "2" , "3"} , manager.resolveTableName(new String[] {"1", "2", "3"})));
+		assertTrue(Arrays.equals(
+			new String[] {CatalogManager.DEFAULT_CATALOG_NAME, "1", "2"},
+			manager.resolveTableName(new String[] {"1", "2"})));
+		assertTrue(Arrays.equals(
+			new String[] {CatalogManager.DEFAULT_CATALOG_NAME, CatalogManager.DEFAULT_DATABASE_NAME, "1"},
+			manager.resolveTableName(new String[] {"1"})));
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void testGetCompleteTablePathWithNull() {
+		manager.resolveTableNameAsString(null);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testGetCompleteTablePathWithEmptyArray() {
+		manager.resolveTableNameAsString(new String[] {});
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testGetCompleteTablePathWithLongArray() {
+		manager.resolveTableNameAsString(new String[] {"1", "2", "3", "4"});
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testGetCompleteTablePathWithEmptyString() {
+		manager.resolveTableNameAsString(new String[] {"1", "2", ""});
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testGetCompleteTablePathWithNullString() {
+		manager.resolveTableNameAsString(new String[] {"1", "2", null});
 	}
 }

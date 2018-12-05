@@ -28,7 +28,7 @@ import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.types.DataTypes.{PROCTIME_INDICATOR => PROCTIME}
 import org.apache.flink.table.api.types.DataTypes.{ROWTIME_INDICATOR => ROWTIME}
 import org.apache.flink.table.api.types.DataTypes._
-import org.apache.flink.table.catalog.CatalogManager
+import org.apache.flink.table.catalog._
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.MemoryTableSourceSinkUtil.UnsafeMemoryAppendTableSink
@@ -87,6 +87,89 @@ class TableEnvironmentTest extends TableTestBase {
   def testNonExistDb(): Unit = {
     streamTestUtil().tableEnv.setDefaultDatabase(
       String.format("%s.%s", CatalogManager.DEFAULT_CATALOG_NAME, "nonexistdb"))
+  }
+
+  @Test
+  def testGetTable(): Unit = {
+    var tEnv = streamTestUtil().tableEnv
+
+    registerTestTable(tEnv)
+
+    assert(!tEnv.getTable2(Array("t1")).isEmpty);
+    assert(tEnv.getTable2(Array("t2")).isEmpty);
+  }
+
+  @Test(expected = classOf[IllegalArgumentException])
+  def testEmptyTablePath(): Unit = {
+    var tEnv = streamTestUtil().tableEnv
+
+    tEnv.getTable2(Array())
+  }
+
+  @Test(expected = classOf[NullPointerException])
+  def testNullTablePath(): Unit = {
+    var tEnv = streamTestUtil().tableEnv
+
+    tEnv.getTable2(null)
+  }
+
+  @Test(expected = classOf[IllegalArgumentException])
+  def testLongTablePath(): Unit = {
+    var tEnv = streamTestUtil().tableEnv
+
+    tEnv.getTable2(Array("1", "2", "3", "4"))
+  }
+
+  @Test
+  def testScan(): Unit = {
+    var tEnv = streamTestUtil().tableEnv
+
+    registerTestTable(tEnv)
+
+    var tableSchema = tEnv.scan2(
+      CatalogManager.DEFAULT_CATALOG_NAME, CatalogManager.DEFAULT_DATABASE_NAME, "t1").getSchema
+
+    assert(tableSchema.getColumnNames.sameElements(Array("a", "b")))
+    assert(tableSchema.toRowType == DataTypes.of(CatalogTestUtil.getRowTypeInfo))
+
+    // test table inference
+    tableSchema = tEnv.scan2("t1").getSchema
+
+    assert(tableSchema.getColumnNames.sameElements(Array("a", "b")))
+    assert(tableSchema.toRowType == DataTypes.of(CatalogTestUtil.getRowTypeInfo))
+  }
+
+  @Test(expected = classOf[TableException])
+  def testScanNonExistCatalog(): Unit = {
+    var tEnv = streamTestUtil().tableEnv
+    registerTestTable(tEnv)
+    var tableSchema = tEnv.scan2(
+      "nonexist", CatalogManager.DEFAULT_DATABASE_NAME, "t1").getSchema
+  }
+
+  @Test(expected = classOf[TableException])
+  def testScanNonExistDb(): Unit = {
+    var tEnv = streamTestUtil().tableEnv
+    registerTestTable(tEnv)
+    var tableSchema = tEnv.scan2(CatalogManager.DEFAULT_CATALOG_NAME, "nonexist", "t1").getSchema
+  }
+
+  @Test(expected = classOf[TableException])
+  def testScanNonExistTable(): Unit = {
+    var tEnv = streamTestUtil().tableEnv
+    registerTestTable(tEnv)
+    var tableSchema = tEnv.scan2(
+      CatalogManager.DEFAULT_CATALOG_NAME, CatalogManager.DEFAULT_DATABASE_NAME, "nonexist")
+      .getSchema
+  }
+
+  def registerTestTable(tEnv: TableEnvironment): Unit = {
+    var catalog = tEnv.getCatalog(tEnv.getDefaultCatalogName())
+
+    catalog.asInstanceOf[ReadableWritableCatalog].createTable(
+      new ObjectPath(tEnv.getDefaultDatabaseName(), "t1"),
+      CatalogTestUtil.getTestExternalCatalogTable,
+      false)
   }
 
   // ----------------------------------------------------------------------------------------------
