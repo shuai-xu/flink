@@ -176,9 +176,9 @@ public class UnilateralSortMerger<E> implements Sorter<E> {
 	protected volatile MutableObjectIterator<E> iterator;
 
 	/**
-	 * The exception that is set, if the iterator cannot be created.
+	 * The exception that is set, if there is any unhandled error.
 	 */
-	protected volatile IOException iteratorException;
+	protected volatile IOException unhandledException;
 
 	/**
 	 * Flag indicating that the sorter was closed.
@@ -526,8 +526,8 @@ public class UnilateralSortMerger<E> implements Sorter<E> {
 		try {
 			// if the result iterator has not been obtained yet, set the exception
 			synchronized (this.iteratorLock) {
-				if (this.iteratorException == null) {
-					this.iteratorException = new IOException("The sorter has been closed.");
+				if (this.unhandledException == null) {
+					this.unhandledException = new IOException("The sorter has been closed.");
 					this.iteratorLock.notifyAll();
 				}
 			}
@@ -690,13 +690,13 @@ public class UnilateralSortMerger<E> implements Sorter<E> {
 	public List<SortedDataFile<E>> getRemainingSortedDataFiles() throws InterruptedException {
 		synchronized (this.iteratorLock) {
 			// wait while both the result and the exception are not set
-			while (this.remainingSortedDataFiles == null && this.iteratorException == null) {
+			while (this.remainingSortedDataFiles == null && this.unhandledException == null) {
 				this.iteratorLock.wait();
 			}
 
-			if (this.iteratorException != null) {
-				throw new RuntimeException("Error obtaining the sorted input: " + this.iteratorException.getMessage(),
-					this.iteratorException);
+			if (this.unhandledException != null) {
+				throw new RuntimeException("Error obtaining the sorted input: " + this.unhandledException.getMessage(),
+					this.unhandledException);
 			}
 			else {
 				return this.remainingSortedDataFiles;
@@ -708,13 +708,13 @@ public class UnilateralSortMerger<E> implements Sorter<E> {
 	public MutableObjectIterator<E> getIterator() throws InterruptedException {
 		synchronized (this.iteratorLock) {
 			// wait while both the result and the exception are not set
-			while (this.iterator == null && this.iteratorException == null) {
+			while (this.iterator == null && this.unhandledException == null) {
 				this.iteratorLock.wait();
 			}
 
-			if (this.iteratorException != null) {
-				throw new RuntimeException("Error obtaining the sorted input: " + this.iteratorException.getMessage(),
-					this.iteratorException);
+			if (this.unhandledException != null) {
+				throw new RuntimeException("Error obtaining the sorted input: " + this.unhandledException.getMessage(),
+					this.unhandledException);
 			}
 			else {
 				return this.iterator;
@@ -731,7 +731,7 @@ public class UnilateralSortMerger<E> implements Sorter<E> {
 	protected final void setResult(List<SortedDataFile<E>> mergedDataFiles, MutableObjectIterator<E> iterator) {
 		synchronized (this.iteratorLock) {
 			// set the result only, if no exception has occurred
-			if (this.iteratorException == null) {
+			if (this.unhandledException == null) {
 				this.remainingSortedDataFiles = mergedDataFiles;
 				this.iterator = iterator;
 				this.iteratorLock.notifyAll();
@@ -746,9 +746,11 @@ public class UnilateralSortMerger<E> implements Sorter<E> {
 	 */
 	protected final void setResultException(IOException ioex) {
 		synchronized (this.iteratorLock) {
-			if (this.iteratorException == null) {
-				this.iteratorException = ioex;
+			if (this.unhandledException == null) {
+				this.unhandledException = ioex;
 				this.iteratorLock.notifyAll();
+
+				LOG.error("Unhandled exception occurs.", this.unhandledException);
 			}
 		}
 	}
@@ -1634,7 +1636,7 @@ public class UnilateralSortMerger<E> implements Sorter<E> {
 							 BlockingQueue<SortedDataFileElement<E>> spilledFiles,
 							 ExceptionHandler<IOException> exceptionHandler,
 							 AbstractInvokable parentTask) {
-			super(exceptionHandler, "SortMerger spilling thread", null, parentTask);
+			super(exceptionHandler, "SortMerger merging thread", null, parentTask);
 			this.merger = merger;
 			this.memManager = memManager;
 			this.spilledFiles = spilledFiles;

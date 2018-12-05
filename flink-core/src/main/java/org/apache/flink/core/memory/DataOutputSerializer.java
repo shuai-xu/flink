@@ -366,7 +366,7 @@ public class DataOutputSerializer implements DataOutputView {
 	@Override
 	public void write(DataInputView source, int numBytes) throws IOException {
 		if (buffer.length - this.position < numBytes){
-			throw new EOFException("Could not write " + numBytes + " bytes. Buffer overflow.");
+			resize(numBytes - (buffer.length - this.position));
 		}
 
 		source.readFully(this.buffer, this.position, numBytes);

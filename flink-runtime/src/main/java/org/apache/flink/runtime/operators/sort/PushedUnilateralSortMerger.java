@@ -69,6 +69,9 @@ public class PushedUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 
 	public synchronized void add(E current) throws IOException {
 		checkArgument(!addingDone, "Adding already done!");
+		if (unhandledException != null) {
+			throw unhandledException;
+		}
 		try {
 			if (firstRecord) {
 				this.bytesUntilSpilling = startSpillingBytes;
@@ -153,7 +156,12 @@ public class PushedUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 				}
 			}
 		} catch (Throwable e) {
-			throw new IOException(e);
+			if (unhandledException != null) {
+				LOG.warn("Record add failed.", e);
+				throw unhandledException;
+			} else {
+				throw new IOException(e);
+			}
 		}
 	}
 
