@@ -18,11 +18,13 @@
 
 package org.apache.flink.table.plan
 
+import org.apache.flink.api.scala._
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.{TableFunc1, TableTestBatchExecBase}
+
 import org.junit.{Before, Test}
 
 class RemoveShuffleTest extends TableTestBatchExecBase {
@@ -444,7 +446,6 @@ class RemoveShuffleTest extends TableTestBatchExecBase {
     util.verifyPlan(sqlQuery)
   }
 
-
   @Test
   def testRemoveHashShuffle_Rank_Singleton1(): Unit = {
     util.tableEnv.getConfig.getParameters.setString(
@@ -475,4 +476,55 @@ class RemoveShuffleTest extends TableTestBatchExecBase {
     util.verifyPlan(sqlQuery)
   }
 
+  @Test
+  def testRemoveHashShuffle_Correlate1(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortMergeJoin,NestedLoopJoin,SortAgg")
+    // disable BroadcastHashJoin
+    util.tableEnv.getConfig.getParameters.setInteger(
+      TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
+    util.tableEnv.registerFunction("split", new TableFunc1)
+    val sqlQuery =
+      """
+        |WITH r AS (SELECT f, count(f) as cnt FROM y GROUP BY f),
+        |     v as (SELECT f1, f, cnt FROM r, LATERAL TABLE(split(f)) AS T(f1))
+        |SELECT * FROM x, v WHERE c = f
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testRemoveHashShuffle_Correlate2(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortMergeJoin,NestedLoopJoin,SortAgg")
+    // disable BroadcastHashJoin
+    util.tableEnv.getConfig.getParameters.setInteger(
+      TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
+    util.tableEnv.registerFunction("split", new TableFunc1)
+    val sqlQuery =
+      """
+        |WITH r AS (SELECT f, count(f) as cnt FROM y GROUP BY f),
+        |     v as (SELECT f, f1 FROM r, LATERAL TABLE(split(f)) AS T(f1))
+        |SELECT * FROM x, v WHERE c = f AND f LIKE '%llo%'
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testRemoveHashShuffle_Correlate3(): Unit = {
+    // do not remove shuffle
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortMergeJoin,NestedLoopJoin,SortAgg")
+    // disable BroadcastHashJoin
+    util.tableEnv.getConfig.getParameters.setInteger(
+      TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
+    util.tableEnv.registerFunction("split", new TableFunc1)
+    val sqlQuery =
+      """
+        |WITH r AS (SELECT f, count(f) as cnt FROM y GROUP BY f),
+        |     v as (SELECT f1 FROM r, LATERAL TABLE(split(f)) AS T(f1))
+        |SELECT * FROM x, v WHERE c = f1
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
 }

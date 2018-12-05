@@ -150,14 +150,14 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       leftRowCnt
     } else {
       // sort cost
-      COMPARE_CPU_COST * numOfSort * leftRowCnt * Math.log(leftRowCnt)
+      COMPARE_CPU_COST * numOfSort * leftRowCnt * Math.max(Math.log(leftRowCnt), 1.0)
     }
     val rightSortCpuCost: Double = if (rightSorted) {
       // cost of writing rhs data to buffer
       rightRowCnt
     } else {
       // sort cost
-      COMPARE_CPU_COST * numOfSort * rightRowCnt * Math.log(rightRowCnt)
+      COMPARE_CPU_COST * numOfSort * rightRowCnt * Math.max(Math.log(rightRowCnt), 1.0)
     }
     // cost of evaluating each join condition
     val joinConditionCpuCost = COMPARE_CPU_COST * (leftRowCnt + rightRowCnt)

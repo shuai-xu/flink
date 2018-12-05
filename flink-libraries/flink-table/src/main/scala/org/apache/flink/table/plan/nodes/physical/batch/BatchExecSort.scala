@@ -76,7 +76,7 @@ class BatchExecSort(
       return null
     }
     val numOfSort = collations.getFieldCollations.size()
-    val cpuCost = COMPARE_CPU_COST * numOfSort * rowCount * Math.log(rowCount)
+    val cpuCost = COMPARE_CPU_COST * numOfSort * rowCount * Math.max(Math.log(rowCount), 1.0)
     val memCost = BatchExecRel.calcNeedMemoryForSort(mq, input)
     val costFactory = planner.getCostFactory.asInstanceOf[FlinkCostFactory]
     costFactory.makeCost(rowCount, cpuCost, 0, 0, memCost)

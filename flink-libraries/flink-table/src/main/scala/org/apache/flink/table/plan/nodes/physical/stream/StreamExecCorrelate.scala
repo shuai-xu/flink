@@ -48,6 +48,8 @@ class StreamExecCorrelate(
   extends SingleRel(cluster, traitSet, child)
   with RowStreamExecRel {
 
+  require(joinType == SemiJoinType.INNER || joinType == SemiJoinType.LEFT)
+
   override def deriveRowType(): RelDataType = relDataType
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {

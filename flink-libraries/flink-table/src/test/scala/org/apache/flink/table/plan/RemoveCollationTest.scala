@@ -25,7 +25,7 @@ import org.apache.flink.table.api.functions.TableFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.{TableFunc1, TableTestBatchExecBase}
 
 import org.apache.commons.lang3.StringUtils
 import org.junit.{Before, Test}
@@ -305,6 +305,49 @@ class RemoveCollationTest extends TableTestBatchExecBase {
       """.stripMargin
 
     util.verifyPlan(sql)
+  }
+
+  @Test
+  def testRemoveCollation_Correlate1(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin,HashAgg")
+    util.tableEnv.registerFunction("split", new TableFunc1)
+    val sqlQuery =
+      """
+        |WITH r AS (SELECT f, count(f) as cnt FROM y GROUP BY f),
+        |     v as (SELECT f1, f, cnt FROM r, LATERAL TABLE(split(f)) AS T(f1))
+        |SELECT * FROM x, v WHERE c = f
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testRemoveCollation_Correlate2(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin,HashAgg")
+    util.tableEnv.registerFunction("split", new TableFunc1)
+    val sqlQuery =
+      """
+        |WITH r AS (SELECT f, count(f) as cnt FROM y GROUP BY f),
+        |     v as (SELECT f, f1 FROM r, LATERAL TABLE(split(f)) AS T(f1))
+        |SELECT * FROM x, v WHERE c = f AND f LIKE '%llo%'
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testRemoveCollation_Correlate3(): Unit = {
+    // do not remove shuffle
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin,HashAgg")
+    util.tableEnv.registerFunction("split", new TableFunc1)
+    val sqlQuery =
+      """
+        |WITH r AS (SELECT f, count(f) as cnt FROM y GROUP BY f),
+        |     v as (SELECT f1 FROM r, LATERAL TABLE(split(f)) AS T(f1))
+        |SELECT * FROM x, v WHERE c = f1
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
   }
 
 }

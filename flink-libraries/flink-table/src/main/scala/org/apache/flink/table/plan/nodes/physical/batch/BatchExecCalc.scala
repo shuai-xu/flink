@@ -104,7 +104,7 @@ class BatchExecCalc(
     val mapping = getProjectMapping
     val appliedDistribution = requiredDistribution.apply(mapping)
     // If both distribution and collation can be pushed down, push them both. If only distribution
-    // can be pushed down, only push down distribution. There is no possible to only push down
+    // can be pushed down, only push down distribution. There is no possibility to only push down
     // collation here except for there is no distribution requirement.
     if ((!requiredDistribution.isTop) &&
         (appliedDistribution eq FlinkRelDistribution.ANY)) {
@@ -112,10 +112,10 @@ class BatchExecCalc(
     }
     val requiredCollation = requiredTraitSet.getTrait(RelCollationTraitDef.INSTANCE)
     val appliedCollation = TraitSetHelper.apply(requiredCollation, mapping)
-    val isCollationPushedDown = !appliedCollation.getFieldCollations.isEmpty
+    val canCollationPushedDown = !appliedCollation.getFieldCollations.isEmpty
     // If required traits only contains collation requirements, but collation keys are not columns
     // from input, then no need to push down required traits.
-    if ((appliedDistribution eq FlinkRelDistribution.ANY) && !isCollationPushedDown) {
+    if ((appliedDistribution eq FlinkRelDistribution.ANY) && !canCollationPushedDown) {
       return null
     }
     var pushDownTraits = getInput.getTraitSet
@@ -124,7 +124,7 @@ class BatchExecCalc(
       pushDownTraits = pushDownTraits.replace(appliedDistribution)
       providedTraits = providedTraits.replace(requiredDistribution)
     }
-    if (isCollationPushedDown) {
+    if (canCollationPushedDown) {
       pushDownTraits = pushDownTraits.replace(appliedCollation)
       providedTraits = providedTraits.replace(requiredCollation)
     }

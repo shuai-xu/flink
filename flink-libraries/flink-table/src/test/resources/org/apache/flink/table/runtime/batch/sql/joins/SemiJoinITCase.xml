@@ -1754,7 +1754,7 @@ Calc(select=[a, b])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b])
-+- SortMergeJoin(where=[=(a, c)], join=[a, b, c], joinType=[InnerJoin])
++- SortMergeJoin(where=[=(a, c)], join=[a, b, c], joinType=[InnerJoin], rightSorted=[true])
    :- Exchange(distribution=[hash[a]])
    :  +- Calc(select=[a, b], where=[>(a, 0)])
    :     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
@@ -1996,7 +1996,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[left]
   <TestCase name="testSingleUniqueConditionLeftAnti[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin])
+SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], rightSorted=[true])
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
 +- SortAggregate(isMerge=[true], groupBy=[c], select=[c])
