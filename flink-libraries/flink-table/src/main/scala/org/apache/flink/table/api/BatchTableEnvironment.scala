@@ -36,12 +36,13 @@ import org.apache.flink.table.expressions.{Expression, TimeAttribute}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
 import org.apache.flink.table.plan.cost.{FlinkBatchCost, FlinkCostFactory}
 import org.apache.flink.table.plan.logical.SinkNode
+import org.apache.flink.table.plan.nodes.calcite.Sink
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExecSink}
 import org.apache.flink.table.plan.optimize.BatchOptimizeContext
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.plan.util.{DeadlockBreakupProcessor, SameRelObjectShuttle, SubplanReuseContext, SubplanReuseShuttle}
-import org.apache.flink.table.plan.{LogicalNodeBlock, LogicalNodeBlockPlanBuilder}
+import org.apache.flink.table.plan.{RelNodeBlock, RelNodeBlockPlanBuilder}
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.sinks._
@@ -249,21 +250,21 @@ class BatchTableEnvironment(
     }
   }
 
-  private[flink] override def compile(): Seq[LogicalNodeBlock] = {
+  private[flink] override def compile(): Seq[RelNodeBlock] = {
     if (config.getSubsectionOptimization) {
       if (sinkNodes.isEmpty) {
         throw new TableException("No table sinks have been created yet. " +
             "A program needs at least one sink that consumes data. ")
       }
-      // build LogicalNodeBlock plan
-      val blockPlan = LogicalNodeBlockPlanBuilder.buildLogicalNodeBlockPlan(sinkNodes, this)
+      // build RelNodeBlock plan
+      val blockPlan = RelNodeBlockPlanBuilder.buildRelNodeBlockPlan(sinkNodes, this)
 
-      // translates recursively LogicalNodeBlock into BoundedStream
+      // translates recursively RelNodeBlock into BoundedStream
       blockPlan.foreach {
         sinkBlock =>
-          val boundedStream: DataStream[_] = translateLogicalNodeBlock(sinkBlock)
+          val boundedStream: DataStream[_] = translateRelNodeBlock(sinkBlock)
           sinkBlock.outputNode match {
-            case sinkNode: SinkNode =>
+            case _: Sink =>
               transformations.add(boundedStream.getTransformation)
             case _ => throw new TableException("SinkNode required here")
           }
@@ -274,18 +275,15 @@ class BatchTableEnvironment(
     }
   }
 
-  private def translateLogicalNodeBlock(block: LogicalNodeBlock): DataStream[_] = {
+  private def translateRelNodeBlock(block: RelNodeBlock): DataStream[_] = {
     block.children.foreach {
       child =>
         if (child.getNewOutputNode.isEmpty) {
-          translateLogicalNodeBlock(child)
+          translateRelNodeBlock(child)
         }
     }
 
-    val blockLogicalPlan = block.getLogicalPlan
-    val table = new Table(this, blockLogicalPlan)
-
-    val originTree = table.getRelNode
+    val originTree = block.getPlan
     val optimizedTree = optimize(originTree)
     addQueryPlan(originTree, optimizedTree)
 
@@ -294,20 +292,19 @@ class BatchTableEnvironment(
         val outputType = n.sink.getOutputType
         translate(n, outputType)
       case _ =>
-        val outputType = DataTypes.createRowType(table.getSchema.getTypes: _*)
+        val outputType = FlinkTypeFactory.toDataType(originTree.getRowType)
         val stream = translate(optimizedTree, outputType)
         val name = createUniqueTableName()
         registerIntermediateBoundedStreamInternal(
-          // It is not a SinkNode, so it will be referenced by other blockLogicalPlan.
+          // It is not a SinkNode, so it will be referenced by other RelNodeBlock.
           // When registering a data collection, we should send a correct type.
           // If no this correct type, it will be converted from Flink's fieldTypes,
           // while STRING_TYPE_INFO will lose the length of varchar.
           originTree.getRowType,
           name,
-          stream,
-          table.getSchema)
+          stream)
         val newTable = scan(name)
-        block.setNewOutputNode(newTable.logicalPlan)
+        block.setNewOutputNode(newTable.getRelNode)
         block.setOutputTableName(name)
         stream
     }
@@ -411,14 +408,13 @@ class BatchTableEnvironment(
   private def registerIntermediateBoundedStreamInternal[T](
       rowType: RelDataType,
       name: String,
-      boundedStream: DataStream[T],
-      tableSchema: TableSchema): Unit = {
+      boundedStream: DataStream[T]): Unit = {
 
     val boundedStreamTable = new IntermediateBoundedStreamTable[T](
       rowType,
       boundedStream,
-      tableSchema.getColumnNames.map(tableSchema.columnNameToIndex.get(_).get),
-      tableSchema.getColumnNames)
+      rowType.getFieldList.map(_.getIndex).toArray[Int],
+      rowType.getFieldList.map(_.getName).toArray[String])
     registerTableInternal(name, boundedStreamTable)
   }
 
@@ -521,7 +517,7 @@ class BatchTableEnvironment(
     val diffObjPlan = optimizedPlan.accept(new SameRelObjectShuttle())
     // reuse sub-plan if enabled
     val reusedPlan = if (config.getSubPlanReuse) {
-      val context = new SubplanReuseContext(config.getTableSourceReuse, diffObjPlan)
+      val context = new SubplanReuseContext(config.isTableSourceReuseDisabled, diffObjPlan)
       diffObjPlan.accept(new SubplanReuseShuttle(context))
     } else {
       diffObjPlan
@@ -841,9 +837,9 @@ class BatchTableEnvironment(
 
     sb.append("== Optimized Logical Plan ==")
     sb.append(System.lineSeparator)
-    val visitedBlocks = mutable.Set[LogicalNodeBlock]()
+    val visitedBlocks = mutable.Set[RelNodeBlock]()
 
-    def visitBlock(block: LogicalNodeBlock, isSinkBlock: Boolean): Unit = {
+    def visitBlock(block: RelNodeBlock, isSinkBlock: Boolean): Unit = {
       if (!visitedBlocks.contains(block)) {
         block.children.foreach(visitBlock(_, isSinkBlock = false))
         if (isSinkBlock) {

@@ -20,11 +20,11 @@ LogicalProject(id1=[$2], num=[$3], text1=[$1])
 == Optimized Logical Plan ==
 [[IntermediateTable=_DataStreamTable_3]]
 StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
-StreamExecDataStreamScan(retract=[true], accMode=[Acc])
+StreamExecDataStreamScan(retract=[false], accMode=[Acc])
 
 [[IntermediateTable=_DataStreamTable_4]]
 StreamExecCalc(select=[id, num, text], where=[>=(id, 0)])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_3]])
+  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 StreamExecCalc(retract=[true], accMode=[Acc])
   StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
@@ -40,7 +40,7 @@ StreamExecSink(fields=[id1, num, text1])
           StreamExecJoin(where=[=(id1, id2)], join=[id1, num, id2], joinType=[InnerJoin])
             StreamExecExchange(distribution=[hash[id1]])
               StreamExecCalc(select=[id AS id1, num], where=[<=(id, 10)])
-                StreamExecDataStreamScan(table=[[_DataStreamTable_3]])
+                StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
             StreamExecExchange(distribution=[hash[id2]])
               StreamExecCalc(select=[id AS id2], where=[>=(num, 5)])
                 StreamExecDataStreamScan(table=[[_DataStreamTable_4]])
@@ -77,30 +77,34 @@ StreamExecSink(retract=[false], accMode=[Acc])
 				ship_strategy : FORWARD
 
 				 : Operator
-					content : Calc(where: (id <= 10), select: (id AS id1, num))
+					content : SourceConversion(table:[_DataStreamTable_0], fields:(id, num, text))
 					ship_strategy : FORWARD
 
 					 : Operator
-						content : Calc(where: (num >= 5), select: (id AS id2))
+						content : Calc(where: (id <= 10), select: (id AS id1, num))
 						ship_strategy : FORWARD
 
 						 : Operator
-							content : InnerJoin(where: (=(id1, id2)), join: (id1, num, id2))
-							ship_strategy : HASH
+							content : Calc(where: (num >= 5), select: (id AS id2))
+							ship_strategy : FORWARD
 
 							 : Operator
-								content : Calc(select: (id1, num))
-								ship_strategy : FORWARD
+								content : InnerJoin(where: (=(id1, id2)), join: (id1, num, id2))
+								ship_strategy : HASH
 
 								 : Operator
-									content : InnerJoin(where: (=(id1, id3)), join: (id3, text1, id1, num))
-									ship_strategy : HASH
+									content : Calc(select: (id1, num))
+									ship_strategy : FORWARD
 
 									 : Operator
-										content : Calc(select: (id1, num, text1))
-										ship_strategy : FORWARD
+										content : InnerJoin(where: (=(id1, id3)), join: (id3, text1, id1, num))
+										ship_strategy : HASH
 
-										 : Data Sink
-											content : Sink: TestingUpsertTableSink(keys=())
+										 : Operator
+											content : Calc(select: (id1, num, text1))
 											ship_strategy : FORWARD
+
+											 : Data Sink
+												content : Sink: TestingUpsertTableSink(keys=())
+												ship_strategy : FORWARD
 

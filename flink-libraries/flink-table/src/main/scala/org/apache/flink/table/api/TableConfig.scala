@@ -118,40 +118,40 @@ class TableConfig {
     * Returns true if sub-plan reuse is enabled, else false.
     */
   def getSubPlanReuse: Boolean = parameters.getBoolean(
-    SQL_EXEC_SUB_PLAN_REUSE_ENABLED, SQL_EXEC_SUB_PLAN_REUSE_ENABLED_DEFAULT)
+    SQL_EXEC_REUSE_SUB_PLAN_ENABLED, SQL_EXEC_REUSE_SUB_PLAN_ENABLED_DEFAULT)
 
   /**
     * Sets whether sub-plan reuse is enabled.
     */
   def setSubPlanReuse(reuseSubPlan: Boolean): Unit = parameters.setBoolean(
-    SQL_EXEC_SUB_PLAN_REUSE_ENABLED, reuseSubPlan)
+    SQL_EXEC_REUSE_SUB_PLAN_ENABLED, reuseSubPlan)
 
   /**
-    * Returns true if table-source reuse is enabled, else false.
+    * Returns true if table-source reuse is disabled, else false.
     */
-  def getTableSourceReuse: Boolean = parameters.getBoolean(
-    SQL_EXEC_TABLE_SOURCE_REUSE_ENABLED, SQL_EXEC_TABLE_SOURCE_REUSE_ENABLED_DEFAULT)
+  def isTableSourceReuseDisabled: Boolean = !parameters.getBoolean(
+    SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED_DEFAULT)
 
   /**
     * Sets whether table-source reuse is enabled.
     * This works only when `sql.exec.sub-plan.reuse.enabled` is true.
     */
   def setTableSourceReuse(reuseSubPlan: Boolean): Unit = parameters.setBoolean(
-    SQL_EXEC_TABLE_SOURCE_REUSE_ENABLED, reuseSubPlan)
+    SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, reuseSubPlan)
 
   /**
     * Returns true if nondeterministic-operator reuse is enabled, else false.
     */
   def getNondeterministicOperatorReuse: Boolean = parameters.getBoolean(
-    SQL_EXEC_NONDETERMINISTIC_OPERATOR_REUSE_ENABLED,
-    SQL_EXEC_NONDETERMINISTIC_OPERATOR_REUSE_ENABLED_DEFAULT)
+    SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED,
+    SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED_DEFAULT)
 
   /**
     * Sets whether nondeterministic-operator reuse is enabled.
     * This works only when `sql.exec.sub-plan.reuse.enabled` is true.
     */
   def setNondeterministicOperatorReuse(reuseNondeterministicOperator: Boolean): Unit =
-    parameters.setBoolean(SQL_EXEC_NONDETERMINISTIC_OPERATOR_REUSE_ENABLED,
+    parameters.setBoolean(SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED,
       reuseNondeterministicOperator)
 
   /**
@@ -282,20 +282,20 @@ class TableConfig {
   }
 
   /**
-    * Returns whether union all is forbidden as breakpoint in subsection optimization.
+    * Returns whether union all is disabled as breakpoint in subsection optimization.
     */
-  def isForbidUnionAllAsBreakPointInSubsectionOptimization: Boolean =
-    parameters.getBoolean(SQL_FORBID_UNIONALL_AS_BREAKPOINT_IN_SUBSECTION_OPTIMIZATION,
-                          SQL_FORBID_UNIONALL_AS_BREAKPOINT_IN_SUBSECTION_OPTIMIZATION_DEFAULT)
+  def isUnionAllAsBreakPointInSubsectionOptimizationDisabled: Boolean =
+    parameters.getBoolean(SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED,
+                          SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED_DEFAULT)
 
   /**
     * Sets whether to forbid union all as breakpoint in subsection optimization. If flag is true,
-    * does not create new [[org.apache.flink.table.plan.LogicalNodeBlock]] at union node even if it
-    * has multiple parents, create new [[org.apache.flink.table.plan.LogicalNodeBlock]] at input
+    * does not create new [[org.apache.flink.table.plan.RelNodeBlock]] at union node even if it
+    * has multiple parents, create new [[org.apache.flink.table.plan.RelNodeBlock]] at input
     * nodes of union node which has multiple parents.
     */
-  def forbidUnionAllAsBreakPointInSubsectionOptimization(flag: Boolean): Unit = {
-    parameters.setBoolean(SQL_FORBID_UNIONALL_AS_BREAKPOINT_IN_SUBSECTION_OPTIMIZATION, flag)
+  def disableUnionAllAsBreakPointInSubsectionOptimization(flag: Boolean): Unit = {
+    parameters.setBoolean(SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, flag)
   }
 
   def enabledGivenOpType(operator: OperatorType): Boolean = {
@@ -933,8 +933,8 @@ object TableConfig {
 
   /**
     * Default cpu for each operator.
-
-    */
+ *
+ */
   val SQL_EXEC_DEFAULT_CPU = "sql.exec.default-cpu"
   val SQL_EXEC_DEFAULT_CPU_DEFAULT = 0.3
 
@@ -970,8 +970,8 @@ object TableConfig {
 
   /**
     * Sets max parallelism for all operators.
-
-    */
+ *
+ */
   val SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM =
     "sql.exec.infer-resource.operator.max-parallelism"
   val SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM_DEFAULT = 800
@@ -1079,27 +1079,27 @@ object TableConfig {
   /**
     * When true, the planner will try to find out duplicated sub-plan and reuse them.
     */
-  val SQL_EXEC_SUB_PLAN_REUSE_ENABLED = "sql.exec.sub-plan.reuse.enabled"
-  val SQL_EXEC_SUB_PLAN_REUSE_ENABLED_DEFAULT = false
+  val SQL_EXEC_REUSE_SUB_PLAN_ENABLED = "sql.exec.reuse.sub-plan.enabled"
+  val SQL_EXEC_REUSE_SUB_PLAN_ENABLED_DEFAULT = false
 
   /**
     * When true, the planner will try to find out duplicated table-source and reuse them.
-    * This works only when `sql.exec.sub-plan.reuse.enabled` is true.
+    * This works only when `sql.exec.reuse.sub-plan.enabled` is true.
     */
-  val SQL_EXEC_TABLE_SOURCE_REUSE_ENABLED = "sql.exec.table-source.reuse.enabled"
-  val SQL_EXEC_TABLE_SOURCE_REUSE_ENABLED_DEFAULT = false
+  val SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED = "sql.exec.reuse.table-source.enabled"
+  val SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED_DEFAULT = false
 
   /**
     * When true, the planner will try to find out duplicated nondeterministic-operator and
-    * reuse them. This works only when `sql.exec.sub-plan.reuse.enabled` is true.
+    * reuse them. This works only when `sql.exec.reuse.sub-plan.enabled` is true.
     * nondeterministic-operator contains
     * 1. nondeterministic [[ScalarFunction]] (UDF, e.g. now),
     * 2. nondeterministic [[AggregateFunction]](UDAF),
     * 3. nondeterministic [[TableFunction]] (UDTF)
     */
-  val SQL_EXEC_NONDETERMINISTIC_OPERATOR_REUSE_ENABLED =
-    "sql.exec.nondeterministic-operator.reuse.enabled"
-  val SQL_EXEC_NONDETERMINISTIC_OPERATOR_REUSE_ENABLED_DEFAULT = false
+  val SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED =
+    "sql.exec.reuse.nondeterministic-operator.enabled"
+  val SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED_DEFAULT = false
 
   // =================================== Cbo ===================================
 
@@ -1295,11 +1295,11 @@ object TableConfig {
   val SQL_EXEC_SINK_PARQUET_DICTIONARY_ENABLE_DEFAULT: Boolean = true
 
   /**
-    * Forbid union all as breakpoint in subsection optimization. Default is false.
+    * Disable union all as breakpoint in subsection optimization. Default is false.
     */
-  val SQL_FORBID_UNIONALL_AS_BREAKPOINT_IN_SUBSECTION_OPTIMIZATION =
-    "sql.forbid.unionall.as.breakpoint.in.subsection.optimization"
-  val SQL_FORBID_UNIONALL_AS_BREAKPOINT_IN_SUBSECTION_OPTIMIZATION_DEFAULT: Boolean = false
+  val SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED =
+    "sql.subsection-optimization.unionall-as-breakpoint.disabled"
+  val SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED_DEFAULT: Boolean = false
 
   // ================================= streaming =======================================
 

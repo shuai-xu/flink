@@ -32,7 +32,7 @@ class SubsectionOptimizationTest extends TableTestBatchExecBase {
   def setup(): Unit = {
     util.addTable[(Int, Long, String)]("SmallTable3", 'a, 'b, 'c)
     util.tableEnv.getConfig.setSubsectionOptimization(true)
-    util.tableEnv.getConfig.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+    util.tableEnv.getConfig.disableUnionAllAsBreakPointInSubsectionOptimization(true)
   }
 
   @Test

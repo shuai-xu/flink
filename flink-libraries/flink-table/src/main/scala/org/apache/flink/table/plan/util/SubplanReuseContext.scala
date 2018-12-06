@@ -17,17 +17,19 @@
  */
 package org.apache.flink.table.plan.util
 
-import java.util
-import java.util.concurrent.atomic.AtomicInteger
-
-import com.google.common.collect.{Maps, Sets}
-import org.apache.calcite.rel.core.Exchange
-import org.apache.calcite.rel.{RelNode, RelVisitor}
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.nodes.calcite.Sink
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableSourceScan
 import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
 import org.apache.flink.table.util.RelDigestWriterImpl
+
+import org.apache.calcite.rel.core.{Exchange, TableFunctionScan}
+import org.apache.calcite.rel.{RelNode, RelVisitor}
+
+import com.google.common.collect.{Maps, Sets}
+
+import java.util
+import java.util.concurrent.atomic.AtomicInteger
 
 import scala.collection.JavaConversions._
 
@@ -53,7 +55,7 @@ import scala.collection.JavaConversions._
   * }}}
   * Project1-Scan1 and Project2-Scan2 have same digest, so they are in a reusable sub-plan group.
   */
-class SubplanReuseContext(enableTableSourceReuse: Boolean, roots: RelNode*) {
+class SubplanReuseContext(disableTableSourceReuse: Boolean, roots: RelNode*) {
   // mapping a relNode to its digest
   private val mapNodeToDigest = Maps.newIdentityHashMap[RelNode, String]()
   // mapping the digest to RelNodes
@@ -62,7 +64,7 @@ class SubplanReuseContext(enableTableSourceReuse: Boolean, roots: RelNode*) {
   private val mapDigestToReuseId = new util.HashMap[String, Integer]()
 
   val visitor = new ReusableSubplanVisitor()
-  roots.map(root => visitor.go(root))
+  roots.map(visitor.go)
 
   /**
     * Return the digest of the given rel node.
@@ -131,38 +133,24 @@ class SubplanReuseContext(enableTableSourceReuse: Boolean, roots: RelNode*) {
     */
   private def isReusableNodes(reusableNodes: List[RelNode]): Boolean = {
     if (reusableNodes.size > 1) {
-      if (isTableSource(reusableNodes.head)) {
-        // TableSource node can be reused if reuse TableSource enabled
-        enableTableSourceReuse
-      } else if (isSink(reusableNodes.head)) {
-        // Sink node can not be reused
-        false
-      } else {
-        true
-      }
+      // Does not reuse nodes which are reusable disabled
+      !isNodeReusableDisabled(reusableNodes.head)
     } else {
       false
     }
   }
 
   /**
-    * Returns true if the given node is a TableSourceScan or
-    * an [[Exchange]] with TableSourceScan as its input, else false.
+    * Returns true if the given node is reusable disabled
     */
-  private def isTableSource(node: RelNode): Boolean = {
+  private def isNodeReusableDisabled(node: RelNode): Boolean = {
     node match {
-      case _: FlinkLogicalTableSourceScan | _: PhysicalTableSourceScan => true
-      case e: Exchange => isTableSource(e.getInput)
-      case _ => false
-    }
-  }
-
-  /**
-    * Returns true if the given node is a SinkNode, else false
-    */
-  private def isSink(node: RelNode): Boolean = {
-    node match {
-      case _: Sink => true
+      // TableSourceScan node can not be reused if reuse TableSource disabled
+      case _: FlinkLogicalTableSourceScan | _: PhysicalTableSourceScan => disableTableSourceReuse
+      // Exchange node can not be reused if its input is reusable disabled
+      case e: Exchange => isNodeReusableDisabled(e.getInput)
+      // TableFunctionScan and sink can not be reused
+      case _: TableFunctionScan | _: Sink => true
       case _ => false
     }
   }
@@ -173,8 +161,8 @@ class SubplanReuseContext(enableTableSourceReuse: Boolean, roots: RelNode*) {
 
     override def visit(node: RelNode, ordinal: Int, parent: RelNode): Unit = {
       if (visitedNodes.contains(node)) {
-        throw new IllegalArgumentException(
-          "Plan has same reference nodes, please rewrite plan with SameRelObjectShuttle first!")
+        // does not need to visit a node which is already visited.
+        return
       }
       visitedNodes.add(node)
 

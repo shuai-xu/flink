@@ -18,22 +18,6 @@
 
 package org.apache.flink.table.api
 
-import _root_.java.lang.reflect.Modifier
-import _root_.java.util
-import _root_.java.util.concurrent.atomic.AtomicInteger
-
-import org.apache.calcite.config.Lex
-import org.apache.calcite.plan.{Contexts, RelOptPlanner}
-import org.apache.calcite.rel.logical.LogicalTableModify
-import org.apache.calcite.schema
-import org.apache.calcite.schema.SchemaPlus
-import org.apache.calcite.schema.impl.AbstractTable
-import org.apache.calcite.sql.parser.SqlParser
-import org.apache.calcite.sql.util.ChainedSqlOperatorTable
-import org.apache.calcite.sql.{SqlIdentifier, SqlInsert, SqlOperatorTable, _}
-import org.apache.calcite.sql2rel.SqlToRelConverter
-import org.apache.calcite.tools._
-import org.apache.commons.lang3.StringUtils
 import org.apache.flink.annotation.Internal
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.api.common.time.Time
@@ -53,7 +37,7 @@ import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.{Alias, Expression, TimeAttribute, UnresolvedFieldReference}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.plan.{LogicalNodeBlock, LogicalNodeBlockPlanBuilder}
+import org.apache.flink.table.plan.{RelNodeBlock, RelNodeBlockPlanBuilder}
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.logical.{CatalogNode, LogicalNode, LogicalRelNode}
 import org.apache.flink.table.plan.schema._
@@ -63,6 +47,25 @@ import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, ExternalFunctionCatalog, FunctionCatalog}
 import org.apache.flink.util.Preconditions
+
+import org.apache.calcite.config.Lex
+import org.apache.calcite.plan.{Contexts, RelOptPlanner}
+import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.logical.LogicalTableModify
+import org.apache.calcite.schema
+import org.apache.calcite.schema.SchemaPlus
+import org.apache.calcite.schema.impl.AbstractTable
+import org.apache.calcite.sql.parser.SqlParser
+import org.apache.calcite.sql.util.ChainedSqlOperatorTable
+import org.apache.calcite.sql.{SqlIdentifier, SqlInsert, SqlOperatorTable, _}
+import org.apache.calcite.sql2rel.SqlToRelConverter
+import org.apache.calcite.tools._
+
+import org.apache.commons.lang3.StringUtils
+
+import _root_.java.lang.reflect.Modifier
+import _root_.java.util
+import _root_.java.util.concurrent.atomic.AtomicInteger
 
 import _root_.scala.annotation.varargs
 import _root_.scala.collection.JavaConversions._
@@ -154,11 +157,12 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   /**
-    * Compile the sink [[org.apache.flink.table.plan.logical.LogicalNode]] to [[LogicalNodeBlock]],
-    * see [[LogicalNodeBlockPlanBuilder]] for details.
-    * @return A sequence of LogicalNodeBlock
+    * Compile the sink [[org.apache.flink.table.plan.logical.LogicalNode]] to [[RelNodeBlock]],
+    * see [[RelNodeBlockPlanBuilder]] for details.
+    *
+    * @return A sequence of RelNodeBlock
     */
-  private[flink] def compile(): Seq[LogicalNodeBlock] = ???
+  private[flink] def compile(): Seq[RelNodeBlock] = ???
 
   /**
     * Returns the operator table for this environment including a custom Calcite configuration.

@@ -43,7 +43,7 @@ import org.apache.flink.table.plan.optimize.StreamOptimizeContext
 import org.apache.flink.table.plan.schema.{TableSourceSinkTable, _}
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.plan.util.UpdatingPlanChecker
-import org.apache.flink.table.plan.{LogicalNodeBlock, LogicalNodeBlockPlanBuilder, MiniBatchHelper}
+import org.apache.flink.table.plan.{RelNodeBlock, RelNodeBlockPlanBuilder, MiniBatchHelper}
 import org.apache.flink.table.sinks.{DataStreamTableSink, _}
 import org.apache.flink.table.sources._
 import org.apache.flink.table.typeutils.TypeCheckUtils
@@ -52,7 +52,7 @@ import org.apache.flink.util.Preconditions
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFieldImpl}
+import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexBuilder
 import org.apache.calcite.sql2rel.SqlToRelConverter
 
@@ -131,7 +131,7 @@ abstract class StreamTableEnvironment(
     execEnv.execute(jobName)
   }
 
-  private[flink] override def compile(): Seq[LogicalNodeBlock] = {
+  private[flink] override def compile(): Seq[RelNodeBlock] = {
 
     mergeParameters()
 
@@ -140,14 +140,14 @@ abstract class StreamTableEnvironment(
         throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
       }
 
-      // build LogicalNodeBlock plan
-      val blockPlan = LogicalNodeBlockPlanBuilder.buildLogicalNodeBlockPlan(sinkNodes, this)
+      // build RelNodeBlock plan
+      val blockPlan = RelNodeBlockPlanBuilder.buildRelNodeBlockPlan(sinkNodes, this)
 
       // infer updateAsRetraction property for each block
       blockPlan.foreach {
         sinkBlock =>
           val retractionFromSink = sinkBlock.outputNode match {
-            case n: SinkNode => n.sink.isInstanceOf[BaseRetractStreamTableSink[_]]
+            case n: Sink => n.sink.isInstanceOf[BaseRetractStreamTableSink[_]]
             case _ => false
           }
           sinkBlock.setUpdateAsRetraction(retractionFromSink)
@@ -159,12 +159,12 @@ abstract class StreamTableEnvironment(
       // clear the intermediate result
       blockPlan.foreach(resetIntermediateResult)
 
-      // translates recursively LogicalNodeBlock into DataStream
+      // translates recursively RelNodeBlock into DataStream
       blockPlan.foreach {
         sinkBlock =>
-          translateLogicalNodeBlock(sinkBlock)
+          translateRelNodeBlock(sinkBlock)
           sinkBlock.outputNode match {
-            case _: SinkNode => // ignore
+            case _: Sink => // ignore
             case _ => throw new TableException(TableErrors.INST.sqlCompileSinkNodeRequired())
           }
       }
@@ -987,8 +987,8 @@ abstract class StreamTableEnvironment(
 
     sb.append("== Optimized Logical Plan ==")
     sb.append(System.lineSeparator)
-    val visitedBlocks = mutable.Set[LogicalNodeBlock]()
-    def visitBlock(block: LogicalNodeBlock, isSinkBlock: Boolean): Unit = {
+    val visitedBlocks = mutable.Set[RelNodeBlock]()
+    def visitBlock(block: RelNodeBlock, isSinkBlock: Boolean): Unit = {
       if (!visitedBlocks.contains(block)) {
         block.children.foreach(visitBlock(_, isSinkBlock = false))
         if (isSinkBlock) {
@@ -1015,55 +1015,57 @@ abstract class StreamTableEnvironment(
   /**
     * Mark Expression to RowtimeAttribute or ProctimeAttribute for time indicators
     */
-  private def getExprsWithTimeAttribute(table: Table, rowType: RelDataType): Array[Expression] = {
+  private def getExprsWithTimeAttribute(
+    preRowType: RelDataType,
+    postRowType: RelDataType): Array[Expression] = {
 
-    for ((name, index) <- table.getSchema.getColumnNames.zipWithIndex) yield {
-      val relType = rowType.getFieldList.get(index).asInstanceOf[RelDataTypeFieldImpl].getValue
-      val relName = rowType.getFieldNames.get(index)
-      val expression = UnresolvedFieldReference(relName)
+    preRowType.getFieldNames.zipWithIndex.map {
+      case (name, index) =>
+        val field = postRowType.getFieldList.get(index)
+        val relType = field.getValue
+        val relName = field.getName
+        val expression = UnresolvedFieldReference(relName)
 
-      relType match {
-        case _ if FlinkTypeFactory.isProctimeIndicatorType(relType) =>
-          new ProctimeAttribute(expression)
-        case _ if FlinkTypeFactory.isRowtimeIndicatorType(relType) =>
-          new RowtimeAttribute(expression)
-        case _ if !relName.equals(name) => Alias(expression, name)
-        case _ => expression
-      }
-    }
+        relType match {
+          case _ if FlinkTypeFactory.isProctimeIndicatorType(relType) =>
+            new ProctimeAttribute(expression)
+          case _ if FlinkTypeFactory.isRowtimeIndicatorType(relType) =>
+            new RowtimeAttribute(expression)
+          case _ if !relName.equals(name) => Alias(expression, name)
+          case _ => expression
+        }
+    }.toArray[Expression]
   }
 
   /**
     * Infer UpdateAsRetraction property for each block.
     *
-    * @param block The [[LogicalNodeBlock]] instance.
+    * @param block              The [[RelNodeBlock]] instance.
     * @param retractionFromSink Whether the sink need update as retraction messages.
     */
   private def inferUpdateAsRetraction(
-      block: LogicalNodeBlock,
+      block: RelNodeBlock,
       retractionFromSink: Boolean): Unit = {
 
     block.children.foreach {
       child =>
         if (child.getNewOutputNode.isEmpty) {
-          inferUpdateAsRetraction(child, false)
+          inferUpdateAsRetraction(child, retractionFromSink = false)
         }
     }
 
-    block.getLogicalPlan match {
-      case n: SinkNode =>
-        val table = new Table(this, n)
-        val optimizedPlan = optimize(table.getRelNode, retractionFromSink)
+    block.getPlan match {
+      case n: Sink =>
+        val optimizedPlan = optimize(n, retractionFromSink)
         block.setOptimizedPlan(optimizedPlan)
 
       case o =>
-        val table = new Table(this, o)
-        val optimizedPlan = optimize(table.getRelNode, retractionFromSink)
+        val optimizedPlan = optimize(o, retractionFromSink)
         val produceUpdates = !UpdatingPlanChecker.isAppendOnly(optimizedPlan)
 
         val name = createUniqueTableName()
         val rowType = optimizedPlan.getRowType
-        val fieldExpressions = getExprsWithTimeAttribute(table, rowType)
+        val fieldExpressions = getExprsWithTimeAttribute(o.getRowType, rowType)
 
         val uniqueKeys = getUniqueKeys(optimizedPlan)
         val monotonicity = FlinkRelMetadataQuery
@@ -1074,7 +1076,7 @@ abstract class StreamTableEnvironment(
           name, produceUpdates, isAccRetract = false, rowType,
           fieldExpressions, uniqueKeys, monotonicity)
         val newTable = scan(name)
-        block.setNewOutputNode(newTable.logicalPlan)
+        block.setNewOutputNode(newTable.getRelNode)
         block.setOutputTableName(name)
         block.setOptimizedPlan(optimizedPlan)
     }
@@ -1083,9 +1085,9 @@ abstract class StreamTableEnvironment(
   /**
     * Reset the intermediate result including newOutputNode and outputTableName
     *
-    * @param block the [[LogicalNodeBlock]] instance.
+    * @param block the [[RelNodeBlock]] instance.
     */
-  private def resetIntermediateResult(block: LogicalNodeBlock): Unit = {
+  private def resetIntermediateResult(block: RelNodeBlock): Unit = {
     block.setNewOutputNode(null)
     block.setOutputTableName(null)
 
@@ -1099,9 +1101,9 @@ abstract class StreamTableEnvironment(
   /**
     * Propagate updateAsRetraction property to all input blocks
     *
-    * @param block The [[LogicalNodeBlock]] instance.
+    * @param block The [[RelNodeBlock]] instance.
     */
-  private def propagateUpdateAsRetraction(block: LogicalNodeBlock): Unit = {
+  private def propagateUpdateAsRetraction(block: RelNodeBlock): Unit = {
 
     // process current block
     def shipUpdateAsRetraction(rel: RelNode, updateAsRetraction: Boolean): Unit = {
@@ -1131,24 +1133,23 @@ abstract class StreamTableEnvironment(
   }
 
   /**
-    * Translates recursively a logical [[RelNode]] in a [[LogicalNodeBlock]] into a [[DataStream]].
+    * Translates recursively a logical [[RelNode]] in a [[RelNodeBlock]] into a [[DataStream]].
     * Converts to target type if the block contains sink node.
     *
-    * @param block The [[LogicalNodeBlock]] instance.
+    * @param block The [[RelNodeBlock]] instance.
     * @return The [[DataStream]] that corresponds to logical plan of current block.
     */
-  private def translateLogicalNodeBlock(block: LogicalNodeBlock): DataStream[_] = {
+  private def translateRelNodeBlock(block: RelNodeBlock): DataStream[_] = {
 
     block.children.foreach {
       child => if (child.getNewOutputNode.isEmpty) {
-        translateLogicalNodeBlock(child)
+        translateRelNodeBlock(child)
       }
     }
 
-    val blockLogicalPlan = block.getLogicalPlan
-    val table = new Table(this, blockLogicalPlan)
-    table.getRelNode match {
-      case n: LogicalSink =>
+    val blockLogicalPlan = block.getPlan
+    blockLogicalPlan match {
+      case n: Sink =>
         try {
           val optimizedTree = optimize(n)
           block.setOptimizedPlan(optimizedTree)
@@ -1173,7 +1174,7 @@ abstract class StreamTableEnvironment(
         val producesUpdates = !UpdatingPlanChecker.isAppendOnly(optimizedPlan)
         val name = createUniqueTableName()
         val rowType = optimizedPlan.getRowType
-        val fieldExpressions = getExprsWithTimeAttribute(table, rowType)
+        val fieldExpressions = getExprsWithTimeAttribute(o.getRowType, rowType)
 
         val uniqueKeys = getUniqueKeys(optimizedPlan)
         val monotonicity = FlinkRelMetadataQuery
@@ -1184,7 +1185,7 @@ abstract class StreamTableEnvironment(
           name, producesUpdates, isAccRetract, dataStream, rowType,
           fieldExpressions, uniqueKeys, monotonicity)
         val newTable = scan(name)
-        block.setNewOutputNode(newTable.logicalPlan)
+        block.setNewOutputNode(newTable.getRelNode)
         block.setOutputTableName(name)
 
         block.setOptimizedPlan(optimizedPlan)

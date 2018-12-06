@@ -16,7 +16,11 @@ LogicalProject(num=[$0], cnt=[$1])
     LogicalTableScan(table=[[T4]])
 
 == Optimized Logical Plan ==
-[[IntermediateTable=_DataStreamTable_4]]
+[[IntermediateTable=_DataStreamTable_5]]
+StreamExecDataStreamScan(table=[[T]])
+StreamExecDataStreamScan(retract=[false], accMode=[Acc])
+
+[[IntermediateTable=_DataStreamTable_6]]
 StreamExecCalc(select=[id, num, text], where=[LIKE(text, '%hello%')])
   StreamExecDataStreamScan(table=[[T]])
 StreamExecCalc(retract=[true], accMode=[Acc])
@@ -24,15 +28,15 @@ StreamExecCalc(retract=[true], accMode=[Acc])
 
 [[Sink]]
 StreamExecSink(fields=[id, num, text])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_4]])
+  StreamExecDataStreamScan(table=[[_DataStreamTable_6]])
 StreamExecSink(retract=[false], accMode=[Acc])
   StreamExecDataStreamScan(retract=[false], accMode=[Acc])
 
-[[IntermediateTable=_DataStreamTable_5]]
-StreamExecDataStreamScan(table=[[_DataStreamTable_4]])
+[[IntermediateTable=_DataStreamTable_7]]
+StreamExecDataStreamScan(table=[[_DataStreamTable_6]])
 StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
-[[IntermediateTable=_DataStreamTable_6]]
+[[IntermediateTable=_DataStreamTable_8]]
 StreamExecCalc(select=[id, num, text], where=[LIKE(text, '%world%')])
   StreamExecDataStreamScan(table=[[T]])
 StreamExecCalc(retract=[true], accMode=[Acc])
@@ -42,9 +46,9 @@ StreamExecCalc(retract=[true], accMode=[Acc])
 StreamExecSink(fields=[id, num, text])
   StreamExecUnion(all=[true], union=[id, num, text])
     StreamExecCalc(select=[id, num, text], where=[>=(num, 5)])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_5]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_7]])
     StreamExecCalc(select=[id, num, text], where=[>=(num, 5)])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_6]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_8]])
 StreamExecSink(retract=[false], accMode=[Acc])
   StreamExecUnion(retract=[true], accMode=[Acc])
     StreamExecCalc(retract=[true], accMode=[Acc])
@@ -52,14 +56,14 @@ StreamExecSink(retract=[false], accMode=[Acc])
     StreamExecCalc(retract=[true], accMode=[Acc])
       StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
-[[IntermediateTable=_DataStreamTable_7]]
+[[IntermediateTable=_DataStreamTable_9]]
 StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS cnt])
   StreamExecExchange(distribution=[hash[num]])
     StreamExecUnion(all=[true], union=[num, id])
       StreamExecCalc(select=[num, id])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_5]])
+        StreamExecDataStreamScan(table=[[_DataStreamTable_7]])
       StreamExecCalc(select=[num, id])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_6]])
+        StreamExecDataStreamScan(table=[[_DataStreamTable_8]])
 StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
   StreamExecExchange(retract=[true], accMode=[Acc])
     StreamExecUnion(retract=[true], accMode=[Acc])
@@ -71,7 +75,7 @@ StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
 [[Sink]]
 StreamExecSink(fields=[num, cnt])
   StreamExecCalc(select=[num, cnt], where=[<(num, 4)])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_7]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_9]])
 StreamExecSink(retract=[false], accMode=[AccRetract])
   StreamExecCalc(retract=[true], accMode=[AccRetract])
     StreamExecDataStreamScan(retract=[true], accMode=[AccRetract])
@@ -79,7 +83,7 @@ StreamExecSink(retract=[false], accMode=[AccRetract])
 [[Sink]]
 StreamExecSink(fields=[num, cnt])
   StreamExecCalc(select=[num, cnt], where=[AND(>=(num, 4), <(num, 6))])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_7]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_9]])
 StreamExecSink(retract=[false], accMode=[AccRetract])
   StreamExecCalc(retract=[false], accMode=[AccRetract])
     StreamExecDataStreamScan(retract=[false], accMode=[AccRetract])

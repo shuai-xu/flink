@@ -58,62 +58,46 @@ StreamExecSink(retract=[false], accMode=[Acc])
       StreamExecDataStreamScan(retract=[false], accMode=[Acc])
 
 [[IntermediateTable=_DataStreamTable_5]]
-StreamExecCalc(select=[a, c])
-  StreamExecDataStreamScan(table=[[t3]])
-StreamExecCalc(retract=[true], accMode=[Acc])
-  StreamExecDataStreamScan(retract=[true], accMode=[Acc])
+StreamExecUnion(all=[true], union=[a])
+  StreamExecUnion(all=[true], union=[a])
+    StreamExecCalc(select=[a])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_3]])
+    StreamExecCalc(select=[d])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_4]])
+  StreamExecCalc(select=[a])
+    StreamExecDataStreamScan(table=[[t3]])
+StreamExecUnion(retract=[true], accMode=[Acc])
+  StreamExecUnion(retract=[true], accMode=[Acc])
+    StreamExecCalc(retract=[true], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
+    StreamExecCalc(retract=[true], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
+  StreamExecCalc(retract=[true], accMode=[Acc])
+    StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
 [[Sink]]
 StreamExecSink(fields=[total_sum])
   StreamExecCalc(select=[TMP_0 AS total_sum])
     StreamExecGroupAggregate(select=[SUM(a) AS TMP_0])
       StreamExecExchange(distribution=[single])
-        StreamExecUnion(all=[true], union=[a])
-          StreamExecUnion(all=[true], union=[a])
-            StreamExecCalc(select=[a])
-              StreamExecDataStreamScan(table=[[_DataStreamTable_3]])
-            StreamExecCalc(select=[d])
-              StreamExecDataStreamScan(table=[[_DataStreamTable_4]])
-          StreamExecCalc(select=[a])
-            StreamExecDataStreamScan(table=[[_DataStreamTable_5]])
+        StreamExecDataStreamScan(table=[[_DataStreamTable_5]])
 StreamExecSink(retract=[false], accMode=[AccRetract])
   StreamExecCalc(retract=[true], accMode=[AccRetract])
     StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
       StreamExecExchange(retract=[true], accMode=[Acc])
-        StreamExecUnion(retract=[true], accMode=[Acc])
-          StreamExecUnion(retract=[true], accMode=[Acc])
-            StreamExecCalc(retract=[true], accMode=[Acc])
-              StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-            StreamExecCalc(retract=[true], accMode=[Acc])
-              StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-          StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
+        StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
 [[Sink]]
 StreamExecSink(fields=[total_min])
   StreamExecCalc(select=[TMP_1 AS total_min])
     StreamExecGroupAggregate(select=[MIN(a) AS TMP_1])
       StreamExecExchange(distribution=[single])
-        StreamExecUnion(all=[true], union=[a])
-          StreamExecUnion(all=[true], union=[a])
-            StreamExecCalc(select=[a])
-              StreamExecDataStreamScan(table=[[_DataStreamTable_3]])
-            StreamExecCalc(select=[d])
-              StreamExecDataStreamScan(table=[[_DataStreamTable_4]])
-          StreamExecCalc(select=[a])
-            StreamExecDataStreamScan(table=[[_DataStreamTable_5]])
+        StreamExecDataStreamScan(table=[[_DataStreamTable_5]])
 StreamExecSink(retract=[false], accMode=[Acc])
   StreamExecCalc(retract=[false], accMode=[Acc])
     StreamExecGroupAggregate(retract=[false], accMode=[Acc])
       StreamExecExchange(retract=[true], accMode=[Acc])
-        StreamExecUnion(retract=[true], accMode=[Acc])
-          StreamExecUnion(retract=[true], accMode=[Acc])
-            StreamExecCalc(retract=[true], accMode=[Acc])
-              StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-            StreamExecCalc(retract=[true], accMode=[Acc])
-              StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-          StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
+        StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
 == Physical Execution Plan ==
  : Data Source
@@ -154,70 +138,54 @@ StreamExecSink(retract=[false], accMode=[Acc])
 								ship_strategy : FORWARD
 
 								 : Operator
-									content : SourceConversion(table:[t3], fields:(a, b, c))
+									content : Calc(select: (a))
 									ship_strategy : FORWARD
 
 									 : Operator
-										content : Calc(select: (a, c))
+										content : Calc(select: (d))
 										ship_strategy : FORWARD
 
 										 : Operator
-											content : Calc(select: (a))
+											content : SourceConversion(table:[t3], fields:(a, b, c))
 											ship_strategy : FORWARD
 
 											 : Operator
-												content : Calc(select: (d))
+												content : Calc(select: (a))
 												ship_strategy : FORWARD
 
 												 : Operator
-													content : Calc(select: (a))
-													ship_strategy : FORWARD
+													content : GroupAggregate(select: (SUM(a) AS TMP_0))
+													ship_strategy : GLOBAL
 
 													 : Operator
-														content : GroupAggregate(select: (SUM(a) AS TMP_0))
-														ship_strategy : GLOBAL
+														content : Calc(select: (TMP_0 AS total_sum))
+														ship_strategy : FORWARD
 
 														 : Operator
-															content : Calc(select: (TMP_0 AS total_sum))
+															content : SinkConversion to Tuple2
 															ship_strategy : FORWARD
 
 															 : Operator
-																content : SinkConversion to Tuple2
+																content : Map
 																ship_strategy : FORWARD
 
 																 : Operator
-																	content : Map
-																	ship_strategy : FORWARD
+																	content : GroupAggregate(select: (MIN(a) AS TMP_1))
+																	ship_strategy : GLOBAL
 
 																	 : Operator
-																		content : Calc(select: (a))
+																		content : Calc(select: (TMP_1 AS total_min))
 																		ship_strategy : FORWARD
 
-																		 : Operator
-																			content : Calc(select: (d))
+																		 : Data Sink
+																			content : Sink: TestingAppendTableSink
 																			ship_strategy : FORWARD
 
-																			 : Operator
-																				content : Calc(select: (a))
+																			 : Data Sink
+																				content : Sink: TestingRetractTableSink
 																				ship_strategy : FORWARD
 
-																				 : Operator
-																					content : GroupAggregate(select: (MIN(a) AS TMP_1))
-																					ship_strategy : GLOBAL
-
-																					 : Operator
-																						content : Calc(select: (TMP_1 AS total_min))
-																						ship_strategy : FORWARD
-
-																						 : Data Sink
-																							content : Sink: TestingAppendTableSink
-																							ship_strategy : FORWARD
-
-																							 : Data Sink
-																								content : Sink: TestingRetractTableSink
-																								ship_strategy : FORWARD
-
-																								 : Data Sink
-																									content : Sink: TestingUpsertTableSink(keys=())
-																									ship_strategy : FORWARD
+																				 : Data Sink
+																					content : Sink: TestingUpsertTableSink(keys=())
+																					ship_strategy : FORWARD
 

@@ -309,7 +309,7 @@ class ExplainTest extends AbstractTestBase {
   def testMultiLevelViewForsqlQuery(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
-    conf.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+    conf.disableUnionAllAsBreakPointInSubsectionOptimization(true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env, conf)
 
@@ -352,7 +352,7 @@ class ExplainTest extends AbstractTestBase {
   def testSharedUnionNode(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
-    conf.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+    conf.disableUnionAllAsBreakPointInSubsectionOptimization(true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env, conf)
 
@@ -428,7 +428,7 @@ class ExplainTest extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+    tEnv.getConfig.disableUnionAllAsBreakPointInSubsectionOptimization(true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
@@ -452,7 +452,7 @@ class ExplainTest extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+    tEnv.getConfig.disableUnionAllAsBreakPointInSubsectionOptimization(true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
@@ -478,7 +478,7 @@ class ExplainTest extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+    tEnv.getConfig.disableUnionAllAsBreakPointInSubsectionOptimization(true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
@@ -506,7 +506,7 @@ class ExplainTest extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+    tEnv.getConfig.disableUnionAllAsBreakPointInSubsectionOptimization(true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
@@ -534,7 +534,7 @@ class ExplainTest extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+    tEnv.getConfig.disableUnionAllAsBreakPointInSubsectionOptimization(true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
@@ -559,7 +559,7 @@ class ExplainTest extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+    tEnv.getConfig.disableUnionAllAsBreakPointInSubsectionOptimization(true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
@@ -581,7 +581,7 @@ class ExplainTest extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+    tEnv.getConfig.disableUnionAllAsBreakPointInSubsectionOptimization(true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)

@@ -36,7 +36,7 @@ import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{Table, TableException, _}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.expressions.Expression
-import org.apache.flink.table.plan.LogicalNodeBlock
+import org.apache.flink.table.plan.RelNodeBlock
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.sources.TableSource
@@ -378,9 +378,9 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
 
     val actual = new StringBuilder()
     actual.append(System.lineSeparator)
-    val visitedBlocks = mutable.Set[LogicalNodeBlock]()
+    val visitedBlocks = mutable.Set[RelNodeBlock]()
 
-    def visitBlock(block: LogicalNodeBlock, isSinkBlock: Boolean): Unit = {
+    def visitBlock(block: RelNodeBlock, isSinkBlock: Boolean): Unit = {
       if (!visitedBlocks.contains(block)) {
         block.children.foreach(visitBlock(_, isSinkBlock = false))
         if (isSinkBlock) {
