@@ -53,6 +53,14 @@ under the License.
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<!-- use a dedicated Scala version to not depend on it -->
+			<artifactId>flink-connector-hive_2.11</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<!-- use a dedicated Scala version to not depend on it -->
 			<artifactId>flink-streaming-scala_2.11</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
@@ -144,13 +152,6 @@ under the License.
 			<version>${project.version}</version>
 			<type>test-jar</type>
 			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-catalog-hive</artifactId>
-			<version>${project.version}</version>
-			<scope>compile</scope>
 		</dependency>
 
 		<dependency>
