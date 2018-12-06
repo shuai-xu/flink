@@ -13,3 +13,4 @@ export const COLOR_MAP = {
 };
 export const BASE_URL = '.';
 
+

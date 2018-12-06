@@ -24,9 +24,10 @@ import { JobCheckpointsComponent } from './checkpoints/job-checkpoints.component
 import { JobCheckpointsDetailComponent } from './checkpoints/detail/job-checkpoints-detail.component';
 import { JobCheckpointsSubtaskComponent } from './checkpoints/subtask/job-checkpoints-subtask.component';
 import { JobOverviewDrawerTaskmanagersComponent } from './overview/taskmanagers/job-overview-drawer-taskmanagers.component';
+import { VerticesNodeComponent } from './overview/vertices-node/vertices-node.component';
 
 @NgModule({
-  imports     : [
+  imports        : [
     CommonModule,
     FormsModule,
     NgZorroAntdModule,
@@ -34,7 +35,7 @@ import { JobOverviewDrawerTaskmanagersComponent } from './overview/taskmanagers/
     PipeModule,
     JobRoutingModule
   ],
-  declarations: [
+  declarations   : [
     JobStatusComponent,
     JobComponent,
     JobOverviewComponent,
@@ -52,8 +53,10 @@ import { JobOverviewDrawerTaskmanagersComponent } from './overview/taskmanagers/
     JobCheckpointsComponent,
     JobCheckpointsDetailComponent,
     JobCheckpointsSubtaskComponent,
-    JobOverviewDrawerTaskmanagersComponent
-  ]
+    JobOverviewDrawerTaskmanagersComponent,
+    VerticesNodeComponent
+  ],
+  entryComponents: [ VerticesNodeComponent ]
 })
 export class JobModule {
 }

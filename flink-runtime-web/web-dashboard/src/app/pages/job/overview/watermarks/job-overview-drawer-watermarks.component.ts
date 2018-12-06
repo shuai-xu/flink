@@ -1,4 +1,4 @@
-import { Component, Input, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { Subject } from 'rxjs';
 import { flatMap, startWith, takeUntil } from 'rxjs/operators';
 import { NodesItemCorrectInterface } from 'interfaces';
@@ -20,7 +20,11 @@ export class JobOverviewDrawerWatermarksComponent implements OnInit, OnDestroy {
     return node.subTaskIndex;
   }
 
-  constructor(private jobService: JobService, private metricsService: MetricsService, private statusService: StatusService) {
+  constructor(
+    private jobService: JobService,
+    private metricsService: MetricsService,
+    private statusService: StatusService,
+    private cdr: ChangeDetectorRef) {
   }
 
   ngOnInit() {
@@ -38,8 +42,10 @@ export class JobOverviewDrawerWatermarksComponent implements OnInit, OnDestroy {
         });
       }
       this.listOfWaterMark = list;
+      this.cdr.markForCheck();
     }, () => {
       this.isLoading = false;
+      this.cdr.markForCheck();
     });
   }
 

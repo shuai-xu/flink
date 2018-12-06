@@ -4,8 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { NgZorroAntdModule } from 'ng-zorro-antd';
 import { PipeModule } from 'pipes/pipe.module';
+import { DagreModule } from 'share/common/dagre/dagre.module';
+import { GraphModule } from './common/graph';
 import { PaginationComponent } from './common/pagination/pagination.component';
-import { DagreModule } from './common/dagre/dagre.module';
 import { LayoutComponent } from './common/layout/layout.component';
 import { TaskBadgeComponent } from './customize/task-badge/task-badge.component';
 import { JobBadgeComponent } from './customize/job-badge/job-badge.component';
@@ -22,8 +23,9 @@ import { JobChartComponent } from './customize/job-chart/job-chart.component';
     NgZorroAntdModule,
     PipeModule,
     RouterModule,
+    FormsModule,
     DagreModule,
-    FormsModule
+    GraphModule,
   ],
   declarations: [
     LayoutComponent,
@@ -43,6 +45,7 @@ import { JobChartComponent } from './customize/job-chart/job-chart.component';
     JobBadgeComponent,
     JobListComponent,
     DagreModule,
+    GraphModule,
     MonacoEditorComponent,
     NavigationComponent,
     FileReadDirective,

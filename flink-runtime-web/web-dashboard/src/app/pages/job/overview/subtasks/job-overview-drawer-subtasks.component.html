@@ -3,7 +3,7 @@
   [nzSize]="'small'"
   [nzLoading]="isLoading"
   [nzData]="listOfTask"
-  [nzScroll]="{x:'1850px',y:'428px'}"
+  [nzScroll]="{x:'1950px',y:'428px'}"
   [nzFrontPagination]="false"
   [nzShowPagination]="false">
   <thead (nzSortChange)="sort($event)" nzSingleSort>
@@ -11,13 +11,13 @@
       <th nzWidth="80px" nzLeft="0px">ID</th>
       <th nzWidth="100px">JMX</th>
       <th nzSortKey="metrics.buffers-in-pool-usage-max" nzShowSort nzWidth="100px">In Queue</th>
-      <th nzSortKey="metrics.buffers-out-pool-usage-max" nzShowSort nzWidth="100px">Out Queue</th>
+      <th nzSortKey="metrics.buffers-out-pool-usage-max" nzShowSort nzWidth="150px">Out Queue</th>
       <th nzSortKey="metrics.tps" nzShowSort nzWidth="100px">TPS</th>
-      <th nzSortKey="metrics.delay" nzShowSort nzWidth="100px">Delay(ms)</th>
+      <th nzSortKey="metrics.delay" nzShowSort nzWidth="120px">Delay(ms)</th>
       <th nzSortKey="metrics.read-bytes" nzShowSort nzWidth="140px">Bytes Received</th>
       <th nzSortKey="metrics.read-records" nzShowSort nzWidth="150px">Records Received</th>
       <th nzSortKey="metrics.write-bytes" nzShowSort nzWidth="120px">Bytes Sent</th>
-      <th nzSortKey="metrics.write-records" nzShowSort nzWidth="120px">Records Sent</th>
+      <th nzSortKey="metrics.write-records" nzShowSort nzWidth="150px">Records Sent</th>
       <th nzSortKey="attempt" nzShowSort nzWidth="100px">Attempt</th>
       <th nzSortKey="host" nzShowSort nzWidth="200px">Host</th>
       <th nzSortKey="start_time" nzShowSort nzWidth="160px">Start Time</th>
@@ -76,7 +76,7 @@
       </td>
       <td>{{ task.attempt + 1 }}</td>
       <td>{{ task.host }}</td>
-      <td>{{ task["start_time"] | humanizeDate: 'yyyy-MM-dd HH:mm:ss' }}</td>
+      <td>{{ task["start-time"] | humanizeDate: 'yyyy-MM-dd HH:mm:ss' }}</td>
       <td>{{ task.duration | humanizeDuration }}</td>
       <td>{{ task["end-time"] | humanizeDate: 'yyyy-MM-dd HH:mm:ss' }}</td>
       <td nzRight="0px">

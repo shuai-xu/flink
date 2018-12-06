@@ -2,14 +2,16 @@ import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, OnInit, View
 import { Subject } from 'rxjs';
 import { first, skip, takeUntil } from 'rxjs/operators';
 import { NodesItemCorrectInterface } from 'interfaces';
-import { JobService } from 'services';
-import { DagreComponent } from 'share/common/dagre/dagre.component';
+import { DagreService, JobService } from 'services';
 import { trigger, state, animate, style, transition } from '@angular/animations';
+import { NzGraphComponent } from 'share/common/graph';
+import { VerticesNodeComponent } from './vertices-node/vertices-node.component';
 
 @Component({
   selector       : 'flink-job-overview',
   templateUrl    : './job-overview.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers      : [ DagreService ],
   animations     : [
     trigger('drawer', [
       state('in', style({ transform: 'translateX(0)' })),
@@ -30,29 +32,36 @@ export class JobOverviewComponent implements OnInit, OnDestroy {
   destroy$ = new Subject();
   selectedNode: NodesItemCorrectInterface;
   top = 500;
-  @ViewChild(DagreComponent) dagreComponent: DagreComponent;
+  verticesNodeComponent = VerticesNodeComponent;
+  @ViewChild(NzGraphComponent) graphComponent: NzGraphComponent;
 
-  onNodeClick(node: NodesItemCorrectInterface) {
+  onNodeClick(node: NodesItemCorrectInterface, traceInputs = false) {
+    this.dagreService.setTransformCache();
+    this.panToCenterByNodeName(node.id);
     this.selectedNode = node;
   }
 
   onListNodeClick(node: NodesItemCorrectInterface) {
-    this.dagreComponent.focusNode(node);
+    this.graphComponent.fire('node-select', {
+      name: node.id
+    });
+    this.onNodeClick(node);
   }
 
   onCloseDrawer() {
-    this.dagreComponent.clickBg();
+    this.selectedNode = null;
+    setTimeout(() => {
+      this.dagreService.resetTransform();
+    }, 200);
   }
 
-  onResizeEnd() {
-    if (!this.selectedNode) {
-      this.dagreComponent.moveToCenter();
-    } else {
-      this.dagreComponent.focusNode(this.selectedNode, true);
-    }
+  panToCenterByNodeName(name: string) {
+    setTimeout(() => {
+      this.graphComponent.panToCenterByNodeName(name);
+    }, 300);
   }
 
-  constructor(private jobService: JobService, public elementRef: ElementRef) {
+  constructor(private jobService: JobService, private dagreService: DagreService, public elementRef: ElementRef) {
   }
 
   ngOnInit() {
@@ -62,24 +71,40 @@ export class JobOverviewComponent implements OnInit, OnDestroy {
     ).subscribe(data => {
       this.nodes = data.plan.nodes;
       this.links = data.plan.links;
-      this.dagreComponent.flush(this.nodes, this.links, true);
+      this.dagreService.initGraph(this.graphComponent, data);
     });
     this.jobService.jobDetail$.pipe(
       takeUntil(this.destroy$),
       skip(1)
     ).subscribe(data => {
+      this.dagreService.updateData(data);
       this.nodes = data.plan.nodes;
-      this.nodes.forEach(node => {
-        this.dagreComponent.updateNode(node.id, node);
-        if (this.selectedNode && (this.selectedNode.id === node.id)) {
-          this.selectedNode = node;
-        }
-      });
     });
   }
 
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  dagreEvent($event) {
+    switch ($event.eventName) {
+      case 'vertices-click':
+        this.onNodeClick($event.event);
+        break;
+      default:
+        break;
+    }
+  }
+
+  collapseAll() {
+    this.graphComponent.expandOrCollapseAll(false);
+  }
+
+  expandAll() {
+    this.graphComponent.expandOrCollapseAll(true);
+    setTimeout(() => {
+      this.graphComponent.traceInputs();
+    }, 250);
   }
 }

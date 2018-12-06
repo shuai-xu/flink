@@ -8,6 +8,80 @@
   border-bottom: solid 1px @border-color-split;
 }
 
+.graph-action {
+  position: absolute;
+  z-index: 1;
+  right: 15px;
+  top: 11px;
+  background-color: fade(@body-background, 70%);
+  transition: background-color, border-color ease .3s;
+  padding: 5px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  opacity: 1;
+  transition: opacity ease-in 100ms;
+  &:hied {
+    opacity: 0;
+  }
+  &:hover {
+    background-color: @body-background;
+  }
+}
+
+
+.tips-content {
+  p {
+    margin: 0;
+    line-height: 1.8;
+  }
+  .group {
+    display: inline-block;
+    width: 45px;
+    height: 16px;
+    background: @nzg-group-node-fill;
+    border-radius: 3px;
+    border-top: 5px solid @nzg-group-header;
+    vertical-align: text-bottom;
+  }
+
+  .operator {
+    display: inline-block;
+    width: 45px;
+    height: 16px;
+    background: @nzg-op-node-fill;
+    border: 1px solid @nzg-op-node-stroke;
+    border-radius: 2px;
+    vertical-align: text-bottom;
+  }
+
+  .edge {
+    width: 40px;
+    border-bottom: 2px @nzg-edge-color solid;
+    position: relative;
+    display: inline-block;
+    margin-bottom: 4px;
+    margin-right: 5px;
+    &:after {
+      content: "";
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 5px 0 5px 8.7px;
+      border-color: transparent transparent transparent @nzg-edge-color;
+      position: absolute;
+      right: -2px;
+      top: -4px;
+    }
+
+    &.edge-highlight {
+      border-bottom: 2px @nzg-highlight-color dashed;
+    }
+    &.edge-highlight:after {
+      border-color: transparent transparent transparent @nzg-highlight-color;
+    }
+  }
+}
+
 nz-radio-group {
   position: absolute;
   right: 24px;
@@ -20,11 +94,28 @@ nz-radio-group {
   }
 }
 
-flink-dagre {
+flink-graph {
   position: absolute;
+  transition: width ease-in 100ms;
   width: 100%;
   height: 100%;
   left: 0;
+
+  flink-graph-minmap {
+    opacity: 1;
+    transition: opacity ease-in 100ms;
+  }
+
+  &.selected {
+    width: 40%;
+
+    ::ng-deep {
+      flink-graph-minmap {
+        pointer-events: none;
+        opacity: 0;
+      }
+    }
+  }
 }
 
 flink-job-overview-drawer {

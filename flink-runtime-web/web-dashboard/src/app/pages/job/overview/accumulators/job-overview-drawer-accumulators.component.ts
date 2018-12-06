@@ -1,4 +1,4 @@
-import { Component, Input, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { Subject } from 'rxjs';
 import { flatMap, startWith, takeUntil } from 'rxjs/operators';
 import { NodesItemCorrectInterface } from 'interfaces';
@@ -22,7 +22,7 @@ export class JobOverviewDrawerAccumulatorsComponent implements OnInit, OnDestroy
     return node.name;
   }
 
-  constructor(private statusService: StatusService, private jobService: JobService) {
+  constructor(private statusService: StatusService, private jobService: JobService, private cdr: ChangeDetectorRef) {
   }
 
   ngOnInit() {
@@ -34,8 +34,10 @@ export class JobOverviewDrawerAccumulatorsComponent implements OnInit, OnDestroy
       this.isLoading = false;
       this.listOfAccumulator = data.main;
       this.listOfSubTaskAccumulator = data.subtasks[ 'user-accumulators' ] || [];
+      this.cdr.markForCheck();
     }, () => {
       this.isLoading = false;
+      this.cdr.markForCheck();
     });
   }
 

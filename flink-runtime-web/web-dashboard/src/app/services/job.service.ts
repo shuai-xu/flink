@@ -1,9 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Subject } from 'rxjs';
+import { forkJoin, Subject } from 'rxjs';
 import { flatMap, map } from 'rxjs/operators';
 import { BASE_URL } from '../app.config';
-import { JobBackpressureInterface, JobOverviewInterface, JobsItemInterface } from 'interfaces';
+import { JobBackpressureInterface, JobOverviewInterface, JobsItemInterface, VerticesDetailInterface } from 'interfaces';
 import {
   CheckPointInterface,
   CheckPointConfigInterface,
@@ -59,10 +59,24 @@ export class JobService {
     return this.httpClient.get<JobConfigInterface>(`${BASE_URL}/jobs/${jobId}/config`);
   }
 
+  loadJobWithVerticesDetail(jobId) {
+    return forkJoin(
+      this.loadJob(jobId),
+      this.loadJobVerticesDetail(jobId),
+    ).pipe(map(([job, vertices]) => ({
+      ...job,
+      verticesDetail: vertices
+    })));
+  }
+
   loadJob(jobId) {
     return this.httpClient.get<JobDetailInterface>(`${BASE_URL}/jobs/${jobId}`).pipe(
       map(job => this.convertJob(job))
     );
+  }
+
+  loadJobVerticesDetail(jobId: string) {
+    return this.httpClient.get<VerticesDetailInterface>(`${BASE_URL}/jobs/${jobId}/vertices/details`);
   }
 
   loadAccumulators(jobId, vertexId) {

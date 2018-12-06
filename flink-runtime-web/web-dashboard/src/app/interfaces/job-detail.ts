@@ -110,10 +110,58 @@ export interface NodesItemLinkInterface {
 }
 
 export interface JobDetailCorrectInterface extends JobDetailInterface {
+  verticesDetail: VerticesDetailInterface;
   'plan': {
     jid: string;
     name: string;
     nodes: NodesItemCorrectInterface[];
     links: NodesItemLinkInterface[];
   };
+}
+
+export interface VerticesDetailInterface {
+  vertices: VerticesItem[];
+  operators: OperatorsItem[];
+}
+
+export interface VerticesItem {
+  id: string;
+  name: string;
+  subtask_metrics: SubtaskMetricsItem[];
+}
+
+export interface SubtaskMetricsItem {
+  'buffers.inputQueueLength': string;
+  'buffers.outputQueueLength': string;
+  'buffers.inPoolUsage': string;
+  'buffers.outPoolUsage': string;
+  numBytesInLocal: string;
+  numBytesInRemotePerSecond: string;
+  numBytesOutPerSecond: string;
+  numBytesInLocalPerSecond: string;
+  numBytesOut: string;
+  numRecordsIn: string;
+  numRecordsOutPerSecond: string;
+  numRecordsOut: string;
+  numRecordsInPerSecond: string;
+  numBuffersOut: string;
+  numBytesInRemote: string;
+  checkpointAlignmentTime?: string;
+  currentInputWatermark?: string;
+
+  [ metric_name: string ]: string;
+}
+
+export interface OperatorsItem {
+  operator_id: string;
+  vertex_id: string;
+  name: string;
+  inputs: VerticesDetailInputsItem[];
+  metric_name: string;
+}
+
+export interface VerticesDetailInputsItem {
+  operator_id: string;
+  partitioner: string;
+  type_number: number;
 }

@@ -5,3 +5,4 @@ export * from './metrics.service';
 export * from './overview.service';
 export * from './status.service';
 export * from './task-manager.service';
+export * from  './dagre.service';

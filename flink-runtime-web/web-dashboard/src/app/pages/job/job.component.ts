@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
-import { flatMap, takeUntil } from 'rxjs/operators';
+import { filter, flatMap, takeUntil, tap } from 'rxjs/operators';
 import { JobService, StatusService } from 'services';
 
 @Component({
@@ -12,6 +12,7 @@ import { JobService, StatusService } from 'services';
 export class JobComponent implements OnInit, OnDestroy {
   destroy$ = new Subject();
   isLoading = true;
+  refreshing = false;
 
   constructor(private activatedRoute: ActivatedRoute, private jobService: JobService, private statusService: StatusService) {
   }
@@ -20,11 +21,16 @@ export class JobComponent implements OnInit, OnDestroy {
     Promise.resolve().then(() => this.statusService.isCollapsed = true);
     this.statusService.refresh$.pipe(
       takeUntil(this.destroy$),
-      flatMap(() => this.jobService.loadJob(this.activatedRoute.snapshot.params.jid))
+      filter(() => !this.refreshing),
+      flatMap(() => {
+        this.refreshing = true;
+        return this.jobService.loadJobWithVerticesDetail(this.activatedRoute.snapshot.params.jid);
+      })
     ).subscribe(data => {
       this.jobService.jobDetail = data;
       this.jobService.jobDetail$.next(data);
       this.isLoading = false;
+      this.refreshing = false;
     });
   }
 

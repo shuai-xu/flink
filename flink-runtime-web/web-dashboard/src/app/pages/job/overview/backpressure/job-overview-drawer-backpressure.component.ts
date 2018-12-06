@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy, Input, OnDestroy } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, Input, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Subject } from 'rxjs';
 import { flatMap, startWith, takeUntil } from 'rxjs/operators';
 import { JobBackpressureInterface, NodesItemCorrectInterface } from 'interfaces';
@@ -33,7 +33,7 @@ export class JobOverviewDrawerBackpressureComponent implements OnInit, OnDestroy
     }
   }
 
-  constructor(private statusService: StatusService, private jobService: JobService) {
+  constructor(private cdr: ChangeDetectorRef, private statusService: StatusService, private jobService: JobService) {
   }
 
   ngOnInit() {
@@ -46,8 +46,10 @@ export class JobOverviewDrawerBackpressureComponent implements OnInit, OnDestroy
       this.now = Date.now();
       this.backpressure = data;
       this.listOfSubTaskBackpressure = data[ 'subtasks' ] || [];
+      this.cdr.markForCheck();
     }, () => {
       this.isLoading = false;
+      this.cdr.markForCheck();
     });
   }
 

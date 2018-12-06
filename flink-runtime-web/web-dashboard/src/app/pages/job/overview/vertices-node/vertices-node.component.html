@@ -1,0 +1,45 @@
+<ng-container *ngIf="nodeInfo.node.isGroupNode">
+  <div class="group-wrapper"
+    [class.danger-node]="verticesDetail.inQueue >=1 || verticesDetail.outQueue >=1"
+    [class.expanded]="nodeInfo.expanded">
+    <div class="group-header">
+      <h4 class="node-title">
+      <span class="action-title">
+        <span *ngIf="!nodeInfo.expanded">Operators({{nodeInfo.node.cardinality}})</span>
+        <span *ngIf="nodeInfo.expanded">
+          Parallel, InQ, OutQ(
+          {{verticesDetail.parallelism}},
+          {{verticesDetail.inQueueDisplay}},
+          {{verticesDetail.outQueueDisplay}}
+          )
+        </span>
+      </span>
+      </h4>
+      <div class="toggle-expand" (click)="toggleExpand($event)">
+        <a>
+          <i *ngIf="!nodeInfo.expanded" nz-icon type="plus" theme="outline"></i>
+          <i *ngIf="nodeInfo.expanded" nz-icon type="minus" theme="outline"></i>
+        </a>
+      </div>
+    </div>
+    <div class="group-body">
+      <h5 class="sub-title">{{verticesDetail.displayName}}</h5>
+      <div class="attr-wrap">
+        <p class="attr"><span class="attr-name">Parallelism:</span>{{verticesDetail.parallelism}} </p>
+        <p class="attr" [class.danger-attr]="verticesDetail.inQueue  >= 1"><span class="attr-name">In Queue:</span>{{verticesDetail.inQueueDisplay}}</p>
+        <p class="attr" [class.danger-attr]="verticesDetail.outQueue  >= 1"><span class="attr-name">Out Queue:</span>{{verticesDetail.outQueueDisplay}}</p>
+      </div>
+    </div>
+  </div>
+</ng-container>
+<ng-container *ngIf="!nodeInfo.node.isGroupNode">
+  <div class="op-wrapper">
+    <div class="attr-wrap">
+      <p class="attr"><span class="attr-name">RecordsIn:</span>{{operatorsDetail?.numRecordsIn}}</p>
+      <p class="attr"><span class="attr-name">RecordsOut:</span>{{operatorsDetail?.numRecordsOut}}</p>
+    </div>
+    <div class="node-name">
+      <p>{{operatorsDetail?.name}}</p>
+    </div>
+  </div>
+</ng-container>

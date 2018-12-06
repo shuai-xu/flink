@@ -1,6 +1,27 @@
 <div class="container" [style.height.px]="top">
-  <flink-dagre (nodeClick)="onNodeClick($event)" [xCenter]="4"></flink-dagre>
+  <div class="graph-action" [class.hied]="selectedNode">
+    <a (click)="graphComponent?.fit()"><i nz-icon type="fullscreen" theme="outline"></i> Fit Window</a>
+    <nz-divider nzType="vertical"></nz-divider>
+    <a (click)="expandAll()"><i nz-icon type="arrows-alt" theme="outline"></i> Expand All</a>
+    <nz-divider nzType="vertical"></nz-divider>
+    <a (click)="collapseAll()"><i nz-icon type="shrink" theme="outline"></i> Collapse All</a>
+    <nz-divider nzType="vertical"></nz-divider>
+    <a  nz-tooltip [nzTitle]="titleTemplate" nzPlacement="topLeft"><i nz-icon type="question-circle" theme="outline"></i></a>
+    <ng-template #titleTemplate>
+      <div class="tips-content">
+        <p>Double click Vertices-node (or click <i nz-icon type="plus" theme="outline"></i>/ <i nz-icon type="minus" theme="outline"></i>)
+          to toggle the expansion</p>
+        <p>Click Vertices-node <i nz-icon type="file-text" theme="outline"></i> title to open the detail window</p>
+        <br>
+        <p><span class="group"></span> Vertices-node</p>
+        <p><span class="operator"></span> Operator-node</p>
+        <p><span class="edge"></span> Data flow</p>
+        <p><span class="edge edge-highlight"></span> Input paths</p>
+      </div>
+    </ng-template>
+  </div>
+  <flink-graph [class.selected]="selectedNode" [nodePortal]="verticesNodeComponent" (event)="dagreEvent($event)"></flink-graph>
   <flink-job-overview-drawer [node]="selectedNode" [@drawer] *ngIf="selectedNode" (closeDrawer)="onCloseDrawer()"></flink-job-overview-drawer>
 </div>
 <flink-job-overview-list (nodeClick)="onListNodeClick($event)" [nodes]="nodes" [selectedNode]="selectedNode"></flink-job-overview-list>
-<flink-resize [(top)]="top" [mode]="'horizontal'" [baseElement]="elementRef" [resizeMin]="280" (resizeEnd)="onResizeEnd()"></flink-resize>
+<flink-resize [(top)]="top" [mode]="'horizontal'" [baseElement]="elementRef" [resizeMin]="280"></flink-resize>

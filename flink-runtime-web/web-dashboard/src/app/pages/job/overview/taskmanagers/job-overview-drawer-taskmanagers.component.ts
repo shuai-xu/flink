@@ -1,4 +1,4 @@
-import { Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { NzMessageService } from 'ng-zorro-antd';
 import { Subject } from 'rxjs';
 import { flatMap, startWith, takeUntil } from 'rxjs/operators';
@@ -52,7 +52,12 @@ export class JobOverviewDrawerTaskmanagersComponent implements OnInit, OnDestroy
     });
   }
 
-  constructor(private statusService: StatusService, private jobService: JobService, private taskManagerService: TaskManagerService, private nzMessageService: NzMessageService) {
+  constructor(
+    private cdr: ChangeDetectorRef,
+    private statusService: StatusService,
+    private jobService: JobService,
+    private taskManagerService: TaskManagerService,
+    private nzMessageService: NzMessageService) {
   }
 
   ngOnInit() {
@@ -64,6 +69,7 @@ export class JobOverviewDrawerTaskmanagersComponent implements OnInit, OnDestroy
       this.listOfTaskManager = data.taskmanagers;
       this.isLoading = false;
       this.search();
+      this.cdr.markForCheck();
     }, () => {
       this.isLoading = false;
     });

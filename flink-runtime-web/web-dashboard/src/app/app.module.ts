@@ -31,8 +31,10 @@ import {
   FolderOutline,
   LoginOutline,
   PlayCircleOutline,
+  RightOutline,
   PlusOutline,
   QuestionCircleOutline,
+  QuestionCircleFill,
   SaveOutline,
   CaretDownOutline,
   CaretUpOutline,
@@ -46,7 +48,12 @@ import {
   VerticalLeftOutline,
   VerticalRightOutline,
   RollbackOutline,
-  SyncOutline
+  SyncOutline,
+  MinusOutline,
+  FileTextOutline,
+  FullscreenOutline,
+  ArrowsAltOutline,
+  ShrinkOutline
 } from '@ant-design/icons-angular/icons';
 
 
@@ -79,12 +86,14 @@ import {
         BuildOutline,
         CheckCircleOutline,
         DashboardOutline,
+        RightOutline,
         EllipsisOutline,
         FolderOutline,
         LoginOutline,
         PlayCircleOutline,
         PlusOutline,
         QuestionCircleOutline,
+        QuestionCircleFill,
         SaveOutline,
         ScheduleOutline,
         CaretDownOutline,
@@ -98,7 +107,12 @@ import {
         VerticalLeftOutline,
         VerticalRightOutline,
         RollbackOutline,
-        SyncOutline
+        SyncOutline,
+        MinusOutline,
+        FileTextOutline,
+        FullscreenOutline,
+        ArrowsAltOutline,
+        ShrinkOutline
       ]
     },
     {
