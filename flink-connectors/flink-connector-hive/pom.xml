@@ -62,94 +62,12 @@ under the License.
 			<version>${project.version}</version>
 			<scope>provided</scope>
 		</dependency>
+
 		<dependency>
 			<groupId>org.apache.hive</groupId>
 			<artifactId>hive-metastore</artifactId>
 			<version>${hive.version}</version>
-			<exclusions>
-				<exclusion>
-					<groupId>org.apache.logging.log4j</groupId>
-					<artifactId>log4j-web</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.apache.logging.log4j</groupId>
-					<artifactId>log4j-1.2-api</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.apache.logging.log4j</groupId>
-					<artifactId>log4j-slf4j-impl</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>prg.apache.avro</groupId>
-					<artifactId>avro</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>com.fasterxml.jackson.core</groupId>
-					<artifactId>jackson-databind</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.codehaus.jackson</groupId>
-					<artifactId>jackson-core-asl</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.codehaus.jackson</groupId>
-					<artifactId>jackson-mapper-asl</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.codehaus.jackson</groupId>
-					<artifactId>jackson-jaxrs</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.codehaus.jackson</groupId>
-					<artifactId>jackson-xc</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.apache.hadoop</groupId>
-					<artifactId>hadoop-yarn-server-resourcemanager</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.apache.hadoop</groupId>
-					<artifactId>hadoop-annotations</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>javax.servlet</groupId>
-					<artifactId>servlet-api</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>io.airlift</groupId>
-					<artifactId>aircompressor</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.apache.orc</groupId>
-					<artifactId>orc-core</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.apache.zookeeper</groupId>
-					<artifactId>zookeeper</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>io.netty</groupId>
-					<artifactId>netty</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>io.dropwizard.metrics</groupId>
-					<artifactId>metrics-core</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>com.sun.jersey</groupId>
-					<artifactId>jersey-client</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>com.sun.jersey</groupId>
-					<artifactId>jersey-json</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>co.cask.tephra</groupId>
-					<artifactId>tephra-core</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
-
 
 		<!-- test dependencies -->
 
@@ -196,8 +114,9 @@ under the License.
 						<configuration>
 							<artifactSet>
 								<includes>
-									<!-- TODO: should only include some core APIs here-->
-									<include>*:*</include>
+									<include>org.apache.hive:*</include>
+									<include>org.apache.hadoop.hive:*</include>
+									<include>org.apache.hive.shims:*</include>
 								</includes>
 							</artifactSet>
 							<filters>
