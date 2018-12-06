@@ -840,9 +840,9 @@ object TableConfig {
     ConfigOptions.key("sql.exec.spill.compression.block-size")
         .defaultValue(new Integer(64 * 1024))
 
-  val SQL_EXEC_SORT_PARALLEL_MERGE_ENABLE: ConfigOption[JBoolean] =
-    ConfigOptions.key("sql.exec.sort.parallel-merge.enable")
-        .defaultValue(new JBoolean(false))
+  val SQL_EXEC_SORT_ASYNC_MERGE_ENABLE: ConfigOption[JBoolean] =
+    ConfigOptions.key("sql.exec.sort.async-merge.enable")
+        .defaultValue(new JBoolean(true))
 
   // =================================== Join ===================================
   /**

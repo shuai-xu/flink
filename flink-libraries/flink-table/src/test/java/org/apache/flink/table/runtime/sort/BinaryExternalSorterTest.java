@@ -66,18 +66,18 @@ public class BinaryExternalSorterTest {
 	public BinaryExternalSorterTest(
 			boolean useBufferedIO,
 			boolean spillCompress,
-			boolean parallelMergeEnable) {
+			boolean asyncMerge) {
 		ioManager = useBufferedIO ? new IOManagerAsync(1024 * 1024, 1024 * 1024) : new IOManagerAsync();
 		conf = new Configuration();
 		if (!spillCompress) {
 			conf.setBoolean(TableConfig.SQL_EXEC_SPILL_COMPRESSION_ENABLE(), false);
 		}
-		if (parallelMergeEnable) {
-			conf.setBoolean(TableConfig.SQL_EXEC_SORT_PARALLEL_MERGE_ENABLE(), true);
+		if (asyncMerge) {
+			conf.setBoolean(TableConfig.SQL_EXEC_SORT_ASYNC_MERGE_ENABLE(), true);
 		}
 	}
 
-	@Parameterized.Parameters(name = "useBufferedIO-{0} spillCompress-{1} parallelMerge-{2}")
+	@Parameterized.Parameters(name = "useBufferedIO-{0} spillCompress-{1} asyncMerge-{2}")
 	public static Collection<Boolean[]> parameters() {
 		return Arrays.asList(
 				new Boolean[]{false, false, false},

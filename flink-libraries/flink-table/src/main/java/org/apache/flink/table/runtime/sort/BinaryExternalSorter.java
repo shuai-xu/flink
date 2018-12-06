@@ -192,7 +192,7 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 	private final BlockCompressionFactory compressionCodecFactory;
 	private final int compressionBlockSize;
 
-	private final boolean parallelMergeEnable;
+	private final boolean asyncMergeEnable;
 
 	// ------------------------------------------------------------------------
 	//                         Constructor & Shutdown
@@ -229,7 +229,7 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 				TableConfig.SQL_EXEC_SPILL_COMPRESSION_CODEC()), conf)
 			: null;
 		compressionBlockSize = conf.getInteger(TableConfig.SQL_EXEC_SPILL_COMPRESSION_BLOCK_SIZE());
-		parallelMergeEnable = conf.getBoolean(TableConfig.SQL_EXEC_SORT_PARALLEL_MERGE_ENABLE());
+		asyncMergeEnable = conf.getBoolean(TableConfig.SQL_EXEC_SORT_ASYNC_MERGE_ENABLE());
 
 		checkArgument(maxNumFileHandles >= 2);
 		checkNotNull(ioManager);
@@ -1161,9 +1161,9 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 				}
 
 				spillChannelIDs.add(channelID);
-				// if parallel merge is disabled, we will only do the final merge
+				// if async merge is disabled, we will only do the final merge
 				// otherwise we wait for `maxFanIn` number of channels to begin a merge
-				if (!parallelMergeEnable || spillChannelIDs.size() < maxFanIn) {
+				if (!asyncMergeEnable || spillChannelIDs.size() < maxFanIn) {
 					continue;
 				}
 
