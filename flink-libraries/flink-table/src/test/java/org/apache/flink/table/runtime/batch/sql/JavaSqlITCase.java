@@ -23,7 +23,11 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.MapTypeInfo;
 import org.apache.flink.api.java.typeutils.TupleTypeInfo;
+import org.apache.flink.streaming.api.datastream.DataStreamSource;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.java.BatchTableEnvironment;
 import org.apache.flink.types.Row;
 
 import org.junit.Test;
@@ -131,5 +135,51 @@ public class JavaSqlITCase extends QueryTest {
 
 		String expected = "bar\n" + "spam\n";
 		compareResultAsText(getResult(result), expected);
+	}
+
+	@Test
+	public void testPojo() throws Exception {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(4);
+		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env);
+		DataStreamSource<WC> input = env.fromElements(
+				new WC("Hello", 1, "xx1"),
+				new WC("Ciao", 1, "xx2"),
+				new WC("Hello", 1, "xx3"));
+
+		// TODO remove it after fix bugs....
+		input.getTransformation().setParallelismLocked(true);
+
+		// register the BoundedStream as table "WordCount"
+		tEnv.registerBoundedStream("WC", input, "word, frequency, amount");
+
+		// run a SQL query on the Table and retrieve the result as a new Table
+		Table result = tEnv.sqlQuery(
+				"SELECT word, frequency, amount FROM WC");
+
+		String expected = "Ciao,1,xx2\n" + "Hello,1,xx1\n" + "Hello,1,xx3\n";
+		compareResultAsText(getResult(result), expected);
+	}
+
+	/**
+	 * Simple POJO containing a word and its respective count.
+	 */
+	public static class WC {
+		public String word;
+		public long frequency;
+		public String amount;
+
+		// public constructor to make it a Flink POJO
+		public WC() {}
+
+		public WC(String word, long frequency, String amount) {
+			this.word = word;
+			this.frequency = frequency;
+			this.amount = amount;
+		}
+
+		@Override
+		public String toString() {
+			return "WC " + word + " " + frequency + " " + amount;
+		}
 	}
 }

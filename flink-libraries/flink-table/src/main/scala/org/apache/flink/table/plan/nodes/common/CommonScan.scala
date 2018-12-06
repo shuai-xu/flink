@@ -98,15 +98,15 @@ trait CommonScan[T] {
       }
 
     var codeSplit = GeneratedSplittableExpression.UNSPLIT_EXPRESSION
-    val inputFieldTypes = DataTypes.internal(inputType) match {
-      case rowType: BaseRowType =>
-        rowType.getFieldTypes
-      case t => Array(t)
+    val (inputTypes, inputNames) = DataTypes.internal(inputType) match {
+      case rowType: BaseRowType => (rowType.getFieldTypes, rowType.getFieldNames)
+      case t => (Array(t), Array("f0"))
     }
 
     val processCode =
-      if ((inputFieldTypes sameElements
-          outputRowType.getFieldTypes) && !hasTimeAttributeField(fieldIndexes)) {
+      if ((inputTypes sameElements outputRowType.getFieldTypes) &&
+          (inputNames sameElements outputRowType.getFieldNames) &&
+          !hasTimeAttributeField(fieldIndexes)) {
         s"${generatorCollect(inputTerm)}"
       } else {
 
