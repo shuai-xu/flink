@@ -78,9 +78,11 @@ under the License.
 		<module>flink-scala-shell</module>
 		<module>flink-quickstart</module>
 		<module>flink-contrib</module>
+		<module>flink-container</module>
 		<module>flink-mesos</module>
 		<module>flink-metrics</module>
 		<module>flink-yarn</module>
+		<module>flink-kubernetes</module>
 		<module>flink-yarn-tests</module>
 		<module>flink-fs-tests</module>
 		<module>flink-docs</module>

@@ -1174,6 +1174,20 @@ public class CliFrontend {
 			LOG.warn("Could not load CLI class {}.", flinkYarnSessionCLI, e);
 		}
 
+		// Command line interface of the kubernetes session, with a special initialization here
+		//	to prefix all options with k/kubernetes.
+		final String flinkKubernetesSessionCLI = "org.apache.flink.kubernetes.cli.FlinkKubernetesSessionCli";
+		try {
+			customCommandLines.add(
+				loadCustomCommandLine(flinkKubernetesSessionCLI,
+					configuration,
+					configurationDirectory,
+					"k",
+					"kubernetes"));
+		} catch (NoClassDefFoundError | Exception e) {
+			LOG.warn("Could not load CLI class {}.", flinkKubernetesSessionCLI, e);
+		}
+
 		if (configuration.getString(CoreOptions.MODE).equalsIgnoreCase(CoreOptions.NEW_MODE)) {
 			customCommandLines.add(new DefaultCLI(configuration));
 		} else {

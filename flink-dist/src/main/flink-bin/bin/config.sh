@@ -153,7 +153,7 @@ bin=`dirname "$target"`
 SYMLINK_RESOLVED_BIN=`cd "$bin"; pwd -P`
 
 # Define the main directory of the flink installation
-FLINK_ROOT_DIR=`dirname "$SYMLINK_RESOLVED_BIN"`
+FLINK_ROOT_DIR=${FLINK_ROOT_DIR:-`dirname "$SYMLINK_RESOLVED_BIN"`}
 FLINK_LIB_DIR=$FLINK_ROOT_DIR/lib
 FLINK_OPT_DIR=$FLINK_ROOT_DIR/opt
 

@@ -130,6 +130,8 @@ under the License.
 									<include>org.apache.httpcomponents:*</include>
 									<include>commons-httpclient:commons-httpclient</include>
 									<include>org.codehaus.jackson:*</include>
+
+									<include>com.squareup.okio:*</include>
 								</includes>
 								<excludes>
 									<exclude>org.slf4j:*</exclude>
@@ -171,6 +173,10 @@ under the License.
 								<relocation>
 									<pattern>org.codehaus.jackson</pattern>
 									<shadedPattern>org.apache.flink.hadoop.shaded.org.codehaus.jackson</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>okio</pattern>
+									<shadedPattern>org.apache.flink.hadoop.shaded.okio</shadedPattern>
 								</relocation>
 							</relocations>
 						</configuration>
