@@ -250,12 +250,11 @@ public class StreamingJobGraphGenerator {
 					chainingNodeMap,
 					chainingLayerMap);
 		}
-		unvisitedInEdgeNumMap.clear();
 
 		// split chains according to the specified strategy using breadth-first traversal
 		if (streamGraph.isChainingEnabled()) {
 			splitChain(chainingLayerMap, chainingNodeMap);
-			chainedNodeMap = Collections.unmodifiableMap(chainingNodeMap);
+			chainedNodeMap = chainingNodeMap;
 		} else {
 			chainedNodeMap = null;
 		}
@@ -479,59 +478,65 @@ public class StreamingJobGraphGenerator {
 		Map<Integer, Set<Integer>> markMap,
 		Map<Integer, ChainingStreamNode> chainingNodeMap) {
 
+		Set<Integer> nodesInAllCycles = new HashSet<>();
 		for (int i = 1; i <= markMap.size(); i++) {
-			Integer breakingOffNodeId = null;
-			int breakingOffNodeBFNumber = -1;
+			nodesInAllCycles.addAll(markMap.get(i));
+		}
 
-			Set<Integer> cycleNodes = markMap.get(i);
-			for (Integer nodeId : cycleNodes) {
-				int nodeBFNumber = chainingNodeMap.get(nodeId).getBreadthFirstNumber();
-				if (breakingOffNodeId == null || breakingOffNodeBFNumber < nodeBFNumber) {
-					breakingOffNodeId = nodeId;
-					breakingOffNodeBFNumber = nodeBFNumber;
+		List<Integer> sortedNodesInAllCycles = new ArrayList<>();
+		sortedNodesInAllCycles.addAll(nodesInAllCycles);
+		sortedNodesInAllCycles.sort(Comparator.comparingInt(o -> chainingNodeMap.get(o).getBreadthFirstNumber()));
+		for (Integer nodeId : sortedNodesInAllCycles) {
+			StreamNode node = streamGraph.getStreamNode(nodeId);
+			List<StreamEdge> inputEdgeInCycles = new ArrayList<>();
+			for (StreamEdge inEdge : node.getInEdges()) {
+				if (nodesInAllCycles.contains(inEdge.getSourceId())) {
+					inputEdgeInCycles.add(inEdge);
 				}
 			}
 
-			StreamNode breakingOffNode = streamGraph.getStreamNode(breakingOffNodeId);
-			if (breakingOffNode.getInEdges().size() < 2) {
-				throw new RuntimeException("The stream graph is cyclic.");
+			if (inputEdgeInCycles.size() < 2) {
+				continue;
 			}
-			for (StreamEdge inEdge : breakingOffNode.getInEdges()) {
-				if (!isInputEdgeBrokenOff(inEdge, breakingOffNodeId, cycleNodes, chainingNodeMap)) {
-					ChainingStreamNode chainingNode = chainingNodeMap.get(breakingOffNodeId);
+
+			for (StreamEdge inEdge : inputEdgeInCycles) {
+				if (!isInputChainBrokenOff(inEdge, nodeId, nodesInAllCycles, chainingNodeMap)) {
+					ChainingStreamNode chainingNode = chainingNodeMap.get(nodeId);
 					chainingNode.removeChainableToNode(inEdge.getSourceId());
 				}
 			}
 		}
 	}
 
-	private boolean isInputEdgeBrokenOff(
-		final StreamEdge edge,
+	private boolean isInputChainBrokenOff(
+		final StreamEdge inEdge,
 		final Integer breakingOffNodeId,
-		Set<Integer> cycleNodes,
+		Set<Integer> nodesInAllCycles,
 		Map<Integer, ChainingStreamNode> chainingNodeMap) {
 
-		Integer sourceId = edge.getSourceId();
+		Integer sourceId = inEdge.getSourceId();
 		if (sourceId.equals(breakingOffNodeId)) {
 			throw new RuntimeException("The stream graph is cyclic.");
 		}
 
-		if (!cycleNodes.contains(sourceId)) {
-			return false;
-		}
-
-		ChainingStreamNode targetChainingNode = chainingNodeMap.get(edge.getTargetId());
+		ChainingStreamNode targetChainingNode = chainingNodeMap.get(inEdge.getTargetId());
 		if (!targetChainingNode.isChainTo(sourceId)) {
 			return true;
 		}
 
-		for (StreamEdge nextEdge : streamGraph.getStreamNode(sourceId).getInEdges()) {
-			if (isInputEdgeBrokenOff(nextEdge, breakingOffNodeId, cycleNodes, chainingNodeMap)) {
-				return true;
+		int expectedBrokenEdgeNum = 0, brokenEdgeNum = 0;
+		for (StreamEdge nextInEdge : streamGraph.getStreamNode(sourceId).getInEdges()) {
+			if (!nodesInAllCycles.contains(nextInEdge.getSourceId())) {
+				continue;
+			}
+
+			expectedBrokenEdgeNum++;
+			if (isInputChainBrokenOff(nextInEdge, breakingOffNodeId, nodesInAllCycles, chainingNodeMap)) {
+				brokenEdgeNum++;
 			}
 		}
 
-		return false;
+		return (expectedBrokenEdgeNum > 0 && expectedBrokenEdgeNum == brokenEdgeNum);
 	}
 
 	private boolean createChain(
