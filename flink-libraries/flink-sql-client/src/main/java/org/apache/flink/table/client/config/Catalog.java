@@ -19,10 +19,12 @@
 package org.apache.flink.table.client.config;
 
 import org.apache.flink.table.client.SqlClientException;
+import org.apache.flink.table.client.catalog.CatalogConfigs;
 import org.apache.flink.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Descriptor for user-defined functions.
@@ -45,6 +47,28 @@ public class Catalog {
 	public Map<String, String> getProperties() {
 		return properties;
 	}
+
+	public boolean isDefaultCatalog() {
+		String s = properties.get(CatalogConfigs.CATALOG_IS_DEFAULT);
+
+		if (s == null) {
+			return false;
+		} else {
+			return Boolean.valueOf(s);
+		}
+	}
+
+	public Optional<String> getDefaultDatabase() {
+		String s = properties.get(CatalogConfigs.CATALOG_DEFAULT_DB);
+
+		if (s == null) {
+			return Optional.empty();
+		} else {
+			return Optional.of(s);
+		}
+	}
+
+	// --------------------------------------------------------------------------------------------
 
 	public static Catalog create(Map<String, Object> config) {
 		final Object name = config.get(NAME);

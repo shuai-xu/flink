@@ -38,8 +38,7 @@ import org.apache.flink.table.api.BatchQueryConfig;
 import org.apache.flink.table.api.QueryConfig;
 import org.apache.flink.table.api.StreamQueryConfig;
 import org.apache.flink.table.api.TableEnvironment;
-import org.apache.flink.table.catalog.FlinkInMemoryCatalogFactory;
-import org.apache.flink.table.catalog.ReadableCatalog;
+import org.apache.flink.table.client.catalog.ClientCatalogFactory;
 import org.apache.flink.table.client.cli.SingleJobMode;
 import org.apache.flink.table.client.config.Catalog;
 import org.apache.flink.table.client.config.Deployment;
@@ -51,9 +50,14 @@ import org.apache.flink.util.FlinkException;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URL;
 import java.util.List;
+import java.util.Map;
+
+import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**
  * Context for executing table programs. This class caches everything that can be cached across
@@ -63,6 +67,7 @@ import java.util.List;
  * @param <T> cluster id
  */
 public class ExecutionContext<T> {
+	private static final Logger LOGGER = LoggerFactory.getLogger(ExecutionContext.class);
 
 	private final SessionContext sessionContext;
 	private final Environment mergedEnv;
@@ -78,8 +83,6 @@ public class ExecutionContext<T> {
 	private final boolean needAttach;
 	private final boolean needShareEnv;
 
-//	private ExternalCatalog externalCatalog = null;
-
 	public ExecutionContext(
 			Environment defaultEnvironment,
 			SessionContext sessionContext,
@@ -88,6 +91,7 @@ public class ExecutionContext<T> {
 			Options commandLineOptions,
 			List<CustomCommandLine<?>> availableCommandLines,
 			SingleJobMode singleJobMode) {
+
 		this.sessionContext = sessionContext.copy(); // create internal copy because session context is mutable
 		this.mergedEnv = Environment.merge(defaultEnvironment, sessionContext.getEnvironment());
 		this.dependencies = dependencies;
@@ -104,8 +108,6 @@ public class ExecutionContext<T> {
 		runOptions = createRunOptions(commandLine);
 		clusterId = activeCommandLine.getClusterId(commandLine);
 		clusterSpec = createClusterSpecification(activeCommandLine, commandLine);
-
-//		externalCatalog = createExternalCatalog(this.mergedEnv.getExecution().getExternalCatalogType());
 
 		this.needAttach = this.needAttach(this.mergedEnv.getExecution());
 
@@ -234,36 +236,6 @@ public class ExecutionContext<T> {
 		throw new RuntimeException("Can not determine whether to share environment");
 	}
 
-//	private ExternalCatalog createExternalCatalog(String externalCatalogType) {
-//		if (externalCatalogType.equalsIgnoreCase("in-memory")) {
-//			return new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA());
-//		} else if (externalCatalogType.equalsIgnoreCase("hive")) {
-//			HiveConf hiveConf = new HiveConf();
-//			// TODO pass these from the configurations
-//			hiveConf.setBoolVar(HiveConf.ConfVars.METASTORE_SCHEMA_VERIFICATION, false);
-//			hiveConf.setBoolean("datanucleus.schema.autoCreateTables", true);
-//			hiveConf.setVar(HiveConf.ConfVars.METASTOREWAREHOUSE, "file:///tmp/hive");
-//			return new HiveExternalCatalog(HiveExternalCatalog.DEFAULT, hiveConf);
-//		} else {
-//			throw new RuntimeException("No such external catalog supported: " + externalCatalogType);
-//		}
-//	}
-
-	private static ReadableCatalog createCatalog(Catalog catalog) {
-		// TODO: convert to service discovery style
-
-		String catalogType = catalog.getProperties().get("catalog.type");
-
-		switch (catalogType) {
-			case "hive":
-				return null;
-			case "inmemory":
-				return new FlinkInMemoryCatalogFactory().createCatalog(catalog.getName(), catalog.getProperties());
-			default:
-				throw new IllegalArgumentException("Doesn't support catalog type " + catalogType + " yet.");
-		}
-	}
-
 	// --------------------------------------------------------------------------------------------
 
 	/**
@@ -293,14 +265,38 @@ public class ExecutionContext<T> {
 			// create query config
 			queryConfig = createQueryConfig();
 
+			LOGGER.info("Register the following catalogs:" + mergedEnv.getCatalogs().keySet());
+
 			mergedEnv.getCatalogs().forEach((name, catalog) -> {
-				tableEnv.registerCatalog(name, createCatalog(catalog));
+				tableEnv.registerCatalog(name, ClientCatalogFactory.createCatalog(catalog));
 			});
 
-//			// TODO: use hive catalog when storing ExternalCatalogTable supported.
-//			tableEnv.registerExternalCatalog(
-//					TableEnvironment.DEFAULT_SCHEMA(),
-//					externalCatalog);
+			setDefaultCatalog(mergedEnv.getCatalogs());
+		}
+
+		private void setDefaultCatalog(Map<String, Catalog> catalogs) {
+			long count = catalogs.values().stream().filter(c -> c.isDefaultCatalog()).count();
+
+			checkArgument(count <= 1,
+				String.format("Only one catalog can be set as default catalog, but currently are %d", count));
+
+			if (count == 0) {
+				return;
+			}
+
+			Map.Entry<String, Catalog> entry = catalogs.entrySet().stream()
+				.filter(e -> e.getValue().isDefaultCatalog())
+				.findFirst()
+				.get();
+
+			String name = entry.getKey();
+			Catalog defaultCatalog = entry.getValue();
+
+			if (defaultCatalog.getDefaultDatabase().isPresent()) {
+				tableEnv.setDefaultDatabase(name, defaultCatalog.getDefaultDatabase().get());
+			} else {
+				tableEnv.setDefaultCatalog(name);
+			}
 		}
 
 		public QueryConfig getQueryConfig() {

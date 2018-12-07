@@ -28,6 +28,8 @@ public class HiveCatalogConfig {
 
 	public static final String HIVE_METASTORE_URIS = "hive.metastore.uris";
 
+	public static final String HIVE_METASTORE_USERNAME = "hive.metastore.username";
+
 	// -------------------
 	// Hive storage information configs
 	// -------------------

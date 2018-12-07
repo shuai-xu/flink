@@ -18,6 +18,9 @@
 
 package org.apache.flink.table.client.gateway.local;
 
+import org.apache.flink.table.client.catalog.CatalogConfigs;
+import org.apache.flink.table.client.config.Catalog;
+import org.apache.flink.table.client.config.CatalogType;
 import org.apache.flink.table.client.config.Environment;
 import org.apache.flink.table.client.gateway.utils.EnvironmentUtil;
 
@@ -29,6 +32,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test for Environment.
@@ -40,12 +44,25 @@ public class EnvironmentTest {
 		Environment env = EnvironmentUtil.getDefaultTestEnvironment();
 
 		assertEquals(new HashSet<>(Arrays.asList("myhive", "myinmemory")), env.getCatalogs().keySet());
+
+		Catalog hive = env.getCatalogs().get("myhive");
 		assertEquals(
 			new HashMap<String, String>() {{
-				put("catalog.connector.hive.metastore.uris", "thrift://host1:10000,thrift://host2:10000");
-				put("catalog.connector.hive.metastore.username", "flink");
-				put("catalog.type", "hive");
+				put(CatalogConfigs.CATALOG_CONNECTOR_HIVE_METASTORE_URIS, "thrift://host1:10000,thrift://host2:10000");
+				put(CatalogConfigs.CATALOG_CONNECTOR_HIVE_METASTORE_USERNAME, "flink");
+				put(CatalogConfigs.CATALOG_TYPE, CatalogType.hive.name());
+				put(CatalogConfigs.CATALOG_IS_DEFAULT, "true");
+				put(CatalogConfigs.CATALOG_DEFAULT_DB, "mydb");
 			}},
-			env.getCatalogs().get("myhive").getProperties());
+			hive.getProperties());
+
+		assertTrue(hive.isDefaultCatalog());
+		assertEquals("mydb", hive.getDefaultDatabase().get());
+
+		assertEquals(
+			new HashMap<String, String>() {{
+				put(CatalogConfigs.CATALOG_TYPE, CatalogType.flink_in_memory.name());
+			}},
+			env.getCatalogs().get("myinmemory").getProperties());
 	}
 }

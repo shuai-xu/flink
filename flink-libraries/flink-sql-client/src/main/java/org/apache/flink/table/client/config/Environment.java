@@ -115,6 +115,12 @@ public class Environment {
 		// merge deployment properties
 		mergedEnv.deployment = Deployment.merge(env1.getDeployment(), env2.getDeployment());
 
+		Map<String, Catalog> catalogs = new HashMap<>();
+		catalogs.putAll(env1.getCatalogs());
+		catalogs.putAll(env2.getCatalogs());
+
+		mergedEnv.catalogs = catalogs;
+
 		return mergedEnv;
 	}
 
