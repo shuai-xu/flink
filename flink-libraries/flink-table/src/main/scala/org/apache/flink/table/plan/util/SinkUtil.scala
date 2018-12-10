@@ -28,7 +28,7 @@ import org.apache.flink.table.util.BinaryHashPartitioner
 
 object SinkUtil {
 
-  private def keyPartition(
+  def keyPartition(
       input: StreamTransformation[BaseRow],
       typeInfo: BaseRowTypeInfo[_],
       keys: Array[Int]): StreamTransformation[BaseRow] = {
