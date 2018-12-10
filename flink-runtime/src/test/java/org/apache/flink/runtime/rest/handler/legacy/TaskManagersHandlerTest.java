@@ -36,9 +36,10 @@ public class TaskManagersHandlerTest {
 	public void testGetPaths() {
 		TaskManagersHandler handler = new TaskManagersHandler(Executors.directExecutor(), Time.seconds(0L), null);
 		String[] paths = handler.getPaths();
-		Assert.assertEquals(2, paths.length);
+		Assert.assertEquals(3, paths.length);
 		List<String> pathsList = Lists.newArrayList(paths);
 		Assert.assertTrue(pathsList.contains("/taskmanagers"));
+		Assert.assertTrue(pathsList.contains("/jobs/:jobid/taskmanagers"));
 		Assert.assertTrue(pathsList.contains("/taskmanagers/:taskmanagerid"));
 	}
 }
