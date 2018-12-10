@@ -18,25 +18,19 @@
 
 package org.apache.flink.table.plan
 
-import org.apache.flink.table.api.{TableEnvironment, TableException, ValidationException}
-import org.apache.flink.table.functions.utils.TableSqlFunction
+import org.apache.flink.table.api.{TableEnvironment, TableException}
 import org.apache.flink.table.plan.nodes.calcite.Sink
-import org.apache.flink.table.plan.schema.{RelTable, RowSchema}
+import org.apache.flink.table.plan.schema.RelTable
 import org.apache.flink.table.plan.logical.{LogicalNode, SinkNode}
 import org.apache.flink.table.plan.util.{SubplanReuseContext, SubplanReuseShuttle}
-import org.apache.flink.table.util.ComplexDimTVF
 import org.apache.flink.util.Preconditions
 
 import org.apache.calcite.rel._
-import org.apache.calcite.rel.`type`.RelDataTypeField
-import org.apache.calcite.rel.core.{CorrelationId, TableScan}
-import org.apache.calcite.rel.logical.{LogicalCorrelate, LogicalJoin, LogicalTableFunctionScan, LogicalTableScan}
-import org.apache.calcite.rex.{RexCall, RexFieldAccess, RexInputRef, RexNode}
-import org.apache.calcite.sql.`type`.SqlTypeName
-import org.apache.calcite.sql.fun.SqlStdOperatorTable
+import org.apache.calcite.rel.core.TableScan
+import org.apache.calcite.rel.logical.LogicalTableScan
 import org.apache.calcite.plan.RelOptUtil
 
-import com.google.common.collect.{Sets, ImmutableList, ImmutableSet}
+import com.google.common.collect.Sets
 
 import java.util.IdentityHashMap
 
@@ -180,70 +174,6 @@ class RelNodeBlock(val outputNode: RelNode, tEnv: TableEnvironment) {
         super.visitChildren(rel)
       }
     }
-
-    /**
-      * TODO if right input is a ComplexDimTVF then rewrite this correlate to a LogicalJoin
-      * with a new right input of DimensionTable for SQLGen scenario. It's a temporary solution
-      * and will'be replaced later.
-      */
-    override def visit(correlate: LogicalCorrelate): RelNode = {
-      correlate.getRight match {
-        case scan: LogicalTableFunctionScan =>
-          val tableFunction = scan.getCall.asInstanceOf[RexCall].op.asInstanceOf[TableSqlFunction]
-                              .getTableFunction
-          tableFunction match {
-            case complexDimTVF: ComplexDimTVF =>
-              val uniqueId = complexDimTVF.dimTable.hashCode() & 0xfffffff
-              val newTableName = s"${complexDimTVF.dimTable.explainSource()}_$uniqueId"
-              if (tEnv.getTable(newTableName).isEmpty) {
-                tEnv.registerTableSource(newTableName, complexDimTVF.dimTable)
-              }
-
-              val leftKey = correlate.getRight.asInstanceOf[LogicalTableFunctionScan]
-                            .getCall.asInstanceOf[RexCall].operands.get(0)
-                            .asInstanceOf[RexFieldAccess].getField.getName
-              val leftRowType = new RowSchema(correlate.getLeft.getRowType)
-              val leftKeyIndex = leftRowType.fieldNames.zipWithIndex
-                                 .find(_._1 == leftKey).getOrElse(
-                throw new ValidationException(s"could find key $leftKey from left input"))._2
-
-              // construct a LogicTableScan
-              val newRight = tEnv.getRelBuilder.scan(newTableName).peek()
-              val rightKeyIndex = new RowSchema(newRight.getRowType)
-                                  .fieldNames.zipWithIndex
-                                  .find(_._1 == complexDimTVF.joinKey).getOrElse(
-                throw new ValidationException(
-                  s"could find key ${complexDimTVF.joinKey} " +
-                    s"from right input"))._2 + leftRowType.arity
-
-              val operands4Condition: ImmutableList[RexNode] = ImmutableList.of(
-                RexInputRef.of(leftKeyIndex, correlate.getLeft.getRowType),
-                RexInputRef.of(rightKeyIndex, correlate.getRowType))
-
-              val joinCondition = tEnv.getRelBuilder.getRexBuilder.makeCall(
-                tEnv.getTypeFactory.createSqlType(SqlTypeName.BOOLEAN),
-                SqlStdOperatorTable.EQUALS,
-                operands4Condition)
-
-              // rewrite current correlate to join
-              val join: LogicalJoin = LogicalJoin.create(
-                correlate.getLeft,
-                newRight,
-                joinCondition,
-                ImmutableSet.of[CorrelationId](),
-                correlate.getJoinType.toJoinType,
-                false,
-                ImmutableList.of[RelDataTypeField]())
-
-              // visit new join node
-              super.visit(join)
-            case _ =>
-              super.visit(correlate)
-          }
-        case _ => super.visit(correlate)
-      }
-    }
-
   }
 
 }
