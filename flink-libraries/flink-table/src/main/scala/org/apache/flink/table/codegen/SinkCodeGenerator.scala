@@ -16,51 +16,52 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.util
+package org.apache.flink.table.codegen
 
-import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.flink.api.common.typeinfo.{AtomicType, TypeInformation}
 import org.apache.flink.api.common.typeutils.CompositeType
-import org.apache.flink.api.java.typeutils._
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
+import org.apache.flink.api.java.typeutils.{GenericTypeInfo, PojoTypeInfo, RowTypeInfo, TupleTypeInfo, TupleTypeInfoBase, TypeExtractor}
 import org.apache.flink.api.scala.createTuple2TypeInformation
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.api.{Table, TableConfig, TableException, Types}
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.codegen.{CodeGenUtils, CodeGeneratorContext, ExprCodeGenerator}
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCollect
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToExternal
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TimeIndicatorTypeInfo}
 import org.apache.flink.table.typeutils.TypeUtils.getCompositeTypes
+import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TimeIndicatorTypeInfo}
+import org.apache.flink.table.util.BaseRowUtil
 import org.apache.flink.types.Row
+
+import org.apache.calcite.rel.`type`.RelDataType
 
 import scala.collection.JavaConversions._
 
-/** Tools class to convert internal type rows to external type. **/
-object RowConverters {
+object SinkCodeGenerator {
+
   /** Code gen a operator to convert internal type rows to external type. **/
   def generateRowConverterOperator[IN, OUT](
-    config: TableConfig,
-    ctx: CodeGeneratorContext,
-    inputTypeInfo: BaseRowTypeInfo[_],
-    relType: RelDataType,
-    operatorName: String,
-    rowtimeField: Option[Int],
-    withChangeFlag: Boolean,
-    dataType: DataType)
-  : (Option[OneInputSubstituteStreamOperator[IN, OUT]], TypeInformation[OUT])  = {
+      config: TableConfig,
+      ctx: CodeGeneratorContext,
+      inputTypeInfo: BaseRowTypeInfo[_],
+      relType: RelDataType,
+      operatorName: String,
+      rowtimeField: Option[Int],
+      withChangeFlag: Boolean,
+      dataType: DataType)
+  : (Option[OneInputSubstituteStreamOperator[IN, OUT]], TypeInformation[OUT]) = {
 
     val resultType = DataTypes.toTypeInfo(dataType).asInstanceOf[TypeInformation[OUT]]
 
     //row needs no conversion
     if (resultType.isInstanceOf[BaseRowTypeInfo[_]]
-      || (resultType.isInstanceOf[GenericTypeInfo[_]]
-      && resultType.getTypeClass == classOf[BaseRow])) {
+        || (resultType.isInstanceOf[GenericTypeInfo[_]]
+        && resultType.getTypeClass == classOf[BaseRow])) {
       return (None, resultType)
     }
 
@@ -182,18 +183,18 @@ object RowConverters {
   }
 
   private def checkRowConverterValid[OUT](
-    inputTypeInfo: BaseRowTypeInfo[_],
-    relType: RelDataType,
-    requestedTypeInfo: TypeInformation[OUT]) : Unit = {
+      inputTypeInfo: BaseRowTypeInfo[_],
+      relType: RelDataType,
+      requestedTypeInfo: TypeInformation[OUT]): Unit = {
 
     // validate that at least the field types of physical and logical type match
     // we do that here to make sure that plan translation was correct
-    val types = relType.getFieldList map {f => FlinkTypeFactory.toTypeInfo(f.getType)}
+    val types = relType.getFieldList map { f => FlinkTypeFactory.toTypeInfo(f.getType) }
     if (inputTypeInfo.getFieldTypes.toList != types) {
       throw new TableException(
         s"The field types of physical and logical row types do not match. " +
-          s"Physical type is [$relType], Logical type is [$inputTypeInfo]. " +
-          s"This is a bug and should not happen. Please file an issue.")
+            s"Physical type is [$relType], Logical type is [$inputTypeInfo]. " +
+            s"This is a bug and should not happen. Please file an issue.")
     }
 
     val fieldTypes = inputTypeInfo.getFieldTypes
@@ -201,10 +202,10 @@ object RowConverters {
 
     // check for valid type info
     if (!requestedTypeInfo.isInstanceOf[GenericTypeInfo[_]] &&
-      requestedTypeInfo.getArity != fieldTypes.length) {
+        requestedTypeInfo.getArity != fieldTypes.length) {
       throw new TableException(
         s"Arity [${fieldTypes.length}] of result [$fieldTypes] does not match " +
-          s"the number[${requestedTypeInfo.getArity}] of requested type [$requestedTypeInfo].")
+            s"the number[${requestedTypeInfo.getArity}] of requested type [$requestedTypeInfo].")
     }
 
     // check requested types
@@ -228,7 +229,7 @@ object RowConverters {
             validateFieldType(requestedTypeInfo)
             if (fType != requestedTypeInfo) {
               throw new TableException(s"Result field '$fName' does not match requested type. " +
-                s"Requested: $requestedTypeInfo; Actual: $fType")
+                  s"Requested: $requestedTypeInfo; Actual: $fType")
             }
         }
 
@@ -240,16 +241,16 @@ object RowConverters {
             if (!requestedTypeInfo.isInstanceOf[GenericTypeInfo[Object]]) {
               throw new TableException(
                 s"Result field '${fieldNames(i)}' does not match requested type. " +
-                  s"Requested: $requestedTypeInfo; Actual: $fieldTypeInfo")
+                    s"Requested: $requestedTypeInfo; Actual: $fieldTypeInfo")
             }
           case (fieldTypeInfo, i) =>
             val requestedTypeInfo = tt.getTypeAt(i)
             validateFieldType(requestedTypeInfo)
             if (fieldTypeInfo != requestedTypeInfo &&
-              !requestedTypeInfo.isInstanceOf[GenericTypeInfo[Object]]) {
+                !requestedTypeInfo.isInstanceOf[GenericTypeInfo[Object]]) {
               val fieldNames = tt.getFieldNames
               throw new TableException(s"Result field '${fieldNames(i)}' does not match requested" +
-                s" type. Requested: $requestedTypeInfo; Actual: $fieldTypeInfo")
+                  s" type. Requested: $requestedTypeInfo; Actual: $fieldTypeInfo")
             }
         }
 
@@ -260,18 +261,17 @@ object RowConverters {
       case at: AtomicType[_] =>
         if (fieldTypes.size != 1) {
           throw new TableException(s"Requested result type is an atomic type but " +
-            s"result[$fieldTypes] has more or less than a single field.")
+              s"result[$fieldTypes] has more or less than a single field.")
         }
         val requestedTypeInfo = fieldTypes.head
         validateFieldType(requestedTypeInfo)
         if (requestedTypeInfo != at) {
           throw new TableException(s"Result field does not match requested type. " +
-            s"Requested: $at; Actual: $requestedTypeInfo")
+              s"Requested: $at; Actual: $requestedTypeInfo")
         }
 
       case _ =>
         throw new TableException(s"Unsupported result type: $requestedTypeInfo")
     }
   }
-
 }

@@ -15,7 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.table.util
+
+package org.apache.flink.table.plan.util
 
 import org.apache.flink.streaming.api.transformations.{PartitionTransformation, StreamTransformation}
 import org.apache.flink.table.api.TableException
@@ -23,10 +24,11 @@ import org.apache.flink.table.connector.DefinedDistribution
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.util.BinaryHashPartitioner
 
-object PartitionUtils {
+object SinkUtil {
 
-  def keyPartition(
+  private def keyPartition(
       input: StreamTransformation[BaseRow],
       typeInfo: BaseRowTypeInfo[_],
       keys: Array[Int]): StreamTransformation[BaseRow] = {
@@ -39,8 +41,8 @@ object PartitionUtils {
   }
 
   def createPartitionTransformation(
-    sink: TableSink[_],
-    input: StreamTransformation[BaseRow]): StreamTransformation[BaseRow] = {
+      sink: TableSink[_],
+      input: StreamTransformation[BaseRow]): StreamTransformation[BaseRow] = {
     sink match {
       case par: DefinedDistribution =>
         val pk = par.getPartitionField()
@@ -49,7 +51,7 @@ object PartitionUtils {
           if (pkIndex < 0) {
             throw new TableException("partitionBy field must be in the schema")
           } else {
-            PartitionUtils.keyPartition(
+            keyPartition(
               input, input.getOutputType.asInstanceOf[BaseRowTypeInfo[_]], Array(pkIndex))
           }
         } else {
@@ -58,6 +60,4 @@ object PartitionUtils {
       case _ => input
     }
   }
-
 }
-

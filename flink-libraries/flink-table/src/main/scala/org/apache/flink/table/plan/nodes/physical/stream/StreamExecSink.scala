@@ -19,22 +19,21 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import java.util
-
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{StreamTableEnvironment, Table, TableException}
 import org.apache.flink.table.plan.`trait`.{AccMode, AccModeTraitDef}
 import org.apache.flink.table.plan.nodes.FlinkRelNode
 import org.apache.flink.table.plan.nodes.calcite.Sink
-import org.apache.flink.table.plan.util.UpdatingPlanChecker
+import org.apache.flink.table.plan.util.{SinkUtil, UpdatingPlanChecker}
 import org.apache.flink.table.sinks._
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
 import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.codegen.SinkCodeGenerator.generateRowConverterOperator
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.{PartitionUtils, RowConverters}
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode
@@ -147,7 +146,7 @@ class StreamExecSink[T](
     val parTransformation = if (isDataStreamTableSink) {
       translateStream
     } else {
-      PartitionUtils.createPartitionTransformation(sink, translateStream)
+      SinkUtil.createPartitionTransformation(sink, translateStream)
     }
     val logicalType = inputNode.getRowType
     val rowtimeFields = logicalType.getFieldList
@@ -179,7 +178,7 @@ class StreamExecSink[T](
     val optionRowTimeField = if (rowtimeFields.isEmpty) None else Some(rowtimeFields.head.getIndex)
     val ctx = CodeGeneratorContext(config, supportReference = true)
               .setOperatorBaseClass(classOf[AbstractProcessStreamOperator[_]])
-    val (converterOperator, outputType) = RowConverters.generateRowConverterOperator[BaseRow, T](
+    val (converterOperator, outputType) = generateRowConverterOperator[BaseRow, T](
       config,
       ctx,
       convType.asInstanceOf[BaseRowTypeInfo[_]],
