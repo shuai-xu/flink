@@ -38,6 +38,7 @@ import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.api.{TableConfig, TableEnvironment}
 import org.apache.flink.table.calcite.FlinkPlannerImpl
+import org.apache.flink.table.catalog.CatalogManager
 import org.apache.flink.table.codegen.{CodeGeneratorContext, Compiler, ExprCodeGenerator, FunctionCodeGenerator, GeneratedFunction}
 import org.apache.flink.table.expressions.{Expression, ExpressionParser, If, IsNull, Literal}
 import org.apache.flink.table.plan.nodes.FlinkConventions
@@ -68,7 +69,9 @@ abstract class ExpressionTestBase {
     context._2.getPlanner,
     context._2.getTypeFactory,
     context._2.sqlToRelConverterConfig,
-    context._2.getRelBuilder.getCluster)
+    context._2.getRelBuilder.getCluster,
+    new CatalogManager()
+  )
   private val logicalOptProgram = Programs.ofRules(
     FlinkBatchExecRuleSets.BATCH_EXEC_LOGICAL_OPT_RULES)
   private val dataSetOptProgram = Programs.ofRules(FlinkBatchExecRuleSets.BATCH_EXEC_OPT_RULES)

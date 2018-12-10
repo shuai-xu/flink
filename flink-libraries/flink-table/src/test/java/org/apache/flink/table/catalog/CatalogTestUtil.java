@@ -26,9 +26,9 @@ import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.types.Row;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 
 import scala.Option;
@@ -38,11 +38,14 @@ import scala.Option;
  */
 public class CatalogTestUtil {
 	public static ExternalCatalogTable getTestExternalCatalogTable() {
-
-		List<Row> data = new LinkedList<>();
+		List<Row> data = new ArrayList<>();
 		data.add(toRow(new Integer(1), new Integer(2)));
 		data.add(toRow(new Integer(1), new Integer(3)));
 
+		return getTestExternalCatalogTable(data);
+	}
+
+	public static ExternalCatalogTable getTestExternalCatalogTable(List<Row> data) {
 		TableSchema tableSchema = TableSchema.fromDataType(DataTypes.of(getRowTypeInfo()), Option.empty());
 
 		RichTableSchema richTableSchema = new RichTableSchema(tableSchema.getColumnNames(), tableSchema.getTypes());
@@ -51,7 +54,7 @@ public class CatalogTestUtil {
 		CollectionTableFactory.initData(getRowTypeInfo(), data);
 
 		return new ExternalCatalogTable(
-			"collections",
+			"collection",
 			tableSchema,
 			new HashMap<>(),
 			richTableSchema,
@@ -73,7 +76,7 @@ public class CatalogTestUtil {
 			new String[] {"a", "b"});
 	}
 
-	private static Row toRow(Object... args) {
+	public static Row toRow(Object... args) {
 		Row row = new Row(args.length);
 
 		for (int i = 0; i < args.length; i++) {

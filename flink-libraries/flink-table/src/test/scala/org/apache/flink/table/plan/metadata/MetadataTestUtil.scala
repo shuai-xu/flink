@@ -27,7 +27,6 @@ import org.apache.flink.table.plan.stats.{ColumnStats, FlinkStatistic, TableStat
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.util.TestTableSourceTable
 import org.apache.flink.table.validate.BuiltInFunctionCatalog
-
 import com.google.common.collect.ImmutableSet
 import org.apache.calcite.config.{CalciteConnectionConfigImpl, CalciteConnectionProperty, Lex}
 import org.apache.calcite.jdbc.CalciteSchema
@@ -35,7 +34,6 @@ import org.apache.calcite.rel.`type`.RelDataTypeFactory
 import org.apache.calcite.schema.SchemaPlus
 import org.apache.calcite.sql.parser.SqlParser
 import org.apache.calcite.tools.{FrameworkConfig, Frameworks}
-
 import java.util
 import java.util.{Collections, Properties}
 

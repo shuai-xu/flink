@@ -120,7 +120,10 @@ public class CatalogManager {
 		checkArgument(catalogs.keySet().contains(catalogName),
 			String.format("Cannot find registered catalog %s", catalogName));
 
-		defaultCatalog = catalogName;
+		if (!defaultCatalog.equals(catalogName)) {
+			defaultCatalog = catalogName;
+			defaultDb = null;
+		}
 	}
 
 	public ReadableCatalog getDefaultCatalog() {

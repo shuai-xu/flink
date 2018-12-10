@@ -36,6 +36,7 @@ import org.apache.calcite.sql.{SqlNode, SqlOperatorTable}
 import org.apache.calcite.sql2rel.{RelDecorrelator, SqlRexConvertletTable, SqlToRelConverter}
 import org.apache.calcite.tools.{FrameworkConfig, RelConversionException}
 import org.apache.flink.table.api.{SqlParserException, TableException, ValidationException}
+import org.apache.flink.table.catalog.CatalogManager
 import org.apache.flink.table.errorcode.CalciteErrorClassifier
 
 import scala.collection.JavaConversions._
@@ -51,7 +52,8 @@ class FlinkPlannerImpl(
     planner: RelOptPlanner,
     typeFactory: FlinkTypeFactory,
     sqlToRelConverterConfig: SqlToRelConverter.Config,
-    cluster: RelOptCluster) {
+    cluster: RelOptCluster,
+    catalogManager: CatalogManager) {
 
   val operatorTable: SqlOperatorTable = config.getOperatorTable
   /** Holds the trait definitions to be registered with planner. May be null. */
@@ -92,6 +94,7 @@ class FlinkPlannerImpl(
     validator = new FlinkCalciteSqlValidator(operatorTable, createCatalogReader, typeFactory)
     validator.setIdentifierExpansion(true)
     validator.setDefaultNullCollation(FlinkPlannerImpl.defaultNullCollation)
+
     try {
       validator.validate(sqlNode)
     }
@@ -142,6 +145,7 @@ class FlinkPlannerImpl(
         case e: CSqlParseException =>
           throw SqlParserException(s"SQL parse failed. ${e.getMessage}", e)
       }
+      // TODO: To resolve view name automatically, may need to add database as schemaPath too
       val catalogReader: CalciteCatalogReader = createCatalogReader.withSchemaPath(schemaPath)
       val validator: SqlValidator =
         new FlinkCalciteSqlValidator(operatorTable, catalogReader, typeFactory)
@@ -161,9 +165,21 @@ class FlinkPlannerImpl(
 
   private def createCatalogReader: CalciteCatalogReader = {
     val rootSchema: SchemaPlus = FlinkPlannerImpl.rootSchema(defaultSchema)
+
+    var paths = new util.ArrayList[util.List[String]]()
+
+    // Add both catalog and catalog.db, if there's a default db, as default schema paths
+    paths.add(new util.ArrayList[String](
+      CalciteSchema.from(defaultSchema).path(catalogManager.getDefaultCatalogName)))
+    if (catalogManager.getDefaultDatabaseName != null) {
+      paths.add(new util.ArrayList[String](
+        CalciteSchema.from(defaultSchema.getSubSchema(catalogManager.getDefaultCatalogName))
+          .path(catalogManager.getDefaultDatabaseName)))
+    }
+
     new FlinkCalciteCatalogReader(
       CalciteSchema.from(rootSchema),
-      CalciteSchema.from(defaultSchema).path(null),
+      paths,
       typeFactory,
       CalciteConfig.connectionConfig(parserConfig)
     )

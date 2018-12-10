@@ -34,9 +34,13 @@ import org.apache.flink.table.expressions.{Proctime, ResolvedFieldReference}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex.RexNode
 import org.junit.Assert.assertEquals
-import org.junit.{Before, Test}
+import org.junit.{Before, Ignore, Test}
 import org.mockito.Mockito
 
+/**
+  * TODO: migrate to new catalog architecture, and move these tests to ReadableCatalogITCase.
+  */
+@Ignore
 class ExternalCatalogITCase {
 
   @Before
@@ -53,148 +57,12 @@ class ExternalCatalogITCase {
   }
 
   @Test
-  def testCatalogTable(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
-    CollectionTableFactory.checkParam = true
-    tableEnv.registerExternalCatalog(
-      TableEnvironment.DEFAULT_SCHEMA,
-      new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
-    tableEnv.useSchema(TableEnvironment.DEFAULT_SCHEMA)
-    val rowTypeInfo =
-      new RowTypeInfo(Array[TypeInformation[_]](
-        BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO), Array[String]("a", "b"))
-    val data = new util.LinkedList[Row]
-    data.add(toRow(new Integer(1), new Integer(2)))
-    data.add(toRow(new Integer(1), new Integer(3)))
-    val schema =
-      TableSchema.fromDataType(DataTypes.of(rowTypeInfo))
-    val richTableSchema =
-      new RichTableSchema(schema.getColumnNames, schema.getTypes)
-    richTableSchema.setPrimaryKey("a")
-    CollectionTableFactory.initData(
-      rowTypeInfo, data)
-    tableEnv.registerExternalTable(
-      null,
-      "t1",
-      ExternalCatalogTable(
-        "collection",
-        schema,
-        new util.HashMap[String, String](),
-        richTableSchema
-      ),
-      false)
-    tableEnv.sqlUpdate("" +
-        s"insert into t1 with (tableType = '3') select t1.b, w.a " +
-        s"from t1 with (tableType = '1') join t1 with (tableType = '2')" +
-        "FOR SYSTEM_TIME AS OF PROCTIME() AS w on t1.a = w.a")
-    tableEnv.execute()
-    val expected = new util.LinkedList[Row]()
-    expected.add(toRow(new Integer(2), new Integer(1)))
-    expected.add(toRow(new Integer(2), new Integer(1)))
-    expected.add(toRow(new Integer(3), new Integer(1)))
-    expected.add(toRow(new Integer(3), new Integer(1)))
-    assertEquals(expected, CollectionTableFactory.RESULT)
-
-  }
-
-  @Test
-  def testSourceParser(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tableEnv = TableEnvironment.getTableEnvironment(env, new TableConfig())
-    tableEnv.registerExternalCatalog(
-      TableEnvironment.DEFAULT_SCHEMA,
-      new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
-    tableEnv.useSchema(TableEnvironment.DEFAULT_SCHEMA)
-    val rowTypeInfo =
-      new RowTypeInfo(Array[TypeInformation[_]](
-        BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO), Array[String]("a", "b"))
-    val data = new util.LinkedList[Row]
-    data.add(toRow(new Integer(1), new Integer(2)))
-    data.add(toRow(new Integer(1), new Integer(3)))
-    val schema =
-      TableSchema.fromDataType(DataTypes.of(rowTypeInfo))
-    val richTableSchema =
-      new RichTableSchema(schema.getColumnNames, schema.getTypes)
-
-    CollectionTableFactory.initData(
-      rowTypeInfo, data)
-    val parameters = new util.LinkedList[String]()
-    parameters.add("b")
-    parameters.add("a")
-    CollectionTableFactory.parser = new TableSourceParser(new Parser(), parameters)
-
-    tableEnv.registerExternalTable(
-      null,
-      "t1",
-      ExternalCatalogTable(
-        "collection",
-        schema,
-        new util.HashMap[String, String](),
-        richTableSchema
-      ),
-      false)
-    tableEnv.sqlUpdate(s"insert into t1  select * from t1 ")
-    tableEnv.execute()
-    val expected = new util.LinkedList[Row]()
-    expected.add(toRow(new Integer(2), new Integer(1)))
-    expected.add(toRow(new Integer(3), new Integer(1)))
-    assertEquals(expected, CollectionTableFactory.RESULT)
-  }
-
-  @Test
-  def testSourceParserInBatch(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
-    tableEnv.registerExternalCatalog(
-      TableEnvironment.DEFAULT_SCHEMA,
-      new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
-    tableEnv.useSchema(TableEnvironment.DEFAULT_SCHEMA)
-    val rowTypeInfo =
-      new RowTypeInfo(Array[TypeInformation[_]](
-        BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO), Array[String]("a", "b"))
-    val data = new util.LinkedList[Row]
-    data.add(toRow(new Integer(1), new Integer(2)))
-    data.add(toRow(new Integer(1), new Integer(3)))
-    val schema =
-      TableSchema.fromDataType(DataTypes.of(rowTypeInfo))
-    val richTableSchema =
-      new RichTableSchema(schema.getColumnNames, schema.getTypes)
-
-    CollectionTableFactory.initData(
-      rowTypeInfo, data)
-    val parameters = new util.LinkedList[String]()
-    parameters.add("b")
-    parameters.add("a")
-    CollectionTableFactory.parser = new TableSourceParser(new Parser(), parameters)
-
-    tableEnv.registerExternalTable(
-      null,
-      "t1",
-      ExternalCatalogTable(
-        "collection",
-        schema,
-        new util.HashMap[String, String](),
-        richTableSchema
-      ),
-      false)
-    tableEnv.sqlUpdate(s"insert into t1  select * from t1 ")
-    tableEnv.execute()
-    val expected = new util.LinkedList[Row]()
-    expected.add(toRow(new Integer(2), new Integer(1)))
-    expected.add(toRow(new Integer(3), new Integer(1)))
-    assertEquals(expected, CollectionTableFactory.RESULT)
-  }
-
-
-  @Test
   def testComputedColumn(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
     tableEnv.registerExternalCatalog(
       TableEnvironment.DEFAULT_SCHEMA,
       new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
-    tableEnv.useSchema(TableEnvironment.DEFAULT_SCHEMA)
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -257,7 +125,6 @@ class ExternalCatalogITCase {
     tableEnv.registerExternalCatalog(
       TableEnvironment.DEFAULT_SCHEMA,
       new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
-    tableEnv.useSchema(TableEnvironment.DEFAULT_SCHEMA)
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -319,7 +186,6 @@ class ExternalCatalogITCase {
     tableEnv.registerExternalCatalog(
       TableEnvironment.DEFAULT_SCHEMA,
       new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
-    tableEnv.useSchema(TableEnvironment.DEFAULT_SCHEMA)
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -387,7 +253,6 @@ class ExternalCatalogITCase {
     tableEnv.registerExternalCatalog(
       TableEnvironment.DEFAULT_SCHEMA,
       new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
-    tableEnv.useSchema(TableEnvironment.DEFAULT_SCHEMA)
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -448,7 +313,6 @@ class ExternalCatalogITCase {
     tableEnv.registerExternalCatalog(
       TableEnvironment.DEFAULT_SCHEMA,
       new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
-    tableEnv.useSchema(TableEnvironment.DEFAULT_SCHEMA)
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](

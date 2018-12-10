@@ -46,11 +46,8 @@ import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, ExternalFunctionCatalog, FunctionCatalog}
-import org.apache.flink.util.Preconditions
-
 import org.apache.calcite.config.Lex
 import org.apache.calcite.plan.{Contexts, RelOptPlanner}
-import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.logical.LogicalTableModify
 import org.apache.calcite.schema
 import org.apache.calcite.schema.SchemaPlus
@@ -60,9 +57,7 @@ import org.apache.calcite.sql.util.ChainedSqlOperatorTable
 import org.apache.calcite.sql.{SqlIdentifier, SqlInsert, SqlOperatorTable, _}
 import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.calcite.tools._
-
 import org.apache.commons.lang3.StringUtils
-
 import _root_.java.lang.reflect.Modifier
 import _root_.java.util
 import _root_.java.util.concurrent.atomic.AtomicInteger
@@ -132,18 +127,6 @@ abstract class TableEnvironment(val config: TableConfig) {
       case Some(c) => c
       case None => getSqlToRelConverterConfig
     }
-  }
-
-  /**
-    * Switch the current schema to the sub schema.
-    * @param schemaName The sub schema name.
-    */
-  def useSchema(schemaName: String): Unit = {
-    currentSchema = catalogManager.getRootSchema.getSubSchema(schemaName)
-    frameworkConfig = createFrameworkConfig
-    relBuilder = createRelBuilder
-    planner = createRelOptPlanner
-    flinkPlanner = createFlinkPlanner
   }
 
   /** Returns the table config to define the runtime behavior of the Table API. */
@@ -1442,7 +1425,8 @@ abstract class TableEnvironment(val config: TableConfig) {
       getPlanner,
       getTypeFactory,
       sqlToRelConverterConfig,
-      relBuilder.getCluster)
+      relBuilder.getCluster,
+      catalogManager)
   }
 
    /**

@@ -38,7 +38,6 @@ import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecRank, Stream
 import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule._
 import org.apache.flink.table.plan.schema.{BaseRowSchema, FlinkRelOptTable}
 import org.apache.flink.table.plan.util.{AggregateUtil, ConstantRankRange, VariableRankRange}
-
 import com.google.common.collect.{ImmutableList, Lists}
 import org.apache.calcite.plan.{Convention, ConventionTraitDef, RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel._
@@ -57,7 +56,6 @@ import org.apache.calcite.sql.{SqlKind, SqlRankFunction, SqlWindow}
 import org.apache.calcite.tools.FrameworkConfig
 import org.apache.calcite.util.{DateString, ImmutableBitSet, TimeString, TimestampString}
 import org.junit.{Before, BeforeClass}
-
 import java.math.BigDecimal
 import java.util.{List => JList}
 

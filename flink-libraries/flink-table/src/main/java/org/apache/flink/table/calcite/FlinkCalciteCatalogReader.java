@@ -1,0 +1,111 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.flink.table.calcite;
+
+import org.apache.flink.table.plan.schema.FlinkRelOptTable;
+import org.apache.flink.table.plan.schema.FlinkTable;
+import org.apache.flink.table.plan.schema.TableSourceSinkTable;
+
+import org.apache.calcite.config.CalciteConnectionConfig;
+import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.prepare.Prepare;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.validate.SqlNameMatcher;
+import org.apache.calcite.sql.validate.SqlNameMatchers;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * Flink specific {@link CalciteCatalogReader} that changes the RelOptTable which wrapped a
+ * FlinkTable to a {@link FlinkRelOptTable}.
+ */
+public class FlinkCalciteCatalogReader extends CalciteCatalogReader {
+
+	public FlinkCalciteCatalogReader(
+		CalciteSchema rootSchema,
+		List<List<String>> defaultSchemas,
+		RelDataTypeFactory typeFactory,
+		CalciteConnectionConfig config) {
+
+		this(
+			rootSchema,
+			SqlNameMatchers.withCaseSensitive(config != null && config.caseSensitive()),
+			getDefaultSchemas(defaultSchemas),
+			typeFactory,
+			config);
+	}
+
+	protected FlinkCalciteCatalogReader(
+		CalciteSchema rootSchema,
+		SqlNameMatcher nameMatcher,
+		List<List<String>> schemaPaths,
+		RelDataTypeFactory typeFactory,
+		CalciteConnectionConfig config) {
+
+		super(rootSchema, nameMatcher, schemaPaths, typeFactory, config);
+	}
+
+	private static List<List<String>> getDefaultSchemas(List<List<String>> defaultSchemas) {
+		List<List<String>> paths = new ArrayList<>(defaultSchemas);
+		paths.add(new ArrayList<>());
+
+		return Collections.unmodifiableList(paths);
+	}
+
+	@Override
+	public Prepare.PreparingTable getTable(List<String> names) {
+		Prepare.PreparingTable originRelOptTable = super.getTable(names);
+		if (originRelOptTable == null) {
+			return originRelOptTable;
+		} else {
+			TableSourceSinkTable sourceSinkTable = originRelOptTable.unwrap(TableSourceSinkTable.class);
+
+			FlinkTable table;
+
+			if (sourceSinkTable != null) {
+				// unwrap the TableSourceSinkTable to TableSourceTable/TableSinkTable, cause we do not want
+				// to have mixed table type in Calcite plans, that means, we only want to see
+				// TableSourceTable/TableSinkTable in query plan.
+
+				if (!sourceSinkTable.tableSourceTable().isEmpty()) {
+					table = (FlinkTable) sourceSinkTable.tableSourceTable().get();
+				} else if (!sourceSinkTable.tableSinkTable().isEmpty()) {
+					table = (FlinkTable) sourceSinkTable.tableSinkTable().get();
+				} else {
+					table = null;
+				}
+			} else {
+				table = originRelOptTable.unwrap(FlinkTable.class);
+			}
+
+			if (table != null) {
+				return FlinkRelOptTable.create(
+					originRelOptTable.getRelOptSchema(),
+					originRelOptTable.getRowType(),
+					originRelOptTable.getQualifiedName(),
+					table);
+			} else {
+				return originRelOptTable;
+			}
+		}
+	}
+}
