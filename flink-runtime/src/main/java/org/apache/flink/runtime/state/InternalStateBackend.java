@@ -70,15 +70,6 @@ public interface InternalStateBackend extends Snapshotable<SnapshotResult<StateP
 	InternalState getInternalState(String stateName);
 
 	/**
-	 * Returns the state storage with the given name in this backend.
-	 *
-	 * @param storageName
-	 * @return The state storage with the given name in this backend.
-	 */
-	@VisibleForTesting
-	StateStorage getStateStorage(String storageName);
-
-	/**
 	 * Returns the keyed state with the given descriptor. The state will be
 	 * created if it has not been created by the backend.
 	 *

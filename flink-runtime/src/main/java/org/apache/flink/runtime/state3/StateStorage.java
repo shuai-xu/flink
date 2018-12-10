@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.state;
+package org.apache.flink.runtime.state3;
 
-import java.util.Map;
+import org.apache.flink.types.Pair;
 
 /**
  * Interface for State Storage, State storage is a Key/Value store that
@@ -73,6 +73,53 @@ public interface StateStorage<K, V> {
 	StorageIterator iterator() throws Exception;
 
 	/**
+	 * Returns an iterator over all the key-values whose key with the prefix {@code prefixKey} in the storage.
+	 * There are no guarantees concerning the order in which the key-values are iterated.
+	 *
+	 * @return An iterator over all the key-values in the state.
+	 *
+	 * @throws Exception Thrown if the system cannot access the state.
+	 */
+	StorageIterator prefixIterator(K prefixKey) throws Exception;
+
+	/**
+	 * Returns an iterator over all the key-values whose key locates in the range of {@code prefixKeyStart} and {@code prefixKeyEnd}.
+	 *
+	 * @param prefixKeyStart The start key of the sub Iterator.
+	 * @param prefixKeyEnd The end key of the sub Iterator.
+	 *
+	 * @return An iterator over all the key-values in the state.
+	 *
+	 * @throws UnsupportedOperationException if the storage is not sorted.
+	 * @throws Exception Thrown if the system cannot access the state.
+	 */
+	StorageIterator subIterator(K prefixKeyStart, K prefixKeyEnd) throws Exception;
+
+	/**
+	 * Returns the first entry in the storage whose key is large than specified key.
+	 *
+	 * @param specifiedKey The specified key used to retrieved the first entry.
+	 *
+	 * @return The entry in the storage whose key is smallest among the entries
+	 * with the same prefix.
+	 *
+	 * @throws UnsupportedOperationException if the storage is not sorted.
+	 *
+	 */
+	Pair<K, V> firstEntry(K specifiedKey);
+
+	/**
+	 * Returns the last entry in the storage whose key is no larger than the given specified key.
+	 *
+	 * @param specifiedKey The specified key to retrieve the last entry.
+	 *
+	 * @return The last entry in the storage whose key is no larger than the given specified key.
+	 *
+	 * @throws UnsupportedOperationException if the storage is not sorted.
+	 */
+	Pair<K, V> lastEntry(K specifiedKey);
+
+	/**
 	 * Merge the given value to exist value of the given key. If the state didn't
 	 * previously contains a value for the given key, the result will be the given value.
 	 *
@@ -84,21 +131,10 @@ public interface StateStorage<K, V> {
 	void merge(K key, V value) throws Exception;
 
 	/**
-	 * Adds all the mappings in the given map into the storage (optional
-	 * operation). The addition of the mappings is atomic, exceptions will be
-	 * thrown if some of them fail to be added.
-	 *
-	 * @param pairs The pairs to be added into the state.
-	 *
-	 * @throws Exception The method may forward exception thrown internally (by I/O or functions).
-	 */
-	void putAll(Map<K, V> pairs) throws Exception;
-
-	/**
 	 * Returns whether the key/value need to be (de)serialized when put to the storage,
 	 * or get from the storage.
 	 *
-	 * @return <tt>true</tt> for need (de)serialize before put to/get from the storage.
+	 * @return <tt>false</tt> for need (de)serialize before put to/get from the storage.
 	 */
 	boolean lazySerde();
 
@@ -115,4 +151,5 @@ public interface StateStorage<K, V> {
 	 * @return The storageInstance associated with the storage.
 	 */
 	StorageInstance getStorageInstance();
+
 }

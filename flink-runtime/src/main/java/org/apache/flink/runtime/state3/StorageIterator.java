@@ -16,10 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.state;
+package org.apache.flink.runtime.state3;
+
+import org.apache.flink.types.Pair;
+
+import java.util.Iterator;
 
 /**
- * interface of storage instance.
+ * Return a specified iterator of {@link StateStorage}.
+ *
+ * @param <K> Key type of the {@link StateStorage}.
+ * @param <V> Value type of the {@link StateStorage}.
  */
-public interface StorageInstance {
+public interface StorageIterator<K, V> extends Iterator<Pair<K, V>>, AutoCloseable {
 }

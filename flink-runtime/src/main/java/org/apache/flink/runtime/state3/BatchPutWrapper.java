@@ -16,32 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.state;
-
-import org.apache.flink.types.Pair;
-
-import java.util.Iterator;
+package org.apache.flink.runtime.state3;
 
 /**
- * Interface of iterator for state storage.
+ * Batch put wrapper for the storage, will flush the data out when close.
+ *
+ * @param <K> Key type of the storage.
+ * @param <V> Value type of the storage.
  */
-public interface StorageIterator<K, V> extends Iterator<Pair<K, V>>, AutoCloseable {
-
-	/** Get the key of current item.*/
-	K key();
-
-	/** Return the value of current item.*/
-	V value();
-
-	/**
-	 * Seek to the specified key.
-	 * If the specified key does not exist, after this operation the cursor will
-	 * stop at the key less than the specified key.*/
-	void seek(K key);
-
-	/** Seek to the first item of current iterator. */
-	void seekToFirst();
-
-	/** Seek to the last item of current iterator. */
-	void seekToLast();
+public interface BatchPutWrapper<K, V> extends AutoCloseable {
+	void put(K key, V value);
 }
+
