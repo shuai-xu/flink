@@ -86,7 +86,6 @@ under the License.
 		<module>flink-yarn-tests</module>
 		<module>flink-fs-tests</module>
 		<module>flink-docs</module>
-		<module>flink-stability-test</module>
 		<module>flink-yarn-shuffle</module>
 		<module>flink-catalog</module>
 		<module>flink-dist</module>
@@ -1201,7 +1200,6 @@ under the License.
 						<exclude>**/.idea/**</exclude>
 
 						<!--Stability test module -->
-						<exclude>flink-stability-test/**</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
