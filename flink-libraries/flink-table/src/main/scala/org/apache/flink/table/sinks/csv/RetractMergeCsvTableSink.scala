@@ -16,11 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sinks
-
-import java.lang.{Boolean => JBool}
-import java.util.TimeZone
-import java.util.concurrent.atomic.AtomicInteger
+package org.apache.flink.table.sinks.csv
 
 import org.apache.flink.api.common.io.FileOutputFormat
 import org.apache.flink.api.java.io.{AbstractCsvOutputFormat, RowCsvOutputFormat}
@@ -28,10 +24,15 @@ import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.{FileSystem, Path}
-import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
 import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.sinks.{RetractStreamTableSink, TableSinkBase}
 import org.apache.flink.types.Row
+
+import java.lang.{Boolean => JBool}
+import java.util.TimeZone
+import java.util.concurrent.atomic.AtomicInteger
 
 import scala.collection.mutable
 
@@ -48,15 +49,16 @@ import scala.collection.mutable
   * @param outputFieldNames Whether output field names.
   */
 class RetractMergeCsvTableSink(
-  path: String,
-  fieldDelim: Option[String],
-  recordDelim: Option[String],
-  quoteCharacter: Option[String],
-  numFiles: Option[Int],
-  writeMode: Option[WriteMode],
-  outputFieldNames: Option[Boolean],
-  timezone: Option[TimeZone])
-extends TableSinkBase[JTuple2[JBool, Row]] with RetractStreamTableSink[Row] {
+    path: String,
+    fieldDelim: Option[String],
+    recordDelim: Option[String],
+    quoteCharacter: Option[String],
+    numFiles: Option[Int],
+    writeMode: Option[WriteMode],
+    outputFieldNames: Option[Boolean],
+    timezone: Option[TimeZone])
+  extends TableSinkBase[JTuple2[JBool, Row]]
+  with RetractStreamTableSink[Row] {
 
   var sinkIndex: Int = RowCollector.createContainer
 

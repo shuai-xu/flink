@@ -22,7 +22,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.sinks.UpsertCsvTableSink
+import org.apache.flink.table.sinks.csv.UpsertCsvTableSink
 
 /**
   * Simple example that shows how to use the Stream SQL API to calculate pv and uv

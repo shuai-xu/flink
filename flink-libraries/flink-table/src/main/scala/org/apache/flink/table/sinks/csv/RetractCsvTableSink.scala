@@ -16,10 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sinks
-
-import java.lang.{Boolean => JBool}
-import java.util.TimeZone
+package org.apache.flink.table.sinks.csv
 
 import org.apache.flink.api.common.functions.MapFunction
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
@@ -27,7 +24,11 @@ import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.runtime.functions.DateTimeFunctions
+import org.apache.flink.table.sinks.{RetractStreamTableSink, TableSinkBase}
 import org.apache.flink.types.Row
+
+import java.lang.{Boolean => JBool}
+import java.util.TimeZone
 
 /**
   * A simple [[org.apache.flink.table.sinks.TableSink]] to emit Retract data as CSV files.
@@ -41,15 +42,16 @@ import org.apache.flink.types.Row
   * @param outputFieldNames Whether output field names.
   */
 class RetractCsvTableSink(
-  path: String,
-  fieldDelim: Option[String],
-  recordDelim: Option[String],
-  quoteCharacter: Option[String],
-  numFiles: Option[Int],
-  writeMode: Option[WriteMode],
-  outputFieldNames: Option[Boolean],
-  timezone: Option[TimeZone])
-extends TableSinkBase[JTuple2[JBool, Row]] with RetractStreamTableSink[Row] {
+    path: String,
+    fieldDelim: Option[String],
+    recordDelim: Option[String],
+    quoteCharacter: Option[String],
+    numFiles: Option[Int],
+    writeMode: Option[WriteMode],
+    outputFieldNames: Option[Boolean],
+    timezone: Option[TimeZone])
+  extends TableSinkBase[JTuple2[JBool, Row]]
+  with RetractStreamTableSink[Row] {
 
   def this(path: String, fieldDelim: String = ",") {
     this(path, Some(fieldDelim), None, None, None, None, None, None)

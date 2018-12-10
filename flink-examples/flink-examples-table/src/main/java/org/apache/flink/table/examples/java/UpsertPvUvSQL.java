@@ -24,7 +24,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.java.StreamTableEnvironment;
-import org.apache.flink.table.sinks.UpsertCsvTableSink;
+import org.apache.flink.table.sinks.csv.UpsertCsvTableSink;
 
 /**
  * Simple example that shows how to use the Stream SQL API to calculate pv and uv

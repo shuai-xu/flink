@@ -16,10 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sinks
-
-import java.lang.{Boolean => JBool}
-import java.util.TimeZone
+package org.apache.flink.table.sinks.csv
 
 import org.apache.flink.api.common.functions.MapFunction
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
@@ -27,7 +24,11 @@ import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.runtime.functions.DateTimeFunctions
+import org.apache.flink.table.sinks.{TableSink, TableSinkBase, UpsertStreamTableSink}
 import org.apache.flink.types.Row
+
+import java.lang.{Boolean => JBool}
+import java.util.TimeZone
 
 /**
   * A simple [[org.apache.flink.table.sinks.TableSink]] to emit Upsert data as CSV files.
@@ -49,7 +50,8 @@ class UpsertCsvTableSink(
     writeMode: Option[WriteMode],
     outputFieldNames: Option[Boolean],
     timezone: Option[TimeZone])
-  extends TableSinkBase[JTuple2[JBool, Row]] with UpsertStreamTableSink[Row] {
+  extends TableSinkBase[JTuple2[JBool, Row]]
+  with UpsertStreamTableSink[Row] {
 
   /**
     * A simple [[TableSink]] to emit data as CSV files.
