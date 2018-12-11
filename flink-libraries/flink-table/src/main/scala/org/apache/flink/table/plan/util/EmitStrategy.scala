@@ -23,7 +23,7 @@ import org.apache.flink.table.api.window.TimeWindow
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.expressions.ExpressionUtils
 import org.apache.flink.table.plan.logical.{LogicalWindow, SessionGroupWindow}
-import org.apache.flink.table.runtime.operator.window.triggers._
+import org.apache.flink.table.runtime.window.triggers._
 
 class EmitStrategy(
     isEventTime: Boolean,

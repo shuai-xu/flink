@@ -33,10 +33,10 @@ import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, JoinedRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.util.{JoinUtil, StreamExecUtil}
-import org.apache.flink.table.runtime.operator.join.stream._
-import org.apache.flink.table.runtime.operator.join.stream.bundle._
-import org.apache.flink.table.runtime.operator.join.stream.state.JoinStateHandler
-import org.apache.flink.table.runtime.operator.join.stream.state.`match`.JoinMatchStateHandler
+import org.apache.flink.table.runtime.join.stream._
+import org.apache.flink.table.runtime.join.stream.bundle._
+import org.apache.flink.table.runtime.join.stream.state.JoinStateHandler
+import org.apache.flink.table.runtime.join.stream.state.`match`.JoinMatchStateHandler
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.apache.calcite.plan._

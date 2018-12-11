@@ -29,7 +29,7 @@ import org.apache.flink.table.plan.PartialFinalType
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateNameUtil, AggregateUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.aggregate.MiniBatchGlobalGroupAggFunction
-import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
+import org.apache.flink.table.runtime.bundle.KeyedBundleOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
 

@@ -23,7 +23,7 @@ import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.calcite.WatermarkAssigner
-import org.apache.flink.table.runtime.operator.WatermarkAssignerOperator
+import org.apache.flink.table.runtime.WatermarkAssignerOperator
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode

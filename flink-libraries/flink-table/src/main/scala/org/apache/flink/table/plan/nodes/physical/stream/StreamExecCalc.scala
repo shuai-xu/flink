@@ -25,7 +25,7 @@ import org.apache.flink.table.codegen.{CalcCodeGenerator, CodeGeneratorContext}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalCalc
 import org.apache.flink.table.plan.util.CalcUtil
-import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
+import org.apache.flink.table.runtime.AbstractProcessStreamOperator
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType

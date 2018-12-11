@@ -31,9 +31,9 @@ import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.util.AggregateUtil.transformToStreamAggregateInfoList
 import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateNameUtil, AggregateUtil, StreamExecUtil}
+import org.apache.flink.table.runtime.KeyedProcessOperator
 import org.apache.flink.table.runtime.aggregate.{GroupAggFunction, MiniBatchGroupAggFunction}
-import org.apache.flink.table.runtime.operator.KeyedProcessOperator
-import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
+import org.apache.flink.table.runtime.bundle.KeyedBundleOperator
 import org.apache.flink.table.typeutils._
 import org.apache.flink.table.util.Logging
 

@@ -32,9 +32,9 @@ import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedJoinConditionFunction, ProjectionCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.util.StreamExecUtil
-import org.apache.flink.table.runtime.operator.join.stream.bundle.{AntiSemiBatchJoinStreamOperator, RightOuterBatchJoinStreamOperator}
-import org.apache.flink.table.runtime.operator.join.stream.state.JoinStateHandler
-import org.apache.flink.table.runtime.operator.join.stream.state.`match`.JoinMatchStateHandler
+import org.apache.flink.table.runtime.join.stream.bundle.{AntiSemiBatchJoinStreamOperator, RightOuterBatchJoinStreamOperator}
+import org.apache.flink.table.runtime.join.stream.state.JoinStateHandler
+import org.apache.flink.table.runtime.join.stream.state.`match`.JoinMatchStateHandler
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.junit.Test

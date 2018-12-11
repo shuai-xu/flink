@@ -24,7 +24,7 @@ import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext.DEFAULT_OPERATOR_COLLECTOR_TERM
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.codegen._
-import org.apache.flink.table.runtime.operator.WithReferences
+import org.apache.flink.table.runtime.WithReferences
 import org.apache.flink.table.util.Logging
 
 /**

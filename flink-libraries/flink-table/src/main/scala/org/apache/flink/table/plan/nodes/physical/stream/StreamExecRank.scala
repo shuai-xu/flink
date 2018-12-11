@@ -26,7 +26,7 @@ import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRul
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.RankUtil._
 import org.apache.flink.table.plan.util.{RankRange, RankUtil, StreamExecUtil}
-import org.apache.flink.table.runtime.operator.KeyedProcessOperator
+import org.apache.flink.table.runtime.KeyedProcessOperator
 import org.apache.flink.table.runtime.rank._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.FlinkRelOptUtil

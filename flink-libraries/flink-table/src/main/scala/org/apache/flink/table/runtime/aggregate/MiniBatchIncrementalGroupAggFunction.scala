@@ -18,14 +18,12 @@
 package org.apache.flink.table.runtime.aggregate
 
 import java.util
-import java.util.{Map => JMap, HashMap => JHashMap}
+import java.util.{HashMap => JHashMap, Map => JMap}
 import java.util.function.{Function => JFunction}
-
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.table.codegen.GeneratedAggsHandleFunction
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
-import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
-import org.apache.flink.table.runtime.functions.bundle.BundleFunction
+import org.apache.flink.table.runtime.functions.{AggsHandleFunction, BundleFunction, ExecutionContext}
 import org.apache.flink.util.Collector
 
 class MiniBatchIncrementalGroupAggFunction(

@@ -22,10 +22,10 @@ import org.apache.flink.streaming.api.operators.OneInputStreamOperator
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, JoinedRow}
+import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContextImpl}
 import org.apache.flink.table.runtime.sort.RecordComparator
-import org.apache.flink.table.runtime.operator.{AbstractStreamOperatorWithMetrics, StreamRecordCollector}
-import org.apache.flink.table.runtime.util.ResettableExternalBuffer
+import org.apache.flink.table.runtime.util.{ResettableExternalBuffer, StreamRecordCollector}
 import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowSerializer, BinaryRowSerializer}
 
 /**

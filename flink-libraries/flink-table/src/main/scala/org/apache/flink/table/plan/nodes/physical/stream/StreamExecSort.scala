@@ -26,7 +26,7 @@ import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.NullBinaryRowKeySelector
 import org.apache.flink.table.runtime.aggregate._
-import org.apache.flink.table.runtime.operator.sort.StreamSortOperator
+import org.apache.flink.table.runtime.sort.StreamSortOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.ExecResourceUtil
 

@@ -33,7 +33,8 @@ import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
 import org.apache.flink.table.plan.schema.FlinkTableFunction
 import org.apache.flink.table.plan.util.CorrelateUtil
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
-import org.apache.flink.table.runtime.operator.{OneInputSubstituteStreamOperator, StreamRecordCollector}
+import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
+import org.apache.flink.table.runtime.util.StreamRecordCollector
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.apache.calcite.rel.`type`.RelDataType

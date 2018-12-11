@@ -24,7 +24,7 @@ import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonScan
-import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
+import org.apache.flink.table.runtime.AbstractProcessStreamOperator
 
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode

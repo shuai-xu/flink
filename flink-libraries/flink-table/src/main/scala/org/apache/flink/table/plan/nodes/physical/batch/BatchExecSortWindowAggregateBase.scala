@@ -28,6 +28,7 @@ import org.apache.flink.table.codegen._
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.logical.LogicalWindow
+import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.runtime.operator._
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}

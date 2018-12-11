@@ -34,7 +34,7 @@ import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BinaryRowWriter, G
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.aggregate.SorterHelper
 import org.apache.flink.table.runtime.harness.SortProcessOperatorHarnessTest._
-import org.apache.flink.table.runtime.operator.sort.{ProcTimeSortOperator, RowTimeSortOperator}
+import org.apache.flink.table.runtime.sort.{ProcTimeSortOperator, RowTimeSortOperator}
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.typeutils._
 import org.junit.Test

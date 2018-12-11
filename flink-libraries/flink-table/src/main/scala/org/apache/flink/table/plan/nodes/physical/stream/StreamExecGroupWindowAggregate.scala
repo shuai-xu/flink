@@ -32,7 +32,7 @@ import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util._
-import org.apache.flink.table.runtime.operator.window.{WindowOperator, WindowOperatorBuilder}
+import org.apache.flink.table.runtime.window.{WindowOperator, WindowOperatorBuilder}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
 

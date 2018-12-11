@@ -22,7 +22,9 @@ import org.apache.flink.streaming.api.operators.OneInputStreamOperator
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.table.codegen.{CodeGenUtils, GeneratedSorter}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
+import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.runtime.sort.RecordComparator
+import org.apache.flink.table.runtime.util.StreamRecordCollector
 import org.apache.flink.table.typeutils.AbstractRowSerializer
 
 class RankOperator(

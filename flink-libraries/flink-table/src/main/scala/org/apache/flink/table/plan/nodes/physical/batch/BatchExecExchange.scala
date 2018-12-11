@@ -33,7 +33,7 @@ import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.common.CommonExchange
 import org.apache.flink.table.plan.util.SortUtil
-import org.apache.flink.table.runtime.operator.range._
+import org.apache.flink.table.runtime.range._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{BinaryHashPartitioner, FlinkRelOptUtil}
 

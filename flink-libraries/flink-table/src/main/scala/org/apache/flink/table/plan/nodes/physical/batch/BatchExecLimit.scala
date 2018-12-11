@@ -23,7 +23,7 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
-import org.apache.flink.table.runtime.operator.sort.LimitOperator
+import org.apache.flink.table.runtime.sort.LimitOperator
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
 import org.apache.calcite.rel._

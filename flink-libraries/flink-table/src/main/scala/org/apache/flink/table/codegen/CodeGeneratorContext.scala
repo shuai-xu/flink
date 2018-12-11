@@ -29,8 +29,8 @@ import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.dataformat._
+import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.runtime.functions.FunctionContextImpl
-import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.runtime.util.ResettableExternalBuffer
 import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowSerializer, BinaryRowSerializer}
 import org.apache.flink.table.util.RowIterator

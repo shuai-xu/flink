@@ -28,9 +28,9 @@ import org.apache.flink.table.codegen.GeneratedJoinConditionFunction
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.util.StreamExecUtil
 import org.apache.flink.table.runtime.harness.HarnessTestBase.BaseRowResultSortComparator
-import org.apache.flink.table.runtime.operator.join.stream.{FullOuterJoinStreamOperator, InnerJoinStreamOperator, LeftOuterJoinStreamOperator, RightOuterJoinStreamOperator}
-import org.apache.flink.table.runtime.operator.join.stream.state.JoinStateHandler
-import org.apache.flink.table.runtime.operator.join.stream.state.`match`.JoinMatchStateHandler
+import org.apache.flink.table.runtime.join.stream.{FullOuterJoinStreamOperator, InnerJoinStreamOperator, LeftOuterJoinStreamOperator, RightOuterJoinStreamOperator}
+import org.apache.flink.table.runtime.join.stream.state.JoinStateHandler
+import org.apache.flink.table.runtime.join.stream.state.`match`.JoinMatchStateHandler
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.junit.Assert.assertEquals

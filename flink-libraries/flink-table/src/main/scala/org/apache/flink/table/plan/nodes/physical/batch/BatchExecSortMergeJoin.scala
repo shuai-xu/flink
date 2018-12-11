@@ -31,7 +31,7 @@ import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.ExpressionFormat
 import org.apache.flink.table.plan.util.{JoinUtil, SortUtil}
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
-import org.apache.flink.table.runtime.operator.join.batch.{MergeJoinOperator, OneSideSortMergeJoinOperator, SortMergeJoinOperator}
+import org.apache.flink.table.runtime.join.batch.{MergeJoinOperator, OneSideSortMergeJoinOperator, SortMergeJoinOperator}
 import org.apache.flink.table.runtime.sort.BinaryExternalSorter
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.ExecResourceUtil

@@ -26,9 +26,9 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.StreamExecUtil
+import org.apache.flink.table.runtime.KeyedProcessOperator
 import org.apache.flink.table.runtime.aggregate.{LastRowFunction, MiniBatchLastRowFunction}
-import org.apache.flink.table.runtime.operator.KeyedProcessOperator
-import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
+import org.apache.flink.table.runtime.bundle.KeyedBundleOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}

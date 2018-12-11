@@ -28,7 +28,7 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
-import org.apache.flink.table.runtime.operator.BytesHashMap;
+import org.apache.flink.table.runtime.util.BytesHashMap;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.BinaryRowUtil;
 import org.apache.flink.util.MutableObjectIterator;

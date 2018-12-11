@@ -18,11 +18,9 @@
 package org.apache.flink.table.runtime.aggregate
 
 import java.util.{Map => JMap}
-
 import org.apache.flink.table.codegen.GeneratedAggsHandleFunction
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
-import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
-import org.apache.flink.table.runtime.functions.bundle.BundleFunction
+import org.apache.flink.table.runtime.functions.{AggsHandleFunction, BundleFunction, ExecutionContext}
 import org.apache.flink.table.util.{BaseRowUtil, Logging}
 import org.apache.flink.util.Collector
 

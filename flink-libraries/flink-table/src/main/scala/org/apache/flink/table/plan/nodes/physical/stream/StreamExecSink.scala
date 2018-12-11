@@ -32,7 +32,7 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.SinkCodeGenerator.generateRowConverterOperator
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
+import org.apache.flink.table.runtime.AbstractProcessStreamOperator
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}

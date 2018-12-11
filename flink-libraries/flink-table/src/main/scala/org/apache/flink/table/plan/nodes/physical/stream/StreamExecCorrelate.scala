@@ -24,7 +24,7 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.functions.utils.TableSqlFunction
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
 import org.apache.flink.table.plan.util.CorrelateUtil
-import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
+import org.apache.flink.table.runtime.AbstractProcessStreamOperator
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType

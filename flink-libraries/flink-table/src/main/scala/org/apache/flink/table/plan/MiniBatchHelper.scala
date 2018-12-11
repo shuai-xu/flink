@@ -28,7 +28,7 @@ import _root_.java.util.{List => JList}
 
 import org.apache.flink.streaming.api.operators.StreamOperator
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.operator.bundle.{BundleOperator, KeyedBundleOperator}
+import org.apache.flink.table.runtime.bundle.{BundleOperator, KeyedBundleOperator}
 import org.apache.flink.util.Preconditions
 
 object MiniBatchHelper {

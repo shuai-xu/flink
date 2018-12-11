@@ -18,14 +18,12 @@
 package org.apache.flink.table.runtime.aggregate
 
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Map => JMap}
-
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.codegen.{EqualiserCodeGenerator, GeneratedAggsHandleFunction}
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
-import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
-import org.apache.flink.table.runtime.functions.bundle.BundleFunction
+import org.apache.flink.table.runtime.functions.{AggsHandleFunction, BundleFunction, ExecutionContext}
 import org.apache.flink.table.runtime.sort.RecordEqualiser
 import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{BaseRowUtil, BinaryRowUtil, Logging}

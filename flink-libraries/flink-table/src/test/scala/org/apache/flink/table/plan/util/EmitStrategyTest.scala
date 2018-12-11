@@ -18,7 +18,7 @@
 package org.apache.flink.table.plan.util
 
 import org.apache.flink.table.api.TableException
-import org.apache.flink.table.runtime.operator.window.triggers.{EventTime, ProcessingTime, Trigger}
+import org.apache.flink.table.runtime.window.triggers.{EventTime, ProcessingTime, Trigger}
 import org.junit.{Rule, Test}
 import org.junit.Assert._
 import org.junit.rules.ExpectedException

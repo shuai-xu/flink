@@ -21,7 +21,7 @@ import org.apache.flink.streaming.api.transformations.{OneInputTransformation, S
 import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.operator.bundle.MicroBatchAssignerOperator
+import org.apache.flink.table.runtime.bundle.MicroBatchAssignerOperator
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}

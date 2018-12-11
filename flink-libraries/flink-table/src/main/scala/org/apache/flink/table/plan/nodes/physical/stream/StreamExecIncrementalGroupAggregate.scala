@@ -26,7 +26,7 @@ import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedAggsHandle
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateNameUtil, AggregateUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.aggregate.MiniBatchIncrementalGroupAggFunction
-import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
+import org.apache.flink.table.runtime.bundle.KeyedBundleOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
 

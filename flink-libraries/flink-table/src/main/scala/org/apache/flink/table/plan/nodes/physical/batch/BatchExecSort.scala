@@ -28,7 +28,7 @@ import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.util.SortUtil
-import org.apache.flink.table.runtime.operator.sort.SortOperator
+import org.apache.flink.table.runtime.sort.SortOperator
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.ExecResourceUtil
 

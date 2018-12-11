@@ -35,9 +35,9 @@ import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, TumblingGroupWindow}
-import org.apache.flink.table.runtime.operator.{AbstractStreamOperatorWithMetrics, BytesHashMap}
+import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.runtime.sort.BinaryKVInMemorySortBuffer
-import org.apache.flink.table.runtime.util.BytesHashMapSpillMemorySegmentPool
+import org.apache.flink.table.runtime.util.{BytesHashMap, BytesHashMapSpillMemorySegmentPool}
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.util.MutableObjectIterator
 

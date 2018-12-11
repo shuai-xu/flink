@@ -26,7 +26,7 @@ import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.util.SortUtil
-import org.apache.flink.table.runtime.operator.sort.SortLimitOperator
+import org.apache.flink.table.runtime.sort.SortLimitOperator
 import org.apache.flink.table.typeutils._
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
