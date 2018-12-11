@@ -19,7 +19,6 @@
 package org.apache.flink.table.plan.rules.physical.stream
 
 import java.util
-
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
@@ -33,11 +32,11 @@ import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.calcite.{FlinkLogicalRelFactories, FlinkRelBuilder}
 import org.apache.flink.table.functions.sql.{AggSqlFunctions, ScalarSqlFunctions, SqlFirstLastValueAggFunction}
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions.DIVIDE
+import org.apache.flink.table.plan.PartialFinalType
 import org.apache.flink.table.plan.nodes.FlinkRelNode
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalAggregate
 import org.apache.flink.table.plan.rules.physical.stream.SplitAggregateRule._
 import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule._
-import org.apache.flink.table.plan.util.PartialFinalType
 import org.apache.flink.table.plan.util.AggregateUtil.doAllAggSupportSplit
 
 import scala.collection.JavaConversions._

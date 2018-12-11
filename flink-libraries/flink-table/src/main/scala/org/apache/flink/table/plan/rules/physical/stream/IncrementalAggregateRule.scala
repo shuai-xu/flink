@@ -18,14 +18,14 @@
 package org.apache.flink.table.plan.rules.physical.stream
 
 import java.util.Collections
-
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptUtil}
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.plan.PartialFinalType
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecExchange, StreamExecGlobalGroupAggregate, StreamExecIncrementalGroupAggregate, StreamExecLocalGroupAggregate}
 import org.apache.flink.table.plan.util.AggregateUtil.{inferLocalAggRowType, transformToStreamAggregateInfoList}
-import org.apache.flink.table.plan.util.{AggregateInfoList, DistinctInfo, PartialFinalType}
+import org.apache.flink.table.plan.util.{AggregateInfoList, DistinctInfo}
 import org.apache.flink.util.Preconditions
 
 class IncrementalAggregateRule

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.plan.util;
+package org.apache.flink.table.plan;
 
 /**
  * Enumerations for partial final aggregate types.

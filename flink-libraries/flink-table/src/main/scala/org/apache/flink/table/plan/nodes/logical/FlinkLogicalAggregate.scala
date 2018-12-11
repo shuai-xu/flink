@@ -18,10 +18,10 @@
 
 package org.apache.flink.table.plan.nodes.logical
 
+import org.apache.flink.table.plan.PartialFinalType
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule._
-import org.apache.flink.table.plan.util.PartialFinalType
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
