@@ -18,7 +18,6 @@
 package org.apache.flink.table.runtime.stream.sql
 
 import java.lang.{Integer => JInt, Long => JLong}
-
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, BigDecimalTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
@@ -29,7 +28,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.functions.aggfunctions.{ConcatAggFunction, ConcatWsAggFunction}
 import org.apache.flink.table.hive.functions.{HiveFunctionWrapper, HiveUDAFFunction}
 import org.apache.flink.table.runtime.batch.sql.agg.{MyPojoAggFunction, VarArgsAggFunction}
-import org.apache.flink.table.runtime.batch.sql.{MyPojo, MyPojoFunc}
+import org.apache.flink.table.runtime.batch.sql.{MyPojo, MyPojoFunc, MyToPojoFunc}
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.VarSumAggFunction
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.AggMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
@@ -38,6 +37,7 @@ import org.apache.flink.table.runtime.utils.UserDefinedFunctionTestUtils.CountNu
 import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingWithAggTestBase, TestingRetractSink}
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.types.Row
+
 import org.apache.hadoop.hive.ql.udf.generic.{AbstractGenericUDAFResolver, GenericUDAFCount, GenericUDAFResolver2, GenericUDAFSum}
 import org.junit.Assert.assertEquals
 import org.junit._
@@ -81,6 +81,29 @@ class AggregateITCase(
     t1.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = List()
+    assertEquals(expected, sink.getRetractResults)
+  }
+
+  @Test
+  def testShufflePojo(): Unit = {
+    val data = new mutable.MutableList[(Int, Int)]
+    data .+= ((1, 1))
+    data .+= ((2, 2))
+    data .+= ((3, 3))
+
+    val t = failingDataSource(data).toTable(tEnv, 'a, 'b)
+    tEnv.registerTable("T", t)
+    tEnv.registerFunction("pojoFunc", MyToPojoFunc)
+
+    val t1 = tEnv.sqlQuery(
+      "select sum(a), avg(a), min(a), count(a), count(1) from T group by pojoFunc(b)")
+    val sink = new TestingRetractSink
+    t1.toRetractStream[Row].addSink(sink).setParallelism(1)
+    env.execute()
+    val expected = List(
+      "1,1.0,1,1,1",
+      "2,2.0,2,1,1",
+      "3,3.0,3,1,1")
     assertEquals(expected, sink.getRetractResults)
   }
 

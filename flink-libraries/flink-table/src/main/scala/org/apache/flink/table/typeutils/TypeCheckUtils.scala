@@ -22,6 +22,7 @@ import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.api.java.typeutils.{ListTypeInfo, PojoTypeInfo}
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.api.types._
+import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.validate._
 
 object TypeCheckUtils {
@@ -146,6 +147,8 @@ object TypeCheckUtils {
       // we don't check the types recursively to give a chance of wrapping
       // proper hashCode/equals methods around an immutable type
       validateEqualsHashCode(name, pt.getClass)
+    // BinaryRow direct hash in bytes, no need to check field types.
+    case bt: BaseRowTypeInfo[_] if bt.getTypeClass == classOf[BinaryRow] =>
     // recursively check composite types
     case ct: CompositeType[_] =>
       validateEqualsHashCode(name, t.getTypeClass)

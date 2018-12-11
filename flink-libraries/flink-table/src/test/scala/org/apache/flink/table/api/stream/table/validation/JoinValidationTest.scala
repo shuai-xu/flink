@@ -21,34 +21,12 @@ package org.apache.flink.table.api.stream.table.validation
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.stream.table.validation.JoinValidationTest.WithoutEqualsHashCode
 import org.apache.flink.table.api.{TableEnvironment, TableException, ValidationException}
 import org.apache.flink.table.runtime.utils.StreamTestData
 import org.apache.flink.table.util.TableTestBase
-import org.apache.flink.types.Row
 import org.junit.Test
 
 class JoinValidationTest extends TableTestBase {
-
-  /**
-    * Generic type cannot be used as key of map state.
-    */
-  @Test(expected = classOf[ValidationException])
-  def testInvalidStateTypes(): Unit = {
-    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    val tenv = TableEnvironment.getTableEnvironment(env)
-    val ds = env.fromElements(new WithoutEqualsHashCode) // no equals/hashCode
-    val t = tenv.fromDataStream(ds)
-
-    val left = t.select('f0 as 'l)
-    val right = t.select('f0 as 'r)
-
-    val resultTable = left.join(right)
-      .where('l === 'r)
-      .select('l)
-
-    resultTable.toRetractStream[Row]
-  }
 
   /**
     * At least one equi-join predicate required.
@@ -176,8 +154,4 @@ class JoinValidationTest extends TableTestBase {
     // Must fail. Tables are bound to different TableEnvironments.
     in1.join(in2).where("a === d").select("g.count")
   }
-}
-
-object JoinValidationTest {
-  class WithoutEqualsHashCode
 }
