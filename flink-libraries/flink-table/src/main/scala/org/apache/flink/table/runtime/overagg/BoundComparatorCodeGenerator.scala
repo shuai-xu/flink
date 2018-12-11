@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.operator.overagg
+package org.apache.flink.table.runtime.overagg
 
 import java.math.BigDecimal
 

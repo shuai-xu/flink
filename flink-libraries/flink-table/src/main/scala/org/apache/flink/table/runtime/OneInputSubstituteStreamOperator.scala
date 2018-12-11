@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.operator
+package org.apache.flink.table.runtime
 
 import org.apache.flink.streaming.api.operators.{AbstractOneInputSubstituteStreamOperator, ChainingStrategy}
 

@@ -19,7 +19,6 @@
 package org.apache.flink.table.plan.nodes.common
 
 import java.util.{List => JList}
-
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
@@ -32,8 +31,8 @@ import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.{ELEMENT, STREAM_RECORD, generatorCollect}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
+import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToInternal
-import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import scala.collection.JavaConversions._

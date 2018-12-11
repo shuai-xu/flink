@@ -27,7 +27,7 @@ import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.logical.LogicalWindow
-import org.apache.flink.table.runtime.operator._
+import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.ExecResourceUtil
 

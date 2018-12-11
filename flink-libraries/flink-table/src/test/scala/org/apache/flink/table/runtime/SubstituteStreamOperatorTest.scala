@@ -16,9 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.operator
-
-import java.util.Date
+package org.apache.flink.table.runtime
 
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
@@ -27,8 +25,11 @@ import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
+
 import org.junit.Assert._
 import org.junit.Test
+
+import java.util.Date
 
 class SubstituteStreamOperatorTest {
 

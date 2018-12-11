@@ -26,8 +26,8 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.util.AggregateNameUtil
+import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
-import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}

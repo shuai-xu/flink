@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.operator
+package org.apache.flink.table.runtime
 
 import org.apache.flink.streaming.api.operators.{ChainingStrategy, StreamOperator}
 import org.apache.flink.table.codegen.{Compiler, JavaSourceManipulator}
-import org.apache.flink.table.runtime.WithReferences
 import org.apache.flink.table.util.Logging
 
 import scala.collection.mutable

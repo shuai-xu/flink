@@ -31,8 +31,8 @@ import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.{JoinUtil, StreamExecUtil, UpdatingPlanChecker}
+import org.apache.flink.table.runtime.KeyedCoProcessOperatorWithWatermarkDelay
 import org.apache.flink.table.runtime.join._
-import org.apache.flink.table.runtime.operator.KeyedCoProcessOperatorWithWatermarkDelay
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
 import org.apache.flink.util.Collector

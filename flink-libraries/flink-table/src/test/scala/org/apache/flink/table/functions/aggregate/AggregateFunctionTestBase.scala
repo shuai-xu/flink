@@ -18,7 +18,6 @@
 package org.apache.flink.table.functions.aggregate
 
 import java.util.function.{Function => JFunction}
-
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.logical.LogicalAggregate
@@ -42,8 +41,9 @@ import org.apache.flink.table.plan.logical.Aggregate
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecLocalSortAggregate, BatchExecSortAggregate}
 import org.apache.flink.table.plan.util.AggregateUtil
 import org.apache.flink.table.dataformat._
-import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
+import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.mockito.Mockito.{mock, when}

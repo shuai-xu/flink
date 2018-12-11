@@ -31,8 +31,8 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCollect
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
+import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToExternal
-import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.TypeUtils.getCompositeTypes
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TimeIndicatorTypeInfo}
 import org.apache.flink.table.util.BaseRowUtil

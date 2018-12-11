@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.operator.overagg
+package org.apache.flink.table.runtime.overagg
 
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord

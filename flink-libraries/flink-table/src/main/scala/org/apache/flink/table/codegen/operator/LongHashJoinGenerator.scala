@@ -26,7 +26,7 @@ import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator._
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedJoinConditionFunction}
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
-import org.apache.flink.table.runtime.operator.TwoInputSubstituteStreamOperator
+import org.apache.flink.table.runtime.TwoInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.join.batch.HashJoinType
 import org.apache.flink.table.runtime.join.batch.hashtable.longtable.{LongHashPartition, LongHybridHashTable}
 import org.apache.flink.table.typeutils.{BaseRowSerializer, BinaryRowSerializer}

@@ -32,7 +32,7 @@ import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.ExpressionFormat
-import org.apache.flink.table.runtime.operator.TwoInputSubstituteStreamOperator
+import org.apache.flink.table.runtime.TwoInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.util.ResettableExternalBuffer
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.ExecResourceUtil

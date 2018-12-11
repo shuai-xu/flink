@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.table.runtime.operator
+package org.apache.flink.table.runtime
 
 import org.apache.flink.streaming.api.functions.co.CoProcessFunction
 import org.apache.flink.streaming.api.operators.co.KeyedCoProcessOperator

@@ -285,7 +285,7 @@ case class GeneratedSplittableExpression(
   isSplit: Boolean)
 
 /**
- * Describes a generated [[org.apache.flink.table.runtime.operator.overagg.BoundComparator]].
+ * Describes a generated [[org.apache.flink.table.runtime.overagg.BoundComparator]].
  *
  * @param name class name of the generated BoundComparator.
  * @param code code of the generated BoundComparator.

@@ -31,7 +31,7 @@ import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.calcite.Rank
 import org.apache.flink.table.plan.util.{ConstantRankRange, RankRange}
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
-import org.apache.flink.table.runtime.operator.RankOperator
+import org.apache.flink.table.runtime.rank.RankOperator
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.FlinkRelOptUtil
 

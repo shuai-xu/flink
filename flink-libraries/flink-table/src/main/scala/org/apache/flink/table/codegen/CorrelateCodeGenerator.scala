@@ -32,8 +32,8 @@ import org.apache.flink.table.functions.utils.{TableSqlFunction, UserDefinedFunc
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
 import org.apache.flink.table.plan.schema.FlinkTableFunction
 import org.apache.flink.table.plan.util.CorrelateUtil
+import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
-import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.util.StreamRecordCollector
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
