@@ -50,8 +50,6 @@ public class TaskManagersHandler extends AbstractJsonRequestHandler  {
 
 	private static final String TASKMANAGERS_REST_PATH = "/taskmanagers";
 
-	private static  final String JOB_TASKMANAGERS_REST_PATH = "/jobs/:jobid/taskmanagers";
-
 	private static final String TASKMANAGER_DETAILS_REST_PATH = "/taskmanagers/:taskmanagerid";
 
 	public static final String TASK_MANAGER_ID_KEY = "taskmanagerid";
@@ -68,7 +66,7 @@ public class TaskManagersHandler extends AbstractJsonRequestHandler  {
 
 	@Override
 	public String[] getPaths() {
-		return new String[]{TASKMANAGERS_REST_PATH, TASKMANAGER_DETAILS_REST_PATH, JOB_TASKMANAGERS_REST_PATH};
+		return new String[]{TASKMANAGERS_REST_PATH, TASKMANAGER_DETAILS_REST_PATH};
 	}
 
 	@Override
