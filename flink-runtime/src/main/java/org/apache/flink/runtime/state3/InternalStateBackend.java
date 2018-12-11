@@ -18,21 +18,24 @@
 
 package org.apache.flink.runtime.state3;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.Snapshotable;
 import org.apache.flink.runtime.state.StatePartitionSnapshot;
+import org.apache.flink.runtime.state3.keyed.KeyedState;
+import org.apache.flink.runtime.state3.keyed.KeyedStateDescriptor;
 import org.apache.flink.util.Disposable;
 
-import java.io.Closeable;
 import java.util.Collection;
+import java.util.Map;
 
 /**
  * The class provides access and manage methods to {@link StateStorage}. Each
  * execution instance of an operator will deploy a backend to manage its
  * state storage.
  */
-public interface InternalStateBackend extends Snapshotable<SnapshotResult<StatePartitionSnapshot>, Collection<StatePartitionSnapshot>>, Closeable, Disposable {
+public interface InternalStateBackend extends Snapshotable<SnapshotResult<StatePartitionSnapshot>, Collection<StatePartitionSnapshot>>, Disposable {
 
 	/**
 	 * Dispose the backend. This method is called when the task completes its
@@ -61,5 +64,34 @@ public interface InternalStateBackend extends Snapshotable<SnapshotResult<StateP
 	 * @return The class loader for the user code in this operator.
 	 */
 	ClassLoader getUserClassLoader();
+
+	/**
+	 * Returns all state storages in this backend.
+	 *
+	 * @return AllMap state storages in this backend.
+	 */
+	@VisibleForTesting
+	Map<String, StateStorage> getStateStorages();
+
+	/**
+	 * Returns all keyed states in this backend.
+	 *
+	 * @return All keyed states in this backend.
+	 */
+	@VisibleForTesting
+	Map<String, KeyedState> getKeyedStates();
+
+	/**
+	 * Returns the keyed state with the given descriptor. The state will be
+	 * created if it has not been created by the backend.
+	 *
+	 * @param stateDescriptor The descriptor of the state to be retrieved.
+	 * @param <K> Type of the keys in the state.
+	 * @param <V> Type of the values in the state.
+	 * @param <S> Type of the state to be retrieved.
+	 */
+	<K, V, S extends KeyedState<K, V>> S getKeyedState(
+		KeyedStateDescriptor<K, V, S> stateDescriptor
+	);
 
 }

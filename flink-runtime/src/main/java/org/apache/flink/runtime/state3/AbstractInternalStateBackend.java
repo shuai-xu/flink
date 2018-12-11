@@ -21,13 +21,33 @@ package org.apache.flink.runtime.state3;
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.GroupSet;
+import org.apache.flink.runtime.state3.keyed.KeyedListState;
+import org.apache.flink.runtime.state3.keyed.KeyedListStateDescriptor;
+import org.apache.flink.runtime.state3.keyed.KeyedListStateImpl;
+import org.apache.flink.runtime.state3.keyed.KeyedMapState;
+import org.apache.flink.runtime.state3.keyed.KeyedMapStateDescriptor;
+import org.apache.flink.runtime.state3.keyed.KeyedMapStateImpl;
+import org.apache.flink.runtime.state3.keyed.KeyedSortedMapState;
+import org.apache.flink.runtime.state3.keyed.KeyedSortedMapStateDescriptor;
+import org.apache.flink.runtime.state3.keyed.KeyedSortedMapStateImpl;
+import org.apache.flink.runtime.state3.keyed.KeyedState;
+import org.apache.flink.runtime.state3.keyed.KeyedStateBinder;
+import org.apache.flink.runtime.state3.keyed.KeyedStateDescriptor;
+import org.apache.flink.runtime.state3.keyed.KeyedValueState;
+import org.apache.flink.runtime.state3.keyed.KeyedValueStateDescriptor;
+import org.apache.flink.runtime.state3.keyed.KeyedValueStateImpl;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
  * The base implementation for {@link InternalStateBackend}.
  */
-public abstract class AbstractInternalStateBackend implements InternalStateBackend {
+public abstract class AbstractInternalStateBackend implements InternalStateBackend, KeyedStateBinder {
 
 	/**
 	 * The total number of groups in all subtasks.
@@ -53,9 +73,27 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	protected TaskKvStateRegistry kvStateRegistry;
 
 	/**
+	 * The state storages backend by the backend.
+	 */
+	protected transient Map<String, StateStorage> stateStorages;
+
+	/**
+	 * The keyed state backed by the backend.
+	 */
+	protected transient Map<String, KeyedState> keyedStates;
+
+	/**
 	 * Subclasses should implement this method to release unused resources.
 	 */
 	protected void closeImpl() {}
+
+	/**
+	 * Creates the state storage described by the given keyed descriptor.
+	 *
+	 * @param descriptor The descriptor of the state storage to be created.
+	 * @return The state storage described by the given descriptor.
+	 */
+	protected abstract StateStorage createStateStorageForKeyedState(KeyedStateDescriptor descriptor);
 
 	//--------------------------------------------------------------------------
 
@@ -70,6 +108,9 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 		this.userClassLoader = Preconditions.checkNotNull(userClassLoader);
 		this.cancelStreamRegistry = new CloseableRegistry();
 		this.kvStateRegistry = kvStateRegistry;
+
+		this.stateStorages = new HashMap<>();
+		this.keyedStates = new HashMap<>();
 	}
 
 	@Override
@@ -87,17 +128,92 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 		return userClassLoader;
 	}
 
-	//--------------------------------------------------------------------------
+	@Override
+	public Map<String, StateStorage> getStateStorages() {
+		return stateStorages;
+	}
 
 	@Override
-	public void close() {
+	public Map<String, KeyedState> getKeyedStates() {
+		return keyedStates;
 	}
+
+	//--------------------------------------------------------------------------
 
 	@Override
 	public void dispose() {
 		closeImpl();
 
 		IOUtils.closeQuietly(cancelStreamRegistry);
+
+		stateStorages.clear();
+		keyedStates.clear();
+	}
+
+	@Override
+	public <K, V, S extends KeyedState<K, V>> S getKeyedState(
+		KeyedStateDescriptor<K, V, S> keyedStateDescriptor
+	) {
+		checkNotNull(keyedStateDescriptor);
+
+		return keyedStateDescriptor.bind(this);
+	}
+
+	@Override
+	public <K, V> KeyedValueState<K, V> createKeyedValueState(KeyedValueStateDescriptor<K, V> keyedStateDescriptor) {
+		StateStorage stateStorage = getStateStorageForKeyedState(keyedStateDescriptor);
+		KeyedValueState<K, V> state = new KeyedValueStateImpl<>(keyedStateDescriptor, stateStorage);
+		keyedStates.put(keyedStateDescriptor.getName(), state);
+
+		return state;
+	}
+
+	@Override
+	public <K, E> KeyedListState<K, E> createKeyedListState(KeyedListStateDescriptor<K, E> keyedStateDescriptor) {
+		StateStorage stateStorage = getStateStorageForKeyedState(keyedStateDescriptor);
+		KeyedListState<K, E> state = new KeyedListStateImpl<>(keyedStateDescriptor, stateStorage);
+		keyedStates.put(keyedStateDescriptor.getName(), state);
+
+		return state;
+	}
+
+	@Override
+	public <K, MK, MV> KeyedMapState<K, MK, MV> createKeyedMapState(KeyedMapStateDescriptor<K, MK, MV> keyedStateDescriptor) {
+		StateStorage stateStorage = getStateStorageForKeyedState(keyedStateDescriptor);
+		KeyedMapState<K, MK, MV> state = new KeyedMapStateImpl<>(keyedStateDescriptor, stateStorage);
+		keyedStates.put(keyedStateDescriptor.getName(), state);
+
+		return state;
+	}
+
+	@Override
+	public <K, MK, MV> KeyedSortedMapState<K, MK, MV> createKeyedSortedMapState(KeyedSortedMapStateDescriptor<K, MK, MV> keyedStateDescriptor) {
+		StateStorage stateStorage = getStateStorageForKeyedState(keyedStateDescriptor);
+		KeyedSortedMapState<K, MK, MV> state = new KeyedSortedMapStateImpl<>(keyedStateDescriptor, stateStorage);
+		keyedStates.put(keyedStateDescriptor.getName(), state);
+
+		return state;
+	}
+
+	//--------------------------------------------------------------------------
+
+	private StateStorage getStateStorageForKeyedState(KeyedStateDescriptor stateDescriptor) {
+		Preconditions.checkNotNull(stateDescriptor);
+
+		String stateName = stateDescriptor.getName();
+		StateStorage stateStorage = stateStorages.get(stateName);
+		if (stateStorage != null) {
+			KeyedState state = keyedStates.get(stateName);
+			Preconditions.checkNotNull(state, "Expect a created keyed state");
+			if (!state.getDescriptor().equals(stateDescriptor)) {
+				throw new StateIncompatibleAccessException(state.getDescriptor(), stateDescriptor);
+			}
+		} else {
+			stateStorage = createStateStorageForKeyedState(stateDescriptor);
+			stateStorages.put(stateName, stateStorage);
+		}
+
+		return stateStorage;
 	}
 
 }
