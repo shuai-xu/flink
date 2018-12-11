@@ -19,8 +19,7 @@
 package org.apache.flink.table.plan.metadata
 
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
-import org.apache.flink.table.plan.cost.FlinkMetadata
-import org.apache.flink.table.plan.cost.FlinkMetadata.UniqueColumns
+import org.apache.flink.table.plan.metadata.FlinkMetadata.UniqueColumns
 import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.physical.batch._

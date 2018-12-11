@@ -23,8 +23,7 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.functions.utils.{AggSqlFunction, ScalarSqlFunction}
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
-import org.apache.flink.table.plan.cost.FlinkMetadata
-import org.apache.flink.table.plan.cost.FlinkMetadata.ModifiedMonotonicityMeta
+import org.apache.flink.table.plan.metadata.FlinkMetadata.ModifiedMonotonicityMeta
 import org.apache.flink.table.plan.nodes.logical._
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecGroupAggregateBase
 import org.apache.flink.table.plan.nodes.physical.stream._

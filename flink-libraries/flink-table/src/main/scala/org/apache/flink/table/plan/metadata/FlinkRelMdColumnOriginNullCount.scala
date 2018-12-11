@@ -18,8 +18,7 @@
 
 package org.apache.flink.table.plan.metadata
 
-import org.apache.flink.table.plan.cost.FlinkMetadata
-import org.apache.flink.table.plan.cost.FlinkMetadata.ColumnOriginNullCount
+import org.apache.flink.table.plan.metadata.FlinkMetadata.ColumnOriginNullCount
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.util.Preconditions
 

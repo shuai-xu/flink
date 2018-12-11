@@ -19,8 +19,7 @@ package org.apache.flink.table.plan.metadata
 
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
-import org.apache.flink.table.plan.cost.FlinkMetadata
-import org.apache.flink.table.plan.cost.FlinkMetadata.FlinkDistribution
+import org.apache.flink.table.plan.metadata.FlinkMetadata.FlinkDistribution
 
 import org.apache.calcite.rel._
 import org.apache.calcite.rel.core.{Calc, Sort, TableScan}

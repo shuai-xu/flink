@@ -20,8 +20,7 @@ package org.apache.flink.table.plan.metadata
 
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
-import org.apache.flink.table.plan.cost.FlinkMetadata
-import org.apache.flink.table.plan.cost.FlinkMetadata.ColumnInterval
+import org.apache.flink.table.plan.metadata.FlinkMetadata.ColumnInterval
 import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalDimensionTableSourceScan, FlinkLogicalWindowAggregate}
 import org.apache.flink.table.plan.nodes.physical.batch._

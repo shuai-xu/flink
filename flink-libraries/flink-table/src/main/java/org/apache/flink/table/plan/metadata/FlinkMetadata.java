@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.plan.cost;
+package org.apache.flink.table.plan.metadata;
 
 import org.apache.flink.table.plan.stats.SkewInfoInternal;
 import org.apache.flink.table.plan.stats.ValueInterval;

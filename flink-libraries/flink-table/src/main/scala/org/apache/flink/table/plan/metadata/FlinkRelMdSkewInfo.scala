@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.metadata
 
 import org.apache.flink.table.api.TableException
-import org.apache.flink.table.plan.cost.FlinkMetadata.SkewInfoMeta
+import org.apache.flink.table.plan.metadata.FlinkMetadata.SkewInfoMeta
 import org.apache.flink.table.plan.nodes.calcite.Expand
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.plan.stats.SkewInfoInternal

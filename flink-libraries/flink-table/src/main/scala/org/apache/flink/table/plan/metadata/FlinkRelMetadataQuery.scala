@@ -19,8 +19,7 @@
 package org.apache.flink.table.plan.metadata
 
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef, RelModifiedMonotonicity}
-import org.apache.flink.table.plan.cost.FlinkMetadata
-import org.apache.flink.table.plan.cost.FlinkMetadata._
+import org.apache.flink.table.plan.metadata.FlinkMetadata.{ColumnInterval, ColumnNullCount, ColumnOriginNullCount, FilteredColumnInterval, FlinkDistribution, ModifiedMonotonicityMeta, SkewInfoMeta, UniqueColumns}
 import org.apache.flink.table.plan.stats.{SkewInfoInternal, ValueInterval}
 
 import org.apache.calcite.plan.RelTraitSet

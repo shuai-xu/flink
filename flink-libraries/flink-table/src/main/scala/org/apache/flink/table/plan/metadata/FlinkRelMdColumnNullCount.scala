@@ -18,8 +18,7 @@
 
 package org.apache.flink.table.plan.metadata
 
-import org.apache.flink.table.plan.cost.FlinkMetadata
-import org.apache.flink.table.plan.cost.FlinkMetadata.ColumnNullCount
+import org.apache.flink.table.plan.metadata.FlinkMetadata.ColumnNullCount
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalDimensionTableSourceScan
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.util.{FlinkRelOptUtil, FlinkRexUtil}
