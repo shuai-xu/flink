@@ -35,8 +35,9 @@ import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.operator.BytesHashMap
 import org.apache.flink.table.runtime.sort.{BufferedKVExternalSorter, NormalizedKeyComputer, RecordComparator}
+import org.apache.flink.table.runtime.util.BytesHashMapSpillMemorySegmentPool
 import org.apache.flink.table.typeutils.{BinaryRowSerializer, TypeUtils}
-import org.apache.flink.table.util.{BytesHashMapSpillMemorySegmentPool, ExecResourceUtil}
+import org.apache.flink.table.util.ExecResourceUtil
 
 trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
 

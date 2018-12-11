@@ -32,8 +32,6 @@ import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.util.MutableObjectIterator;
 
-import static org.apache.flink.table.runtime.sort.InMemorySortTest.randomRow;
-
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -46,6 +44,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+
+import static org.apache.flink.table.runtime.sort.InMemorySortTest.randomRow;
 
 /**
  * UT for BufferedKVExternalSorter.

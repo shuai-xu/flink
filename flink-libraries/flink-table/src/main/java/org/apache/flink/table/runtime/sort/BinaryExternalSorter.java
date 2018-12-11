@@ -41,10 +41,9 @@ import org.apache.flink.runtime.util.EmptyMutableObjectIterator;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
-import org.apache.flink.table.runtime.CompressedHeaderlessChannelWriterOutputView;
+import org.apache.flink.table.runtime.util.ChannelWithMeta;
+import org.apache.flink.table.runtime.util.CompressedHeaderlessChannelWriterOutputView;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
-import org.apache.flink.table.util.BinaryMergeIterator;
-import org.apache.flink.table.util.ChannelWithMeta;
 import org.apache.flink.util.MutableObjectIterator;
 
 import org.slf4j.Logger;

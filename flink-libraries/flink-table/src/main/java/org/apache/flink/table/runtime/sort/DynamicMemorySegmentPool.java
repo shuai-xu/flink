@@ -21,7 +21,7 @@ package org.apache.flink.table.runtime.sort;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.memory.MemoryAllocationException;
 import org.apache.flink.runtime.memory.MemoryManager;
-import org.apache.flink.table.util.MemorySegmentPool;
+import org.apache.flink.table.runtime.util.MemorySegmentPool;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

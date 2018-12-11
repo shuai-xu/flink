@@ -34,12 +34,12 @@ import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.runtime.operator.join.batch.HashJoinType;
 import org.apache.flink.table.runtime.operator.join.batch.NullAwareJoinHelper;
+import org.apache.flink.table.runtime.util.PagedChannelReaderInputViewIterator;
+import org.apache.flink.table.runtime.util.WrappedRowIterator;
 import org.apache.flink.table.typeutils.AbstractRowSerializer;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.BinaryRowUtil;
-import org.apache.flink.table.util.PagedChannelReaderInputViewIterator;
 import org.apache.flink.table.util.RowIterator;
-import org.apache.flink.table.util.WrappedRowIterator;
 import org.apache.flink.util.MathUtils;
 
 import java.io.IOException;

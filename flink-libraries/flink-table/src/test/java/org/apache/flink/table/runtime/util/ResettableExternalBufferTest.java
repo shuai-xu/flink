@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.util;
+package org.apache.flink.table.runtime.util;
 
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
@@ -74,11 +74,12 @@ public class ResettableExternalBufferTest {
 		return newBuffer(memorySize, this.serializer);
 	}
 
-	private ResettableExternalBuffer newBuffer(long memorySize, BinaryRowSerializer serializer) throws MemoryAllocationException {
+	private ResettableExternalBuffer newBuffer(long memorySize,
+			BinaryRowSerializer serializer) throws MemoryAllocationException {
 		return new ResettableExternalBuffer(
-			memManager, ioManager,
-			memManager.allocatePages(this, (int) (memorySize / memManager.getPageSize())),
-			serializer);
+				memManager, ioManager,
+				memManager.allocatePages(this, (int) (memorySize / memManager.getPageSize())),
+				serializer);
 	}
 
 	@Test
@@ -176,9 +177,9 @@ public class ResettableExternalBufferTest {
 	public void testHugeRecord() throws Exception {
 		thrown.expect(IOException.class);
 		try (ResettableExternalBuffer buffer = new ResettableExternalBuffer(
-			memManager, ioManager,
-			memManager.allocatePages(this, 3 * DEFAULT_PAGE_SIZE / memManager.getPageSize()),
-			new BinaryRowSerializer(Types.STRING))) {
+				memManager, ioManager,
+				memManager.allocatePages(this, 3 * DEFAULT_PAGE_SIZE / memManager.getPageSize()),
+				new BinaryRowSerializer(Types.STRING))) {
 			writeHuge(buffer, 10);
 			writeHuge(buffer, 50000);
 		}
@@ -529,7 +530,7 @@ public class ResettableExternalBufferTest {
 	}
 
 	private <T extends RowData> void testMultiColumnRandomAccessLess(
-		BinaryRowSerializer serializer, Class<T> clazz) throws Exception {
+			BinaryRowSerializer serializer, Class<T> clazz) throws Exception {
 		ResettableExternalBuffer buffer = newBuffer(DEFAULT_PAGE_SIZE * 2, serializer);
 
 		int number = 30;
@@ -551,7 +552,7 @@ public class ResettableExternalBufferTest {
 	}
 
 	private <T extends RowData> void testMultiColumnRandomAccessSpill(
-		BinaryRowSerializer serializer, Class<T> clazz) throws Exception {
+			BinaryRowSerializer serializer, Class<T> clazz) throws Exception {
 		ResettableExternalBuffer buffer = newBuffer(DEFAULT_PAGE_SIZE * 2, serializer);
 
 		int number = 4000;
@@ -573,7 +574,7 @@ public class ResettableExternalBufferTest {
 	}
 
 	private <T extends RowData> void testBufferResetWithSpillAndMultiColumnRandomAccess(
-		BinaryRowSerializer serializer, Class<T> clazz) throws Exception {
+			BinaryRowSerializer serializer, Class<T> clazz) throws Exception {
 		final int tries = 100;
 		ResettableExternalBuffer buffer = newBuffer(DEFAULT_PAGE_SIZE * 2, serializer);
 
@@ -614,7 +615,7 @@ public class ResettableExternalBufferTest {
 	}
 
 	private void testIteratorOnMultiColumnEmptyBuffer(
-		BinaryRowSerializer serializer) throws Exception {
+			BinaryRowSerializer serializer) throws Exception {
 		ResettableExternalBuffer buffer = newBuffer(DEFAULT_PAGE_SIZE * 2, serializer);
 
 		ResettableExternalBuffer.BufferIterator iterator;
@@ -627,7 +628,7 @@ public class ResettableExternalBufferTest {
 	}
 
 	private <T extends RowData> void testRandomAccessOutOfRange(
-		BinaryRowSerializer serializer, Class<T> clazz) throws Exception {
+			BinaryRowSerializer serializer, Class<T> clazz) throws Exception {
 		ResettableExternalBuffer buffer = newBuffer(DEFAULT_PAGE_SIZE * 2, serializer);
 
 		int number = 100;
@@ -647,7 +648,7 @@ public class ResettableExternalBufferTest {
 	}
 
 	private <T extends RowData> void testUpdateIteratorLess(
-		BinaryRowSerializer serializer, Class<T> clazz) throws Exception {
+			BinaryRowSerializer serializer, Class<T> clazz) throws Exception {
 		ResettableExternalBuffer buffer = newBuffer(DEFAULT_PAGE_SIZE * 2, serializer);
 
 		int number = 20;
@@ -696,7 +697,7 @@ public class ResettableExternalBufferTest {
 	}
 
 	private <T extends RowData> void testUpdateIteratorSpill(
-		BinaryRowSerializer serializer, Class<T> clazz) throws Exception {
+			BinaryRowSerializer serializer, Class<T> clazz) throws Exception {
 		ResettableExternalBuffer buffer = newBuffer(DEFAULT_PAGE_SIZE * 2, serializer);
 
 		int number = 100;
@@ -769,7 +770,7 @@ public class ResettableExternalBufferTest {
 	}
 
 	private void assertBuffer(
-		List<Long> expected, ResettableExternalBuffer.BufferIterator iterator
+			List<Long> expected, ResettableExternalBuffer.BufferIterator iterator
 	) {
 		List<Long> values = new ArrayList<>();
 		while (iterator.advanceNext()) {
@@ -784,7 +785,8 @@ public class ResettableExternalBufferTest {
 		return expected;
 	}
 
-	private void insertMulti(ResettableExternalBuffer buffer, int cnt, List<Long> expected) throws IOException {
+	private void insertMulti(ResettableExternalBuffer buffer, int cnt,
+			List<Long> expected) throws IOException {
 		for (int i = 0; i < cnt; i++) {
 			expected.add(randomInsert(buffer));
 		}
@@ -806,13 +808,15 @@ public class ResettableExternalBufferTest {
 		assertRandomAccess(expected, buffer, begin);
 	}
 
-	private void assertRandomAccess(List<Long> expected, ResettableExternalBuffer buffer, int begin) {
+	private void assertRandomAccess(List<Long> expected, ResettableExternalBuffer buffer,
+			int begin) {
 		ResettableExternalBuffer.BufferIterator iterator = buffer.newIterator(begin);
 		assertRandomAccess(expected, iterator, begin);
 		iterator.close();
 	}
 
-	private void assertRandomAccess(List<Long> expected, ResettableExternalBuffer.BufferIterator iterator, int begin) {
+	private void assertRandomAccess(List<Long> expected,
+			ResettableExternalBuffer.BufferIterator iterator, int begin) {
 		List<Long> values = new ArrayList<>();
 		while (iterator.advanceNext()) {
 			values.add(iterator.getRow().getLong(0));
@@ -821,16 +825,16 @@ public class ResettableExternalBufferTest {
 	}
 
 	private <T extends RowData> List<RowData> insertMultiColumn(
-		ResettableExternalBuffer buffer, int cnt, Class<T> clazz)
-		throws IOException, IllegalAccessException, InstantiationException {
+			ResettableExternalBuffer buffer, int cnt, Class<T> clazz)
+			throws IOException, IllegalAccessException, InstantiationException {
 		ArrayList<RowData> expected = new ArrayList<>(cnt);
 		insertMultiColumn(buffer, cnt, expected, clazz);
 		return expected;
 	}
 
 	private <T extends RowData> void insertMultiColumn(
-		ResettableExternalBuffer buffer, int cnt, List<RowData> expected, Class<T> clazz)
-		throws IOException, IllegalAccessException, InstantiationException {
+			ResettableExternalBuffer buffer, int cnt, List<RowData> expected, Class<T> clazz)
+			throws IOException, IllegalAccessException, InstantiationException {
 		for (int i = 0; i < cnt; i++) {
 			RowData data = clazz.newInstance();
 			data.insertIntoBuffer(buffer);
@@ -838,12 +842,14 @@ public class ResettableExternalBufferTest {
 		}
 	}
 
-	private void assertMultiColumnRandomAccess(List<RowData> expected, ResettableExternalBuffer buffer) {
+	private void assertMultiColumnRandomAccess(List<RowData> expected,
+			ResettableExternalBuffer buffer) {
 		int begin = random.nextInt(buffer.size());
 		assertMultiColumnRandomAccess(expected, buffer, begin);
 	}
 
-	private void assertMultiColumnRandomAccess(List<RowData> expected, ResettableExternalBuffer buffer, int begin) {
+	private void assertMultiColumnRandomAccess(List<RowData> expected,
+			ResettableExternalBuffer buffer, int begin) {
 		ResettableExternalBuffer.BufferIterator iterator = buffer.newIterator(begin);
 		for (int i = begin; i < buffer.size(); i++) {
 			assertTrue(iterator.advanceNext());

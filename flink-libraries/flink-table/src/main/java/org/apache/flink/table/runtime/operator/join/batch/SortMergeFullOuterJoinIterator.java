@@ -20,8 +20,8 @@ package org.apache.flink.table.runtime.operator.join.batch;
 import org.apache.flink.table.codegen.Projection;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.runtime.sort.RecordComparator;
+import org.apache.flink.table.runtime.util.ResettableExternalBuffer;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
-import org.apache.flink.table.util.ResettableExternalBuffer;
 import org.apache.flink.util.MutableObjectIterator;
 
 import java.io.Closeable;

@@ -30,14 +30,11 @@ import org.apache.flink.runtime.operators.sort.IndexedSorter;
 import org.apache.flink.runtime.operators.sort.QuickSort;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.dataformat.BinaryRow;
-import org.apache.flink.table.runtime.CompressedHeaderlessChannelWriterOutputView;
+import org.apache.flink.table.runtime.util.ChannelWithMeta;
+import org.apache.flink.table.runtime.util.CompressedHeaderlessChannelWriterOutputView;
+import org.apache.flink.table.runtime.util.MemorySegmentPool;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
-import org.apache.flink.table.util.BinaryMergeIterator;
-import org.apache.flink.table.util.ChannelWithMeta;
-import org.apache.flink.table.util.MemorySegmentPool;
 import org.apache.flink.util.MutableObjectIterator;
-
-import static org.apache.flink.table.runtime.sort.BinaryExternalMerger.getSegmentsForReaders;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +43,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import static org.apache.flink.table.runtime.sort.BinaryExternalMerger.getSegmentsForReaders;
 
 /**
  * Sorter for buffered input in the form of Key-Value Style.

@@ -28,10 +28,9 @@ import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.HeaderlessChannelReaderInputView;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.memory.AbstractPagedOutputView;
-import org.apache.flink.table.runtime.CompressedHeaderlessChannelReaderInputView;
-import org.apache.flink.table.runtime.CompressedHeaderlessChannelWriterOutputView;
-import org.apache.flink.table.util.BinaryMergeIterator;
-import org.apache.flink.table.util.ChannelWithMeta;
+import org.apache.flink.table.runtime.util.ChannelWithMeta;
+import org.apache.flink.table.runtime.util.CompressedHeaderlessChannelReaderInputView;
+import org.apache.flink.table.runtime.util.CompressedHeaderlessChannelWriterOutputView;
 import org.apache.flink.util.MutableObjectIterator;
 
 import org.slf4j.Logger;

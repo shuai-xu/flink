@@ -41,9 +41,9 @@ import org.apache.flink.table.runtime.operator.StreamRecordCollector;
 import org.apache.flink.table.runtime.sort.BinaryExternalSorter;
 import org.apache.flink.table.runtime.sort.NormalizedKeyComputer;
 import org.apache.flink.table.runtime.sort.RecordComparator;
+import org.apache.flink.table.runtime.util.ResettableExternalBuffer;
 import org.apache.flink.table.typeutils.AbstractRowSerializer;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
-import org.apache.flink.table.util.ResettableExternalBuffer;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.MutableObjectIterator;
 

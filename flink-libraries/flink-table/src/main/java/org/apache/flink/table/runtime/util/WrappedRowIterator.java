@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.util;
+package org.apache.flink.table.runtime.util;
 
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.util.RowIterator;
 import org.apache.flink.util.MutableObjectIterator;
 
 import java.io.IOException;

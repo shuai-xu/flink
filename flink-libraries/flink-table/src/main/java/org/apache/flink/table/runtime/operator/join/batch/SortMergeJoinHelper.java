@@ -21,7 +21,7 @@ import org.apache.flink.table.codegen.JoinConditionFunction;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.JoinedRow;
-import org.apache.flink.table.util.ResettableExternalBuffer;
+import org.apache.flink.table.runtime.util.ResettableExternalBuffer;
 import org.apache.flink.util.Collector;
 
 import java.util.BitSet;

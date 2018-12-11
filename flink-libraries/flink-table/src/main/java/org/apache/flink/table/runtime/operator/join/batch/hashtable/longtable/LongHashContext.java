@@ -19,7 +19,7 @@
 package org.apache.flink.table.runtime.operator.join.batch.hashtable.longtable;
 
 import org.apache.flink.core.memory.MemorySegment;
-import org.apache.flink.table.util.MemorySegmentPool;
+import org.apache.flink.table.runtime.util.MemorySegmentPool;
 
 import java.io.IOException;
 

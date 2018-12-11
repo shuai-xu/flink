@@ -25,6 +25,8 @@ import org.apache.flink.runtime.io.disk.iomanager.BufferFileWriter;
 import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
+import org.apache.flink.table.runtime.util.CompressedHeaderlessChannelReaderInputView;
+import org.apache.flink.table.runtime.util.CompressedHeaderlessChannelWriterOutputView;
 
 import org.junit.After;
 import org.junit.Assert;

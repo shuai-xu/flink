@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.util;
+package org.apache.flink.table.runtime.sort;
 
 import org.apache.flink.runtime.operators.sort.MergeIterator;
 import org.apache.flink.runtime.operators.sort.PartialOrderPriorityQueue;
-import org.apache.flink.table.runtime.sort.RecordComparator;
 import org.apache.flink.util.MutableObjectIterator;
 
 import java.io.IOException;

@@ -26,7 +26,7 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.memory.MemoryAllocationException;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.table.runtime.operator.join.batch.hashtable.longtable.LongHybridHashTable;
-import org.apache.flink.table.util.MemorySegmentPool;
+import org.apache.flink.table.runtime.util.MemorySegmentPool;
 import org.apache.flink.util.MathUtils;
 
 import org.slf4j.Logger;

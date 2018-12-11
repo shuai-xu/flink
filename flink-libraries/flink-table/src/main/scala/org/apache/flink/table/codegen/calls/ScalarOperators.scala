@@ -19,7 +19,6 @@ package org.apache.flink.table.codegen.calls
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.CompletableFuture
-
 import org.apache.calcite.avatica.util.DateTimeUtils.MILLIS_PER_DAY
 import org.apache.calcite.avatica.util.{DateTimeUtils, TimeUnitRange}
 import org.apache.calcite.util.BuiltInMethod
@@ -32,10 +31,11 @@ import org.apache.flink.table.dataformat._
 import org.apache.flink.table.dataformat.{BinaryArray, BinaryArrayWriter, BinaryMap, Decimal}
 import org.apache.flink.table.functions.sql.internal.{SqlRuntimeFilterBuilderFunction, SqlRuntimeFilterFunction}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToExternal
+import org.apache.flink.table.runtime.util.RuntimeFilterUtils
 import org.apache.flink.table.typeutils.TypeCheckUtils._
 import org.apache.flink.table.typeutils._
 import org.apache.flink.table.util.StringUtils
-import org.apache.flink.table.util.{BinaryRowUtil, BloomFilter, BloomFilterAcc, RuntimeFilterUtils}
+import org.apache.flink.table.util.{BinaryRowUtil, BloomFilter, BloomFilterAcc}
 import org.apache.flink.util.SerializedValue
 
 object ScalarOperators {

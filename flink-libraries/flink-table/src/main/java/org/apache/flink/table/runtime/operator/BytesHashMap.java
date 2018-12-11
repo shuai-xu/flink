@@ -33,8 +33,6 @@ import org.apache.flink.table.util.BinaryRowUtil;
 import org.apache.flink.util.MathUtils;
 import org.apache.flink.util.MutableObjectIterator;
 
-import static org.apache.flink.util.Preconditions.checkArgument;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +40,8 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**
  * Bytes based hash table.

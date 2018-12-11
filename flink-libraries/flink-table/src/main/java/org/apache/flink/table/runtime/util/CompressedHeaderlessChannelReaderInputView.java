@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime;
+package org.apache.flink.table.runtime.util;
 
 import org.apache.flink.api.common.io.blockcompression.AbstractBlockCompressor;
 import org.apache.flink.api.common.io.blockcompression.AbstractBlockDecompressor;

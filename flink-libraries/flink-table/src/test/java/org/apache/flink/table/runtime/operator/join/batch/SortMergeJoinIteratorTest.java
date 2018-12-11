@@ -31,8 +31,8 @@ import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.runtime.operator.join.batch.Int2HashJoinOperatorTest.MyProjection;
 import org.apache.flink.table.runtime.sort.NormalizedKeyComputer;
 import org.apache.flink.table.runtime.sort.RecordComparator;
+import org.apache.flink.table.runtime.util.ResettableExternalBuffer;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
-import org.apache.flink.table.util.ResettableExternalBuffer;
 import org.apache.flink.util.MutableObjectIterator;
 
 import org.junit.Before;

@@ -27,7 +27,7 @@ import org.apache.flink.table.dataformat.{BinaryRow, GenericRow, JoinedRow}
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.runtime.operator.{AbstractStreamOperatorWithMetrics, BytesHashMap}
-import org.apache.flink.table.util.BytesHashMapSpillMemorySegmentPool
+import org.apache.flink.table.runtime.util.BytesHashMapSpillMemorySegmentPool
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
 import org.apache.calcite.rel.RelNode
