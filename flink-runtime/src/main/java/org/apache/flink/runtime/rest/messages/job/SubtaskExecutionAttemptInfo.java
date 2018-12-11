@@ -18,27 +18,31 @@
 
 package org.apache.flink.runtime.rest.messages.job;
 
+import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.AccessExecution;
-import org.apache.flink.runtime.rest.handler.util.MutableIOMetrics;
+import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.rest.messages.ResponseBody;
-import org.apache.flink.runtime.rest.messages.job.metrics.IOMetricsInfo;
+import org.apache.flink.runtime.rest.messages.json.ExecutionAttemptIDDeserializer;
+import org.apache.flink.runtime.rest.messages.json.ExecutionAttemptIDSerializer;
+import org.apache.flink.runtime.rest.messages.json.ResourceIDDeserializer;
+import org.apache.flink.runtime.rest.messages.json.ResourceIDSerializer;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 /**
  * The sub task execution attempt response.
  */
-public class SubtaskExecutionAttemptDetailsInfo implements ResponseBody {
+public class SubtaskExecutionAttemptInfo implements ResponseBody {
 
-	public static final String FIELD_NAME_SUBTASK_INDEX = "subtask";
+	public static final String FIELD_NAME_ID = "id";
 
 	public static final String FIELD_NAME_STATUS = "status";
 
@@ -50,14 +54,15 @@ public class SubtaskExecutionAttemptDetailsInfo implements ResponseBody {
 
 	public static final String FIELD_NAME_END_TIME = "end-time";
 
-	public static final String FIELD_NAME_STATE_TRANSITION_TIME = "state-transition-time";
-
 	public static final String FIELD_NAME_DURATION = "duration";
 
-	public static final String FIELD_NAME_METRICS = "metrics";
+	public static final String FIELD_NAME_FAILURE_CAUSE = "failure-cause";
 
-	@JsonProperty(FIELD_NAME_SUBTASK_INDEX)
-	private final int subtaskIndex;
+	public static final String FIELD_NAME_RESOURCE_ID = "resource-id";
+
+	@JsonProperty(FIELD_NAME_ID)
+	@JsonSerialize(using = ExecutionAttemptIDSerializer.class)
+	private final ExecutionAttemptID attemptID;
 
 	@JsonProperty(FIELD_NAME_STATUS)
 	private final ExecutionState status;
@@ -77,37 +82,40 @@ public class SubtaskExecutionAttemptDetailsInfo implements ResponseBody {
 	@JsonProperty(FIELD_NAME_DURATION)
 	private final long duration;
 
-	@JsonProperty(FIELD_NAME_STATE_TRANSITION_TIME)
-	private final Map<ExecutionState, Long> stateTransitionTime;
+	@JsonProperty(FIELD_NAME_FAILURE_CAUSE)
+	private final String failureCause;
 
-	@JsonProperty(FIELD_NAME_METRICS)
-	private final IOMetricsInfo ioMetricsInfo;
+	@JsonProperty(FIELD_NAME_RESOURCE_ID)
+	@JsonSerialize(using = ResourceIDSerializer.class)
+	private final ResourceID resourceID;
 
 	@JsonCreator
-	public SubtaskExecutionAttemptDetailsInfo(
-			@JsonProperty(FIELD_NAME_SUBTASK_INDEX) int subtaskIndex,
-			@JsonProperty(FIELD_NAME_STATUS) ExecutionState status,
-			@JsonProperty(FIELD_NAME_ATTEMPT) int attempt,
-			@JsonProperty(FIELD_NAME_HOST) String host,
-			@JsonProperty(FIELD_NAME_START_TIME) long startTime,
-			@JsonProperty(FIELD_NAME_END_TIME) long endTime,
-			@JsonProperty(FIELD_NAME_DURATION) long duration,
-			@JsonProperty(FIELD_NAME_STATE_TRANSITION_TIME) Map<ExecutionState, Long> stateTransitionTime,
-			@JsonProperty(FIELD_NAME_METRICS) IOMetricsInfo ioMetricsInfo) {
+	public SubtaskExecutionAttemptInfo(
+		@JsonDeserialize(using = ExecutionAttemptIDDeserializer.class)
+			@JsonProperty(FIELD_NAME_ID) ExecutionAttemptID attemptID,
+		@JsonProperty(FIELD_NAME_STATUS) ExecutionState status,
+		@JsonProperty(FIELD_NAME_ATTEMPT) int attempt,
+		@JsonProperty(FIELD_NAME_HOST) String host,
+		@JsonProperty(FIELD_NAME_START_TIME) long startTime,
+		@JsonProperty(FIELD_NAME_END_TIME) long endTime,
+		@JsonProperty(FIELD_NAME_DURATION) long duration,
+		@JsonProperty(FIELD_NAME_FAILURE_CAUSE) String failureCause,
+		@JsonDeserialize(using = ResourceIDDeserializer.class)
+			@JsonProperty(FIELD_NAME_RESOURCE_ID) ResourceID resourceID) {
 
-		this.subtaskIndex = subtaskIndex;
+		this.attemptID = Preconditions.checkNotNull(attemptID);
 		this.status = Preconditions.checkNotNull(status);
 		this.attempt = attempt;
 		this.host = Preconditions.checkNotNull(host);
 		this.startTime = startTime;
 		this.endTime = endTime;
 		this.duration = duration;
-		this.stateTransitionTime = stateTransitionTime;
-		this.ioMetricsInfo = Preconditions.checkNotNull(ioMetricsInfo);
+		this.failureCause = Preconditions.checkNotNull(failureCause);
+		this.resourceID = Preconditions.checkNotNull(resourceID);
 	}
 
-	public int getSubtaskIndex() {
-		return subtaskIndex;
+	public ExecutionAttemptID getAttemptID() {
+		return attemptID;
 	}
 
 	public ExecutionState getStatus() {
@@ -134,12 +142,12 @@ public class SubtaskExecutionAttemptDetailsInfo implements ResponseBody {
 		return duration;
 	}
 
-	public Map<ExecutionState, Long> getStateTransitionTime() {
-		return stateTransitionTime;
+	public String getFailureCause() {
+		return failureCause;
 	}
 
-	public IOMetricsInfo getIoMetricsInfo() {
-		return ioMetricsInfo;
+	public ResourceID getResourceID() {
+		return resourceID;
 	}
 
 	@Override
@@ -151,29 +159,31 @@ public class SubtaskExecutionAttemptDetailsInfo implements ResponseBody {
 			return false;
 		}
 
-		SubtaskExecutionAttemptDetailsInfo that = (SubtaskExecutionAttemptDetailsInfo) o;
+		SubtaskExecutionAttemptInfo that = (SubtaskExecutionAttemptInfo) o;
 
-		return subtaskIndex == that.subtaskIndex &&
+		return Objects.equals(attemptID, that.attemptID) &&
 			status == that.status &&
 			attempt == that.attempt &&
 			Objects.equals(host, that.host) &&
 			startTime == that.startTime &&
 			endTime == that.endTime &&
 			duration == that.duration &&
-			Objects.equals(ioMetricsInfo, that.ioMetricsInfo);
+			Objects.equals(failureCause, that.failureCause) &&
+			Objects.equals(resourceID, that.resourceID);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(subtaskIndex, status, attempt, host, startTime, endTime, duration, ioMetricsInfo);
+		return Objects.hash(attemptID, status, attempt, host, startTime, endTime, duration, failureCause, resourceID);
 	}
 
-	public static SubtaskExecutionAttemptDetailsInfo create(AccessExecution execution, MutableIOMetrics ioMetrics) {
+	public static SubtaskExecutionAttemptInfo create(AccessExecution execution) {
 		final ExecutionState status = execution.getState();
 		final long now = System.currentTimeMillis();
 
 		final TaskManagerLocation location = execution.getAssignedResourceLocation();
 		final String locationString = location == null ? "(unassigned)" : location.getHostname() + ":" + location.dataPort();
+		final ResourceID resourceID = location == null ? new ResourceID("(unassigned)") : location.getResourceID();
 
 		long startTime = execution.getStateTimestamp(ExecutionState.DEPLOYING);
 		if (startTime == 0) {
@@ -182,25 +192,18 @@ public class SubtaskExecutionAttemptDetailsInfo implements ResponseBody {
 		final long endTime = status.isTerminal() ? execution.getStateTimestamp(status) : -1;
 		final long duration = startTime > 0 ? ((endTime > 0 ? endTime : now) - startTime) : -1;
 
-		final IOMetricsInfo ioMetricsInfo = new IOMetricsInfo(ioMetrics);
+		final String failureCause = execution.getFailureCauseAsString();
 
-		long[] stateTimestamps = execution.getStateTimestamps();
-		Map<ExecutionState, Long> stateTransitionTime = new HashMap<>();
-
-		for (int i = 0; i < stateTimestamps.length; ++i) {
-			stateTransitionTime.put(ExecutionState.values()[i], stateTimestamps[i]);
-		}
-
-		return new SubtaskExecutionAttemptDetailsInfo(
-			execution.getParallelSubtaskIndex(),
+		return new SubtaskExecutionAttemptInfo(
+			execution.getAttemptId(),
 			status,
 			execution.getAttemptNumber(),
 			locationString,
 			startTime,
 			endTime,
 			duration,
-			stateTransitionTime,
-			ioMetricsInfo
+			failureCause,
+			resourceID
 		);
 	}
 }
