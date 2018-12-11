@@ -89,6 +89,7 @@ under the License.
 		<module>flink-yarn-shuffle</module>
 		<module>flink-catalog</module>
 		<module>flink-dist</module>
+		<module>flink-service</module>
 	</modules>
 
 	<properties>
