@@ -25,6 +25,8 @@ import org.apache.flink.runtime.state.Snapshotable;
 import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state3.keyed.KeyedState;
 import org.apache.flink.runtime.state3.keyed.KeyedStateDescriptor;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedState;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.util.Disposable;
 
 import java.util.Collection;
@@ -82,6 +84,14 @@ public interface InternalStateBackend extends Snapshotable<SnapshotResult<StateP
 	Map<String, KeyedState> getKeyedStates();
 
 	/**
+	 * Returns all sub-keyed states in this backend.
+	 *
+	 * @return All sub-keyed states in this backend.
+	 */
+	@VisibleForTesting
+	Map<String, SubKeyedState> getSubKeyedStates();
+
+	/**
 	 * Returns the keyed state with the given descriptor. The state will be
 	 * created if it has not been created by the backend.
 	 *
@@ -92,6 +102,19 @@ public interface InternalStateBackend extends Snapshotable<SnapshotResult<StateP
 	 */
 	<K, V, S extends KeyedState<K, V>> S getKeyedState(
 		KeyedStateDescriptor<K, V, S> stateDescriptor
+	);
+
+	/**
+	 * Returns the subkeyed state with the given descriptor. The state will be
+	 * created if it has not been created by the backend.
+	 *
+	 * @param stateDescriptor The descriptor of the state to be retrieved.
+	 * @param <K> Type of the keys in the state.
+	 * @param <N> Type of the namespaces in the state.
+	 * @param <V> Type of the values in the state.
+	 */
+	<K, N, V, S extends SubKeyedState<K, N, V>> S getSubKeyedState(
+		SubKeyedStateDescriptor<K, N, V, S> stateDescriptor
 	);
 
 }

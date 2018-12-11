@@ -349,7 +349,7 @@ public class NestedMapsStateTable<K, N, S> extends StateTable<K, N, S> {
 			lastKey = namespace;
 		}
 
-		map.put(lastKey, transformation.apply((S) map.get(key), value));
+		map.put(lastKey, transformation.apply((S) map.get(lastKey), value));
 	}
 
 	// Iteration  ------------------------------------------------------------------------------------------------------
@@ -372,9 +372,15 @@ public class NestedMapsStateTable<K, N, S> extends StateTable<K, N, S> {
 		Preconditions.checkNotNull(key, "No key set. This method should not be called outside of a keyed context.");
 
 		int keyGroupIndex = getKeyGroupIndex(key);
-		Map map = getMapForKeyGroup(keyGroupIndex);
+		Map keyMap = getMapForKeyGroup(keyGroupIndex);
 
-		return map == null ? Collections.emptyIterator() : map.keySet().iterator();
+		if (keyMap == null) {
+			return Collections.emptyIterator();
+		}
+
+		Map namespaceMap = (Map) keyMap.get(key);
+
+		return namespaceMap == null ? Collections.emptyIterator() : namespaceMap.keySet().iterator();
 	}
 
 	// snapshots ---------------------------------------------------------------------------------------------------

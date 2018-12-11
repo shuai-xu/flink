@@ -31,6 +31,7 @@ import org.apache.flink.runtime.state.VoidNamespaceSerializer;
 import org.apache.flink.runtime.state3.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state3.StateStorage;
 import org.apache.flink.runtime.state3.keyed.KeyedStateDescriptor;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.util.Preconditions;
 
 import org.slf4j.Logger;
@@ -102,6 +103,28 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 				descriptor.getValueSerializer(),
 				VoidNamespace.INSTANCE,
 				false,
+				asynchronousSnapshots
+			);
+			stateStorages.put(stateName, stateStorage);
+		}
+
+		return stateStorage;
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	protected StateStorage createStateStorageForSubKeyedState(SubKeyedStateDescriptor descriptor) {
+		String stateName = descriptor.getName();
+		StateStorage stateStorage = stateStorages.get(stateName);
+
+		if (stateStorage == null) {
+			stateStorage = new HeapStateStorage<>(
+				this,
+				descriptor.getKeySerializer(),
+				descriptor.getNamespaceSerializer(),
+				descriptor.getValueSerializer(),
+				null,
+				true,
 				asynchronousSnapshots
 			);
 			stateStorages.put(stateName, stateStorage);

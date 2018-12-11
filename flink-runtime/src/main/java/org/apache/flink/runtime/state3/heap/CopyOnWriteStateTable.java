@@ -500,10 +500,9 @@ public class CopyOnWriteStateTable<K, N, S> extends StateTable<K, N, S> {
 
 	private void checkKeyNamespacePreconditions(K key, N namespace) {
 		Preconditions.checkNotNull(key, "No key set. This method should not be called outside of a keyed context.");
-		if (namespace == null) {
-			int i = 0;
+		if (usingNamespace) {
+			Preconditions.checkNotNull(namespace, "Provided namespace is null.");
 		}
-		Preconditions.checkNotNull(namespace, "Provided namespace is null.");
 	}
 
 	// Iteration  ------------------------------------------------------------------------------------------------------
@@ -551,7 +550,7 @@ public class CopyOnWriteStateTable<K, N, S> extends StateTable<K, N, S> {
 			throw new UnsupportedOperationException("This method should be called with namespace supported");
 		}
 
-		Map<N, S> results = new HashMap<>();
+		final Map<N, S> results = new HashMap<>();
 
 		StateEntryIterator iterator = new StateEntryIterator();
 
@@ -562,7 +561,31 @@ public class CopyOnWriteStateTable<K, N, S> extends StateTable<K, N, S> {
 			}
 		}
 
-		return results.keySet().iterator();
+		return new Iterator<N>() {
+
+			private final K k = key;
+
+			private final Iterator<N> iterator = results.keySet().iterator();
+
+			private N namespace;
+
+			@Override
+			public boolean hasNext() {
+				return iterator.hasNext();
+			}
+
+			@Override
+			public N next() {
+				namespace = iterator.next();
+				return namespace;
+			}
+
+			@Override
+			public void remove() {
+				iterator.remove();
+				CopyOnWriteStateTable.this.remove(k, namespace);
+			}
+		};
 	}
 
 	// Private utility functions for StateTable management -------------------------------------------------------------

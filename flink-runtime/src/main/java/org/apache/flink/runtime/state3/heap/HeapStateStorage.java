@@ -52,7 +52,7 @@ public class HeapStateStorage<K, N, S> implements StateStorage<K, S>{
 		Preconditions.checkNotNull(keySerializer);
 		Preconditions.checkNotNull(stateSerializer);
 
-		this.currentNamespace = Preconditions.checkNotNull(defaultNamespace);
+		this.currentNamespace = defaultNamespace;
 
 		this.stateTable = asynchronous ?
 			new CopyOnWriteStateTable<>(
@@ -134,7 +134,7 @@ public class HeapStateStorage<K, N, S> implements StateStorage<K, S>{
 
 	@Override
 	public StorageInstance getStorageInstance() {
-		return null;
+		throw new UnsupportedOperationException("HeapStateStorage does not have StorageInstance");
 	}
 
 	/**
@@ -172,7 +172,7 @@ public class HeapStateStorage<K, N, S> implements StateStorage<K, S>{
 	 * @param namespace the namespace to set.
 	 */
 	public void setCurrentNamespace(N namespace) {
-		currentNamespace = namespace;
+		currentNamespace = Preconditions.checkNotNull(namespace);
 	}
 
 	/**

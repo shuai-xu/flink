@@ -36,6 +36,21 @@ import org.apache.flink.runtime.state3.keyed.KeyedStateDescriptor;
 import org.apache.flink.runtime.state3.keyed.KeyedValueState;
 import org.apache.flink.runtime.state3.keyed.KeyedValueStateDescriptor;
 import org.apache.flink.runtime.state3.keyed.KeyedValueStateImpl;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedListState;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedListStateDescriptor;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedListStateImpl;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedMapState;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedMapStateDescriptor;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedMapStateImpl;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedSortedMapState;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedSortedMapStateDescriptor;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedSortedMapStateImpl;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedState;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedStateBinder;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedStateDescriptor;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedValueState;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedValueStateDescriptor;
+import org.apache.flink.runtime.state3.subkeyed.SubKeyedValueStateImpl;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
 
@@ -47,7 +62,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 /**
  * The base implementation for {@link InternalStateBackend}.
  */
-public abstract class AbstractInternalStateBackend implements InternalStateBackend, KeyedStateBinder {
+public abstract class AbstractInternalStateBackend implements InternalStateBackend, KeyedStateBinder, SubKeyedStateBinder {
 
 	/**
 	 * The total number of groups in all subtasks.
@@ -83,6 +98,11 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	protected transient Map<String, KeyedState> keyedStates;
 
 	/**
+	 * The sub-keyed state backed by the backend.
+	 */
+	protected transient Map<String, SubKeyedState> subKeyedStates;
+
+	/**
 	 * Subclasses should implement this method to release unused resources.
 	 */
 	protected void closeImpl() {}
@@ -94,6 +114,14 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	 * @return The state storage described by the given descriptor.
 	 */
 	protected abstract StateStorage createStateStorageForKeyedState(KeyedStateDescriptor descriptor);
+
+	/**
+	 * Creates the state storage described by the given sub-keyed descriptor.
+	 *
+	 * @param descriptor The descriptor of the state storage to be created.
+	 * @return The state storage described by the given descriptor.
+	 */
+	protected abstract StateStorage createStateStorageForSubKeyedState(SubKeyedStateDescriptor descriptor);
 
 	//--------------------------------------------------------------------------
 
@@ -111,6 +139,7 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 
 		this.stateStorages = new HashMap<>();
 		this.keyedStates = new HashMap<>();
+		this.subKeyedStates = new HashMap<>();
 	}
 
 	@Override
@@ -138,6 +167,11 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 		return keyedStates;
 	}
 
+	@Override
+	public Map<String, SubKeyedState> getSubKeyedStates() {
+		return subKeyedStates;
+	}
+
 	//--------------------------------------------------------------------------
 
 	@Override
@@ -148,6 +182,7 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 
 		stateStorages.clear();
 		keyedStates.clear();
+		subKeyedStates.clear();
 	}
 
 	@Override
@@ -157,6 +192,15 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 		checkNotNull(keyedStateDescriptor);
 
 		return keyedStateDescriptor.bind(this);
+	}
+
+	@Override
+	public <K, N, V, S extends SubKeyedState<K, N, V>> S getSubKeyedState(
+		SubKeyedStateDescriptor<K, N, V, S> stateDescriptor
+	) {
+		checkNotNull(stateDescriptor);
+
+		return stateDescriptor.bind(this);
 	}
 
 	@Override
@@ -195,6 +239,42 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 		return state;
 	}
 
+	@Override
+	public <K, N, V> SubKeyedValueState<K, N, V> createSubKeyedValueState(SubKeyedValueStateDescriptor<K, N, V> subKeyedStateDescriptor) {
+		StateStorage stateStorage = getStateStorageForSubKeyedState(subKeyedStateDescriptor);
+		SubKeyedValueState<K, N, V> state = new SubKeyedValueStateImpl<>(subKeyedStateDescriptor, stateStorage);
+		subKeyedStates.put(subKeyedStateDescriptor.getName(), state);
+
+		return state;
+	}
+
+	@Override
+	public <K, N, E> SubKeyedListState<K, N, E> createSubKeyedListState(SubKeyedListStateDescriptor<K, N, E> subKeyedStateDescriptor) {
+		StateStorage stateStorage = getStateStorageForSubKeyedState(subKeyedStateDescriptor);
+		SubKeyedListState<K, N, E> state = new SubKeyedListStateImpl<>(subKeyedStateDescriptor, stateStorage);
+		subKeyedStates.put(subKeyedStateDescriptor.getName(), state);
+
+		return state;
+	}
+
+	@Override
+	public <K, N, MK, MV> SubKeyedMapState<K, N, MK, MV> createSubKeyedMapState(SubKeyedMapStateDescriptor<K, N, MK, MV> subKeyedStateDescriptor) {
+		StateStorage stateStorage = getStateStorageForSubKeyedState(subKeyedStateDescriptor);
+		SubKeyedMapState<K, N, MK, MV> state = new SubKeyedMapStateImpl<>(subKeyedStateDescriptor, stateStorage);
+		subKeyedStates.put(subKeyedStateDescriptor.getName(), state);
+
+		return state;
+	}
+
+	@Override
+	public <K, N, MK, MV> SubKeyedSortedMapState<K, N, MK, MV> createSubKeyedSortedMapState(SubKeyedSortedMapStateDescriptor<K, N, MK, MV> subKeyedStateDescriptor) {
+		StateStorage stateStorage = getStateStorageForSubKeyedState(subKeyedStateDescriptor);
+		SubKeyedSortedMapState<K, N, MK, MV> state = new SubKeyedSortedMapStateImpl<>(subKeyedStateDescriptor, stateStorage);
+		subKeyedStates.put(subKeyedStateDescriptor.getName(), state);
+
+		return state;
+	}
+
 	//--------------------------------------------------------------------------
 
 	private StateStorage getStateStorageForKeyedState(KeyedStateDescriptor stateDescriptor) {
@@ -210,6 +290,25 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 			}
 		} else {
 			stateStorage = createStateStorageForKeyedState(stateDescriptor);
+			stateStorages.put(stateName, stateStorage);
+		}
+
+		return stateStorage;
+	}
+
+	private StateStorage getStateStorageForSubKeyedState(SubKeyedStateDescriptor stateDescriptor) {
+		Preconditions.checkNotNull(stateDescriptor);
+
+		String stateName = stateDescriptor.getName();
+		StateStorage stateStorage = stateStorages.get(stateName);
+		if (stateStorage != null) {
+			SubKeyedState state = subKeyedStates.get(stateName);
+			Preconditions.checkNotNull(state, "Expect a created keyed state");
+			if (!state.getDescriptor().equals(stateDescriptor)) {
+				throw new StateIncompatibleAccessException(state.getDescriptor(), stateDescriptor);
+			}
+		} else {
+			stateStorage = createStateStorageForSubKeyedState(stateDescriptor);
 			stateStorages.put(stateName, stateStorage);
 		}
 
