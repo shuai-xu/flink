@@ -31,7 +31,7 @@ import static org.apache.flink.util.Preconditions.checkArgument;
  * Helper class to read {@link Buffer}s from files into objects.
  */
 public class BufferFileChannelReader {
-	private final ByteBuffer header = ByteBuffer.allocateDirect(8);
+	private final ByteBuffer header = ByteBuffer.allocate(8);
 	private final FileChannel fileChannel;
 
 	BufferFileChannelReader(FileChannel fileChannel) {

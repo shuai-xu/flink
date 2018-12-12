@@ -392,7 +392,7 @@ final class BufferWriteRequest implements WriteRequest {
 	public void write() throws IOException {
 		ByteBuffer nioBufferReadable = buffer.getNioBufferReadable();
 
-		final ByteBuffer header = ByteBuffer.allocateDirect(8);
+		final ByteBuffer header = ByteBuffer.allocate(8);
 
 		header.putInt(buffer.isBuffer() ? 1 : 0);
 		header.putInt(nioBufferReadable.remaining());
@@ -576,7 +576,7 @@ final class FileSegmentReadRequest implements ReadRequest {
 		final FileChannel fileChannel = channel.fileChannel;
 
 		if (fileChannel.size() - fileChannel.position() > 0) {
-			final ByteBuffer header = ByteBuffer.allocateDirect(8);
+			final ByteBuffer header = ByteBuffer.allocate(8);
 
 			fileChannel.read(header);
 			header.flip();
