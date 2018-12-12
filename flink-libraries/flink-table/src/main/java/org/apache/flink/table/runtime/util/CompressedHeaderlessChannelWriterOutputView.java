@@ -25,14 +25,14 @@ import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.io.disk.iomanager.BufferFileWriter;
 import org.apache.flink.runtime.io.network.buffer.BufferRecycler;
 import org.apache.flink.runtime.io.network.buffer.NetworkBuffer;
-import org.apache.flink.runtime.memory.AbstractPagedOutputView;
 
 import java.io.IOException;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
+ * Compressed output view, it use {@link BufferFileWriter} to compress and io.
  */
-public final class CompressedHeaderlessChannelWriterOutputView extends AbstractPagedOutputView implements BufferRecycler {
+public final class CompressedHeaderlessChannelWriterOutputView extends AbstractChannelWriterOutputView implements BufferRecycler {
 
 	private final MemorySegment buffer;
 	private final LinkedBlockingQueue<MemorySegment> compressedBuffers = new LinkedBlockingQueue<>();
@@ -41,12 +41,12 @@ public final class CompressedHeaderlessChannelWriterOutputView extends AbstractP
 
 	private int blockCount;
 
-	private int numBytes;
-	private int numCompressedBytes;
+	private long numBytes;
+	private long numCompressedBytes;
 
 	public CompressedHeaderlessChannelWriterOutputView(
 			BufferFileWriter writer, BlockCompressionFactory compressionCodecFactory, int compressionBlockSize) throws IOException {
-		super(compressionBlockSize, 0);
+		super(writer, compressionBlockSize, 0);
 
 		buffer = MemorySegmentFactory.wrap(new byte[segmentSize]);
 		compressor = compressionCodecFactory.getCompressor();
@@ -63,11 +63,13 @@ public final class CompressedHeaderlessChannelWriterOutputView extends AbstractP
 		}
 	}
 
-	public void close() throws IOException {
+	@Override
+	public int close() throws IOException {
 		int currentPositionInSegment = getCurrentPositionInSegment();
 		writeCompressed(buffer, currentPositionInSegment);
 		clear();
 		this.writer.close();
+		return -1;
 	}
 
 	@Override
@@ -94,14 +96,17 @@ public final class CompressedHeaderlessChannelWriterOutputView extends AbstractP
 		numCompressedBytes += compressedLen;
 	}
 
-	public int getNumBytes() {
+	@Override
+	public long getNumBytes() {
 		return numBytes;
 	}
 
-	public int getNumCompressedBytes() {
+	@Override
+	public long getNumCompressedBytes() {
 		return numCompressedBytes;
 	}
 
+	@Override
 	public int getBlockCount() {
 		return blockCount;
 	}

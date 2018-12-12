@@ -682,7 +682,6 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
     val aggBuffTerm = CodeGenUtils.newName("val")
     val binaryRow = classOf[BinaryRow].getName
 
-    val memoryPoolTypeTerm = classOf[BytesHashMapSpillMemorySegmentPool].getName
     s"""
        |  $binaryRow $lastKeyTerm = null;
        |  $kvPairTypeTerm<$binaryRow, $binaryRow> $kvPairTerm = null;
@@ -693,10 +692,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
        |  // free hash map memory, but not release back to memory manager
        |
        |  org.apache.flink.util.MutableObjectIterator<$kvPairTypeTerm<$binaryRow, $binaryRow>>
-       |    iterator = $sorterTerm.getKVIterator(
-       |    $aggregateMapTerm.getFreeMemorySegments(),
-       |    new $memoryPoolTypeTerm(
-       |      getContainingTask().getEnvironment().getMemoryManager().getPageSize()));
+       |    iterator = $sorterTerm.getKVIterator();
        |
        |  while (
        |    ($kvPairTerm = ($kvPairTypeTerm<$binaryRow, $binaryRow>) iterator.next()) != null) {

@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.sort;
+package org.apache.flink.table.runtime.util;
 
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.iomanager.BlockChannelWriter;
 import org.apache.flink.runtime.io.disk.iomanager.ChannelWriterOutputView;
-import org.apache.flink.runtime.memory.AbstractPagedOutputView;
 import org.apache.flink.util.Preconditions;
 
 import java.io.IOException;
@@ -31,7 +30,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 /**
  * Header less {@link ChannelWriterOutputView}. The caller saves the writePosition information.
  */
-public final class HeaderlessChannelWriterOutputView extends AbstractPagedOutputView {
+public final class HeaderlessChannelWriterOutputView extends AbstractChannelWriterOutputView {
 
 	private final BlockChannelWriter<MemorySegment> writer; // the writer to the channel
 
@@ -39,7 +38,7 @@ public final class HeaderlessChannelWriterOutputView extends AbstractPagedOutput
 
 	public HeaderlessChannelWriterOutputView(BlockChannelWriter<MemorySegment> writer,
 			List<MemorySegment> memory, int segmentSize) {
-		super(segmentSize, 0);
+		super(writer, segmentSize, 0);
 
 		if (writer == null) {
 			throw new NullPointerException();
@@ -71,6 +70,7 @@ public final class HeaderlessChannelWriterOutputView extends AbstractPagedOutput
 	 * Closes this OutputView, closing the underlying writer. And return number bytes in last
 	 * memory segment.
 	 */
+	@Override
 	public int close() throws IOException {
 		int currentPositionInSegment = getCurrentPositionInSegment();
 		// write last segment
@@ -83,14 +83,23 @@ public final class HeaderlessChannelWriterOutputView extends AbstractPagedOutput
 		return currentPositionInSegment;
 	}
 
-	/**
-	 * Gets the number of blocks used by this view.
-	 */
+	@Override
 	public int getBlockCount() {
 		return this.blockCount;
 	}
 
-	protected final MemorySegment nextSegment(MemorySegment current, int posInSegment) throws IOException {
+	@Override
+	public long getNumBytes() throws IOException {
+		return writer.getSize();
+	}
+
+	@Override
+	public long getNumCompressedBytes() throws IOException {
+		return writer.getSize();
+	}
+
+	@Override
+	public MemorySegment nextSegment(MemorySegment current, int posInSegment) throws IOException {
 		if (current != null) {
 			writer.writeBlock(current);
 		}

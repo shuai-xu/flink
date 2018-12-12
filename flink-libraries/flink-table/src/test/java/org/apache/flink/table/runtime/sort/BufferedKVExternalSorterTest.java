@@ -133,12 +133,7 @@ public class BufferedKVExternalSorterTest {
 			sorter.sortAndSpill(segments, recordNumberPerFile, pool);
 		}
 		Collections.sort(expected);
-		List<MemorySegment> readMemory = new ArrayList<>();
-		for (int i = 0; i < 20; i++) {
-			readMemory.add(pool.nextSegment());
-		}
-		MutableObjectIterator<Tuple2<BinaryRow, BinaryRow>> iterator =
-				sorter.getKVIterator(readMemory, pool);
+		MutableObjectIterator<Tuple2<BinaryRow, BinaryRow>> iterator = sorter.getKVIterator();
 		Tuple2<BinaryRow, BinaryRow> kv =
 				new Tuple2<>(keySerializer.createInstance(), valueSerializer.createInstance());
 		int count = 0;
