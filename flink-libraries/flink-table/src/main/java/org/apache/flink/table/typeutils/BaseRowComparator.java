@@ -43,7 +43,6 @@ import scala.Tuple2;
 /**
  * For sort by nested row field.
  */
-@Deprecated
 public class BaseRowComparator extends TypeComparator<BaseRow> {
 
 	private GeneratedRecordComparator genComparator;

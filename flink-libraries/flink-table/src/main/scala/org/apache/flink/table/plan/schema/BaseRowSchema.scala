@@ -17,12 +17,13 @@
  */
 package org.apache.flink.table.plan.schema
 
-import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.types.{BaseRowType, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, GenericRowTypeInfo}
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
+import org.apache.calcite.rel.`type`.RelDataType
 
 import scala.collection.JavaConverters._
 
@@ -87,13 +88,5 @@ class BaseRowSchema(private val logicalRowType: RelDataType) {
     */
   def projectedTypes(fields: Array[Int]): Array[TypeInformation[_]] = {
     fields.map(fieldTypeInfos(_))
-  }
-
-  /**
-    * Returns a projected [[GenericRowTypeInfo]] of the schema.
-    */
-  def projectedTypeInfo(fields: Array[Int]): GenericRowTypeInfo = {
-    val projectedTypes = fields.map(fieldTypeInfos(_))
-    new GenericRowTypeInfo(projectedTypes: _*)
   }
 }
