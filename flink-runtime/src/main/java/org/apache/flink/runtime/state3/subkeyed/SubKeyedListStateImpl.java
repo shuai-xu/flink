@@ -18,18 +18,31 @@
 
 package org.apache.flink.runtime.state3.subkeyed;
 
+import org.apache.flink.api.common.functions.HashPartitioner;
+import org.apache.flink.api.common.typeutils.SerializationException;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.state.StateAccessException;
+import org.apache.flink.runtime.state3.AbstractInternalStateBackend;
+import org.apache.flink.runtime.state3.StateSerializerUtil;
 import org.apache.flink.runtime.state3.StateStorage;
+import org.apache.flink.runtime.state3.StorageIterator;
 import org.apache.flink.runtime.state3.heap.HeapStateStorage;
+import org.apache.flink.types.Pair;
 import org.apache.flink.util.Preconditions;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  * An implementation of {@link SubKeyedListState} backed by a state storage.
@@ -47,13 +60,39 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 	/**
 	 * The descriptor of this state.
 	 */
-	private final SubKeyedListStateDescriptor descriptor;
+	private final SubKeyedListStateDescriptor<K, N, E> descriptor;
 
 	/**
 	 * The state storage where the values are stored.
 	 */
 	private final StateStorage stateStorage;
 
+	/**
+	 * The state descriptor associated with the current state.
+	 */
+	private AbstractInternalStateBackend internalStateBackend;
+
+	/**
+	 * Serializer of key for current state.
+	 */
+	private TypeSerializer<K> keySerializer;
+
+	/**
+	 * Serializer of namespace for current state.
+	 */
+	private TypeSerializer<N> namespaceSerializer;
+
+	/**
+	 * Serializer of list element for current state.
+	 */
+	private TypeSerializer<E> elementSerializer;
+
+	/**
+	 * Serialized bytes of current state name.
+	 */
+	private byte[] stateNameByte;
+
+	protected final HashPartitioner partitioner = HashPartitioner.INSTANCE;
 	//--------------------------------------------------------------------------
 
 	/**
@@ -62,11 +101,24 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 	 * @param stateStorage The state storage where elements are stored.
 	 */
 	public SubKeyedListStateImpl(
-		SubKeyedListStateDescriptor descriptor,
+		AbstractInternalStateBackend internalStateBackend,
+		SubKeyedListStateDescriptor<K, N, E> descriptor,
 		StateStorage stateStorage
 	) {
+		this.internalStateBackend = Preconditions.checkNotNull(internalStateBackend);
 		this.descriptor = Preconditions.checkNotNull(descriptor);
 		this.stateStorage = Preconditions.checkNotNull(stateStorage);
+
+		this.keySerializer = descriptor.getKeySerializer();
+		this.namespaceSerializer = descriptor.getNamespaceSerializer();
+		this.elementSerializer = descriptor.getElementSerializer();
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		try {
+			StringSerializer.INSTANCE.serialize(descriptor.getName(), new DataOutputViewStreamWrapper(out));
+			stateNameByte = out.toByteArray();
+		} catch (IOException e) {
+			throw new SerializationException(e);
+		}
 	}
 
 	@Override
@@ -86,7 +138,13 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 			if (stateStorage.lazySerde()) {
 				return getOrDefault(key, namespace, null) != null;
 			} else {
-				return false;
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedValueState(key,
+					keySerializer,
+					namespace,
+					namespaceSerializer,
+					getKeyGroup(key),
+					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+				return stateStorage.get(serializedKey) != null;
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);
@@ -111,7 +169,18 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 				List<E> value = (List<E>) heapStateStorage.get(key);
 				return value == null ? defaultList : value;
 			} else {
-				return null;
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedValueState(key,
+					keySerializer,
+					namespace,
+					namespaceSerializer,
+					getKeyGroup(key),
+					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
+				if (serializedValue == null) {
+					return defaultList;
+				} else {
+					return StateSerializerUtil.getDeserializeList(serializedValue, elementSerializer);
+				}
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);
@@ -129,7 +198,28 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 			if (stateStorage.lazySerde()) {
 				return ((HeapStateStorage) stateStorage).getAll(key);
 			} else {
-				return null;
+				Map<N, List<E>> result = new HashMap<>();
+
+				byte[] prefix = StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					key,
+					keySerializer,
+					getKeyGroup(key), stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+				StorageIterator<byte[], byte[]> iterator = stateStorage.prefixIterator(prefix);
+				while (iterator.hasNext()) {
+					Pair<byte[], byte[]> pair = iterator.next();
+					byte[] byteKey = pair.getKey();
+					byte[] byteValue = pair.getValue();
+
+					N currentNamespace = StateSerializerUtil.getDeserializedNamespcae(
+											byteKey,
+											keySerializer,
+											namespaceSerializer,
+											stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
+					List<E> currentValue = StateSerializerUtil.getDeserializeList(byteValue, elementSerializer);
+					result.put(currentNamespace, currentValue);
+				}
+
+				return result;
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);
@@ -153,6 +243,14 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 				}
 				list.add(element);
 			} else {
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedListState(key,
+					descriptor.getKeySerializer(),
+					namespace,
+					descriptor.getNamespaceSerializer(),
+					getKeyGroup(key),
+					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+				byte[] serializedValue = StateSerializerUtil.getSerializeSingleValue(element, elementSerializer);
+				stateStorage.merge(serializedKey, serializedValue);
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);
@@ -184,6 +282,15 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 					return previousState;
 				});
 			} else {
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedListState(key,
+					descriptor.getKeySerializer(),
+					namespace,
+					descriptor.getNamespaceSerializer(),
+					getKeyGroup(key),
+					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+
+				byte[] preMergedValue = StateSerializerUtil.getPreMergedList(elements, elementSerializer);
+				stateStorage.merge(serializedKey, preMergedValue);
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);
@@ -202,6 +309,14 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 				heapStateStorage.setCurrentNamespace(namespace);
 				heapStateStorage.put(key, Arrays.asList(element));
 			} else {
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedListState(key,
+					descriptor.getKeySerializer(),
+					namespace,
+					descriptor.getNamespaceSerializer(),
+					getKeyGroup(key),
+					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+				byte[] serilizedValue = StateSerializerUtil.getSerializeSingleValue(element, elementSerializer);
+				stateStorage.put(serializedKey, serilizedValue);
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);
@@ -229,6 +344,14 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 				}
 				heapStateStorage.put(key, list);
 			} else {
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedListState(key,
+					descriptor.getKeySerializer(),
+					namespace,
+					descriptor.getNamespaceSerializer(),
+					getKeyGroup(key),
+					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+				byte[] preMergedValue = StateSerializerUtil.getPreMergedList(elements, elementSerializer);
+				stateStorage.put(serializedKey, preMergedValue);
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);
@@ -247,6 +370,13 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 				heapStateStorage.setCurrentNamespace(namespace);
 				heapStateStorage.remove(key);
 			} else {
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedListState(key,
+					descriptor.getKeySerializer(),
+					namespace,
+					descriptor.getNamespaceSerializer(),
+					getKeyGroup(key),
+					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+				stateStorage.remove(serializedKey);
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);
@@ -273,7 +403,25 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 				}
 				return success;
 			} else {
-				return false;
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedListState(key,
+					descriptor.getKeySerializer(),
+					namespace,
+					descriptor.getNamespaceSerializer(),
+					getKeyGroup(key),
+					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+				byte[] byteValue = (byte[]) stateStorage.get(serializedKey);
+				if (byteValue == null) {
+					return false;
+				} else {
+					List<E> list = StateSerializerUtil.getDeserializeList(byteValue, elementSerializer);
+					boolean success = list.remove(elementToRemove);
+					if (list.isEmpty()) {
+						stateStorage.remove(serializedKey);
+					} else {
+						putAll(key, namespace, list);
+					}
+					return success;
+				}
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);
@@ -300,7 +448,25 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 				}
 				return success;
 			} else {
-				return false;
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedListState(key,
+					descriptor.getKeySerializer(),
+					namespace,
+					descriptor.getNamespaceSerializer(),
+					getKeyGroup(key),
+					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+				byte[] byteValue = (byte[]) stateStorage.get(serializedKey);
+				if (byteValue == null) {
+					return false;
+				} else {
+					List<E> list = StateSerializerUtil.getDeserializeList(byteValue, elementSerializer);
+					boolean success = list.removeAll(elements);
+					if (list.isEmpty()) {
+						stateStorage.remove(serializedKey);
+					} else {
+						putAll(key, namespace, list);
+					}
+					return success;
+				}
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);
@@ -317,7 +483,15 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 			if (stateStorage.lazySerde()) {
 				((HeapStateStorage) stateStorage).removeAll(key);
 			} else {
-
+				byte[] prefix = StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					key,
+					keySerializer,
+					getKeyGroup(key), stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+				StorageIterator<byte[], byte[]> iterator = stateStorage.prefixIterator(prefix);
+				while (iterator.hasNext()) {
+					Pair<byte[], byte[]> pair = iterator.next();
+					stateStorage.remove(pair.getKey());
+				}
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);
@@ -332,7 +506,41 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 			if (stateStorage.lazySerde()) {
 				return ((HeapStateStorage) stateStorage).namespaceIterator(key);
 			} else {
-				return null;
+				byte[] prefix = StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					key,
+					keySerializer,
+					getKeyGroup(key), stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+				StorageIterator<byte[], byte[]> iterator = stateStorage.prefixIterator(prefix);
+
+				return new Iterator<N>() {
+					@Override
+					public boolean hasNext() {
+						return iterator.hasNext();
+					}
+
+					@Override
+					public N next() {
+						try {
+							if (iterator.hasNext()) {
+								N namespace = StateSerializerUtil.getDeserializedNamespcae(
+									iterator.next().getKey(),
+									keySerializer,
+									namespaceSerializer,
+									stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
+								return namespace;
+							} else {
+								throw new NoSuchElementException();
+							}
+						} catch (IOException e) {
+							throw new StateAccessException(e);
+						}
+					}
+
+					@Override
+					public void remove() {
+						iterator.remove();
+					}
+				};
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);
@@ -359,7 +567,22 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 
 				return element;
 			} else {
-				return null;
+				List<E> list = get(key, namespace);
+				if (list == null) {
+					return null;
+				}
+				Iterator<E> iterator = list.iterator();
+				E result = null;
+				if (iterator.hasNext()) {
+					result = iterator.next();
+					iterator.remove();
+				}
+				if (list.isEmpty()) {
+					remove(key, namespace);
+				} else {
+					putAll(key, namespace, list);
+				}
+				return result;
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);
@@ -373,12 +596,24 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 				List<E> list = get(key, namespace);
 				return list == null ? null : list.get(0);
 			} else {
-				return null;
+				List<E> list = get(key, namespace);
+				if (list == null) {
+					return null;
+				}
+				Iterator<E> iterator = list.iterator();
+				E result = null;
+				if (iterator.hasNext()) {
+					result = iterator.next();
+				}
+				return result;
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);
 		}
 	}
 
+	private <K> int getKeyGroup(K key) {
+		return partitioner.partition(key, internalStateBackend.getNumGroups());
+	}
 }
 

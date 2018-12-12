@@ -68,29 +68,31 @@ public class RocksDbStateStorage implements StateStorage<byte[], byte[]> {
 
 	@Override
 	public Pair<byte[], byte[]> firstEntry(byte[] prefixKeys) {
-		RocksIterator iterator = storageInstance.iterator();
-		iterator.seek(prefixKeys);
 
-		if (iterator.isValid()) {
-			return new RocksDbPair(storageInstance, iterator.key(), iterator.value());
-		} else {
-			return null;
+		try (RocksIterator iterator = storageInstance.iterator()) {
+			iterator.seek(prefixKeys);
+			if (iterator.isValid()) {
+				return new RocksDbPair(storageInstance, iterator.key(), iterator.value());
+			} else {
+				return null;
+			}
 		}
 	}
 
 	@Override
 	public Pair<byte[], byte[]> lastEntry(byte[] prefixKeys) {
-		RocksIterator iterator = storageInstance.iterator();
-		iterator.seek(prefixKeys);
-		if (iterator.isValid()) {
-			iterator.prev();
-		} else {
-			iterator.seekToLast();
-		}
-		if (iterator.isValid()) {
-			return new RocksDbPair(storageInstance, iterator.key(), iterator.value());
-		} else {
-			return null;
+		try (RocksIterator iterator = storageInstance.iterator()) {
+			iterator.seek(prefixKeys);
+			if (iterator.isValid()) {
+				iterator.prev();
+			} else {
+				iterator.seekToLast();
+			}
+			if (iterator.isValid()) {
+				return new RocksDbPair(storageInstance, iterator.key(), iterator.value());
+			} else {
+				return null;
+			}
 		}
 	}
 

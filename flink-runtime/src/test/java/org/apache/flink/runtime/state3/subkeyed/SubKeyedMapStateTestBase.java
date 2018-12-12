@@ -106,7 +106,7 @@ public abstract class SubKeyedMapStateTestBase {
 				int numMappings = random.nextInt(9) + 1;
 				Map<Integer, Float> mappings = new HashMap<>(numMappings);
 				for (int k = 0; k < numMappings; ++k) {
-					Float mapValue = (i == 0 && j == 0) ? null : random.nextFloat();
+					Float mapValue = random.nextFloat();
 					mappings.put(k, mapValue);
 				}
 
@@ -371,7 +371,7 @@ public abstract class SubKeyedMapStateTestBase {
 				int numMappings = random.nextInt(9) + 1;
 				Map<Integer, Float> mappings = new HashMap<>(numMappings);
 				for (int k = 0; k < numMappings; ++k) {
-					Float element = (i == 0 && j == 0) ? null : random.nextFloat();
+					Float element = random.nextFloat();
 					state.add(i, namespace, k, element);
 					mappings.put(k, element);
 				}
@@ -667,7 +667,7 @@ public abstract class SubKeyedMapStateTestBase {
 				int numMappings = random.nextInt(9) + 1;
 				Map<Integer, Float> mappings = new HashMap<>(numMappings);
 				for (int k = 0; k < numMappings; ++k) {
-					Float mapValue = (i == 0 && j == 0) ? null : random.nextFloat();
+					Float mapValue = random.nextFloat();
 					mappings.put(k, mapValue);
 				}
 

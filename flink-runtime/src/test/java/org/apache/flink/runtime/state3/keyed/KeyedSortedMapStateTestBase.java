@@ -90,7 +90,7 @@ public abstract class KeyedSortedMapStateTestBase {
 	@Test
 	public void testKeyAccess() {
 		KeyedSortedMapStateDescriptor<Integer, Integer, Float> descriptor =
-			new KeyedSortedMapStateDescriptor<>("test", IntSerializer.INSTANCE,
+			new KeyedSortedMapStateDescriptor<>("keyAccess", IntSerializer.INSTANCE,
 				new NaturalComparator<>(), IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
 
 		KeyedSortedMapState<Integer, Integer, Float> state = backend.getKeyedState(descriptor);
@@ -103,7 +103,7 @@ public abstract class KeyedSortedMapStateTestBase {
 
 			SortedMap<Integer, Float> mappings = new TreeMap<>();
 			for (int j = 0; j < numMappings; j++) {
-				Float mapValue = (i == 0 && j == 0) ? null : random.nextFloat();
+				Float mapValue = random.nextFloat();
 				mappings.put(j, mapValue);
 			}
 
@@ -259,7 +259,7 @@ public abstract class KeyedSortedMapStateTestBase {
 	@Test
 	public void testMapKeyAccess() {
 		KeyedSortedMapStateDescriptor<Integer, Integer, Float> descriptor =
-			new KeyedSortedMapStateDescriptor<>("test", IntSerializer.INSTANCE,
+			new KeyedSortedMapStateDescriptor<>("mapKeyAccess", IntSerializer.INSTANCE,
 				new NaturalComparator<>(), IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
 
 		KeyedSortedMapState<Integer, Integer, Float> state = backend.getKeyedState(descriptor);
@@ -274,7 +274,7 @@ public abstract class KeyedSortedMapStateTestBase {
 
 			SortedMap<Integer, Float> mappings = new TreeMap<>();
 			for (int j = 0; j < numMappings; j++) {
-				Float value = (i == 0 && j == 0) ? null : random.nextFloat();
+				Float value = random.nextFloat();
 
 				state.add(i, j, value);
 				mappings.put(j, value);
@@ -524,7 +524,7 @@ public abstract class KeyedSortedMapStateTestBase {
 	@Test
 	public void testBoundAccess() {
 		KeyedSortedMapStateDescriptor<Integer, Integer, Float> descriptor =
-			new KeyedSortedMapStateDescriptor<>("test", IntSerializer.INSTANCE,
+			new KeyedSortedMapStateDescriptor<>("boundaccess", IntSerializer.INSTANCE,
 				BytewiseComparator.INT_INSTANCE, IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
 
 		KeyedSortedMapState<Integer, Integer, Float> state = backend.getKeyedState(descriptor);
@@ -572,7 +572,7 @@ public abstract class KeyedSortedMapStateTestBase {
 	@Test
 	public void testIterator() {
 		KeyedSortedMapStateDescriptor<Integer, Integer, Float> descriptor =
-			new KeyedSortedMapStateDescriptor<>("test", IntSerializer.INSTANCE,
+			new KeyedSortedMapStateDescriptor<>("iteratortest", IntSerializer.INSTANCE,
 				BytewiseComparator.INT_INSTANCE, IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
 
 		KeyedSortedMapState<Integer, Integer, Float> state = backend.getKeyedState(descriptor);

@@ -18,9 +18,15 @@
 
 package org.apache.flink.runtime.state3.keyed;
 
+import org.apache.flink.api.common.typeutils.SerializationException;
+import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
+import org.apache.flink.runtime.state3.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state3.StateStorage;
 import org.apache.flink.util.Preconditions;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,17 +44,32 @@ public final class KeyedMapStateImpl<K, MK, MV>
 	/**
 	 * The descriptor of current state.
 	 */
-	private KeyedMapStateDescriptor stateDescriptor;
+	private KeyedMapStateDescriptor<K, MK, MV> stateDescriptor;
 
 	/**
 	 * Constructor with the state storage to store mappings.
 	 *
+	 * @param internalStateBackend The state backend who creates the current state.
+	 * @param descriptor The descriptor of current state.
 	 * @param stateStorage The state storage where mappings are stored.
 	 */
-	public KeyedMapStateImpl(KeyedMapStateDescriptor descriptor, StateStorage stateStorage) {
-		super(stateStorage);
+	public KeyedMapStateImpl(
+		AbstractInternalStateBackend internalStateBackend,
+		KeyedMapStateDescriptor<K, MK, MV> descriptor,
+		StateStorage stateStorage) {
+		super(internalStateBackend, stateStorage);
 
 		this.stateDescriptor = Preconditions.checkNotNull(descriptor);
+		this.keySerializer = descriptor.getKeySerializer();
+		this.mapKeySerializer = descriptor.getMapKeySerializer();
+		this.mapValueSerializer = descriptor.getMapValueSerializer();
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		try {
+			StringSerializer.INSTANCE.serialize(descriptor.getName(), new DataOutputViewStreamWrapper(out));
+			stateNameByte = out.toByteArray();
+		} catch (IOException e) {
+			throw new SerializationException(e);
+		}
 	}
 
 	@Override

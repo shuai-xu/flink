@@ -18,6 +18,9 @@
 
 package org.apache.flink.runtime.state3.subkeyed;
 
+import org.apache.flink.api.common.typeutils.SerializationException;
+import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.runtime.state3.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state3.StateStorage;
 import org.apache.flink.util.Preconditions;
 
@@ -47,12 +50,24 @@ public final class SubKeyedMapStateImpl<K, N, MK, MV>
 	 * @param stateStorage The state storage where mappings are stored.
 	 */
 	public SubKeyedMapStateImpl(
+		AbstractInternalStateBackend internalStateBackend,
 		SubKeyedMapStateDescriptor descriptor,
 		StateStorage stateStorage
 	) {
-		super(stateStorage);
+		super(internalStateBackend, stateStorage);
 
 		this.stateDescriptor = Preconditions.checkNotNull(descriptor);
+		this.keySerializer = descriptor.getKeySerializer();
+		this.namespaceSerializer = descriptor.getNamespaceSerializer();
+		this.mapKeySerializer = descriptor.getMapKeySerializer();
+		this.mapValueSerializer = descriptor.getMapValueSerializer();
+		try {
+			outputStream.reset();
+			StringSerializer.INSTANCE.serialize(descriptor.getName(), outputView);
+			stateNameByte = outputStream.toByteArray();
+		} catch (Exception e) {
+			throw new SerializationException(e);
+		}
 	}
 
 	@Override

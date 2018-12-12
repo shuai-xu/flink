@@ -99,7 +99,7 @@ public abstract class KeyedMapStateTestBase {
 
 			Map<Integer, Float> mappings = new HashMap<>();
 			for (int j = 0; j < numMappings; j++) {
-				Float mapValue = (i == 0 && j == 0) ? null : random.nextFloat();
+				Float mapValue = random.nextFloat();
 				mappings.put(j, mapValue);
 			}
 
@@ -327,7 +327,7 @@ public abstract class KeyedMapStateTestBase {
 
 			Map<Integer, Float> mappings = new HashMap<>();
 			for (int j = 0; j < numMappings; j++) {
-				Float value = (i == 0 && j == 0) ? null : random.nextFloat();
+				Float value = random.nextFloat();
 
 				state.add(i, j, value);
 				mappings.put(j, value);
@@ -632,7 +632,7 @@ public abstract class KeyedMapStateTestBase {
 
 			Map<Integer, Float> mappings = new HashMap<>();
 			for (int j = 0; j < numMappings; j++) {
-				Float value = (i == 0 && j == 0) ? null : random.nextFloat();
+				Float value = random.nextFloat();
 
 				state.add(i, j, value);
 				mappings.put(j, value);
@@ -790,7 +790,7 @@ public abstract class KeyedMapStateTestBase {
 
 			Map<Integer, Float> mappings = new HashMap<>();
 			for (int j = 0; j < numMappings; j++) {
-				Float mapValue = (i == 0 && j == 0) ? null : random.nextFloat();
+				Float mapValue = random.nextFloat();
 				mappings.put(j, mapValue);
 			}
 

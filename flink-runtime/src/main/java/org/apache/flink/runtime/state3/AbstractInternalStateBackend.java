@@ -206,7 +206,7 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	@Override
 	public <K, V> KeyedValueState<K, V> createKeyedValueState(KeyedValueStateDescriptor<K, V> keyedStateDescriptor) {
 		StateStorage stateStorage = getStateStorageForKeyedState(keyedStateDescriptor);
-		KeyedValueState<K, V> state = new KeyedValueStateImpl<>(keyedStateDescriptor, stateStorage);
+		KeyedValueState<K, V> state = new KeyedValueStateImpl<>(this, keyedStateDescriptor, stateStorage);
 		keyedStates.put(keyedStateDescriptor.getName(), state);
 
 		return state;
@@ -215,7 +215,7 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	@Override
 	public <K, E> KeyedListState<K, E> createKeyedListState(KeyedListStateDescriptor<K, E> keyedStateDescriptor) {
 		StateStorage stateStorage = getStateStorageForKeyedState(keyedStateDescriptor);
-		KeyedListState<K, E> state = new KeyedListStateImpl<>(keyedStateDescriptor, stateStorage);
+		KeyedListState<K, E> state = new KeyedListStateImpl<>(this, keyedStateDescriptor, stateStorage);
 		keyedStates.put(keyedStateDescriptor.getName(), state);
 
 		return state;
@@ -224,7 +224,7 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	@Override
 	public <K, MK, MV> KeyedMapState<K, MK, MV> createKeyedMapState(KeyedMapStateDescriptor<K, MK, MV> keyedStateDescriptor) {
 		StateStorage stateStorage = getStateStorageForKeyedState(keyedStateDescriptor);
-		KeyedMapState<K, MK, MV> state = new KeyedMapStateImpl<>(keyedStateDescriptor, stateStorage);
+		KeyedMapState<K, MK, MV> state = new KeyedMapStateImpl<>(this, keyedStateDescriptor, stateStorage);
 		keyedStates.put(keyedStateDescriptor.getName(), state);
 
 		return state;
@@ -233,7 +233,7 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	@Override
 	public <K, MK, MV> KeyedSortedMapState<K, MK, MV> createKeyedSortedMapState(KeyedSortedMapStateDescriptor<K, MK, MV> keyedStateDescriptor) {
 		StateStorage stateStorage = getStateStorageForKeyedState(keyedStateDescriptor);
-		KeyedSortedMapState<K, MK, MV> state = new KeyedSortedMapStateImpl<>(keyedStateDescriptor, stateStorage);
+		KeyedSortedMapState<K, MK, MV> state = new KeyedSortedMapStateImpl<>(this, keyedStateDescriptor, stateStorage);
 		keyedStates.put(keyedStateDescriptor.getName(), state);
 
 		return state;
@@ -242,7 +242,7 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	@Override
 	public <K, N, V> SubKeyedValueState<K, N, V> createSubKeyedValueState(SubKeyedValueStateDescriptor<K, N, V> subKeyedStateDescriptor) {
 		StateStorage stateStorage = getStateStorageForSubKeyedState(subKeyedStateDescriptor);
-		SubKeyedValueState<K, N, V> state = new SubKeyedValueStateImpl<>(subKeyedStateDescriptor, stateStorage);
+		SubKeyedValueState<K, N, V> state = new SubKeyedValueStateImpl<>(this, subKeyedStateDescriptor, stateStorage);
 		subKeyedStates.put(subKeyedStateDescriptor.getName(), state);
 
 		return state;
@@ -251,7 +251,7 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	@Override
 	public <K, N, E> SubKeyedListState<K, N, E> createSubKeyedListState(SubKeyedListStateDescriptor<K, N, E> subKeyedStateDescriptor) {
 		StateStorage stateStorage = getStateStorageForSubKeyedState(subKeyedStateDescriptor);
-		SubKeyedListState<K, N, E> state = new SubKeyedListStateImpl<>(subKeyedStateDescriptor, stateStorage);
+		SubKeyedListState<K, N, E> state = new SubKeyedListStateImpl<>(this, subKeyedStateDescriptor, stateStorage);
 		subKeyedStates.put(subKeyedStateDescriptor.getName(), state);
 
 		return state;
@@ -260,7 +260,7 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	@Override
 	public <K, N, MK, MV> SubKeyedMapState<K, N, MK, MV> createSubKeyedMapState(SubKeyedMapStateDescriptor<K, N, MK, MV> subKeyedStateDescriptor) {
 		StateStorage stateStorage = getStateStorageForSubKeyedState(subKeyedStateDescriptor);
-		SubKeyedMapState<K, N, MK, MV> state = new SubKeyedMapStateImpl<>(subKeyedStateDescriptor, stateStorage);
+		SubKeyedMapState<K, N, MK, MV> state = new SubKeyedMapStateImpl<>(this, subKeyedStateDescriptor, stateStorage);
 		subKeyedStates.put(subKeyedStateDescriptor.getName(), state);
 
 		return state;
@@ -269,7 +269,7 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	@Override
 	public <K, N, MK, MV> SubKeyedSortedMapState<K, N, MK, MV> createSubKeyedSortedMapState(SubKeyedSortedMapStateDescriptor<K, N, MK, MV> subKeyedStateDescriptor) {
 		StateStorage stateStorage = getStateStorageForSubKeyedState(subKeyedStateDescriptor);
-		SubKeyedSortedMapState<K, N, MK, MV> state = new SubKeyedSortedMapStateImpl<>(subKeyedStateDescriptor, stateStorage);
+		SubKeyedSortedMapState<K, N, MK, MV> state = new SubKeyedSortedMapStateImpl<>(this, subKeyedStateDescriptor, stateStorage);
 		subKeyedStates.put(subKeyedStateDescriptor.getName(), state);
 
 		return state;

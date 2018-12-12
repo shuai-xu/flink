@@ -127,7 +127,7 @@ public class RocksDbStorageInstance implements StorageInstance, AutoCloseable {
 	}
 
 	@Override
-	public void close() throws Exception {
+	public void close() {
 		IOUtils.closeQuietly(columnFamilyHandle);
 		IOUtils.closeQuietly(writeOptions);
 	}
