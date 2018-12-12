@@ -42,6 +42,8 @@ import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.catalog.ExternalCatalogTable;
+import org.apache.flink.table.catalog.ObjectPath;
+import org.apache.flink.table.catalog.ReadableWritableCatalog;
 import org.apache.flink.table.client.gateway.SqlExecutionException;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.errorcode.TableErrors;
@@ -142,8 +144,13 @@ public class SqlJobUtil {
 				offset,
 				now,
 				now);
-		tableEnv.registerExternalTable(
-				null, tableName, externalCatalogTable, true);
+
+		ReadableWritableCatalog catalog = (ReadableWritableCatalog) tableEnv.getCatalog(tableEnv.getDefaultCatalogName());
+		// TODO: need to consider if a default db doesn't exist
+		catalog.createTable(
+			new ObjectPath(tableEnv.getDefaultDatabaseName(), tableName),
+			externalCatalogTable,
+			true);
 	}
 
 	/**
