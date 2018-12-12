@@ -711,10 +711,6 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 			ResourceID taskExecutorResourceId,
 			int dataPort,
 			HardwareDescription hardwareDescription) {
-		WorkerRegistration<WorkerType> oldRegistration = taskExecutors.remove(taskExecutorResourceId);
-		if (oldRegistration != null) {
-			log.info("Will merging slot state of old instance of worker for ResourceID {}", taskExecutorResourceId);
-		}
 
 		final WorkerType newWorker = workerStarted(taskExecutorResourceId);
 
@@ -723,23 +719,29 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 				"not recognize it", taskExecutorResourceId, taskExecutorAddress);
 			return new RegistrationResponse.Decline("unrecognized TaskExecutor");
 		} else {
-			WorkerRegistration<WorkerType> registration =
-				new WorkerRegistration<>(taskExecutorGateway, newWorker, dataPort, hardwareDescription);
+			WorkerRegistration<WorkerType> registration = taskExecutors.get(taskExecutorResourceId);
+			if (registration != null &&
+					taskManagerHeartbeatManager.getLastHeartbeatFrom(taskExecutorResourceId) >= 0) {
+				log.info("The TaskExecutor {} has already registered and kept heartbeat, so will ignore " +
+						"and use original instance id {}", taskExecutorResourceId, registration.getInstanceID());
+			} else {
+				registration = new WorkerRegistration<>(taskExecutorGateway, newWorker, dataPort, hardwareDescription);
 
-			taskExecutors.put(taskExecutorResourceId, registration);
+				taskExecutors.put(taskExecutorResourceId, registration);
 
-			taskManagerHeartbeatManager.monitorTarget(taskExecutorResourceId, new HeartbeatTarget<Void>() {
-				@Override
-				public void receiveHeartbeat(ResourceID resourceID, Void payload) {
-					// the ResourceManager will always send heartbeat requests to the
-					// TaskManager
-				}
+				taskManagerHeartbeatManager.monitorTarget(taskExecutorResourceId, new HeartbeatTarget<Void>() {
+					@Override
+					public void receiveHeartbeat(ResourceID resourceID, Void payload) {
+						// the ResourceManager will always send heartbeat requests to the
+						// TaskManager
+					}
 
-				@Override
-				public void requestHeartbeat(ResourceID resourceID, Void payload) {
-					taskExecutorGateway.heartbeatFromResourceManager(resourceID);
-				}
-			});
+					@Override
+					public void requestHeartbeat(ResourceID resourceID, Void payload) {
+						taskExecutorGateway.heartbeatFromResourceManager(resourceID);
+					}
+				});
+			}
 
 			return new TaskExecutorRegistrationSuccess(
 				registration.getInstanceID(),
