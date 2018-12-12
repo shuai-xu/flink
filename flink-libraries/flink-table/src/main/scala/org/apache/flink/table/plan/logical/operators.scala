@@ -171,9 +171,6 @@ case class Limit(offset: Int, fetch: Int = -1, child: LogicalNode) extends Unary
     if (tableEnv.isInstanceOf[StreamTableEnvironment]) {
       failValidation(s"Limit on stream tables is currently not supported.")
     }
-    if (!child.isInstanceOf[Sort]) {
-      failValidation(s"Limit operator must be preceded by an OrderBy operator.")
-    }
     if (offset < 0) {
       failValidation(s"Offset should be greater than or equal to zero.")
     }

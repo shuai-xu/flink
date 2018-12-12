@@ -19,6 +19,7 @@
 package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.api.java.typeutils.RowTypeInfo
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.util.TestLimitableTableSource
@@ -76,6 +77,17 @@ class LimitITCase extends QueryTest {
       5)
     checkSize(
       "SELECT * FROM LimitTable LIMIT 5",
+      5)
+  }
+
+  @Test
+  def testTableLimit(): Unit = {
+    Assert.assertEquals(
+      executeQuery(tEnv.scan("Table3").fetch(5)).size,
+      5)
+
+    Assert.assertEquals(
+      executeQuery(tEnv.scan("LimitTable").fetch(5)).size,
       5)
   }
 
