@@ -107,4 +107,11 @@ class JoinValidationTest extends TableTestBase {
 
     streamUtil.explainSql(sql)
   }
+
+  /** Validates that Rowtime attributes is in the input rows of a regular join */
+  @Test(expected = classOf[TableException])
+  def testRowTimeAttributeAsJoinInput(): Unit = {
+    val sql = "SELECT MyTable.* from MyTable, MyTable2 where MyTable.a = MyTable2.a"
+    streamUtil.explainSql(sql)
+  }
 }

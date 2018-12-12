@@ -18,20 +18,21 @@
 
 package org.apache.flink.table.plan.rules.physical.stream
 
-import java.util
-
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelTraitSet}
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.convert.ConverterRule
-import org.apache.calcite.rel.core.{JoinInfo, JoinRelType}
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecJoin
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalDimensionTableSourceScan, FlinkLogicalJoin}
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecJoin
 import org.apache.flink.table.runtime.join.WindowJoinUtil
+
+import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelTraitSet}
+import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.convert.ConverterRule
+import org.apache.calcite.rel.core.JoinInfo
+
+import java.util
 
 import scala.collection.JavaConversions._
 
@@ -46,14 +47,16 @@ class StreamExecJoinRule
     val join: FlinkLogicalJoin = call.rel(0).asInstanceOf[FlinkLogicalJoin]
     val right = join.getRight
 
-    val joinInfo = join.analyzeCondition
-
     val (windowBounds, remainingPreds) = WindowJoinUtil.extractWindowBoundsFromPredicate(
-      joinInfo.getRemaining(join.getCluster.getRexBuilder),
+      join.getCondition,
       join.getLeft.getRowType.getFieldCount,
       join.getRowType,
       join.getCluster.getRexBuilder,
       TableConfig.DEFAULT)
+
+    if (windowBounds.isDefined) {
+      return false
+    }
 
     // remaining predicate must not access time attributes
     val remainingPredsAccessTime = remainingPreds.isDefined &&
@@ -61,13 +64,17 @@ class StreamExecJoinRule
 
     val rowTimeAttrInOutput = join.getRowType.getFieldList
       .exists(f => FlinkTypeFactory.isRowtimeIndicatorType(f.getType))
+    if (rowTimeAttrInOutput) {
+      throw new TableException(
+        "Rowtime attributes must not be in the input rows of a regular join. " +
+          "As a workaround you can cast the time attributes of input tables to TIMESTAMP before.")
+    }
 
     // joins require an equality condition
     // or a conjunctive predicate with at least one equality condition
     // and disable outer joins with non-equality predicates(see FLINK-5520)
     // And do not accept a FlinkLogicalDimensionTableSourceScan as right input
-    !windowBounds.isDefined && !remainingPredsAccessTime && !rowTimeAttrInOutput &&
-      !right.isInstanceOf[FlinkLogicalDimensionTableSourceScan]
+    !remainingPredsAccessTime && !right.isInstanceOf[FlinkLogicalDimensionTableSourceScan]
   }
 
   override def convert(rel: RelNode): RelNode = {
