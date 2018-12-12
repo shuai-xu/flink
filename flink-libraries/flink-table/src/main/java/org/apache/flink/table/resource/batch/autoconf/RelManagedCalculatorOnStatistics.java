@@ -21,7 +21,6 @@ package org.apache.flink.table.resource.batch.autoconf;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableException;
-import org.apache.flink.table.plan.batch.BatchExecRelVisitor;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
@@ -52,6 +51,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
 import org.apache.flink.table.resource.RelResource;
 import org.apache.flink.table.resource.batch.ShuffleStage;
+import org.apache.flink.table.util.BatchExecRelVisitor;
 import org.apache.flink.table.util.ExecResourceUtil;
 import org.apache.flink.util.Preconditions;
 

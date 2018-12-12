@@ -25,7 +25,6 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{GeneratedSorter, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
-import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.FlinkBatchCost.FUNC_CPU_COST
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.calcite.Rank
@@ -33,7 +32,7 @@ import org.apache.flink.table.plan.util.{ConstantRankRange, RankRange}
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.rank.RankOperator
 import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.table.util.FlinkRelOptUtil
+import org.apache.flink.table.util.{BatchExecRelVisitor, FlinkRelOptUtil}
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelDistribution.Type

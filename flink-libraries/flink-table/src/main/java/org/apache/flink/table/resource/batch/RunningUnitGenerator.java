@@ -21,7 +21,6 @@ package org.apache.flink.table.resource.batch;
 import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableException;
-import org.apache.flink.table.plan.batch.BatchExecRelVisitor;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
@@ -51,6 +50,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
 import org.apache.flink.table.resource.batch.RunningUnitGenerator.RelStageExchangeInfo;
+import org.apache.flink.table.util.BatchExecRelVisitor;
 
 import org.apache.calcite.rel.BiRel;
 import org.apache.calcite.rel.RelNode;

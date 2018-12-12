@@ -23,7 +23,6 @@ import org.apache.flink.streaming.api.graph.StreamGraphGenerator;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.api.TableConfig;
-import org.apache.flink.table.plan.batch.BatchExecRelVisitor;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink;
 import org.apache.flink.table.resource.RelResource;
@@ -37,6 +36,7 @@ import org.apache.flink.table.resource.batch.calculator.ParallelismCalculatorOnS
 import org.apache.flink.table.resource.batch.calculator.RelFinalParallelismSetter;
 import org.apache.flink.table.resource.batch.calculator.ShuffleStageParallelismCalculator;
 import org.apache.flink.table.resource.batch.schedule.RunningUnitGraphManagerPlugin;
+import org.apache.flink.table.util.BatchExecRelVisitor;
 import org.apache.flink.table.util.ExecResourceUtil;
 import org.apache.flink.table.util.ExecResourceUtil.InferMode;
 import org.apache.flink.util.FlinkRuntimeException;

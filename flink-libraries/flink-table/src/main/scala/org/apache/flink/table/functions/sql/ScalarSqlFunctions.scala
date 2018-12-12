@@ -17,14 +17,15 @@
  */
 package org.apache.flink.table.functions.sql
 
+import org.apache.flink.table.api.Types
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.calcite.`type`.{FlinkReturnTypes, NumericExceptFirstOperandChecker, RepeatFamilyOperandTypeChecker}
+import org.apache.flink.table.dataformat.Decimal
+
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory, RelProtoDataType}
 import org.apache.calcite.sql._
 import org.apache.calcite.sql.`type`.{OperandTypes, ReturnTypes, SqlTypeFamily, _}
 import org.apache.calcite.sql.validate.SqlMonotonicity
-import org.apache.flink.table.api.Types
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.calcite.sql.`type`.{FlinkReturnTypes, NumericExceptFirstOperandChecker, RepeatFamilyOperandTypeChecker}
-import org.apache.flink.table.dataformat.Decimal
 
 /**
   * All built-in scalar SQL functions.

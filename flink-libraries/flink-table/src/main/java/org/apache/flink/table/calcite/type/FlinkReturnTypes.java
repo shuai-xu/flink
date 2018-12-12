@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.calcite.sql.type;
+package org.apache.flink.table.calcite.type;
 
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.dataformat.Decimal;

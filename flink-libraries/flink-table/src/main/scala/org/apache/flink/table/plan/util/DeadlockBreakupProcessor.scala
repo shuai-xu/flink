@@ -18,15 +18,16 @@
 
 package org.apache.flink.table.plan.util
 
-import java.util
-
-import com.google.common.collect.{Maps, Sets}
-import org.apache.calcite.rel.{RelNode, RelVisitor}
 import org.apache.flink.runtime.io.network.DataExchangeMode
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
-import org.apache.flink.table.plan.batch.{BatchExecRelShuttleImpl, BatchExecRelVisitorImpl}
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecBoundedStreamScan, _}
+import org.apache.flink.table.util.{BatchExecRelShuttleImpl, BatchExecRelVisitorImpl}
+
+import com.google.common.collect.{Maps, Sets}
+import org.apache.calcite.rel.{RelNode, RelVisitor}
+
+import java.util
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

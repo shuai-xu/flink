@@ -24,7 +24,6 @@ import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, Pr
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
-import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
@@ -34,8 +33,9 @@ import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.join.batch.{MergeJoinOperator, OneSideSortMergeJoinOperator, SortMergeJoinOperator}
 import org.apache.flink.table.runtime.sort.BinaryExternalSorter
 import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
 import org.apache.flink.table.util.ExecResourceUtil.InferMode
+
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata.RelMetadataQuery

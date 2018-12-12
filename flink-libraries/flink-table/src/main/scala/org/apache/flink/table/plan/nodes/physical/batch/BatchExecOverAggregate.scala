@@ -28,7 +28,6 @@ import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.{AggsHandlerCodeGenerator, BatchExecAggregateCodeGen}
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
-import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.physical.batch.OverWindowMode.OverWindowMode
@@ -36,7 +35,7 @@ import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToB
 import org.apache.flink.table.plan.util.OverAggregateUtil
 import org.apache.flink.table.runtime.overagg._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelOptUtil}
+import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil, FlinkRelOptUtil}
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelDistribution.Type._

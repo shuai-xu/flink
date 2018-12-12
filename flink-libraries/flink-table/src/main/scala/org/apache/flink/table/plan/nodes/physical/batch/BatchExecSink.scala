@@ -23,15 +23,14 @@ import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.types.DataType
-import org.apache.flink.table.codegen.SinkCodeGenerator.generateRowConverterOperator
 import org.apache.flink.table.codegen.CodeGeneratorContext
+import org.apache.flink.table.codegen.SinkCodeGenerator.generateRowConverterOperator
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.calcite.Sink
 import org.apache.flink.table.plan.util.SinkUtil
 import org.apache.flink.table.sinks.{BatchCompatibleStreamTableSink, BatchTableSink, TableSink}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode

@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.plan.batch;
+package org.apache.flink.table.util;
 
+import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
@@ -48,154 +49,173 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
 
 import org.apache.calcite.rel.RelNode;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * Default implementation of {@link BatchExecRelVisitor},
- * which visits each node but does nothing while it's there.
- *
- * @param <R> Return type from each {@code visitXxx} method.
+ * Basic implementation of {@link BatchExecRelVisitor} that calls
+ * {@link BatchExecRel#accept(BatchExecRelVisitor)} on each child, and
+ * {@link RelNode#copy(org.apache.calcite.plan.RelTraitSet, java.util.List)} if
+ * any children change.
  */
-public class BatchExecRelVisitorImpl<R> implements BatchExecRelVisitor<R> {
+public class BatchExecRelShuttleImpl implements BatchExecRelVisitor<BatchExecRel<?>> {
 
 	@Override
-	public R visit(BatchExecBoundedStreamScan boundedStreamScan) {
+	public BatchExecRel<?> visit(BatchExecBoundedStreamScan boundedStreamScan) {
 		return visitInputs(boundedStreamScan);
 	}
 
 	@Override
-	public R visit(BatchExecTableSourceScan scanTableSource) {
+	public BatchExecRel<?> visit(BatchExecTableSourceScan scanTableSource) {
 		return visitInputs(scanTableSource);
 	}
 
 	@Override
-	public R visit(BatchExecValues values) {
+	public BatchExecRel<?> visit(BatchExecValues values) {
 		return visitInputs(values);
 	}
 
 	@Override
-	public R visit(BatchExecCalc calc) {
+	public BatchExecRel<?> visit(BatchExecCalc calc) {
 		return visitInputs(calc);
 	}
 
 	@Override
-	public R visit(BatchExecCorrelate correlate) {
+	public BatchExecRel<?> visit(BatchExecCorrelate correlate) {
 		return visitInputs(correlate);
 	}
 
 	@Override
-	public R visit(BatchExecExchange exchange) {
+	public BatchExecRel<?> visit(BatchExecExchange exchange) {
 		return visitInputs(exchange);
 	}
 
 	@Override
-	public R visit(BatchExecExpand expand) {
+	public BatchExecRel<?> visit(BatchExecExpand expand) {
 		return visitInputs(expand);
 	}
 
 	@Override
-	public R visit(BatchExecHashAggregate hashAggregate) {
-		return visitInputs(hashAggregate);
-	}
-
-	@Override
-	public R visit(BatchExecHashWindowAggregate hashAggregate) {
-		return visitInputs(hashAggregate);
-	}
-
-	@Override
-	public R visit(BatchExecHashJoinBase hashJoin) {
+	public BatchExecRel<?> visit(BatchExecHashJoinBase hashJoin) {
 		return visitInputs(hashJoin);
 	}
 
 	@Override
-	public R visit(BatchExecSortMergeJoinBase sortMergeJoin) {
+	public BatchExecRel<?> visit(BatchExecSortMergeJoinBase sortMergeJoin) {
 		return visitInputs(sortMergeJoin);
 	}
 
 	@Override
-	public R visit(BatchExecNestedLoopJoinBase nestedLoopJoin) {
+	public BatchExecRel<?> visit(BatchExecHashAggregate hashAggregate) {
+		return visitInputs(hashAggregate);
+	}
+
+	@Override
+	public BatchExecRel<?> visit(BatchExecHashWindowAggregate hashAggregate) {
+		return visitInputs(hashAggregate);
+	}
+
+	@Override
+	public BatchExecRel<?> visit(BatchExecNestedLoopJoinBase nestedLoopJoin) {
 		return visitInputs(nestedLoopJoin);
 	}
 
 	@Override
-	public R visit(BatchExecLocalHashWindowAggregate localHashAggregate) {
+	public BatchExecRel<?> visit(BatchExecLocalHashAggregate localHashAggregate) {
 		return visitInputs(localHashAggregate);
 	}
 
 	@Override
-	public R visit(BatchExecLocalSortAggregate localSortAggregate) {
+	public BatchExecRel<?> visit(BatchExecLocalHashWindowAggregate localHashAggregate) {
+		return visitInputs(localHashAggregate);
+	}
+
+	@Override
+	public BatchExecRel<?> visit(BatchExecLocalSortAggregate localSortAggregate) {
 		return visitInputs(localSortAggregate);
 	}
 
 	@Override
-	public R visit(BatchExecLocalHashAggregate localHashAggregate) {
-		return visitInputs(localHashAggregate);
+	public BatchExecRel<?> visit(BatchExecSortAggregate sortAggregate){
+			return visitInputs(sortAggregate);
 	}
 
 	@Override
-	public R visit(BatchExecOverAggregate overWindowAgg) {
+	public BatchExecRel<?> visit(BatchExecSortWindowAggregate sortAggregate) {
+		return visitInputs(sortAggregate);
+	}
+
+	@Override
+	public BatchExecRel<?> visit(BatchExecLocalSortWindowAggregate localSortAggregate) {
+		return visitInputs(localSortAggregate);
+	}
+
+	@Override
+	public BatchExecRel<?> visit(BatchExecOverAggregate overWindowAgg) {
 		return visitInputs(overWindowAgg);
 	}
 
 	@Override
-	public R visit(BatchExecLocalSortWindowAggregate localSortAggregate) {
-		return visitInputs(localSortAggregate);
-	}
-
-	@Override
-	public R visit(BatchExecSortAggregate sortAggregate) {
-		return visitInputs(sortAggregate);
-	}
-
-	@Override
-	public R visit(BatchExecSortWindowAggregate sortAggregate) {
-		return visitInputs(sortAggregate);
-	}
-
-	@Override
-	public R visit(BatchExecLimit limit) {
+	public BatchExecRel<?> visit(BatchExecLimit limit) {
 		return visitInputs(limit);
 	}
 
 	@Override
-	public R visit(BatchExecSort sort) {
+	public BatchExecRel<?> visit(BatchExecSort sort) {
 		return visitInputs(sort);
 	}
 
 	@Override
-	public R visit(BatchExecSortLimit sortLimit) {
+	public BatchExecRel<?> visit(BatchExecSortLimit sortLimit) {
 		return visitInputs(sortLimit);
 	}
 
 	@Override
-	public R visit(BatchExecRank rank) {
+	public BatchExecRel<?> visit(BatchExecRank rank) {
 		return visitInputs(rank);
 	}
 
 	@Override
-	public R visit(BatchExecUnion union) {
+	public BatchExecRel<?> visit(BatchExecUnion union) {
 		return visitInputs(union);
 	}
 
 	@Override
-	public R visit(BatchExecJoinTable joinTable) {
+	public BatchExecRel<?> visit(BatchExecJoinTable joinTable) {
 		return visitInputs(joinTable);
 	}
 
 	@Override
-	public R visit(BatchExecSink<?> sink) {
+	public BatchExecRel<?> visit(BatchExecSink<?> sink) {
 		return visitInputs(sink);
 	}
 
 	@Override
-	public R visit(BatchExecRel<?> batchExec) {
-		return visitInputs(batchExec);
+	public BatchExecRel<?> visit(BatchExecRel<?> other) {
+		throw new TableException("Unknown BatchExecRel: " + other.getClass().getCanonicalName());
 	}
 
-	protected R visitInputs(BatchExecRel<?> batchExecRel) {
-		R r = null;
-		for (RelNode input : batchExecRel.getInputs()) {
-			r = ((BatchExecRel<?>) input).accept(this);
+	protected BatchExecRel<?> visitInputs(BatchExecRel<?> batchExecRel) {
+		boolean[] update = {false};
+		List<BatchExecRel<?>> clonedInputs = visitInputs(batchExecRel.getInputs(), update);
+		if (update[0]) {
+			return (BatchExecRel<?>) batchExecRel.copy(batchExecRel.getTraitSet(), new ArrayList<>(clonedInputs));
+		} else {
+			return batchExecRel;
 		}
-		return r;
 	}
+
+	protected List<BatchExecRel<?>> visitInputs(List<? extends RelNode> inputs, boolean[] update) {
+		com.google.common.collect.ImmutableList.Builder<BatchExecRel<?>> clonedInputs =
+				com.google.common.collect.ImmutableList.builder();
+		for (RelNode input : inputs) {
+			BatchExecRel<?> clonedInput = ((BatchExecRel<?>) input).accept(this);
+			if ((clonedInput != input) && (update != null)) {
+				update[0] = true;
+			}
+			clonedInputs.add(clonedInput);
+		}
+		return clonedInputs.build();
+	}
+
 }

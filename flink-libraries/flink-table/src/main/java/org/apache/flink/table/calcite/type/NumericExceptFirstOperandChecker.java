@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.calcite.sql.type;
+package org.apache.flink.table.calcite.type;
 
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlOperandCountRange;

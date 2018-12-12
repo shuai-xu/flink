@@ -23,13 +23,12 @@ import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.SortCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
-import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.FlinkBatchCost
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.runtime.sort.BinaryIndexedSortable
 import org.apache.flink.table.typeutils.BinaryRowSerializer
-import org.apache.flink.table.util.{FlinkRelOptUtil, Logging}
+import org.apache.flink.table.util.{BatchExecRelVisitor, FlinkRelOptUtil, Logging}
 
 import org.apache.calcite.plan.RelTraitSet
 import org.apache.calcite.rel.RelNode

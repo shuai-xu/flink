@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.calcite.sql.type;
+package org.apache.flink.table.calcite.type;
 
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.rel.type.RelDataType;
