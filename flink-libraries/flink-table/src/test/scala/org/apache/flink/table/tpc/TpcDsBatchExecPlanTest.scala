@@ -17,16 +17,19 @@
  */
 package org.apache.flink.table.tpc
 
-import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.flink.core.fs.Path
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.dataformat.ColumnarRow
 import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.InsertRuntimeFilterRule
 import org.apache.flink.table.plan.stats.TableStats
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.flink.table.sources.parquet.{ParquetTableSource, ParquetVectorizedColumnRowTableSource}
 import org.apache.flink.table.tpc.STATS_MODE.STATS_MODE
-import org.apache.flink.table.util.{FlinkRelOptUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.TableTestBatchExecBase
+
+import org.apache.calcite.sql.SqlExplainLevel
+
 import org.junit.{Before, Test}
 import org.scalatest.prop.PropertyChecks
 

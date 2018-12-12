@@ -18,14 +18,6 @@
 
 package org.apache.flink.table.runtime.batch.sql
 
-import java.lang.{Iterable => JIterable}
-import java.util.TimeZone
-import java.util.regex.Pattern
-
-import org.apache.calcite.runtime.CalciteContextException
-import org.apache.calcite.sql.parser.SqlParseException
-import org.apache.calcite.sql.SqlExplainLevel
-import org.apache.commons.lang3.SystemUtils
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.tuple.Tuple
 import org.apache.flink.configuration.Configuration
@@ -37,18 +29,29 @@ import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTabl
 import org.apache.flink.table.api.{SqlParserException, Table, TableConfig, TableEnvironment}
 import org.apache.flink.table.dataformat.{BinaryRow, BinaryRowWriter}
 import org.apache.flink.table.expressions.{Expression, ExpressionParser}
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.ExecResourceUtil.InferMode
-import org.apache.flink.table.util.{DiffRepository, ExecResourceUtil, FlinkRelOptUtil}
+import org.apache.flink.table.util.{DiffRepository, ExecResourceUtil}
 import org.apache.flink.types.Row
-import org.junit.{Assert, Rule}
-import org.junit.Assert._
-import org.junit.rules.TestName
+
+import org.apache.calcite.runtime.CalciteContextException
+import org.apache.calcite.sql.parser.SqlParseException
+import org.apache.calcite.sql.SqlExplainLevel
+import org.apache.commons.lang3.SystemUtils
+
+import java.lang.{Iterable => JIterable}
+import java.util.TimeZone
+import java.util.regex.Pattern
 
 import scala.collection.JavaConverters._
 import scala.collection.Seq
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Sorting
+
+import org.junit.{Assert, Rule}
+import org.junit.Assert._
+import org.junit.rules.TestName
 
 class QueryTest {
 
@@ -138,7 +141,7 @@ class QueryTest {
     val relNode = table.getRelNode
     val optimized = tEnv.optimize(relNode)
     val actual = SystemUtils.LINE_SEPARATOR + FlinkRelOptUtil.toString(
-      optimized, treeStyle = true, SqlExplainLevel.EXPPLAN_ATTRIBUTES)
+      optimized, SqlExplainLevel.EXPPLAN_ATTRIBUTES)
     assertEqualsOrExpand("planAfter", actual.toString, expand = false)
   }
 

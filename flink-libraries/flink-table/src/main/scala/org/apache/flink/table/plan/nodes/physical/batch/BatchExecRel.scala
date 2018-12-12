@@ -26,9 +26,10 @@ import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.cost.FlinkBatchCost
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.flink.table.runtime.sort.BinaryIndexedSortable
 import org.apache.flink.table.typeutils.BinaryRowSerializer
-import org.apache.flink.table.util.{BatchExecRelVisitor, FlinkRelOptUtil, Logging}
+import org.apache.flink.table.util.{BatchExecRelVisitor, Logging}
 
 import org.apache.calcite.plan.RelTraitSet
 import org.apache.calcite.rel.RelNode

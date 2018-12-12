@@ -23,9 +23,8 @@ import org.apache.flink.table.functions.sql.internal.{SqlRuntimeFilterBuilderFun
 import org.apache.flink.table.plan.metadata.SelectivityEstimator._
 import org.apache.flink.table.plan.schema.{FlinkTable, TableSourceTable}
 import org.apache.flink.table.plan.stats._
-import org.apache.flink.table.plan.util.{PartitionPredicateExtractor, RexNodeExtractor}
+import org.apache.flink.table.plan.util.{FlinkRelOptUtil, FlinkRexUtil, PartitionPredicateExtractor, RexNodeExtractor}
 import org.apache.flink.table.sources.PartitionableTableSource
-import org.apache.flink.table.util.{FlinkRelOptUtil, FlinkRexUtil}
 
 import org.apache.calcite.avatica.util.DateTimeUtils
 import org.apache.calcite.plan.{RelOptPredicateList, RelOptUtil}

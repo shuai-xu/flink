@@ -27,9 +27,8 @@ import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.plan.stats._
-import org.apache.flink.table.plan.util.{ConstantRankRange, VariableRankRange}
-import org.apache.flink.table.util.FlinkRelOptUtil._
-import org.apache.flink.table.util.{ColumnIntervalUtil, FlinkRelMdUtil}
+import org.apache.flink.table.plan.util.{ConstantRankRange, ColumnIntervalUtil, FlinkRelMdUtil, VariableRankRange}
+import org.apache.flink.table.plan.util.FlinkRelOptUtil._
 import org.apache.flink.util.Preconditions
 
 import org.apache.calcite.plan.volcano.RelSubset

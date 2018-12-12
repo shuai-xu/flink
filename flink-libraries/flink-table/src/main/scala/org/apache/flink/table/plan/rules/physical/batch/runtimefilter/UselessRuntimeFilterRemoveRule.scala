@@ -18,7 +18,13 @@
 
 package org.apache.flink.table.plan.rules.physical.batch.runtimefilter
 
-import java.lang
+import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.functions.sql.internal.SqlRuntimeFilterFunction
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc
+import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.BaseRuntimeFilterPushDownRule.findRuntimeFilters
+import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.UselessRuntimeFilterRemoveRule._
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
+import org.apache.flink.table.util.BloomFilter
 
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptUtil}
@@ -26,12 +32,8 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.core.Calc
 import org.apache.calcite.rex.{RexCall, RexProgramBuilder}
 import org.apache.calcite.sql.SqlOperator
-import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.functions.sql.internal.SqlRuntimeFilterFunction
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc
-import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.BaseRuntimeFilterPushDownRule.findRuntimeFilters
-import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.UselessRuntimeFilterRemoveRule._
-import org.apache.flink.table.util.{BloomFilter, FlinkRelOptUtil}
+
+import java.lang
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

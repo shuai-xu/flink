@@ -34,9 +34,8 @@ import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, T
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashWindowAggregate, BatchExecLocalHashWindowAggregate, BatchExecLocalSortWindowAggregate, BatchExecSortWindowAggregate}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
-import org.apache.flink.table.plan.util.AggregateUtil
+import org.apache.flink.table.plan.util.{AggregateUtil, FlinkRelOptUtil}
 import org.apache.flink.table.plan.util.AggregateUtil._
-import org.apache.flink.table.util.FlinkRelOptUtil
 
 import scala.collection.JavaConversions._
 

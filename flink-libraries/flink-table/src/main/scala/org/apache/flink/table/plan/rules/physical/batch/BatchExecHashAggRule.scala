@@ -26,8 +26,7 @@ import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashAggregate, BatchExecLocalHashAggregate}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalAggregate
-import org.apache.flink.table.plan.util.AggregateUtil
-import org.apache.flink.table.util.FlinkRelOptUtil
+import org.apache.flink.table.plan.util.{AggregateUtil, FlinkRelOptUtil}
 
 import scala.collection.JavaConversions._
 

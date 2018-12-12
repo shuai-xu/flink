@@ -18,17 +18,20 @@
 
 package org.apache.flink.table.util
 
-import java.io.{PrintWriter, StringWriter}
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Paths, StandardOpenOption}
+import org.apache.flink.api.common.JobExecutionResult
+import org.apache.flink.streaming.api.graph.StreamGraph
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
+import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics._
 
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.sql.SqlExplainLevel
-import org.apache.flink.api.common.JobExecutionResult
-import org.apache.flink.streaming.api.graph.StreamGraph
-import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics._
+
 import PlanUtil._
 import org.json.JSONObject
+
+import java.io.{PrintWriter, StringWriter}
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths, StandardOpenOption}
 
 import scala.collection.mutable
 import scala.collection.JavaConversions._
@@ -147,7 +150,6 @@ object PlanUtil extends Logging {
   def dumpRelNode(relNode: RelNode, dumpFilePath: String): Unit = {
     val relNodeStr = FlinkRelOptUtil.toString(
       relNode,
-      treeStyle = true,
       SqlExplainLevel.ALL_ATTRIBUTES,
       withRelNodeId = true,
       printMemCost = true)

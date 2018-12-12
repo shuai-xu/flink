@@ -16,26 +16,32 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.util
+package org.apache.flink.table.plan.util
 
-import java.io.{PrintWriter, StringWriter, Writer}
+import org.apache.flink.table.plan.`trait`.{AccModeTraitDef, UpdateAsRetractionTraitDef}
 
 import org.apache.calcite.rel.core.Union
 import org.apache.calcite.rel.{BiRel, RelNode, SingleRel}
-import org.apache.flink.table.plan.`trait`.{AccModeTraitDef, UpdateAsRetractionTraitDef}
+
+import java.io.{PrintWriter, StringWriter, Writer}
 
 import scala.collection.JavaConversions._
 
 object RelTraitUtil {
-  def toString(rel: RelNode): String = {
+
+  /**
+    * Converts a relational expression to a string. Each node only contains node name,
+    * retraction traits (including UpdateAsRetractionTraitDef and AccModeTraitDef) if exists.
+    */
+  def explainRetractTraits(rel: RelNode): String = {
     val sw = new StringWriter()
     val pw = new PrintWriter(sw)
-    explainTrait(rel, pw, 0)
+    explainRetractTraits(rel, pw, 0)
     pw.close()
     sw.toString
   }
 
-  private def explainTrait(rel: RelNode, writer: Writer, depth: Int): Unit = {
+  private def explainRetractTraits(rel: RelNode, writer: Writer, depth: Int): Unit = {
     val className = rel.getClass.getSimpleName
     val retractString = rel.getTraitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE).toString
     val accModString = rel.getTraitSet.getTrait(AccModeTraitDef.INSTANCE).toString
@@ -44,12 +50,12 @@ object RelTraitUtil {
       .append(s"$className(retract=[$retractString], accMode=[$accModString])")
       .append("\n")
     rel match {
-      case s: SingleRel => explainTrait(s.getInput, writer, depth + 1)
+      case s: SingleRel => explainRetractTraits(s.getInput, writer, depth + 1)
       case b: BiRel =>
-        explainTrait(b.getLeft, writer, depth + 1)
-        explainTrait(b.getRight, writer, depth + 1)
+        explainRetractTraits(b.getLeft, writer, depth + 1)
+        explainRetractTraits(b.getRight, writer, depth + 1)
       case u: Union =>
-        u.getInputs.map(explainTrait(_, writer, depth + 1))
+        u.getInputs.map(explainRetractTraits(_, writer, depth + 1))
       case _ => // do nothing
     }
   }

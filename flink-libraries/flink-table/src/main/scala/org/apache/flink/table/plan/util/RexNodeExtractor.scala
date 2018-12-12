@@ -18,8 +18,12 @@
 
 package org.apache.flink.table.plan.util
 
-import java.sql.{Date, Time, Timestamp}
-import java.util.{List => JList}
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.expressions._
+import org.apache.flink.table.validate.FunctionCatalog
+import org.apache.flink.util.Preconditions
 
 import org.apache.calcite.avatica.util.DateTimeUtils
 import org.apache.calcite.plan.RelOptUtil
@@ -27,13 +31,9 @@ import org.apache.calcite.rex._
 import org.apache.calcite.sql.fun.{SqlStdOperatorTable, SqlTrimFunction}
 import org.apache.calcite.sql.{SqlFunction, SqlPostfixOperator}
 import org.apache.calcite.util.{DateString, TimeString, TimestampString}
-import org.apache.flink.table.api.TableException
-import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.expressions._
-import org.apache.flink.table.util.FlinkRexUtil
-import org.apache.flink.table.validate.FunctionCatalog
-import org.apache.flink.util.Preconditions
+
+import java.sql.{Date, Time, Timestamp}
+import java.util.{List => JList}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._

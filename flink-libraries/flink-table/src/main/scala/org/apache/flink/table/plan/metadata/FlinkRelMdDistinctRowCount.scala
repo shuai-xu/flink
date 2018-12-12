@@ -23,7 +23,7 @@ import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
-import org.apache.flink.table.util.{FlinkRelMdUtil, FlinkRelOptUtil, FlinkRexUtil}
+import org.apache.flink.table.plan.util.{FlinkRelMdUtil, FlinkRelOptUtil, FlinkRexUtil}
 
 import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.plan.volcano.RelSubset

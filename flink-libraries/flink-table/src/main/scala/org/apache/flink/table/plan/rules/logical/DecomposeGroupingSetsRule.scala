@@ -18,10 +18,12 @@
 
 package org.apache.flink.table.plan.rules.logical
 
-import java.math.BigDecimal
-import java.util
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkRelFactories}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalExpand}
+import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule._
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
 
-import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.RelOptRule._
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
@@ -33,11 +35,11 @@ import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.util.ImmutableBitSet
-import org.apache.flink.table.api.TableException
-import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkRelFactories}
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalExpand}
-import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule._
-import org.apache.flink.table.util.FlinkRelOptUtil
+
+import com.google.common.collect.ImmutableList
+
+import java.math.BigDecimal
+import java.util
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

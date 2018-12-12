@@ -28,10 +28,9 @@ import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggre
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.plan.util.AggregateUtil
+import org.apache.flink.table.plan.util.{AggregateUtil, FlinkRelOptUtil}
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
-import org.apache.flink.table.util.FlinkRelOptUtil
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._

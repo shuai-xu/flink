@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.stats
 
-import org.apache.flink.table.util.ColumnIntervalUtil.convertNumberToString
+import org.apache.flink.table.plan.util.ColumnIntervalUtil.convertNumberToString
 import org.apache.flink.util.Preconditions
 
 trait ValueInterval

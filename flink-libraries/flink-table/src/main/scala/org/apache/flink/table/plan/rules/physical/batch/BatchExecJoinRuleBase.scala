@@ -23,7 +23,7 @@ import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalJoin, FlinkLogicalSemiJoin}
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecLocalHashAggregate, BatchExecRel}
-import org.apache.flink.table.util.FlinkRelOptUtil
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
 
 import org.apache.calcite.plan.RelOptRule
 import org.apache.calcite.rel.RelNode

@@ -18,21 +18,22 @@
 
 package org.apache.flink.table.tpc
 
-import java.util
-
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.{TableConfig, TableEnvironment}
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.flink.table.runtime.utils.TestingRetractSink
 import org.apache.flink.table.sources.csv.CsvTableSource
-import org.apache.flink.table.util.FlinkRelOptUtil
 import org.apache.flink.types.Row
+
+import java.util
+
+import scala.collection.JavaConversions._
+
 import org.junit.{Before, Ignore, Test}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-
-import scala.collection.JavaConversions._
 
 @RunWith(classOf[Parameterized])
 class TpcHStreamExecPlanTest(caseName: String, twoStageAgg: Boolean) {

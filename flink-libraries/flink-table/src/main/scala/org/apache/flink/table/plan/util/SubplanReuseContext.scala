@@ -21,7 +21,6 @@ import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.nodes.calcite.Sink
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableSourceScan
 import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
-import org.apache.flink.table.util.RelDigestWriterImpl
 
 import org.apache.calcite.rel.core.{Exchange, TableFunctionScan}
 import org.apache.calcite.rel.{RelNode, RelVisitor}

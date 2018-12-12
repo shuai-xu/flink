@@ -21,11 +21,12 @@ import org.apache.calcite.rex.{RexBuilder, RexUtil}
 import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
-import org.apache.flink.table.util.FlinkRexUtil
-import org.junit.Assert.{assertFalse, assertEquals}
-import org.junit.Test
+import org.apache.flink.table.plan.util.FlinkRexUtil
 
 import java.math.BigDecimal
+
+import org.junit.Assert.{assertEquals, assertFalse}
+import org.junit.Test
 
 class FlinkRexUtilTest {
   private val typeFactory: FlinkTypeFactory = new FlinkTypeFactory(new FlinkTypeSystem())

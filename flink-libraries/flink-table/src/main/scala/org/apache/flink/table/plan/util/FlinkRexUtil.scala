@@ -15,13 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.table.util
+package org.apache.flink.table.plan.util
 
-import java.lang.Iterable
-import java.util
-
-import com.google.common.base.Function
-import com.google.common.collect.{ImmutableList, Lists}
 import org.apache.calcite.plan.{RelOptPredicateList, RelOptUtil}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex._
@@ -30,9 +25,18 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.{ControlFlowException, Util}
 
+import com.google.common.base.Function
+import com.google.common.collect.{ImmutableList, Lists}
+
+import java.lang.Iterable
+import java.util
+
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
+/**
+  * Utility methods concerning [[RexNode]].
+  */
 object FlinkRexUtil {
 
   /**

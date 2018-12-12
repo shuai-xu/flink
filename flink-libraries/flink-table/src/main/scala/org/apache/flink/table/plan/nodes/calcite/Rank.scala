@@ -18,6 +18,9 @@
 
 package org.apache.flink.table.plan.nodes.calcite
 
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.plan.util._
+
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.metadata.RelMetadataQuery
@@ -25,9 +28,6 @@ import org.apache.calcite.rel.{RelCollation, RelNode, RelWriter, SingleRel}
 import org.apache.calcite.sql.SqlRankFunction
 import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.util.{ImmutableBitSet, NumberUtil}
-import org.apache.flink.table.api.TableException
-import org.apache.flink.table.plan.util.{ConstantRankRange, RankRange, SortUtil, VariableRankRange}
-import org.apache.flink.table.util.{FlinkRelMdUtil, FlinkRelOptUtil}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

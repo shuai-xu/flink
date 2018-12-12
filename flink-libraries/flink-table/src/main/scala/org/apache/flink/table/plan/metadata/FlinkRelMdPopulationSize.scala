@@ -22,7 +22,7 @@ import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.util.FlinkRelMdUtil
+import org.apache.flink.table.plan.util.FlinkRelMdUtil
 
 import org.apache.calcite.plan.volcano.RelSubset
 import org.apache.calcite.rel.core._

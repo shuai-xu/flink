@@ -34,8 +34,8 @@ import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.{TableConfig, TableEnvironment, Types}
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.flink.table.runtime.utils.{StreamingTestBase, TestingAppendSink}
-import org.apache.flink.table.util.FlinkRelOptUtil
 import org.apache.flink.table.util.MemoryTableSourceSinkUtil
 import org.apache.flink.types.Row
 import org.junit.Assert._

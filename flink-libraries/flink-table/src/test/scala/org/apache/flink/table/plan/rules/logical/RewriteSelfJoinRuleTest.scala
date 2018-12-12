@@ -18,15 +18,17 @@
 
 package org.apache.flink.table.plan.rules.logical
 
-import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms._
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
-import org.apache.flink.table.util.FlinkRelOptUtil
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.flink.table.util.TableTestBatchExecBase
+
+import org.apache.calcite.plan.hep.HepMatchOrder
+
 import org.junit.{Before, Ignore, Test}
 import org.scalatest.prop.PropertyChecks
 

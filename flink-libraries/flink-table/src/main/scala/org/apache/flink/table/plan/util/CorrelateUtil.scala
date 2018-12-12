@@ -19,7 +19,6 @@ package org.apache.flink.table.plan.util
 
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.functions.utils.TableSqlFunction
-import org.apache.flink.table.util.FlinkRexUtil
 
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField, RelDataTypeFieldImpl}
 import org.apache.calcite.rex.{RexBuilder, RexCall, RexNode, RexProgram, RexProgramBuilder}

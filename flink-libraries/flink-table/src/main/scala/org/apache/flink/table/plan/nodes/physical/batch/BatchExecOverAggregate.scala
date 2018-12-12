@@ -32,10 +32,10 @@ import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.physical.batch.OverWindowMode.OverWindowMode
 import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToBatchAggregateInfoList}
-import org.apache.flink.table.plan.util.OverAggregateUtil
+import org.apache.flink.table.plan.util.{FlinkRelOptUtil, OverAggregateUtil}
 import org.apache.flink.table.runtime.overagg._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil, FlinkRelOptUtil}
+import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelDistribution.Type._

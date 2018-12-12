@@ -23,18 +23,19 @@ import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.util.FlinkRelOptUtil._
+import org.apache.flink.table.plan.util.FlinkRelOptUtil._
 
 import org.apache.calcite.rex.{RexBuilder, RexLiteral, RexUtil}
 import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.{DateString, TimeString, TimestampString}
-import org.junit.Assert._
-import org.junit.Test
 
 import java.math.BigDecimal
 import java.sql.{Date, Time, Timestamp}
+
+import org.junit.Assert._
+import org.junit.Test
 
 class FlinkRelOptUtilTest {
   val typeFactory: FlinkTypeFactory = new FlinkTypeFactory(new FlinkTypeSystem())
@@ -204,8 +205,8 @@ class FlinkRelOptUtilTest {
     tEnv.registerTableSource("MyTable", CommonTestData.get3Source(Array("a", "b", "c")))
     val table = tEnv.sqlQuery("select c from MyTable where a > 10")
     val node = tEnv.optimize(table.getRelNode)
-    assertEquals("BatchExecCalc(select=[c], where=[>(a, 10)])", FlinkRelOptUtil.getDigest(node))
-    assertTrue(FlinkRelOptUtil.getDigest(node, withInput = true).contains("input="))
+    assertEquals("BatchExecCalc(select=[c], where=[>(a, 10)])", getDigest(node))
+    assertTrue(getDigest(node, withInput = true).contains("input="))
   }
 
   private def assertLiteralValueEquals(expected: Any, actual: RexLiteral): Unit = {

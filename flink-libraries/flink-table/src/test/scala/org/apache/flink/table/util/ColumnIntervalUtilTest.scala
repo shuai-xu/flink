@@ -18,12 +18,13 @@
 
 package org.apache.flink.table.util
 
+import org.apache.flink.table.plan.stats._
+import org.apache.flink.table.plan.util.ColumnIntervalUtil._
+
 import java.lang
 import java.math.BigInteger
 import java.util.Date
 
-import org.apache.flink.table.plan.stats._
-import org.apache.flink.table.util.ColumnIntervalUtil._
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

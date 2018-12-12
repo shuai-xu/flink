@@ -18,8 +18,12 @@
 
 package org.apache.flink.table.plan.rules.physical.batch.runtimefilter
 
-import java.util.Collections
-import java.util.concurrent.atomic.AtomicInteger
+import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.functions.sql.internal.{SqlRuntimeFilterBuilderFunction, SqlRuntimeFilterFunction}
+import org.apache.flink.table.plan.FlinkJoinRelType._
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCalc, BatchExecExchange, BatchExecHashJoinBase}
+import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.InsertRuntimeFilterRule._
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
 
 import org.apache.calcite.plan.RelOptRule._
 import org.apache.calcite.plan.hep.HepRelVertex
@@ -27,12 +31,9 @@ import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex.RexProgramBuilder
 import org.apache.calcite.util.ImmutableBitSet
-import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.functions.sql.internal.{SqlRuntimeFilterBuilderFunction, SqlRuntimeFilterFunction}
-import org.apache.flink.table.plan.FlinkJoinRelType._
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCalc, BatchExecExchange, BatchExecHashJoinBase}
-import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.InsertRuntimeFilterRule._
-import org.apache.flink.table.util.FlinkRelOptUtil
+
+import java.util.Collections
+import java.util.concurrent.atomic.AtomicInteger
 
 import scala.collection.JavaConversions._
 

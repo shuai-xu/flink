@@ -27,7 +27,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCorrelate, Bat
 import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
 import org.apache.flink.table.sources.{DimensionTableSource, IndexKey, TableSource}
-import org.apache.flink.table.util.FlinkRelMdUtil
+import org.apache.flink.table.plan.util.FlinkRelMdUtil
 
 import com.google.common.collect.ImmutableSet
 import org.apache.calcite.plan.RelOptTable

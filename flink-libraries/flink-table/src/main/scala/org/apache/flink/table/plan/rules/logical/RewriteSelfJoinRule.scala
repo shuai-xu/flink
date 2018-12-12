@@ -18,9 +18,10 @@
 
 package org.apache.flink.table.plan.rules.logical
 
-import java.util.{ArrayList => JArrayList, List => JList}
+import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkRelFactories}
+import org.apache.flink.table.plan.rules.logical.RewriteSelfJoinRule.{RankInfo, SequenceTracer}
+import org.apache.flink.table.plan.util.{ConstantRankRange, RelDigestWriterImpl}
 
-import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.hep.HepRelVertex
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptUtil}
@@ -37,10 +38,10 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.util.{ImmutableBitSet, Pair}
 import org.apache.calcite.util.mapping.Mappings
-import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkRelFactories}
-import org.apache.flink.table.plan.rules.logical.RewriteSelfJoinRule.{RankInfo, SequenceTracer}
-import org.apache.flink.table.plan.util.ConstantRankRange
-import org.apache.flink.table.util.RelDigestWriterImpl
+
+import com.google.common.collect.ImmutableList
+
+import java.util.{ArrayList => JArrayList, List => JList}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

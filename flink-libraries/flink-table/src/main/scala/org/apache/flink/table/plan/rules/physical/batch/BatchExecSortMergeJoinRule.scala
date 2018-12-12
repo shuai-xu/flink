@@ -23,8 +23,8 @@ import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalJoin, FlinkLogicalSemiJoin}
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecSortMergeJoin, BatchExecSortMergeSemiJoin}
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
-import org.apache.flink.table.util.FlinkRelOptUtil
 
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelTraitSet}

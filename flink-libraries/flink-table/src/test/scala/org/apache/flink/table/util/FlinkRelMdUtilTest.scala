@@ -22,6 +22,7 @@ import org.apache.flink.table.plan.metadata.FlinkRelMdHandlerTestBase
 import org.apache.flink.table.plan.nodes.calcite.LogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalRank, FlinkLogicalWindowAggregate}
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashWindowAggregate, BatchExecLocalHashWindowAggregate, BatchExecWindowAggregateBase}
+import org.apache.flink.table.plan.util.FlinkRelMdUtil
 
 import org.apache.calcite.rel.SingleRel
 import org.apache.calcite.rel.metadata.RelMdUtil

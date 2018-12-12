@@ -24,13 +24,14 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.{Table, TableException}
 import org.apache.flink.table.plan.optimize.{BatchOptimizeContext, FlinkChainedPrograms, FlinkCorrelateVariablesValidationProgram}
 import org.apache.flink.table.plan.rules.logical.SubQueryTestBase
-import org.apache.flink.table.util.FlinkRelOptUtil
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.flink.table.util.TestTableSourceWithFieldNullables
+
+import scala.collection.Seq
+
 import org.junit.{Before, Test}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-
-import scala.collection.Seq
 
 /**
   * Test for checking correlate variables exist after decorrelate.

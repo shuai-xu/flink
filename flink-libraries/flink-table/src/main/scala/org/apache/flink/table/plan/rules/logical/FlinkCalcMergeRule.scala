@@ -18,12 +18,13 @@
 
 package org.apache.flink.table.plan.rules.logical
 
+import org.apache.flink.table.plan.util.FlinkRexUtil
+
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.core.{Calc, RelFactories}
 import org.apache.calcite.rex.{RexOver, RexProgramBuilder, RexUtil}
 import org.apache.calcite.tools.RelBuilderFactory
-import org.apache.flink.table.util.FlinkRexUtil
 
 /**
   * This rules is copied from Calcite's [[org.apache.calcite.rel.rules.CalcMergeRule]].

@@ -23,7 +23,7 @@ import org.apache.flink.table.plan.metadata.FlinkMetadata.SkewInfoMeta
 import org.apache.flink.table.plan.nodes.calcite.Expand
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.plan.stats.SkewInfoInternal
-import org.apache.flink.table.util.FlinkRelOptUtil.getLiteralValue
+import org.apache.flink.table.plan.util.FlinkRelOptUtil.getLiteralValue
 
 import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.plan.volcano.RelSubset

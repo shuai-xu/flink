@@ -20,21 +20,20 @@ package org.apache.flink.table.plan.rules.logical
 
 import java.util
 
-import org.apache.calcite.plan.RelOptRule.{none, operand}
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
-import org.apache.calcite.rel.logical.LogicalTableScan
-import org.apache.calcite.rel.core.Filter
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.expressions.Expression
-import org.apache.flink.table.plan.util.RexNodeExtractor
+import org.apache.flink.table.plan.util.{FlinkRelOptUtil, RexNodeExtractor}
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sources.FilterableTableSource
 import org.apache.flink.table.sources.orc.OrcTableSource
 import org.apache.flink.table.sources.parquet.ParquetTableSource
-import org.apache.flink.table.util.FlinkRelOptUtil
-import org.apache.flink.table.validate.FunctionCatalog
+
+import org.apache.calcite.plan.RelOptRule.{none, operand}
+import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
+import org.apache.calcite.rel.logical.LogicalTableScan
+import org.apache.calcite.rel.core.Filter
+import org.apache.calcite.tools.RelBuilder
 
 import scala.collection.JavaConverters._
 

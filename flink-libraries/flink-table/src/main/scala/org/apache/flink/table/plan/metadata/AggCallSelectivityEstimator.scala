@@ -21,7 +21,7 @@ package org.apache.flink.table.plan.metadata
 import org.apache.flink.table.api.TableConfig.SQL_CBO_SELECTIVITY_AGG_CALL_DEFAULT
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecGroupAggregateBase, BatchExecLocalHashWindowAggregate, BatchExecLocalSortWindowAggregate, BatchExecWindowAggregateBase}
 import org.apache.flink.table.plan.stats.{ValueInterval, _}
-import org.apache.flink.table.util.FlinkRelOptUtil.checkAndSplitAggCalls
+import org.apache.flink.table.plan.util.FlinkRelOptUtil.checkAndSplitAggCalls
 
 import org.apache.calcite.plan.RelOptPredicateList
 import org.apache.calcite.rel.RelNode

@@ -18,17 +18,18 @@
 
 package org.apache.flink.table.plan.rules.physical.batch.runtimefilter
 
-import org.apache.calcite.plan.{RelOptRuleCall, RelOptUtil}
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rex._
-import org.apache.calcite.util.ImmutableBitSet
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.functions.sql.internal.SqlRuntimeFilterBuilderFunction
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCalc, BatchExecHashJoinBase}
 import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.BaseRuntimeFilterPushDownRule.findRfBuilders
 import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.RfBuilderJoinTransposeRule.{getIndexFromCall, updateRuntimeFilterBuilderFunction}
-import org.apache.flink.table.util.FlinkRelOptUtil
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
+
+import org.apache.calcite.plan.{RelOptRuleCall, RelOptUtil}
+import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rex._
+import org.apache.calcite.util.ImmutableBitSet
 
 import scala.collection.JavaConversions._
 

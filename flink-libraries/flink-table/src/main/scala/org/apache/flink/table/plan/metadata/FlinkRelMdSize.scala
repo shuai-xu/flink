@@ -23,9 +23,8 @@ import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
-import org.apache.flink.table.util.FlinkRelOptUtil.{checkAndGetFullGroupSet, checkAndSplitAggCalls}
+import org.apache.flink.table.plan.util.FlinkRelOptUtil.{checkAndGetFullGroupSet, checkAndSplitAggCalls}
 
-import com.google.common.collect.ImmutableList
 import org.apache.calcite.avatica.util.ByteString
 import org.apache.calcite.plan.volcano.RelSubset
 import org.apache.calcite.rel.`type`.RelDataType
@@ -35,6 +34,8 @@ import org.apache.calcite.rel.{BiRel, RelNode, SingleRel}
 import org.apache.calcite.rex.{RexCall, RexInputRef, RexLiteral, RexNode}
 import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.util.{BuiltInMethod, ImmutableNullableList, NlsString, Util}
+
+import com.google.common.collect.ImmutableList
 
 import java.lang.Double
 import java.util.{List => JList}

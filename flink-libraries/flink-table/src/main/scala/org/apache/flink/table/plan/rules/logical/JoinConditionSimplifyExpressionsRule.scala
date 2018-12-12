@@ -18,11 +18,12 @@
 
 package org.apache.flink.table.plan.rules.logical
 
+import org.apache.flink.table.plan.util.FlinkRexUtil
+
 import org.apache.calcite.plan.RelOptRule.{operand, _}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptRuleOperand}
 import org.apache.calcite.rel.logical.LogicalJoin
 import org.apache.calcite.rex._
-import org.apache.flink.table.util.FlinkRexUtil
 
 class JoinConditionSimplifyExpressionsRule(
     operand: RelOptRuleOperand,

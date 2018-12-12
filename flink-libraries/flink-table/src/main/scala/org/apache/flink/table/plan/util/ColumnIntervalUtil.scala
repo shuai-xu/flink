@@ -16,11 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.util
+package org.apache.flink.table.plan.util
+
+import org.apache.flink.table.plan.stats._
 
 import org.apache.calcite.rex.RexCall
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
-import org.apache.flink.table.plan.stats._
 
 /**
   * Helper for FlinkRelMdColumnInterval.

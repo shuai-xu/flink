@@ -25,8 +25,9 @@ import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.stats.ValueInterval
 import org.apache.flink.table.plan.util.AggregateUtil._
-import org.apache.flink.table.util.FlinkRelMdUtil._
-import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelMdUtil, FlinkRelOptUtil}
+import org.apache.flink.table.plan.util.FlinkRelMdUtil._
+import org.apache.flink.table.plan.util.{FlinkRelMdUtil, FlinkRelOptUtil}
+import org.apache.flink.table.util.ExecResourceUtil
 
 import org.apache.calcite.adapter.enumerable.EnumerableLimit
 import org.apache.calcite.plan.volcano.RelSubset

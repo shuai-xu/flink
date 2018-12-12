@@ -17,19 +17,21 @@
  */
 package org.apache.flink.table.api.stream.sql
 
-import java.io.{PrintWriter, StringWriter}
-import java.util.{List => JList}
+import org.apache.flink.api.scala._
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecGlobalGroupAggregate, StreamExecGroupAggregate, StreamExecJoin, StreamExecLocalGroupAggregate}
+import org.apache.flink.table.plan.util.RelTraitUtil
+import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.externalize.RelWriterImpl
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.util.Pair
+
 import org.apache.commons.lang3.SystemUtils
-import org.apache.flink.api.scala._
-import org.apache.flink.table.api.scala._
-import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecGlobalGroupAggregate, StreamExecGroupAggregate, StreamExecJoin, StreamExecLocalGroupAggregate}
-import org.apache.flink.table.util.RelTraitUtil
-import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
+
+import java.io.{PrintWriter, StringWriter}
+import java.util.{List => JList}
 
 abstract class StreamPlanTestBase extends TableTestBase {
   protected val streamUtil: StreamTableTestUtil = streamTestUtil()
@@ -40,7 +42,8 @@ abstract class StreamPlanTestBase extends TableTestBase {
     val table = streamUtil.tableEnv.sqlQuery(sql)
     val relNode = table.getRelNode
     val optimized = streamUtil.tableEnv.optimize(relNode, updatesAsRetraction = false)
-    val traitResult = SystemUtils.LINE_SEPARATOR + RelTraitUtil.toString(optimized)
+    val traitResult = SystemUtils.LINE_SEPARATOR +
+      RelTraitUtil.explainRetractTraits(optimized)
     val sw = new StringWriter
     val planWriter = new JoinRelWriter(new PrintWriter(sw))
     optimized.explain(planWriter)

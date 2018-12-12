@@ -23,9 +23,8 @@ import org.apache.flink.table.api.Types
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.functions.sql.internal.SqlAuxiliaryGroupAggFunction
 import org.apache.flink.table.plan.stats.{RightSemiInfiniteValueInterval, ValueInterval}
-import org.apache.flink.table.util.ColumnIntervalUtil.toBigDecimalInterval
+import org.apache.flink.table.plan.util.ColumnIntervalUtil.toBigDecimalInterval
 
-import com.google.common.collect.Lists
 import org.apache.calcite.rel._
 import org.apache.calcite.rel.core.{AggregateCall, JoinRelType}
 import org.apache.calcite.rel.logical.LogicalExchange
@@ -33,12 +32,15 @@ import org.apache.calcite.rex._
 import org.apache.calcite.sql.fun.SqlCountAggFunction
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.{DateString, TimeString, TimestampString}
-import org.junit.Assert._
-import org.junit.Test
+
+import com.google.common.collect.Lists
 
 import java.sql.{Date, Time, Timestamp}
 
 import scala.collection.JavaConversions._
+
+import org.junit.Assert._
+import org.junit.Test
 
 class FlinkRelMdColumnIntervalTest extends FlinkRelMdHandlerTestBase {
 

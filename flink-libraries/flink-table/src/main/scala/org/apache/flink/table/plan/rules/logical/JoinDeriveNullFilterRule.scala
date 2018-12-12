@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.rules.logical
 
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
-import org.apache.flink.table.util.FlinkRelOptUtil
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
 
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}

@@ -25,11 +25,10 @@ import org.apache.flink.table.plan.nodes.calcite.Rank
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.RankUtil._
-import org.apache.flink.table.plan.util.{RankRange, RankUtil, StreamExecUtil}
+import org.apache.flink.table.plan.util.{FlinkRelOptUtil, RankRange, RankUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.KeyedProcessOperator
 import org.apache.flink.table.runtime.rank._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.FlinkRelOptUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel._

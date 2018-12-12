@@ -18,8 +18,6 @@
 
 package org.apache.flink.table.util
 
-import org.apache.calcite.sql.SqlExplainLevel
-import org.apache.commons.lang3.SystemUtils
 import org.apache.flink.api.common.functions.Function
 import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.api.common.typeinfo.{AtomicType, TypeInformation}
@@ -38,8 +36,18 @@ import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.RelNodeBlock
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.sources.TableSource
+
+import org.apache.calcite.sql.SqlExplainLevel
+
+import org.apache.commons.lang3.SystemUtils
+
+import _root_.scala.collection.mutable
+import _root_.scala.collection.JavaConversions._
+import _root_.scala.collection.JavaConverters._
+
 import org.junit.Assert._
 import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}
@@ -47,10 +55,6 @@ import org.mockito.Mockito._
 import org.mockito.Matchers._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-
-import _root_.scala.collection.mutable
-import _root_.scala.collection.JavaConversions._
-import _root_.scala.collection.JavaConverters._
 
 /**
   * Test batch exec base for testing Table API / SQL plans.
@@ -316,7 +320,6 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
 
   private def doVerifyPlan(
       resultTable: Table,
-      treeStyle: Boolean = true,
       explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
       printResource: Boolean = false,
       printPlanBefore: Boolean = true,
@@ -336,7 +339,7 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
 
     if (printPlanBefore) {
       val planBefore = SystemUtils.LINE_SEPARATOR + FlinkRelOptUtil.toString(
-        relNode, treeStyle, SqlExplainLevel.EXPPLAN_ATTRIBUTES, false)
+        relNode, SqlExplainLevel.EXPPLAN_ATTRIBUTES, false)
       assertEqualsOrExpand("planBefore", planBefore)
     }
 
@@ -348,12 +351,11 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
     }
 
     val actual = SystemUtils.LINE_SEPARATOR + FlinkRelOptUtil.toString(
-      optimized, treeStyle, explainLevel, printResource)
+      optimized, explainLevel, printResource)
     assertEqualsOrExpand("planAfter", actual.toString, expand = false)
   }
 
   private def doVerifyPlanWithSubsectionOptimization(
-      treeStyle: Boolean = true,
       explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
       printResultPartitionCount: Boolean = false,
       printPlanBefore: Boolean = true): Unit = {
@@ -370,7 +372,7 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
         val ast = table.getRelNode
         planBefore.append(System.lineSeparator)
         planBefore.append(FlinkRelOptUtil.toString(
-          ast, treeStyle, SqlExplainLevel.EXPPLAN_ATTRIBUTES, false))
+          ast, SqlExplainLevel.EXPPLAN_ATTRIBUTES, false))
       }
       assertEqualsOrExpand("planBefore", planBefore.toString())
     }
@@ -391,7 +393,6 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
         actual.append(System.lineSeparator)
         actual.append(FlinkRelOptUtil.toString(
           block.getOptimizedPlan,
-          treeStyle = treeStyle,
           detailLevel = explainLevel,
           printResource = printResultPartitionCount))
         actual.append(System.lineSeparator)

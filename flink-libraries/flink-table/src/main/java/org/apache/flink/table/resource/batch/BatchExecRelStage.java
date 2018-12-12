@@ -20,7 +20,7 @@ package org.apache.flink.table.resource.batch;
 
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
-import org.apache.flink.table.util.FlinkRelOptUtil;
+import org.apache.flink.table.plan.util.FlinkRelOptUtil;
 
 import java.io.Serializable;
 import java.util.ArrayList;

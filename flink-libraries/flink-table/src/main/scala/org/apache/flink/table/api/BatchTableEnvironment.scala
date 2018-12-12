@@ -41,7 +41,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExec
 import org.apache.flink.table.plan.optimize.BatchOptimizeContext
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.plan.util.{DeadlockBreakupProcessor, SameRelObjectShuttle, SubplanReuseContext, SubplanReuseShuttle}
+import org.apache.flink.table.plan.util.{DeadlockBreakupProcessor, SameRelObjectShuttle, SubplanReuseContext, SubplanReuseShuttle, FlinkRelOptUtil}
 import org.apache.flink.table.plan.{RelNodeBlock, RelNodeBlockPlanBuilder}
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics

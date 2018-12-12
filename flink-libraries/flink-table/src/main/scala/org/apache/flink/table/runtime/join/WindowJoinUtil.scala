@@ -17,13 +17,6 @@
  */
 package org.apache.flink.table.runtime.join
 
-import java.util
-
-import org.apache.calcite.plan.RelOptUtil
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.JoinRelType
-import org.apache.calcite.rex._
-import org.apache.calcite.sql.SqlKind
 import org.apache.flink.api.common.functions.FlatJoinFunction
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.types.BaseRowType
@@ -31,7 +24,15 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.plan.schema.TimeIndicatorRelDataType
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
-import org.apache.flink.table.util.FlinkRexUtil
+import org.apache.flink.table.plan.util.FlinkRexUtil
+
+import org.apache.calcite.plan.RelOptUtil
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.JoinRelType
+import org.apache.calcite.rex._
+import org.apache.calcite.sql.SqlKind
+
+import java.util
 
 import scala.collection.JavaConverters._
 

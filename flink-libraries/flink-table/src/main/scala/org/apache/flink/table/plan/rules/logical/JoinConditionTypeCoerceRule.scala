@@ -18,6 +18,8 @@
 
 package org.apache.flink.table.plan.rules.logical
 
+import org.apache.flink.table.plan.util.FlinkRexUtil
+
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptUtil}
 import org.apache.calcite.rel.`type`.RelDataTypeFactory
@@ -25,7 +27,6 @@ import org.apache.calcite.rel.core.Join
 import org.apache.calcite.rex.{RexCall, RexInputRef, RexNode}
 import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.`type`.SqlTypeUtil
-import org.apache.flink.table.util.FlinkRexUtil
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

@@ -31,18 +31,23 @@ import org.apache.flink.table.api.{Table, TableEnvironment, TableSchema}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.optimize._
+import org.apache.flink.table.plan.util.RelTraitUtil
+
 import org.apache.calcite.plan.RelOptUtil
+import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.tools.RuleSet
 import org.apache.calcite.util.ImmutableBitSet
+
 import org.apache.commons.lang3.SystemUtils
+
+import java.util
+import java.util.{ArrayList => JArrayList}
+
 import org.junit.Assert.assertEquals
 import org.junit.{Before, Rule}
 import org.junit.rules.{ExpectedException, TestName}
 import org.mockito.Mockito.{mock, when}
-import java.util
-import java.util.{ArrayList => JArrayList}
-import org.apache.calcite.plan.hep.HepMatchOrder
-import org.apache.flink.table.plan.optimize._
 
 /**
   * Test base for testing Table API / SQL plans.
@@ -244,7 +249,7 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
   def verifyTrait(table: Table): Unit = {
     val relNode = table.getRelNode
     val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
-    val actual = SystemUtils.LINE_SEPARATOR + RelTraitUtil.toString(optimized)
+    val actual = SystemUtils.LINE_SEPARATOR + RelTraitUtil.explainRetractTraits(optimized)
     verifyTrait(test.name.getMethodName, actual)
   }
 
@@ -261,7 +266,8 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
     val relNode = table.getRelNode
     val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
     val actualPlan = SystemUtils.LINE_SEPARATOR + RelOptUtil.toString(optimized)
-    val actualTrait = SystemUtils.LINE_SEPARATOR + RelTraitUtil.toString(optimized)
+    val actualTrait = SystemUtils.LINE_SEPARATOR +
+      RelTraitUtil.explainRetractTraits(optimized)
     assertEqualsOrExpand("plan", actualPlan)
     assertEqualsOrExpand("trait", actualTrait, expand = false)
   }

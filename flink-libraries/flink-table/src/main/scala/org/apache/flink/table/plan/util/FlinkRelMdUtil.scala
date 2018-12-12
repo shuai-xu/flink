@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.util
+package org.apache.flink.table.plan.util
 
-import java.lang.Double
-import java.math.BigDecimal
-import java.util
+import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
+import org.apache.flink.table.plan.nodes.calcite.{LogicalRank, LogicalWindowAggregate, Rank}
+import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalRank, FlinkLogicalWindowAggregate}
+import org.apache.flink.table.plan.nodes.physical.batch._
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRank
+import org.apache.flink.table.plan.util.FlinkRelOptUtil.{checkAndGetFullGroupSet, checkAndSplitAggCalls}
 
-import com.google.common.collect.ImmutableList
 import org.apache.calcite.avatica.util.TimeUnitRange._
 import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.rel.core._
@@ -32,17 +34,19 @@ import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.util.{ImmutableBitSet, NumberUtil}
-import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
-import org.apache.flink.table.plan.nodes.calcite.{LogicalRank, LogicalWindowAggregate, Rank}
-import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalRank, FlinkLogicalWindowAggregate}
-import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRank
-import org.apache.flink.table.plan.util.{ConstantRankRange, RankRange}
-import org.apache.flink.table.util.FlinkRelOptUtil.{checkAndGetFullGroupSet, checkAndSplitAggCalls}
+
+import com.google.common.collect.ImmutableList
+
+import java.lang.Double
+import java.math.BigDecimal
+import java.util
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
+/**
+  * FlinkRelMdUtil provides utility methods used by the metadata provider methods.
+  */
 object FlinkRelMdUtil {
 
   /**

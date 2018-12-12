@@ -18,11 +18,12 @@
 
 package org.apache.flink.table.plan.rules.logical
 
+import org.apache.flink.table.plan.util.FlinkRexUtil
+
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptUtil}
 import org.apache.calcite.rel.logical.LogicalJoin
 import org.apache.calcite.rex.RexNode
-import org.apache.flink.table.util.FlinkRexUtil
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

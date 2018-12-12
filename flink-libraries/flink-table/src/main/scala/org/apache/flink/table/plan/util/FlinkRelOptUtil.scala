@@ -15,12 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.table.util
+package org.apache.flink.table.plan.util
 
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.functions.sql.internal.SqlAuxiliaryGroupAggFunction
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
-import org.apache.flink.table.plan.util.{SameRelObjectShuttle, SubplanReuseContext}
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, FunctionCatalog}
 
 import org.apache.calcite.plan.RelOptUtil
@@ -40,44 +39,46 @@ import java.sql.{Date, Time, Timestamp}
 import java.util
 import java.util.Calendar
 
-import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
+import scala.collection.JavaConversions._
 import scala.collection.mutable
 
 object FlinkRelOptUtil {
 
+  /**
+    * Converts a relational expression to a string.
+    * This is different from [[RelOptUtil]]#toString on two points:
+    * 1. Generated string by this method is in a tree style
+    * 2. Generated string by this method may have more information about RelNode, such as
+    * resource, memory cost, RelNodeId.
+    */
   def toString(
       rel: RelNode,
-      treeStyle: Boolean = true,
       detailLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
       printResource: Boolean = false,
       printMemCost: Boolean = false,
       withRelNodeId: Boolean = false): String = {
-    if (!treeStyle) {
-      RelOptUtil.toString(rel, detailLevel)
+    // FIXME refactor
+    val config = FlinkRelOptUtil.getTableConfig(rel)
+    val isPhysicalRel = rel.isInstanceOf[FlinkPhysicalRel]
+    // only print reuse info of physical plan
+    val (subplanReuseContext, newRel) = if (isPhysicalRel && config.getSubPlanReuse) {
+      val planWithoutSameRef = rel.accept(new SameRelObjectShuttle)
+      (Some(new SubplanReuseContext(config.isTableSourceReuseDisabled, planWithoutSameRef)),
+        planWithoutSameRef)
     } else {
-      // FIXME refactor
-      val config = FlinkRelOptUtil.getTableConfig(rel)
-      val isPhysicalRel = rel.isInstanceOf[FlinkPhysicalRel]
-      // only print reuse info of physical plan
-      val (subplanReuseContext, newRel) = if (isPhysicalRel && config.getSubPlanReuse) {
-        val planWithoutSameRef = rel.accept(new SameRelObjectShuttle)
-        (Some(new SubplanReuseContext(config.isTableSourceReuseDisabled, planWithoutSameRef)),
-          planWithoutSameRef)
-      } else {
-        (None, rel)
-      }
-      val sw = new StringWriter
-      val planWriter = new RelTreeWriterImpl(
-        new PrintWriter(sw),
-        subplanReuseContext,
-        detailLevel,
-        printResource,
-        printMemCost,
-        withRelNodeId)
-      newRel.explain(planWriter)
-      sw.toString
+      (None, rel)
     }
+    val sw = new StringWriter
+    val planWriter = new RelTreeWriterImpl(
+      new PrintWriter(sw),
+      subplanReuseContext,
+      detailLevel,
+      printResource,
+      printMemCost,
+      withRelNodeId)
+    newRel.explain(planWriter)
+    sw.toString
   }
 
   def getDigest(rel: RelNode, withInput: Boolean = false): String = {

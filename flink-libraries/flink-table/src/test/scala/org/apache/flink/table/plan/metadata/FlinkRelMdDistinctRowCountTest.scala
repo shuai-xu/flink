@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.metadata
 
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.util.FlinkRelMdUtil
+import org.apache.flink.table.plan.util.FlinkRelMdUtil
 
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.rel.core.AggregateCall

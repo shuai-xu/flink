@@ -19,8 +19,8 @@
 package org.apache.flink.table.plan.rules.logical;
 
 import org.apache.flink.table.calcite.FlinkRelBuilder;
-import org.apache.flink.table.util.FlinkRelOptUtil;
-import org.apache.flink.table.util.FlinkRexUtil;
+import org.apache.flink.table.plan.util.FlinkRelOptUtil;
+import org.apache.flink.table.plan.util.FlinkRexUtil;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.calcite.plan.RelOptCluster;

@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.util
+package org.apache.flink.table.plan.util
 
-import java.io.{PrintWriter, StringWriter}
-import java.util
-import java.util.concurrent.atomic.AtomicInteger
+import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCorrelate, BatchExecGroupAggregateBase, BatchExecOverAggregate}
 
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.core.{Calc, Join}
@@ -28,8 +27,10 @@ import org.apache.calcite.rel.externalize.RelWriterImpl
 import org.apache.calcite.rex.RexUtil
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.util.Pair
-import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCorrelate, BatchExecGroupAggregateBase, BatchExecOverAggregate}
+
+import java.io.{PrintWriter, StringWriter}
+import java.util
+import java.util.concurrent.atomic.AtomicInteger
 
 import scala.collection.JavaConversions._
 

@@ -15,12 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.table.util
+package org.apache.flink.table.plan.util
 
 import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.table.plan.cost.FlinkBatchCost
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashJoinBase, BatchExecNestedLoopJoinBase, BatchExecRel, BatchExecScan}
-import org.apache.flink.table.plan.util.SubplanReuseContext
 
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.externalize.RelWriterImpl

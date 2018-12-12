@@ -25,7 +25,7 @@ import org.apache.flink.table.plan.nodes.FlinkConventions.BATCHEXEC
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalJoin, FlinkLogicalSemiJoin}
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecNestedLoopJoin, BatchExecNestedLoopSemiJoin}
 import org.apache.flink.table.plan.rules.physical.batch.BatchExecNestedLoopJoinRule.transformToNestedLoopJoin
-import org.apache.flink.table.util.FlinkRelOptUtil
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
 
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}

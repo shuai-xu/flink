@@ -28,11 +28,11 @@ import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistri
 import org.apache.flink.table.plan.cost.FlinkBatchCost.FUNC_CPU_COST
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.calcite.Rank
-import org.apache.flink.table.plan.util.{ConstantRankRange, RankRange}
+import org.apache.flink.table.plan.util.{ConstantRankRange, FlinkRelOptUtil, RankRange}
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.rank.RankOperator
 import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.table.util.{BatchExecRelVisitor, FlinkRelOptUtil}
+import org.apache.flink.table.util.BatchExecRelVisitor
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelDistribution.Type

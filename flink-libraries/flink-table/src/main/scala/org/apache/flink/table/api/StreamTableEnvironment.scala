@@ -42,8 +42,8 @@ import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecRel, _}
 import org.apache.flink.table.plan.optimize.StreamOptimizeContext
 import org.apache.flink.table.plan.schema.{TableSourceSinkTable, _}
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.plan.util.UpdatingPlanChecker
-import org.apache.flink.table.plan.{RelNodeBlock, RelNodeBlockPlanBuilder, MiniBatchHelper}
+import org.apache.flink.table.plan.util.{RelTraitUtil, UpdatingPlanChecker}
+import org.apache.flink.table.plan.{MiniBatchHelper, RelNodeBlock, RelNodeBlockPlanBuilder}
 import org.apache.flink.table.sinks.{DataStreamTableSink, _}
 import org.apache.flink.table.sources._
 import org.apache.flink.table.typeutils.TypeCheckUtils
@@ -998,7 +998,7 @@ abstract class StreamTableEnvironment(
         }
         sb.append(System.lineSeparator)
         sb.append(RelOptUtil.toString(block.getOptimizedPlan))
-        sb.append(RelTraitUtil.toString(block.getOptimizedPlan))
+        sb.append(RelTraitUtil.explainRetractTraits(block.getOptimizedPlan))
         sb.append(System.lineSeparator)
         visitedBlocks += block
       }

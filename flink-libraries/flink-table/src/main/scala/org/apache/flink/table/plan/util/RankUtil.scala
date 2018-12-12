@@ -26,11 +26,11 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRank
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
+import org.apache.flink.table.plan.util.FlinkRexUtil
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.runtime.aggregate.SorterHelper
 import org.apache.flink.table.runtime.{BinaryRowKeySelector, NullBinaryRowKeySelector}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.FlinkRexUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptUtil}
 import org.apache.calcite.rel.RelFieldCollation.Direction
