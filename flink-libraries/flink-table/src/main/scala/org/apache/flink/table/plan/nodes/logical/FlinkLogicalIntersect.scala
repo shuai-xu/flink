@@ -52,6 +52,8 @@ class FlinkLogicalIntersect(
       cost.plus(planner.getCostFactory.makeCost(rowCnt, rowCnt, rowCnt * rowSize))
     }
   }
+
+  override def isDeterministic: Boolean = true
 }
 
 private class FlinkLogicalIntersectConverter

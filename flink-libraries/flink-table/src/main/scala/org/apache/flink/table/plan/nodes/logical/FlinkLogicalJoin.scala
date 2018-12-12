@@ -27,10 +27,7 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.logical.LogicalJoin
-import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rex.RexNode
-
-import scala.collection.JavaConverters._
 
 class FlinkLogicalJoin(
     cluster: RelOptCluster,
@@ -58,6 +55,7 @@ class FlinkLogicalJoin(
 
     new FlinkLogicalJoin(cluster, traitSet, left, right, conditionExpr, joinType)
   }
+
 }
 
 private class FlinkLogicalJoinConverter

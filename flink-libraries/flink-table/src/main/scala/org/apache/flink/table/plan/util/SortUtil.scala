@@ -18,13 +18,14 @@
 
 package org.apache.flink.table.plan.util
 
+import org.apache.flink.api.common.operators.Order
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.calcite.FlinkPlannerImpl
+
 import org.apache.calcite.rel.RelFieldCollation.Direction
 import org.apache.calcite.rel.`type`._
 import org.apache.calcite.rel.{RelCollation, RelFieldCollation, RelWriter}
 import org.apache.calcite.rex.{RexLiteral, RexNode}
-import org.apache.flink.api.common.operators.Order
-import org.apache.flink.table.api.TableException
-import org.apache.flink.table.calcite.FlinkPlannerImpl
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -33,6 +34,10 @@ import scala.collection.mutable
   * Common methods for Flink sort operators.
   */
 object SortUtil {
+
+  def isDeterministic(offset: RexNode, fetch: RexNode): Boolean = {
+    FlinkRexUtil.isDeterministicOperator(offset) && FlinkRexUtil.isDeterministicOperator(fetch)
+  }
 
   /**
    * Returns the direction of the first sort field.

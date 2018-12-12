@@ -19,6 +19,7 @@ package org.apache.flink.table.plan.nodes.logical
 
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
+import org.apache.flink.table.plan.util.JoinTableUtil
 import org.apache.flink.table.sources.{DimensionTableSource, TableSource}
 
 import org.apache.calcite.plan._
@@ -50,10 +51,8 @@ class FlinkLogicalDimensionTableSourceScan(
   override def deriveRowType(): RelDataType = {
     // use calcProgram's output row type if not none
     calcProgram match {
-      case Some(_) =>
-        calcProgram.get.getOutputRowType
-      case None =>
-        super.deriveRowType()
+      case Some(_) => calcProgram.get.getOutputRowType
+      case None => super.deriveRowType()
     }
   }
 
@@ -69,6 +68,9 @@ class FlinkLogicalDimensionTableSourceScan(
       .item("period", period)
       .item("calcProgram", calcProgram)
   }
+
+  override def isDeterministic: Boolean = JoinTableUtil.isDeterministic(calcProgram, period, null)
+
 }
 
 class FlinkLogicalDimensionTableSourceScanConverter(scanClass: Class[_ <: TableScan])

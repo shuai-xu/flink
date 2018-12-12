@@ -49,4 +49,8 @@ object ExpandUtil {
     }.mkString(", ")
   }
 
+  def isDeterministic(projects: util.List[util.List[RexNode]]): Boolean = {
+    projects.forall(_.forall(r => FlinkRexUtil.isDeterministicOperator(r)))
+  }
+
 }

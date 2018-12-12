@@ -24,7 +24,6 @@ import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, Decim
 import org.apache.flink.table.api.{TableConfig, TableException, Types}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
-import org.apache.flink.table.codegen.expr.{ConcatAggFunction => _}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.dataview.DataViewUtils.useNullSerializerForStateViewFieldsFromAccType
 import org.apache.flink.table.dataview.{DataViewSpec, MapViewSpec}
@@ -53,6 +52,10 @@ object AggregateUtil extends Enumeration {
 
   type CalcitePair[T, R] = org.apache.calcite.util.Pair[T, R]
   type JavaList[T] = java.util.List[T]
+
+  def isDeterministic(aggCalls: util.List[AggregateCall]): Boolean = {
+    aggCalls.forall(c => FlinkRexUtil.isDeterministicOperator(c.getAggregation))
+  }
 
   def transformToBatchAggregateFunctions(
       aggregateCalls: Seq[AggregateCall],

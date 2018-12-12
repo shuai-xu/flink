@@ -18,16 +18,16 @@
 
 package org.apache.flink.table.plan.nodes.logical
 
-import java.util
-
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.calcite.{LogicalSink, Sink}
 import org.apache.flink.table.sinks.TableSink
 
 import org.apache.calcite.plan.{Convention, RelOptCluster, RelOptRule, RelTraitSet}
+import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
-import org.apache.calcite.rel.{RelNode, RelWriter}
+
+import java.util
 
 import scala.collection.JavaConversions._
 
@@ -40,11 +40,11 @@ class FlinkLogicalSink(
   extends Sink(cluster, traitSet, input, sink, sinkName)
   with FlinkLogicalRel {
 
-
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
     new FlinkLogicalSink(cluster, traitSet, inputs.head, sink, sinkName)
   }
 
+  override def isDeterministic: Boolean = true
 }
 
 private class FlinkLogicalSinkConverter

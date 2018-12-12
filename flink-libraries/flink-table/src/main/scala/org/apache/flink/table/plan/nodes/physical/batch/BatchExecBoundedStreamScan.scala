@@ -69,6 +69,8 @@ class BatchExecBoundedStreamScan(
     new BatchExecBoundedStreamScan(cluster, traitSet, getTable, getRowType)
   }
 
+  override def isDeterministic: Boolean = true
+
   /**
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *

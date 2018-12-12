@@ -60,9 +60,10 @@ class BatchExecValues(
   override def deriveRowType(): RelDataType = rowRelDataType
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    super.explainTerms(pw)
-      .item("values", valuesFieldsToString)
+    super.explainTerms(pw).item("values", valuesFieldsToString)
   }
+
+  override def isDeterministic: Boolean = true
 
   /**
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.

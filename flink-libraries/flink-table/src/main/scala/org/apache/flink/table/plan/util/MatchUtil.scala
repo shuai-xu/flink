@@ -16,33 +16,45 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.`match`
+package org.apache.flink.table.plan.util
 
-import java.util
-import java.util.Comparator
-
-import org.apache.calcite.rel.RelCollation
-import org.apache.calcite.rex.RexNode
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.cep._
 import org.apache.flink.cep.pattern.conditions.IterativeCondition
+import org.apache.flink.cep.{EventComparator, PatternFlatSelectFunction, PatternFlatTimeoutFunction, PatternSelectFunction, PatternTimeoutFunction}
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.codegen.{CodeGeneratorContext, Compiler, GenConditionFunction, GenSelectFunction, GeneratedSorter, MatchCodeGenerator}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.schema.BaseRowSchema
+import org.apache.flink.table.runtime.`match`.{IterativeConditionRunner, PatternFlatSelectFunctionRunner, PatternFlatTimeoutFunctionRunner, PatternSelectFunctionRunner, PatternTimeoutFunctionRunner}
 import org.apache.flink.table.runtime.aggregate.{CollectionBaseRowComparator, SorterHelper}
 import org.apache.flink.table.runtime.sort.RecordComparator
 import org.apache.flink.table.util.Logging
 
-import scala.collection.JavaConversions._
+import org.apache.calcite.rel.RelCollation
+import org.apache.calcite.rel.core.Match
+import org.apache.calcite.rex.RexNode
+import org.apache.calcite.tools.RelBuilder
+
+import java.util
+import java.util.Comparator
+
 import scala.collection.JavaConverters._
 
 /**
   * An util class to generate match functions.
   */
 object MatchUtil {
+
+  def isDeterministic(`match`: Match): Boolean = {
+    FlinkRexUtil.isDeterministicOperator(`match`.getAfter) &&
+      FlinkRexUtil.isDeterministicOperator(`match`.getPattern) &&
+      FlinkRexUtil.isDeterministicOperator(`match`.getRowsPerMatch) &&
+      `match`.getPatternDefinitions.values().asScala.forall(FlinkRexUtil.isDeterministicOperator) &&
+      `match`.getPartitionKeys.asScala.forall(FlinkRexUtil.isDeterministicOperator) &&
+      FlinkRexUtil.isDeterministicOperator(`match`.getInterval) &&
+      FlinkRexUtil.isDeterministicOperator(`match`.getEmit)
+  }
 
   private[flink] def generateIterativeCondition(
     config: TableConfig,

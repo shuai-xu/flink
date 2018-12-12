@@ -32,7 +32,7 @@ import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.plan.nodes.FlinkRelNode
 import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.plan.util.CalcUtil
+import org.apache.flink.table.plan.util.{CalcUtil, JoinTableUtil}
 import org.apache.flink.table.runtime.collector.TableFunctionCollector
 import org.apache.flink.table.runtime.join._
 import org.apache.flink.table.sources.{DimensionTableSource, IndexKey}
@@ -82,6 +82,10 @@ abstract class CommonJoinTable(
       schema.relDataType,
       joinCondition,
       getExpressionString)
+  }
+
+  override def isDeterministic: Boolean = {
+    JoinTableUtil.isDeterministic(calcProgram, period, joinCondition)
   }
 
   protected def translateToPlanInternal(

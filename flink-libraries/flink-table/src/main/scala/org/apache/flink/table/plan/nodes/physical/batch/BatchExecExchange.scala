@@ -146,6 +146,8 @@ class BatchExecExchange(
       .itemIf("exchange_mode", requiredExchangeMode.orNull,
         requiredExchangeMode.contains(DataExchangeMode.BATCH))
 
+  override def isDeterministic: Boolean = true
+
   def setRequiredDataExchangeMode(exchangeMode: DataExchangeMode): Unit = {
     require(exchangeMode != null)
     requiredExchangeMode = Some(exchangeMode)

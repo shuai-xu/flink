@@ -64,6 +64,8 @@ class StreamExecExpand(
       .item("projects", ExpandUtil.projectsToString(projects, input.getRowType, getRowType))
   }
 
+  override def isDeterministic: Boolean = ExpandUtil.isDeterministic(projects)
+
   private def getOperatorName: String = {
     s"StreamExecExpand: ${rowType.getFieldList.map(_.getName).mkString(", ")}"
   }

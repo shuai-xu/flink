@@ -46,6 +46,8 @@ class StreamExecWatermarkAssigner (
       cluster, traitSet, inputs.get(0), rowtimeField, watermarkOffset)
   }
 
+  override def isDeterministic: Boolean = true
+
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val in = input.asInstanceOf[RowStreamExecRel]
     val inputTransformation = in.translateToPlan(tableEnv)

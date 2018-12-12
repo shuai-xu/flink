@@ -41,6 +41,8 @@ import org.apache.calcite.util.Pair
 
 import java.util.{ArrayList => JArrayList, List => JList}
 
+import scala.collection.JavaConversions._
+
 /**
   *
   * Flink RelNode for data stream unbounded local group aggregate
@@ -123,6 +125,7 @@ class StreamExecLocalGroupAggregate(
     values
   }
 
+  override def isDeterministic: Boolean = AggregateUtil.isDeterministic(aggCalls)
 
   private def getOperatorName: String = {
     s"LocalGroupAggregate(${

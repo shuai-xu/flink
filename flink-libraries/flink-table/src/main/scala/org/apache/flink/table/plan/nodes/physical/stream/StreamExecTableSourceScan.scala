@@ -67,6 +67,8 @@ class StreamExecTableSourceScan(
     )
   }
 
+  override def isDeterministic: Boolean = true
+
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     val config = tableEnv.getConfig

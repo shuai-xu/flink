@@ -67,6 +67,8 @@ class BatchExecExpand(
       .item("projects", ExpandUtil.projectsToString(projects, input.getRowType, getRowType))
   }
 
+  override def isDeterministic: Boolean = ExpandUtil.isDeterministic(projects)
+
   private def getOperatorName: String = {
     s"BatchExecExpand: ${getRowType.getFieldList.map(_.getName).mkString(", ")}"
   }

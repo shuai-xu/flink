@@ -18,13 +18,15 @@
 
 package org.apache.flink.table.plan.util
 
-import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCorrelate, BatchExecGroupAggregateBase, BatchExecOverAggregate}
+import org.apache.flink.table.api.{TableConfig, TableException}
+import org.apache.flink.table.plan.nodes.FlinkRelNode
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalLastRow, Rank, Sink, WatermarkAssigner}
+import org.apache.flink.table.plan.util.{AggregateUtil, CalcUtil, ExpandUtil, MatchUtil, OverAggregateUtil, SortUtil}
 
 import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.core.{Calc, Join}
+import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.externalize.RelWriterImpl
-import org.apache.calcite.rex.RexUtil
+import org.apache.calcite.rel.rules.MultiJoin
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.util.Pair
 
@@ -97,7 +99,7 @@ class RelDigestWriterImpl(sw: StringWriter, tableConfig: TableConfig)
     s.append("rowType=[").append(rel.getRowType.toString).append("]")
     // if the given rel contains non-deterministic `SqlOperator`,
     // add a unique id to distinguish each other
-    if (!tableConfig.getNondeterministicOperatorReuse && findNonDeterministicOperator(rel)) {
+    if (!tableConfig.getNondeterministicOperatorReuse && !isDeterministicOperator(rel)) {
       s.append(",nonDeterministicId=[")
         .append(RelDigestWriterImpl.nonDeterministicIdCounter.incrementAndGet()).append("]")
     }
@@ -109,40 +111,42 @@ class RelDigestWriterImpl(sw: StringWriter, tableConfig: TableConfig)
 
   /**
     * Return true if the given rel does not contain non-deterministic `SqlOperator`
-    * (e.g. op in `RexCall`, op in `SqlAggFunction`), otherwise false.
+    * and dynamic function `SqlOperator`(e.g. op in `RexCall`, op in `SqlAggFunction`),
+    * otherwise false.
     */
-  private def findNonDeterministicOperator(rel: RelNode): Boolean = {
+  private def isDeterministicOperator(rel: RelNode): Boolean = {
     rel match {
-      case c: Calc =>
-        val program = c.getProgram
-        if (program.getCondition != null) {
-          val condition = program.expandLocalRef(program.getCondition)
-          if (!RexUtil.isDeterministic(condition)) {
-            return true
-          }
-        }
-        val projection = program.getProjectList.map(program.expandLocalRef)
-        projection.exists(p => !RexUtil.isDeterministic(p))
-      case j: Join => !RexUtil.isDeterministic(j.getCondition)
-      case a: BatchExecGroupAggregateBase =>
-        a.getAggCallList.exists(c => !c.getAggregation.isDeterministic)
-      case o: BatchExecOverAggregate =>
-        o.aggregateCalls.exists(c => !c.getAggregation.isDeterministic)
-      case c: BatchExecCorrelate =>
-        if (!RexUtil.isDeterministic(c.scan.getCall)) {
-          return false
-        }
-        c.condition match {
-          case Some(condition) => RexUtil.isDeterministic(condition)
-          case _ => false
-        }
-      case _ => false
+      case r: FlinkRelNode => r.isDeterministic
+      case f: Filter => FlinkRexUtil.isDeterministicOperator(f.getCondition)
+      case p: Project => p.getProjects.forall(p => FlinkRexUtil.isDeterministicOperator(p))
+      case c: Calc => CalcUtil.isDeterministic(c.getProgram)
+      case s: Sort => SortUtil.isDeterministic(s.offset, s.fetch)
+      case j: Join => FlinkRexUtil.isDeterministicOperator(j.getCondition)
+      case a: Aggregate => AggregateUtil.isDeterministic(a.getAggCallList)
+      case w: Window => OverAggregateUtil.isDeterministic(w.groups)
+      case s: TableFunctionScan => FlinkRexUtil.isDeterministicOperator(s.getCall)
+      case m: Match => MatchUtil.isDeterministic(m)
+      case m: MultiJoin =>
+        m.getOuterJoinConditions.forall(FlinkRexUtil.isDeterministicOperator) &&
+          FlinkRexUtil.isDeterministicOperator(m.getJoinFilter) &&
+          FlinkRexUtil.isDeterministicOperator(m.getPostJoinFilter)
+      case t: TableModify =>
+        t.getSourceExpressionList != null &&
+          t.getSourceExpressionList.forall(FlinkRexUtil.isDeterministicOperator)
+      case r: Rank => FlinkRexUtil.isDeterministicOperator(r.rankFunction)
+      case e: Expand => ExpandUtil.isDeterministic(e.projects)
+      case _: Collect | _: Correlate | _: Exchange | _: SetOp | _: Sample |
+           _: TableScan | _: Uncollect | _: Values | _: Sink | _: LogicalLastRow |
+           _: WatermarkAssigner => true
+      case o => throw new TableException(
+        s"Unsupported RelNode: ${o.getRelTypeName}, which should be handled before this exception")
     }
   }
+
 }
 
 object RelDigestWriterImpl {
-  private val nonDeterministicIdCounter = new AtomicInteger(0)
+  private[flink] val nonDeterministicIdCounter = new AtomicInteger(0)
 
   def getDigest(rel: RelNode): String = {
     val sw = new StringWriter

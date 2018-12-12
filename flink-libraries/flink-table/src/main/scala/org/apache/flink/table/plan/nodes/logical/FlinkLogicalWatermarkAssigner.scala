@@ -44,6 +44,7 @@ class FlinkLogicalWatermarkAssigner(
         cluster, traitSet, inputs.get(0), rowtimeField, watermarkOffset)
   }
 
+  override def isDeterministic: Boolean = true
 }
 
 class FlinkLogicalWatermarkAssignerConverter extends ConverterRule(

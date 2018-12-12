@@ -25,7 +25,7 @@ import org.apache.flink.table.plan.nodes.calcite.Rank
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.RankUtil._
-import org.apache.flink.table.plan.util.{FlinkRelOptUtil, RankRange, RankUtil, StreamExecUtil}
+import org.apache.flink.table.plan.util.{FlinkRelOptUtil, FlinkRexUtil, RankRange, RankUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.KeyedProcessOperator
 import org.apache.flink.table.runtime.rank._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -122,6 +122,7 @@ class StreamExecRank(
       .item("select", selectToString)
   }
 
+  override def isDeterministic: Boolean = FlinkRexUtil.isDeterministicOperator(rankFunction)
 
   private def getOperatorName: String = {
     var result =

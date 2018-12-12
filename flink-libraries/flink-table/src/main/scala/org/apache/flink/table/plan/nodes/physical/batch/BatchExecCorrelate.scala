@@ -95,6 +95,8 @@ class BatchExecCorrelate(
       .itemIf("condition", condition.orNull, condition.isDefined)
   }
 
+  override def isDeterministic: Boolean = CorrelateUtil.isDeterministic(scan, condition)
+
   override def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = {
     val requiredDistribution = requiredTraitSet.getTrait(FlinkRelDistributionTraitDef.INSTANCE)
     // Does not push broadcast distribution trait down into Correlate.

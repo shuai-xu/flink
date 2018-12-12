@@ -20,6 +20,7 @@ package org.apache.flink.table.plan.nodes.logical
 
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.util.MatchUtil
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.`type`.RelDataType
@@ -135,6 +136,8 @@ class FlinkLogicalMatch(
       emit,
       rowType)
   }
+
+  override def isDeterministic: Boolean = MatchUtil.isDeterministic(this)
 }
 
 private class FlinkLogicalMatchConverter

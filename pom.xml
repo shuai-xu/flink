@@ -1165,6 +1165,7 @@ under the License.
 						<exclude>flink-libraries/flink-python/src/test/python/org/apache/flink/python/api/data_csv</exclude>
 						<exclude>flink-libraries/flink-python/src/test/python/org/apache/flink/python/api/data_text</exclude>
 						<exclude>flink-libraries/flink-table/src/test/resources/explain/*</exclude>
+						<exclude>flink-libraries/flink-table/src/test/resources/digest/*</exclude>
 						<exclude>flink-libraries/flink-table/src/test/resources/tpcds/result/*/*</exclude>
 						<exclude>flink-libraries/flink-table/src/test/resources/tpcds/queries/*/*</exclude>
 						<exclude>flink-libraries/flink-table/src/test/resources/tpcds/queries-stream/*</exclude>

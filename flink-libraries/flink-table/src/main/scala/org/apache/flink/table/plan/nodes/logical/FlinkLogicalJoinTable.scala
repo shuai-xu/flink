@@ -23,7 +23,7 @@ import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.plan.metadata.FlinkRelMdSize
 import org.apache.flink.table.plan.schema.{BaseRowSchema, TimeIndicatorRelDataType}
-import org.apache.flink.table.plan.util.CalcUtil
+import org.apache.flink.table.plan.util.{CalcUtil, JoinTableUtil}
 import org.apache.flink.table.sources.{DimensionTableSource, IndexKey}
 
 import org.apache.calcite.plan._
@@ -84,17 +84,17 @@ class FlinkLogicalJoinTable(
       return litmus.fail(TableErrors.INST.sqlDimTableRequiresIndex())
     }
 
-    def getTableSourceSchema(): BaseRowSchema = {
+    def getTableSourceSchema: BaseRowSchema = {
       val flinkTypeFactory = cluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
       val tableSourceRowType = flinkTypeFactory.buildLogicalRowType(
-        tableSource.getTableSchema, false)
+        tableSource.getTableSchema, isStreaming = false)
       new BaseRowSchema(tableSourceRowType)
     }
 
     val leftKeys = lookupKeyPairs.map(_.source).toArray
     val rightKeys = lookupKeyPairs.map(_.target) ++ constantLookupKeys.asScala.keys
     val inputSchema = new BaseRowSchema(input.getRowType)
-    val tableSourceSchema = getTableSourceSchema()
+    val tableSourceSchema = getTableSourceSchema
     val leftKeyTypes = leftKeys.map(inputSchema.fieldTypeInfos(_))
     // use original keyPair to validate key types (rigthKeys may include constant keys)
     val rightKeyTypes = lookupKeyPairs.map(p => tableSourceSchema.fieldTypeInfos(p.target))
@@ -198,7 +198,7 @@ class FlinkLogicalJoinTable(
     if (calcProgram.isDefined) {
       calcProgram.get.getOutputRowType
     } else {
-      flinkTypeFactory.buildLogicalRowType(tableSource.getTableSchema, false)
+      flinkTypeFactory.buildLogicalRowType(tableSource.getTableSchema, isStreaming = false)
     }
   }
 
@@ -240,5 +240,9 @@ class FlinkLogicalJoinTable(
     }
 
     pw
+  }
+
+  override def isDeterministic: Boolean = {
+    JoinTableUtil.isDeterministic(calcProgram, period, newJoinRemainingCondition)
   }
 }

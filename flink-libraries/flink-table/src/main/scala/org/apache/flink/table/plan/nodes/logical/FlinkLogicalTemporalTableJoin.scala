@@ -18,14 +18,15 @@
 
 package org.apache.flink.table.plan.nodes.logical
 
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.calcite.LogicalTemporalTableJoin
+import org.apache.flink.util.Preconditions.checkArgument
+
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rex.RexNode
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.calcite.LogicalTemporalTableJoin
-import org.apache.flink.util.Preconditions.checkArgument
 
 /**
   * Represents a join between a table and
@@ -64,6 +65,7 @@ class FlinkLogicalTemporalTableJoin(
       right,
       condition)
   }
+
 }
 
 class FlinkLogicalTemporalTableJoinConverter

@@ -46,6 +46,8 @@ import org.apache.calcite.util.{ImmutableBitSet, Pair}
 import java.util
 import java.util.{ArrayList => JArrayList, List => JList}
 
+import scala.collection.JavaConversions._
+
 /**
   *
   * Flink RelNode for data stream unbounded group aggregate
@@ -143,6 +145,8 @@ class StreamExecGroupAggregate(
     values.add(Pair.of("aggWithRetract", util.Arrays.toString(needRetractionArray)))
     values
   }
+
+  override def isDeterministic: Boolean = AggregateUtil.isDeterministic(aggCalls)
 
   private def getOperatorName: String = {
     s"GroupAggregate(${

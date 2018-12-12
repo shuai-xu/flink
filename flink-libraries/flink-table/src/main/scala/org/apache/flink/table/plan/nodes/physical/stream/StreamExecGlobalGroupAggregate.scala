@@ -27,7 +27,7 @@ import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedAggsHandle
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.PartialFinalType
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
-import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateNameUtil, AggregateUtil, StreamExecUtil}
+import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateNameUtil, AggregateUtil, FlinkRexUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.aggregate.MiniBatchGlobalGroupAggFunction
 import org.apache.flink.table.runtime.bundle.KeyedBundleOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -128,6 +128,11 @@ class StreamExecGlobalGroupAggregate(
     values
   }
 
+  override def isDeterministic: Boolean = {
+    (localAggInfoList.getActualAggregateCalls ++
+      globalAggInfoList.getActualAggregateCalls)
+      .forall(c => FlinkRexUtil.isDeterministicOperator(c.getAggregation))
+  }
 
   private def getOperatorName: String = {
     s"GlobalGroupAggregate(${

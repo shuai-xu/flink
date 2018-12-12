@@ -59,6 +59,8 @@ class FlinkLogicalCalc(
           CalcUtil.conditionToString(calcProgram, getExpressionString),
           calcProgram.getCondition != null)
   }
+
+  override def isDeterministic: Boolean = CalcUtil.isDeterministic(program)
 }
 
 private class FlinkLogicalCalcConverter

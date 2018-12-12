@@ -21,6 +21,7 @@ package org.apache.flink.table.plan.nodes.logical
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalExpand}
+import org.apache.flink.table.plan.util.ExpandUtil
 
 import org.apache.calcite.plan.{Convention, RelOptCluster, RelOptRule, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
@@ -58,6 +59,8 @@ class FlinkLogicalExpand(
     }.mkString(", ")
     super.explainTerms(pw).item("projects", terms)
   }
+
+  override def isDeterministic: Boolean = ExpandUtil.isDeterministic(projects)
 }
 
 

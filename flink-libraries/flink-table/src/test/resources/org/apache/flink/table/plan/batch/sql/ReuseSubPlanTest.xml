@@ -254,6 +254,55 @@ Calc(select=[a, b, c, d, e, f, a1 AS a0, b0, c0, d0, e0, f0])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testReusableSubPlan_DynamicFunction">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalIntersect(all=[false])
+:- LogicalIntersect(all=[false])
+:  :- LogicalProject(random=[$0])
+:  :  +- LogicalSort(sort0=[$1], dir0=[ASC-nulls-first], fetch=[1])
+:  :     +- LogicalProject(random=[$0], EXPR$1=[RAND()])
+:  :        +- LogicalTableScan(table=[[x, source: [selectedFields=[a, b, c]]]])
+:  +- LogicalProject(random=[$0])
+:     +- LogicalSort(sort0=[$1], dir0=[ASC-nulls-first], fetch=[1])
+:        +- LogicalProject(random=[$0], EXPR$1=[RAND()])
+:           +- LogicalTableScan(table=[[x, source: [selectedFields=[a, b, c]]]])
++- LogicalProject(random=[$0])
+   +- LogicalSort(sort0=[$1], dir0=[ASC-nulls-first], fetch=[1])
+      +- LogicalProject(random=[$0], EXPR$1=[RAND()])
+         +- LogicalTableScan(table=[[x, source: [selectedFields=[a, b, c]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+NestedLoopSemiJoin(where=[OR(=(random, random0), AND(IS NULL(random), IS NULL(random0)))], join=[random], joinType=[LeftSemiJoin], build=[right])
+:- SortAggregate(isMerge=[false], groupBy=[random], select=[random])
+:  +- Sort(orderBy=[random ASC])
+:     +- Exchange(distribution=[hash[random]])
+:        +- NestedLoopSemiJoin(where=[OR(=(random, random0), AND(IS NULL(random), IS NULL(random0)))], join=[random], joinType=[LeftSemiJoin], build=[right])
+:           :- Calc(select=[random])
+:           :  +- SortLimit(orderBy=[EXPR$1 ASC], offset=[0], limit=[1], global=[true])
+:           :     +- Exchange(distribution=[single])
+:           :        +- SortLimit(orderBy=[EXPR$1 ASC], offset=[0], limit=[1], global=[false])
+:           :           +- Calc(select=[a AS random, RAND() AS EXPR$1])
+:           :              +- TableSourceScan(table=[[x, source: [selectedFields=[a]]]], fields=[a])
+:           +- Exchange(distribution=[broadcast])
+:              +- Calc(select=[random])
+:                 +- SortLimit(orderBy=[EXPR$1 ASC], offset=[0], limit=[1], global=[true])
+:                    +- Exchange(distribution=[single])
+:                       +- SortLimit(orderBy=[EXPR$1 ASC], offset=[0], limit=[1], global=[false])
+:                          +- Calc(select=[a AS random, RAND() AS EXPR$1])
+:                             +- TableSourceScan(table=[[x, source: [selectedFields=[a]]]], fields=[a])
++- Exchange(distribution=[broadcast])
+   +- Calc(select=[random])
+      +- SortLimit(orderBy=[EXPR$1 ASC], offset=[0], limit=[1], global=[true])
+         +- Exchange(distribution=[single])
+            +- SortLimit(orderBy=[EXPR$1 ASC], offset=[0], limit=[1], global=[false])
+               +- Calc(select=[a AS random, RAND() AS EXPR$1])
+                  +- TableSourceScan(table=[[x, source: [selectedFields=[a]]]], fields=[a])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testReusableSubPlan_NonDeterministicAgg_Disabled">
     <Resource name="sql">
       <![CDATA[

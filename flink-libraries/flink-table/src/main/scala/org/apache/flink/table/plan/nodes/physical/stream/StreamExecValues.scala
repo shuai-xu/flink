@@ -56,6 +56,8 @@ class StreamExecValues(
     )
   }
 
+  override def isDeterministic: Boolean = true
+
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     if (tableEnv.getConfig.isValuesSourceInputEnabled) {
       val inputFormat = ValuesCodeGenerator.generatorInputFormat(

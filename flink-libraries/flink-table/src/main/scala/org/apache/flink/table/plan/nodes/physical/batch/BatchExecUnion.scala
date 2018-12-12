@@ -92,6 +92,8 @@ class BatchExecUnion(
     rowRelDataType.getFieldNames.mkString(", ")
   }
 
+  override def isDeterministic: Boolean = true
+
   /**
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *

@@ -81,6 +81,8 @@ class BatchExecSort(
     costFactory.makeCost(rowCount, cpuCost, 0, 0, memCost)
   }
 
+  override def isDeterministic: Boolean = true
+
   /**
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *

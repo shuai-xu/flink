@@ -50,6 +50,8 @@ import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.tools.RelBuilder
 import org.apache.commons.math3.util.ArithmeticUtils
 
+import scala.collection.JavaConversions._
+
 abstract class BatchExecWindowAggregateBase(
     window: LogicalWindow,
     inputTimestampIndex: Int,
@@ -143,6 +145,8 @@ abstract class BatchExecWindowAggregateBase(
           isMerge = isMerge,
           isGlobal = isFinal))
   }
+
+  override def isDeterministic: Boolean = AggregateUtil.isDeterministic(getAggCallList)
 
   def getOutputType: BaseRowType = {
     if (namedProperties.isEmpty && grouping.isEmpty) {

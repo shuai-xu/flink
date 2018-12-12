@@ -32,7 +32,7 @@ import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.plan.util.{SortUtil, StreamExecUtil}
+import org.apache.flink.table.plan.util.{FlinkRexUtil, MatchUtil, SortUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.BaseRowRowtimeProcessFunction
 import org.apache.flink.table.runtime.`match`._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -79,7 +79,7 @@ class StreamExecMatch(
     outputSchema: BaseRowSchema,
     inputSchema: BaseRowSchema)
   extends SingleRel(cluster, traitSet, input)
-  with RowStreamExecRel {
+    with RowStreamExecRel {
 
   override def deriveRowType(): RelDataType = outputSchema.relDataType
 
@@ -123,10 +123,20 @@ class StreamExecMatch(
         },
         interval != null)
       .itemIf("subset",
-        subsets.map { case (k, v) => s"$k = (${v.toArray.mkString(", ")})"}.mkString(", "),
+        subsets.map { case (k, v) => s"$k = (${v.toArray.mkString(", ")})" }.mkString(", "),
         !subsets.isEmpty)
       .item("define",
-        patternDefinitions.map { case (k, v) => s"$k AS ${v.toString}"}.mkString(", "))
+        patternDefinitions.map { case (k, v) => s"$k AS ${v.toString}" }.mkString(", "))
+  }
+
+  override def isDeterministic: Boolean = {
+    FlinkRexUtil.isDeterministicOperator(after) &&
+      FlinkRexUtil.isDeterministicOperator(pattern) &&
+      FlinkRexUtil.isDeterministicOperator(rowsPerMatch) &&
+      patternDefinitions.values().forall(FlinkRexUtil.isDeterministicOperator) &&
+      partitionKeys.forall(FlinkRexUtil.isDeterministicOperator) &&
+      FlinkRexUtil.isDeterministicOperator(interval) &&
+      FlinkRexUtil.isDeterministicOperator(emit)
   }
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
@@ -157,11 +167,11 @@ class StreamExecMatch(
     }
 
     def translatePattern(
-      relBuilder: RelBuilder,
-      rexNode: RexNode,
-      currentPattern: Pattern[BaseRow, BaseRow],
-      patternNames: ListBuffer[String],
-      strictContiguity: Option[Boolean]): Pattern[BaseRow, BaseRow] = rexNode match {
+        relBuilder: RelBuilder,
+        rexNode: RexNode,
+        currentPattern: Pattern[BaseRow, BaseRow],
+        patternNames: ListBuffer[String],
+        strictContiguity: Option[Boolean]): Pattern[BaseRow, BaseRow] = rexNode match {
       case literal: RexLiteral =>
         val patternName = literal.getValue3.toString
         patternNames += patternName

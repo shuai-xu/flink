@@ -19,6 +19,7 @@ package org.apache.flink.table.plan.util
 
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.functions.utils.TableSqlFunction
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
 
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField, RelDataTypeFieldImpl}
 import org.apache.calcite.rex.{RexBuilder, RexCall, RexNode, RexProgram, RexProgramBuilder}
@@ -157,5 +158,15 @@ object CorrelateUtil {
     val udtfName = sqlFunction.toString
     val operands = rexCall.getOperands.asScala.map(expression(_, inFields, None)).mkString(",")
     s"table($udtfName($operands))"
+  }
+
+  def isDeterministic(scan: FlinkLogicalTableFunctionScan, condition: Option[RexNode]): Boolean = {
+    if (!FlinkRexUtil.isDeterministicOperator(scan.getCall)) {
+      return false
+    }
+    condition match {
+      case Some(c) => FlinkRexUtil.isDeterministicOperator(c)
+      case _ => true
+    }
   }
 }

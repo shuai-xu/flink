@@ -60,6 +60,8 @@ class BatchExecSink[T](
     */
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
+  override def isDeterministic: Boolean = true
+
   /**
     * Translates the FlinkRelNode into a Flink operator.
     *

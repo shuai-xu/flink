@@ -17,9 +17,10 @@
  */
 package org.apache.flink.table.plan.util
 
-import org.apache.calcite.rex.{RexNode, RexProgram}
 import org.apache.flink.table.plan.nodes.ExpressionFormat
 import org.apache.flink.table.plan.nodes.ExpressionFormat.ExpressionFormat
+
+import org.apache.calcite.rex.{RexNode, RexProgram}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -79,4 +80,14 @@ object CalcUtil {
     }.mkString(", ")
   }
 
+  private[flink] def isDeterministic(program: RexProgram): Boolean = {
+    if (program.getCondition != null) {
+      val condition = program.expandLocalRef(program.getCondition)
+      if (!FlinkRexUtil.isDeterministicOperator(condition)) {
+        return false
+      }
+    }
+    val projection = program.getProjectList.map(program.expandLocalRef)
+    projection.forall(p => FlinkRexUtil.isDeterministicOperator(p))
+  }
 }

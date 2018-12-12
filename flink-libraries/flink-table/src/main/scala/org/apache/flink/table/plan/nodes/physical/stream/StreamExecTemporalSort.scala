@@ -82,6 +82,8 @@ class StreamExecTemporalSort(
       null)
   }
 
+  override def isDeterministic: Boolean = true
+
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     val inputTransformation = input.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)

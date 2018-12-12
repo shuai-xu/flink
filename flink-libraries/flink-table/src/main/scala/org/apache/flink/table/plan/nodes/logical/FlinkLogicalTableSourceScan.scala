@@ -64,7 +64,7 @@ class FlinkLogicalTableSourceScan(
       case s: StreamTableSource[_] =>
         TableSourceUtil.getRelDataType(s, None, streaming = true, flinkTypeFactory)
       case _: BatchTableSource[_] | _: DimensionTableSource[_]=>
-        flinkTypeFactory.buildLogicalRowType(tableSource.getTableSchema, false)
+        flinkTypeFactory.buildLogicalRowType(tableSource.getTableSchema, isStreaming = false)
       case _ => throw new TableException("Unknown TableSource type.")
     }
   }
@@ -79,6 +79,8 @@ class FlinkLogicalTableSourceScan(
     super.explainTerms(pw)
         .item("fields", tableSource.getTableSchema.getColumnNames.mkString(", "))
   }
+
+  override def isDeterministic: Boolean = true
 }
 
 class FlinkLogicalTableSourceScanConverter

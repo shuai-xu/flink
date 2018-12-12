@@ -28,7 +28,7 @@ import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedOperator}
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.util.{AggregateNameUtil, FlinkRelOptUtil}
+import org.apache.flink.table.plan.util.{AggregateNameUtil, AggregateUtil, FlinkRelOptUtil}
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
@@ -37,6 +37,8 @@ import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.tools.RelBuilder
+
+import scala.collection.JavaConversions._
 
 abstract class BatchExecGroupAggregateBase(
     cluster: RelOptCluster,
@@ -96,6 +98,8 @@ abstract class BatchExecGroupAggregateBase(
       .filter(a => a.isInstanceOf[AggregateFunction[_, _]])
       .map(a => a -> CodeGeneratorContext.udfFieldName(a)).toMap
       .asInstanceOf[Map[AggregateFunction[_, _], String]]
+
+  override def isDeterministic: Boolean = AggregateUtil.isDeterministic(getAggCallList)
 
   override def deriveRowType(): RelDataType = rowRelDataType
 

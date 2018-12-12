@@ -91,6 +91,8 @@ class BatchExecSortLimit(
       .item("global", isGlobal)
   }
 
+  override def isDeterministic: Boolean = SortUtil.isDeterministic(offset, fetch)
+
   override def estimateRowCount(metadata: RelMetadataQuery): Double = {
     val inputRowCnt = metadata.getRowCount(this.getInput)
     if (inputRowCnt == null) {

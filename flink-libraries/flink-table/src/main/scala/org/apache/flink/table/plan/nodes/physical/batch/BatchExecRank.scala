@@ -28,7 +28,7 @@ import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistri
 import org.apache.flink.table.plan.cost.FlinkBatchCost.FUNC_CPU_COST
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.calcite.Rank
-import org.apache.flink.table.plan.util.{ConstantRankRange, FlinkRelOptUtil, RankRange}
+import org.apache.flink.table.plan.util.{ConstantRankRange, FlinkRelOptUtil, FlinkRexUtil, RankRange}
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.rank.RankOperator
 import org.apache.flink.table.typeutils.TypeUtils
@@ -109,6 +109,8 @@ class BatchExecRank(
       .item("global", isGlobal)
       .item("select", getRowType.getFieldNames.mkString(", "))
   }
+
+  override def isDeterministic: Boolean = FlinkRexUtil.isDeterministicOperator(rankFunction)
 
   override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
     // sort is done in the last sort operator, only need to compare between agg column.

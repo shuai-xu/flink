@@ -22,6 +22,7 @@ import org.apache.flink.table.plan.PartialFinalType
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule._
+import org.apache.flink.table.plan.util.AggregateUtil
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
@@ -75,6 +76,8 @@ class FlinkLogicalAggregate(
       planner.getCostFactory.makeCost(rowCnt, cpuCost, rowCnt * rowSize)
     }
   }
+
+  override def isDeterministic: Boolean = AggregateUtil.isDeterministic(getAggCallList)
 }
 
 private class FlinkLogicalAggregateBatchConverter

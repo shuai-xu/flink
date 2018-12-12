@@ -21,6 +21,7 @@ package org.apache.flink.table.plan.nodes.logical
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.util.SortUtil
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.convert.ConverterRule
@@ -77,6 +78,8 @@ class FlinkLogicalSort(
     val rowCount: Double = mq.getRowCount(this)
     planner.getCostFactory.makeCost(rowCount, rowCount, 0)
   }
+
+  override def isDeterministic: Boolean = SortUtil.isDeterministic(offset, fetch)
 }
 
 class FlinkLogicalSortStreamConverter

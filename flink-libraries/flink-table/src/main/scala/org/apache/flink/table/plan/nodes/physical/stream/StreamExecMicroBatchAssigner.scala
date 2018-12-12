@@ -44,6 +44,8 @@ class StreamExecMicroBatchAssigner(
     super.explainTerms(pw).item("interval", intervalMs + "ms")
   }
 
+  override def isDeterministic: Boolean = true
+
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     val in = input.asInstanceOf[RowStreamExecRel]

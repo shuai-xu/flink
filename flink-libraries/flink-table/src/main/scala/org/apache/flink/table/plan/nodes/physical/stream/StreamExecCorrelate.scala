@@ -89,6 +89,8 @@ class StreamExecCorrelate(
       .itemIf("condition", condition.orNull, condition.isDefined)
   }
 
+  override def isDeterministic: Boolean = CorrelateUtil.isDeterministic(scan, condition)
+
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     val inputTransformation = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)

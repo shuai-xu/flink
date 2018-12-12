@@ -56,6 +56,8 @@ class StreamExecSink[T](
     new StreamExecSink(cluster, traitSet, inputs.get(0), sink, sinkName)
   }
 
+  override def isDeterministic: Boolean = true
+
   /**
     * Whether the [[FlinkRelNode]] requires retraction messages or not.
     */

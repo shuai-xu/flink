@@ -55,6 +55,8 @@ class StreamExecExchange(
     new StreamExecExchange(cluster, traitSet, newInput, newDistribution)
   }
 
+  override def isDeterministic: Boolean = true
+
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val input = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
     val inputType = input.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]

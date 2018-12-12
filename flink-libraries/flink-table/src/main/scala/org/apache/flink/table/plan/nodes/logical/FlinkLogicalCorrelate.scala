@@ -57,6 +57,8 @@ class FlinkLogicalCorrelate(
       requiredColumns,
       joinType)
   }
+
+  override def isDeterministic: Boolean = true
 }
 
 class FlinkLogicalCorrelateConverter

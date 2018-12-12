@@ -22,6 +22,7 @@ import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
+import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.sort.LimitOperator
 import org.apache.flink.table.util.BatchExecRelVisitor
 
@@ -91,6 +92,8 @@ class BatchExecLimit(
       "unlimited"
     }
   }
+
+  override def isDeterministic: Boolean = SortUtil.isDeterministic(offset, fetch)
 
   override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
     val rowCount = mq.getRowCount(this)

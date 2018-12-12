@@ -90,6 +90,8 @@ class StreamExecSort(
       fetch)
   }
 
+  override def isDeterministic: Boolean = true
+
   override def translateToPlan(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 

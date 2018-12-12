@@ -44,6 +44,8 @@ import org.apache.calcite.tools.RelBuilder
 
 import java.time.Duration
 
+import scala.collection.JavaConversions._
+
 class StreamExecGroupWindowAggregate(
     val window: LogicalWindow,
     namedProperties: Seq[NamedWindowProperty],
@@ -57,8 +59,8 @@ class StreamExecGroupWindowAggregate(
     inputTimestampIndex: Int,
     emitStrategy: EmitStrategy)
   extends SingleRel(cluster, traitSet, inputNode)
-  with RowStreamExecRel
-  with Logging {
+    with RowStreamExecRel
+    with Logging {
 
   override def deriveRowType(): RelDataType = outputSchema.relDataType
 
@@ -103,6 +105,8 @@ class StreamExecGroupWindowAggregate(
       .itemIf("emit", emitStrategy, !emitStrategy.toString.isEmpty)
   }
 
+  override def isDeterministic: Boolean = AggregateUtil.isDeterministic(aggCalls)
+
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     val config = tableEnv.getConfig
@@ -123,11 +127,11 @@ class StreamExecGroupWindowAggregate(
     }
 
     if (isCountWindow && grouping.length > 0 &&
-        tableEnv.getConfig.getMinIdleStateRetentionTime < 0) {
+      tableEnv.getConfig.getMinIdleStateRetentionTime < 0) {
       LOG.warn(
         "No state retention interval configured for a query which accumulates state. " +
-        "Please provide a query configuration with valid retention interval to prevent excessive " +
-        "state size. You may specify a retention time of 0 to not clean up the state.")
+          "Please provide a query configuration with valid retention interval to prevent " +
+          "excessive state size. You may specify a retention time of 0 to not clean up the state.")
     }
 
     // validation
@@ -277,7 +281,7 @@ class StreamExecGroupWindowAggregate(
         builder.tumble(toDuration(size)).withEventTime(timeIdx)
 
       case TumblingGroupWindow(_, timeField, size)
-        if isProctimeAttribute(timeField) && isRowCountLiteral(size)=>
+        if isProctimeAttribute(timeField) && isRowCountLiteral(size) =>
         builder.countWindow(toLong(size))
 
       case TumblingGroupWindow(_, _, _) =>
@@ -292,7 +296,7 @@ class StreamExecGroupWindowAggregate(
         builder.sliding(toDuration(size), toDuration(slide)).withProcessingTime()
 
       case SlidingGroupWindow(_, timeField, size, slide)
-        if isRowtimeAttribute(timeField) && isTimeIntervalLiteral(size)=>
+        if isRowtimeAttribute(timeField) && isTimeIntervalLiteral(size) =>
         builder.sliding(toDuration(size), toDuration(slide)).withEventTime(timeIdx)
 
       case SlidingGroupWindow(_, timeField, size, slide)

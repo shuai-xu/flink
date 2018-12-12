@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.logical
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.calcite.{LogicalRank, Rank}
-import org.apache.flink.table.plan.util.RankRange
+import org.apache.flink.table.plan.util.{FlinkRexUtil, RankRange}
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.`type`.RelDataType
@@ -81,6 +81,8 @@ class FlinkLogicalRank(
       rankRange,
       outputRankFunColumn)
   }
+
+  override def isDeterministic: Boolean = FlinkRexUtil.isDeterministicOperator(rankFunction)
 }
 
 private class FlinkLogicalRankConverter extends ConverterRule(

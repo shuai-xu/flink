@@ -25,7 +25,7 @@ import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.FlinkJoinRelType._
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
-import org.apache.flink.table.plan.util.JoinUtil
+import org.apache.flink.table.plan.util.{FlinkRexUtil, JoinUtil}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.apache.calcite.plan.{RelOptRule, RelTraitSet}
@@ -242,6 +242,8 @@ trait BatchExecJoinBase extends Join with RowBatchExecRel {
       getRowType,
       getExpressionString)
   }
+
+  override def isDeterministic: Boolean = FlinkRexUtil.isDeterministicOperator(getCondition)
 
   private[flink] def generateConditionFunction(
       config: TableConfig,

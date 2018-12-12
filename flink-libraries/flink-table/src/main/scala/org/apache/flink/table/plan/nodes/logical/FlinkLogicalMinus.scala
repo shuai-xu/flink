@@ -52,6 +52,8 @@ class FlinkLogicalMinus(
       cost.plus(planner.getCostFactory.makeCost(rowCnt, rowCnt, rowCnt * rowSize))
     }
   }
+
+  override def isDeterministic: Boolean = true
 }
 
 private class FlinkLogicalMinusConverter

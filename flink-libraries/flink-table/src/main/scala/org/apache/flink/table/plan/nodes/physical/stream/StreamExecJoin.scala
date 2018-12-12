@@ -32,7 +32,7 @@ import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, JoinedRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
-import org.apache.flink.table.plan.util.{JoinUtil, StreamExecUtil}
+import org.apache.flink.table.plan.util.{FlinkRexUtil, JoinUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.join.stream._
 import org.apache.flink.table.runtime.join.stream.bundle._
 import org.apache.flink.table.runtime.join.stream.state.JoinStateHandler
@@ -177,6 +177,8 @@ class StreamExecJoin(
     values.add(Pair.of("rightMatchStateType", s"$rMatchStateType"))
     values
   }
+
+  override def isDeterministic: Boolean = FlinkRexUtil.isDeterministicOperator(joinCondition)
 
   override def computeSelfCost(planner: RelOptPlanner, metadata: RelMetadataQuery): RelOptCost = {
     val elementRate = 100.0d * 2 // two input stream

@@ -18,10 +18,6 @@
 
 package org.apache.flink.table.plan.batch.sql
 
-import java.util.Random
-
-import org.apache.calcite.sql.SqlExplainLevel
-import org.apache.calcite.tools.RuleSets
 import org.apache.flink.api.scala._
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.api.TableConfig
@@ -33,7 +29,12 @@ import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.functions.aggfunctions.{IntFirstValueAggFunction, LongLastValueAggFunction}
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.TableTestBatchExecBase
+
+import org.apache.calcite.sql.SqlExplainLevel
+import org.apache.calcite.tools.RuleSets
 import org.junit.{Before, Ignore, Test}
+
+import java.util.Random
 
 class ReuseSubPlanTest extends TableTestBatchExecBase {
 
@@ -508,6 +509,19 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
       """.stripMargin
     // TODO the sub-plan of Correlate should be reused,
     // however the digests of Correlates are different
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testReusableSubPlan_DynamicFunction(): Unit = {
+    val sqlQuery = util.tableEnv.sqlQuery(
+      """
+        |(SELECT a AS random FROM x ORDER BY rand() LIMIT 1)
+        |INTERSECT
+        |(SELECT a AS random FROM x ORDER BY rand() LIMIT 1)
+        |INTERSECT
+        |(SELECT a AS random FROM x ORDER BY rand() LIMIT 1)
+      """.stripMargin)
     util.verifyPlan(sqlQuery)
   }
 

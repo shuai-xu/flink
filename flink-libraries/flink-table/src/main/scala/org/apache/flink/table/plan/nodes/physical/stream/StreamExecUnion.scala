@@ -66,6 +66,8 @@ class StreamExecUnion(
     super.explainTerms(pw).item("union", outputRowType.getFieldNames.mkString(", "))
   }
 
+  override def isDeterministic: Boolean = true
+
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val inputs = getInputs
     val firstInputRowType = inputs.head.getRowType

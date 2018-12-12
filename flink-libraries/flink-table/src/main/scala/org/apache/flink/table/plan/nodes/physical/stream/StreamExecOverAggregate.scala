@@ -110,6 +110,8 @@ class StreamExecOverAggregate(
           namedAggregates))
   }
 
+  override def isDeterministic: Boolean = OverAggregateUtil.isDeterministic(logicWindow.groups)
+
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val tableConfig = tableEnv.getConfig
 

@@ -68,6 +68,8 @@ class StreamExecLastRow(
       ruleDescription)
   }
 
+  override def isDeterministic: Boolean = true
+
   override def producesUpdates: Boolean = true
 
   override def consumesRetractions: Boolean = true

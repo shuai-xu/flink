@@ -67,6 +67,8 @@ class StreamExecCalc(
         calcProgram.getCondition != null)
   }
 
+  override def isDeterministic: Boolean = CalcUtil.isDeterministic(program)
+
   override def computeSelfCost(planner: RelOptPlanner, metadata: RelMetadataQuery): RelOptCost = {
     FlinkLogicalCalc.computeCost(calcProgram, planner, metadata, this)
   }

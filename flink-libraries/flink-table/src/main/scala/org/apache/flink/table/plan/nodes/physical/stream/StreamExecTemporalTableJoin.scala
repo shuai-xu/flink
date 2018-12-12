@@ -18,11 +18,6 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import org.apache.calcite.plan._
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.JoinInfo
-import org.apache.calcite.rel.{BiRel, RelNode, RelWriter}
-import org.apache.calcite.rex._
 import org.apache.flink.api.common.functions.FlatJoinFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
@@ -39,12 +34,18 @@ import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.nodes.calcite.LogicalTemporalTableJoin
 import org.apache.flink.table.plan.nodes.calcite.LogicalTemporalTableJoin.TEMPORAL_JOIN_CONDITION
 import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.plan.util.{JoinUtil, RexDefaultVisitor}
 import org.apache.flink.table.plan.util.JoinUtil.{joinConditionToString, joinSelectionToString, joinTypeToString}
-import org.apache.flink.table.runtime.{BaseRowKeySelector, BinaryRowKeySelector}
+import org.apache.flink.table.plan.util.{FlinkRexUtil, JoinUtil, RexDefaultVisitor}
 import org.apache.flink.table.runtime.join.{TemporalProcessTimeJoin, TemporalRowtimeJoin}
+import org.apache.flink.table.runtime.{BaseRowKeySelector, BinaryRowKeySelector}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.Preconditions.checkState
+
+import org.apache.calcite.plan._
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.JoinInfo
+import org.apache.calcite.rel.{BiRel, RelNode, RelWriter}
+import org.apache.calcite.rex._
 
 import scala.collection.JavaConversions._
 
@@ -66,9 +67,7 @@ class StreamExecTemporalTableJoin(
   extends BiRel(cluster, traitSet, leftNode, rightNode)
   with RowStreamExecRel {
 
-  override def deriveRowType(): RelDataType = {
-    schema.relDataType
-  }
+  override def deriveRowType(): RelDataType = schema.relDataType
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
@@ -95,8 +94,9 @@ class StreamExecTemporalTableJoin(
       ruleDescription)
   }
 
-  override def translateToPlan(tableEnv: StreamTableEnvironment)
-  : StreamTransformation[BaseRow] = {
+  override def isDeterministic: Boolean = FlinkRexUtil.isDeterministicOperator(joinCondition)
+
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     validateKeyTypes()
 

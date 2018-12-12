@@ -32,7 +32,7 @@ import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.physical.batch.OverWindowMode.OverWindowMode
 import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToBatchAggregateInfoList}
-import org.apache.flink.table.plan.util.{FlinkRelOptUtil, OverAggregateUtil}
+import org.apache.flink.table.plan.util.{AggregateUtil, FlinkRelOptUtil, OverAggregateUtil}
 import org.apache.flink.table.runtime.overagg._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
@@ -249,6 +249,8 @@ class BatchExecOverAggregate(
     }
     writer.item("select", getRowType.getFieldNames.mkString(", "))
   }
+
+  override def isDeterministic: Boolean = AggregateUtil.isDeterministic(aggregateCalls)
 
   /**
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.

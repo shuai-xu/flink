@@ -70,6 +70,8 @@ class BatchExecTableSourceScan(
     new BatchExecTableSourceScan(cluster, traitSet, relOptTable)
   }
 
+  override def isDeterministic: Boolean = true
+
   /**
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *

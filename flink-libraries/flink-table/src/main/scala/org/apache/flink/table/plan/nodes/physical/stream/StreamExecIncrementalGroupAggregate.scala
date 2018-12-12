@@ -24,7 +24,7 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedAggsHandleFunction}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateNameUtil, AggregateUtil, StreamExecUtil}
+import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateNameUtil, AggregateUtil, FlinkRexUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.aggregate.MiniBatchIncrementalGroupAggFunction
 import org.apache.flink.table.runtime.bundle.KeyedBundleOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -103,6 +103,13 @@ class StreamExecIncrementalGroupAggregate(
         finalAggInfoList,
         groupKey,
         shuffleKey = Some(shuffleKey)))
+  }
+
+  override def isDeterministic: Boolean = {
+    (partialAggInfoList.getActualAggregateCalls ++
+      finalAggInfoList.getActualAggregateCalls ++
+      finalAggCalls)
+      .forall(c => FlinkRexUtil.isDeterministicOperator(c.getAggregation))
   }
 
   private def getOperatorName: String = {

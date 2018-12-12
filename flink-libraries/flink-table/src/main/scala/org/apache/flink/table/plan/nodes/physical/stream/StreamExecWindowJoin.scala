@@ -30,7 +30,7 @@ import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.plan.util.{JoinUtil, StreamExecUtil, UpdatingPlanChecker}
+import org.apache.flink.table.plan.util.{FlinkRexUtil, JoinUtil, StreamExecUtil, UpdatingPlanChecker}
 import org.apache.flink.table.runtime.KeyedCoProcessOperatorWithWatermarkDelay
 import org.apache.flink.table.runtime.join._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -104,6 +104,17 @@ class StreamExecWindowJoin(
       outputRowSchema.relDataType,
       getExpressionString)
     writer.item("windowBounds", windowBounds)
+  }
+
+  override def isDeterministic: Boolean = {
+    remainCondition match {
+      case Some(condition) =>
+        if (!FlinkRexUtil.isDeterministicOperator(condition)) {
+          return false
+        }
+      case _ => // do nothing
+    }
+    FlinkRexUtil.isDeterministicOperator(joinCondition)
   }
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

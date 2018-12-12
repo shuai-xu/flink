@@ -29,7 +29,7 @@ import org.apache.calcite.rel.{RelCollation, RelCollations, RelFieldCollation, R
 import org.apache.calcite.rex.{RexInputRef, RexLiteral, RexWindowBound}
 import org.apache.calcite.sql.`type`.SqlTypeName
 
-import java.util.{ArrayList => JArrayList}
+import java.util.{ArrayList => JArrayList, List => JList}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -206,6 +206,10 @@ object OverAggregateUtil {
         true
       }
     }
+  }
+
+  def isDeterministic(groups: JList[Window.Group]): Boolean = {
+    groups.forall(g => g.aggCalls.forall(FlinkRexUtil.isDeterministicOperator))
   }
 
 }

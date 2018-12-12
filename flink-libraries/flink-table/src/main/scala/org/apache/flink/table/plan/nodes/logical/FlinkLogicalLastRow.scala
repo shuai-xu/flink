@@ -56,6 +56,8 @@ class FlinkLogicalLastRow(
       .item("key", keyNames)
       .item("select", rowType.getFieldNames.mkString(", "))
   }
+
+  override def isDeterministic: Boolean = true
 }
 
 class FlinkLogicalLastRowConverter extends ConverterRule(
