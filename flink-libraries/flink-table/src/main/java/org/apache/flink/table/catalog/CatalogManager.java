@@ -25,8 +25,10 @@ import org.apache.flink.util.StringUtils;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -184,7 +186,7 @@ public class CatalogManager {
 			tableName = paths[1];
 		}
 
-		return new String[] {catalogName, dbName, tableName};
+		return new String[]{catalogName, dbName, tableName};
 	}
 
 	/**
@@ -195,5 +197,34 @@ public class CatalogManager {
 	 */
 	public String resolveTableNameAsString(String[] paths) {
 		return String.join(".", resolveTableName(paths));
+	}
+
+	/**
+	 * Checks if a table is registered under the given name.
+	 *
+	 * @param tableName The table name to check.
+	 * @return true, if a table is registered under the name, false otherwise.
+	 */
+	public boolean isRegistered(String tableName) {
+		// TODO: need to consider if there's no default database
+		return getCatalog(getDefaultCatalogName())
+			.listTablesByDatabase(getDefaultDatabaseName())
+			.stream()
+			.map(op -> op.getObjectName())
+			.anyMatch(o -> o.equals(tableName));
+	}
+
+	public List<List<String>> getCalciteReaderDefaultPaths(SchemaPlus defaultSchema) {
+		List<List<String>> paths = new ArrayList<>();
+
+		// Add both catalog and catalog.db, if there's a default db, as default schema paths
+		paths.add(new ArrayList<>(CalciteSchema.from(defaultSchema).path(getDefaultCatalogName())));
+
+		if (getDefaultDatabaseName() != null && defaultSchema.getSubSchema(getDefaultCatalogName()) != null) {
+			paths.add(new ArrayList<>(
+				CalciteSchema.from(defaultSchema.getSubSchema(getDefaultCatalogName())).path(getDefaultDatabaseName())));
+		}
+
+		return paths;
 	}
 }

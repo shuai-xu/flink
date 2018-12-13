@@ -1168,14 +1168,14 @@ println(explanation)
 == Abstract Syntax Tree ==
 LogicalUnion(all=[true])
   LogicalFilter(condition=[LIKE($1, 'F%')])
-    LogicalTableScan(table=[[_DataStreamTable_0]])
-  LogicalTableScan(table=[[_DataStreamTable_1]])
+    LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+  LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 
 == Optimized Logical Plan ==
 DataStreamUnion(union=[count, word])
   DataStreamCalc(select=[count, word], where=[LIKE(word, 'F%')])
-    DataStreamScan(table=[[_DataStreamTable_0]])
-  DataStreamScan(table=[[_DataStreamTable_1]])
+    DataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+  DataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 
 == Physical Execution Plan ==
 Stage 1 : Data Source

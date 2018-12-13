@@ -23,7 +23,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[max_p
   StreamExecExchange(distribution=[hash[category]])
     StreamExecGroupAggregate(groupBy=[category, shopId], select=[category, shopId, MAX(price) AS max_price])
       StreamExecExchange(distribution=[hash[category, shopId]])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
 	</Resource>
 	<Resource name="trait">
@@ -50,7 +50,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[$f3 DESC], r
                 StreamExecCalc(select=[a, b, c, $f3, =($e, 1) AS $g_1, =($e, 0) AS $g_0])
                   StreamExecExpand(projects=[{a, b, c, $f3, 0 AS $e}, {a, b, c, null AS $f3, 1 AS $e}])
                     StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(c), 256) AS $f3], where=[>=(c, 0)])
-                      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+                      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
 		</Resource>
 		<Resource name="trait">
@@ -77,7 +77,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
   StreamExecExchange(distribution=[hash[b]])
     StreamExecGroupAggregate(groupBy=[a], select=[a, LAST_VALUE(b) AS b, SUM(c) AS sum_c])
       StreamExecExchange(distribution=[hash[a]])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
 	</Resource>
 	<Resource name="trait">
@@ -101,7 +101,7 @@ StreamExecCalc(select=[a, b, count_c, w0$o0])
           StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(*) AS count_c])
             StreamExecExchange(distribution=[hash[a, b]])
               StreamExecCalc(select=[a, b, 'cn' AS cn])
-                StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+                StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -123,7 +123,7 @@ StreamExecCalc(retract=[false], accMode=[Acc])
       <![CDATA[
 StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[a ASC, b DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*])
   StreamExecExchange(distribution=[single])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -139,7 +139,7 @@ StreamExecRank(retract=[false], accMode=[Acc])
       <![CDATA[
 StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[a ASC, b DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*])
   StreamExecExchange(distribution=[single])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -155,7 +155,7 @@ StreamExecRank(retract=[false], accMode=[Acc])
       <![CDATA[
 StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[b DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum])
   StreamExecExchange(distribution=[hash[a]])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -171,7 +171,7 @@ StreamExecRank(retract=[false], accMode=[Acc])
       <![CDATA[
 StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[b DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum])
   StreamExecExchange(distribution=[hash[a]])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -190,7 +190,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[count_c DESC
     StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(*) AS count_c])
       StreamExecExchange(distribution=[hash[a, b]])
         StreamExecCalc(select=[a, b])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+          StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -211,7 +211,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
   StreamExecExchange(distribution=[hash[b]])
     StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) AS sum_c])
       StreamExecExchange(distribution=[hash[a, b]])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -235,7 +235,7 @@ StreamExecGroupAggregate(select=[MAX_RETRACT(a) AS EXPR$0])
           StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(*) AS count_c])
             StreamExecExchange(distribution=[hash[a, b]])
               StreamExecCalc(select=[a, b])
-                StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+                StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -260,7 +260,7 @@ StreamExecCalc(select=[CONCAT(seller_id, venture, stat_date, sku_id) AS rowkey, 
     StreamExecExchange(distribution=[hash[seller_id, venture, stat_date]])
       StreamExecGroupAggregate(groupBy=[seller_id, sku_id, venture, stat_date], select=[seller_id, sku_id, venture, stat_date, increasing_sum(trd_amt) AS amt_dtr, COUNT(DISTINCT trd_buyer_id) AS byr_cnt_dtr, SUM(log_pv) AS pv_dtr, COUNT(DISTINCT log_visitor_id) AS uv_dtr])
         StreamExecExchange(distribution=[hash[seller_id, sku_id, venture, stat_date]])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+          StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -282,7 +282,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], ran
     StreamExecCalc(select=[a, b, add(max_c) AS c])
       StreamExecGroupAggregate(groupBy=[b], select=[b, MAX(a) AS a, MAX(c) AS max_c])
         StreamExecExchange(distribution=[hash[b]])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+          StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -304,7 +304,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
     StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) AS sum_c])
       StreamExecExchange(distribution=[hash[a, b]])
         StreamExecCalc(select=[a, b, c], where=[>=(c, 0)])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+          StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -326,7 +326,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
     StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM($f2) AS sum_c])
       StreamExecExchange(distribution=[hash[a, b]])
         StreamExecCalc(select=[a, b, CASE(>(c, 10), 1, <(c, 0), 0, null) AS $f2])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+          StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
 		</Resource>
 	</TestCase>
@@ -338,7 +338,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
     StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM($f2) AS sum_c])
       StreamExecExchange(distribution=[hash[a, b]])
         StreamExecCalc(select=[a, b, IF(>(c, 10), 1, 0) AS $f2])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+          StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
 		</Resource>
 	</TestCase>
@@ -350,7 +350,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
     StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) FILTER $f3 AS sum_c])
       StreamExecExchange(distribution=[hash[a, b]])
         StreamExecCalc(select=[a, b, c, IS TRUE(AND(>=(c, 0), <(a, 0))) AS $f3])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+          StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
 		</Resource>
 	</TestCase>
@@ -361,7 +361,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
   StreamExecExchange(distribution=[hash[b]])
     StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, increasing_sum(c) AS sum_c])
       StreamExecExchange(distribution=[hash[a, b]])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -380,7 +380,7 @@ StreamExecRank(retract=[false], accMode=[Acc])
 StreamExecCalc(select=[a, b, c, 10 AS rank_num])
   StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[b DESC], rankRange=[rankStart=10, rankEnd=10], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[hash[a]])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -399,7 +399,7 @@ StreamExecCalc(select=[w0$o0 AS rank_num, a, c], where=[IS NOT NULL(b)])
   StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[b DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum])
     StreamExecExchange(distribution=[hash[a]])
       StreamExecCalc(select=[a, b, c], where=[>(c, 1000)])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -420,7 +420,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[count_c DESC
     StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(*) AS count_c])
       StreamExecExchange(distribution=[hash[a, b]])
         StreamExecCalc(select=[a, b, 'cn' AS cn])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+          StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -441,7 +441,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC, 
   StreamExecExchange(distribution=[hash[b]])
     StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) AS sum_c, COUNT(c) AS cnt])
       StreamExecExchange(distribution=[hash[a, b]])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">

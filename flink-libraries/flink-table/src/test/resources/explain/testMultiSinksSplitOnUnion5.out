@@ -5,11 +5,11 @@ LogicalProject(total_sum=[AS($0, 'total_sum')])
       LogicalUnion(all=[true])
         LogicalUnion(all=[true])
           LogicalProject(a=[$0], c=[$2])
-            LogicalTableScan(table=[[t1]])
+            LogicalTableScan(table=[[default_catalog, default_db, t1]])
           LogicalProject(d=[$0], f=[$2])
-            LogicalTableScan(table=[[t2]])
+            LogicalTableScan(table=[[default_catalog, default_db, t2]])
         LogicalProject(a=[$0], c=[$2])
-          LogicalTableScan(table=[[t3]])
+          LogicalTableScan(table=[[default_catalog, default_db, t3]])
 
 LogicalProject(total_min=[AS($0, 'total_min')])
   LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
@@ -17,22 +17,22 @@ LogicalProject(total_min=[AS($0, 'total_min')])
       LogicalUnion(all=[true])
         LogicalUnion(all=[true])
           LogicalProject(a=[$0], c=[$2])
-            LogicalTableScan(table=[[t1]])
+            LogicalTableScan(table=[[default_catalog, default_db, t1]])
           LogicalProject(d=[$0], f=[$2])
-            LogicalTableScan(table=[[t2]])
+            LogicalTableScan(table=[[default_catalog, default_db, t2]])
         LogicalProject(a=[$0], c=[$2])
-          LogicalTableScan(table=[[t3]])
+          LogicalTableScan(table=[[default_catalog, default_db, t3]])
 
 == Optimized Logical Plan ==
 [[IntermediateTable=_DataStreamTable_1]]
 StreamExecUnion(all=[true], union=[a])
   StreamExecUnion(all=[true], union=[a])
     StreamExecCalc(select=[a])
-      StreamExecDataStreamScan(table=[[t1]])
+      StreamExecDataStreamScan(table=[[default_catalog, default_db, t1]])
     StreamExecCalc(select=[d])
-      StreamExecDataStreamScan(table=[[t2]])
+      StreamExecDataStreamScan(table=[[default_catalog, default_db, t2]])
   StreamExecCalc(select=[a])
-    StreamExecDataStreamScan(table=[[t3]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, t3]])
 StreamExecUnion(retract=[true], accMode=[Acc])
   StreamExecUnion(retract=[true], accMode=[Acc])
     StreamExecCalc(retract=[true], accMode=[Acc])
@@ -47,7 +47,7 @@ StreamExecSink(fields=[total_sum])
   StreamExecCalc(select=[TMP_0 AS total_sum])
     StreamExecGroupAggregate(select=[SUM(a) AS TMP_0])
       StreamExecExchange(distribution=[single])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 StreamExecSink(retract=[false], accMode=[Acc])
   StreamExecCalc(retract=[false], accMode=[Acc])
     StreamExecGroupAggregate(retract=[false], accMode=[Acc])
@@ -59,7 +59,7 @@ StreamExecSink(fields=[total_min])
   StreamExecCalc(select=[TMP_1 AS total_min])
     StreamExecGroupAggregate(select=[MIN(a) AS TMP_1])
       StreamExecExchange(distribution=[single])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 StreamExecSink(retract=[false], accMode=[AccRetract])
   StreamExecCalc(retract=[true], accMode=[AccRetract])
     StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
@@ -77,7 +77,7 @@ StreamExecSink(retract=[false], accMode=[AccRetract])
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[t1], fields:(a, b, c))
+		content : SourceConversion(table:[default_catalog, default_db, t1], fields:(a, b, c))
 		ship_strategy : FORWARD
 
 		 : Operator
@@ -85,7 +85,7 @@ StreamExecSink(retract=[false], accMode=[AccRetract])
 			ship_strategy : FORWARD
 
 			 : Operator
-				content : SourceConversion(table:[t2], fields:(d, e, f))
+				content : SourceConversion(table:[default_catalog, default_db, t2], fields:(d, e, f))
 				ship_strategy : FORWARD
 
 				 : Operator
@@ -93,7 +93,7 @@ StreamExecSink(retract=[false], accMode=[AccRetract])
 					ship_strategy : FORWARD
 
 					 : Operator
-						content : SourceConversion(table:[t3], fields:(a, b, c))
+						content : SourceConversion(table:[default_catalog, default_db, t3], fields:(a, b, c))
 						ship_strategy : FORWARD
 
 						 : Operator

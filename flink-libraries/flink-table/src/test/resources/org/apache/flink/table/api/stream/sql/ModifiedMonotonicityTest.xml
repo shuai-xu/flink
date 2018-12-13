@@ -34,7 +34,7 @@ StreamExecGroupAggregate(groupBy=[a1], select=[a1, MAX(a3) AS EXPR$1])
     StreamExecCalc(select=[a1, a3])
       StreamExecGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS a3])
         StreamExecExchange(distribution=[hash[a1, a2]])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+          StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
 		</Resource>
 	</TestCase>
@@ -56,7 +56,7 @@ StreamExecGroupAggregate(groupBy=[a1], select=[a1, MIN(a3) AS EXPR$1])
     StreamExecCalc(select=[a1, a3])
       StreamExecGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MIN(a3) AS a3])
         StreamExecExchange(distribution=[hash[a1, a2]])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+          StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
 		</Resource>
 	</TestCase>
@@ -78,7 +78,7 @@ StreamExecGroupAggregate(groupBy=[a1], select=[a1, MIN_RETRACT(a3) AS EXPR$1])
     StreamExecCalc(select=[a1, a3])
       StreamExecGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS a3])
         StreamExecExchange(distribution=[hash[a1, a2]])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+          StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
 		</Resource>
 	</TestCase>
@@ -104,7 +104,7 @@ StreamExecGlobalGroupAggregate(groupBy=[a1], select=[a1, MAX(max$0) AS EXPR$1])
         StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(max$0) AS a3])
           StreamExecExchange(distribution=[hash[a1, a2]])
             StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS max$0])
-              StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+              StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
 		</Resource>
 	</TestCase>
@@ -130,7 +130,7 @@ StreamExecGlobalGroupAggregate(select=[MIN(min$0) AS EXPR$0])
         StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MIN(min$0) AS a3])
           StreamExecExchange(distribution=[hash[a1, a2]])
             StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MIN(a3) AS min$0])
-              StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+              StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
 		</Resource>
 	</TestCase>
@@ -156,7 +156,7 @@ StreamExecGlobalGroupAggregate(groupBy=[a1], select=[a1, MIN_RETRACT(min$0) AS E
         StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(max$0) AS a3])
           StreamExecExchange(distribution=[hash[a1, a2]])
             StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS max$0])
-              StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+              StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
 		</Resource>
 	</TestCase>

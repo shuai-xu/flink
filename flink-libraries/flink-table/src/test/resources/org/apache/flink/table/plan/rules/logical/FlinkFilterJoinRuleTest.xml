@@ -28,18 +28,18 @@ LogicalProject(a=[$0], b=[$1])
       +- LogicalFilter(condition=[NOT(IN($0, {
 LogicalProject(c=[$0])
   LogicalFilter(condition=[<($0, 3)])
-    LogicalTableScan(table=[[rightT]])
+    LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 }))])
-         +- LogicalTableScan(table=[[leftT]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[=($0, $2)], joinType=[inner], isAnti=[true])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[c], where=[<(c, 3)])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -55,18 +55,18 @@ LogicalProject(a=[$0], b=[$1])
       +- LogicalFilter(condition=[NOT(IN($0, {
 LogicalProject(c=[$0])
   LogicalFilter(condition=[<($0, 3)])
-    LogicalTableScan(table=[[rightT]])
+    LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 }))])
-         +- LogicalTableScan(table=[[leftT]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[OR(=($0, $2), IS NULL(=($0, $2)))], joinType=[inner], isAnti=[true])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[c], where=[<(c, 3)])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -81,20 +81,20 @@ LogicalProject(a=[$0], b=[$1])
    +- LogicalProject(a=[$0], b=[$1])
       +- LogicalFilter(condition=[NOT(EXISTS({
 LogicalFilter(condition=[>($0, 10)])
-  LogicalTableScan(table=[[rightT]])
+  LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 }))])
-         +- LogicalTableScan(table=[[leftT]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[$2], joinType=[inner], isAnti=[true])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[IS NOT NULL(m) AS $f0])
    +- FlinkLogicalAggregate(group=[{}], m=[MIN($0)])
       +- FlinkLogicalCalc(select=[true AS i], where=[>(c, 10)])
-         +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+         +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -109,20 +109,20 @@ LogicalProject(a=[$0], b=[$1])
    +- LogicalProject(a=[$0], b=[$1])
       +- LogicalFilter(condition=[NOT(EXISTS({
 LogicalFilter(condition=[>($0, 10)])
-  LogicalTableScan(table=[[rightT]])
+  LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 }))])
-         +- LogicalTableScan(table=[[leftT]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[$2], joinType=[inner], isAnti=[true])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[IS NOT NULL(m) AS $f0])
    +- FlinkLogicalAggregate(group=[{}], m=[MIN($0)])
       +- FlinkLogicalCalc(select=[true AS i], where=[>(c, 10)])
-         +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+         +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -138,18 +138,18 @@ LogicalProject(a=[$0], b=[$1])
       +- LogicalFilter(condition=[NOT(IN($0, {
 LogicalProject(c=[$0])
   LogicalFilter(condition=[AND(=($cor0.b, $1), <($0, 3))])
-    LogicalTableScan(table=[[rightT]])
+    LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 }))], variablesSet=[[$cor0]])
-         +- LogicalTableScan(table=[[leftT]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[AND(=($0, $2), =($1, $3))], joinType=[inner], isAnti=[true])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[c, d], where=[<(c, 3)])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -165,18 +165,18 @@ LogicalProject(a=[$0], b=[$1])
       +- LogicalFilter(condition=[NOT(IN($0, {
 LogicalProject(c=[$0])
   LogicalFilter(condition=[AND(=($cor0.b, $1), <($0, 3))])
-    LogicalTableScan(table=[[rightT]])
+    LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 }))], variablesSet=[[$cor0]])
-         +- LogicalTableScan(table=[[leftT]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[AND(OR(=($0, $2), IS NULL(=($0, $2))), =($1, $3))], joinType=[inner], isAnti=[true])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[c, d], where=[<(c, 3)])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -191,18 +191,18 @@ LogicalProject(a=[$0], b=[$1])
    +- LogicalProject(a=[$0], b=[$1])
       +- LogicalFilter(condition=[NOT(EXISTS({
 LogicalFilter(condition=[=($cor0.a, $0)])
-  LogicalTableScan(table=[[rightT]])
+  LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 }))], variablesSet=[[$cor0]])
-         +- LogicalTableScan(table=[[leftT]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[=($0, $2)], joinType=[inner], isAnti=[true])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[c])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -217,18 +217,18 @@ LogicalProject(a=[$0], b=[$1])
    +- LogicalProject(a=[$0], b=[$1])
       +- LogicalFilter(condition=[NOT(EXISTS({
 LogicalFilter(condition=[=($cor0.a, $0)])
-  LogicalTableScan(table=[[rightT]])
+  LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 }))], variablesSet=[[$cor0]])
-         +- LogicalTableScan(table=[[leftT]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[=($0, $2)], joinType=[inner], isAnti=[true])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[c])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -243,18 +243,18 @@ LogicalProject(a=[$0], b=[$1])
    +- LogicalProject(a=[$0], b=[$1])
       +- LogicalFilter(condition=[IN($0, {
 LogicalProject(c=[$0])
-  LogicalTableScan(table=[[rightT]])
+  LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 })])
-         +- LogicalTableScan(table=[[leftT]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[=($0, $2)], joinType=[inner], isAnti=[false])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[c])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -269,18 +269,18 @@ LogicalProject(a=[$0], b=[$1])
    +- LogicalProject(a=[$0], b=[$1])
       +- LogicalFilter(condition=[IN($0, {
 LogicalProject(c=[$0])
-  LogicalTableScan(table=[[rightT]])
+  LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 })])
-         +- LogicalTableScan(table=[[leftT]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[=($0, $2)], joinType=[inner], isAnti=[false])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[c])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -294,20 +294,20 @@ LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[>($1, 2)])
    +- LogicalProject(a=[$0], b=[$1])
       +- LogicalFilter(condition=[EXISTS({
-LogicalTableScan(table=[[rightT]])
+LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 })])
-         +- LogicalTableScan(table=[[leftT]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[$2], joinType=[inner], isAnti=[false])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[IS NOT NULL(m) AS $f0])
    +- FlinkLogicalAggregate(group=[{}], m=[MIN($0)])
       +- FlinkLogicalCalc(select=[true AS i])
-         +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+         +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -321,20 +321,20 @@ LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[>($1, 2)])
    +- LogicalProject(a=[$0], b=[$1])
       +- LogicalFilter(condition=[EXISTS({
-LogicalTableScan(table=[[rightT]])
+LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 })])
-         +- LogicalTableScan(table=[[leftT]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[$2], joinType=[inner], isAnti=[false])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[IS NOT NULL(m) AS $f0])
    +- FlinkLogicalAggregate(group=[{}], m=[MIN($0)])
       +- FlinkLogicalCalc(select=[true AS i])
-         +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+         +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -349,18 +349,18 @@ LogicalProject(a=[$0], b=[$1])
    +- LogicalProject(a=[$0], b=[$1])
       +- LogicalFilter(condition=[EXISTS({
 LogicalFilter(condition=[=($cor0.a, $0)])
-  LogicalTableScan(table=[[rightT]])
+  LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 })], variablesSet=[[$cor0]])
-         +- LogicalTableScan(table=[[leftT]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[=($0, $2)], joinType=[inner], isAnti=[false])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[c])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -375,18 +375,18 @@ LogicalProject(a=[$0], b=[$1])
    +- LogicalProject(a=[$0], b=[$1])
       +- LogicalFilter(condition=[EXISTS({
 LogicalFilter(condition=[=($cor0.a, $0)])
-  LogicalTableScan(table=[[rightT]])
+  LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 })], variablesSet=[[$cor0]])
-         +- LogicalTableScan(table=[[leftT]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[=($0, $2)], joinType=[inner], isAnti=[false])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[c])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -400,9 +400,9 @@ LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[NOT(IN($0, {
 LogicalProject(c=[$0])
   LogicalFilter(condition=[>($cor0.b, 2)])
-    LogicalTableScan(table=[[rightT]])
+    LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 }))], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[leftT]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -410,9 +410,9 @@ LogicalProject(c=[$0])
 FlinkLogicalCalc(select=[a, b])
 +- FlinkLogicalSemiJoin(condition=[AND(=($0, $3), $2)], joinType=[inner], isAnti=[true])
    :- FlinkLogicalCalc(select=[a, b, >(b, 2) AS $f2])
-   :  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+   :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- FlinkLogicalCalc(select=[c])
-      +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+      +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -426,9 +426,9 @@ LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[NOT(IN($0, {
 LogicalProject(c=[$0])
   LogicalFilter(condition=[>($cor0.b, 2)])
-    LogicalTableScan(table=[[rightT]])
+    LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 }))], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[leftT]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -436,9 +436,9 @@ LogicalProject(c=[$0])
 FlinkLogicalCalc(select=[a, b])
 +- FlinkLogicalSemiJoin(condition=[AND(OR(=($0, $3), IS NULL(=($0, $3))), $2)], joinType=[inner], isAnti=[true])
    :- FlinkLogicalCalc(select=[a, b, >(b, 2) AS $f2])
-   :  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+   :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- FlinkLogicalCalc(select=[c])
-      +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+      +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -451,9 +451,9 @@ FlinkLogicalCalc(select=[a, b])
 LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[NOT(EXISTS({
 LogicalFilter(condition=[>($cor0.b, 2)])
-  LogicalTableScan(table=[[rightT]])
+  LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 }))], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[leftT]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -461,9 +461,9 @@ LogicalFilter(condition=[>($cor0.b, 2)])
 FlinkLogicalCalc(select=[a, b])
 +- FlinkLogicalSemiJoin(condition=[$2], joinType=[inner], isAnti=[true])
    :- FlinkLogicalCalc(select=[a, b, >(b, 2) AS $f2])
-   :  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+   :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- FlinkLogicalCalc(select=[])
-      +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+      +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -476,9 +476,9 @@ FlinkLogicalCalc(select=[a, b])
 LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[NOT(EXISTS({
 LogicalFilter(condition=[>($cor0.b, 2)])
-  LogicalTableScan(table=[[rightT]])
+  LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 }))], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[leftT]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -486,9 +486,9 @@ LogicalFilter(condition=[>($cor0.b, 2)])
 FlinkLogicalCalc(select=[a, b])
 +- FlinkLogicalSemiJoin(condition=[$2], joinType=[inner], isAnti=[true])
    :- FlinkLogicalCalc(select=[a, b, >(b, 2) AS $f2])
-   :  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+   :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- FlinkLogicalCalc(select=[])
-      +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+      +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -502,9 +502,9 @@ LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[NOT(IN($0, {
 LogicalProject(c=[$0])
   LogicalFilter(condition=[AND(=($cor0.b, $1), >($cor0.b, 1))])
-    LogicalTableScan(table=[[rightT]])
+    LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 }))], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[leftT]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -512,8 +512,8 @@ LogicalProject(c=[$0])
 FlinkLogicalCalc(select=[a, b])
 +- FlinkLogicalSemiJoin(condition=[AND(=($0, $3), =($1, $4), $2)], joinType=[inner], isAnti=[true])
    :- FlinkLogicalCalc(select=[a, b, >(b, 1) AS $f2])
-   :  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -527,9 +527,9 @@ LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[NOT(IN($0, {
 LogicalProject(c=[$0])
   LogicalFilter(condition=[AND(=($cor0.b, $1), >($cor0.b, 1))])
-    LogicalTableScan(table=[[rightT]])
+    LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 }))], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[leftT]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -537,8 +537,8 @@ LogicalProject(c=[$0])
 FlinkLogicalCalc(select=[a, b])
 +- FlinkLogicalSemiJoin(condition=[AND(OR(=($0, $3), IS NULL(=($0, $3))), =($1, $4), $2)], joinType=[inner], isAnti=[true])
    :- FlinkLogicalCalc(select=[a, b, >(b, 1) AS $f2])
-   :  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -551,9 +551,9 @@ FlinkLogicalCalc(select=[a, b])
 LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[NOT(EXISTS({
 LogicalFilter(condition=[AND(=($cor0.a, $0), >($cor0.b, 2))])
-  LogicalTableScan(table=[[rightT]])
+  LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 }))], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[leftT]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -561,9 +561,9 @@ LogicalFilter(condition=[AND(=($cor0.a, $0), >($cor0.b, 2))])
 FlinkLogicalCalc(select=[a, b])
 +- FlinkLogicalSemiJoin(condition=[AND(=($0, $3), $2)], joinType=[inner], isAnti=[true])
    :- FlinkLogicalCalc(select=[a, b, >(b, 2) AS $f2])
-   :  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+   :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- FlinkLogicalCalc(select=[c])
-      +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+      +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -576,9 +576,9 @@ FlinkLogicalCalc(select=[a, b])
 LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[NOT(EXISTS({
 LogicalFilter(condition=[AND(=($cor0.a, $0), >($cor0.b, 2))])
-  LogicalTableScan(table=[[rightT]])
+  LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 }))], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[leftT]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -586,9 +586,9 @@ LogicalFilter(condition=[AND(=($cor0.a, $0), >($cor0.b, 2))])
 FlinkLogicalCalc(select=[a, b])
 +- FlinkLogicalSemiJoin(condition=[AND(=($0, $3), $2)], joinType=[inner], isAnti=[true])
    :- FlinkLogicalCalc(select=[a, b, >(b, 2) AS $f2])
-   :  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+   :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- FlinkLogicalCalc(select=[c])
-      +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+      +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -602,18 +602,18 @@ LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[IN($0, {
 LogicalProject(c=[$0])
   LogicalFilter(condition=[>($cor0.b, 2)])
-    LogicalTableScan(table=[[rightT]])
+    LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 })], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[leftT]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[=($0, $2)], joinType=[inner], isAnti=[false])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[c])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -627,18 +627,18 @@ LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[IN($0, {
 LogicalProject(c=[$0])
   LogicalFilter(condition=[>($cor0.b, 2)])
-    LogicalTableScan(table=[[rightT]])
+    LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 })], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[leftT]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[=($0, $2)], joinType=[inner], isAnti=[false])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[c])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -651,18 +651,18 @@ FlinkLogicalSemiJoin(condition=[=($0, $2)], joinType=[inner], isAnti=[false])
 LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[EXISTS({
 LogicalFilter(condition=[>($cor0.b, 2)])
-  LogicalTableScan(table=[[rightT]])
+  LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 })], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[leftT]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[true], joinType=[inner], isAnti=[false])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -675,18 +675,18 @@ FlinkLogicalSemiJoin(condition=[true], joinType=[inner], isAnti=[false])
 LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[EXISTS({
 LogicalFilter(condition=[>($cor0.b, 2)])
-  LogicalTableScan(table=[[rightT]])
+  LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 })], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[leftT]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[true], joinType=[inner], isAnti=[false])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -699,18 +699,18 @@ FlinkLogicalSemiJoin(condition=[true], joinType=[inner], isAnti=[false])
 LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[EXISTS({
 LogicalFilter(condition=[AND(=($cor0.a, $0), >($cor0.b, 2))])
-  LogicalTableScan(table=[[rightT]])
+  LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 })], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[leftT]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[=($0, $2)], joinType=[inner], isAnti=[false])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[c])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -723,18 +723,18 @@ FlinkLogicalSemiJoin(condition=[=($0, $2)], joinType=[inner], isAnti=[false])
 LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[EXISTS({
 LogicalFilter(condition=[AND(=($cor0.a, $0), >($cor0.b, 2))])
-  LogicalTableScan(table=[[rightT]])
+  LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 })], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[leftT]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalSemiJoin(condition=[=($0, $2)], joinType=[inner], isAnti=[false])
 :- FlinkLogicalCalc(select=[a, b], where=[>(b, 2)])
-:  +- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+:  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- FlinkLogicalCalc(select=[c])
-   +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -747,8 +747,8 @@ FlinkLogicalSemiJoin(condition=[=($0, $2)], joinType=[inner], isAnti=[false])
 LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[AND(=($1, $3), >(rand_add($0), 10))])
    +- LogicalJoin(condition=[true], joinType=[inner])
-      :- LogicalTableScan(table=[[leftT]])
-      +- LogicalTableScan(table=[[rightT]])
+      :- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -756,9 +756,9 @@ LogicalProject(a=[$0], b=[$1])
 FlinkLogicalCalc(select=[a, b], where=[>(rand_add(a), 10)])
 +- FlinkLogicalCalc(select=[a, b])
    +- FlinkLogicalJoin(condition=[=($1, $2)], joinType=[inner])
-      :- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+      :- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
       +- FlinkLogicalCalc(select=[d])
-         +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+         +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -771,8 +771,8 @@ FlinkLogicalCalc(select=[a, b], where=[>(rand_add(a), 10)])
 LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[AND(=($1, $3), >(rand_add($0), 10))])
    +- LogicalJoin(condition=[true], joinType=[inner])
-      :- LogicalTableScan(table=[[leftT]])
-      +- LogicalTableScan(table=[[rightT]])
+      :- LogicalTableScan(table=[[default_catalog, default_db, leftT]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, rightT]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -780,9 +780,9 @@ LogicalProject(a=[$0], b=[$1])
 FlinkLogicalCalc(select=[a, b], where=[>(rand_add(a), 10)])
 +- FlinkLogicalCalc(select=[a, b])
    +- FlinkLogicalJoin(condition=[=($1, $2)], joinType=[inner])
-      :- FlinkLogicalTableSourceScan(table=[[leftT]], fields=[a, b])
+      :- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
       +- FlinkLogicalCalc(select=[d])
-         +- FlinkLogicalTableSourceScan(table=[[rightT]], fields=[c, d])
+         +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>

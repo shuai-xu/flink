@@ -35,8 +35,8 @@ public class ReadableCatalogTest extends TableTestBase {
 
 		util.tableEnv().registerCatalog("test", CommonTestData.getTestFlinkInMemoryCatalog());
 
-		Table t1 = util.tableEnv().scan2("test", "db1", "tb1");
-		Table t2 = util.tableEnv().scan2("test", "db2", "tb2");
+		Table t1 = util.tableEnv().scan("test", "db1", "tb1");
+		Table t2 = util.tableEnv().scan("test", "db2", "tb2");
 
 		Table result = t2.where("d < 3")
 			.select("d * 2, e, g.upperCase()")

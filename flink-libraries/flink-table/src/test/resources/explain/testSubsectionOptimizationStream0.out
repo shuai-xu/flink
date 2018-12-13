@@ -2,7 +2,7 @@
 LogicalProject(num=[$0], cnt=[AS($1, 'cnt')])
   LogicalAggregate(group=[{0}], TMP_0=[COUNT($1)])
     LogicalProject(num=[$1], id=[$0])
-      LogicalTableScan(table=[[_DataStreamTable_0]])
+      LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 
 == Optimized Logical Plan ==
 [[Sink]]
@@ -11,7 +11,7 @@ StreamExecSink(fields=[num, cnt])
     StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS TMP_0])
       StreamExecExchange(distribution=[hash[num]])
         StreamExecCalc(select=[num, id])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+          StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 StreamExecSink(retract=[false], accMode=[Acc])
   StreamExecCalc(retract=[false], accMode=[Acc])
     StreamExecGroupAggregate(retract=[false], accMode=[Acc])
@@ -24,7 +24,7 @@ StreamExecSink(retract=[false], accMode=[Acc])
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[_DataStreamTable_0], fields:(id, num, text))
+		content : SourceConversion(table:[default_catalog, default_db, _DataStreamTable_0], fields:(id, num, text))
 		ship_strategy : FORWARD
 
 		 : Operator

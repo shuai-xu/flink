@@ -106,14 +106,14 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	void dropTable(ObjectPath tableName, boolean ignoreIfNotExists) throws TableNotExistException;
 
 	/**
-	 * Modifies an existing table.
+	 * Modifies an existing newTable.
 	 *
 	 * @param tableName         The name of the table to modify.
 	 * @param newTable             The new table which replaces the existing table.
 	 * @param ignoreIfNotExists Flag to specify behavior if the table does not exist:
 	 *                          if set to false, throw an exception,
 	 *                          if set to true, nothing happens.
-	 * @throws TableNotExistException   thrown if the table does not exist
+	 * @throws TableNotExistException   thrown if the newTable does not exist
 	 */
 	void alterTable(ObjectPath tableName, ExternalCatalogTable newTable, boolean ignoreIfNotExists)
 		throws TableNotExistException;

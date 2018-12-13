@@ -24,9 +24,9 @@ limitations under the License.
       <![CDATA[
 LogicalMinus(all=[false])
 :- LogicalProject(c=[$2])
-:  +- LogicalTableScan(table=[[T1]])
+:  +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 +- LogicalProject(f=[$2])
-   +- LogicalTableScan(table=[[T2]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -36,10 +36,10 @@ HashAggregate(isMerge=[true], groupBy=[c], select=[c])
    +- LocalHashAggregate(groupBy=[c], select=[c])
       +- HashSemiJoin(where=[OR(=(c, f), AND(IS NULL(c), IS NULL(f)))], join=[c], joinType=[LeftAntiJoin], isBroadcast=[true], build=[right])
          :- Calc(select=[c])
-         :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
          +- Exchange(distribution=[broadcast])
             +- Calc(select=[f])
-               +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f])
 ]]>
     </Resource>
   </TestCase>
@@ -52,9 +52,9 @@ HashAggregate(isMerge=[true], groupBy=[c], select=[c])
 LogicalMinus(all=[false])
 :- LogicalProject(c=[$2])
 :  +- LogicalFilter(condition=[=(1, 0)])
-:     +- LogicalTableScan(table=[[T1]])
+:     +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 +- LogicalProject(f=[$2])
-   +- LogicalTableScan(table=[[T2]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -71,10 +71,10 @@ Values(tuples=[[]], values=[c])
       <![CDATA[
 LogicalMinus(all=[false])
 :- LogicalProject(c=[$2])
-:  +- LogicalTableScan(table=[[T1]])
+:  +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 +- LogicalProject(f=[$2])
    +- LogicalFilter(condition=[=(1, 0)])
-      +- LogicalTableScan(table=[[T2]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -83,7 +83,7 @@ HashAggregate(isMerge=[true], groupBy=[c], select=[c])
 +- Exchange(distribution=[hash[c]])
    +- LocalHashAggregate(groupBy=[c], select=[c])
       +- Calc(select=[c])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -95,9 +95,9 @@ HashAggregate(isMerge=[true], groupBy=[c], select=[c])
       <![CDATA[
 LogicalIntersect(all=[false])
 :- LogicalProject(c=[$2])
-:  +- LogicalTableScan(table=[[T1]])
+:  +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 +- LogicalProject(f=[$2])
-   +- LogicalTableScan(table=[[T2]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -107,10 +107,10 @@ HashAggregate(isMerge=[true], groupBy=[c], select=[c])
    +- LocalHashAggregate(groupBy=[c], select=[c])
       +- HashSemiJoin(where=[OR(=(c, f), AND(IS NULL(c), IS NULL(f)))], join=[c], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
          :- Calc(select=[c])
-         :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
          +- Exchange(distribution=[broadcast])
             +- Calc(select=[f])
-               +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f])
 ]]>
     </Resource>
   </TestCase>
@@ -122,10 +122,10 @@ HashAggregate(isMerge=[true], groupBy=[c], select=[c])
       <![CDATA[
 LogicalIntersect(all=[false])
 :- LogicalProject(c=[$2])
-:  +- LogicalTableScan(table=[[T1]])
+:  +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 +- LogicalProject(f=[$2])
    +- LogicalFilter(condition=[=(1, 0)])
-      +- LogicalTableScan(table=[[T2]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -143,9 +143,9 @@ Values(tuples=[[]], values=[c])
 LogicalIntersect(all=[false])
 :- LogicalProject(c=[$2])
 :  +- LogicalFilter(condition=[=(1, 0)])
-:     +- LogicalTableScan(table=[[T1]])
+:     +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 +- LogicalProject(f=[$2])
-   +- LogicalTableScan(table=[[T2]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
 ]]>
     </Resource>
     <Resource name="planAfter">

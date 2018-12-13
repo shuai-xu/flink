@@ -177,7 +177,12 @@ public class CatalogCalciteSchema implements Schema {
 		public Table getTable(String tableName) {
 			try {
 				ExternalCatalogTable table = catalog.getTable(new ObjectPath(dbName, tableName));
-				return new CatalogTable(tableName, table, isStreaming);
+
+				if (table instanceof FlinkTempTable) {
+					return ((FlinkTempTable) table).getAbstractTable();
+				} else {
+					return new CatalogTable(tableName, table, isStreaming);
+				}
 			} catch (TableNotExistException e) {
 				LOGGER.warn(
 					String.format("Table %s.%s does not exist in catalog %s", dbName, tableName, catalogName));

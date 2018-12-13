@@ -22,6 +22,7 @@ import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.api.java.BatchTableEnvironment;
@@ -81,7 +82,7 @@ public class JavaTableEnvironmentITCase extends QueryTest {
 		compareResultAsText(getResult(result), expected);
 	}
 
-	@Test(expected = TableException.class)
+	@Test(expected = TableAlreadyExistException.class)
 	public void testRegisterExistingDatasetTable() throws Exception {
 		registerCollection("MyTable", TestData.data3(), TestData.type3(), "a, b, c");
 		registerCollection("MyTable", TestData.data5(), TestData.type5(), "a, b, c, d, e");

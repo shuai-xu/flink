@@ -52,13 +52,13 @@ import scala.collection.JavaConversions._
   *  :  +- Exchange(distribution=[hash[a]])
   *  :     +- LocalHashAggregate(groupBy=[a], select=[a, Partial_SUM(b) AS sum$0])
   *  :        +- Calc(select=[CAST(a) AS a, b])
-  *  :           +- ScanTable(table=[[x]], fields=[a, b, c])
+  *  :           +- ScanTable(table=[[default_catalog, default_db, x]], fields=[a, b, c])
   *  +- Exchange(distribution=[broadcast])
   *     +- HashAggregate(groupBy=[a], select=[a, Final_SUM(sum$0) AS b])
   *        +- Exchange(distribution=[hash[a]])
   *           +- LocalHashAggregate(groupBy=[a], select=[a, Partial_SUM(b) AS sum$0])
   *              +- Calc(select=[CAST(a) AS a, b])
-  *                 +- ScanTable(table=[[x]], fields=[a, b, c])
+  *                 +- ScanTable(table=[[default_catalog, default_db, x]], fields=[a, b, c])
   * }}}
   *
   * The sub-plan of `HashAggregate(groupBy=[a], select=[a, Final_SUM(sum$0) AS b])`

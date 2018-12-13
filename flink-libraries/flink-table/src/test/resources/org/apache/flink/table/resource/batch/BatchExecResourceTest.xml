@@ -31,20 +31,20 @@ HashAggregate(partition=[59], resource=[RelResource{cpu=0.3, heapMem=46, reserve
          :     +- HashJoin(partition=[150], shuffleCount=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=32, preferManagedMem=32, maxManagedMem=470}], memCost=[4.800000000000004E8], rowcount=[1.5000000000000013E7], where=[=(c_custkey, o_custkey)], join=[c_custkey, c_name, o_orderkey, o_custkey], joinType=[InnerJoin], build=[right])
          :        :- Exchange(partition=[-1], memCost=[0.0], rowcount=[1.5E8], distribution=[hash[c_custkey]])
          :        :  +- Calc(partition=[150], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E8], select=[c_custkey, c_name])
-         :        :     +- TableSourceScan(partition=[150], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E8], table=[[customer]], fields=[c_custkey, c_name, c_address, c_nationkey, c_phone, c_acctbal, c_mktsegment, c_comment])
+         :        :     +- TableSourceScan(partition=[150], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E8], table=[[default_catalog, default_db, customer]], fields=[c_custkey, c_name, c_address, c_nationkey, c_phone, c_acctbal, c_mktsegment, c_comment])
          :        +- Exchange(partition=[-1], memCost=[0.0], rowcount=[1.5000000000000013E7], distribution=[hash[o_custkey]])
          :           +- HashSemiJoin(partition=[800], shuffleCount=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=32, preferManagedMem=32, maxManagedMem=470}], memCost=[3.6E8], rowcount=[1.5000000000000013E7], where=[=(o_orderkey, l_orderkey)], join=[o_orderkey, o_custkey], joinType=[LeftSemiJoin], build=[right])
          :              :- Exchange(partition=[-1], memCost=[0.0], rowcount=[1.5E9], distribution=[hash[o_orderkey]])
          :              :  +- Calc(partition=[1000], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E9], select=[o_orderkey, o_custkey])
-         :              :     +- TableSourceScan(partition=[1000], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E9], table=[[orders]], fields=[o_orderkey, o_custkey, o_orderstatus, o_totalprice, o_orderdate, o_orderpriority, o_clerk, o_shippriority, o_comment])
+         :              :     +- TableSourceScan(partition=[1000], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E9], table=[[default_catalog, default_db, orders]], fields=[o_orderkey, o_custkey, o_orderstatus, o_totalprice, o_orderdate, o_orderpriority, o_clerk, o_shippriority, o_comment])
          :              +- Calc(partition=[800], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E7], select=[l_orderkey], where=[>($f1, 300)])
          :                 +- HashAggregate(partition=[800], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=35, preferManagedMem=71, maxManagedMem=470}], memCost=[6.0E10], rowcount=[1.5E9], isMerge=[false], groupBy=[l_orderkey], select=[l_orderkey, SUM(l_quantity) AS $f1])
          :                    +- Exchange(partition=[-1], memCost=[0.0], rowcount=[5.999989709E9], distribution=[hash[l_orderkey]])
          :                       +- Calc(partition=[1000], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], select=[l_orderkey, l_quantity])
-         :                          +- TableSourceScan(partition=[1000], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
+         :                          +- TableSourceScan(partition=[1000], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[default_catalog, default_db, lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
          +- Exchange(partition=[-1], memCost=[0.0], rowcount=[5.999989709E9], distribution=[hash[l_orderkey]])
             +- Calc(partition=[1000], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], select=[l_orderkey, l_quantity])
-               +- TableSourceScan(partition=[1000], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
+               +- TableSourceScan(partition=[1000], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[default_catalog, default_db, lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
 ]]>
     </Resource>
   </TestCase>
@@ -63,20 +63,20 @@ HashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reserve
          :     +- HashJoin(partition=[18], shuffleCount=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=43, preferManagedMem=47, maxManagedMem=47}], memCost=[4.800000000000004E8], rowcount=[1.5000000000000013E7], where=[=(c_custkey, o_custkey)], join=[c_custkey, c_name, o_orderkey, o_custkey], joinType=[InnerJoin], build=[right])
          :        :- Exchange(partition=[-1], memCost=[0.0], rowcount=[1.5E8], distribution=[hash[c_custkey]])
          :        :  +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E8], select=[c_custkey, c_name])
-         :        :     +- TableSourceScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E8], table=[[customer]], fields=[c_custkey, c_name, c_address, c_nationkey, c_phone, c_acctbal, c_mktsegment, c_comment])
+         :        :     +- TableSourceScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E8], table=[[default_catalog, default_db, customer]], fields=[c_custkey, c_name, c_address, c_nationkey, c_phone, c_acctbal, c_mktsegment, c_comment])
          :        +- Exchange(partition=[-1], memCost=[0.0], rowcount=[1.5000000000000013E7], distribution=[hash[o_custkey]])
          :           +- HashSemiJoin(partition=[18], shuffleCount=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=43, preferManagedMem=47, maxManagedMem=47}], memCost=[3.6E8], rowcount=[1.5000000000000013E7], where=[=(o_orderkey, l_orderkey)], join=[o_orderkey, o_custkey], joinType=[LeftSemiJoin], build=[right])
          :              :- Exchange(partition=[-1], memCost=[0.0], rowcount=[1.5E9], distribution=[hash[o_orderkey]])
          :              :  +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E9], select=[o_orderkey, o_custkey])
-         :              :     +- TableSourceScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E9], table=[[orders]], fields=[o_orderkey, o_custkey, o_orderstatus, o_totalprice, o_orderdate, o_orderpriority, o_clerk, o_shippriority, o_comment])
+         :              :     +- TableSourceScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E9], table=[[default_catalog, default_db, orders]], fields=[o_orderkey, o_custkey, o_orderstatus, o_totalprice, o_orderdate, o_orderpriority, o_clerk, o_shippriority, o_comment])
          :              +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E7], select=[l_orderkey], where=[>($f1, 300)])
          :                 +- HashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=33, preferManagedMem=37, maxManagedMem=37}], memCost=[6.0E10], rowcount=[1.5E9], isMerge=[false], groupBy=[l_orderkey], select=[l_orderkey, SUM(l_quantity) AS $f1])
          :                    +- Exchange(partition=[-1], memCost=[0.0], rowcount=[5.999989709E9], distribution=[hash[l_orderkey]])
          :                       +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], select=[l_orderkey, l_quantity])
-         :                          +- TableSourceScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
+         :                          +- TableSourceScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[default_catalog, default_db, lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
          +- Exchange(partition=[-1], memCost=[0.0], rowcount=[5.999989709E9], distribution=[hash[l_orderkey]])
             +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], select=[l_orderkey, l_quantity])
-               +- TableSourceScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
+               +- TableSourceScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[default_catalog, default_db, lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
 ]]>
     </Resource>
   </TestCase>
@@ -95,20 +95,20 @@ HashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reserve
          :     +- HashJoin(partition=[18], shuffleCount=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=43, preferManagedMem=47, maxManagedMem=47}], memCost=[4.800000000000004E8], rowcount=[1.5000000000000013E7], where=[=(c_custkey, o_custkey)], join=[c_custkey, c_name, o_orderkey, o_custkey], joinType=[InnerJoin], build=[right])
          :        :- Exchange(partition=[-1], memCost=[0.0], rowcount=[1.5E8], distribution=[hash[c_custkey]])
          :        :  +- Calc(partition=[150], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E8], select=[c_custkey, c_name])
-         :        :     +- TableSourceScan(partition=[150], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E8], table=[[customer]], fields=[c_custkey, c_name, c_address, c_nationkey, c_phone, c_acctbal, c_mktsegment, c_comment])
+         :        :     +- TableSourceScan(partition=[150], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E8], table=[[default_catalog, default_db, customer]], fields=[c_custkey, c_name, c_address, c_nationkey, c_phone, c_acctbal, c_mktsegment, c_comment])
          :        +- Exchange(partition=[-1], memCost=[0.0], rowcount=[1.5000000000000013E7], distribution=[hash[o_custkey]])
          :           +- HashSemiJoin(partition=[18], shuffleCount=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=43, preferManagedMem=47, maxManagedMem=47}], memCost=[3.6E8], rowcount=[1.5000000000000013E7], where=[=(o_orderkey, l_orderkey)], join=[o_orderkey, o_custkey], joinType=[LeftSemiJoin], build=[right])
          :              :- Exchange(partition=[-1], memCost=[0.0], rowcount=[1.5E9], distribution=[hash[o_orderkey]])
          :              :  +- Calc(partition=[1000], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E9], select=[o_orderkey, o_custkey])
-         :              :     +- TableSourceScan(partition=[1000], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E9], table=[[orders]], fields=[o_orderkey, o_custkey, o_orderstatus, o_totalprice, o_orderdate, o_orderpriority, o_clerk, o_shippriority, o_comment])
+         :              :     +- TableSourceScan(partition=[1000], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E9], table=[[default_catalog, default_db, orders]], fields=[o_orderkey, o_custkey, o_orderstatus, o_totalprice, o_orderdate, o_orderpriority, o_clerk, o_shippriority, o_comment])
          :              +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.5E7], select=[l_orderkey], where=[>($f1, 300)])
          :                 +- HashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=33, preferManagedMem=37, maxManagedMem=37}], memCost=[6.0E10], rowcount=[1.5E9], isMerge=[false], groupBy=[l_orderkey], select=[l_orderkey, SUM(l_quantity) AS $f1])
          :                    +- Exchange(partition=[-1], memCost=[0.0], rowcount=[5.999989709E9], distribution=[hash[l_orderkey]])
          :                       +- Calc(partition=[1000], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], select=[l_orderkey, l_quantity])
-         :                          +- TableSourceScan(partition=[1000], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
+         :                          +- TableSourceScan(partition=[1000], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[default_catalog, default_db, lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
          +- Exchange(partition=[-1], memCost=[0.0], rowcount=[5.999989709E9], distribution=[hash[l_orderkey]])
             +- Calc(partition=[1000], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], select=[l_orderkey, l_quantity])
-               +- TableSourceScan(partition=[1000], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
+               +- TableSourceScan(partition=[1000], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[default_catalog, default_db, lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
 ]]>
     </Resource>
   </TestCase>
@@ -126,7 +126,7 @@ Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMe
             +- Exchange(partition=[-1], memCost=[0.0], rowcount=[95.16258196404048], distribution=[hash[c]])
                +- LocalHashAggregate(partition=[20], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=32, preferManagedMem=32, maxManagedMem=470}], memCost=[4948.454262130105], rowcount=[95.16258196404048], groupBy=[c], select=[c, Partial_SUM(a) AS sum$0])
                   +- Calc(partition=[20], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], select=[c, a])
-                     +- BoundedStreamScan(partition=[20], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
+                     +- BoundedStreamScan(partition=[20], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -144,7 +144,7 @@ Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMe
             +- Exchange(partition=[-1], memCost=[0.0], rowcount=[95.16258196404048], distribution=[hash[c]])
                +- LocalHashAggregate(partition=[100], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=33, preferManagedMem=37, maxManagedMem=37}], memCost=[4948.454262130105], rowcount=[95.16258196404048], groupBy=[c], select=[c, Partial_SUM(a) AS sum$0])
                   +- Calc(partition=[100], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], select=[c, a])
-                     +- BoundedStreamScan(partition=[100], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
+                     +- BoundedStreamScan(partition=[100], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -162,7 +162,7 @@ Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMe
             +- Exchange(partition=[-1], memCost=[0.0], rowcount=[95.16258196404048], distribution=[hash[c]])
                +- LocalHashAggregate(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=33, preferManagedMem=37, maxManagedMem=37}], memCost=[4948.454262130105], rowcount=[95.16258196404048], groupBy=[c], select=[c, Partial_SUM(a) AS sum$0])
                   +- Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], select=[c, a])
-                     +- BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
+                     +- BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -172,7 +172,7 @@ Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMe
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-TableSourceScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
+TableSourceScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[default_catalog, default_db, lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
 ]]>
     </Resource>
   </TestCase>
@@ -182,7 +182,7 @@ TableSourceScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], convers
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-TableSourceScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
+TableSourceScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[default_catalog, default_db, lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
 ]]>
     </Resource>
   </TestCase>
@@ -192,7 +192,7 @@ TableSourceScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], convers
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-TableSourceScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
+TableSourceScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[5.999989709E9], table=[[default_catalog, default_db, lineitem]], fields=[l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment])
 ]]>
     </Resource>
   </TestCase>
@@ -205,7 +205,7 @@ TableSourceScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], convers
 Sort(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=53, preferManagedMem=57, maxManagedMem=57}], memCost=[44000.0], rowcount=[500.0], orderBy=[e ASC])
 +- Exchange(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[500.0], distribution=[range[e ASC]])
    +- Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[500.0], select=[d, e, f, g, h], where=[<(d, 100)])
-      +- BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+      +- BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>
@@ -218,7 +218,7 @@ Sort(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedM
 Sort(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=53, preferManagedMem=57, maxManagedMem=57}], memCost=[44000.0], rowcount=[500.0], orderBy=[e ASC])
 +- Exchange(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[500.0], distribution=[range[e ASC]])
    +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[500.0], select=[d, e, f, g, h], where=[<(d, 100)])
-      +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+      +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>
@@ -231,7 +231,7 @@ Sort(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedM
 Sort(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=53, preferManagedMem=57, maxManagedMem=57}], memCost=[44000.0], rowcount=[500.0], orderBy=[e ASC])
 +- Exchange(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[500.0], distribution=[range[e ASC]])
    +- Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[500.0], select=[d, e, f, g, h], where=[<(d, 100)])
-      +- BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+      +- BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>
@@ -249,7 +249,7 @@ Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMe
             +- Exchange(partition=[-1], memCost=[0.0], rowcount=[95.16258196404048], distribution=[hash[c]])
                +- LocalHashAggregate(partition=[20], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=32, preferManagedMem=32, maxManagedMem=470}], memCost=[4948.454262130105], rowcount=[95.16258196404048], groupBy=[c], select=[c, Partial_SUM(a) AS sum$0])
                   +- Calc(partition=[20], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], select=[c, a])
-                     +- BoundedStreamScan(partition=[20], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
+                     +- BoundedStreamScan(partition=[20], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -259,7 +259,7 @@ Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMe
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
+BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -277,7 +277,7 @@ Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMe
             +- Exchange(partition=[-1], memCost=[0.0], rowcount=[95.16258196404048], distribution=[hash[c]])
                +- LocalHashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=33, preferManagedMem=37, maxManagedMem=37}], memCost=[4948.454262130105], rowcount=[95.16258196404048], groupBy=[c], select=[c, Partial_SUM(a) AS sum$0])
                   +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], select=[c, a])
-                     +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
+                     +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -295,7 +295,7 @@ Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMe
             +- Exchange(partition=[-1], memCost=[0.0], rowcount=[95.16258196404048], distribution=[hash[c]])
                +- LocalHashAggregate(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=33, preferManagedMem=37, maxManagedMem=37}], memCost=[4948.454262130105], rowcount=[95.16258196404048], groupBy=[c], select=[c, Partial_SUM(a) AS sum$0])
                   +- Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], select=[c, a])
-                     +- BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
+                     +- BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -305,7 +305,7 @@ Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMe
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
+BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -315,7 +315,7 @@ BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conve
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
+BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -392,12 +392,12 @@ Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedM
                :- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1100.0], select=[a, b])
                :  +- Union(partition=[-1], memCost=[0.0], rowcount=[1100.0], all=[true], union=[a, b, c])
                :     :- Exchange(partition=[-1], memCost=[0.0], rowcount=[1000.0], distribution=[hash[b]])
-               :     :  +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
+               :     :  +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
                :     +- Exchange(partition=[-1], memCost=[0.0], rowcount=[100.0], distribution=[hash[b]])
-               :        +- TableSourceScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[100.0], table=[[Table3]], fields=[a, b, c])
+               :        +- TableSourceScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[100.0], table=[[default_catalog, default_db, Table3]], fields=[a, b, c])
                +- Exchange(partition=[-1], memCost=[0.0], rowcount=[1000.0], distribution=[hash[e]])
                   +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], select=[e, g])
-                     +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+                     +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>
@@ -445,12 +445,12 @@ Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedM
                :- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1100.0], select=[a, b])
                :  +- Union(partition=[-1], memCost=[0.0], rowcount=[1100.0], all=[true], union=[a, b, c])
                :     :- Exchange(partition=[-1], memCost=[0.0], rowcount=[1000.0], distribution=[hash[b]])
-               :     :  +- BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
+               :     :  +- BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
                :     +- Exchange(partition=[-1], memCost=[0.0], rowcount=[100.0], distribution=[hash[b]])
-               :        +- TableSourceScan(partition=[60], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[100.0], table=[[Table3]], fields=[a, b, c])
+               :        +- TableSourceScan(partition=[60], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[100.0], table=[[default_catalog, default_db, Table3]], fields=[a, b, c])
                +- Exchange(partition=[-1], memCost=[0.0], rowcount=[1000.0], distribution=[hash[e]])
                   +- Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], select=[e, g])
-                     +- BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+                     +- BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>
@@ -469,12 +469,12 @@ Calc(partition=[20], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedM
                :- Calc(partition=[20], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1100.0], select=[a, b])
                :  +- Union(partition=[-1], memCost=[0.0], rowcount=[1100.0], all=[true], union=[a, b, c])
                :     :- Exchange(partition=[-1], memCost=[0.0], rowcount=[1000.0], distribution=[hash[b]])
-               :     :  +- BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
+               :     :  +- BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
                :     +- Exchange(partition=[-1], memCost=[0.0], rowcount=[100.0], distribution=[hash[b]])
-               :        +- TableSourceScan(partition=[60], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[100.0], table=[[Table3]], fields=[a, b, c])
+               :        +- TableSourceScan(partition=[60], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[100.0], table=[[default_catalog, default_db, Table3]], fields=[a, b, c])
                +- Exchange(partition=[-1], memCost=[0.0], rowcount=[1000.0], distribution=[hash[e]])
                   +- Calc(partition=[20], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], select=[e, g])
-                     +- BoundedStreamScan(partition=[20], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+                     +- BoundedStreamScan(partition=[20], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0], table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>

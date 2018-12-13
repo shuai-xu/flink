@@ -5,26 +5,26 @@ LogicalProject(id1=[$2], num=[$3], text1=[$1])
       LogicalFilter(condition=[<($1, 5)])
         LogicalProject(id=[$0], num=[$1], text=[$2])
           LogicalFilter(condition=[>=($0, 0)])
-            LogicalTableScan(table=[[_DataStreamTable_0]])
+            LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
     LogicalProject(id1=[$0], num=[$1], text2=[AS($3, 'text2')])
       LogicalJoin(condition=[=($0, $2)], joinType=[inner])
         LogicalProject(id1=[AS($0, 'id1')], num=[$1])
           LogicalFilter(condition=[<=($0, 10)])
-            LogicalTableScan(table=[[_DataStreamTable_0]])
+            LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
         LogicalProject(id2=[AS($0, 'id2')], text=[$2])
           LogicalFilter(condition=[>=($1, 5)])
             LogicalProject(id=[$0], num=[$1], text=[$2])
               LogicalFilter(condition=[>=($0, 0)])
-                LogicalTableScan(table=[[_DataStreamTable_0]])
+                LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 
 == Optimized Logical Plan ==
 [[IntermediateTable=_DataStreamTable_3]]
-StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 StreamExecDataStreamScan(retract=[false], accMode=[Acc])
 
 [[IntermediateTable=_DataStreamTable_4]]
 StreamExecCalc(select=[id, num, text], where=[>=(id, 0)])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 StreamExecCalc(retract=[true], accMode=[Acc])
   StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
@@ -34,16 +34,16 @@ StreamExecSink(fields=[id1, num, text1])
     StreamExecJoin(where=[=(id1, id3)], join=[id3, text1, id1, num], joinType=[InnerJoin])
       StreamExecExchange(distribution=[hash[id3]])
         StreamExecCalc(select=[id AS id3, text AS text1], where=[<(num, 5)])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_4]])
+          StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_4]])
       StreamExecExchange(distribution=[hash[id1]])
         StreamExecCalc(select=[id1, num])
           StreamExecJoin(where=[=(id1, id2)], join=[id1, num, id2], joinType=[InnerJoin])
             StreamExecExchange(distribution=[hash[id1]])
               StreamExecCalc(select=[id AS id1, num], where=[<=(id, 10)])
-                StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+                StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
             StreamExecExchange(distribution=[hash[id2]])
               StreamExecCalc(select=[id AS id2], where=[>=(num, 5)])
-                StreamExecDataStreamScan(table=[[_DataStreamTable_4]])
+                StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_4]])
 StreamExecSink(retract=[false], accMode=[Acc])
   StreamExecCalc(retract=[false], accMode=[Acc])
     StreamExecJoin(retract=[false], accMode=[Acc])
@@ -65,7 +65,7 @@ StreamExecSink(retract=[false], accMode=[Acc])
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[_DataStreamTable_0], fields:(id, num, text))
+		content : SourceConversion(table:[default_catalog, default_db, _DataStreamTable_0], fields:(id, num, text))
 		ship_strategy : FORWARD
 
 		 : Operator
@@ -77,7 +77,7 @@ StreamExecSink(retract=[false], accMode=[Acc])
 				ship_strategy : FORWARD
 
 				 : Operator
-					content : SourceConversion(table:[_DataStreamTable_0], fields:(id, num, text))
+					content : SourceConversion(table:[default_catalog, default_db, _DataStreamTable_0], fields:(id, num, text))
 					ship_strategy : FORWARD
 
 					 : Operator

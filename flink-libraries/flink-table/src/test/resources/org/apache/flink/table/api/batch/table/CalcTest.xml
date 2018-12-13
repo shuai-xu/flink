@@ -20,13 +20,13 @@ limitations under the License.
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(_c0=[AS(org$apache$flink$table$api$batch$table$CalcTest$giveMeCaseClass$$e22d5c9fb387459a70c9b5d0711145bb().my, '_c0')], _c1=[AS(org$apache$flink$table$api$batch$table$CalcTest$giveMeCaseClass$$e22d5c9fb387459a70c9b5d0711145bb().clazz, '_c1')], _c2=[AS(org$apache$flink$table$api$batch$table$CalcTest$giveMeCaseClass$$e22d5c9fb387459a70c9b5d0711145bb().my, '_c2')], _c3=[AS(org$apache$flink$table$api$batch$table$CalcTest$giveMeCaseClass$$e22d5c9fb387459a70c9b5d0711145bb().clazz, '_c3')])
-+- LogicalTableScan(table=[[_DataStreamTable_0]])
++- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[giveMeCaseClass$().my AS _c0, giveMeCaseClass$().clazz AS _c1, giveMeCaseClass$().my AS _c2, giveMeCaseClass$().clazz AS _c3])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -37,13 +37,13 @@ LogicalFilter(condition=[=(MOD($0, 2), 1)])
 +- LogicalFilter(condition=[<($1, 2)])
    +- LogicalFilter(condition=[>($0, 0)])
       +- LogicalProject(a=[$0], b=[$1])
-         +- LogicalTableScan(table=[[_DataStreamTable_0]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b], where=[AND(>(a, 0), <(b, 2), =(MOD(a, 2), 1))])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -51,13 +51,13 @@ Calc(select=[a, b], where=[AND(>(a, 0), <(b, 2), =(MOD(a, 2), 1))])
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a$_1=[AS($0._1, 'a$_1')], a$_2=[AS($0._2, 'a$_2')], c=[$2], b$_1=[AS($1._1, 'b$_1')], b$_2=[AS($1._2, 'b$_2')])
-+- LogicalTableScan(table=[[_DataStreamTable_0]])
++- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a._1 AS a$_1, a._2 AS a$_2, c, b._1 AS b$_1, b._2 AS b$_2])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -65,13 +65,13 @@ Calc(select=[a._1 AS a$_1, a._2 AS a$_2, c, b._1 AS b$_1, b._2 AS b$_2])
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a$_1=[AS($0._1, 'a$_1')], a$_2=[AS($0._2, 'a$_2')], b=[$1])
-+- LogicalTableScan(table=[[_DataStreamTable_0]])
++- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a._1 AS a$_1, a._2 AS a$_2, b])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -81,7 +81,7 @@ Calc(select=[a._1 AS a$_1, a._2 AS a$_2, b])
 LogicalProject(TMP_0=[$0], TMP_1=[$1])
 +- LogicalAggregate(group=[{}], TMP_0=[SUM($0)], TMP_1=[MAX($1)])
    +- LogicalProject(a=[$0], b=[$1])
-      +- LogicalTableScan(table=[[_DataStreamTable_0]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -90,7 +90,7 @@ SortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0, Final_MAX(max$1
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_SUM(a) AS sum$0, Partial_MAX(b) AS max$1])
       +- Calc(select=[a, b])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -100,7 +100,7 @@ SortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0, Final_MAX(max$1
 LogicalProject(TMP_0=[$1])
 +- LogicalAggregate(group=[{1}], TMP_0=[SUM($0)])
    +- LogicalProject(a=[$0], c=[$2])
-      +- LogicalTableScan(table=[[_DataStreamTable_0]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -110,7 +110,7 @@ Calc(select=[TMP_0])
    +- Exchange(distribution=[hash[c]])
       +- LocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0])
          +- Calc(select=[a, c])
-            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -120,7 +120,7 @@ Calc(select=[TMP_0])
 LogicalProject(a=[$0], c=[$1])
 +- LogicalAggregate(group=[{0, 1}])
    +- LogicalProject(a=[$0], c=[$2])
-      +- LogicalTableScan(table=[[_DataStreamTable_0]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -129,7 +129,7 @@ HashAggregate(isMerge=[true], groupBy=[a, c], select=[a, c])
 +- Exchange(distribution=[hash[a, c]])
    +- LocalHashAggregate(groupBy=[a, c], select=[a, c])
       +- Calc(select=[a, c])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -140,7 +140,7 @@ LogicalFilter(condition=[=($1, 2)])
 +- LogicalProject(word=[$0], frequency=[AS($1, 'frequency')])
    +- LogicalAggregate(group=[{0}], TMP_0=[SUM($1)])
       +- LogicalProject(word=[$0], frequency=[$1])
-         +- LogicalTableScan(table=[[_DataStreamTable_0]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -149,7 +149,7 @@ Calc(select=[word, TMP_0 AS frequency], where=[=(TMP_0, 2)])
 +- HashAggregate(isMerge=[true], groupBy=[word], select=[word, Final_SUM(sum$0) AS TMP_0])
    +- Exchange(distribution=[hash[word]])
       +- LocalHashAggregate(groupBy=[word], select=[word, Partial_SUM(frequency) AS sum$0])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[word, frequency])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[word, frequency])
 ]]>
     </Resource>
   </TestCase>
@@ -159,7 +159,7 @@ Calc(select=[word, TMP_0 AS frequency], where=[=(TMP_0, 2)])
 LogicalProject(a=[$0])
 +- LogicalAggregate(group=[{0, 1}])
    +- LogicalProject(a=[$0], c=[$2])
-      +- LogicalTableScan(table=[[_DataStreamTable_0]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -169,7 +169,7 @@ Calc(select=[a])
    +- Exchange(distribution=[hash[a, c]])
       +- LocalHashAggregate(groupBy=[a, c], select=[a, c])
          +- Calc(select=[a, c])
-            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -181,7 +181,7 @@ LogicalProject(TMP_0=[$1])
    +- LogicalProject(a=[$0], c=[$1], k=[$2])
       +- LogicalProject(a=[$0], c=[$1], $f2=[org$apache$flink$table$api$batch$table$CalcTest$MyHashCode$$0794cbbebd8b2d367166ee8a42a68adf($1)])
          +- LogicalProject(a=[$0], c=[$2])
-            +- LogicalTableScan(table=[[_DataStreamTable_0]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -191,7 +191,7 @@ Calc(select=[TMP_0])
    +- Exchange(distribution=[hash[k]])
       +- LocalHashAggregate(groupBy=[k], select=[k, Partial_SUM(a) AS sum$0])
          +- Calc(select=[a, c, MyHashCode$(c) AS k])
-            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -203,7 +203,7 @@ LogicalProject(TMP_0=[$1])
    +- LogicalProject(a=[$0], c=[$1], k=[$2])
       +- LogicalProject(a=[$0], c=[$1], $f2=[UPPER($1)])
          +- LogicalProject(a=[$0], c=[$2])
-            +- LogicalTableScan(table=[[_DataStreamTable_0]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -213,7 +213,7 @@ Calc(select=[TMP_0])
    +- Exchange(distribution=[hash[k]])
       +- LocalHashAggregate(groupBy=[k], select=[k, Partial_SUM(a) AS sum$0])
          +- Calc(select=[a, c, UPPER(c) AS k])
-            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -221,13 +221,13 @@ Calc(select=[TMP_0])
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1])
-+- LogicalTableScan(table=[[_DataStreamTable_0]])
++- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -235,13 +235,13 @@ Calc(select=[a, b])
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(_c0=[AS(org$apache$flink$table$api$batch$table$CalcTest$MyHashCode$$0794cbbebd8b2d367166ee8a42a68adf($2), '_c0')], b=[$1])
-+- LogicalTableScan(table=[[_DataStreamTable_0]])
++- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[MyHashCode$(c) AS _c0, b])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>

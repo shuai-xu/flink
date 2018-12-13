@@ -21,7 +21,7 @@ limitations under the License.
       <![CDATA[
 LogicalAggregate(group=[{0}], cnt=[COUNT($1)])
 +- LogicalProject(c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[SmallTable3]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -32,7 +32,7 @@ Sink(fields=[c, cnt])
    +- Exchange(distribution=[hash[c]])
       +- LocalHashAggregate(groupBy=[c], select=[c, Partial_COUNT(a) AS count$0])
          +- Calc(select=[c, a])
-            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -45,7 +45,7 @@ LogicalProject(total_sum=[AS($0, 'total_sum')])
       +- LogicalProject(sum_a=[$1], c=[$0])
          +- LogicalAggregate(group=[{0}], sum_a=[SUM($1)])
             +- LogicalProject(c=[$2], a=[$0])
-               +- LogicalTableScan(table=[[SmallTable3]])
+               +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
 
 LogicalProject(total_min=[AS($0, 'total_min')])
 +- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
@@ -53,7 +53,7 @@ LogicalProject(total_min=[AS($0, 'total_min')])
       +- LogicalProject(sum_a=[$1], c=[$0])
          +- LogicalAggregate(group=[{0}], sum_a=[SUM($1)])
             +- LogicalProject(c=[$2], a=[$0])
-               +- LogicalTableScan(table=[[SmallTable3]])
+               +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -64,7 +64,7 @@ Calc(select=[sum_a])
    +- Exchange(distribution=[hash[c]])
       +- LocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0])
          +- Calc(select=[c, a])
-            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 
 [[Sink]]
 Sink(fields=[total_sum])
@@ -72,7 +72,7 @@ Sink(fields=[total_sum])
    +- HashAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0])
       +- Exchange(distribution=[single])
          +- LocalHashAggregate(select=[Partial_SUM(sum_a) AS sum$0])
-            +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[sum_a])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[sum_a])
 
 [[Sink]]
 Sink(fields=[total_min])
@@ -80,7 +80,7 @@ Sink(fields=[total_min])
    +- HashAggregate(isMerge=[true], select=[Final_MIN(min$0) AS TMP_1])
       +- Exchange(distribution=[single])
          +- LocalHashAggregate(select=[Partial_MIN(sum_a) AS min$0])
-            +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[sum_a])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[sum_a])
 ]]>
     </Resource>
   </TestCase>
@@ -92,18 +92,18 @@ LogicalProject(total_sum=[AS($0, 'total_sum')])
    +- LogicalProject(a=[$0])
       +- LogicalUnion(all=[true])
          :- LogicalProject(a=[$0], c=[$2])
-         :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
          +- LogicalProject(d=[$0], f=[$2])
-            +- LogicalTableScan(table=[[SmallTable1]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable1]])
 
 LogicalProject(total_min=[AS($0, 'total_min')])
 +- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
    +- LogicalProject(a=[$0])
       +- LogicalUnion(all=[true])
          :- LogicalProject(a=[$0], c=[$2])
-         :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
          +- LogicalProject(d=[$0], f=[$2])
-            +- LogicalTableScan(table=[[SmallTable1]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -112,9 +112,9 @@ LogicalProject(total_min=[AS($0, 'total_min')])
 Calc(select=[a])
 +- Union(all=[true], union=[a, c])
    :- Calc(select=[a, c])
-   :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
    +- Calc(select=[d, f])
-      +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f])
 
 [[Sink]]
 Sink(fields=[total_sum])
@@ -122,7 +122,7 @@ Sink(fields=[total_sum])
    +- HashAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0])
       +- Exchange(distribution=[single])
          +- LocalHashAggregate(select=[Partial_SUM(a) AS sum$0])
-            +- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], fields=[a])
 
 [[Sink]]
 Sink(fields=[total_min])
@@ -130,7 +130,7 @@ Sink(fields=[total_min])
    +- HashAggregate(isMerge=[true], select=[Final_MIN(min$0) AS TMP_1])
       +- Exchange(distribution=[single])
          +- LocalHashAggregate(select=[Partial_MIN(a) AS min$0])
-            +- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], fields=[a])
 ]]>
     </Resource>
   </TestCase>
@@ -142,18 +142,18 @@ LogicalProject(total_sum=[AS($0, 'total_sum')])
    +- LogicalProject(a=[$0])
       +- LogicalUnion(all=[true])
          :- LogicalProject(a=[$0], c=[$2])
-         :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
          +- LogicalProject(d=[$0], f=[$2])
-            +- LogicalTableScan(table=[[SmallTable1]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable1]])
 
 LogicalProject(total_min=[AS($0, 'total_min')])
 +- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
    +- LogicalProject(a=[$0])
       +- LogicalUnion(all=[true])
          :- LogicalProject(a=[$0], c=[$2])
-         :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
          +- LogicalProject(d=[$0], f=[$2])
-            +- LogicalTableScan(table=[[SmallTable1]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -162,9 +162,9 @@ LogicalProject(total_min=[AS($0, 'total_min')])
 Calc(select=[a])
 +- Union(all=[true], union=[a, c])
    :- Calc(select=[a, c])
-   :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
    +- Calc(select=[d, f])
-      +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f])
 
 [[Sink]]
 Sink(fields=[total_sum])
@@ -172,7 +172,7 @@ Sink(fields=[total_sum])
    +- HashAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0])
       +- Exchange(distribution=[single])
          +- LocalHashAggregate(select=[Partial_SUM(a) AS sum$0])
-            +- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], fields=[a])
 
 [[Sink]]
 Sink(fields=[total_min])
@@ -180,7 +180,7 @@ Sink(fields=[total_min])
    +- HashAggregate(isMerge=[true], select=[Final_MIN(min$0) AS TMP_1])
       +- Exchange(distribution=[single])
          +- LocalHashAggregate(select=[Partial_MIN(a) AS min$0])
-            +- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], fields=[a])
 ]]>
     </Resource>
   </TestCase>
@@ -193,11 +193,11 @@ LogicalProject(total_sum=[AS($0, 'total_sum')])
       +- LogicalUnion(all=[true])
          :- LogicalUnion(all=[true])
          :  :- LogicalProject(a=[$0], c=[$2])
-         :  :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  :  +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
          :  +- LogicalProject(d=[$0], f=[$2])
-         :     +- LogicalTableScan(table=[[SmallTable1]])
+         :     +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable1]])
          +- LogicalProject(a=[$0], c=[$2])
-            +- LogicalTableScan(table=[[SmallTable2]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable2]])
 
 LogicalProject(total_min=[AS($0, 'total_min')])
 +- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
@@ -205,38 +205,38 @@ LogicalProject(total_min=[AS($0, 'total_min')])
       +- LogicalUnion(all=[true])
          :- LogicalUnion(all=[true])
          :  :- LogicalProject(a=[$0], c=[$2])
-         :  :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  :  +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
          :  +- LogicalProject(d=[$0], f=[$2])
-         :     +- LogicalTableScan(table=[[SmallTable1]])
+         :     +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable1]])
          +- LogicalProject(a=[$0], c=[$2])
-            +- LogicalTableScan(table=[[SmallTable2]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable2]])
 
 LogicalProject(a=[$0])
 +- LogicalUnion(all=[true])
    :- LogicalProject(a=[$0], c=[$2])
-   :  +- LogicalTableScan(table=[[SmallTable3]])
+   :  +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
    +- LogicalProject(d=[$0], f=[$2])
-      +- LogicalTableScan(table=[[SmallTable1]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 [[IntermediateTable=_DataStreamTable_3]]
 Calc(select=[a, c])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 
 [[IntermediateTable=_DataStreamTable_4]]
 Calc(select=[d, f])
-+- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f])
 
 [[IntermediateTable=_DataStreamTable_5]]
 Calc(select=[a])
 +- Union(all=[true], union=[a, c])
    :- Union(all=[true], union=[a, c])
-   :  :- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
-   :  +- BoundedStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+   :  :- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_3]], fields=[a, c])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_4]], fields=[d, f])
    +- Calc(select=[a, c])
-      +- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], fields=[a, b, c])
 
 [[Sink]]
 Sink(fields=[total_sum])
@@ -244,7 +244,7 @@ Sink(fields=[total_sum])
    +- HashAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0])
       +- Exchange(distribution=[single])
          +- LocalHashAggregate(select=[Partial_SUM(a) AS sum$0])
-            +- BoundedStreamScan(table=[[_DataStreamTable_5]], fields=[a])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_5]], fields=[a])
 
 [[Sink]]
 Sink(fields=[total_min])
@@ -252,14 +252,14 @@ Sink(fields=[total_min])
    +- HashAggregate(isMerge=[true], select=[Final_MIN(min$0) AS TMP_1])
       +- Exchange(distribution=[single])
          +- LocalHashAggregate(select=[Partial_MIN(a) AS min$0])
-            +- BoundedStreamScan(table=[[_DataStreamTable_5]], fields=[a])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_5]], fields=[a])
 
 [[Sink]]
 Sink(fields=[a])
 +- Calc(select=[a])
    +- Union(all=[true], union=[a, c])
-      :- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
-      +- BoundedStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+      :- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_3]], fields=[a, c])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_4]], fields=[d, f])
 ]]>
     </Resource>
   </TestCase>
@@ -269,9 +269,9 @@ Sink(fields=[a])
 LogicalProject(a=[$0])
 +- LogicalUnion(all=[true])
    :- LogicalProject(a=[$0], c=[$2])
-   :  +- LogicalTableScan(table=[[SmallTable3]])
+   :  +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
    +- LogicalProject(d=[$0], f=[$2])
-      +- LogicalTableScan(table=[[SmallTable1]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable1]])
 
 LogicalProject(total_sum=[AS($0, 'total_sum')])
 +- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
@@ -279,11 +279,11 @@ LogicalProject(total_sum=[AS($0, 'total_sum')])
       +- LogicalUnion(all=[true])
          :- LogicalUnion(all=[true])
          :  :- LogicalProject(a=[$0], c=[$2])
-         :  :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  :  +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
          :  +- LogicalProject(d=[$0], f=[$2])
-         :     +- LogicalTableScan(table=[[SmallTable1]])
+         :     +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable1]])
          +- LogicalProject(a=[$0], c=[$2])
-            +- LogicalTableScan(table=[[SmallTable2]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable2]])
 
 LogicalProject(total_min=[AS($0, 'total_min')])
 +- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
@@ -291,38 +291,38 @@ LogicalProject(total_min=[AS($0, 'total_min')])
       +- LogicalUnion(all=[true])
          :- LogicalUnion(all=[true])
          :  :- LogicalProject(a=[$0], c=[$2])
-         :  :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  :  +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
          :  +- LogicalProject(d=[$0], f=[$2])
-         :     +- LogicalTableScan(table=[[SmallTable1]])
+         :     +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable1]])
          +- LogicalProject(a=[$0], c=[$2])
-            +- LogicalTableScan(table=[[SmallTable2]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 [[IntermediateTable=_DataStreamTable_3]]
 Calc(select=[a, c])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 
 [[IntermediateTable=_DataStreamTable_4]]
 Calc(select=[d, f])
-+- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f])
 
 [[Sink]]
 Sink(fields=[a])
 +- Calc(select=[a])
    +- Union(all=[true], union=[a, c])
-      :- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
-      +- BoundedStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+      :- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_3]], fields=[a, c])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_4]], fields=[d, f])
 
 [[IntermediateTable=_DataStreamTable_5]]
 Calc(select=[a])
 +- Union(all=[true], union=[a, c])
    :- Union(all=[true], union=[a, c])
-   :  :- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
-   :  +- BoundedStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+   :  :- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_3]], fields=[a, c])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_4]], fields=[d, f])
    +- Calc(select=[a, c])
-      +- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], fields=[a, b, c])
 
 [[Sink]]
 Sink(fields=[total_sum])
@@ -330,7 +330,7 @@ Sink(fields=[total_sum])
    +- HashAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0])
       +- Exchange(distribution=[single])
          +- LocalHashAggregate(select=[Partial_SUM(a) AS sum$0])
-            +- BoundedStreamScan(table=[[_DataStreamTable_5]], fields=[a])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_5]], fields=[a])
 
 [[Sink]]
 Sink(fields=[total_min])
@@ -338,7 +338,7 @@ Sink(fields=[total_min])
    +- HashAggregate(isMerge=[true], select=[Final_MIN(min$0) AS TMP_1])
       +- Exchange(distribution=[single])
          +- LocalHashAggregate(select=[Partial_MIN(a) AS min$0])
-            +- BoundedStreamScan(table=[[_DataStreamTable_5]], fields=[a])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_5]], fields=[a])
 ]]>
     </Resource>
   </TestCase>
@@ -351,11 +351,11 @@ LogicalProject(total_sum=[AS($0, 'total_sum')])
       +- LogicalUnion(all=[true])
          :- LogicalUnion(all=[true])
          :  :- LogicalProject(a=[$0], c=[$2])
-         :  :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  :  +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
          :  +- LogicalProject(d=[$0], f=[$2])
-         :     +- LogicalTableScan(table=[[SmallTable1]])
+         :     +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable1]])
          +- LogicalProject(a=[$0], c=[$2])
-            +- LogicalTableScan(table=[[SmallTable2]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable2]])
 
 LogicalProject(total_min=[AS($0, 'total_min')])
 +- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
@@ -363,11 +363,11 @@ LogicalProject(total_min=[AS($0, 'total_min')])
       +- LogicalUnion(all=[true])
          :- LogicalUnion(all=[true])
          :  :- LogicalProject(a=[$0], c=[$2])
-         :  :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  :  +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
          :  +- LogicalProject(d=[$0], f=[$2])
-         :     +- LogicalTableScan(table=[[SmallTable1]])
+         :     +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable1]])
          +- LogicalProject(a=[$0], c=[$2])
-            +- LogicalTableScan(table=[[SmallTable2]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -377,11 +377,11 @@ Calc(select=[a])
 +- Union(all=[true], union=[a, c])
    :- Union(all=[true], union=[a, c])
    :  :- Calc(select=[a, c])
-   :  :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :  :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
    :  +- Calc(select=[d, f])
-   :     +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f])
    +- Calc(select=[a, c])
-      +- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], fields=[a, b, c])
 
 [[Sink]]
 Sink(fields=[total_sum])
@@ -389,7 +389,7 @@ Sink(fields=[total_sum])
    +- HashAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0])
       +- Exchange(distribution=[single])
          +- LocalHashAggregate(select=[Partial_SUM(a) AS sum$0])
-            +- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[a])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_3]], fields=[a])
 
 [[Sink]]
 Sink(fields=[total_min])
@@ -397,7 +397,7 @@ Sink(fields=[total_min])
    +- HashAggregate(isMerge=[true], select=[Final_MIN(min$0) AS TMP_1])
       +- Exchange(distribution=[single])
          +- LocalHashAggregate(select=[Partial_MIN(a) AS min$0])
-            +- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[a])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_3]], fields=[a])
 ]]>
     </Resource>
   </TestCase>
@@ -407,7 +407,7 @@ Sink(fields=[total_min])
 LogicalProject(c=[$0], cnt=[AS($1, 'cnt')])
 +- LogicalAggregate(group=[{0}], TMP_0=[COUNT($1)])
    +- LogicalProject(c=[$2], b=[$1])
-      +- LogicalTableScan(table=[[SmallTable3]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -419,7 +419,7 @@ Sink(fields=[c, cnt])
       +- Exchange(distribution=[hash[c]])
          +- LocalHashAggregate(groupBy=[c], select=[c, Partial_COUNT(b) AS count$0])
             +- Calc(select=[c, b])
-               +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -432,27 +432,27 @@ LogicalProject(a1=[$2], b=[$3], c1=[$1])
    :  +- LogicalFilter(condition=[<($1, 5)])
    :     +- LogicalProject(a=[$0], b=[$1], c=[$2])
    :        +- LogicalFilter(condition=[>=($0, 0)])
-   :           +- LogicalTableScan(table=[[SmallTable3]])
+   :           +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
    +- LogicalProject(a1=[$0], b=[$1], c2=[AS($3, 'c2')])
       +- LogicalJoin(condition=[=($0, $2)], joinType=[inner])
          :- LogicalProject(a1=[AS($0, 'a1')], b=[$1])
          :  +- LogicalFilter(condition=[<=($0, 10)])
-         :     +- LogicalTableScan(table=[[SmallTable3]])
+         :     +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
          +- LogicalProject(a2=[AS($0, 'a2')], c=[$2])
             +- LogicalFilter(condition=[>=($1, 5)])
                +- LogicalProject(a=[$0], b=[$1], c=[$2])
                   +- LogicalFilter(condition=[>=($0, 0)])
-                     +- LogicalTableScan(table=[[SmallTable3]])
+                     +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 [[IntermediateTable=_DataStreamTable_1]]
-BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 
 [[IntermediateTable=_DataStreamTable_2]]
 Calc(select=[a, b, c], where=[>=(a, 0)])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 
 [[Sink]]
 Sink(fields=[a1, b, c1])
@@ -460,14 +460,14 @@ Sink(fields=[a1, b, c1])
    +- HashJoin(where=[=(a1, a3)], join=[a3, c1, a1, b], joinType=[InnerJoin], isBroadcast=[true], build=[left])
       :- Exchange(distribution=[broadcast])
       :  +- Calc(select=[a AS a3, c AS c1], where=[<(b, 5)])
-      :     +- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
+      :     +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], fields=[a, b, c])
       +- Calc(select=[a1, b])
          +- HashJoin(where=[=(a1, a2)], join=[a1, b, a2], joinType=[InnerJoin], isBroadcast=[true], build=[right])
             :- Calc(select=[a AS a1, b], where=[<=(a, 10)])
-            :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+            :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
             +- Exchange(distribution=[broadcast])
                +- Calc(select=[a AS a2], where=[>=(b, 5)])
-                  +- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -479,9 +479,9 @@ LogicalProject(total_sum=[AS($0, 'total_sum')])
    +- LogicalProject(a=[$0])
       +- LogicalUnion(all=[true])
          :- LogicalProject(a=[$0], c=[$2])
-         :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
          +- LogicalProject(d=[$0], f=[$2])
-            +- LogicalTableScan(table=[[SmallTable1]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -495,9 +495,9 @@ Sink(fields=[total_sum])
             +- Calc(select=[a])
                +- Union(all=[true], union=[a, c])
                   :- Calc(select=[a, c])
-                  :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+                  :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
                   +- Calc(select=[d, f])
-                     +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+                     +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f])
 ]]>
     </Resource>
   </TestCase>
@@ -509,9 +509,9 @@ LogicalProject(total_sum=[AS($0, 'total_sum')])
    +- LogicalProject(a=[$0])
       +- LogicalUnion(all=[true])
          :- LogicalProject(a=[$0], c=[$2])
-         :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable3]])
          +- LogicalProject(d=[$0], f=[$2])
-            +- LogicalTableScan(table=[[SmallTable1]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, SmallTable1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -525,9 +525,9 @@ Sink(fields=[total_sum])
             +- Calc(select=[a])
                +- Union(all=[true], union=[a, c])
                   :- Calc(select=[a, c])
-                  :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+                  :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
                   +- Calc(select=[d, f])
-                     +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+                     +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f])
 ]]>
     </Resource>
   </TestCase>

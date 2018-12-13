@@ -23,13 +23,13 @@ limitations under the License.
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a=[$0])
-+- LogicalTableScan(table=[[NewTable]])
++- LogicalTableScan(table=[[default_catalog, default_db, NewTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[+(2, a) AS a])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -41,13 +41,13 @@ Calc(select=[+(2, a) AS a])
       <![CDATA[
 LogicalProject(EXPR$0=[+(+(3, 4), $0)], EXPR$1=[+($1, +(1, 2))], EXPR$2=[CASE(=(11, 1), 'a', 'b')], EXPR$3=[TRIM(FLAG(BOTH), ' ', ' STRING ')], EXPR$4=[||('test', 'string')], EXPR$5=[CASE(=(1, 1), null, 1)], EXPR$6=[+(1990-10-14 23:00:00.123, 864001000)], EXPR$7=[EXTRACT(FLAG(DAY), 1685410123)], EXPR$8=[false], EXPR$9=[LIKE('TEST', '%EST')], EXPR$10=[FLOOR(2.5)], EXPR$11=[true], EXPR$12=[||(CAST(true):VARCHAR(65536) CHARACTER SET "UTF-16LE" COLLATE "UTF-16LE$en_US$primary" NOT NULL, 'X')])
 +- LogicalFilter(condition=[>($0, +(1, 7))])
-   +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[+(7, a) AS EXPR$0, +(b, 3) AS EXPR$1, 'b' AS EXPR$2, 'STRING' AS EXPR$3, 'teststring' AS EXPR$4, null AS EXPR$5, 1990-10-24 23:00:01.123 AS EXPR$6, 19 AS EXPR$7, false AS EXPR$8, true AS EXPR$9, 2 AS EXPR$10, true AS EXPR$11, 'trueX' AS EXPR$12], where=[>(a, 8)])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -56,13 +56,13 @@ Calc(select=[+(7, a) AS EXPR$0, +(b, 3) AS EXPR$1, 'b' AS EXPR$2, 'STRING' AS EX
       <![CDATA[
 LogicalProject(_c0=[AS(+(7, 6), '_c0')], _c1=[AS(CASE(=(11, 1), 'a', 'b'), '_c1')], _c2=[AS('STRING', '_c2')], _c3=[AS('teststring', '_c3')], _c4=[AS(+(+(CAST('1990-10-14 23:00:00.123'):TIMESTAMP(3) NOT NULL, 864000000), 1000), '_c4')], _c5=[AS(IS NULL(1), '_c5')], _c6=[AS(LIKE('TEST', '%EST'), '_c6')], _c7=[AS(FLOOR(2.5E0), '_c7')], _c8=[AS(||(CAST(true):VARCHAR(65536) CHARACTER SET "UTF-16LE" COLLATE "UTF-16LE$en_US$primary" NOT NULL, CAST('X'):VARCHAR(65536) CHARACTER SET "UTF-16LE" COLLATE "UTF-16LE$en_US$primary" NOT NULL), '_c8')])
 +- LogicalFilter(condition=[>($0, 8)])
-   +- LogicalTableScan(table=[[_DataStreamTable_0]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[13 AS _c0, 'b' AS _c1, 'STRING' AS _c2, 'teststring' AS _c3, 1990-10-24 23:00:01.123 AS _c4, false AS _c5, true AS _c6, 2E0 AS _c7, 'trueX' AS _c8], where=[>(a, 8)])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -74,13 +74,13 @@ Calc(select=[13 AS _c0, 'b' AS _c1, 'STRING' AS _c2, 'teststring' AS _c3, 1990-1
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2], f=[constant_fun()], f500=[constant_fun(500)])
 +- LogicalFilter(condition=[AND(>($0, constant_fun()), <($1, constant_fun(500)), =(constant_fun(), 1000))])
-   +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b, c, CAST(1000) AS f, CAST(1500) AS f500], where=[AND(>(a, 1000), <(b, 1500))])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -89,13 +89,13 @@ Calc(select=[a, b, c, CAST(1000) AS f, CAST(1500) AS f500], where=[AND(>(a, 1000
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2], f=[AS(org$apache$flink$table$plan$ConstantFunc$b1571f5e9a84058992a0035325fe185b(), 'f')], f500=[AS(org$apache$flink$table$plan$ConstantFunc$b1571f5e9a84058992a0035325fe185b(500), 'f500')])
 +- LogicalFilter(condition=[AND(>($0, org$apache$flink$table$plan$ConstantFunc$b1571f5e9a84058992a0035325fe185b()), <($1, org$apache$flink$table$plan$ConstantFunc$b1571f5e9a84058992a0035325fe185b(500)), =(org$apache$flink$table$plan$ConstantFunc$b1571f5e9a84058992a0035325fe185b(), 1000))])
-   +- LogicalTableScan(table=[[_DataStreamTable_0]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b, c, CAST(1000) AS f, CAST(1500) AS f500], where=[AND(>(a, 1000), <(b, 1500))])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -107,13 +107,13 @@ Calc(select=[a, b, c, CAST(1000) AS f, CAST(1500) AS f500], where=[AND(>(a, 1000
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- LogicalFilter(condition=[>($0, +(1, 7))])
-   +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b, c], where=[>(a, 8)])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -121,13 +121,13 @@ Calc(select=[a, b, c], where=[>(a, 8)])
     <Resource name="planBefore">
       <![CDATA[
 LogicalFilter(condition=[>($0, 8)])
-+- LogicalTableScan(table=[[_DataStreamTable_0]])
++- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b, c], where=[>(a, 8)])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -149,13 +149,13 @@ Calc(select=[a, b, c], where=[>(a, 8)])
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a=[$0], f1=[constant_fun('getMetricGroup')], f2=[constant_fun('getCachedFile')], f3=[constant_fun('getNumberOfParallelSubtasks')], f4=[constant_fun('getIndexOfThisSubtask')], f5=[constant_fun('getIntCounter')], f6=[constant_fun('getLongCounter')], f7=[constant_fun('getDoubleCounter')], f8=[constant_fun('getHistogram')])
-+- LogicalTableScan(table=[[MyTable]])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, CAST(1) AS f1, CAST(2) AS f2, CAST(3) AS f3, CAST(4) AS f4, CAST(5) AS f5, CAST(6) AS f6, CAST(7) AS f7, CAST(8) AS f8])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -163,13 +163,13 @@ Calc(select=[a, CAST(1) AS f1, CAST(2) AS f2, CAST(3) AS f3, CAST(4) AS f4, CAST
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a=[$0], f1=[AS(org$apache$flink$table$plan$IllegalConstantFunc$20bfdc748a1c5c60ddc6de35c9c41e41('getMetricGroup'), 'f1')], f2=[AS(org$apache$flink$table$plan$IllegalConstantFunc$20bfdc748a1c5c60ddc6de35c9c41e41('getCachedFile'), 'f2')], f3=[AS(org$apache$flink$table$plan$IllegalConstantFunc$20bfdc748a1c5c60ddc6de35c9c41e41('getNumberOfParallelSubtasks'), 'f3')], f4=[AS(org$apache$flink$table$plan$IllegalConstantFunc$20bfdc748a1c5c60ddc6de35c9c41e41('getIndexOfThisSubtask'), 'f4')], f5=[AS(org$apache$flink$table$plan$IllegalConstantFunc$20bfdc748a1c5c60ddc6de35c9c41e41('getIntCounter'), 'f5')], f6=[AS(org$apache$flink$table$plan$IllegalConstantFunc$20bfdc748a1c5c60ddc6de35c9c41e41('getLongCounter'), 'f6')], f7=[AS(org$apache$flink$table$plan$IllegalConstantFunc$20bfdc748a1c5c60ddc6de35c9c41e41('getDoubleCounter'), 'f7')], f8=[AS(org$apache$flink$table$plan$IllegalConstantFunc$20bfdc748a1c5c60ddc6de35c9c41e41('getHistogram'), 'f8')])
-+- LogicalTableScan(table=[[_DataStreamTable_0]])
++- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, CAST(1) AS f1, CAST(2) AS f2, CAST(3) AS f3, CAST(4) AS f4, CAST(5) AS f5, CAST(6) AS f6, CAST(7) AS f7, CAST(8) AS f8])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -177,13 +177,13 @@ Calc(select=[a, CAST(1) AS f1, CAST(2) AS f2, CAST(3) AS f3, CAST(4) AS f4, CAST
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(_c0=[AS(+(7, 6), '_c0')], _c1=[AS(CASE(=(11, 1), 'a', 'b'), '_c1')], _c2=[AS('STRING', '_c2')], _c3=[AS('teststring', '_c3')], _c4=[AS(+(+(CAST('1990-10-14 23:00:00.123'):TIMESTAMP(3) NOT NULL, 864000000), 1000), '_c4')], _c5=[AS(IS NULL(1), '_c5')], _c6=[AS(LIKE('TEST', '%EST'), '_c6')], _c7=[AS(FLOOR(2.5E0), '_c7')], _c8=[AS(||(CAST(true):VARCHAR(65536) CHARACTER SET "UTF-16LE" COLLATE "UTF-16LE$en_US$primary" NOT NULL, CAST('X'):VARCHAR(65536) CHARACTER SET "UTF-16LE" COLLATE "UTF-16LE$en_US$primary" NOT NULL), '_c8')])
-+- LogicalTableScan(table=[[_DataStreamTable_0]])
++- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[13 AS _c0, 'b' AS _c1, 'STRING' AS _c2, 'teststring' AS _c3, 1990-10-24 23:00:01.123 AS _c4, false AS _c5, true AS _c6, 2E0 AS _c7, 'trueX' AS _c8])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -194,13 +194,13 @@ Calc(select=[13 AS _c0, 'b' AS _c1, 'STRING' AS _c2, 'teststring' AS _c3, 1990-1
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(EXPR$0=[+(+(3, 4), $0)], EXPR$1=[+($1, +(1, 2))], EXPR$2=[CASE(=(11, 1), 'a', 'b')], EXPR$3=[TRIM(FLAG(BOTH), ' ', ' STRING ')], EXPR$4=[||('test', 'string')], EXPR$5=[CASE(=(1, 1), null, 1)], EXPR$6=[+(1990-10-14 23:00:00.123, 864001000)], EXPR$7=[EXTRACT(FLAG(DAY), 1685410123)], EXPR$8=[false], EXPR$9=[LIKE('TEST', '%EST')], EXPR$10=[FLOOR(2.5)], EXPR$11=[true], EXPR$12=[||(CAST(true):VARCHAR(65536) CHARACTER SET "UTF-16LE" COLLATE "UTF-16LE$en_US$primary" NOT NULL, 'X')])
-+- LogicalTableScan(table=[[MyTable]])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[+(7, a) AS EXPR$0, +(b, 3) AS EXPR$1, 'b' AS EXPR$2, 'STRING' AS EXPR$3, 'teststring' AS EXPR$4, null AS EXPR$5, 1990-10-24 23:00:01.123 AS EXPR$6, 19 AS EXPR$7, false AS EXPR$8, true AS EXPR$9, 2 AS EXPR$10, true AS EXPR$11, 'trueX' AS EXPR$12])
-+- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

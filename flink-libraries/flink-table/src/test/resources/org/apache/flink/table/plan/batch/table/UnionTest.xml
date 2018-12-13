@@ -22,12 +22,12 @@ limitations under the License.
 LogicalUnion(all=[false])
 :- LogicalProject(a=[$0])
 :  +- LogicalFilter(condition=[>($1, 2)])
-:     +- LogicalTableScan(table=[[_DataStreamTable_0]])
+:     +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 +- LogicalUnion(all=[false])
    :- LogicalProject(a=[$0])
-   :  +- LogicalTableScan(table=[[_DataStreamTable_1]])
+   :  +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
    +- LogicalProject(a=[$0])
-      +- LogicalTableScan(table=[[_DataStreamTable_2]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -37,12 +37,12 @@ HashAggregate(isMerge=[true], groupBy=[a], select=[a])
    +- LocalHashAggregate(groupBy=[a], select=[a])
       +- Union(all=[true], union=[a])
          :- Calc(select=[a], where=[>(b, 2)])
-         :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
          +- Union(all=[true], union=[a])
             :- Calc(select=[a])
-            :  +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
+            :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[a, b, c])
             +- Calc(select=[a])
-               +- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -51,8 +51,8 @@ HashAggregate(isMerge=[true], groupBy=[a], select=[a])
       <![CDATA[
 LogicalProject(a=[$0])
 +- LogicalUnion(all=[false])
-   :- LogicalTableScan(table=[[_DataStreamTable_0]])
-   +- LogicalTableScan(table=[[_DataStreamTable_1]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -62,8 +62,8 @@ Calc(select=[a])
    +- Exchange(distribution=[hash[a, b, c]])
       +- LocalHashAggregate(groupBy=[a, b, c], select=[a, b, c])
          +- Union(all=[true], union=[a, b, c])
-            :- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
-            +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
+            :- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -72,8 +72,8 @@ Calc(select=[a])
       <![CDATA[
 LogicalProject(a=[$0])
 +- LogicalUnion(all=[false])
-   :- LogicalTableScan(table=[[MyTable1, source: [selectedFields=[a, b, c]]]])
-   +- LogicalTableScan(table=[[MyTable2, source: [selectedFields=[a, b, c]]]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable1, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -83,8 +83,8 @@ Calc(select=[a])
    +- Exchange(distribution=[hash[a, b, c]])
       +- LocalHashAggregate(groupBy=[a, b, c], select=[a, b, c])
          +- Union(all=[true], union=[a, b, c])
-            :- TableSourceScan(table=[[MyTable1, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
-            +- TableSourceScan(table=[[MyTable2, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            :- TableSourceScan(table=[[default_catalog, default_db, MyTable1, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[default_catalog, default_db, MyTable2, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -95,18 +95,18 @@ LogicalProject(a=[$0], c=[$1])
 +- LogicalFilter(condition=[>($0, 2)])
    +- LogicalUnion(all=[true])
       :- LogicalProject(a=[$0], c=[$2])
-      :  +- LogicalTableScan(table=[[_DataStreamTable_0]])
+      :  +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
       +- LogicalProject(a=[$0], c=[$2])
-         +- LogicalTableScan(table=[[_DataStreamTable_1]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Union(all=[true], union=[a, c])
 :- Calc(select=[a, c], where=[>(a, 2)])
-:  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 +- Calc(select=[a, c], where=[>(a, 2)])
-   +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

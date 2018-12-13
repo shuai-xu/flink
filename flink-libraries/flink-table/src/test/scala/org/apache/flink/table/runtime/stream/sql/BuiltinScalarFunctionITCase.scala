@@ -1196,11 +1196,11 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
     val optimized = tEnv.optimize(relNode, updatesAsRetraction = false)
     val result = FlinkRelOptUtil.toString(optimized)
     assertEquals(
-      """StreamExecCalc(select=[UNIX_TIMESTAMP() AS EXPR$0, date1])
-        |+- StreamExecCalc(select=[date1], where=[>(UNIX_TIMESTAMP(), 0)])
-        |   +- StreamExecCalc(select=[date1])
-        |      +- StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
-        |""".stripMargin,
+    """StreamExecCalc(select=[UNIX_TIMESTAMP() AS EXPR$0, date1])
+      |+- StreamExecCalc(select=[date1], where=[>(UNIX_TIMESTAMP(), 0)])
+      |   +- StreamExecCalc(select=[date1])
+      |      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      |""".stripMargin,
       result)
   }
 

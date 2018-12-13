@@ -24,7 +24,7 @@ limitations under the License.
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -34,7 +34,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
          +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -46,7 +46,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], a=[AVG($2)], g=[GROUP_ID()])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -56,7 +56,7 @@ Calc(select=[b, c, a, 0 AS g])
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
          +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
-            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -68,7 +68,7 @@ Calc(select=[b, c, a, 0 AS g])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -78,7 +78,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
          +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

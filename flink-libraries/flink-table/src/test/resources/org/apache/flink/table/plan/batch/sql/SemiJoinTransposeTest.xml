@@ -26,31 +26,31 @@ LogicalProject(f1=[$0], f5=[$4], f9=[$8])
 +- LogicalFilter(condition=[AND(IN($3, {
 LogicalProject(f7=[$0])
   LogicalFilter(condition=[<($1, 10)])
-    LogicalTableScan(table=[[T3, source: [selectedFields=[f7, f8, f9]]]])
+    LogicalTableScan(table=[[default_catalog, default_db, T3, source: [selectedFields=[f7, f8, f9]]]])
 }), =($2, $5), =($3, $6), LIKE($5, 'abc'))])
    +- LogicalJoin(condition=[true], joinType=[inner])
       :- LogicalJoin(condition=[true], joinType=[inner])
-      :  :- LogicalTableScan(table=[[T1, source: [selectedFields=[f1, f2, f3]]]])
-      :  +- LogicalTableScan(table=[[T2, source: [selectedFields=[f4, f5, f6]]]])
-      +- LogicalTableScan(table=[[T3, source: [selectedFields=[f7, f8, f9]]]])
+      :  :- LogicalTableScan(table=[[default_catalog, default_db, T1, source: [selectedFields=[f1, f2, f3]]]])
+      :  +- LogicalTableScan(table=[[default_catalog, default_db, T2, source: [selectedFields=[f4, f5, f6]]]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T3, source: [selectedFields=[f7, f8, f9]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[f1, f5, f9])
 +- HashJoin(where=[=(f4, f7)], join=[f7, f9, f1, f4, f5], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-   :- TableSourceScan(table=[[T3, source: [selectedFields=[f7, f9]]]], fields=[f7, f9])
+   :- TableSourceScan(table=[[default_catalog, default_db, T3, source: [selectedFields=[f7, f9]]]], fields=[f7, f9])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[f1, f4, f5])
          +- HashJoin(where=[=(f3, f6)], join=[f1, f3, f4, f5, f6], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-            :- TableSourceScan(table=[[T1, source: [selectedFields=[f1, f3]]]], fields=[f1, f3])
+            :- TableSourceScan(table=[[default_catalog, default_db, T1, source: [selectedFields=[f1, f3]]]], fields=[f1, f3])
             +- Exchange(distribution=[broadcast])
                +- HashSemiJoin(where=[=(f4, f7)], join=[f4, f5, f6], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
                   :- Calc(select=[f4, f5, f6], where=[LIKE(f6, 'abc')])
-                  :  +- TableSourceScan(table=[[T2, source: [selectedFields=[f4, f5, f6]]]], fields=[f4, f5, f6])
+                  :  +- TableSourceScan(table=[[default_catalog, default_db, T2, source: [selectedFields=[f4, f5, f6]]]], fields=[f4, f5, f6])
                   +- Exchange(distribution=[broadcast])
                      +- Calc(select=[f7], where=[<(f8, 10)])
-                        +- TableSourceScan(table=[[T3, source: [selectedFields=[f7, f8]]]], fields=[f7, f8])
+                        +- TableSourceScan(table=[[default_catalog, default_db, T3, source: [selectedFields=[f7, f8]]]], fields=[f7, f8])
 ]]>
     </Resource>
   </TestCase>
@@ -64,31 +64,31 @@ LogicalProject(f1=[$0], f5=[$4], f9=[$8])
 +- LogicalFilter(condition=[AND(NOT(IN($3, {
 LogicalProject(f7=[$0])
   LogicalFilter(condition=[<($1, 10)])
-    LogicalTableScan(table=[[T3, source: [selectedFields=[f7, f8, f9]]]])
+    LogicalTableScan(table=[[default_catalog, default_db, T3, source: [selectedFields=[f7, f8, f9]]]])
 })), =($2, $5), =($3, $6), LIKE($5, 'abc'))])
    +- LogicalJoin(condition=[true], joinType=[inner])
       :- LogicalJoin(condition=[true], joinType=[inner])
-      :  :- LogicalTableScan(table=[[T1, source: [selectedFields=[f1, f2, f3]]]])
-      :  +- LogicalTableScan(table=[[T2, source: [selectedFields=[f4, f5, f6]]]])
-      +- LogicalTableScan(table=[[T3, source: [selectedFields=[f7, f8, f9]]]])
+      :  :- LogicalTableScan(table=[[default_catalog, default_db, T1, source: [selectedFields=[f1, f2, f3]]]])
+      :  +- LogicalTableScan(table=[[default_catalog, default_db, T2, source: [selectedFields=[f4, f5, f6]]]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T3, source: [selectedFields=[f7, f8, f9]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[f1, f5, f9])
 +- HashJoin(where=[=(f4, f7)], join=[f7, f9, f1, f4, f5], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-   :- TableSourceScan(table=[[T3, source: [selectedFields=[f7, f9]]]], fields=[f7, f9])
+   :- TableSourceScan(table=[[default_catalog, default_db, T3, source: [selectedFields=[f7, f9]]]], fields=[f7, f9])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[f1, f4, f5])
          +- HashJoin(where=[=(f3, f6)], join=[f1, f3, f4, f5, f6], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-            :- TableSourceScan(table=[[T1, source: [selectedFields=[f1, f3]]]], fields=[f1, f3])
+            :- TableSourceScan(table=[[default_catalog, default_db, T1, source: [selectedFields=[f1, f3]]]], fields=[f1, f3])
             +- Exchange(distribution=[broadcast])
                +- NestedLoopSemiJoin(where=[OR(=(f4, f7), IS NULL(=(f4, f7)))], join=[f4, f5, f6], joinType=[LeftAntiJoin], build=[right])
                   :- Calc(select=[f4, f5, f6], where=[LIKE(f6, 'abc')])
-                  :  +- TableSourceScan(table=[[T2, source: [selectedFields=[f4, f5, f6]]]], fields=[f4, f5, f6])
+                  :  +- TableSourceScan(table=[[default_catalog, default_db, T2, source: [selectedFields=[f4, f5, f6]]]], fields=[f4, f5, f6])
                   +- Exchange(distribution=[broadcast])
                      +- Calc(select=[f7], where=[<(f8, 10)])
-                        +- TableSourceScan(table=[[T3, source: [selectedFields=[f7, f8]]]], fields=[f7, f8])
+                        +- TableSourceScan(table=[[default_catalog, default_db, T3, source: [selectedFields=[f7, f8]]]], fields=[f7, f8])
 ]]>
     </Resource>
   </TestCase>

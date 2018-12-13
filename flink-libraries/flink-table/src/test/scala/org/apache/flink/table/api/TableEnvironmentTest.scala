@@ -95,29 +95,15 @@ class TableEnvironmentTest extends TableTestBase {
 
     registerTestTable(tEnv)
 
-    assert(!tEnv.getTable2(Array("t1")).isEmpty);
-    assert(tEnv.getTable2(Array("t2")).isEmpty);
-  }
-
-  @Test(expected = classOf[IllegalArgumentException])
-  def testEmptyTablePath(): Unit = {
-    var tEnv = streamTestUtil().tableEnv
-
-    tEnv.getTable2(Array())
-  }
-
-  @Test(expected = classOf[NullPointerException])
-  def testNullTablePath(): Unit = {
-    var tEnv = streamTestUtil().tableEnv
-
-    tEnv.getTable2(null)
+    assert(!tEnv.getTable(Array("t1")).isEmpty);
+    assert(tEnv.getTable(Array("t2")).isEmpty);
   }
 
   @Test(expected = classOf[IllegalArgumentException])
   def testLongTablePath(): Unit = {
     var tEnv = streamTestUtil().tableEnv
 
-    tEnv.getTable2(Array("1", "2", "3", "4"))
+    tEnv.getTable(Array("1", "2", "3", "4"))
   }
 
   @Test
@@ -126,14 +112,14 @@ class TableEnvironmentTest extends TableTestBase {
 
     registerTestTable(tEnv)
 
-    var tableSchema = tEnv.scan2(
+    var tableSchema = tEnv.scan(
       CatalogManager.DEFAULT_CATALOG_NAME, CatalogManager.DEFAULT_DATABASE_NAME, "t1").getSchema
 
     assert(tableSchema.getColumnNames.sameElements(Array("a", "b")))
     assert(tableSchema.toRowType == DataTypes.of(CatalogTestUtil.getRowTypeInfo))
 
     // test table inference
-    tableSchema = tEnv.scan2("t1").getSchema
+    tableSchema = tEnv.scan("t1").getSchema
 
     assert(tableSchema.getColumnNames.sameElements(Array("a", "b")))
     assert(tableSchema.toRowType == DataTypes.of(CatalogTestUtil.getRowTypeInfo))
@@ -143,7 +129,7 @@ class TableEnvironmentTest extends TableTestBase {
   def testScanNonExistCatalog(): Unit = {
     var tEnv = streamTestUtil().tableEnv
     registerTestTable(tEnv)
-    var tableSchema = tEnv.scan2(
+    var tableSchema = tEnv.scan(
       "nonexist", CatalogManager.DEFAULT_DATABASE_NAME, "t1").getSchema
   }
 
@@ -151,14 +137,14 @@ class TableEnvironmentTest extends TableTestBase {
   def testScanNonExistDb(): Unit = {
     var tEnv = streamTestUtil().tableEnv
     registerTestTable(tEnv)
-    var tableSchema = tEnv.scan2(CatalogManager.DEFAULT_CATALOG_NAME, "nonexist", "t1").getSchema
+    var tableSchema = tEnv.scan(CatalogManager.DEFAULT_CATALOG_NAME, "nonexist", "t1").getSchema
   }
 
   @Test(expected = classOf[TableException])
   def testScanNonExistTable(): Unit = {
     var tEnv = streamTestUtil().tableEnv
     registerTestTable(tEnv)
-    var tableSchema = tEnv.scan2(
+    var tableSchema = tEnv.scan(
       CatalogManager.DEFAULT_CATALOG_NAME, CatalogManager.DEFAULT_DATABASE_NAME, "nonexist")
       .getSchema
   }
@@ -689,7 +675,7 @@ class TableEnvironmentTest extends TableTestBase {
       Seq("f0" -> INT, "new" -> ROWTIME, "f2" -> STRING))
   }
 
-   @Test
+  @Test
   def testInsertInto(): Unit = {
     val util = streamTestUtil()
 

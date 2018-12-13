@@ -20,7 +20,6 @@ package org.apache.flink.table.calcite
 
 import java.lang.Iterable
 import java.util
-import java.util.Collections
 
 import org.apache.calcite.jdbc.CalciteSchema
 import org.apache.calcite.plan._
@@ -33,9 +32,10 @@ import org.apache.calcite.sql.SqlRankFunction
 import org.apache.calcite.tools.RelBuilder.{AggCall, GroupKey}
 import org.apache.calcite.tools.{FrameworkConfig, RelBuilder, RelBuilderFactory}
 import org.apache.calcite.util.{ImmutableBitSet, Util}
-import org.apache.flink.table.api.{QueryConfig, TableConfig}
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkRelFactories.{ExpandFactory, SinkFactory}
+import org.apache.flink.table.catalog.CatalogManager
 import org.apache.flink.table.expressions.WindowProperty
 import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.plan.nodes.calcite.{LogicalRank, LogicalWindowAggregate}
@@ -128,7 +128,8 @@ object FlinkRelBuilder {
   def create(config: FrameworkConfig,
       tableConfig: TableConfig,
       typeFactory: RelDataTypeFactory,
-      traitDefs: Array[RelTraitDef[_ <: RelTrait]] = Array(ConventionTraitDef.INSTANCE))
+      traitDefs: Array[RelTraitDef[_ <: RelTrait]] = Array(ConventionTraitDef.INSTANCE),
+      catalogManager: CatalogManager)
       : FlinkRelBuilder = {
 
     // create context instances with Flink type factory
@@ -140,7 +141,7 @@ object FlinkRelBuilder {
     val calciteSchema = CalciteSchema.from(config.getDefaultSchema)
     val relOptSchema = new FlinkCalciteCatalogReader(
       calciteSchema,
-      Collections.emptyList(),
+      catalogManager.getCalciteReaderDefaultPaths(config.getDefaultSchema),
       typeFactory,
       CalciteConfig.connectionConfig(config.getParserConfig))
 

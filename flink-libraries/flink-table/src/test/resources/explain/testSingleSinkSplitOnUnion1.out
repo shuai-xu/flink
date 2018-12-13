@@ -4,9 +4,9 @@ LogicalProject(total_sum=[AS($0, 'total_sum')])
     LogicalProject(a=[$0])
       LogicalUnion(all=[true])
         LogicalProject(a=[$0], c=[$2])
-          LogicalTableScan(table=[[t1]])
+          LogicalTableScan(table=[[default_catalog, default_db, t1]])
         LogicalProject(d=[$0], f=[$2])
-          LogicalTableScan(table=[[t2]])
+          LogicalTableScan(table=[[default_catalog, default_db, t2]])
 
 == Optimized Logical Plan ==
 [[Sink]]
@@ -16,9 +16,9 @@ StreamExecSink(fields=[total_sum])
       StreamExecExchange(distribution=[single])
         StreamExecUnion(all=[true], union=[a])
           StreamExecCalc(select=[a])
-            StreamExecDataStreamScan(table=[[t1]])
+            StreamExecDataStreamScan(table=[[default_catalog, default_db, t1]])
           StreamExecCalc(select=[d])
-            StreamExecDataStreamScan(table=[[t2]])
+            StreamExecDataStreamScan(table=[[default_catalog, default_db, t2]])
 StreamExecSink(retract=[false], accMode=[AccRetract])
   StreamExecCalc(retract=[true], accMode=[AccRetract])
     StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
@@ -37,7 +37,7 @@ StreamExecSink(retract=[false], accMode=[AccRetract])
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[t1], fields:(a, b, c))
+		content : SourceConversion(table:[default_catalog, default_db, t1], fields:(a, b, c))
 		ship_strategy : FORWARD
 
 		 : Operator
@@ -45,7 +45,7 @@ StreamExecSink(retract=[false], accMode=[AccRetract])
 			ship_strategy : FORWARD
 
 			 : Operator
-				content : SourceConversion(table:[t2], fields:(d, e, f))
+				content : SourceConversion(table:[default_catalog, default_db, t2], fields:(d, e, f))
 				ship_strategy : FORWARD
 
 				 : Operator

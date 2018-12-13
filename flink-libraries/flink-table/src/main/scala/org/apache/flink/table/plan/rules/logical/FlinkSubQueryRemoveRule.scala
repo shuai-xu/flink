@@ -218,11 +218,11 @@ class FlinkSubQueryRemoveRule(
           //
           // LogicalProject(a=[$0], b=[$1])
           //  SemiJoin(condition=[$2], joinType=[inner], isAnti=[false])
-          //    LogicalTableScan(table=[[l]])
+          //    LogicalTableScan(table=[[default_catalog, default_db, l]])
           //    LogicalProject($f0=[IS NOT NULL($0)])
           //     LogicalAggregate(group=[{}], m=[MIN($0)])
           //       LogicalProject(i=[true])
-          //         LogicalTableScan(table=[[r]])
+          //         LogicalTableScan(table=[[default_catalog, default_db, r]])
           //
           // MIN($0) will return null when table `r` is empty,
           // so add LogicalProject($f0=[IS NOT NULL($0)]) to check null value

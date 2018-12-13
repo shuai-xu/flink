@@ -20,7 +20,7 @@ limitations under the License.
     <Resource name="plan">
       <![CDATA[
 StreamExecWatermarkAssigner(fields=[[a, b, c]], rowtimeField=[a], watermarkOffset=[1])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

@@ -21,7 +21,7 @@ limitations under the License.
       <![CDATA[
 StreamExecCalc(select=[a, PROCTIME(proctime) AS proctime, c])
   StreamExecTemporalSort(orderBy=[proctime ASC, c ASC])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

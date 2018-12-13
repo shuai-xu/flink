@@ -31,7 +31,7 @@ import org.apache.flink.table.util.CollectionBatchExecTable
 import org.apache.flink.util.TimeConvertUtils
 import org.apache.flink.util.TimeConvertUtils.MILLIS_PER_DAY
 import org.junit.Assert.assertEquals
-import org.junit.Test
+import org.junit.{Ignore, Test}
 
 import scala.collection.JavaConverters._
 
@@ -146,6 +146,7 @@ class AnalyzeStatisticTest extends QueryTest {
     assertEquals(expectedTableStats, tableStats)
   }
 
+  @Ignore
   @Test(expected = classOf[TableException]) // Table 'My.Table' was not found
   def testGenerateTableStats_TableNameWithDot(): Unit = {
     val ds = CollectionBatchExecTable.get3TupleDataSet(tEnv, "a, b, c")

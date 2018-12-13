@@ -24,7 +24,7 @@ limitations under the License.
       <![CDATA[
 LogicalAggregate(group=[{0}], groups=[[{0}, {}]], g=[GROUP_ID()], c=[COUNT()])
 +- LogicalProject(a=[$0])
-   +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -33,7 +33,7 @@ FlinkLogicalCalc(select=[a, 0 AS g, c])
 +- FlinkLogicalAggregate(group=[{0, 1}], c=[COUNT()])
    +- FlinkLogicalExpand(projects=[{a=[$0], $e=[0]}, {a=[null], $e=[1]}])
       +- FlinkLogicalCalc(select=[a])
-         +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+         +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -45,7 +45,7 @@ FlinkLogicalCalc(select=[a, 0 AS g, c])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -53,7 +53,7 @@ LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], a=[AVG($2)], g
 FlinkLogicalCalc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS gb, CASE(=($e, 0), 0, =($e, 1), 1, =($e, 2), 0, 1) AS gc, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS gib, CASE(=($e, 0), 0, =($e, 1), 1, =($e, 2), 0, 1) AS gic, CASE(=($e, 0), 0, =($e, 1), 1, =($e, 2), 2, 3) AS gid])
 +- FlinkLogicalAggregate(group=[{1, 2, 3}], a=[AVG($0)])
    +- FlinkLogicalExpand(projects=[{a=[$0], b=[$1], c=[$2], $e=[0]}, {a=[$0], b=[$1], c=[null], $e=[1]}, {a=[$0], b=[null], c=[$2], $e=[2]}, {a=[$0], b=[null], c=[null], $e=[3]}])
-      +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+      +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -65,7 +65,7 @@ FlinkLogicalCalc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2
       <![CDATA[
 LogicalAggregate(group=[{0}], a=[AVG($1)], g=[GROUP_ID()], gb=[GROUPING($0)], gib=[GROUPING_ID($0)])
 +- LogicalProject(b=[$1], a=[$0])
-   +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -73,7 +73,7 @@ LogicalAggregate(group=[{0}], a=[AVG($1)], g=[GROUP_ID()], gb=[GROUPING($0)], gi
 FlinkLogicalCalc(select=[b, a, 0 AS g, 0 AS gb, 0 AS gib])
 +- FlinkLogicalAggregate(group=[{0}], a=[AVG($1)])
    +- FlinkLogicalCalc(select=[b, a])
-      +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+      +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -85,7 +85,7 @@ FlinkLogicalCalc(select=[b, a, 0 AS g, 0 AS gb, 0 AS gib])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], a=[AVG($2)], g=[GROUP_ID()])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -93,7 +93,7 @@ LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], a=[AVG($2)], g=[GROUP_ID()
 FlinkLogicalCalc(select=[b, c, a, 0 AS g])
 +- FlinkLogicalAggregate(group=[{1, 2, 3}], a=[AVG($0)])
    +- FlinkLogicalExpand(projects=[{a=[$0], b=[$1], c=[null], $e=[1]}, {a=[$0], b=[null], c=[$2], $e=[2]}])
-      +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+      +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -105,7 +105,7 @@ FlinkLogicalCalc(select=[b, c, a, 0 AS g])
       <![CDATA[
 LogicalProject(a=[$3], b=[$4], c=[$5])
 +- LogicalAggregate(group=[{0, 1, 2}], groups=[[{0, 1}, {0, 2}]], a=[COUNT($0)], b=[COUNT($1)], c=[COUNT($2)])
-   +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -113,7 +113,7 @@ LogicalProject(a=[$3], b=[$4], c=[$5])
 FlinkLogicalCalc(select=[a_0 AS a, b_0 AS b, c_0 AS c])
 +- FlinkLogicalAggregate(group=[{0, 1, 2, 3}], a=[COUNT($0)], b=[COUNT($4)], c=[COUNT($5)])
    +- FlinkLogicalExpand(projects=[{a=[$0], b=[$1], c=[null], $e=[1], b_0=[$1], c_0=[$2]}, {a=[$0], b=[null], c=[$2], $e=[2], b_0=[$1], c_0=[$2]}])
-      +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+      +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -125,7 +125,7 @@ FlinkLogicalCalc(select=[a_0 AS a, b_0 AS b, c_0 AS c])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -133,7 +133,7 @@ LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], a=[AVG($2)], g=[GRO
 FlinkLogicalCalc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e, 0), 0, =($e, 1), 1, 1) AS gc, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gib, CASE(=($e, 0), 0, =($e, 1), 1, 1) AS gic, CASE(=($e, 0), 0, =($e, 1), 1, 3) AS gid])
 +- FlinkLogicalAggregate(group=[{1, 2, 3}], a=[AVG($0)])
    +- FlinkLogicalExpand(projects=[{a=[$0], b=[$1], c=[$2], $e=[0]}, {a=[$0], b=[$1], c=[null], $e=[1]}, {a=[$0], b=[null], c=[null], $e=[3]}])
-      +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+      +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -146,7 +146,7 @@ FlinkLogicalCalc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS g
 LogicalProject(b=[$2], c=[$3])
 +- LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], b=[COUNT($0)], c=[COUNT($1)])
    +- LogicalProject(b=[$1], c=[$2])
-      +- LogicalTableScan(table=[[MyTable]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -155,7 +155,7 @@ FlinkLogicalCalc(select=[b_0 AS b, c_0 AS c])
 +- FlinkLogicalAggregate(group=[{0, 1, 2}], b=[COUNT($3)], c=[COUNT($4)])
    +- FlinkLogicalExpand(projects=[{b=[$0], c=[null], $e=[1], b_0=[$0], c_0=[$1]}, {b=[null], c=[$1], $e=[2], b_0=[$0], c_0=[$1]}])
       +- FlinkLogicalCalc(select=[b, c])
-         +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+         +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

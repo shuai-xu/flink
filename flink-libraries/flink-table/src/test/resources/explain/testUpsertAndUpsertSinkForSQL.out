@@ -3,18 +3,18 @@ LogicalAggregate(group=[{0}], frequency=[COUNT($1)])
   LogicalProject(cnt=[$1], num=[$0])
     LogicalProject(num=[$0], cnt=[$1])
       LogicalFilter(condition=[<($0, 4)])
-        LogicalTableScan(table=[[T1]])
+        LogicalTableScan(table=[[default_catalog, default_db, T1]])
 
 LogicalProject(num=[$0], cnt=[$1])
   LogicalFilter(condition=[AND(>=($0, 4), <($0, 6))])
-    LogicalTableScan(table=[[T1]])
+    LogicalTableScan(table=[[default_catalog, default_db, T1]])
 
 == Optimized Logical Plan ==
 [[IntermediateTable=_DataStreamTable_1]]
 StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS cnt])
   StreamExecExchange(distribution=[hash[num]])
     StreamExecCalc(select=[num, id])
-      StreamExecDataStreamScan(table=[[T]])
+      StreamExecDataStreamScan(table=[[default_catalog, default_db, T]])
 StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
   StreamExecExchange(retract=[true], accMode=[Acc])
     StreamExecCalc(retract=[true], accMode=[Acc])
@@ -25,7 +25,7 @@ StreamExecSink(fields=[cnt, frequency])
   StreamExecGroupAggregate(groupBy=[cnt], select=[cnt, COUNT_RETRACT(num) AS frequency])
     StreamExecExchange(distribution=[hash[cnt]])
       StreamExecCalc(select=[num, cnt], where=[<(num, 4)])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 StreamExecSink(retract=[false], accMode=[Acc])
   StreamExecGroupAggregate(retract=[false], accMode=[Acc])
     StreamExecExchange(retract=[true], accMode=[AccRetract])
@@ -35,7 +35,7 @@ StreamExecSink(retract=[false], accMode=[Acc])
 [[Sink]]
 StreamExecSink(fields=[num, cnt])
   StreamExecCalc(select=[num, cnt], where=[AND(>=(num, 4), <(num, 6))])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 StreamExecSink(retract=[false], accMode=[AccRetract])
   StreamExecCalc(retract=[false], accMode=[AccRetract])
     StreamExecDataStreamScan(retract=[false], accMode=[AccRetract])
@@ -45,7 +45,7 @@ StreamExecSink(retract=[false], accMode=[AccRetract])
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[T], fields:(id, num, text))
+		content : SourceConversion(table:[default_catalog, default_db, T], fields:(id, num, text))
 		ship_strategy : FORWARD
 
 		 : Operator

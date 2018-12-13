@@ -166,20 +166,9 @@ class FlinkPlannerImpl(
   private def createCatalogReader: CalciteCatalogReader = {
     val rootSchema: SchemaPlus = FlinkPlannerImpl.rootSchema(defaultSchema)
 
-    var paths = new util.ArrayList[util.List[String]]()
-
-    // Add both catalog and catalog.db, if there's a default db, as default schema paths
-    paths.add(new util.ArrayList[String](
-      CalciteSchema.from(defaultSchema).path(catalogManager.getDefaultCatalogName)))
-    if (catalogManager.getDefaultDatabaseName != null) {
-      paths.add(new util.ArrayList[String](
-        CalciteSchema.from(defaultSchema.getSubSchema(catalogManager.getDefaultCatalogName))
-          .path(catalogManager.getDefaultDatabaseName)))
-    }
-
     new FlinkCalciteCatalogReader(
       CalciteSchema.from(rootSchema),
-      paths,
+      catalogManager.getCalciteReaderDefaultPaths(defaultSchema),
       typeFactory,
       CalciteConfig.connectionConfig(parserConfig)
     )

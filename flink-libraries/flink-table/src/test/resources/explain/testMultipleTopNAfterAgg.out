@@ -2,19 +2,19 @@
 LogicalProject(category=[$0], shopId=[$1], sum_num=[$2], max_num=[$3], rank_num=[$4])
   LogicalFilter(condition=[<=($4, 2)])
     LogicalProject(category=[$0], shopId=[$1], sum_num=[$2], max_num=[$3], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0 ORDER BY $2 DESC NULLS LAST, $3 NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-      LogicalTableScan(table=[[MyView]])
+      LogicalTableScan(table=[[default_catalog, default_db, MyView]])
 
 LogicalProject(category=[$0], shopId=[$1], avg_num=[$2], cnt_num=[$3], rank_num=[$4])
   LogicalFilter(condition=[<=($4, 2)])
     LogicalProject(category=[$0], shopId=[$1], avg_num=[$4], cnt_num=[$5], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0 ORDER BY $4 DESC NULLS LAST, $5 NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-      LogicalTableScan(table=[[MyView]])
+      LogicalTableScan(table=[[default_catalog, default_db, MyView]])
 
 == Optimized Logical Plan ==
 [[IntermediateTable=_DataStreamTable_2]]
 StreamExecCalc(select=[category, shopId, CASE(=($f3, 0), null, sum_num) AS sum_num, max_num, CAST(/(CAST(CASE(=($f3, 0), null, sum_num)), $f3)) AS avg_num, $f3 AS cnt_num])
   StreamExecGroupAggregate(groupBy=[category, shopId], select=[category, shopId, $SUM0(num) AS sum_num, COUNT(num) AS $f3, MAX(num) AS max_num])
     StreamExecExchange(distribution=[hash[category, shopId]])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 StreamExecCalc(retract=[true], accMode=[AccRetract])
   StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
     StreamExecExchange(retract=[true], accMode=[Acc])
@@ -25,7 +25,7 @@ StreamExecSink(fields=[category, shopId, sum_num, max_num, rank_num])
   StreamExecCalc(select=[category, shopId, sum_num, max_num, w0$o0])
     StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[sum_num DESC, max_num ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[RetractRank], select=[*, rowNum])
       StreamExecExchange(distribution=[hash[category]])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
+        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
 StreamExecSink(retract=[false], accMode=[AccRetract])
   StreamExecCalc(retract=[true], accMode=[AccRetract])
     StreamExecRank(retract=[true], accMode=[AccRetract])
@@ -37,7 +37,7 @@ StreamExecSink(fields=[category, shopId, avg_num, cnt_num, rank_num])
   StreamExecCalc(select=[category, shopId, avg_num, cnt_num, w0$o0])
     StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[avg_num DESC, cnt_num ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[RetractRank], select=[*, rowNum])
       StreamExecExchange(distribution=[hash[category]])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
+        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
 StreamExecSink(retract=[false], accMode=[AccRetract])
   StreamExecCalc(retract=[true], accMode=[AccRetract])
     StreamExecRank(retract=[true], accMode=[AccRetract])
@@ -49,7 +49,7 @@ StreamExecSink(retract=[false], accMode=[AccRetract])
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[_DataStreamTable_0], fields:(category, shopId, num))
+		content : SourceConversion(table:[default_catalog, default_db, _DataStreamTable_0], fields:(category, shopId, num))
 		ship_strategy : FORWARD
 
 		 : Operator

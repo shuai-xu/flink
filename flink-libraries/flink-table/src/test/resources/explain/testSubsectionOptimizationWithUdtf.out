@@ -4,9 +4,9 @@ LogicalCorrelate(correlation=[$cor2], joinType=[inner], requiredColumns=[{}])
     LogicalJoin(condition=[true], joinType=[inner])
       LogicalFilter(condition=[=($1, $4)])
         LogicalJoin(condition=[true], joinType=[inner])
-          LogicalTableScan(table=[[t1]])
-          LogicalTableScan(table=[[t2]])
-      LogicalTableScan(table=[[t3]])
+          LogicalTableScan(table=[[default_catalog, default_db, t1]])
+          LogicalTableScan(table=[[default_catalog, default_db, t2]])
+      LogicalTableScan(table=[[default_catalog, default_db, t3]])
   LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc1$1fa5efd95b4ed8403438ecea56e662a2($5)], rowType=[RecordType(VARCHAR(65536) f1)], elementType=[class [Ljava.lang.Object;])
 
 == Optimized Logical Plan ==
@@ -17,11 +17,11 @@ StreamExecSink(fields=[a, b, c, d, e, f, i, j, k, l, m, f1])
       StreamExecExchange(distribution=[hash[a]])
         StreamExecJoin(where=[=(b, e)], join=[a, b, c, d, e, f], joinType=[InnerJoin])
           StreamExecExchange(distribution=[hash[b]])
-            StreamExecDataStreamScan(table=[[t1]])
+            StreamExecDataStreamScan(table=[[default_catalog, default_db, t1]])
           StreamExecExchange(distribution=[hash[e]])
-            StreamExecDataStreamScan(table=[[t2]])
+            StreamExecDataStreamScan(table=[[default_catalog, default_db, t2]])
       StreamExecExchange(distribution=[hash[i]])
-        StreamExecDataStreamScan(table=[[t3]])
+        StreamExecDataStreamScan(table=[[default_catalog, default_db, t3]])
 StreamExecSink(retract=[false], accMode=[Acc])
   StreamExecCorrelate(retract=[false], accMode=[Acc])
     StreamExecJoin(retract=[false], accMode=[Acc])
@@ -45,11 +45,11 @@ StreamExecSink(retract=[false], accMode=[Acc])
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[t1], fields:(a, b, c))
+		content : SourceConversion(table:[default_catalog, default_db, t1], fields:(a, b, c))
 		ship_strategy : FORWARD
 
 		 : Operator
-			content : SourceConversion(table:[t2], fields:(d, e, f))
+			content : SourceConversion(table:[default_catalog, default_db, t2], fields:(d, e, f))
 			ship_strategy : FORWARD
 
 			 : Operator
@@ -57,7 +57,7 @@ StreamExecSink(retract=[false], accMode=[Acc])
 				ship_strategy : HASH
 
 				 : Operator
-					content : SourceConversion(table:[t3], fields:(i, j, k, l, m))
+					content : SourceConversion(table:[default_catalog, default_db, t3], fields:(i, j, k, l, m))
 					ship_strategy : FORWARD
 
 					 : Operator

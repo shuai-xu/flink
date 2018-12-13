@@ -26,7 +26,7 @@ StreamExecGroupAggregate(groupBy=[b], select=[b, COUNT_RETRACT(a) AS EXPR$1, SUM
         StreamExecCalc(select=[b, a, c, d])
           StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) AS c, SUM(d) AS d])
             StreamExecExchange(distribution=[hash[a, b]])
-              StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+              StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -36,7 +36,7 @@ StreamExecGroupAggregate(groupBy=[b], select=[b, COUNT_RETRACT(a) AS EXPR$1, SUM
 StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
   StreamExecJoinTable(join=[a, b, c, proc, rt, b0, id, name, age], source=[TestDimensionTable(id, name, age)], on=[[5-0]], joinType=[InnerJoin], period=[$cor0.proc])
     StreamExecCalc(select=[a, b, c, proc, rt, CAST(b) AS b0])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -46,7 +46,7 @@ StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
 StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
   StreamExecJoinTable(join=[a, b, c, proc, rt, b0, id, name, age], source=[TestDimensionTable(id, name, age)], on=[[5-0]], joinType=[InnerJoin], period=[$3])
     StreamExecCalc(select=[a, b, c, proc, rt, CAST(b) AS b0])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -56,7 +56,7 @@ StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
 StreamExecCalc(select=[a, b, name])
   StreamExecJoinTable(join=[a, b, id, name], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin])
     StreamExecCalc(select=[a, b])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -65,7 +65,7 @@ StreamExecCalc(select=[a, b, name])
       <![CDATA[
 StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
   StreamExecJoinTable(join=[a, b, c, proc, rt, id, name, age], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], period=[$cor0.proc])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -75,7 +75,7 @@ StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
 StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, CAST(10) AS age])
   StreamExecJoinTable(join=[a, b, c, proc, rt, id, name], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], where=[=(age, 10)], period=[$cor0.proc])
     StreamExecCalc(select=[a, b, c, proc, rt], where=[>(c, 1000)])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -84,7 +84,7 @@ StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, CAST(10) A
 	<![CDATA[
 StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, CAST(10) AS age])
   StreamExecJoinTable(join=[a, b, c, proc, rt, id, name], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], where=[AND(=(age, 10), >(CAST(name), 1000))], period=[$cor0.proc])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -94,7 +94,7 @@ StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, CAST(10) A
 StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, CAST('AAA') AS name, CAST(10) AS age])
   StreamExecJoinTable(join=[a, b, c, proc, rt, id], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], where=[AND(=(age, 10), =(name, 'AAA'))], period=[$cor0.proc])
     StreamExecCalc(select=[a, b, c, proc, rt], where=[>(c, 1000)])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -104,7 +104,7 @@ StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, CAST('AAA') AS n
 StreamExecCalc(select=[a, b, PROCTIME(proc) AS proc, id, name, age])
   StreamExecJoinTable(join=[a, b, proc, id, name, age], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], period=[$cor0.proc])
     StreamExecCalc(select=[a, b, proc], where=[>(c, 1000)])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -113,7 +113,7 @@ StreamExecCalc(select=[a, b, PROCTIME(proc) AS proc, id, name, age])
       <![CDATA[
 StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
   StreamExecJoinTable(join=[a, b, c, proc, rt, id, name, age], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[LeftOuterJoin], period=[PROCTIME()])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -122,7 +122,7 @@ StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
       <![CDATA[
 StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id])
   StreamExecJoinTable(join=[a, b, c, proc, rt, id], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], period=[PROCTIME()])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -131,7 +131,7 @@ StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id])
       <![CDATA[
 StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
   StreamExecJoinTable(join=[a, b, c, proc, rt, id, name, age], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[LeftOuterJoin], period=[$3])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

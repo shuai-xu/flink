@@ -25,19 +25,19 @@ limitations under the License.
 LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[NOT(IN($0, {
 LogicalProject(c=[$0])
-  LogicalTableScan(table=[[r]])
+  LogicalTableScan(table=[[default_catalog, default_db, r]])
 }))])
-   +- LogicalTableScan(table=[[l]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, l]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
-:  +- TableSourceScan(table=[[l]], fields=[a, b])
+:  +- TableSourceScan(table=[[default_catalog, default_db, l]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- TableSourceScan(table=[[r]], fields=[c, d])
+      +- TableSourceScan(table=[[default_catalog, default_db, r]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -48,12 +48,12 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1])
-+- LogicalTableScan(table=[[l]])
++- LogicalTableScan(table=[[default_catalog, default_db, l]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-TableSourceScan(table=[[l]], fields=[a, b])
+TableSourceScan(table=[[default_catalog, default_db, l]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>

@@ -124,7 +124,7 @@ StreamExecCalc(retract=[false], accMode=[AccRetract])
 StreamExecCalc(select=[word, TMP_0 AS count])
   StreamExecGroupWindowAggregate(groupBy=[word], window=[TumblingGroupWindow('w, 'rowtime, 50.millis)], select=[word, COUNT(number) AS TMP_0], emit=[early delay 10 millisecond, late no delay])
     StreamExecExchange(distribution=[hash[word]])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -245,7 +245,7 @@ StreamExecCalc(select=[word, TMP_2 AS sum])
       StreamExecCalc(select=[word, TMP_0 AS count, TMP_1 AS w_rowtime])
         StreamExecGroupWindowAggregate(groupBy=[word], window=[TumblingGroupWindow('w, 'rowtime, 50.millis)], properties=[TMP_1], select=[word, COUNT(number) AS TMP_0, rowtime('w) AS TMP_1], emit=[early delay 10 millisecond, late no delay])
           StreamExecExchange(distribution=[hash[word]])
-            StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+            StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">

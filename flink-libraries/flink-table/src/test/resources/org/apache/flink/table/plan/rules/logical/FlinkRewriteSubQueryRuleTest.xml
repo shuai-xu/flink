@@ -27,9 +27,9 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT($0)])
   LogicalProject(e=[$1])
     LogicalFilter(condition=[>($0, 10)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }), 0)])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -38,11 +38,11 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 +- LogicalProject(a=[$0], b=[$1], c=[$2])
    +- LogicalFilter(condition=[>($3, 0)])
       +- LogicalJoin(condition=[true], joinType=[left])
-         :- LogicalTableScan(table=[[x]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, x]])
          +- LogicalAggregate(group=[{}], EXPR$0=[COUNT($0)])
             +- LogicalProject(e=[$1])
                +- LogicalFilter(condition=[>($0, 10)])
-                  +- LogicalTableScan(table=[[y]])
+                  +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -58,9 +58,9 @@ LogicalProject(EXPR$0=[$1])
   LogicalAggregate(group=[{0}], EXPR$0=[COUNT()])
     LogicalProject(f=[$2])
       LogicalFilter(condition=[>($0, 10)])
-        LogicalTableScan(table=[[y]])
+        LogicalTableScan(table=[[default_catalog, default_db, y]])
 }), 0)])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -69,13 +69,13 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 +- LogicalProject(a=[$0], b=[$1], c=[$2])
    +- LogicalFilter(condition=[>($3, 0)])
       +- LogicalJoin(condition=[true], joinType=[left])
-         :- LogicalTableScan(table=[[x]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, x]])
          +- LogicalAggregate(group=[{}], agg#0=[SINGLE_VALUE($0)])
             +- LogicalProject(EXPR$0=[$1])
                +- LogicalAggregate(group=[{0}], EXPR$0=[COUNT()])
                   +- LogicalProject(f=[$2])
                      +- LogicalFilter(condition=[>($0, 10)])
-                        +- LogicalTableScan(table=[[y]])
+                        +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -142,9 +142,9 @@ LogicalSort(sort0=[$0], dir0=[ASC-nulls-first], fetch=[100])
 LogicalAggregate(group=[{}], item_cnt=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[OR(AND(=($1, $cor0.i_manufact), OR(AND(=($3, 'Women'), OR(=($4, 'powder'), =($4, 'khaki')), OR(=($5, 'Ounce'), =($5, 'Oz')), OR(=($6, 'medium'), =($6, 'extra large'))), AND(=($3, 'Women'), OR(=($4, 'brown'), =($4, 'honeydew')), OR(=($5, 'Bunch'), =($5, 'Ton')), OR(=($6, 'N/A'), =($6, 'small'))), AND(=($3, 'Men'), OR(=($4, 'floral'), =($4, 'deep')), OR(=($5, 'N/A'), =($5, 'Dozen')), OR(=($6, 'petite'), =($6, 'large'))), AND(=($3, 'Men'), OR(=($4, 'light'), =($4, 'cornflower')), OR(=($5, 'Box'), =($5, 'Pound')), OR(=($6, 'medium'), =($6, 'extra large'))))), AND(=($1, $cor0.i_manufact), OR(AND(=($3, 'Women'), OR(=($4, 'midnight'), =($4, 'snow')), OR(=($5, 'Pallet'), =($5, 'Gross')), OR(=($6, 'medium'), =($6, 'extra large'))), AND(=($3, 'Women'), OR(=($4, 'cyan'), =($4, 'papaya')), OR(=($5, 'Cup'), =($5, 'Dram')), OR(=($6, 'N/A'), =($6, 'small'))), AND(=($3, 'Men'), OR(=($4, 'orange'), =($4, 'frosted')), OR(=($5, 'Each'), =($5, 'Tbl')), OR(=($6, 'petite'), =($6, 'large'))), AND(=($3, 'Men'), OR(=($4, 'forest'), =($4, 'ghost')), OR(=($5, 'Lb'), =($5, 'Bundle')), OR(=($6, 'medium'), =($6, 'extra large'))))))])
-      LogicalTableScan(table=[[item]])
+      LogicalTableScan(table=[[default_catalog, default_db, item]])
 }), 0))], variablesSet=[[$cor0]])
-         +- LogicalTableScan(table=[[item]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, item]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -154,11 +154,11 @@ LogicalSort(sort0=[$0], dir0=[ASC-nulls-first], fetch=[100])
    +- LogicalProject(i_product_name=[$2])
       +- LogicalFilter(condition=[AND(>=(CAST($0):BIGINT, 738), <=(CAST($0):BIGINT, CAST(+(738, 40)):BIGINT NOT NULL))])
          +- SemiJoin(condition=[=($7, $1)], joinType=[inner], isAnti=[false])
-            :- LogicalTableScan(table=[[item]])
+            :- LogicalTableScan(table=[[default_catalog, default_db, item]])
             +- LogicalProject(i_manufact=[$1])
                +- LogicalProject($f0=[0], i_manufact=[$1])
                   +- LogicalFilter(condition=[OR(AND(=($3, 'Women'), OR(=($4, 'powder'), =($4, 'khaki')), OR(=($5, 'Ounce'), =($5, 'Oz')), OR(=($6, 'medium'), =($6, 'extra large'))), AND(=($3, 'Women'), OR(=($4, 'brown'), =($4, 'honeydew')), OR(=($5, 'Bunch'), =($5, 'Ton')), OR(=($6, 'N/A'), =($6, 'small'))), AND(=($3, 'Men'), OR(=($4, 'floral'), =($4, 'deep')), OR(=($5, 'N/A'), =($5, 'Dozen')), OR(=($6, 'petite'), =($6, 'large'))), AND(=($3, 'Men'), OR(=($4, 'light'), =($4, 'cornflower')), OR(=($5, 'Box'), =($5, 'Pound')), OR(=($6, 'medium'), =($6, 'extra large'))), AND(=($3, 'Women'), OR(=($4, 'midnight'), =($4, 'snow')), OR(=($5, 'Pallet'), =($5, 'Gross')), OR(=($6, 'medium'), =($6, 'extra large'))), AND(=($3, 'Women'), OR(=($4, 'cyan'), =($4, 'papaya')), OR(=($5, 'Cup'), =($5, 'Dram')), OR(=($6, 'N/A'), =($6, 'small'))), AND(=($3, 'Men'), OR(=($4, 'orange'), =($4, 'frosted')), OR(=($5, 'Each'), =($5, 'Tbl')), OR(=($6, 'petite'), =($6, 'large'))), AND(=($3, 'Men'), OR(=($4, 'forest'), =($4, 'ghost')), OR(=($5, 'Lb'), =($5, 'Bundle')), OR(=($6, 'medium'), =($6, 'extra large'))))])
-                     +- LogicalTableScan(table=[[item]])
+                     +- LogicalTableScan(table=[[default_catalog, default_db, item]])
 ]]>
     </Resource>
   </TestCase>
@@ -173,20 +173,20 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[=($cor0.a, $0)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }), 0)], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- SemiJoin(condition=[=($0, $3)], joinType=[inner], isAnti=[false])
-   :- LogicalTableScan(table=[[x]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, x]])
    +- LogicalProject(d=[$1])
       +- LogicalProject($f0=[0], d=[$0])
          +- LogicalFilter(condition=[true])
-            +- LogicalTableScan(table=[[y]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -201,20 +201,20 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[=($cor0.a, $0)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }), 0.9)], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- SemiJoin(condition=[=($0, $3)], joinType=[inner], isAnti=[false])
-   :- LogicalTableScan(table=[[x]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, x]])
    +- LogicalProject(d=[$1])
       +- LogicalProject($f0=[0], d=[$0])
          +- LogicalFilter(condition=[true])
-            +- LogicalTableScan(table=[[y]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -229,20 +229,20 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[=($cor0.a, $0)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }), 1)], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- SemiJoin(condition=[=($0, $3)], joinType=[inner], isAnti=[false])
-   :- LogicalTableScan(table=[[x]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, x]])
    +- LogicalProject(d=[$1])
       +- LogicalProject($f0=[0], d=[$0])
          +- LogicalFilter(condition=[true])
-            +- LogicalTableScan(table=[[y]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -257,20 +257,20 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[=($cor0.a, $0)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }), 0.1)], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- SemiJoin(condition=[=($0, $3)], joinType=[inner], isAnti=[false])
-   :- LogicalTableScan(table=[[x]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, x]])
    +- LogicalProject(d=[$1])
       +- LogicalProject($f0=[0], d=[$0])
          +- LogicalFilter(condition=[true])
-            +- LogicalTableScan(table=[[y]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -285,20 +285,20 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[=($cor0.a, $0)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }))], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- SemiJoin(condition=[=($0, $3)], joinType=[inner], isAnti=[false])
-   :- LogicalTableScan(table=[[x]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, x]])
    +- LogicalProject(d=[$1])
       +- LogicalProject($f0=[0], d=[$0])
          +- LogicalFilter(condition=[true])
-            +- LogicalTableScan(table=[[y]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -313,20 +313,20 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[=($cor0.a, $0)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }))], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- SemiJoin(condition=[=($0, $3)], joinType=[inner], isAnti=[false])
-   :- LogicalTableScan(table=[[x]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, x]])
    +- LogicalProject(d=[$1])
       +- LogicalProject($f0=[0], d=[$0])
          +- LogicalFilter(condition=[true])
-            +- LogicalTableScan(table=[[y]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -341,20 +341,20 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[=($cor0.a, $0)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }))], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- SemiJoin(condition=[=($0, $3)], joinType=[inner], isAnti=[false])
-   :- LogicalTableScan(table=[[x]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, x]])
    +- LogicalProject(d=[$1])
       +- LogicalProject($f0=[0], d=[$0])
          +- LogicalFilter(condition=[true])
-            +- LogicalTableScan(table=[[y]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -369,20 +369,20 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[=($cor0.a, $0)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }))], variablesSet=[[$cor0]])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- SemiJoin(condition=[=($0, $3)], joinType=[inner], isAnti=[false])
-   :- LogicalTableScan(table=[[x]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, x]])
    +- LogicalProject(d=[$1])
       +- LogicalProject($f0=[0], d=[$0])
          +- LogicalFilter(condition=[true])
-            +- LogicalTableScan(table=[[y]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -397,22 +397,22 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[>($0, 10)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }), 0)])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- SemiJoin(condition=[$3], joinType=[inner], isAnti=[false])
-   :- LogicalTableScan(table=[[x]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, x]])
    +- LogicalProject($f0=[IS NOT NULL($0)])
       +- LogicalAggregate(group=[{}], m=[MIN($0)])
          +- LogicalProject(i=[true])
             +- LogicalProject($f0=[0])
                +- LogicalFilter(condition=[>($0, 10)])
-                  +- LogicalTableScan(table=[[y]])
+                  +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -427,22 +427,22 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[>($0, 10)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }), 0.9)])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- SemiJoin(condition=[$3], joinType=[inner], isAnti=[false])
-   :- LogicalTableScan(table=[[x]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, x]])
    +- LogicalProject($f0=[IS NOT NULL($0)])
       +- LogicalAggregate(group=[{}], m=[MIN($0)])
          +- LogicalProject(i=[true])
             +- LogicalProject($f0=[0])
                +- LogicalFilter(condition=[>($0, 10)])
-                  +- LogicalTableScan(table=[[y]])
+                  +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -457,22 +457,22 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[>($0, 10)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }), 1)])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- SemiJoin(condition=[$3], joinType=[inner], isAnti=[false])
-   :- LogicalTableScan(table=[[x]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, x]])
    +- LogicalProject($f0=[IS NOT NULL($0)])
       +- LogicalAggregate(group=[{}], m=[MIN($0)])
          +- LogicalProject(i=[true])
             +- LogicalProject($f0=[0])
                +- LogicalFilter(condition=[>($0, 10)])
-                  +- LogicalTableScan(table=[[y]])
+                  +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -487,22 +487,22 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[>($0, 10)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }), 0.1)])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- SemiJoin(condition=[$3], joinType=[inner], isAnti=[false])
-   :- LogicalTableScan(table=[[x]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, x]])
    +- LogicalProject($f0=[IS NOT NULL($0)])
       +- LogicalAggregate(group=[{}], m=[MIN($0)])
          +- LogicalProject(i=[true])
             +- LogicalProject($f0=[0])
                +- LogicalFilter(condition=[>($0, 10)])
-                  +- LogicalTableScan(table=[[y]])
+                  +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -517,22 +517,22 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[>($0, 10)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }))])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- SemiJoin(condition=[$3], joinType=[inner], isAnti=[false])
-   :- LogicalTableScan(table=[[x]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, x]])
    +- LogicalProject($f0=[IS NOT NULL($0)])
       +- LogicalAggregate(group=[{}], m=[MIN($0)])
          +- LogicalProject(i=[true])
             +- LogicalProject($f0=[0])
                +- LogicalFilter(condition=[>($0, 10)])
-                  +- LogicalTableScan(table=[[y]])
+                  +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -547,22 +547,22 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[>($0, 10)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }))])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- SemiJoin(condition=[$3], joinType=[inner], isAnti=[false])
-   :- LogicalTableScan(table=[[x]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, x]])
    +- LogicalProject($f0=[IS NOT NULL($0)])
       +- LogicalAggregate(group=[{}], m=[MIN($0)])
          +- LogicalProject(i=[true])
             +- LogicalProject($f0=[0])
                +- LogicalFilter(condition=[>($0, 10)])
-                  +- LogicalTableScan(table=[[y]])
+                  +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -577,22 +577,22 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[>($0, 10)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }))])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- SemiJoin(condition=[$3], joinType=[inner], isAnti=[false])
-   :- LogicalTableScan(table=[[x]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, x]])
    +- LogicalProject($f0=[IS NOT NULL($0)])
       +- LogicalAggregate(group=[{}], m=[MIN($0)])
          +- LogicalProject(i=[true])
             +- LogicalProject($f0=[0])
                +- LogicalFilter(condition=[>($0, 10)])
-                  +- LogicalTableScan(table=[[y]])
+                  +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>
@@ -607,22 +607,22 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
   LogicalProject($f0=[0])
     LogicalFilter(condition=[>($0, 10)])
-      LogicalTableScan(table=[[y]])
+      LogicalTableScan(table=[[default_catalog, default_db, y]])
 }))])
-   +- LogicalTableScan(table=[[x]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, x]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- SemiJoin(condition=[$3], joinType=[inner], isAnti=[false])
-   :- LogicalTableScan(table=[[x]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, x]])
    +- LogicalProject($f0=[IS NOT NULL($0)])
       +- LogicalAggregate(group=[{}], m=[MIN($0)])
          +- LogicalProject(i=[true])
             +- LogicalProject($f0=[0])
                +- LogicalFilter(condition=[>($0, 10)])
-                  +- LogicalTableScan(table=[[y]])
+                  +- LogicalTableScan(table=[[default_catalog, default_db, y]])
 ]]>
     </Resource>
   </TestCase>

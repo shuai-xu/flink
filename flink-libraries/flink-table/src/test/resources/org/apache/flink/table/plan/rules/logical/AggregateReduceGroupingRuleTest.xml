@@ -26,8 +26,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 +- LogicalProject(a1=[$0], b1=[$1], a2=[$4], b2=[$5], c1=[$2])
    +- LogicalProject(a1=[$0], b1=[$1], c1=[$2], d1=[$3], a2=[$4], b2=[$5], c2=[$6])
       +- LogicalJoin(condition=[=($0, $5)], joinType=[full])
-         :- LogicalTableScan(table=[[T1]])
-         +- LogicalTableScan(table=[[T2]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -38,10 +38,10 @@ Calc(select=[a1, b1, a2, b2, EXPR$4])
       +- HashJoin(where=[=(a1, b2)], join=[a1, b1, c1, a2, b2], joinType=[FullOuterJoin], build=[right])
          :- Exchange(distribution=[hash[a1]])
          :  +- Calc(select=[a1, b1, c1])
-         :     +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+         :     +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
          +- Exchange(distribution=[hash[b2]])
             +- Calc(select=[a2, b2])
-               +- TableSourceScan(table=[[T2]], fields=[a2, b2, c2])
+               +- TableSourceScan(table=[[default_catalog, default_db, T2]], fields=[a2, b2, c2])
 ]]>
     </Resource>
   </TestCase>
@@ -55,8 +55,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 +- LogicalProject(a1=[$0], b1=[$1], a2=[$4], b2=[$5], c1=[$2])
    +- LogicalProject(a1=[$0], b1=[$1], c1=[$2], d1=[$3], a2=[$4], b2=[$5], c2=[$6])
       +- LogicalJoin(condition=[=($0, $5)], joinType=[full])
-         :- LogicalTableScan(table=[[T1]])
-         +- LogicalTableScan(table=[[T2]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -65,9 +65,9 @@ FlinkLogicalCalc(select=[a1, b1, a2, b2, EXPR$4])
 +- FlinkLogicalAggregate(group=[{0, 4}], b1=[AUXILIARY_GROUP($1)], a2=[AUXILIARY_GROUP($3)], EXPR$4=[COUNT($2)])
    +- FlinkLogicalJoin(condition=[=($0, $4)], joinType=[full])
       :- FlinkLogicalCalc(select=[a1, b1, c1])
-      :  +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+      :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
       +- FlinkLogicalCalc(select=[a2, b2])
-         +- FlinkLogicalTableSourceScan(table=[[T2]], fields=[a2, b2, c2])
+         +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T2]], fields=[a2, b2, c2])
 ]]>
     </Resource>
   </TestCase>
@@ -81,8 +81,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 +- LogicalProject(a1=[$0], b1=[$1], a3=[$4], b3=[$5], c1=[$2])
    +- LogicalProject(a1=[$0], b1=[$1], c1=[$2], d1=[$3], a3=[$4], b3=[$5], c3=[$6], d3=[$7])
       +- LogicalJoin(condition=[=($0, $4)], joinType=[full])
-         :- LogicalTableScan(table=[[T1]])
-         +- LogicalTableScan(table=[[T3]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -94,10 +94,10 @@ Calc(select=[a1, b1, a3, b3, EXPR$4])
          +- HashJoin(where=[=(a1, a3)], join=[a1, b1, c1, a3, b3], joinType=[FullOuterJoin], build=[right])
             :- Exchange(distribution=[hash[a1]])
             :  +- Calc(select=[a1, b1, c1])
-            :     +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+            :     +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
             +- Exchange(distribution=[hash[a3]])
                +- Calc(select=[a3, b3])
-                  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a3, b3, c3, d3])
 ]]>
     </Resource>
   </TestCase>
@@ -111,8 +111,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 +- LogicalProject(a1=[$0], b1=[$1], a3=[$4], b3=[$5], c1=[$2])
    +- LogicalProject(a1=[$0], b1=[$1], c1=[$2], d1=[$3], a3=[$4], b3=[$5], c3=[$6], d3=[$7])
       +- LogicalJoin(condition=[=($0, $4)], joinType=[full])
-         :- LogicalTableScan(table=[[T1]])
-         +- LogicalTableScan(table=[[T3]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -121,9 +121,9 @@ FlinkLogicalCalc(select=[a1, b1, a3, b3, EXPR$4])
 +- FlinkLogicalAggregate(group=[{0, 3, 4}], b1=[AUXILIARY_GROUP($1)], EXPR$4=[COUNT($2)])
    +- FlinkLogicalJoin(condition=[=($0, $3)], joinType=[full])
       :- FlinkLogicalCalc(select=[a1, b1, c1])
-      :  +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+      :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
       +- FlinkLogicalCalc(select=[a3, b3])
-         +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+         +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -138,8 +138,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
    +- LogicalProject(a1=[$0], b1=[$1], c1=[$2], d1=[$3], a2=[$4], b2=[$5], c2=[$6])
       +- LogicalFilter(condition=[=($0, $5)])
          +- LogicalJoin(condition=[true], joinType=[inner])
-            :- LogicalTableScan(table=[[T1]])
-            +- LogicalTableScan(table=[[T2]])
+            :- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -148,10 +148,10 @@ HashAggregate(isMerge=[false], groupBy=[a1], auxGrouping=[b1, a2, b2], select=[a
 +- HashJoin(where=[=(a1, b2)], join=[a1, b1, c1, a2, b2], joinType=[InnerJoin], build=[right])
    :- Exchange(distribution=[hash[a1]])
    :  +- Calc(select=[a1, b1, c1])
-   :     +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+   :     +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
    +- Exchange(distribution=[hash[b2]])
       +- Calc(select=[a2, b2])
-         +- TableSourceScan(table=[[T2]], fields=[a2, b2, c2])
+         +- TableSourceScan(table=[[default_catalog, default_db, T2]], fields=[a2, b2, c2])
 ]]>
     </Resource>
   </TestCase>
@@ -166,8 +166,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
    +- LogicalProject(a1=[$0], b1=[$1], c1=[$2], d1=[$3], a2=[$4], b2=[$5], c2=[$6])
       +- LogicalFilter(condition=[=($0, $5)])
          +- LogicalJoin(condition=[true], joinType=[inner])
-            :- LogicalTableScan(table=[[T1]])
-            +- LogicalTableScan(table=[[T2]])
+            :- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -175,9 +175,9 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 FlinkLogicalAggregate(group=[{0}], b1=[AUXILIARY_GROUP($1)], a2=[AUXILIARY_GROUP($3)], b2=[AUXILIARY_GROUP($4)], EXPR$4=[COUNT($2)])
 +- FlinkLogicalJoin(condition=[=($0, $4)], joinType=[inner])
    :- FlinkLogicalCalc(select=[a1, b1, c1])
-   :  +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+   :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
    +- FlinkLogicalCalc(select=[a2, b2])
-      +- FlinkLogicalTableSourceScan(table=[[T2]], fields=[a2, b2, c2])
+      +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T2]], fields=[a2, b2, c2])
 ]]>
     </Resource>
   </TestCase>
@@ -192,8 +192,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)], EXPR$5=[AVG($5)])
    +- LogicalProject(a2=[$0], b2=[$1], c2=[$2], a3=[$3], b3=[$4], c3=[$5], d3=[$6])
       +- LogicalFilter(condition=[=($1, $3)])
          +- LogicalJoin(condition=[true], joinType=[inner])
-            :- LogicalTableScan(table=[[T2]])
-            +- LogicalTableScan(table=[[T3]])
+            :- LogicalTableScan(table=[[default_catalog, default_db, T2]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -201,13 +201,13 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)], EXPR$5=[AVG($5)])
 Calc(select=[a2, b2, a3, b3, *($f2, $f20) AS EXPR$4, CAST(/(CAST(CASE(=($f4, 0), null, $f3)), $f4)) AS EXPR$5])
 +- HashJoin(where=[=(b2, a3)], join=[a2, b2, $f2, a3, b3, $f20, $f3, $f4], joinType=[InnerJoin], isBroadcast=[true], build=[right])
    :- Calc(select=[a2, b2, CAST(CASE(IS NOT NULL(c2), 1, 0)) AS $f2])
-   :  +- TableSourceScan(table=[[T2]], fields=[a2, b2, c2])
+   :  +- TableSourceScan(table=[[default_catalog, default_db, T2]], fields=[a2, b2, c2])
    +- Exchange(distribution=[broadcast])
       +- HashAggregate(isMerge=[true], groupBy=[a3, b3], select=[a3, b3, Final_COUNT(count$0) AS $f2, Final_$SUM0(sum0$1) AS $f3, Final_COUNT(count$2) AS $f4])
          +- Exchange(distribution=[hash[a3, b3]])
             +- LocalHashAggregate(groupBy=[a3, b3], select=[a3, b3, Partial_COUNT(*) AS count$0, Partial_$SUM0(d3) AS sum0$1, Partial_COUNT(d3) AS count$2])
                +- Calc(select=[a3, b3, d3])
-                  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a3, b3, c3, d3])
 ]]>
     </Resource>
   </TestCase>
@@ -222,8 +222,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)], EXPR$5=[AVG($5)])
    +- LogicalProject(a2=[$0], b2=[$1], c2=[$2], a3=[$3], b3=[$4], c3=[$5], d3=[$6])
       +- LogicalFilter(condition=[=($1, $3)])
          +- LogicalJoin(condition=[true], joinType=[inner])
-            :- LogicalTableScan(table=[[T2]])
-            +- LogicalTableScan(table=[[T3]])
+            :- LogicalTableScan(table=[[default_catalog, default_db, T2]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -231,10 +231,10 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)], EXPR$5=[AVG($5)])
 FlinkLogicalCalc(select=[a2, b2, a3, b3, *($f2, $f20) AS EXPR$4, CAST(/(CAST(CASE(=($f4, 0), null, $f3)), $f4)) AS EXPR$5])
 +- FlinkLogicalJoin(condition=[=($1, $3)], joinType=[inner])
    :- FlinkLogicalCalc(select=[a2, b2, CAST(CASE(IS NOT NULL(c2), 1, 0)) AS $f2])
-   :  +- FlinkLogicalTableSourceScan(table=[[T2]], fields=[a2, b2, c2])
+   :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T2]], fields=[a2, b2, c2])
    +- FlinkLogicalAggregate(group=[{0, 1}], agg#0=[COUNT()], agg#1=[$SUM0($2)], agg#2=[COUNT($2)])
       +- FlinkLogicalCalc(select=[a3, b3, d3])
-         +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+         +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -250,9 +250,9 @@ LogicalAggregate(group=[{0, 1, 2, 3, 4, 5}], EXPR$6=[COUNT($6)])
       +- LogicalFilter(condition=[AND(=($0, $5), =($0, $7))])
          +- LogicalJoin(condition=[true], joinType=[inner])
             :- LogicalJoin(condition=[true], joinType=[inner])
-            :  :- LogicalTableScan(table=[[T1]])
-            :  +- LogicalTableScan(table=[[T2]])
-            +- LogicalTableScan(table=[[T3]])
+            :  :- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+            :  +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -263,16 +263,16 @@ Calc(select=[a1, b1, a2, b2, a3, b3, *($f4, $f2) AS $f8])
    :  +- HashJoin(where=[=(a1, b2)], join=[a1, b1, c1, a2, b2], joinType=[InnerJoin], build=[right])
    :     :- Exchange(distribution=[hash[a1]])
    :     :  +- Calc(select=[a1, b1, c1])
-   :     :     +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+   :     :     +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
    :     +- Exchange(distribution=[hash[b2]])
    :        +- Calc(select=[a2, b2])
-   :           +- TableSourceScan(table=[[T2]], fields=[a2, b2, c2])
+   :           +- TableSourceScan(table=[[default_catalog, default_db, T2]], fields=[a2, b2, c2])
    +- Exchange(distribution=[broadcast])
       +- HashAggregate(isMerge=[true], groupBy=[a3, b3], select=[a3, b3, Final_COUNT(count$0) AS $f2])
          +- Exchange(distribution=[hash[a3, b3]])
             +- LocalHashAggregate(groupBy=[a3, b3], select=[a3, b3, Partial_COUNT(*) AS count$0])
                +- Calc(select=[a3, b3])
-                  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a3, b3, c3, d3])
 ]]>
     </Resource>
   </TestCase>
@@ -288,9 +288,9 @@ LogicalAggregate(group=[{0, 1, 2, 3, 4, 5}], EXPR$6=[COUNT($6)])
       +- LogicalFilter(condition=[AND(=($0, $5), =($0, $7))])
          +- LogicalJoin(condition=[true], joinType=[inner])
             :- LogicalJoin(condition=[true], joinType=[inner])
-            :  :- LogicalTableScan(table=[[T1]])
-            :  +- LogicalTableScan(table=[[T2]])
-            +- LogicalTableScan(table=[[T3]])
+            :  :- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+            :  +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -300,12 +300,12 @@ FlinkLogicalCalc(select=[a1, b1, a2, b2, a3, b3, *($f4, $f2) AS $f8])
    :- FlinkLogicalCalc(select=[a1, b1, a2, b2, CAST(CASE(IS NOT NULL(c1), 1, 0)) AS $f4])
    :  +- FlinkLogicalJoin(condition=[=($0, $4)], joinType=[inner])
    :     :- FlinkLogicalCalc(select=[a1, b1, c1])
-   :     :  +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+   :     :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
    :     +- FlinkLogicalCalc(select=[a2, b2])
-   :        +- FlinkLogicalTableSourceScan(table=[[T2]], fields=[a2, b2, c2])
+   :        +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T2]], fields=[a2, b2, c2])
    +- FlinkLogicalAggregate(group=[{0, 1}], agg#0=[COUNT()])
       +- FlinkLogicalCalc(select=[a3, b3])
-         +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+         +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -319,8 +319,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 +- LogicalProject(a1=[$0], b1=[$1], a2=[$4], b2=[$5], c1=[$2])
    +- LogicalProject(a1=[$0], b1=[$1], c1=[$2], d1=[$3], a2=[$4], b2=[$5], c2=[$6])
       +- LogicalJoin(condition=[=($0, $5)], joinType=[left])
-         :- LogicalTableScan(table=[[T1]])
-         +- LogicalTableScan(table=[[T2]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -329,10 +329,10 @@ HashAggregate(isMerge=[false], groupBy=[a1], auxGrouping=[b1, a2, b2], select=[a
 +- HashJoin(where=[=(a1, b2)], join=[a1, b1, c1, a2, b2], joinType=[LeftOuterJoin], build=[right])
    :- Exchange(distribution=[hash[a1]])
    :  +- Calc(select=[a1, b1, c1])
-   :     +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+   :     +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
    +- Exchange(distribution=[hash[b2]])
       +- Calc(select=[a2, b2])
-         +- TableSourceScan(table=[[T2]], fields=[a2, b2, c2])
+         +- TableSourceScan(table=[[default_catalog, default_db, T2]], fields=[a2, b2, c2])
 ]]>
     </Resource>
   </TestCase>
@@ -346,8 +346,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 +- LogicalProject(a1=[$0], b1=[$1], a2=[$4], b2=[$5], c1=[$2])
    +- LogicalProject(a1=[$0], b1=[$1], c1=[$2], d1=[$3], a2=[$4], b2=[$5], c2=[$6])
       +- LogicalJoin(condition=[=($0, $5)], joinType=[left])
-         :- LogicalTableScan(table=[[T1]])
-         +- LogicalTableScan(table=[[T2]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -355,9 +355,9 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 FlinkLogicalAggregate(group=[{0}], b1=[AUXILIARY_GROUP($1)], a2=[AUXILIARY_GROUP($3)], b2=[AUXILIARY_GROUP($4)], EXPR$4=[COUNT($2)])
 +- FlinkLogicalJoin(condition=[=($0, $4)], joinType=[left])
    :- FlinkLogicalCalc(select=[a1, b1, c1])
-   :  +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+   :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
    +- FlinkLogicalCalc(select=[a2, b2])
-      +- FlinkLogicalTableSourceScan(table=[[T2]], fields=[a2, b2, c2])
+      +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T2]], fields=[a2, b2, c2])
 ]]>
     </Resource>
   </TestCase>
@@ -371,8 +371,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 +- LogicalProject(a1=[$0], b1=[$1], a3=[$4], b3=[$5], c1=[$2])
    +- LogicalProject(a1=[$0], b1=[$1], c1=[$2], d1=[$3], a3=[$4], b3=[$5], c3=[$6], d3=[$7])
       +- LogicalJoin(condition=[=($0, $4)], joinType=[left])
-         :- LogicalTableScan(table=[[T1]])
-         +- LogicalTableScan(table=[[T3]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -383,10 +383,10 @@ Calc(select=[a1, b1, a3, b3, EXPR$4])
       +- LocalHashAggregate(groupBy=[a1, a3, b3], auxGrouping=[b1], select=[a1, a3, b3, b1, Partial_COUNT(c1) AS count$0])
          +- HashJoin(where=[=(a1, a3)], join=[a1, b1, c1, a3, b3], joinType=[LeftOuterJoin], isBroadcast=[true], build=[right])
             :- Calc(select=[a1, b1, c1])
-            :  +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+            :  +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
             +- Exchange(distribution=[broadcast])
                +- Calc(select=[a3, b3])
-                  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a3, b3, c3, d3])
 ]]>
     </Resource>
   </TestCase>
@@ -400,8 +400,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 +- LogicalProject(a1=[$0], b1=[$1], a3=[$4], b3=[$5], c1=[$2])
    +- LogicalProject(a1=[$0], b1=[$1], c1=[$2], d1=[$3], a3=[$4], b3=[$5], c3=[$6], d3=[$7])
       +- LogicalJoin(condition=[=($0, $4)], joinType=[left])
-         :- LogicalTableScan(table=[[T1]])
-         +- LogicalTableScan(table=[[T3]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -410,9 +410,9 @@ FlinkLogicalCalc(select=[a1, b1, a3, b3, EXPR$4])
 +- FlinkLogicalAggregate(group=[{0, 3, 4}], b1=[AUXILIARY_GROUP($1)], EXPR$4=[COUNT($2)])
    +- FlinkLogicalJoin(condition=[=($0, $3)], joinType=[left])
       :- FlinkLogicalCalc(select=[a1, b1, c1])
-      :  +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+      :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
       +- FlinkLogicalCalc(select=[a3, b3])
-         +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+         +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -426,8 +426,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 +- LogicalProject(a3=[$0], b3=[$1], a1=[$4], b1=[$5], c1=[$6])
    +- LogicalProject(a3=[$0], b3=[$1], c3=[$2], d3=[$3], a1=[$4], b1=[$5], c1=[$6], d1=[$7])
       +- LogicalJoin(condition=[=($4, $0)], joinType=[left])
-         :- LogicalTableScan(table=[[T3]])
-         +- LogicalTableScan(table=[[T1]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, T3]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -436,10 +436,10 @@ HashAggregate(isMerge=[false], groupBy=[a3, b3], auxGrouping=[a1, b1], select=[a
 +- HashJoin(where=[=(a1, a3)], join=[a3, b3, a1, b1, c1], joinType=[LeftOuterJoin], build=[left])
    :- Exchange(distribution=[hash[a3]])
    :  +- Calc(select=[a3, b3])
-   :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a3, b3, c3, d3])
    +- Exchange(distribution=[hash[a1]])
       +- Calc(select=[a1, b1, c1])
-         +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+         +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -453,8 +453,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 +- LogicalProject(a3=[$0], b3=[$1], a1=[$4], b1=[$5], c1=[$6])
    +- LogicalProject(a3=[$0], b3=[$1], c3=[$2], d3=[$3], a1=[$4], b1=[$5], c1=[$6], d1=[$7])
       +- LogicalJoin(condition=[=($4, $0)], joinType=[left])
-         :- LogicalTableScan(table=[[T3]])
-         +- LogicalTableScan(table=[[T1]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, T3]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -462,9 +462,9 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 FlinkLogicalAggregate(group=[{0, 1}], a1=[AUXILIARY_GROUP($2)], b1=[AUXILIARY_GROUP($3)], EXPR$4=[COUNT($4)])
 +- FlinkLogicalJoin(condition=[=($2, $0)], joinType=[left])
    :- FlinkLogicalCalc(select=[a3, b3])
-   :  +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+   :  +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
    +- FlinkLogicalCalc(select=[a1, b1, c1])
-      +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+      +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -477,7 +477,7 @@ FlinkLogicalAggregate(group=[{0, 1}], a1=[AUXILIARY_GROUP($2)], b1=[AUXILIARY_GR
 LogicalAggregate(group=[{0, 1, 2}], EXPR$3=[COUNT($3)])
 +- LogicalProject(a1=[$0], b1=[$1], c=[$3], d1=[$2])
    +- LogicalProject(a1=[$0], b1=[$1], d1=[$3], c=[COUNT() OVER (PARTITION BY $2 RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)])
-      +- LogicalTableScan(table=[[T1]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -490,7 +490,7 @@ Calc(select=[a1, b1, c, EXPR$3])
             +- OverAggregate(partitionBy=[c1], window#0=[COUNT(*) AS w0$o0 RANG BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING], select=[a1, b1, c1, d1, w0$o0])
                +- Sort(orderBy=[c1 ASC])
                   +- Exchange(distribution=[hash[c1]])
-                     +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+                     +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -503,7 +503,7 @@ Calc(select=[a1, b1, c, EXPR$3])
 LogicalAggregate(group=[{0, 1, 2}], EXPR$3=[COUNT($3)])
 +- LogicalProject(a1=[$0], b1=[$1], c=[$3], d1=[$2])
    +- LogicalProject(a1=[$0], b1=[$1], d1=[$3], c=[COUNT() OVER (PARTITION BY $2 RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)])
-      +- LogicalTableScan(table=[[T1]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -512,7 +512,7 @@ FlinkLogicalCalc(select=[a1, b1, c, EXPR$3])
 +- FlinkLogicalAggregate(group=[{0, 2}], b1=[AUXILIARY_GROUP($1)], EXPR$3=[COUNT($3)])
    +- FlinkLogicalCalc(select=[a1, b1, w0$o0 AS c, d1])
       +- FlinkLogicalOverWindow(window#0=[window(partition {2} order by [] range between UNBOUNDED PRECEDING and UNBOUNDED FOLLOWING aggs [COUNT()])])
-         +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+         +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -526,8 +526,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 +- LogicalProject(a1=[$0], b1=[$1], a2=[$4], b2=[$5], c1=[$2])
    +- LogicalProject(a1=[$0], b1=[$1], c1=[$2], d1=[$3], a2=[$4], b2=[$5], c2=[$6])
       +- LogicalJoin(condition=[=($0, $5)], joinType=[right])
-         :- LogicalTableScan(table=[[T1]])
-         +- LogicalTableScan(table=[[T2]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -537,10 +537,10 @@ Calc(select=[a1, b1, a2, b2, EXPR$4])
    +- HashJoin(where=[=(a1, b2)], join=[a1, b1, c1, a2, b2], joinType=[RightOuterJoin], build=[right])
       :- Exchange(distribution=[hash[a1]])
       :  +- Calc(select=[a1, b1, c1])
-      :     +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+      :     +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
       +- Exchange(distribution=[hash[b2]])
          +- Calc(select=[a2, b2])
-            +- TableSourceScan(table=[[T2]], fields=[a2, b2, c2])
+            +- TableSourceScan(table=[[default_catalog, default_db, T2]], fields=[a2, b2, c2])
 ]]>
     </Resource>
   </TestCase>
@@ -554,8 +554,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 +- LogicalProject(a1=[$0], b1=[$1], a2=[$4], b2=[$5], c1=[$2])
    +- LogicalProject(a1=[$0], b1=[$1], c1=[$2], d1=[$3], a2=[$4], b2=[$5], c2=[$6])
       +- LogicalJoin(condition=[=($0, $5)], joinType=[right])
-         :- LogicalTableScan(table=[[T1]])
-         +- LogicalTableScan(table=[[T2]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -564,9 +564,9 @@ FlinkLogicalCalc(select=[a1, b1, a2, b2, EXPR$4])
 +- FlinkLogicalAggregate(group=[{4}], a1=[AUXILIARY_GROUP($0)], b1=[AUXILIARY_GROUP($1)], a2=[AUXILIARY_GROUP($3)], EXPR$4=[COUNT($2)])
    +- FlinkLogicalJoin(condition=[=($0, $4)], joinType=[right])
       :- FlinkLogicalCalc(select=[a1, b1, c1])
-      :  +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+      :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
       +- FlinkLogicalCalc(select=[a2, b2])
-         +- FlinkLogicalTableSourceScan(table=[[T2]], fields=[a2, b2, c2])
+         +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T2]], fields=[a2, b2, c2])
 ]]>
     </Resource>
   </TestCase>
@@ -580,8 +580,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 +- LogicalProject(a1=[$0], b1=[$1], a3=[$4], b3=[$5], c1=[$2])
    +- LogicalProject(a1=[$0], b1=[$1], c1=[$2], d1=[$3], a3=[$4], b3=[$5], c3=[$6], d3=[$7])
       +- LogicalJoin(condition=[=($0, $4)], joinType=[right])
-         :- LogicalTableScan(table=[[T1]])
-         +- LogicalTableScan(table=[[T3]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -591,10 +591,10 @@ Calc(select=[a1, b1, a3, b3, EXPR$4])
    +- HashJoin(where=[=(a1, a3)], join=[a1, b1, c1, a3, b3], joinType=[RightOuterJoin], build=[right])
       :- Exchange(distribution=[hash[a1]])
       :  +- Calc(select=[a1, b1, c1])
-      :     +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+      :     +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
       +- Exchange(distribution=[hash[a3]])
          +- Calc(select=[a3, b3])
-            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a3, b3, c3, d3])
 ]]>
     </Resource>
   </TestCase>
@@ -608,8 +608,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 +- LogicalProject(a1=[$0], b1=[$1], a3=[$4], b3=[$5], c1=[$2])
    +- LogicalProject(a1=[$0], b1=[$1], c1=[$2], d1=[$3], a3=[$4], b3=[$5], c3=[$6], d3=[$7])
       +- LogicalJoin(condition=[=($0, $4)], joinType=[right])
-         :- LogicalTableScan(table=[[T1]])
-         +- LogicalTableScan(table=[[T3]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -618,9 +618,9 @@ FlinkLogicalCalc(select=[a1, b1, a3, b3, EXPR$4])
 +- FlinkLogicalAggregate(group=[{3, 4}], a1=[AUXILIARY_GROUP($0)], b1=[AUXILIARY_GROUP($1)], EXPR$4=[COUNT($2)])
    +- FlinkLogicalJoin(condition=[=($0, $3)], joinType=[right])
       :- FlinkLogicalCalc(select=[a1, b1, c1])
-      :  +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+      :  +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
       +- FlinkLogicalCalc(select=[a3, b3])
-         +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+         +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -634,8 +634,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 +- LogicalProject(a3=[$0], b3=[$1], a1=[$4], b1=[$5], c1=[$6])
    +- LogicalProject(a3=[$0], b3=[$1], c3=[$2], d3=[$3], a1=[$4], b1=[$5], c1=[$6], d1=[$7])
       +- LogicalJoin(condition=[=($4, $0)], joinType=[right])
-         :- LogicalTableScan(table=[[T3]])
-         +- LogicalTableScan(table=[[T1]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, T3]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -646,9 +646,9 @@ HashAggregate(isMerge=[true], groupBy=[a3, b3, a1], auxGrouping=[b1], select=[a3
       +- HashJoin(where=[=(a1, a3)], join=[a3, b3, a1, b1, c1], joinType=[RightOuterJoin], isBroadcast=[true], build=[left])
          :- Exchange(distribution=[broadcast])
          :  +- Calc(select=[a3, b3])
-         :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+         :     +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a3, b3, c3, d3])
          +- Calc(select=[a1, b1, c1])
-            +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+            +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -662,8 +662,8 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 +- LogicalProject(a3=[$0], b3=[$1], a1=[$4], b1=[$5], c1=[$6])
    +- LogicalProject(a3=[$0], b3=[$1], c3=[$2], d3=[$3], a1=[$4], b1=[$5], c1=[$6], d1=[$7])
       +- LogicalJoin(condition=[=($4, $0)], joinType=[right])
-         :- LogicalTableScan(table=[[T3]])
-         +- LogicalTableScan(table=[[T1]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, T3]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -671,9 +671,9 @@ LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$4=[COUNT($4)])
 FlinkLogicalAggregate(group=[{0, 1, 2}], b1=[AUXILIARY_GROUP($3)], EXPR$4=[COUNT($4)])
 +- FlinkLogicalJoin(condition=[=($2, $0)], joinType=[right])
    :- FlinkLogicalCalc(select=[a3, b3])
-   :  +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+   :  +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
    +- FlinkLogicalCalc(select=[a1, b1, c1])
-      +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+      +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -686,14 +686,14 @@ FlinkLogicalAggregate(group=[{0, 1, 2}], b1=[AUXILIARY_GROUP($3)], EXPR$4=[COUNT
 LogicalProject(a4=[$0], b4=[$1], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0, 1, 2}], EXPR$2=[COUNT($3)])
    +- LogicalProject(a4=[$0], b4=[$1], $f2=[TUMBLE($3, 900000)], c4=[$2])
-      +- LogicalTableScan(table=[[T4]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T4]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 HashWindowAggregate(groupBy=[a4], auxGrouping=[b4], window=[TumblingGroupWindow('w$, 'd4, 900000.millis)], select=[a4, b4 AS EXPR$2, COUNT(c4) AS EXPR$2])
 +- Exchange(distribution=[hash[a4]])
-   +- TableSourceScan(table=[[T4]], fields=[a4, b4, c4, d4])
+   +- TableSourceScan(table=[[default_catalog, default_db, T4]], fields=[a4, b4, c4, d4])
 ]]>
     </Resource>
   </TestCase>
@@ -706,13 +706,13 @@ HashWindowAggregate(groupBy=[a4], auxGrouping=[b4], window=[TumblingGroupWindow(
 LogicalProject(a4=[$0], b4=[$1], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0, 1, 2}], EXPR$2=[COUNT($3)])
    +- LogicalProject(a4=[$0], b4=[$1], $f2=[TUMBLE($3, 900000)], c4=[$2])
-      +- LogicalTableScan(table=[[T4]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T4]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalWindowAggregate(group=[{0}], b4=[AUXILIARY_GROUP($1)], EXPR$2=[COUNT($2)], window=[TumblingGroupWindow('w$, 'd4, 900000.millis)], properties=[])
-+- FlinkLogicalTableSourceScan(table=[[T4]], fields=[a4, b4, c4, d4])
++- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T4]], fields=[a4, b4, c4, d4])
 ]]>
     </Resource>
   </TestCase>
@@ -725,14 +725,14 @@ FlinkLogicalWindowAggregate(group=[{0}], b4=[AUXILIARY_GROUP($1)], EXPR$2=[COUNT
 LogicalProject(a4=[$0], c4=[$1], EXPR$2=[$3], EXPR$3=[$4])
 +- LogicalAggregate(group=[{0, 1, 2}], EXPR$2=[COUNT($3)], EXPR$3=[AVG($3)])
    +- LogicalProject(a4=[$0], c4=[$2], $f2=[TUMBLE($3, 900000)], b4=[$1])
-      +- LogicalTableScan(table=[[T4]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T4]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 HashWindowAggregate(groupBy=[a4], auxGrouping=[c4], window=[TumblingGroupWindow('w$, 'd4, 900000.millis)], select=[a4, c4 AS EXPR$2, COUNT(b4) AS EXPR$2, AVG(b4) AS EXPR$3])
 +- Exchange(distribution=[hash[a4]])
-   +- TableSourceScan(table=[[T4]], fields=[a4, b4, c4, d4])
+   +- TableSourceScan(table=[[default_catalog, default_db, T4]], fields=[a4, b4, c4, d4])
 ]]>
     </Resource>
   </TestCase>
@@ -745,13 +745,13 @@ HashWindowAggregate(groupBy=[a4], auxGrouping=[c4], window=[TumblingGroupWindow(
 LogicalProject(a4=[$0], c4=[$1], EXPR$2=[$3], EXPR$3=[$4])
 +- LogicalAggregate(group=[{0, 1, 2}], EXPR$2=[COUNT($3)], EXPR$3=[AVG($3)])
    +- LogicalProject(a4=[$0], c4=[$2], $f2=[TUMBLE($3, 900000)], b4=[$1])
-      +- LogicalTableScan(table=[[T4]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T4]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalWindowAggregate(group=[{0}], c4=[AUXILIARY_GROUP($2)], EXPR$2=[COUNT($1)], EXPR$3=[AVG($1)], window=[TumblingGroupWindow('w$, 'd4, 900000.millis)], properties=[])
-+- FlinkLogicalTableSourceScan(table=[[T4]], fields=[a4, b4, c4, d4])
++- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T4]], fields=[a4, b4, c4, d4])
 ]]>
     </Resource>
   </TestCase>
@@ -766,7 +766,7 @@ LogicalAggregate(group=[{0, 1, 2}], EXPR$3=[COUNT($3)])
    +- LogicalProject(a4=[$0], c4=[$1], b4=[$3], s=[TUMBLE_START($2)], e=[TUMBLE_END($2)])
       +- LogicalAggregate(group=[{0, 1, 2}], b4=[VAR_POP($3)])
          +- LogicalProject(a4=[$0], c4=[$2], $f2=[TUMBLE($3, 900000)], b4=[$1])
-            +- LogicalTableScan(table=[[T4]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, T4]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -779,7 +779,7 @@ Calc(select=[a4, c4, s, EXPR$3])
             +- HashWindowAggregate(groupBy=[a4], auxGrouping=[c4], window=[TumblingGroupWindow('w$, 'd4, 900000.millis)], properties=[w$start, w$end, w$rowtime], select=[a4, c4 AS $f2, SUM($f4) AS $f2, SUM(b4) AS $f3, COUNT(b4) AS $f4])
                +- Calc(select=[a4, c4, d4, b4, *(CAST(b4), CAST(b4)) AS $f4])
                   +- Exchange(distribution=[hash[a4]])
-                     +- TableSourceScan(table=[[T4]], fields=[a4, b4, c4, d4])
+                     +- TableSourceScan(table=[[default_catalog, default_db, T4]], fields=[a4, b4, c4, d4])
 ]]>
     </Resource>
   </TestCase>
@@ -794,7 +794,7 @@ LogicalAggregate(group=[{0, 1, 2}], EXPR$3=[COUNT($3)])
    +- LogicalProject(a4=[$0], c4=[$1], b4=[$3], s=[TUMBLE_START($2)], e=[TUMBLE_END($2)])
       +- LogicalAggregate(group=[{0, 1, 2}], b4=[VAR_POP($3)])
          +- LogicalProject(a4=[$0], c4=[$2], $f2=[TUMBLE($3, 900000)], b4=[$1])
-            +- LogicalTableScan(table=[[T4]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, T4]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -804,7 +804,7 @@ FlinkLogicalCalc(select=[a4, c4, s, EXPR$3])
    +- FlinkLogicalCalc(select=[a4, c4, CAST(w$start) AS s, CAST(/(-($f2, /(*(CAST($f3), CAST($f3)), $f4)), $f4)) AS b4])
       +- FlinkLogicalWindowAggregate(group=[{0}], c4=[AUXILIARY_GROUP($1)], agg#1=[SUM($4)], agg#2=[SUM($3)], agg#3=[COUNT($3)], window=[TumblingGroupWindow('w$, 'd4, 900000.millis)], properties=[w$start, w$end, w$rowtime])
          +- FlinkLogicalCalc(select=[a4, c4, d4, b4, *(CAST(b4), CAST(b4)) AS $f4])
-            +- FlinkLogicalTableSourceScan(table=[[T4]], fields=[a4, b4, c4, d4])
+            +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T4]], fields=[a4, b4, c4, d4])
 ]]>
     </Resource>
   </TestCase>
@@ -819,7 +819,7 @@ LogicalAggregate(group=[{0, 1, 2}], EXPR$3=[COUNT($3)])
    +- LogicalProject(a4=[$0], c4=[$1], b4=[$3], s=[TUMBLE_START($2)], e=[TUMBLE_END($2)])
       +- LogicalAggregate(group=[{0, 1, 2}], b4=[VAR_POP($3)])
          +- LogicalProject(a4=[$0], c4=[$2], $f2=[TUMBLE($3, 900000)], b4=[$1])
-            +- LogicalTableScan(table=[[T4]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, T4]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -832,7 +832,7 @@ Calc(select=[a4, c4, e, EXPR$3])
             +- HashWindowAggregate(groupBy=[a4], auxGrouping=[c4], window=[TumblingGroupWindow('w$, 'd4, 900000.millis)], properties=[w$start, w$end, w$rowtime], select=[a4, c4 AS $f2, SUM($f4) AS $f2, SUM(b4) AS $f3, COUNT(b4) AS $f4])
                +- Calc(select=[a4, c4, d4, b4, *(CAST(b4), CAST(b4)) AS $f4])
                   +- Exchange(distribution=[hash[a4]])
-                     +- TableSourceScan(table=[[T4]], fields=[a4, b4, c4, d4])
+                     +- TableSourceScan(table=[[default_catalog, default_db, T4]], fields=[a4, b4, c4, d4])
 ]]>
     </Resource>
   </TestCase>
@@ -847,7 +847,7 @@ LogicalAggregate(group=[{0, 1, 2}], EXPR$3=[COUNT($3)])
    +- LogicalProject(a4=[$0], c4=[$1], b4=[$3], s=[TUMBLE_START($2)], e=[TUMBLE_END($2)])
       +- LogicalAggregate(group=[{0, 1, 2}], b4=[VAR_POP($3)])
          +- LogicalProject(a4=[$0], c4=[$2], $f2=[TUMBLE($3, 900000)], b4=[$1])
-            +- LogicalTableScan(table=[[T4]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, T4]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -857,7 +857,7 @@ FlinkLogicalCalc(select=[a4, c4, e, EXPR$3])
    +- FlinkLogicalCalc(select=[a4, c4, CAST(w$end) AS e, CAST(/(-($f2, /(*(CAST($f3), CAST($f3)), $f4)), $f4)) AS b4])
       +- FlinkLogicalWindowAggregate(group=[{0}], c4=[AUXILIARY_GROUP($1)], agg#1=[SUM($4)], agg#2=[SUM($3)], agg#3=[COUNT($3)], window=[TumblingGroupWindow('w$, 'd4, 900000.millis)], properties=[w$start, w$end, w$rowtime])
          +- FlinkLogicalCalc(select=[a4, c4, d4, b4, *(CAST(b4), CAST(b4)) AS $f4])
-            +- FlinkLogicalTableSourceScan(table=[[T4]], fields=[a4, b4, c4, d4])
+            +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T4]], fields=[a4, b4, c4, d4])
 ]]>
     </Resource>
   </TestCase>
@@ -872,7 +872,7 @@ LogicalAggregate(group=[{0, 1, 2}], EXPR$3=[COUNT()])
    +- LogicalProject(a4=[$0], c4=[$1], b4=[$3], s=[TUMBLE_START($2)], e=[TUMBLE_END($2)])
       +- LogicalAggregate(group=[{0, 1, 2}], b4=[VAR_POP($3)])
          +- LogicalProject(a4=[$0], c4=[$2], $f2=[TUMBLE($3, 900000)], b4=[$1])
-            +- LogicalTableScan(table=[[T4]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, T4]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -884,7 +884,7 @@ HashAggregate(isMerge=[true], groupBy=[a4, b4], auxGrouping=[c4], select=[a4, b4
          +- HashWindowAggregate(groupBy=[a4], auxGrouping=[c4], window=[TumblingGroupWindow('w$, 'd4, 900000.millis)], properties=[w$start, w$end, w$rowtime], select=[a4, c4 AS $f2, SUM($f4) AS $f2, SUM(b4) AS $f3, COUNT(b4) AS $f4])
             +- Calc(select=[a4, c4, d4, b4, *(CAST(b4), CAST(b4)) AS $f4])
                +- Exchange(distribution=[hash[a4]])
-                  +- TableSourceScan(table=[[T4]], fields=[a4, b4, c4, d4])
+                  +- TableSourceScan(table=[[default_catalog, default_db, T4]], fields=[a4, b4, c4, d4])
 ]]>
     </Resource>
   </TestCase>
@@ -899,7 +899,7 @@ LogicalAggregate(group=[{0, 1, 2}], EXPR$3=[COUNT()])
    +- LogicalProject(a4=[$0], c4=[$1], b4=[$3], s=[TUMBLE_START($2)], e=[TUMBLE_END($2)])
       +- LogicalAggregate(group=[{0, 1, 2}], b4=[VAR_POP($3)])
          +- LogicalProject(a4=[$0], c4=[$2], $f2=[TUMBLE($3, 900000)], b4=[$1])
-            +- LogicalTableScan(table=[[T4]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, T4]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -908,7 +908,7 @@ FlinkLogicalAggregate(group=[{0, 1}], c4=[AUXILIARY_GROUP($2)], EXPR$3=[COUNT()]
 +- FlinkLogicalCalc(select=[a4, CAST(/(-($f2, /(*(CAST($f3), CAST($f3)), $f4)), $f4)) AS b4, c4])
    +- FlinkLogicalWindowAggregate(group=[{0}], c4=[AUXILIARY_GROUP($1)], agg#1=[SUM($4)], agg#2=[SUM($3)], agg#3=[COUNT($3)], window=[TumblingGroupWindow('w$, 'd4, 900000.millis)], properties=[w$start, w$end, w$rowtime])
       +- FlinkLogicalCalc(select=[a4, c4, d4, b4, *(CAST(b4), CAST(b4)) AS $f4])
-         +- FlinkLogicalTableSourceScan(table=[[T4]], fields=[a4, b4, c4, d4])
+         +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T4]], fields=[a4, b4, c4, d4])
 ]]>
     </Resource>
   </TestCase>
@@ -919,7 +919,7 @@ FlinkLogicalAggregate(group=[{0, 1}], c4=[AUXILIARY_GROUP($2)], EXPR$3=[COUNT()]
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{0, 1, 2}], groups=[[{0, 1}, {0, 2}]], EXPR$3=[COUNT($3)])
-+- LogicalTableScan(table=[[T1]])
++- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -928,7 +928,7 @@ Calc(select=[a1, b1, c1, EXPR$3])
 +- HashAggregate(isMerge=[false], groupBy=[a1, $e], auxGrouping=[b1, c1], select=[a1, $e, b1, c1, COUNT(d1) AS EXPR$3])
    +- Exchange(distribution=[hash[a1, $e]])
       +- Expand(projects=[{a1, b1, null AS c1, d1, 1 AS $e}, {a1, null AS b1, c1, d1, 2 AS $e}])
-         +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+         +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -939,7 +939,7 @@ Calc(select=[a1, b1, c1, EXPR$3])
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{0, 1, 2}], groups=[[{0, 1}, {0, 2}]], EXPR$3=[COUNT($3)])
-+- LogicalTableScan(table=[[T1]])
++- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -947,7 +947,7 @@ LogicalAggregate(group=[{0, 1, 2}], groups=[[{0, 1}, {0, 2}]], EXPR$3=[COUNT($3)
 FlinkLogicalCalc(select=[a1, b1, c1, EXPR$3])
 +- FlinkLogicalAggregate(group=[{0, 4}], b1=[AUXILIARY_GROUP($1)], c1=[AUXILIARY_GROUP($2)], EXPR$3=[COUNT($3)])
    +- FlinkLogicalExpand(projects=[{a1=[$0], b1=[$1], c1=[null], d1=[$3], $e=[1]}, {a1=[$0], b1=[null], c1=[$2], d1=[$3], $e=[2]}])
-      +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+      +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -959,7 +959,7 @@ FlinkLogicalCalc(select=[a1, b1, c1, EXPR$3])
       <![CDATA[
 LogicalAggregate(group=[{0, 1, 2}])
 +- LogicalProject(a1=[$0], b1=[$1], c1=[$2])
-   +- LogicalTableScan(table=[[T1]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -967,7 +967,7 @@ LogicalAggregate(group=[{0, 1, 2}])
 HashAggregate(isMerge=[false], groupBy=[a1], auxGrouping=[b1, c1], select=[a1, b1, c1])
 +- Exchange(distribution=[hash[a1]])
    +- Calc(select=[a1, b1, c1])
-      +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+      +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -979,14 +979,14 @@ HashAggregate(isMerge=[false], groupBy=[a1], auxGrouping=[b1, c1], select=[a1, b
       <![CDATA[
 LogicalAggregate(group=[{0, 1, 2}])
 +- LogicalProject(a1=[$0], b1=[$1], c1=[$2])
-   +- LogicalTableScan(table=[[T1]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalAggregate(group=[{0}], b1=[AUXILIARY_GROUP($1)], c1=[AUXILIARY_GROUP($2)])
 +- FlinkLogicalCalc(select=[a1, b1, c1])
-   +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -998,7 +998,7 @@ FlinkLogicalAggregate(group=[{0}], b1=[AUXILIARY_GROUP($1)], c1=[AUXILIARY_GROUP
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT($2)])
 +- LogicalProject(a3=[$0], b3=[$1], c3=[$2])
-   +- LogicalTableScan(table=[[T3]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1007,7 +1007,7 @@ HashAggregate(isMerge=[true], groupBy=[a3, b3], select=[a3, b3, Final_COUNT(coun
 +- Exchange(distribution=[hash[a3, b3]])
    +- LocalHashAggregate(groupBy=[a3, b3], select=[a3, b3, Partial_COUNT(c3) AS count$0])
       +- Calc(select=[a3, b3, c3])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a3, b3, c3, d3])
 ]]>
     </Resource>
   </TestCase>
@@ -1019,14 +1019,14 @@ HashAggregate(isMerge=[true], groupBy=[a3, b3], select=[a3, b3, Final_COUNT(coun
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT($2)])
 +- LogicalProject(a3=[$0], b3=[$1], c3=[$2])
-   +- LogicalTableScan(table=[[T3]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT($2)])
 +- FlinkLogicalCalc(select=[a3, b3, c3])
-   +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+   +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -1037,7 +1037,7 @@ FlinkLogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT($2)])
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT(DISTINCT $2)], EXPR$3=[COUNT(DISTINCT $3)])
-+- LogicalTableScan(table=[[T1]])
++- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1046,7 +1046,7 @@ HashAggregate(isMerge=[false], groupBy=[a1], auxGrouping=[b1], select=[a1, b1, C
 +- Exchange(distribution=[hash[a1]])
    +- Calc(select=[a1, b1, c1, d1, =(CASE(=($e, 1), 1, 2), 1) AS $g_1, =(CASE(=($e, 1), 1, 2), 2) AS $g_2])
       +- Expand(projects=[{a1, b1, c1, null AS d1, 1 AS $e}, {a1, b1, null AS c1, d1, 2 AS $e}])
-         +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+         +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -1057,7 +1057,7 @@ HashAggregate(isMerge=[false], groupBy=[a1], auxGrouping=[b1], select=[a1, b1, C
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT(DISTINCT $2)], EXPR$3=[COUNT(DISTINCT $3)])
-+- LogicalTableScan(table=[[T1]])
++- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1065,7 +1065,7 @@ LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT(DISTINCT $2)], EXPR$3=[COUNT(DIST
 FlinkLogicalAggregate(group=[{0}], b1=[AUXILIARY_GROUP($1)], EXPR$2=[COUNT($2) FILTER $4], EXPR$3=[COUNT($3) FILTER $5])
 +- FlinkLogicalCalc(select=[a1, b1, c1, d1, =(CASE(=($e, 1), 1, 2), 1) AS $g_1, =(CASE(=($e, 1), 1, 2), 2) AS $g_2])
    +- FlinkLogicalExpand(projects=[{a1=[$0], b1=[$1], c1=[$2], d1=[null], $e=[1]}, {a1=[$0], b1=[$1], c1=[null], d1=[$3], $e=[2]}])
-      +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+      +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -1077,7 +1077,7 @@ FlinkLogicalAggregate(group=[{0}], b1=[AUXILIARY_GROUP($1)], EXPR$2=[COUNT($2) F
       <![CDATA[
 LogicalAggregate(group=[{0, 1, 2, 3, 4}], EXPR$5=[COUNT()])
 +- LogicalAggregate(group=[{0, 1, 2}], d1=[COUNT($3)], m=[MAX($3)])
-   +- LogicalTableScan(table=[[T1]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1086,7 +1086,7 @@ SortAggregate(isMerge=[false], groupBy=[a1], auxGrouping=[b1, c1, d1, m], select
 +- SortAggregate(isMerge=[false], groupBy=[a1], auxGrouping=[b1, c1], select=[a1, b1, c1, COUNT(d1) AS d1, MAX(d1) AS m])
    +- Sort(orderBy=[a1 ASC])
       +- Exchange(distribution=[hash[a1]])
-         +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+         +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -1098,14 +1098,14 @@ SortAggregate(isMerge=[false], groupBy=[a1], auxGrouping=[b1, c1, d1, m], select
       <![CDATA[
 LogicalAggregate(group=[{0, 1, 2, 3, 4}], EXPR$5=[COUNT()])
 +- LogicalAggregate(group=[{0, 1, 2}], d1=[COUNT($3)], m=[MAX($3)])
-   +- LogicalTableScan(table=[[T1]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalAggregate(group=[{0}], b1=[AUXILIARY_GROUP($1)], c1=[AUXILIARY_GROUP($2)], d1=[AUXILIARY_GROUP($3)], m=[AUXILIARY_GROUP($4)], EXPR$5=[COUNT()])
 +- FlinkLogicalAggregate(group=[{0}], b1=[AUXILIARY_GROUP($1)], c1=[AUXILIARY_GROUP($2)], d1=[COUNT($3)], m=[MAX($3)])
-   +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -1117,7 +1117,7 @@ FlinkLogicalAggregate(group=[{0}], b1=[AUXILIARY_GROUP($1)], c1=[AUXILIARY_GROUP
       <![CDATA[
 LogicalAggregate(group=[{0, 1, 2, 3, 4}], EXPR$5=[COUNT()])
 +- LogicalAggregate(group=[{0, 1}], c=[COUNT($2)], s=[SUM($3)], a=[AVG($3)])
-   +- LogicalTableScan(table=[[T3]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1126,7 +1126,7 @@ HashAggregate(isMerge=[false], groupBy=[a3, b3], auxGrouping=[c, s, a], select=[
 +- HashAggregate(isMerge=[true], groupBy=[a3, b3], select=[a3, b3, Final_COUNT(count$0) AS c, Final_SUM(sum$1) AS s, Final_AVG(sum$2, count$3) AS a])
    +- Exchange(distribution=[hash[a3, b3]])
       +- LocalHashAggregate(groupBy=[a3, b3], select=[a3, b3, Partial_COUNT(c3) AS count$0, Partial_SUM(d3) AS sum$1, Partial_AVG(d3) AS (sum$2, count$3)])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a3, b3, c3, d3])
 ]]>
     </Resource>
   </TestCase>
@@ -1138,14 +1138,14 @@ HashAggregate(isMerge=[false], groupBy=[a3, b3], auxGrouping=[c, s, a], select=[
       <![CDATA[
 LogicalAggregate(group=[{0, 1, 2, 3, 4}], EXPR$5=[COUNT()])
 +- LogicalAggregate(group=[{0, 1}], c=[COUNT($2)], s=[SUM($3)], a=[AVG($3)])
-   +- LogicalTableScan(table=[[T3]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalAggregate(group=[{0, 1}], c=[AUXILIARY_GROUP($2)], s=[AUXILIARY_GROUP($3)], a=[AUXILIARY_GROUP($4)], EXPR$5=[COUNT()])
 +- FlinkLogicalAggregate(group=[{0, 1}], c=[COUNT($2)], s=[SUM($3)], a=[AVG($3)])
-   +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+   +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -1158,7 +1158,7 @@ FlinkLogicalAggregate(group=[{0, 1}], c=[AUXILIARY_GROUP($2)], s=[AUXILIARY_GROU
 LogicalProject(EXPR$0=[$2])
 +- LogicalAggregate(group=[{0, 1}], EXPR$0=[COUNT($2)])
    +- LogicalProject($f0=[1], $f1=[true], c1=[$2])
-      +- LogicalTableScan(table=[[T1]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1168,7 +1168,7 @@ Calc(select=[EXPR$0])
    +- Exchange(distribution=[hash[$f0]])
       +- LocalHashAggregate(groupBy=[$f0], select=[$f0, Partial_COUNT(c1) AS count$0])
          +- Calc(select=[1 AS $f0, true AS $f1, c1])
-            +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+            +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -1181,7 +1181,7 @@ Calc(select=[EXPR$0])
 LogicalProject(EXPR$0=[$2])
 +- LogicalAggregate(group=[{0, 1}], EXPR$0=[COUNT($2)])
    +- LogicalProject($f0=[1], $f1=[true], c1=[$2])
-      +- LogicalTableScan(table=[[T1]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1189,7 +1189,7 @@ LogicalProject(EXPR$0=[$2])
 FlinkLogicalCalc(select=[EXPR$0])
 +- FlinkLogicalAggregate(group=[{0}], EXPR$0=[COUNT($2)])
    +- FlinkLogicalCalc(select=[1 AS $f0, true AS $f1, c1])
-      +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+      +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -1201,7 +1201,7 @@ FlinkLogicalCalc(select=[EXPR$0])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT($2)])
 +- LogicalProject(a3=[$0], b3=[$1], c3=[$2])
-   +- LogicalTableScan(table=[[T3]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1210,7 +1210,7 @@ HashAggregate(isMerge=[true], groupBy=[a3, b3], select=[a3, b3, Final_COUNT(coun
 +- Exchange(distribution=[hash[a3, b3]])
    +- LocalHashAggregate(groupBy=[a3, b3], select=[a3, b3, Partial_COUNT(c3) AS count$0])
       +- Calc(select=[a3, b3, c3])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a3, b3, c3, d3])
 ]]>
     </Resource>
   </TestCase>
@@ -1222,14 +1222,14 @@ HashAggregate(isMerge=[true], groupBy=[a3, b3], select=[a3, b3, Final_COUNT(coun
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT($2)])
 +- LogicalProject(a3=[$0], b3=[$1], c3=[$2])
-   +- LogicalTableScan(table=[[T3]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT($2)])
 +- FlinkLogicalCalc(select=[a3, b3, c3])
-   +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+   +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -1241,7 +1241,7 @@ FlinkLogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT($2)])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT($2)])
 +- LogicalProject(a1=[$0], b1=[$1], c1=[$2])
-   +- LogicalTableScan(table=[[T1]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1249,7 +1249,7 @@ LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT($2)])
 HashAggregate(isMerge=[false], groupBy=[a1], auxGrouping=[b1], select=[a1, b1, COUNT(c1) AS EXPR$2])
 +- Exchange(distribution=[hash[a1]])
    +- Calc(select=[a1, b1, c1])
-      +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+      +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -1261,14 +1261,14 @@ HashAggregate(isMerge=[false], groupBy=[a1], auxGrouping=[b1], select=[a1, b1, C
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT($2)])
 +- LogicalProject(a1=[$0], b1=[$1], c1=[$2])
-   +- LogicalTableScan(table=[[T1]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalAggregate(group=[{0}], b1=[AUXILIARY_GROUP($1)], EXPR$2=[COUNT($2)])
 +- FlinkLogicalCalc(select=[a1, b1, c1])
-   +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -1280,14 +1280,14 @@ FlinkLogicalAggregate(group=[{0}], b1=[AUXILIARY_GROUP($1)], EXPR$2=[COUNT($2)])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], EXPR$2=[AVG($2)])
 +- LogicalProject(b2=[$1], c2=[$2], a2=[$0])
-   +- LogicalTableScan(table=[[T2]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 HashAggregate(isMerge=[false], groupBy=[b2], auxGrouping=[c2], select=[b2, c2, AVG(a2) AS EXPR$2])
 +- Exchange(distribution=[hash[b2]])
-   +- TableSourceScan(table=[[T2]], fields=[a2, b2, c2])
+   +- TableSourceScan(table=[[default_catalog, default_db, T2]], fields=[a2, b2, c2])
 ]]>
     </Resource>
   </TestCase>
@@ -1300,14 +1300,14 @@ HashAggregate(isMerge=[false], groupBy=[b2], auxGrouping=[c2], select=[b2, c2, A
 LogicalProject(a1=[$0], b1=[$1], EXPR$2=[$4])
 +- LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$2=[COUNT($4)])
    +- LogicalProject(a1=[$0], b1=[$1], $f2=[1], $f3=[true], c1=[$2])
-      +- LogicalTableScan(table=[[T1]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalAggregate(group=[{0}], b1=[AUXILIARY_GROUP($1)], EXPR$2=[COUNT($4)])
 +- FlinkLogicalCalc(select=[a1, b1, 1 AS $f2, true AS $f3, c1])
-   +- FlinkLogicalTableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -1319,13 +1319,13 @@ FlinkLogicalAggregate(group=[{0}], b1=[AUXILIARY_GROUP($1)], EXPR$2=[COUNT($4)])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], EXPR$2=[AVG($2)])
 +- LogicalProject(b2=[$1], c2=[$2], a2=[$0])
-   +- LogicalTableScan(table=[[T2]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalAggregate(group=[{1}], c2=[AUXILIARY_GROUP($2)], EXPR$2=[AVG($0)])
-+- FlinkLogicalTableSourceScan(table=[[T2]], fields=[a2, b2, c2])
++- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T2]], fields=[a2, b2, c2])
 ]]>
     </Resource>
   </TestCase>
@@ -1338,7 +1338,7 @@ FlinkLogicalAggregate(group=[{1}], c2=[AUXILIARY_GROUP($2)], EXPR$2=[AVG($0)])
 LogicalProject(a1=[$0], b1=[$1], EXPR$2=[$4])
 +- LogicalAggregate(group=[{0, 1, 2, 3}], EXPR$2=[COUNT($4)])
    +- LogicalProject(a1=[$0], b1=[$1], $f2=[1], $f3=[true], c1=[$2])
-      +- LogicalTableScan(table=[[T1]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1346,7 +1346,7 @@ LogicalProject(a1=[$0], b1=[$1], EXPR$2=[$4])
 HashAggregate(isMerge=[false], groupBy=[a1], auxGrouping=[b1], select=[a1, b1, COUNT(c1) AS EXPR$2])
 +- Exchange(distribution=[hash[a1]])
    +- Calc(select=[a1, b1, 1 AS $f2, true AS $f3, c1])
-      +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
+      +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>

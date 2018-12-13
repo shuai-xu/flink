@@ -1,44 +1,44 @@
 == Abstract Syntax Tree ==
 LogicalProject(id=[$0], num=[$1], text=[$2])
   LogicalFilter(condition=[LIKE($2, '%hello%')])
-    LogicalTableScan(table=[[T]])
+    LogicalTableScan(table=[[default_catalog, default_db, T]])
 
 LogicalProject(id=[$0], num=[$1], text=[$2])
   LogicalFilter(condition=[>=($1, 5)])
-    LogicalTableScan(table=[[T3]])
+    LogicalTableScan(table=[[default_catalog, default_db, T3]])
 
 LogicalProject(num=[$0], cnt=[$1])
   LogicalFilter(condition=[<($0, 4)])
-    LogicalTableScan(table=[[T4]])
+    LogicalTableScan(table=[[default_catalog, default_db, T4]])
 
 LogicalProject(num=[$0], cnt=[$1])
   LogicalFilter(condition=[AND(>=($0, 4), <($0, 6))])
-    LogicalTableScan(table=[[T4]])
+    LogicalTableScan(table=[[default_catalog, default_db, T4]])
 
 == Optimized Logical Plan ==
 [[IntermediateTable=_DataStreamTable_5]]
-StreamExecDataStreamScan(table=[[T]])
+StreamExecDataStreamScan(table=[[default_catalog, default_db, T]])
 StreamExecDataStreamScan(retract=[false], accMode=[Acc])
 
 [[IntermediateTable=_DataStreamTable_6]]
 StreamExecCalc(select=[id, num, text], where=[LIKE(text, '%hello%')])
-  StreamExecDataStreamScan(table=[[T]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, T]])
 StreamExecCalc(retract=[true], accMode=[Acc])
   StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
 [[Sink]]
 StreamExecSink(fields=[id, num, text])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_6]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_6]])
 StreamExecSink(retract=[false], accMode=[Acc])
   StreamExecDataStreamScan(retract=[false], accMode=[Acc])
 
 [[IntermediateTable=_DataStreamTable_7]]
-StreamExecDataStreamScan(table=[[_DataStreamTable_6]])
+StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_6]])
 StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
 [[IntermediateTable=_DataStreamTable_8]]
 StreamExecCalc(select=[id, num, text], where=[LIKE(text, '%world%')])
-  StreamExecDataStreamScan(table=[[T]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, T]])
 StreamExecCalc(retract=[true], accMode=[Acc])
   StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
@@ -46,9 +46,9 @@ StreamExecCalc(retract=[true], accMode=[Acc])
 StreamExecSink(fields=[id, num, text])
   StreamExecUnion(all=[true], union=[id, num, text])
     StreamExecCalc(select=[id, num, text], where=[>=(num, 5)])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_7]])
+      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_7]])
     StreamExecCalc(select=[id, num, text], where=[>=(num, 5)])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_8]])
+      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_8]])
 StreamExecSink(retract=[false], accMode=[Acc])
   StreamExecUnion(retract=[true], accMode=[Acc])
     StreamExecCalc(retract=[true], accMode=[Acc])
@@ -61,9 +61,9 @@ StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS cnt])
   StreamExecExchange(distribution=[hash[num]])
     StreamExecUnion(all=[true], union=[num, id])
       StreamExecCalc(select=[num, id])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_7]])
+        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_7]])
       StreamExecCalc(select=[num, id])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_8]])
+        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_8]])
 StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
   StreamExecExchange(retract=[true], accMode=[Acc])
     StreamExecUnion(retract=[true], accMode=[Acc])
@@ -75,7 +75,7 @@ StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
 [[Sink]]
 StreamExecSink(fields=[num, cnt])
   StreamExecCalc(select=[num, cnt], where=[<(num, 4)])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_9]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_9]])
 StreamExecSink(retract=[false], accMode=[AccRetract])
   StreamExecCalc(retract=[true], accMode=[AccRetract])
     StreamExecDataStreamScan(retract=[true], accMode=[AccRetract])
@@ -83,7 +83,7 @@ StreamExecSink(retract=[false], accMode=[AccRetract])
 [[Sink]]
 StreamExecSink(fields=[num, cnt])
   StreamExecCalc(select=[num, cnt], where=[AND(>=(num, 4), <(num, 6))])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_9]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_9]])
 StreamExecSink(retract=[false], accMode=[AccRetract])
   StreamExecCalc(retract=[false], accMode=[AccRetract])
     StreamExecDataStreamScan(retract=[false], accMode=[AccRetract])
@@ -93,7 +93,7 @@ StreamExecSink(retract=[false], accMode=[AccRetract])
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[T], fields:(id, num, text))
+		content : SourceConversion(table:[default_catalog, default_db, T], fields:(id, num, text))
 		ship_strategy : FORWARD
 
 		 : Operator
@@ -105,7 +105,7 @@ StreamExecSink(retract=[false], accMode=[AccRetract])
 				ship_strategy : FORWARD
 
 				 : Operator
-					content : SourceConversion(table:[T], fields:(id, num, text))
+					content : SourceConversion(table:[default_catalog, default_db, T], fields:(id, num, text))
 					ship_strategy : FORWARD
 
 					 : Operator

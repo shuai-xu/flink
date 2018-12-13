@@ -79,7 +79,8 @@ import scala.collection.mutable
   *          +- FlinkLogicalExpand(projects=[{a=[$0], b=[$1], c=[$2], $f3=[$3], $e=[0]}, {a=[$0],
   *               b=[$1], c=[$2], $f3=[null], $e=[1]}])
   *             +- FlinkLogicalCalc(select=[a, b, c, MOD(HASH_CODE(c), 256) AS $f3])
-  *                +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
+  *                +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db,
+  *                     _DataStreamTable_0]])
   * }}}
   *
   * '$e = 0' is equivalent to 'group by a, hash(c) % 256'

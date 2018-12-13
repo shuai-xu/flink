@@ -20,9 +20,9 @@ limitations under the License.
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin], isBroadcast=[true], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -31,9 +31,9 @@ HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin]
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -42,9 +42,9 @@ HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin]
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -52,9 +52,9 @@ HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin]
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -63,9 +63,9 @@ NestedLoopSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAnt
       <![CDATA[
 SortMergeSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -73,9 +73,9 @@ SortMergeSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAnti
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -84,9 +84,9 @@ HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftSemiJoin]
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -95,9 +95,9 @@ HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftSemiJoin]
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -105,9 +105,9 @@ HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftSemiJoin]
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -116,9 +116,9 @@ NestedLoopSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftSem
       <![CDATA[
 SortMergeSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -126,9 +126,9 @@ SortMergeSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftSemi
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin], isBroadcast=[true], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- BoundedStreamScan(table=[[rightUniqueKeyT]], fields=[c, d])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, rightUniqueKeyT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -137,9 +137,9 @@ HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin]
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- BoundedStreamScan(table=[[rightUniqueKeyT]], fields=[c, d])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, rightUniqueKeyT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -148,9 +148,9 @@ HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin]
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- BoundedStreamScan(table=[[rightUniqueKeyT]], fields=[c, d])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, rightUniqueKeyT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -158,9 +158,9 @@ HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin]
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- BoundedStreamScan(table=[[rightUniqueKeyT]], fields=[c, d])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, rightUniqueKeyT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -169,9 +169,9 @@ NestedLoopSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAnt
       <![CDATA[
 SortMergeSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- BoundedStreamScan(table=[[rightUniqueKeyT]], fields=[c, d])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, rightUniqueKeyT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -179,10 +179,10 @@ SortMergeSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAnti
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[>(b, d)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[d])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -190,10 +190,10 @@ NestedLoopSemiJoin(where=[>(b, d)], join=[a, b], joinType=[LeftSemiJoin], build=
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[b])
-      +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -202,10 +202,10 @@ HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=
       <![CDATA[
 HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[d]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[b]])
    +- Calc(select=[b])
-      +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -214,10 +214,10 @@ HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[left]
       <![CDATA[
 HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[d]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[b]])
    +- Calc(select=[b])
-      +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -225,10 +225,10 @@ HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[b])
-      +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -237,10 +237,10 @@ NestedLoopSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=
       <![CDATA[
 SortMergeSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[d]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[b]])
    +- Calc(select=[b])
-      +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -248,10 +248,10 @@ SortMergeSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin])
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[>(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[b])
-      +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -259,13 +259,13 @@ NestedLoopSemiJoin(where=[>(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[b])
       +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
          +- Exchange(distribution=[hash[a, b]])
             +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-               +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -274,13 +274,13 @@ HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=
       <![CDATA[
 HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[d]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[b]])
    +- Calc(select=[b])
       +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
          +- Exchange(distribution=[hash[a, b]])
             +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-               +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -289,7 +289,7 @@ HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[left]
       <![CDATA[
 HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[d]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[b]])
    +- Calc(select=[b])
       +- SortAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
@@ -297,7 +297,7 @@ HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right
             +- Exchange(distribution=[hash[a, b]])
                +- LocalSortAggregate(groupBy=[a, b], select=[a, b])
                   +- Sort(orderBy=[a ASC, b ASC])
-                     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -305,13 +305,13 @@ HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[b])
       +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
          +- Exchange(distribution=[hash[a, b]])
             +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-               +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -320,13 +320,13 @@ NestedLoopSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=
       <![CDATA[
 SortMergeSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[d]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[b]])
    +- Calc(select=[b])
       +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
          +- Exchange(distribution=[hash[a, b]])
             +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-               +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -336,7 +336,7 @@ SortMergeSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin])
 Calc(select=[c, d])
 +- NestedLoopJoin(where=[=(d, d0)], join=[c, d, d0], joinType=[InnerJoin], build=[right])
    :- Exchange(distribution=[any], exchange_mode=[BATCH])
-   :  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
    +- Exchange(distribution=[broadcast])
       +- HashAggregate(isMerge=[true], groupBy=[d], select=[d])
          +- Exchange(distribution=[hash[d]])
@@ -347,7 +347,7 @@ Calc(select=[c, d])
                         +- LocalHashAggregate(groupBy=[a, d], select=[a, d])
                            +- Calc(select=[a, d])
                               +- NestedLoopJoin(where=[>(b, d)], join=[a, b, d], joinType=[InnerJoin], build=[right])
-                                 :- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                                 :- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
                                  +- Exchange(distribution=[broadcast])
                                     +- SortAggregate(isMerge=[true], groupBy=[d], select=[d])
                                        +- Sort(orderBy=[d ASC])
@@ -355,7 +355,7 @@ Calc(select=[c, d])
                                              +- LocalSortAggregate(groupBy=[d], select=[d])
                                                 +- Sort(orderBy=[d ASC])
                                                    +- Calc(select=[d])
-                                                      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+                                                      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -364,10 +364,10 @@ Calc(select=[c, d])
       <![CDATA[
 NestedLoopSemiJoin(where=[OR(=(a, c), IS NULL(=(a, c)))], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c], where=[<(c, 3)])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -376,13 +376,13 @@ NestedLoopSemiJoin(where=[OR(=(a, c), IS NULL(=(a, c)))], join=[a, b], joinType=
       <![CDATA[
 NestedLoopSemiJoin(where=[$f0], join=[a, b], joinType=[LeftAntiJoin], build=[right], singleRowJoin=[true])
 :- Calc(select=[a, b], where=[>(b, 2)])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[IS NOT NULL(m) AS $f0])
       +- SortAggregate(isMerge=[false], select=[MIN(i) AS m])
          +- Exchange(distribution=[single])
             +- Calc(select=[true AS i], where=[>(c, 10)])
-               +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -391,10 +391,10 @@ NestedLoopSemiJoin(where=[$f0], join=[a, b], joinType=[LeftAntiJoin], build=[rig
       <![CDATA[
 HashSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], joinType=[LeftAntiJoin], isBroadcast=[true], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c, d], where=[<(c, 3)])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -404,10 +404,10 @@ HashSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], j
 HashSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- Exchange(distribution=[hash[b]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[d]])
    +- Calc(select=[c, d], where=[<(c, 3)])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -417,10 +417,10 @@ HashSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], j
 HashSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[left])
 :- Exchange(distribution=[hash[b]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[d]])
    +- Calc(select=[c, d], where=[<(c, 3)])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -429,10 +429,10 @@ HashSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], j
       <![CDATA[
 NestedLoopSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c, d], where=[<(c, 3)])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -442,10 +442,10 @@ NestedLoopSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a,
 SortMergeSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], joinType=[LeftAntiJoin])
 :- Exchange(distribution=[hash[b]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[d]])
    +- Calc(select=[c, d], where=[<(c, 3)])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -454,10 +454,10 @@ SortMergeSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, 
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], isBroadcast=[true], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -467,10 +467,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], isBroadcast=
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -480,10 +480,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -492,10 +492,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[left]
       <![CDATA[
 NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -505,10 +505,10 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=
 SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -517,10 +517,10 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin])
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -530,10 +530,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -543,10 +543,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -555,10 +555,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left]
       <![CDATA[
 NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -568,10 +568,10 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
 SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -580,14 +580,14 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
       <![CDATA[
 NestedLoopSemiJoin(where=[$f0], join=[a, b], joinType=[LeftSemiJoin], build=[right], singleRowJoin=[true])
 :- Calc(select=[a, b], where=[>(b, 2)])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[IS NOT NULL(m) AS $f0])
       +- HashAggregate(isMerge=[true], select=[Final_MIN(min$0) AS m])
          +- Exchange(distribution=[single])
             +- LocalHashAggregate(select=[Partial_MIN(i) AS min$0])
                +- Calc(select=[true AS i])
-                  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -596,10 +596,10 @@ NestedLoopSemiJoin(where=[$f0], join=[a, b], joinType=[LeftSemiJoin], build=[rig
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -609,10 +609,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -622,10 +622,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -634,10 +634,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left]
       <![CDATA[
 NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -647,10 +647,10 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
 SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -658,13 +658,13 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[EXPR$0, b])
       +- HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_SUM(sum$0) AS EXPR$0])
          +- Exchange(distribution=[hash[b]])
             +- LocalHashAggregate(groupBy=[b], select=[b, Partial_SUM(a) AS sum$0])
-               +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -673,13 +673,13 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
       <![CDATA[
 HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[c, d]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
    +- Calc(select=[EXPR$0, b])
       +- HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_SUM(sum$0) AS EXPR$0])
          +- Exchange(distribution=[hash[b]])
             +- LocalHashAggregate(groupBy=[b], select=[b, Partial_SUM(a) AS sum$0])
-               +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -688,7 +688,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
       <![CDATA[
 HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[c, d]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
    +- Calc(select=[EXPR$0, b])
       +- SortAggregate(isMerge=[true], groupBy=[b], select=[b, Final_SUM(sum$0) AS EXPR$0])
@@ -696,7 +696,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
             +- Exchange(distribution=[hash[b]])
                +- LocalSortAggregate(groupBy=[b], select=[b, Partial_SUM(a) AS sum$0])
                   +- Sort(orderBy=[b ASC])
-                     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -704,13 +704,13 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[EXPR$0, b])
       +- HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_SUM(sum$0) AS EXPR$0])
          +- Exchange(distribution=[hash[b]])
             +- LocalHashAggregate(groupBy=[b], select=[b, Partial_SUM(a) AS sum$0])
-               +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -719,13 +719,13 @@ NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Le
       <![CDATA[
 SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[c, d]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
    +- Calc(select=[EXPR$0, b])
       +- HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_SUM(sum$0) AS EXPR$0])
          +- Exchange(distribution=[hash[b]])
             +- LocalHashAggregate(groupBy=[b], select=[b, Partial_SUM(a) AS sum$0])
-               +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -734,12 +734,12 @@ SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Lef
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
 :- Exchange(distribution=[hash[a, b]], exchange_mode=[BATCH])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
       +- Exchange(distribution=[hash[a, b]])
          +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-            +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -748,11 +748,11 @@ HashSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoi
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[a, b]], exchange_mode=[BATCH])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
    +- Exchange(distribution=[hash[a, b]])
       +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-         +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -761,13 +761,13 @@ HashSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoi
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[a, b]], exchange_mode=[BATCH])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- SortAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
    +- Sort(orderBy=[a ASC, b ASC])
       +- Exchange(distribution=[hash[a, b]])
          +- LocalSortAggregate(groupBy=[a, b], select=[a, b])
             +- Sort(orderBy=[a ASC, b ASC])
-               +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -776,12 +776,12 @@ HashSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoi
       <![CDATA[
 NestedLoopSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[any], exchange_mode=[BATCH])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
       +- Exchange(distribution=[hash[a, b]])
          +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-            +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -790,11 +790,11 @@ NestedLoopSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftS
       <![CDATA[
 SortMergeSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a, b]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
    +- Exchange(distribution=[hash[a, b]])
       +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-         +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -804,13 +804,13 @@ SortMergeSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSe
 Calc(select=[c, d])
 +- HashSemiJoin(where=[AND(=($f2, EXPR$0), =(b, d))], join=[c, d, $f2], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
    :- Calc(select=[c, d, CAST(/(CAST(c), 2)) AS $f2])
-   :  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[EXPR$0, b])
          +- HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_COUNT(count$0) AS EXPR$0])
             +- Exchange(distribution=[hash[b]])
                +- LocalHashAggregate(groupBy=[b], select=[b, Partial_COUNT(*) AS count$0])
-                  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -821,13 +821,13 @@ Calc(select=[c, d])
 +- HashSemiJoin(where=[AND(=($f2, EXPR$0), =(b, d))], join=[c, d, $f2], joinType=[LeftSemiJoin], build=[left])
    :- Exchange(distribution=[hash[$f2, d]])
    :  +- Calc(select=[c, d, CAST(/(CAST(c), 2)) AS $f2])
-   :     +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
    +- Exchange(distribution=[hash[EXPR$0, b]])
       +- Calc(select=[EXPR$0, b])
          +- HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_COUNT(count$0) AS EXPR$0])
             +- Exchange(distribution=[hash[b]])
                +- LocalHashAggregate(groupBy=[b], select=[b, Partial_COUNT(*) AS count$0])
-                  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -838,7 +838,7 @@ Calc(select=[c, d])
 +- HashSemiJoin(where=[AND(=($f2, EXPR$0), =(b, d))], join=[c, d, $f2], joinType=[LeftSemiJoin], build=[right])
    :- Exchange(distribution=[hash[$f2, d]])
    :  +- Calc(select=[c, d, CAST(/(CAST(c), 2)) AS $f2])
-   :     +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
    +- Exchange(distribution=[hash[EXPR$0, b]])
       +- Calc(select=[EXPR$0, b])
          +- SortAggregate(isMerge=[true], groupBy=[b], select=[b, Final_COUNT(count$0) AS EXPR$0])
@@ -846,7 +846,7 @@ Calc(select=[c, d])
                +- Exchange(distribution=[hash[b]])
                   +- LocalSortAggregate(groupBy=[b], select=[b, Partial_COUNT(*) AS count$0])
                      +- Sort(orderBy=[b ASC])
-                        +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                        +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -856,13 +856,13 @@ Calc(select=[c, d])
 Calc(select=[c, d])
 +- NestedLoopSemiJoin(where=[AND(=($f2, EXPR$0), =(b, d))], join=[c, d, $f2], joinType=[LeftSemiJoin], build=[right])
    :- Calc(select=[c, d, CAST(/(CAST(c), 2)) AS $f2])
-   :  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[EXPR$0, b])
          +- HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_COUNT(count$0) AS EXPR$0])
             +- Exchange(distribution=[hash[b]])
                +- LocalHashAggregate(groupBy=[b], select=[b, Partial_COUNT(*) AS count$0])
-                  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -873,13 +873,13 @@ Calc(select=[c, d])
 +- SortMergeSemiJoin(where=[AND(=($f2, EXPR$0), =(b, d))], join=[c, d, $f2], joinType=[LeftSemiJoin])
    :- Exchange(distribution=[hash[$f2, d]])
    :  +- Calc(select=[c, d, CAST(/(CAST(c), 2)) AS $f2])
-   :     +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
    +- Exchange(distribution=[hash[EXPR$0, b]])
       +- Calc(select=[EXPR$0, b])
          +- HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_COUNT(count$0) AS EXPR$0])
             +- Exchange(distribution=[hash[b]])
                +- LocalHashAggregate(groupBy=[b], select=[b, Partial_COUNT(*) AS count$0])
-                  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -887,9 +887,9 @@ Calc(select=[c, d])
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
-   +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -898,9 +898,9 @@ HashSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSemiJoin]
       <![CDATA[
 HashSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[c]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[a]])
-   +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -909,9 +909,9 @@ HashSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSemiJoin]
       <![CDATA[
 HashSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[c]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[a]])
-   +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -919,9 +919,9 @@ HashSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSemiJoin]
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
-   +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -930,9 +930,9 @@ NestedLoopSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSem
       <![CDATA[
 SortMergeSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[c]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[a]])
-   +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -940,7 +940,7 @@ SortMergeSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSemi
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c, d])
       +- SortAggregate(isMerge=[true], groupBy=[d], select=[d, Final_MAX(max$0) AS c])
@@ -948,7 +948,7 @@ HashSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin]
             +- Exchange(distribution=[hash[d]])
                +- LocalSortAggregate(groupBy=[d], select=[d, Partial_MAX(c) AS max$0])
                   +- Sort(orderBy=[d ASC])
-                     +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+                     +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -957,7 +957,7 @@ HashSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin]
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c, d])
       +- SortAggregate(isMerge=[true], groupBy=[d], select=[d, Final_MAX(max$0) AS c])
@@ -965,7 +965,7 @@ HashSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin]
             +- Exchange(distribution=[hash[d]])
                +- LocalSortAggregate(groupBy=[d], select=[d, Partial_MAX(c) AS max$0])
                   +- Sort(orderBy=[d ASC])
-                     +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+                     +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -974,13 +974,13 @@ HashSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin]
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c, d])
       +- HashAggregate(isMerge=[true], groupBy=[d], select=[d, Final_MAX(max$0) AS c])
          +- Exchange(distribution=[hash[d]])
             +- LocalHashAggregate(groupBy=[d], select=[d, Partial_MAX(c) AS max$0])
-               +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -988,7 +988,7 @@ HashSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin]
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c, d])
       +- SortAggregate(isMerge=[true], groupBy=[d], select=[d, Final_MAX(max$0) AS c])
@@ -996,7 +996,7 @@ NestedLoopSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSem
             +- Exchange(distribution=[hash[d]])
                +- LocalSortAggregate(groupBy=[d], select=[d, Partial_MAX(c) AS max$0])
                   +- Sort(orderBy=[d ASC])
-                     +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+                     +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1005,7 +1005,7 @@ NestedLoopSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSem
       <![CDATA[
 SortMergeSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c, d])
       +- SortAggregate(isMerge=[true], groupBy=[d], select=[d, Final_MAX(max$0) AS c])
@@ -1013,7 +1013,7 @@ SortMergeSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemi
             +- Exchange(distribution=[hash[d]])
                +- LocalSortAggregate(groupBy=[d], select=[d, Partial_MAX(c) AS max$0])
                   +- Sort(orderBy=[d ASC])
-                     +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+                     +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1021,12 +1021,12 @@ SortMergeSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemi
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[AND(=(a, c), <>(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[w0$o0 AS c, d])
       +- OverAggregate(window#0=[MIN(c) AS w0$o0 RANG BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING], select=[c, d, w0$o0])
          +- Exchange(distribution=[single])
-            +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1034,7 +1034,7 @@ NestedLoopSemiJoin(where=[AND(=(a, c), <>(b, d))], join=[a, b], joinType=[LeftSe
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[AND(=(a, c), <>(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[w0$o0 AS c, d])
       +- OverAggregate(window#0=[MIN(c) AS w0$o0 RANG BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING], select=[c, d, w0$o0])
@@ -1044,7 +1044,7 @@ NestedLoopSemiJoin(where=[AND(=(a, c), <>(b, d))], join=[a, b], joinType=[LeftSe
                   +- Exchange(distribution=[hash[c, d]])
                      +- LocalSortAggregate(groupBy=[c, d], select=[c, d])
                         +- Sort(orderBy=[c ASC, d ASC])
-                           +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+                           +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1052,14 +1052,14 @@ NestedLoopSemiJoin(where=[AND(=(a, c), <>(b, d))], join=[a, b], joinType=[LeftSe
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right], tryDistinctBuildRow=[true])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(groupBy=[EXPR$0], select=[EXPR$0])
       +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0])
          +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
             +- Sort(orderBy=[b ASC, a ASC])
                +- Exchange(distribution=[hash[b]])
-                  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1068,14 +1068,14 @@ HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], isBroad
       <![CDATA[
 HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[left], tryDistinctBuildRow=[true])
 :- Exchange(distribution=[hash[c]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0]])
    +- LocalHashAggregate(groupBy=[EXPR$0], select=[EXPR$0])
       +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0])
          +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
             +- Sort(orderBy=[b ASC, a ASC])
                +- Exchange(distribution=[hash[b]])
-                  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1084,14 +1084,14 @@ HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[
       <![CDATA[
 HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[right], tryDistinctBuildRow=[true])
 :- Exchange(distribution=[hash[c]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0]])
    +- LocalHashAggregate(groupBy=[EXPR$0], select=[EXPR$0])
       +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0])
          +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
             +- Sort(orderBy=[b ASC, a ASC])
                +- Exchange(distribution=[hash[b]])
-                  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1099,14 +1099,14 @@ HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(groupBy=[EXPR$0], select=[EXPR$0])
       +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0])
          +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
             +- Sort(orderBy=[b ASC, a ASC])
                +- Exchange(distribution=[hash[b]])
-                  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1115,14 +1115,14 @@ NestedLoopSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], b
       <![CDATA[
 SortMergeSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[c]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0]])
    +- LocalHashAggregate(groupBy=[EXPR$0], select=[EXPR$0])
       +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0])
          +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
             +- Sort(orderBy=[b ASC, a ASC])
                +- Exchange(distribution=[hash[b]])
-                  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1130,7 +1130,7 @@ SortMergeSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin])
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right], tryDistinctBuildRow=[true])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(groupBy=[EXPR$0], select=[EXPR$0])
       +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0])
@@ -1140,7 +1140,7 @@ HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], isBroad
                   +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
                      +- Exchange(distribution=[hash[a, b]])
                         +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-                           +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                           +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1149,7 +1149,7 @@ HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], isBroad
       <![CDATA[
 HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[left], tryDistinctBuildRow=[true])
 :- Exchange(distribution=[hash[c]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0]])
    +- LocalHashAggregate(groupBy=[EXPR$0], select=[EXPR$0])
       +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0])
@@ -1159,7 +1159,7 @@ HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[
                   +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
                      +- Exchange(distribution=[hash[a, b]])
                         +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-                           +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                           +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1168,7 +1168,7 @@ HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[
       <![CDATA[
 HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[c]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0]])
    +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
@@ -1179,7 +1179,7 @@ HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[
                      +- Exchange(distribution=[hash[a, b]])
                         +- LocalSortAggregate(groupBy=[a, b], select=[a, b])
                            +- Sort(orderBy=[a ASC, b ASC])
-                              +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                              +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1187,7 +1187,7 @@ HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(groupBy=[EXPR$0], select=[EXPR$0])
       +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0])
@@ -1197,7 +1197,7 @@ NestedLoopSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], b
                   +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
                      +- Exchange(distribution=[hash[a, b]])
                         +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-                           +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                           +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1206,7 +1206,7 @@ NestedLoopSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], b
       <![CDATA[
 SortMergeSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[c]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0]])
    +- LocalHashAggregate(groupBy=[EXPR$0], select=[EXPR$0])
       +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0])
@@ -1216,7 +1216,7 @@ SortMergeSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin])
                   +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
                      +- Exchange(distribution=[hash[a, b]])
                         +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-                           +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                           +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1224,13 +1224,13 @@ SortMergeSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin])
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
          +- Sort(orderBy=[b ASC, a ASC])
             +- Exchange(distribution=[hash[b]])
-               +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1239,13 +1239,13 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
       <![CDATA[
 HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[c, d]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
    +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
          +- Sort(orderBy=[b ASC, a ASC])
             +- Exchange(distribution=[hash[b]])
-               +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1254,13 +1254,13 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
       <![CDATA[
 HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[c, d]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
    +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
          +- Sort(orderBy=[b ASC, a ASC])
             +- Exchange(distribution=[hash[b]])
-               +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1268,13 +1268,13 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
          +- Sort(orderBy=[b ASC, a ASC])
             +- Exchange(distribution=[hash[b]])
-               +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1283,13 +1283,13 @@ NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Le
       <![CDATA[
 SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[c, d]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
    +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
          +- Sort(orderBy=[b ASC, a ASC])
             +- Exchange(distribution=[hash[b]])
-               +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1297,7 +1297,7 @@ SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Lef
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
@@ -1306,7 +1306,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
                +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
                   +- Exchange(distribution=[hash[a, b]])
                      +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-                        +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                        +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1315,7 +1315,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
       <![CDATA[
 HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[c, d]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
    +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
@@ -1324,7 +1324,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
                +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
                   +- Exchange(distribution=[hash[a, b]])
                      +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-                        +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                        +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1333,7 +1333,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
       <![CDATA[
 HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[c, d]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
    +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
@@ -1344,7 +1344,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
                      +- Exchange(distribution=[hash[a, b]])
                         +- LocalSortAggregate(groupBy=[a, b], select=[a, b])
                            +- Sort(orderBy=[a ASC, b ASC])
-                              +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                              +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1352,7 +1352,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right])
-:- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
@@ -1361,7 +1361,7 @@ NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Le
                +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
                   +- Exchange(distribution=[hash[a, b]])
                      +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-                        +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                        +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1370,7 +1370,7 @@ NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Le
       <![CDATA[
 SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[c, d]])
-:  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
    +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
@@ -1379,7 +1379,7 @@ SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Lef
                +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
                   +- Exchange(distribution=[hash[a, b]])
                      +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-                        +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+                        +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -1389,10 +1389,10 @@ SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Lef
 Calc(select=[a, b])
 +- NestedLoopSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], build=[right])
    :- Calc(select=[a, b, >(b, 2) AS $f2])
-   :  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[c])
-         +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1402,11 +1402,11 @@ Calc(select=[a, b])
 Calc(select=[a, b])
 +- NestedLoopSemiJoin(where=[$f2], join=[a, b, $f2], joinType=[LeftAntiJoin], build=[right])
    :- Calc(select=[a, b, >(b, 2) AS $f2])
-   :  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
       +- LocalHashAggregate(select=[])
          +- Calc(select=[])
-            +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1416,9 +1416,9 @@ Calc(select=[a, b])
 Calc(select=[a, b])
 +- HashSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], isBroadcast=[true], build=[right])
    :- Calc(select=[a, b, >(b, 1) AS $f2])
-   :  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1429,9 +1429,9 @@ Calc(select=[a, b])
 +- HashSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], build=[right])
    :- Calc(select=[a, b, >(b, 1) AS $f2])
    :  +- Exchange(distribution=[hash[b]])
-   :     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- Exchange(distribution=[hash[d]])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1442,9 +1442,9 @@ Calc(select=[a, b])
 +- HashSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], build=[left])
    :- Calc(select=[a, b, >(b, 1) AS $f2])
    :  +- Exchange(distribution=[hash[b]])
-   :     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- Exchange(distribution=[hash[d]])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1454,9 +1454,9 @@ Calc(select=[a, b])
 Calc(select=[a, b])
 +- NestedLoopSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], build=[right])
    :- Calc(select=[a, b, >(b, 1) AS $f2])
-   :  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1467,9 +1467,9 @@ Calc(select=[a, b])
 +- SortMergeSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin])
    :- Calc(select=[a, b, >(b, 1) AS $f2])
    :  +- Exchange(distribution=[hash[b]])
-   :     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- Exchange(distribution=[hash[d]])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1479,10 +1479,10 @@ Calc(select=[a, b])
 Calc(select=[a, b])
 +- HashSemiJoin(where=[AND(=(a, c), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], isBroadcast=[true], build=[right])
    :- Calc(select=[a, b, >(b, 2) AS $f2])
-   :  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[c])
-         +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1493,10 +1493,10 @@ Calc(select=[a, b])
 +- HashSemiJoin(where=[AND(=(a, c), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], build=[right])
    :- Calc(select=[a, b, >(b, 2) AS $f2])
    :  +- Exchange(distribution=[hash[a]])
-   :     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- Exchange(distribution=[hash[c]])
       +- Calc(select=[c])
-         +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1507,10 +1507,10 @@ Calc(select=[a, b])
 +- HashSemiJoin(where=[AND(=(a, c), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], build=[left])
    :- Calc(select=[a, b, >(b, 2) AS $f2])
    :  +- Exchange(distribution=[hash[a]])
-   :     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- Exchange(distribution=[hash[c]])
       +- Calc(select=[c])
-         +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1520,10 +1520,10 @@ Calc(select=[a, b])
 Calc(select=[a, b])
 +- NestedLoopSemiJoin(where=[AND(=(a, c), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], build=[right])
    :- Calc(select=[a, b, >(b, 2) AS $f2])
-   :  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[c])
-         +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1534,10 +1534,10 @@ Calc(select=[a, b])
 +- SortMergeSemiJoin(where=[AND(=(a, c), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin])
    :- Calc(select=[a, b, >(b, 2) AS $f2])
    :  +- Exchange(distribution=[hash[a]])
-   :     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- Exchange(distribution=[hash[c]])
       +- Calc(select=[c])
-         +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1546,10 +1546,10 @@ Calc(select=[a, b])
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1559,10 +1559,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1572,10 +1572,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1584,10 +1584,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left]
       <![CDATA[
 NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1597,10 +1597,10 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
 SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1609,11 +1609,11 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
       <![CDATA[
 NestedLoopSemiJoin(where=[true], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(select=[])
       +- Calc(select=[])
-         +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1622,10 +1622,10 @@ NestedLoopSemiJoin(where=[true], join=[a, b], joinType=[LeftSemiJoin], build=[ri
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1635,10 +1635,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1648,10 +1648,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1660,10 +1660,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left]
       <![CDATA[
 NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1673,10 +1673,10 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
 SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
-:     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1686,14 +1686,14 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 Calc(select=[a, b])
 +- HashJoin(where=[=(a, c)], join=[a, b, c], joinType=[InnerJoin], isBroadcast=[true], build=[right])
    :- Calc(select=[a, b], where=[>(a, 0)])
-   :  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
       +- HashSemiJoin(where=[=(c, c0)], join=[c], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
          :- Calc(select=[c])
-         :  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+         :  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
          +- Exchange(distribution=[broadcast])
             +- Calc(select=[c], where=[>(d, 1)])
-               +- BoundedStreamScan(table=[[rightUniqueKeyT]], fields=[c, d])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, rightUniqueKeyT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1704,14 +1704,14 @@ Calc(select=[a, b])
 +- HashJoin(where=[=(a, c)], join=[a, b, c], joinType=[InnerJoin], build=[right])
    :- Exchange(distribution=[hash[a]])
    :  +- Calc(select=[a, b], where=[>(a, 0)])
-   :     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- HashSemiJoin(where=[=(c, c0)], join=[c], joinType=[LeftSemiJoin], build=[left])
       :- Exchange(distribution=[hash[c]])
       :  +- Calc(select=[c])
-      :     +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      :     +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
       +- Exchange(distribution=[hash[c]])
          +- Calc(select=[c], where=[>(d, 1)])
-            +- BoundedStreamScan(table=[[rightUniqueKeyT]], fields=[c, d])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, rightUniqueKeyT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1723,13 +1723,13 @@ Calc(select=[a, b])
    :- HashJoin(where=[=(a, c)], join=[a, b, c], joinType=[InnerJoin], build=[left])
    :  :- Exchange(distribution=[hash[a]])
    :  :  +- Calc(select=[a, b], where=[>(a, 0)])
-   :  :     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :  :     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    :  +- Exchange(distribution=[hash[c]])
    :     +- Calc(select=[c])
-   :        +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+   :        +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
    +- Exchange(distribution=[hash[c]])
       +- Calc(select=[c], where=[>(d, 1)])
-         +- BoundedStreamScan(table=[[rightUniqueKeyT]], fields=[c, d])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, rightUniqueKeyT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1739,14 +1739,14 @@ Calc(select=[a, b])
 Calc(select=[a, b])
 +- NestedLoopJoin(where=[=(a, c)], join=[a, b, c], joinType=[InnerJoin], build=[right])
    :- Calc(select=[a, b], where=[>(a, 0)])
-   :  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
       +- NestedLoopSemiJoin(where=[=(c, c0)], join=[c], joinType=[LeftSemiJoin], build=[right])
          :- Calc(select=[c])
-         :  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+         :  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
          +- Exchange(distribution=[broadcast])
             +- Calc(select=[c], where=[>(d, 1)])
-               +- BoundedStreamScan(table=[[rightUniqueKeyT]], fields=[c, d])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, rightUniqueKeyT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1757,14 +1757,14 @@ Calc(select=[a, b])
 +- SortMergeJoin(where=[=(a, c)], join=[a, b, c], joinType=[InnerJoin], rightSorted=[true])
    :- Exchange(distribution=[hash[a]])
    :  +- Calc(select=[a, b], where=[>(a, 0)])
-   :     +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
    +- SortMergeSemiJoin(where=[=(c, c0)], join=[c], joinType=[LeftSemiJoin])
       :- Exchange(distribution=[hash[c]])
       :  +- Calc(select=[c])
-      :     +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      :     +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
       +- Exchange(distribution=[hash[c]])
          +- Calc(select=[c], where=[>(d, 1)])
-            +- BoundedStreamScan(table=[[rightUniqueKeyT]], fields=[c, d])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, rightUniqueKeyT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1772,11 +1772,11 @@ Calc(select=[a, b])
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right], tryDistinctBuildRow=[true])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(groupBy=[c], select=[c])
       +- Calc(select=[c])
-         +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1785,11 +1785,11 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right], tryDistinctBuildRow=[true])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- LocalHashAggregate(groupBy=[c], select=[c])
       +- Calc(select=[c])
-         +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1798,11 +1798,11 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right], tryDistinctBuildRow=[true])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- LocalHashAggregate(groupBy=[c], select=[c])
       +- Calc(select=[c])
-         +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1810,11 +1810,11 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(groupBy=[c], select=[c])
       +- Calc(select=[c])
-         +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1823,11 +1823,11 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
       <![CDATA[
 SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- LocalHashAggregate(groupBy=[c], select=[c])
       +- Calc(select=[c])
-         +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1835,10 +1835,10 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], isBroadcast=[true], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1847,10 +1847,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], isBroadcast=
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1859,10 +1859,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1870,10 +1870,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[left]
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1882,10 +1882,10 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=
       <![CDATA[
 SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1893,10 +1893,10 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin])
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1904,7 +1904,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], isBroadcast=[true], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- SortAggregate(isMerge=[true], groupBy=[c], select=[c])
       +- Sort(orderBy=[c ASC])
@@ -1912,7 +1912,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], isBroadcast=
             +- LocalSortAggregate(groupBy=[c], select=[c])
                +- Sort(orderBy=[c ASC])
                   +- Calc(select=[c])
-                     +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+                     +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1921,10 +1921,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], isBroadcast=
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1932,10 +1932,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1944,10 +1944,10 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
       <![CDATA[
 SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1956,14 +1956,14 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- SortAggregate(isMerge=[true], groupBy=[c], select=[c])
    +- Sort(orderBy=[c ASC])
       +- Exchange(distribution=[hash[c]])
          +- LocalSortAggregate(groupBy=[c], select=[c])
             +- Sort(orderBy=[c ASC])
                +- Calc(select=[c])
-                  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1972,10 +1972,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
    +- Calc(select=[c])
-      +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1984,12 +1984,12 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left]
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- HashAggregate(isMerge=[true], groupBy=[c], select=[c])
    +- Exchange(distribution=[hash[c]])
       +- LocalHashAggregate(groupBy=[c], select=[c])
          +- Calc(select=[c])
-            +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -1998,14 +1998,14 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[left]
       <![CDATA[
 SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], rightSorted=[true])
 :- Exchange(distribution=[hash[a]])
-:  +- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- SortAggregate(isMerge=[true], groupBy=[c], select=[c])
    +- Sort(orderBy=[c ASC])
       +- Exchange(distribution=[hash[c]])
          +- LocalSortAggregate(groupBy=[c], select=[c])
             +- Sort(orderBy=[c ASC])
                +- Calc(select=[c])
-                  +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+                  +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -2013,7 +2013,7 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], rightSo
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right])
-:- BoundedStreamScan(table=[[leftT]], fields=[a, b])
+:- BoundedStreamScan(table=[[default_catalog, default_db, leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- SortAggregate(isMerge=[true], groupBy=[c], select=[c])
       +- Sort(orderBy=[c ASC])
@@ -2021,7 +2021,7 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=
             +- LocalSortAggregate(groupBy=[c], select=[c])
                +- Sort(orderBy=[c ASC])
                   +- Calc(select=[c])
-                     +- BoundedStreamScan(table=[[rightT]], fields=[c, d])
+                     +- BoundedStreamScan(table=[[default_catalog, default_db, rightT]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>

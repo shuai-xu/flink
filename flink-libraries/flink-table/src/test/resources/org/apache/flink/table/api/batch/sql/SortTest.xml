@@ -24,7 +24,7 @@ limitations under the License.
       <![CDATA[
 LogicalSort(fetch=[5])
 +- LogicalProject(a=[$0], b=[$1], c=[$2])
-   +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -32,7 +32,7 @@ LogicalSort(fetch=[5])
 Limit(offset=[0], limit=[5], global=[true])
 +- Exchange(distribution=[single])
    +- Limit(offset=[0], limit=[5], global=[false])
-      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

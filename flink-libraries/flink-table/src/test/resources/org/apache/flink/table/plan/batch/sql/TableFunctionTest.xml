@@ -24,7 +24,7 @@ limitations under the License.
       <![CDATA[
 LogicalProject(a=[$0], s=[$3])
 +- LogicalJoin(condition=[true], joinType=[inner])
-   :- LogicalTableScan(table=[[MyTable]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
    +- LogicalTableFunctionScan(invocation=[str_split('a,b,c', ',', 1)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
@@ -32,7 +32,7 @@ LogicalProject(a=[$0], s=[$3])
       <![CDATA[
 NestedLoopJoin(where=[true], join=[a, f0], joinType=[InnerJoin], build=[right])
 :- Calc(select=[a])
-:  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 +- Exchange(distribution=[broadcast])
    +- Correlate(invocation=[str_split('a,b,c', ',', 1)], correlate=[table(str_split('a,b,c',',',1))], select=[f0], rowType=[RecordType(VARCHAR(65536) f0)], joinType=[INNER])
       +- Values(tuples=[[{  }]], values=[])
@@ -47,7 +47,7 @@ NestedLoopJoin(where=[true], join=[a, f0], joinType=[InnerJoin], build=[right])
       <![CDATA[
 LogicalProject(a=[$0], s=[$3])
 +- LogicalJoin(condition=[true], joinType=[inner])
-   :- LogicalTableScan(table=[[MyTable]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
    +- LogicalTableFunctionScan(invocation=[str_split()], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
@@ -55,7 +55,7 @@ LogicalProject(a=[$0], s=[$3])
       <![CDATA[
 NestedLoopJoin(where=[true], join=[a, f0], joinType=[InnerJoin], build=[right])
 :- Calc(select=[a])
-:  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 +- Exchange(distribution=[broadcast])
    +- Correlate(invocation=[str_split()], correlate=[table(str_split())], select=[f0], rowType=[RecordType(VARCHAR(65536) f0)], joinType=[INNER])
       +- Values(tuples=[[{  }]], values=[])
@@ -70,7 +70,7 @@ NestedLoopJoin(where=[true], join=[a, f0], joinType=[InnerJoin], build=[right])
       <![CDATA[
 LogicalProject(a=[$0], s=[$3])
 +- LogicalJoin(condition=[=($3, $2)], joinType=[full])
-   :- LogicalTableScan(table=[[MyTable]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
    +- LogicalTableFunctionScan(invocation=[str_split('a,b,c', ',')], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
@@ -80,7 +80,7 @@ Calc(select=[a, f0 AS s])
 +- NestedLoopJoin(where=[=(f0, c)], join=[a, c, f0], joinType=[FullOuterJoin], build=[right])
    :- Exchange(distribution=[single])
    :  +- Calc(select=[a, c])
-   :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
    +- Correlate(invocation=[str_split('a,b,c', ',')], correlate=[table(str_split('a,b,c',','))], select=[f0], rowType=[RecordType(VARCHAR(65536) f0)], joinType=[INNER])
       +- Exchange(distribution=[single])
          +- Values(tuples=[[{  }]], values=[])
@@ -96,7 +96,7 @@ Calc(select=[a, f0 AS s])
 LogicalProject(a=[$1], s=[$0])
 +- LogicalJoin(condition=[=($0, $3)], joinType=[full])
    :- LogicalTableFunctionScan(invocation=[str_split('a,b,c', ',')], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
-   +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -108,7 +108,7 @@ Calc(select=[a, f0 AS s])
    :     +- Values(tuples=[[{  }]], values=[])
    +- Exchange(distribution=[single])
       +- Calc(select=[a, c])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -122,7 +122,7 @@ LogicalProject(a=[$1], s=[$0])
 +- LogicalFilter(condition=[=($0, $3)])
    +- LogicalJoin(condition=[true], joinType=[inner])
       :- LogicalTableFunctionScan(invocation=[str_split('a,b,c', ',')], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
-      +- LogicalTableScan(table=[[MyTable]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -133,7 +133,7 @@ Calc(select=[a, f0 AS s])
    :  +- Correlate(invocation=[str_split('a,b,c', ',')], correlate=[table(str_split('a,b,c',','))], select=[f0], rowType=[RecordType(VARCHAR(65536) f0)], joinType=[INNER])
    :     +- Values(tuples=[[{  }]], values=[])
    +- Calc(select=[a, c])
-      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -146,7 +146,7 @@ Calc(select=[a, f0 AS s])
 LogicalProject(a=[$1], s=[$0])
 +- LogicalJoin(condition=[=($0, $3)], joinType=[left])
    :- LogicalTableFunctionScan(invocation=[str_split('a,b,c', ',')], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
-   +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -157,7 +157,7 @@ Calc(select=[a, f0 AS s])
    :  +- Values(tuples=[[{  }]], values=[])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[a, c])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -170,7 +170,7 @@ Calc(select=[a, f0 AS s])
 LogicalProject(a=[$0], s=[$3], x=[$4])
 +- LogicalJoin(condition=[true], joinType=[inner])
    :- LogicalJoin(condition=[true], joinType=[inner])
-   :  :- LogicalTableScan(table=[[MyTable]])
+   :  :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
    :  +- LogicalTableFunctionScan(invocation=[str_split(SUBSTRING('a,b,c', 1, 3), ',')], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
    +- LogicalTableFunctionScan(invocation=[str_split('a,b,c', ',')], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
@@ -180,7 +180,7 @@ LogicalProject(a=[$0], s=[$3], x=[$4])
 NestedLoopJoin(where=[true], join=[a, f0, f00], joinType=[InnerJoin], build=[right])
 :- NestedLoopJoin(where=[true], join=[a, f0], joinType=[InnerJoin], build=[right])
 :  :- Calc(select=[a])
-:  :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+:  :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 :  +- Exchange(distribution=[broadcast])
 :     +- Correlate(invocation=[str_split(SUBSTRING('a,b,c', 1, 3), ',')], correlate=[table(str_split(SUBSTRING('a,b,c', 1, 3),','))], select=[f0], rowType=[RecordType(VARCHAR(65536) f0)], joinType=[INNER])
 :        +- Values(tuples=[[{  }]], values=[])
@@ -202,7 +202,7 @@ LogicalProject(a=[$2], s=[$0], x=[$1])
       :- LogicalJoin(condition=[true], joinType=[inner])
       :  :- LogicalTableFunctionScan(invocation=[str_split(SUBSTRING('a,b,c', 1, 3), ',')], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
       :  +- LogicalTableFunctionScan(invocation=[str_split('a,b,c', ',')], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
-      +- LogicalTableScan(table=[[MyTable]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -217,7 +217,7 @@ Calc(select=[a, f0 AS s, f00 AS x])
    :     +- Correlate(invocation=[str_split('a,b,c', ',')], correlate=[table(str_split('a,b,c',','))], select=[f0], rowType=[RecordType(VARCHAR(65536) f0)], joinType=[INNER])
    :        +- Values(tuples=[[{  }]], values=[])
    +- Calc(select=[a], where=[>(a, 10)])
-      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -229,7 +229,7 @@ Calc(select=[a, f0 AS s, f00 AS x])
       <![CDATA[
 LogicalProject(a=[$0], s=[$3])
 +- LogicalJoin(condition=[true], joinType=[inner])
-   :- LogicalTableScan(table=[[MyTable]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
    +- LogicalTableFunctionScan(invocation=[str_split('a,b,c')], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
@@ -237,7 +237,7 @@ LogicalProject(a=[$0], s=[$3])
       <![CDATA[
 NestedLoopJoin(where=[true], join=[a, f0], joinType=[InnerJoin], build=[right])
 :- Calc(select=[a])
-:  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 +- Exchange(distribution=[broadcast])
    +- Correlate(invocation=[str_split('a,b,c')], correlate=[table(str_split('a,b,c'))], select=[f0], rowType=[RecordType(VARCHAR(65536) f0)], joinType=[INNER])
       +- Values(tuples=[[{  }]], values=[])
@@ -276,7 +276,7 @@ NestedLoopJoin(where=[=(f0, f00)], join=[f0, f00], joinType=[InnerJoin], build=[
       <![CDATA[
 LogicalProject(a=[$0], s=[$3])
 +- LogicalJoin(condition=[=($3, $2)], joinType=[right])
-   :- LogicalTableScan(table=[[MyTable]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
    +- LogicalTableFunctionScan(invocation=[str_split('a,b,c', ',')], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
@@ -286,7 +286,7 @@ Calc(select=[a, f0 AS s])
 +- NestedLoopJoin(where=[=(f0, c)], join=[a, c, f0], joinType=[RightOuterJoin], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- Calc(select=[a, c])
-   :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
    +- Correlate(invocation=[str_split('a,b,c', ',')], correlate=[table(str_split('a,b,c',','))], select=[f0], rowType=[RecordType(VARCHAR(65536) f0)], joinType=[INNER])
       +- Values(tuples=[[{  }]], values=[])
 ]]>
@@ -301,7 +301,7 @@ Calc(select=[a, f0 AS s])
 LogicalProject(a=[$1], s=[$0])
 +- LogicalJoin(condition=[=($0, $3)], joinType=[right])
    :- LogicalTableFunctionScan(invocation=[str_split('a,b,c', ',')], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
-   +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -312,7 +312,7 @@ Calc(select=[a, f0 AS s])
    :  +- Correlate(invocation=[str_split('a,b,c', ',')], correlate=[table(str_split('a,b,c',','))], select=[f0], rowType=[RecordType(VARCHAR(65536) f0)], joinType=[INNER])
    :     +- Values(tuples=[[{  }]], values=[])
    +- Calc(select=[a, c])
-      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -324,7 +324,7 @@ Calc(select=[a, f0 AS s])
       <![CDATA[
 LogicalProject(a=[$0], s=[$3])
 +- LogicalJoin(condition=[true], joinType=[inner])
-   :- LogicalTableScan(table=[[MyTable]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
    +- LogicalTableFunctionScan(invocation=[str_split('a,b,c', ',')], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
@@ -332,7 +332,7 @@ LogicalProject(a=[$0], s=[$3])
       <![CDATA[
 NestedLoopJoin(where=[true], join=[a, f0], joinType=[InnerJoin], build=[right])
 :- Calc(select=[a])
-:  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 +- Exchange(distribution=[broadcast])
    +- Correlate(invocation=[str_split('a,b,c', ',')], correlate=[table(str_split('a,b,c',','))], select=[f0], rowType=[RecordType(VARCHAR(65536) f0)], joinType=[INNER])
       +- Values(tuples=[[{  }]], values=[])
@@ -349,7 +349,7 @@ LogicalProject(c=[$2], name0=[$3], len0=[$4], len1=[$5], name1=[$6], len2=[$7])
 +- LogicalFilter(condition=[AND(=($2, 'Anna#44'), =($3, 'test'))])
    +- LogicalJoin(condition=[true], joinType=[inner])
       :- LogicalJoin(condition=[true], joinType=[inner])
-      :  :- LogicalTableScan(table=[[MyTable]])
+      :  :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
       :  +- LogicalTableFunctionScan(invocation=[funcDyn('test', 'string,int,int')], rowType=[RecordType(VARCHAR(65536) f0, INTEGER f1, INTEGER f2)], elementType=[class [Ljava.lang.Object;])
       +- LogicalTableFunctionScan(invocation=[funcDyn('abc', 'string,int')], rowType=[RecordType(VARCHAR(65536) f0, INTEGER f1)], elementType=[class [Ljava.lang.Object;])
 ]]>
@@ -361,7 +361,7 @@ Calc(select=[CAST('Anna#44') AS c, CAST('test') AS name0, f1 AS len0, f2 AS len1
    :- Calc(select=[f1, f2])
    :  +- NestedLoopJoin(where=[true], join=[a, f1, f2], joinType=[InnerJoin], build=[right])
    :     :- Calc(select=[a], where=[=(c, 'Anna#44')])
-   :     :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :     :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
    :     +- Exchange(distribution=[broadcast])
    :        +- Calc(select=[f1, f2], where=[=(f0, 'test')])
    :           +- Correlate(invocation=[funcDyn('test', 'string,int,int')], correlate=[table(funcDyn('test','string,int,int'))], select=[f0,f1,f2], rowType=[RecordType(VARCHAR(65536) f0, INTEGER f1, INTEGER f2)], joinType=[INNER])
@@ -381,7 +381,7 @@ Calc(select=[CAST('Anna#44') AS c, CAST('test') AS name0, f1 AS len0, f2 AS len1
 LogicalProject(a=[$0], s=[$3])
 +- LogicalFilter(condition=[=($3, $2)])
    +- LogicalJoin(condition=[true], joinType=[inner])
-      :- LogicalTableScan(table=[[MyTable]])
+      :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
       +- LogicalTableFunctionScan(invocation=[str_split('a,b,c', ',')], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
@@ -390,7 +390,7 @@ LogicalProject(a=[$0], s=[$3])
 Calc(select=[a, f0 AS s])
 +- NestedLoopJoin(where=[=(f0, c)], join=[a, c, f0], joinType=[InnerJoin], build=[right])
    :- Calc(select=[a, c])
-   :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
       +- Correlate(invocation=[str_split('a,b,c', ',')], correlate=[table(str_split('a,b,c',','))], select=[f0], rowType=[RecordType(VARCHAR(65536) f0)], joinType=[INNER])
          +- Values(tuples=[[{  }]], values=[])
@@ -405,7 +405,7 @@ Calc(select=[a, f0 AS s])
       <![CDATA[
 LogicalProject(a=[$0], s=[$3])
 +- LogicalJoin(condition=[true], joinType=[inner])
-   :- LogicalTableScan(table=[[MyTable]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
    +- LogicalTableFunctionScan(invocation=[str_split(SUBSTRING('a,b,c', 1, 3), ',')], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
@@ -413,7 +413,7 @@ LogicalProject(a=[$0], s=[$3])
       <![CDATA[
 NestedLoopJoin(where=[true], join=[a, f0], joinType=[InnerJoin], build=[right])
 :- Calc(select=[a])
-:  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 +- Exchange(distribution=[broadcast])
    +- Correlate(invocation=[str_split(SUBSTRING('a,b,c', 1, 3), ',')], correlate=[table(str_split(SUBSTRING('a,b,c', 1, 3),','))], select=[f0], rowType=[RecordType(VARCHAR(65536) f0)], joinType=[INNER])
       +- Values(tuples=[[{  }]], values=[])
@@ -428,14 +428,14 @@ NestedLoopJoin(where=[true], join=[a, f0], joinType=[InnerJoin], build=[right])
       <![CDATA[
 LogicalProject(a=[$0], d=[$3], s=[$4])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{3}])
-   :- LogicalTableScan(table=[[MyTable2]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
    +- LogicalTableFunctionScan(invocation=[str_split($cor0.d)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[str_split($cor0.d)], correlate=[table(str_split($cor0.d))], select=[a,d,s], rowType=[RecordType(INTEGER a, VARBINARY d, VARCHAR(65536) s)], joinType=[INNER])
-+- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c, d])
++- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -452,20 +452,20 @@ Correlate(invocation=[str_split($cor0.d)], correlate=[table(str_split($cor0.d))]
       <![CDATA[
 LogicalProject(a2=[$0], b2=[$1], c2=[$2], c=[$3], s=[$4])
 +- LogicalJoin(condition=[=($2, $4)], joinType=[left])
-   :- LogicalTableScan(table=[[MyTable2]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
    +- LogicalProject(c=[$2], s=[$3])
       +- LogicalCorrelate(correlation=[$cor0], joinType=[left], requiredColumns=[{2}])
-         :- LogicalTableScan(table=[[MyTable]])
+         :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
          +- LogicalTableFunctionScan(invocation=[func1($cor0.c)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 HashJoin(where=[=(c2, s)], join=[a2, b2, c2, c, s], joinType=[LeftOuterJoin], isBroadcast=[true], build=[right])
-:- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a2, b2, c2])
+:- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[a2, b2, c2])
 +- Exchange(distribution=[broadcast])
    +- Correlate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[LEFT])
-      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

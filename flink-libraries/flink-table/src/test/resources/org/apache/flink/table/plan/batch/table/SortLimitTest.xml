@@ -21,7 +21,7 @@ limitations under the License.
       <![CDATA[
 LogicalProject(a=[$0], c=[$2])
 +- LogicalSort(sort0=[$0], dir0=[DESC-nulls-last], offset=[2], fetch=[10])
-   +- LogicalTableScan(table=[[_DataStreamTable_0]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -30,7 +30,7 @@ Calc(select=[a, c])
 +- SortLimit(orderBy=[a DESC], offset=[2], limit=[10], global=[true])
    +- Exchange(distribution=[single])
       +- SortLimit(orderBy=[a DESC], offset=[2], limit=[10], global=[false])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -39,7 +39,7 @@ Calc(select=[a, c])
       <![CDATA[
 LogicalProject(a=[$0], c=[$2])
 +- LogicalSort(sort0=[$0], dir0=[DESC-nulls-last], fetch=[10])
-   +- LogicalTableScan(table=[[_DataStreamTable_0]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -48,7 +48,7 @@ Calc(select=[a, c])
 +- SortLimit(orderBy=[a DESC], offset=[0], limit=[10], global=[true])
    +- Exchange(distribution=[single])
       +- SortLimit(orderBy=[a DESC], offset=[0], limit=[10], global=[false])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

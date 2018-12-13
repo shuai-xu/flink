@@ -23,12 +23,12 @@ limitations under the License.
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(score=[$3])
-+- LogicalTableScan(table=[[csvSource, source: [selectedFields=[id, first, last, score]]]])
++- LogicalTableScan(table=[[default_catalog, default_db, csvSource, source: [selectedFields=[id, first, last, score]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-TableSourceScan(table=[[csvSource, source: [selectedFields=[score]]]], fields=[score])
+TableSourceScan(table=[[default_catalog, default_db, csvSource, source: [selectedFields=[score]]]], fields=[score])
 ]]>
     </Resource>
   </TestCase>
@@ -40,12 +40,12 @@ TableSourceScan(table=[[csvSource, source: [selectedFields=[score]]]], fields=[s
       <![CDATA[
 LogicalSort(fetch=[2])
 +- LogicalProject(id=[$0], first=[$1], last=[$2], score=[$3])
-   +- LogicalTableScan(table=[[csvSource, source: [selectedFields=[id, first, last, score]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, csvSource, source: [selectedFields=[id, first, last, score]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-TableSourceScan(table=[[csvSource, source: [selectedFields=[id, first, last, score], limit=2]]], fields=[id, first, last, score])
+TableSourceScan(table=[[default_catalog, default_db, csvSource, source: [selectedFields=[id, first, last, score], limit=2]]], fields=[id, first, last, score])
 ]]>
     </Resource>
   </TestCase>

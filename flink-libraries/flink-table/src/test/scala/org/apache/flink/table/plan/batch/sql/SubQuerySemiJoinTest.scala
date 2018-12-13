@@ -1375,11 +1375,11 @@ class SubQuerySemiJoinTest(fieldsNullable: Boolean) extends SubQueryTestBase(fie
     //  LogicalFilter(condition=[IN($2, {
     //   LogicalProject(d=[$1])
     //    LogicalFilter(condition=[=($1, $cor0.b)])
-    //     LogicalTableScan(table=[[r]])
+    //     LogicalTableScan(table=[[default_catalog, default_db, r]])
     //  })])
     //   LogicalAggregate(group=[{0}], s=[SUM($1)], agg#1=[MAX($1)])
     //    LogicalProject(b=[$1], a=[$0])
-    //     LogicalTableScan(table=[[l]])
+    //     LogicalTableScan(table=[[default_catalog, default_db, l]])
     //
     // LogicalFilter lost variablesSet information.
 
@@ -2222,11 +2222,11 @@ class SubQuerySemiJoinTest(fieldsNullable: Boolean) extends SubQueryTestBase(fie
     //  LogicalFilter(condition=[IN($2, {
     //   LogicalProject(d=[$1])
     //    LogicalFilter(condition=[=($1, $cor0.b)])
-    //     LogicalTableScan(table=[[r]])
+    //     LogicalTableScan(table=[[default_catalog, default_db, r]])
     //  })])
     //   LogicalAggregate(group=[{0}], s=[SUM($1)], agg#1=[MAX($1)])
     //    LogicalProject(b=[$1], a=[$0])
-    //     LogicalTableScan(table=[[l]])
+    //     LogicalTableScan(table=[[default_catalog, default_db, l]])
     //
     // LogicalFilter lost variablesSet information.
 

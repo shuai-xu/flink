@@ -87,10 +87,15 @@ class BatchTableEnvironment(
 
   // the builder for Calcite RelNodes, Calcite's representation of a relational expression tree.
   override protected def createRelBuilder: FlinkRelBuilder = FlinkRelBuilder.create(
-    frameworkConfig, config, getTypeFactory, Array(
+    frameworkConfig,
+    config,
+    getTypeFactory,
+    Array(
       ConventionTraitDef.INSTANCE,
       FlinkRelDistributionTraitDef.INSTANCE,
-      RelCollationTraitDef.INSTANCE))
+      RelCollationTraitDef.INSTANCE),
+    catalogManager
+  )
 
   // prefix for unique table names.
   override private[flink] val tableNamePrefix = "_DataStreamTable_"

@@ -1,12 +1,12 @@
 == Abstract Syntax Tree ==
 LogicalUnion(all=[true])
-  LogicalTableScan(table=[[_DataStreamTable_0]])
-  LogicalTableScan(table=[[_DataStreamTable_1]])
+  LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+  LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 
 == Optimized Logical Plan ==
 StreamExecUnion(all=[true], union=[count, word])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 
 == Physical Execution Plan ==
  : Data Source
@@ -16,10 +16,10 @@ StreamExecUnion(all=[true], union=[count, word])
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[_DataStreamTable_0], fields:(count, word))
+		content : SourceConversion(table:[default_catalog, default_db, _DataStreamTable_0], fields:(count, word))
 		ship_strategy : FORWARD
 
 		 : Operator
-			content : SourceConversion(table:[_DataStreamTable_1], fields:(count, word))
+			content : SourceConversion(table:[default_catalog, default_db, _DataStreamTable_1], fields:(count, word))
 			ship_strategy : FORWARD
 

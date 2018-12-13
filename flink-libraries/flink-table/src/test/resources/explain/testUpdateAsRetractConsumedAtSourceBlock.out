@@ -1,17 +1,17 @@
 == Abstract Syntax Tree ==
 LogicalProject(a=[$0])
   LogicalFilter(condition=[>($0, 6)])
-    LogicalTableScan(table=[[T]])
+    LogicalTableScan(table=[[default_catalog, default_db, T]])
 
 LogicalProject(a=[$0], b=[$1])
   LogicalFilter(condition=[<($0, 6)])
-    LogicalTableScan(table=[[T]])
+    LogicalTableScan(table=[[default_catalog, default_db, T]])
 
 == Optimized Logical Plan ==
 [[IntermediateTable=_DataStreamTable_2]]
 StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum])
   StreamExecExchange(distribution=[hash[b]])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 StreamExecRank(retract=[true], accMode=[AccRetract])
   StreamExecExchange(retract=[false], accMode=[Acc])
     StreamExecDataStreamScan(retract=[false], accMode=[Acc])
@@ -19,7 +19,7 @@ StreamExecRank(retract=[true], accMode=[AccRetract])
 [[Sink]]
 StreamExecSink(fields=[a])
   StreamExecCalc(select=[a], where=[>(a, 6)])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
 StreamExecSink(retract=[false], accMode=[AccRetract])
   StreamExecCalc(retract=[true], accMode=[AccRetract])
     StreamExecDataStreamScan(retract=[true], accMode=[AccRetract])
@@ -27,7 +27,7 @@ StreamExecSink(retract=[false], accMode=[AccRetract])
 [[Sink]]
 StreamExecSink(fields=[a, b])
   StreamExecCalc(select=[a, b], where=[<(a, 6)])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
 StreamExecSink(retract=[false], accMode=[AccRetract])
   StreamExecCalc(retract=[false], accMode=[AccRetract])
     StreamExecDataStreamScan(retract=[false], accMode=[AccRetract])
@@ -37,7 +37,7 @@ StreamExecSink(retract=[false], accMode=[AccRetract])
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[_DataStreamTable_0], fields:(a, b, c))
+		content : SourceConversion(table:[default_catalog, default_db, _DataStreamTable_0], fields:(a, b, c))
 		ship_strategy : FORWARD
 
 		 : Operator

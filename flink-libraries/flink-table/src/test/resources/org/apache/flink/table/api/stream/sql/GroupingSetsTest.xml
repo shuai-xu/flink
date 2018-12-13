@@ -24,7 +24,7 @@ StreamExecCalc(select=[b, c, EXPR$2], where=[>(EXPR$2, 3)])
     StreamExecExchange(distribution=[hash[b, c, $e]])
       StreamExecExpand(projects=[{b, c, 0 AS $e}, {b, null AS c, 1 AS $e}, {null AS b, c, 2 AS $e}, {null AS b, null AS c, 3 AS $e}])
         StreamExecCalc(select=[b, c])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+          StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -35,7 +35,7 @@ StreamExecCalc(select=[b, EXPR$1, 0 AS EXPR$2, 0 AS EXPR$3])
   StreamExecGroupAggregate(groupBy=[b], select=[b, AVG(a) AS EXPR$1])
     StreamExecExchange(distribution=[hash[b]])
       StreamExecCalc(select=[b, a])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -48,7 +48,7 @@ StreamExecCalc(select=[course, sum0, CASE(=($e, 0), 0, =($e, 1), 1, 3) AS EXPR$2
       StreamExecExchange(distribution=[hash[course, earnings, $e]])
         StreamExecExpand(projects=[{course, earnings, 0 AS $e, earnings AS earnings_0}, {course, null AS earnings, 1 AS $e, earnings AS earnings_0}, {null AS course, null AS earnings, 3 AS $e, earnings AS earnings_0}])
           StreamExecCalc(select=[course, earnings])
-            StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+            StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -61,7 +61,7 @@ StreamExecCalc(select=[course, sum0])
       StreamExecExchange(distribution=[hash[course, earnings, $e]])
         StreamExecExpand(projects=[{course, earnings, 0 AS $e, earnings AS earnings_0}, {course, null AS earnings, 1 AS $e, earnings AS earnings_0}, {null AS course, null AS earnings, 3 AS $e, earnings AS earnings_0}])
           StreamExecCalc(select=[course, earnings])
-            StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+            StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -73,7 +73,7 @@ StreamExecCalc(select=[b, c, EXPR$2])
     StreamExecExchange(distribution=[hash[b, c, $e]])
       StreamExecExpand(projects=[{b, c, 0 AS $e}, {b, null AS c, 1 AS $e}, {null AS b, null AS c, 3 AS $e}])
         StreamExecCalc(select=[b, c])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+          StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

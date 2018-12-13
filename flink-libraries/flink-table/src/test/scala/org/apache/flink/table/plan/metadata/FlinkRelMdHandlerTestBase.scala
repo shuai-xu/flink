@@ -59,6 +59,8 @@ import org.junit.{Before, BeforeClass}
 import java.math.BigDecimal
 import java.util.{List => JList}
 
+import org.apache.flink.table.catalog.CatalogManager
+
 import scala.collection.JavaConversions._
 
 class FlinkRelMdHandlerTestBase {
@@ -84,7 +86,9 @@ class FlinkRelMdHandlerTestBase {
       frameworkConfig, new TableConfig, typeFactory, Array(
         ConventionTraitDef.INSTANCE,
         FlinkRelDistributionTraitDef.INSTANCE,
-        RelCollationTraitDef.INSTANCE))
+        RelCollationTraitDef.INSTANCE),
+      new CatalogManager()
+    )
     batchExecTraits = relBuilder
       .getCluster
       .traitSetOf(Convention.NONE)

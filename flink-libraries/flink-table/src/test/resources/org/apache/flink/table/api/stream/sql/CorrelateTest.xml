@@ -20,7 +20,7 @@ limitations under the License.
     <Resource name="plan">
       <![CDATA[
 StreamExecCorrelate(invocation=[str_split($cor0.d)], correlate=[table(str_split($cor0.d))], select=[a,d,s], rowType=[RecordType(INTEGER a, VARBINARY d, VARCHAR(65536) s)], joinType=[INNER])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -29,7 +29,7 @@ StreamExecCorrelate(invocation=[str_split($cor0.d)], correlate=[table(str_split(
       <![CDATA[
 StreamExecCalc(select=[_1 AS name, _2 AS len, c], where=[<>(objHash(a, _2), 0)])
   StreamExecCorrelate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[a,c,_1,_2], rowType=[RecordType(VARBINARY a, INTEGER c, VARCHAR(65536) _1, INTEGER _2)], joinType=[INNER])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -38,7 +38,7 @@ StreamExecCalc(select=[_1 AS name, _2 AS len, c], where=[<>(objHash(a, _2), 0)])
       <![CDATA[
 StreamExecCalc(select=[_2 AS len, objHash(c, _2) AS hash], where=[>(objHash(c, _2), 0)])
   StreamExecCorrelate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[c,_2], rowType=[RecordType(VARBINARY c, INTEGER _2)], joinType=[INNER])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -49,7 +49,7 @@ StreamExecGroupAggregate(select=[COUNT(*) AS EXPR$0])
   StreamExecExchange(distribution=[single])
     StreamExecCalc(select=[0 AS $f0])
       StreamExecCorrelate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[_2], rowType=[RecordType(INTEGER _2)], joinType=[INNER])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -57,7 +57,7 @@ StreamExecGroupAggregate(select=[COUNT(*) AS EXPR$0])
     <Resource name="plan">
       <![CDATA[
 StreamExecCorrelate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -65,7 +65,7 @@ StreamExecCorrelate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c)
     <Resource name="plan">
       <![CDATA[
 StreamExecCorrelate(invocation=[func1($cor0.c, '$')], correlate=[table(func1($cor0.c,'$'))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -73,7 +73,7 @@ StreamExecCorrelate(invocation=[func1($cor0.c, '$')], correlate=[table(func1($co
     <Resource name="plan">
       <![CDATA[
 StreamExecCorrelate(invocation=[func2($cor0.c)], correlate=[table(func2($cor0.c))], select=[c,name,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len)], joinType=[INNER])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -82,7 +82,7 @@ StreamExecCorrelate(invocation=[func2($cor0.c)], correlate=[table(func2($cor0.c)
       <![CDATA[
 StreamExecCorrelate(invocation=[funcDyna0($cor1.c, 'string,int')], correlate=[table(funcDyna0($cor1.c,'string,int'))], select=[c,name,len0,len1,name1,len10], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len0, INTEGER len1, VARCHAR(65536) name1, INTEGER len10)], joinType=[INNER])
   StreamExecCorrelate(invocation=[funcDyna0($cor0.c, 'string,int,int')], correlate=[table(funcDyna0($cor0.c,'string,int,int'))], select=[a,b,c,f0,f1,f2], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, VARCHAR(65536) f0, INTEGER f1, INTEGER f2)], joinType=[INNER])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -91,7 +91,7 @@ StreamExecCorrelate(invocation=[funcDyna0($cor1.c, 'string,int')], correlate=[ta
       <![CDATA[
 StreamExecCorrelate(invocation=[funcDyna0($cor1.c, 'string,int', 'a', 'b', 'c')], correlate=[table(funcDyna0($cor1.c,'string,int','a','b','c'))], select=[c,name,len0,len1,name1,len10], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len0, INTEGER len1, VARCHAR(65536) name1, INTEGER len10)], joinType=[INNER])
   StreamExecCorrelate(invocation=[funcDyna0($cor0.c, 'string,int,int', 'a', 'b', 'c')], correlate=[table(funcDyna0($cor0.c,'string,int,int','a','b','c'))], select=[a,b,c,f0,f1,f2], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, VARCHAR(65536) f0, INTEGER f1, INTEGER f2)], joinType=[INNER])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -99,7 +99,7 @@ StreamExecCorrelate(invocation=[funcDyna0($cor1.c, 'string,int', 'a', 'b', 'c')]
     <Resource name="plan">
       <![CDATA[
 StreamExecCorrelate(invocation=[funcDyna0($cor0.a)], correlate=[table(funcDyna0($cor0.a))], select=[a,b,c,f0,f1], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, INTEGER f0, INTEGER f1)], joinType=[INNER])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -107,7 +107,7 @@ StreamExecCorrelate(invocation=[funcDyna0($cor0.a)], correlate=[table(funcDyna0(
     <Resource name="plan">
       <![CDATA[
 StreamExecCorrelate(invocation=[func2($cor0.c)], correlate=[table(func2($cor0.c))], select=[c,name,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len)], joinType=[INNER], condition=[>($1, 2)])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -115,7 +115,7 @@ StreamExecCorrelate(invocation=[func2($cor0.c)], correlate=[table(func2($cor0.c)
     <Resource name="plan">
       <![CDATA[
 StreamExecCorrelate(invocation=[hierarchy($cor0.c)], correlate=[table(hierarchy($cor0.c))], select=[c,name,adult,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, BOOLEAN adult, INTEGER len)], joinType=[INNER])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -123,7 +123,7 @@ StreamExecCorrelate(invocation=[hierarchy($cor0.c)], correlate=[table(hierarchy(
     <Resource name="plan">
       <![CDATA[
 StreamExecCorrelate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[name,len], rowType=[RecordType(VARCHAR(65536) name, INTEGER len)], joinType=[INNER])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -132,7 +132,7 @@ StreamExecCorrelate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.
       <![CDATA[
 StreamExecCalc(select=[_1 AS name, objHash(_1) AS EXPR$1, _2 AS len])
   StreamExecCorrelate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[_1,_2], rowType=[RecordType(VARCHAR(65536) _1, INTEGER _2)], joinType=[INNER], condition=[>(objHash($0), 0)])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -141,7 +141,7 @@ StreamExecCalc(select=[_1 AS name, objHash(_1) AS EXPR$1, _2 AS len])
       <![CDATA[
 StreamExecCorrelate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[name,len], rowType=[RecordType(VARCHAR(65536) name, INTEGER len)], joinType=[INNER])
   StreamExecCalc(select=[a, PROCTIME() AS proctime])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -149,7 +149,7 @@ StreamExecCorrelate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.
     <Resource name="plan">
       <![CDATA[
 StreamExecCorrelate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[name,len], rowType=[RecordType(VARCHAR(65536) name, INTEGER len)], joinType=[INNER])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -158,7 +158,7 @@ StreamExecCorrelate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.
       <![CDATA[
 StreamExecCalc(select=[objHash(a) AS hash_a, _1 AS name, _2 AS len])
   StreamExecCorrelate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[a,_1,_2], rowType=[RecordType(VARBINARY a, VARCHAR(65536) _1, INTEGER _2)], joinType=[INNER])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -168,7 +168,7 @@ StreamExecCalc(select=[objHash(a) AS hash_a, _1 AS name, _2 AS len])
 StreamExecCalc(select=[_1 AS name, _2 AS len, PROCTIME(proc) AS proc])
   StreamExecCorrelate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[proc,_1,_2], rowType=[RecordType(TIME ATTRIBUTE(PROCTIME) proc, VARCHAR(65536) _1, INTEGER _2)], joinType=[INNER])
     StreamExecCalc(select=[a, PROCTIME() AS proc])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -177,7 +177,7 @@ StreamExecCalc(select=[_1 AS name, _2 AS len, PROCTIME(proc) AS proc])
       <![CDATA[
 StreamExecCalc(select=[_1 AS name, _2 AS len, b])
   StreamExecCorrelate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[b,_1,_2], rowType=[RecordType(TIME ATTRIBUTE(ROWTIME) b, VARCHAR(65536) _1, INTEGER _2)], joinType=[INNER])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -186,10 +186,10 @@ StreamExecCalc(select=[_1 AS name, _2 AS len, b])
       <![CDATA[
 StreamExecJoin(where=[=(c2, s)], join=[a2, b2, c2, c, s], joinType=[LeftOuterJoin])
   StreamExecExchange(distribution=[hash[c2]])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
   StreamExecExchange(distribution=[hash[s]])
     StreamExecCorrelate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[LEFT])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -197,7 +197,7 @@ StreamExecJoin(where=[=(c2, s)], join=[a2, b2, c2, c, s], joinType=[LeftOuterJoi
     <Resource name="plan">
       <![CDATA[
 StreamExecCorrelate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[LEFT])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -206,7 +206,7 @@ StreamExecCorrelate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c)
       <![CDATA[
 StreamExecCalc(select=[c, name, age])
   StreamExecCorrelate(invocation=[pojo($cor0.c)], correlate=[table(pojo($cor0.c))], select=[c,age,name], rowType=[RecordType(VARCHAR(65536) c, INTEGER age, VARCHAR(65536) name)], joinType=[INNER])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -214,7 +214,7 @@ StreamExecCalc(select=[c, name, age])
     <Resource name="plan">
       <![CDATA[
 StreamExecCorrelate(invocation=[tableFunc6($cor0.c)], correlate=[table(tableFunc6($cor0.c))], select=[c,f2], rowType=[RecordType(COMPOSITE(BaseRow(f0: Integer, f1: Integer, f2: Integer)) c, INTEGER f2)], joinType=[INNER])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -222,7 +222,7 @@ StreamExecCorrelate(invocation=[tableFunc6($cor0.c)], correlate=[table(tableFunc
     <Resource name="plan">
       <![CDATA[
 StreamExecCorrelate(invocation=[func2('hello', 'world', $cor0.c)], correlate=[table(func2('hello','world',$cor0.c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -230,7 +230,7 @@ StreamExecCorrelate(invocation=[func2('hello', 'world', $cor0.c)], correlate=[ta
     <Resource name="plan">
       <![CDATA[
 StreamExecCorrelate(invocation=[func1(SUBSTRING($cor0.c, 2))], correlate=[table(func1(SUBSTRING($cor0.c, 2)))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -238,7 +238,7 @@ StreamExecCorrelate(invocation=[func1(SUBSTRING($cor0.c, 2))], correlate=[table(
     <Resource name="plan">
       <![CDATA[
 StreamExecCorrelate(invocation=[func1('hello', 'world', $cor0.c)], correlate=[table(func1('hello','world',$cor0.c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

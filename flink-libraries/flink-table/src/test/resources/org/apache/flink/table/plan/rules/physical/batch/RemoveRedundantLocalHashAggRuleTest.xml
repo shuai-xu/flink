@@ -31,8 +31,8 @@ LogicalProject(EXPR$0=[$1])
       +- LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5])
          +- LogicalFilter(condition=[AND(=($0, $3), LIKE($2, 'He%'))])
             +- LogicalJoin(condition=[true], joinType=[inner])
-               :- LogicalTableScan(table=[[x, source: [selectedFields=[a, b, c]]]])
-               +- LogicalTableScan(table=[[y, source: [selectedFields=[d, e, f]]]])
+               :- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+               +- LogicalTableScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d, e, f]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -43,9 +43,9 @@ Calc(select=[EXPR$0])
       +- HashJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin], build=[left])
          :- Exchange(distribution=[hash[a]])
          :  +- Calc(select=[a, b], where=[LIKE(c, 'He%')])
-         :     +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         :     +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
          +- Exchange(distribution=[hash[d]])
-            +- TableSourceScan(table=[[y, source: [selectedFields=[d]]]], fields=[d])
+            +- TableSourceScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d]]]], fields=[d])
 ]]>
     </Resource>
   </TestCase>
@@ -66,7 +66,7 @@ LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
    +- LogicalProject(a=[$0], b=[$1], c=[$2], rk=[$3])
       +- LogicalFilter(condition=[<=($3, 10)])
          +- LogicalProject(a=[$0], b=[$1], c=[$2], rk=[RANK() OVER (PARTITION BY $0, $2 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-            +- LogicalTableScan(table=[[x, source: [selectedFields=[a, b, c]]]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -78,7 +78,7 @@ HashAggregate(isMerge=[false], groupBy=[a], select=[a, SUM(b) AS EXPR$1])
          +- Exchange(distribution=[hash[a]])
             +- Rank(rankFunction=[RANK], partitionBy=[a,c], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=10], global=[false], select=[a, b, c])
                +- Sort(orderBy=[a ASC, c ASC, b ASC])
-                  +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

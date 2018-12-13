@@ -94,11 +94,16 @@ abstract class StreamTableEnvironment(
 
   // the builder for Calcite RelNodes, Calcite's representation of a relational expression tree.
   override protected def createRelBuilder: FlinkRelBuilder = FlinkRelBuilder.create(
-    frameworkConfig, config, getTypeFactory, Array(
+    frameworkConfig,
+    config,
+    getTypeFactory,
+    Array(
       ConventionTraitDef.INSTANCE,
       FlinkRelDistributionTraitDef.INSTANCE,
       UpdateAsRetractionTraitDef.INSTANCE,
-      AccModeTraitDef.INSTANCE))
+      AccModeTraitDef.INSTANCE),
+    catalogManager
+  )
 
   /**
     * `inSubQueryThreshold` is set to Integer.MAX_VALUE which forces usage of OR

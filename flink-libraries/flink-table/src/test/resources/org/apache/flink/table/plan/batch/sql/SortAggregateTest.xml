@@ -24,7 +24,7 @@ limitations under the License.
       <![CDATA[
 LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 +- LogicalProject(b=[$1], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -32,7 +32,7 @@ LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 SortAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
 +- Sort(orderBy=[b ASC])
    +- Exchange(distribution=[hash[b]])
-      +- TableSourceScan(table=[[MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
+      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
 ]]>
     </Resource>
   </TestCase>
@@ -44,7 +44,7 @@ SortAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
       <![CDATA[
 LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 +- LogicalProject(b=[$1], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -52,7 +52,7 @@ LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 SortAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
 +- Sort(orderBy=[b ASC])
    +- Exchange(distribution=[hash[b]])
-      +- TableSourceScan(table=[[MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
+      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
 ]]>
     </Resource>
   </TestCase>
@@ -64,7 +64,7 @@ SortAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
       <![CDATA[
 LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 +- LogicalProject(b=[$1], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -72,7 +72,7 @@ LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 SortAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
 +- Sort(orderBy=[b ASC])
    +- Exchange(distribution=[hash[b]])
-      +- TableSourceScan(table=[[MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
+      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
 ]]>
     </Resource>
   </TestCase>
@@ -84,7 +84,7 @@ SortAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
       <![CDATA[
 LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 +- LogicalProject(b=[$1], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -92,7 +92,7 @@ LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 SortAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
 +- Sort(orderBy=[b ASC])
    +- Exchange(distribution=[hash[b]])
-      +- TableSourceScan(table=[[MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
+      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
 ]]>
     </Resource>
   </TestCase>
@@ -104,7 +104,7 @@ SortAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
       <![CDATA[
 LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 +- LogicalProject(b=[$1], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -112,7 +112,7 @@ LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 SortAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
 +- Sort(orderBy=[b ASC])
    +- Exchange(distribution=[hash[b]])
-      +- TableSourceScan(table=[[MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
+      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
 ]]>
     </Resource>
   </TestCase>
@@ -124,7 +124,7 @@ SortAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
       <![CDATA[
 LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 +- LogicalProject(b=[$1], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -132,7 +132,7 @@ LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 SortAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
 +- Sort(orderBy=[b ASC])
    +- Exchange(distribution=[hash[b]])
-      +- TableSourceScan(table=[[MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
+      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
 ]]>
     </Resource>
   </TestCase>
@@ -143,7 +143,7 @@ SortAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-+- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -151,7 +151,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
 SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final_SUM(sum$2) AS EXPR$1, Final_COUNT(count$3) AS EXPR$2])
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
-      +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -162,7 +162,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-+- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -170,7 +170,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
 SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final_SUM(sum$2) AS EXPR$1, Final_COUNT(count$3) AS EXPR$2])
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
-      +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -181,14 +181,14 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-+- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 SortAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
 +- Exchange(distribution=[single])
-   +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+   +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -199,14 +199,14 @@ SortAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-+- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 SortAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
 +- Exchange(distribution=[single])
-   +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+   +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -217,7 +217,7 @@ SortAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-+- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -225,7 +225,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
 SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final_SUM(sum$2) AS EXPR$1, Final_COUNT(count$3) AS EXPR$2])
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
-      +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -236,7 +236,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-+- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -244,7 +244,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
 SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final_SUM(sum$2) AS EXPR$1, Final_COUNT(count$3) AS EXPR$2])
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
-      +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -256,7 +256,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
 +- LogicalFilter(condition=[=($0, 1)])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -265,7 +265,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
       +- Calc(select=[a, b, c], where=[=(a, 1)])
-         +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -277,7 +277,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
 +- LogicalFilter(condition=[=($0, 1)])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -286,7 +286,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
       +- Calc(select=[a, b, c], where=[=(a, 1)])
-         +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -298,7 +298,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
 +- LogicalFilter(condition=[=($0, 1)])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -306,7 +306,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
 SortAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
 +- Exchange(distribution=[single])
    +- Calc(select=[a, b, c], where=[=(a, 1)])
-      +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -318,7 +318,7 @@ SortAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
 +- LogicalFilter(condition=[=($0, 1)])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -326,7 +326,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
 SortAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
 +- Exchange(distribution=[single])
    +- Calc(select=[a, b, c], where=[=(a, 1)])
-      +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -338,7 +338,7 @@ SortAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
 +- LogicalFilter(condition=[=($0, 1)])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -347,7 +347,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
       +- Calc(select=[a, b, c], where=[=(a, 1)])
-         +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -359,7 +359,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
 +- LogicalFilter(condition=[=($0, 1)])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -368,7 +368,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
       +- Calc(select=[a, b, c], where=[=(a, 1)])
-         +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -381,7 +381,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)], EXPR$3=[SUM($3)])
 +- LogicalProject(a=[$0], b=[$1], c=[$2], $f3=[$2._1])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[MyTable3]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -390,7 +390,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3, Partial_SUM($f3) AS sum$4])
       +- Calc(select=[CAST(1) AS a, b, c, c._1 AS $f3], where=[=(a, 1)])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -402,7 +402,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
       <![CDATA[
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -411,7 +411,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 +- SortAggregate(isMerge=[false], groupBy=[a], select=[a, AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
    +- Sort(orderBy=[a ASC])
       +- Exchange(distribution=[hash[a]])
-         +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -424,7 +424,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)], EXPR$3=[SUM($3)])
 +- LogicalProject(a=[$0], b=[$1], c=[$2], $f3=[$2._1])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[MyTable3]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -433,7 +433,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3, Partial_SUM($f3) AS sum$4])
       +- Calc(select=[CAST(1) AS a, b, c, c._1 AS $f3], where=[=(a, 1)])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -446,7 +446,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)], EXPR$3=[SUM($3)])
 +- LogicalProject(a=[$0], b=[$1], c=[$2], $f3=[$2._1])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[MyTable3]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -454,7 +454,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
 SortAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2, SUM($f3) AS EXPR$3])
 +- Exchange(distribution=[single])
    +- Calc(select=[CAST(1) AS a, b, c, c._1 AS $f3], where=[=(a, 1)])
-      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -467,7 +467,7 @@ SortAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)], EXPR$3=[SUM($3)])
 +- LogicalProject(a=[$0], b=[$1], c=[$2], $f3=[$2._1])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[MyTable3]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -475,7 +475,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
 SortAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2, SUM($f3) AS EXPR$3])
 +- Exchange(distribution=[single])
    +- Calc(select=[CAST(1) AS a, b, c, c._1 AS $f3], where=[=(a, 1)])
-      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -488,7 +488,7 @@ SortAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)], EXPR$3=[SUM($3)])
 +- LogicalProject(a=[$0], b=[$1], c=[$2], $f3=[$2._1])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[MyTable3]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -497,7 +497,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3, Partial_SUM($f3) AS sum$4])
       +- Calc(select=[CAST(1) AS a, b, c, c._1 AS $f3], where=[=(a, 1)])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -510,7 +510,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)], EXPR$3=[SUM($3)])
 +- LogicalProject(a=[$0], b=[$1], c=[$2], $f3=[$2._1])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[MyTable3]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -519,7 +519,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3, Partial_SUM($f3) AS sum$4])
       +- Calc(select=[CAST(1) AS a, b, c, c._1 AS $f3], where=[=(a, 1)])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -531,7 +531,7 @@ SortAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -543,7 +543,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
                +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-                  +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -555,7 +555,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -565,7 +565,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
    +- Sort(orderBy=[b ASC, c ASC, $e ASC])
       +- Exchange(distribution=[hash[b, c, $e]])
          +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-            +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -577,7 +577,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -587,7 +587,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
    +- Sort(orderBy=[b ASC, c ASC, $e ASC])
       +- Exchange(distribution=[hash[b, c, $e]])
          +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-            +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -599,7 +599,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -611,7 +611,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
                +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-                  +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -623,7 +623,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -635,7 +635,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
                +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-                  +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -647,7 +647,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       <![CDATA[
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -658,7 +658,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
       +- Exchange(distribution=[hash[a]])
          +- LocalSortAggregate(groupBy=[a], select=[a, Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
             +- Sort(orderBy=[a ASC])
-               +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+               +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -669,7 +669,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[countFun($0)], EXPR$1=[countFun($1)], EXPR$2=[countFun($2)])
-+- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -677,7 +677,7 @@ LogicalAggregate(group=[{}], EXPR$0=[countFun($0)], EXPR$1=[countFun($1)], EXPR$
 SortAggregate(isMerge=[true], select=[Final_countFun(EXPR$0) AS EXPR$0, Final_countFun(EXPR$1) AS EXPR$1, Final_countFun(EXPR$2) AS EXPR$2])
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_countFun(a) AS EXPR$0, Partial_countFun(b) AS EXPR$1, Partial_countFun(c) AS EXPR$2])
-      +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -689,7 +689,7 @@ SortAggregate(isMerge=[true], select=[Final_countFun(EXPR$0) AS EXPR$0, Final_co
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -701,7 +701,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
                +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-                  +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -713,7 +713,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       <![CDATA[
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -722,7 +722,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 +- SortAggregate(isMerge=[false], groupBy=[a], select=[a, AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
    +- Sort(orderBy=[a ASC])
       +- Exchange(distribution=[hash[a]])
-         +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -734,7 +734,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
       <![CDATA[
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -743,7 +743,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 +- SortAggregate(isMerge=[false], groupBy=[a], select=[a, AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
    +- Sort(orderBy=[a ASC])
       +- Exchange(distribution=[hash[a]])
-         +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -755,7 +755,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
       <![CDATA[
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -766,7 +766,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
       +- Exchange(distribution=[hash[a]])
          +- LocalSortAggregate(groupBy=[a], select=[a, Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
             +- Sort(orderBy=[a ASC])
-               +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+               +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -778,7 +778,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
       <![CDATA[
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -789,7 +789,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
       +- Exchange(distribution=[hash[a]])
          +- LocalSortAggregate(groupBy=[a], select=[a, Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
             +- Sort(orderBy=[a ASC])
-               +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+               +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -802,7 +802,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -814,7 +814,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
          +- LocalSortAggregate(groupBy=[a], select=[a, Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
             +- Sort(orderBy=[a ASC])
                +- Calc(select=[a, b, c], where=[=(a, 1)])
-                  +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -827,7 +827,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -837,7 +837,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
    +- Sort(orderBy=[a ASC])
       +- Exchange(distribution=[hash[a]])
          +- Calc(select=[a, b, c], where=[=(a, 1)])
-            +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -850,7 +850,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -860,7 +860,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
    +- Sort(orderBy=[a ASC])
       +- Exchange(distribution=[hash[a]])
          +- Calc(select=[a, b, c], where=[=(a, 1)])
-            +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -873,7 +873,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -883,7 +883,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
    +- Sort(orderBy=[a ASC])
       +- Exchange(distribution=[hash[a]])
          +- Calc(select=[a, b, c], where=[=(a, 1)])
-            +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -896,7 +896,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -908,7 +908,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
          +- LocalSortAggregate(groupBy=[a], select=[a, Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
             +- Sort(orderBy=[a ASC])
                +- Calc(select=[a, b, c], where=[=(a, 1)])
-                  +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -921,7 +921,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -933,7 +933,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
          +- LocalSortAggregate(groupBy=[a], select=[a, Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
             +- Sort(orderBy=[a ASC])
                +- Calc(select=[a, b, c], where=[=(a, 1)])
-                  +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -945,7 +945,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], a=[AVG($2)], g=[GROUP_ID()])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -957,7 +957,7 @@ Calc(select=[b, c, a, 0 AS g])
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
                +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
-                  +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -969,7 +969,7 @@ Calc(select=[b, c, a, 0 AS g])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], a=[AVG($2)], g=[GROUP_ID()])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -981,7 +981,7 @@ Calc(select=[b, c, a, 0 AS g])
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
                +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
-                  +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -993,7 +993,7 @@ Calc(select=[b, c, a, 0 AS g])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], a=[AVG($2)], g=[GROUP_ID()])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1003,7 +1003,7 @@ Calc(select=[b, c, a, 0 AS g])
    +- Sort(orderBy=[b ASC, c ASC, $e ASC])
       +- Exchange(distribution=[hash[b, c, $e]])
          +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
-            +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1015,7 +1015,7 @@ Calc(select=[b, c, a, 0 AS g])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], a=[AVG($2)], g=[GROUP_ID()])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1025,7 +1025,7 @@ Calc(select=[b, c, a, 0 AS g])
    +- Sort(orderBy=[b ASC, c ASC, $e ASC])
       +- Exchange(distribution=[hash[b, c, $e]])
          +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
-            +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1037,7 +1037,7 @@ Calc(select=[b, c, a, 0 AS g])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], a=[AVG($2)], g=[GROUP_ID()])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1049,7 +1049,7 @@ Calc(select=[b, c, a, 0 AS g])
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
                +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
-                  +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1061,7 +1061,7 @@ Calc(select=[b, c, a, 0 AS g])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], a=[AVG($2)], g=[GROUP_ID()])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1073,7 +1073,7 @@ Calc(select=[b, c, a, 0 AS g])
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
                +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
-                  +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1085,7 +1085,7 @@ Calc(select=[b, c, a, 0 AS g])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1097,7 +1097,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
                +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-                  +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1109,7 +1109,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1121,7 +1121,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
                +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-                  +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1133,7 +1133,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1143,7 +1143,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
    +- Sort(orderBy=[b ASC, c ASC, $e ASC])
       +- Exchange(distribution=[hash[b, c, $e]])
          +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-            +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1155,7 +1155,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1165,7 +1165,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
    +- Sort(orderBy=[b ASC, c ASC, $e ASC])
       +- Exchange(distribution=[hash[b, c, $e]])
          +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-            +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1177,7 +1177,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1189,7 +1189,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
                +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-                  +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1201,7 +1201,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1213,7 +1213,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
                +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-                  +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1224,7 +1224,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[countFun($0)], EXPR$1=[countFun($1)], EXPR$2=[countFun($2)])
-+- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1232,7 +1232,7 @@ LogicalAggregate(group=[{}], EXPR$0=[countFun($0)], EXPR$1=[countFun($1)], EXPR$
 SortAggregate(isMerge=[true], select=[Final_countFun(EXPR$0) AS EXPR$0, Final_countFun(EXPR$1) AS EXPR$1, Final_countFun(EXPR$2) AS EXPR$2])
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_countFun(a) AS EXPR$0, Partial_countFun(b) AS EXPR$1, Partial_countFun(c) AS EXPR$2])
-      +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1243,14 +1243,14 @@ SortAggregate(isMerge=[true], select=[Final_countFun(EXPR$0) AS EXPR$0, Final_co
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[countFun($0)], EXPR$1=[countFun($1)], EXPR$2=[countFun($2)])
-+- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 SortAggregate(isMerge=[false], select=[countFun(a) AS EXPR$0, countFun(b) AS EXPR$1, countFun(c) AS EXPR$2])
 +- Exchange(distribution=[single])
-   +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+   +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1261,14 +1261,14 @@ SortAggregate(isMerge=[false], select=[countFun(a) AS EXPR$0, countFun(b) AS EXP
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[countFun($0)], EXPR$1=[countFun($1)], EXPR$2=[countFun($2)])
-+- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 SortAggregate(isMerge=[false], select=[countFun(a) AS EXPR$0, countFun(b) AS EXPR$1, countFun(c) AS EXPR$2])
 +- Exchange(distribution=[single])
-   +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+   +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1279,7 +1279,7 @@ SortAggregate(isMerge=[false], select=[countFun(a) AS EXPR$0, countFun(b) AS EXP
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[countFun($0)], EXPR$1=[countFun($1)], EXPR$2=[countFun($2)])
-+- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1287,7 +1287,7 @@ LogicalAggregate(group=[{}], EXPR$0=[countFun($0)], EXPR$1=[countFun($1)], EXPR$
 SortAggregate(isMerge=[true], select=[Final_countFun(EXPR$0) AS EXPR$0, Final_countFun(EXPR$1) AS EXPR$1, Final_countFun(EXPR$2) AS EXPR$2])
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_countFun(a) AS EXPR$0, Partial_countFun(b) AS EXPR$1, Partial_countFun(c) AS EXPR$2])
-      +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1298,7 +1298,7 @@ SortAggregate(isMerge=[true], select=[Final_countFun(EXPR$0) AS EXPR$0, Final_co
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[countFun($0)], EXPR$1=[countFun($1)], EXPR$2=[countFun($2)])
-+- LogicalTableScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1306,7 +1306,7 @@ LogicalAggregate(group=[{}], EXPR$0=[countFun($0)], EXPR$1=[countFun($1)], EXPR$
 SortAggregate(isMerge=[true], select=[Final_countFun(EXPR$0) AS EXPR$0, Final_countFun(EXPR$1) AS EXPR$1, Final_countFun(EXPR$2) AS EXPR$2])
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_countFun(a) AS EXPR$0, Partial_countFun(b) AS EXPR$1, Partial_countFun(c) AS EXPR$2])
-      +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

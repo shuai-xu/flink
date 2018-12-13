@@ -22,18 +22,18 @@ limitations under the License.
 LogicalProject(c=[$2], g=[$6])
 +- LogicalFilter(condition=[AND(=($0, $3), <($3, 2), <($1, $7))])
    +- LogicalJoin(condition=[true], joinType=[inner])
-      :- LogicalTableScan(table=[[_DataStreamTable_0]])
-      +- LogicalTableScan(table=[[_DataStreamTable_1]])
+      :- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, g])
 +- HashJoin(where=[AND(=(a, d), <(b, h))], join=[a, b, c, d, g, h], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-   :- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[d, g, h], where=[<(d, 2)])
-         +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>
@@ -42,8 +42,8 @@ Calc(select=[c, g])
       <![CDATA[
 LogicalProject(c=[$2], g=[$6])
 +- LogicalJoin(condition=[=($1, $4)], joinType=[full])
-   :- LogicalTableScan(table=[[_DataStreamTable_0]])
-   +- LogicalTableScan(table=[[_DataStreamTable_1]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -52,10 +52,10 @@ Calc(select=[c, g])
 +- HashJoin(where=[=(b, e)], join=[e, g, b, c], joinType=[FullOuterJoin], build=[left])
    :- Exchange(distribution=[hash[e]])
    :  +- Calc(select=[e, g])
-   :     +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f, g, h])
    +- Exchange(distribution=[hash[b]])
       +- Calc(select=[b, c])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -65,8 +65,8 @@ Calc(select=[c, g])
 LogicalProject(c=[$2], g=[$6])
 +- LogicalFilter(condition=[=($0, $3)])
    +- LogicalJoin(condition=[true], joinType=[inner])
-      :- LogicalTableScan(table=[[_DataStreamTable_0]])
-      +- LogicalTableScan(table=[[_DataStreamTable_1]])
+      :- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -74,10 +74,10 @@ LogicalProject(c=[$2], g=[$6])
 Calc(select=[c, g])
 +- HashJoin(where=[=(a, d)], join=[d, g, a, c], joinType=[InnerJoin], isBroadcast=[true], build=[right])
    :- Calc(select=[d, g])
-   :  +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f, g, h])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[a, c])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -87,8 +87,8 @@ Calc(select=[c, g])
 LogicalProject(c=[$2], g=[$6])
 +- LogicalFilter(condition=[AND(=($0, $3), <($3, 2))])
    +- LogicalJoin(condition=[true], joinType=[inner])
-      :- LogicalTableScan(table=[[_DataStreamTable_0]])
-      +- LogicalTableScan(table=[[_DataStreamTable_1]])
+      :- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -96,10 +96,10 @@ LogicalProject(c=[$2], g=[$6])
 Calc(select=[c, g])
 +- HashJoin(where=[=(a, d)], join=[a, c, d, g], joinType=[InnerJoin], isBroadcast=[true], build=[right])
    :- Calc(select=[a, c])
-   :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[d, g], where=[<(d, 2)])
-         +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>
@@ -109,8 +109,8 @@ Calc(select=[c, g])
 LogicalProject(c=[$2], g=[$6])
 +- LogicalFilter(condition=[AND(=($0, $3), =($1, $4))])
    +- LogicalJoin(condition=[true], joinType=[inner])
-      :- LogicalTableScan(table=[[_DataStreamTable_0]])
-      +- LogicalTableScan(table=[[_DataStreamTable_1]])
+      :- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -118,9 +118,9 @@ LogicalProject(c=[$2], g=[$6])
 Calc(select=[c, g])
 +- HashJoin(where=[AND(=(a, d), =(b, e))], join=[d, e, g, a, b, c], joinType=[InnerJoin], isBroadcast=[true], build=[right])
    :- Calc(select=[d, e, g])
-   :  +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f, g, h])
    +- Exchange(distribution=[broadcast])
-      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -129,8 +129,8 @@ Calc(select=[c, g])
       <![CDATA[
 LogicalProject(c=[$2], g=[$6])
 +- LogicalJoin(condition=[=($1, $4)], joinType=[left])
-   :- LogicalTableScan(table=[[_DataStreamTable_0]])
-   +- LogicalTableScan(table=[[_DataStreamTable_1]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -139,9 +139,9 @@ Calc(select=[c, g])
 +- HashJoin(where=[=(b, e)], join=[e, g, b, c], joinType=[RightOuterJoin], isBroadcast=[true], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- Calc(select=[e, g])
-   :     +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+   :     +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f, g, h])
    +- Calc(select=[b, c])
-      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -150,8 +150,8 @@ Calc(select=[c, g])
       <![CDATA[
 LogicalProject(c=[$2], g=[$6])
 +- LogicalJoin(condition=[=($1, $4)], joinType=[right])
-   :- LogicalTableScan(table=[[_DataStreamTable_0]])
-   +- LogicalTableScan(table=[[_DataStreamTable_1]])
+   :- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -159,10 +159,10 @@ LogicalProject(c=[$2], g=[$6])
 Calc(select=[c, g])
 +- HashJoin(where=[=(b, e)], join=[e, g, b, c], joinType=[LeftOuterJoin], isBroadcast=[true], build=[right])
    :- Calc(select=[e, g])
-   :  +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+   :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f, g, h])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[b, c])
-         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

@@ -26,12 +26,12 @@ LogicalProject(a=[$0])
 +- LogicalUnion(all=[false])
    :- LogicalProject(a=[$0])
    :  +- LogicalFilter(condition=[>($1, 2)])
-   :     +- LogicalTableScan(table=[[MyTable1]])
+   :     +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
    +- LogicalUnion(all=[false])
       :- LogicalProject(a=[$0])
-      :  +- LogicalTableScan(table=[[MyTable2]])
+      :  +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
       +- LogicalProject(a=[$0])
-         +- LogicalTableScan(table=[[MyTable3]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, MyTable3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -41,12 +41,12 @@ HashAggregate(isMerge=[true], groupBy=[a], select=[a])
    +- LocalHashAggregate(groupBy=[a], select=[a])
       +- Union(all=[true], union=[a])
          :- Calc(select=[a], where=[>(b, 2)])
-         :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
          +- Union(all=[true], union=[a])
             :- Calc(select=[a])
-            :  +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
+            :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[a, b, c])
             +- Calc(select=[a])
-               +- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
+               +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -59,9 +59,9 @@ HashAggregate(isMerge=[true], groupBy=[a], select=[a])
 LogicalProject(a=[$0])
 +- LogicalUnion(all=[false])
    :- LogicalProject(a=[$0], b=[$1], c=[$2])
-   :  +- LogicalTableScan(table=[[MyTable1]])
+   :  +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
    +- LogicalProject(a=[$0], b=[$1], c=[$2])
-      +- LogicalTableScan(table=[[MyTable2]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -71,8 +71,8 @@ Calc(select=[a])
    +- Exchange(distribution=[hash[a, b, c]])
       +- LocalHashAggregate(groupBy=[a, b, c], select=[a, b, c])
          +- Union(all=[true], union=[a, b, c])
-            :- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
-            +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
+            :- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -86,18 +86,18 @@ LogicalProject(a=[$0], c=[$1])
 +- LogicalFilter(condition=[>($0, 2)])
    +- LogicalUnion(all=[true])
       :- LogicalProject(a=[$0], c=[$2])
-      :  +- LogicalTableScan(table=[[MyTable1]])
+      :  +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
       +- LogicalProject(a=[$0], c=[$2])
-         +- LogicalTableScan(table=[[MyTable2]])
+         +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Union(all=[true], union=[a, c])
 :- Calc(select=[a, c], where=[>(a, 2)])
-:  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 +- Calc(select=[a, c], where=[>(a, 2)])
-   +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -110,18 +110,18 @@ Union(all=[true], union=[a, c])
 LogicalProject(a=[$0], b=[$1])
 +- LogicalUnion(all=[true])
    :- LogicalProject(a=[$0], b=[$1])
-   :  +- LogicalTableScan(table=[[MyTable1]])
+   :  +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
    +- LogicalProject(a=[$0], EXPR$1=[0])
-      +- LogicalTableScan(table=[[MyTable2]])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Union(all=[true], union=[a, b])
 :- Calc(select=[a, CAST(b) AS b])
-:  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+:  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
 +- Calc(select=[a, CAST(0.0) AS EXPR$1])
-   +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -138,24 +138,24 @@ LogicalProject(a=[$0], EXPR$1=[/(CAST($5):DOUBLE, CAST($1):DOUBLE)], EXPR$2=[/(C
       :  :- LogicalJoin(condition=[true], joinType=[inner])
       :  :  :- LogicalUnion(all=[true])
       :  :  :  :- LogicalProject(a=[$0], b=[$1], c=[$2], sale_type=['s'])
-      :  :  :  :  +- LogicalTableScan(table=[[MyTable1]])
+      :  :  :  :  +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
       :  :  :  +- LogicalProject(a=[$0], b=[$1], c=[$2], sale_type=['w'])
-      :  :  :     +- LogicalTableScan(table=[[MyTable2]])
+      :  :  :     +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
       :  :  +- LogicalUnion(all=[true])
       :  :     :- LogicalProject(a=[$0], b=[$1], c=[$2], sale_type=['s'])
-      :  :     :  +- LogicalTableScan(table=[[MyTable1]])
+      :  :     :  +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
       :  :     +- LogicalProject(a=[$0], b=[$1], c=[$2], sale_type=['w'])
-      :  :        +- LogicalTableScan(table=[[MyTable2]])
+      :  :        +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
       :  +- LogicalUnion(all=[true])
       :     :- LogicalProject(a=[$0], b=[$1], c=[$2], sale_type=['s'])
-      :     :  +- LogicalTableScan(table=[[MyTable1]])
+      :     :  +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
       :     +- LogicalProject(a=[$0], b=[$1], c=[$2], sale_type=['w'])
-      :        +- LogicalTableScan(table=[[MyTable2]])
+      :        +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
       +- LogicalUnion(all=[true])
          :- LogicalProject(a=[$0], b=[$1], c=[$2], sale_type=['s'])
-         :  +- LogicalTableScan(table=[[MyTable1]])
+         :  +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
          +- LogicalProject(a=[$0], b=[$1], c=[$2], sale_type=['w'])
-            +- LogicalTableScan(table=[[MyTable2]])
+            +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -169,15 +169,15 @@ Calc(select=[a, /(CAST(b0), CAST(b)) AS EXPR$1, /(CAST(b2), CAST(b1)) AS EXPR$2]
    :     :     +- HashJoin(where=[=(a, a0)], join=[a, b, a0, b0], joinType=[InnerJoin], isBroadcast=[true], build=[right])
    :     :        :- Exchange(distribution=[hash[a]], exchange_mode=[BATCH])
    :     :        :  +- Calc(select=[a, b], where=[=(c, '2001')])
-   :     :        :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :     :        :     +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
    :     :        +- Exchange(distribution=[broadcast])
    :     :           +- Calc(select=[a, b], where=[=(c, '2002')])
-   :     :              +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :     :              +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
    :     +- Calc(select=[a, b], where=[=(c, '2001')])
-   :        +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
+   :        +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[a, b, c])
    +- Exchange(distribution=[hash[a]], exchange_mode=[BATCH])
       +- Calc(select=[a, b], where=[=(c, '2002')])
-         +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
