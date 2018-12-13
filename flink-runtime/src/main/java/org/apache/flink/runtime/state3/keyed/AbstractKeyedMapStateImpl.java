@@ -374,6 +374,10 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 
 					outputStream.reset();
 					StateSerializerUtil.writeGroup(outputStream, group);
+					// we need to use state name to distinguish different column families.
+					if (!stateStorage.supportMultiColumnFamilies()) {
+						outputStream.write(stateNameByte);
+					}
 					StateSerializerUtil.serializeItemWithKeyPrefix(outputView, key, keySerializer);
 					int prefixLength = outputStream.getPosition();
 
