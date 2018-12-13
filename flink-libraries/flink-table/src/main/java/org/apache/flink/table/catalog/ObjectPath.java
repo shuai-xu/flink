@@ -23,22 +23,22 @@ import java.util.Objects;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * A schema name and object (table/function) name combo in a catalog.
+ * A database name and object (table/function) name combo in a catalog.
  */
 public class ObjectPath {
-	private final String schemaName;
+	private final String dbName;
 	private final String objectName;
 
-	public ObjectPath(String schemaName, String objectName) {
-		checkNotNull(schemaName, "schemaName cannot be null");
+	public ObjectPath(String dbName, String objectName) {
+		checkNotNull(dbName, "dbName cannot be null");
 		checkNotNull(objectName, "objectName cannot be null");
 
-		this.schemaName = schemaName;
+		this.dbName = dbName;
 		this.objectName = objectName;
 	}
 
-	public String getSchemaName() {
-		return schemaName;
+	public String getDbName() {
+		return dbName;
 	}
 
 	public String getObjectName() {
@@ -46,7 +46,7 @@ public class ObjectPath {
 	}
 
 	public String getFullName() {
-		return String.format("%s.%s", schemaName, objectName);
+		return String.format("%s.%s", dbName, objectName);
 	}
 
 	public static ObjectPath fromString(String fullName) {
@@ -54,7 +54,7 @@ public class ObjectPath {
 
 		if (paths.length != 2) {
 			throw new IllegalArgumentException(
-				String.format("Cannot get split '%s' to get schemaName and objectName", fullName));
+				String.format("Cannot get split '%s' to get dbName and objectName", fullName));
 		}
 
 		return new ObjectPath(paths[0], paths[1]);
@@ -72,19 +72,19 @@ public class ObjectPath {
 
 		ObjectPath that = (ObjectPath) o;
 
-		return Objects.equals(schemaName, that.schemaName) &&
+		return Objects.equals(dbName, that.dbName) &&
 			Objects.equals(objectName, that.objectName);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(schemaName, objectName);
+		return Objects.hash(dbName, objectName);
 	}
 
 	@Override
 	public String toString() {
 		return "ObjectPath{" +
-			"schemaName='" + schemaName + '\'' +
+			"dbName='" + dbName + '\'' +
 			", objectName='" + objectName + '\'' +
 			'}';
 	}

@@ -34,7 +34,7 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 * @param dbName    The name of the database to add.
 	 * @param database        The database to add.
 	 * @param ignoreIfExists Flag to specify behavior if a database with the given name already
-	 *                       exists: if set to false, it throws a SchemaAlreadyExistException,
+	 *                       exists: if set to false, it throws a DatabaseAlreadyExistException,
 	 *                       if set to true, nothing happens.
 	 * @throws DatabaseAlreadyExistException
 	 *                       thrown if the database does already exist in the catalog
@@ -58,26 +58,26 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 * Modifies an existing database.
 	 *
 	 * @param dbName        Name of the database to modify.
-	 * @param database           The new database to replace the existing database.
+	 * @param newDatabase           The new database to replace the existing database.
 	 * @param ignoreIfNotExists Flag to specify behavior if the database does not exist:
 	 *                          if set to false, throw an exception,
 	 *                          if set to true, nothing happens.
 	 * @throws DatabaseNotExistException thrown if the database does not exist in the catalog
 	 */
-	void alterDatabase(String dbName, CatalogDatabase database, boolean ignoreIfNotExists)
+	void alterDatabase(String dbName, CatalogDatabase newDatabase, boolean ignoreIfNotExists)
 		throws DatabaseNotExistException;
 
 	/**
 	 * Renames an existing database.
 	 *
 	 * @param dbName        Name of the database to modify.
-	 * @param newSchemaName     New name of the database.
+	 * @param newDbName     New name of the database.
 	 * @param ignoreIfNotExists Flag to specify behavior if the database does not exist:
 	 *                          if set to false, throw an exception,
 	 *                          if set to true, nothing happens.
 	 * @throws DatabaseNotExistException thrown if the database does not exist in the catalog
 	 */
-	void renameDatabase(String dbName, String newSchemaName, boolean ignoreIfNotExists)
+	void renameDatabase(String dbName, String newDbName, boolean ignoreIfNotExists)
 		throws DatabaseNotExistException;
 
 	/**
@@ -109,13 +109,13 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 * Modifies an existing table.
 	 *
 	 * @param tableName         The name of the table to modify.
-	 * @param table             The new table which replaces the existing table.
+	 * @param newTable             The new table which replaces the existing table.
 	 * @param ignoreIfNotExists Flag to specify behavior if the table does not exist:
 	 *                          if set to false, throw an exception,
 	 *                          if set to true, nothing happens.
 	 * @throws TableNotExistException   thrown if the table does not exist
 	 */
-	void alterTable(ObjectPath tableName, ExternalCatalogTable table, boolean ignoreIfNotExists)
+	void alterTable(ObjectPath tableName, ExternalCatalogTable newTable, boolean ignoreIfNotExists)
 		throws TableNotExistException;
 
 	/**
@@ -129,6 +129,6 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 * @throws TableNotExistException thrown if the table does not exist
 	 * @throws DatabaseNotExistException thrown if the new database that this table belongs to doesn't exist
 	 */
-	void renameTable(ObjectPath tableName, ObjectPath newTableName, boolean ignoreIfNotExists)
+	void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists)
 		throws TableNotExistException, DatabaseNotExistException;
 }

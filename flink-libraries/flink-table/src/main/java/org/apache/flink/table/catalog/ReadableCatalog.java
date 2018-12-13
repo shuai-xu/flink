@@ -73,5 +73,4 @@ public interface ReadableCatalog extends Closeable {
 	 * @return The requested table.
 	 */
 	ExternalCatalogTable getTable(ObjectPath tableName) throws TableNotExistException;
-
 }

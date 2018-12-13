@@ -22,14 +22,10 @@ import org.apache.flink.table.api.DatabaseAlreadyExistException;
 import org.apache.flink.table.api.DatabaseNotExistException;
 import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
-import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.InternalType;
 
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.HashMap;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -41,15 +37,16 @@ import static org.junit.Assert.assertTrue;
 /**
  * Tests for FlinkInMemoryCatalog.
  */
-public class FlinkInMemoryCatalogTest {
+public class FlinkInMemoryCatalogTest extends CatalogTestBase {
 
 	private FlinkInMemoryCatalog catalog;
 
 	private final String db1 = "db1";
 	private final String db2 = "db2";
-	private final ObjectPath table1 = ObjectPath.fromString("db1.t1");
-	private final ObjectPath table2 = ObjectPath.fromString("db2.t2");
-	private final ObjectPath nonExistTable = ObjectPath.fromString("non.exist");
+	private final ObjectPath path1 = ObjectPath.fromString("db1.t1");
+	private final ObjectPath path2 = ObjectPath.fromString("db2.t2");
+	private final ObjectPath nonExistDbPath = ObjectPath.fromString("non.exist");
+	private final ObjectPath nonExistTablePath = ObjectPath.fromString("db1.nonexist");
 
 	@Before
 	public void setUp() {
@@ -60,125 +57,140 @@ public class FlinkInMemoryCatalogTest {
 	public void testCreateTable() {
 		assertTrue(catalog.listAllTables().isEmpty());
 
-		catalog.createDatabase(db1, createSchema(), false);
-		catalog.createTable(table1, InMemoryExternalCatalogTest.createTable(), false);
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createTable(), false);
 		List<ObjectPath> tables = catalog.listAllTables();
 
 		assertEquals(1, tables.size());
-		assertEquals(table1.getFullName(), tables.get(0).getFullName());
+		assertEquals(path1.getFullName(), tables.get(0).getFullName());
 
 		List<ObjectPath> s1Tables = catalog.listTablesByDatabase(db1);
 
 		assertEquals(1, s1Tables.size());
-		assertEquals(table1.getFullName(), tables.get(0).getFullName());
+		assertEquals(path1.getFullName(), tables.get(0).getFullName());
+	}
+
+	@Test(expected = DatabaseNotExistException.class)
+	public void testCreateTableNotExistDb() {
+		assertTrue(catalog.listAllTables().isEmpty());
+
+		catalog.createTable(ObjectPath.fromString("nonexist.t1"), createTable(), false);
 	}
 
 	@Test(expected = TableAlreadyExistException.class)
 	public void testCreateExistedTable() {
-		catalog.createDatabase(db1, createSchema(), false);
-		catalog.createTable(table1, InMemoryExternalCatalogTest.createTable(), false);
-		catalog.createTable(table1, InMemoryExternalCatalogTest.createTable(), false);
-	}
-
-	@Test(expected = DatabaseNotExistException.class)
-	public void testCreateTableNotExistSchema() {
-		assertTrue(catalog.listAllTables().isEmpty());
-
-		catalog.createTable(ObjectPath.fromString("nonexist.t1"), InMemoryExternalCatalogTest.createTable(), false);
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createTable(), false);
+		catalog.createTable(path1, createTable(), false);
 	}
 
 	@Test
 	public void testGetTable() {
-		ExternalCatalogTable originTable = InMemoryExternalCatalogTest.createTable();
-		catalog.createDatabase(db1, createSchema(), false);
-		catalog.createTable(table1, originTable, false);
+		ExternalCatalogTable originTable = createTable();
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, originTable, false);
 
-		assertEquals(catalog.getTable(table1), originTable);
+		assertEquals(catalog.getTable(path1), originTable);
+	}
+
+	@Test(expected = TableNotExistException.class)
+	public void testGetNotExistDb() {
+		catalog.getTable(nonExistDbPath);
 	}
 
 	@Test(expected = TableNotExistException.class)
 	public void testGetNotExistTable() {
-		catalog.getTable(nonExistTable);
+		catalog.createDatabase(db1, createDb(), false);
+
+		catalog.getTable(nonExistTablePath);
 	}
 
 	@Test
 	public void testAlterTable() {
-		ExternalCatalogTable table = InMemoryExternalCatalogTest.createTable();
-		catalog.createDatabase(db1, createSchema(), false);
-		catalog.createTable(table1, table, false);
+		ExternalCatalogTable table = createTable();
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, table, false);
 
-		assertEquals(catalog.getTable(table1), table);
+		assertEquals(catalog.getTable(path1), table);
 
-		ExternalCatalogTable newTable = InMemoryExternalCatalogTest.createAnotherTable();
-		catalog.alterTable(table1, newTable, false);
-		ExternalCatalogTable currentTable = catalog.getTable(table1);
+		ExternalCatalogTable newTable = createAnotherTable();
+		catalog.alterTable(path1, newTable, false);
+		ExternalCatalogTable currentTable = catalog.getTable(path1);
 
 		assertNotEquals(table, currentTable);
 		assertEquals(newTable, currentTable);
 	}
 
 	@Test(expected = TableNotExistException.class)
+	public void testAlterNotExistDb() {
+		catalog.alterTable(nonExistDbPath, createTable(), false);
+	}
+
+	@Test(expected = TableNotExistException.class)
 	public void testAlterNotExistTable() {
-		catalog.alterTable(nonExistTable, InMemoryExternalCatalogTest.createTable(), false);
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.alterTable(nonExistTablePath, createTable(), false);
 	}
 
 	@Test
 	public void testRenameTable() {
-		catalog.createDatabase(db1, createSchema(), false);
-		catalog.createDatabase(db2, createAnotherSchema(), false);
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createDatabase(db2, createAnotherDb(), false);
 
-		ExternalCatalogTable table = InMemoryExternalCatalogTest.createTable();
-		catalog.createTable(table1, table, false);
+		ExternalCatalogTable table = createTable();
+		catalog.createTable(path1, table, false);
 
-		assertEquals(table1, catalog.listAllTables().get(0));
+		assertEquals(path1, catalog.listAllTables().get(0));
 
-		catalog.renameTable(table1, table2, false);
+		catalog.renameTable(path1, path2.getObjectName(), false);
 
-		assertEquals(table2, catalog.listAllTables().get(0));
+		assertEquals(new ObjectPath(path1.getDbName(), path2.getObjectName()), catalog.listAllTables().get(0));
+	}
+
+	@Test(expected = TableNotExistException.class)
+	public void testRenameNotExistDb() {
+		catalog.renameTable(nonExistDbPath, "", false);
 	}
 
 	@Test(expected = TableNotExistException.class)
 	public void testRenameNotExistTable() {
-		catalog.renameTable(nonExistTable, table2, false);
-	}
-
-	@Test(expected = DatabaseNotExistException.class)
-	public void testRenameTableNotExistSchema() {
-		ExternalCatalogTable table = InMemoryExternalCatalogTest.createTable();
-		catalog.createTable(table1, table, false);
-
-		assertEquals(table1, catalog.listAllTables().get(0));
-
-		catalog.renameTable(table1, ObjectPath.fromString("nonexist.t1"), false);
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.renameTable(nonExistTablePath, path2.getObjectName(), false);
 	}
 
 	@Test
 	public void testDropTable() {
-		catalog.createDatabase(db1, createSchema(), false);
-		catalog.createTable(table1, InMemoryExternalCatalogTest.createTable(), false);
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createTable(), false);
 
-		assertTrue(catalog.listAllTables().contains(table1));
+		assertTrue(catalog.listAllTables().contains(path1));
 
-		catalog.dropTable(table1, false);
+		catalog.dropTable(path1, false);
 
-		assertFalse(catalog.listAllTables().contains(table1));
+		assertFalse(catalog.listAllTables().contains(path1));
+	}
+
+	@Test(expected = TableNotExistException.class)
+	public void testDropNotExistDb() {
+		catalog.dropTable(nonExistDbPath, false);
 	}
 
 	@Test(expected = TableNotExistException.class)
 	public void testDropNotExistTable() {
-		catalog.dropTable(nonExistTable, false);
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.dropTable(nonExistTablePath, false);
 	}
 
 	@Test
-	public void testCreateSchema() {
-		catalog.createDatabase("db2", createSchema(), false);
+	public void testCreateDb() {
+		catalog.createDatabase("db2", createDb(), false);
 
 		assertEquals(1, catalog.listDatabases().size());
 	}
 
 	@Test(expected = DatabaseAlreadyExistException.class)
-	public void testCreateExistedSchema() {
-		catalog.createDatabase("existed", createSchema(), false);
+	public void testCreateExistedDb() {
+		catalog.createDatabase("existed", createDb(), false);
 
 		assertNotNull(catalog.getDatabase("existed"));
 
@@ -187,22 +199,22 @@ public class FlinkInMemoryCatalogTest {
 		assertEquals(1, schemas.size());
 		assertEquals("existed", schemas.get(0));
 
-		catalog.createDatabase("existed", createSchema(), false);
+		catalog.createDatabase("existed", createDb(), false);
 	}
 
 	@Test(expected = DatabaseNotExistException.class)
-	public void testGetNotExistSchema() {
+	public void testGetDbNotExistDb() {
 		catalog.getDatabase("notexisted");
 	}
 
 	@Test
-	public void testAlterSchema() {
-		CatalogDatabase schema = createSchema();
+	public void testAlterDb() {
+		CatalogDatabase schema = createDb();
 		catalog.createDatabase(db1, schema, false);
 
 		assertEquals(schema, catalog.getDatabase(db1));
 
-		CatalogDatabase newSchema = createAnotherSchema();
+		CatalogDatabase newSchema = createAnotherDb();
 		catalog.alterDatabase(db1, newSchema, false);
 		CatalogDatabase currentSchema = catalog.getDatabase(db1);
 
@@ -211,13 +223,13 @@ public class FlinkInMemoryCatalogTest {
 	}
 
 	@Test(expected = DatabaseNotExistException.class)
-	public void testAlterNotExistSchema() {
-		catalog.alterDatabase("nonexist", createSchema(), false);
+	public void testAlterDbNotExistDb() {
+		catalog.alterDatabase("nonexist", createDb(), false);
 	}
 
 	@Test
-	public void testRenameSchema() {
-		CatalogDatabase schema = createSchema();
+	public void testRenameDb() {
+		CatalogDatabase schema = createDb();
 		catalog.createDatabase(db1, schema, false);
 
 		assertEquals(db1, catalog.listDatabases().get(0));
@@ -228,46 +240,18 @@ public class FlinkInMemoryCatalogTest {
 	}
 
 	@Test(expected = DatabaseNotExistException.class)
-	public void testRenameNotExistSchema() {
+	public void testRenameDbNotExistDb() {
 		catalog.renameDatabase("nonexisit", db2, false);
 	}
 
 	@Test
-	public void testDropSchema() {
-		catalog.createDatabase(db1, createSchema(), false);
+	public void testDropDb() {
+		catalog.createDatabase(db1, createDb(), false);
 
 		assertTrue(catalog.listDatabases().contains(db1));
 
 		catalog.dropDatabase(db1, false);
 
 		assertFalse(catalog.listDatabases().contains(db1));
-	}
-
-	private CatalogDatabase createSchema() {
-		return new CatalogDatabase(new HashMap<>());
-	}
-
-	private CatalogDatabase createAnotherSchema() {
-		return new CatalogDatabase(new HashMap<String, String>() {{
-			put("key", "value");
-		}});
-	}
-
-	private CatalogTable createTable() {
-		TableSchema schema = new TableSchema(
-			new String[] {"first", "second"},
-			new InternalType[]{ DataTypes.STRING, DataTypes.INT }
-		);
-
-		return new CatalogTable("csv", schema, null, new HashMap<>());
-	}
-
-	private CatalogTable createAnotherTable() {
-		TableSchema schema = new TableSchema(
-			new String[] {"first", "second"},
-			new InternalType[]{ DataTypes.STRING, DataTypes.STRING }
-		);
-
-		return new CatalogTable("csv", schema, null, new HashMap<>());
 	}
 }

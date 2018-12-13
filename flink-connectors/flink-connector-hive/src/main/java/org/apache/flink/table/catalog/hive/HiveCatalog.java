@@ -122,13 +122,15 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	public ExternalCatalogTable getTable(ObjectPath tableName) throws TableNotExistException {
 		Table hiveTable;
 
+		String dbName = tableName.getDbName();
+		String tblName = tableName.getObjectName();
 		try {
-			hiveTable = client.getTable(tableName.getSchemaName(), tableName.getObjectName());
+			hiveTable = client.getTable(dbName, tblName);
 		} catch (NoSuchObjectException e) {
-			throw new TableNotExistException(catalogName, tableName.getObjectName());
+			throw new TableNotExistException(catalogName, tblName);
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed getting table %s in database %s", tableName, DEFAULT_FLINK_DATABASE), e);
+				String.format("Failed getting table %s in database %s", dbName, tblName), e);
 		}
 
 		return new ExternalCatalogTable(
@@ -222,12 +224,12 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void alterTable(ObjectPath tableName, ExternalCatalogTable table, boolean ignoreIfNotExists) throws TableNotExistException {
+	public void alterTable(ObjectPath tableName, ExternalCatalogTable newTable, boolean ignoreIfNotExists) throws TableNotExistException {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public void renameTable(ObjectPath tableName, ObjectPath newTableName, boolean ignoreIfNotExists) throws TableNotExistException, DatabaseNotExistException {
+	public void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists) throws TableNotExistException, DatabaseNotExistException {
 		throw new UnsupportedOperationException();
 	}
 
@@ -244,12 +246,12 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void alterDatabase(String dbName, CatalogDatabase database, boolean ignoreIfNotExists) throws DatabaseNotExistException {
+	public void alterDatabase(String dbName, CatalogDatabase newDatabase, boolean ignoreIfNotExists) throws DatabaseNotExistException {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public void renameDatabase(String dbName, String newSchemaName, boolean ignoreIfNotExists) throws DatabaseNotExistException {
+	public void renameDatabase(String dbName, String newDbName, boolean ignoreIfNotExists) throws DatabaseNotExistException {
 		throw new UnsupportedOperationException();
 	}
 
