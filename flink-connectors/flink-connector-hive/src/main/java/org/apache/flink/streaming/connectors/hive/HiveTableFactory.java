@@ -56,7 +56,7 @@ public class HiveTableFactory implements TableFactory {
 		String hiveMetastoreURI = tableProperties.getString("hive.metastore.uris".toLowerCase(), null);
 		HiveCatalog hiveCatalog = new HiveCatalog(s, hiveMetastoreURI);
 		ExternalCatalogTable externalCatalogTable = hiveCatalog.getTable(ObjectPath.fromString(tableName));
-		TableStats tableStats = externalCatalogTable.stats();
+		TableStats tableStats = externalCatalogTable.getTableStats();
 		HiveConf hiveConf = new HiveConf();
 		// We will have to find out some necessary options and expose them to the outside.
 		hiveConf.setVar(HiveConf.ConfVars.METASTOREURIS, hiveMetastoreURI);
@@ -65,7 +65,7 @@ public class HiveTableFactory implements TableFactory {
 		for (Map.Entry<String, String> prop : props.entrySet()) {
 			hiveConf.set(prop.getKey(), prop.getValue());
 		}
-		for (Map.Entry<String, String> prop : externalCatalogTable.properties().entrySet()) {
+		for (Map.Entry<String, String> prop : externalCatalogTable.getProperties().entrySet()) {
 			hiveConf.set(prop.getKey(), prop.getValue());
 		}
 		try {
