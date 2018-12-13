@@ -80,11 +80,15 @@ public class TableServiceClient implements LifeCycleAware {
 
 	private ServiceRegistry registry;
 
+	public void setRegistry(ServiceRegistry registry) {
+		this.registry = registry;
+	}
+
 	public final ServiceRegistry getRegistry() {
 		return registry;
 	}
 
-	List<Integer> getPartitions(String tableName) {
+	public List<Integer> getPartitions(String tableName) {
 		List<ServiceInstance> serviceInfoList = getRegistry().getAllInstances(FlinkTableService.class.getSimpleName());
 		List<Integer> partitions = new ArrayList<>();
 		if (serviceInfoList != null) {
@@ -131,7 +135,7 @@ public class TableServiceClient implements LifeCycleAware {
 		return partitions;
 	}
 
-	void write(String tableName, int partitionIndex, BaseRow row, BaseRowSerializer baseRowSerializer) {
+	public void write(String tableName, int partitionIndex, BaseRow row, BaseRowSerializer baseRowSerializer) {
 		ensureConnected(tableName, partitionIndex);
 		if (writeBuffer == null) {
 			writeBuffer = new TableServiceBuffer(tableName, partitionIndex, 32000);
@@ -155,7 +159,7 @@ public class TableServiceClient implements LifeCycleAware {
 		}
 	}
 
-	BaseRow readNext(String tableName, int partitionIndex, BaseRowSerializer baseRowSerializer) {
+	public BaseRow readNext(String tableName, int partitionIndex, BaseRowSerializer baseRowSerializer) {
 		ensureConnected(tableName, partitionIndex);
 		if (readBuffer == null) {
 			readBuffer = new TableServiceBuffer(tableName, partitionIndex, BUFFER_READ_SIZE);
