@@ -41,6 +41,7 @@ import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.api.UnknownDBException;
+import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.parquet.Strings;
 import org.apache.thrift.TException;
 
@@ -58,6 +59,7 @@ import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_L
 import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_NUM_BUCKETS;
 import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_OUTPUT_FORMAT;
 import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_SERDE_LIBRARY;
+import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT;
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -160,6 +162,8 @@ public class HiveCatalog implements ReadableWritableCatalog {
 		prop.put(HIVE_TABLE_OUTPUT_FORMAT, sd.getOutputFormat());
 		prop.put(HIVE_TABLE_COMPRESSED, String.valueOf(sd.isCompressed()));
 		prop.put(HIVE_TABLE_NUM_BUCKETS, String.valueOf(sd.getNumBuckets()));
+		prop.put(HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT,
+				String.valueOf(sd.getSerdeInfo().getParameters().get(serdeConstants.SERIALIZATION_FORMAT)));
 
 		return prop;
 	}
