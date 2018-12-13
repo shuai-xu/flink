@@ -92,7 +92,7 @@ class FlinkRelOptTable protected(
     override def generationStrategy(table:RelOptTable, iColumn: Int):ColumnStrategy = {
       table.unwrap(classOf[CatalogTable]) match {
         case catalogTable: CatalogTable if
-            !catalogTable.table.richTableSchema.getColumnNames.contains(
+            !catalogTable.table.getRichTableSchema.getColumnNames.contains(
                 table.getRowType.getFieldList.get(iColumn).getName) =>
           ColumnStrategy.VIRTUAL
         case _ =>

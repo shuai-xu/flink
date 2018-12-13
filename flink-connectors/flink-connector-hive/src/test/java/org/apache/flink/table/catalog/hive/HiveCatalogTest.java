@@ -60,8 +60,8 @@ public class HiveCatalogTest {
 
 		ExternalCatalogTable table = hiveCatalog.getTable(ObjectPath.fromString("default.hivetable"));
 
-		assertEquals(TABLE_TYPE, table.tableType());
-		assertEquals(hiveCatalog.getTableSchema(getFieldSchemas()), table.schema());
+		assertEquals(TABLE_TYPE, table.getTableType());
+		assertEquals(hiveCatalog.getTableSchema(getFieldSchemas()), table.getTableSchema());
 	}
 
 	@Test

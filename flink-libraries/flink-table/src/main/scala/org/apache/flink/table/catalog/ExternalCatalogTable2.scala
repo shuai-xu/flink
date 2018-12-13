@@ -18,12 +18,8 @@
 
 package org.apache.flink.table.catalog
 
-import java.util.{HashMap => JHashMap, LinkedHashSet => JLinkedHashSet, Map => JMap}
-import java.lang.{Long => JLong}
-
-import org.apache.flink.table.api.{RichTableSchema, TableSchema}
+import java.util.{Map => JMap}
 import org.apache.flink.table.plan.stats.TableStats
-import org.apache.calcite.rex.RexNode
 import org.apache.flink.table.descriptors.StatisticsValidator.{STATISTICS_COLUMNS, STATISTICS_ROW_COUNT, readColumnStats}
 import org.apache.flink.table.descriptors.StreamTableDescriptorValidator.{UPDATE_MODE, UPDATE_MODE_VALUE_APPEND, UPDATE_MODE_VALUE_RETRACT, UPDATE_MODE_VALUE_UPSERT}
 import org.apache.flink.table.descriptors._
@@ -31,36 +27,6 @@ import org.apache.flink.table.factories.TableFactory
 import org.apache.flink.table.util.JavaScalaConversionUtil.toScala
 
 import scala.collection.JavaConverters._
-
-/**
-  * Defines a table in an [[ExternalCatalog]].
-  *
-  * @param tableType            Table type, e.g csv, hbase, kafka
-  * @param schema               Schema of the table (column names and types)
-  * @param properties           Properties of the table
-  * @param richTableSchema      RichTableSchema of the table
-  * @param stats                Statistics of the table
-  * @param comment              Comment of the table
-  * @param computedColumns      Computed columns expression
-  * @param rowTimeField         Row time field
-  * @param watermarkOffset      Watermark offset for row time
-  * @param createTime           Create timestamp of the table
-  * @param lastAccessTime       Timestamp of last access of the table
-  */
-case class ExternalCatalogTable(
-    tableType: String,
-    schema: TableSchema,
-    properties: JMap[String, String] = new JHashMap(),
-    richTableSchema: RichTableSchema = null,
-    stats: TableStats = null,
-    comment: String = null,
-    partitionColumnNames: JLinkedHashSet[String] = new JLinkedHashSet(),
-    isPartitioned: Boolean = false,
-    computedColumns: JMap[String, RexNode] = null,
-    rowTimeField: String = null,
-    watermarkOffset: JLong = -1L,
-    createTime: JLong = System.currentTimeMillis,
-    lastAccessTime: JLong = -1L)
 
 /**
   * Defines a table in an [[ExternalCatalog]]. External catalog tables describe table sources
@@ -154,10 +120,10 @@ class ExternalCatalogTable2(
   }
 }
 
-object ExternalCatalogTable {
+object ExternalCatalogTable2 {
 
   /**
-    * Creates a builder for creating an [[ExternalCatalogTable]].
+    * Creates a builder for creating an [[ExternalCatalogTable2]].
     *
     * It takes [[Descriptor]]s which allow for declaring the communication to external
     * systems in an implementation-agnostic way. The classpath is scanned for suitable table

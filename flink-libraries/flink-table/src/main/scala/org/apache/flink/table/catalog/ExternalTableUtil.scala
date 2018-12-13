@@ -70,7 +70,7 @@ object ExternalTableUtil extends Logging {
         val tableFactory = TableFactoryService.find(classOf[TableSourceParserFactory],
           getToolDescriptor(getStorageType(name, tableProperties), tableProperties))
         tableFactory.createParser(
-          name, table.richTableSchema, tableProperties)
+          name, table.getRichTableSchema, tableProperties)
     }
   }
 
@@ -141,7 +141,7 @@ object ExternalTableUtil extends Logging {
     isStream: Boolean): TableProperties = {
 
     val tableProperties = new TableProperties()
-    tableProperties.addAll(externalTable.properties)
+    tableProperties.addAll(externalTable.getProperties)
     isStream match {
       case true =>
         tableProperties.setString(
@@ -153,10 +153,10 @@ object ExternalTableUtil extends Logging {
           TableProperties.BLINK_ENVIRONMENT_BATCHEXEC_VALUE)
     }
     // we choose table factory based on the connector type.
-    tableProperties.setString(TableProperties.BLINK_CONNECTOR_TYPE_KEY, externalTable.tableType)
+    tableProperties.setString(TableProperties.BLINK_CONNECTOR_TYPE_KEY, externalTable.getTableType)
     // put in internal arguments.
     tableProperties.putTableNameIntoProperties(sqlTableName)
-    tableProperties.putSchemaIntoProperties(externalTable.richTableSchema)
+    tableProperties.putSchemaIntoProperties(externalTable.getRichTableSchema)
     tableProperties
   }
 

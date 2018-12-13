@@ -47,9 +47,9 @@ public class FlinkTempTable extends ExternalCatalogTable {
 		boolean isPartitioned,
 		Map<String, RexNode> computedColumns,
 		String rowTimeField,
-		Long watermarkOffset,
-		Long createTime,
-		Long lastAccessTime) {
+		long watermarkOffset,
+		long createTime,
+		long lastAccessTime) {
 
 		super(tableType,
 			schema,

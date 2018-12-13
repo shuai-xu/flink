@@ -159,7 +159,22 @@ class InMemoryExternalCatalog(name: String) extends CrudExternalCatalog {
     ignoreIfNotExists: Boolean): Unit = {
     if (tables.contains(tableName)) {
       val oldTable = tables(tableName)
-      tables(tableName) = oldTable.copy(stats = stats.orNull)
+
+      tables(tableName) = new ExternalCatalogTable(
+        oldTable.getTableType,
+        oldTable.getTableSchema,
+        oldTable.getProperties,
+        oldTable.getRichTableSchema,
+        stats.get,
+        oldTable.getComment,
+        oldTable.getPartitionColumnNames,
+        oldTable.isPartitioned,
+        oldTable.getComputedColumns,
+        oldTable.getRowTimeField,
+        oldTable.getWatermarkOffset,
+        oldTable.getCreateTime,
+        oldTable.getLastAccessTime
+      )
     } else if (!ignoreIfNotExists) {
       throw new TableNotExistException(name, tableName)
     }
@@ -230,7 +245,7 @@ class InMemoryExternalCatalog(name: String) extends CrudExternalCatalog {
   }
 
   private def checkPartitionSpec(partSpec: PartitionSpec, table: ExternalCatalogTable): Unit = {
-    if (!CollectionUtils.isEqualCollection(partSpec.keySet, table.partitionColumnNames)) {
+    if (!CollectionUtils.isEqualCollection(partSpec.keySet, table.getPartitionColumnNames)) {
       throw new IllegalArgumentException("Input partition specification is invalid!")
     }
   }

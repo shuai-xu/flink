@@ -41,7 +41,7 @@ class ExternalTableSourceUtilTest {
   @Test
   def testExternalStreamTable() = {
     val schema = new TableSchema(Array("foo"), Array(DataTypes.INT))
-    val table = ExternalCatalogTable("mock", schema)
+    val table = new ExternalCatalogTable("mock", schema)
     val tableSource = ExternalTableSourceUtil.fromExternalCatalogTable(table)
     assertTrue(tableSource.isInstanceOf[StreamTableSourceTable[_]])
   }
@@ -49,7 +49,7 @@ class ExternalTableSourceUtilTest {
   @Test
   def testNotExistedExternalTable() = {
     val schema = new TableSchema(Array("foo"), Array(DataTypes.INT))
-    val table = ExternalCatalogTable("mock1", schema)
+    val table = new ExternalCatalogTable("mock1", schema)
     val tableSource = ExternalTableSourceUtil.toTableSource(table)
     assertFalse(tableSource.isDefined)
   }
@@ -66,7 +66,7 @@ class MockTableSourceConverter extends TableSourceConverter[StreamTableSource[Ro
         throw new UnsupportedOperationException
 
       override def getReturnType: DataType = {
-        val schema = externalCatalogTable.schema
+        val schema = externalCatalogTable.getTableSchema
         DataTypes.createRowType(
           schema.getTypes.asInstanceOf[Array[DataType]],
           schema.getColumnNames)

@@ -84,31 +84,31 @@ class CatalogTableToStreamTableSourceRule
     // computed column.
     val computedColumns = new JHashMap[String, RexNode]()
 
-    if(catalogTable.table.computedColumns != null) {
-      computedColumns.putAll(catalogTable.table.computedColumns)
+    if(catalogTable.table.getComputedColumns != null) {
+      computedColumns.putAll(catalogTable.table.getComputedColumns)
     }
 
     newRel = CatalogTableRules.appendComputedColumns(
-      call.builder(), newRel, catalogTable.table.schema, computedColumns)
+      call.builder(), newRel, catalogTable.table.getTableSchema, computedColumns)
 
     // watermark.
-    if (catalogTable.table.rowTimeField != null) {
+    if (catalogTable.table.getRowTimeField != null) {
       newRel = new LogicalWatermarkAssigner(
         newRel.getCluster,
         newRel.getTraitSet,
         newRel,
-        catalogTable.table.rowTimeField,
-        catalogTable.table.watermarkOffset)
+        catalogTable.table.getRowTimeField,
+        catalogTable.table.getWatermarkOffset)
     }
 
     // transfer to a update stream when primary key specified.
-    if (catalogTable.table.schema.getPrimaryKeys != null
-        && !catalogTable.table.schema.getPrimaryKeys.isEmpty) {
+    if (catalogTable.table.getTableSchema.getPrimaryKeys != null
+        && !catalogTable.table.getTableSchema.getPrimaryKeys.isEmpty) {
       newRel = new LogicalLastRow(
         newRel.getCluster,
         newRel.getTraitSet,
         newRel,
-        catalogTable.table.schema.getPrimaryKeys.toList)
+        catalogTable.table.getTableSchema.getPrimaryKeys.toList)
     }
 
     call.transformTo(newRel)
@@ -152,23 +152,23 @@ class CatalogTableToBatchTableSourceRule
 
     // computed columns
     val computedColumns = new JHashMap[String, RexNode]()
-    if (catalogTable.table.computedColumns != null) {
-      computedColumns.putAll(catalogTable.table.computedColumns)
+    if (catalogTable.table.getComputedColumns != null) {
+      computedColumns.putAll(catalogTable.table.getComputedColumns)
 
-      catalogTable.table.computedColumns.foreach {
+      catalogTable.table.getComputedColumns.foreach {
         case (name: String, expr: RexCall)
             if expr.getOperator.equals(ScalarSqlFunctions.PROCTIME) =>
           computedColumns.put(
             name, Cast(CurrentTimestamp(), DataTypes.TIMESTAMP).toRexNode(call.builder()))
-        case (name: String, expr: RexNode) if name.equals(catalogTable.table.rowTimeField) =>
+        case (name: String, expr: RexNode) if name.equals(catalogTable.table.getRowTimeField) =>
           computedColumns.put(
             name, oldRel.getCluster.getRexBuilder.makeCast(
               oldRel.getRowType.getField(name, true, false).getType, expr))
         case _ =>
       }
-    } else if (catalogTable.table.rowTimeField != null) {
-       catalogTable.table.schema.getColumns.foreach {
-         case column: Column if column.name.equals(catalogTable.table.rowTimeField) =>
+    } else if (catalogTable.table.getRowTimeField != null) {
+       catalogTable.table.getTableSchema.getColumns.foreach {
+         case column: Column if column.name.equals(catalogTable.table.getRowTimeField) =>
            computedColumns.put(
              column.name, oldRel.getCluster.getRexBuilder.makeCast(
                oldRel.getRowType.getField(column.name, true, false).getType,
@@ -179,7 +179,7 @@ class CatalogTableToBatchTableSourceRule
     }
 
     call.transformTo(CatalogTableRules.appendComputedColumns(
-      call.builder(), newRel, catalogTable.table.schema, computedColumns))
+      call.builder(), newRel, catalogTable.table.getTableSchema, computedColumns))
 
   }
 }
@@ -223,10 +223,10 @@ class CatalogTableToDimensionTableSource extends RelOptRule(
 
 
     val computedColumns = new JHashMap[String, RexNode]()
-    if (catalogTable.table.computedColumns != null) {
-      computedColumns.putAll(catalogTable.table.computedColumns)
+    if (catalogTable.table.getComputedColumns != null) {
+      computedColumns.putAll(catalogTable.table.getComputedColumns)
 
-      catalogTable.table.computedColumns.foreach {
+      catalogTable.table.getComputedColumns.foreach {
         case (name: String, expr: RexCall)
             if expr.getOperator.equals(ScalarSqlFunctions.PROCTIME) =>
           computedColumns.put(
@@ -236,7 +236,7 @@ class CatalogTableToDimensionTableSource extends RelOptRule(
     }
 
     call.transformTo(CatalogTableRules.appendComputedColumns(
-      call.builder(), newRel, catalogTable.table.schema, computedColumns))
+      call.builder(), newRel, catalogTable.table.getTableSchema, computedColumns))
 
   }
 }

@@ -570,7 +570,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       false,
       null,
       null,
-      null,
+      -1,
       currentMillis,
       currentMillis
     )
@@ -657,7 +657,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       val leafCatalog = tablePath.slice(1, tablePath.length - 1).foldLeft(rootCatalog) {
         case (parentCatalog, name) => parentCatalog.getSubCatalog(name)
       }
-      Option(leafCatalog.getTable(tableName).stats)
+      Option(leafCatalog.getTable(tableName).getTableStats)
     }
     stats.orNull
   }

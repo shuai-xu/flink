@@ -1,0 +1,155 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.flink.table.catalog;
+
+import org.apache.flink.table.api.RichTableSchema;
+import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.table.plan.stats.TableStats;
+
+import org.apache.calcite.rex.RexNode;
+
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+
+/**
+ * Defines a table in a catalog.
+ */
+public class ExternalCatalogTable {
+	// Table type, e.g csv, hbase, kafka
+	private final String tableType;
+	// Schema of the table (column names and types)
+	private final TableSchema tableSchema;
+
+	// Properties of the table
+	private Map<String, String> properties = new HashMap<>();
+	// RichTableSchema of the table
+	private RichTableSchema richTableSchema;
+	// Statistics of the table
+	private TableStats tableStats;
+	// Comment of the table
+	private String comment;
+	// Partitioned columns
+	private LinkedHashSet<String> partitionColumnNames;
+	// Whether the table is partitioned
+	private boolean isPartitioned = false;
+	// Computed columns expression
+	private Map<String, RexNode> computedColumns;
+	// Row time field
+	private String rowTimeField = null;
+	// Watermark offset for row time
+	private long watermarkOffset = -1L;
+	// Create timestamp of the table
+	private long createTime = System.currentTimeMillis();
+	// Timestamp of last access of the table
+	private long lastAccessTime = -1L;
+
+	public ExternalCatalogTable(String tableType, TableSchema tableSchema) {
+		this.tableType = tableType;
+		this.tableSchema = tableSchema;
+	}
+
+	public ExternalCatalogTable(String tableType, TableSchema tableSchema, Map<String, String> properties) {
+		this.tableType = tableType;
+		this.tableSchema = tableSchema;
+		this.properties = properties;
+	}
+
+	public ExternalCatalogTable(
+		String tableType,
+		TableSchema tableSchema,
+		Map<String, String> properties,
+		RichTableSchema richTableSchema,
+		TableStats tableStats,
+		String comment,
+		LinkedHashSet<String> partitionColumnNames,
+		boolean isPartitioned,
+		Map<String, RexNode> computedColumns,
+		String rowTimeField,
+		long watermarkOffset,
+		long createTime,
+		long lastAccessTime) {
+
+		this.tableType = tableType;
+		this.tableSchema = tableSchema;
+		this.properties = properties;
+		this.richTableSchema = richTableSchema;
+		this.tableStats = tableStats;
+		this.comment = comment;
+		this.partitionColumnNames = partitionColumnNames;
+		this.isPartitioned = isPartitioned;
+		this.computedColumns = computedColumns;
+		this.rowTimeField = rowTimeField;
+		this.watermarkOffset = watermarkOffset;
+		this.createTime = createTime;
+		this.lastAccessTime = lastAccessTime;
+	}
+
+	public String getTableType() {
+		return tableType;
+	}
+
+	public TableSchema getTableSchema() {
+		return tableSchema;
+	}
+
+	public Map<String, String> getProperties() {
+		return properties;
+	}
+
+	public RichTableSchema getRichTableSchema() {
+		return richTableSchema;
+	}
+
+	public TableStats getTableStats() {
+		return tableStats;
+	}
+
+	public String getComment() {
+		return comment;
+	}
+
+	public LinkedHashSet<String> getPartitionColumnNames() {
+		return partitionColumnNames;
+	}
+
+	public boolean isPartitioned() {
+		return isPartitioned;
+	}
+
+	public Map<String, RexNode> getComputedColumns() {
+		return computedColumns;
+	}
+
+	public String getRowTimeField() {
+		return rowTimeField;
+	}
+
+	public long getWatermarkOffset() {
+		return watermarkOffset;
+	}
+
+	public long getCreateTime() {
+		return createTime;
+	}
+
+	public long getLastAccessTime() {
+		return lastAccessTime;
+	}
+}

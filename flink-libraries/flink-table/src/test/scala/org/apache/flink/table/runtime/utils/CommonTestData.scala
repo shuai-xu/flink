@@ -275,7 +275,7 @@ object CommonTestData {
     properties1.put("path", tempFilePath1)
     properties1.put("fieldDelim", "#")
     properties1.put("rowDelim", "$")
-    val externalCatalogTable1 = ExternalCatalogTable(
+    val externalCatalogTable1 = new ExternalCatalogTable(
       "csv",
       new TableSchema(
         Array("a", "b", "c"),
@@ -308,7 +308,7 @@ object CommonTestData {
     properties2.put("path", tempFilePath2)
     properties2.put("fieldDelim", "#")
     properties2.put("rowDelim", "$")
-    val externalCatalogTable2 = ExternalCatalogTable(
+    val externalCatalogTable2 = new ExternalCatalogTable(
       "csv",
       new TableSchema(
         Array("d", "e", "f", "g", "h"),
@@ -345,7 +345,7 @@ object CommonTestData {
     properties1.put("path", tempFilePath1)
     properties1.put("fieldDelim", "#")
     properties1.put("rowDelim", "$")
-    val catalogTable1 = ExternalCatalogTable(
+    val catalogTable1 = new ExternalCatalogTable(
       "csv",
       new TableSchema(
         Array("a", "b", "c"),
@@ -378,7 +378,7 @@ object CommonTestData {
     properties2.put("path", tempFilePath2)
     properties2.put("fieldDelim", "#")
     properties2.put("rowDelim", "$")
-    val catalogTable2 = ExternalCatalogTable(
+    val catalogTable2 = new ExternalCatalogTable(
       "csv",
       new TableSchema(
         Array("d", "e", "f", "g", "h"),

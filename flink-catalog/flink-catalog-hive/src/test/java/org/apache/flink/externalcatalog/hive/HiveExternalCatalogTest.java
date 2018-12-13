@@ -109,19 +109,19 @@ public class HiveExternalCatalogTest {
 		RichTableSchema richTableSchema = new RichTableSchema(names, types);
 
 		table = new ExternalCatalogTable(
-				table.tableType(),
+				table.getTableType(),
 				tableSchema,
-				table.properties(),
+				table.getProperties(),
 				richTableSchema,
-				table.stats(),
-				table.comment(),
-				table.partitionColumnNames(),
+				table.getTableStats(),
+				table.getComment(),
+				table.getPartitionColumnNames(),
 				table.isPartitioned(),
 				null,
 				null,
-				null,
-				table.createTime(),
-				table.lastAccessTime());
+				-1,
+				table.getCreateTime(),
+				table.getLastAccessTime());
 
 		catalog.createTable(
 				"src",
@@ -129,16 +129,16 @@ public class HiveExternalCatalogTest {
 				false);
 
 		ExternalCatalogTable t = catalog.getTable("src");
-		Assert.assertEquals(t.tableType(), "hive");
+		Assert.assertEquals(t.getTableType(), "hive");
 		Assert.assertTrue((new File("/tmp/hive/src")).exists());
-		Assert.assertEquals(1, t.schema().getColumns().length);
-		Assert.assertEquals("a", t.schema().getColumnNames()[0]);
-		Assert.assertEquals(IntType.INSTANCE, t.schema().getColumns()[0].internalType());
-		Assert.assertNotNull(t.richTableSchema());
-		Assert.assertEquals(1, t.richTableSchema().getColumnNames().length);
-		Assert.assertEquals("a", t.richTableSchema().getColumnNames()[0]);
-		Assert.assertEquals(1, t.richTableSchema().getColumnTypes().length);
-		Assert.assertEquals(IntType.INSTANCE, t.richTableSchema().getColumnTypes()[0]);
+		Assert.assertEquals(1, t.getTableSchema().getColumns().length);
+		Assert.assertEquals("a", t.getTableSchema().getColumnNames()[0]);
+		Assert.assertEquals(IntType.INSTANCE, t.getTableSchema().getColumns()[0].internalType());
+		Assert.assertNotNull(t.getRichTableSchema());
+		Assert.assertEquals(1, t.getRichTableSchema().getColumnNames().length);
+		Assert.assertEquals("a", t.getRichTableSchema().getColumnNames()[0]);
+		Assert.assertEquals(1, t.getRichTableSchema().getColumnTypes().length);
+		Assert.assertEquals(IntType.INSTANCE, t.getRichTableSchema().getColumnTypes()[0]);
 	}
 
 	@Test
@@ -174,19 +174,19 @@ public class HiveExternalCatalogTest {
 		ExternalCatalogTable table = MetaConverter.convertToExternalCatalogTable(
 				hiveTable, null);
 		table = new ExternalCatalogTable(
-				table.tableType(),
+				table.getTableType(),
 				tableSchema,
-				table.properties(),
+				table.getProperties(),
 				null,
-				table.stats(),
-				table.comment(),
-				table.partitionColumnNames(),
+				table.getTableStats(),
+				table.getComment(),
+				table.getPartitionColumnNames(),
 				table.isPartitioned(),
 				null,
 				null,
-				null,
-				table.createTime(),
-				table.lastAccessTime());
+				-1,
+				table.getCreateTime(),
+				table.getLastAccessTime());
 
 		catalog.createTable(
 				"src",
@@ -268,11 +268,11 @@ public class HiveExternalCatalogTest {
 
 		// Get from the meta and compare
 		ExternalCatalogTable t = catalog.getTable("src");
-		Assert.assertEquals(t.tableType(), "hive");
+		Assert.assertEquals(t.getTableType(), "hive");
 		Assert.assertTrue((new File("/tmp/hive/src")).exists());
-		Assert.assertEquals(8, t.schema().getColumns().length);
+		Assert.assertEquals(8, t.getTableSchema().getColumns().length);
 
-		TableStats stats = t.stats();
+		TableStats stats = t.getTableStats();
 		Assert.assertEquals(8L, stats.rowCount().longValue());
 		Assert.assertEquals(8, stats.colStats().size());
 		ColumnStats colA = stats.colStats().get("a");
@@ -423,20 +423,20 @@ public class HiveExternalCatalogTest {
 	public void testAlterTableStats() {
 		String tableName = "t1";
 		ExternalCatalogTable table = createTableInstance();
-		Assert.assertNull(table.stats());
+		Assert.assertNull(table.getTableStats());
 		catalog.createTable(tableName, table, false);
 
 		TableStats newTableStats = new TableStats(1000L, null);
 		catalog.alterTableStats(tableName, new Some<>(newTableStats), false);
 		ExternalCatalogTable currentTable = catalog.getTable(tableName);
 		Assert.assertNotEquals(table, currentTable);
-		Assert.assertEquals(newTableStats.rowCount(), currentTable.stats().rowCount());
+		Assert.assertEquals(newTableStats.rowCount(), currentTable.getTableStats().rowCount());
 
 		// update TableStats with None
 		catalog.alterTableStats(tableName, null, false);
 		ExternalCatalogTable currentTable2 = catalog.getTable(tableName);
-		Assert.assertEquals(0L, currentTable2.stats().rowCount().longValue());
-		Assert.assertTrue(currentTable2.stats().colStats().isEmpty());
+		Assert.assertEquals(0L, currentTable2.getTableStats().rowCount().longValue());
+		Assert.assertTrue(currentTable2.getTableStats().colStats().isEmpty());
 	}
 
 	private ExternalCatalogTable createTableInstance() {
@@ -458,7 +458,7 @@ public class HiveExternalCatalogTest {
 			false,
 			null,
 			null,
-			null,
+			-1,
 			System.currentTimeMillis(),
 			System.currentTimeMillis());
 	}
@@ -483,7 +483,7 @@ public class HiveExternalCatalogTest {
 				true,
 				null,
 				null,
-				null,
+				-1,
 				System.currentTimeMillis(),
 				System.currentTimeMillis());
 	}

@@ -43,7 +43,7 @@ class CsvTableSourceConverter extends TableSourceConverter[CsvTableSource] {
 
   override def fromExternalCatalogTable(
     externalCatalogTable: ExternalCatalogTable): CsvTableSource = {
-    val params = externalCatalogTable.properties.asScala
+    val params = externalCatalogTable.getProperties.asScala
     val csvTableSourceBuilder = new CsvTableSource.Builder
 
     params.get("path").foreach(csvTableSourceBuilder.path)
@@ -73,8 +73,8 @@ class CsvTableSourceConverter extends TableSourceConverter[CsvTableSource] {
       v => if(v.toBoolean) {
         csvTableSourceBuilder.enableEmptyColumnAsNull()
       })
-    externalCatalogTable.schema.getColumnNames
-      .zip(externalCatalogTable.schema.getTypes)
+    externalCatalogTable.getTableSchema.getColumnNames
+      .zip(externalCatalogTable.getTableSchema.getTypes)
       .foreach(field => csvTableSourceBuilder.field(field._1, field._2))
 
     csvTableSourceBuilder.build()

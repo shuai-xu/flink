@@ -114,8 +114,8 @@ public class MetaConverter {
 		// See CreateTableDesc.java in hive
 		Table hTable = getEmptyTable(databaseName, tableName);
 
-		hTable.setParameters(table.properties());
-		hTable.putToParameters(FLINK_TABLE_TYPE, table.tableType());
+		hTable.setParameters(table.getProperties());
+		hTable.putToParameters(FLINK_TABLE_TYPE, table.getTableType());
 
 		// Default PartCols = null, NumBuckets = -1
 		// Default Storage Handler = null
@@ -123,11 +123,11 @@ public class MetaConverter {
 		String serDeClassName = LazySimpleSerDe.class.getName();
 		hTable.getSd().getSerdeInfo().setSerializationLib(serDeClassName);
 
-		List<FieldSchema> cols = getHiveCols(table.schema());
+		List<FieldSchema> cols = getHiveCols(table.getTableSchema());
 		hTable.getSd().setCols(cols);
 
 		if (table.isPartitioned()) {
-			LinkedHashSet<String> colNames = table.partitionColumnNames();
+			LinkedHashSet<String> colNames = table.getPartitionColumnNames();
 			List<FieldSchema> parts = new ArrayList<>();
 			for (String colName : colNames) {
 				FieldSchema part = new FieldSchema(colName, serdeConstants.STRING_TYPE_NAME, "");
@@ -136,7 +136,7 @@ public class MetaConverter {
 			hTable.setPartitionKeys(parts);
 		}
 
-		RichTableSchema richTableSchema = table.richTableSchema();
+		RichTableSchema richTableSchema = table.getRichTableSchema();
 		String richTableSchemaStr = serializeToString(richTableSchema);
 		hTable.putToParameters(FLINK_RICH_TABLE_SCHEMA, richTableSchemaStr);
 
@@ -223,7 +223,7 @@ public class MetaConverter {
 						&& table.getPartitionKeys().size() > 0,
 				null,
 				null,
-				null,
+				-1,
 				table.getCreateTime() * 1000L,
 				table.getLastAccessTime() * 1000L);
 	}

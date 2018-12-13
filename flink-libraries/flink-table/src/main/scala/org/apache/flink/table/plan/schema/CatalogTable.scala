@@ -56,34 +56,35 @@ class CatalogTable(val name:String, val table: ExternalCatalogTable, val isStrea
   override def copy(statistic: FlinkStatistic) = new CatalogTable(name, table, isStreaming)
 
   override def getRowType(typeFactory: RelDataTypeFactory) =
-    typeFactory.asInstanceOf[FlinkTypeFactory].buildLogicalRowType(table.schema, isStreaming)
+    typeFactory.asInstanceOf[FlinkTypeFactory]
+      .buildLogicalRowType(table.getTableSchema, isStreaming)
 
   override def config(dynamicParameters: util.Map[String, String]) = {
     val newProperties = new util.HashMap[String, String]()
-    newProperties.putAll(table.properties)
+    newProperties.putAll(table.getProperties)
     newProperties.putAll(dynamicParameters)
-    val newTable = ExternalCatalogTable(
-      table.tableType,
-      table.schema,
+    val newTable = new ExternalCatalogTable(
+      table.getTableType,
+      table.getTableSchema,
       newProperties,
-      table.richTableSchema,
-      table.stats,
-      table.comment,
-      table.partitionColumnNames,
+      table.getRichTableSchema,
+      table.getTableStats,
+      table.getComment,
+      table.getPartitionColumnNames,
       table.isPartitioned,
-      table.computedColumns,
-      table.rowTimeField,
-      table.watermarkOffset,
-      table.createTime,
-      table.lastAccessTime)
+      table.getComputedColumns,
+      table.getRowTimeField,
+      table.getWatermarkOffset,
+      table.getCreateTime,
+      table.getLastAccessTime)
     new CatalogTable(name, newTable, isStreaming)
   }
 
   override def getStatistic(): FlinkStatistic = {
-    val primaryKeys = table.schema.getPrimaryKeys
-    val uniqueKeys = table.schema.getUniqueKeys
+    val primaryKeys = table.getTableSchema.getPrimaryKeys
+    val uniqueKeys = table.getTableSchema.getUniqueKeys
     if (primaryKeys.isEmpty && uniqueKeys.isEmpty) {
-      FlinkStatistic.of(table.stats)
+      FlinkStatistic.of(table.getTableStats)
     } else {
       val keyBuffer = new ArrayBuffer[util.Set[String]]()
       if (!primaryKeys.isEmpty) {
@@ -93,7 +94,7 @@ class CatalogTable(val name:String, val table: ExternalCatalogTable, val isStrea
         case uniqueKey: Array[String] => keyBuffer.append(ImmutableSet.copyOf(uniqueKey))
       }
 
-      FlinkStatistic.of(table.stats, ImmutableSet.copyOf(keyBuffer.toArray), null)
+      FlinkStatistic.of(table.getTableStats, ImmutableSet.copyOf(keyBuffer.toArray), null)
     }
   }
 
