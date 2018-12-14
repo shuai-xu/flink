@@ -47,4 +47,8 @@ public class HiveCatalogConfig {
 	public static final String HIVE_TABLE_NUM_BUCKETS = "hive.table.num.buckets";
 
 	public static final String HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT = "hive.table.storage.serialization.format";
+
+	public static final String HIVE_TABLE_FIELD_NAMES = "hive.table.field.names";
+
+	public static final String HIVE_TABLE_FIELD_TYPES = "hive.table.field.types";
 }

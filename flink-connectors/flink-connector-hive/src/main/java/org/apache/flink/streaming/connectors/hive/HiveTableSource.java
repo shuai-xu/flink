@@ -24,7 +24,6 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.sources.BatchTableSource;
@@ -54,17 +53,21 @@ public class HiveTableSource implements BatchTableSource<GenericRow> {
 	@Override
 	public DataStream<GenericRow> getBoundedStream(StreamExecutionEnvironment streamEnv) {
 		try {
-			return streamEnv.createInput(new HiveTableInputFormat.Builder(rowTypeInfo, jobConf).build()).
-					name(explainSource());
+			return streamEnv.createInput(new HiveTableInputFormat.Builder(rowTypeInfo, jobConf).build())
+							.name(explainSource());
 		} catch (Exception e){
 			logger.error("Can not normally create hiveTableInputFormat !", e);
 			throw new RuntimeException(e);
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public DataType getReturnType() {
-		return DataTypes.internal(new BaseRowTypeInfo(BaseRow.class, rowTypeInfo.getFieldTypes(), rowTypeInfo.getFieldNames()));
+		return DataTypes.internal(new BaseRowTypeInfo(
+					GenericRow.class,
+					rowTypeInfo.getFieldTypes(),
+					rowTypeInfo.getFieldNames()));
 	}
 
 	@Override

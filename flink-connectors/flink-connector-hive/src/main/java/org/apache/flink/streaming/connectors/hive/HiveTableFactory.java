@@ -18,36 +18,105 @@
 
 package org.apache.flink.streaming.connectors.hive;
 
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.table.api.RichTableSchema;
+import org.apache.flink.table.api.TableSourceParser;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.catalog.ExternalCatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.hive.HiveCatalog;
-import org.apache.flink.table.factories.TableFactory;
+import org.apache.flink.table.catalog.hive.HiveCatalogConfig;
+import org.apache.flink.table.catalog.hive.TypeConverterUtil;
+import org.apache.flink.table.dataformat.GenericRow;
+import org.apache.flink.table.factories.BatchTableSourceFactory;
+import org.apache.flink.table.factories.TableSourceParserFactory;
 import org.apache.flink.table.plan.stats.TableStats;
-import org.apache.flink.table.sinks.TableSink;
-import org.apache.flink.table.sources.DimensionTableSource;
+import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.TableSource;
 import org.apache.flink.table.util.TableProperties;
 
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.mapred.JobConf;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_FIELD_NAMES;
+import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_FIELD_TYPES;
+import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CONNECTOR_PROPERTY_VERSION;
+import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CONNECTOR_TYPE;
 
 /**
  * Hive table factory provides for sql to register hive table.
  */
-public class HiveTableFactory implements TableFactory {
-
+public class HiveTableFactory implements BatchTableSourceFactory<GenericRow>, TableSourceParserFactory {
+	private static Logger logger = LoggerFactory.getLogger(HiveTableFactory.class);
+	/**
+	 * Add this method to make some optimize rule work normally, we should delete it later.
+	 */
 	@Override
-	public Map<String, String> requiredContext() {
+	public TableSourceParser createParser(
+			String tableName, RichTableSchema tableSchema, TableProperties properties) {
 		return null;
 	}
 
 	@Override
+	public BatchTableSource<GenericRow> createBatchTableSource(Map<String, String> props) {
+		HiveConf hiveConf = new HiveConf();
+		TableStats tableStats = null;
+		for (Map.Entry<String, String> prop : props.entrySet()) {
+			hiveConf.set(prop.getKey(), prop.getValue());
+		}
+		String[] fieldNames = props.get(HIVE_TABLE_FIELD_NAMES).split(",");
+		String[] hiveFieldTypes = props.get(HIVE_TABLE_FIELD_TYPES).split(",");
+		InternalType[] colTypes = new InternalType[fieldNames.length];
+		TypeInformation[] typeInformations = new TypeInformation[fieldNames.length];
+		for (int i = 0; i < hiveFieldTypes.length; i++) {
+			colTypes[i] = TypeConverterUtil.convert(hiveFieldTypes[i]);
+			typeInformations[i] = DataTypes.toTypeInfo(colTypes[i]);
+		}
+		try {
+			JobConf jobConf = new JobConf(hiveConf);
+			return new HiveTableSource(new RowTypeInfo(typeInformations, fieldNames), jobConf, tableStats);
+		} catch (Exception e){
+			logger.error("Error when create hive batch table source ...", e);
+			throw new RuntimeException(e);
+		}
+	}
+
+	@Override
+	public Map<String, String> requiredContext() {
+		HashMap<String, String> context = new HashMap<>();
+		context.put(CONNECTOR_TYPE, "HIVE");
+		return context;
+	}
+
+	@Override
 	public List<String> supportedProperties() {
-		return null;
+		List<String> properties = new ArrayList<>();
+		properties.add(HiveCatalogConfig.HIVE_METASTORE_USERNAME);
+		properties.add(HiveCatalogConfig.HIVE_TABLE_COMPRESSED);
+		properties.add(HiveCatalogConfig.HIVE_TABLE_INPUT_FORMAT);
+		properties.add(HiveCatalogConfig.HIVE_TABLE_LOCATION);
+		properties.add(HiveCatalogConfig.HIVE_TABLE_NUM_BUCKETS);
+		properties.add(HiveCatalogConfig.HIVE_TABLE_OUTPUT_FORMAT);
+		properties.add(HiveCatalogConfig.HIVE_TABLE_SERDE_LIBRARY);
+		properties.add(HiveCatalogConfig.HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT);
+		properties.add(HIVE_TABLE_FIELD_NAMES);
+		properties.add(HiveCatalogConfig.HIVE_TABLE_FIELD_TYPES);
+		properties.add(CONNECTOR_PROPERTY_VERSION);
+		properties.add("transient_lastddltime");
+		properties.add("totalsize");
+		properties.add("rawdatasize");
+		properties.add("numrows");
+		properties.add("numfiles");
+		return properties;
 	}
 
 	public TableSource createTableSource(
@@ -58,9 +127,6 @@ public class HiveTableFactory implements TableFactory {
 		ExternalCatalogTable externalCatalogTable = hiveCatalog.getTable(ObjectPath.fromString(tableName));
 		TableStats tableStats = externalCatalogTable.getTableStats();
 		HiveConf hiveConf = new HiveConf();
-		// We will have to find out some necessary options and expose them to the outside.
-		hiveConf.setVar(HiveConf.ConfVars.METASTOREURIS, hiveMetastoreURI);
-
 		Map<String, String> props = tableProperties.toMap();
 		for (Map.Entry<String, String> prop : props.entrySet()) {
 			hiveConf.set(prop.getKey(), prop.getValue());
@@ -71,18 +137,9 @@ public class HiveTableFactory implements TableFactory {
 		try {
 			JobConf jobConf = new JobConf(hiveConf);
 			return new HiveTableSource(richTableSchema.getResultTypeInfo(), jobConf, tableStats);
-		} catch (Exception e){
+		} catch (Exception e) {
+			logger.error("Error when create hive batch table source ...", e);
 			throw new RuntimeException(e);
 		}
-	}
-
-	public DimensionTableSource<?> createDimensionTableSource(
-			String s, RichTableSchema richTableSchema, TableProperties tableProperties) {
-		return null;
-	}
-
-	public TableSink<?> createTableSink(
-			String s, RichTableSchema richTableSchema, TableProperties tableProperties) {
-		return null;
 	}
 }

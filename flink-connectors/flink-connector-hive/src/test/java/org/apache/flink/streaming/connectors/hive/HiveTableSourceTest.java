@@ -29,6 +29,7 @@ import org.apache.flink.table.api.types.DoubleType;
 import org.apache.flink.table.api.types.IntType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.StringType;
+import org.apache.flink.table.catalog.hive.HiveCatalog;
 import org.apache.flink.table.sources.TableSource;
 import org.apache.flink.table.util.TableProperties;
 
@@ -114,5 +115,21 @@ public class HiveTableSourceTest {
 		result.print();
 //		List<Row> results = scala.collection.JavaConversions.seqAsJavaList(result.collect());
 
+	}
+
+	@Test
+	public void testScanWithHcataLog() throws Exception {
+		Configuration config = new Configuration();
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(1, config);
+		env.setParallelism(1);
+		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
+		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_SINK_PARALLELISM(), 1);
+		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM(), 1);
+		tEnv.registerCatalog("myHive", new HiveCatalog("myHive", "thrift://localhost:9083"));
+		tEnv.setDefaultDatabase("myHive", "default");
+//		Table table = tEnv.scan("myHive", "default", "test");
+//		table.printSchema();
+//		table.print();
+		tEnv.sqlQuery("select * from test").print();
 	}
 }

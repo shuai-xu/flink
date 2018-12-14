@@ -12,8 +12,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-org.apache.flink.table.sources.csv.CsvBatchTableSourceFactory
-org.apache.flink.table.sources.csv.CsvAppendTableSourceFactory
-org.apache.flink.table.sinks.csv.CsvBatchTableSinkFactory
-org.apache.flink.table.sinks.csv.CsvAppendTableSinkFactory
+org.apache.flink.streaming.connectors.hive.HiveTableFactory

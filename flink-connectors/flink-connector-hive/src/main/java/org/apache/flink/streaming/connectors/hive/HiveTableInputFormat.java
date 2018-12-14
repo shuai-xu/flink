@@ -60,7 +60,7 @@ import static org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR;
 public class HiveTableInputFormat extends HadoopInputFormatBase<Writable, Writable, GenericRow>
 		implements ResultTypeQueryable {
 	private static Logger logger = LoggerFactory.getLogger(HiveTableInputFormat.class);
-	private final RowTypeInfo rowTypeInfo;
+	private RowTypeInfo rowTypeInfo;
 	// Necessary info to init deserializer
 	private final Properties properties;
 	private final String serDeInfoClass;
@@ -125,11 +125,11 @@ public class HiveTableInputFormat extends HadoopInputFormatBase<Writable, Writab
 	}
 
 	/**
-	 * Use this  class to build HiveTableInputFormat.
+	 * Use this class to build HiveTableInputFormat.
 	 */
 	public static class Builder {
-		private final RowTypeInfo rowTypeInfo;
-		private final JobConf jobConf;
+		private RowTypeInfo rowTypeInfo;
+		private JobConf jobConf;
 
 		public Builder(RowTypeInfo rowTypeInfo, JobConf jobConf) {
 			this.rowTypeInfo = rowTypeInfo;
@@ -146,8 +146,7 @@ public class HiveTableInputFormat extends HadoopInputFormatBase<Writable, Writab
 				Properties properties = new Properties();
 				properties.setProperty(serdeConstants.SERIALIZATION_FORMAT,
 									serDeInfo.getParameters().get(serdeConstants.SERIALIZATION_FORMAT));
-				properties.setProperty(serdeConstants.LIST_COLUMNS,
-									StringUtils.join(rowTypeInfo.getFieldNames(), ","));
+				properties.setProperty(serdeConstants.LIST_COLUMNS, StringUtils.join(rowTypeInfo.getFieldNames(), ","));
 				String[] colTypes = new String[rowTypeInfo.getArity()];
 				List<FieldSchema> cols = storageDescriptor.getCols();
 				int t = 0;
@@ -156,9 +155,8 @@ public class HiveTableInputFormat extends HadoopInputFormatBase<Writable, Writab
 				}
 				properties.setProperty(serdeConstants.LIST_COLUMN_TYPES, StringUtils.join(colTypes, ":"));
 				properties.setProperty(serdeConstants.SERIALIZATION_NULL_FORMAT, "NULL");
-
 				return new HiveTableInputFormat(inputFormat, jobConf, rowTypeInfo, properties,
-												serDeInfo.getSerializationLib());
+													serDeInfo.getSerializationLib());
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}

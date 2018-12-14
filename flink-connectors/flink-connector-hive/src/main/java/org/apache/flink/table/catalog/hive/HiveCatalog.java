@@ -30,6 +30,7 @@ import org.apache.flink.table.catalog.ExternalCatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.ReadableWritableCatalog;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.IMetaStoreClient;
@@ -54,6 +55,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_COMPRESSED;
+import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_FIELD_NAMES;
+import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_FIELD_TYPES;
 import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_INPUT_FORMAT;
 import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_LOCATION;
 import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_NUM_BUCKETS;
@@ -136,7 +139,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 		}
 
 		return new ExternalCatalogTable(
-			"csv", // TODO: Need a dedicate 'hive' type. Temporarily set to 'csv' for now
+			"hive", // TODO: Need a dedicate 'hive' type. Temporarily set to 'csv' for now
 			getTableSchema(hiveTable.getSd().getCols()),
 			getPropertiesFromHiveTable(hiveTable),
 			null,
@@ -164,7 +167,15 @@ public class HiveCatalog implements ReadableWritableCatalog {
 		prop.put(HIVE_TABLE_NUM_BUCKETS, String.valueOf(sd.getNumBuckets()));
 		prop.put(HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT,
 				String.valueOf(sd.getSerdeInfo().getParameters().get(serdeConstants.SERIALIZATION_FORMAT)));
-
+		List<FieldSchema> fieldSchemas = sd.getCols();
+		String[] colNames = new String[fieldSchemas.size()];
+		String[] hiveTypes = new String[fieldSchemas.size()];
+		for (int i = 0; i < fieldSchemas.size(); i++) {
+			colNames[i] = fieldSchemas.get(i).getName();
+			hiveTypes[i] = fieldSchemas.get(i).getType();
+		}
+		prop.put(HIVE_TABLE_FIELD_NAMES, StringUtils.join(colNames, ","));
+		prop.put(HIVE_TABLE_FIELD_TYPES, StringUtils.join(hiveTypes, ","));
 		return prop;
 	}
 
