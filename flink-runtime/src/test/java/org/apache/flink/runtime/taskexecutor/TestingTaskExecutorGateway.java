@@ -39,14 +39,14 @@ import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
 import org.apache.flink.runtime.util.FileOffsetRange;
 import org.apache.flink.util.Preconditions;
 
+import javax.annotation.Nullable;
+
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
-import javax.annotation.Nullable;
 
 /**
  * Simple {@link TaskExecutorGateway} implementation for testing purposes.
@@ -152,6 +152,15 @@ public class TestingTaskExecutorGateway implements TaskExecutorGateway {
 
 	@Override
 	public CompletableFuture<TransientBlobKey> requestFileUpload(
+		String filename,
+		@Nullable FileOffsetRange fileOffsetRange,
+		Time timeout) {
+
+		return FutureUtils.completedExceptionally(new UnsupportedOperationException());
+	}
+
+	@Override
+	public CompletableFuture<Tuple2<TransientBlobKey, Long>> requestTaskManagerFileUploadReturnLength(
 		String filename,
 		@Nullable FileOffsetRange fileOffsetRange,
 		Time timeout) {

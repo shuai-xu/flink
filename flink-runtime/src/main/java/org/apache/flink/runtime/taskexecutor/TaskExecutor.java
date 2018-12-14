@@ -852,15 +852,14 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		return CompletableFuture.completedFuture(Acknowledge.get());
 	}
 
-	@Override
-	public CompletableFuture<TransientBlobKey> requestFileUpload(
+	public Tuple2<TransientBlobKey, Long> requestFileUploadUtil(
 		String filename,
-		@Nullable FileOffsetRange fileOffsetRange,
-		Time timeout) {
+		@Nullable FileOffsetRange fileOffsetRange
+	) throws FlinkException, IOException{
 
 		final String logDir = taskManagerConfiguration.getTaskManagerLogDir();
 		if (logDir == null) {
-			return FutureUtils.completedExceptionally(new FlinkException("There is no log file available on the TaskExecutor."));
+			throw new FlinkException("There is no log file available on the TaskExecutor.");
 		}
 
 		final File logFile;
@@ -872,7 +871,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 			logFile = new File(logDir, filename);
 		}
 		if (!logFile.exists()) {
-			return FutureUtils.completedExceptionally(new FlinkException("The log file " + filename + " is not available on the TaskExecutor."));
+			throw new FlinkException("The log file " + filename + " is not available on the TaskExecutor.");
 		}
 
 		final InputStream logFileInputStream;
@@ -894,10 +893,42 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
 			logFileInputStream.close();
 
-			return CompletableFuture.completedFuture(transientBlobKey);
+			return Tuple2.of(transientBlobKey, logFile.length());
 
 		} catch (IOException e) {
 			log.debug("Could not upload file {}.", filename, e);
+			throw e;
+		}
+	}
+
+	@Override
+	public CompletableFuture<TransientBlobKey> requestFileUpload(
+		String filename,
+		@Nullable FileOffsetRange fileOffsetRange,
+		Time timeout) {
+
+		try {
+			Tuple2<TransientBlobKey, Long> blobKey2FileLength = requestFileUploadUtil(filename, fileOffsetRange);
+			return CompletableFuture.completedFuture(blobKey2FileLength.f0);
+		} catch (FlinkException e) {
+			return FutureUtils.completedExceptionally(e);
+		} catch (IOException e) {
+			return FutureUtils.completedExceptionally(e);
+		}
+	}
+
+	@Override
+	public CompletableFuture<Tuple2<TransientBlobKey, Long>> requestTaskManagerFileUploadReturnLength(
+		String filename,
+		@Nullable FileOffsetRange fileOffsetRange,
+		Time timeout) {
+
+		try {
+			Tuple2<TransientBlobKey, Long> blobKey2FileLength = requestFileUploadUtil(filename, fileOffsetRange);
+			return CompletableFuture.completedFuture(blobKey2FileLength);
+		} catch (FlinkException e) {
+			return FutureUtils.completedExceptionally(e);
+		} catch (IOException e) {
 			return FutureUtils.completedExceptionally(e);
 		}
 	}

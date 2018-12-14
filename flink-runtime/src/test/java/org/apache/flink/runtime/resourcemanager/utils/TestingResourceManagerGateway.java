@@ -329,6 +329,15 @@ public class TestingResourceManagerGateway implements ResourceManagerGateway {
 	}
 
 	@Override
+	public CompletableFuture<Tuple2<TransientBlobKey, Long>> requestTaskManagerFileUploadReturnLength(
+		ResourceID taskManagerId,
+		String filename,
+		FileOffsetRange fileOffsetRange,
+		Time timeout) {
+		return FutureUtils.completedExceptionally(new UnsupportedOperationException("Not yet implemented"));
+	}
+
+	@Override
 	public CompletableFuture<Collection<Tuple2<String, Long>>> requestTaskManagerLogList(ResourceID taskManagerId, Time timeout) {
 		return FutureUtils.completedExceptionally(new UnsupportedOperationException("Not yet implemented"));
 	}

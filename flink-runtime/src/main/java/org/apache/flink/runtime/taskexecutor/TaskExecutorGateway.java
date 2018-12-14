@@ -212,6 +212,19 @@ public interface TaskExecutorGateway extends RpcGateway {
 		@RpcTimeout Time timeout);
 
 	/**
+	 * Requests the file upload of the specified type to the cluster's {@link BlobServer}.
+	 *
+	 * @param filename the file name requested
+	 * @param fileOffsetRange the offset range of this file, it could be null
+	 * @param timeout for the asynchronous operation
+	 * @return Future which is completed with the {@link TransientBlobKey} and file length  of the uploaded file.
+	 */
+	CompletableFuture<Tuple2<TransientBlobKey, Long>> requestTaskManagerFileUploadReturnLength(
+		String filename,
+		@Nullable FileOffsetRange fileOffsetRange,
+		@RpcTimeout Time timeout);
+
+	/**
 	 * Requests for the historical log file names on the TaskManager.
 	 *
 	 * @return A String Array with all historical log file names

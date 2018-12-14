@@ -19,12 +19,14 @@
 package org.apache.flink.runtime.rest.handler.taskmanager;
 
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.blob.TransientBlobKey;
 import org.apache.flink.runtime.blob.TransientBlobService;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
-import org.apache.flink.runtime.rest.messages.UntypedResponseMessageHeaders;
+import org.apache.flink.runtime.rest.messages.MessageHeaders;
 import org.apache.flink.runtime.rest.messages.taskmanager.FileRangeMessageParameters;
+import org.apache.flink.runtime.rest.messages.taskmanager.LogDetail;
 import org.apache.flink.runtime.taskexecutor.TaskExecutor;
 import org.apache.flink.runtime.util.FileReadDetail;
 import org.apache.flink.runtime.webmonitor.RestfulGateway;
@@ -38,22 +40,22 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Rest handler which serves the log range file of the {@link TaskExecutor}.
  */
-public class TaskManagerLogFileRangeHandler extends AbstractTaskManagerFileHandler<FileRangeMessageParameters> {
+public class TaskManagerLogFileRangeHandler extends TaskManagerFileRangeHandler {
 
 	public TaskManagerLogFileRangeHandler(
 			@Nonnull CompletableFuture<String> localAddressFuture,
 			@Nonnull GatewayRetriever<? extends RestfulGateway> leaderRetriever,
 			@Nonnull Time timeout,
 			@Nonnull Map<String, String> responseHeaders,
-			@Nonnull UntypedResponseMessageHeaders<EmptyRequestBody, FileRangeMessageParameters> untypedResponseMessageHeaders,
+			@Nonnull MessageHeaders<EmptyRequestBody, LogDetail, FileRangeMessageParameters> messageHeaders,
 			@Nonnull GatewayRetriever<ResourceManagerGateway> resourceManagerGatewayRetriever,
 			@Nonnull TransientBlobService transientBlobService,
 			@Nonnull Time cacheEntryDuration) {
-		super(localAddressFuture, leaderRetriever, timeout, responseHeaders, untypedResponseMessageHeaders, resourceManagerGatewayRetriever, transientBlobService, cacheEntryDuration);
+		super(localAddressFuture, leaderRetriever, timeout, responseHeaders, messageHeaders, resourceManagerGatewayRetriever, transientBlobService, cacheEntryDuration);
 	}
 
 	@Override
-	protected CompletableFuture<TransientBlobKey> requestFileUpload(ResourceManagerGateway resourceManagerGateway, FileReadDetail fd) {
-		return resourceManagerGateway.requestTaskManagerFileUpload(fd.getTaskManagerResourceId(), fd.getFileName(), fd.getFileOffsetRange(), timeout);
+	protected CompletableFuture<Tuple2<TransientBlobKey, Long>> requestTaskManagerFileUploadReturnLength(ResourceManagerGateway resourceManagerGateway, FileReadDetail fd) {
+		return resourceManagerGateway.requestTaskManagerFileUploadReturnLength(fd.getTaskManagerResourceId(), fd.getFileName(), fd.getFileOffsetRange(), timeout);
 	}
 }
