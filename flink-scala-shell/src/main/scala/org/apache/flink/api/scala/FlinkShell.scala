@@ -233,6 +233,11 @@ object FlinkShell {
         sys.exit()
     }
 
+    if(config.executionMode.equals(ExecutionMode.YARN)
+      ||config.executionMode.equals(ExecutionMode.REMOTE)){
+      repl.saveEnvAsContext()
+    }
+
     val settings = new Settings()
     settings.usejavacp.value = true
     settings.Yreplsync.value = true

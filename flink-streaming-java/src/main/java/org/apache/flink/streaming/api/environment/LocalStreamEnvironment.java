@@ -20,6 +20,8 @@ package org.apache.flink.streaming.api.environment;
 import org.apache.flink.annotation.Public;
 import org.apache.flink.api.common.InvalidProgramException;
 import org.apache.flink.api.common.JobExecutionResult;
+import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.JobSubmissionResult;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.RestOptions;
@@ -33,6 +35,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * The LocalStreamEnvironment is a StreamExecutionEnvironment that runs the program locally,
@@ -48,6 +53,8 @@ public class LocalStreamEnvironment extends StreamExecutionEnvironment {
 	private static final Logger LOG = LoggerFactory.getLogger(LocalStreamEnvironment.class);
 
 	private final Configuration configuration;
+
+	private Map<JobID, MiniCluster> submitMapping = new HashMap<>();
 
 	/**
 	 * Creates a new mini cluster stream environment that uses the default configuration.
@@ -87,7 +94,41 @@ public class LocalStreamEnvironment extends StreamExecutionEnvironment {
 		// transform the streaming program into a JobGraph
 		JobGraph jobGraph = streamGraph.getJobGraph();
 		jobGraph.setAllowQueuedScheduling(true);
+		MiniCluster miniCluster = prepareMiniCluster(jobGraph);
 
+		try {
+			return miniCluster.executeJobBlocking(jobGraph);
+		}
+		finally {
+			transformations.clear();
+			miniCluster.close();
+		}
+	}
+
+	@Override
+	public JobSubmissionResult submitJob(StreamGraph streamGraph) throws Exception {
+		// transform the streaming program into a JobGraph
+		JobGraph jobGraph = streamGraph.getJobGraph();
+		jobGraph.setAllowQueuedScheduling(true);
+		MiniCluster miniCluster = prepareMiniCluster(jobGraph);
+		this.submitMapping.put(jobGraph.getJobID(), miniCluster);
+		JobSubmissionResult jobSubmissionResult = miniCluster.submitJob(jobGraph).get();
+		transformations.clear();
+		return jobSubmissionResult;
+	}
+
+	@Override
+	public void stopJob(JobID jobID) throws Exception {
+		MiniCluster miniCluster = this.submitMapping.get(jobID);
+		if (miniCluster == null) {
+			throw new RuntimeException("Try to stop an untraceable job");
+		}
+		miniCluster.stopJob(jobID).get();
+		miniCluster.close();
+		this.submitMapping.remove(jobID);
+	}
+
+	private MiniCluster prepareMiniCluster(JobGraph jobGraph) throws Exception {
 		Configuration configuration = new Configuration();
 		configuration.addAll(jobGraph.getJobConfiguration());
 		configuration.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, -1L);
@@ -116,15 +157,8 @@ public class LocalStreamEnvironment extends StreamExecutionEnvironment {
 
 		MiniCluster miniCluster = new MiniCluster(cfg);
 
-		try {
-			miniCluster.start();
-			configuration.setInteger(RestOptions.PORT, miniCluster.getRestAddress().getPort());
-
-			return miniCluster.executeJobBlocking(jobGraph);
-		}
-		finally {
-			transformations.clear();
-			miniCluster.close();
-		}
+		miniCluster.start();
+		configuration.setInteger(RestOptions.PORT, miniCluster.getRestAddress().getPort());
+		return miniCluster;
 	}
 }

@@ -33,7 +33,7 @@ public final class ServiceRegistryFactory {
 
 	private static final String SERVICE_REGISTRY_CLASS = "flink.service.registry.class";
 
-	private static final String DEFAULT_REGISTRY_CLASS = "org.apache.flink.table.temptable.FileSystemRegistry";
+	private static final String DEFAULT_REGISTRY_CLASS = "org.apache.flink.service.impl.FileSystemRegistry";
 
 	private ServiceRegistryFactory() {}
 

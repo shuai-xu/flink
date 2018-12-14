@@ -20,6 +20,8 @@ package org.apache.flink.streaming.api.environment;
 import org.apache.flink.annotation.Public;
 import org.apache.flink.api.common.InvalidProgramException;
 import org.apache.flink.api.common.JobExecutionResult;
+import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.JobSubmissionResult;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.client.program.ClusterClient;
 import org.apache.flink.client.program.JobWithJars;
@@ -41,7 +43,9 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A {@link StreamExecutionEnvironment} for executing on a cluster.
@@ -65,6 +69,8 @@ public class RemoteStreamEnvironment extends StreamExecutionEnvironment {
 
 	/** The classpaths that need to be attached to each job. */
 	private final List<URL> globalClasspaths;
+
+	private final Map<JobID, ClusterClient> submittedJobs = new HashMap<>();
 
 	/**
 	 * Creates a new RemoteStreamEnvironment that points to the master
@@ -193,6 +199,44 @@ public class RemoteStreamEnvironment extends StreamExecutionEnvironment {
 		ClassLoader usercodeClassLoader = JobWithJars.buildUserCodeClassLoader(jarFiles, globalClasspaths,
 			getClass().getClassLoader());
 
+		ClusterClient<?> client = null;
+		try {
+			client = prepareClusterClient();
+			return client.run(streamGraph, jarFiles, globalClasspaths, usercodeClassLoader).getJobExecutionResult();
+		} catch (ProgramInvocationException e) {
+			throw e;
+		} catch (Exception e) {
+			String term = e.getMessage() == null ? "." : (": " + e.getMessage());
+			throw new ProgramInvocationException("The program execution failed" + term, e);
+		} finally {
+			try {
+				client.shutdown();
+			} catch (Exception e) {
+				LOG.warn("Could not properly shut down the cluster client.", e);
+			}
+		}
+	}
+
+	@Override
+	public JobSubmissionResult submitJob(StreamGraph streamGraph) throws Exception {
+		if (LOG.isInfoEnabled()) {
+			LOG.info("Running remotely at {}:{}", host, port);
+		}
+
+		ClassLoader usercodeClassLoader = JobWithJars.buildUserCodeClassLoader(jarFiles, globalClasspaths,
+			getClass().getClassLoader());
+
+		ClusterClient<?> client = prepareClusterClient();
+		client.setDetached(true);
+		JobSubmissionResult jobSubmissionResult = client.submitJob(streamGraph.getJobGraph(),
+			usercodeClassLoader);
+		JobID jobID = jobSubmissionResult.getJobID();
+		submittedJobs.put(jobID, client);
+		return jobSubmissionResult;
+	}
+
+	private ClusterClient<?> prepareClusterClient() throws Exception {
+
 		Configuration configuration = new Configuration();
 		configuration.addAll(this.clientConfiguration);
 
@@ -213,23 +257,14 @@ public class RemoteStreamEnvironment extends StreamExecutionEnvironment {
 
 		client.setPrintStatusDuringExecution(getConfig().isSysoutLoggingEnabled());
 
-		try {
-			return client.run(streamGraph, jarFiles, globalClasspaths, usercodeClassLoader).getJobExecutionResult();
-		}
-		catch (ProgramInvocationException e) {
-			throw e;
-		}
-		catch (Exception e) {
-			String term = e.getMessage() == null ? "." : (": " + e.getMessage());
-			throw new ProgramInvocationException("The program execution failed" + term, e);
-		}
-		finally {
-			try {
-				client.shutdown();
-			} catch (Exception e) {
-				LOG.warn("Could not properly shut down the cluster client.", e);
-			}
-		}
+		return client;
+	}
+
+	@Override
+	public void stopJob(JobID jobID) throws Exception {
+		ClusterClient clusterClient = submittedJobs.get(jobID);
+		clusterClient.stop(jobID);
+		clusterClient.shutdown();
 	}
 
 	@Override

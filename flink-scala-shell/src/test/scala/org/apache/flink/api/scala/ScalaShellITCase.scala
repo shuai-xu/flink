@@ -40,39 +40,6 @@ class ScalaShellITCase extends TestLogger {
   @Rule
   def temporaryFolder = _temporaryFolder
 
-  /** Prevent re-creation of environment */
-  @Test
-  def testPreventRecreationBatch(): Unit = {
-
-    val input: String =
-      """
-        val benv = ExecutionEnvironment.getExecutionEnvironment
-      """.stripMargin
-
-    val output: String = processInShell(input)
-
-    Assert.assertTrue(output.contains(
-      "UnsupportedOperationException: Execution Environment is already " +
-      "defined for this shell"))
-  }
-
-  /** Prevent re-creation of environment */
-  @Test
-  def testPreventRecreationStreaming(): Unit = {
-
-    val input: String =
-      """
-        import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-        val senv = StreamExecutionEnvironment.getExecutionEnvironment
-      """.stripMargin
-
-    val output: String = processInShell(input)
-
-    Assert.assertTrue(output.contains(
-      "UnsupportedOperationException: Execution Environment is already " +
-      "defined for this shell"))
-  }
-
   /** Iteration test with iterative Pi example */
   @Test
   def testIterativePIBatch(): Unit = {

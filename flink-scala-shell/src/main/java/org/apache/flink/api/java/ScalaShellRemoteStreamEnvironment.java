@@ -43,6 +43,10 @@ public class ScalaShellRemoteStreamEnvironment extends RemoteStreamEnvironment {
 
 	// reference to Scala Shell, for access to virtual directory
 	private FlinkILoop flinkILoop;
+	private String host;
+	private int port;
+	private Configuration configuration;
+	private String[] jarFiles;
 
 	/**
 	 * Creates a new RemoteStreamEnvironment that points to the master
@@ -66,6 +70,10 @@ public class ScalaShellRemoteStreamEnvironment extends RemoteStreamEnvironment {
 
 		super(host, port, configuration, jarFiles);
 		this.flinkILoop = flinkILoop;
+		this.host = host;
+		this.port = port;
+		this.configuration = configuration;
+		this.jarFiles = jarFiles;
 	}
 
 	/**
@@ -94,27 +102,8 @@ public class ScalaShellRemoteStreamEnvironment extends RemoteStreamEnvironment {
 	}
 
 	public void setAsContext() {
-		StreamExecutionEnvironmentFactory factory = new StreamExecutionEnvironmentFactory() {
-			@Override
-			public StreamExecutionEnvironment createExecutionEnvironment() {
-				throw new UnsupportedOperationException("Execution Environment is already defined" +
-						" for this shell.");
-			}
-		};
-		initializeContextEnvironment(factory);
-	}
-
-	public static void disableAllContextAndOtherEnvironments() {
-		// we create a context environment that prevents the instantiation of further
-		// context environments. at the same time, setting the context environment prevents manual
-		// creation of local and remote environments
-		StreamExecutionEnvironmentFactory factory = new StreamExecutionEnvironmentFactory() {
-			@Override
-			public StreamExecutionEnvironment createExecutionEnvironment() {
-				throw new UnsupportedOperationException("Execution Environment is already defined" +
-						" for this shell.");
-			}
-		};
+		StreamExecutionEnvironmentFactory factory = () -> new RemoteStreamEnvironment(host, port,
+			configuration, jarFiles);
 		initializeContextEnvironment(factory);
 	}
 

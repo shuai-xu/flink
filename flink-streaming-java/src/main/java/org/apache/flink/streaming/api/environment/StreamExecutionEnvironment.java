@@ -23,6 +23,8 @@ import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.InvalidProgramException;
 import org.apache.flink.api.common.JobExecutionResult;
+import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.JobSubmissionResult;
 import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.api.common.functions.InvalidTypesException;
 import org.apache.flink.api.common.functions.StoppableFunction;
@@ -1798,6 +1800,15 @@ public abstract class StreamExecutionEnvironment {
 		return execute(streamGraph);
 	}
 
+	public JobSubmissionResult submit(String jobName) throws Exception {
+		Preconditions.checkNotNull("Streaming Job name should not be null.");
+
+		StreamGraph streamGraph = this.getStreamGraph();
+		streamGraph.setJobName(jobName);
+
+		return submitJob(streamGraph);
+	}
+
 	/**
 	 * Triggers the program execution with stream graph.
 	 *
@@ -1807,6 +1818,14 @@ public abstract class StreamExecutionEnvironment {
 	 */
 	@Internal
 	public abstract JobExecutionResult execute(StreamGraph streamGraph) throws Exception;
+
+	public JobSubmissionResult submitJob(StreamGraph streamGraph) throws Exception {
+		throw new RuntimeException("do not support submitting job.");
+	}
+
+	public void stopJob(JobID jobID) throws Exception {
+		throw new RuntimeException("do not support stopping job.");
+	}
 
 	/**
 	 * Getter of the {@link org.apache.flink.streaming.api.graph.StreamGraph} of the streaming job.

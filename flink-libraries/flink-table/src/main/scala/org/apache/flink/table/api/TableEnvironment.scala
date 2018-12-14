@@ -62,6 +62,8 @@ import _root_.java.lang.reflect.Modifier
 import _root_.java.util
 import _root_.java.util.concurrent.atomic.AtomicInteger
 
+import org.apache.flink.table.temptable.FlinkTableServiceManager
+
 import _root_.scala.annotation.varargs
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
@@ -119,6 +121,9 @@ abstract class TableEnvironment(val config: TableConfig) {
 
   // sink nodes collection
   private[flink] val sinkNodes = new mutable.MutableList[LogicalNode]
+
+  // a manager for table service
+  private[flink] val tableServiceManager = new FlinkTableServiceManager(this)
 
   // the configuration for SqlToRelConverter
   private[flink] lazy val sqlToRelConverterConfig: SqlToRelConverter.Config = {

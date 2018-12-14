@@ -105,6 +105,10 @@ class FlinkILoop(
     (scalaBenv,scalaSenv,scalaBTEnv,scalaSTEnv)
   }
 
+  def saveEnvAsContext(): Unit = {
+    remoteSenv.setAsContext()
+  }
+
   /**
    * creates a temporary directory to store compiled console files
    */
@@ -167,6 +171,11 @@ class FlinkILoop(
       intp.bind("btenv", this.scalaBTEnv)
       intp.bind("stenv", this.scalaSTEnv)
     }
+  }
+
+  override def closeInterpreter(): Unit = {
+    super.closeInterpreter()
+    scalaBTEnv.tableServiceManager.close()
   }
 
   /**

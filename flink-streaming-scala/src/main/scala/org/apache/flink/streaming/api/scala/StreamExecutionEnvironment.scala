@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.scala
 
 import com.esotericsoftware.kryo.Serializer
 import org.apache.flink.annotation.{Internal, Public, PublicEvolving}
+import org.apache.flink.api.common.{JobID, JobSubmissionResult}
 import org.apache.flink.api.common.io.{FileInputFormat, FilePathFilter, InputFormat}
 import org.apache.flink.api.common.restartstrategy.RestartStrategies.RestartStrategyConfiguration
 import org.apache.flink.api.common.typeinfo.TypeInformation
@@ -32,6 +33,7 @@ import org.apache.flink.runtime.state.StateBackend
 import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JavaEnv}
 import org.apache.flink.streaming.api.functions.source._
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext
+import org.apache.flink.streaming.api.graph.StreamGraph
 import org.apache.flink.streaming.api.{CheckpointingMode, TimeCharacteristic}
 import org.apache.flink.util.SplittableIterator
 
@@ -805,6 +807,32 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
     */
   def registerCachedFile(filePath: String, name: String, executable: Boolean): Unit = {
     javaEnv.registerCachedFile(filePath, name, executable)
+  }
+
+  /**
+    * Submit job asynchronously.
+    * @param streamGraph
+    * @return
+    */
+  def submitJob(streamGraph: StreamGraph): JobSubmissionResult = {
+    javaEnv.submitJob(streamGraph)
+  }
+
+  /**
+    * Submit job asynchronously with a name.
+    * @param streamGraph
+    * @return
+    */
+  def submit(jobName: String): JobSubmissionResult = {
+    javaEnv.submit(jobName)
+  }
+
+  /**
+    * Stop a submitted job with JobID.
+    * @param jobId
+    */
+  def stopJob(jobId: JobID): Unit = {
+    javaEnv.stopJob(jobId)
   }
 }
 

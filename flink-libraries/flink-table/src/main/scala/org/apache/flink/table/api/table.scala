@@ -138,6 +138,19 @@ class Table(
   def collectAsT[T](t: DataType, jobName : String = null): Seq[T] =
     collectSink(new CollectTableSink(_ => t), Option(jobName))
 
+  /**
+    * cache this table to builtin table service or the specified external service
+    * @return
+    */
+  def cache(): Unit = {
+    // check if it has been already cached.
+    (tableEnv.tableServiceManager.getToBeCachedTableName(logicalPlan) orElse
+      tableEnv.tableServiceManager.getCachedTableName(logicalPlan)) match {
+      case None => tableEnv.tableServiceManager.cacheTable(this)
+      case Some(_) =>
+    }
+  }
+
   private def print(jobName : Option[String] = None): Unit = {
     for (row <- collectSink(new CollectRowTableSink, jobName)) {
       System.out.println(row)

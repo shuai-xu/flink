@@ -140,6 +140,7 @@ class BatchTableEnvironment(
       throw new TableException("No table sinks have been created yet. " +
           "A program needs at least one sink that consumes data. ")
     }
+    tableServiceManager.startTableServiceJob()
     val result = executeInternal(transformations, Option.apply(jobName))
     sinkNodes.clear()
     result
@@ -154,8 +155,8 @@ class BatchTableEnvironment(
         .asInstanceOf[TypeSerializer[T]]
     val id = new AbstractID().toString
     sink.init(typeSerializer, id)
-    val stream = translate(table, sink)
-    val res = executeInternal(ArrayBuffer(stream.getTransformation), jobName)
+    writeToSink(table, sink)
+    val res = execute(jobName.getOrElse(DEFAULT_JOB_NAME))
     val accResult: JArrayList[Array[Byte]] = res.getAccumulatorResult(id)
     SerializedListAccumulator.deserializeList(accResult, typeSerializer).asScala
   }
@@ -202,6 +203,8 @@ class BatchTableEnvironment(
 
     val result = streamEnv.execute(streamGraph)
     dumpPlanWithMetricsIfNeed(streamGraph, result)
+    ruKeeper.clear()
+    tableServiceManager.markAllTablesCached()
     result
   }
 
@@ -261,8 +264,10 @@ class BatchTableEnvironment(
         throw new TableException("No table sinks have been created yet. " +
             "A program needs at least one sink that consumes data. ")
       }
+
+      val optSinkNodes = tableServiceManager.cachePlanBuilder.buildPlanIfNeeded(sinkNodes)
       // build RelNodeBlock plan
-      val blockPlan = RelNodeBlockPlanBuilder.buildRelNodeBlockPlan(sinkNodes, this)
+      val blockPlan = RelNodeBlockPlanBuilder.buildRelNodeBlockPlan(optSinkNodes, this)
 
       // translates recursively RelNodeBlock into BoundedStream
       blockPlan.foreach {
