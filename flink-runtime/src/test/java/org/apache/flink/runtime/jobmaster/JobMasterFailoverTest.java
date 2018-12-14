@@ -39,6 +39,7 @@ import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.ArchivedExecutionGraph;
 import org.apache.flink.runtime.executiongraph.Execution;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
+import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils;
 import org.apache.flink.runtime.executiongraph.ExecutionJobVertex;
 import org.apache.flink.runtime.executiongraph.ExecutionVertex;
@@ -52,6 +53,7 @@ import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
@@ -97,6 +99,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -1143,6 +1146,105 @@ public class JobMasterFailoverTest extends TestLogger {
 					newJobMaster.getExecutionGraph().getRegisteredExecutions().values().iterator().next(),
 					ExecutionState.SCHEDULED,
 					2000L);
+
+			RpcUtils.terminateRpcEndpoint(newJobMaster, testingTimeout);
+		} finally {
+			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
+		}
+	}
+
+	/**
+	 * Tests that the JobMaster will failover the job if reconciling all deploying executions.
+	 */
+	@Test
+	public void testFailoverAfterReconcileDeployingExecutions() throws Exception {
+		TestingEagerSchedulingPlugin.init();
+		configuration.setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, TestingEagerSchedulingPlugin.class.getName());
+		configuration.setLong(JobManagerOptions.JOB_RECONCILE_TIMEOUT, 1L);
+		final JobGraph producerConsumerJobGraph = producerConsumerJobGraph(configuration, ResultPartitionType.BLOCKING);
+		final JobMaster jobMaster = createJobMaster(
+				configuration,
+				producerConsumerJobGraph,
+				haServices,
+				new TestingJobManagerSharedServicesBuilder().build(),
+				heartbeatServices);
+
+		CompletableFuture<Acknowledge> startFuture = jobMaster.start(jobMasterId, testingTimeout);
+
+		try {
+			// wait for the start to complete
+			startFuture.get(testingTimeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+			//clear the log genereated by other cases;
+			jobMaster.getExecutionGraph().getGraphManager().reset();
+
+			final TestingResourceManagerGateway testingResourceManagerGateway = new TestingResourceManagerGateway();
+
+			final CompletableFuture<AllocationID> allocationIdFuture = new CompletableFuture<>();
+			testingResourceManagerGateway.setRequestSlotConsumer(slotRequest -> allocationIdFuture.complete(slotRequest.getAllocationId()));
+
+			rpcService.registerGateway(testingResourceManagerGateway.getAddress(), testingResourceManagerGateway);
+
+			final CompletableFuture<TaskDeploymentDescriptor> tddFuture = new CompletableFuture<>();
+			final TestingTaskExecutorGateway testingTaskExecutorGateway = new TestingTaskExecutorGatewayBuilder()
+					.setSubmitTaskConsumer((taskDeploymentDescriptor, jobMasterId) -> {
+						tddFuture.complete(taskDeploymentDescriptor);
+						return CompletableFuture.completedFuture(Acknowledge.get());
+					})
+					.createTestingTaskExecutorGateway();
+			rpcService.registerGateway(testingTaskExecutorGateway.getAddress(), testingTaskExecutorGateway);
+
+			final JobMasterGateway jobMasterGateway = jobMaster.getSelfGateway(JobMasterGateway.class);
+
+			rmLeaderRetrievalService.notifyListener(testingResourceManagerGateway.getAddress(), testingResourceManagerGateway.getFencingToken().toUUID());
+
+			final AllocationID allocationId = allocationIdFuture.get();
+
+			final LocalTaskManagerLocation taskManagerLocation = new LocalTaskManagerLocation();
+			jobMasterGateway.registerTaskManager(testingTaskExecutorGateway.getAddress(), taskManagerLocation, testingTimeout).get();
+
+			final SlotOffer slotOffer = new SlotOffer(allocationId, 0, ResourceProfile.UNKNOWN);
+
+			final Collection<SlotOffer> slotOffers = jobMasterGateway.offerSlots(taskManagerLocation.getResourceID(), Collections.singleton(slotOffer), testingTimeout).get();
+
+			assertThat(slotOffers, hasSize(1));
+			assertThat(slotOffers, contains(slotOffer));
+
+			// obtain tdd for the result partition ids
+			final TaskDeploymentDescriptor tdd = tddFuture.get();
+
+			final ExecutionAttemptID producerAttemptId = tdd.getExecutionAttemptId();
+			ExecutionAttemptID theOther = null;
+			for (Execution execution : jobMaster.getExecutionGraph().getRegisteredExecutions().values()) {
+				if (execution.getAttemptId() != producerAttemptId) {
+					theOther = execution.getAttemptId();
+					break;
+				}
+			}
+
+			ExecutionGraphTestUtils.waitUntilExecutionState(
+					jobMaster.getExecutionGraph().getRegisteredExecutions().get(theOther),
+					ExecutionState.DEPLOYING,
+					2000L);
+
+			// Another master can replay the log as the use the same log store.
+			final JobMaster newJobMaster = createJobMaster(
+					configuration,
+					producerConsumerJobGraph,
+					haServices,
+					new TestingJobManagerSharedServicesBuilder().build(),
+					heartbeatServices);
+
+			// let the new job master replay log
+			newJobMaster.reconcile();
+
+			ExecutionGraph newExecutionGraph = newJobMaster.getExecutionGraph();
+			Collection<ExecutionAttemptID> failedExecutions = newExecutionGraph.getReconcileFuture().get();
+
+			// check that after reconciling, the job status are running, some executions need to be mark failed.
+			assertEquals(JobStatus.RUNNING, newExecutionGraph.getState());
+			Iterator<ExecutionAttemptID> attemptIDIterator = failedExecutions.iterator();
+			assertTrue(newExecutionGraph.getRegisteredExecutions().containsKey(attemptIDIterator.next()));
+			assertTrue(newExecutionGraph.getRegisteredExecutions().containsKey(attemptIDIterator.next()));
 
 			RpcUtils.terminateRpcEndpoint(newJobMaster, testingTimeout);
 		} finally {
