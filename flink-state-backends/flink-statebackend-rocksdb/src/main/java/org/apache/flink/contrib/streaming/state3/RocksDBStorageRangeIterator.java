@@ -22,37 +22,32 @@ import org.apache.flink.runtime.state3.StorageIterator;
 import org.apache.flink.types.Pair;
 import org.apache.flink.util.Preconditions;
 
-import javax.annotation.Nullable;
-
 /**
- * A helper class returns an iterator with the given prefix.
+ * An helper class returns an iterator which key locates in the given key range.
  */
-public class RocksDbStoragePrefixIterator implements StorageIterator<byte[], byte[]> {
-	private final RocksDbStorageInstance dbStorageInstance;
-	/**
-	 * The prefixKye will be null if iterator from the first element from the storage.
-	 */
-	@Nullable
-	private final byte[] prefixKey;
-	private final AbstractRocksDbStorageIterator<RocksDbPair> prefixIterator;
+public class RocksDBStorageRangeIterator implements StorageIterator<byte[], byte[]> {
+	private final RocksDBStorageInstance dbStorageInstance;
+	private final AbstractRocksDbStorageIterator<RocksDBPair> rangeIterator;
 
-	public RocksDbStoragePrefixIterator(RocksDbStorageInstance dbStorageInstance, byte[] prefixKey) {
+	public RocksDBStorageRangeIterator(
+		RocksDBStorageInstance dbStorageInstance,
+		final byte[] keyPrefixStart,
+		final byte[] keyPrefixEnd) {
+		Preconditions.checkState(compare(keyPrefixStart, keyPrefixEnd) <= 0);
 		this.dbStorageInstance = dbStorageInstance;
-		this.prefixKey = prefixKey;
-
-		this.prefixIterator = new AbstractRocksDbStorageIterator<RocksDbPair>(dbStorageInstance) {
+		this.rangeIterator = new AbstractRocksDbStorageIterator<RocksDBPair>(dbStorageInstance) {
 			@Override
 			byte[] getStartDBKey() {
-				return prefixKey;
+				return keyPrefixStart;
 			}
 
 			@Override
 			boolean isEndDBKey(byte[] dbKey) {
-				return prefixKey != null && !isPrefixWith(dbKey);
+				return compare(dbKey, keyPrefixEnd) >= 0;
 			}
 
 			@Override
-			public RocksDbPair next() {
+			public RocksDBPair next() {
 				return getNextPair();
 			}
 		};
@@ -64,33 +59,32 @@ public class RocksDbStoragePrefixIterator implements StorageIterator<byte[], byt
 	}
 
 	@Override
-	public void remove() {
-		prefixIterator.remove();
-	}
-
-	@Override
 	public boolean hasNext() {
-		return prefixIterator.hasNext();
+		return rangeIterator.hasNext();
 	}
 
 	@Override
 	public Pair<byte[], byte[]> next() {
-		return prefixIterator.next();
+		return rangeIterator.next();
 	}
 
-	private boolean isPrefixWith(byte[] bytes) {
-		Preconditions.checkArgument(bytes != null);
+	private int compare(byte[] leftBytes, byte[] rightBytes) {
+		Preconditions.checkArgument(leftBytes != null);
+		Preconditions.checkArgument(rightBytes != null);
 
-		if (bytes.length < prefixKey.length) {
-			return false;
-		}
+		int commonLength = Math.min(leftBytes.length, rightBytes.length);
+		for (int i = 0; i < commonLength; ++i) {
+			int leftByte = leftBytes[i] & 0xFF;
+			int rightByte = rightBytes[i] & 0xFF;
 
-		for (int i = 0; i < prefixKey.length; ++i) {
-			if (bytes[i] != prefixKey[i]) {
-				return false;
+			if (leftByte > rightByte) {
+				return 1;
+			} else if (leftByte < rightByte) {
+				return -1;
 			}
 		}
 
-		return true;
+		return (leftBytes.length - rightBytes.length);
 	}
 }
+

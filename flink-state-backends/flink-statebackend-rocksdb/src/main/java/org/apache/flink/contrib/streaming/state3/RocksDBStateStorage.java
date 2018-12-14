@@ -28,10 +28,10 @@ import org.rocksdb.RocksIterator;
 /**
  * An implementation of {@link StateStorage} which stores key-values in {@code RocksDB}.
  */
-public class RocksDbStateStorage implements StateStorage<byte[], byte[]> {
-	private final RocksDbStorageInstance storageInstance;
+public class RocksDBStateStorage implements StateStorage<byte[], byte[]> {
+	private final RocksDBStorageInstance storageInstance;
 
-	public RocksDbStateStorage(RocksDbStorageInstance storageInstance) {
+	public RocksDBStateStorage(RocksDBStorageInstance storageInstance) {
 		this.storageInstance = storageInstance;
 	}
 
@@ -53,17 +53,17 @@ public class RocksDbStateStorage implements StateStorage<byte[], byte[]> {
 
 	@Override
 	public StorageIterator iterator() {
-		return new RocksDbStoragePrefixIterator(storageInstance, null);
+		return new RocksDBStoragePrefixIterator(storageInstance, null);
 	}
 
 	@Override
 	public StorageIterator prefixIterator(byte[] prefixKey) {
-		return new RocksDbStoragePrefixIterator(storageInstance, prefixKey);
+		return new RocksDBStoragePrefixIterator(storageInstance, prefixKey);
 	}
 
 	@Override
 	public StorageIterator subIterator(byte[] prefixKeyStart, byte[] prefixKeyEnd) {
-		return new RocksDbStorageRangeIterator(storageInstance, prefixKeyStart, prefixKeyEnd);
+		return new RocksDBStorageRangeIterator(storageInstance, prefixKeyStart, prefixKeyEnd);
 	}
 
 	@Override
@@ -72,7 +72,7 @@ public class RocksDbStateStorage implements StateStorage<byte[], byte[]> {
 		try (RocksIterator iterator = storageInstance.iterator()) {
 			iterator.seek(prefixKeys);
 			if (iterator.isValid()) {
-				return new RocksDbPair(storageInstance, iterator.key(), iterator.value());
+				return new RocksDBPair(storageInstance, iterator.key(), iterator.value());
 			} else {
 				return null;
 			}
@@ -89,7 +89,7 @@ public class RocksDbStateStorage implements StateStorage<byte[], byte[]> {
 				iterator.seekToLast();
 			}
 			if (iterator.isValid()) {
-				return new RocksDbPair(storageInstance, iterator.key(), iterator.value());
+				return new RocksDBPair(storageInstance, iterator.key(), iterator.value());
 			} else {
 				return null;
 			}

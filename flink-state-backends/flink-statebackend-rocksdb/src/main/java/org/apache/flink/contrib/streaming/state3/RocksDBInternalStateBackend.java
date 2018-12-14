@@ -24,13 +24,22 @@ import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.CheckpointType;
+import org.apache.flink.runtime.io.async.AbstractAsyncCallableWithResources;
+import org.apache.flink.runtime.io.async.AsyncStoppableTaskWithCallback;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.CheckpointListener;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
+import org.apache.flink.runtime.state.CheckpointStreamWithResultProvider;
+import org.apache.flink.runtime.state.CheckpointedStateScope;
+import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
 import org.apache.flink.runtime.state.DoneFuture;
 import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.GroupSet;
+import org.apache.flink.runtime.state.IncrementalLocalStatePartitionSnapshot;
+import org.apache.flink.runtime.state.IncrementalStatePartitionSnapshot;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
+import org.apache.flink.runtime.state.LocalRecoveryDirectoryProvider;
+import org.apache.flink.runtime.state.SnapshotDirectory;
 import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.SnapshotStrategy;
 import org.apache.flink.runtime.state.StateAccessException;
@@ -45,15 +54,20 @@ import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.ResourceGuard;
+import org.apache.flink.util.function.SupplierWithException;
 
+import org.rocksdb.Checkpoint;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.DBOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
+import org.rocksdb.WriteOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nonnull;
 
 import java.io.File;
 import java.io.IOException;
@@ -66,6 +80,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.RunnableFuture;
 
 /**
@@ -82,18 +97,21 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 	private static final Logger LOG = LoggerFactory.getLogger(RocksDBInternalStateBackend.class);
 
 	/** The name of the merge operator in RocksDB. Do not change except you know exactly what you do. */
-	public static final String MERGE_OPERATOR_NAME = "stringappendtest";
-
-	/**
-	 * Separator of StringAppendTestOperator in RocksDB.
-	 */
-	static final byte DELIMITER = ',';
+	private static final String MERGE_OPERATOR_NAME = "stringappendtest";
 
 	/** The DB options from the options factory. */
-	final DBOptions dbOptions;
+	private final DBOptions dbOptions;
 
 	/** The column family options from the options factory. */
-	final ColumnFamilyOptions columnOptions;
+	private final ColumnFamilyOptions columnOptions;
+
+	/** Default column family handle of current RocksDB instance. */
+	private ColumnFamilyHandle defaultColumnFamilyHandle;
+
+	/** Default column family descriptor of current RocksDB instance. */
+	private final ColumnFamilyDescriptor defaultColumnFamilyDescriptor;
+
+	private final String defaultColumnFamilyName = "default";
 
 	/**
 	 * Protects access to RocksDB in other threads, like the checkpointing thread from parallel call that disposes the
@@ -101,13 +119,26 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 	 */
 	final ResourceGuard rocksDBResourceGuard;
 
+	/**
+	 * The RocksDB instance associates with the current state backend.
+	 * All data will write to it.
+	 */
 	private RocksDB db;
 
+	/**
+	 * Write options for RocksDB.
+	 */
+	private WriteOptions writeOptions;
+
+	/**
+	 * Opened ColumnFamily Handles of current state backend.
+	 */
 	private final Map<String, ColumnFamilyHandle> columnFamilyHandles;
 
+	/**
+	 * All registered column family descriptors of current state backend.
+	 */
 	private final Map<String, ColumnFamilyDescriptor> columnFamilyDescriptors;
-
-	private ColumnFamilyHandle defaultColumnFamilyHandle;
 
 	/** Path where this configured instance stores its data directory. */
 	private File instanceBasePath;
@@ -154,6 +185,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 		// ensure that we use the right merge operator, because other code relies on this
 		this.columnOptions = Preconditions.checkNotNull(columnOptions)
 			.setMergeOperatorName(MERGE_OPERATOR_NAME);
+		this.defaultColumnFamilyDescriptor = new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY, columnOptions);
 
 		this.instanceBasePath = Preconditions.checkNotNull(instanceBasePath);
 		this.instanceRocksDBPath = new File(instanceBasePath, "db");
@@ -170,6 +202,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 
 		this.columnFamilyDescriptors = new HashMap<>();
 		this.columnFamilyHandles = new HashMap<>();
+		this.writeOptions = new WriteOptions().setDisableWAL(true);
 
 		this.materializedSstFiles = new TreeMap<>();
 
@@ -192,11 +225,12 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 		if (db != null) {
 			IOUtils.closeQuietly(defaultColumnFamilyHandle);
 			for (StateStorage storage : stateStorages.values()) {
-				((RocksDbStorageInstance) storage.getStorageInstance()).close();
+				((RocksDBStorageInstance) storage.getStorageInstance()).close();
 			}
+			IOUtils.closeQuietly(db);
+			IOUtils.closeQuietly(writeOptions);
 			IOUtils.closeQuietly(columnOptions);
 			IOUtils.closeQuietly(dbOptions);
-			IOUtils.closeQuietly(db);
 
 			db = null;
 			cleanInstanceBasePath();
@@ -206,7 +240,10 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 	@Override
 	protected StateStorage createStateStorageForKeyedState(KeyedStateDescriptor descriptor) {
 		try {
-			return new RocksDbStateStorage(new RocksDbStorageInstance(this.db, getOrCreateColumnfamily(descriptor.getName())));
+			return new RocksDBStateStorage(new RocksDBStorageInstance(
+												db,
+												getOrCreateColumnfamily(descriptor.getName()),
+												writeOptions));
 		} catch (IOException e) {
 			throw new StateAccessException(e);
 		}
@@ -240,10 +277,18 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 		return columnDescriptor;
 	}
 
+	public WriteOptions getWriteOptions() {
+		return this.writeOptions;
+	}
+
 	@Override
 	protected StateStorage createStateStorageForSubKeyedState(SubKeyedStateDescriptor descriptor) {
 		try {
-			return new RocksDbStateStorage(new RocksDbStorageInstance(this.db, getOrCreateColumnfamily(descriptor.getName())));
+			return new RocksDBStateStorage(
+				new RocksDBStorageInstance(
+					db,
+					getOrCreateColumnfamily(descriptor.getName()),
+					writeOptions));
 		} catch (IOException e) {
 			throw new StateAccessException(e);
 		}
@@ -308,7 +353,28 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 		}
 
 		try {
-			createDB();
+			if (restoredSnapshots == null || restoredSnapshots.isEmpty()) {
+				createDB();
+				LOG.info("Successfully created RocksDB state backend at {}.", instanceRocksDBPath);
+			} else {
+				LOG.info("Restoring RocksDB internal state backend at {}.", instanceRocksDBPath);
+
+				long startMillis = System.currentTimeMillis();
+
+				StatePartitionSnapshot stateSnapshot = restoredSnapshots.iterator().next();
+				if (stateSnapshot instanceof DefaultStatePartitionSnapshot) {
+					RocksDBFullRestoreOperation restoreOperation = new RocksDBFullRestoreOperation(this);
+					restoreOperation.restore(restoredSnapshots);
+				} else if (stateSnapshot instanceof IncrementalStatePartitionSnapshot || stateSnapshot instanceof IncrementalLocalStatePartitionSnapshot) {
+					RocksDbIncrementalRestoreOperation restoreOperation = new RocksDbIncrementalRestoreOperation(this);
+					restoreOperation.restore(restoredSnapshots);
+				} else {
+					throw new UnsupportedOperationException("Unknown statePartitionSnapshot for RocksDB internal state-backend to restore.");
+				}
+
+				long endMillis = System.currentTimeMillis();
+				LOG.info("Successfully restored RocksDB internal state-backend at {}, duration {} ms.", instanceRocksDBPath, (endMillis - startMillis));
+			}
 		} catch (Exception ex) {
 			closeImpl();
 			throw ex;
@@ -382,7 +448,73 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 					checkpointOptions);
 			}
 
-			return DoneFuture.of(SnapshotResult.empty());
+			if (db == null) {
+				throw new IOException("RocksDB closed.");
+			}
+
+			if (getKeyedStates().isEmpty() && getSubKeyedStates().isEmpty()) {
+				if (LOG.isDebugEnabled()) {
+					LOG.debug("Asynchronous RocksDB snapshot performed on empty keyed state at {}. Returning empty snapshot.", checkpointTimestamp);
+				}
+				return DoneFuture.of(SnapshotResult.empty());
+			}
+
+			SnapshotDirectory snapshotDirectory;
+
+			if (localRecoveryConfig.isLocalRecoveryEnabled()) {
+				// create a "permanent" snapshot directory for local recovery.
+				LocalRecoveryDirectoryProvider directoryProvider = localRecoveryConfig.getLocalStateDirectoryProvider();
+				File directory = directoryProvider.subtaskSpecificCheckpointDirectory(checkpointId);
+
+				if (directory.exists()) {
+					FileUtils.deleteDirectory(directory);
+				}
+
+				if (!directory.mkdirs()) {
+					throw new IOException("Local state base directory for checkpoint " + checkpointId +
+						" already exists: " + directory);
+				}
+
+				// introduces an extra directory because RocksDB wants a non-existing directory for native checkpoints.
+				File rdbSnapshotDir = new File(directory, "rocks_db");
+				Path path = new Path(rdbSnapshotDir.toURI());
+				// create a "permanent" snapshot directory because local recovery is active.
+				snapshotDirectory = SnapshotDirectory.permanent(path);
+			} else {
+				// create a "temporary" snapshot directory because local recovery is inactive.
+				Path path = new Path(instanceBasePath.getAbsolutePath(), "chk-" + checkpointId);
+				snapshotDirectory = SnapshotDirectory.temporary(path);
+			}
+
+			final RocksDBIncrementalSnapshotOperation snapshotOperation =
+				new RocksDBIncrementalSnapshotOperation(
+					RocksDBInternalStateBackend.this,
+					checkpointStreamFactory,
+					snapshotDirectory,
+					checkpointId);
+
+			try {
+				snapshotOperation.takeSnapshot();
+			} catch (Exception e) {
+				snapshotOperation.stop();
+				snapshotOperation.releaseResources(true);
+				throw e;
+			}
+
+			return new FutureTask<SnapshotResult<StatePartitionSnapshot>>(
+				snapshotOperation::runSnapshot
+			) {
+				@Override
+				public boolean cancel(boolean mayInterruptIfRunning) {
+					snapshotOperation.stop();
+					return super.cancel(mayInterruptIfRunning);
+				}
+
+				@Override
+				protected void done() {
+					snapshotOperation.releaseResources(isCancelled());
+				}
+			};
 		}
 	}
 
@@ -396,8 +528,98 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 			CheckpointOptions checkpointOptions) throws Exception {
 
 			long startTime = System.currentTimeMillis();
+			if (getKeyedStates().isEmpty() && getSubKeyedStates().isEmpty()) {
+				if (LOG.isDebugEnabled()) {
+					LOG.debug("Asynchronous RocksDB snapshot performed on empty keyed state at {}. Returning empty snapshot.", timestamp);
+				}
 
-			return DoneFuture.of(SnapshotResult.empty());
+				return DoneFuture.of(SnapshotResult.empty());
+			}
+
+			final SupplierWithException<CheckpointStreamWithResultProvider, Exception> supplier =
+
+				localRecoveryConfig.isLocalRecoveryEnabled() &&
+					(CheckpointType.SAVEPOINT != checkpointOptions.getCheckpointType()) ?
+
+					() -> CheckpointStreamWithResultProvider.createDuplicatingStream(
+						checkpointId,
+						CheckpointedStateScope.EXCLUSIVE,
+						primaryStreamFactory,
+						localRecoveryConfig.getLocalStateDirectoryProvider()) :
+
+					() -> CheckpointStreamWithResultProvider.createSimpleStream(
+						checkpointId,
+						CheckpointedStateScope.EXCLUSIVE,
+						primaryStreamFactory);
+
+			final CloseableRegistry snapshotCloseableRegistry = new CloseableRegistry();
+
+			final RocksDBFullSnapshotOperation snapshotOperation =
+				new RocksDBFullSnapshotOperation(
+					RocksDBInternalStateBackend.this,
+					checkpointId,
+					supplier,
+					snapshotCloseableRegistry);
+
+			snapshotOperation.takeDBSnapShot();
+
+			// implementation of the async IO operation, based on FutureTask
+			AbstractAsyncCallableWithResources<SnapshotResult<StatePartitionSnapshot>> ioCallable =
+				new AbstractAsyncCallableWithResources<SnapshotResult<StatePartitionSnapshot>>() {
+
+					@Override
+					protected void acquireResources() throws Exception {
+						cancelStreamRegistry.registerCloseable(snapshotCloseableRegistry);
+						snapshotOperation.openCheckpointStream();
+					}
+
+					@Override
+					protected void releaseResources() throws Exception {
+						closeLocalRegistry();
+						releaseSnapshotOperationResources();
+					}
+
+					private void releaseSnapshotOperationResources() {
+						// hold the db lock while operation on the db to guard us against async db disposal
+						snapshotOperation.releaseSnapshotResources();
+					}
+
+					@Override
+					protected void stopOperation() throws Exception {
+						closeLocalRegistry();
+					}
+
+					private void closeLocalRegistry() {
+						if (cancelStreamRegistry.unregisterCloseable(snapshotCloseableRegistry)) {
+							try {
+								snapshotCloseableRegistry.close();
+							} catch (Exception ex) {
+								LOG.warn("Error closing local registry", ex);
+							}
+						}
+					}
+
+					@Nonnull
+					@Override
+					public SnapshotResult<StatePartitionSnapshot> performOperation() throws Exception {
+						long startTime = System.currentTimeMillis();
+
+						if (isStopped()) {
+							throw new IOException("RocksDB closed.");
+						}
+
+						snapshotOperation.writeDBSnapshot();
+
+						LOG.info("Asynchronous RocksDB snapshot ({}, asynchronous part) in thread {} took {} ms.",
+							primaryStreamFactory, Thread.currentThread(), (System.currentTimeMillis() - startTime));
+
+						return snapshotOperation.getStatePartitionSnapshot();
+					}
+				};
+
+			LOG.info("Asynchronous RocksDB snapshot ({}, synchronous part) in thread {} took {} ms.",
+				primaryStreamFactory, Thread.currentThread(), (System.currentTimeMillis() - startTime));
+			return AsyncStoppableTaskWithCallback.from(ioCallable);
 		}
 	}
 
@@ -423,22 +645,67 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 		return db;
 	}
 
+	void takeDbSnapshot(String localCheckpointPath) throws RocksDBException {
+		Checkpoint checkpoint = Checkpoint.create(db);
+		checkpoint.createCheckpoint(localCheckpointPath);
+	}
+
 	void createDB() throws IOException {
+		List<ColumnFamilyDescriptor> columnFamilyDescriptors = Collections.singletonList(defaultColumnFamilyDescriptor);
+		List<ColumnFamilyHandle> stateColumnFamilyHandles = new ArrayList<>(1);
 		try {
-			List<ColumnFamilyDescriptor> columnFamilyDescriptors = Collections.singletonList(new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY, columnOptions));
-			List<ColumnFamilyHandle> stateColumnFamilyHandles = new ArrayList<>(1);
 			this.db = RocksDB.open(dbOptions, instanceRocksDBPath.getAbsolutePath(), columnFamilyDescriptors, stateColumnFamilyHandles);
-			defaultColumnFamilyHandle = stateColumnFamilyHandles.get(0);
+			defaultColumnFamilyHandle = stateColumnFamilyHandles.remove(0);
 		} catch (RocksDBException e) {
 			throw new IOException("Error while opening rocksDB instance at " + instanceRocksDBPath, e);
 		}
 	}
 
-	void setDb(RocksDB restoredDb) {
-		if (this.db != null) {
-			throw new IllegalStateException("It's illegal to set DB instance when the instance is already created, " +
-				"it's only allowed to set DB instance when restoring the state backend.");
+	ColumnFamilyDescriptor getDefaultColumnFamilyDescriptor() {
+		return defaultColumnFamilyDescriptor;
+	}
+
+	void createDBWithColumnFamily(
+		List<ColumnFamilyDescriptor> descriptors,
+		List<String> descriptorName) throws IOException {
+		Preconditions.checkState(db == null, "Can not create db twice.");
+
+		try {
+			int size = descriptors.size();
+			List<ColumnFamilyHandle> handles = new ArrayList<>(size);
+			db = RocksDB.open(dbOptions, instanceRocksDBPath.getAbsolutePath(), descriptors, handles);
+			for (int i = 1; i < size; ++i) {
+				columnFamilyDescriptors.put(descriptorName.get(i), descriptors.get(i));
+			}
+			for (int i = 1; i < size; ++i) {
+				columnFamilyHandles.put(descriptorName.get(i), handles.get(i));
+			}
+			defaultColumnFamilyHandle = handles.remove(0);
+		} catch (RocksDBException e) {
+			throw new IOException("Error while opening rocksDB instance at " + instanceBasePath, e);
 		}
-		this.db = db;
+	}
+
+	Map<String, ColumnFamilyDescriptor> getColumnFamilyDescriptors() {
+		return columnFamilyDescriptors;
+	}
+
+	Map<String, ColumnFamilyHandle> getColumnFamilyHandles() {
+		return columnFamilyHandles;
+	}
+
+	void registAllStates(
+		List<KeyedStateDescriptor> keyedStateDescriptors,
+		List<SubKeyedStateDescriptor> subKeyedStateDescriptors) {
+		for (KeyedStateDescriptor descriptor : keyedStateDescriptors) {
+			getKeyedState(descriptor);
+		}
+		for (SubKeyedStateDescriptor descriptor : subKeyedStateDescriptors) {
+			getSubKeyedState(descriptor);
+		}
+	}
+
+	String getDefaultColumnFamilyName() {
+		return defaultColumnFamilyName;
 	}
 }

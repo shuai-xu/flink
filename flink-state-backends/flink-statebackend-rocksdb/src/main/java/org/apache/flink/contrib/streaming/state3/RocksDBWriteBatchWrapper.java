@@ -35,7 +35,7 @@ import javax.annotation.Nullable;
  *
  * <p>IMPORTANT: This class is not thread safe.
  */
-public class RocksDbWriteBatchWrapper implements AutoCloseable {
+public class RocksDBWriteBatchWrapper implements AutoCloseable {
 
 	private static final int MIN_CAPACITY = 100;
 	private static final int MAX_CAPACITY = 1000;
@@ -49,15 +49,15 @@ public class RocksDbWriteBatchWrapper implements AutoCloseable {
 
 	private final int capacity;
 
-	public RocksDbWriteBatchWrapper(@Nonnull RocksDB rocksDB) {
+	public RocksDBWriteBatchWrapper(@Nonnull RocksDB rocksDB) {
 		this(rocksDB, null, 500);
 	}
 
-	public RocksDbWriteBatchWrapper(@Nonnull RocksDB rocksDB, @Nullable WriteOptions options) {
+	public RocksDBWriteBatchWrapper(@Nonnull RocksDB rocksDB, @Nullable WriteOptions options) {
 		this(rocksDB, options, 500);
 	}
 
-	public RocksDbWriteBatchWrapper(@Nonnull RocksDB rocksDB, @Nullable WriteOptions options, int capacity) {
+	public RocksDBWriteBatchWrapper(@Nonnull RocksDB rocksDB, @Nullable WriteOptions options, int capacity) {
 		Preconditions.checkArgument(capacity >= MIN_CAPACITY && capacity <= MAX_CAPACITY,
 			"capacity should be between " + MIN_CAPACITY + " and " + MAX_CAPACITY);
 

@@ -644,7 +644,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		return groups.contains(KeyGroupRangeAssignment.assignToKeyGroup(key, maxParallelism));
 	}
 
-	private int getGroupForKey(int key) {
+	private static int getGroupForKey(int key) {
 		return KeyGroupRangeAssignment.assignToKeyGroup(key, maxParallelism);
 	}
 

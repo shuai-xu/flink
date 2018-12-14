@@ -39,7 +39,7 @@ public class StateSerializerUtil {
 	private static final byte KEY_PREFIX_BYTE = 0x0f;
 	public static final byte KEY_END_BYTE = 0x7f;
 	private static final int KEY_PREFIX_BYTE_LENGTH = 1;
-	private static final int GROUP_WRITE_BYTES = 2;
+	public static final int GROUP_WRITE_BYTES = 2;
 	private static final byte DELIMITER = ',';
 	private static ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
 	private static DataOutputView outputView = new DataOutputViewStreamWrapper(outputStream);

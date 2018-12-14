@@ -24,10 +24,10 @@ import org.apache.flink.util.Preconditions;
 /**
  * A helper class for RocksDB Pair.
  */
-public class RocksDbPair implements Pair<byte[], byte[]> {
+public class RocksDBPair implements Pair<byte[], byte[]> {
 
 	/** The rocksDB storage of current pair. */
-	private final RocksDbStorageInstance storageInstance;
+	private final RocksDBStorageInstance storageInstance;
 
 	/** Current db key of the pair.*/
 	private final byte[] key;
@@ -38,7 +38,7 @@ public class RocksDbPair implements Pair<byte[], byte[]> {
 	/** Is the current pair is deleted.*/
 	private boolean deleted;
 
-	RocksDbPair(RocksDbStorageInstance storageInstance, byte[] key, byte[] value) {
+	RocksDBPair(RocksDBStorageInstance storageInstance, byte[] key, byte[] value) {
 		this.storageInstance = Preconditions.checkNotNull(storageInstance);
 		this.key = Preconditions.checkNotNull(key);
 		this.value = Preconditions.checkNotNull(value);

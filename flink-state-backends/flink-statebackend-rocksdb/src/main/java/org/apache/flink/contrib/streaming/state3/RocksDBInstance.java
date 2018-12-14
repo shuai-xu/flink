@@ -19,8 +19,6 @@
 package org.apache.flink.contrib.streaming.state3;
 
 import org.apache.flink.runtime.state.StateAccessException;
-import org.apache.flink.runtime.state3.BatchPutWrapper;
-import org.apache.flink.runtime.state3.StorageInstance;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
 
@@ -34,45 +32,37 @@ import org.rocksdb.WriteOptions;
 import java.util.Map;
 
 /**
- * An implementation of {@link StorageInstance} which used {@code RocksDB} to store data.
+ * A DB instance wrapper of {@link RocksDB}.
  */
-public class RocksDbStorageInstance implements StorageInstance, AutoCloseable {
-	static final String SST_FILE_SUFFIX = ".sst";
+public class RocksDBInstance implements AutoCloseable {
 
 	/**
 	 * Our RocksDB database, this is used to store state.
-	 * The different k/v states that we have will have their own RocksDB instance and columnFamilyHandle.
+	 * The different k/v states that we have don't each have their own RocksDB instance.
 	 */
-	private final RocksDB db;
-
-	private final ColumnFamilyHandle columnFamilyHandle;
+	private RocksDB db;
 
 	/** The write options to use in the states. We disable write ahead logging. */
 	private final WriteOptions writeOptions;
 
+	private final ColumnFamilyHandle columnFamilyHandle;
+
 	/**
-	 * Create a RocksDBStorageInstance with the given {@link RocksDB} and {@link ColumnFamilyHandle} instance.
-	 * @param db The RocksDB instance the storage used.
-	 * @param columnFamilyHandle The ColumnFamilyHandle the storage used.
+	 * Creates a rocksDB instance with given options, ttlSeconds and the instance path for rocksDB.
 	 */
-	public RocksDbStorageInstance(
-		final RocksDB db,
-		final ColumnFamilyHandle columnFamilyHandle) {
-		this.db = Preconditions.checkNotNull(db);
-		this.columnFamilyHandle = Preconditions.checkNotNull(columnFamilyHandle);
+	RocksDBInstance(RocksDB db, ColumnFamilyHandle handle) {
+		Preconditions.checkNotNull(db);
+		Preconditions.checkNotNull(handle);
+
 		this.writeOptions = new WriteOptions().setDisableWAL(true);
+		this.db = db;
+		this.columnFamilyHandle = handle;
 	}
 
-	public ColumnFamilyHandle getColumnFamilyHandle() {
-		return this.columnFamilyHandle;
-	}
-
-	public WriteOptions getWriteOptions() {
-		return this.writeOptions;
-	}
-
-	RocksDB getDb() {
-		return db;
+	@Override
+	public void close() {
+		IOUtils.closeQuietly(columnFamilyHandle);
+		IOUtils.closeQuietly(writeOptions);
 	}
 
 	byte[] get(byte[] keyBytes) {
@@ -92,7 +82,7 @@ public class RocksDbStorageInstance implements StorageInstance, AutoCloseable {
 	}
 
 	void multiPut(Map<byte[], byte[]> keyValueBytesMap) {
-		try (RocksDbWriteBatchWrapper writeBatchWrapper = new RocksDbWriteBatchWrapper(db, writeOptions)) {
+		try (RocksDBWriteBatchWrapper writeBatchWrapper = new RocksDBWriteBatchWrapper(db, writeOptions)) {
 			for (Map.Entry<byte[], byte[]> entry : keyValueBytesMap.entrySet()) {
 				writeBatchWrapper.put(columnFamilyHandle, entry.getKey(), entry.getValue());
 			}
@@ -103,7 +93,7 @@ public class RocksDbStorageInstance implements StorageInstance, AutoCloseable {
 
 	void delete(byte[] keyBytes) {
 		try {
-			db.delete(columnFamilyHandle, writeOptions, keyBytes);
+			db.delete(writeOptions, keyBytes);
 		} catch (RocksDBException e) {
 			throw new StateAccessException(e);
 		}
@@ -111,14 +101,14 @@ public class RocksDbStorageInstance implements StorageInstance, AutoCloseable {
 
 	void merge(byte[] keyBytes, byte[] partialValueBytes) {
 		try {
-			db.merge(columnFamilyHandle, writeOptions, keyBytes, partialValueBytes);
+			db.merge(writeOptions, keyBytes, partialValueBytes);
 		} catch (RocksDBException e) {
 			throw new StateAccessException(e);
 		}
 	}
 
 	RocksIterator iterator() {
-		return db.newIterator(columnFamilyHandle);
+		return db.newIterator();
 	}
 
 	void snapshot(String localCheckpointPath) throws RocksDBException {
@@ -126,16 +116,68 @@ public class RocksDbStorageInstance implements StorageInstance, AutoCloseable {
 		checkpoint.createCheckpoint(localCheckpointPath);
 	}
 
-	@Override
-	public void close() {
-		IOUtils.closeQuietly(columnFamilyHandle);
-		IOUtils.closeQuietly(writeOptions);
+	RocksDB getDb() {
+		return db;
 	}
 
-	@Override
-	public BatchPutWrapper getBatchPutWrapper() {
-		return new RocksDbBatchPutWrapper(
-					new RocksDbWriteBatchWrapper(db, writeOptions),
-					columnFamilyHandle);
+	WriteOptions getWriteOptions() {
+		return writeOptions;
+	}
+
+	public ColumnFamilyHandle getColumnFamilyHandle() {
+		return columnFamilyHandle;
+	}
+
+//--------------------------------------------------------------------------
+
+	/**
+	 * Check whether the given bytes is prefixed with prefiBytes.
+	 *
+	 * @param bytes The given bytes to compare.
+	 * @param prefixBytes The target prefix bytes.
+	 */
+	public static boolean isPrefixWith(byte[] bytes, byte[] prefixBytes) {
+		Preconditions.checkArgument(bytes != null);
+		Preconditions.checkArgument(prefixBytes != null);
+
+		if (bytes.length < prefixBytes.length) {
+			return false;
+		}
+
+		for (int i = 0; i < prefixBytes.length; ++i) {
+			if (bytes[i] != prefixBytes[i]) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Compares two given bytes array for order. Returns a negative integer,
+	 * zero, or a positive integer as the first bytes array is less than, equal
+	 * to, or greater than the second one.
+	 *
+	 * @param leftBytes The first bytes array to compare.
+	 * @param rightBytes The second bytes array to compare.
+	 */
+	static int compare(byte[] leftBytes, byte[] rightBytes) {
+		Preconditions.checkArgument(leftBytes != null);
+		Preconditions.checkArgument(rightBytes != null);
+
+		int commonLength = Math.min(leftBytes.length, rightBytes.length);
+		for (int i = 0; i < commonLength; ++i) {
+			int leftByte = leftBytes[i] & 0xFF;
+			int rightByte = rightBytes[i] & 0xFF;
+
+			if (leftByte > rightByte) {
+				return 1;
+			} else if (leftByte < rightByte) {
+				return -1;
+			}
+		}
+
+		return (leftBytes.length - rightBytes.length);
 	}
 }
+

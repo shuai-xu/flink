@@ -25,17 +25,17 @@ import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDBException;
 
 /**
- * Implementation of {@link BatchPutWrapper} for {@link RocksDbStateStorage}.
+ * Implementation of {@link BatchPutWrapper} for {@link RocksDBStateStorage}.
  */
-class RocksDbBatchPutWrapper implements BatchPutWrapper<byte[], byte[]> {
+class RocksDBBatchPutWrapper implements BatchPutWrapper<byte[], byte[]> {
 	/** The write batch wrapper of RocksDB. */
-	private final RocksDbWriteBatchWrapper batchWrapper;
+	private final RocksDBWriteBatchWrapper batchWrapper;
 
 	/** The columnFamilyHandle where the record will inserted into. */
 	private final ColumnFamilyHandle columnFamilyHandle;
 
-	RocksDbBatchPutWrapper(
-		RocksDbWriteBatchWrapper writeBatchWrapper,
+	RocksDBBatchPutWrapper(
+		RocksDBWriteBatchWrapper writeBatchWrapper,
 		ColumnFamilyHandle handle) {
 		this.batchWrapper = writeBatchWrapper;
 		this.columnFamilyHandle = handle;

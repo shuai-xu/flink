@@ -38,19 +38,19 @@ abstract class AbstractRocksDbStorageIterator<T> implements Iterator<T> {
 	 *
 	 *  <p>When this {@link AbstractRocksDbStorageIterator} is created, it would load 128 elements into this {@code cachePairs}.
 	 */
-	private final List<RocksDbPair> cachePairs;
+	private final List<RocksDBPair> cachePairs;
 
 	/** The rocksDB storage where entries are located. */
-	private RocksDbStorageInstance dbStorageInstance;
+	private RocksDBStorageInstance dbStorageInstance;
 
 	/** The entry pointing to the current position which is last returned by calling {@link #getNextPair()}. */
-	private RocksDbPair currentPair;
+	private RocksDBPair currentPair;
 
 	private boolean expired;
 
 	private int cacheIndex;
 
-	AbstractRocksDbStorageIterator(RocksDbStorageInstance dbStorageInstance) {
+	AbstractRocksDbStorageIterator(RocksDBStorageInstance dbStorageInstance) {
 		this.dbStorageInstance = dbStorageInstance;
 		this.cachePairs = new ArrayList<>();
 		this.expired = false;
@@ -84,7 +84,7 @@ abstract class AbstractRocksDbStorageIterator<T> implements Iterator<T> {
 		currentPair.remove();
 	}
 
-	final RocksDbPair getNextPair() {
+	final RocksDBPair getNextPair() {
 		loadCachePairs();
 
 		if (cacheIndex == cachePairs.size()) {
@@ -145,7 +145,7 @@ abstract class AbstractRocksDbStorageIterator<T> implements Iterator<T> {
 					break;
 				}
 
-				RocksDbPair entry = new RocksDbPair(dbStorageInstance, iterator.key(), iterator.value());
+				RocksDBPair entry = new RocksDBPair(dbStorageInstance, iterator.key(), iterator.value());
 				cachePairs.add(entry);
 
 				iterator.next();

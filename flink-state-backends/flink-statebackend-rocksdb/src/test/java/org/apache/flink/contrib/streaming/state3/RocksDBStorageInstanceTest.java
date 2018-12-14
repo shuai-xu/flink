@@ -52,6 +52,7 @@ import static org.junit.Assert.assertTrue;
 public class RocksDBStorageInstanceTest {
 	private static RocksDB db;
 	private static DBOptions dbOptions;
+	private static WriteOptions writeOptions;
 
 	private static ColumnFamilyOptions columnOptions;
 
@@ -61,11 +62,14 @@ public class RocksDBStorageInstanceTest {
 		columnOptions = PredefinedOptions.DEFAULT.createColumnOptions()
 			.setMergeOperatorName(RocksDBKeyedStateBackend.MERGE_OPERATOR_NAME);
 		db = RocksDB.open(temporaryFolder.newFolder().getAbsolutePath());
-
+		writeOptions = new WriteOptions().setDisableWAL(true);
 	}
 
 	@AfterClass
 	public static void disposeOptions() {
+		if (writeOptions != null) {
+			writeOptions.close();
+		}
 		if (db != null) {
 			db.close();
 			db = null;
@@ -87,9 +91,10 @@ public class RocksDBStorageInstanceTest {
 		ColumnFamilyDescriptor columnDescriptor = new ColumnFamilyDescriptor(nameBytes, columnOptions);
 		ColumnFamilyHandle columnFamilyHandle = db.createColumnFamily(columnDescriptor);
 
-		RocksDbStorageInstance storageInstance = new RocksDbStorageInstance(
+		RocksDBStorageInstance storageInstance = new RocksDBStorageInstance(
 			db,
-			columnFamilyHandle);
+			columnFamilyHandle,
+			writeOptions);
 
 		storageInstance.close();
 
@@ -98,7 +103,7 @@ public class RocksDBStorageInstanceTest {
 		assertTrue(db.isOwningHandle());
 		assertFalse(columnFamilyHandle.isOwningHandle());
 		WriteOptions writeOptions = (WriteOptions) Whitebox.getInternalState(storageInstance, "writeOptions");
-		assertFalse(writeOptions.isOwningHandle());
+		assertTrue(writeOptions.isOwningHandle());
 	}
 
 	@Test
@@ -107,9 +112,10 @@ public class RocksDBStorageInstanceTest {
 		ColumnFamilyDescriptor columnDescriptor = new ColumnFamilyDescriptor(nameBytes, columnOptions);
 		ColumnFamilyHandle columnFamilyHandle = db.createColumnFamily(columnDescriptor);
 
-		try (RocksDbStorageInstance storageInstance = new RocksDbStorageInstance(
+		try (RocksDBStorageInstance storageInstance = new RocksDBStorageInstance(
 			db,
-			columnFamilyHandle)) {
+			columnFamilyHandle,
+			writeOptions)) {
 			byte[] keyBytes = new byte[10];
 			byte[] valueBytes = new byte[20];
 			ThreadLocalRandom random = ThreadLocalRandom.current();
@@ -154,8 +160,8 @@ public class RocksDBStorageInstanceTest {
 		ColumnFamilyDescriptor columnDescriptor2 = new ColumnFamilyDescriptor(nameBytes2, columnOptions);
 		ColumnFamilyHandle columnFamilyHandle2 = db.createColumnFamily(columnDescriptor2);
 
-		RocksDbStorageInstance storageInstance1 = new RocksDbStorageInstance(db, columnFamilyHandle);
-		RocksDbStorageInstance storageInstance2 = new RocksDbStorageInstance(db, columnFamilyHandle2);
+		RocksDBStorageInstance storageInstance1 = new RocksDBStorageInstance(db, columnFamilyHandle, writeOptions);
+		RocksDBStorageInstance storageInstance2 = new RocksDBStorageInstance(db, columnFamilyHandle2, writeOptions);
 
 		byte[] keyBytes = new byte[10];
 		byte[] valueBytes = new byte[20];
