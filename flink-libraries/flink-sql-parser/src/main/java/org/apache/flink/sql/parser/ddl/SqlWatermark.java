@@ -18,6 +18,8 @@
 
 package org.apache.flink.sql.parser.ddl;
 
+import org.apache.flink.sql.parser.plan.SqlParseException;
+
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
@@ -40,6 +42,7 @@ import static java.util.Objects.requireNonNull;
 public class SqlWatermark extends SqlCall {
 
 	private static final SqlSpecialOperator OPERATOR = new SqlSpecialOperator("WATERMARK", SqlKind.OTHER);
+	private static final String WITH_OFFSET_FUNC = "withOffset";
 
 	private SqlIdentifier watermarkName;
 	private SqlIdentifier columnName;
@@ -88,5 +91,41 @@ public class SqlWatermark extends SqlCall {
 
 	public SqlCall getFunctionCall() {
 		return functionCall;
+	}
+
+	public long getWatermarkOffset() throws SqlParseException {
+		// as we have validated in validate(), directly cast it here
+		SqlOperator wmOp = functionCall.getOperator();
+		String funcName = wmOp.getName();
+		if (WITH_OFFSET_FUNC.equalsIgnoreCase(funcName)) {
+			List<SqlNode> operands = functionCall.getOperandList();
+			if (operands.size() != 2) {
+				throw new SqlParseException(
+					functionCall.getParserPosition(),
+					"Watermark function 'withOffset(<rowtime_field>, <offset>)' only accept two arguments.");
+			}
+			String timeField = operands.get(0).toString();
+			String rowtimeField = getColumnName().toString();
+			if (!rowtimeField.equals(timeField)) {
+				throw new SqlParseException(
+					operands.get(0).getParserPosition(),
+					"The first argument of 'withOffset' must be the rowtime field.");
+			}
+			String offsetStr = operands.get(1).toString();
+			long offset = -1;
+			try {
+				offset = Long.valueOf(offsetStr);
+			} catch (NumberFormatException e) {
+				throw new SqlParseException(
+					operands.get(1).getParserPosition(),
+					"The second argument of 'withOffset' must be an integer, but is " + offsetStr,
+					e);
+			}
+			return offset;
+		} else {
+			throw new SqlParseException(
+				functionCall.getParserPosition(),
+				"Unsupported Watermark Function '" + funcName + "'");
+		}
 	}
 }

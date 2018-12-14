@@ -280,4 +280,99 @@ public class SqlParserTest extends ParserTestBase {
 		check("describe formatted table emps col1",
 				"DESCRIBE FORMATTED TABLE `emps` `col1`");
 	}
+
+	@Test
+	public void testInvalidWatermark() {
+		String template = "CREATE TABLE sls_stream (\n" +
+						"  a bigint, \n" +
+						"  f as a + 1, \n" +
+						"  b varchar,\n" +
+						"  ts as toTimestamp(b, 'yyyy-MM-dd HH:mm:ss'), \n" +
+						"  %s\n" +
+						") with (\n" +
+						"  x = 'y', \n" +
+						"  asd = 'data'\n" +
+						")\n";
+
+		String sql1 = String.format(template, "WATERMARK wm FOR ts AS withOffset(b, 1000)");
+		String expected1 = "The first argument of 'withOffset' must be the rowtime field.";
+		sql(sql1).node(new WatermarkMatcher(expected1, SqlParseException.class));
+
+		String sql2 = String.format(template, "WATERMARK wm FOR ts AS withOffset(ts, '123a')");
+		String expected2 = "The second argument of 'withOffset' must be an integer, but is '123a'";
+		sql(sql2).node(new WatermarkMatcher(expected2, SqlParseException.class));
+
+		String sql3 = String.format(template, "WATERMARK wm FOR ts AS nonExistFunc(ts, 1000)");
+		String expected3 = "Unsupported Watermark Function 'nonExistFunc'";
+		sql(sql3).node(new WatermarkMatcher(expected3, SqlParseException.class));
+
+		String sql4 = String.format(template, "WATERMARK wm FOR ts AS withOffset(1000)");
+		String expected4 = "Watermark function 'withOffset(<rowtime_field>, <offset>)' only accept two arguments.";
+		sql(sql4).node(new WatermarkMatcher(expected4, SqlParseException.class));
+	}
+
+	@Test
+	public void testWatermark() {
+		String sql = "CREATE TABLE sls_stream (\n" +
+					"  a bigint, \n" +
+					"  f as a + 1, \n" +
+					"  b varchar,\n" +
+					"  ts as toTimestamp(b, 'yyyy-MM-dd HH:mm:ss'), \n" +
+					"  WATERMARK wm FOR ts AS withOffset(ts, 1000)\n" +
+					") with (\n" +
+					"  x = 'y', \n" +
+					"  asd = 'data'\n" +
+					")\n";
+
+		sql(sql).node(new WatermarkMatcher(1000));
+	}
+
+	private static class WatermarkMatcher extends BaseMatcher<SqlNode> {
+
+		private boolean matchException;
+		private String exceptionMessage;
+		private Class<?> exceptionClass;
+		private long expectedOffset;
+
+		private WatermarkMatcher(
+			String exceptionMessage,
+			Class<?> exceptionClass) {
+			this.exceptionMessage = exceptionMessage;
+			this.exceptionClass = exceptionClass;
+			this.matchException = true;
+		}
+
+		private WatermarkMatcher(long offset) {
+			this.expectedOffset = offset;
+			this.matchException = false;
+		}
+
+		@Override
+		public void describeTo(Description description) {
+			description.appendText("test");
+		}
+
+		@Override
+		public boolean matches(Object item) {
+			if (item instanceof SqlCreateTable) {
+				SqlCreateTable createTable = (SqlCreateTable) item;
+				try {
+					if (createTable.getWatermark() != null) {
+						long offset = createTable.getWatermark().getWatermarkOffset();
+						if (matchException) {
+							fail("An " + exceptionClass.getSimpleName() + " exception should be thrown here.");
+						} else {
+							assertEquals(expectedOffset, offset);
+						}
+					}
+				} catch (Exception e) {
+					assertEquals(exceptionClass, e.getClass());
+					assertEquals(exceptionMessage, e.getMessage());
+				}
+				return true;
+			} else {
+				return false;
+			}
+		}
+	}
 }

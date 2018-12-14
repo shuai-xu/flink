@@ -52,7 +52,6 @@ import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.runtime.functions.python.PythonUDFUtil;
 import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.StreamTableSource;
-import org.apache.flink.table.util.WatermarkUtils;
 import org.apache.flink.util.StringUtils;
 
 import org.apache.calcite.avatica.util.Casing;
@@ -124,9 +123,11 @@ public class SqlJobUtil {
 		String rowtimeField = null;
 		long offset = -1;
 		if (sqlCreateTable.getWatermark() != null) {
-			rowtimeField = sqlCreateTable.getWatermark().getColumnName().toString();
-			offset = WatermarkUtils.getWithOffsetParameters(
-					rowtimeField, sqlCreateTable.getWatermark().getFunctionCall());
+			try {
+				offset = sqlCreateTable.getWatermark().getWatermarkOffset();
+			} catch (SqlParseException e) {
+				throw new SqlExecutionException(e.getMessage(), e);
+			}
 		}
 
 		long now = System.currentTimeMillis();
