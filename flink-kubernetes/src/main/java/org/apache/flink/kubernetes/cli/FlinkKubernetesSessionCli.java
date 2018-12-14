@@ -40,6 +40,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,8 +49,11 @@ import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 import java.util.Properties;
 
+import static org.apache.flink.client.cli.CliFrontendParser.ARGS_OPTION;
+import static org.apache.flink.client.cli.CliFrontendParser.CLASS_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.DETACHED_OPTION;
 import static org.apache.flink.kubernetes.configuration.Constants.SERVICE_NAME_SUFFIX;
 
@@ -100,7 +104,7 @@ public class FlinkKubernetesSessionCli extends AbstractCustomCommandLine<Kuberne
 
 		// Create the command line options
 		serviceAddress = new Option(shortPrefix + "sa", longPrefix + "serviceaddress", true,
-			KubernetesConfigOptions.SERVICE_EXTERNAL_ADDRESS.description());
+			KubernetesConfigOptions.SERVICE_EXPOSED_ADDRESS.description());
 		master = new Option(shortPrefix + "ms", longPrefix + "master", true, "Kubernetes cluster master url");
 		namespace = new Option(shortPrefix + "ns", longPrefix + "namespace", true, "Specify kubernetes namespace.");
 		name = new Option(shortPrefix + "nm", longPrefix + "name", true, "Set a custom name for the flink cluster on kubernetes");
@@ -228,7 +232,7 @@ public class FlinkKubernetesSessionCli extends AbstractCustomCommandLine<Kuberne
 		final Configuration effectiveConfiguration = new Configuration(configuration);
 
 		if (commandLine.hasOption(serviceAddress.getOpt())) {
-			effectiveConfiguration.setString(KubernetesConfigOptions.SERVICE_EXTERNAL_ADDRESS,
+			effectiveConfiguration.setString(KubernetesConfigOptions.SERVICE_EXPOSED_ADDRESS,
 				commandLine.getOptionValue(serviceAddress.getOpt()));
 		}
 
@@ -270,6 +274,20 @@ public class FlinkKubernetesSessionCli extends AbstractCustomCommandLine<Kuberne
 		if (commandLine.hasOption(slots.getOpt())) {
 			effectiveConfiguration.setInteger(TaskManagerOptions.NUM_TASK_SLOTS,
 				Integer.parseInt(commandLine.getOptionValue(slots.getOpt())));
+		}
+
+		String[] progArgs = commandLine.getOptionValues(ARGS_OPTION.getOpt());
+		if (progArgs == null && commandLine.getArgs().length > 0) {
+			progArgs = Arrays.copyOfRange(commandLine.getArgs(), 1, commandLine.getArgs().length);
+		}
+		if (progArgs != null) {
+			effectiveConfiguration.setString(KubernetesConfigOptions.USER_PROGRAM_ARGS,
+				StringUtils.join(progArgs, " "));
+		}
+
+		if (commandLine.hasOption(CLASS_OPTION.getOpt())) {
+			effectiveConfiguration.setString(KubernetesConfigOptions.USER_PROGRAM_ENTRYPOINT_CLASS,
+				commandLine.getOptionValue(CLASS_OPTION.getOpt()));
 		}
 
 		// apply dynamic properties
@@ -348,7 +366,6 @@ public class FlinkKubernetesSessionCli extends AbstractCustomCommandLine<Kuberne
 						LOG.warn("Exception while running the interactive command line interface.", e);
 					}
 					clusterClient.shutDownCluster();
-					kubernetesClusterDescriptor.killCluster(clusterId);
 				}
 				clusterClient.shutdown();
 			} catch (Exception e) {

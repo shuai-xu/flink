@@ -24,18 +24,19 @@ import org.apache.flink.client.deployment.ClusterDescriptor;
 import org.apache.flink.client.deployment.ClusterRetrieveException;
 import org.apache.flink.client.deployment.ClusterSpecification;
 import org.apache.flink.client.program.ClusterClient;
-import org.apache.flink.client.program.rest.RestClusterClient;
 import org.apache.flink.configuration.BlobServerOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.HighAvailabilityOptions;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.RestOptions;
+import org.apache.flink.kubernetes.cli.KubernetesRestClusterClient;
 import org.apache.flink.kubernetes.configuration.KubernetesConfigOptions;
 import org.apache.flink.kubernetes.entrypoint.KubernetesJobClusterEntrypoint;
 import org.apache.flink.kubernetes.entrypoint.KubernetesSessionClusterEntrypoint;
 import org.apache.flink.kubernetes.utils.KubernetesClientFactory;
 import org.apache.flink.runtime.clusterframework.BootstrapTools;
+import org.apache.flink.runtime.entrypoint.ClusterEntrypoint;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.util.Preconditions;
 
@@ -44,6 +45,7 @@ import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerStatus;
+import io.fabric8.kubernetes.api.model.LoadBalancerIngress;
 import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -64,14 +66,17 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.apache.flink.configuration.ConfigConstants.ENV_FLINK_CONF_DIR;
 import static org.apache.flink.configuration.GlobalConfiguration.FLINK_CONF_FILENAME;
 import static org.apache.flink.kubernetes.configuration.Constants.CONFIG_FILE_LOG4J_NAME;
+import static org.apache.flink.kubernetes.configuration.Constants.ENV_FLINK_CLASSPATH;
 import static org.apache.flink.kubernetes.configuration.Constants.FLINK_CONF_VOLUME;
 import static org.apache.flink.kubernetes.configuration.Constants.JOBMANAGER_BLOB_PORT;
 import static org.apache.flink.kubernetes.configuration.Constants.JOBMANAGER_RC_NAME_SUFFIX;
@@ -120,7 +125,7 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 	@Override
 	public ClusterClient<KubernetesClusterId> retrieve(KubernetesClusterId clusterId) throws ClusterRetrieveException {
 		try {
-			return new RestClusterClient<>(getClientEffectiveConfiguration(), clusterId);
+			return new KubernetesRestClusterClient<>(this, getClientEffectiveConfiguration(), clusterId);
 		} catch (Exception e) {
 			throw new ClusterRetrieveException(
 				String.format("Could not retrieve the cluster %s, %s", clusterId, e.getMessage()));
@@ -131,7 +136,7 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 	public ClusterClient<KubernetesClusterId> deploySessionCluster(ClusterSpecification clusterSpecification)
 			throws ClusterDeploymentException {
 		try {
-			return deployInternal(clusterSpecification);
+			return deployInternal(getSessionClusterEntrypoint(), clusterSpecification, true);
 		} catch (Exception e) {
 			throw new ClusterDeploymentException("Couldn't deploy Kubernetes session cluster", e);
 		}
@@ -146,7 +151,15 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 	public ClusterClient<KubernetesClusterId> deployJobCluster(ClusterSpecification clusterSpecification,
 			JobGraph jobGraph, boolean detached)
 			throws ClusterDeploymentException {
-		return null;
+		final ClusterEntrypoint.ExecutionMode executionMode = detached ?
+			ClusterEntrypoint.ExecutionMode.DETACHED
+			: ClusterEntrypoint.ExecutionMode.NORMAL;
+		flinkConfiguration.setString(ClusterEntrypoint.EXECUTION_MODE, executionMode.toString());
+		try {
+			return deployInternal(getJobClusterEntrypoint(), clusterSpecification, false);
+		} catch (Exception e) {
+			throw new ClusterDeploymentException("Couldn't deploy Kubernetes job cluster", e);
+		}
 	}
 
 	@Override
@@ -171,47 +184,48 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 	}
 
 	private ClusterClient<KubernetesClusterId> deployInternal(
-		ClusterSpecification clusterSpecification) throws Exception {
+		String entryPoint,
+		ClusterSpecification clusterSpecification,
+		Boolean waitForLaunched) throws Exception {
 		String customName = flinkConfiguration.getString(KubernetesConfigOptions.CLUSTER_ID);
 		KubernetesClusterId clusterId = (customName != null ? KubernetesClusterId.fromString(customName)
 			: KubernetesClusterId.getInstance());
 		Map<String, String> labels = new HashMap<>();
 		labels.put("app", clusterId.toString());
 		labels.put("component", "jobmanager");
-		startJobManager(getSessionClusterEntrypoint(), clusterSpecification, clusterId, labels);
+		startJobManager(entryPoint, clusterSpecification, clusterId, labels);
 
-		String containerName = flinkConfiguration.getString(KubernetesConfigOptions.JOB_MANAGER_CONTAINER_NAME);
-		//wait for job manager to be launched
-		String host = "";
-		int rpcPort = flinkConfiguration.getInteger(RestOptions.PORT);
-		PodList podList;
-		LOG.info("Waiting for the cluster to be allocated");
-		final long startTime = System.currentTimeMillis();
-		loop: while (true) {
-			podList = kubernetesClient.pods().withLabels(labels).list();
-			if (podList != null && podList.getItems().size() > 0) {
-				for (Pod pod : podList.getItems()) {
-					for (ContainerStatus containerStatus : pod.getStatus().getContainerStatuses()) {
-						if (containerStatus.getState().getRunning() != null
-							&& containerStatus.getName().equals(containerName)) {
-							host = pod.getStatus().getPodIP();
-							break loop;
-						}
-					}
-				}
+		if (waitForLaunched) {
+			waitForPodLaunched(labels);
+
+			int restPort = flinkConfiguration.getInteger(RestOptions.PORT);
+			String serviceName = clusterId.toString() + SERVICE_NAME_SUFFIX;
+			Service service = kubernetesClient.services().withName(serviceName).get();
+			checkNotNull(service);
+			String serviceExposedType = service.getSpec().getType();
+			switch (KubernetesConfigOptions.ServiceExposedType.fromString(serviceExposedType)) {
+				case CLUSTER_IP :
+					LOG.info("Service exposed type is {}, you need to start a local proxy to " +
+						"submit job and provide dashboard. " +
+						"e.g. kubectl port-forward service/{} {}", serviceExposedType, serviceName, restPort);
+					break;
+				case NODE_PORT:
+				case EXTERNAL_NAME:
+					// TODO support NodePort and ExternalName
+					LOG.info("Not supported exposed type {}", serviceExposedType);
+					break;
+				case LOAD_BALANCER:
+					String exposedIp = waitForExposedIp(serviceName);
+					flinkConfiguration.setString(KubernetesConfigOptions.SERVICE_EXPOSED_ADDRESS, exposedIp);
+					LOG.info("Service exposed type is {}, {}:{} could be used to submit job and view dashboard.",
+						serviceExposedType, exposedIp, restPort);
+					break;
+				default:
+					break;
 			}
-			if (System.currentTimeMillis() - startTime > 60000) {
-				LOG.info("Deployment took more than 60 seconds. " +
-					"Please check if the requested resources are available in the Kubernetes cluster");
-			}
-			Thread.sleep(250);
 		}
 
-		LOG.info("Found JobManager host name '{}' and port '{}' from supplied cluster id '{}'." +
-			"The host and port could not be used to submit job and provide web ui" +
-			"because of the network limit of kubernetes cluster.", host, String.valueOf(rpcPort), clusterId);
-
-		return new RestClusterClient<>(getClientEffectiveConfiguration(), clusterId);
+		return new KubernetesRestClusterClient<>(this, getClientEffectiveConfiguration(), clusterId);
 	}
 
 	@VisibleForTesting
@@ -286,7 +300,7 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 
 		final Map<String, String> startCommandValues = new HashMap<>();
 		startCommandValues.put("java", "$JAVA_HOME/bin/java");
-		startCommandValues.put("classpath", "-classpath " + confDir + ":$FLINK_CLASSPATH");
+		startCommandValues.put("classpath", "-classpath " + confDir + File.pathSeparator + "$" + ENV_FLINK_CLASSPATH);
 		startCommandValues.put("jvmmem", "-Xmx" + jobManagerMemoryMb + "m");
 		startCommandValues.put("jvmopts", javaOpts);
 		startCommandValues.put("logging", "-Dlog4j.configuration=" + CONFIG_FILE_LOG4J_NAME);
@@ -310,7 +324,7 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 			.withAmount(String.valueOf(cpu))
 			.build();
 		Quantity jobManagerMemoryQuantity = new QuantityBuilder(false)
-			.withAmount(String.valueOf(jobManagerMemoryMb << 20))
+			.withAmount(String.valueOf(((long)jobManagerMemoryMb) << 20))
 			.build();
 
 		return new ContainerBuilder()
@@ -350,11 +364,14 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 	}
 
 	private Service createService(KubernetesClusterId clusterId, Map<String, String> labels) {
+		String exposedType = KubernetesConfigOptions.ServiceExposedType.valueOf(
+			flinkConfiguration.getString(KubernetesConfigOptions.SERVICE_EXPOSED_TYPE)).getServiceExposedType();
 		return kubernetesClient.services().create(new ServiceBuilder()
 			.withNewMetadata()
 				.withName(clusterId.toString() + SERVICE_NAME_SUFFIX)
 				.endMetadata()
 			.withNewSpec()
+			.withType(exposedType)
 			.withSelector(labels)
 			.addNewPort()
 				.withName(JOBMANAGER_RPC_PORT)
@@ -402,9 +419,62 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 		return configMapBuilder.build();
 	}
 
+	private void waitForPodLaunched(Map<String, String> labels) throws InterruptedException {
+		String containerName = flinkConfiguration.getString(KubernetesConfigOptions.JOB_MANAGER_CONTAINER_NAME);
+		//wait for job manager to be launched
+		PodList podList;
+		LOG.info("Waiting for the cluster to be allocated");
+		final long startTime = System.currentTimeMillis();
+		loop: while (true) {
+			podList = kubernetesClient.pods().withLabels(labels).list();
+			if (podList != null && podList.getItems().size() > 0) {
+				for (Pod pod : podList.getItems()) {
+					for (ContainerStatus containerStatus : pod.getStatus().getContainerStatuses()) {
+						if (containerStatus.getState().getRunning() != null
+							&& containerStatus.getName().equals(containerName)) {
+							break loop;
+						}
+					}
+				}
+			}
+			if (System.currentTimeMillis() - startTime > 60000) {
+				LOG.info("Deployment took more than 60 seconds. " +
+					"Please check if the requested resources are available in the Kubernetes cluster");
+			}
+			Thread.sleep(250);
+		}
+	}
+
+	private String waitForExposedIp(String serviceName) throws InterruptedException {
+		LOG.info("Waiting for service {} to be exposed.", serviceName);
+		List<String> ipList = new ArrayList<>();
+		List<LoadBalancerIngress> ingressList;
+		final long startTime = System.currentTimeMillis();
+		Service service;
+		while (true) {
+			service = kubernetesClient.services().withName(serviceName).get();
+			if (service != null) {
+				ingressList = service.getStatus().getLoadBalancer().getIngress();
+				if (ingressList != null && ingressList.size() > 0) {
+					for (LoadBalancerIngress ingress : ingressList) {
+						ipList.add(ingress.getIp());
+					}
+					break;
+				}
+			}
+			if (System.currentTimeMillis() - startTime > 60000) {
+				LOG.info("Exposed service took more than 60 seconds, please check logs on the Kubernetes cluster.");
+			}
+			Thread.sleep(250);
+		}
+		// just return the first one load balancer ip
+		return ipList.get(0);
+	}
+
 	private Configuration getClientEffectiveConfiguration() {
 		Configuration configuration = new Configuration(flinkConfiguration);
-		String[] address = flinkConfiguration.getString(KubernetesConfigOptions.SERVICE_EXTERNAL_ADDRESS).split(":");
+		// it may be including a port, e.g. localhost:8081
+		String[] address = flinkConfiguration.getString(KubernetesConfigOptions.SERVICE_EXPOSED_ADDRESS).split(":");
 		configuration.setString(JobManagerOptions.ADDRESS, address[0]);
 		configuration.setString(RestOptions.ADDRESS, address[0]);
 		if (address.length == 2) {

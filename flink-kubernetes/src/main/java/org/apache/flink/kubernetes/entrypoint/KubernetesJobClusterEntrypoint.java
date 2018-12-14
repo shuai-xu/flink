@@ -19,10 +19,17 @@
 package org.apache.flink.kubernetes.entrypoint;
 
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.client.program.PackagedProgram;
+import org.apache.flink.client.program.PackagedProgramUtils;
+import org.apache.flink.client.program.ProgramInvocationException;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.ResourceManagerOptions;
+import org.apache.flink.kubernetes.configuration.KubernetesConfigOptions;
+import org.apache.flink.kubernetes.runtime.clusterframework.KubernetesSessionResourceManager;
+import org.apache.flink.kubernetes.utils.KubernetesClientFactory;
 import org.apache.flink.runtime.akka.AkkaUtils;
 import org.apache.flink.runtime.clusterframework.ApplicationStatus;
 import org.apache.flink.runtime.clusterframework.FlinkResourceManager;
@@ -37,7 +44,6 @@ import org.apache.flink.runtime.resourcemanager.ResourceManager;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerConfiguration;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerRuntimeServices;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerRuntimeServicesConfiguration;
-import org.apache.flink.runtime.resourcemanager.StandaloneResourceManager;
 import org.apache.flink.runtime.resourcemanager.slotmanager.DynamicAssigningSlotManager;
 import org.apache.flink.runtime.resourcemanager.slotmanager.SlotManager;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
@@ -47,10 +53,15 @@ import org.apache.flink.runtime.util.EnvironmentInformation;
 import org.apache.flink.runtime.util.JvmShutdownSafeguard;
 import org.apache.flink.runtime.util.SignalHandler;
 import org.apache.flink.util.FlinkException;
+import org.apache.flink.util.Preconditions;
 
 import javax.annotation.Nullable;
 
+import java.io.File;
 import java.util.concurrent.CompletableFuture;
+
+import static org.apache.flink.kubernetes.configuration.Constants.ENV_FLINK_CLASSPATH;
+import static org.apache.flink.kubernetes.configuration.Constants.USER_JAR_NAME_IN_IMAGE;
 
 /**
  * Entry point for Kubernetes job clusters.
@@ -63,7 +74,7 @@ public class KubernetesJobClusterEntrypoint extends JobClusterEntrypoint {
 
 	@Override
 	protected SecurityContext installSecurityContext(Configuration configuration) throws Exception {
-		return null;
+		return super.installSecurityContext(configuration);
 	}
 
 	@Override
@@ -96,8 +107,7 @@ public class KubernetesJobClusterEntrypoint extends JobClusterEntrypoint {
 				resourceManagerRuntimeServicesConfiguration.getSlotManagerConfiguration().getTaskManagerTimeout() :
 				Time.seconds(AkkaUtils.INF_TIMEOUT().toSeconds()),
 			resourceManagerRuntimeServicesConfiguration.getSlotManagerConfiguration().getTaskManagerCheckerInitialDelay());
-		// TODO replace of KubernetesJobResourceManager
-		return new StandaloneResourceManager(
+		return new KubernetesSessionResourceManager(
 			rpcService,
 			FlinkResourceManager.RESOURCE_MANAGER_NAME,
 			resourceId,
@@ -114,12 +124,47 @@ public class KubernetesJobClusterEntrypoint extends JobClusterEntrypoint {
 
 	@Override
 	protected JobGraph retrieveJobGraph(Configuration configuration) throws FlinkException {
-		return null;
+		// build job graph
+		int parallelism = configuration.getInteger(CoreOptions.DEFAULT_PARALLELISM);
+		String flinkClassPath = System.getenv().get(ENV_FLINK_CLASSPATH);
+		Preconditions.checkNotNull(flinkClassPath);
+		File jobJarFile = null;
+		for (String jar : flinkClassPath.split(File.pathSeparator)) {
+			if (jar.split(File.separator)[jar.split(File.separator).length - 1].equals(USER_JAR_NAME_IN_IMAGE)) {
+				jobJarFile = new File(jar);
+			}
+		}
+		Preconditions.checkNotNull(jobJarFile);
+		String programEntryPointClass = configuration.getString(KubernetesConfigOptions.USER_PROGRAM_ENTRYPOINT_CLASS);
+		String programArgs = configuration.getString(KubernetesConfigOptions.USER_PROGRAM_ARGS);
+		String[] programArgsArray = null;
+		if (programArgs != null && !programArgs.isEmpty()) {
+			programArgsArray = programArgs.split(" ");
+		}
+
+		final JobGraph jobGraph;
+		try {
+			final PackagedProgram packagedProgram = programEntryPointClass == null ?
+				new PackagedProgram(jobJarFile, programArgsArray) :
+				new PackagedProgram(jobJarFile, programEntryPointClass, programArgsArray);
+			jobGraph = PackagedProgramUtils.createJobGraph(packagedProgram, configuration, parallelism);
+			jobGraph.setAllowQueuedScheduling(true);
+		} catch (final ProgramInvocationException e) {
+			throw new FlinkException("Build job graph failed.", e);
+		}
+		return jobGraph;
 	}
 
 	@Override
 	protected void registerShutdownActions(CompletableFuture<ApplicationStatus> terminationFuture) {
+		Configuration configuration = GlobalConfiguration.loadConfiguration();
+		if (configuration.getBoolean(KubernetesConfigOptions.DESTROY_PERJOB_CLUSTER_AFTER_JOB_FINISHED)) {
+			destroyClusterOnKubernetes();
+		}
+	}
 
+	private void destroyClusterOnKubernetes() {
+		KubernetesClientFactory.destroyCluster(GlobalConfiguration.loadConfiguration());
 	}
 
 	public static void main(String[] args) {
@@ -128,12 +173,11 @@ public class KubernetesJobClusterEntrypoint extends JobClusterEntrypoint {
 		SignalHandler.register(LOG);
 		JvmShutdownSafeguard.installAsShutdownHook(LOG);
 
-		// TODO get conf dir for ENV?
 		Configuration configuration = GlobalConfiguration.loadConfiguration();
 
-		KubernetesJobClusterEntrypoint kubernetesSessionClusterEntrypoint =
+		KubernetesJobClusterEntrypoint kubernetesJobClusterEntrypoint =
 			new KubernetesJobClusterEntrypoint(configuration);
 
-		kubernetesSessionClusterEntrypoint.startCluster();
+		kubernetesJobClusterEntrypoint.startCluster();
 	}
 }

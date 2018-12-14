@@ -20,6 +20,7 @@ package org.apache.flink.kubernetes.utils;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.kubernetes.configuration.KubernetesConfigOptions;
+import org.apache.flink.util.Preconditions;
 
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
@@ -27,6 +28,8 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.utils.HttpClientUtils;
 import okhttp3.Dispatcher;
 import okhttp3.OkHttpClient;
+
+import static org.apache.flink.kubernetes.configuration.Constants.SERVICE_NAME_SUFFIX;
 
 /**
  * Builder for Kubernetes clients.
@@ -48,5 +51,12 @@ public class KubernetesClientFactory {
 		OkHttpClient httpClient = HttpClientUtils.createHttpClient(clientConfig.build()).newBuilder()
 			.dispatcher(dispatcher).build();
 		return new DefaultKubernetesClient(httpClient, clientConfig.build());
+	}
+
+	public static void destroyCluster(Configuration flinkConf) {
+		KubernetesClient kubernetesClient = create(flinkConf);
+		String cluserId = flinkConf.getString(KubernetesConfigOptions.CLUSTER_ID);
+		Preconditions.checkNotNull(cluserId);
+		kubernetesClient.services().withName(cluserId + SERVICE_NAME_SUFFIX).delete();
 	}
 }

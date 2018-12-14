@@ -42,7 +42,7 @@ public class CliFrontendParser {
 
 	static final Option JAR_OPTION = new Option("j", "jarfile", true, "Flink program JAR file.");
 
-	static final Option CLASS_OPTION = new Option("c", "class", true,
+	public static final Option CLASS_OPTION = new Option("c", "class", true,
 			"Class with the program entry point (\"main\" method or \"getPlan()\" method. Only needed if the " +
 			"JAR file does not specify the class in its manifest.");
 
@@ -69,7 +69,7 @@ public class CliFrontendParser {
 	public static final Option YARN_DETACHED_OPTION = new Option("yd", "yarndetached", false, "If present, runs " +
 		"the job in detached mode (deprecated; use non-YARN specific option instead)");
 
-	static final Option ARGS_OPTION = new Option("a", "arguments", true,
+	public static final Option ARGS_OPTION = new Option("a", "arguments", true,
 			"Program arguments. Arguments can also be added without -a, simply as trailing parameters.");
 
 	public static final Option ADDRESS_OPTION = new Option("m", "jobmanager", true,

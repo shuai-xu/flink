@@ -49,13 +49,15 @@ public class KubernetesConfigOptions {
 			.defaultValue("default")
 			.withDescription("The namespace that will be used for running the jobmanager and taskmanager pods.");
 
-	public static final ConfigOption<String> SERVICE_EXTERNAL_ADDRESS =
+	public static final ConfigOption<String> SERVICE_EXPOSED_TYPE =
+		key("kubernetes.service.exposed.type")
+			.defaultValue("CLUSTER_IP")
+			.withDescription("It could be CLUSTER_IP(default)/NODE_PORT/LOAD_BALANCER/EXTERNAL_NAME.");
+
+	public static final ConfigOption<String> SERVICE_EXPOSED_ADDRESS =
 		key("kubernetes.service.external.address")
-			.defaultValue("localhost:8081")
-			.withDescription("The external address of kubernetes service to submit job and get webui/dashboard." +
-				"It could be a local proxy started by kubectl " +
-				"e.g. kubectl port-forward service/flink-default-session-service 8081. " +
-				"Or it could be ClusterIP/NodePort/LoadBalance/ExternalName/Ingress exposed when starting kubernetes service.");
+			.defaultValue("localhost")
+			.withDescription("The exposed address of kubernetes service to submit job and view dashboard.");
 
 	public static final ConfigOption<Double> JOB_MANAGER_CORE =
 		key("kubernetes.jobmanager.cpu")
@@ -109,4 +111,55 @@ public class KubernetesConfigOptions {
 		key("kubernetes.workernode.max-failed-attempts")
 			.defaultValue(100)
 			.withDescription("The max failed attempts for work node.");
+
+	public static final ConfigOption<String> USER_PROGRAM_ENTRYPOINT_CLASS =
+		key("kubernetes.program.entrypoint.class")
+			.noDefaultValue()
+			.withDescription("Class with the program entry point (\"main\" method or \"getPlan()\" method. Only needed if the " +
+				"JAR file does not specify the class in its manifest.");
+
+	public static final ConfigOption<String> USER_PROGRAM_ARGS =
+		key("kubernetes.program.args")
+			.noDefaultValue()
+			.withDescription("Arguments specified for user program.");
+
+	public static final ConfigOption<Boolean> DESTROY_PERJOB_CLUSTER_AFTER_JOB_FINISHED =
+		key("kubernetes.destroy-perjob-cluster.after-job-finished")
+			.defaultValue(true)
+			.withDescription("Whether to kill perjob-cluster on kubernetes after job finished." +
+				"If you want to check logs and view dashboard after job finished, set this to false.");
+
+	/**
+	 * Service exposed type on kubernetes cluster.
+	 */
+	public enum ServiceExposedType {
+		CLUSTER_IP("ClusterIP"),
+		NODE_PORT("NodePort"),
+		LOAD_BALANCER("LoadBalancer"),
+		EXTERNAL_NAME("ExternalName");
+
+		private final String serviceExposedType;
+
+		private ServiceExposedType(String type) {
+			serviceExposedType = type;
+		}
+
+		public String getServiceExposedType() {
+			return serviceExposedType;
+		}
+
+		/**
+		 * Convert exposed type string in kubernetes spec to ServiceExposedType.
+		 * @param type exposed in kubernetes spec, e.g. LoadBanlancer
+		 * @return ServiceExposedType
+		 */
+		public static ServiceExposedType fromString(String type) {
+			for (ServiceExposedType exposedType : ServiceExposedType.values()) {
+				if (exposedType.getServiceExposedType().equals(type)) {
+					return exposedType;
+				}
+			}
+			return CLUSTER_IP;
+		}
+	}
 }

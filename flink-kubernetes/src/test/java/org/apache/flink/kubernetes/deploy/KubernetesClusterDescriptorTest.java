@@ -107,7 +107,7 @@ public class KubernetesClusterDescriptorTest {
 	}
 
 	@Test
-	public void testDeployInternal() {
+	public void testStartJobManager() {
 		ClusterSpecification clusterSpecification = ClusterSpecification.fromConfiguration(flinkConf);
 		String clusterEntryPoint = KubernetesSessionClusterEntrypoint.class.getName();
 		Map<String, String> labels = new HashMap<>();
@@ -116,7 +116,7 @@ public class KubernetesClusterDescriptorTest {
 		kubernetesClusterDescriptor.startJobManager(clusterEntryPoint, clusterSpecification,
 			KubernetesClusterId.fromString(CLUSTER_ID), labels);
 
-		// check config map
+		// check config mapS
 		ConfigMap configMap = kubernetesClient.configMaps().withName(CLUSTER_ID + JOB_MANAGER_CONFIG_MAP_SUFFIX).get();
 		assertNotNull(configMap);
 		assertEquals(1, configMap.getData().size());
@@ -143,6 +143,34 @@ public class KubernetesClusterDescriptorTest {
 		assertEquals(serviceName, configMap.getMetadata().getOwnerReferences().get(0).getName());
 		assertNotNull(rc.getMetadata().getOwnerReferences().get(0));
 		assertEquals(serviceName, rc.getMetadata().getOwnerReferences().get(0).getName());
+	}
+
+	@Test(timeout = 30000)
+	public void testKillCluster() {
+		ClusterSpecification clusterSpecification = ClusterSpecification.fromConfiguration(flinkConf);
+		String clusterEntryPoint = KubernetesSessionClusterEntrypoint.class.getName();
+		Map<String, String> labels = new HashMap<>();
+		labels.put("app", CLUSTER_ID);
+		labels.put("component", "jobmanager");
+		kubernetesClusterDescriptor.startJobManager(clusterEntryPoint, clusterSpecification,
+			KubernetesClusterId.fromString(CLUSTER_ID), labels);
+
+		Service service = kubernetesClient.services().withName(CLUSTER_ID + SERVICE_NAME_SUFFIX).get();
+		assertNotNull(service);
+
+		ConfigMap configMap = kubernetesClient.configMaps().withName(CLUSTER_ID + JOB_MANAGER_CONFIG_MAP_SUFFIX).get();
+		assertNotNull(configMap);
+
+		ReplicationController rc = kubernetesClient.replicationControllers().withName(
+			CLUSTER_ID + JOBMANAGER_RC_NAME_SUFFIX).get();
+		assertNotNull(rc);
+
+		kubernetesClusterDescriptor.killCluster(KubernetesClusterId.fromString(CLUSTER_ID));
+
+		// Service should be deleted
+		while (service != null) {
+			service = kubernetesClient.services().withName(CLUSTER_ID + SERVICE_NAME_SUFFIX).get();
+		}
 	}
 
 }

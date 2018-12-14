@@ -63,4 +63,10 @@ public final class Constants {
 	public static final String LABEL_COMPONENT_TASK_MANAGER = "taskmanager";
 
 	public static final String LABEL_PRIORITY_KEY = "priority";
+
+	// User jar will be built into image under flink lib-dir of name "job.jar"
+	public static final String USER_JAR_NAME_IN_IMAGE = "job.jar";
+
+	// Update this value when flink-container/docker/docker-entrypoint.sh was updated
+	public static final String ENV_FLINK_CLASSPATH = "FLINK_CLASSPATH";
 }
