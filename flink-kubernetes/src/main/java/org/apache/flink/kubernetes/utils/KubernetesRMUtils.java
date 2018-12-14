@@ -47,14 +47,17 @@ import io.fabric8.kubernetes.api.model.QuantityBuilder;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.net.util.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -65,6 +68,11 @@ import static org.apache.flink.configuration.ConfigConstants.ENV_FLINK_CONF_DIR;
 import static org.apache.flink.configuration.GlobalConfiguration.FLINK_CONF_FILENAME;
 import static org.apache.flink.kubernetes.configuration.Constants.CONFIG_FILE_LOG4J_NAME;
 import static org.apache.flink.kubernetes.configuration.Constants.FLINK_CONF_VOLUME;
+import static org.apache.flink.kubernetes.configuration.Constants.POD_RESTART_POLICY;
+import static org.apache.flink.kubernetes.configuration.Constants.PROTOCOL_TCP;
+import static org.apache.flink.kubernetes.configuration.Constants.RESOURCE_NAME_CPU;
+import static org.apache.flink.kubernetes.configuration.Constants.RESOURCE_NAME_MEMORY;
+import static org.apache.flink.kubernetes.configuration.Constants.TASK_MANAGER_RPC_PORT;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
@@ -120,7 +128,7 @@ public class KubernetesRMUtils {
 			.withOwnerReferences(ownerReference)
 			.endMetadata()
 			.editOrNewSpec()
-			.withRestartPolicy("Never")
+			.withRestartPolicy(POD_RESTART_POLICY)
 			.addToContainers(container)
 			.addNewVolume()
 			.withName(FLINK_CONF_VOLUME)
@@ -142,7 +150,8 @@ public class KubernetesRMUtils {
 
 	public static Container createTaskManagerContainer(
 		Configuration flinkConfig, TaskManagerResource taskManagerResource,
-		String confDir, String resourceId, Double minCorePerContainer, Integer minMemoryPerContainer) {
+		String confDir, String resourceId, Double minCorePerContainer, Integer minMemoryPerContainer,
+		Map<String, String> additionalEnvs) {
 		final ContaineredTaskManagerParameters taskManagerParameters = ContaineredTaskManagerParameters.create(
 			flinkConfig,
 			taskManagerResource.getTotalContainerMemory(),
@@ -153,6 +162,13 @@ public class KubernetesRMUtils {
 		String command = getTaskManagerShellCommand(flinkConfig, taskManagerParameters,
 			confDir, false, true,
 			KubernetesTaskExecutorRunner.class);
+		LOG.info("TaskExecutor will be started with container size {} MB, JVM heap size {} MB, " +
+				"new generation size {} MB, JVM direct memory limit {} MB, command: {}",
+			taskManagerParameters.taskManagerTotalMemoryMB(),
+			taskManagerParameters.taskManagerHeapSizeMB(),
+			taskManagerParameters.getYoungMemoryMB(),
+			taskManagerParameters.taskManagerDirectMemoryLimitMB(),
+			command);
 
 		String image = flinkConfig.getString(KubernetesConfigOptions.CONTAINER_IMAGE);
 		checkNotNull(image, "TaskManager image should be specified");
@@ -161,11 +177,11 @@ public class KubernetesRMUtils {
 
 		int rpcPort = Integer.parseInt(flinkConfig.getString(TaskManagerOptions.RPC_PORT));
 
-		int cpu;
+		double cpu;
 		if (minCorePerContainer == null) {
-			cpu = (int) taskManagerResource.getContainerCpuCores();
+			cpu = taskManagerResource.getContainerCpuCores();
 		} else {
-			cpu = (int) Math.max(taskManagerResource.getContainerCpuCores(), minCorePerContainer);
+			cpu = Math.max(taskManagerResource.getContainerCpuCores(), minCorePerContainer);
 		}
 		long memory;
 		if (minMemoryPerContainer == null) {
@@ -188,26 +204,18 @@ public class KubernetesRMUtils {
 			.withImage(image)
 			.withImagePullPolicy(pullPolicy)
 			.addNewPort()
-			.withName(Constants.TASK_MANAGER_RPC_PORT)
+			.withName(TASK_MANAGER_RPC_PORT)
 			.withContainerPort(rpcPort)
-			.withProtocol("TCP")
+			.withProtocol(PROTOCOL_TCP)
 			.endPort()
-			.addNewEnv()
-			.withName(ENV_FLINK_CONF_DIR)
-			.withValue(confDir)
-			.endEnv()
-			.addNewEnv()
-			.withName(Constants.ENV_FLINK_CONTAINER_ID)
-			.withValue(resourceId)
-			.endEnv()
 			.withVolumeMounts(
 				new VolumeMountBuilder().withName(FLINK_CONF_VOLUME)
 					.withMountPath(confDir).build())
 			.withArgs(Arrays.asList("/bin/bash", "-c", command))
 			.editOrNewResources()
-			.addToRequests("memory", taskManagerMemoryQuantity)
-			.addToLimits("memory", taskManagerMemoryQuantity)
-			.addToRequests("cpu", taskManagerCpuQuantity)
+			.addToRequests(RESOURCE_NAME_MEMORY, taskManagerMemoryQuantity)
+			.addToLimits(RESOURCE_NAME_MEMORY, taskManagerMemoryQuantity)
+			.addToRequests(RESOURCE_NAME_CPU, taskManagerCpuQuantity)
 			.endResources();
 		if (pureExtendedResources != null && !pureExtendedResources.isEmpty()) {
 			pureExtendedResources.values().stream().forEach(
@@ -215,6 +223,20 @@ public class KubernetesRMUtils {
 					.addToLimits(e.getName(), new QuantityBuilder(false)
 						.withAmount(String.valueOf(e.getValue())).build())
 					.endResources());
+		}
+		// Add environments
+		containerBuilder.addNewEnv()
+			.withName(ENV_FLINK_CONF_DIR)
+			.withValue(confDir)
+			.endEnv()
+			.addNewEnv()
+			.withName(Constants.ENV_FLINK_CONTAINER_ID)
+			.withValue(resourceId)
+			.endEnv();
+		if (additionalEnvs != null && !additionalEnvs.isEmpty()) {
+			additionalEnvs.entrySet().stream().forEach(
+				e -> containerBuilder.addNewEnv().withName(e.getKey()).withValue(e.getValue()).endEnv()
+			);
 		}
 		return containerBuilder.build();
 	}
@@ -340,5 +362,13 @@ public class KubernetesRMUtils {
 				.collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
 		}
 		return null;
+	}
+
+	public static String getEncodedResourceProfile(ResourceProfile resourceProfile) throws IOException {
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		ObjectOutputStream rpOutput = new ObjectOutputStream(output);
+		rpOutput.writeObject(resourceProfile);
+		rpOutput.close();
+		return new String(Base64.encodeBase64(output.toByteArray()));
 	}
 }

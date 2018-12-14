@@ -39,6 +39,7 @@ import org.apache.flink.runtime.resourcemanager.ResourceManagerConfiguration;
 import org.apache.flink.runtime.resourcemanager.slotmanager.SlotManager;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.TestingRpcService;
+import org.apache.flink.util.TestLogger;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.DoneablePod;
@@ -69,7 +70,7 @@ import java.util.stream.IntStream;
 /**
  * General tests for the Flink Kubernetes session resource manager component.
  */
-public class KubernetesSessionResourceManagerTest {
+public class KubernetesSessionResourceManagerTest extends TestLogger {
 
 	protected static final int TASK_MANAGER_COUNT = 3;
 

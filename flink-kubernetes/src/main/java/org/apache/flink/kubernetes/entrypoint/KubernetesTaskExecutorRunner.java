@@ -21,6 +21,7 @@ package org.apache.flink.kubernetes.entrypoint;
 import org.apache.flink.configuration.AkkaOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.GlobalConfiguration;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.kubernetes.configuration.Constants;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.security.SecurityConfiguration;
@@ -88,6 +89,37 @@ public class KubernetesTaskExecutorRunner {
 			Preconditions.checkArgument(containerId != null,
 				"ContainerId variable %s not set", Constants.ENV_FLINK_CONTAINER_ID);
 			LOG.info("ResourceID assigned for this container: {}", containerId);
+
+			if (ENV.containsKey(Constants.ENV_TM_NUM_TASK_SLOT)) {
+				int numSlots = Integer.valueOf(ENV.get(Constants.ENV_TM_NUM_TASK_SLOT));
+				configuration.setInteger(TaskManagerOptions.NUM_TASK_SLOTS, numSlots);
+				LOG.info("Num slots for this container: {}", numSlots);
+			}
+			if (ENV.containsKey(Constants.ENV_TM_NUM_TASK_SLOT)) {
+				String resourceProfile = ENV.get(Constants.ENV_TM_RESOURCE_PROFILE_KEY);
+				configuration.setString(TaskManagerOptions.TASK_MANAGER_RESOURCE_PROFILE_KEY, resourceProfile);
+				LOG.info("Resource profile for this container: {}", resourceProfile);
+			}
+			if (ENV.containsKey(Constants.ENV_TM_MANAGED_MEMORY_SIZE)) {
+				long managedMemorySize = Long.valueOf(ENV.get(Constants.ENV_TM_MANAGED_MEMORY_SIZE));
+				configuration.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, managedMemorySize);
+			}
+			if (ENV.containsKey(Constants.ENV_TM_FLOATING_MANAGED_MEMORY_SIZE)) {
+				int floatingManagedMemory = Integer.valueOf(ENV.get(Constants.ENV_TM_FLOATING_MANAGED_MEMORY_SIZE));
+				configuration.setInteger(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE.key(), floatingManagedMemory);
+			}
+			if (ENV.containsKey(Constants.ENV_TM_PROCESS_NETTY_MEMORY)) {
+				int processNettyMemory = Integer.valueOf(ENV.get(Constants.ENV_TM_PROCESS_NETTY_MEMORY));
+				configuration.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY, processNettyMemory);
+			}
+			if (ENV.containsKey(Constants.ENV_TM_NETWORK_BUFFERS_MEMORY_MIN)) {
+				long networkBufMemoryMin = Long.valueOf(ENV.get(Constants.ENV_TM_NETWORK_BUFFERS_MEMORY_MIN));
+				configuration.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN, networkBufMemoryMin);
+			}
+			if (ENV.containsKey(Constants.ENV_TM_NETWORK_BUFFERS_MEMORY_MAX)) {
+				long networkBufMemoryMax = Long.valueOf(ENV.get(Constants.ENV_TM_NETWORK_BUFFERS_MEMORY_MAX));
+				configuration.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX, networkBufMemoryMax);
+			}
 
 			SecurityConfiguration sc = new SecurityConfiguration(configuration);
 			SecurityUtils.install(sc);

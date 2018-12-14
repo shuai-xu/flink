@@ -28,7 +28,7 @@ import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.ResourceManagerOptions;
 import org.apache.flink.kubernetes.configuration.KubernetesConfigOptions;
-import org.apache.flink.kubernetes.runtime.clusterframework.KubernetesSessionResourceManager;
+import org.apache.flink.kubernetes.runtime.clusterframework.KubernetesResourceManager;
 import org.apache.flink.kubernetes.utils.KubernetesClientFactory;
 import org.apache.flink.runtime.akka.AkkaUtils;
 import org.apache.flink.runtime.clusterframework.ApplicationStatus;
@@ -44,8 +44,8 @@ import org.apache.flink.runtime.resourcemanager.ResourceManager;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerConfiguration;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerRuntimeServices;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerRuntimeServicesConfiguration;
-import org.apache.flink.runtime.resourcemanager.slotmanager.DynamicAssigningSlotManager;
 import org.apache.flink.runtime.resourcemanager.slotmanager.SlotManager;
+import org.apache.flink.runtime.resourcemanager.slotmanager.StrictlyMatchingSlotManager;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.security.SecurityContext;
@@ -99,7 +99,7 @@ public class KubernetesJobClusterEntrypoint extends JobClusterEntrypoint {
 			resourceManagerRuntimeServicesConfiguration,
 			highAvailabilityServices,
 			rpcService.getScheduledExecutor());
-		SlotManager slotManager = new DynamicAssigningSlotManager(
+		SlotManager slotManager = new StrictlyMatchingSlotManager(
 			rpcService.getScheduledExecutor(),
 			resourceManagerRuntimeServicesConfiguration.getSlotManagerConfiguration().getTaskManagerRequestTimeout(),
 			resourceManagerRuntimeServicesConfiguration.getSlotManagerConfiguration().getSlotRequestTimeout(),
@@ -107,7 +107,7 @@ public class KubernetesJobClusterEntrypoint extends JobClusterEntrypoint {
 				resourceManagerRuntimeServicesConfiguration.getSlotManagerConfiguration().getTaskManagerTimeout() :
 				Time.seconds(AkkaUtils.INF_TIMEOUT().toSeconds()),
 			resourceManagerRuntimeServicesConfiguration.getSlotManagerConfiguration().getTaskManagerCheckerInitialDelay());
-		return new KubernetesSessionResourceManager(
+		return new KubernetesResourceManager(
 			rpcService,
 			FlinkResourceManager.RESOURCE_MANAGER_NAME,
 			resourceId,

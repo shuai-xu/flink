@@ -19,8 +19,10 @@
 package org.apache.flink.kubernetes.runtime.clusterframework;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.kubernetes.configuration.Constants;
 import org.apache.flink.kubernetes.configuration.KubernetesConfigOptions;
 import org.apache.flink.kubernetes.utils.KubernetesClientFactory;
@@ -38,12 +40,12 @@ import org.apache.flink.runtime.resourcemanager.JobLeaderIdService;
 import org.apache.flink.runtime.resourcemanager.ResourceManager;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerConfiguration;
 import org.apache.flink.runtime.resourcemanager.exceptions.ResourceManagerException;
-import org.apache.flink.runtime.resourcemanager.slotmanager.DynamicAssigningSlotManager;
 import org.apache.flink.runtime.resourcemanager.slotmanager.SlotManager;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
+import org.apache.flink.util.FlinkRuntimeException;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.Container;
@@ -61,7 +63,7 @@ import org.apache.commons.lang3.StringUtils;
 import javax.annotation.Nullable;
 
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -76,8 +78,7 @@ import java.util.stream.Collectors;
  * The Kubernetes implementation of the resource manager. Used when the system is started
  * via the resource framework Kubernetes.
  */
-public class KubernetesSessionResourceManager extends
-	ResourceManager<KubernetesWorkerNode> {
+public class KubernetesResourceManager extends ResourceManager<KubernetesWorkerNode> {
 
 	/**
 	 * Kubernetes pod map. Package private for unit test purposes.
@@ -90,15 +91,7 @@ public class KubernetesSessionResourceManager extends
 	 */
 	private KubernetesClient resourceManagerClient;
 
-	/** The number of containers requested. **/
-	private final int workerNum;
-
-	/** The pending pod requests, but not yet granted. */
-	private final Set<ResourceID> pendingWorkerNodes;
-
 	private final Time taskManagerRegisterTimeout;
-
-	private final TaskManagerResource taskManagerResource;
 
 	private Watch watcher;
 
@@ -124,7 +117,38 @@ public class KubernetesSessionResourceManager extends
 
 	private OwnerReference ownerReference;
 
-	public KubernetesSessionResourceManager(
+	/** The min cpu core of a task executor. */
+	private final double minCorePerContainer;
+
+	/** The min memory of task executor to allocate (in MB). */
+	private final int minMemoryPerContainer;
+
+	/** The max cpu core of a task executor, used to decide how many slots can be placed on a task executor. */
+	private final double maxCorePerContainer;
+
+	/** The max memory of a task executor, used to decide how many slots can be placed on a task executor. */
+	private final int maxMemoryPerContainer;
+
+	/** The max extended resource of a task executor, used to decide how many slots can be placed on a task executor. */
+	private final Map<String, Double> maxExtendedResourcePerContainer;
+
+	/** The pending pod requests for each priority, but not yet granted.
+	 *  Currently we use priority to identity a typical type of resource.
+	 **/
+	private final ConcurrentHashMap<Integer, Set<ResourceID>> pendingWorkerNodes;
+
+	private final Map<TaskManagerResource, Integer> resourceToPriorityMap;
+
+	private final Map<Integer, TaskManagerResource> priorityToResourceMap;
+
+	/**
+	 * The number of slots not used by any request.
+	 */
+	private final Map<Integer, Integer> priorityToSpareSlots;
+
+	private volatile int latestPriority = 0;
+
+	public KubernetesResourceManager(
 		RpcService rpcService,
 		String resourceManagerEndpointId,
 		ResourceID resourceId,
@@ -152,7 +176,6 @@ public class KubernetesSessionResourceManager extends
 		this.flinkConfig = flinkConfig;
 		this.fatalErrorHandler = fatalErrorHandler;
 		this.workerNodeMap = new ConcurrentHashMap<>();
-		this.pendingWorkerNodes = new HashSet<>();
 		this.confDir = flinkConfig.getString(KubernetesConfigOptions.CONF_DIR);
 
 		taskManagerRegisterTimeout = Time.seconds(flinkConfig
@@ -160,17 +183,6 @@ public class KubernetesSessionResourceManager extends
 
 		workerNodeMaxFailedAttempts = flinkConfig.getInteger(
 			KubernetesConfigOptions.WORKER_NODE_MAX_FAILED_ATTEMPTS);
-
-		// build the task manager's total resource according to user's resource
-		taskManagerResource = TaskManagerResource.fromConfiguration(flinkConfig,
-			KubernetesRMUtils.createTaskManagerResourceProfile(flinkConfig), 1);
-		log.info("Task manager resource: " + taskManagerResource);
-
-		if (slotManager instanceof DynamicAssigningSlotManager) {
-			((DynamicAssigningSlotManager) slotManager).setTotalResourceOfTaskExecutor(
-				TaskManagerResource.convertToResourceProfile(taskManagerResource));
-			log.info("The resource for user in a task executor is {}.", taskManagerResource);
-		}
 
 		clusterId = flinkConfig.getString(KubernetesConfigOptions.CLUSTER_ID);
 		taskManagerPodLabels = new HashMap<>();
@@ -180,10 +192,18 @@ public class KubernetesSessionResourceManager extends
 			clusterId + Constants.TASK_MANAGER_LABEL_SUFFIX + Constants.NAME_SEPARATOR;
 		taskManagerConfigMapName =
 			clusterId + Constants.TASK_MANAGER_CONFIG_MAP_SUFFIX;
-		workerNum =
-			flinkConfig.getInteger(KubernetesConfigOptions.TASK_MANAGER_COUNT);
-		log.info("Initialize KubernetesSessionResourceManager: clusterId: {}, "
-			+ "workerNum: {}", clusterId, workerNum);
+
+		minCorePerContainer = flinkConfig.getDouble(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MIN_CORE);
+		minMemoryPerContainer = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MIN_MEMORY);
+		maxCorePerContainer = flinkConfig.getDouble(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_CORE);
+		maxMemoryPerContainer = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_MEMORY);
+		maxExtendedResourcePerContainer = KubernetesRMUtils.loadExtendedResourceConstrains(flinkConfig);
+
+		pendingWorkerNodes = new ConcurrentHashMap<>();
+		priorityToSpareSlots = new HashMap<>();
+		priorityToResourceMap = new HashMap<>();
+		resourceToPriorityMap = new HashMap<>();
+		log.info("Initialize KubernetesResourceManager: clusterId: {}", clusterId);
 	}
 
 	@VisibleForTesting
@@ -199,6 +219,8 @@ public class KubernetesSessionResourceManager extends
 				long maxId = workerNodeMap.values().stream()
 					.mapToLong(KubernetesWorkerNode::getPodId).max().getAsLong();
 				maxPodId.set(maxId);
+				latestPriority = workerNodeMap.values().stream()
+					.mapToInt(KubernetesWorkerNode::getPriority).max().getAsInt() + 1;
 			}
 			log.info(
 				"Recovered {} pods from previous attempts, max pod id is {}.",
@@ -206,84 +228,132 @@ public class KubernetesSessionResourceManager extends
 		}
 	}
 
-	private synchronized KubernetesWorkerNode addWorkerNode(Pod pod, boolean checkPending) {
+	protected synchronized KubernetesWorkerNode addWorkerNode(Pod pod, boolean checkPending) {
 		String podName = pod.getMetadata().getName();
 		ResourceID resourceId = new ResourceID(podName);
-		boolean pendingRemoved = pendingWorkerNodes.remove(resourceId);
-		if (!pendingRemoved && checkPending) {
-			log.warn("Skip adding worker node {} since it's no longer pending!", resourceId);
-			removePod(pod);
-			return null;
-		}
 		if (workerNodeMap.containsKey(resourceId)) {
 			log.warn("Skip adding worker node {} since it's already exist!", resourceId);
 			return workerNodeMap.get(resourceId);
 		}
-		if (workerNodeMap.size() >= workerNum) {
-			log.error("Skip adding worker node {} since the number of worker nodes ({}) is equal with "
-				+ "or beyond required ({})", workerNodeMap.size(), workerNum);
-			removePod(pod);
-			return null;
-		}
 		if (podName.startsWith(taskManagerPodNamePrefix)) {
-			String podId = podName
-				.substring(podName.lastIndexOf(Constants.NAME_SEPARATOR) + 1);
-			if (StringUtils.isNumeric(podId)) {
+			String podId = podName.substring(podName.lastIndexOf(Constants.NAME_SEPARATOR) + 1);
+			Map<String, String> labels = pod.getMetadata().getLabels();
+			if (StringUtils.isNumeric(podId) && labels != null
+				&& labels.containsKey(Constants.LABEL_PRIORITY_KEY)
+				&& StringUtils.isNumeric(labels.get(Constants.LABEL_PRIORITY_KEY))) {
+				int priority = Integer.parseInt(labels.get(Constants.LABEL_PRIORITY_KEY));
+				Set<ResourceID> curPendingWorkerNodes = pendingWorkerNodes.get(priority);
+				if (checkPending) {
+					if (curPendingWorkerNodes == null) {
+						log.error("Skip invalid pod {} whose priority {} is not pending.", podName, priority);
+						removePod(pod);
+						return null;
+					}
+					boolean pendingRemoved = curPendingWorkerNodes.remove(resourceId);
+					if (!pendingRemoved) {
+						log.warn("Skip adding worker node {} since it's no longer pending!", resourceId);
+						removePod(pod);
+						return null;
+					}
+				} else if (curPendingWorkerNodes != null) {
+					// remove from pending worker nodes if exist
+					curPendingWorkerNodes.remove(resourceId);
+				}
 				KubernetesWorkerNode workerNode =
 					new KubernetesWorkerNode(pod, podName,
-						Long.parseLong(podId));
+						Long.parseLong(podId), priority);
 				workerNodeMap.put(workerNode.getResourceID(), workerNode);
 				scheduleRunAsync(() -> checkTMRegistered(resourceId), taskManagerRegisterTimeout);
 				log.info("Add worker node : {}, worker nodes: {}, pending worker nodes: {} - {}",
-					workerNode.getResourceID(), workerNodeMap.size(), pendingWorkerNodes.size(), pendingWorkerNodes);
+					workerNode.getResourceID(), workerNodeMap.size(),
+					curPendingWorkerNodes == null ? 0 : curPendingWorkerNodes.size(), curPendingWorkerNodes);
 				return workerNode;
 			} else {
-				log.warn("Skip invalid pod whose name is {} "
-					+ "and the last part is not a number.", podName);
+				log.error("Skip invalid pod whose podId ({}) or priority in labels({}) is not a number.", podId, labels);
 				removePod(pod);
 			}
 		} else {
-			log.warn("Skip invalid pod whose name is {} and prefix is not {}.",
+			log.error("Skip invalid pod whose name is {} and prefix is not {}.",
 				podName, taskManagerPodNamePrefix);
 			removePod(pod);
 		}
 		return null;
 	}
 
-	private synchronized boolean removeWorkerNode(ResourceID resourceID, String diagnostics, boolean increaseFailedAttempt) {
+	protected synchronized boolean removeWorkerNode(ResourceID resourceID, String diagnostics, boolean increaseFailedAttempt) {
 		if (!workerNodeMap.containsKey(resourceID)) {
-			log.warn("Failed to remove non-exist worker node {}.", resourceID);
 			return false;
 		}
 		if (increaseFailedAttempt) {
 			increaseWorkerNodeFailedAttempts();
 		}
 		log.info("Try to remove worker node: {}, diagnostics: {}", resourceID, diagnostics);
-		closeTaskManagerConnection(resourceID, new Exception(diagnostics));
-
-		// If a worker terminated exceptionally, start a new one;
+		boolean registered = closeTaskManagerConnection(resourceID, new Exception(diagnostics));
 		KubernetesWorkerNode node = workerNodeMap.remove(resourceID);
+		// Remove pod and check worker node failed attempts
 		if (node != null) {
 			removePod(node.getPod());
 			checkWorkerNodeFailedAttempts();
-			requestWorkerNodes();
+			// We only request new container for it when the container has not register to the RM as otherwise
+			// the job master will ask for it when failover.
+			if (!registered) {
+				if (priorityToResourceMap.containsKey(node.getPriority())) {
+					// Container completed unexpectedly ~> start a new one
+					internalRequestYarnContainer(node.getPriority());
+				} else {
+					log.info("Not found resource for priority {}, this is usually due to job master failover.",
+						node.getPriority());
+				}
+			}
 			log.info("Removed worker node: {}, left worker nodes: {}", resourceID, workerNodeMap.size());
 			return true;
 		}
 		return false;
 	}
 
-	private void requestPod(Pod pod) {
+	/**
+	 * Request new container if pending containers cannot satisfies pending slot requests.
+	 */
+	private void internalRequestYarnContainer(int priority) {
+		Set<ResourceID> curPendingWorkerNodes = pendingWorkerNodes.get(priority);
+		TaskManagerResource tmResource = priorityToResourceMap.get(priority);
+		if (curPendingWorkerNodes == null || tmResource == null) {
+			log.error("There is no previous allocation with id {} for {}.", priority, tmResource);
+		} else {
+			// TODO: Just a weak check because we don't know how many pending slot requests belongs to
+			// this priority. So currently we use overall pending slot requests number to restrain
+			// the container requests of this priority.
+			int pendingSlotRequests = getNumberPendingSlotRequests();
+			int pendingSlotAllocation = curPendingWorkerNodes.size() * tmResource.getSlotNum();
+			if (pendingSlotRequests > pendingSlotAllocation) {
+				requestNewWorkerNode(tmResource, priority);
+			} else {
+				log.info("Skip request yarn container, there are enough pending slot allocation for slot requests." +
+						" Priority {}. Resource {}. Pending slot allocation {}. Pending slot requests {}.",
+					priority,
+					tmResource,
+					pendingSlotAllocation,
+					pendingSlotRequests);
+			}
+		}
+	}
+
+	protected void requestPod(Pod pod) {
 		resourceManagerClient.pods().create(pod);
 		log.info("Requested pod: {}", pod.getMetadata().getName());
 	}
 
-	private void removePod(Pod pod) {
-		resourceManagerClient.pods().delete(pod);
-		log.info("Removed pod: {}", pod.getMetadata().getName());
+	protected void removeRequest(ResourceID resourceId) {
+		Boolean deleted = resourceManagerClient.pods().withName(resourceId.toString()).delete();
+		log.info("{} pod request: {}", deleted ? "Removed" : "Failed to remove", resourceId);
 	}
 
-	private void removeTMPods() {
+	protected void removePod(Pod pod) {
+		Boolean deleted = resourceManagerClient.pods().delete(pod);
+		log.info("{} pod: {}", deleted ? "Removed" : "Failed to remove", pod.getMetadata().getName());
+	}
+
+	protected void removeTMPods() {
 		resourceManagerClient.pods().withLabels(taskManagerPodLabels).delete();
 		log.info("Removed TM pods with labels: {}, left pods: {}", taskManagerPodLabels);
 		PodList leftPods = resourceManagerClient.pods().withLabels(taskManagerPodLabels).list();
@@ -324,12 +394,6 @@ public class KubernetesSessionResourceManager extends
 		} catch (Exception e) {
 			throw new ResourceManagerException(
 				"Could not create and start watcher.", e);
-		}
-		try {
-			requestWorkerNodes();
-		} catch (Exception e) {
-			throw new ResourceManagerException(
-				"Could not create and start worker node.", e);
 		}
 	}
 
@@ -409,9 +473,8 @@ public class KubernetesSessionResourceManager extends
 					Collectors.toList());
 			if (!podTerminatedStates.isEmpty()) {
 				//increase failed attempts if terminated exceptionally
-				removeWorkerNode(new ResourceID(pod.getMetadata().getName()),
+				return removeWorkerNode(new ResourceID(pod.getMetadata().getName()),
 					"Pod terminated : " + podTerminatedStates, true);
-				return true;
 			}
 		}
 		return false;
@@ -441,16 +504,58 @@ public class KubernetesSessionResourceManager extends
 		return maxPodId.addAndGet(1);
 	}
 
-	protected ResourceID requestNewWorkerNode() {
+	protected synchronized void requestNewWorkerNode(TaskManagerResource taskManagerResource, int priority) {
+		if (isStopped) {
+			return;
+		}
 		String taskManagerPodName = taskManagerPodNamePrefix + generateNewPodId();
-		Container container = KubernetesRMUtils.createTaskManagerContainer(
-			flinkConfig, taskManagerResource, confDir, taskManagerPodName, null, null, null);
-		log.info("Task manager start command: " + container.getArgs());
-		Pod taskManagerPod = KubernetesRMUtils
-			.createTaskManagerPod(taskManagerPodLabels, taskManagerPodName,
-				taskManagerConfigMapName, ownerReference, container);
-		requestPod(taskManagerPod);
-		return new ResourceID(taskManagerPodName);
+		try {
+			// init additional environments
+			Map<String, String> additionalEnvs = new HashMap<>();
+			additionalEnvs.put(Constants.ENV_TM_NUM_TASK_SLOT, String.valueOf(taskManagerResource.getSlotNum()));
+			additionalEnvs.put(Constants.ENV_TM_RESOURCE_PROFILE_KEY,
+				KubernetesRMUtils.getEncodedResourceProfile(taskManagerResource.getTaskResourceProfile()));
+
+			final long managedMemory = taskManagerResource.getManagedMemorySize() > 1 ? taskManagerResource.getManagedMemorySize() :
+				flinkConfig.getLong(TaskManagerOptions.MANAGED_MEMORY_SIZE);
+			additionalEnvs.put(Constants.ENV_TM_MANAGED_MEMORY_SIZE, String.valueOf(managedMemory));
+
+			final int floatingManagedMemory = taskManagerResource.getFloatingManagedMemorySize();
+			additionalEnvs.put(Constants.ENV_TM_FLOATING_MANAGED_MEMORY_SIZE, String.valueOf(floatingManagedMemory));
+
+			additionalEnvs.put(Constants.ENV_TM_PROCESS_NETTY_MEMORY,
+				String.valueOf(taskManagerResource.getTaskManagerNettyMemorySizeMB()));
+
+			long networkBufBytes = taskManagerResource.getNetworkMemorySize() << 20;
+			additionalEnvs.put(Constants.ENV_TM_NETWORK_BUFFERS_MEMORY_MIN, String.valueOf(networkBufBytes));
+			additionalEnvs.put(Constants.ENV_TM_NETWORK_BUFFERS_MEMORY_MAX, String.valueOf(networkBufBytes));
+			log.debug("Task manager environments: " + additionalEnvs);
+			// create TM container
+			Container container = KubernetesRMUtils.createTaskManagerContainer(
+				flinkConfig, taskManagerResource, confDir, taskManagerPodName,
+				minCorePerContainer, minMemoryPerContainer, additionalEnvs);
+			log.debug("Task manager start command: " + container.getArgs());
+			// create TM pod
+			Map<String, String> currentLabels = new HashMap<>(taskManagerPodLabels);
+			currentLabels.put(Constants.LABEL_PRIORITY_KEY, String.valueOf(priority));
+			Pod taskManagerPod = KubernetesRMUtils
+				.createTaskManagerPod(currentLabels, taskManagerPodName,
+					taskManagerConfigMapName, ownerReference, container);
+			requestPod(taskManagerPod);
+			// update pending worker nodes
+			Set<ResourceID> curPendingWorkerNodes = pendingWorkerNodes.get(priority);
+			if (curPendingWorkerNodes == null) {
+				curPendingWorkerNodes = new LinkedHashSet<>();
+				pendingWorkerNodes.put(priority, curPendingWorkerNodes);
+			}
+			curPendingWorkerNodes.add(new ResourceID(taskManagerPodName));
+			log.info("Requesting new TaskExecutor container with priority {}. Number pending requests {}. TM Pod name {}. TM Resources {}.",
+				priority, curPendingWorkerNodes.size(), taskManagerPodName, taskManagerResource);
+		} catch (Exception e) {
+			log.error("Failed to request new worker node with priority {}. TM Pod name {}. TM Resources {}.",
+				priority, taskManagerPodName, taskManagerResource, e);
+			throw new FlinkRuntimeException("Failed to request new worker node", e);
+		}
 	}
 
 	@Override
@@ -496,12 +601,25 @@ public class KubernetesSessionResourceManager extends
 	}
 
 	@Override
-	public void startNewWorker(ResourceProfile resourceProfile) {
-		requestWorkerNodes();
+	public synchronized void startNewWorker(ResourceProfile resourceProfile) {
+		// Priority for worker containers - priorities are intra-application
+		int slotNumber = calculateSlotNumber(resourceProfile);
+		TaskManagerResource tmResource = TaskManagerResource.fromConfiguration(flinkConfig, resourceProfile, slotNumber);
+		int priority = generatePriority(tmResource);
+
+		int spareSlots = priorityToSpareSlots.getOrDefault(priority, 0);
+		if (spareSlots > 0) {
+			priorityToSpareSlots.put(priority, spareSlots - 1);
+		} else {
+			if (slotNumber > 1) {
+				priorityToSpareSlots.put(priority, slotNumber - 1);
+			}
+			requestNewWorkerNode(tmResource, priority);
+		}
 	}
 
 	@Override
-	public boolean stopWorker(KubernetesWorkerNode workerNode) {
+	public synchronized boolean stopWorker(KubernetesWorkerNode workerNode) {
 		if (workerNode != null) {
 			return removeWorkerNode(workerNode.getResourceID(), "Stop worker", false);
 		}
@@ -514,7 +632,38 @@ public class KubernetesSessionResourceManager extends
 	}
 
 	@Override
-	public void cancelNewWorker(ResourceProfile resourceProfile) {
+	public synchronized void cancelNewWorker(ResourceProfile resourceProfile) {
+		int slotNumber = calculateSlotNumber(resourceProfile);
+		TaskManagerResource tmResource = TaskManagerResource.fromConfiguration(flinkConfig, resourceProfile, slotNumber);
+		int priority = generatePriority(tmResource);
+		Set<ResourceID> curPendingWorkerNodes = pendingWorkerNodes.get(priority);
+		log.info("Canceling new worker with priority {}, pending worker nodes: {}.", priority, curPendingWorkerNodes.size());
+		if (curPendingWorkerNodes == null) {
+			log.error("There is no previous allocation with id {} for {}.", priority, resourceProfile);
+		} else if (curPendingWorkerNodes.size() > 0) {
+			// update the pending request number
+			if (slotNumber == 1) {
+				// if one container has one slot, just decrease the pending number
+				ResourceID resourceID = curPendingWorkerNodes.iterator().next();
+				curPendingWorkerNodes.remove(resourceID);
+				removeRequest(resourceID);
+			} else {
+				Integer spareSlots = priorityToSpareSlots.get(priority);
+				// if spare slots not fulfill a container, add one to the spare number, else decrease the pending number
+				if (spareSlots == null) {
+					priorityToSpareSlots.put(priority, 1);
+				} else if (spareSlots < slotNumber - 1) {
+					priorityToSpareSlots.put(priority, spareSlots + 1);
+				} else {
+					priorityToSpareSlots.remove(priority);
+					ResourceID resourceID = curPendingWorkerNodes.iterator().next();
+					curPendingWorkerNodes.remove(resourceID);
+					removeRequest(resourceID);
+				}
+			}
+		}
+		log.info("Canceled new worker with priority {}, pending worker nodes: {}, priority to spare slots: {}.",
+			priority, curPendingWorkerNodes.size(), priorityToSpareSlots);
 	}
 
 	@Override
@@ -526,37 +675,13 @@ public class KubernetesSessionResourceManager extends
 		return workerNodeMap;
 	}
 
-	protected Set<ResourceID> getPendingWorkerNodes() {
+	protected Map<Integer, Set<ResourceID>> getPendingWorkerNodes() {
 		return pendingWorkerNodes;
-	}
-
-	protected synchronized void requestWorkerNodes() {
-		if (isStopped) {
-			return;
-		}
-		int requiredWorkerNum =
-			workerNum - workerNodeMap.size() - pendingWorkerNodes.size();
-		if (requiredWorkerNum < 1) {
-			log.info(
-				"Allocated and pending containers have reached the limit {}, will not allocate more.",
-				workerNum);
-			return;
-		}
-
-		for (int i = 0; i < requiredWorkerNum; ++i) {
-			ResourceID newResourceId = requestNewWorkerNode();
-			pendingWorkerNodes.add(newResourceId);
-			log.info("Add pending worker node: {}", newResourceId);
-		}
-
-		log.info("Number pending requests {}. Requesting new container with resources {}. ",
-			pendingWorkerNodes.size(), taskManagerResource);
 	}
 
 	protected synchronized void checkTMRegistered(ResourceID resourceId) {
 		KubernetesWorkerNode node = workerNodeMap.get(resourceId);
 		if (node != null && !taskExecutorRegistered(resourceId)) {
-			//increase failed attempts if terminated exceptionally
 			increaseWorkerNodeFailedAttempts();
 			log.info("Task manager {} did not register in {}, will stop it and request a new one.", resourceId, taskManagerRegisterTimeout);
 			stopWorker(node);
@@ -568,8 +693,68 @@ public class KubernetesSessionResourceManager extends
 		this.ownerReference = ownerReference;
 	}
 
+	public void setResourceManagerClient(KubernetesClient resourceManagerClient) {
+		this.resourceManagerClient = resourceManagerClient;
+	}
+
+	/**
+	 * Calculate the slot number in a task executor according to the resource.
+	 *
+	 * @param resourceProfile The resource profile of a request
+	 * @return The slot number in a task executor.
+	 */
 	@VisibleForTesting
-	protected boolean isStopped() {
+	int calculateSlotNumber(ResourceProfile resourceProfile) {
+		if (resourceProfile.getCpuCores() <= 0 || resourceProfile.getMemoryInMB() <= 0) {
+			return 1;
+		}
+		else {
+			if (resourceProfile.getCpuCores() > maxCorePerContainer) {
+				return 1;
+			}
+			if (resourceProfile.getMemoryInMB() > maxMemoryPerContainer) {
+				return 1;
+			}
+			int slot = Math.min((int) (maxCorePerContainer / resourceProfile.getCpuCores()),
+				(maxMemoryPerContainer / resourceProfile.getMemoryInMB()));
+
+			for (org.apache.flink.api.common.resources.Resource extendedResource : resourceProfile.getExtendedResources().values()) {
+				// Skip floating memory, it has been added to memory
+				if (extendedResource.getName().equals(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME)) {
+					continue;
+				}
+				Double maxPerContainer = maxExtendedResourcePerContainer.get(extendedResource.getName().toLowerCase());
+				if (maxPerContainer != null) {
+					if (extendedResource.getValue() > maxPerContainer) {
+						return 1;
+					}
+					slot = Math.min(slot, (int) (maxPerContainer / extendedResource.getValue()));
+				}
+			}
+			return slot;
+		}
+	}
+
+	/**
+	 * Generate priority by given resource profile.
+	 * Priority is only used for distinguishing request of different resource.
+	 * @param tmResource The resource profile of a request
+	 * @return The priority of this resource profile.
+	 */
+	private int generatePriority(TaskManagerResource tmResource) {
+		Integer priority = resourceToPriorityMap.get(tmResource);
+		if (priority != null) {
+			return priority;
+		} else {
+			priority = latestPriority++;
+			resourceToPriorityMap.put(tmResource, priority);
+			priorityToResourceMap.put(priority, tmResource);
+			return priority;
+		}
+	}
+
+	@VisibleForTesting
+	public boolean isStopped() {
 		return isStopped;
 	}
 }
