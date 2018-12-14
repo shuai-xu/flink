@@ -324,7 +324,7 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 			.withAmount(String.valueOf(cpu))
 			.build();
 		Quantity jobManagerMemoryQuantity = new QuantityBuilder(false)
-			.withAmount(String.valueOf(((long)jobManagerMemoryMb) << 20))
+			.withAmount(String.valueOf(((long) jobManagerMemoryMb) << 20))
 			.build();
 
 		return new ContainerBuilder()
