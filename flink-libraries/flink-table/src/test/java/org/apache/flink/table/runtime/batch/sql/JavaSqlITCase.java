@@ -146,9 +146,6 @@ public class JavaSqlITCase extends QueryTest {
 				new WC("Ciao", 1, "xx2"),
 				new WC("Hello", 1, "xx3"));
 
-		// TODO remove it after fix bugs....
-		input.getTransformation().setParallelismLocked(true);
-
 		// register the BoundedStream as table "WordCount"
 		tEnv.registerBoundedStream("WC", input, "word, frequency, amount");
 

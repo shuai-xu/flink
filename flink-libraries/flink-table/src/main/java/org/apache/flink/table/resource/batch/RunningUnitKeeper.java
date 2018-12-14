@@ -63,8 +63,6 @@ public class RunningUnitKeeper {
 	private final TableConfig tableConfig;
 	private final BatchTableEnvironment tableEnv;
 	private List<RelRunningUnit> runningUnits;
-	private BatchResultPartitionCalculator resultPartitionCalculator;
-	private BatchRelCpuHeapMemCalculator relCpuHeapMemCalculator;
 	private final Map<BatchExecRel<?>, Set<RelRunningUnit>> relRunningUnitMap = new LinkedHashMap<>();
 	// rel --> shuffleStage
 	private final Map<BatchExecRel<?>, Set<BatchExecRelStage>> relStagesMap = new LinkedHashMap<>();
@@ -73,8 +71,6 @@ public class RunningUnitKeeper {
 	public RunningUnitKeeper(BatchTableEnvironment tableEnv) {
 		this.tableConfig = tableEnv.getConfig();
 		this.tableEnv = tableEnv;
-		this.resultPartitionCalculator = new BatchResultPartitionCalculator(tableEnv);
-		this.relCpuHeapMemCalculator = new BatchRelCpuHeapMemCalculator(tableEnv);
 	}
 
 	public void clear() {
@@ -123,13 +119,13 @@ public class RunningUnitKeeper {
 		if (rootNode instanceof BatchExecSink<?>) {
 			rootNode = (BatchExecRel<?>) ((BatchExecSink) rootNode).getInput();
 		}
+		RelMetadataQuery mq = rootNode.getCluster().getMetadataQuery();
 		Map<BatchExecRel<?>, RelResource> relResourceMap = new LinkedHashMap<>();
-		this.relCpuHeapMemCalculator.setRelResourceMap(relResourceMap);
-		this.relCpuHeapMemCalculator.calculate(rootNode);
+		BatchRelCpuHeapMemCalculator.calculate(tableEnv, relResourceMap, rootNode);
 		if (!supportRunningUnit) {
 			// if runningUnit cannot be build, or no statics, we set resource according to config.
 			// we are not able to set resource according to statics when runningUnits are not build.
-			this.resultPartitionCalculator.calculate(rootNode);
+			BatchResultPartitionCalculator.calculate(tableEnv, mq, rootNode);
 			rootNode.accept(new BatchRelManagedCalculator(tableConfig, relResourceMap));
 			for (Map.Entry<BatchExecRel<?>, RelResource> entry : relResourceMap.entrySet()) {
 				entry.getKey().setResource(entry.getValue());
@@ -140,7 +136,6 @@ public class RunningUnitKeeper {
 		InferMode inferMode = ExecResourceUtil.getInferMode(tableConfig);
 		RelFinalParallelismSetter.calculate(tableEnv, rootNode);
 		Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap = ShuffleStageGenerator.generate(rootNode);
-		RelMetadataQuery mq = rootNode.getCluster().getMetadataQuery();
 		getShuffleStageParallelismCalculator(mq, tableConfig, inferMode).calculate(relShuffleStageMap.values());
 		Double cpuLimit = tableConfig.getParameters().getDouble(TableConfig.SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU());
 		if (cpuLimit > 0) {

@@ -18,11 +18,13 @@
 
 package org.apache.flink.table.resource.batch.calculator;
 
-import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.table.api.BatchTableEnvironment;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
 
 import org.apache.calcite.rel.RelDistribution;
@@ -52,8 +54,10 @@ public class RelFinalParallelismSetter {
 		if (!calculatedRelSet.add(batchExecRel)) {
 			return;
 		}
-		if (batchExecRel instanceof BatchExecScan) {
-			calculateSource((BatchExecScan) batchExecRel);
+		if (batchExecRel instanceof BatchExecTableSourceScan) {
+			calculateTableSource((BatchExecTableSourceScan) batchExecRel);
+		} else if (batchExecRel instanceof BatchExecBoundedStreamScan) {
+			calculateBoundedStreamScan((BatchExecBoundedStreamScan) batchExecRel);
 		} else if (batchExecRel instanceof SingleRel) {
 			calculateSingle((SingleRel & BatchExecRel<?>) batchExecRel);
 		} else if (batchExecRel instanceof BatchExecValues) {
@@ -63,13 +67,24 @@ public class RelFinalParallelismSetter {
 		}
 	}
 
-	private void calculateSource(BatchExecScan scanBatchExec) {
-		Tuple2<Boolean, Integer> result = scanBatchExec.getTableSourceResultPartitionNum(tEnv);
-		// we expect sourceParallelism > 0 always, only for the mocked test case.
-		if (result.f0 && result.f1 > 0) {
-			// if parallelism locked, use set parallelism directly.
-			scanBatchExec.setResultPartitionCount(result.f1);
+	private void calculateTableSource(BatchExecTableSourceScan tableSourceScan) {
+		if (tableSourceScan.canLimitPushedDown()) {
+			tableSourceScan.setResultPartitionCount(1);
+		} else {
+			StreamTransformation transformation = tableSourceScan.getSourceTransformation(tEnv.streamEnv());
+			if (transformation.getMaxParallelism() > 0) {
+				tableSourceScan.setResultPartitionCount(transformation.getMaxParallelism());
+			}
 		}
+	}
+
+	private void calculateBoundedStreamScan(BatchExecBoundedStreamScan boundedStreamScan) {
+		StreamTransformation transformation = boundedStreamScan.getSourceTransformation(tEnv.streamEnv());
+		int parallelism = transformation.getParallelism();
+		if (parallelism <= 0) {
+			parallelism = StreamExecutionEnvironment.getDefaultLocalParallelism();
+		}
+		boundedStreamScan.setResultPartitionCount(parallelism);
 	}
 
 	private <T extends SingleRel & BatchExecRel<?>> void calculateSingle(T singleRel) {

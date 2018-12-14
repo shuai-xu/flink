@@ -410,6 +410,7 @@ class BatchTableEnvironment(
       data.asJavaCollection,
       typeInfo.createSerializer(execEnv.getConfig)),
       typeInfo, tableName)
+    boundedStream.forceNonParallel()
     (fields == null, fieldNullables == null) match {
       case (true, true) => registerBoundedStreamInternal(tableName, boundedStream)
       case (false, true) => registerBoundedStreamInternal(tableName, boundedStream, fields)
@@ -502,6 +503,7 @@ class BatchTableEnvironment(
       data.asJavaCollection,
       typeInfo.createSerializer(execEnv.getConfig)),
       typeInfo, getCallLocationName())
+    boundedStream.setParallelism(1)
     val name = if (tableName == null) createUniqueTableName() else tableName
     if (fields == null) {
       registerBoundedStreamInternal(name, boundedStream)

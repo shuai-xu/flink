@@ -80,7 +80,6 @@ class BatchExecValues(
     val transformation = tableEnv.streamEnv
       .createInput(inputFormat, inputFormat.getProducedType, description)
       .getTransformation
-    transformation.setParallelismLocked(true)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation

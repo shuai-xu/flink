@@ -305,7 +305,6 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       operator,
       getOutputType,
       resultPartitionCount)
-    transformation.setParallelismLocked(true)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation

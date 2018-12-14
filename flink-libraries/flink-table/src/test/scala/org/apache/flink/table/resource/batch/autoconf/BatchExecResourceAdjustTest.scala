@@ -18,11 +18,10 @@
 
 package org.apache.flink.table.resource.batch.autoconf
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableSchema}
 import org.apache.flink.table.resource.batch.BatchExecResourceTest
-import org.apache.flink.table.resource.batch.BatchExecResourceTest.MockTableSource
 import org.apache.flink.table.tpc.{STATS_MODE, TpcHSchemaProvider, TpchTableStatsProvider}
-import org.apache.flink.table.util.{ExecResourceUtil, BatchExecTableTestUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{BatchExecTableTestUtil, ExecResourceUtil, TableTestBatchExecBase}
 import org.junit.{Before, Test}
 
 class BatchExecResourceAdjustTest extends TableTestBatchExecBase {
@@ -56,19 +55,25 @@ class BatchExecResourceAdjustTest extends TableTestBatchExecBase {
     val customerSchema = TpcHSchemaProvider.getSchema("customer")
     val colStatsOfCustomer =
       TpchTableStatsProvider.getTableStatsMap(1000, STATS_MODE.FULL).get("customer")
-    val customer = new MockTableSource(customerSchema, colStatsOfCustomer.get)
-    util.addTable("customer", customer)
+    util.addTableSource("customer",
+      new TableSchema(customerSchema.getFieldNames,
+        customerSchema.getFieldTypes),
+      false, colStatsOfCustomer.get)
 
     val ordersSchema = TpcHSchemaProvider.getSchema("orders")
     val colStastOfOrders =
       TpchTableStatsProvider.getTableStatsMap(1000, STATS_MODE.FULL).get("orders")
-    val orders = new MockTableSource(ordersSchema, colStastOfOrders.get)
-    util.addTable("orders", orders)
+    util.addTableSource("orders",
+      new TableSchema(ordersSchema.getFieldNames,
+        ordersSchema.getFieldTypes),
+      false, colStastOfOrders.get)
     val lineitemSchema = TpcHSchemaProvider.getSchema("lineitem")
     val colStatsOfLineitem =
       TpchTableStatsProvider.getTableStatsMap(1000, STATS_MODE.FULL).get("lineitem")
-    val lineitem = new MockTableSource(lineitemSchema, colStatsOfLineitem.get)
-    util.addTable("lineitem", lineitem)
+    util.addTableSource("lineitem",
+      new TableSchema(lineitemSchema.getFieldNames,
+        lineitemSchema.getFieldTypes),
+      false, colStatsOfLineitem.get)
 
     val sqlQuery = "select c.c_name, sum(l.l_quantity)" +
         " from customer c, orders o, lineitem l" +

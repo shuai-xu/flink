@@ -433,7 +433,8 @@ class StreamExecMatch(
     transform.setStateKeyType(selector.getProducedType)
 
     if (logicalKeys.isEmpty) {
-      transform.forceNonParallel()
+      transform.setParallelism(1)
+      transform.setMaxParallelism(1)
     }
   }
 

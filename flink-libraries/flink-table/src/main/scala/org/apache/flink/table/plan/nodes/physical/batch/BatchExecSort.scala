@@ -118,7 +118,6 @@ class BatchExecSort(
       operator.asInstanceOf[OneInputStreamOperator[BaseRow, BaseRow]],
       binaryType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
       resultPartitionCount)
-    transformation.setParallelismLocked(true)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
 
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)

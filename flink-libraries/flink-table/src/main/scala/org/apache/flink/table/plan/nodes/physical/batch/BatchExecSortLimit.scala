@@ -174,7 +174,6 @@ class BatchExecSortLimit(
       operator,
       inputType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
       resultPartitionCount)
-    transformation.setParallelismLocked(true)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation

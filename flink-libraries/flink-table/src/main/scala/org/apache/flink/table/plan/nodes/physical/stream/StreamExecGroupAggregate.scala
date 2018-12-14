@@ -245,7 +245,8 @@ class StreamExecGroupAggregate(
       tableEnv.execEnv.getParallelism)
 
     if (groupings.isEmpty) {
-      ret.forceNonParallel()
+      ret.setParallelism(1)
+      ret.setMaxParallelism(1)
     }
 
     // set KeyType and Selector for state

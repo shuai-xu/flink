@@ -18,13 +18,15 @@
 
 package org.apache.flink.table.resource.batch.calculator;
 
-import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.transformations.StreamTransformation;
+import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.api.TableException;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecJoinBase;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
 import org.apache.flink.table.resource.ResourceCalculator;
@@ -43,17 +45,25 @@ import org.slf4j.LoggerFactory;
  */
 public class BatchResultPartitionCalculator extends ResourceCalculator<BatchExecRel<?>> {
 	private static final Logger LOG = LoggerFactory.getLogger(BatchResultPartitionCalculator.class);
+	private final RelMetadataQuery mq;
 
-	public BatchResultPartitionCalculator(TableEnvironment tEnv) {
+	private BatchResultPartitionCalculator(BatchTableEnvironment tEnv, RelMetadataQuery mq) {
 		super(tEnv);
+		this.mq = mq;
+	}
+
+	public static void calculate(BatchTableEnvironment tEnv, RelMetadataQuery mq, BatchExecRel<?> rootExecRel) {
+		new BatchResultPartitionCalculator(tEnv, mq).calculate(rootExecRel);
 	}
 
 	public void calculate(BatchExecRel<?> batchExecRel) {
 		if (batchExecRel.resultPartitionCount() > 0) {
 			return;
 		}
-		if (batchExecRel instanceof BatchExecScan) {
-			calculateSource((BatchExecScan) batchExecRel);
+		if (batchExecRel instanceof BatchExecBoundedStreamScan) {
+			calculateBoundedStreamScan((BatchExecBoundedStreamScan) batchExecRel);
+		} else if (batchExecRel instanceof BatchExecTableSourceScan) {
+			calculateTableSourceScan((BatchExecTableSourceScan) batchExecRel);
 		} else if (batchExecRel instanceof BatchExecUnion) {
 			calculateUnion((BatchExecUnion) batchExecRel);
 		} else if (batchExecRel instanceof BatchExecExchange) {
@@ -69,34 +79,45 @@ public class BatchResultPartitionCalculator extends ResourceCalculator<BatchExec
 		}
 	}
 
-	private void calculateSource(BatchExecScan scanBatchExec) {
-		Tuple2<Boolean, Integer> result = scanBatchExec.getTableSourceResultPartitionNum(tEnv);
-		// we expect sourceParallelism > 0 always, only for the mocked test case.
-		if (result.f0 && result.f1 > 0) {
-			// if parallelism locked, use set parallelism directly.
-			scanBatchExec.setResultPartitionCount(result.f1);
-			return;
+	private void calculateBoundedStreamScan(BatchExecBoundedStreamScan boundedStreamScan) {
+		StreamTransformation transformation = boundedStreamScan.getSourceTransformation(tEnv.streamEnv());
+		int parallelism = transformation.getParallelism();
+		if (parallelism <= 0) {
+			parallelism = StreamExecutionEnvironment.getDefaultLocalParallelism();
 		}
-		boolean infer = !ExecResourceUtil.getInferMode(tConfig).equals(ExecResourceUtil.InferMode.NONE);
-		LOG.info("infer source partitions num: " + infer);
-		if (infer) {
-			RelMetadataQuery mq = scanBatchExec.getCluster().getMetadataQuery();
-			double rowCount = mq.getRowCount(scanBatchExec);
-			double io = rowCount * mq.getAverageRowSize(scanBatchExec);
-			LOG.info("source row count is : " + rowCount);
-			LOG.info("source data size is : " + io);
-			long rowsPerPartition = ExecResourceUtil.getRelCountPerPartition(tConfig);
-			long sizePerPartition = ExecResourceUtil.getSourceSizePerPartition(tConfig);
-			int maxNum = ExecResourceUtil.getSourceMaxParallelism(tConfig);
-			scanBatchExec.setResultPartitionCount(Math.min(maxNum,
-					Math.max(
-							(int) Math.max(
-									io / sizePerPartition / ExecResourceUtil.SIZE_IN_MB,
-									rowCount / rowsPerPartition),
-							1)));
+		boundedStreamScan.setResultPartitionCount(parallelism);
+	}
+
+	private void calculateTableSourceScan(BatchExecTableSourceScan tableSourceScan) {
+		if (tableSourceScan.canLimitPushedDown()) {
+			tableSourceScan.setResultPartitionCount(1);
 		} else {
-			scanBatchExec.setResultPartitionCount(ExecResourceUtil
-					.getSourceParallelism(tConfig));
+			StreamTransformation transformation = tableSourceScan.getSourceTransformation(tEnv.streamEnv());
+			if (transformation.getMaxParallelism() > 0) {
+				tableSourceScan.setResultPartitionCount(transformation.getMaxParallelism());
+				return;
+			}
+			boolean infer = !ExecResourceUtil.getInferMode(tConfig).equals(ExecResourceUtil.InferMode.NONE);
+			LOG.info("infer source partitions num: " + infer);
+			if (infer) {
+				double rowCount = mq.getRowCount(tableSourceScan);
+				double io = rowCount * mq.getAverageRowSize(tableSourceScan);
+				LOG.info("source row count is : " + rowCount);
+				LOG.info("source data size is : " + io);
+				long rowsPerPartition = ExecResourceUtil.getRelCountPerPartition(tConfig);
+				long sizePerPartition = ExecResourceUtil.getSourceSizePerPartition(tConfig);
+				int maxNum = ExecResourceUtil.getSourceMaxParallelism(tConfig);
+				tableSourceScan.setResultPartitionCount(Math.min(maxNum,
+						Math.max(
+								(int) Math.max(
+										io / sizePerPartition / ExecResourceUtil.SIZE_IN_MB,
+										rowCount / rowsPerPartition),
+								1)));
+			} else {
+				tableSourceScan.setResultPartitionCount(ExecResourceUtil
+						.getSourceParallelism(tConfig));
+			}
+
 		}
 	}
 

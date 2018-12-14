@@ -404,7 +404,7 @@ class JoinDimensionTableITCase extends QueryTest {
       val sourceFunction = new TestSourceFunction(fetcher.asInstanceOf[TestSingleKeyFetcher])
       val streamSource = streamEnv.addSource(sourceFunction, "test source", rowType)
         .setParallelism(1)
-      streamSource.getTransformation.setParallelismLocked(true)
+      streamSource.setMaxParallelism(1)
       streamSource
     }
 

@@ -243,7 +243,6 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
       getOutputType,
       resultPartitionCount
     )
-    transformation.setParallelismLocked(true)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation

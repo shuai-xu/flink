@@ -323,7 +323,6 @@ class BatchExecOverAggregate(
         generatorSort)
       val transformation = new OneInputTransformation(input, "OverAggregate", operator,
         outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]], resultPartitionCount)
-      transformation.setParallelismLocked(true)
       tableEnv.getRUKeeper().addTransformation(this, transformation)
       transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
       transformation

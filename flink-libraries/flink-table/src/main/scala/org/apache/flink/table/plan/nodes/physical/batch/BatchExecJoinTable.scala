@@ -111,7 +111,6 @@ class BatchExecJoinTable(
       getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv),
       tableEnv.streamEnv,
       tableEnv.getConfig)
-    transformation.setParallelismLocked(true)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
     transformation
   }

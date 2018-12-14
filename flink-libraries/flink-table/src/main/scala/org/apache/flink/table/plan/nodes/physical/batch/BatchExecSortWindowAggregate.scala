@@ -128,7 +128,6 @@ class BatchExecSortWindowAggregate(
       operator,
       DataTypes.toTypeInfo(outputRowType).asInstanceOf[BaseRowTypeInfo[BaseRow]],
       resultPartitionCount)
-    transformation.setParallelismLocked(true)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
 
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)

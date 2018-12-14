@@ -92,7 +92,7 @@ class TestPartitionableTableSource(
     val streamSource = streamEnv.createInput(
       new TestPartitionInputFormat(getPartitionData),
       returnType, getCallLocationName()).setParallelism(1)
-    streamSource.getTransformation.setParallelismLocked(true)
+    streamSource.setMaxParallelism(1)
     streamSource
   }
 

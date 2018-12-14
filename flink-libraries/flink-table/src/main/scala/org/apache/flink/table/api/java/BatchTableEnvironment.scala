@@ -336,6 +336,7 @@ class BatchTableEnvironment(
       data,
       typeInfo.createSerializer(execEnv.getConfig)),
       typeInfo, tableName)
+    boundedStream.setParallelism(1)
     if (fields == null) {
       registerBoundedStream(tableName, boundedStream)
     } else {
@@ -365,6 +366,7 @@ class BatchTableEnvironment(
       data,
       typeInfo.createSerializer(execEnv.getConfig)),
       typeInfo, tableName)
+    boundedStream.setParallelism(1)
     registerBoundedStream(tableName, boundedStream, fieldNullables, fields)
   }
 
@@ -418,6 +420,7 @@ class BatchTableEnvironment(
       data,
       typeInfo.createSerializer(execEnv.getConfig)),
       typeInfo, getCallLocationName())
+    boundedStream.setParallelism(1)
     if (fields == null) {
       fromBoundedStream(boundedStream)
     } else {
@@ -433,6 +436,7 @@ class BatchTableEnvironment(
     val typeInfo = new BaseRowTypeInfo[BoxedWrapperRow](classOf[BoxedWrapperRow], Types.LONG)
     val boundedStream = streamEnv.createInput(new RangeInputFormat(start, end),
       typeInfo, getCallLocationName())
+    boundedStream.setParallelism(1)
     fromBoundedStream(boundedStream, "id")
   }
 }

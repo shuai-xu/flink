@@ -20,24 +20,13 @@ package org.apache.flink.table.resource.batch
 
 import java.util.{Arrays => JArrays, Collection => JCollection}
 
-import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.api.java.io.RowCsvInputFormat
-import org.apache.flink.api.scala._
-import org.apache.flink.core.fs.Path
-import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.streaming.api.functions.source.InputFormatSourceFunction
-import org.apache.flink.streaming.api.operators.StreamSource
 import org.apache.flink.table.api.{TableConfig, TableSchema}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
-import org.apache.flink.table.resource.batch.BatchExecResourceTest.MockTableSource
 import org.apache.flink.table.sinks.csv.CsvTableSink
-import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSource}
 import org.apache.flink.table.tpc.{STATS_MODE, Schema, TpcHSchemaProvider, TpchTableStatsProvider}
 import org.apache.flink.table.util.{ExecResourceUtil, TableTestBatchExecBase}
-import org.apache.flink.types.Row
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Before, Test}
@@ -56,8 +45,22 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBatchExecBase {
       TableConfig.SQL_EXEC_INFER_RESOURCE_MODE,
       inferMode
     )
-    util.addTable[(Int, Long, String)]("SmallTable3", 'a, 'b, 'c)
-    util.addTable[(Int, Long, Int, String, Long)]("Table5", 'd, 'e, 'f, 'g, 'h)
+    val tableSchema1 = new TableSchema(
+      Array("a", "b", "c"),
+      Array(
+        DataTypes.INT,
+        DataTypes.LONG,
+        DataTypes.STRING))
+    util.addTableSource("SmallTable3", tableSchema1)
+    val tableSchema2 = new TableSchema(
+      Array("d", "e", "f", "g", "h"),
+      Array(
+        DataTypes.INT,
+        DataTypes.LONG,
+        DataTypes.INT,
+        DataTypes.STRING,
+        DataTypes.LONG))
+    util.addTableSource("Table5", tableSchema2)
     BatchExecResourceTest.setResourceConfig(util.getTableEnv.getConfig)
   }
 
@@ -96,28 +99,18 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBatchExecBase {
 
   @Test
   def testUnionQuery(): Unit = {
-    val table3Schema = new Schema() {
-      override def getFieldNames: Array[String] = {
-        Array("a", "b", "c")
-      }
+    val table3Schema = new TableSchema(
+      Array("a", "b", "c"),
+      Array(
+        DataTypes.INT,
+        DataTypes.LONG,
+        DataTypes.STRING))
 
-      override def getFieldTypes: Array[InternalType] = {
-        Array(
-          DataTypes.INT,
-          DataTypes.LONG,
-          DataTypes.STRING)
-      }
-
-      override def getFieldNullables: Array[Boolean] = {
-        getFieldTypes.map(_ => false)
-      }
-    }
     val colStatsOfTable3 = TableStats(100L, Map[java.lang.String, ColumnStats](
       "a" -> ColumnStats(3L, 1L, 10000D * ExecResourceUtil.SIZE_IN_MB, 8, 5, -5),
       "b" -> ColumnStats(5L, 0L, 10000D * ExecResourceUtil.SIZE_IN_MB, 32, 6.1D, 0D),
       "c" -> ColumnStats(5L, 0L, 10000D * ExecResourceUtil.SIZE_IN_MB, 32, 6.1D, 0D)))
-    val table3 = new MockTableSource(table3Schema, colStatsOfTable3)
-    util.addTable("Table3", table3)
+    util.addTableSource("Table3", table3Schema, true, colStatsOfTable3)
 
     val sqlQuery = "SELECT sum(a) as sum_a, g FROM " +
         "(SELECT a, b, c FROM SmallTable3 UNION ALL SELECT a, b, c FROM Table3), Table5 " +
@@ -142,19 +135,25 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBatchExecBase {
     val customerSchema = TpcHSchemaProvider.getSchema("customer")
     val colStatsOfCustomer =
       TpchTableStatsProvider.getTableStatsMap(1000, STATS_MODE.FULL).get("customer")
-    val customer = new MockTableSource(customerSchema, colStatsOfCustomer.get)
-    util.addTable("customer", customer)
+    util.addTableSource("customer",
+      new TableSchema(customerSchema.getFieldNames,
+        customerSchema.getFieldTypes),
+      false, colStatsOfCustomer.get)
 
     val ordersSchema = TpcHSchemaProvider.getSchema("orders")
     val colStastOfOrders =
       TpchTableStatsProvider.getTableStatsMap(1000, STATS_MODE.FULL).get("orders")
-    val orders = new MockTableSource(ordersSchema, colStastOfOrders.get)
-    util.addTable("orders", orders)
+    util.addTableSource("orders",
+      new TableSchema(ordersSchema.getFieldNames,
+        ordersSchema.getFieldTypes),
+      false, colStastOfOrders.get)
     val lineitemSchema = TpcHSchemaProvider.getSchema("lineitem")
     val colStatsOfLineitem =
       TpchTableStatsProvider.getTableStatsMap(1000, STATS_MODE.FULL).get("lineitem")
-    val lineitem = new MockTableSource(lineitemSchema, colStatsOfLineitem.get)
-    util.addTable("lineitem", lineitem)
+    util.addTableSource("lineitem",
+      new TableSchema(lineitemSchema.getFieldNames,
+        lineitemSchema.getFieldTypes),
+      false, colStatsOfLineitem.get)
 
     val sqlQuery = "select c.c_name, sum(l.l_quantity)" +
         " from customer c, orders o, lineitem l" +
@@ -171,8 +170,10 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBatchExecBase {
     val lineitemSchema = TpcHSchemaProvider.getSchema("lineitem")
     val colStatsOfLineitem =
       TpchTableStatsProvider.getTableStatsMap(1000, STATS_MODE.FULL).get("lineitem")
-    val lineitem = new MockTableSource(lineitemSchema, colStatsOfLineitem.get)
-    util.addTable("lineitem", lineitem)
+    util.addTableSource("lineitem",
+      new TableSchema(lineitemSchema.getFieldNames,
+        lineitemSchema.getFieldTypes),
+      true, colStatsOfLineitem.get)
 
     val sqlQuery = "select * from lineitem limit 1"
     util.verifyResource(sqlQuery)
@@ -264,45 +265,5 @@ object BatchExecResourceTest {
       ExecResourceUtil.SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB,
       32
     )
-  }
-
-  class MockTableSource(
-      schema: Schema,
-      stats: TableStats) extends BatchTableSource[Row] with LimitableTableSource {
-    var isLimitPushdown = false
-
-    override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[Row] = {
-      val inputFormat = new RowCsvInputFormat(
-        new Path("/tmp/tmp"),
-        schema.getFieldTypes.map(DataTypes.toTypeInfo),
-        "\n",
-        ",")
-      // cause the streamEnv is mocked, will new DataStreamSource directly.
-      val typeInformation = DataTypes.toTypeInfo(getReturnType).asInstanceOf[TypeInformation[Row]]
-      val sourceFunction: InputFormatSourceFunction[Row] =
-        new InputFormatSourceFunction(inputFormat, typeInformation)
-      val sourceOperator: StreamSource[Row, InputFormatSourceFunction[Row]] =
-        new StreamSource(sourceFunction)
-      new DataStreamSource[Row](streamEnv, typeInformation, sourceOperator, true, "source")
-    }
-
-    override def applyLimit(limit: Long): TableSource = {
-      isLimitPushdown = true
-      this
-    }
-
-    override def isLimitPushedDown: Boolean = {
-      isLimitPushdown
-    }
-
-    override def getReturnType: DataType = DataTypes.createRowType(
-      schema.getFieldTypes.asInstanceOf[Array[DataType]], schema.getFieldNames)
-
-    override def getTableStats: TableStats = stats
-
-    /** Returns the table schema of the table source */
-    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
-
-    override def explainSource(): String = ""
   }
 }

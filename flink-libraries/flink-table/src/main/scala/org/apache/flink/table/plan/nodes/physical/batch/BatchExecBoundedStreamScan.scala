@@ -18,21 +18,17 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.flink.api.common.operators.ResourceSpec
-import org.apache.flink.api.java.tuple.{Tuple2 => JTuple}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{BatchTableEnvironment, TableEnvironment}
+import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.schema.DataStreamTable
 import org.apache.flink.table.util.BatchExecRelVisitor
-
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.TableScan
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, RelWriter}
-
-import java.lang.{Boolean => JBoolean, Integer => JInteger}
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 
 import scala.collection.JavaConverters._
 
@@ -91,19 +87,11 @@ class BatchExecBoundedStreamScan(
       None)
   }
 
-  override private[flink] def getTableSourceResultPartitionNum(
-      tableEnv: TableEnvironment): JTuple[JBoolean, JInteger] = {
-    new JTuple(boundedStreamTable.dataStream.getTransformation.isParallelismLocked,
-      boundedStreamTable.dataStream.getParallelism)
-  }
-
-  override private[flink] def getTableSourceResource(
-    tableEnv: TableEnvironment): ResourceSpec = {
-    boundedStreamTable.dataStream.getTransformation.getMinResources
-  }
-
   override def needInternalConversion: Boolean = {
     hasTimeAttributeField(boundedStreamTable.fieldIndexes) ||
         needsConversion(boundedStreamTable.dataType)
   }
+
+  override private[flink] def getSourceTransformation(streamEnv: StreamExecutionEnvironment) =
+    boundedStreamTable.dataStream.getTransformation
 }

@@ -320,7 +320,8 @@ class StreamExecWindowJoin(
     )
 
     if (leftKeys.isEmpty) {
-      ret.forceNonParallel()
+      ret.setParallelism(1)
+      ret.setMaxParallelism(1)
     }
     // set KeyType and Selector for state
     ret.setStateKeySelectors(leftSelect, rightSelect)
@@ -369,7 +370,7 @@ class StreamExecWindowJoin(
     )
 
     if (leftKeys.isEmpty) {
-      ret.forceNonParallel()
+      ret.setMaxParallelism(1)
     }
 
     ret.setStateKeySelectors(leftSelect, rightSelect)

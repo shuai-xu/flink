@@ -30,15 +30,13 @@ import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment, DataStr
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.api.scala.BatchTableEnvironment
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.{Table, TableException, _}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.RelNodeBlock
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
 import org.apache.flink.table.plan.util.FlinkRelOptUtil
-import org.apache.flink.table.resource.batch.RunningUnitKeeper
-import org.apache.flink.table.sources.TableSource
 
 import org.apache.calcite.sql.SqlExplainLevel
 
@@ -48,6 +46,10 @@ import _root_.scala.collection.mutable
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
 
+import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
+import org.apache.flink.table.resource.batch.RunningUnitKeeper
+import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSource}
+import org.apache.flink.types.Row
 import org.junit.Assert._
 import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}
@@ -201,6 +203,16 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
     val t = tableEnv.fromBoundedStream(new ScalaStream[T](bs), fields: _*)
     tableEnv.registerTable(name, t)
     t
+  }
+
+  def addTableSource(name: String,
+      tableSchema: TableSchema,
+      limitPushDown: Boolean = false,
+      stats: TableStats = null): TableSource = {
+
+    val table = new TestBatchTableSource(tableSchema, limitPushDown, stats)
+    addTable(name, table)
+    table
   }
 
   def addJavaTable[T](typeInfo: TypeInformation[T], name: String, fields: Expression*): Table = {
@@ -434,6 +446,58 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
       explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES): Unit = {
     printTable(tableEnv.sqlQuery(query), explainLevel)
   }
+}
+
+class TestBatchTableSource(tableSchema: TableSchema,
+    limitPushDown: Boolean = false,
+    stats: TableStats = null)
+    extends BatchTableSource[Row] with LimitableTableSource {
+
+  override def getReturnType: DataType =
+    DataTypes.createRowType(
+      tableSchema.getTypes.asInstanceOf[Array[DataType]],
+      tableSchema.getColumnNames)
+
+  override def getTableStats: TableStats = if (stats == null) {
+    new TableStats(10L, new mutable.HashMap[String, ColumnStats]())
+  } else {
+    stats
+  }
+
+  /** Returns the table schema of the table source */
+  override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
+
+  override def explainSource(): String = ""
+
+  /**
+    * Returns the data of the table as a [[DataStream]].
+    *
+    * NOTE: This method is for internal use only for defining a [[TableSource]].
+    * Do not use it in Table API programs.
+    */
+  override def getBoundedStream(streamEnv: JavaEnv): DataStream[Row] = {
+    val transformation = mock(classOf[StreamTransformation[Row]])
+    when(transformation.getMaxParallelism).thenReturn(-1)
+    val bs = mock(classOf[DataStream[Row]])
+    when(bs.getTransformation).thenReturn(transformation)
+    when(transformation.getOutputType).thenReturn(
+      DataTypes.toTypeInfo(getReturnType).asInstanceOf[TypeInformation[Row]])
+    bs
+  }
+
+  /**
+    * Check and push down the limit to the table source.
+    *
+    * @param limit the value which limit the number of records.
+    * @return A new cloned instance of [[TableSource]]
+    */
+  override def applyLimit(limit: Long): TableSource = this
+
+  /**
+    * Return the flag to indicate whether limit push down has been tried. Must return true on
+    * the returned instance of [[applyLimit]].
+    */
+  override def isLimitPushedDown = limitPushDown
 }
 
 class NullableBatchExecTableTestUtil(fieldsNullable: Boolean, test: TableTestBatchExecBase)

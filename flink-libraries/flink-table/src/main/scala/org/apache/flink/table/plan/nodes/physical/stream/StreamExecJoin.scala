@@ -420,7 +420,8 @@ class StreamExecJoin(
       tableEnv.execEnv.getParallelism)
 
     if (leftKeys.isEmpty) {
-      ret.forceNonParallel()
+      ret.setParallelism(1)
+      ret.setMaxParallelism(1)
     }
 
     // set KeyType and Selector for state

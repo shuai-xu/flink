@@ -19,10 +19,13 @@
 package org.apache.flink.table.resource.batch.calculator;
 
 import org.apache.flink.api.common.operators.ResourceSpec;
-import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.streaming.api.transformations.StreamTransformation;
+import org.apache.flink.table.api.BatchTableEnvironment;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.resource.RelResource;
 import org.apache.flink.table.resource.ResourceCalculator;
@@ -39,23 +42,26 @@ import java.util.Set;
  */
 public class BatchRelCpuHeapMemCalculator extends ResourceCalculator<BatchExecRel<?>> {
 
-	private Map<BatchExecRel<?>, RelResource> relResMap;
+	private final Map<BatchExecRel<?>, RelResource> relResMap;
 	private final Set<BatchExecRel<?>> calculatedRelSet = new HashSet<>();
 
-	public BatchRelCpuHeapMemCalculator(TableEnvironment tEnv) {
+	private BatchRelCpuHeapMemCalculator(BatchTableEnvironment tEnv, Map<BatchExecRel<?>, RelResource> relResMap) {
 		super(tEnv);
+		this.relResMap = relResMap;
 	}
 
-	public void setRelResourceMap(Map<BatchExecRel<?>, RelResource> relResMap) {
-		this.relResMap = relResMap;
+	public static void calculate(BatchTableEnvironment tEnv, Map<BatchExecRel<?>, RelResource> relResMap, BatchExecRel<?> rootExecRel) {
+		new BatchRelCpuHeapMemCalculator(tEnv, relResMap).calculate(rootExecRel);
 	}
 
 	public void calculate(BatchExecRel<?> batchExecRel) {
 		if (!calculatedRelSet.add(batchExecRel)) {
 			return;
 		}
-		if (batchExecRel instanceof BatchExecScan) {
-			calculateSource((BatchExecScan) batchExecRel);
+		if (batchExecRel instanceof BatchExecBoundedStreamScan) {
+			calculateBoundedStreamScan((BatchExecBoundedStreamScan) batchExecRel);
+		} else if (batchExecRel instanceof BatchExecTableSourceScan) {
+			calculateTableSourceScan((BatchExecTableSourceScan) batchExecRel);
 		} else if (batchExecRel instanceof BatchExecUnion) {
 			calculateInputs(batchExecRel);
 		} else if (batchExecRel instanceof BatchExecExchange) {
@@ -65,23 +71,37 @@ public class BatchRelCpuHeapMemCalculator extends ResourceCalculator<BatchExecRe
 		}
 	}
 
-	private void calculateSource(BatchExecScan scanBatchExec) {
+	private void calculateBoundedStreamScan(BatchExecBoundedStreamScan scanBatchExec) {
+		StreamTransformation transformation = scanBatchExec.getSourceTransformation(tEnv.streamEnv());
+		ResourceSpec sourceRes = transformation.getMinResources();
+		if (sourceRes == null) {
+			sourceRes = ResourceSpec.DEFAULT;
+		}
+		calculateBatchScan(scanBatchExec, sourceRes);
+	}
+
+	private void calculateTableSourceScan(BatchExecTableSourceScan tableSourceScan) {
 		// user may have set resource for source transformation.
-		RelResource relResource = new RelResource();
-		ResourceSpec sourceRes = scanBatchExec.getTableSourceResource(this.tEnv);
+		StreamTransformation transformation = tableSourceScan.getSourceTransformation(tEnv.streamEnv());
+		ResourceSpec sourceRes = transformation.getMinResources();
 		if (sourceRes == ResourceSpec.DEFAULT || sourceRes == null) {
 			int heap = ExecResourceUtil.getSourceMem(tConfig);
 			sourceRes = ExecResourceUtil.getResourceSpec(tConfig, heap);
 		}
+		calculateBatchScan(tableSourceScan, sourceRes);
+	}
+
+	private void calculateBatchScan(BatchExecScan batchExecScan, ResourceSpec sourceRes) {
+		RelResource relResource = new RelResource();
 		ResourceSpec conversionRes = ResourceSpec.DEFAULT;
-		if (scanBatchExec.needInternalConversion()) {
+		if (batchExecScan.needInternalConversion()) {
 			conversionRes = ExecResourceUtil.getDefaultResourceSpec(tConfig);
 		}
 		ResourceSpec totalRes = sourceRes.merge(conversionRes);
 		relResource.setCpu(totalRes.getCpuCores());
 		relResource.setHeapMem(totalRes.getHeapMemory());
-		relResMap.put(scanBatchExec, relResource);
-		scanBatchExec.setResForSourceAndConversion(sourceRes, conversionRes);
+		relResMap.put(batchExecScan, relResource);
+		batchExecScan.setResForSourceAndConversion(sourceRes, conversionRes);
 	}
 
 	private void calculateDefaultRel(BatchExecRel<?> rel) {

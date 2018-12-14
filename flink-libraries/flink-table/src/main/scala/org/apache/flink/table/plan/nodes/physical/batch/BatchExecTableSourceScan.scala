@@ -18,12 +18,10 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.flink.api.common.operators.ResourceSpec
-import org.apache.flink.api.java.tuple.{Tuple2 => JTuple}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.api.{BatchTableEnvironment, TableEnvironment, TableException}
+import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
@@ -35,8 +33,6 @@ import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rex.RexNode
-
-import java.lang.{Boolean => JBoolean, Integer => JInteger}
 
 /**
   * Flink RelNode to read data from an external source defined by a [[BatchTableSource]].
@@ -118,25 +114,15 @@ class BatchExecTableSourceScan(
     hasTimeAttributeField(fieldIndexes) || needsConversion(tableSource.getReturnType)
   }
 
-  private def getSourceTransformation(streamEnv: StreamExecutionEnvironment):
-    StreamTransformation[_] = {
-    tableSource.asInstanceOf[BatchTableSource[_]]
-      .getBoundedStream(streamEnv).getTransformation
+  override private[flink] def getSourceTransformation(
+      streamEnv: StreamExecutionEnvironment): StreamTransformation[_] = {
+    tableSource.asInstanceOf[BatchTableSource[_]].getBoundedStream(streamEnv).getTransformation
   }
 
-  override private[flink] def getTableSourceResultPartitionNum(
-      tableEnv: TableEnvironment): JTuple[JBoolean, JInteger] = {
+  private[flink] def canLimitPushedDown: Boolean = {
     tableSource match {
-      case source: LimitableTableSource if source.isLimitPushedDown => new JTuple(true, 1)
-      case _ =>
-        val transformation = getSourceTransformation(
-          tableEnv.asInstanceOf[BatchTableEnvironment].streamEnv)
-        new JTuple(transformation.isParallelismLocked, transformation.getParallelism)
+      case source: LimitableTableSource if source.isLimitPushedDown => true
+      case _ => false
     }
-  }
-
-  override private[flink] def getTableSourceResource(
-    tableEnv: TableEnvironment): ResourceSpec = {
-    getSourceTransformation(tableEnv.asInstanceOf[BatchTableEnvironment].streamEnv).getMinResources
   }
 }

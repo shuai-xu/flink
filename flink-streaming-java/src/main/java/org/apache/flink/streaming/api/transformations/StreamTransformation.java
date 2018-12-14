@@ -120,20 +120,17 @@ public abstract class StreamTransformation<T> {
 
 	private int parallelism;
 
-	/** Flag to indicate whether the parallelism is locked, to say `locked` we mean we will not
-	 * infer the parallelism for this transformation later on for auto conf. Default to false
-	 * to let auto conf inferring work.
-	 */
-	private boolean parallelismLocked;
-
 	/**
 	 * The maximum parallelism for this stream transformation. It defines the upper limit for
 	 * dynamic scaling and the number of key groups used for partitioned state.
 	 */
 	private int maxParallelism = -1;
 
-	/** Indicate this is a non-parallel operator and cannot set a non-1 degree of parallelism. **/
-	protected boolean nonParallel = false;
+	/**
+	 * The minimum parallelism for this stream transformation. It defines the lower limit for
+	 * dynamic scaling parallelism in future plan.
+	 */
+	private int minParallelism = -1;
 
 	/**
 	 *  The minimum resources for this stream transformation. It defines the lower limit for
@@ -179,7 +176,6 @@ public abstract class StreamTransformation<T> {
 		this.outputType = outputType;
 		this.parallelism = parallelism;
 		this.slotSharingGroup = null;
-		this.parallelismLocked = false;
 	}
 
 	/**
@@ -219,38 +215,7 @@ public abstract class StreamTransformation<T> {
 		Preconditions.checkArgument(
 				parallelism > 0 || parallelism == ExecutionConfig.PARALLELISM_DEFAULT,
 				"The parallelism must be at least one, or ExecutionConfig.PARALLELISM_DEFAULT (use system default).");
-		Preconditions.checkArgument(canBeParallel() || parallelism == 1,
-			"The parallelism of non parallel operator must be 1.");
 		this.parallelism = parallelism;
-	}
-
-	/**
-	 * Sets the parallelism and maximum parallelism of this operator to one.
-	 * And mark this operator cannot set a non-1 degree of parallelism.
-	 */
-	public void forceNonParallel() {
-		setParallelism(1);
-		setMaxParallelism(1);
-		nonParallel = true;
-	}
-
-	private boolean canBeParallel() {
-		return !nonParallel;
-	}
-
-	/**
-	 * Returns if the parallelism is locked and will never be tweaked by auto conf any more.
-	 */
-	public boolean isParallelismLocked() {
-		return this.parallelismLocked;
-	}
-
-	/**
-	 * Set if the parallelism to be locked, if set to true, the auto conf will not tweak it anymore,
-	 * if false, auto conf will infer the parallelism and ignore the current set parallelism.
-	 */
-	public void setParallelismLocked(boolean locked) {
-		this.parallelismLocked = locked;
 	}
 
 	/**
@@ -260,6 +225,15 @@ public abstract class StreamTransformation<T> {
 	 */
 	public int getMaxParallelism() {
 		return maxParallelism;
+	}
+
+	/**
+	 * Gets the minimum parallelism for this stream transformation.
+	 *
+	 * @return Minimum parallelism of this transformation.
+	 */
+	public int getMinParallelism() {
+		return minParallelism;
 	}
 
 	/**
@@ -273,6 +247,17 @@ public abstract class StreamTransformation<T> {
 				"Maximum parallelism must be between 1 and " + StreamGraphGenerator.UPPER_BOUND_MAX_PARALLELISM
 						+ ". Found: " + maxParallelism);
 		this.maxParallelism = maxParallelism;
+	}
+
+	/**
+	 * Sets the minimum parallelism for this stream transformation.
+	 *
+	 * @param minParallelism Minimum parallelism for this stream transformation.
+	 */
+	public void setMinParallelism(int minParallelism) {
+		Preconditions.checkArgument(minParallelism > 0,
+				"Minimum parallelism must be greater than 1. Found: " + minParallelism);
+		this.minParallelism = minParallelism;
 	}
 
 	/**

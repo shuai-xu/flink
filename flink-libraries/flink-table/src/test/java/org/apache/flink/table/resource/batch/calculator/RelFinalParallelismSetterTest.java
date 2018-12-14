@@ -18,12 +18,12 @@
 
 package org.apache.flink.table.resource.batch.calculator;
 
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
 import org.apache.flink.table.resource.MockRelTestBase;
@@ -32,6 +32,7 @@ import org.apache.calcite.rel.RelDistribution;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
@@ -55,22 +56,27 @@ public class RelFinalParallelismSetterTest extends MockRelTestBase {
 	@Test
 	public void testSource() {
 		/**
-		 *   0, Source   1, Source  2, Values
-		 *            \      /      /
+		 *   0, Source   1, Source  2, Values  4, Source   5, Source
+		 *            \      /      /            /           /
 		 *             3, Union
 		 */
-		createRelList(4);
-		BatchExecScan scan0 = mock(BatchExecScan.class);
+		createRelList(6);
+		BatchExecTableSourceScan scan0 = mock(BatchExecTableSourceScan.class);
 		updateRel(0, scan0);
-		when(scan0.getTableSourceResultPartitionNum(tEnv)).thenReturn(new Tuple2<>(true, 5));
-		updateRel(1, mock(BatchExecScan.class));
+		when(((BatchExecTableSourceScan) relList.get(0)).getSourceTransformation(any()).getMaxParallelism()).thenReturn(5);
+		updateRel(1, mock(BatchExecTableSourceScan.class));
 		updateRel(2, mock(BatchExecValues.class));
 		updateRel(3, mock(BatchExecUnion.class));
-		connect(3, 0, 1, 2);
+		updateRel(4, mock(BatchExecBoundedStreamScan.class));
+		when(((BatchExecBoundedStreamScan) relList.get(4)).getSourceTransformation(any()).getParallelism()).thenReturn(7);
+		updateRel(5, mock(BatchExecBoundedStreamScan.class));
+		connect(3, 0, 1, 2, 4, 5);
 		RelFinalParallelismSetter.calculate(tEnv, relList.get(3));
 		verify(relList.get(0)).setResultPartitionCount(5);
 		verify(relList.get(2)).setResultPartitionCount(1);
 		verify(relList.get(1), never()).setResultPartitionCount(anyInt());
+		verify(relList.get(4)).setResultPartitionCount(7);
+		verify(relList.get(5)).setResultPartitionCount(StreamExecutionEnvironment.getDefaultLocalParallelism());
 	}
 
 	@Test
@@ -85,9 +91,9 @@ public class RelFinalParallelismSetterTest extends MockRelTestBase {
 		 *          6, Union
 		 */
 		createRelList(7);
-		BatchExecScan scan0 = mock(BatchExecScan.class);
+		BatchExecTableSourceScan scan0 = mock(BatchExecTableSourceScan.class);
 		updateRel(0, scan0);
-		when(scan0.getTableSourceResultPartitionNum(tEnv)).thenReturn(new Tuple2<>(true, 5));
+		when(((BatchExecTableSourceScan) relList.get(0)).getSourceTransformation(any()).getMaxParallelism()).thenReturn(5);
 		BatchExecExchange execExchange4 = mock(BatchExecExchange.class, RETURNS_DEEP_STUBS);
 		when(execExchange4.getDistribution().getType()).thenReturn(RelDistribution.Type.BROADCAST_DISTRIBUTED);
 		updateRel(2, execExchange4);

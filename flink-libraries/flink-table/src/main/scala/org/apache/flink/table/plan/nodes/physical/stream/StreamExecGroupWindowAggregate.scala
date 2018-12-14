@@ -207,7 +207,8 @@ class StreamExecGroupWindowAggregate(
       tableEnv.execEnv.getParallelism)
 
     if (grouping.isEmpty) {
-      transformation.forceNonParallel()
+      transformation.setParallelism(1)
+      transformation.setMaxParallelism(1)
     }
 
     // set KeyType and Selector for state

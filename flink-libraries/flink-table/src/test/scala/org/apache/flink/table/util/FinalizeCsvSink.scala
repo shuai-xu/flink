@@ -78,7 +78,7 @@ class FinalizeCsvSink(
       case Some(fileNum) =>
         val ret = boundedStream.writeUsingOutputFormat(outputFormat)
         .name(name).setParallelism(fileNum)
-        ret.getTransformation.setParallelismLocked(true)
+        ret.getTransformation.setMaxParallelism(fileNum)
         ret
     }
   }

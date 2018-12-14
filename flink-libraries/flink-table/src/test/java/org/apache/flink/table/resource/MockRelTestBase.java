@@ -18,10 +18,11 @@
 
 package org.apache.flink.table.resource;
 
-import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.streaming.api.transformations.StreamTransformation;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan;
 
 import org.apache.calcite.rel.BiRel;
 import org.apache.calcite.rel.RelNode;
@@ -45,8 +46,13 @@ public class MockRelTestBase {
 	protected void updateRel(int index, BatchExecRel<?> rel) {
 		relList.set(index, rel);
 		when(rel.toString()).thenReturn("id: " + index);
-		if (rel instanceof BatchExecScan) {
-			when(((BatchExecScan) rel).getTableSourceResultPartitionNum(any())).thenReturn(new Tuple2<>(false, -1));
+		if (rel instanceof BatchExecTableSourceScan) {
+			StreamTransformation transformation = mock(StreamTransformation.class);
+			when(((BatchExecTableSourceScan) rel).getSourceTransformation(any())).thenReturn(transformation);
+			when(transformation.getMaxParallelism()).thenReturn(-1);
+		} else if (rel instanceof BatchExecBoundedStreamScan) {
+			StreamTransformation transformation = mock(StreamTransformation.class);
+			when(((BatchExecBoundedStreamScan) rel).getSourceTransformation(any())).thenReturn(transformation);
 		}
 	}
 

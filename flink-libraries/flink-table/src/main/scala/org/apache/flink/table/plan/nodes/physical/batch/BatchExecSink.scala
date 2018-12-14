@@ -115,7 +115,9 @@ class BatchExecSink[T](
       val resource = ExecResourceUtil.getResourceSpec(tableConfig, heapMem)
       sinkTransformation.setResources(resource, resource)
     }
-    if (!sinkTransformation.isParallelismLocked) {
+    if (sinkTransformation.getMaxParallelism > 0) {
+      sinkTransformation.setParallelism(sinkTransformation.getMaxParallelism)
+    } else {
       val configSinkParallelism = ExecResourceUtil.getSinkParallelism(tableConfig)
       if (configSinkParallelism > 0) {
         sinkTransformation.setParallelism(configSinkParallelism)
@@ -197,7 +199,6 @@ class BatchExecSink[T](
           outputTypeInfo,
           input.getParallelism)
         val defaultResource = ExecResourceUtil.getDefaultResourceSpec(config)
-        transformation.setParallelismLocked(true)
         transformation.setResources(defaultResource, defaultResource)
         transformation
     }

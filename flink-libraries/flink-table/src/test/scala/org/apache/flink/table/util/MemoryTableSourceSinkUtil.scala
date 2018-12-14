@@ -137,7 +137,7 @@ object MemoryTableSourceSinkUtil {
       val ret = boundedStream.addSink(new MemoryAppendSink)
         .name(TableConnectorUtil.generateRuntimeName(this.getClass, getFieldNames))
       ret.setParallelism(1)
-      ret.getTransformation.setParallelismLocked(true)
+      ret.getTransformation.setMaxParallelism(1)
       ret
     }
   }

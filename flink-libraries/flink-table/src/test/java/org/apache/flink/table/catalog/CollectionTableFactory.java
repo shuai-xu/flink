@@ -397,7 +397,7 @@ public class CollectionTableFactory<T1> implements StreamTableSourceFactory<T1>,
 			DataStreamSink<Row> bounded = boundedStream.addSink(new UnsafeMemorySinkFunction())
 				.name(name)
 				.setParallelism(1);
-			bounded.getTransformation().setParallelismLocked(true);
+			bounded.getTransformation().setMaxParallelism(1);
 			return bounded;
 		}
 
