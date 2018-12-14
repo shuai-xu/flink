@@ -271,6 +271,9 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 
 				outputStream.reset();
 				StateSerializerUtil.writeGroup(outputStream, group);
+				if (!stateStorage.supportMultiColumnFamilies()) {
+					outputStream.write(stateNameByte);
+				}
 				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, key, keySerializer);
 				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, namespace, namespaceSerializer);
 				int prefixLength = outputStream.getPosition();
@@ -402,6 +405,9 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 
 					outputStream.reset();
 					StateSerializerUtil.writeGroup(outputStream, group);
+					if (!stateStorage.supportMultiColumnFamilies()) {
+						outputStream.write(stateNameByte);
+					}
 					StateSerializerUtil.serializeItemWithKeyPrefix(outputView, key, keySerializer);
 					StateSerializerUtil.serializeItemWithKeyPrefix(outputView, namespace, namespaceSerializer);
 					int prefixLength = outputStream.getPosition();
@@ -506,6 +512,9 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 				int group = getKeyGroup(key);
 				outputStream.reset();
 				StateSerializerUtil.writeGroup(outputStream, group);
+				if (!stateStorage.supportMultiColumnFamilies()) {
+					outputStream.write(stateNameByte);
+				}
 				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, key, keySerializer);
 				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, namespace, namespaceSerializer);
 				int prefixLength = outputStream.getPosition();
