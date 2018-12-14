@@ -26,6 +26,8 @@ import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.state.StateAccessException;
 import org.apache.flink.runtime.state3.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state3.BatchPutWrapper;
+import org.apache.flink.runtime.state3.GroupIterator;
+import org.apache.flink.runtime.state3.StateIteratorUtil;
 import org.apache.flink.runtime.state3.StateSerializerUtil;
 import org.apache.flink.runtime.state3.StateStorage;
 import org.apache.flink.runtime.state3.StorageInstance;
@@ -34,11 +36,15 @@ import org.apache.flink.runtime.state3.heap.HeapStateStorage;
 import org.apache.flink.types.Pair;
 import org.apache.flink.util.Preconditions;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+
+import static org.apache.flink.runtime.state3.StateSerializerUtil.KEY_END_BYTE;
 
 /**
  * The base implementation of {@link AbstractKeyedMapState} backed by a
@@ -687,21 +693,20 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 				}
 
 			} else {
-				StorageIterator<byte[], byte[]> iterator = stateStorage.iterator();
-				while (iterator.hasNext()) {
-					Pair<byte[], byte[]> pair = iterator.next();
-					K key = StateSerializerUtil.getDeserializedKeyForKeyedMapState(pair.getKey(),
-						keySerializer, stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
-					MK mapKey = StateSerializerUtil.getDeserializedMapKeyForKeyedMapState(pair.getKey(),
-						keySerializer, mapKeySerializer, stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
-					MV mapValue = StateSerializerUtil.getDeserializeSingleValue(pair.getValue(), mapValueSerializer);
+				if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
+					for (Integer group : internalStateBackend.getGroups()) {
+						outputStream.reset();
+						StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
+						byte[] groupPrefix = outputStream.toByteArray();
+						outputStream.write(KEY_END_BYTE);
+						byte[] groupPrefixEnd = outputStream.toByteArray();
 
-					M map = result.get(key);
-					if (map == null) {
-						map = createMap();
-						result.put(key, map);
+						StorageIterator<byte[], byte[]> iterator = (StorageIterator<byte[], byte[]>) stateStorage.subIterator(groupPrefix, groupPrefixEnd);
+						iteratorToMap(iterator, result, stateNameByte.length);
 					}
-					map.put(mapKey, mapValue);
+				} else {
+					StorageIterator<byte[], byte[]> iterator = stateStorage.iterator();
+					iteratorToMap(iterator, result, stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
 				}
 			}
 
@@ -717,10 +722,26 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			((HeapStateStorage) stateStorage).removeAll();
 		} else {
 			try {
-				StorageIterator<byte[], byte[]> iterator = stateStorage.iterator();
-				while (iterator.hasNext()) {
-					iterator.next();
-					iterator.remove();
+				if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
+					for (Integer group : internalStateBackend.getGroups()) {
+						outputStream.reset();
+						StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
+						byte[] groupPrefix = outputStream.toByteArray();
+						outputStream.write(KEY_END_BYTE);
+						byte[] groupPrefixEnd = outputStream.toByteArray();
+
+						StorageIterator iterator = stateStorage.subIterator(groupPrefix, groupPrefixEnd);
+						while (iterator.hasNext()) {
+							iterator.next();
+							iterator.remove();
+						}
+					}
+				} else {
+					StorageIterator<byte[], byte[]> iterator = stateStorage.iterator();
+					while (iterator.hasNext()) {
+						iterator.next();
+						iterator.remove();
+					}
 				}
 			} catch (Exception e) {
 				throw new StateAccessException(e);
@@ -755,26 +776,25 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 						};
 
 					} else {
-						StorageIterator<byte[], byte[]> iterator = stateStorage.iterator();
-						return new Iterator<K>() {
-							@Override
-							public boolean hasNext() {
-								return iterator.hasNext();
-							}
+						if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
+							Collection<Iterator<Pair<byte[], byte[]>>> groupIterators = new ArrayList<>();
+							for (Integer group : internalStateBackend.getGroups()) {
+								outputStream.reset();
+								StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
+								byte[] groupPrefix = outputStream.toByteArray();
+								outputStream.write(KEY_END_BYTE);
+								byte[] groupPrefixEnd = outputStream.toByteArray();
 
-							@Override
-							public K next() {
-								byte[] byteKey = iterator.next().getKey();
-								try {
-									return StateSerializerUtil.getDeserializedKeyForKeyedMapState(
-													byteKey,
-													keySerializer,
-													stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
-								} catch (Exception e) {
-									throw new StateAccessException(e);
-								}
+								StorageIterator iterator = stateStorage.subIterator(groupPrefix, groupPrefixEnd);
+								groupIterators.add(iterator);
 							}
-						};
+							GroupIterator groupIterator = new GroupIterator(groupIterators);
+							return StateIteratorUtil.createKeyIterator(groupIterator, keySerializer, stateNameByte.length);
+						} else {
+							StorageIterator<byte[], byte[]> iterator = stateStorage.iterator();
+
+							return StateIteratorUtil.createKeyIterator(iterator, keySerializer, stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
+						}
 					}
 				} catch (Exception e) {
 					throw new StateAccessException(e);
@@ -785,5 +805,23 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 
 	protected  <K> int getKeyGroup(K key) {
 		return PARTITIONER.partition(key, internalStateBackend.getNumGroups());
+	}
+
+	private void iteratorToMap(StorageIterator<byte[], byte[]> iterator, Map<K, M> result, int stateNameByteLength) throws IOException {
+		while (iterator.hasNext()) {
+			Pair<byte[], byte[]> pair = iterator.next();
+			K key = StateSerializerUtil.getDeserializedKeyForKeyedMapState(pair.getKey(),
+				keySerializer, stateNameByteLength);
+			MK mapKey = StateSerializerUtil.getDeserializedMapKeyForKeyedMapState(pair.getKey(),
+				keySerializer, mapKeySerializer, stateNameByteLength);
+			MV mapValue = StateSerializerUtil.getDeserializeSingleValue(pair.getValue(), mapValueSerializer);
+
+			M map = result.get(key);
+			if (map == null) {
+				map = createMap();
+				result.put(key, map);
+			}
+			map.put(mapKey, mapValue);
+		}
 	}
 }

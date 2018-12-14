@@ -26,6 +26,8 @@ import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.util.Preconditions;
 
+import javax.annotation.Nullable;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -395,6 +397,17 @@ public class StateSerializerUtil {
 		TypeSerializer<K> itemSerializer) throws IOException {
 		outputView.write(KEY_PREFIX_BYTE);
 		itemSerializer.serialize(item, outputView);
+	}
+
+	public static void serializeGroupPrefix(
+		ByteArrayOutputStreamWithPos outputStream,
+		int group,
+		@Nullable byte[] stateNameBytes) throws IOException {
+
+		writeGroup(outputStream, group);
+		if (stateNameBytes != null) {
+			outputStream.write(stateNameBytes);
+		}
 	}
 
 	public static void writeGroup(ByteArrayOutputStreamWithPos outputStream, int group) {

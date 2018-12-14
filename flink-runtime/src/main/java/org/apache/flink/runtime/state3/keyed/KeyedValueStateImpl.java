@@ -22,10 +22,13 @@ import org.apache.flink.api.common.functions.HashPartitioner;
 import org.apache.flink.api.common.typeutils.SerializationException;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.state.StateAccessException;
 import org.apache.flink.runtime.state3.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state3.BatchPutWrapper;
+import org.apache.flink.runtime.state3.GroupIterator;
+import org.apache.flink.runtime.state3.StateIteratorUtil;
 import org.apache.flink.runtime.state3.StateSerializerUtil;
 import org.apache.flink.runtime.state3.StateStorage;
 import org.apache.flink.runtime.state3.StorageInstance;
@@ -36,11 +39,14 @@ import org.apache.flink.util.Preconditions;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+
+import static org.apache.flink.runtime.state3.StateSerializerUtil.KEY_END_BYTE;
 
 /**
  * An implementation of {@link KeyedValueState} based on a {@link StateStorage}
@@ -83,6 +89,9 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 
 	/** partitioner used to generate key group. */
 	private static final HashPartitioner partitioner = HashPartitioner.INSTANCE;
+
+	private ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
+
 	/**
 	 * Constructor with the state storage to store the values.
 	 *
@@ -307,15 +316,36 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 					results.put(pair.getKey(), pair.getValue());
 				}
 			} else {
-				StorageIterator iterator = stateStorage.iterator();
-				while (iterator.hasNext()) {
-					Pair<byte[], byte[]> bytePair = (Pair<byte[], byte[]>) iterator.next();
-					K key = StateSerializerUtil.getDeserializedKeyForKeyedValueState(
-						bytePair.getKey(),
-						keySerializer,
-						stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
-					V value = StateSerializerUtil.getDeserializeSingleValue(bytePair.getValue(), valueSerializer);
-					results.put(key, value);
+				if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
+					for (Integer group : internalStateBackend.getGroups()) {
+						outputStream.reset();
+						StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
+						byte[] groupPrefix = outputStream.toByteArray();
+						outputStream.write(KEY_END_BYTE);
+						byte[] groupPrefixEnd = outputStream.toByteArray();
+
+						StorageIterator<byte[], byte[]> iterator = (StorageIterator<byte[], byte[]>) stateStorage.subIterator(groupPrefix, groupPrefixEnd);
+						while (iterator.hasNext()) {
+							Pair<byte[], byte[]> bytePair = iterator.next();
+							K key = StateSerializerUtil.getDeserializedKeyForKeyedValueState(
+								bytePair.getKey(),
+								keySerializer,
+								stateNameByte.length);
+							V value = StateSerializerUtil.getDeserializeSingleValue(bytePair.getValue(), valueSerializer);
+							results.put(key, value);
+						}
+					}
+				} else {
+					StorageIterator<byte[], byte[]> iterator = (StorageIterator<byte[], byte[]>) stateStorage.iterator();
+					while (iterator.hasNext()) {
+						Pair<byte[], byte[]> bytePair = iterator.next();
+						K key = StateSerializerUtil.getDeserializedKeyForKeyedValueState(
+							bytePair.getKey(),
+							keySerializer,
+							stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
+						V value = StateSerializerUtil.getDeserializeSingleValue(bytePair.getValue(), valueSerializer);
+						results.put(key, value);
+					}
 				}
 			}
 			return results;
@@ -331,10 +361,26 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 			((HeapStateStorage) stateStorage).removeAll();
 		} else {
 			try {
-				StorageIterator<byte[], byte[]> iterator = stateStorage.iterator();
-				while (iterator.hasNext()) {
-					Pair<byte[], byte[]> pair = iterator.next();
-					stateStorage.remove(pair.getKey());
+				if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
+					for (Integer group : internalStateBackend.getGroups()) {
+						outputStream.reset();
+						StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
+						byte[] groupPrefix = outputStream.toByteArray();
+						outputStream.write(KEY_END_BYTE);
+						byte[] groupPrefixEnd = outputStream.toByteArray();
+
+						StorageIterator iterator = stateStorage.subIterator(groupPrefix, groupPrefixEnd);
+						while (iterator.hasNext()) {
+							iterator.next();
+							iterator.remove();
+						}
+					}
+				} else {
+					StorageIterator<byte[], byte[]> iterator = stateStorage.iterator();
+					while (iterator.hasNext()) {
+						iterator.next();
+						iterator.remove();
+					}
 				}
 			} catch (Exception e) {
 				throw new StateAccessException(e);
@@ -369,32 +415,25 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 							}
 						};
 					} else {
-						StorageIterator<byte[], byte[]> iterator = stateStorage.iterator();
+						if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
+							Collection<Iterator<Pair<byte[], byte[]>>> groupIterators = new ArrayList<>();
+							for (Integer group : internalStateBackend.getGroups()) {
+								outputStream.reset();
+								StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
+								byte[] groupPrefix = outputStream.toByteArray();
+								outputStream.write(KEY_END_BYTE);
+								byte[] groupPrefixEnd = outputStream.toByteArray();
 
-						return new Iterator<K>() {
-							@Override
-							public boolean hasNext() {
-								return iterator.hasNext();
+								StorageIterator iterator = stateStorage.subIterator(groupPrefix, groupPrefixEnd);
+								groupIterators.add(iterator);
 							}
+							GroupIterator groupIterator = new GroupIterator(groupIterators);
+							return StateIteratorUtil.createKeyIterator(groupIterator, keySerializer, stateNameByte.length);
+						} else {
+							StorageIterator<byte[], byte[]> iterator = stateStorage.iterator();
 
-							@Override
-							public K next() {
-								byte[] serializedKey = iterator.next().getKey();
-								try {
-									return StateSerializerUtil.getDeserializedKeyForKeyedValueState(
-										serializedKey,
-										keySerializer,
-										stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
-								} catch (IOException e) {
-									throw new StateAccessException(e);
-								}
-							}
-
-							@Override
-							public void remove() {
-								iterator.remove();
-							}
-						};
+							return StateIteratorUtil.createKeyIterator(iterator, keySerializer, stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
+						}
 					}
 				} catch (Exception e) {
 					throw new StateAccessException(e);
