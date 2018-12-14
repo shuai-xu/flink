@@ -81,6 +81,12 @@ under the License.
 			<artifactId>flink-table_2.11</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>com.google.guava</groupId>
+					<artifactId>guava</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<!-- Add for flink-table test dependency -->
 		<dependency>
