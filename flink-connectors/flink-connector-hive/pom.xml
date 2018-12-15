@@ -183,27 +183,27 @@ under the License.
 									</excludes>
 								</filter>
 							</filters>
-							<relocations combine.children="override">
-								<!-- DO NOT RELOCATE GUAVA IN THIS PACKAGE -->
-								<relocation>
-									<pattern>org.apache.hive</pattern>
-									<shadedPattern>org.apache.flink.hive.shaded.org.apache.hive</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hive.hcatalog</pattern>
-									<shadedPattern>org.apache.flink.hive.hcatalog.shaded.org.apache.hive.hcatalog</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.hive</pattern>
-									<shadedPattern>org.apache.flink.hive.shaded.org.apache.hadoop.hive</shadedPattern>
-								</relocation>
-								<!-- TODO: hive-metastore uses guava, but we probably shouln't shade guava here, as mentioned above.
-								 Not shade guava here seems to be a flink tradition.-->
-								<relocation>
-									<pattern>com.google</pattern>
-									<shadedPattern>org.apache.flink.hive.shaded.com.google</shadedPattern>
-								</relocation>
-							</relocations>
+							<!--<relocations combine.children="override">-->
+								<!--&lt;!&ndash; DO NOT RELOCATE GUAVA IN THIS PACKAGE &ndash;&gt;-->
+								<!--<relocation>-->
+									<!--<pattern>org.apache.hive</pattern>-->
+									<!--<shadedPattern>org.apache.flink.hive.shaded.org.apache.hive</shadedPattern>-->
+								<!--</relocation>-->
+								<!--<relocation>-->
+									<!--<pattern>org.apache.hive.hcatalog</pattern>-->
+									<!--<shadedPattern>org.apache.flink.hive.hcatalog.shaded.org.apache.hive.hcatalog</shadedPattern>-->
+								<!--</relocation>-->
+								<!--<relocation>-->
+									<!--<pattern>org.apache.hadoop.hive</pattern>-->
+									<!--<shadedPattern>org.apache.flink.hive.shaded.org.apache.hadoop.hive</shadedPattern>-->
+								<!--</relocation>-->
+								<!--&lt;!&ndash; TODO: hive-metastore uses guava, but we probably shouln't shade guava here, as mentioned above.-->
+								 <!--Not shade guava here seems to be a flink tradition.&ndash;&gt;-->
+								<!--<relocation>-->
+									<!--<pattern>com.google</pattern>-->
+									<!--<shadedPattern>org.apache.flink.hive.shaded.com.google</shadedPattern>-->
+								<!--</relocation>-->
+							<!--</relocations>-->
 						</configuration>
 					</execution>
 				</executions>

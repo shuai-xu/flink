@@ -43,7 +43,7 @@ import static org.mockito.Matchers.anyString;
  * Test for HiveCatalog.
  */
 public class HiveCatalogTest {
-	private static final String TABLE_TYPE = "csv";
+	private static final String TABLE_TYPE = "hive";
 
 	private static final String DB1 = "db1";
 	private static final String DB2 = "db2";
