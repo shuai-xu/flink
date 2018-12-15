@@ -34,7 +34,7 @@ class RetractionRulesTest extends TableTestBase {
 
     val resultTable = table.select('word, 'number)
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 
   // one level unbounded groupBy
@@ -47,7 +47,7 @@ class RetractionRulesTest extends TableTestBase {
       .groupBy('word)
       .select('number.count)
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 
   // two level unbounded groupBy
@@ -62,7 +62,7 @@ class RetractionRulesTest extends TableTestBase {
       .groupBy('count)
       .select('count, 'count.count as 'frequency)
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 
   // group window
@@ -76,7 +76,7 @@ class RetractionRulesTest extends TableTestBase {
       .groupBy('w, 'word)
       .select('word, 'number.count as 'count)
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 
   // group window
@@ -93,7 +93,7 @@ class RetractionRulesTest extends TableTestBase {
       .groupBy('w2, 'word)
       .select('word, 'count.sum as 'sum)
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 
   // group window with emit
@@ -150,7 +150,7 @@ class RetractionRulesTest extends TableTestBase {
         "ROWS BETWEEN UNBOUNDED preceding AND CURRENT ROW)" +
         "FROM T1"
 
-    util.verifyTrait(sqlQuery)
+    util.verifyPlanAndTrait(sqlQuery)
   }
 
   // test binaryNode
@@ -167,7 +167,7 @@ class RetractionRulesTest extends TableTestBase {
       .groupBy('count)
       .select('count, 'count.count as 'frequency)
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 
   // test join keys equal unique keys of children
@@ -188,7 +188,7 @@ class RetractionRulesTest extends TableTestBase {
     val resultTable = lTableWithPk
       .join(rTableWithPk, 'pk_l === 'pk_r)
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 
   // test join keys don't equal unique keys of children
@@ -209,7 +209,7 @@ class RetractionRulesTest extends TableTestBase {
     val resultTable = lTableWithPk
       .join(rTableWithPk, 'pk_l === 'a_r)
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 
   // test left and right without unique keys
@@ -222,7 +222,7 @@ class RetractionRulesTest extends TableTestBase {
     val resultTable = lTable
       .join(rTable, 'pk_l === 'a_r)
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 
 
@@ -236,7 +236,7 @@ class RetractionRulesTest extends TableTestBase {
       .leftOuterJoin(rTable, 'b === 'bb)
       .select('a, 'b, 'c)
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 
   @Test
@@ -252,7 +252,7 @@ class RetractionRulesTest extends TableTestBase {
       .groupBy('a)
       .select('a, countDistinct('c))
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 
   @Test
@@ -265,7 +265,7 @@ class RetractionRulesTest extends TableTestBase {
       .rightOuterJoin(rTable, 'b === 'bb)
       .select('a, 'b, 'c)
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 
   @Test
@@ -281,7 +281,7 @@ class RetractionRulesTest extends TableTestBase {
       .groupBy('a)
       .select('a, countDistinct('c))
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 
   @Test
@@ -294,7 +294,7 @@ class RetractionRulesTest extends TableTestBase {
       .fullOuterJoin(rTable, 'b === 'bb)
       .select('a, 'b, 'c)
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 
   @Test
@@ -310,6 +310,6 @@ class RetractionRulesTest extends TableTestBase {
       .groupBy('a)
       .select('a, countDistinct('c))
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 }

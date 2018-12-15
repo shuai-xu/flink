@@ -20,10 +20,10 @@ limitations under the License.
     <Resource name="plan">
       <![CDATA[
 StreamExecUnion(all=[true], union=[_c0, e, _c2])
-  StreamExecCalc(select=[*(d, 2) AS _c0, e, UPPER(g) AS _c2], where=[<(d, 3)])
-    StreamExecTableSourceScan(table=[[test, db2, tb2, source: [selectedFields=[d, e, g]]]], fields=[d, e, g])
-  StreamExecCalc(select=[*(a, 2) AS _c0, b, UPPER(c) AS _c2])
-    StreamExecTableSourceScan(table=[[test, db1, tb1, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+:- StreamExecCalc(select=[*(d, 2) AS _c0, e, UPPER(g) AS _c2], where=[<(d, 3)])
+:  +- StreamExecTableSourceScan(table=[[test, db2, tb2, source: [selectedFields=[d, e, g]]]], fields=[d, e, g])
++- StreamExecCalc(select=[*(a, 2) AS _c0, b, UPPER(c) AS _c2])
+   +- StreamExecTableSourceScan(table=[[test, db1, tb1, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -31,10 +31,10 @@ StreamExecUnion(all=[true], union=[_c0, e, _c2])
     <Resource name="plan">
       <![CDATA[
 StreamExecUnion(all=[true], union=[EXPR$0, e, g])
-  StreamExecCalc(select=[*(d, 2) AS EXPR$0, e, g], where=[<(d, 3)])
-    StreamExecTableSourceScan(table=[[test, db2, tb2, source: [selectedFields=[d, e, g]]]], fields=[d, e, g])
-  StreamExecCalc(select=[*(a, 2) AS EXPR$0, b, c])
-    StreamExecTableSourceScan(table=[[test, db1, tb1, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+:- StreamExecCalc(select=[*(d, 2) AS EXPR$0, e, g], where=[<(d, 3)])
+:  +- StreamExecTableSourceScan(table=[[test, db2, tb2, source: [selectedFields=[d, e, g]]]], fields=[d, e, g])
++- StreamExecCalc(select=[*(a, 2) AS EXPR$0, b, c])
+   +- StreamExecTableSourceScan(table=[[test, db1, tb1, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

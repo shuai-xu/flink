@@ -20,11 +20,11 @@ limitations under the License.
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[*(o_amount, rate) AS rate])
-  StreamExecTemporalTableJoin(where=[AND(__TEMPORAL_JOIN_CONDITION(o_rowtime, rowtime, currency), =(currency, o_currency))], join=[o_amount, o_currency, o_rowtime, currency, rate, rowtime], joinType=[InnerJoin])
-    StreamExecExchange(distribution=[hash[o_currency]])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[currency]])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecTemporalTableJoin(where=[AND(__TEMPORAL_JOIN_CONDITION(o_rowtime, rowtime, currency), =(currency, o_currency))], join=[o_amount, o_currency, o_rowtime, currency, rate, rowtime], joinType=[InnerJoin])
+   :- StreamExecExchange(distribution=[hash[o_currency]])
+   :  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[currency]])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -32,17 +32,17 @@ StreamExecCalc(select=[*(o_amount, rate) AS rate])
     <Resource name="plan">
       <![CDATA[
 StreamExecJoin(where=[=(t3_secondary_key, secondary_key)], join=[rate, secondary_key, t3_comment, t3_secondary_key], joinType=[InnerJoin])
-  StreamExecExchange(distribution=[hash[secondary_key]])
-    StreamExecCalc(select=[*(o_amount, rate) AS rate, secondary_key])
-      StreamExecTemporalTableJoin(where=[AND(__TEMPORAL_JOIN_CONDITION(o_rowtime, rowtime, currency), OR(=(currency, o_currency), =(secondary_key, o_secondary_key)))], join=[o_rowtime, o_amount, o_currency, o_secondary_key, rowtime, currency, rate, secondary_key], joinType=[InnerJoin])
-        StreamExecExchange(distribution=[single])
-          StreamExecCalc(select=[o_rowtime, o_amount, o_currency, o_secondary_key])
-            StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
-        StreamExecExchange(distribution=[single])
-          StreamExecCalc(select=[rowtime, currency, rate, secondary_key], where=[>(rate, 110)])
-            StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
-  StreamExecExchange(distribution=[hash[t3_secondary_key]])
-    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+:- StreamExecExchange(distribution=[hash[secondary_key]])
+:  +- StreamExecCalc(select=[*(o_amount, rate) AS rate, secondary_key])
+:     +- StreamExecTemporalTableJoin(where=[AND(__TEMPORAL_JOIN_CONDITION(o_rowtime, rowtime, currency), OR(=(currency, o_currency), =(secondary_key, o_secondary_key)))], join=[o_rowtime, o_amount, o_currency, o_secondary_key, rowtime, currency, rate, secondary_key], joinType=[InnerJoin])
+:        :- StreamExecExchange(distribution=[single])
+:        :  +- StreamExecCalc(select=[o_rowtime, o_amount, o_currency, o_secondary_key])
+:        :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
+:        +- StreamExecExchange(distribution=[single])
+:           +- StreamExecCalc(select=[rowtime, currency, rate, secondary_key], where=[>(rate, 110)])
+:              +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
++- StreamExecExchange(distribution=[hash[t3_secondary_key]])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -50,12 +50,12 @@ StreamExecJoin(where=[=(t3_secondary_key, secondary_key)], join=[rate, secondary
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[*(o_amount, rate) AS rate])
-  StreamExecTemporalTableJoin(where=[AND(__TEMPORAL_JOIN_CONDITION(o_proctime, currency), =(currency, o_currency))], join=[o_amount, o_currency, o_proctime, currency, rate], joinType=[InnerJoin])
-    StreamExecExchange(distribution=[hash[o_currency]])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
-    StreamExecExchange(distribution=[hash[currency]])
-      StreamExecCalc(select=[currency, rate])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_3]])
++- StreamExecTemporalTableJoin(where=[AND(__TEMPORAL_JOIN_CONDITION(o_proctime, currency), =(currency, o_currency))], join=[o_amount, o_currency, o_proctime, currency, rate], joinType=[InnerJoin])
+   :- StreamExecExchange(distribution=[hash[o_currency]])
+   :  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
+   +- StreamExecExchange(distribution=[hash[currency]])
+      +- StreamExecCalc(select=[currency, rate])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_3]])
 ]]>
     </Resource>
   </TestCase>

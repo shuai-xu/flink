@@ -1,35 +1,27 @@
 == Abstract Syntax Tree ==
 LogicalProject(a=[$0], b=[$1], c=[$2], rank_num=[$3])
-  LogicalFilter(condition=[<=($3, 10)])
-    LogicalProject(a=[$0], b=[$1], c=[$2], rank_num=[ROW_NUMBER() OVER (PARTITION BY $1 ORDER BY $2 DESC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-      LogicalTableScan(table=[[default_catalog, default_db, T]])
++- LogicalFilter(condition=[<=($3, 10)])
+   +- LogicalProject(a=[$0], b=[$1], c=[$2], rank_num=[ROW_NUMBER() OVER (PARTITION BY $1 ORDER BY $2 DESC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T]])
 
 LogicalProject(a=[$0], b=[$1])
-  LogicalFilter(condition=[<($0, 6)])
-    LogicalTableScan(table=[[default_catalog, default_db, T]])
++- LogicalFilter(condition=[<($0, 6)])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T]])
 
 == Optimized Logical Plan ==
 [[IntermediateTable=_DataStreamTable_2]]
-StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-StreamExecDataStreamScan(retract=[false], accMode=[Acc])
+StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[false], accMode=[Acc])
 
 [[Sink]]
-StreamExecSink(fields=[a, b, c, rank_num])
-  StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum])
-    StreamExecExchange(distribution=[hash[b]])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
-StreamExecSink(retract=[false], accMode=[AccRetract])
-  StreamExecRank(retract=[true], accMode=[AccRetract])
-    StreamExecExchange(retract=[false], accMode=[Acc])
-      StreamExecDataStreamScan(retract=[false], accMode=[Acc])
+StreamExecSink(fields=[a, b, c, rank_num], retract=[false], accMode=[AccRetract])
++- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum], retract=[true], accMode=[AccRetract])
+   +- StreamExecExchange(distribution=[hash[b]], retract=[false], accMode=[Acc])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], retract=[false], accMode=[Acc])
 
 [[Sink]]
-StreamExecSink(fields=[a, b])
-  StreamExecCalc(select=[a, b], where=[<(a, 6)])
-    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
-StreamExecSink(retract=[false], accMode=[Acc])
-  StreamExecCalc(retract=[false], accMode=[Acc])
-    StreamExecDataStreamScan(retract=[false], accMode=[Acc])
+StreamExecSink(fields=[a, b], retract=[false], accMode=[Acc])
++- StreamExecCalc(select=[a, b], where=[<(a, 6)], retract=[false], accMode=[Acc])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], retract=[false], accMode=[Acc])
 
 == Physical Execution Plan ==
  : Data Source

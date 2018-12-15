@@ -20,9 +20,9 @@ limitations under the License.
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[PROCTIME(proctime) AS proctime, c])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -30,9 +30,9 @@ StreamExecCalc(select=[PROCTIME(proctime) AS proctime, c])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[PROCTIME(proctime) AS desc, c])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -40,9 +40,9 @@ StreamExecCalc(select=[PROCTIME(proctime) AS desc, c])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[c, PROCTIME(proctime) AS desc])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -50,9 +50,9 @@ StreamExecCalc(select=[c, PROCTIME(proctime) AS desc])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[proctime ASC, c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[proctime ASC, c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -60,9 +60,9 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[c, PROCTIME(proctime) AS proctime])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -70,9 +70,9 @@ StreamExecCalc(select=[c, PROCTIME(proctime) AS proctime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[rowtime, c])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -80,9 +80,9 @@ StreamExecCalc(select=[rowtime, c])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[rowtime AS desc, c])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -90,9 +90,9 @@ StreamExecCalc(select=[rowtime AS desc, c])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[c, rowtime AS desc])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -100,9 +100,9 @@ StreamExecCalc(select=[c, rowtime AS desc])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[c, rowtime])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -110,8 +110,8 @@ StreamExecCalc(select=[c, rowtime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecTemporalSort(orderBy=[proctime ASC, c ASC])
-    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecTemporalSort(orderBy=[proctime ASC, c ASC])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -119,8 +119,8 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecSort(orderBy=[proctime DESC, c ASC])
-    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecSort(orderBy=[proctime DESC, c ASC])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -128,9 +128,9 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[proctime DESC, c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[proctime DESC, c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -138,8 +138,8 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecSort(orderBy=[c ASC, proctime ASC])
-    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecSort(orderBy=[c ASC, proctime ASC])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -147,8 +147,8 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecSort(orderBy=[c ASC, proctime DESC])
-    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecSort(orderBy=[c ASC, proctime DESC])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -156,9 +156,9 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, proctime DESC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, proctime DESC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -166,9 +166,9 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, proctime ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, proctime ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -176,8 +176,8 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecTemporalSort(orderBy=[rowtime ASC, c ASC])
-    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecTemporalSort(orderBy=[rowtime ASC, c ASC])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -185,8 +185,8 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecSort(orderBy=[rowtime DESC, c ASC])
-    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecSort(orderBy=[rowtime DESC, c ASC])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -194,9 +194,9 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, rowtime DESC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, rowtime DESC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -204,9 +204,9 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[rowtime DESC, c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[rowtime DESC, c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -214,8 +214,8 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecSort(orderBy=[c ASC, rowtime ASC])
-    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecSort(orderBy=[c ASC, rowtime ASC])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -223,8 +223,8 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecSort(orderBy=[c ASC, rowtime DESC])
-    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecSort(orderBy=[c ASC, rowtime DESC])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -232,9 +232,9 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, rowtime ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, rowtime ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -242,9 +242,9 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -252,9 +252,9 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[rowtime ASC, c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-    StreamExecExchange(distribution=[single])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[rowtime ASC, c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -262,8 +262,8 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-  StreamExecSort(orderBy=[c ASC])
-    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecSort(orderBy=[c ASC])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

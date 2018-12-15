@@ -152,7 +152,7 @@ object PlanUtil extends Logging {
       relNode,
       SqlExplainLevel.ALL_ATTRIBUTES,
       withRelNodeId = true,
-      printMemCost = true)
+      withMemCost = true)
     writeContentToFile(relNodeStr, dumpFilePath)
     if (LOG.isDebugEnabled) {
       LOG.debug(s"dump RelNode: \n $relNodeStr")

@@ -678,7 +678,7 @@ object FlinkRelMdUtil {
   /**
     * Estimates outputRowCount of local aggregate.
     *
-    * output rowcount of local agg is pow(1 - (1 - 1/x) , n/m)) * m * x, based on two assumption:
+    * output rowcount of local agg is (1 - pow((1 - 1/x) , n/m)) * m * x, based on two assumption:
     * 1. even distribution of all distinct data
     * 2. even distribution of all data in each concurrent local agg worker
     *

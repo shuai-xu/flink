@@ -17,16 +17,6 @@ limitations under the License.
 -->
 <Root>
   <TestCase name="testAntiJoin">
-    <Resource name="trait">
-      <![CDATA[
-StreamExecJoin(retract=[false], accMode=[AccRetract])
-  StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-  StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecCalc(retract=[true], accMode=[Acc])
-      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-]]>
-    </Resource>
     <Resource name="plan">
       <![CDATA[
 StreamExecJoin(where=[=(a1, b1)], join=[a1, a2, a3], joinType=[AntiJoin], leftStateType=[WITHOUT_PRIMARY_KEY], leftMatchStateType=[ONLY_EQUALITY_CONDITION_EMPTY_MATCH], rightStateType=[WITHOUT_PRIMARY_KEY], rightMatchStateType=[EMPTY_MATCH])
@@ -39,16 +29,6 @@ StreamExecJoin(where=[=(a1, b1)], join=[a1, a2, a3], joinType=[AntiJoin], leftSt
     </Resource>
   </TestCase>
   <TestCase name="testAntiJoinNonEqui">
-    <Resource name="trait">
-      <![CDATA[
-StreamExecJoin(retract=[false], accMode=[AccRetract])
-  StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-  StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecCalc(retract=[true], accMode=[Acc])
-      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-]]>
-    </Resource>
     <Resource name="plan">
       <![CDATA[
 StreamExecJoin(where=[AND(=(a1, b1), >(a2, b2))], join=[a1, a2, a3], joinType=[AntiJoin], leftStateType=[WITHOUT_PRIMARY_KEY], leftMatchStateType=[WITHOUT_PRIMARY_KEY_MATCH], rightStateType=[WITHOUT_PRIMARY_KEY], rightMatchStateType=[EMPTY_MATCH])
@@ -61,23 +41,6 @@ StreamExecJoin(where=[AND(=(a1, b1), >(a2, b2))], join=[a1, a2, a3], joinType=[A
     </Resource>
   </TestCase>
   <TestCase name="testAntiJoinWithEqualPkNonEqui">
-    <Resource name="trait">
-      <![CDATA[
-StreamExecCalc(retract=[false], accMode=[AccRetract])
-  StreamExecJoin(retract=[false], accMode=[AccRetract])
-    StreamExecExchange(retract=[false], accMode=[Acc])
-      StreamExecGroupAggregate(retract=[false], accMode=[Acc])
-        StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-    StreamExecExchange(retract=[false], accMode=[Acc])
-      StreamExecCalc(retract=[false], accMode=[Acc])
-        StreamExecGroupAggregate(retract=[false], accMode=[Acc])
-          StreamExecExchange(retract=[true], accMode=[Acc])
-            StreamExecCalc(retract=[true], accMode=[Acc])
-              StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-]]>
-    </Resource>
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a2, a1])
@@ -97,20 +60,6 @@ StreamExecCalc(select=[a2, a1])
     </Resource>
   </TestCase>
   <TestCase name="testSemiJoinWithRightNotPkNonEqui">
-    <Resource name="trait">
-      <![CDATA[
-StreamExecCalc(retract=[false], accMode=[Acc])
-  StreamExecJoin(retract=[false], accMode=[Acc])
-    StreamExecExchange(retract=[false], accMode=[Acc])
-      StreamExecGroupAggregate(retract=[false], accMode=[Acc])
-        StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-    StreamExecExchange(retract=[true], accMode=[Acc])
-      StreamExecCalc(retract=[true], accMode=[Acc])
-        StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-]]>
-    </Resource>
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a2, a1])
@@ -127,23 +76,6 @@ StreamExecCalc(select=[a2, a1])
     </Resource>
   </TestCase>
   <TestCase name="testAntiJoinWithPkNonEqui">
-    <Resource name="trait">
-      <![CDATA[
-StreamExecCalc(retract=[false], accMode=[AccRetract])
-  StreamExecJoin(retract=[false], accMode=[AccRetract])
-    StreamExecExchange(retract=[true], accMode=[AccRetract])
-      StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
-        StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-    StreamExecExchange(retract=[true], accMode=[AccRetract])
-      StreamExecCalc(retract=[true], accMode=[AccRetract])
-        StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
-          StreamExecExchange(retract=[true], accMode=[Acc])
-            StreamExecCalc(retract=[true], accMode=[Acc])
-              StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-]]>
-    </Resource>
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a2, a1])
@@ -163,20 +95,6 @@ StreamExecCalc(select=[a2, a1])
     </Resource>
   </TestCase>
   <TestCase name="testAntiJoinWithRightNotPkNonEqui">
-    <Resource name="trait">
-      <![CDATA[
-StreamExecCalc(retract=[false], accMode=[AccRetract])
-  StreamExecJoin(retract=[false], accMode=[AccRetract])
-    StreamExecExchange(retract=[false], accMode=[Acc])
-      StreamExecGroupAggregate(retract=[false], accMode=[Acc])
-        StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-    StreamExecExchange(retract=[true], accMode=[Acc])
-      StreamExecCalc(retract=[true], accMode=[Acc])
-        StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-]]>
-    </Resource>
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a2, a1])
@@ -193,16 +111,6 @@ StreamExecCalc(select=[a2, a1])
     </Resource>
   </TestCase>
   <TestCase name="testSemiJoin">
-    <Resource name="trait">
-      <![CDATA[
-StreamExecJoin(retract=[false], accMode=[Acc])
-  StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-  StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecCalc(retract=[true], accMode=[Acc])
-      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-]]>
-    </Resource>
     <Resource name="plan">
       <![CDATA[
 StreamExecJoin(where=[=(a1, b1)], join=[a1, a2, a3], joinType=[SemiJoin], leftStateType=[WITHOUT_PRIMARY_KEY], leftMatchStateType=[EMPTY_MATCH], rightStateType=[WITHOUT_PRIMARY_KEY], rightMatchStateType=[EMPTY_MATCH])
@@ -215,16 +123,6 @@ StreamExecJoin(where=[=(a1, b1)], join=[a1, a2, a3], joinType=[SemiJoin], leftSt
     </Resource>
   </TestCase>
   <TestCase name="testSemiJoinNonEqui">
-    <Resource name="trait">
-      <![CDATA[
-StreamExecJoin(retract=[false], accMode=[Acc])
-  StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-  StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecCalc(retract=[true], accMode=[Acc])
-      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-]]>
-    </Resource>
     <Resource name="plan">
       <![CDATA[
 StreamExecJoin(where=[AND(=(a1, b1), >(a2, b2))], join=[a1, a2, a3], joinType=[SemiJoin], leftStateType=[WITHOUT_PRIMARY_KEY], leftMatchStateType=[EMPTY_MATCH], rightStateType=[WITHOUT_PRIMARY_KEY], rightMatchStateType=[EMPTY_MATCH])
@@ -237,23 +135,6 @@ StreamExecJoin(where=[AND(=(a1, b1), >(a2, b2))], join=[a1, a2, a3], joinType=[S
     </Resource>
   </TestCase>
   <TestCase name="testSemiJoinWithPkNonEqui">
-    <Resource name="trait">
-      <![CDATA[
-StreamExecCalc(retract=[false], accMode=[AccRetract])
-  StreamExecJoin(retract=[false], accMode=[AccRetract])
-    StreamExecExchange(retract=[true], accMode=[AccRetract])
-      StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
-        StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-    StreamExecExchange(retract=[true], accMode=[AccRetract])
-      StreamExecCalc(retract=[true], accMode=[AccRetract])
-        StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
-          StreamExecExchange(retract=[true], accMode=[Acc])
-            StreamExecCalc(retract=[true], accMode=[Acc])
-              StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-]]>
-    </Resource>
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a2, a1])
@@ -273,22 +154,6 @@ StreamExecCalc(select=[a2, a1])
     </Resource>
   </TestCase>
   <TestCase name="testSemiJoinWithEqualPkNonEqui">
-    <Resource name="trait">
-      <![CDATA[
-StreamExecCalc(retract=[false], accMode=[Acc])
-  StreamExecJoin(retract=[false], accMode=[Acc])
-    StreamExecExchange(retract=[false], accMode=[Acc])
-      StreamExecGroupAggregate(retract=[false], accMode=[Acc])
-        StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-    StreamExecExchange(retract=[false], accMode=[Acc])
-      StreamExecGroupAggregate(retract=[false], accMode=[Acc])
-        StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
-]]>
-    </Resource>
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a2, a1])

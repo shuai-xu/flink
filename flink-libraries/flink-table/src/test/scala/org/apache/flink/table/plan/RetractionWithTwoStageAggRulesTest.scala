@@ -48,7 +48,7 @@ class RetractionWithTwoStageAggRulesTest extends TableTestBase {
       .groupBy('word)
       .select('number.count)
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 
   // two level unbounded groupBy
@@ -62,7 +62,7 @@ class RetractionWithTwoStageAggRulesTest extends TableTestBase {
       .groupBy('count)
       .select('count, 'count.count as 'frequency)
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 
   // test binaryNode
@@ -78,6 +78,6 @@ class RetractionWithTwoStageAggRulesTest extends TableTestBase {
       .groupBy('count)
       .select('count, 'count.count as 'frequency)
 
-    util.verifyTrait(resultTable)
+    util.verifyPlanAndTrait(resultTable)
   }
 }

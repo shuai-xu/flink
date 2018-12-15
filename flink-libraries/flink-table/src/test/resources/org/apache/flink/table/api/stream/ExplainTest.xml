@@ -16,14 +16,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
-  <TestCase name="testApplyNormalizationRuleForStreamSQL">
+  <TestCase name="testUnion">
     <Resource name="plan">
       <![CDATA[
-LogicalProject(EXPR$0=[$1])
-  LogicalAggregate(group=[{0}], EXPR$0=[COUNT($1)])
-    LogicalAggregate(group=[{0, 1}])
-      LogicalProject(b=[$1], a=[$0])
-        LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+StreamExecUnion(all=[true], union=[count, word])
+:- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testFilter">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a, b], where=[=(MOD(a, 2), 0)])
++- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

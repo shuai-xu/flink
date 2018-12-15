@@ -20,13 +20,13 @@ limitations under the License.
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[b, y])
-  StreamExecJoin(where=[AND(=(a, z), $f3)], join=[a, b, $f3, y, z], joinType=[LeftOuterJoin])
-    StreamExecExchange(distribution=[hash[a]])
-      StreamExecCalc(select=[a, b, <(b, 2) AS $f3])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[z]])
-      StreamExecCalc(select=[y, z])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecJoin(where=[AND(=(a, z), $f3)], join=[a, b, $f3, y, z], joinType=[LeftOuterJoin])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- StreamExecCalc(select=[a, b, <(b, 2) AS $f3])
+   :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[z]])
+      +- StreamExecCalc(select=[y, z])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -34,12 +34,12 @@ StreamExecCalc(select=[b, y])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[b, y])
-  StreamExecJoin(where=[AND(=(a, z), <(b, x))], join=[a, b, x, y, z], joinType=[LeftOuterJoin])
-    StreamExecExchange(distribution=[hash[a]])
-      StreamExecCalc(select=[a, b])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[z]])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecJoin(where=[AND(=(a, z), <(b, x))], join=[a, b, x, y, z], joinType=[LeftOuterJoin])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- StreamExecCalc(select=[a, b])
+   :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[z]])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -47,10 +47,10 @@ StreamExecCalc(select=[b, y])
     <Resource name="plan">
       <![CDATA[
 StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, rrtime), >(lrtime, f))], join=[a, b, c, lrtime, d, e, f, rrtime], joinType=[InnerJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=-1, leftTimeIndex=3, rightTimeIndex=3])
-  StreamExecExchange(distribution=[hash[a]])
-    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-  StreamExecExchange(distribution=[hash[d]])
-    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
+:- StreamExecExchange(distribution=[hash[a]])
+:  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecExchange(distribution=[hash[d]])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -58,13 +58,13 @@ StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[b, y])
-  StreamExecJoin(where=[=(a, z)], join=[a, b, y, z], joinType=[LeftOuterJoin])
-    StreamExecExchange(distribution=[hash[a]])
-      StreamExecCalc(select=[a, b])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[z]])
-      StreamExecCalc(select=[y, z])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecJoin(where=[=(a, z)], join=[a, b, y, z], joinType=[LeftOuterJoin])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- StreamExecCalc(select=[a, b])
+   :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[z]])
+      +- StreamExecCalc(select=[y, z])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -72,13 +72,13 @@ StreamExecCalc(select=[b, y])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lptime, -(rptime, 1000)), <(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[FullOuterJoin], windowBounds=[isRowTime=false, leftLowerBound=-1000, leftUpperBound=-1, leftTimeIndex=1, rightTimeIndex=2])
-    StreamExecExchange(distribution=[hash[a]])
-      StreamExecCalc(select=[a, lptime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[d]])
-      StreamExecCalc(select=[d, e, rptime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecWindowJoin(where=[AND(=(a, d), >=(lptime, -(rptime, 1000)), <(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[FullOuterJoin], windowBounds=[isRowTime=false, leftLowerBound=-1000, leftUpperBound=-1, leftTimeIndex=1, rightTimeIndex=2])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- StreamExecCalc(select=[a, lptime])
+   :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[d]])
+      +- StreamExecCalc(select=[d, e, rptime])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -86,13 +86,13 @@ StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lptime, -(rptime, 1000)), <(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[InnerJoin], windowBounds=[isRowTime=false, leftLowerBound=-1000, leftUpperBound=-1, leftTimeIndex=1, rightTimeIndex=2])
-    StreamExecExchange(distribution=[hash[a]])
-      StreamExecCalc(select=[a, lptime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[d]])
-      StreamExecCalc(select=[d, e, rptime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecWindowJoin(where=[AND(=(a, d), >=(lptime, -(rptime, 1000)), <(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[InnerJoin], windowBounds=[isRowTime=false, leftLowerBound=-1000, leftUpperBound=-1, leftTimeIndex=1, rightTimeIndex=2])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- StreamExecCalc(select=[a, lptime])
+   :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[d]])
+      +- StreamExecCalc(select=[d, e, rptime])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -100,13 +100,13 @@ StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
-  StreamExecWindowJoin(where=[AND(=(a, d), =(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[InnerJoin], windowBounds=[isRowTime=false, leftLowerBound=0, leftUpperBound=0, leftTimeIndex=1, rightTimeIndex=2])
-    StreamExecExchange(distribution=[hash[a, lptime]])
-      StreamExecCalc(select=[a, lptime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[d, rptime]])
-      StreamExecCalc(select=[d, e, rptime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecWindowJoin(where=[AND(=(a, d), =(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[InnerJoin], windowBounds=[isRowTime=false, leftLowerBound=0, leftUpperBound=0, leftTimeIndex=1, rightTimeIndex=2])
+   :- StreamExecExchange(distribution=[hash[a, lptime]])
+   :  +- StreamExecCalc(select=[a, lptime])
+   :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[d, rptime]])
+      +- StreamExecCalc(select=[d, e, rptime])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -114,13 +114,13 @@ StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lptime, -(rptime, 1000)), <(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[LeftOuterJoin], windowBounds=[isRowTime=false, leftLowerBound=-1000, leftUpperBound=-1, leftTimeIndex=1, rightTimeIndex=2])
-    StreamExecExchange(distribution=[hash[a]])
-      StreamExecCalc(select=[a, lptime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[d]])
-      StreamExecCalc(select=[d, e, rptime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecWindowJoin(where=[AND(=(a, d), >=(lptime, -(rptime, 1000)), <(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[LeftOuterJoin], windowBounds=[isRowTime=false, leftLowerBound=-1000, leftUpperBound=-1, leftTimeIndex=1, rightTimeIndex=2])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- StreamExecCalc(select=[a, lptime])
+   :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[d]])
+      +- StreamExecCalc(select=[d, e, rptime])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -128,13 +128,13 @@ StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lptime, -(rptime, 1000)), <(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[RightOuterJoin], windowBounds=[isRowTime=false, leftLowerBound=-1000, leftUpperBound=-1, leftTimeIndex=1, rightTimeIndex=2])
-    StreamExecExchange(distribution=[hash[a]])
-      StreamExecCalc(select=[a, lptime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[d]])
-      StreamExecCalc(select=[d, e, rptime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecWindowJoin(where=[AND(=(a, d), >=(lptime, -(rptime, 1000)), <(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[RightOuterJoin], windowBounds=[isRowTime=false, leftLowerBound=-1000, leftUpperBound=-1, leftTimeIndex=1, rightTimeIndex=2])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- StreamExecCalc(select=[a, lptime])
+   :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[d]])
+      +- StreamExecCalc(select=[d, e, rptime])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -142,13 +142,13 @@ StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[b, x])
-  StreamExecJoin(where=[AND(=(a, z), $f3)], join=[a, b, x, z, $f3], joinType=[RightOuterJoin])
-    StreamExecExchange(distribution=[hash[a]])
-      StreamExecCalc(select=[a, b])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[z]])
-      StreamExecCalc(select=[x, z, <(x, 2) AS $f3])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecJoin(where=[AND(=(a, z), $f3)], join=[a, b, x, z, $f3], joinType=[RightOuterJoin])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- StreamExecCalc(select=[a, b])
+   :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[z]])
+      +- StreamExecCalc(select=[x, z, <(x, 2) AS $f3])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -156,12 +156,12 @@ StreamExecCalc(select=[b, x])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[b, y])
-  StreamExecJoin(where=[AND(=(a, z), <(b, x))], join=[a, b, x, y, z], joinType=[RightOuterJoin])
-    StreamExecExchange(distribution=[hash[a]])
-      StreamExecCalc(select=[a, b])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[z]])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecJoin(where=[AND(=(a, z), <(b, x))], join=[a, b, x, y, z], joinType=[RightOuterJoin])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- StreamExecCalc(select=[a, b])
+   :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[z]])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -169,13 +169,13 @@ StreamExecCalc(select=[b, y])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, lrtime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[InnerJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=2999, leftTimeIndex=1, rightTimeIndex=2])
-    StreamExecExchange(distribution=[hash[a]])
-      StreamExecCalc(select=[a, lrtime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[d]])
-      StreamExecCalc(select=[d, e, rrtime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[InnerJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=2999, leftTimeIndex=1, rightTimeIndex=2])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- StreamExecCalc(select=[a, lrtime])
+   :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[d]])
+      +- StreamExecCalc(select=[d, e, rrtime])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -183,13 +183,13 @@ StreamExecCalc(select=[a, e, lrtime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[b, y])
-  StreamExecJoin(where=[=(a, z)], join=[a, b, y, z], joinType=[RightOuterJoin])
-    StreamExecExchange(distribution=[hash[a]])
-      StreamExecCalc(select=[a, b])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[z]])
-      StreamExecCalc(select=[y, z])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecJoin(where=[=(a, z)], join=[a, b, y, z], joinType=[RightOuterJoin])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- StreamExecCalc(select=[a, b])
+   :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[z]])
+      +- StreamExecCalc(select=[y, z])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -197,13 +197,13 @@ StreamExecCalc(select=[b, y])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, lrtime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[FullOuterJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=2999, leftTimeIndex=1, rightTimeIndex=2])
-    StreamExecExchange(distribution=[hash[a]])
-      StreamExecCalc(select=[a, lrtime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[d]])
-      StreamExecCalc(select=[d, e, rrtime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[FullOuterJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=2999, leftTimeIndex=1, rightTimeIndex=2])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- StreamExecCalc(select=[a, lrtime])
+   :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[d]])
+      +- StreamExecCalc(select=[d, e, rrtime])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -211,13 +211,13 @@ StreamExecCalc(select=[a, e, lrtime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, lrtime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[LeftOuterJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=2999, leftTimeIndex=1, rightTimeIndex=2])
-    StreamExecExchange(distribution=[hash[a]])
-      StreamExecCalc(select=[a, lrtime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[d]])
-      StreamExecCalc(select=[d, e, rrtime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[LeftOuterJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=2999, leftTimeIndex=1, rightTimeIndex=2])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- StreamExecCalc(select=[a, lrtime])
+   :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[d]])
+      +- StreamExecCalc(select=[d, e, rrtime])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -225,13 +225,13 @@ StreamExecCalc(select=[a, e, lrtime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, lrtime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[InnerJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=2999, leftTimeIndex=1, rightTimeIndex=2])
-    StreamExecExchange(distribution=[hash[a]])
-      StreamExecCalc(select=[a, lrtime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[d]])
-      StreamExecCalc(select=[d, e, rrtime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[InnerJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=2999, leftTimeIndex=1, rightTimeIndex=2])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- StreamExecCalc(select=[a, lrtime])
+   :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[d]])
+      +- StreamExecCalc(select=[d, e, rrtime])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -239,13 +239,13 @@ StreamExecCalc(select=[a, e, lrtime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, lrtime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[RightOuterJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=2999, leftTimeIndex=1, rightTimeIndex=2])
-    StreamExecExchange(distribution=[hash[a]])
-      StreamExecCalc(select=[a, lrtime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-    StreamExecExchange(distribution=[hash[d]])
-      StreamExecCalc(select=[d, e, rrtime])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
++- StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[RightOuterJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=2999, leftTimeIndex=1, rightTimeIndex=2])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- StreamExecCalc(select=[a, lrtime])
+   :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- StreamExecExchange(distribution=[hash[d]])
+      +- StreamExecCalc(select=[d, e, rrtime])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>

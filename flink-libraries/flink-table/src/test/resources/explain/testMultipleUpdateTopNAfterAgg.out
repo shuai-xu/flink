@@ -1,46 +1,33 @@
 == Abstract Syntax Tree ==
 LogicalProject(category=[$0], shopId=[$1], cnt_num=[$2], rank_num=[$3])
-  LogicalFilter(condition=[<=($3, 2)])
-    LogicalProject(category=[$0], shopId=[$1], cnt_num=[$2], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0 ORDER BY $2 DESC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-      LogicalTableScan(table=[[default_catalog, default_db, MyView]])
++- LogicalFilter(condition=[<=($3, 2)])
+   +- LogicalProject(category=[$0], shopId=[$1], cnt_num=[$2], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0 ORDER BY $2 DESC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyView]])
 
 LogicalProject(category=[$0], shopId=[$1], max_num=[$2], rank_num=[$3])
-  LogicalFilter(condition=[<=($3, 2)])
-    LogicalProject(category=[$0], shopId=[$1], max_num=[$3], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0 ORDER BY $3 DESC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-      LogicalTableScan(table=[[default_catalog, default_db, MyView]])
++- LogicalFilter(condition=[<=($3, 2)])
+   +- LogicalProject(category=[$0], shopId=[$1], max_num=[$3], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0 ORDER BY $3 DESC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
+      +- LogicalTableScan(table=[[default_catalog, default_db, MyView]])
 
 == Optimized Logical Plan ==
 [[IntermediateTable=_DataStreamTable_2]]
-StreamExecGroupAggregate(groupBy=[category, shopId], select=[category, shopId, COUNT(num) AS cnt_num, MAX(num) AS max_num])
-  StreamExecExchange(distribution=[hash[category, shopId]])
-    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-StreamExecGroupAggregate(retract=[false], accMode=[Acc])
-  StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecDataStreamScan(retract=[true], accMode=[Acc])
+StreamExecGroupAggregate(groupBy=[category, shopId], select=[category, shopId, COUNT(num) AS cnt_num, MAX(num) AS max_num], retract=[false], accMode=[Acc])
++- StreamExecExchange(distribution=[hash[category, shopId]], retract=[true], accMode=[Acc])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 
 [[Sink]]
-StreamExecSink(fields=[category, shopId, cnt_num, rank_num])
-  StreamExecCalc(select=[category, shopId, cnt_num, w0$o0])
-    StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[cnt_num DESC], rankRange=[rankStart=1, rankEnd=2], strategy=[UpdateFastRank[0,1]], select=[*, rowNum])
-      StreamExecExchange(distribution=[hash[category]])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
-StreamExecSink(retract=[false], accMode=[AccRetract])
-  StreamExecCalc(retract=[true], accMode=[AccRetract])
-    StreamExecRank(retract=[true], accMode=[AccRetract])
-      StreamExecExchange(retract=[false], accMode=[Acc])
-        StreamExecDataStreamScan(retract=[false], accMode=[Acc])
+StreamExecSink(fields=[category, shopId, cnt_num, rank_num], retract=[false], accMode=[AccRetract])
++- StreamExecCalc(select=[category, shopId, cnt_num, w0$o0], retract=[true], accMode=[AccRetract])
+   +- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[cnt_num DESC], rankRange=[rankStart=1, rankEnd=2], strategy=[UpdateFastRank[0,1]], select=[*, rowNum], retract=[true], accMode=[AccRetract])
+      +- StreamExecExchange(distribution=[hash[category]], retract=[false], accMode=[Acc])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], retract=[false], accMode=[Acc])
 
 [[Sink]]
-StreamExecSink(fields=[category, shopId, max_num, rank_num])
-  StreamExecCalc(select=[category, shopId, max_num, w0$o0])
-    StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[max_num DESC], rankRange=[rankStart=1, rankEnd=2], strategy=[UpdateFastRank[0,1]], select=[*, rowNum])
-      StreamExecExchange(distribution=[hash[category]])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
-StreamExecSink(retract=[false], accMode=[AccRetract])
-  StreamExecCalc(retract=[true], accMode=[AccRetract])
-    StreamExecRank(retract=[true], accMode=[AccRetract])
-      StreamExecExchange(retract=[false], accMode=[Acc])
-        StreamExecDataStreamScan(retract=[false], accMode=[Acc])
+StreamExecSink(fields=[category, shopId, max_num, rank_num], retract=[false], accMode=[AccRetract])
++- StreamExecCalc(select=[category, shopId, max_num, w0$o0], retract=[true], accMode=[AccRetract])
+   +- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[max_num DESC], rankRange=[rankStart=1, rankEnd=2], strategy=[UpdateFastRank[0,1]], select=[*, rowNum], retract=[true], accMode=[AccRetract])
+      +- StreamExecExchange(distribution=[hash[category]], retract=[false], accMode=[Acc])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], retract=[false], accMode=[Acc])
 
 == Physical Execution Plan ==
  : Data Source

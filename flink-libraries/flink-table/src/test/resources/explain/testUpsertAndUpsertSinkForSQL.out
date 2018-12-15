@@ -1,44 +1,32 @@
 == Abstract Syntax Tree ==
 LogicalAggregate(group=[{0}], frequency=[COUNT($1)])
-  LogicalProject(cnt=[$1], num=[$0])
-    LogicalProject(num=[$0], cnt=[$1])
-      LogicalFilter(condition=[<($0, 4)])
-        LogicalTableScan(table=[[default_catalog, default_db, T1]])
++- LogicalProject(cnt=[$1], num=[$0])
+   +- LogicalProject(num=[$0], cnt=[$1])
+      +- LogicalFilter(condition=[<($0, 4)])
+         +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 
 LogicalProject(num=[$0], cnt=[$1])
-  LogicalFilter(condition=[AND(>=($0, 4), <($0, 6))])
-    LogicalTableScan(table=[[default_catalog, default_db, T1]])
++- LogicalFilter(condition=[AND(>=($0, 4), <($0, 6))])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
 
 == Optimized Logical Plan ==
 [[IntermediateTable=_DataStreamTable_1]]
-StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS cnt])
-  StreamExecExchange(distribution=[hash[num]])
-    StreamExecCalc(select=[num, id])
-      StreamExecDataStreamScan(table=[[default_catalog, default_db, T]])
-StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
-  StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecCalc(retract=[true], accMode=[Acc])
-      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
+StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS cnt], retract=[true], accMode=[AccRetract])
++- StreamExecExchange(distribution=[hash[num]], retract=[true], accMode=[Acc])
+   +- StreamExecCalc(select=[num, id], retract=[true], accMode=[Acc])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, T]], retract=[true], accMode=[Acc])
 
 [[Sink]]
-StreamExecSink(fields=[cnt, frequency])
-  StreamExecGroupAggregate(groupBy=[cnt], select=[cnt, COUNT_RETRACT(num) AS frequency])
-    StreamExecExchange(distribution=[hash[cnt]])
-      StreamExecCalc(select=[num, cnt], where=[<(num, 4)])
-        StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
-StreamExecSink(retract=[false], accMode=[Acc])
-  StreamExecGroupAggregate(retract=[false], accMode=[Acc])
-    StreamExecExchange(retract=[true], accMode=[AccRetract])
-      StreamExecCalc(retract=[true], accMode=[AccRetract])
-        StreamExecDataStreamScan(retract=[true], accMode=[AccRetract])
+StreamExecSink(fields=[cnt, frequency], retract=[false], accMode=[Acc])
++- StreamExecGroupAggregate(groupBy=[cnt], select=[cnt, COUNT_RETRACT(num) AS frequency], retract=[false], accMode=[Acc])
+   +- StreamExecExchange(distribution=[hash[cnt]], retract=[true], accMode=[AccRetract])
+      +- StreamExecCalc(select=[num, cnt], where=[<(num, 4)], retract=[true], accMode=[AccRetract])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[AccRetract])
 
 [[Sink]]
-StreamExecSink(fields=[num, cnt])
-  StreamExecCalc(select=[num, cnt], where=[AND(>=(num, 4), <(num, 6))])
-    StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
-StreamExecSink(retract=[false], accMode=[AccRetract])
-  StreamExecCalc(retract=[false], accMode=[AccRetract])
-    StreamExecDataStreamScan(retract=[false], accMode=[AccRetract])
+StreamExecSink(fields=[num, cnt], retract=[false], accMode=[AccRetract])
++- StreamExecCalc(select=[num, cnt], where=[AND(>=(num, 4), <(num, 6))], retract=[false], accMode=[AccRetract])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[false], accMode=[AccRetract])
 
 == Physical Execution Plan ==
  : Data Source

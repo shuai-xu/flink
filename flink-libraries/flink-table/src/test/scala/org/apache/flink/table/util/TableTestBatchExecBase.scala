@@ -406,7 +406,7 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
         actual.append(FlinkRelOptUtil.toString(
           block.getOptimizedPlan,
           detailLevel = explainLevel,
-          printResource = printResultPartitionCount))
+          withResource = printResultPartitionCount))
         actual.append(System.lineSeparator)
         visitedBlocks += block
       }

@@ -24,49 +24,33 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{Table, TableConfig, TableEnvironment}
 import org.apache.flink.table.runtime.utils.{StreamTestData, TestingAppendTableSink, TestingRetractTableSink, TestingUpsertTableSink}
 import org.apache.flink.table.sinks.csv.CsvTableSink
-import org.apache.flink.table.util.TableFunc1
+import org.apache.flink.table.util.{StreamTableTestUtil, TableFunc1, TableTestBase}
 import org.apache.flink.test.util.AbstractTestBase
 import org.junit.Assert.assertEquals
 import org.junit._
 
 import scala.io.Source
 
-class ExplainTest extends AbstractTestBase {
+class ExplainTest extends TableTestBase {
 
   @Test
   def testFilter(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-    val table = env.fromElements((1, "hello"))
-      .toTable(tEnv, 'a, 'b)
-      .filter("a % 2 = 0")
-
-    val result = replaceString(tEnv.explain(table))
-
-    val source = readFromResource("testFilterStream0.out")
-    val expect = replaceString(source)
-    assertEquals(result, expect)
+    val util = streamTestUtil()
+    val table = util.addTable[(Int, String)]('a, 'b).filter("a % 2 = 0")
+    util.verifyPlan(table)
   }
 
   @Test
   def testUnion(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-    val table1 = env.fromElements((1, "hello")).toTable(tEnv, 'count, 'word)
-    val table2 = env.fromElements((1, "hello")).toTable(tEnv, 'count, 'word)
+    val util = streamTestUtil()
+    val table1 = util.addTable[(Int, String)]('count, 'word)
+    val table2 = util.addTable[(Int, String)]('count, 'word)
     val table = table1.unionAll(table2)
-
-    val result = replaceString(tEnv.explain(table))
-
-    val source = readFromResource("testUnionStream0.out")
-    val expect = replaceString(source)
-    assertEquals(expect, result)
+    util.verifyPlan(table)
   }
 
   @Test
-  def testSubsectionOptimization0(): Unit = {
+  def testSubsectionOptimizationStream0(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
@@ -80,14 +64,13 @@ class ExplainTest extends AbstractTestBase {
       .writeToSink(new TestingUpsertTableSink(Array(0)))
 
     val result = replaceString(tEnv.explain())
-
     val source = readFromResource("testSubsectionOptimizationStream0.out")
     val expected = replaceString(source)
     assertEquals(expected, result)
   }
 
   @Test
-  def testSubsectionOptimizationForsqlQuery(): Unit = {
+  def testSubsectionOptimizationForSQL(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
@@ -99,14 +82,13 @@ class ExplainTest extends AbstractTestBase {
       .writeToSink(new TestingUpsertTableSink(Array(0)))
 
     val result = replaceString(tEnv.explain())
-
     val source = readFromResource("testSubsectionOptimizationForSQL.out")
     val expected = replaceString(source)
     assertEquals(expected, result)
   }
 
   @Test
-  def testSubsectionOptimization1(): Unit = {
+  def testSubsectionOptimizationStream1(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
@@ -125,7 +107,6 @@ class ExplainTest extends AbstractTestBase {
     table6.writeToSink(new TestingUpsertTableSink(Array()))
 
     val result = replaceString(tEnv.explain())
-
     val source = readFromResource("testSubsectionOptimizationStream1.out")
     val expected = replaceString(source)
     assertEquals(expected, result)
@@ -149,14 +130,13 @@ class ExplainTest extends AbstractTestBase {
       .writeToSink(new TestingUpsertTableSink(Array()))
 
     val result = replaceString(tEnv.explain())
-
     val source = readFromResource("testRetractAndUpsertSink.out")
     val expected = replaceString(source)
     assertEquals(expected, result)
   }
 
   @Test
-  def testRetractAndUpsertSinkForsqlQuery(): Unit = {
+  def testRetractAndUpsertSinkForSQL(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
@@ -174,7 +154,6 @@ class ExplainTest extends AbstractTestBase {
       .writeToSink(new TestingUpsertTableSink(Array()))
 
     val result = replaceString(tEnv.explain())
-
     val source = readFromResource("testRetractAndUpsertSinkForSQL.out")
     val expected = replaceString(source)
     assertEquals(expected, result)
@@ -208,7 +187,6 @@ class ExplainTest extends AbstractTestBase {
     tEnv.sqlQuery("SELECT a, b FROM T WHERE a < 6").writeToSink(upsertSink)
 
     val result = replaceString(tEnv.explain())
-
     val source = readFromResource("testUpdateAsRetractConsumedAtSinkBlock.out")
     val expected = replaceString(source)
     assertEquals(expected, result)
@@ -221,9 +199,9 @@ class ExplainTest extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env, conf)
 
-    val mytable = StreamTestData.get3TupleDataStream(env)
+    val myTable = StreamTestData.get3TupleDataStream(env)
       .toTable(tEnv, 'a, 'b, 'c)
-    tEnv.registerTable("MyTable", mytable)
+    tEnv.registerTable("MyTable", myTable)
 
     val sql =
       s"""
@@ -243,7 +221,6 @@ class ExplainTest extends AbstractTestBase {
     tEnv.sqlQuery("SELECT a, b FROM T WHERE a < 6").writeToSink(upsertSink)
 
     val result = replaceString(tEnv.explain())
-
     val source = readFromResource("testUpdateAsRetractConsumedAtSourceBlock.out")
     val expected = replaceString(source)
     assertEquals(expected, result)
@@ -267,14 +244,13 @@ class ExplainTest extends AbstractTestBase {
       .writeToSink(new TestingUpsertTableSink(Array()))
 
     val result = replaceString(tEnv.explain())
-
     val source = readFromResource("testUpsertAndUpsertSink.out")
     val expected = replaceString(source)
     assertEquals(expected, result)
   }
 
   @Test
-  def testUpsertAndUpsertSinkForsqlQuery(): Unit = {
+  def testUpsertAndUpsertSinkForSQL(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
@@ -299,14 +275,13 @@ class ExplainTest extends AbstractTestBase {
       .writeToSink(new TestingUpsertTableSink(Array()))
 
     val result = replaceString(tEnv.explain())
-
     val source = readFromResource("testUpsertAndUpsertSinkForSQL.out")
     val expected = replaceString(source)
     assertEquals(expected, result)
   }
 
   @Test
-  def testMultiLevelViewForsqlQuery(): Unit = {
+  def testMultiLevelViewForSQL(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
     conf.disableUnionAllAsBreakPointInSubsectionOptimization(true)
@@ -342,7 +317,6 @@ class ExplainTest extends AbstractTestBase {
       .writeToSink(new TestingUpsertTableSink(Array()))
 
     val result = replaceString(tEnv.explain())
-
     val source = readFromResource("testMultiLevelViewForSQL.out")
     val expected = replaceString(source)
     assertEquals(expected, result)
@@ -390,7 +364,6 @@ class ExplainTest extends AbstractTestBase {
       .writeToSink(new TestingUpsertTableSink(Array()))
 
     val result = replaceString(tEnv.explain())
-
     val source = readFromResource("testSharedUnionNode.out")
     val expected = replaceString(source)
     assertEquals(expected, result)
@@ -416,7 +389,6 @@ class ExplainTest extends AbstractTestBase {
     result.writeToSink(new CsvTableSink("file"))
 
     val actual = replaceString(tEnv.explain())
-
     val source = readFromResource("testSubsectionOptimizationWithUdtf.out")
     val expected = replaceString(source)
     assertEquals(expected, actual)

@@ -32,9 +32,8 @@ import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.optimize._
-import org.apache.flink.table.plan.util.RelTraitUtil
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
 
-import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.tools.RuleSet
 import org.apache.calcite.util.ImmutableBitSet
@@ -45,7 +44,7 @@ import java.util
 import java.util.{ArrayList => JArrayList}
 
 import org.junit.Assert.assertEquals
-import org.junit.{Before, Rule}
+import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}
 import org.mockito.Mockito.{mock, when}
 
@@ -71,8 +70,8 @@ abstract class TableTestBase {
   def verifyTableEquals(expected: Table, actual: Table): Unit = {
     assertEquals(
       "Logical plans do not match",
-      LogicalPlanFormatUtils.formatTempTableId(RelOptUtil.toString(expected.getRelNode)),
-      LogicalPlanFormatUtils.formatTempTableId(RelOptUtil.toString(actual.getRelNode)))
+      LogicalPlanFormatUtils.formatTempTableId(FlinkRelOptUtil.toString(expected.getRelNode)),
+      LogicalPlanFormatUtils.formatTempTableId(FlinkRelOptUtil.toString(actual.getRelNode)))
   }
 
   def injectRules(tEnv: TableEnvironment, phase: String, injectRuleSet: RuleSet): Unit = {
@@ -116,10 +115,6 @@ abstract class TableTestUtil {
   def verifyPlan(sql: String): Unit
 
   def verifyPlan(table: Table): Unit
-
-  def verifyTrait(sql: String): Unit
-
-  def verifyTrait(table: Table): Unit
 
   def verifyPlanAndTrait(sql: String): Unit
 
@@ -204,13 +199,13 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
     val optimized1 = tableEnv.optimize(relNode1, updatesAsRetraction = false)
     val relNode2 = resultTable2.getRelNode
     val optimized2 = tableEnv.optimize(relNode2, updatesAsRetraction = false)
-    assertEquals(RelOptUtil.toString(optimized1), RelOptUtil.toString(optimized2))
+    assertEquals(FlinkRelOptUtil.toString(optimized1), FlinkRelOptUtil.toString(optimized2))
   }
 
   def verifyPlan(table: Table): Unit = {
     val relNode = table.getRelNode
     val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
-    val actual = SystemUtils.LINE_SEPARATOR + RelOptUtil.toString(optimized)
+    val actual = SystemUtils.LINE_SEPARATOR + FlinkRelOptUtil.toString(optimized)
 
     verifyPlan(test.name.getMethodName, actual)
   }
@@ -241,22 +236,6 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
     }
   }
 
-  def verifyTrait(sql: String): Unit = {
-    val resultTable = tableEnv.sqlQuery(sql)
-    verifyTrait(resultTable)
-  }
-
-  def verifyTrait(table: Table): Unit = {
-    val relNode = table.getRelNode
-    val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
-    val actual = SystemUtils.LINE_SEPARATOR + RelTraitUtil.explainRetractTraits(optimized)
-    verifyTrait(test.name.getMethodName, actual)
-  }
-
-  def verifyTrait(name: String, ret: String): Unit = {
-    diffRepository.assertEquals(name, "trait", "${trait}", ret)
-  }
-
   def verifyPlanAndTrait(sql: String): Unit = {
     val resultTable = tableEnv.sqlQuery(sql)
     verifyPlanAndTrait(resultTable)
@@ -265,17 +244,15 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
   def verifyPlanAndTrait(table: Table): Unit = {
     val relNode = table.getRelNode
     val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
-    val actualPlan = SystemUtils.LINE_SEPARATOR + RelOptUtil.toString(optimized)
-    val actualTrait = SystemUtils.LINE_SEPARATOR +
-      RelTraitUtil.explainRetractTraits(optimized)
+    val actualPlan = SystemUtils.LINE_SEPARATOR +
+      FlinkRelOptUtil.toString(optimized, withRetractTraits = true)
     assertEqualsOrExpand("plan", actualPlan)
-    assertEqualsOrExpand("trait", actualTrait, expand = false)
   }
 
   def explainSql(query: String): String = {
     val relNode = tableEnv.sqlQuery(query).getRelNode
     val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
-    RelOptUtil.toString(optimized)
+    FlinkRelOptUtil.toString(optimized)
   }
 
   def explain(resultTable: Table): String = {

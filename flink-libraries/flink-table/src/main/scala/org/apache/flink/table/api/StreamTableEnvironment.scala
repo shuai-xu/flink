@@ -42,7 +42,7 @@ import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecRel, _}
 import org.apache.flink.table.plan.optimize.StreamOptimizeContext
 import org.apache.flink.table.plan.schema.{TableSourceSinkTable, _}
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.plan.util.{RelTraitUtil, UpdatingPlanChecker}
+import org.apache.flink.table.plan.util.{FlinkRelOptUtil, UpdatingPlanChecker}
 import org.apache.flink.table.plan.{MiniBatchHelper, RelNodeBlock, RelNodeBlockPlanBuilder}
 import org.apache.flink.table.sinks.{DataStreamTableSink, _}
 import org.apache.flink.table.sources._
@@ -938,11 +938,11 @@ abstract class StreamTableEnvironment(
 
     s"== Abstract Syntax Tree ==" +
         System.lineSeparator +
-        s"${RelOptUtil.toString(ast)}" +
+        s"${FlinkRelOptUtil.toString(ast)}" +
         System.lineSeparator +
         s"== Optimized Logical Plan ==" +
         System.lineSeparator +
-        s"${RelOptUtil.toString(optimizedPlan)}" +
+        s"${FlinkRelOptUtil.toString(optimizedPlan)}" +
         System.lineSeparator +
         s"== Physical Execution Plan ==" +
         System.lineSeparator +
@@ -986,7 +986,7 @@ abstract class StreamTableEnvironment(
     sinkNodes.foreach { sink =>
       val table = new Table(this, sink.children.head)
       val ast = table.getRelNode
-      sb.append(RelOptUtil.toString(ast))
+      sb.append(FlinkRelOptUtil.toString(ast))
       sb.append(System.lineSeparator)
     }
 
@@ -1002,8 +1002,7 @@ abstract class StreamTableEnvironment(
           sb.append(s"[[IntermediateTable=${block.getOutputTableName}]]")
         }
         sb.append(System.lineSeparator)
-        sb.append(RelOptUtil.toString(block.getOptimizedPlan))
-        sb.append(RelTraitUtil.explainRetractTraits(block.getOptimizedPlan))
+        sb.append(FlinkRelOptUtil.toString(block.getOptimizedPlan, withRetractTraits = true))
         sb.append(System.lineSeparator)
         visitedBlocks += block
       }

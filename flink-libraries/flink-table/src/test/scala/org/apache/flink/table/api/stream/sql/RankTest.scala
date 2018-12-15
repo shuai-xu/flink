@@ -619,7 +619,7 @@ class RankTest extends TableTestBase {
 
     val result = replaceString(tEnv.explain())
 
-    val source = readFromResource("testMultipleTopNAfterAgg.out")
+    val source = readFromResource("testMultipleRetractTopNAfterAgg.out")
     val expected = replaceString(source)
     assertEquals(expected, result)
   }

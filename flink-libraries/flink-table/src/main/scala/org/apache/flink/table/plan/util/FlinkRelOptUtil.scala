@@ -50,16 +50,28 @@ object FlinkRelOptUtil {
     * This is different from [[RelOptUtil]]#toString on two points:
     * 1. Generated string by this method is in a tree style
     * 2. Generated string by this method may have more information about RelNode, such as
-    * resource, memory cost, RelNodeId.
+    * resource, memory cost, RelNodeId, retractionTraits.
+    *
+    * @param rel                the RelNode to convert
+    * @param detailLevel        detailLevel defines detail levels for EXPLAIN PLAN.
+    * @param withResource       whether including resource information of RelNode (only apply to
+    *                           BatchExecRel node at present)
+    * @param withMemCost        whether including memory cost information of RelNode (only apply to
+    *                           BatchExecRel node at present)
+    * @param withRelNodeId      whether including ID of RelNode
+    * @param withRetractTraits  whether including Retraction Traits of RelNode (only apply to
+    *                           StreamExecRel node at present)
+    * @return explain plan of RelNode
     */
   def toString(
       rel: RelNode,
       detailLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
-      printResource: Boolean = false,
-      printMemCost: Boolean = false,
-      withRelNodeId: Boolean = false): String = {
+      withResource: Boolean = false,
+      withMemCost: Boolean = false,
+      withRelNodeId: Boolean = false,
+      withRetractTraits: Boolean = false): String = {
     // FIXME refactor
-    val config = FlinkRelOptUtil.getTableConfig(rel)
+    val config = getTableConfig(rel)
     val isPhysicalRel = rel.isInstanceOf[FlinkPhysicalRel]
     // only print reuse info of physical plan
     val (subplanReuseContext, newRel) = if (isPhysicalRel && config.getSubPlanReuse) {
@@ -74,9 +86,10 @@ object FlinkRelOptUtil {
       new PrintWriter(sw),
       subplanReuseContext,
       detailLevel,
-      printResource,
-      printMemCost,
-      withRelNodeId)
+      withResource,
+      withMemCost,
+      withRelNodeId,
+      withRetractTraits)
     newRel.explain(planWriter)
     sw.toString
   }

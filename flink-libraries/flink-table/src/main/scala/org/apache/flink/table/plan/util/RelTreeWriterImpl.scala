@@ -20,6 +20,8 @@ package org.apache.flink.table.plan.util
 import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.table.plan.cost.FlinkBatchCost
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashJoinBase, BatchExecNestedLoopJoinBase, BatchExecRel, BatchExecScan}
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRel
+import org.apache.flink.table.plan.`trait`.{AccModeTraitDef, UpdateAsRetractionTraitDef}
 
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.externalize.RelWriterImpl
@@ -35,9 +37,10 @@ class RelTreeWriterImpl(
     pw: PrintWriter,
     subplanReuseContext: Option[SubplanReuseContext],
     explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
-    printResource: Boolean = false,
-    printMemCost: Boolean = false,
-    withRelNodeId: Boolean = false)
+    withResource: Boolean = false,
+    withMemCost: Boolean = false,
+    withRelNodeId: Boolean = false,
+    withRetractTraits: Boolean = false)
   extends RelWriterImpl(pw, explainLevel, false) {
 
   var lastChildren: Seq[Boolean] = Nil
@@ -74,7 +77,7 @@ class RelTreeWriterImpl(
 
     val printValues = new JArrayList[Pair[String, AnyRef]]()
     if (!isReuseOtherRel) {
-      if (printResource) {
+      if (withResource) {
         rel match {
           case rowBatchExec: BatchExecRel[_] =>
             printValues.add(Pair.of(
@@ -103,10 +106,10 @@ class RelTreeWriterImpl(
             addResourceToPrint(rowBatchExec, printValues)
         }
       }
-      if (printMemCost || printResource) {
+      if (withMemCost || withResource) {
         rel match {
-          case rowBatchExec: BatchExecRel[_] =>
-            val memCost = mq.getNonCumulativeCost(rowBatchExec).asInstanceOf[FlinkBatchCost].memory
+          case batchRel: BatchExecRel[_] =>
+            val memCost = mq.getNonCumulativeCost(batchRel).asInstanceOf[FlinkBatchCost].memory
             printValues.add(Pair.of(
               "memCost",
               memCost.asInstanceOf[AnyRef]))
@@ -115,7 +118,6 @@ class RelTreeWriterImpl(
               mq.getRowCount(rel)))
         }
       }
-
       if (explainLevel != SqlExplainLevel.NO_ATTRIBUTES) {
         printValues.addAll(values)
       }
@@ -124,6 +126,16 @@ class RelTreeWriterImpl(
         rel match {
           case rowBatchExec: BatchExecRel[_] =>
             printValues.add(Pair.of("__id__", rowBatchExec.getId.toString))
+        }
+      }
+      if (withRetractTraits) {
+        rel match {
+          case streamRel: StreamExecRel[_] =>
+            val traitSet = streamRel.getTraitSet
+            printValues.add(
+              Pair.of("retract", traitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE)))
+            printValues.add(
+              Pair.of("accMode", traitSet.getTrait(AccModeTraitDef.INSTANCE)))
         }
       }
     }
