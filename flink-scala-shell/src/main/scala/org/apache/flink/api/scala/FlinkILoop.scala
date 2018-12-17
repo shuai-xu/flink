@@ -23,7 +23,7 @@ import java.io.{BufferedReader, File, FileOutputStream}
 import org.apache.flink.api.java.{JarHelper, ScalaShellRemoteEnvironment, ScalaShellRemoteStreamEnvironment}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.TableEnvironment
+import org.apache.flink.table.api.{TableConfig, TableEnvironment}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment, StreamTableEnvironment}
 import org.apache.flink.util.AbstractID
 
@@ -85,8 +85,6 @@ class FlinkILoop(
       this,
       clientConfig,
       getExternalJars(): _*)
-    // prevent further instantiation of environments
-    ScalaShellRemoteEnvironment.disableAllContextAndOtherEnvironments()
 
     (remoteBenv,remoteSenv)
   }
@@ -101,6 +99,7 @@ class FlinkILoop(
     val scalaBenv = new ExecutionEnvironment(remoteBenv)
     val scalaSenv = new StreamExecutionEnvironment(remoteSenv)
     val scalaBTEnv = TableEnvironment.getBatchTableEnvironment(scalaSenv)
+    scalaBTEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM,1)
     val scalaSTEnv = TableEnvironment.getTableEnvironment(scalaSenv)
     (scalaBenv,scalaSenv,scalaBTEnv,scalaSTEnv)
   }
@@ -153,7 +152,6 @@ class FlinkILoop(
     "org.apache.flink.api.scala.utils._",
     "org.apache.flink.streaming.api.scala._",
     "org.apache.flink.streaming.api.windowing.time._",
-    "org.apache.flink.table.api._",
     "org.apache.flink.table.api.scala._",
     "org.apache.flink.types.Row"
   )
