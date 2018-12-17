@@ -17,34 +17,34 @@
  */
 package org.apache.flink.table.tpc
 
-import java.util
-
-import org.apache.flink.configuration.TaskManagerOptions
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.runtime.batch.sql.{OptionalModeQueryTest, PartitionShufflerMode}
-import org.apache.flink.table.runtime.batch.sql.PartitionShufflerMode.PartitionShufflerMode
+import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.table.tpc.TpcUtils.getTpcHQuery
 import org.apache.flink.test.util.TestBaseUtils
+
+import org.junit.{Before, Test}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import org.junit.{Ignore, Test}
 import org.scalatest.prop.PropertyChecks
+
+import java.util
 
 import scala.collection.JavaConversions._
 
-@Ignore
+// TODO support externalShuffle test.
+// TODO now there is no way to test in externalShuffle.
 @RunWith(classOf[Parameterized])
 class TpcHBatchExecITCase(caseName: String,
-    shuffleMode: PartitionShufflerMode,
     subsectionOptimization: Boolean)
-  extends OptionalModeQueryTest(shuffleMode)  with PropertyChecks {
+  extends QueryTest with PropertyChecks {
 
   def getDataFile(tableName: String): String = {
     getClass.getResource(s"/tpch/data/$tableName/$tableName.tbl").getFile
   }
 
-  override def prepareOp(): Unit = {
+  @Before
+  def prepareOp(): Unit = {
     for ((tableName, schema) <- TpcHSchemaProvider.schemaMap) {
       lazy val tableSource = CsvTableSource.builder()
           .path(getDataFile(tableName))
@@ -73,7 +73,7 @@ class TpcHBatchExecITCase(caseName: String,
 }
 
 object TpcHBatchExecITCase {
-  @Parameterized.Parameters(name = "{0}, {1}, {2}")
+  @Parameterized.Parameters(name = "{0}, {1}")
   def parameters(): util.Collection[Array[_]] = {
     // 15 plan: VIEW is unsupported
     util.Arrays.asList(
@@ -81,12 +81,7 @@ object TpcHBatchExecITCase {
       "11", "12", "13", "14", "15_1", "16", "17", "18", "19",
       "20", "21", "22"
     ).flatMap { s => Seq(
-      Array(s, PartitionShufflerMode.PipelinePartitionShuffler, true),
-      Array(s, PartitionShufflerMode.ExternalPartitionShuffler, true),
-      Array(s, PartitionShufflerMode.ExternalPartitionMergeShuffler, true),
-      Array(s, PartitionShufflerMode.PipelinePartitionShuffler, false),
-      Array(s, PartitionShufflerMode.ExternalPartitionShuffler, false),
-      Array(s, PartitionShufflerMode.ExternalPartitionMergeShuffler, false)
-    )}
+      Array(s, true),
+      Array(s, false))}
   }
 }
