@@ -37,6 +37,7 @@ import org.apache.flink.streaming.api.graph.StreamGraph;
 import org.apache.flink.table.api.BatchQueryConfig;
 import org.apache.flink.table.api.QueryConfig;
 import org.apache.flink.table.api.StreamQueryConfig;
+import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.client.catalog.ClientCatalogFactory;
 import org.apache.flink.table.client.cli.SingleJobMode;
@@ -270,6 +271,12 @@ public class ExecutionContext<T> {
 			mergedEnv.getCatalogs().forEach((name, catalog) -> {
 				tableEnv.registerCatalog(name, ClientCatalogFactory.createCatalog(catalog));
 			});
+
+			// TODO: sql client should parse and set job's TableConfig from execution configs from yaml config file.
+			// https://aone.alibaba-inc.com/issue/18280385
+			tableEnv.getConfig().getParameters().setInteger(
+				TableConfig.SQL_EXEC_DEFAULT_PARALLELISM(),
+				mergedEnv.getExecution().getParallelism());
 
 			setDefaultCatalog(mergedEnv.getCatalogs());
 		}
