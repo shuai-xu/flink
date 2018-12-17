@@ -181,6 +181,10 @@ object FlinkStreamExecRuleSets {
     AggregateReduceFunctionsRule.INSTANCE,
     WindowAggregateReduceFunctionsRule.INSTANCE,
 
+    // reduce useless aggCall
+    PruneAggregateCallRule.PROJECT_ON_AGGREGATE,
+    PruneAggregateCallRule.CALC_ON_AGGREGATE,
+
     // expand grouping sets
     DecomposeGroupingSetsRule.INSTANCE,
 

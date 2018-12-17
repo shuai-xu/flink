@@ -1290,4 +1290,23 @@ class AggregateITCase(
     val expected = List("1,1,50", "1,ALL,50")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
+
+  @Test
+  def testPruneUselessAggCall(): Unit = {
+    val data = new mutable.MutableList[(Int, Long, String)]
+    data .+= ((1, 1L, "Hi"))
+    data .+= ((2, 2L, "Hello"))
+    data .+= ((3, 2L, "Hello world"))
+
+    val t = failingDataSource(data).toTable(tEnv, 'a, 'b, 'c)
+    tEnv.registerTable("T", t)
+
+    val t1 = tEnv.sqlQuery(
+      "select a from (select b, max(a) as a, count(*), max(c) as c from T group by b) T1")
+    val sink = new TestingRetractSink
+    t1.toRetractStream[Row].addSink(sink).setParallelism(1)
+    env.execute()
+    val expected = List("1", "3")
+    assertEquals(expected, sink.getRetractResults)
+  }
 }
