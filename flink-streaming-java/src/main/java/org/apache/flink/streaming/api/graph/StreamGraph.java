@@ -43,6 +43,7 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.collector.selector.OutputSelector;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.source.InputFormatSourceFunctionV2;
 import org.apache.flink.streaming.api.operators.OutputTypeConfigurable;
 import org.apache.flink.streaming.api.operators.StoppableStreamSource;
 import org.apache.flink.streaming.api.operators.StreamOperator;
@@ -53,6 +54,7 @@ import org.apache.flink.streaming.runtime.partitioner.ForwardPartitioner;
 import org.apache.flink.streaming.runtime.partitioner.RebalancePartitioner;
 import org.apache.flink.streaming.runtime.partitioner.RescalePartitioner;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
+import org.apache.flink.streaming.runtime.tasks.InputFormatSourceStreamTaskV2;
 import org.apache.flink.streaming.runtime.tasks.OneInputStreamTask;
 import org.apache.flink.streaming.runtime.tasks.SourceStreamTask;
 import org.apache.flink.streaming.runtime.tasks.SourceStreamTaskV2;
@@ -275,8 +277,11 @@ public class StreamGraph extends StreamingPlan {
 			addNode(vertexID, slotSharingGroup, SourceStreamTask.class, operatorObject,
 				operatorName);
 		} else if (operatorObject instanceof StreamSourceV2) {
-			addNode(vertexID, slotSharingGroup, SourceStreamTaskV2.class, operatorObject,
-				operatorName);
+			if (((StreamSourceV2) operatorObject).getUserFunction() instanceof InputFormatSourceFunctionV2) {
+				addNode(vertexID, slotSharingGroup, InputFormatSourceStreamTaskV2.class, operatorObject, operatorName);
+			} else {
+				addNode(vertexID, slotSharingGroup, SourceStreamTaskV2.class, operatorObject, operatorName);
+			}
 		} else {
 			addNode(vertexID, slotSharingGroup, OneInputStreamTask.class, operatorObject, operatorName);
 		}

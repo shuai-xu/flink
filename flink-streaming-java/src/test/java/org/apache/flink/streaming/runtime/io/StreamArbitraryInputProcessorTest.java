@@ -140,6 +140,11 @@ public class StreamArbitraryInputProcessorTest {
 			public SourceRecord<String> next() throws Exception {
 				return null;
 			}
+
+			@Override
+			public void cancel() {
+
+			}
 		};
 
 		final EndInputChecker endInputChecker = new EndInputChecker();

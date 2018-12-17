@@ -167,6 +167,11 @@ public class SourceFetcherTest {
 			return next;
 		}
 
+		@Override
+		public void cancel() {
+
+		}
+
 		public void reset() {
 			next = null;
 			isFinished.clear();

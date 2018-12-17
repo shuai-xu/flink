@@ -70,7 +70,7 @@ public class StreamSourceV2<OUT, SRC extends SourceFunctionV2<OUT>>
 		}
 	}
 
-	public SourceRecord next() throws Exception {
+	public SourceRecord<OUT> next() throws Exception {
 		return userFunction.next();
 	}
 

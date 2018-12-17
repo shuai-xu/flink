@@ -50,7 +50,5 @@ public interface SourceFunctionV2<T> extends Function, Serializable {
 	/**
 	 * Cancel the source function.
 	 */
-	default void cancel() {
-
-	}
+	void cancel();
 }

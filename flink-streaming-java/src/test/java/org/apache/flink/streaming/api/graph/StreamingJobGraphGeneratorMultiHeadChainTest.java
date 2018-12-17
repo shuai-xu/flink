@@ -1455,6 +1455,11 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 		public SourceRecord<String> next() throws Exception {
 			return null;
 		}
+
+		@Override
+		public void cancel() {
+
+		}
 	}
 
 	private static class NoOpSinkFunction implements SinkFunction<String> {

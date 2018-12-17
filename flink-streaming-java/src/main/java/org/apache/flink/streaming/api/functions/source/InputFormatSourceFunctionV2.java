@@ -28,7 +28,6 @@ import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.jobgraph.tasks.InputSplitProvider;
 import org.apache.flink.runtime.jobgraph.tasks.InputSplitProviderException;
 import org.apache.flink.streaming.api.operators.StreamingRuntimeContext;
-import org.apache.flink.util.Preconditions;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -99,6 +98,7 @@ public class InputFormatSourceFunctionV2<OUT> extends RichParallelSourceFunction
 		}
 		isObjectReuse = getRuntimeContext().getExecutionConfig().isObjectReuseEnabled();
 		sourceRecord = new SourceRecord<>();
+		reusableElement = serializer.createInstance();
 	}
 
 	@Override
@@ -108,18 +108,14 @@ public class InputFormatSourceFunctionV2<OUT> extends RichParallelSourceFunction
 
 	@Override
 	public SourceRecord<OUT> next() throws Exception {
-		Preconditions.checkNotNull(format, "InputFormat should not be null");
-
-		if (!isObjectReuse || reusableElement == null) {
-			reusableElement = serializer.createInstance();
-		}
 
 		while (hasMoreData) {
 			if (!format.reachedEnd()) {
 				OUT element = format.nextRecord(reusableElement);
 				if (element != null) {
 					reusableElement = element;
-					return sourceRecord.replace(element);
+					sourceRecord.setRecord(element);
+					return sourceRecord;
 				} else {
 					completedSplitsCounter.inc();
 					requestNextSplit();
@@ -129,6 +125,11 @@ public class InputFormatSourceFunctionV2<OUT> extends RichParallelSourceFunction
 			}
 		}
 		return null;
+	}
+
+	@Override
+	public void cancel() {
+
 	}
 
 	private void requestNextSplit() throws IOException {

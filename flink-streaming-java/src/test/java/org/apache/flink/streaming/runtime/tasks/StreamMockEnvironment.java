@@ -108,7 +108,7 @@ public class StreamMockEnvironment implements Environment {
 		Configuration taskConfig,
 		ExecutionConfig executionConfig,
 		long memorySize,
-		MockInputSplitProvider inputSplitProvider,
+		InputSplitProvider inputSplitProvider,
 		int bufferSize,
 		TaskStateManager taskStateManager) {
 		this(
@@ -132,7 +132,7 @@ public class StreamMockEnvironment implements Environment {
 		Configuration taskConfig,
 		ExecutionConfig executionConfig,
 		long memorySize,
-		MockInputSplitProvider inputSplitProvider,
+		InputSplitProvider inputSplitProvider,
 		int bufferSize,
 		TaskStateManager taskStateManager) {
 
