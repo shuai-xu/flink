@@ -18,16 +18,14 @@
 package org.apache.flink.streaming.runtime.io;
 
 import org.apache.flink.runtime.metrics.MetricNames;
-import org.apache.flink.runtime.metrics.groups.TaskMetricGroup;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.runtime.metrics.MinWatermarkGauge;
 import org.apache.flink.streaming.runtime.metrics.WatermarkGauge;
-import org.apache.flink.streaming.runtime.streamstatus.StreamStatusSubMaintainer;
 
 /**
  * The type Abstract two input processor.
  */
-abstract class AbstractTwoInputProcessor extends AbstractInputProcessor {
+class TwoInputWatermarkProcessor {
 
 	/**
 	 * The Input 1 watermark gauge.
@@ -44,22 +42,12 @@ abstract class AbstractTwoInputProcessor extends AbstractInputProcessor {
 	/**
 	 * Instantiates a new Abstract two input processor.
 	 *
-	 * @param streamStatusSubMaintainer the stream status sub maintainer
 	 * @param operator                  the operator
-	 * @param checkpointLock            the checkpoint lock
-	 * @param taskMetricGroup           the task metric group
 	 * @param minAllInputWatermarkGauge the min all input watermark gauge
-	 * @param channelCount              the channel count
 	 */
-	AbstractTwoInputProcessor(
-		StreamStatusSubMaintainer streamStatusSubMaintainer,
+	TwoInputWatermarkProcessor(
 		TwoInputStreamOperator operator,
-		Object checkpointLock,
-		TaskMetricGroup taskMetricGroup,
-		MinWatermarkGauge minAllInputWatermarkGauge,
-		int channelCount) {
-
-		super(streamStatusSubMaintainer, checkpointLock, taskMetricGroup, channelCount);
+		MinWatermarkGauge minAllInputWatermarkGauge) {
 
 		operator.getMetricGroup().gauge(MetricNames.IO_CURRENT_INPUT_WATERMARK, minInputWatermarkGauge);
 		operator.getMetricGroup().gauge(MetricNames.IO_CURRENT_INPUT_1_WATERMARK, input1WatermarkGauge);

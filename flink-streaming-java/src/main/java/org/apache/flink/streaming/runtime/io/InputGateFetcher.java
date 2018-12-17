@@ -156,8 +156,17 @@ class InputGateFetcher<IN> implements InputFetcher, InputGateListener {
 				if (streamElement.isRecord()) {
 					final StreamRecord<IN> record = streamElement.asRecord();
 					reusedObject = record.getValue();
+					inputProcessor.processRecord(record, currentChannelIndex);
+				} else if (streamElement.isWatermark()) {
+					inputProcessor.processWatermark(streamElement.asWatermark(), currentChannelIndex);
+				} else if (streamElement.isLatencyMarker()) {
+					inputProcessor.processLatencyMarker(streamElement.asLatencyMarker(), currentChannelIndex);
+				} else if (streamElement.isStreamStatus()) {
+					inputProcessor.processStreamStatus(streamElement.asStreamStatus(), currentChannelIndex);
+				} else {
+					throw new RuntimeException("Unknown stream element " + streamElement);
 				}
-				inputProcessor.processElement(streamElement, currentChannelIndex);
+
 				return true;
 			}
 		}

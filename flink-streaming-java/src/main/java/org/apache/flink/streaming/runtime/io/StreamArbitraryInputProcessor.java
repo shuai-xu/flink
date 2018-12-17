@@ -38,7 +38,6 @@ import org.apache.flink.streaming.runtime.tasks.InputSelector;
 import org.apache.flink.streaming.runtime.tasks.InputSelector.EdgeInputSelection;
 import org.apache.flink.streaming.runtime.tasks.InputSelector.InputSelection;
 import org.apache.flink.streaming.runtime.tasks.InputSelector.SelectionChangedListener;
-import org.apache.flink.streaming.runtime.tasks.InputSelector.SourceInputSelection;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.flink.streaming.runtime.tasks.InputSelector.SourceInputSelection;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.apache.flink.util.Preconditions.checkState;
 

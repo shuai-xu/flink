@@ -28,6 +28,8 @@ import org.apache.flink.streaming.runtime.metrics.MinWatermarkGauge;
 import org.apache.flink.streaming.runtime.metrics.WatermarkGauge;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.streamstatus.StatusWatermarkValve;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
 import org.apache.flink.streaming.runtime.streamstatus.StreamStatusSubMaintainer;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -35,13 +37,21 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 /**
  * The type One input processor.
  */
-class OneInputProcessor extends AbstractInputProcessor {
+class OneInputProcessor implements InputProcessor, StatusWatermarkValve.ValveOutputHandler {
 
 	private Counter numRecordsIn;
 
 	private final OneInputStreamOperator operator;
 
 	private final WatermarkGauge watermarkGauge = new WatermarkGauge();
+
+	private final StatusWatermarkValve statusWatermarkValve;
+
+	private final Object checkpointLock;
+
+	private final TaskMetricGroup taskMetricGroup;
+
+	private final StreamStatusSubMaintainer streamStatusSubMaintainer;
 
 	/**
 	 * Instantiates a new One input processor.
@@ -61,8 +71,10 @@ class OneInputProcessor extends AbstractInputProcessor {
 		MinWatermarkGauge minAllInputWatermarkGauge,
 		int channelCount) {
 
-		super(streamStatusSubMaintainer, checkpointLock, taskMetricGroup, channelCount);
-
+		this.streamStatusSubMaintainer = streamStatusSubMaintainer;
+		this.checkpointLock = checkNotNull(checkpointLock);
+		this.taskMetricGroup = checkNotNull(taskMetricGroup);
+		this.statusWatermarkValve = new StatusWatermarkValve(channelCount, this);
 		this.operator = checkNotNull(operator);
 
 		operator.getMetricGroup().gauge(MetricNames.IO_CURRENT_INPUT_WATERMARK, this.watermarkGauge);
@@ -73,16 +85,29 @@ class OneInputProcessor extends AbstractInputProcessor {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	void processRecord(StreamRecord streamRecord) throws Exception {
-		numRecordsIn.inc();
-
-		operator.setKeyContextElement1(streamRecord);
-		operator.processElement(streamRecord);
+	public void processRecord(StreamRecord streamRecord, int channelIndex) throws Exception {
+		synchronized (checkpointLock) {
+			numRecordsIn.inc();
+			operator.setKeyContextElement1(streamRecord);
+			operator.processElement(streamRecord);
+		}
 	}
 
 	@Override
-	void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
-		operator.processLatencyMarker(latencyMarker);
+	public void processLatencyMarker(LatencyMarker latencyMarker, int channelIndex) throws Exception {
+		synchronized (checkpointLock) {
+			operator.processLatencyMarker(latencyMarker);
+		}
+	}
+
+	@Override
+	public void processWatermark(Watermark watermark, int channelIndex) throws Exception {
+		statusWatermarkValve.inputWatermark(watermark, channelIndex);
+	}
+
+	@Override
+	public void processStreamStatus(StreamStatus streamStatus, int channelIndex) throws Exception {
+		statusWatermarkValve.inputStreamStatus(streamStatus, channelIndex);
 	}
 
 	@Override
@@ -98,6 +123,16 @@ class OneInputProcessor extends AbstractInputProcessor {
 		} catch (Exception e) {
 			throw new RuntimeException("Exception occurred while processing valve output watermark: ", e);
 		}
+	}
+
+	@Override
+	public void handleStreamStatus(StreamStatus streamStatus) {
+		streamStatusSubMaintainer.updateStreamStatus(streamStatus);
+	}
+
+	@Override
+	public void release() {
+		streamStatusSubMaintainer.release();
 	}
 
 	@VisibleForTesting

@@ -312,7 +312,7 @@ public class InputGateFetcherTest {
 		fetcher.setCurrentRecordDeserializer(deserializer);
 		assertTrue(fetcher.moreAvailable());
 
-		verify(inputProcessor, times(2)).processElement(record, fetcher.getCurrentChannelIndex());
+		verify(inputProcessor, times(2)).processRecord(record, fetcher.getCurrentChannelIndex());
 	}
 
 	class FakeInputGateFetcher<IN> extends InputGateFetcher<IN> {

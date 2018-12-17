@@ -17,7 +17,10 @@
 
 package org.apache.flink.streaming.runtime.io;
 
-import org.apache.flink.streaming.runtime.streamrecord.StreamElement;
+import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
+import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
 
 /**
  * The interface Input processor.
@@ -25,13 +28,40 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamElement;
 interface InputProcessor {
 
 	/**
-	 * Process element.
+	 * Process record.
 	 *
-	 * @param streamElement the stream element
+	 * @param streamRecord the stream record
+	 * @param channelIndex the channel index
+	 * @throws Exception the exception
+	 */
+	void processRecord(StreamRecord streamRecord, int channelIndex) throws Exception;
+
+	/**
+	 * Process latency marker.
+	 *
+	 * @param latencyMarker the latency marker
 	 * @param channelIndex  the channel index
 	 * @throws Exception the exception
 	 */
-	void processElement(StreamElement streamElement, int channelIndex) throws Exception;
+	void processLatencyMarker(LatencyMarker latencyMarker, int channelIndex) throws Exception;
+
+	/**
+	 * Process watermark.
+	 *
+	 * @param watermark    the watermark
+	 * @param channelIndex the channel index
+	 * @throws Exception the exception
+	 */
+	void processWatermark(Watermark watermark, int channelIndex) throws Exception;
+
+	/**
+	 * Process stream status.
+	 *
+	 * @param streamStatus the stream status
+	 * @param channelIndex the channel index
+	 * @throws Exception the exception
+	 */
+	void processStreamStatus(StreamStatus streamStatus, int channelIndex) throws Exception;
 
 	/**
 	 * End input.

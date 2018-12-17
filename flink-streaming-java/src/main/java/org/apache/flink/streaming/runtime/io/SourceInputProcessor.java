@@ -22,6 +22,8 @@ import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.streamstatus.StatusWatermarkValve;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
 import org.apache.flink.streaming.runtime.streamstatus.StreamStatusSubMaintainer;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -29,9 +31,13 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 /**
  * The type Source input processor.
  */
-class SourceInputProcessor extends AbstractInputProcessor {
+class SourceInputProcessor implements InputProcessor, StatusWatermarkValve.ValveOutputHandler {
 
 	private final OneInputStreamOperator sourceOperatorProxy;
+
+	private final StatusWatermarkValve statusWatermarkValve;
+
+	private final StreamStatusSubMaintainer streamStatusSubMaintainer;
 
 	/**
 	 * Instantiates a new Source input processor.
@@ -49,19 +55,31 @@ class SourceInputProcessor extends AbstractInputProcessor {
 		TaskMetricGroup taskMetricGroup,
 		int channelCount) {
 
-		super(streamStatusSubMaintainer, checkpointLock, taskMetricGroup, channelCount);
+		this.streamStatusSubMaintainer = checkNotNull(streamStatusSubMaintainer);
+
+		this.statusWatermarkValve = new StatusWatermarkValve(channelCount, this);
 
 		this.sourceOperatorProxy = checkNotNull(sourceOperatorProxy);
 	}
 
 	@Override
-	void processRecord(StreamRecord streamRecord) throws Exception {
+	public void processRecord(StreamRecord streamRecord, int channelIndex) throws Exception {
 		throw new UnsupportedOperationException("SourceInputProcessor should not process record");
 	}
 
 	@Override
-	void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
+	public void processLatencyMarker(LatencyMarker latencyMarker, int channelIndex) throws Exception {
 		throw new UnsupportedOperationException("SourceInputProcessor should not process latency marker");
+	}
+
+	@Override
+	public void processWatermark(Watermark watermark, int channelIndex) throws Exception {
+		throw new UnsupportedOperationException("SourceInputProcessor should not process watermark");
+	}
+
+	@Override
+	public void processStreamStatus(StreamStatus streamStatus, int channelIndex) throws Exception {
+		throw new UnsupportedOperationException("SourceInputProcessor should not process stream status");
 	}
 
 	@Override
@@ -72,6 +90,16 @@ class SourceInputProcessor extends AbstractInputProcessor {
 	@Override
 	public void handleWatermark(Watermark watermark) {
 		throw new UnsupportedOperationException("SourceInputProcessor should not process watermark");
+	}
+
+	@Override
+	public void handleStreamStatus(StreamStatus streamStatus) {
+		streamStatusSubMaintainer.updateStreamStatus(streamStatus);
+	}
+
+	@Override
+	public void release() {
+		streamStatusSubMaintainer.release();
 	}
 }
 
