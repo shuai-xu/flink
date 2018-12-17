@@ -21,6 +21,7 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.runtime.jobgraph.EdgeID;
+import org.apache.flink.runtime.operators.DamBehavior;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
 import org.apache.flink.util.OutputTag;
 
@@ -71,16 +72,21 @@ public class StreamEdge implements Serializable {
 	 */
 	private DataExchangeMode dataExchangeMode;
 
+	/**
+	 * The {@link DamBehavior} of the source operator on this {@link StreamEdge}.
+	 */
+	private final DamBehavior damBehavior;
+
 	@VisibleForTesting
 	public StreamEdge(StreamNode sourceVertex, StreamNode targetVertex, int typeNumber,
 			List<String> selectedNames, StreamPartitioner<?> outputPartitioner, OutputTag outputTag) {
 		this(sourceVertex, targetVertex, typeNumber, selectedNames, outputPartitioner, outputTag,
-			DataExchangeMode.PIPELINED);
+			DataExchangeMode.PIPELINED, DamBehavior.PIPELINED);
 	}
 
 	public StreamEdge(StreamNode sourceVertex, StreamNode targetVertex, int typeNumber,
 			List<String> selectedNames, StreamPartitioner<?> outputPartitioner, OutputTag outputTag,
-			DataExchangeMode dataExchangeMode) {
+			DataExchangeMode dataExchangeMode, DamBehavior damBehavior) {
 		this.sourceId = sourceVertex.getId();
 		this.targetId = targetVertex.getId();
 		this.typeNumber = typeNumber;
@@ -88,6 +94,7 @@ public class StreamEdge implements Serializable {
 		this.outputPartitioner = outputPartitioner;
 		this.outputTag = outputTag;
 		this.dataExchangeMode = dataExchangeMode;
+		this.damBehavior = damBehavior;
 
 		this.edgeID = new EdgeID();
 
@@ -127,11 +134,16 @@ public class StreamEdge implements Serializable {
 		return dataExchangeMode;
 	}
 
+	public DamBehavior getDamBehavior() {
+		return this.damBehavior;
+	}
+
 	public void setPartitioner(StreamPartitioner<?> partitioner) {
 		this.outputPartitioner = partitioner;
 	}
 
-	public void setDataExchangeMode(DataExchangeMode dataExchangeMode) {
+	@VisibleForTesting
+	void setDataExchangeMode(DataExchangeMode dataExchangeMode) {
 		this.dataExchangeMode = dataExchangeMode;
 	}
 

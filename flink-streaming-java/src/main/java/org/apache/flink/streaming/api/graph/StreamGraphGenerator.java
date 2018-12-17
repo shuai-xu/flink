@@ -351,7 +351,7 @@ public class StreamGraphGenerator {
 
 		for (int inputId : resultIds) {
 			int virtualId = StreamTransformation.getNewNodeId();
-			streamGraph.addVirtualSideOutputNode(inputId, virtualId, sideOutput.getOutputTag());
+			streamGraph.addVirtualSideOutputNode(inputId, virtualId, sideOutput.getOutputTag(), sideOutput.getDamBehavior());
 			virtualResultIds.add(virtualId);
 		}
 		return virtualResultIds;
@@ -605,6 +605,7 @@ public class StreamGraphGenerator {
 
 		streamGraph.setParallelism(transform.getId(), transform.getParallelism());
 		streamGraph.setMaxParallelism(transform.getId(), transform.getMaxParallelism());
+		streamGraph.setMainOutputDamBehavior(transform.getId(), transform.getDamBehavior());
 
 		for (Integer inputId: inputIds) {
 			streamGraph.addEdge(inputId, transform.getId(), 0);
@@ -651,6 +652,7 @@ public class StreamGraphGenerator {
 
 		streamGraph.setParallelism(transform.getId(), transform.getParallelism());
 		streamGraph.setMaxParallelism(transform.getId(), transform.getMaxParallelism());
+		streamGraph.setMainOutputDamBehavior(transform.getId(), transform.getDamBehavior());
 
 		for (Integer inputId: inputIds1) {
 			streamGraph.addEdge(inputId,

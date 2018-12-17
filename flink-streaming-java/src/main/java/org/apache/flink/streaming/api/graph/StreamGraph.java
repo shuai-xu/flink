@@ -18,6 +18,7 @@
 package org.apache.flink.streaming.api.graph;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.api.common.io.InputFormat;
@@ -36,6 +37,7 @@ import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
+import org.apache.flink.runtime.operators.DamBehavior;
 import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.collector.selector.OutputSelector;
@@ -75,6 +77,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -100,8 +103,9 @@ public class StreamGraph extends StreamingPlan {
 	private Set<Integer> sources;
 	private Set<Integer> sinks;
 	private Map<Integer, Tuple2<Integer, List<String>>> virtualSelectNodes;
-	private Map<Integer, Tuple2<Integer, OutputTag>> virtualSideOutputNodes;
+	private Map<Integer, Tuple3<Integer, OutputTag, DamBehavior>> virtualSideOutputNodes;
 	private Map<Integer, Tuple3<Integer, StreamPartitioner<?>, DataExchangeMode>> virtualPartitionNodes;
+	private Map<Integer, DamBehavior> mainOutputDamBehaviors;
 
 	protected Map<Integer, String> vertexIDtoBrokerID;
 	protected Map<Integer, Long> vertexIDtoLoopTimeout;
@@ -151,6 +155,7 @@ public class StreamGraph extends StreamingPlan {
 		sources = new HashSet<>();
 		sinks = new HashSet<>();
 		cachedFiles = new ArrayList<>();
+		mainOutputDamBehaviors = new HashMap<>();
 	}
 
 	public ExecutionConfig getExecutionConfig() {
@@ -379,8 +384,9 @@ public class StreamGraph extends StreamingPlan {
 	 * @param originalId ID of the node that should be connected to.
 	 * @param virtualId ID of the virtual node.
 	 * @param outputTag The selected side-output {@code OutputTag}.
+	 * @param damBehavior The {@link DamBehavior} of the upstream operator on the selected side-output.
 	 */
-	public void addVirtualSideOutputNode(Integer originalId, Integer virtualId, OutputTag outputTag) {
+	public void addVirtualSideOutputNode(Integer originalId, Integer virtualId, OutputTag outputTag, DamBehavior damBehavior) {
 
 		if (virtualSideOutputNodes.containsKey(virtualId)) {
 			throw new IllegalStateException("Already has virtual output node with id " + virtualId);
@@ -391,21 +397,21 @@ public class StreamGraph extends StreamingPlan {
 		// to read a side output from an operation with a different type for the same side output
 		// id.
 
-		for (Tuple2<Integer, OutputTag> tag : virtualSideOutputNodes.values()) {
+		for (Tuple3<Integer, OutputTag, DamBehavior> tag : virtualSideOutputNodes.values()) {
 			if (!tag.f0.equals(originalId)) {
 				// different source operator
 				continue;
 			}
 
 			if (tag.f1.getId().equals(outputTag.getId()) &&
-					!tag.f1.getTypeInfo().equals(outputTag.getTypeInfo())) {
+					(!tag.f1.getTypeInfo().equals(outputTag.getTypeInfo()) || !Objects.equals(tag.f2, damBehavior))) {
 				throw new IllegalArgumentException("Trying to add a side output for the same " +
 						"side-output id with a different type. This is not allowed. Side-output ID: " +
 						tag.f1.getId());
 			}
 		}
 
-		virtualSideOutputNodes.put(virtualId, new Tuple2<>(originalId, outputTag));
+		virtualSideOutputNodes.put(virtualId, new Tuple3<>(originalId, outputTag, damBehavior));
 	}
 
 	/**
@@ -429,6 +435,10 @@ public class StreamGraph extends StreamingPlan {
 		}
 
 		virtualPartitionNodes.put(virtualId, new Tuple3<>(originalId, partitioner, dataExchangeMode));
+	}
+
+	void setMainOutputDamBehavior(Integer id, DamBehavior damBehavior) {
+		mainOutputDamBehaviors.put(id, damBehavior);
 	}
 
 	/**
@@ -457,14 +467,16 @@ public class StreamGraph extends StreamingPlan {
 			null,
 			new ArrayList<String>(),
 			null,
+			null,
 			null);
-
 	}
 
-	public void addEdge(Integer upStreamVertexID,
+	@VisibleForTesting
+	void addEdge(Integer upStreamVertexID,
 		Integer downStreamVertexID,
 		int typeNumber,
-		@Nullable DataExchangeMode dataExchangeMode) {
+		@Nullable DataExchangeMode dataExchangeMode,
+		@Nullable DamBehavior damBehavior) {
 
 		addEdgeInternal(upStreamVertexID,
 				downStreamVertexID,
@@ -472,7 +484,8 @@ public class StreamGraph extends StreamingPlan {
 				null,
 				new ArrayList<String>(),
 				null,
-				dataExchangeMode);
+				dataExchangeMode,
+				damBehavior);
 
 	}
 
@@ -482,15 +495,20 @@ public class StreamGraph extends StreamingPlan {
 			StreamPartitioner<?> partitioner,
 			List<String> outputNames,
 			OutputTag outputTag,
-			DataExchangeMode dataExchangeMode) {
+			DataExchangeMode dataExchangeMode,
+			DamBehavior damBehavior) {
 
 		if (virtualSideOutputNodes.containsKey(upStreamVertexID)) {
 			int virtualId = upStreamVertexID;
 			upStreamVertexID = virtualSideOutputNodes.get(virtualId).f0;
 			if (outputTag == null) {
 				outputTag = virtualSideOutputNodes.get(virtualId).f1;
+				damBehavior = virtualSideOutputNodes.get(virtualId).f2;
 			}
-			addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, null, outputTag, dataExchangeMode);
+			if (damBehavior == null) {
+				damBehavior = DamBehavior.PIPELINED;
+			}
+			addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, null, outputTag, dataExchangeMode, damBehavior);
 		} else if (virtualSelectNodes.containsKey(upStreamVertexID)) {
 			int virtualId = upStreamVertexID;
 			upStreamVertexID = virtualSelectNodes.get(virtualId).f0;
@@ -498,17 +516,15 @@ public class StreamGraph extends StreamingPlan {
 				// selections that happen downstream override earlier selections
 				outputNames = virtualSelectNodes.get(virtualId).f1;
 			}
-			addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, outputNames, outputTag, dataExchangeMode);
+			addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, outputNames, outputTag, dataExchangeMode, null);
 		} else if (virtualPartitionNodes.containsKey(upStreamVertexID)) {
 			int virtualId = upStreamVertexID;
 			upStreamVertexID = virtualPartitionNodes.get(virtualId).f0;
 			if (partitioner == null) {
 				partitioner = virtualPartitionNodes.get(virtualId).f1;
-			}
-			if (dataExchangeMode == null) {
 				dataExchangeMode = virtualPartitionNodes.get(virtualId).f2;
 			}
-			addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, outputNames, outputTag, dataExchangeMode);
+			addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, outputNames, outputTag, dataExchangeMode, null);
 		} else {
 			StreamNode upstreamNode = getStreamNode(upStreamVertexID);
 			StreamNode downstreamNode = getStreamNode(downStreamVertexID);
@@ -536,11 +552,22 @@ public class StreamGraph extends StreamingPlan {
 				}
 			}
 
+			// It must be a main-output edge.
+			if (damBehavior == null) {
+				damBehavior = mainOutputDamBehaviors.get(upStreamVertexID);
+
+				// If no dam behavior was specified, use the default value.
+				if (damBehavior == null) {
+					damBehavior = DamBehavior.PIPELINED;
+				}
+			}
+
 			// If no partition type was specified, use the default value.
 			if (dataExchangeMode == null) {
 				dataExchangeMode = DataExchangeMode.AUTO;
 			}
-			StreamEdge edge = new StreamEdge(upstreamNode, downstreamNode, typeNumber, outputNames, partitioner, outputTag, dataExchangeMode);
+
+			StreamEdge edge = new StreamEdge(upstreamNode, downstreamNode, typeNumber, outputNames, partitioner, outputTag, dataExchangeMode, damBehavior);
 
 			getStreamNode(edge.getSourceId()).addOutEdge(edge);
 			getStreamNode(edge.getTargetId()).addInEdge(edge);

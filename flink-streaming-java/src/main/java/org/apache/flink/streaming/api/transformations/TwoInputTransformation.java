@@ -21,6 +21,7 @@ package org.apache.flink.streaming.api.transformations;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.runtime.operators.DamBehavior;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 
@@ -51,6 +52,11 @@ public class TwoInputTransformation<IN1, IN2, OUT> extends StreamTransformation<
 	private KeySelector<IN2, ?> stateKeySelector2;
 
 	private TypeInformation<?> stateKeyType;
+
+	/**
+	 * The {@link DamBehavior} of the operator on main output.
+	 */
+	private DamBehavior damBehavior;
 
 	/**
 	 * Creates a new {@code TwoInputTransformation} from the given inputs and operator.
@@ -164,4 +170,11 @@ public class TwoInputTransformation<IN1, IN2, OUT> extends StreamTransformation<
 		operator.setChainingStrategy(strategy);
 	}
 
+	public DamBehavior getDamBehavior() {
+		return this.damBehavior;
+	}
+
+	public void setDamBehavior(DamBehavior damBehavior) {
+		this.damBehavior = damBehavior;
+	}
 }

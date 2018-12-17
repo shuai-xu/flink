@@ -19,6 +19,7 @@
 package org.apache.flink.streaming.api.graph;
 
 import org.apache.flink.api.common.ExecutionConfig;
+import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.functions.KeySelector;
@@ -27,10 +28,12 @@ import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.GlobalConfiguration;
+import org.apache.flink.runtime.operators.DamBehavior;
 import org.apache.flink.streaming.api.datastream.ConnectedStreams;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
+import org.apache.flink.streaming.api.datastream.SplitStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.co.CoMapFunction;
 import org.apache.flink.streaming.api.functions.sink.DiscardingSink;
@@ -41,6 +44,9 @@ import org.apache.flink.streaming.api.operators.Output;
 import org.apache.flink.streaming.api.operators.OutputTypeConfigurable;
 import org.apache.flink.streaming.api.operators.StreamSource;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
+import org.apache.flink.streaming.api.transformations.OneInputTransformation;
+import org.apache.flink.streaming.api.transformations.SideOutputTransformation;
+import org.apache.flink.streaming.api.transformations.TwoInputTransformation;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.partitioner.BroadcastPartitioner;
 import org.apache.flink.streaming.runtime.partitioner.GlobalPartitioner;
@@ -53,6 +59,7 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.tasks.StreamTask;
 import org.apache.flink.streaming.util.EvenOddOutputSelector;
 import org.apache.flink.streaming.util.NoOpIntMap;
+import org.apache.flink.util.OutputTag;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -580,6 +587,36 @@ public class StreamGraphGeneratorTest {
 		}
 	}
 
+	@Test
+	public void testDamBehavior() {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+		DataStream<Integer> source = env.fromElements(1, 10);
+
+		DataStream<Integer> map1 = source.map(new NoOpIntMap());
+		((OneInputTransformation) map1.getTransformation()).setDamBehavior(DamBehavior.MATERIALIZING);
+		DataStream<Integer> filter1 = map1.filter(new NoOpIntFilter());
+
+		DataStream<Integer> sideOutput = ((SingleOutputStreamOperator<Integer>) map1)
+				.getSideOutput(new OutputTag<Integer>("test tag"){});
+		((SideOutputTransformation) sideOutput.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
+		DataStream<Integer> filter2 = sideOutput.filter(new NoOpIntFilter());
+
+		DataStream<Integer> map2 = filter1.connect(filter2).map(new NoOpIntCoMap());
+		((TwoInputTransformation) map2.getTransformation()).setDamBehavior(DamBehavior.MATERIALIZING);
+		SplitStream<Integer> spit1 = map2.split((o) -> null);
+		DataStreamSink<Integer> sink1 = spit1.select("select1").addSink(new DiscardingSink<>());
+		DataStreamSink<Integer> sink2 = spit1.select("select2").addSink(new DiscardingSink<>());
+
+		StreamGraph graph = env.getStreamGraph();
+
+		assertEquals(DamBehavior.PIPELINED, graph.getStreamEdges(source.getId(), map1.getId()).get(0).getDamBehavior());
+		assertEquals(DamBehavior.MATERIALIZING, graph.getStreamEdges(map1.getId(), filter1.getId()).get(0).getDamBehavior());
+		assertEquals(DamBehavior.FULL_DAM, graph.getStreamEdges(map1.getId(), filter2.getId()).get(0).getDamBehavior());
+		assertEquals(DamBehavior.MATERIALIZING, graph.getStreamEdges(map2.getId(), sink1.getId()).get(0).getDamBehavior());
+		assertEquals(DamBehavior.MATERIALIZING, graph.getStreamEdges(map2.getId(), sink1.getId()).get(0).getDamBehavior());
+	}
+
 	private static class OutputTypeConfigurableOperationWithTwoInputs
 			extends AbstractStreamOperator<Integer>
 			implements TwoInputStreamOperator<Integer, Integer, Integer>, OutputTypeConfigurable<Integer> {
@@ -667,5 +704,13 @@ public class StreamGraphGeneratorTest {
 			return value;
 		}
 
+	}
+
+	static class NoOpIntFilter implements FilterFunction<Integer> {
+
+		@Override
+		public boolean filter(Integer value) throws Exception {
+			return false;
+		}
 	}
 }
