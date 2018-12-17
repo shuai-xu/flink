@@ -30,7 +30,9 @@ import org.apache.flink.streaming.api.operators.StreamOperator;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Class representing the operators in the streaming programs, with all their properties.
@@ -72,6 +74,8 @@ public class StreamNode implements Serializable {
 
 	private String transformationUID;
 	private String userHash;
+
+	private Map<StreamEdge, ReadPriority> readPriorityHintMap = new HashMap<>();
 
 	private final Configuration customConfiguration = new Configuration();
 
@@ -306,6 +310,14 @@ public class StreamNode implements Serializable {
 		this.userHash = userHash;
 	}
 
+	public ReadPriority getReadPriorityHint(StreamEdge inEdge) {
+		return readPriorityHintMap.get(inEdge);
+	}
+
+	public void setReadPriorityHint(StreamEdge inEdge, ReadPriority priority) {
+		readPriorityHintMap.put(inEdge, priority);
+	}
+
 	public Configuration getCustomConfiguration() {
 		return this.customConfiguration;
 	}
@@ -332,5 +344,11 @@ public class StreamNode implements Serializable {
 	@Override
 	public int hashCode() {
 		return id;
+	}
+
+	enum ReadPriority {
+		HIGHER,
+
+		LOWER
 	}
 }

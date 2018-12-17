@@ -446,6 +446,10 @@ public class StreamGraph extends StreamingPlan {
 		mainOutputDamBehaviors.put(id, damBehavior);
 	}
 
+	void setReadPriorityHint(Integer vertexID, StreamEdge inEdge, StreamNode.ReadPriority priority) {
+		getStreamNode(vertexID).setReadPriorityHint(inEdge, priority);
+	}
+
 	/**
 	 * Determines the slot sharing group of an operation across virtual nodes.
 	 */

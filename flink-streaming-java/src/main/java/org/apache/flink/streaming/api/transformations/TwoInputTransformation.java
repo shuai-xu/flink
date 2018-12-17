@@ -59,6 +59,11 @@ public class TwoInputTransformation<IN1, IN2, OUT> extends StreamTransformation<
 	private DamBehavior damBehavior;
 
 	/**
+	 * The hint for the static order in which Input1 and Input2 are read.
+	 */
+	private ReadOrder readOrderHint;
+
+	/**
 	 * Creates a new {@code TwoInputTransformation} from the given inputs and operator.
 	 *
 	 * @param input1 The first input {@code StreamTransformation}
@@ -176,5 +181,30 @@ public class TwoInputTransformation<IN1, IN2, OUT> extends StreamTransformation<
 
 	public void setDamBehavior(DamBehavior damBehavior) {
 		this.damBehavior = damBehavior;
+	}
+
+	public ReadOrder getReadOrderHint() {
+		return this.readOrderHint;
+	}
+
+	public void setReadOrderHint(ReadOrder order) {
+		this.readOrderHint = order;
+	}
+
+	/**
+	 * Defines the static order in which operators read Input1 and Input2.
+	 */
+	public enum ReadOrder {
+		/**
+		 * The operator read Input1 firstly and does not read Input2 until
+		 * Input1 is fully read.
+		 */
+		INPUT1_FIRST,
+
+		/**
+		 * The operator read Input2 firstly and does not read Input1 until
+		 * Input2 is fully read.
+		 */
+		INPUT2_FIRST
 	}
 }

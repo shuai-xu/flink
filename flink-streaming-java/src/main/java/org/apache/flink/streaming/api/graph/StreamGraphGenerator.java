@@ -35,6 +35,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.OutputFormatSinkFunction;
 import org.apache.flink.streaming.api.functions.source.InputFormatSourceFunction;
 import org.apache.flink.streaming.api.functions.source.InputFormatSourceFunctionV2;
+import org.apache.flink.streaming.api.graph.StreamNode.ReadPriority;
 import org.apache.flink.streaming.api.transformations.CoFeedbackTransformation;
 import org.apache.flink.streaming.api.transformations.FeedbackTransformation;
 import org.apache.flink.streaming.api.transformations.OneInputTransformation;
@@ -61,6 +62,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.apache.flink.streaming.api.transformations.TwoInputTransformation.ReadOrder;
 
 /**
  * A generator that generates a {@link StreamGraph} from a graph of
@@ -430,6 +433,13 @@ public class StreamGraphGenerator {
 		itSink.setSlotSharingGroup(slotSharingGroup);
 		itSource.setSlotSharingGroup(slotSharingGroup);
 
+		List<StreamEdge> inEdges = streamGraph.getStreamNode(itSink.getId()).getInEdges();
+		if (inEdges.size() > 1) {
+			for (StreamEdge inEdge : inEdges) {
+				streamGraph.setReadPriorityHint(itSink.getId(), inEdge, ReadPriority.HIGHER);
+			}
+		}
+
 		return resultIds;
 	}
 
@@ -492,6 +502,13 @@ public class StreamGraphGenerator {
 
 		itSink.setSlotSharingGroup(slotSharingGroup);
 		itSource.setSlotSharingGroup(slotSharingGroup);
+
+		List<StreamEdge> inEdges = streamGraph.getStreamNode(itSink.getId()).getInEdges();
+		if (inEdges.size() > 1) {
+			for (StreamEdge inEdge : inEdges) {
+				streamGraph.setReadPriorityHint(itSink.getId(), inEdge, ReadPriority.HIGHER);
+			}
+		}
 
 		return Collections.singleton(itSource.getId());
 	}
@@ -571,6 +588,13 @@ public class StreamGraphGenerator {
 			streamGraph.setOneInputStateKey(sink.getId(), sink.getStateKeySelector(), keySerializer);
 		}
 
+		List<StreamEdge> inEdges = streamGraph.getStreamNode(sink.getId()).getInEdges();
+		if (inEdges.size() > 1) {
+			for (StreamEdge inEdge : inEdges) {
+				streamGraph.setReadPriorityHint(sink.getId(), inEdge, ReadPriority.HIGHER);
+			}
+		}
+
 		return Collections.emptyList();
 	}
 
@@ -609,6 +633,13 @@ public class StreamGraphGenerator {
 
 		for (Integer inputId: inputIds) {
 			streamGraph.addEdge(inputId, transform.getId(), 0);
+		}
+
+		List<StreamEdge> inEdges = streamGraph.getStreamNode(transform.getId()).getInEdges();
+		if (inEdges.size() > 1) {
+			for (StreamEdge inEdge : inEdges) {
+				streamGraph.setReadPriorityHint(transform.getId(), inEdge, ReadPriority.HIGHER);
+			}
 		}
 
 		return Collections.singleton(transform.getId());
@@ -654,11 +685,18 @@ public class StreamGraphGenerator {
 		streamGraph.setMaxParallelism(transform.getId(), transform.getMaxParallelism());
 		streamGraph.setMainOutputDamBehavior(transform.getId(), transform.getDamBehavior());
 
+		Map<Integer, ReadPriority> readPriorityHintMap = new HashMap<>();
+		ReadOrder readOrderHint = transform.getReadOrderHint();
 		for (Integer inputId: inputIds1) {
 			streamGraph.addEdge(inputId,
 					transform.getId(),
 					1
 			);
+
+			if (readOrderHint != null) {
+				readPriorityHintMap.put(inputId,
+						readOrderHint == ReadOrder.INPUT1_FIRST ? ReadPriority.HIGHER : ReadPriority.LOWER);
+			}
 		}
 
 		for (Integer inputId: inputIds2) {
@@ -666,6 +704,18 @@ public class StreamGraphGenerator {
 					transform.getId(),
 					2
 			);
+
+			if (readOrderHint != null) {
+				readPriorityHintMap.put(inputId,
+						readOrderHint == ReadOrder.INPUT2_FIRST ? ReadPriority.HIGHER : ReadPriority.LOWER);
+			}
+		}
+
+		if (readPriorityHintMap.size() > 0) {
+			int vertexID = transform.getId();
+			for (StreamEdge inEdge : streamGraph.getStreamNode(vertexID).getInEdges()) {
+				streamGraph.setReadPriorityHint(vertexID, inEdge, readPriorityHintMap.get(inEdge.getSourceId()));
+			}
 		}
 
 		return Collections.singleton(transform.getId());

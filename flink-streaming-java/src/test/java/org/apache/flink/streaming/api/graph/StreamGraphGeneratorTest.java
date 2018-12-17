@@ -70,6 +70,8 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.apache.flink.streaming.api.graph.StreamNode.ReadPriority;
+import static org.apache.flink.streaming.api.transformations.TwoInputTransformation.ReadOrder;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -615,6 +617,39 @@ public class StreamGraphGeneratorTest {
 		assertEquals(DamBehavior.FULL_DAM, graph.getStreamEdges(map1.getId(), filter2.getId()).get(0).getDamBehavior());
 		assertEquals(DamBehavior.MATERIALIZING, graph.getStreamEdges(map2.getId(), sink1.getId()).get(0).getDamBehavior());
 		assertEquals(DamBehavior.MATERIALIZING, graph.getStreamEdges(map2.getId(), sink1.getId()).get(0).getDamBehavior());
+	}
+
+	@Test
+	public void testReadPriorityHint() {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+		DataStream<Integer> source1 = env.fromElements(1, 10);
+		DataStream<Integer> source2 = env.fromElements(10, 20);
+
+		DataStream<Integer> map1 = source1.union(source2).map(new NoOpIntMap());
+		DataStream<Integer> filter1 = source2.filter(new NoOpIntFilter());
+
+		DataStream<Integer> map2 = map1.connect(filter1).map(new NoOpIntCoMap());
+		((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
+
+		DataStreamSink<Integer> sink1 = map1.union(map2).addSink(new DiscardingSink<>());
+
+		StreamGraph graph = env.getStreamGraph();
+
+		StreamNode map1Node = graph.getStreamNode(map1.getId());
+		assertEquals(ReadPriority.HIGHER, map1Node.getReadPriorityHint(graph.getStreamEdges(source1.getId(), map1.getId()).get(0)));
+		assertEquals(ReadPriority.HIGHER, map1Node.getReadPriorityHint(graph.getStreamEdges(source2.getId(), map1.getId()).get(0)));
+
+		assertEquals(null, graph.getStreamNode(filter1.getId())
+				.getReadPriorityHint(graph.getStreamEdges(source2.getId(), filter1.getId()).get(0)));
+
+		StreamNode map2Node = graph.getStreamNode(map2.getId());
+		assertEquals(ReadPriority.LOWER, map2Node.getReadPriorityHint(graph.getStreamEdges(map1.getId(), map2.getId()).get(0)));
+		assertEquals(ReadPriority.HIGHER, map2Node.getReadPriorityHint(graph.getStreamEdges(filter1.getId(), map2.getId()).get(0)));
+
+		StreamNode sink1Node = graph.getStreamNode(sink1.getId());
+		assertEquals(ReadPriority.HIGHER, sink1Node.getReadPriorityHint(graph.getStreamEdges(map1.getId(), sink1.getId()).get(0)));
+		assertEquals(ReadPriority.HIGHER, sink1Node.getReadPriorityHint(graph.getStreamEdges(map2.getId(), sink1.getId()).get(0)));
 	}
 
 	private static class OutputTypeConfigurableOperationWithTwoInputs
