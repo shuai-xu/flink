@@ -20,7 +20,6 @@ package org.apache.flink.table.runtime.rank
 import java.lang.Long
 import java.util
 import java.util.{List => JList}
-
 import org.apache.calcite.sql.SqlKind
 import org.apache.flink.api.common.functions.Comparator
 import org.apache.flink.api.common.state.{MapStateDescriptor, ValueStateDescriptor}
@@ -32,12 +31,13 @@ import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.{Compiler, GeneratedSorter}
 import org.apache.flink.table.plan.util.RankRange
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.runtime.aggregate.LazyBaseRowComparator
 import org.apache.flink.table.runtime.functions.ExecutionContext
 import org.apache.flink.table.runtime.functions.ProcessFunction.Context
 import org.apache.flink.table.runtime.sort.RecordComparator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.{BaseRowUtil, Logging, StateUtil}
+import org.apache.flink.table.util.{Logging, StateUtil}
 import org.apache.flink.util.Collector
 
 class RetractRankFunction(

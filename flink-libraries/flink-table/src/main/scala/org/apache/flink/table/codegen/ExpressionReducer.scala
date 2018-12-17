@@ -19,7 +19,6 @@
 package org.apache.flink.table.codegen
 
 import java.io.File
-import java.util
 
 import org.apache.calcite.avatica.util.ByteString
 import org.apache.calcite.plan.RelOptPlanner
@@ -50,8 +49,8 @@ class ExpressionReducer(config: TableConfig)
 
   override def reduce(
     rexBuilder: RexBuilder,
-    constExprs: util.List[RexNode],
-    reducedValues: util.List[RexNode]): Unit = {
+    constExprs: java.util.List[RexNode],
+    reducedValues: java.util.List[RexNode]): Unit = {
 
     val literals = constExprs.asScala.map(e => (e.getType.getSqlTypeName, e)).flatMap {
 

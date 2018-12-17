@@ -23,10 +23,10 @@ import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.codegen._
+import org.apache.flink.table.dataformat.util.BinaryRowUtil
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.typeutils.TypeCheckUtils.validateEqualsHashCode
 import org.apache.flink.table.typeutils.{BaseRowSerializer, BaseRowTypeInfo}
-import org.apache.flink.table.util.BinaryRowUtil
 
 abstract class BaseRowKeySelector
   extends KeySelector[BaseRow, BaseRow] with ResultTypeQueryable[BaseRow]

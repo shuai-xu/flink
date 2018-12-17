@@ -23,7 +23,7 @@ import org.apache.flink.table.codegen.CodeGenUtils.newName
 import org.apache.flink.table.codegen.CodeGeneratorContext.BASE_ROW
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.util.BinaryRowUtil
+import org.apache.flink.table.dataformat.util.BinaryRowUtil
 
 /**
   * CodeGenerator for projection.

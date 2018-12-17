@@ -21,7 +21,7 @@ import org.apache.flink.table.api.window.TimeWindow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.runtime.functions.BuildInScalarFunctions;
-import org.apache.flink.table.util.RowIterator;
+import org.apache.flink.table.runtime.util.RowIterator;
 
 import org.junit.Test;
 

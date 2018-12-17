@@ -20,7 +20,7 @@ package org.apache.flink.table.temptable;
 
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
-import org.apache.flink.table.util.BinaryRowUtil;
+import org.apache.flink.table.dataformat.util.BinaryRowUtil;
 
 import org.junit.Assert;
 import org.junit.Test;

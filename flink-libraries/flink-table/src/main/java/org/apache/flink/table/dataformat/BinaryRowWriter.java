@@ -19,7 +19,7 @@ package org.apache.flink.table.dataformat;
 
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
-import org.apache.flink.table.util.BitSetUtil;
+import org.apache.flink.table.dataformat.util.BitSetUtil;
 
 /**
  * Use the special format to write data to a {@link MemorySegment} (its capacity grows

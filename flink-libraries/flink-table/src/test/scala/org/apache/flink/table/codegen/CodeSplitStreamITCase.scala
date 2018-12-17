@@ -18,8 +18,6 @@
 
 package org.apache.flink.table.codegen
 
-
-import java.util
 import java.util.Collections
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
@@ -299,7 +297,7 @@ class AsyncDimensionTableSource extends DimensionTableSource[BaseRow] {
     asyncFetcher
   }
 
-  override def getIndexes: util.Collection[IndexKey] = {
+  override def getIndexes: java.util.Collection[IndexKey] = {
     Collections.singleton(IndexKey.of(true, 1)) // primary key(id)
   }
 

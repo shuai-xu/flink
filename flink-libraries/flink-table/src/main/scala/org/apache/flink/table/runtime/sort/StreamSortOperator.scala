@@ -31,10 +31,10 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.table.api.{TableException, Types}
 import org.apache.flink.table.codegen.{CodeGenUtils, GeneratedSorter}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.sort.{BinaryInMemorySortBuffer, NormalizedKeyComputer, RecordComparator}
+import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.runtime.util.StreamRecordCollector
 import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowSerializer, BaseRowTypeInfo, BinaryRowSerializer, TypeUtils}
-import org.apache.flink.table.util.{BaseRowUtil, Logging}
+import org.apache.flink.table.util.Logging
 
 import scala.collection.mutable
 

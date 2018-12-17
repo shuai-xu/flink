@@ -69,7 +69,7 @@ trait BatchExecAggregateCodeGen {
       lastKeyTerm: String): String = {
     s"""
        |$currentKeyTerm.getSizeInBytes() != $lastKeyTerm.getSizeInBytes() ||
-       |  !(org.apache.flink.table.util.BinaryRowUtil.byteArrayEquals(
+       |  !(org.apache.flink.table.dataformat.util.BinaryRowUtil.byteArrayEquals(
        |     $currentKeyTerm.getMemorySegment().getHeapMemory(),
        |     $lastKeyTerm.getMemorySegment().getHeapMemory(),
        |     $currentKeyTerm.getSizeInBytes()))

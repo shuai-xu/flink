@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.join.batch.hashtable;
 
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.table.dataformat.BinaryRow;
-import org.apache.flink.table.util.RowIterator;
+import org.apache.flink.table.runtime.util.RowIterator;
 import org.apache.flink.util.MathUtils;
 
 /**

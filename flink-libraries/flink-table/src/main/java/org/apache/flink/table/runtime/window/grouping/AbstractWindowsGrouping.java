@@ -22,7 +22,7 @@ import org.apache.flink.table.api.window.TimeWindow;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.runtime.functions.DateTimeFunctions;
-import org.apache.flink.table.util.RowIterator;
+import org.apache.flink.table.runtime.util.RowIterator;
 import org.apache.flink.util.Preconditions;
 
 import java.io.IOException;

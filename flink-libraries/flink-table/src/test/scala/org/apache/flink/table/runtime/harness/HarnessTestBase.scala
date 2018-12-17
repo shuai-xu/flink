@@ -20,7 +20,6 @@ package org.apache.flink.table.runtime.harness
 import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.{Comparator, Queue => JQueue}
-
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
@@ -35,11 +34,12 @@ import org.apache.flink.streaming.api.transformations.{OneInputTransformation, S
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.{KeyedOneInputStreamOperatorTestHarness, KeyedTwoInputStreamOperatorTestHarness, TestHarnessUtil}
+import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.runtime.utils.StreamingTestBase
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.BaseRowUtil
+
 import org.junit.runners.Parameterized
 
 import scala.collection.JavaConversions._

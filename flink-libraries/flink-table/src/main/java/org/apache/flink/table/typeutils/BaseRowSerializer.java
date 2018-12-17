@@ -43,7 +43,7 @@ import org.apache.flink.table.dataformat.BoxedWrapperRow;
 import org.apache.flink.table.dataformat.ColumnarRow;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.dataformat.NestedRow;
-import org.apache.flink.table.util.BinaryRowUtil;
+import org.apache.flink.table.dataformat.util.BinaryRowUtil;
 import org.apache.flink.types.CopyableValue;
 
 import java.io.IOException;

@@ -22,9 +22,9 @@ import org.apache.flink.streaming.api.transformations.{PartitionTransformation, 
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.connector.DefinedDistribution
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.runtime.BinaryHashPartitioner
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.BinaryHashPartitioner
 
 object SinkUtil {
 

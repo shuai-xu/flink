@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.hash;
+package org.apache.flink.table.runtime.util;
 
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
@@ -28,9 +28,8 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
-import org.apache.flink.table.runtime.util.BytesHashMap;
+import org.apache.flink.table.dataformat.util.BinaryRowUtil;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
-import org.apache.flink.table.util.BinaryRowUtil;
 import org.apache.flink.util.MutableObjectIterator;
 
 import org.junit.Assert;

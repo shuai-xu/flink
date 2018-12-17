@@ -20,7 +20,8 @@ package org.apache.flink.table.dataformat;
 
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
-import org.apache.flink.table.util.BinaryRowUtil;
+import org.apache.flink.table.dataformat.util.BinaryRowUtil;
+import org.apache.flink.table.dataformat.util.MultiSegUtil;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 

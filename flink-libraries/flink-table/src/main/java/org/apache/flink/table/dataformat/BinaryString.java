@@ -20,9 +20,10 @@ package org.apache.flink.table.dataformat;
 import org.apache.flink.api.common.typeinfo.TypeInfo;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
+import org.apache.flink.table.dataformat.util.BinaryRowUtil;
+import org.apache.flink.table.dataformat.util.MultiSegUtil;
+import org.apache.flink.table.runtime.util.StringUtf8Utils;
 import org.apache.flink.table.typeutils.BinaryStringTypeFactory;
-import org.apache.flink.table.util.BinaryRowUtil;
-import org.apache.flink.table.util.StringUtf8Utils;
 import org.apache.flink.table.util.hash.Murmur32;
 
 import com.esotericsoftware.kryo.Kryo;
@@ -36,6 +37,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 
@@ -1984,5 +1988,32 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 
 	public BinaryString hash(String algorithm) throws NoSuchAlgorithmException {
 		return hash(MessageDigest.getInstance(algorithm));
+	}
+
+	private static final List<BinaryString> TRUE_STRINGS =
+			Stream
+					.of("t", "true", "y", "yes", "1")
+					.map(BinaryString::fromString)
+					.peek(BinaryString::ensureEncoded)
+					.collect(Collectors.toList());
+
+	private static final List<BinaryString> FALSE_STRINGS =
+			Stream
+					.of("f", "false", "n", "no", "0")
+					.map(BinaryString::fromString)
+					.peek(BinaryString::ensureEncoded)
+					.collect(Collectors.toList());
+
+	/**
+	 * Decide boolean representation of a string.
+	 */
+	public Boolean toBooleanSQL() {
+		if (TRUE_STRINGS.contains(toLowerCase())) {
+			return true;
+		} else if (FALSE_STRINGS.contains(toLowerCase())) {
+			return false;
+		} else {
+			return null;
+		}
 	}
 }

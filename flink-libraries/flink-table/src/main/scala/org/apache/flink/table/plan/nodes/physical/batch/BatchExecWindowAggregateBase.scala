@@ -39,8 +39,8 @@ import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, T
 import org.apache.flink.table.plan.util.AggregateUtil.asLong
 import org.apache.flink.table.plan.util.{AggregateNameUtil, AggregateUtil}
 import org.apache.flink.table.runtime.functions.DateTimeFunctions
+import org.apache.flink.table.runtime.util.RowIterator
 import org.apache.flink.table.runtime.window.grouping.{AbstractWindowsGrouping, HeapWindowsGrouping}
-import org.apache.flink.table.util.RowIterator
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType

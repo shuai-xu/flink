@@ -22,7 +22,7 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.table.api.window.TimeWindow;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
-import org.apache.flink.table.util.BaseRowUtil;
+import org.apache.flink.table.dataformat.util.BaseRowUtil;
 
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;

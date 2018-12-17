@@ -24,6 +24,7 @@ import org.apache.flink.table.codegen.CodeGenUtils.newName
 import org.apache.flink.table.codegen.CodeGeneratorContext.BASE_ROW
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.dataformat.BinaryRow
+import org.apache.flink.table.dataformat.util.BinaryRowUtil
 import org.apache.flink.table.runtime.sort.{NormalizedKeyComputer, RecordComparator}
 
 import scala.collection.mutable
@@ -44,7 +45,7 @@ class SortCodeGenerator(
     val orders: Array[Boolean],
     val nullsIsLast: Array[Boolean]) {
 
-  val binaryRowUtil = "org.apache.flink.table.util.BinaryRowUtil"
+  val binaryRowUtil = "org.apache.flink.table.dataformat.util.BinaryRowUtil"
   val memorySegment = "org.apache.flink.core.memory.MemorySegment"
 
   /** Chunks for long, int, short, byte */
@@ -184,10 +185,10 @@ class SortCodeGenerator(
   def generatePutNormalizedKeys(numKeyBytes: Int): mutable.ArrayBuffer[String] = {
     /* Example generated code, for int:
     if (record.isNullAt(0)) {
-      org.apache.flink.table.util.BinaryRowUtil.minNormalizedKey(target, offset+0, 5);
+      org.apache.flink.table.dataformat.util.BinaryRowUtil.minNormalizedKey(target, offset+0, 5);
     } else {
       target.put(offset+0, (byte) 1);
-      org.apache.flink.table.util.BinaryRowUtil.putIntNormalizedKey(
+      org.apache.flink.table.dataformat.util.BinaryRowUtil.putIntNormalizedKey(
         record.getInt(0), target, offset+1, 4);
     }
      */
@@ -393,8 +394,7 @@ class SortCodeGenerator(
     boolean null0At2 = o2.isNullAt(0);
     int cmp0 = null0At1 && null0At2 ? 0 :
       (null0At1 ? -1 :
-        (null0At2 ? 1 :
-          org.apache.flink.table.util.BinaryRowUtil.compareInt(o1.getInt(0), o2.getInt(0))));
+        (null0At2 ? 1 : BinaryRowUtil.compareInt(o1.getInt(0), o2.getInt(0))));
     if (cmp0 != 0) {
       return cmp0;
     }
@@ -483,7 +483,7 @@ class SortCodeGenerator(
 
   /**
     * For compare$prefix() and put${prefix}NormalizedKey() of
-    * [[org.apache.flink.table.util.BinaryRowUtil]].
+    * [[BinaryRowUtil]].
     */
   def prefixGetFromBinaryRow(t: InternalType): String = t match {
     case DataTypes.INT => "Int"

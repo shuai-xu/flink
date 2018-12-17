@@ -19,11 +19,11 @@
 package org.apache.flink.table.runtime.`match`
 
 import java.util
-
 import org.apache.flink.cep.PatternSelectFunction
 import org.apache.flink.table.codegen.GeneratedPatternSelectFunction
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.util.{BaseRowUtil, Logging}
+import org.apache.flink.table.dataformat.util.BaseRowUtil
+import org.apache.flink.table.util.Logging
 
 /**
   * PatternSelectFunctionRunner with [[BaseRow]] input and [[BaseRow]] output.

@@ -23,8 +23,8 @@ import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.io.disk.RandomAccessInputView;
 import org.apache.flink.runtime.io.disk.RandomAccessOutputView;
 import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.dataformat.util.BinaryRowUtil;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
-import org.apache.flink.table.util.BinaryRowUtil;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Test;
@@ -35,7 +35,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.apache.flink.table.util.BinaryRowUtil.BYTE_ARRAY_BASE_OFFSET;
+import static org.apache.flink.table.dataformat.util.BinaryRowUtil.BYTE_ARRAY_BASE_OFFSET;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;

@@ -19,7 +19,7 @@ package org.apache.flink.table.dataformat;
 
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
-import org.apache.flink.table.util.StringUtf8Utils;
+import org.apache.flink.table.runtime.util.StringUtf8Utils;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;

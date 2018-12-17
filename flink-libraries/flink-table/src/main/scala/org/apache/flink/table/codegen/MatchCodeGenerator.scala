@@ -19,7 +19,6 @@
 package org.apache.flink.table.codegen
 
 import java.math.{BigDecimal => JBigDecimal}
-import java.util
 
 import org.apache.calcite.rel.RelCollation
 import org.apache.calcite.rel.core.AggregateCall
@@ -591,8 +590,8 @@ class MatchCodeGenerator(
   }
 
   def generateSelectOutputExpression(
-    partitionKeys: util.List[RexNode],
-    measures: util.Map[String, RexNode],
+    partitionKeys: java.util.List[RexNode],
+    measures: java.util.Map[String, RexNode],
     returnSchema: BaseRowSchema
   ): GeneratedExpression = {
 
@@ -639,9 +638,9 @@ class MatchCodeGenerator(
   }
 
   def generateFlatSelectOutputExpression(
-      partitionKeys: util.List[RexNode],
+      partitionKeys: java.util.List[RexNode],
       orderKeys: RelCollation,
-      measures: util.Map[String, RexNode],
+      measures: java.util.Map[String, RexNode],
       returnSchema: BaseRowSchema)
     : GeneratedExpression = {
 
@@ -851,7 +850,7 @@ class MatchCodeGenerator(
     : GeneratedExpression = {
     val typeFactory = relBuilder.getTypeFactory.asInstanceOf[FlinkTypeFactory]
     // assume the aggregate function only accept one parameter
-    val argList = new util.ArrayList[Integer]()
+    val argList = new java.util.ArrayList[Integer]()
     argList.add(0)
     val resultRelType = typeFactory.buildRelDataType(Seq("TMP0"), Seq(returnType))
     val aggCall = AggregateCall.create(

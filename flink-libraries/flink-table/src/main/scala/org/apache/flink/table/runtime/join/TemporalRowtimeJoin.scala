@@ -20,7 +20,6 @@ package org.apache.flink.table.runtime.join
 import java.lang.{Long => JLong}
 import java.util
 import java.util.{Comparator, Optional}
-
 import org.apache.flink.api.common.functions.FlatJoinFunction
 import org.apache.flink.api.common.functions.util.FunctionUtils
 import org.apache.flink.api.common.state._
@@ -31,8 +30,9 @@ import org.apache.flink.streaming.api.operators._
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.table.codegen.Compiler
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.runtime.collector.HeaderCollector
-import org.apache.flink.table.util.{BaseRowUtil, Logging}
+import org.apache.flink.table.util.Logging
 
 import scala.collection.JavaConversions._
 

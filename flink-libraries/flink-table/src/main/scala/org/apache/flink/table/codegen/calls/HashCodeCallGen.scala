@@ -22,7 +22,7 @@ import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.codegen.calls.CallGenerator.generateCallIfArgsNullable
 import org.apache.flink.table.codegen.HashCodeGenerator.hashNameInBinaryUtil
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedExpression}
-import org.apache.flink.table.util.BinaryRowUtil
+import org.apache.flink.table.dataformat.util.BinaryRowUtil
 
 class HashCodeCallGen extends CallGenerator {
   override def generate(

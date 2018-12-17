@@ -21,7 +21,8 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.table.api.types.GenericType;
-import org.apache.flink.table.util.BinaryRowUtil;
+import org.apache.flink.table.dataformat.util.BinaryRowUtil;
+import org.apache.flink.table.dataformat.util.MultiSegUtil;
 import org.apache.flink.table.util.hash.Murmur32;
 import org.apache.flink.util.InstantiationUtil;
 

@@ -20,7 +20,6 @@ package org.apache.flink.table.runtime.util;
 
 import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.streaming.api.operators.StreamingRuntimeContext;
-import org.apache.flink.table.util.BloomFilter;
 import org.apache.flink.util.SerializedValue;
 
 import org.slf4j.Logger;

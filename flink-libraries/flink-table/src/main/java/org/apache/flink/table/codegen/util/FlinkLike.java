@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.util;
+package org.apache.flink.table.codegen.util;
 
 /**
  * Utilities for converting SQL {@code LIKE} and {@code SIMILAR} operators

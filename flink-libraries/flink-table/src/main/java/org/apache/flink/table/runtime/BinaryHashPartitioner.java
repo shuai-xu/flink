@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.util;
+package org.apache.flink.table.runtime;
 
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;

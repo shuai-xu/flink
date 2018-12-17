@@ -25,18 +25,18 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction;
 import org.apache.flink.table.codegen.GeneratedProjection;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.dataformat.util.BaseRowUtil;
 import org.apache.flink.table.runtime.join.stream.state.JoinStateHandler;
 import org.apache.flink.table.runtime.join.stream.state.match.JoinMatchStateHandler;
 import org.apache.flink.table.runtime.join.stream.state.match.NonBatchOnlyEqualityConditionMatchStateHandler;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
-import org.apache.flink.table.util.BaseRowUtil;
 
 import java.util.Iterator;
 
+import static org.apache.flink.table.dataformat.util.BaseRowUtil.ACCUMULATE_MSG;
+import static org.apache.flink.table.dataformat.util.BaseRowUtil.RETRACT_MSG;
 import static org.apache.flink.table.runtime.join.stream.state.match.JoinMatchStateHandler.Type.EMPTY_MATCH;
 import static org.apache.flink.table.runtime.join.stream.state.match.JoinMatchStateHandler.Type.ONLY_EQUALITY_CONDITION_EMPTY_MATCH;
-import static org.apache.flink.table.util.BaseRowUtil.ACCUMULATE_MSG;
-import static org.apache.flink.table.util.BaseRowUtil.RETRACT_MSG;
 
 /**
  * Semi&Anti join operator.

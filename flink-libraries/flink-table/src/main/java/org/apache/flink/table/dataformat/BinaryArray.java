@@ -24,20 +24,21 @@ import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.util.BinaryRowUtil;
+import org.apache.flink.table.dataformat.util.BinaryRowUtil;
+import org.apache.flink.table.dataformat.util.MultiSegUtil;
 import org.apache.flink.util.InstantiationUtil;
 
 import java.io.IOException;
 
 import static org.apache.flink.table.dataformat.BinaryRow.getBinaryStringFromSeg;
-import static org.apache.flink.table.util.BinaryRowUtil.BOOLEAN_ARRAY_OFFSET;
-import static org.apache.flink.table.util.BinaryRowUtil.BYTE_ARRAY_BASE_OFFSET;
-import static org.apache.flink.table.util.BinaryRowUtil.DOUBLE_ARRAY_OFFSET;
-import static org.apache.flink.table.util.BinaryRowUtil.FLOAT_ARRAY_OFFSET;
-import static org.apache.flink.table.util.BinaryRowUtil.INT_ARRAY_OFFSET;
-import static org.apache.flink.table.util.BinaryRowUtil.LONG_ARRAY_OFFSET;
-import static org.apache.flink.table.util.BinaryRowUtil.SHORT_ARRAY_OFFSET;
-import static org.apache.flink.table.util.BinaryRowUtil.UNSAFE;
+import static org.apache.flink.table.dataformat.util.BinaryRowUtil.BOOLEAN_ARRAY_OFFSET;
+import static org.apache.flink.table.dataformat.util.BinaryRowUtil.BYTE_ARRAY_BASE_OFFSET;
+import static org.apache.flink.table.dataformat.util.BinaryRowUtil.DOUBLE_ARRAY_OFFSET;
+import static org.apache.flink.table.dataformat.util.BinaryRowUtil.FLOAT_ARRAY_OFFSET;
+import static org.apache.flink.table.dataformat.util.BinaryRowUtil.INT_ARRAY_OFFSET;
+import static org.apache.flink.table.dataformat.util.BinaryRowUtil.LONG_ARRAY_OFFSET;
+import static org.apache.flink.table.dataformat.util.BinaryRowUtil.SHORT_ARRAY_OFFSET;
+import static org.apache.flink.table.dataformat.util.BinaryRowUtil.UNSAFE;
 
 /**
  * For fields that hold fixed-length primitive types, such as long, double, or int, we store the

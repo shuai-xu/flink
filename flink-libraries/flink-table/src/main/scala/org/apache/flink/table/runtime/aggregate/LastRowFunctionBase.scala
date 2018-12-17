@@ -20,8 +20,8 @@ package org.apache.flink.table.runtime.aggregate
 
 import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.runtime.sort.RecordEqualiser
-import org.apache.flink.table.util.BaseRowUtil
 import org.apache.flink.util.Collector
 
 trait LastRowFunctionBase {

@@ -29,8 +29,6 @@ import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.apache.calcite.rex.RexNode
 
-import java.util
-
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
@@ -41,7 +39,7 @@ object ExpandCodeGenerator {
       inputType: InternalType,
       outputType: BaseRowTypeInfo[BaseRow],
       config: TableConfig,
-      projects: util.List[util.List[RexNode]],
+      projects: java.util.List[java.util.List[RexNode]],
       ruleDescription: String,
       retainHeader: Boolean = false): OneInputSubstituteStreamOperator[BaseRow, BaseRow] = {
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM

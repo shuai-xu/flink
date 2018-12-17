@@ -33,10 +33,10 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.dataformat.BinaryString;
+import org.apache.flink.table.dataformat.util.BinaryRowUtil;
 import org.apache.flink.table.plan.util.SortUtil;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.typeutils.TypeUtils;
-import org.apache.flink.table.util.BinaryRowUtil;
 import org.apache.flink.util.MutableObjectIterator;
 
 import org.apache.commons.lang3.RandomStringUtils;

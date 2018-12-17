@@ -34,8 +34,8 @@ import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.dataformat.UniformBinaryRowGenerator;
 import org.apache.flink.table.runtime.join.batch.HashJoinType;
 import org.apache.flink.table.runtime.join.batch.Int2HashJoinOperatorTest.MyProjection;
+import org.apache.flink.table.runtime.util.RowIterator;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
-import org.apache.flink.table.util.RowIterator;
 import org.apache.flink.types.IntValue;
 import org.apache.flink.util.MutableObjectIterator;
 

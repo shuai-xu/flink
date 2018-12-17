@@ -22,7 +22,6 @@ import java.lang.reflect.Method
 import java.lang.{Boolean => JBoolean, Byte => JByte, Character => JChar, Double => JDouble, Float => JFloat, Integer => JInt, Long => JLong, Short => JShort}
 import java.math.{BigDecimal => JBigDecimal}
 import java.sql.{Date, Time, Timestamp}
-import java.util
 import java.util.concurrent.atomic.AtomicInteger
 
 import org.apache.calcite.sql.SqlOperator
@@ -124,7 +123,7 @@ object CodeGenUtils {
     case at: ArrayType if at.isPrimitive => s"${primitiveTypeTermForType(at.getElementType)}[]"
     case at: ArrayType => s"${externalBoxedTermForType(at.getElementType)}[]"
     case bt: BaseRowType => bt.getTypeClass.getCanonicalName
-    case _: MapType => classOf[util.Map[_, _]].getCanonicalName
+    case _: MapType => classOf[java.util.Map[_, _]].getCanonicalName
     case _: TimestampType if t != DataTypes.INTERVAL_MILLIS => classOf[Timestamp].getCanonicalName
     case _: DateType if t != DataTypes.INTERVAL_MONTHS => classOf[Date].getCanonicalName
     case DataTypes.TIME => classOf[Time].getCanonicalName

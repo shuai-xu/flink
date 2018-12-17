@@ -29,7 +29,7 @@ import org.apache.flink.table.dataformat.BinaryString.fromString
 import org.apache.flink.table.dataformat.GenericRow
 import org.apache.flink.table.runtime.utils.BaseRowHarnessAssertor
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
-import org.apache.flink.table.util.BaseRowUtil._
+import org.apache.flink.table.dataformat.util.BaseRowUtil._
 import org.apache.flink.types.Row
 import org.junit.Test
 import org.junit.runner.RunWith

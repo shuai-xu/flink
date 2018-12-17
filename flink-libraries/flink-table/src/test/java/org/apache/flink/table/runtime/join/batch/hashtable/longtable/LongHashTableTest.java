@@ -30,8 +30,8 @@ import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.UniformBinaryRowGenerator;
 import org.apache.flink.table.runtime.join.batch.hashtable.BinaryHashTableTest;
+import org.apache.flink.table.runtime.util.RowIterator;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
-import org.apache.flink.table.util.RowIterator;
 import org.apache.flink.util.MutableObjectIterator;
 
 import org.junit.Assert;

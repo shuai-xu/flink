@@ -32,6 +32,7 @@ import org.apache.flink.table.api.window.TimeWindow;
 import org.apache.flink.table.api.window.Window;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
+import org.apache.flink.table.dataformat.util.BaseRowUtil;
 import org.apache.flink.table.runtime.BinaryRowKeySelector;
 import org.apache.flink.table.runtime.functions.ExecutionContext;
 import org.apache.flink.table.runtime.functions.SubKeyedAggsHandleFunction;
@@ -44,7 +45,6 @@ import org.apache.flink.table.runtime.window.triggers.Element;
 import org.apache.flink.table.runtime.window.triggers.EventTime;
 import org.apache.flink.table.runtime.window.triggers.ProcessingTime;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
-import org.apache.flink.table.util.BaseRowUtil;
 
 import org.junit.Test;
 

@@ -26,9 +26,9 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction;
 import org.apache.flink.table.codegen.GeneratedProjection;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.dataformat.util.BaseRowUtil;
 import org.apache.flink.table.runtime.join.stream.state.JoinStateHandler;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
-import org.apache.flink.table.util.BaseRowUtil;
 
 import java.util.Iterator;
 

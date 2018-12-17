@@ -38,18 +38,18 @@ import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.MapType;
 import org.apache.flink.table.api.types.TimestampType;
+import org.apache.flink.table.runtime.util.StringUtf8Utils;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
 import org.apache.flink.table.typeutils.BinaryStringTypeInfo;
 import org.apache.flink.table.typeutils.DecimalTypeInfo;
 import org.apache.flink.table.typeutils.TypeUtils;
-import org.apache.flink.table.util.StringUtf8Utils;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 
 import static org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_PRIMITIVE_ARRAY_TYPE_INFO;
-import static org.apache.flink.table.util.StringUtf8Utils.MAX_BYTES_PER_CHAR;
+import static org.apache.flink.table.runtime.util.StringUtf8Utils.MAX_BYTES_PER_CHAR;
 
 /**
  * Abstract BinaryWriter.

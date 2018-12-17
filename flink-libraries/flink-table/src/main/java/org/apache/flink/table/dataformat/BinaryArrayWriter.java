@@ -22,7 +22,7 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DateType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.TimestampType;
-import org.apache.flink.table.util.BitSetUtil;
+import org.apache.flink.table.dataformat.util.BitSetUtil;
 
 /**
  * Writer for binary array. See {@link BinaryArray}.

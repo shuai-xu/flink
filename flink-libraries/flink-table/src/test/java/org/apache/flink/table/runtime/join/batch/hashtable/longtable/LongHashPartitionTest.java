@@ -23,8 +23,8 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.runtime.sort.InMemorySortTest;
+import org.apache.flink.table.runtime.util.RowIterator;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
-import org.apache.flink.table.util.RowIterator;
 
 import org.junit.Assert;
 import org.junit.Before;

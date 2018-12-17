@@ -16,15 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.util;
+package org.apache.flink.table.runtime.util;
 
 import org.apache.flink.core.memory.DataInputDeserializer;
 
 import java.util.Arrays;
 
-import static org.apache.flink.table.util.BinaryRowUtil.BYTE_ARRAY_BASE_OFFSET;
-import static org.apache.flink.table.util.BinaryRowUtil.LONG_ARRAY_OFFSET;
-import static org.apache.flink.table.util.BinaryRowUtil.UNSAFE;
+import static org.apache.flink.table.dataformat.util.BinaryRowUtil.BYTE_ARRAY_BASE_OFFSET;
+import static org.apache.flink.table.dataformat.util.BinaryRowUtil.LONG_ARRAY_OFFSET;
+import static org.apache.flink.table.dataformat.util.BinaryRowUtil.UNSAFE;
 import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**

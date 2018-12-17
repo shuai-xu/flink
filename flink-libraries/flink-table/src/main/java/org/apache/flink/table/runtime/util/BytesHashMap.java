@@ -28,8 +28,8 @@ import org.apache.flink.runtime.memory.MemoryAllocationException;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BinaryRow;
+import org.apache.flink.table.dataformat.util.BinaryRowUtil;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
-import org.apache.flink.table.util.BinaryRowUtil;
 import org.apache.flink.util.MathUtils;
 import org.apache.flink.util.MutableObjectIterator;
 

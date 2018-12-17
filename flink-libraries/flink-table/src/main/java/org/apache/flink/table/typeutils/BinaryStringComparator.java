@@ -23,7 +23,7 @@ import org.apache.flink.api.common.typeutils.base.BasicTypeComparator;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.table.dataformat.BinaryString;
-import org.apache.flink.table.util.BinaryRowUtil;
+import org.apache.flink.table.dataformat.util.BinaryRowUtil;
 
 import java.io.IOException;
 

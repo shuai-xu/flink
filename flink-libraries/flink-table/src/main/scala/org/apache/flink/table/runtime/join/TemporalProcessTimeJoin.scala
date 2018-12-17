@@ -26,8 +26,9 @@ import org.apache.flink.streaming.api.operators.{AbstractStreamOperator, Timesta
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.table.codegen.Compiler
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.runtime.collector.HeaderCollector
-import org.apache.flink.table.util.{BaseRowUtil, Logging}
+import org.apache.flink.table.util.Logging
 
 class TemporalProcessTimeJoin(
     leftType: TypeInformation[BaseRow],

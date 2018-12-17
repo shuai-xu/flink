@@ -43,6 +43,7 @@ import org.apache.flink.table.codegen.JoinConditionFunction;
 import org.apache.flink.table.codegen.Projection;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.JoinedRow;
+import org.apache.flink.table.dataformat.util.BaseRowUtil;
 import org.apache.flink.table.runtime.bundle.KeyedCoBundleOperator;
 import org.apache.flink.table.runtime.join.batch.NullAwareJoinHelper;
 import org.apache.flink.table.runtime.join.stream.state.CountKeySizeStateHandler;
@@ -59,7 +60,6 @@ import org.apache.flink.table.runtime.join.stream.state.match.OnlyEqualityCondit
 import org.apache.flink.table.runtime.join.stream.state.match.WithoutPrimaryKeyMatchStateHandler;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 import org.apache.flink.table.typeutils.TypeUtils;
-import org.apache.flink.table.util.BaseRowUtil;
 
 import java.io.IOException;
 import java.util.Arrays;

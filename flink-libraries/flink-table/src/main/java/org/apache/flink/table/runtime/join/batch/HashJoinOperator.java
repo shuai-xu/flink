@@ -35,9 +35,9 @@ import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.dataformat.JoinedRow;
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics;
 import org.apache.flink.table.runtime.join.batch.hashtable.BinaryHashTable;
+import org.apache.flink.table.runtime.util.RowIterator;
 import org.apache.flink.table.runtime.util.StreamRecordCollector;
 import org.apache.flink.table.typeutils.AbstractRowSerializer;
-import org.apache.flink.table.util.RowIterator;
 import org.apache.flink.util.Collector;
 
 import org.codehaus.commons.compiler.CompileException;

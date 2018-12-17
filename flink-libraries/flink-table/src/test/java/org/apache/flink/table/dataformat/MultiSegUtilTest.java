@@ -20,6 +20,7 @@ package org.apache.flink.table.dataformat;
 
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
+import org.apache.flink.table.dataformat.util.MultiSegUtil;
 
 import org.junit.Before;
 import org.junit.Test;

@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.dataformat;
+package org.apache.flink.table.dataformat.util;
 
 import org.apache.flink.core.memory.MemorySegment;
-import org.apache.flink.table.util.BinaryRowUtil;
 
 import java.nio.ByteOrder;
 

@@ -31,8 +31,8 @@ import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.dataformat.JoinedRow;
 import org.apache.flink.table.dataformat.UniformBinaryRowGenerator;
+import org.apache.flink.table.runtime.util.RowIterator;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
-import org.apache.flink.table.util.RowIterator;
 import org.apache.flink.util.MutableObjectIterator;
 
 import org.codehaus.commons.compiler.CompileException;

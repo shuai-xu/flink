@@ -33,8 +33,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.apache.flink.table.util.BaseRowUtil.ACCUMULATE_MSG;
-import static org.apache.flink.table.util.BaseRowUtil.RETRACT_MSG;
+import static org.apache.flink.table.dataformat.util.BaseRowUtil.ACCUMULATE_MSG;
+import static org.apache.flink.table.dataformat.util.BaseRowUtil.RETRACT_MSG;
 
 /**
  * The wrap for {@link KeyedState}s whose values are a collection of

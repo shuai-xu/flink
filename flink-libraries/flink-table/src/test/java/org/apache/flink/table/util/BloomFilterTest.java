@@ -18,6 +18,8 @@
 
 package org.apache.flink.table.util;
 
+import org.apache.flink.table.runtime.util.BloomFilter;
+
 import java.util.Random;
 
 /**

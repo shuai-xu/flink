@@ -24,7 +24,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc
 import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.BaseRuntimeFilterPushDownRule.findRuntimeFilters
 import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.UselessRuntimeFilterRemoveRule._
 import org.apache.flink.table.plan.util.FlinkRelOptUtil
-import org.apache.flink.table.util.BloomFilter
+import org.apache.flink.table.runtime.util.BloomFilter
 
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptUtil}

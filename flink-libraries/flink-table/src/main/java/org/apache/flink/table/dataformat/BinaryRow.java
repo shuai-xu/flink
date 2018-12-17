@@ -25,8 +25,9 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.util.BinaryRowUtil;
-import org.apache.flink.table.util.BitSetUtil;
+import org.apache.flink.table.dataformat.util.BinaryRowUtil;
+import org.apache.flink.table.dataformat.util.BitSetUtil;
+import org.apache.flink.table.dataformat.util.MultiSegUtil;
 import org.apache.flink.table.util.hash.Murmur32;
 import org.apache.flink.util.InstantiationUtil;
 

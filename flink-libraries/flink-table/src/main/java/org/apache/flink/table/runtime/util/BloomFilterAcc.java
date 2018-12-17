@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.util;
+package org.apache.flink.table.runtime.util;
 
 import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.util.SerializedValue;

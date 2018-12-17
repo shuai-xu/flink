@@ -53,6 +53,7 @@ import org.apache.flink.table.codegen.GeneratedSubKeyedAggsHandleFunction;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.dataformat.JoinedRow;
+import org.apache.flink.table.dataformat.util.BaseRowUtil;
 import org.apache.flink.table.runtime.functions.ExecutionContextImpl;
 import org.apache.flink.table.runtime.functions.SubKeyedAggsHandleFunction;
 import org.apache.flink.table.runtime.sort.RecordEqualiser;
@@ -65,7 +66,6 @@ import org.apache.flink.table.runtime.window.internal.MergingWindowProcessFuncti
 import org.apache.flink.table.runtime.window.internal.PanedWindowProcessFunction;
 import org.apache.flink.table.runtime.window.triggers.Trigger;
 import org.apache.flink.table.typeutils.TypeUtils;
-import org.apache.flink.table.util.BaseRowUtil;
 
 import org.apache.commons.lang3.ArrayUtils;
 

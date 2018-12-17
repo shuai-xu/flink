@@ -19,7 +19,7 @@
 package org.apache.flink.table.runtime.window.grouping;
 
 import org.apache.flink.table.dataformat.BinaryRow;
-import org.apache.flink.table.util.RowIterator;
+import org.apache.flink.table.runtime.util.RowIterator;
 
 import java.io.IOException;
 import java.util.Iterator;

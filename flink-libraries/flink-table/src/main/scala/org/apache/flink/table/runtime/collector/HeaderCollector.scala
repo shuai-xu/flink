@@ -19,7 +19,7 @@
 package org.apache.flink.table.runtime.collector
 
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.util.BaseRowUtil
+import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.util.Collector
 
 /**

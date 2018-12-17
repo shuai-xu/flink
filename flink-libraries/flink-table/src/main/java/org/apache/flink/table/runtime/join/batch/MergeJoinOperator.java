@@ -33,13 +33,13 @@ import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.dataformat.JoinedRow;
+import org.apache.flink.table.dataformat.util.BinaryRowUtil;
 import org.apache.flink.table.plan.FlinkJoinRelType;
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics;
 import org.apache.flink.table.runtime.sort.RecordComparator;
 import org.apache.flink.table.runtime.util.ResettableExternalBuffer;
 import org.apache.flink.table.runtime.util.StreamRecordCollector;
 import org.apache.flink.table.typeutils.AbstractRowSerializer;
-import org.apache.flink.table.util.BinaryRowUtil;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.Preconditions;
 

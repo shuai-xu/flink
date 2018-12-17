@@ -22,8 +22,8 @@ import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
+import org.apache.flink.table.dataformat.util.BinaryRowUtil;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
-import org.apache.flink.table.util.BinaryRowUtil;
 
 import java.io.IOException;
 import java.util.Collection;
