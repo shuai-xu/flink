@@ -26,7 +26,7 @@ import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.bundle.{CoBundleTrigger, CombinedCoBundleTrigger, CountCoBundleTrigger, TimeCoBundleTrigger}
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
-import org.apache.flink.streaming.util.{KeyedTwoInputStreamOperatorTestHarness, MockStreamConfig}
+import org.apache.flink.streaming.util.{KeyedTwoInputStreamOperatorTestHarness}
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedJoinConditionFunction, ProjectionCodeGenerator}
@@ -232,12 +232,115 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
     // time 10
     expectedOutput.add(hOf(1, null: JLong, null: JInt, 17L: JLong, 5: JInt))
     // time 20
-    expectedOutput.add(hOf(0, null: JLong, null: JInt, 41L: JLong, 5: JInt))
-    expectedOutput.add(hOf(1, null: JLong, null: JInt, 41L: JLong, 5: JInt))
     expectedOutput.add(hOf(0, 42L: JLong, 5: JInt, 41L: JLong, 5: JInt))
     // time 30
     expectedOutput.add(hOf(1, 42L: JLong, 5: JInt, 41L: JLong, 5: JInt))
     expectedOutput.add(hOf(0, null: JLong, null: JInt, 41L: JLong, 5: JInt))
+
+    verify(expectedOutput, outputList)
+    testHarness.close()
+  }
+
+  @Test
+  def testRightOuterJoinWithJoinKeyNotContainPrimaryKeyMatchStateHandler() {
+
+    val rowType = new BaseRowTypeInfo(
+      classOf[BaseRow],
+      BasicTypeInfo.LONG_TYPE_INFO,
+      BasicTypeInfo.INT_TYPE_INFO)
+
+    val joinReturnType = new BaseRowTypeInfo(
+      classOf[BaseRow],
+      BasicTypeInfo.LONG_TYPE_INFO,
+      BasicTypeInfo.INT_TYPE_INFO,
+      BasicTypeInfo.LONG_TYPE_INFO,
+      BasicTypeInfo.INT_TYPE_INFO)
+
+    val funcCode: String =
+      s"""
+         |public class TestJoinFunction
+         |          extends org.apache.flink.table.codegen.JoinConditionFunction {
+         |   @Override
+         |   public boolean apply($baseRow in1, $baseRow in2) {
+         |   return true;
+         |   }
+         |}
+      """.stripMargin;
+
+    val leftKeySelector = StreamExecUtil.getKeySelector(Array(1), rowType)
+    val rightKeySelector = StreamExecUtil.getKeySelector(Array(1), rowType)
+
+    val config: TableConfig = new TableConfig
+    val pkProject = ProjectionCodeGenerator.generateProjection(
+      CodeGeneratorContext.apply(config, false),
+      "pkProject",
+      new BaseRowType(classOf[BinaryRow], DataTypes.LONG, DataTypes.INT),
+      new BaseRowType(classOf[BinaryRow], DataTypes.LONG),
+      Array(0),
+      "in1",
+      "out",
+      "outWriter",
+      false
+    )
+
+    val operator = new RightOuterBatchJoinStreamOperator(
+      rowType,
+      rowType,
+      GeneratedJoinConditionFunction("TestJoinFunction", funcCode),
+      leftKeySelector,
+      rightKeySelector,
+      pkProject,
+      pkProject,
+      JoinStateHandler.Type.JOIN_KEY_NOT_CONTAIN_PRIMARY_KEY,
+      JoinStateHandler.Type.JOIN_KEY_NOT_CONTAIN_PRIMARY_KEY,
+      tableConfig.getMaxIdleStateRetentionTime,
+      tableConfig.getMinIdleStateRetentionTime,
+      JoinMatchStateHandler.Type.EMPTY_MATCH,
+      JoinMatchStateHandler.Type.JOIN_KEY_NOT_CONTAIN_PRIMARY_KEY_MATCH,
+      true,
+      true,
+      Array[Boolean](false),
+      getMiniBatchTrigger(tableConfig),
+      tableConfig.getParameters.getBoolean(
+        TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+
+    val testHarness =
+      new KeyedTwoInputStreamOperatorTestHarness(
+        operator,
+        leftKeySelector,
+        rightKeySelector,
+        rightKeySelector.asInstanceOf[ResultTypeQueryable[BaseRow]].getProducedType,
+        1, 1, 0)
+    val typeSerializer1 = rowType.createSerializer(new ExecutionConfig)
+    operator.setupTypeSerializer(typeSerializer1, typeSerializer1)
+    testHarness.open()
+
+    testHarness.setProcessingTime(1)
+    testHarness.processElement1(new StreamRecord(hOf(0, 3L: JLong, 2: JInt)))
+    testHarness.processElement2(new StreamRecord(hOf(0, 3L: JLong, 2: JInt)))
+    testHarness.setProcessingTime(20)
+
+    testHarness.processElement2(new StreamRecord(hOf(0, 2L: JLong, 1: JInt)))
+    testHarness.setProcessingTime(30)
+
+    testHarness.processElement2(new StreamRecord(hOf(1, 2L: JLong, 1: JInt)))
+    testHarness.setProcessingTime(40)
+
+    testHarness.processElement1(new StreamRecord(hOf(1, 3L: JLong, 2: JInt)))
+    // trigger miniBatch
+    testHarness.setProcessingTime(50)
+    val outputList = convertStreamRecordToGenericRow(testHarness.getOutput, joinReturnType)
+
+    val expectedOutput = new ConcurrentLinkedQueue[Object]()
+    // time 20
+    expectedOutput.add(hOf(0, 3L: JLong, 2: JInt, 3L: JLong, 2: JInt))
+    // time 30
+    expectedOutput.add(hOf(0, null: JLong, null: JInt, 2L: JLong, 1: JInt))
+    // time 40
+    expectedOutput.add(hOf(1, null: JLong, null: JInt, 2L: JLong, 1: JInt))
+    // time 50
+    expectedOutput.add(hOf(1, 3L: JLong, 2: JInt, 3L: JLong, 2: JInt))
+    expectedOutput.add(hOf(0, null: JLong, null: JInt, 3L: JLong, 2: JInt))
 
     verify(expectedOutput, outputList)
     testHarness.close()

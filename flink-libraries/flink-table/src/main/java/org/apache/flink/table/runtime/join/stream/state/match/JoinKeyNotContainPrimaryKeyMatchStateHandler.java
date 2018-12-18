@@ -111,7 +111,7 @@ public class JoinKeyNotContainPrimaryKeyMatchStateHandler implements JoinMatchSt
 		for (BaseRow baseRow: keys) {
 			pks.add(pkProjection.apply(baseRow));
 		}
-		keyedMapState.removeAll(pks);
+		keyedMapState.removeAll(joinKey, pks);
 	}
 
 	@Override

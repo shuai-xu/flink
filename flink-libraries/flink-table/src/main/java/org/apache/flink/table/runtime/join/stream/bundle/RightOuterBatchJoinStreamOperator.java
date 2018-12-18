@@ -66,13 +66,15 @@ public class RightOuterBatchJoinStreamOperator extends OuterBatchJoinStreamOpera
 			Map<BaseRow, List<BaseRow>> right,
 			Collector<BaseRow> out) throws Exception {
 
-		// process right
-		processSingleSideBundles(right, left, rightJoinStateType, leftJoinStateType, rightStateHandler,
-				leftStateHandler, rightMatchStateHandler, leftMatchStateHandler, rightTimerState, false, true, false, out);
+		// more efficient to process left first for right out join, i.e, some retractions can be avoided
 
 		// process left
 		processSingleSideBundles(left, right, leftJoinStateType, rightJoinStateType, leftStateHandler,
-				rightStateHandler, leftMatchStateHandler, rightMatchStateHandler, leftTimerState, true, false, true, out);
+			rightStateHandler, leftMatchStateHandler, rightMatchStateHandler, leftTimerState, true, false, true, out);
+
+		// process right
+		processSingleSideBundles(right, left, rightJoinStateType, leftJoinStateType, rightStateHandler,
+				leftStateHandler, rightMatchStateHandler, leftMatchStateHandler, rightTimerState, false, true, false, out);
 	}
 
 	@Override

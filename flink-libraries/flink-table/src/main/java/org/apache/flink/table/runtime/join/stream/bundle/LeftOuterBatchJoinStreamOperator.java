@@ -87,6 +87,7 @@ public class LeftOuterBatchJoinStreamOperator extends OuterBatchJoinStreamOperat
 			Map<BaseRow, List<BaseRow>> right,
 			Collector<BaseRow> out) throws Exception {
 
+		// more efficient to process right first for left out join, i.e, some retractions can be avoided
 		// process right
 		processSingleSideBundles(right, left, rightJoinStateType, leftJoinStateType, rightStateHandler,
 				leftStateHandler, rightMatchStateHandler, leftMatchStateHandler, rightTimerState, false, false, true, out);
