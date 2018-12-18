@@ -70,6 +70,8 @@ public final class KeyedMapStateImpl<K, MK, MV>
 		} catch (IOException e) {
 			throw new SerializationException(e);
 		}
+		this.stateNameForSerialize = stateStorage.supportMultiColumnFamilies() ? null : stateNameByte;
+		this.serializedStateNameLength = stateNameForSerialize == null ? 0 : stateNameForSerialize.length;
 	}
 
 	@Override

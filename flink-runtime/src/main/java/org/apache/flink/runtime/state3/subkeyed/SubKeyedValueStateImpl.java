@@ -22,6 +22,8 @@ import org.apache.flink.api.common.functions.HashPartitioner;
 import org.apache.flink.api.common.typeutils.SerializationException;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
+import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.state.StateAccessException;
 import org.apache.flink.runtime.state3.AbstractInternalStateBackend;
@@ -32,13 +34,11 @@ import org.apache.flink.runtime.state3.heap.HeapStateStorage;
 import org.apache.flink.types.Pair;
 import org.apache.flink.util.Preconditions;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 /**
  * An implementation of {@link SubKeyedValueState} based on an {@link StateStorage}
@@ -84,7 +84,12 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 	/**
 	 * Serialized bytes of current state name.
 	 */
-	private byte[] stateNameByte;
+	private final byte[] stateNameByte;
+
+	private final byte[] stateNameForSerialize;
+
+	ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
+	DataOutputView outputView = new DataOutputViewStreamWrapper(outputStream);
 
 	protected final HashPartitioner partitioner = HashPartitioner.INSTANCE;
 
@@ -106,13 +111,14 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 		this.keySerializer = descriptor.getKeySerializer();
 		this.namespaceSerializer = descriptor.getNamespaceSerializer();
 		this.valueSerializer = descriptor.getValueSerializer();
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		try {
-			StringSerializer.INSTANCE.serialize(descriptor.getName(), new DataOutputViewStreamWrapper(out));
-			stateNameByte = out.toByteArray();
+			outputStream.reset();
+			StringSerializer.INSTANCE.serialize(descriptor.getName(), outputView);
+			stateNameByte = outputStream.toByteArray();
 		} catch (IOException e) {
 			throw new SerializationException(e);
 		}
+		this.stateNameForSerialize = stateStorage.supportMultiColumnFamilies() ? null : stateNameByte;
 	}
 
 	@Override
@@ -134,12 +140,17 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 				heapStateStorage.setCurrentNamespace(namespace);
 				return heapStateStorage.get(key) != null;
 			} else {
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedValueState(key,
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedValueState(
+					outputStream,
+					outputView,
+					key,
 					keySerializer,
 					namespace,
 					namespaceSerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
+
 				return stateStorage.get(serializedKey) != null;
 			}
 		} catch (Exception e) {
@@ -166,12 +177,16 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 				V value = (V) heapStateStorage.get(key);
 				return value == null ? defaultValue : value;
 			} else {
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedValueState(key,
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedValueState(
+					outputStream,
+					outputView,
+					key,
 					keySerializer,
 					namespace,
 					namespaceSerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
 				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
 				if (serializedValue == null) {
 					return defaultValue;
@@ -197,10 +212,17 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 			} else {
 				Map<N, V> result = new HashMap<>();
 
+				outputStream.reset();
 				byte[] prefix = StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
 					key,
 					keySerializer,
-					getKeyGroup(key), stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					null,
+					namespaceSerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+
 				StorageIterator<byte[], byte[]> iterator = stateStorage.prefixIterator(prefix);
 				while (iterator.hasNext()) {
 					Pair<byte[], byte[]> pair = iterator.next();
@@ -235,12 +257,17 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 				heapStateStorage.setCurrentNamespace(namespace);
 				heapStateStorage.remove(key);
 			} else {
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedValueState(key,
-					descriptor.getKeySerializer(),
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedValueState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
 					namespace,
-					descriptor.getNamespaceSerializer(),
+					namespaceSerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
+
 				stateStorage.remove(serializedKey);
 			}
 		} catch (Exception e) {
@@ -258,10 +285,17 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 			if (stateStorage.lazySerde()) {
 				((HeapStateStorage) stateStorage).removeAll(key);
 			} else {
+				outputStream.reset();
 				byte[] prefix = StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
 					key,
 					keySerializer,
-					getKeyGroup(key), stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					null,
+					namespaceSerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+
 				StorageIterator<byte[], byte[]> iterator = stateStorage.prefixIterator(prefix);
 				while (iterator.hasNext()) {
 					Pair<byte[], byte[]> pair = iterator.next();
@@ -284,13 +318,20 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 				heapStateStorage.setCurrentNamespace(namespace);
 				heapStateStorage.put(key, value);
 			} else {
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedValueState(key,
-					descriptor.getKeySerializer(),
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedValueState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
 					namespace,
-					descriptor.getNamespaceSerializer(),
+					namespaceSerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
-				byte[] serializedValue = StateSerializerUtil.getSerializeSingleValue(value, valueSerializer);
+					stateNameForSerialize);
+
+				outputStream.reset();
+				valueSerializer.serialize(value, outputView);
+				byte[] serializedValue = outputStream.toByteArray();
 				stateStorage.put(serializedKey, serializedValue);
 			}
 		} catch (Exception e) {
@@ -306,10 +347,17 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 			if (stateStorage.lazySerde()) {
 				return ((HeapStateStorage) stateStorage).namespaceIterator(key);
 			} else {
+				outputStream.reset();
 				byte[] prefix = StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
 					key,
 					keySerializer,
-					getKeyGroup(key), stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					null,
+					namespaceSerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+
 				StorageIterator<byte[], byte[]> iterator = stateStorage.prefixIterator(prefix);
 
 				return new Iterator<N>() {
@@ -321,15 +369,11 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 					@Override
 					public N next() {
 						try {
-							if (iterator.hasNext()) {
-								return StateSerializerUtil.getDeserializedNamespcae(
-									iterator.next().getKey(),
-									keySerializer,
-									namespaceSerializer,
-									stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
-							} else {
-								throw new NoSuchElementException();
-							}
+							return StateSerializerUtil.getDeserializedNamespcae(
+								iterator.next().getKey(),
+								keySerializer,
+								namespaceSerializer,
+								stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
 						} catch (IOException e) {
 							throw new StateAccessException(e);
 						}

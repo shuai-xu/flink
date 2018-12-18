@@ -66,6 +66,10 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 	 */
 	protected byte[] stateNameByte;
 
+	protected byte[] stateNameForSerialize;
+
+	protected int serializedStateNameLength;
+
 	/**
 	 * The key serializer of current state.
 	 */
@@ -131,15 +135,19 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 				Map<MK, MV> map = get(key, namespace);
 				return map != null && map.containsKey(mapKey);
 			} else {
+				outputStream.reset();
+
 				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedMapState(
+					outputStream,
+					outputView,
 					key,
 					keySerializer,
-					mapKey,
-					mapKeySerializer,
 					namespace,
 					namespaceSerializer,
+					mapKey,
+					mapKeySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
 
 				return stateStorage.get(serializedKey) != null;
 			}
@@ -186,15 +194,18 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 				MV value = map.get(mapKey);
 				return value == null ? defaultMapValue : value;
 			} else {
+				outputStream.reset();
 				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedMapState(
+					outputStream,
+					outputView,
 					key,
 					keySerializer,
-					mapKey,
-					mapKeySerializer,
 					namespace,
 					namespaceSerializer,
+					mapKey,
+					mapKeySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
 				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
 				if (serializedValue == null) {
 					return defaultMapValue;
@@ -267,15 +278,18 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 				return results;
 			} else {
 				M result = createMap();
-				int group = getKeyGroup(key);
 
 				outputStream.reset();
-				StateSerializerUtil.writeGroup(outputStream, group);
-				if (!stateStorage.supportMultiColumnFamilies()) {
-					outputStream.write(stateNameByte);
-				}
-				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, key, keySerializer);
-				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, namespace, namespaceSerializer);
+				StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					namespace,
+					namespaceSerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+
 				int prefixLength = outputStream.getPosition();
 				for (MK mapKey : mapKeys) {
 					if (mapKey != null) {
@@ -307,11 +321,18 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 			if (stateStorage.lazySerde()) {
 				return ((HeapStateStorage) stateStorage).getAll(key);
 			} else {
+				outputStream.reset();
+
 				byte[] prefix = StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
 					key,
 					keySerializer,
+					null,
+					namespaceSerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
+
 				StorageIterator<byte[], byte[]> iterator = stateStorage.prefixIterator(prefix);
 				Map<N, M> result = new HashMap<>();
 				while (iterator.hasNext()) {
@@ -320,14 +341,14 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 						pair.getKey(),
 						keySerializer,
 						namespaceSerializer,
-						stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
+						serializedStateNameLength);
 
 					MK mapKey = StateSerializerUtil.getDeserializedMapKeyForSubKeyedMapState(
 						pair.getKey(),
 						keySerializer,
 						namespaceSerializer,
 						mapKeySerializer,
-						stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
+						serializedStateNameLength);
 					MV mapValue = StateSerializerUtil.getDeserializeSingleValue(pair.getValue(), mapValueSerializer);
 
 					M innerMap = result.get(namespace);
@@ -362,16 +383,23 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 				}
 				map.put(mapKey, mapValue);
 			} else {
+				outputStream.reset();
+
 				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedMapState(
+					outputStream,
+					outputView,
 					key,
 					keySerializer,
-					mapKey,
-					mapKeySerializer,
 					namespace,
 					namespaceSerializer,
+					mapKey,
+					mapKeySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
-				byte[] serializedValue = StateSerializerUtil.getSerializeSingleValue(mapValue, mapValueSerializer);
+					stateNameForSerialize);
+
+				outputStream.reset();
+				mapValueSerializer.serialize(mapValue, outputView);
+				byte[] serializedValue = outputStream.toByteArray();
 				stateStorage.put(serializedKey, serializedValue);
 			}
 		} catch (Exception e) {
@@ -401,17 +429,22 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 			} else {
 				StorageInstance instance = stateStorage.getStorageInstance();
 				try (BatchPutWrapper batchPutWrapper = instance.getBatchPutWrapper()) {
-					int group = getKeyGroup(key);
 
 					outputStream.reset();
-					StateSerializerUtil.writeGroup(outputStream, group);
-					if (!stateStorage.supportMultiColumnFamilies()) {
-						outputStream.write(stateNameByte);
-					}
-					StateSerializerUtil.serializeItemWithKeyPrefix(outputView, key, keySerializer);
-					StateSerializerUtil.serializeItemWithKeyPrefix(outputView, namespace, namespaceSerializer);
+					StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+						outputStream,
+						outputView,
+						key,
+						keySerializer,
+						namespace,
+						namespaceSerializer,
+						getKeyGroup(key),
+						stateNameForSerialize);
+
 					int prefixLength = outputStream.getPosition();
 
+					ByteArrayOutputStreamWithPos valueOutputStream = new ByteArrayOutputStreamWithPos();
+					DataOutputView valueOutputView = new DataOutputViewStreamWrapper(valueOutputStream);
 					for (Map.Entry<? extends MK, ? extends MV> entry : mappings.entrySet()) {
 						Preconditions.checkNotNull(entry.getKey(), "Can not insert null key to mapstate");
 						Preconditions.checkNotNull(entry.getValue(), "Can not insert null value to mapstate");
@@ -419,8 +452,10 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 						outputStream.setPosition(prefixLength);
 						StateSerializerUtil.serializeItemWithKeyPrefix(outputView, entry.getKey(), mapKeySerializer);
 						byte[] byteKey = outputStream.toByteArray();
-						byte[] byteValue = StateSerializerUtil.getSerializeSingleValue(entry.getValue(), mapValueSerializer);
 
+						valueOutputStream.reset();
+						mapValueSerializer.serialize(entry.getValue(), valueOutputView);
+						byte[] byteValue = valueOutputStream.toByteArray();
 						batchPutWrapper.put(byteKey, byteValue);
 					}
 				}
@@ -472,15 +507,18 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 					}
 				}
 			} else {
+				outputStream.reset();
 				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedMapState(
+					outputStream,
+					outputView,
 					key,
 					keySerializer,
-					mapKey,
-					mapKeySerializer,
 					namespace,
 					namespaceSerializer,
+					mapKey,
+					mapKeySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
 				stateStorage.remove(serializedKey);
 			}
 		} catch (Exception e) {
@@ -509,14 +547,16 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 					}
 				}
 			} else {
-				int group = getKeyGroup(key);
 				outputStream.reset();
-				StateSerializerUtil.writeGroup(outputStream, group);
-				if (!stateStorage.supportMultiColumnFamilies()) {
-					outputStream.write(stateNameByte);
-				}
-				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, key, keySerializer);
-				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, namespace, namespaceSerializer);
+				StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					namespace,
+					namespaceSerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
 				int prefixLength = outputStream.getPosition();
 				for (MK mapKey : mapKeys) {
 					outputStream.setPosition(prefixLength);
@@ -539,11 +579,16 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 			((HeapStateStorage) stateStorage).removeAll(key);
 		} else {
 			try {
+				outputStream.reset();
 				byte[] prefix = StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
 					key,
 					keySerializer,
+					null,
+					namespaceSerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
 				StorageIterator<byte[], byte[]> iterator = stateStorage.prefixIterator(prefix);
 				while (iterator.hasNext()) {
 					stateStorage.remove(iterator.next().getKey());
@@ -565,13 +610,17 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 				Map map = (Map) heapStateStorage.get(key);
 				return map == null ? Collections.emptyIterator() : map.entrySet().iterator();
 			} else {
+				outputStream.reset();
+
 				byte[] prefix = StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
 					key,
 					keySerializer,
 					namespace,
 					namespaceSerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
 				StorageIterator<byte[], byte[]> iterator = stateStorage.prefixIterator(prefix);
 				return new Iterator<Map.Entry<MK, MV>>() {
 					Pair<byte[], byte[]> pair;
@@ -597,7 +646,7 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 										keySerializer,
 										namespaceSerializer,
 										mapKeySerializer,
-										stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
+										serializedStateNameLength);
 								} catch (Exception e) {
 									throw new StateAccessException(e);
 								}
@@ -616,7 +665,11 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 							public MV setValue(MV value) {
 								Preconditions.checkNotNull(value);
 								try {
-									return StateSerializerUtil.getDeserializeSingleValue(pair.setValue(StateSerializerUtil.getSerializeSingleValue(value, mapValueSerializer)), mapValueSerializer);
+
+									ByteArrayOutputStreamWithPos valueOutputStream = new ByteArrayOutputStreamWithPos();
+									DataOutputView valueOutputView = new DataOutputViewStreamWrapper(valueOutputStream);
+									mapValueSerializer.serialize(value, valueOutputView);
+									return StateSerializerUtil.getDeserializeSingleValue(pair.setValue(valueOutputStream.toByteArray()), mapValueSerializer);
 								} catch (Exception e) {
 									throw new StateAccessException(e);
 								}
@@ -758,11 +811,18 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 			return ((HeapStateStorage) stateStorage).namespaceIterator(key);
 		} else {
 			try {
+				outputStream.reset();
+
 				byte[] prefix = StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
 					key,
 					keySerializer,
+					null,
+					namespaceSerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
+
 				StorageIterator<byte[], byte[]> iterator = stateStorage.prefixIterator(prefix);
 
 				//TODO: Load the namespace in lazy style for better performance.
@@ -773,7 +833,7 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 							iterator.next().getKey(),
 							keySerializer,
 							namespaceSerializer,
-							stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length));
+							serializedStateNameLength));
 					}
 				} catch (Exception e) {
 					throw new StateAccessException(e);

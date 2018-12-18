@@ -23,6 +23,7 @@ import org.apache.flink.api.common.typeutils.SerializationException;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
+import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.state.StateAccessException;
 import org.apache.flink.runtime.state3.AbstractInternalStateBackend;
@@ -80,7 +81,9 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 	/**
 	 * Serialized bytes of current state name.
 	 */
-	private byte[] stateNameByte;
+	private final byte[] stateNameByte;
+
+	private final byte[] stateNameForSerializer;
 
 	/**
 	 * State backend who creates current state.
@@ -91,6 +94,7 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 	private static final HashPartitioner partitioner = HashPartitioner.INSTANCE;
 
 	private ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
+	private DataOutputView outputView = new DataOutputViewStreamWrapper(outputStream);
 
 	/**
 	 * Constructor with the state storage to store the values.
@@ -101,7 +105,7 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 	 */
 	public KeyedValueStateImpl(
 		AbstractInternalStateBackend internalStateBackend,
-		KeyedValueStateDescriptor descriptor,
+		KeyedValueStateDescriptor<K, V> descriptor,
 		StateStorage stateStorage
 	) {
 		this.descriptor = Preconditions.checkNotNull(descriptor);
@@ -117,6 +121,7 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 		} catch (IOException e) {
 			throw new SerializationException(e);
 		}
+		this.stateNameForSerializer = stateStorage.supportMultiColumnFamilies() ? null : stateNameByte;
 	}
 
 	@Override
@@ -136,10 +141,15 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 			if (stateStorage.lazySerde()) {
 				return stateStorage.get(key) != null;
 			} else {
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(key,
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(
+					outputStream,
+					outputView,
+					key,
 					keySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerializer);
+
 				return stateStorage.get(serializedKey) != null;
 			}
 		} catch (Exception e) {
@@ -163,10 +173,14 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 				V value = (V) stateStorage.get(key);
 				return value == null ? defaultValue : value;
 			} else {
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(key,
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(
+					outputStream,
+					outputView,
+					key,
 					keySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerializer);
 				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
 				if (serializedValue == null) {
 					return defaultValue;
@@ -203,10 +217,14 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 					if (key == null) {
 						continue;
 					}
-					byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(key,
+					outputStream.reset();
+					byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(
+						outputStream,
+						outputView,
+						key,
 						keySerializer,
 						getKeyGroup(key),
-						stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+						stateNameForSerializer);
 					byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
 					if (serializedValue != null) {
 						results.put(key, StateSerializerUtil.getDeserializeSingleValue(serializedValue, valueSerializer));
@@ -230,10 +248,14 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 			if (stateStorage.lazySerde()) {
 				stateStorage.remove(key);
 			} else {
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(key,
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(
+					outputStream,
+					outputView,
+					key,
 					keySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerializer);
 				stateStorage.remove(serializedKey);
 			}
 		} catch (Exception e) {
@@ -260,11 +282,17 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 			if (stateStorage.lazySerde()) {
 				stateStorage.put(key, value);
 			} else {
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(key,
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(
+					outputStream,
+					outputView,
+					key,
 					keySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
-				byte[] serializedValue = StateSerializerUtil.getSerializeSingleValue(value, valueSerializer);
+					stateNameForSerializer);
+
+				outputStream.reset();
+				byte[] serializedValue = StateSerializerUtil.getSerializeSingleValue(outputStream, outputView, value, valueSerializer);
 				stateStorage.put(serializedKey, serializedValue);
 			}
 		} catch (Exception e) {
@@ -288,12 +316,23 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 				try (BatchPutWrapper batchPutWrapper = instance.getBatchPutWrapper()) {
 					for (Map.Entry<? extends K, ? extends V> entry : pairs.entrySet()) {
 						K key = entry.getKey();
+						outputStream.reset();
 						byte[] byteKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(
+							outputStream,
+							outputView,
 							key,
 							keySerializer,
 							getKeyGroup(key),
-							stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
-						byte[] byteValue = StateSerializerUtil.getSerializeSingleValue(entry.getValue(), valueSerializer);
+							stateNameForSerializer);
+
+						outputStream.reset();
+
+						byte[] byteValue = StateSerializerUtil.getSerializeSingleValue(
+							outputStream,
+							outputView,
+							entry.getValue(),
+							valueSerializer);
+
 						batchPutWrapper.put(byteKey, byteValue);
 					}
 				}

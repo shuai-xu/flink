@@ -20,6 +20,7 @@ package org.apache.flink.runtime.state3.keyed;
 
 import org.apache.flink.api.common.typeutils.base.FloatSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.GroupRangePartitioner;
 import org.apache.flink.runtime.state.GroupSet;
@@ -39,6 +40,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -781,6 +784,61 @@ public abstract class KeyedMapStateTestBase {
 		}
 		assertEquals(keySet1, pairs.keySet());
 		assertEquals(keySet2, pairs.keySet());
+	}
+
+	@Test
+	public void testMulitStateAccessParallism() throws InterruptedException {
+		KeyedMapStateDescriptor<Integer, Integer, Float> descriptor1 =
+			new KeyedMapStateDescriptor<>("test1", IntSerializer.INSTANCE,
+				IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
+
+		KeyedMapState<Integer, Integer, Float> state1 = backend.getKeyedState(descriptor1);
+
+		KeyedMapStateDescriptor<Integer, Integer, Float> descriptor2 =
+			new KeyedMapStateDescriptor<>("test2", IntSerializer.INSTANCE,
+				IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
+
+		KeyedMapState<Integer, Integer, Float> state2 = backend.getKeyedState(descriptor2);
+
+		int stateCount = 1000;
+		ConcurrentHashMap<Tuple2<Integer, Integer>, Float> value1 = new ConcurrentHashMap<>(stateCount);
+		Thread thread1 = new Thread(() -> {
+			for (int i = 0; i < stateCount; ++i) {
+				int mapKey = ThreadLocalRandom.current().nextInt();
+				Float value = ThreadLocalRandom.current().nextFloat();
+				state1.add(i, mapKey, value);
+				value1.put(Tuple2.of(i, mapKey), value);
+			}
+		});
+
+		ConcurrentHashMap<Tuple2<Integer, Integer>, Float> value2 = new ConcurrentHashMap<>(stateCount);
+		Thread thread2 = new Thread(() -> {
+			for (int i = 0; i < stateCount; ++i) {
+				int mapKey = ThreadLocalRandom.current().nextInt();
+				Float value = ThreadLocalRandom.current().nextFloat();
+				state2.add(i, mapKey, value);
+				value2.put(Tuple2.of(i, mapKey), value);
+			}
+		});
+		thread1.start();
+		thread2.start();
+
+		thread1.join();
+		thread2.join();
+
+		for (Map.Entry<Tuple2<Integer, Integer>, Float> entry : value1.entrySet()) {
+			Tuple2<Integer, Integer> key = entry.getKey();
+			Float v1 = state1.get(key.f0, key.f1);
+			assertNotNull(v1);
+			assertEquals(entry.getValue(), v1);
+		}
+
+		for (Map.Entry<Tuple2<Integer, Integer>, Float> entry : value2.entrySet()) {
+			Tuple2<Integer, Integer> key = entry.getKey();
+			Float v1 = state2.get(key.f0, key.f1);
+			assertNotNull(v1);
+			assertEquals(entry.getValue(), v1);
+		}
 	}
 
 	private void populateState(Map<Integer, Map<Integer, Float>> pairs, KeyedMapState<Integer, Integer, Float> state) {

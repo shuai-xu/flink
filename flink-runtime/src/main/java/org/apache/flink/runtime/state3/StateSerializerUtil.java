@@ -23,7 +23,6 @@ import org.apache.flink.core.memory.ByteArrayInputStreamWithPos;
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.core.memory.DataOutputView;
-import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.util.Preconditions;
 
 import javax.annotation.Nullable;
@@ -42,17 +41,17 @@ public class StateSerializerUtil {
 	public static final byte KEY_END_BYTE = 0x7f;
 	private static final int KEY_PREFIX_BYTE_LENGTH = 1;
 	public static final int GROUP_WRITE_BYTES = 2;
-	private static final byte DELIMITER = ',';
-	private static ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
-	private static DataOutputView outputView = new DataOutputViewStreamWrapper(outputStream);
+	public static final byte DELIMITER = ',';
 
 	public static <K> byte[] getSerializedKeyForKeyedValueState(
+		ByteArrayOutputStreamWithPos outputStream,
+		DataOutputView outputView,
 		K key,
 		TypeSerializer<K> keySerializer,
 		int group,
 		byte[] stateNameByte) throws IOException {
-		outputStream.reset();
-		serializeSingleKey(key, keySerializer, group, stateNameByte);
+
+		serializeSingleKey(outputView, key, keySerializer, group, stateNameByte);
 		return outputStream.toByteArray();
 	}
 
@@ -67,13 +66,14 @@ public class StateSerializerUtil {
 	}
 
 	public static <K> byte[] getSerializedKeyForKeyedListState(
+		ByteArrayOutputStreamWithPos outputStream,
+		DataOutputView outputView,
 		K key,
 		TypeSerializer<K> keySerializer,
 		int group,
 		byte[] stateNameByte) throws IOException {
 
-		outputStream.reset();
-		serializeSingleKey(key, keySerializer, group, stateNameByte);
+		serializeSingleKey(outputView, key, keySerializer, group, stateNameByte);
 		return outputStream.toByteArray();
 	}
 
@@ -87,23 +87,21 @@ public class StateSerializerUtil {
 		return getDeserializedSingleKey(inputView, keySerializer, serializedStateNameLength);
 	}
 
-	public static <K, MK> byte[] getSerializedPrefixKeyForKeyedMapState(
+	public static <K> byte[] getSerializedPrefixKeyForKeyedMapState(
+		ByteArrayOutputStreamWithPos outputStream,
+		DataOutputView outputView,
 		K key,
 		TypeSerializer<K> keySerializer,
-		MK mapKey,
-		TypeSerializer<MK> mapKeySerializer,
 		int group,
 		byte[] stateNameByte) throws IOException {
 
-		outputStream.reset();
-		serializeSingleKey(key, keySerializer, group, stateNameByte);
-		if (mapKey != null) {
-			serializeItemWithKeyPrefix(outputView, mapKey, mapKeySerializer);
-		}
+		serializeSingleKey(outputView, key, keySerializer, group, stateNameByte);
 		return outputStream.toByteArray();
 	}
 
 	public static <K, MK> byte[] getSerializedPrefixKeyEndForKeyedMapState(
+		ByteArrayOutputStreamWithPos outputStream,
+		DataOutputView outputView,
 		K key,
 		TypeSerializer<K> keySerializer,
 		MK mapKey,
@@ -111,9 +109,7 @@ public class StateSerializerUtil {
 		int group,
 		byte[] stateNameByte) throws IOException {
 
-		outputStream.reset();
-
-		getSerializedKeyForKeyedValueState(key, keySerializer, group, stateNameByte);
+		getSerializedKeyForKeyedValueState(outputStream, outputView, key, keySerializer, group, stateNameByte);
 		if (mapKey != null) {
 			outputView.write(KEY_PREFIX_BYTE);
 			mapKeySerializer.serialize(mapKey, outputView);
@@ -123,6 +119,8 @@ public class StateSerializerUtil {
 	}
 
 	public static <K, N, MK> byte[] getSerializedPrefixKeyEndForSubKeyedMapState(
+		ByteArrayOutputStreamWithPos outputStream,
+		DataOutputView outputView,
 		K key,
 		TypeSerializer<K> keySerializer,
 		N namespace,
@@ -131,15 +129,13 @@ public class StateSerializerUtil {
 		TypeSerializer<MK> mapKeySerializer,
 		int group,
 		byte[] stateNameByte) throws IOException {
-		outputStream.reset();
 
-		serializeSingleKey(key, keySerializer, group, stateNameByte);
+		serializeSingleKey(outputView, key, keySerializer, group, stateNameByte);
 
 		serializeItemWithKeyPrefix(outputView, namespace, namespaceSerializer);
 
 		if (mapKey != null) {
-			outputView.write(KEY_PREFIX_BYTE);
-			mapKeySerializer.serialize(mapKey, outputView);
+			serializeItemWithKeyPrefix(outputView, mapKey, mapKeySerializer);
 		}
 
 		outputView.write(KEY_END_BYTE);
@@ -147,6 +143,8 @@ public class StateSerializerUtil {
 	}
 
 	public static <K, MK> byte[] getSerializedKeyForKeyedMapState(
+		ByteArrayOutputStreamWithPos outputStream,
+		DataOutputView outputView,
 		K key,
 		TypeSerializer<K> keySerializer,
 		MK mapKey,
@@ -154,8 +152,7 @@ public class StateSerializerUtil {
 		int group,
 		byte[] stateNameByte) throws IOException {
 
-		outputStream.reset();
-		serializeDoubleKey(key, keySerializer, mapKey, mapKeySerializer, group, stateNameByte);
+		serializeDoubleKey(outputView, key, keySerializer, mapKey, mapKeySerializer, group, stateNameByte);
 		return outputStream.toByteArray();
 	}
 
@@ -183,13 +180,13 @@ public class StateSerializerUtil {
 	public static <K, N, MK> MK getDeserializedMapKeyForSubKeyedMapState(
 		byte[] serializedBytes,
 		TypeSerializer<K> keySerializer,
-		TypeSerializer<N> namespaceSerialzier,
+		TypeSerializer<N> namespaceSerializer,
 		TypeSerializer<MK> mapKeySerializer,
 		int serializedStateNameLength) throws IOException {
 
 		ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(serializedBytes);
 		DataInputViewStreamWrapper inputView = new DataInputViewStreamWrapper(inputStream);
-		getDeserializedSecondKey(inputView, keySerializer, namespaceSerialzier, serializedStateNameLength);
+		getDeserializedSecondKey(inputView, keySerializer, namespaceSerializer, serializedStateNameLength);
 		inputView.skipBytesToRead(KEY_PREFIX_BYTE_LENGTH);
 		return mapKeySerializer.deserialize(inputView);
 	}
@@ -206,6 +203,8 @@ public class StateSerializerUtil {
 	}
 
 	public static <K, N> byte[] getSerializedKeyForSubKeyedValueState(
+		ByteArrayOutputStreamWithPos outputStream,
+		DataOutputView outputView,
 		K key,
 		TypeSerializer<K> keySerializer,
 		N namespace,
@@ -213,12 +212,13 @@ public class StateSerializerUtil {
 		int group,
 		byte[] stateNameByte) throws IOException {
 
-		outputStream.reset();
-		serializeSingleKeyWithNamespace(key, keySerializer, namespace, namespaceSerializer, group, stateNameByte);
+		serializeSingleKeyWithNamespace(outputView, key, keySerializer, namespace, namespaceSerializer, group, stateNameByte);
 		return outputStream.toByteArray();
 	}
 
 	public static <K, N> byte[] getSerializedKeyForSubKeyedListState(
+		ByteArrayOutputStreamWithPos outputStream,
+		DataOutputView outputView,
 		K key,
 		TypeSerializer<K> keySerializer,
 		N namespace,
@@ -226,38 +226,29 @@ public class StateSerializerUtil {
 		int group,
 		byte[] stateNameByte) throws IOException {
 
-		outputStream.reset();
-		serializeSingleKeyWithNamespace(key, keySerializer, namespace, namespaceSerializer, group, stateNameByte);
+		serializeSingleKeyWithNamespace(outputView, key, keySerializer, namespace, namespaceSerializer, group, stateNameByte);
 		return outputStream.toByteArray();
 	}
 
 	public static <K, MK, N> byte[] getSerializedKeyForSubKeyedMapState(
+		ByteArrayOutputStreamWithPos outputStream,
+		DataOutputView outputView,
 		K key,
 		TypeSerializer<K> keySerializer,
-		MK mapKey,
-		TypeSerializer<MK> mapKeySerializer,
 		N namespace,
 		TypeSerializer<N> namespaceSerializer,
+		MK mapKey,
+		TypeSerializer<MK> mapKeySerializer,
 		int group,
 		byte[] stateNameByte) throws IOException {
 
-		outputStream.reset();
-		serializeDoubleKeyWithNamespace(key, keySerializer, mapKey, mapKeySerializer, namespace, namespaceSerializer, group, stateNameByte);
-		return outputStream.toByteArray();
-	}
-
-	public static <K> byte[] getSerializedPrefixKeyForSubKeyedState(
-		K key,
-		TypeSerializer<K> keySerializer,
-		int group,
-		byte[] stateNameByte) throws IOException {
-
-		outputStream.reset();
-		serializeSingleKey(key, keySerializer, group, stateNameByte);
+		serializeDoubleKeyWithNamespace(outputView, key, keySerializer, mapKey, mapKeySerializer, namespace, namespaceSerializer, group, stateNameByte);
 		return outputStream.toByteArray();
 	}
 
 	public static <K, N> byte[] getSerializedPrefixKeyForSubKeyedState(
+		ByteArrayOutputStreamWithPos outputStream,
+		DataOutputView outputView,
 		K key,
 		TypeSerializer<K> keySerializer,
 		N namespace,
@@ -265,16 +256,20 @@ public class StateSerializerUtil {
 		int group,
 		byte[] stateNameByte) throws IOException {
 
-		outputStream.reset();
-		serializeSingleKey(key, keySerializer, group, stateNameByte);
-		serializeItemWithKeyPrefix(outputView, namespace, namespaceSerializer);
+		serializeSingleKey(outputView, key, keySerializer, group, stateNameByte);
+		if (namespace != null) {
+			serializeItemWithKeyPrefix(outputView, namespace, namespaceSerializer);
+		}
 		return outputStream.toByteArray();
 	}
 
-	public static <V> byte[] getSerializeSingleValue(V value, TypeSerializer<V> valueSerializer) throws IOException {
-		ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
-		DataOutputView outputView = new DataOutputViewStreamWrapper(outputStream);
+	public static <V> byte[] getSerializeSingleValue(
+		ByteArrayOutputStreamWithPos outputStream,
+		DataOutputView outputView,
+		V value, TypeSerializer<V> valueSerializer) throws IOException {
+
 		valueSerializer.serialize(value, outputView);
+
 		return outputStream.toByteArray();
 	}
 
@@ -299,8 +294,10 @@ public class StateSerializerUtil {
 		return result;
 	}
 
-	public static <E> byte[] getPreMergedList(Collection<? extends E> values, TypeSerializer<E> elementSerializer) throws IOException {
-		outputStream.reset();
+	public static <E> void getPreMergedList(
+		DataOutputView outputView,
+		Collection<? extends E> values,
+		TypeSerializer<E> elementSerializer) throws IOException {
 
 		boolean first = true;
 		for (E value : values) {
@@ -308,34 +305,33 @@ public class StateSerializerUtil {
 			if (first) {
 				first = false;
 			} else {
-				outputStream.write(DELIMITER);
+				outputView.write(DELIMITER);
 			}
 			elementSerializer.serialize(value, outputView);
 		}
-
-		return outputStream.toByteArray();
 	}
 
 	private static <F, S> S getDeserializedSecondKey(
 		DataInputViewStreamWrapper inputView,
 		TypeSerializer<F> firstSerializer,
-		TypeSerializer<S> secondeSerialzier,
+		TypeSerializer<S> secondeSerializer,
 		int serializedStateNameLength) throws IOException {
 
 		getDeserializedSingleKey(inputView, firstSerializer, serializedStateNameLength);
 
 		// skip key prefix
 		inputView.skipBytesToRead(KEY_PREFIX_BYTE_LENGTH);
-		return secondeSerialzier.deserialize(inputView);
+		return secondeSerializer.deserialize(inputView);
 	}
 
 	private static <K> void serializeSingleKey(
+		DataOutputView outputView,
 		K key,
 		TypeSerializer<K> keySerializer,
 		int group,
 		byte[] stateNameByte) throws IOException {
 
-		writeGroup(outputStream, group);
+		writeGroup(outputView, group);
 		if (stateNameByte != null) {
 			outputView.write(stateNameByte);
 		}
@@ -343,6 +339,7 @@ public class StateSerializerUtil {
 	}
 
 	private static <K, MK> void serializeDoubleKey(
+		DataOutputView outputView,
 		K key,
 		TypeSerializer<K> keySerializer,
 		MK mapKey,
@@ -350,22 +347,24 @@ public class StateSerializerUtil {
 		int group,
 		byte[] stateNameByte) throws IOException {
 
-		serializeSingleKey(key, keySerializer, group, stateNameByte);
+		serializeSingleKey(outputView, key, keySerializer, group, stateNameByte);
 		serializeItemWithKeyPrefix(outputView, mapKey, mapKeySerializer);
 	}
 
 	private static <K, N> void serializeSingleKeyWithNamespace(
+		DataOutputView outputView,
 		K key,
 		TypeSerializer<K> keySerializer,
 		N namespace,
 		TypeSerializer<N> namespaceSerializer,
 		int group,
 		byte[] stateNameByte) throws IOException {
-		serializeSingleKey(key, keySerializer, group, stateNameByte);
+		serializeSingleKey(outputView, key, keySerializer, group, stateNameByte);
 		serializeItemWithKeyPrefix(outputView, namespace, namespaceSerializer);
 	}
 
 	private static <K, N, MK> void serializeDoubleKeyWithNamespace(
+		DataOutputView outputView,
 		K key,
 		TypeSerializer<K> keySerializer,
 		MK mapKey,
@@ -375,7 +374,7 @@ public class StateSerializerUtil {
 		int group,
 		byte[] stateNameByte) throws IOException {
 
-		serializeSingleKeyWithNamespace(key, keySerializer, namespace, namespaceSerializer, group, stateNameByte);
+		serializeSingleKeyWithNamespace(outputView, key, keySerializer, namespace, namespaceSerializer, group, stateNameByte);
 		serializeItemWithKeyPrefix(outputView, mapKey, mapKeySerializer);
 	}
 
@@ -384,10 +383,7 @@ public class StateSerializerUtil {
 		TypeSerializer<K> keySerializer,
 		int serializedStateNameLength
 	) throws IOException {
-		inputView.skipBytesToRead(GROUP_WRITE_BYTES);
-		inputView.skipBytesToRead(serializedStateNameLength);
-		// skip key prefix
-		inputView.skipBytesToRead(KEY_PREFIX_BYTE_LENGTH);
+		inputView.skipBytesToRead(GROUP_WRITE_BYTES + serializedStateNameLength + KEY_PREFIX_BYTE_LENGTH);
 		return keySerializer.deserialize(inputView);
 	}
 
@@ -414,6 +410,14 @@ public class StateSerializerUtil {
 		// because group always less than 32768, 2 bytes are ok.
 		outputStream.write((group >>> 8) & 0xFF);
 		outputStream.write(group & 0xFF);
+	}
+
+	public static void writeGroup(
+		DataOutputView outputView,
+		int group) throws IOException {
+		// because group always less than 32768, 2 bytes are ok.
+		outputView.write((group >>> 8) & 0xFF);
+		outputView.write(group & 0xFF);
 	}
 
 	public static int getGroupFromSerializedKey(byte[] serializedBytes) throws IOException {

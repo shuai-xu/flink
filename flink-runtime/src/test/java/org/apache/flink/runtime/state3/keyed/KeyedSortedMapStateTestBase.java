@@ -22,6 +22,7 @@ import org.apache.flink.api.common.functions.NaturalComparator;
 import org.apache.flink.api.common.typeutils.BytewiseComparator;
 import org.apache.flink.api.common.typeutils.base.FloatSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.GroupRangePartitioner;
 import org.apache.flink.runtime.state.GroupSet;
@@ -43,6 +44,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -620,6 +623,61 @@ public abstract class KeyedSortedMapStateTestBase {
 			Iterator<Map.Entry<Integer, Float>> expectedSubIterator3 = mappings.subMap(bounds[2], bounds[2]).entrySet().iterator();
 			Iterator<Map.Entry<Integer, Float>> actualSubIterator3 = state.subIterator(key, bounds[2], bounds[2]);
 			validateIterator(expectedSubIterator3, actualSubIterator3);
+		}
+	}
+
+	@Test
+	public void testMulitStateAccessParallism() throws InterruptedException {
+		KeyedSortedMapStateDescriptor<Integer, Integer, Float> descriptor1 =
+			new KeyedSortedMapStateDescriptor<>("iteratortest1", IntSerializer.INSTANCE,
+				BytewiseComparator.INT_INSTANCE, IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
+
+		KeyedSortedMapState<Integer, Integer, Float> state1 = backend.getKeyedState(descriptor1);
+
+		KeyedSortedMapStateDescriptor<Integer, Integer, Float> descriptor2 =
+			new KeyedSortedMapStateDescriptor<>("iteratortest2", IntSerializer.INSTANCE,
+				BytewiseComparator.INT_INSTANCE, IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
+
+		KeyedSortedMapState<Integer, Integer, Float> state2 = backend.getKeyedState(descriptor2);
+
+		int stateCount = 1000;
+		ConcurrentHashMap<Tuple2<Integer, Integer>, Float> value1 = new ConcurrentHashMap<>(stateCount);
+		Thread thread1 = new Thread(() -> {
+			for (int i = 0; i < stateCount; ++i) {
+				int subKey = ThreadLocalRandom.current().nextInt();
+				Float value = ThreadLocalRandom.current().nextFloat();
+				state1.add(i, subKey, value);
+				value1.put(Tuple2.of(i, subKey), value);
+			}
+		});
+
+		ConcurrentHashMap<Tuple2<Integer, Integer>, Float> value2 = new ConcurrentHashMap<>(stateCount);
+		Thread thread2 = new Thread(() -> {
+			for (int i = 0; i < stateCount; ++i) {
+				int subKey = ThreadLocalRandom.current().nextInt();
+				Float value = ThreadLocalRandom.current().nextFloat();
+				state2.add(i, subKey, value);
+				value2.put(Tuple2.of(i, subKey), value);
+			}
+		});
+		thread1.start();
+		thread2.start();
+
+		thread1.join();
+		thread2.join();
+
+		for (Map.Entry<Tuple2<Integer, Integer>, Float> entry : value1.entrySet()) {
+			Tuple2<Integer, Integer> key = entry.getKey();
+			Float v1 = state1.get(key.f0, key.f1);
+			assertNotNull(v1);
+			assertEquals(entry.getValue(), v1);
+		}
+
+		for (Map.Entry<Tuple2<Integer, Integer>, Float> entry : value2.entrySet()) {
+			Tuple2<Integer, Integer> key = entry.getKey();
+			Float v1 = state2.get(key.f0, key.f1);
+			assertNotNull(v1);
+			assertEquals(entry.getValue(), v1);
 		}
 	}
 

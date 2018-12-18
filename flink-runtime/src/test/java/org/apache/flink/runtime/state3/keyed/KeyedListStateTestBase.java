@@ -41,6 +41,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -553,6 +555,57 @@ public abstract class KeyedListStateTestBase {
 			for (long j = i; j < 10; ++j) {
 				assertTrue(actualList.contains(j));
 			}
+		}
+	}
+
+	@Test
+	public void testMulitStateAccessParallism() throws InterruptedException {
+		KeyedListStateDescriptor<Integer, Long> descriptor1 =
+			new KeyedListStateDescriptor<>("test1", IntSerializer.INSTANCE,
+				LongSerializer.INSTANCE);
+
+		KeyedListState<Integer, Long> state1 = backend.getKeyedState(descriptor1);
+
+		KeyedListStateDescriptor<Integer, Long> descriptor2 =
+			new KeyedListStateDescriptor<>("test2", IntSerializer.INSTANCE,
+				LongSerializer.INSTANCE);
+
+		KeyedListState<Integer, Long> state2 = backend.getKeyedState(descriptor2);
+
+		int stateCount = 1000;
+		ConcurrentHashMap<Integer, Long> value1 = new ConcurrentHashMap<>(stateCount);
+		Thread thread1 = new Thread(() -> {
+			for (int i = 0; i < stateCount; ++i) {
+				long value = ThreadLocalRandom.current().nextLong();
+				state1.put(i, value);
+				value1.put(i, value);
+			}
+		});
+
+		ConcurrentHashMap<Integer, Long> value2 = new ConcurrentHashMap<>(stateCount);
+		Thread thread2 = new Thread(() -> {
+			for (int i = 0; i < stateCount; ++i) {
+				long value = ThreadLocalRandom.current().nextLong();
+				state2.put(i, value);
+				value2.put(i, value);
+			}
+		});
+		thread1.start();
+		thread2.start();
+
+		thread1.join();
+		thread2.join();
+
+		for (int i = 0; i < stateCount; ++i) {
+			List<Long> v1 = state1.get(i);
+			assertNotNull(v1);
+			assertEquals(1, v1.size());
+			assertEquals(value1.get(i), v1.get(0));
+
+			List<Long> v2 = state2.get(i);
+			assertNotNull(v2);
+			assertEquals(1, v2.size());
+			assertEquals(value2.get(i), v2.get(0));
 		}
 	}
 

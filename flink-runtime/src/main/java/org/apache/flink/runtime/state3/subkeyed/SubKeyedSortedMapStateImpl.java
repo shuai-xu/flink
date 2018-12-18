@@ -21,6 +21,9 @@ package org.apache.flink.runtime.state3.subkeyed;
 import org.apache.flink.api.common.functions.Comparator;
 import org.apache.flink.api.common.typeutils.SerializationException;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
+import org.apache.flink.core.memory.DataOutputView;
+import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.state.StateAccessException;
 import org.apache.flink.runtime.state3.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state3.StateSerializerUtil;
@@ -78,6 +81,8 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 		} catch (Exception e) {
 			throw new SerializationException(e);
 		}
+		this.stateNameForSerialize = stateStorage.supportMultiColumnFamilies() ? null : stateNameByte;
+		this.serializedStateNameLength = stateNameForSerialize == null ? 0 : stateNameForSerialize.length;
 	}
 
 	@Override
@@ -106,13 +111,18 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 				TreeMap map = (TreeMap) stateStorage.get(key);
 				return map == null ? null : map.firstEntry();
 			} else {
+				outputStream.reset();
+
 				byte[] prefixKey = StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
 					key,
 					keySerializer,
 					namespace,
 					namespaceSerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
+
 				Pair<byte[], byte[]> firstEntry = stateStorage.firstEntry(prefixKey);
 				return new Map.Entry<MK, MV>() {
 					@Override
@@ -126,7 +136,7 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 									keySerializer,
 									namespaceSerializer,
 									mapKeySerializer,
-									stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
+									serializedStateNameLength);
 							}
 						} catch (Exception e) {
 							throw new StateAccessException(e);
@@ -171,7 +181,11 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 				TreeMap map = (TreeMap) stateStorage.get(key);
 				return map == null ? null : map.lastEntry();
 			} else {
+				outputStream.reset();
+
 				byte[] prefixKey = StateSerializerUtil.getSerializedPrefixKeyEndForSubKeyedMapState(
+					outputStream,
+					outputView,
 					key,
 					keySerializer,
 					namespace,
@@ -179,7 +193,8 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 					null,
 					mapKeySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
+
 				Pair<byte[], byte[]> firstEntry = stateStorage.lastEntry(prefixKey);
 				return new Map.Entry<MK, MV>(){
 					@Override
@@ -193,7 +208,7 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 									keySerializer,
 									namespaceSerializer,
 									mapKeySerializer,
-									stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
+									serializedStateNameLength);
 							}
 						} catch (Exception e) {
 							throw new StateAccessException(e);
@@ -238,15 +253,17 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 				TreeMap map = (TreeMap) stateStorage.get(key);
 				return map == null ? null : map.headMap(endMapKey).entrySet().iterator();
 			} else {
-				int group = getKeyGroup(key);
 				outputStream.reset();
-				StateSerializerUtil.writeGroup(outputStream, group);
-				if (!stateStorage.supportMultiColumnFamilies()) {
-					outputView.write(stateNameByte);
-				}
-				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, key, keySerializer);
-				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, namespace, namespaceSerializer);
-				byte[] prefixKey = outputStream.toByteArray();
+
+				byte[] prefixKey = StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					namespace,
+					namespaceSerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
 				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, endMapKey, mapKeySerializer);
 				byte[] prefixKeyEnd = outputStream.toByteArray();
 				return subIterator(prefixKey, prefixKeyEnd);
@@ -268,14 +285,16 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 				TreeMap map = (TreeMap) stateStorage.get(key);
 				return map == null ? null : map.tailMap(startMapKey).entrySet().iterator();
 			} else {
-				int group = getKeyGroup(key);
 				outputStream.reset();
-				StateSerializerUtil.writeGroup(outputStream, group);
-				if (!stateStorage.supportMultiColumnFamilies()) {
-					outputView.write(stateNameByte);
-				}
-				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, key, keySerializer);
-				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, namespace, namespaceSerializer);
+				StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					namespace,
+					namespaceSerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
 				int namespacePosition = outputStream.getPosition();
 				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, startMapKey, mapKeySerializer);
 				byte[] prefixKey = outputStream.toByteArray();
@@ -302,14 +321,16 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 				TreeMap map = (TreeMap) stateStorage.get(key);
 				return map == null ? null : map.subMap(startMapKey, endMapKey).entrySet().iterator();
 			} else {
-				int group = getKeyGroup(key);
 				outputStream.reset();
-				StateSerializerUtil.writeGroup(outputStream, group);
-				if (!stateStorage.supportMultiColumnFamilies()) {
-					outputView.write(stateNameByte);
-				}
-				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, key, keySerializer);
-				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, namespace, namespaceSerializer);
+				StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					namespace,
+					namespaceSerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
 				int namespacePosition = outputStream.getPosition();
 				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, startMapKey, mapKeySerializer);
 				byte[] prefixKey = outputStream.toByteArray();
@@ -348,7 +369,7 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 										keySerializer,
 										namespaceSerializer,
 										mapKeySerializer,
-										stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
+										serializedStateNameLength);
 								} catch (Exception e) {
 									throw new StateAccessException(e);
 								}
@@ -373,11 +394,11 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 							public MV setValue(MV value) {
 								Preconditions.checkNotNull(value);
 								try {
-									byte[] oldValue = nextByteEntry.setValue(
-										StateSerializerUtil.getSerializeSingleValue(
-											value,
-											mapValueSerializer)
-									);
+									ByteArrayOutputStreamWithPos valueOutputStream = new ByteArrayOutputStreamWithPos();
+									DataOutputView valueOutputView = new DataOutputViewStreamWrapper(valueOutputStream);
+									mapValueSerializer.serialize(value, valueOutputView);
+									byte[] oldValue = nextByteEntry.setValue(valueOutputStream.toByteArray());
+
 									if (oldValue == null) {
 										return null;
 									} else {

@@ -21,6 +21,8 @@ package org.apache.flink.runtime.state3.keyed;
 import org.apache.flink.api.common.functions.Comparator;
 import org.apache.flink.api.common.typeutils.SerializationException;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
+import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.state.StateAccessException;
 import org.apache.flink.runtime.state3.AbstractInternalStateBackend;
@@ -36,6 +38,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
+
+import static org.apache.flink.runtime.state3.StateSerializerUtil.KEY_END_BYTE;
 
 /**
  * An implementation of {@link KeyedSortedMapState} backed by a state storage.
@@ -77,6 +81,9 @@ public final class KeyedSortedMapStateImpl<K, MK, MV>
 		} catch (IOException e) {
 			throw new SerializationException(e);
 		}
+
+		this.stateNameForSerialize = stateStorage.supportMultiColumnFamilies() ? null : stateNameByte;
+		this.serializedStateNameLength = stateNameForSerialize == null ? 0 : stateNameForSerialize.length;
 	}
 
 	@Override
@@ -105,13 +112,16 @@ public final class KeyedSortedMapStateImpl<K, MK, MV>
 			return map == null ? null : map.firstEntry();
 		} else {
 			try {
+				outputStream.reset();
+
 				byte[] prefixKey = StateSerializerUtil.getSerializedPrefixKeyForKeyedMapState(
+					outputStream,
+					outputView,
 					key,
 					keySerializer,
-					null,
-					mapKeySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
+
 				Pair<byte[], byte[]> firstEntry = stateStorage.firstEntry(prefixKey);
 				if (firstEntry == null || !isEntryWithPrefix(prefixKey, prefixKey.length, firstEntry.getKey())) {
 					return null;
@@ -124,7 +134,7 @@ public final class KeyedSortedMapStateImpl<K, MK, MV>
 									firstEntry.getKey(),
 									keySerializer,
 									mapKeySerializer,
-									stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
+									serializedStateNameLength);
 						} catch (Exception e) {
 							throw new StateAccessException(e);
 						}
@@ -164,13 +174,17 @@ public final class KeyedSortedMapStateImpl<K, MK, MV>
 			return map == null ? null : map.lastEntry();
 		} else {
 			try {
+				outputStream.reset();
+
 				byte[] prefixKey = StateSerializerUtil.getSerializedPrefixKeyEndForKeyedMapState(
+					outputStream,
+					outputView,
 					key,
 					keySerializer,
 					null,
 					mapKeySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
 				Pair<byte[], byte[]> lastEntry = stateStorage.lastEntry(prefixKey);
 				if (lastEntry == null || !isEntryWithPrefix(prefixKey, prefixKey.length - 1, lastEntry.getKey())) {
 					return null;
@@ -183,7 +197,7 @@ public final class KeyedSortedMapStateImpl<K, MK, MV>
 									lastEntry.getKey(),
 									keySerializer,
 									mapKeySerializer,
-									stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
+									serializedStateNameLength);
 							} catch (Exception e) {
 								throw new StateAccessException(e);
 							}
@@ -203,7 +217,10 @@ public final class KeyedSortedMapStateImpl<K, MK, MV>
 						@Override
 						public MV setValue(MV value) {
 							try {
-								byte[] oldValue = lastEntry.setValue(StateSerializerUtil.getSerializeSingleValue(value, mapValueSerializer));
+								ByteArrayOutputStreamWithPos valueOutputStream = new ByteArrayOutputStreamWithPos();
+								DataOutputView valueOutputView = new DataOutputViewStreamWrapper(valueOutputStream);
+								mapValueSerializer.serialize(value, valueOutputView);
+								byte[] oldValue = lastEntry.setValue(valueOutputStream.toByteArray());
 								if (oldValue == null) {
 									return null;
 								} else {
@@ -232,14 +249,15 @@ public final class KeyedSortedMapStateImpl<K, MK, MV>
 			return map == null ? Collections.emptyIterator() : map.headMap(endMapKey).entrySet().iterator();
 		} else {
 			try {
-				int group = getKeyGroup(key);
 				outputStream.reset();
-				StateSerializerUtil.writeGroup(outputStream, group);
-				if (!stateStorage.supportMultiColumnFamilies()) {
-					outputView.write(stateNameByte);
-				}
-				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, key, keySerializer);
-				byte[] prefixKey = outputStream.toByteArray();
+
+				byte[] prefixKey = StateSerializerUtil.getSerializedPrefixKeyForKeyedMapState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
 
 				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, endMapKey, mapKeySerializer);
 				byte[] prefixKeyEnd = outputStream.toByteArray();
@@ -261,19 +279,21 @@ public final class KeyedSortedMapStateImpl<K, MK, MV>
 			return map == null ? Collections.emptyIterator() : map.tailMap(startMapKey).entrySet().iterator();
 		} else {
 			try {
-				int group = getKeyGroup(key);
 				outputStream.reset();
-				StateSerializerUtil.writeGroup(outputStream, group);
-				if (!stateStorage.supportMultiColumnFamilies()) {
-					outputView.write(stateNameByte);
-				}
-				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, key, keySerializer);
+				StateSerializerUtil.getSerializedPrefixKeyForKeyedMapState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+
 				int keyPosition = outputStream.getPosition();
 				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, startMapKey, mapKeySerializer);
 				byte[] prefixKey = outputStream.toByteArray();
 
 				outputStream.setPosition(keyPosition);
-				outputStream.write(StateSerializerUtil.KEY_END_BYTE);
+				outputStream.write(KEY_END_BYTE);
 				byte[] prefixKeyEnd = outputStream.toByteArray();
 				return subIterator(prefixKey, prefixKeyEnd);
 			} catch (Exception e) {
@@ -293,13 +313,15 @@ public final class KeyedSortedMapStateImpl<K, MK, MV>
 			return map == null ? Collections.emptyIterator() : map.subMap(startMapKey, endMapKey).entrySet().iterator();
 		} else {
 			try {
-				int group = getKeyGroup(key);
 				outputStream.reset();
-				StateSerializerUtil.writeGroup(outputStream, group);
-				if (!stateStorage.supportMultiColumnFamilies()) {
-					outputView.write(stateNameByte);
-				}
-				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, key, keySerializer);
+				StateSerializerUtil.getSerializedPrefixKeyForKeyedMapState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+
 				int keyPosition = outputStream.getPosition();
 				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, startMapKey, mapKeySerializer);
 				byte[] prefixKey = outputStream.toByteArray();
@@ -315,7 +337,6 @@ public final class KeyedSortedMapStateImpl<K, MK, MV>
 	}
 
 	private boolean isEntryWithPrefix(byte[] prefixKey, int length, byte[] actualKey) {
-		// minus 1 for KEY_END_BYTE.
 		if (actualKey.length < length) {
 			return false;
 		}
@@ -358,7 +379,7 @@ public final class KeyedSortedMapStateImpl<K, MK, MV>
 											nextByteEntry.getKey(),
 											keySerializer,
 											mapKeySerializer,
-											stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
+											serializedStateNameLength);
 									}
 								} catch (Exception e) {
 									throw new StateAccessException(e);
@@ -383,11 +404,10 @@ public final class KeyedSortedMapStateImpl<K, MK, MV>
 							@Override
 							public MV setValue(MV value) {
 								try {
-									byte[] oldValue = nextByteEntry.setValue(
-										StateSerializerUtil.getSerializeSingleValue(
-											value,
-											mapValueSerializer)
-									);
+									ByteArrayOutputStreamWithPos valueOutputStream = new ByteArrayOutputStreamWithPos();
+									DataOutputView valueOutputView = new DataOutputViewStreamWrapper(valueOutputStream);
+									mapValueSerializer.serialize(value, valueOutputView);
+									byte[] oldValue = nextByteEntry.setValue(valueOutputStream.toByteArray());
 									if (oldValue == null) {
 										return null;
 									} else {

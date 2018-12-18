@@ -40,6 +40,7 @@ import org.apache.flink.runtime.state3.keyed.KeyedStateDescriptor;
 import org.apache.flink.runtime.state3.subkeyed.SubKeyedState;
 import org.apache.flink.runtime.state3.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.types.Pair;
+import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.ResourceGuard;
@@ -47,14 +48,18 @@ import org.apache.flink.util.function.SupplierWithException;
 
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
+import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
+import org.rocksdb.WriteOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.apache.flink.runtime.state3.StateSerializerUtil.GROUP_WRITE_BYTES;
@@ -66,13 +71,19 @@ public class RocksDBFullSnapshotOperation {
 
 	private static final Logger LOG = LoggerFactory.getLogger(RocksDBFullSnapshotOperation.class);
 
-	/** State backend who starts the Snapshot.*/
+	/**
+	 * State backend who starts the Snapshot.
+	 */
 	private final RocksDBInternalStateBackend stateBackend;
 
-	/** Current Checkpoint ID.*/
+	/**
+	 * Current Checkpoint ID.
+	 */
 	private final long checkpointId;
 
-	/** Checkpoint Stream Supplier of current snapshot.*/
+	/**
+	 * Checkpoint Stream Supplier of current snapshot.
+	 */
 	private final SupplierWithException<CheckpointStreamWithResultProvider, Exception> checkpointStreamSupplier;
 
 	private final CloseableRegistry snapshotCloseableRegistry;
@@ -83,12 +94,19 @@ public class RocksDBFullSnapshotOperation {
 
 	private DataOutputView outputView;
 
-	/** All keyed states will be snapshot.*/
+	/**
+	 * All keyed states will be snapshot.
+	 */
 	private final Map<String, KeyedState> keyedStates;
 
-	/** All subkeyed states will be snapshot.*/
+	/**
+	 * All subkeyed states will be snapshot.
+	 */
 	private final Map<String, SubKeyedState> subKeyedStates;
 
+	private Map<String, ColumnFamilyDescriptor> allColumnFamilyDescriptors;
+	private List<ColumnFamilyDescriptor> descriptors;
+	private List<ColumnFamilyHandle> columnFamilyHandles;
 	private Map<Integer, Tuple2<Long, Integer>> metaInfo;
 
 	private final Map<String, Integer> stateName2Id;
@@ -112,6 +130,7 @@ public class RocksDBFullSnapshotOperation {
 		this.keyedStates = new HashMap<>();
 		this.subKeyedStates = new HashMap<>();
 		this.stateName2Id = new HashMap<>();
+		this.allColumnFamilyDescriptors = new HashMap<>();
 	}
 
 	/**
@@ -122,12 +141,19 @@ public class RocksDBFullSnapshotOperation {
 
 		keyedStates.putAll(stateBackend.getKeyedStates());
 		subKeyedStates.putAll(stateBackend.getSubKeyedStates());
-		int id = 0;
+		allColumnFamilyDescriptors.putAll(stateBackend.getColumnFamilyDescriptors());
+		descriptors = new ArrayList<>(allColumnFamilyDescriptors.size() + 1);
+		descriptors.add(stateBackend.getDefaultColumnFamilyDescriptor());
+
+		columnFamilyHandles = new ArrayList<>(allColumnFamilyDescriptors.size() + 1);
+		int id = 1;
 		for (String stateName : keyedStates.keySet()) {
 			stateName2Id.put(stateName, id++);
+			descriptors.add(allColumnFamilyDescriptors.get(stateName));
 		}
 		for (String stateName : subKeyedStates.keySet()) {
 			stateName2Id.put(stateName, id++);
+			descriptors.add(allColumnFamilyDescriptors.get(stateName));
 		}
 
 		// create a "temporary" snapshot directory because local recovery is inactive.
@@ -235,36 +261,55 @@ public class RocksDBFullSnapshotOperation {
 		}
 	}
 
-	private void materializeKVStateData() throws IOException {
-		Map<String, ColumnFamilyDescriptor> allColumnFamilyDescriptors = stateBackend.getColumnFamilyDescriptors();
-		Map<String, ColumnFamilyHandle> allColumnFamilyHandles = stateBackend.getColumnFamilyHandles();
+	private void materializeKVStateData() throws IOException, RocksDBException {
 		CheckpointStreamFactory.CheckpointStateOutputStream outputStream =
 			checkpointStreamWithResultProvider.getCheckpointOutputStream();
 
 		this.metaInfo = new HashMap<>();
+
+		CloseableRegistry closeableRegistry = new CloseableRegistry();
+		snapshotCloseableRegistry.registerCloseable(closeableRegistry);
+
+		RocksDB db = RocksDB.open(snapshotDirectory.getDirectory().getPath(), descriptors, columnFamilyHandles);
+		WriteOptions writeOptions = new WriteOptions().setDisableWAL(true);
+
+		closeableRegistry.registerCloseable(db::close);
+		closeableRegistry.registerCloseable(() -> columnFamilyHandles.forEach(ColumnFamilyHandle::close));
+		closeableRegistry.registerCloseable(writeOptions::close);
+
 		GroupSet groups = stateBackend.getGroups();
-		for (int group : groups) {
-			long offset = outputStream.getPos();
-			int numEntries = 0;
+		try {
+			for (int group : groups) {
+				long offset = outputStream.getPos();
+				int numEntries = 0;
 
-			ByteArrayOutputStreamWithPos innerStream = new ByteArrayOutputStreamWithPos(GROUP_WRITE_BYTES + 1);
-			StateSerializerUtil.writeGroup(innerStream, group);
-			byte[] groupPrefix = innerStream.toByteArray();
+				ByteArrayOutputStreamWithPos innerStream = new ByteArrayOutputStreamWithPos(GROUP_WRITE_BYTES + 1);
+				StateSerializerUtil.writeGroup(innerStream, group);
+				byte[] groupPrefix = innerStream.toByteArray();
 
-			for (Map.Entry<String, ColumnFamilyHandle> entry : allColumnFamilyHandles.entrySet()) {
-				RocksDBStorageInstance storageInstance = new RocksDBStorageInstance(stateBackend.getDbInstance(), entry.getValue(), stateBackend.getWriteOptions());
+				for (int i = 1; i < columnFamilyHandles.size(); ++i) {
+					RocksDBStorageInstance storageInstance = new RocksDBStorageInstance(db, columnFamilyHandles.get(i), writeOptions);
 					RocksDBStoragePrefixIterator iterator = new RocksDBStoragePrefixIterator(storageInstance, groupPrefix);
 					while (iterator.hasNext()) {
 						Pair<byte[], byte[]> pair = iterator.next();
-						IntSerializer.INSTANCE.serialize(stateName2Id.get(entry.getKey()), outputView);
+						IntSerializer.INSTANCE.serialize(i, outputView);
 						BytePrimitiveArraySerializer.INSTANCE.serialize(pair.getKey(), outputView);
 						BytePrimitiveArraySerializer.INSTANCE.serialize(pair.getValue(), outputView);
 						numEntries++;
 					}
-			}
+				}
 
-			if (numEntries != 0) {
-				metaInfo.put(group, new Tuple2<>(offset, numEntries));
+				if (numEntries != 0) {
+					metaInfo.put(group, new Tuple2<>(offset, numEntries));
+				}
+			}
+		} finally {
+			if (snapshotCloseableRegistry.unregisterCloseable(closeableRegistry)) {
+				IOUtils.closeQuietly(writeOptions);
+				for (ColumnFamilyHandle handle : columnFamilyHandles) {
+					IOUtils.closeQuietly(handle);
+				}
+				IOUtils.closeQuietly(db);
 			}
 		}
 	}

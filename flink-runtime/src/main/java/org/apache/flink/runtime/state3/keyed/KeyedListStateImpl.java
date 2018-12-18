@@ -23,6 +23,7 @@ import org.apache.flink.api.common.typeutils.SerializationException;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
+import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.state.StateAccessException;
 import org.apache.flink.runtime.state3.AbstractInternalStateBackend;
@@ -80,7 +81,9 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 	/**
 	 * Serialized bytes of current state name.
 	 */
-	private byte[] stateNameByte;
+	private final byte[] stateNameByte;
+
+	private final byte[] stateNameForSerialize;
 
 	/**
 	 * State backend who creates the current state.
@@ -93,6 +96,8 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 	private static final HashPartitioner partitioner = HashPartitioner.INSTANCE;
 
 	private ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
+
+	private DataOutputView outputView = new DataOutputViewStreamWrapper(outputStream);
 
 	//--------------------------------------------------------------------------
 
@@ -118,6 +123,7 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 		} catch (IOException e) {
 			throw new SerializationException(e);
 		}
+		stateNameForSerialize = stateStorage.supportMultiColumnFamilies() ? null : stateNameByte;
 	}
 
 	@Override
@@ -151,10 +157,15 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 				List<E> value = (List<E>) stateStorage.get(key);
 				return value == null ? defaultValue : value;
 			} else {
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(key,
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+					outputStream,
+					outputView,
+					key,
 					keySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
+
 				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
 				if (serializedValue == null) {
 					return defaultValue;
@@ -203,11 +214,18 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 
 				list.add(element);
 			} else {
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(key,
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+					outputStream,
+					outputView,
+					key,
 					keySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
-				byte[] serializedValue = StateSerializerUtil.getSerializeSingleValue(element, elementSerializer);
+					stateNameForSerialize);
+
+				outputStream.reset();
+				elementSerializer.serialize(element, outputView);
+				byte[] serializedValue = outputStream.toByteArray();
 				stateStorage.merge(serializedKey, serializedValue);
 			}
 		} catch (Exception e) {
@@ -237,11 +255,18 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 					return previousState;
 				});
 			} else {
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(key,
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+					outputStream,
+					outputView,
+					key,
 					keySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
-				byte[] preMergedValue = StateSerializerUtil.getPreMergedList(elements, elementSerializer);
+					stateNameForSerialize);
+
+				outputStream.reset();
+				StateSerializerUtil.getPreMergedList(outputView, elements, elementSerializer);
+				byte[] preMergedValue = outputStream.toByteArray();
 				stateStorage.merge(serializedKey, preMergedValue);
 			}
 		} catch (Exception e) {
@@ -270,11 +295,18 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 				List<E> list = new ArrayList<>(Arrays.asList(element));
 				stateStorage.put(key, list);
 			} else {
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(key,
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+					outputStream,
+					outputView,
+					key,
 					keySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
-				byte[] serializedValue = StateSerializerUtil.getSerializeSingleValue(element, elementSerializer);
+					stateNameForSerialize);
+
+				outputStream.reset();
+				elementSerializer.serialize(element, outputView);
+				byte[] serializedValue = outputStream.toByteArray();
 				stateStorage.put(serializedKey, serializedValue);
 			}
 		} catch (Exception e) {
@@ -295,11 +327,18 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 				}
 				stateStorage.put(key, list);
 			} else {
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(key,
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+					outputStream,
+					outputView,
+					key,
 					keySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
-				byte[] preMergedValue = StateSerializerUtil.getPreMergedList(elements, elementSerializer);
+					stateNameForSerialize);
+
+				outputStream.reset();
+				StateSerializerUtil.getPreMergedList(outputView, elements, elementSerializer);
+				byte[] preMergedValue = outputStream.toByteArray();
 				stateStorage.put(serializedKey, preMergedValue);
 			}
 		} catch (Exception e) {
@@ -328,10 +367,15 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 			if (stateStorage.lazySerde()) {
 				stateStorage.remove(key);
 			} else {
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(key,
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+					outputStream,
+					outputView,
+					key,
 					keySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
+
 				stateStorage.remove(serializedKey);
 			}
 		} catch (Exception e) {
@@ -356,10 +400,15 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 					}
 				}
 			} else {
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(key,
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+					outputStream,
+					outputView,
+					key,
 					keySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
+
 				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
 				if (serializedValue == null) {
 					success = false;
@@ -369,7 +418,9 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 					if (list.isEmpty()) {
 						stateStorage.remove(serializedKey);
 					} else {
-						byte[] preMergedValueValue = StateSerializerUtil.getPreMergedList(list, elementSerializer);
+						outputStream.reset();
+						StateSerializerUtil.getPreMergedList(outputView, list, elementSerializer);
+						byte[] preMergedValueValue = outputStream.toByteArray();
 						stateStorage.put(serializedKey, preMergedValueValue);
 					}
 				}
@@ -409,10 +460,15 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 					}
 				}
 			} else {
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(key,
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+					outputStream,
+					outputView,
+					key,
 					keySerializer,
 					getKeyGroup(key),
-					stateStorage.supportMultiColumnFamilies() ? null : stateNameByte);
+					stateNameForSerialize);
+
 				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
 				if (serializedValue == null) {
 					success = false;
@@ -422,7 +478,9 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 					if (preList.isEmpty()) {
 						stateStorage.remove(serializedKey);
 					} else {
-						byte[] preMergedValueValue = StateSerializerUtil.getPreMergedList(preList, elementSerializer);
+						outputStream.reset();
+						StateSerializerUtil.getPreMergedList(outputView, preList, elementSerializer);
+						byte[] preMergedValueValue = outputStream.toByteArray();
 						stateStorage.put(serializedKey, preMergedValueValue);
 					}
 				}
@@ -466,6 +524,7 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 						outputStream.reset();
 						StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
 						byte[] groupPrefix = outputStream.toByteArray();
+
 						outputStream.write(KEY_END_BYTE);
 						byte[] groupPrefixEnd = outputStream.toByteArray();
 
@@ -509,10 +568,13 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 				if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
 					for (Integer group : internalStateBackend.getGroups()) {
 						outputStream.reset();
+
 						StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
 						byte[] groupPrefix = outputStream.toByteArray();
+
 						outputStream.write(KEY_END_BYTE);
 						byte[] groupPrefixEnd = outputStream.toByteArray();
+
 						StorageIterator iterator = stateStorage.subIterator(groupPrefix, groupPrefixEnd);
 						while (iterator.hasNext()) {
 							iterator.next();

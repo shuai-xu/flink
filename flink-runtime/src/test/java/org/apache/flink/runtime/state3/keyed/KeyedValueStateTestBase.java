@@ -20,6 +20,7 @@ package org.apache.flink.runtime.state3.keyed;
 
 import org.apache.flink.api.common.typeutils.base.FloatSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
+import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.GroupRangePartitioner;
 import org.apache.flink.runtime.state.GroupSet;
@@ -37,6 +38,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -292,6 +295,53 @@ public abstract class KeyedValueStateTestBase {
 
 		assertEquals(expectedKeys, keySet1);
 		assertEquals(expectedKeys, keySet2);
+	}
+
+	@Test
+	public void testMulitStateAccessParallism() throws InterruptedException {
+		KeyedValueStateDescriptor<Integer, Long> descriptor1 =
+			new KeyedValueStateDescriptor<>("test1", IntSerializer.INSTANCE,
+				LongSerializer.INSTANCE);
+		KeyedValueState<Integer, Long> state1 = backend.getKeyedState(descriptor1);
+
+		KeyedValueStateDescriptor<Integer, Long> descriptor2 =
+			new KeyedValueStateDescriptor<>("test2", IntSerializer.INSTANCE,
+				LongSerializer.INSTANCE);
+		KeyedValueState<Integer, Long> state2 = backend.getKeyedState(descriptor2);
+
+		int stateCount = 1000;
+		ConcurrentHashMap<Integer, Long> value1 = new ConcurrentHashMap<>(stateCount);
+		Thread thread1 = new Thread(() -> {
+			for (int i = 0; i < stateCount; ++i) {
+				long value = ThreadLocalRandom.current().nextLong();
+				state1.put(i, value);
+				value1.put(i, value);
+			}
+		});
+
+		ConcurrentHashMap<Integer, Long> value2 = new ConcurrentHashMap<>(stateCount);
+		Thread thread2 = new Thread(() -> {
+			for (int i = 0; i < stateCount; ++i) {
+				long value = ThreadLocalRandom.current().nextLong();
+				state2.put(i, value);
+				value2.put(i, value);
+			}
+		});
+		thread1.start();
+		thread2.start();
+
+		thread1.join();
+		thread2.join();
+
+		for (int i = 0; i < stateCount; ++i) {
+			Long v1 = state1.get(i);
+			assertNotNull(v1);
+			assertEquals(v1, value1.get(i));
+
+			Long v2 = state2.get(i);
+			assertNotNull(v2);
+			assertEquals(v2, value2.get(i));
+		}
 	}
 
 	private GroupSet getGroupsForSubtask(int maxParallelism, int parallelism, int subtaskIndex) {

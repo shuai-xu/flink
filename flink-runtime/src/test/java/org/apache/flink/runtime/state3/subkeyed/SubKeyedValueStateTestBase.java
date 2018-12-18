@@ -20,7 +20,9 @@ package org.apache.flink.runtime.state3.subkeyed;
 
 import org.apache.flink.api.common.typeutils.base.FloatSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
+import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.GroupRangePartitioner;
 import org.apache.flink.runtime.state.GroupSet;
@@ -40,6 +42,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -356,6 +360,58 @@ public abstract class SubKeyedValueStateTestBase {
 			iter5.remove();
 		} catch (IllegalStateException e) {
 			// ignore this exception.
+		}
+	}
+
+	@Test
+	public void testMultiStateParallismAccess() throws InterruptedException {
+		SubKeyedValueStateDescriptor<Integer, Integer, Long> descriptor1 =
+			new SubKeyedValueStateDescriptor<>("test1",
+				IntSerializer.INSTANCE, IntSerializer.INSTANCE,
+				LongSerializer.INSTANCE);
+		SubKeyedValueState<Integer, Integer, Long> state1 = backend.getSubKeyedState(descriptor1);
+
+		SubKeyedValueStateDescriptor<Integer, Integer, Long> descriptor2 =
+			new SubKeyedValueStateDescriptor<>("test2",
+				IntSerializer.INSTANCE, IntSerializer.INSTANCE,
+				LongSerializer.INSTANCE);
+		SubKeyedValueState<Integer, Integer, Long> state2 = backend.getSubKeyedState(descriptor2);
+
+		int stateCount = 1000;
+		ConcurrentHashMap<Tuple2<Integer, Integer>, Long> value1 = new ConcurrentHashMap<>(stateCount);
+		Thread thread1 = new Thread(() -> {
+			for (int i = 0; i < stateCount; ++i) {
+				Long value = ThreadLocalRandom.current().nextLong();
+				Integer subKey = ThreadLocalRandom.current().nextInt();
+				state1.put(i, subKey, value);
+				value1.put(Tuple2.of(i, subKey), value);
+			}
+		});
+
+		ConcurrentHashMap<Tuple2<Integer, Integer>, Long> value2 = new ConcurrentHashMap<>(stateCount);
+		Thread thread2 = new Thread(() -> {
+			for (int i = 0; i < stateCount; ++i) {
+				Long value = ThreadLocalRandom.current().nextLong();
+				Integer subKey = ThreadLocalRandom.current().nextInt();
+				state2.put(i, subKey, value);
+				value2.put(Tuple2.of(i, subKey), value);
+			}
+		});
+		thread1.start();
+		thread2.start();
+
+		thread1.join();
+		thread2.join();
+
+		for (Map.Entry<Tuple2<Integer, Integer>, Long> entry : value1.entrySet()) {
+			Tuple2<Integer, Integer> key = entry.getKey();
+			Long v = state1.get(key.f0, key.f1);
+			assertEquals(entry.getValue(), v);
+		}
+		for (Map.Entry<Tuple2<Integer, Integer>, Long> entry : value2.entrySet()) {
+			Tuple2<Integer, Integer> key = entry.getKey();
+			Long v = state2.get(key.f0, key.f1);
+			assertEquals(entry.getValue(), v);
 		}
 	}
 
