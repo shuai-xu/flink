@@ -154,6 +154,7 @@ object FlinkBatchExecRuleSets {
   private val LOGICAL_OPT_RULES: RuleSet = RuleSets.ofList(
     // aggregation and projection rules
     AggregateProjectMergeRule.INSTANCE,
+    AggregateCalcMergeRule.INSTANCE,
     AggregateProjectPullUpConstantsRule.INSTANCE,
     // reorder sort and projection
     SortProjectTransposeRule.INSTANCE,

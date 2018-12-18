@@ -72,7 +72,7 @@ StreamExecCalc(select=[name, val, id])
 StreamExecCalc(select=[name, TMP_0, TMP_1])
 +- StreamExecGroupWindowAggregate(groupBy=[name], window=[TumblingGroupWindow('w, 'rowtime, 600000.millis)], properties=[TMP_0], select=[name, AVG(val) AS TMP_1, end('w) AS TMP_0])
    +- StreamExecExchange(distribution=[hash[name]])
-      +- StreamExecCalc(select=[rowtime, val, name], where=[>(val, 100)])
+      +- StreamExecCalc(select=[name, val, rowtime], where=[>(val, 100)])
          +- StreamExecTableSourceScan(table=[[default_catalog, default_db, rowTimeT]], fields=[id, rowtime, val, name])
 ]]>
     </Resource>
