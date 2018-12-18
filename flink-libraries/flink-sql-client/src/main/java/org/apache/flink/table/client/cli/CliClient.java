@@ -323,6 +323,9 @@ public class CliClient {
 			case DESCRIBE:
 				callDescribe(cmdCall);
 				break;
+			case DESC:
+				callDescribe(cmdCall);
+				break;
 			case EXPLAIN:
 				callExplain(cmdCall);
 				break;

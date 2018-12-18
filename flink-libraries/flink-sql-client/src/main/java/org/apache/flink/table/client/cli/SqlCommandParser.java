@@ -99,6 +99,7 @@ public final class SqlCommandParser {
 		SHOW_FUNCTIONS("show functions"),
 		USE("use"),
 		DESCRIBE("describe"),
+		DESC("desc"),
 		EXPLAIN("explain"),
 		SELECT("select"),
 		INSERT_INTO("insert into"),
