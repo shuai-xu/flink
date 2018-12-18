@@ -489,6 +489,11 @@ public class LegacyStatefulJobSavepointMigrationITCase extends SavepointMigratio
 		public void processWatermark(Watermark mark) throws Exception {
 			output.emitWatermark(mark);
 		}
+
+		@Override
+		public void endInput() throws Exception {
+
+		}
 	}
 
 	private static class CheckingRestoringUdfOperator
@@ -521,6 +526,11 @@ public class LegacyStatefulJobSavepointMigrationITCase extends SavepointMigratio
 		@Override
 		public void processWatermark(Watermark mark) throws Exception {
 			output.emitWatermark(mark);
+		}
+
+		@Override
+		public void endInput() throws Exception {
+
 		}
 	}
 
@@ -574,6 +584,11 @@ public class LegacyStatefulJobSavepointMigrationITCase extends SavepointMigratio
 		public void processWatermark(Watermark mark) throws Exception {
 			output.emitWatermark(mark);
 		}
+
+		@Override
+		public void endInput() throws Exception {
+
+		}
 	}
 
 	private static class CheckingTimelyStatefulOperator
@@ -615,6 +630,11 @@ public class LegacyStatefulJobSavepointMigrationITCase extends SavepointMigratio
 			getRuntimeContext().getAccumulator(SUCCESSFUL_PROCESS_CHECK_ACCUMULATOR).add(1);
 
 			output.collect(element);
+		}
+
+		@Override
+		public void endInput() throws Exception {
+
 		}
 
 		@Override

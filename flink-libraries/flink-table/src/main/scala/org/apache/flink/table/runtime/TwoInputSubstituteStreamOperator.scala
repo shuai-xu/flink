@@ -28,5 +28,11 @@ class TwoInputSubstituteStreamOperator[IN1 <: Any, IN2 <: Any, OUT <: Any](
     override val references: mutable.ArrayBuffer[AnyRef] = new mutable.ArrayBuffer[AnyRef]())
   extends SubstituteStreamOperator[OUT](name, code, ChainingStrategy.ALWAYS, references)
   with AbstractTwoInputSubstituteStreamOperator[IN1, IN2, OUT] {
+
+  override def endInput1(): Unit = {}
+
+  override def endInput2(): Unit = {}
+
+  override def requireState(): Boolean = false
 }
 

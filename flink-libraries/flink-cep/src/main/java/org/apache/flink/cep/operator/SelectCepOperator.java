@@ -55,4 +55,9 @@ public class SelectCepOperator<IN, KEY, OUT>
 			output.collect(new StreamRecord<>(getUserFunction().select(match), timestamp));
 		}
 	}
+
+	@Override
+	public void endInput() throws Exception {
+
+	}
 }

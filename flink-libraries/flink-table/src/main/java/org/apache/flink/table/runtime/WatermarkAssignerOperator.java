@@ -121,6 +121,11 @@ public class WatermarkAssignerOperator
 	}
 
 	@Override
+	public void endInput() throws Exception {
+
+	}
+
+	@Override
 	public void close() throws Exception {
 		super.close();
 

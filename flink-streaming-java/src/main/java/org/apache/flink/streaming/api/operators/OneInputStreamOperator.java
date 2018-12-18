@@ -55,5 +55,5 @@ public interface OneInputStreamOperator<IN, OUT> extends StreamOperator<OUT> {
 	 * will arrive at this operator. This method is guaranteed to not be called concurrently with
 	 * other methods of the operator.
 	 */
-	default void endInput() throws Exception {}
+	void endInput() throws Exception;
 }

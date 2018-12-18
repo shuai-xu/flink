@@ -190,4 +190,6 @@ class OverWindowOperator(
     }
     lastInput = inputRowSerializer.copy(input)
   }
+
+  override def endInput(): Unit = {}
 }

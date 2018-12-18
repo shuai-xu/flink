@@ -721,6 +721,11 @@ public class AbstractStreamOperatorTest {
 		}
 
 		@Override
+		public void endInput() throws Exception {
+
+		}
+
+		@Override
 		public void onEventTime(InternalTimer<Integer, VoidNamespace> timer) throws Exception {
 			String stateValue = getState(stateDescriptor).value();
 			output.collect(new StreamRecord<>("ON_EVENT_TIME:" + stateValue));

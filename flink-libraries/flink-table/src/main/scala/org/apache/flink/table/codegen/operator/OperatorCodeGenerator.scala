@@ -288,7 +288,7 @@ object OperatorCodeGenerator extends Logging {
         }
 
         @Override
-        public $SELECTION processRecord1($STREAM_RECORD $ELEMENT)
+        public $SELECTION processElement1($STREAM_RECORD $ELEMENT)
          throws Exception {
           ${ctx.reuseFieldCode()}
           $inputTypeTerm1 $input1Term = ${generatorInputTerm(inputTypeTerm1)}
@@ -301,7 +301,7 @@ object OperatorCodeGenerator extends Logging {
         }
 
         @Override
-        public $SELECTION processRecord2($STREAM_RECORD $ELEMENT)
+        public $SELECTION processElement2($STREAM_RECORD $ELEMENT)
          throws Exception {
           ${ctx.reuseFieldCode()}
           $inputTypeTerm2 $input2Term = ${generatorInputTerm(inputTypeTerm2)}

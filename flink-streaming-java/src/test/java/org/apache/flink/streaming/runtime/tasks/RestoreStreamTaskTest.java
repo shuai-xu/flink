@@ -320,6 +320,11 @@ public class RestoreStreamTaskTest extends TestLogger {
 		}
 
 		@Override
+		public void endInput() throws Exception {
+
+		}
+
+		@Override
 		public void initializeState(StateInitializationContext context) throws Exception {
 			super.initializeState(context);
 
@@ -351,6 +356,11 @@ public class RestoreStreamTaskTest extends TestLogger {
 		@Override
 		public void processElement(StreamRecord<String> element) throws Exception {
 			output.collect(element);
+		}
+
+		@Override
+		public void endInput() throws Exception {
+
 		}
 
 		@Override

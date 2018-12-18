@@ -137,7 +137,7 @@ public class TwoInputStreamTaskITCase extends AbstractTestBase {
 		}
 
 		@Override
-		public TwoInputSelection processRecord1(StreamRecord<String> element) throws Exception {
+		public TwoInputSelection processElement1(StreamRecord<String> element) throws Exception {
 			output.collect(element.replace(element.getValue() + "-[" + name + "-1]"));
 
 			currentInputReadingCount++;
@@ -150,7 +150,7 @@ public class TwoInputStreamTaskITCase extends AbstractTestBase {
 		}
 
 		@Override
-		public TwoInputSelection processRecord2(StreamRecord<String> element) throws Exception {
+		public TwoInputSelection processElement2(StreamRecord<String> element) throws Exception {
 			output.collect(element.replace(element.getValue() + "-[" + name + "-2]"));
 
 			currentInputReadingCount++;

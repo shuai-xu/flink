@@ -28,5 +28,9 @@ class OneInputSubstituteStreamOperator[IN <: Any, OUT <: Any](
     override val references: mutable.ArrayBuffer[AnyRef] = new mutable.ArrayBuffer[AnyRef]())
   extends SubstituteStreamOperator[OUT](name, code, ChainingStrategy.ALWAYS, references)
   with AbstractOneInputSubstituteStreamOperator[IN, OUT] {
+
+  override def endInput(): Unit = {}
+
+  override def requireState(): Boolean = false
 }
 

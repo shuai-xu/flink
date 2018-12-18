@@ -317,4 +317,9 @@ public class BoltWrapper<IN, OUT> extends AbstractStreamOperator<OUT> implements
 					MessageId.makeUnanchored()));
 		}
 	}
+
+	@Override
+	public void endInput() throws Exception {
+
+	}
 }

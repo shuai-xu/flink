@@ -151,7 +151,7 @@ public class SecondOfTwoInputProcessorTest {
 		//noinspection unchecked
 		verify(operator, times(2)).setKeyContextElement2(any(StreamRecord.class));
 		//noinspection unchecked
-		verify(operator, times(2)).processRecord2(any(StreamRecord.class));
+		verify(operator, times(2)).processElement2(any(StreamRecord.class));
 
 		assertEquals(2, operatorMetricGroup.getIOMetricGroup().getNumRecordsInCounter().getCount());
 		assertEquals(2, operatorMetricGroup.parent().getIOMetricGroup().getNumRecordsInCounter().getCount());

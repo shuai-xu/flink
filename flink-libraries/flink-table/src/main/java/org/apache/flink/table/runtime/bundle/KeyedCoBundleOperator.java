@@ -29,6 +29,7 @@ import org.apache.flink.streaming.api.bundle.CoBundleTrigger;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.Output;
+import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
@@ -90,7 +91,7 @@ public abstract class KeyedCoBundleOperator
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void processElement1(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection processElement1(StreamRecord<BaseRow> element) throws Exception {
 		while (isInFinishingBundle) {
 			checkpointingLock.wait();
 		}
@@ -99,11 +100,12 @@ public abstract class KeyedCoBundleOperator
 		List<BaseRow> records = leftBuffer.computeIfAbsent(key, k -> new ArrayList<>());
 		records.add(row);
 		coBundleTrigger.onLeftElement(row);
+		return TwoInputSelection.ANY;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void processElement2(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection processElement2(StreamRecord<BaseRow> element) throws Exception {
 		while (isInFinishingBundle) {
 			checkpointingLock.wait();
 		}
@@ -112,6 +114,7 @@ public abstract class KeyedCoBundleOperator
 		List<BaseRow> records = rightBuffer.computeIfAbsent(key, k -> new ArrayList<>());
 		records.add(row);
 		coBundleTrigger.onRightElement(row);
+		return TwoInputSelection.ANY;
 	}
 
 	@Override

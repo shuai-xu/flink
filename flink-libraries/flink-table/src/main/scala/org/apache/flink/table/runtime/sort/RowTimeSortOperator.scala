@@ -140,4 +140,6 @@ class RowTimeSortOperator(
       buffer.reset()
     }
   }
+
+  override def endInput(): Unit = {}
 }

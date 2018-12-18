@@ -617,6 +617,11 @@ public class OneInputStreamTaskTest extends TestLogger {
 		}
 
 		@Override
+		public void endInput() throws Exception {
+
+		}
+
+		@Override
 		public void close() throws Exception {
 
 			// verify that the timer service is still running
@@ -673,6 +678,11 @@ public class OneInputStreamTaskTest extends TestLogger {
 		public void processElement(StreamRecord<String> element) {
 			output.collect(element);
 			output.collect(element);
+		}
+
+		@Override
+		public void endInput() throws Exception {
+
 		}
 	}
 
@@ -769,6 +779,11 @@ public class OneInputStreamTaskTest extends TestLogger {
 		public void processWatermark(Watermark mark) throws Exception {
 			output.emitWatermark(new Watermark(mark.getTimestamp() * 2));
 		}
+
+		@Override
+		public void endInput() throws Exception {
+
+		}
 	}
 
 	@Test
@@ -855,6 +870,11 @@ public class OneInputStreamTaskTest extends TestLogger {
 			}
 
 			output.collect(element);
+		}
+
+		@Override
+		public void endInput() throws Exception {
+
 		}
 	}
 
@@ -1029,6 +1049,11 @@ public class OneInputStreamTaskTest extends TestLogger {
 		public void processElement(StreamRecord<IN> element) throws Exception {
 
 		}
+
+		@Override
+		public void endInput() throws Exception {
+
+		}
 	}
 
 
@@ -1140,6 +1165,11 @@ public class OneInputStreamTaskTest extends TestLogger {
 			} else {
 				handleWatermark(mark);
 			}
+		}
+
+		@Override
+		public void endInput() throws Exception {
+
 		}
 
 		protected void handleElement(StreamRecord<String> element) {

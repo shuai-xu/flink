@@ -194,6 +194,11 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 	}
 
 	@Override
+	public void endInput() throws Exception {
+
+	}
+
+	@Override
 	public void prepareSnapshotPreBarrier(long checkpointId) throws Exception {
 		while (isInFinishingBundle) {
 			checkpointingLock.wait();

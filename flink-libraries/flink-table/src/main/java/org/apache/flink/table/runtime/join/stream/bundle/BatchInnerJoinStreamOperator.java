@@ -24,6 +24,7 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.runtime.state.keyed.KeyedValueState;
 import org.apache.flink.streaming.api.bundle.CoBundleTrigger;
 import org.apache.flink.streaming.api.operators.InternalTimer;
+import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction;
 import org.apache.flink.table.codegen.GeneratedProjection;
 import org.apache.flink.table.dataformat.BaseRow;
@@ -208,5 +209,10 @@ public class BatchInnerJoinStreamOperator extends BatchJoinStreamOperator {
 				iterator.remove();
 			}
 		}
+	}
+
+	@Override
+	public TwoInputSelection firstInputSelection() {
+		return TwoInputSelection.ANY;
 	}
 }

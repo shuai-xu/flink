@@ -65,5 +65,7 @@ object TimeTestUtil {
         case Right(w) => output.emitWatermark(new Watermark(w))
       }
     }
+
+    override def endInput(): Unit = {}
   }
 }

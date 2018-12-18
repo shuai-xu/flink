@@ -302,6 +302,11 @@ public class ContextSubKeyedStateBinderTest {
 		public void processElement(StreamRecord<IN> elements) throws Exception {
 
 		}
+
+		@Override
+		public void endInput() throws Exception {
+
+		}
 	}
 
 	private static final class IdentityKeySelector<T> implements KeySelector<T, T> {

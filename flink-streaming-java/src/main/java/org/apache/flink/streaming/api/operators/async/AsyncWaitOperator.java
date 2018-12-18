@@ -247,6 +247,11 @@ public class AsyncWaitOperator<IN, OUT>
 	}
 
 	@Override
+	public void endInput() throws Exception {
+
+	}
+
+	@Override
 	public void snapshotState(StateSnapshotContext context) throws Exception {
 		super.snapshotState(context);
 

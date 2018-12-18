@@ -55,14 +55,14 @@ public class PriorityCoStreamFlatMap<IN1, IN2, OUT> extends CoStreamFlatMap<IN1,
 	}
 
 	@Override
-	public TwoInputSelection processRecord1(StreamRecord<IN1> element) throws Exception {
+	public TwoInputSelection processElement1(StreamRecord<IN1> element) throws Exception {
 		Preconditions.checkState(!firstFinished);
 		super.processElement1(element);
 		return TwoInputSelection.FIRST;
 	}
 
 	@Override
-	public TwoInputSelection processRecord2(StreamRecord<IN2> element) throws Exception {
+	public TwoInputSelection processElement2(StreamRecord<IN2> element) throws Exception {
 		Preconditions.checkState(firstFinished);
 		Preconditions.checkState(!secondFinished);
 		super.processElement2(element);

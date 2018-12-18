@@ -239,7 +239,12 @@ public class MergeJoinOperator extends AbstractStreamOperatorWithMetrics<BaseRow
 	}
 
 	@Override
-	public TwoInputSelection processRecord1(StreamRecord<BaseRow> record) throws Exception {
+	public TwoInputSelection firstInputSelection() {
+		return TwoInputSelection.ANY;
+	}
+
+	@Override
+	public TwoInputSelection processElement1(StreamRecord<BaseRow> record) throws Exception {
 		buffer1.add(record.getValue());
 		runJoin();
 		// must materialize cache immediately after the operation,
@@ -249,7 +254,7 @@ public class MergeJoinOperator extends AbstractStreamOperatorWithMetrics<BaseRow
 	}
 
 	@Override
-	public TwoInputSelection processRecord2(StreamRecord<BaseRow> record) throws Exception {
+	public TwoInputSelection processElement2(StreamRecord<BaseRow> record) throws Exception {
 		buffer2.add(record.getValue());
 		runJoin();
 		// must materialize cache immediately after the operation,

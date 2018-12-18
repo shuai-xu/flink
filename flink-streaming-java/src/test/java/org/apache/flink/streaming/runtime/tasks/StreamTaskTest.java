@@ -883,6 +883,11 @@ public class StreamTaskTest extends TestLogger {
 		public void processElement(StreamRecord<Void> element) throws Exception {
 
 		}
+
+		@Override
+		public void endInput() throws Exception {
+
+		}
 	}
 
 	private static class TestingExecutionStateListener implements TaskExecutionStateListener {

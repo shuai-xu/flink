@@ -718,6 +718,11 @@ public class TimestampITCase extends TestLogger {
 		}
 
 		@Override
+		public void endInput() throws Exception {
+
+		}
+
+		@Override
 		public void open() throws Exception {
 			super.open();
 			watermarks = new ArrayList<>();
@@ -743,6 +748,11 @@ public class TimestampITCase extends TestLogger {
 			}
 			output.collect(element);
 		}
+
+		@Override
+		public void endInput() throws Exception {
+
+		}
 	}
 
 	private static class DisabledTimestampCheckingOperator extends AbstractStreamOperator<Integer> implements OneInputStreamOperator<Integer, Integer> {
@@ -753,6 +763,11 @@ public class TimestampITCase extends TestLogger {
 				Assert.fail("Timestamps are not properly handled.");
 			}
 			output.collect(element);
+		}
+
+		@Override
+		public void endInput() throws Exception {
+
 		}
 	}
 

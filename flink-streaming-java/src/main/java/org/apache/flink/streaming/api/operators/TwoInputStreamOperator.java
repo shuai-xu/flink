@@ -39,57 +39,21 @@ public interface TwoInputStreamOperator<IN1, IN2, OUT> extends StreamOperator<OU
 	 * Returns the selection that this two-input operator wants to read firstly.
 	 * This method is guaranteed to not be called concurrently with other methods of the operator.
 	 */
-	default TwoInputSelection firstInputSelection() {
-		return TwoInputSelection.ANY;
-	}
-
-	/**
-	 * Processes one record that is from the first input of this two-input operator and returns
-	 * the next input selection. This method is guaranteed to not be called concurrently with
-	 * other methods of the operator.
-	 *
-	 * <p>You have to override this method when implementing a {@code TwoInputStreamOperator}, this is a
-	 * {@code default} method for backward compatibility with the old-style method only.
-	 */
-	default TwoInputSelection processRecord1(StreamRecord<IN1> element) throws Exception {
-		processElement1(element);
-
-		return TwoInputSelection.ANY;
-	}
-
-	/**
-	 * Processes one record that is from the second input of this two-input operator and returns
-	 * the next input selection. This method is guaranteed to not be called concurrently with
-	 * other methods of the operator.
-	 *
-	 * <p>You have to override this method when implementing a {@code TwoInputStreamOperator}, this is a
-	 * {@code default} method for backward compatibility with the old-style method only.
-	 */
-	default TwoInputSelection processRecord2(StreamRecord<IN2> element) throws Exception {
-		processElement2(element);
-
-		return TwoInputSelection.ANY;
-	}
+	TwoInputSelection firstInputSelection();
 
 	/**
 	 * Processes one element that arrived on the first input of this two-input operator.
 	 * This method is guaranteed to not be called concurrently with other methods of the operator.
 	 *
-	 * @deprecated This will be removed in a future version.
-	 *             Please use {@link #processRecord1(StreamRecord)} instead.
 	 */
-	@Deprecated
-	default void processElement1(StreamRecord<IN1> element) throws Exception {}
+	TwoInputSelection processElement1(StreamRecord<IN1> element) throws Exception;
 
 	/**
 	 * Processes one element that arrived on the second input of this two-input operator.
 	 * This method is guaranteed to not be called concurrently with other methods of the operator.
 	 *
-	 * @deprecated This will be removed in a future version.
-	 *             Please use {@link #processRecord2(StreamRecord)} instead.
 	 */
-	@Deprecated
-	default void processElement2(StreamRecord<IN2> element) throws Exception {}
+	TwoInputSelection processElement2(StreamRecord<IN2> element) throws Exception;
 
 	/**
 	 * Processes a {@link Watermark} that arrived on the first input of this two-input operator.
@@ -128,12 +92,12 @@ public interface TwoInputStreamOperator<IN1, IN2, OUT> extends StreamOperator<OU
 	 * will arrive on the first input of this two-input operator. This method is guaranteed to not
 	 * be called concurrently with other methods of the operator.
 	 */
-	default void endInput1() throws Exception {}
+	void endInput1() throws Exception;
 
 	/**
 	 * It is notified that no more element ({@link StreamRecord}, {@link Watermark} and {@link LatencyMarker})
 	 * will arrive on the second input of this two-input operator. This method is guaranteed to not
 	 * be called concurrently with other methods of the operator.
 	 */
-	default void endInput2() throws Exception {}
+	void endInput2() throws Exception;
 }

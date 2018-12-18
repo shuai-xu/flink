@@ -87,6 +87,11 @@ public class StreamConfigTest {
 		}
 
 		@Override
+		public boolean requireState() {
+			return actualStreamOperator.requireState();
+		}
+
+		@Override
 		public ChainingStrategy getChainingStrategy() {
 			return chainingStrategy;
 		}

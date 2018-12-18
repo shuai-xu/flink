@@ -152,7 +152,6 @@ public interface StreamOperator<OUT> extends CheckpointListener, KeyContext, Dis
 	 * indicates if this operator has state.
 	 * @return
 	 */
-	default boolean requireState() {
-		return false;
-	}
+	boolean requireState();
+
 }

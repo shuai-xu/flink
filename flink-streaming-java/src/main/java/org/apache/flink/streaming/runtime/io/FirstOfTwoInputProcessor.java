@@ -87,7 +87,7 @@ class FirstOfTwoInputProcessor implements InputProcessor, StatusWatermarkValve.V
 			numRecordsIn.inc();
 
 			operator.setKeyContextElement1(streamRecord);
-			operator.processRecord1(streamRecord);
+			operator.processElement1(streamRecord);
 		}
 	}
 

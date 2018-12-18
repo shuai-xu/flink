@@ -529,6 +529,11 @@ public class RocksDBAsyncSnapshotTest extends TestLogger {
 
 			state.update(element.getValue());
 		}
+
+		@Override
+		public void endInput() throws Exception {
+
+		}
 	}
 
 	// ------------------------------------------------------------------------

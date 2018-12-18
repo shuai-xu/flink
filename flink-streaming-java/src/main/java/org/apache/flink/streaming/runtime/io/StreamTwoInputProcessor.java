@@ -301,7 +301,7 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 							synchronized (lock) {
 								numRecordsIn.inc();
 								streamOperator.setKeyContextElement1(record);
-								inputSelection = streamOperator.processRecord1(record);
+								inputSelection = streamOperator.processElement1(record);
 							}
 						} else {
 							reusedObject2 = ((StreamRecord<IN2>) recordOrWatermark).getValue();
@@ -310,7 +310,7 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 							synchronized (lock) {
 								numRecordsIn.inc();
 								streamOperator.setKeyContextElement2(record);
-								inputSelection = streamOperator.processRecord2(record);
+								inputSelection = streamOperator.processElement2(record);
 							}
 						}
 

@@ -133,7 +133,12 @@ public class SemiAntiJoinStreamOperator extends JoinStreamOperator {
 	}
 
 	@Override
-	public TwoInputSelection processRecord1(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection firstInputSelection() {
+		return TwoInputSelection.ANY;
+	}
+
+	@Override
+	public TwoInputSelection processElement1(StreamRecord<BaseRow> element) throws Exception {
 		long currentTime = internalTimerService.currentProcessingTime();
 		BaseRow input = element.getValue();
 		BaseRow joinKey = leftKeySelector.getKey(input);
@@ -193,7 +198,7 @@ public class SemiAntiJoinStreamOperator extends JoinStreamOperator {
 	}
 
 	@Override
-	public TwoInputSelection processRecord2(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection processElement2(StreamRecord<BaseRow> element) throws Exception {
 		BaseRow input = element.getValue();
 		if (isAntiJoin) {
 			processReceivedRightRow(input, leftNotEmitedStateHandler, leftEmitedStateHandler);
@@ -201,6 +206,16 @@ public class SemiAntiJoinStreamOperator extends JoinStreamOperator {
 			processReceivedRightRow(input, leftEmitedStateHandler, leftNotEmitedStateHandler);
 		}
 		return TwoInputSelection.ANY;
+	}
+
+	@Override
+	public void endInput1() throws Exception {
+
+	}
+
+	@Override
+	public void endInput2() throws Exception {
+
 	}
 
 	private void processReceivedRightRow(BaseRow rightRow, JoinStateHandler leftJoinStateHandler,

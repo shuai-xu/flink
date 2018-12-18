@@ -115,4 +115,6 @@ class RankOperator(
       }
     }
   }
+
+  override def endInput(): Unit = {}
 }

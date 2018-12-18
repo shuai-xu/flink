@@ -265,7 +265,12 @@ public class OneSideSortMergeJoinOperator extends AbstractStreamOperatorWithMetr
 	}
 
 	@Override
-	public TwoInputSelection processRecord1(StreamRecord<BaseRow> record) throws Exception {
+	public TwoInputSelection firstInputSelection() {
+		return TwoInputSelection.ANY;
+	}
+
+	@Override
+	public TwoInputSelection processElement1(StreamRecord<BaseRow> record) throws Exception {
 		if (leftNeedsSort) {
 			sorter.write(record.getValue());
 		} else {
@@ -281,7 +286,7 @@ public class OneSideSortMergeJoinOperator extends AbstractStreamOperatorWithMetr
 	}
 
 	@Override
-	public TwoInputSelection processRecord2(StreamRecord<BaseRow> record) throws Exception {
+	public TwoInputSelection processElement2(StreamRecord<BaseRow> record) throws Exception {
 		if (leftNeedsSort) {
 			BaseRow row = record.getValue();
 			if (isFinished1) {

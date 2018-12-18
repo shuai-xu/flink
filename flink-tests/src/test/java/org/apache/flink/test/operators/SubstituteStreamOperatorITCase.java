@@ -134,8 +134,18 @@ public class SubstituteStreamOperatorITCase extends AbstractTestBase {
 		}
 
 		@Override
+		public boolean requireState() {
+			return false;
+		}
+
+		@Override
 		public ChainingStrategy getChainingStrategy() {
 			return chainingStrategy;
+		}
+
+		@Override
+		public void endInput() throws Exception {
+
 		}
 	}
 
@@ -182,8 +192,33 @@ public class SubstituteStreamOperatorITCase extends AbstractTestBase {
 		}
 
 		@Override
+		public boolean requireState() {
+			return false;
+		}
+
+		@Override
 		public ChainingStrategy getChainingStrategy() {
 			return chainingStrategy;
+		}
+
+		@Override
+		public TwoInputSelection processElement1(StreamRecord<IN1> element) throws Exception {
+			return TwoInputSelection.ANY;
+		}
+
+		@Override
+		public TwoInputSelection processElement2(StreamRecord<IN2> element) throws Exception {
+			return TwoInputSelection.ANY;
+		}
+
+		@Override
+		public void endInput1() throws Exception {
+
+		}
+
+		@Override
+		public void endInput2() throws Exception {
+
 		}
 	}
 
@@ -201,15 +236,30 @@ public class SubstituteStreamOperatorITCase extends AbstractTestBase {
 		}
 
 		@Override
-		public TwoInputSelection processRecord1(StreamRecord<String> element) throws Exception {
+		public TwoInputSelection processElement1(StreamRecord<String> element) throws Exception {
 			output.collect((element.replace(element.getValue() + "-[" + suffix1 + "]")));
 			return TwoInputSelection.ANY;
 		}
 
 		@Override
-		public TwoInputSelection processRecord2(StreamRecord<String> element) throws Exception {
+		public TwoInputSelection processElement2(StreamRecord<String> element) throws Exception {
 			output.collect((element.replace(element.getValue() + "-[" + suffix2 + "]")));
 			return TwoInputSelection.ANY;
+		}
+
+		@Override
+		public TwoInputSelection firstInputSelection() {
+			return TwoInputSelection.ANY;
+		}
+
+		@Override
+		public void endInput1() throws Exception {
+
+		}
+
+		@Override
+		public void endInput2() throws Exception {
+
 		}
 	}
 

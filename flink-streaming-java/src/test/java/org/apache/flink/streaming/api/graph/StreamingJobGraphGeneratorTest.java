@@ -945,8 +945,18 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		}
 
 		@Override
+		public boolean requireState() {
+			return actualStreamOperator.requireState();
+		}
+
+		@Override
 		public ChainingStrategy getChainingStrategy() {
 			return chainingStrategy;
+		}
+
+		@Override
+		public void endInput() throws Exception {
+			actualStreamOperator.endInput();
 		}
 	}
 

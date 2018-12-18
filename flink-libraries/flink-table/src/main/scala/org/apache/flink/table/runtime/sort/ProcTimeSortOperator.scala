@@ -119,4 +119,6 @@ class ProcTimeSortOperator(
       buffer.reset()
     }
   }
+
+  override def endInput(): Unit = {}
 }

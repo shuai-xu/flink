@@ -147,13 +147,13 @@ public abstract class HashJoinOperator extends AbstractStreamOperatorWithMetrics
 	}
 
 	@Override
-	public TwoInputSelection processRecord1(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection processElement1(StreamRecord<BaseRow> element) throws Exception {
 		this.table.putBuildRow(element.getValue());
 		return TwoInputSelection.FIRST;
 	}
 
 	@Override
-	public TwoInputSelection processRecord2(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection processElement2(StreamRecord<BaseRow> element) throws Exception {
 		if (this.table.tryProbe(element.getValue())) {
 			joinWithNextKey();
 		}

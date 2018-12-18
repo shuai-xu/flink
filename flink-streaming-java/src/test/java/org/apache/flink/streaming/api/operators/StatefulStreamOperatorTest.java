@@ -459,6 +459,11 @@ public class StatefulStreamOperatorTest {
 					throw new IllegalStateException();
 			}
 		}
+
+		@Override
+		public void endInput() throws Exception {
+
+		}
 	}
 
 	private static class KeyedStateAccessOperator
@@ -499,6 +504,11 @@ public class StatefulStreamOperatorTest {
 				default:
 					throw new IllegalStateException();
 			}
+		}
+
+		@Override
+		public void endInput() throws Exception {
+
 		}
 	}
 
@@ -541,6 +551,11 @@ public class StatefulStreamOperatorTest {
 				default:
 					throw new IllegalStateException();
 			}
+		}
+
+		@Override
+		public void endInput() throws Exception {
+
 		}
 	}
 

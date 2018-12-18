@@ -387,8 +387,8 @@ public class StreamingJobGraphGenerator {
 		   for the following purpose:
 		   1. No cycle when connecting edges of the job graph.
 		   2. No deadlock occurs when dynamic selection reading,
-		      see {@code org.apache.flink.streaming.api.operators.TwoInputStreamOperator#processRecord1(StreamRecord)}
-		      and {@code org.apache.flink.streaming.api.operators.TwoInputStreamOperator#processRecord2(StreamRecord)}.
+		      see {@code org.apache.flink.streaming.api.operators.TwoInputStreamOperator#processElement1(StreamRecord)}
+		      and {@code org.apache.flink.streaming.api.operators.TwoInputStreamOperator#processElement2(StreamRecord)}.
 		 */
 		if (streamGraph.isMultiHeadChainMode() && chainingLayerMap.size() > 0) {
 			Map<Integer, Integer> colorMap = new HashMap<>(); // key: nodeId, value: colorType (1, 2)

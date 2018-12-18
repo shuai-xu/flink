@@ -66,4 +66,9 @@ public class FlatSelectCepOperator<IN, KEY, OUT>
 			getUserFunction().flatSelect(match, collector);
 		}
 	}
+
+	@Override
+	public void endInput() throws Exception {
+
+	}
 }

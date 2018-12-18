@@ -87,6 +87,11 @@ public class SelectTimeoutCepOperator<IN, OUT1, OUT2, KEY>
 		}
 	}
 
+	@Override
+	public void endInput() throws Exception {
+
+	}
+
 	/**
 	 * Wrapper that enables storing {@link PatternSelectFunction} and {@link PatternTimeoutFunction} in one udf.
 	 *

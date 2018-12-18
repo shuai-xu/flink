@@ -281,6 +281,11 @@ public class StatefulJobSavepointMigrationITCase extends SavepointMigrationTestB
 		public void processWatermark(Watermark mark) {
 			output.emitWatermark(mark);
 		}
+
+		@Override
+		public void endInput() throws Exception {
+
+		}
 	}
 
 	private static class CheckingTimelyStatefulOperator
@@ -321,6 +326,11 @@ public class StatefulJobSavepointMigrationITCase extends SavepointMigrationTestB
 			getRuntimeContext().getAccumulator(SUCCESSFUL_PROCESS_CHECK_ACCUMULATOR).add(1);
 
 			output.collect(element);
+		}
+
+		@Override
+		public void endInput() throws Exception {
+
 		}
 
 		@Override

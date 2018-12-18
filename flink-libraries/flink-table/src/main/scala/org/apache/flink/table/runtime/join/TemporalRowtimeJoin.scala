@@ -142,21 +142,25 @@ class TemporalRowtimeJoin(
       this)
   }
 
-  override def processElement1(element: StreamRecord[BaseRow]): Unit = {
+  override def processElement1(element: StreamRecord[BaseRow]): TwoInputSelection = {
     val row = element.getValue
     checkNotRetraction(row)
 
     leftState.put(getNextLeftIndex, row)
     registerSmallestTimer(getLeftTime(row)) // Timer to emit and clean up the state
+
+    TwoInputSelection.ANY
   }
 
-  override def processElement2(element: StreamRecord[BaseRow]): Unit = {
+  override def processElement2(element: StreamRecord[BaseRow]): TwoInputSelection = {
     val row = element.getValue
     checkNotRetraction(row)
 
     val rowTime = getRightTime(row)
     rightState.put(rowTime, row)
     registerSmallestTimer(rowTime) // Timer to clean up the state
+
+    TwoInputSelection.ANY
   }
 
   private def registerSmallestTimer(timestamp: Long): Unit = {
@@ -335,6 +339,12 @@ class TemporalRowtimeJoin(
           "If this can happen it should be validated during planning!")
     }
   }
+
+  override def firstInputSelection() = TwoInputSelection.ANY
+
+  override def endInput1() = {}
+
+  override def endInput2() = {}
 }
 
 class RowtimeComparator(timeAttribute: Int) extends Comparator[BaseRow] with Serializable {

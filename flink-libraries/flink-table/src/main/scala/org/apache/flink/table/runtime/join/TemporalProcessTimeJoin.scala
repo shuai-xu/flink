@@ -22,7 +22,7 @@ import org.apache.flink.api.common.functions.util.FunctionUtils
 import org.apache.flink.api.common.state.{ValueState, ValueStateDescriptor}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.streaming.api.operators.{AbstractStreamOperator, TimestampedCollector, TwoInputStreamOperator}
+import org.apache.flink.streaming.api.operators.{AbstractStreamOperator, TimestampedCollector, TwoInputSelection, TwoInputStreamOperator}
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.table.codegen.Compiler
 import org.apache.flink.table.dataformat.BaseRow
@@ -64,24 +64,35 @@ class TemporalProcessTimeJoin(
     headerCollector.out = collector
   }
 
-  override def processElement1(element: StreamRecord[BaseRow]): Unit = {
+  override def processElement1(element: StreamRecord[BaseRow]): TwoInputSelection = {
 
     if (rightState.value() == null) {
-      return
+      return TwoInputSelection.ANY
     }
 
     headerCollector.setHeader(element.getValue.getHeader)
 
     val rightSideRow = rightState.value()
     joinFunction.join(element.getValue, rightSideRow, collector)
+
+    TwoInputSelection.ANY
   }
 
-  override def processElement2(element: StreamRecord[BaseRow]): Unit = {
+  override def processElement2(element: StreamRecord[BaseRow]): TwoInputSelection = {
 
     if (BaseRowUtil.isAccumulateMsg(element.getValue)) {
       rightState.update(element.getValue)
     } else {
       rightState.clear()
     }
+    TwoInputSelection.ANY
   }
+
+  override def firstInputSelection(): TwoInputSelection = {
+    TwoInputSelection.ANY
+  }
+
+  override def endInput1(): Unit = {}
+
+  override def endInput2(): Unit = {}
 }

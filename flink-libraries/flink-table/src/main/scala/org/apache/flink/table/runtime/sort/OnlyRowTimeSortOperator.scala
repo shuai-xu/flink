@@ -90,4 +90,6 @@ class OnlyRowTimeSortOperator(
       lastTriggeringTsState.put(VoidNamespace.INSTANCE, timestamp)
     }
   }
+
+  override def endInput(): Unit = {}
 }

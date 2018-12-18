@@ -150,7 +150,7 @@ public class FirstOfTwoInputProcessorTest {
 		//noinspection unchecked
 		verify(operator, times(2)).setKeyContextElement1(any(StreamRecord.class));
 		//noinspection unchecked
-		verify(operator, times(2)).processRecord1(any(StreamRecord.class));
+		verify(operator, times(2)).processElement1(any(StreamRecord.class));
 		assertEquals(2, operatorMetricGroup.getIOMetricGroup().getNumRecordsInCounter().getCount());
 		assertEquals(2, operatorMetricGroup.parent().getIOMetricGroup().getNumRecordsInCounter().getCount());
 	}

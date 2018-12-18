@@ -18,6 +18,7 @@
 package org.apache.flink.table.runtime.join.stream;
 
 import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction;
 import org.apache.flink.table.codegen.GeneratedProjection;
@@ -53,14 +54,31 @@ public class RightOuterJoinStreamOperator extends OuterJoinStreamOperator {
 	}
 
 	@Override
-	public void processElement1(StreamRecord<BaseRow> element) throws Exception {
-		processElement(element.getValue(), leftStateHandler, rightStateHandler, leftMatchStateHandler,
-			rightMatchStateHandler, true, false, true, leftTimerState);
+	public TwoInputSelection firstInputSelection() {
+		return TwoInputSelection.ANY;
 	}
 
 	@Override
-	public void processElement2(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection processElement1(StreamRecord<BaseRow> element) throws Exception {
+		processElement(element.getValue(), leftStateHandler, rightStateHandler, leftMatchStateHandler,
+			rightMatchStateHandler, true, false, true, leftTimerState);
+		return TwoInputSelection.ANY;
+	}
+
+	@Override
+	public TwoInputSelection processElement2(StreamRecord<BaseRow> element) throws Exception {
 		processElement(element.getValue(), rightStateHandler, leftStateHandler, rightMatchStateHandler,
 			leftMatchStateHandler, false, true, false, rightTimerState);
+		return TwoInputSelection.ANY;
+	}
+
+	@Override
+	public void endInput1() throws Exception {
+
+	}
+
+	@Override
+	public void endInput2() throws Exception {
+
 	}
 }

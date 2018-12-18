@@ -19,6 +19,7 @@ package org.apache.flink.table.runtime.join.stream.bundle;
 
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.bundle.CoBundleTrigger;
+import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction;
 import org.apache.flink.table.codegen.GeneratedProjection;
 import org.apache.flink.table.dataformat.BaseRow;
@@ -75,5 +76,10 @@ public class FullOuterBatchJoinStreamOperator extends OuterBatchJoinStreamOperat
 		processSingleSideBundles(left, right, leftJoinStateType, rightJoinStateType, leftStateHandler,
 				rightStateHandler, leftMatchStateHandler, rightMatchStateHandler, leftTimerState,
 				true, true, true, out);
+	}
+
+	@Override
+	public TwoInputSelection firstInputSelection() {
+		return TwoInputSelection.ANY;
 	}
 }

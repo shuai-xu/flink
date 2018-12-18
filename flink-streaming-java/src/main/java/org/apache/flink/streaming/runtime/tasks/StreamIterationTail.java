@@ -130,6 +130,11 @@ public class StreamIterationTail<IN> extends OneInputStreamTask<IN, IN> {
 		public void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
 			// ignore
 		}
+
+		@Override
+		public void endInput() throws Exception {
+
+		}
 	}
 
 	private static class IterationTailOutput<IN> implements Output<StreamRecord<IN>> {

@@ -99,6 +99,11 @@ public class FlatSelectTimeoutCepOperator<IN, OUT1, OUT2, KEY> extends
 		}
 	}
 
+	@Override
+	public void endInput() throws Exception {
+
+	}
+
 	/**
 	 * Wrapper that enables storing {@link PatternFlatSelectFunction} and {@link PatternFlatTimeoutFunction} functions
 	 * in one udf.

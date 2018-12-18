@@ -37,12 +37,12 @@ public interface AbstractTwoInputSubstituteStreamOperator<IN1, IN2, OUT> extends
 	}
 
 	@Override
-	default TwoInputSelection processRecord1(StreamRecord<IN1> element) throws Exception {
+	default TwoInputSelection processElement1(StreamRecord<IN1> element) throws Exception {
 		throw new UnsupportedOperationException("For an AbstractTwoInputSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	default TwoInputSelection processRecord2(StreamRecord<IN2> element) throws Exception {
+	default TwoInputSelection processElement2(StreamRecord<IN2> element) throws Exception {
 		throw new UnsupportedOperationException("For an AbstractTwoInputSubstituteStreamOperator, this method should not be called");
 	}
 

@@ -455,15 +455,32 @@ public class TwoInputStreamTaskTest {
 	static class DuplicatingOperator extends AbstractStreamOperator<String> implements TwoInputStreamOperator<String, String, String> {
 
 		@Override
-		public void processElement1(StreamRecord<String> element) {
-			output.collect(element);
-			output.collect(element);
+		public TwoInputSelection firstInputSelection() {
+			return TwoInputSelection.ANY;
 		}
 
 		@Override
-		public void processElement2(StreamRecord<String> element) {
+		public TwoInputSelection processElement1(StreamRecord<String> element) {
 			output.collect(element);
 			output.collect(element);
+			return TwoInputSelection.ANY;
+		}
+
+		@Override
+		public TwoInputSelection processElement2(StreamRecord<String> element) {
+			output.collect(element);
+			output.collect(element);
+			return TwoInputSelection.ANY;
+		}
+
+		@Override
+		public void endInput1() throws Exception {
+
+		}
+
+		@Override
+		public void endInput2() throws Exception {
+
 		}
 	}
 
@@ -692,7 +709,12 @@ public class TwoInputStreamTaskTest {
 		private Object prevValue2 = null;
 
 		@Override
-		public void processElement1(StreamRecord<Tuple2<String, Integer>> element) throws Exception {
+		public TwoInputSelection firstInputSelection() {
+			return TwoInputSelection.ANY;
+		}
+
+		@Override
+		public TwoInputSelection processElement1(StreamRecord<Tuple2<String, Integer>> element) throws Exception {
 			if (prevRecord1 != null) {
 				assertTrue("Reuse StreamRecord object in the 1th input of the head operator.", element != prevRecord1);
 				assertTrue("No reuse value object in the 1th input of the head operator.", element.getValue() == prevValue1);
@@ -704,10 +726,11 @@ public class TwoInputStreamTaskTest {
 			headOperatorValue = element.getValue();
 
 			output.collect(element);
+			return TwoInputSelection.ANY;
 		}
 
 		@Override
-		public void processElement2(StreamRecord<Tuple2<String, Integer>> element) {
+		public TwoInputSelection processElement2(StreamRecord<Tuple2<String, Integer>> element) {
 			if (prevRecord2 != null) {
 				assertTrue("Reuse StreamRecord object in the 2th input of the head operator.", element != prevRecord2);
 				assertTrue("No reuse value object in the 2th input of the head operator.", element.getValue() == prevValue2);
@@ -723,6 +746,17 @@ public class TwoInputStreamTaskTest {
 			headOperatorValue = element.getValue();
 
 			output.collect(element);
+			return TwoInputSelection.ANY;
+		}
+
+		@Override
+		public void endInput1() throws Exception {
+
+		}
+
+		@Override
+		public void endInput2() throws Exception {
+
 		}
 
 		private static class TestMutableObjectReuseNextOperator
@@ -736,6 +770,11 @@ public class TwoInputStreamTaskTest {
 				assertTrue("No reuse value object in chain.", element.getValue() == headOperatorValue);
 
 				output.collect(element);
+			}
+
+			@Override
+			public void endInput() throws Exception {
+
 			}
 		}
 	}
@@ -817,23 +856,30 @@ public class TwoInputStreamTaskTest {
 		}
 
 		@Override
-		public void processElement1(StreamRecord<String> element) throws Exception {
+		public TwoInputSelection firstInputSelection() {
+			return TwoInputSelection.ANY;
+		}
+
+		@Override
+		public TwoInputSelection processElement1(StreamRecord<String> element) throws Exception {
 			output.collect(element.replace(element.getValue() + "-[" + name + "-1]"));
 
 			numOutputRecords1++;
 			synchronized (this) {
 				this.notifyAll();
 			}
+			return TwoInputSelection.ANY;
 		}
 
 		@Override
-		public void processElement2(StreamRecord<String> element) throws Exception {
+		public TwoInputSelection processElement2(StreamRecord<String> element) throws Exception {
 			output.collect(element.replace(element.getValue() + "-[" + name + "-2]"));
 
 			numOutputRecords2++;
 			synchronized (this) {
 				this.notifyAll();
 			}
+			return TwoInputSelection.ANY;
 		}
 
 		@Override
@@ -989,7 +1035,7 @@ public class TwoInputStreamTaskTest {
 		}
 
 		@Override
-		public TwoInputSelection processRecord1(StreamRecord<String> element) throws Exception {
+		public TwoInputSelection processElement1(StreamRecord<String> element) throws Exception {
 			output.collect(element.replace(element.getValue() + "-[" + name + "-1]"));
 
 			currentInputReadingCount++;
@@ -1002,7 +1048,7 @@ public class TwoInputStreamTaskTest {
 		}
 
 		@Override
-		public TwoInputSelection processRecord2(StreamRecord<String> element) throws Exception {
+		public TwoInputSelection processElement2(StreamRecord<String> element) throws Exception {
 			output.collect(element.replace(element.getValue() + "-[" + name + "-2]"));
 
 			currentInputReadingCount++;

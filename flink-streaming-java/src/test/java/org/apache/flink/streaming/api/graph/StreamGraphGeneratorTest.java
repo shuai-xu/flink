@@ -43,6 +43,7 @@ import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.operators.Output;
 import org.apache.flink.streaming.api.operators.OutputTypeConfigurable;
 import org.apache.flink.streaming.api.operators.StreamSource;
+import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.api.transformations.OneInputTransformation;
 import org.apache.flink.streaming.api.transformations.SideOutputTransformation;
@@ -669,13 +670,20 @@ public class StreamGraphGeneratorTest {
 		}
 
 		@Override
-		public void processElement1(StreamRecord<Integer> element) throws Exception {
-			output.collect(element);
+		public TwoInputSelection firstInputSelection() {
+			return TwoInputSelection.ANY;
 		}
 
 		@Override
-		public void processElement2(StreamRecord<Integer> element) throws Exception {
+		public TwoInputSelection processElement1(StreamRecord<Integer> element) throws Exception {
 			output.collect(element);
+			return TwoInputSelection.ANY;
+		}
+
+		@Override
+		public TwoInputSelection processElement2(StreamRecord<Integer> element) throws Exception {
+			output.collect(element);
+			return TwoInputSelection.ANY;
 		}
 
 		@Override
@@ -692,6 +700,16 @@ public class StreamGraphGeneratorTest {
 		@Override
 		public void processLatencyMarker2(LatencyMarker latencyMarker) throws Exception {
 			// ignore
+		}
+
+		@Override
+		public void endInput1() throws Exception {
+
+		}
+
+		@Override
+		public void endInput2() throws Exception {
+
 		}
 
 		@Override
@@ -719,6 +737,11 @@ public class StreamGraphGeneratorTest {
 
 		@Override
 		public void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
+
+		}
+
+		@Override
+		public void endInput() throws Exception {
 
 		}
 

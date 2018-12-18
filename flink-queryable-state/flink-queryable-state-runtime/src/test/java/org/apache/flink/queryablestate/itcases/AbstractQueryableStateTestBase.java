@@ -1168,6 +1168,11 @@ public abstract class AbstractQueryableStateTestBase extends TestLogger {
 		public void processElement(StreamRecord<Tuple2<Integer, Long>> element) throws Exception {
 			state.add(element.getValue());
 		}
+
+		@Override
+		public void endInput() throws Exception {
+
+		}
 	}
 
 	/**

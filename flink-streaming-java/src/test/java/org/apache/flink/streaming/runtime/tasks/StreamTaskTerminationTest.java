@@ -251,6 +251,11 @@ public class StreamTaskTerminationTest extends TestLogger {
 		public void processElement(StreamRecord<T> element) throws Exception {
 
 		}
+
+		@Override
+		public void endInput() throws Exception {
+
+		}
 	}
 
 	static class BlockingStateBackend implements StateBackend {

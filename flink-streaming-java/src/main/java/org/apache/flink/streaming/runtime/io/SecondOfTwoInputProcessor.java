@@ -88,7 +88,7 @@ class SecondOfTwoInputProcessor implements InputProcessor, StatusWatermarkValve.
 			numRecordsIn.inc();
 
 			operator.setKeyContextElement2(streamRecord);
-			operator.processRecord2(streamRecord);
+			operator.processElement2(streamRecord);
 		}
 	}
 

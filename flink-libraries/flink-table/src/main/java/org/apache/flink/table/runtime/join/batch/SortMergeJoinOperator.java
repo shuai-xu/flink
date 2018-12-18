@@ -239,13 +239,13 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 	}
 
 	@Override
-	public TwoInputSelection processRecord1(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection processElement1(StreamRecord<BaseRow> element) throws Exception {
 		this.sorter1.write(element.getValue());
 		return TwoInputSelection.ANY;
 	}
 
 	@Override
-	public TwoInputSelection processRecord2(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection processElement2(StreamRecord<BaseRow> element) throws Exception {
 		this.sorter2.write(element.getValue());
 		return TwoInputSelection.ANY;
 	}

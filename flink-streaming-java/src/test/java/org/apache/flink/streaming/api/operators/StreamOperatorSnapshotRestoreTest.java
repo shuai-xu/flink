@@ -277,6 +277,11 @@ public class StreamOperatorSnapshotRestoreTest extends TestLogger {
 		}
 
 		@Override
+		public void endInput() throws Exception {
+
+		}
+
+		@Override
 		public void snapshotState(StateSnapshotContext context) throws Exception {
 
 			KeyedStateCheckpointOutputStream out = context.getRawKeyedOperatorStateOutput();

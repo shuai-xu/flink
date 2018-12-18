@@ -156,6 +156,11 @@ public class ContinuousFileReaderOperator<OUT> extends AbstractStreamOperator<OU
 	}
 
 	@Override
+	public void endInput() throws Exception {
+
+	}
+
+	@Override
 	public void dispose() throws Exception {
 		super.dispose();
 

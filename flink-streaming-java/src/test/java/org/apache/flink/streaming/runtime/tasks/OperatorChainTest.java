@@ -490,7 +490,7 @@ public class OperatorChainTest {
 
 		assertFalse(monitor.selectionChanged);
 		// record-$operator-$typeNum-$recordSequence
-		twoInputOperator3.processRecord2(new StreamRecord<>("record-3-2-1"));
+		twoInputOperator3.processElement2(new StreamRecord<>("record-3-2-1"));
 
 		assertTrue(monitor.selectionChanged);
 		monitor.selectionChanged = false;
@@ -503,7 +503,7 @@ public class OperatorChainTest {
 		assertEquals(2, nextSelectedInputs1.get(0).toEdgeInputSelection().getStreamEdge().getSourceId());
 		assertEquals(4, nextSelectedInputs1.get(0).toEdgeInputSelection().getStreamEdge().getTargetId());
 
-		twoInputOperator4.processRecord1(new StreamRecord<>("record-4-1-1"));
+		twoInputOperator4.processElement1(new StreamRecord<>("record-4-1-1"));
 
 		assertTrue(monitor.selectionChanged);
 		monitor.selectionChanged = false;
@@ -515,7 +515,7 @@ public class OperatorChainTest {
 		assertEquals(0, nextSelectedInputs2.get(0).toEdgeInputSelection().getStreamEdge().getSourceId());
 		assertEquals(3, nextSelectedInputs2.get(0).toEdgeInputSelection().getStreamEdge().getTargetId());
 
-		twoInputOperator3.processRecord1(new StreamRecord<>("record-3-1-1"));
+		twoInputOperator3.processElement1(new StreamRecord<>("record-3-1-1"));
 
 		assertTrue(monitor.selectionChanged);
 		monitor.selectionChanged = false;
@@ -528,7 +528,7 @@ public class OperatorChainTest {
 		assertEquals(2, nextSelectedInputs3.get(0).toEdgeInputSelection().getStreamEdge().getSourceId());
 		assertEquals(4, nextSelectedInputs3.get(0).toEdgeInputSelection().getStreamEdge().getTargetId());
 
-		twoInputOperator4.processRecord1(new StreamRecord<>("record-4-1-2"));
+		twoInputOperator4.processElement1(new StreamRecord<>("record-4-1-2"));
 
 		assertTrue(monitor.selectionChanged);
 		monitor.selectionChanged = false;
@@ -607,7 +607,7 @@ public class OperatorChainTest {
 		}
 
 		@Override
-		public TwoInputSelection processRecord1(StreamRecord<String> element) throws Exception {
+		public TwoInputSelection processElement1(StreamRecord<String> element) throws Exception {
 			firstRecords.add(element.getValue());
 			output.collect(element);
 			processed++;
@@ -615,7 +615,7 @@ public class OperatorChainTest {
 		}
 
 		@Override
-		public TwoInputSelection processRecord2(StreamRecord<String> element) throws Exception {
+		public TwoInputSelection processElement2(StreamRecord<String> element) throws Exception {
 			secondRecords.add(element.getValue());
 			output.collect(element);
 			processed++;
