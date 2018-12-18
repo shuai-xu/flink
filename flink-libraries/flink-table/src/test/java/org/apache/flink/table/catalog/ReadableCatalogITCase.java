@@ -40,6 +40,7 @@ import static org.junit.Assert.assertEquals;
  * IT case for ReadableCatalog.
  */
 public class ReadableCatalogITCase {
+
 	private StreamExecutionEnvironment env;
 	private StreamTableEnvironment streamEnv;
 	private BatchTableEnvironment batchEnv;
