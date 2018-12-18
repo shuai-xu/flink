@@ -17,11 +17,21 @@
 
 package org.apache.flink.table.dataformat.util;
 
+import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
+import org.apache.flink.api.common.typeinfo.BigDecimalTypeInfo;
+import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.java.typeutils.MapTypeInfo;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
+import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo;
+import org.apache.flink.table.typeutils.TypeUtils;
+
+import static org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_PRIMITIVE_ARRAY_TYPE_INFO;
+import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**
  * Util for base row.
@@ -69,7 +79,7 @@ public final class BaseRowUtil {
 				if (baseRow.isNullAt(i)) {
 					row.update(i, null);
 				} else {
-					row.update(i, baseRow.get(i, typeInfos[i], typeSerializers[i]));
+					row.update(i, get(baseRow, i, typeInfos[i], typeSerializers[i]));
 				}
 			}
 			return row;
@@ -93,5 +103,65 @@ public final class BaseRowUtil {
 			}
 			return row;
 		}
+	}
+
+	public static Object get(BaseRow row, int ordinal, TypeInformation type, TypeSerializer serializer) {
+		if (type.equals(Types.BOOLEAN)) {
+			return row.getBoolean(ordinal);
+		} else if (type.equals(Types.BYTE)) {
+			return row.getByte(ordinal);
+		} else if (type.equals(Types.SHORT)) {
+			return row.getShort(ordinal);
+		} else if (type.equals(Types.INT)) {
+			return row.getInt(ordinal);
+		} else if (type.equals(Types.LONG)) {
+			return row.getLong(ordinal);
+		} else if (type.equals(Types.FLOAT)) {
+			return row.getFloat(ordinal);
+		} else if (type.equals(Types.DOUBLE)) {
+			return row.getDouble(ordinal);
+		} else if (type instanceof BigDecimalTypeInfo) {
+			BigDecimalTypeInfo dt = (BigDecimalTypeInfo) type;
+			return row.getDecimal(ordinal, dt.precision(), dt.scale());
+		} else if (type.equals(Types.STRING)) {
+			return row.getBinaryString(ordinal);
+		} else if (type.equals(BasicTypeInfo.CHAR_TYPE_INFO)) {
+			return row.getChar(ordinal);
+		} else if (type.equals(TimeIndicatorTypeInfo.ROWTIME_INDICATOR())) {
+			return row.getLong(ordinal);
+		} else if (type.equals(SqlTimeTypeInfo.DATE)) {
+			return row.getInt(ordinal);
+		} else if (type.equals(SqlTimeTypeInfo.TIME)) {
+			return row.getInt(ordinal);
+		} else if (type.equals(SqlTimeTypeInfo.TIMESTAMP)) {
+			return row.getLong(ordinal);
+		} else if (type.equals(BYTE_PRIMITIVE_ARRAY_TYPE_INFO)) {
+			return row.getByteArray(ordinal);
+		} else if (TypeUtils.isInternalArrayType(type)) {
+			return row.getArray(ordinal);
+		} else if (type instanceof MapTypeInfo) {
+			return row.getMap(ordinal);
+		} else if (TypeUtils.isInternalCompositeType(type)) {
+			return row.getBaseRow(ordinal, type.getArity());
+		} else {
+			return row.getGeneric(ordinal, serializer);
+		}
+	}
+
+	public static String toOriginString(BaseRow row, TypeInformation[] types, TypeSerializer[] serializers) {
+		checkArgument(types.length == row.getArity());
+		StringBuilder build = new StringBuilder("[");
+		build.append(row.getHeader());
+		for (int i = 0; i < row.getArity(); i++) {
+			build.append(',');
+			if (row.isNullAt(i)) {
+				build.append("null");
+			} else {
+				TypeSerializer serializer = serializers != null ? serializers[i] : null;
+				build.append(get(row, i, types[i], serializer));
+			}
+		}
+		build.append(']');
+		return build.toString();
 	}
 }

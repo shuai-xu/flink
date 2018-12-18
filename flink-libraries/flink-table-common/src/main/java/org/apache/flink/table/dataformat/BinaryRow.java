@@ -17,14 +17,14 @@
 
 package org.apache.flink.table.dataformat;
 
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
-import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.Types;
 import org.apache.flink.table.dataformat.util.BinaryRowUtil;
 import org.apache.flink.table.dataformat.util.BitSetUtil;
 import org.apache.flink.table.dataformat.util.MultiSegUtil;
@@ -63,21 +63,21 @@ public final class BinaryRow implements BaseRow {
 
 	static {
 		MUTABLE_FIELD_TYPES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-				DataTypes.BOOLEAN,
-				DataTypes.BYTE,
-				DataTypes.SHORT,
-				DataTypes.INT,
-				DataTypes.LONG,
-				DataTypes.FLOAT,
-				DataTypes.DOUBLE,
-				DataTypes.CHAR,
-				DataTypes.TIMESTAMP,
-				DataTypes.DATE,
-				DataTypes.TIME,
-				DataTypes.INTERVAL_MONTHS,
-				DataTypes.INTERVAL_MILLIS,
-				DataTypes.ROWTIME_INDICATOR,
-				DataTypes.PROCTIME_INDICATOR)));
+				Types.BOOLEAN,
+				Types.BYTE,
+				Types.SHORT,
+				Types.INT,
+				Types.LONG,
+				Types.FLOAT,
+				Types.DOUBLE,
+				Types.CHAR,
+				Types.TIMESTAMP,
+				Types.DATE,
+				Types.TIME,
+				Types.INTERVAL_MONTHS,
+				Types.INTERVAL_MILLIS,
+				Types.ROWTIME_INDICATOR,
+				Types.PROCTIME_INDICATOR)));
 	}
 
 	public static int calculateBitSetWidthInBytes(int arity) {
@@ -572,16 +572,11 @@ public final class BinaryRow implements BaseRow {
 		}
 	}
 
-	public String toOriginString(TypeInformation... types) {
-		return toOriginString(this, types, null);
+	public String toOriginString(DataType... types) {
+		return toOriginString(this, types);
 	}
 
-	public String toOriginString(TypeInformation[] types, TypeSerializer[] serializers) {
-		return toOriginString(this, types, serializers);
-	}
-
-	public static String toOriginString(
-			BaseRow row, TypeInformation[] types, TypeSerializer[] serializers) {
+	public String toOriginString(BaseRow row, DataType[] types) {
 		checkArgument(types.length == row.getArity());
 		StringBuilder build = new StringBuilder("[");
 		build.append(row.getHeader());
@@ -590,8 +585,7 @@ public final class BinaryRow implements BaseRow {
 			if (row.isNullAt(i)) {
 				build.append("null");
 			} else {
-				TypeSerializer serializer = serializers != null ? serializers[i] : null;
-				build.append(row.get(i, types[i], serializer));
+				build.append(row.get(i, types[i]));
 			}
 		}
 		build.append(']');

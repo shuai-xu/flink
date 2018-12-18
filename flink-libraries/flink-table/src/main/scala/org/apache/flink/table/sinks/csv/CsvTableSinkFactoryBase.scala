@@ -92,7 +92,7 @@ abstract class CsvTableSinkFactoryBase extends TableFactory {
 
     csvTableSink
       .configure(formatSchema.getFieldNames,
-        DataTypes.internalTypes(formatSchema.getFieldTypes).asInstanceOf[Array[DataType]])
+        formatSchema.getFieldTypes.asInstanceOf[Array[DataType]])
       .asInstanceOf[CsvTableSink]
   }
 }

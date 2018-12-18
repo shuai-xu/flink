@@ -33,6 +33,7 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.dataformat.BinaryString;
+import org.apache.flink.table.dataformat.util.BaseRowUtil;
 import org.apache.flink.table.dataformat.util.BinaryRowUtil;
 import org.apache.flink.table.plan.util.SortUtil;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
@@ -66,6 +67,7 @@ import static org.apache.flink.api.common.typeinfo.BasicTypeInfo.LONG_TYPE_INFO;
 import static org.apache.flink.api.common.typeinfo.BasicTypeInfo.SHORT_TYPE_INFO;
 import static org.apache.flink.api.common.typeinfo.BasicTypeInfo.STRING_TYPE_INFO;
 import static org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_PRIMITIVE_ARRAY_TYPE_INFO;
+import static org.apache.flink.table.dataformat.util.BaseRowUtil.toOriginString;
 import static org.apache.flink.table.runtime.conversion.InternalTypeConverters.createToInternalConverter;
 
 /**
@@ -450,14 +452,14 @@ public class RandomCodegenSortTest {
 					if (keyTypes[i].equals(STRING_TYPE_INFO)) {
 						v1 = o1.getBinaryString(keys[i]);
 					} else {
-						v1 = o1.get(keys[i], keyTypes[i], keySerializers[i]);
+						v1 = BaseRowUtil.get(o1, keys[i], keyTypes[i], keySerializers[i]);
 					}
 				}
 				if (!o2.isNullAt(keys[i])) {
 					if (keyTypes[i].equals(STRING_TYPE_INFO)) {
 						v2 = o2.getBinaryString(keys[i]);
 					} else {
-						v2 = o2.get(keys[i], keyTypes[i], keySerializers[i]);
+						v2 = BaseRowUtil.get(o2, keys[i], keyTypes[i], keySerializers[i]);
 					}
 				}
 				int cmp;
@@ -477,9 +479,10 @@ public class RandomCodegenSortTest {
 		for (int i = 0; i < data.size(); i++) {
 			builder.append("\n")
 					.append("expect: ")
-					.append(data.get(i).toOriginString(fieldTypes, fieldSerializers))
+					.append(toOriginString(data.get(i), fieldTypes, fieldSerializers))
 					.append("; actual: ")
-					.append(result.get(i).toOriginString(fieldTypes, fieldSerializers));
+					.append(toOriginString(result.get(i), fieldTypes, fieldSerializers))
+			;
 		}
 		builder.append("\n").append("types: ").append(Arrays.asList(fieldTypes));
 		builder.append("\n").append("keys: ").append(Arrays.toString(keys));
@@ -491,8 +494,8 @@ public class RandomCodegenSortTest {
 				Assert.assertEquals(msg, isNull1, isNull2);
 				if (!isNull1 || !isNull2) {
 					Assert.assertTrue(msg, comparators[j].compare(
-							data.get(i).get(keys[j], keyTypes[j], keySerializers[j]),
-							result.get(i).get(keys[j], keyTypes[j], keySerializers[j])) == 0);
+							BaseRowUtil.get(data.get(i), keys[j], keyTypes[j], keySerializers[j]),
+							BaseRowUtil.get(result.get(i), keys[j], keyTypes[j], keySerializers[j])) == 0);
 				}
 			}
 		}

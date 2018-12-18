@@ -27,6 +27,7 @@ import org.apache.flink.table.descriptors.JsonValidator;
 import org.apache.flink.table.factories.DeserializationSchemaFactory;
 import org.apache.flink.table.factories.SerializationSchemaFactory;
 import org.apache.flink.table.factories.TableFormatFactoryBase;
+import org.apache.flink.table.util.TableSchemaUtils;
 import org.apache.flink.types.Row;
 
 import java.util.ArrayList;
@@ -80,7 +81,7 @@ public class JsonRowFormatFactory extends TableFormatFactoryBase<Row>
 		} else if (descriptorProperties.containsKey(JsonValidator.FORMAT_JSON_SCHEMA)) {
 			return JsonRowSchemaConverter.convert(descriptorProperties.getString(JsonValidator.FORMAT_JSON_SCHEMA));
 		} else {
-			return deriveSchema(descriptorProperties.asMap()).toRowType();
+			return TableSchemaUtils.toRowType(deriveSchema(descriptorProperties.asMap()));
 		}
 	}
 

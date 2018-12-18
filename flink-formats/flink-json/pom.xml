@@ -58,6 +58,17 @@ under the License.
 			<scope>provided</scope>
 		</dependency>
 
+		<!-- TODO This could be dropped if we change JsonRowFormatFactory -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<!-- use a dedicated Scala version to not depend on it -->
+			<artifactId>flink-table_2.11</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
+			<!-- Projects depending on this project, won't depend on flink-table. -->
+			<optional>true</optional>
+		</dependency>
+
 		<!-- test dependencies -->
 
 		<dependency>
@@ -74,20 +85,6 @@ under the License.
 			<type>test-jar</type>
 		</dependency>
 
-		<!-- TODO This could be dropped if we change JsonRowFormatFactoryTest -->
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<!-- use a dedicated Scala version to not depend on it -->
-			<artifactId>flink-table_2.11</artifactId>
-			<version>${project.version}</version>
-			<scope>test</scope>
-			<exclusions>
-				<exclusion>
-					<groupId>com.google.guava</groupId>
-					<artifactId>guava</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
 		<!-- Add for flink-table test dependency -->
 		<dependency>
 			<groupId>org.apache.flink</groupId>

@@ -17,13 +17,11 @@
 
 package org.apache.flink.table.dataformat.util;
 
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.base.ComparatorUtil;
 import org.apache.flink.api.common.typeutils.base.DateComparator;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.core.memory.MemoryUtils;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryString;
@@ -559,18 +557,6 @@ public class BinaryRowUtil {
 				offset = -remain;
 			}
 		}
-	}
-
-	public static int getVariableLength(TypeInformation<?>[] types) {
-		int length = 0;
-		for (TypeInformation<?> type : types) {
-			if (!BinaryRow.isFixedLength(DataTypes.internal(type))) {
-				// find a better way of computing generic type field variable-length
-				// right now we use a small value assumption
-				length += 16;
-			}
-		}
-		return length;
 	}
 
 	public static int getVariableLength(InternalType[] types) {

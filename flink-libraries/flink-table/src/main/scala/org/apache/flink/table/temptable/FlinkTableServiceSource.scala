@@ -31,7 +31,7 @@ import org.apache.flink.table.sources.{BatchTableSource, StreamTableSource}
 import org.apache.flink.table.temptable.FlinkTableServiceFactory.{TABLESERVICE_DEFAULT_READY_GAP_MS_VALUE, TABLESERVICE_DEFAULT_READY_RETRYTIMES_VALUE, TABLESERVICE_READY_RETRYGAP_MS, TABLESERVICE_READY_RETRYTIMES}
 import org.apache.flink.table.temptable.rpc.TableServiceClient
 import org.apache.flink.table.temptable.util.TableServiceUtil
-import org.apache.flink.table.typeutils.BaseRowSerializer
+import org.apache.flink.table.typeutils.{BaseRowSerializer, TypeUtils}
 import org.apache.flink.table.util.TableProperties
 
 import scala.collection.JavaConverters._
@@ -91,7 +91,8 @@ class FlinkTableServiceSourceFunction(
       .newInstance().asInstanceOf[TableServiceClient]
     flinkTableServiceClient.setRegistry(ServiceRegistryFactory.getRegistry)
     flinkTableServiceClient.open(tableProperties)
-    baseRowSerializer = resultType.getBaseRowSerializer
+    baseRowSerializer =
+      TypeUtils.createSerializer(resultType).asInstanceOf[BaseRowSerializer[BaseRow]]
     val maxRetry = parameters
       .getInteger(TABLESERVICE_READY_RETRYTIMES, TABLESERVICE_DEFAULT_READY_RETRYTIMES_VALUE)
     val retryGap = parameters

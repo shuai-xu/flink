@@ -149,7 +149,7 @@ public abstract class KafkaTableSourceSinkFactoryBase implements
 
 		final TableSchema2 schema2 = descriptorProperties.getTableSchema(SCHEMA());
 		final TableSchema schema = new TableSchema(
-			schema2.getFieldNames(), DataTypes.internalTypes(schema2.getFieldTypes()));
+			schema2.getFieldNames(), schema2.getFieldTypes());
 
 		return createKafkaTableSource(
 			schema,
@@ -171,7 +171,7 @@ public abstract class KafkaTableSourceSinkFactoryBase implements
 
 		final TableSchema2 schema2 = descriptorProperties.getTableSchema(SCHEMA());
 		final TableSchema schema = new TableSchema(
-			schema2.getFieldNames(), DataTypes.internalTypes(schema2.getFieldTypes()));
+			schema2.getFieldNames(), schema2.getFieldTypes());
 		final String topic = descriptorProperties.getString(CONNECTOR_TOPIC);
 		final Optional<String> proctime = SchemaValidator.deriveProctimeAttribute(descriptorProperties);
 		final List<RowtimeAttributeDescriptor> rowtimeAttributeDescriptors =

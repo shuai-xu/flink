@@ -19,7 +19,6 @@
 package org.apache.flink.table.dataformat;
 
 import org.apache.flink.api.common.ExecutionConfig;
-import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.SqlDateSerializer;
 import org.apache.flink.api.common.typeutils.base.SqlTimeSerializer;
@@ -32,6 +31,7 @@ import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.io.disk.RandomAccessInputView;
 import org.apache.flink.runtime.io.disk.RandomAccessOutputView;
+import org.apache.flink.table.api.types.Types;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.hash.Murmur32;
@@ -297,7 +297,8 @@ public class BinaryRowTest {
 		assertTestGenericRow(row, genericSerializer);
 
 		// getBytes from var-length memorySegments.
-		BinaryRowSerializer serializer = new BinaryRowSerializer(Types.INT, info, info, info);
+		BinaryRowSerializer serializer = new BinaryRowSerializer(
+			org.apache.flink.api.common.typeinfo.Types.INT, info, info, info);
 		MemorySegment[] memorySegments = new MemorySegment[3];
 		ArrayList<MemorySegment> memorySegmentList = new ArrayList<>();
 		for (int i = 0; i < 3; i++) {
@@ -459,7 +460,10 @@ public class BinaryRowTest {
 		writer.setNullAt(1);
 		writer.writeHeader((byte) 29);
 		writer.complete();
-		BaseRowSerializer serializer = new BaseRowSerializer(BaseRow.class, Types.INT, Types.INT);
+		BaseRowSerializer serializer = new BaseRowSerializer(
+			BaseRow.class,
+			org.apache.flink.api.common.typeinfo.Types.INT,
+			org.apache.flink.api.common.typeinfo.Types.INT);
 		TestDataOutputSerializer output = new TestDataOutputSerializer(1024);
 		serializer.serialize(row, output);
 

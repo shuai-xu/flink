@@ -24,7 +24,7 @@ package org.apache.flink.table.api.types;
 public class MultisetType extends MapType {
 
 	public MultisetType(InternalType elementType) {
-		super(elementType, DataTypes.INT);
+		super(elementType, Types.INT);
 	}
 
 	public InternalType getElementType() {

@@ -21,9 +21,9 @@ package org.apache.flink.table.dataformat;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.Types;
 import org.apache.flink.table.dataformat.util.BinaryRowUtil;
 import org.apache.flink.table.dataformat.util.MultiSegUtil;
 import org.apache.flink.util.InstantiationUtil;
@@ -53,21 +53,21 @@ public class BinaryArray implements TypeGetterSetters {
 	}
 
 	public static int calculateElementSize(InternalType type) {
-		if (type.equals(DataTypes.BOOLEAN)) {
+		if (type.equals(Types.BOOLEAN)) {
 			return 1;
-		} else if (type.equals(DataTypes.BYTE)) {
+		} else if (type.equals(Types.BYTE)) {
 			return 1;
-		} else if (type.equals(DataTypes.SHORT)) {
+		} else if (type.equals(Types.SHORT)) {
 			return 2;
-		} else if (type.equals(DataTypes.INT)) {
+		} else if (type.equals(Types.INT)) {
 			return 4;
-		} else if (type.equals(DataTypes.FLOAT)) {
+		} else if (type.equals(Types.FLOAT)) {
 			return 4;
-		} else if (type.equals(DataTypes.CHAR)) {
+		} else if (type.equals(Types.CHAR)) {
 			return 2;
-		} else if (type.equals(DataTypes.DATE)) {
+		} else if (type.equals(Types.DATE)) {
 			return 4;
-		} else if (type.equals(DataTypes.TIME)) {
+		} else if (type.equals(Types.TIME)) {
 			return 4;
 		} else {
 			return 8;
@@ -472,19 +472,19 @@ public class BinaryArray implements TypeGetterSetters {
 	}
 
 	public Object toPrimitiveArray(InternalType type) {
-		if (type.equals(DataTypes.BOOLEAN)) {
+		if (type.equals(Types.BOOLEAN)) {
 			return toBooleanArray();
-		} else if (type.equals(DataTypes.BYTE)) {
+		} else if (type.equals(Types.BYTE)) {
 			return toByteArray();
-		} else if (type.equals(DataTypes.SHORT)) {
+		} else if (type.equals(Types.SHORT)) {
 			return toShortArray();
-		} else if (type.equals(DataTypes.INT)) {
+		} else if (type.equals(Types.INT)) {
 			return toIntArray();
-		} else if (type.equals(DataTypes.LONG)) {
+		} else if (type.equals(Types.LONG)) {
 			return toLongArray();
-		} else if (type.equals(DataTypes.FLOAT)) {
+		} else if (type.equals(Types.FLOAT)) {
 			return toFloatArray();
-		} else if (type.equals(DataTypes.DOUBLE)) {
+		} else if (type.equals(Types.DOUBLE)) {
 			return toDoubleArray();
 		} else {
 			throw new RuntimeException();

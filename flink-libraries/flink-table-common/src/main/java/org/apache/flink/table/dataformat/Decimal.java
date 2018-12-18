@@ -17,10 +17,9 @@
 
 package org.apache.flink.table.dataformat;
 
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.codegen.CodeGenException;
+import org.apache.flink.table.api.types.Types;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -457,7 +456,7 @@ public final class Decimal implements Comparable<Decimal> {
 				case "/": return "divide";
 				case "%": return "mod";
 				case "DIV": return "divideToIntegralValue";
-				default: throw new CodeGenException(
+				default: throw new RuntimeException(
 					"Unsupported decimal arithmetic operator: " + op);
 			}
 		}
@@ -469,23 +468,23 @@ public final class Decimal implements Comparable<Decimal> {
 
 		public static String castTo(InternalType type) {
 			String name = null;
-			if (type.equals(DataTypes.INT)) {
+			if (type.equals(Types.INT)) {
 				name = "Integer";
-			} else if (type.equals(DataTypes.LONG)) {
+			} else if (type.equals(Types.LONG)) {
 				name = "Long";
-			} else if (type.equals(DataTypes.SHORT)) {
+			} else if (type.equals(Types.SHORT)) {
 				name = "Short";
-			} else if (type.equals(DataTypes.BYTE)) {
+			} else if (type.equals(Types.BYTE)) {
 				name = "Byte";
-			} else if (type.equals(DataTypes.FLOAT)) {
+			} else if (type.equals(Types.FLOAT)) {
 				name = "Float";
-			} else if (type.equals(DataTypes.DOUBLE)) {
+			} else if (type.equals(Types.DOUBLE)) {
 				name = "Double";
 			} else if (type instanceof DecimalType) {
 				name = "Decimal";
-			} else if (type.equals(DataTypes.BOOLEAN)) {
+			} else if (type.equals(Types.BOOLEAN)) {
 				name = "Boolean";
-			} else if (type.equals(DataTypes.TIMESTAMP)) {
+			} else if (type.equals(Types.TIMESTAMP)) {
 				name = "Timestamp";
 			}
 			return fullName("castTo" + name);

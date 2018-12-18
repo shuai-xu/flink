@@ -27,6 +27,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
+import org.apache.flink.table.dataformat.util.BaseRowUtil;
 import org.apache.flink.util.StringUtils;
 
 import org.junit.Test;
@@ -119,8 +120,8 @@ public class BinaryRowSerializerTest {
 			int arity = should.getArity();
 			assertEquals(message, arity, is.getArity());
 			for (int i = 0; i < arity; i++) {
-				Object copiedValue = should.get(i, types[i], null);
-				Object element = is.get(i, types[i], null);
+				Object copiedValue = BaseRowUtil.get(should, i, types[i], null);
+				Object element = BaseRowUtil.get(is, i, types[i], null);
 				assertEquals(message, element, copiedValue);
 			}
 		}

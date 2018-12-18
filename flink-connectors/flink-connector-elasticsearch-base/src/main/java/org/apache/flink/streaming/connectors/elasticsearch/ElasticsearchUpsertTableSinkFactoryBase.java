@@ -29,7 +29,6 @@ import org.apache.flink.streaming.connectors.elasticsearch.util.RetryRejectedExe
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.TableSchema2;
 import org.apache.flink.table.api.ValidationException;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.descriptors.ElasticsearchValidator;
 import org.apache.flink.table.descriptors.SchemaValidator;
@@ -153,7 +152,7 @@ public abstract class ElasticsearchUpsertTableSinkFactoryBase implements StreamT
 
 		final TableSchema2 schema2 = descriptorProperties.getTableSchema(SCHEMA());
 		final TableSchema schema = new TableSchema(
-			schema2.getFieldNames(), DataTypes.internalTypes(schema2.getFieldTypes()));
+			schema2.getFieldNames(), schema2.getFieldTypes());
 
 		return createElasticsearchUpsertTableSink(
 			descriptorProperties.isValue(UPDATE_MODE(), UPDATE_MODE_VALUE_APPEND()),

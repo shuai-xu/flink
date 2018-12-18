@@ -18,6 +18,7 @@
 package org.apache.flink.table.functions.aggregate
 
 import java.util.function.{Function => JFunction}
+
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.logical.LogicalAggregate
@@ -36,14 +37,14 @@ import org.apache.flink.table.api.functions.UserDefinedFunction
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkRelOptClusterFactory, FlinkTypeFactory}
 import org.apache.flink.table.codegen.CodeGeneratorContext
+import org.apache.flink.table.dataformat._
+import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.expressions.{Alias, Expression}
 import org.apache.flink.table.plan.logical.Aggregate
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecLocalSortAggregate, BatchExecSortAggregate}
 import org.apache.flink.table.plan.util.AggregateUtil
-import org.apache.flink.table.dataformat._
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.mockito.Mockito.{mock, when}
@@ -354,13 +355,13 @@ abstract class AggregateFunctionTestBase {
           val expertField = if (expert.isNullAt(index)) {
             null
           } else {
-            expert.get(
+            BaseRowUtil.get(expert,
               index, expectedFieldTypes(index), expectedFieldTypes(index).createSerializer(config))
           }
           val actualField = if (actual.isNullAt(index)) {
             null
           } else {
-            actual.get(
+            BaseRowUtil.get(actual,
               index, actualFieldTypes(index), actualFieldTypes(index).createSerializer(config))
           }
           ret = ret && expertField == actualField

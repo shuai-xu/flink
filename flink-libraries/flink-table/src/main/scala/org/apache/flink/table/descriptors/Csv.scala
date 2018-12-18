@@ -21,7 +21,8 @@ package org.apache.flink.table.descriptors
 import java.util
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.{TableSchema2 => TableSchema, ValidationException}
+import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.{ValidationException, TableSchema2 => TableSchema}
 import org.apache.flink.table.descriptors.CsvValidator._
 import org.apache.flink.table.utils.TypeStringUtils
 
@@ -73,7 +74,7 @@ class Csv extends FormatDescriptor(FORMAT_TYPE_VALUE, 1) {
   def schema(schema: TableSchema): Csv = {
     this.schema.clear()
     schema.getFieldNames.zip(schema.getFieldTypes).foreach { case (n, t) =>
-      field(n, t)
+      field(n, DataTypes.to(t))
     }
     this
   }

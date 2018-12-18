@@ -27,6 +27,8 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 public final class BitSetUtil {
 
 	private static final int ADDRESS_BITS_PER_WORD = 6;
+	private static final int BITS_PER_WORD = 1 << ADDRESS_BITS_PER_WORD;
+	private static final int BIT_INDEX_MASK = BITS_PER_WORD - 1;
 	private static final int WORD_SIZE = 8;
 
 	/**

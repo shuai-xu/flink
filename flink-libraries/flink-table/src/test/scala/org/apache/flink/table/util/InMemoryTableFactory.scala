@@ -87,12 +87,12 @@ class InMemoryTableFactory(terminationCount: Int)
     val (names, types) = tableSchema2.getFieldNames.zip(tableSchema2.getFieldTypes)
       .filter(_._1 != proctimeAttributeOpt.get()).unzip
 
-    val tableSchema = new TableSchema(names, types.map(t => DataTypes.internal(t)))
+    val tableSchema = new TableSchema(names, types)
     // rowtime
     val rowtimeDescriptors = SchemaValidator.deriveRowtimeAttributes(params)
     new MemoryTableSourceSinkUtil.UnsafeMemoryTableSource(
       tableSchema,
-      DataTypes.createRowType(DataTypes.internalTypes(types), names),
+      DataTypes.createRowType(types, names),
       rowtimeDescriptors,
       proctimeAttributeOpt.get(),
       terminationCount)

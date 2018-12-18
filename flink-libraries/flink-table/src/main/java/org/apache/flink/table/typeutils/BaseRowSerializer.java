@@ -43,6 +43,7 @@ import org.apache.flink.table.dataformat.BoxedWrapperRow;
 import org.apache.flink.table.dataformat.ColumnarRow;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.dataformat.NestedRow;
+import org.apache.flink.table.dataformat.util.BaseRowUtil;
 import org.apache.flink.table.dataformat.util.BinaryRowUtil;
 import org.apache.flink.types.CopyableValue;
 
@@ -183,7 +184,7 @@ public class BaseRowSerializer<T extends BaseRow> extends AbstractRowSerializer<
 		ret.setHeader(from.getHeader());
 		for (int i = 0; i < from.getArity(); i++) {
 			if (!from.isNullAt(i)) {
-				ret.update(i, copyValueNotNull(from.get(i, types[i], serializers[i]), i));
+				ret.update(i, copyValueNotNull(BaseRowUtil.get(from, i, types[i], serializers[i]), i));
 			} else {
 				ret.setNullAt(i);
 			}
@@ -215,7 +216,7 @@ public class BaseRowSerializer<T extends BaseRow> extends AbstractRowSerializer<
 		for (int i = 0; i < from.getArity(); i++) {
 			if (!from.isNullAt(i)) {
 				ret.update(i, copyNotNullFromBoxedWrapperRow(
-						from.get(i, types[i], serializers[i]), i));
+						BaseRowUtil.get(from, i, types[i], serializers[i]), i));
 			} else {
 				ret.setNullAt(i);
 			}

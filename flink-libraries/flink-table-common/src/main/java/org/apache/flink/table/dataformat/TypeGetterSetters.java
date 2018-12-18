@@ -17,25 +17,15 @@
 
 package org.apache.flink.table.dataformat;
 
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
-import org.apache.flink.api.common.typeinfo.BigDecimalTypeInfo;
-import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.java.typeutils.MapTypeInfo;
 import org.apache.flink.table.api.types.ArrayType;
 import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataType;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.MapType;
-import org.apache.flink.table.api.types.TypeInfoWrappedType;
-import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo;
-import org.apache.flink.table.typeutils.TypeUtils;
-
-import static org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_PRIMITIVE_ARRAY_TYPE_INFO;
+import org.apache.flink.table.api.types.Types;
+//import org.apache.flink.table.api.types.TypeInfoWrappedType;
 
 /**
  * Provide type specialized getters and setters to reduce if/else and eliminate box and unbox.
@@ -142,8 +132,7 @@ public interface TypeGetterSetters {
 	 */
 	BinaryMap getMap(int ordinal);
 
-	@Deprecated
-	default Object get(int ordinal, TypeInformation type, TypeSerializer serializer) {
+	default Object get(int ordinal, DataType type) {
 		if (type.equals(Types.BOOLEAN)) {
 			return getBoolean(ordinal);
 		} else if (type.equals(Types.BYTE)) {
@@ -158,65 +147,22 @@ public interface TypeGetterSetters {
 			return getFloat(ordinal);
 		} else if (type.equals(Types.DOUBLE)) {
 			return getDouble(ordinal);
-		} else if (type instanceof BigDecimalTypeInfo) {
-			BigDecimalTypeInfo dt = (BigDecimalTypeInfo) type;
-			return getDecimal(ordinal, dt.precision(), dt.scale());
-		} else if (type.equals(Types.STRING)) {
-			return getBinaryString(ordinal);
-		} else if (type.equals(BasicTypeInfo.CHAR_TYPE_INFO)) {
-			return getChar(ordinal);
-		} else if (type.equals(TimeIndicatorTypeInfo.ROWTIME_INDICATOR())) {
-			return getLong(ordinal);
-		} else if (type.equals(SqlTimeTypeInfo.DATE)) {
-			return getInt(ordinal);
-		} else if (type.equals(SqlTimeTypeInfo.TIME)) {
-			return getInt(ordinal);
-		} else if (type.equals(SqlTimeTypeInfo.TIMESTAMP)) {
-			return getLong(ordinal);
-		} else if (type.equals(BYTE_PRIMITIVE_ARRAY_TYPE_INFO)) {
-			return getByteArray(ordinal);
-		} else if (TypeUtils.isInternalArrayType(type)) {
-			return getArray(ordinal);
-		} else if (type instanceof MapTypeInfo) {
-			return getMap(ordinal);
-		} else if (TypeUtils.isInternalCompositeType(type)) {
-			return getBaseRow(ordinal, type.getArity());
-		} else {
-			return getGeneric(ordinal, serializer);
-		}
-	}
-
-	default Object get(int ordinal, DataType type) {
-		if (type.equals(DataTypes.BOOLEAN)) {
-			return getBoolean(ordinal);
-		} else if (type.equals(DataTypes.BYTE)) {
-			return getByte(ordinal);
-		} else if (type.equals(DataTypes.SHORT)) {
-			return getShort(ordinal);
-		} else if (type.equals(DataTypes.INT)) {
-			return getInt(ordinal);
-		} else if (type.equals(DataTypes.LONG)) {
-			return getLong(ordinal);
-		} else if (type.equals(DataTypes.FLOAT)) {
-			return getFloat(ordinal);
-		} else if (type.equals(DataTypes.DOUBLE)) {
-			return getDouble(ordinal);
 		} else if (type instanceof DecimalType) {
 			DecimalType dt = (DecimalType) type;
 			return getDecimal(ordinal, dt.precision(), dt.scale());
-		} else if (type.equals(DataTypes.STRING)) {
+		} else if (type.equals(Types.STRING)) {
 			return getBinaryString(ordinal);
-		} else if (type.equals(DataTypes.CHAR)) {
+		} else if (type.equals(Types.CHAR)) {
 			return getChar(ordinal);
-		} else if (type.equals(DataTypes.ROWTIME_INDICATOR)) {
+		} else if (type.equals(Types.ROWTIME_INDICATOR)) {
 			return getLong(ordinal);
-		} else if (type.equals(DataTypes.DATE)) {
+		} else if (type.equals(Types.DATE)) {
 			return getInt(ordinal);
-		} else if (type.equals(DataTypes.TIME)) {
+		} else if (type.equals(Types.TIME)) {
 			return getInt(ordinal);
-		} else if (type.equals(DataTypes.TIMESTAMP)) {
+		} else if (type.equals(Types.TIMESTAMP)) {
 			return getLong(ordinal);
-		} else if (type.equals(DataTypes.BYTE_ARRAY)) {
+		} else if (type.equals(Types.BYTE_ARRAY)) {
 			return getByteArray(ordinal);
 		} else if (type instanceof ArrayType) {
 			return getArray(ordinal);
@@ -226,8 +172,9 @@ public interface TypeGetterSetters {
 			return getBaseRow(ordinal, ((BaseRowType) type).getArity());
 		} else if (type instanceof GenericType) {
 			return getGeneric(ordinal, (GenericType) type);
-		} else if (type instanceof TypeInfoWrappedType) {
-			return get(ordinal, ((TypeInfoWrappedType) type).toInternalType());
+		// TODO: Move TypeInfoWrappedType from flink-table to flink-table-common
+		//} else if (type instanceof TypeInfoWrappedType) {
+		//	return get(ordinal, ((TypeInfoWrappedType) type).toInternalType());
 		} else {
 			throw new RuntimeException("Not support type: " + type);
 		}

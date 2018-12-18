@@ -17,8 +17,6 @@
 
 package org.apache.flink.table.dataformat;
 
-import org.apache.flink.table.dataformat.util.BaseRowUtil;
-
 /**
  * An interface for row used internally in Flink Table/SQL.
  *
