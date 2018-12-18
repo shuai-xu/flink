@@ -22,11 +22,15 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
 import org.apache.flink.runtime.taskmanager.Task;
 import org.apache.flink.util.Preconditions;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -71,6 +75,9 @@ public class TaskSlot {
 	/** The actual allocated resource in this slot */
 	private ResourceProfile allocationResourceProfile;
 
+	/** Tags of the task slot. */
+	private List<SlotTag> tags;
+
 	/** Version of the state of this slot */
 	private long version;
 
@@ -85,6 +92,7 @@ public class TaskSlot {
 		this.jobId = null;
 		this.allocationId = null;
 		this.allocationResourceProfile = null;
+		this.tags = new ArrayList<>();
 		this.version = 0L;
 	}
 
@@ -121,6 +129,8 @@ public class TaskSlot {
 	public ResourceProfile getAllocationResourceProfile() {
 		return allocationResourceProfile;
 	}
+
+	public List<SlotTag> getSlotTags() { return tags; }
 
 	TaskSlotState getState() {
 		return state;
@@ -227,7 +237,7 @@ public class TaskSlot {
 	 * @param newAllocationId to identify the slot allocation
 	 * @return True if the slot was allocated for the given job and allocation id; otherwise false
 	 */
-	public boolean allocate(JobID newJobId, AllocationID newAllocationId, ResourceProfile newAllocationResourceProfile) {
+	public boolean allocate(JobID newJobId, AllocationID newAllocationId, ResourceProfile newAllocationResourceProfile, List<SlotTag> newTags) {
 		if (TaskSlotState.FREE == state) {
 			// sanity checks
 			Preconditions.checkState(allocationId == null);
@@ -236,6 +246,7 @@ public class TaskSlot {
 			this.jobId = Preconditions.checkNotNull(newJobId);
 			this.allocationId = Preconditions.checkNotNull(newAllocationId);
 			this.allocationResourceProfile = Preconditions.checkNotNull(newAllocationResourceProfile);
+			this.tags.addAll(newTags);
 
 			state = TaskSlotState.ALLOCATED;
 
@@ -244,8 +255,12 @@ public class TaskSlot {
 			Preconditions.checkNotNull(newJobId);
 			Preconditions.checkNotNull(newAllocationId);
 			Preconditions.checkNotNull(newAllocationResourceProfile);
+			Preconditions.checkNotNull(newTags);
 
-			return newJobId.equals(jobId) && newAllocationId.equals(allocationId) && newAllocationResourceProfile.equals(allocationResourceProfile);
+			return newJobId.equals(jobId) &&
+				newAllocationId.equals(allocationId) &&
+				newAllocationResourceProfile.equals(allocationResourceProfile) &&
+				new HashSet<>(newTags).equals(new HashSet<>(tags));
 		} else {
 			return false;
 		}
@@ -295,6 +310,7 @@ public class TaskSlot {
 			this.jobId = null;
 			this.allocationId = null;
 			this.allocationResourceProfile = null;
+			this.tags.clear();
 
 			return true;
 		} else {
@@ -323,9 +339,9 @@ public class TaskSlot {
 		Preconditions.checkState(allocationId != null, "The task slot are not allocated");
 
 		if (resourceProfile.equals(ResourceProfile.UNKNOWN)) {
-			return new SlotOffer(allocationId, index, allocationResourceProfile);
+			return new SlotOffer(allocationId, index, allocationResourceProfile, tags);
 		}
-		return new SlotOffer(allocationId, index, resourceProfile);
+		return new SlotOffer(allocationId, index, resourceProfile, tags);
 	}
 
 	@Override

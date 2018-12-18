@@ -22,8 +22,11 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.clusterframework.types.SlotID;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
 
 import java.io.Serializable;
+import java.util.Collections;
+import java.util.List;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -49,10 +52,29 @@ public class SlotStatus implements Serializable {
 	/** if the slot is allocated, jobId identify which job this slot is allocated to; else, jobId is null */
 	private final JobID jobID;
 
+	/** tags of the slot */
+	private final List<SlotTag> tags;
+
 	private final long version;
 
 	public SlotStatus(SlotID slotID, ResourceProfile resourceProfile) {
-		this(slotID, resourceProfile, null, null, null, 0L);
+		this(slotID, resourceProfile, null, null, null, Collections.emptyList(), 0L);
+	}
+
+	public SlotStatus(
+		SlotID slotID,
+		ResourceProfile resourceProfile,
+		JobID jobID,
+		AllocationID allocationID,
+		ResourceProfile allocationResourceProfile,
+		long version) {
+		this(slotID,
+			resourceProfile,
+			jobID,
+			allocationID,
+			allocationResourceProfile,
+			Collections.emptyList(),
+			version);
 	}
 
 	public SlotStatus(
@@ -61,12 +83,14 @@ public class SlotStatus implements Serializable {
 			JobID jobID,
 			AllocationID allocationID,
 			ResourceProfile allocationResourceProfile,
+			List<SlotTag> tags,
 			long version) {
 		this.slotID = checkNotNull(slotID, "slotID cannot be null");
 		this.resourceProfile = checkNotNull(resourceProfile, "profile cannot be null");
 		this.allocationID = allocationID;
 		this.jobID = jobID;
 		this.allocationResourceProfile = allocationResourceProfile;
+		this.tags = tags;
 		this.version = version;
 	}
 
@@ -114,6 +138,8 @@ public class SlotStatus implements Serializable {
 	public JobID getJobID() {
 		return jobID;
 	}
+
+	public List<SlotTag> getTags() { return tags; }
 
 	public long getVersion() {
 		return version;

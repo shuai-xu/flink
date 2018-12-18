@@ -42,6 +42,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -112,6 +113,7 @@ public class SlotProtocolTest extends TestLogger {
 						any(AllocationID.class),
 						any(ResourceProfile.class),
 						any(String.class),
+						any(List.class),
 						any(ResourceManagerId.class),
 						anyLong(),
 						any(Time.class)))
@@ -135,6 +137,7 @@ public class SlotProtocolTest extends TestLogger {
 					eq(allocationID),
 					eq(resourceProfile),
 					any(String.class),
+					any(List.class),
 					any(ResourceManagerId.class),
 					eq(1L),
 					any(Time.class));
@@ -159,7 +162,7 @@ public class SlotProtocolTest extends TestLogger {
 			taskExecutorGateway
 				.requestSlot(any(SlotID.class), any(JobID.class),
 					any(AllocationID.class), any(ResourceProfile.class), any(String.class),
-					any(ResourceManagerId.class), anyLong(), any(Time.class)))
+					any(List.class), any(ResourceManagerId.class), anyLong(), any(Time.class)))
 			.thenReturn(mock(CompletableFuture.class));
 
 		try (SlotManager slotManager = new SlotManager(
@@ -198,6 +201,7 @@ public class SlotProtocolTest extends TestLogger {
 					eq(allocationID),
 					eq(resourceProfile),
 					any(String.class),
+					eq(Collections.emptyList()),
 					any(ResourceManagerId.class),
 					eq(1L),
 					any(Time.class));

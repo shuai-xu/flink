@@ -47,6 +47,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -822,6 +823,7 @@ public class SlotManager implements AutoCloseable {
 			allocationId,
 			pendingSlotRequest.getResourceProfile(),
 			pendingSlotRequest.getTargetAddress(),
+			Collections.emptyList(),
 			resourceManagerId,
 			taskManagerSlot.getVersion(),
 			taskManagerRequestTimeout);

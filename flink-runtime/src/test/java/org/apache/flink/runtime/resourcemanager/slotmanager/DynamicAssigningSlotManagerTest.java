@@ -39,6 +39,7 @@ package org.apache.flink.runtime.resourcemanager.slotmanager;
 
 	import java.util.ArrayList;
 	import java.util.Arrays;
+	import java.util.Collections;
 	import java.util.List;
 	import java.util.Map;
 	import java.util.concurrent.CompletableFuture;
@@ -147,6 +148,7 @@ public class DynamicAssigningSlotManagerTest {
 			any(AllocationID.class),
 			any(ResourceProfile.class),
 			anyString(),
+			eq(Collections.emptyList()),
 			eq(resourceManagerId),
 			anyLong(),
 			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
@@ -207,6 +209,7 @@ public class DynamicAssigningSlotManagerTest {
 			any(AllocationID.class),
 			any(ResourceProfile.class),
 			anyString(),
+			any(List.class),
 			eq(resourceManagerId),
 			anyLong(),
 			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
@@ -272,6 +275,7 @@ public class DynamicAssigningSlotManagerTest {
 			any(AllocationID.class),
 			any(ResourceProfile.class),
 			anyString(),
+			eq(Collections.emptyList()),
 			eq(resourceManagerId),
 			anyLong(),
 			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
@@ -315,6 +319,7 @@ public class DynamicAssigningSlotManagerTest {
 			any(AllocationID.class),
 			any(ResourceProfile.class),
 			anyString(),
+			eq(Collections.emptyList()),
 			eq(resourceManagerId),
 			anyLong(),
 			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
@@ -373,6 +378,7 @@ public class DynamicAssigningSlotManagerTest {
 			any(AllocationID.class),
 			any(ResourceProfile.class),
 			anyString(),
+			any(List.class),
 			eq(resourceManagerId),
 			anyLong(),
 			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
@@ -440,6 +446,7 @@ public class DynamicAssigningSlotManagerTest {
 			any(AllocationID.class),
 			any(ResourceProfile.class),
 			anyString(),
+			any(List.class),
 			eq(resourceManagerId),
 			anyLong(),
 			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));

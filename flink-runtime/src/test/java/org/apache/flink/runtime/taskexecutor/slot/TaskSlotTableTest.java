@@ -28,6 +28,7 @@ import org.apache.flink.shaded.guava18.com.google.common.collect.Lists;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -66,6 +67,7 @@ public class TaskSlotTableTest {
 			jobID,
 			allocationID1,
 			new ResourceProfile(firstCPU, firstMemory),
+			Collections.emptyList(),
 			Time.seconds(2));
 
 		List<TaskSlot> allocated = Lists.newArrayList(taskSlotTable.getAllocatedSlots(jobID));
@@ -77,6 +79,7 @@ public class TaskSlotTableTest {
 			jobID,
 			allocationID2,
 			new ResourceProfile(totalCPU, totalMemory),
+			Collections.emptyList(),
 			Time.seconds(2)));
 
 		// The second slot
@@ -84,6 +87,7 @@ public class TaskSlotTableTest {
 			jobID,
 			allocationID2,
 			new ResourceProfile(secondCPU, secondMemory),
+			Collections.emptyList(),
 			Time.seconds(2));
 
 		allocated = Lists.newArrayList(taskSlotTable.getAllocatedSlots(jobID));
@@ -134,6 +138,7 @@ public class TaskSlotTableTest {
 			jobID,
 			allocationID1,
 			new ResourceProfile(firstCPU, firstMemory),
+			Collections.emptyList(),
 			Time.seconds(2));
 
 		List<TaskSlot> allocated = Lists.newArrayList(taskSlotTable.getAllocatedSlots(jobID));
@@ -145,6 +150,7 @@ public class TaskSlotTableTest {
 			jobID,
 			allocationID2,
 			new ResourceProfile(secondCPU, secondMemory),
+			Collections.emptyList(),
 			Time.seconds(2));
 
 		allocated = Lists.newArrayList(taskSlotTable.getAllocatedSlots(jobID));

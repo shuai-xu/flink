@@ -23,7 +23,7 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.api.java.tuple.Tuple5;
+import org.apache.flink.api.java.tuple.Tuple6;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
@@ -37,6 +37,7 @@ import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
 import org.apache.flink.runtime.resourcemanager.SlotRequest;
 import org.apache.flink.runtime.resourcemanager.exceptions.ResourceManagerException;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
 import org.apache.flink.runtime.resourcemanager.registration.TaskExecutorConnection;
 import org.apache.flink.runtime.taskexecutor.SlotReport;
 import org.apache.flink.runtime.taskexecutor.SlotStatus;
@@ -55,6 +56,7 @@ import javax.annotation.Nonnull;
 
 import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -180,6 +182,7 @@ public class SlotManagerTest extends TestLogger {
 			any(AllocationID.class),
 			any(ResourceProfile.class),
 			anyString(),
+			any(List.class),
 			eq(resourceManagerId),
 			anyLong(),
 			any(Time.class))).thenReturn(new CompletableFuture<>());
@@ -309,6 +312,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				anyString(),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				anyLong(),
 				any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
@@ -330,6 +334,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				eq(targetAddress),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				eq(1L),
 				any(Time.class));
@@ -359,6 +364,7 @@ public class SlotManagerTest extends TestLogger {
 			any(AllocationID.class),
 			any(ResourceProfile.class),
 			anyString(),
+			eq(Collections.emptyList()),
 			eq(resourceManagerId),
 			anyLong(),
 			any(Time.class))).thenReturn(new CompletableFuture<>());
@@ -419,6 +425,7 @@ public class SlotManagerTest extends TestLogger {
 			eq(allocationId),
 			any(ResourceProfile.class),
 			anyString(),
+			eq(Collections.emptyList()),
 			eq(resourceManagerId),
 			anyLong(),
 			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
@@ -444,6 +451,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				eq(targetAddress),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				eq(1L),
 				any(Time.class));
@@ -573,6 +581,7 @@ public class SlotManagerTest extends TestLogger {
 			any(AllocationID.class),
 			any(ResourceProfile.class),
 			anyString(),
+			eq(Collections.emptyList()),
 			eq(resourceManagerId),
 			anyLong(),
 			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
@@ -622,6 +631,7 @@ public class SlotManagerTest extends TestLogger {
 			any(AllocationID.class),
 			any(ResourceProfile.class),
 			anyString(),
+			any(List.class),
 			eq(resourceManagerId),
 			anyLong(),
 			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
@@ -855,6 +865,7 @@ public class SlotManagerTest extends TestLogger {
 			eq(allocationId),
 			eq(resourceProfile),
 			anyString(),
+			any(List.class),
 			any(ResourceManagerId.class),
 			anyLong(),
 			any(Time.class))).thenReturn(slotRequestFuture1, slotRequestFuture2);
@@ -882,6 +893,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				anyString(),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				eq(1L),
 				any(Time.class));
@@ -897,6 +909,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				anyString(),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				eq(1L),
 				any(Time.class));
@@ -939,6 +952,7 @@ public class SlotManagerTest extends TestLogger {
 			eq(allocationId),
 			eq(resourceProfile),
 			anyString(),
+			any(List.class),
 			any(ResourceManagerId.class),
 			anyLong(),
 			any(Time.class))).thenReturn(slotRequestFuture1, CompletableFuture.completedFuture(Acknowledge.get()));
@@ -989,6 +1003,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				anyString(),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				anyLong(),
 				any(Time.class));
@@ -1019,6 +1034,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				anyString(),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				anyLong(),
 				any(Time.class));
@@ -1065,6 +1081,7 @@ public class SlotManagerTest extends TestLogger {
 			eq(allocationId),
 			eq(resourceProfile),
 			anyString(),
+			eq(Collections.emptyList()),
 			eq(resourceManagerId),
 			anyLong(),
 			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
@@ -1106,6 +1123,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				anyString(),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				eq(1L),
 				any(Time.class));
@@ -1274,6 +1292,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				anyString(),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				anyLong(),
 				any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
@@ -1299,6 +1318,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				eq(targetAddress),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				eq(1L),
 				any(Time.class));
@@ -1350,6 +1370,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				anyString(),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				anyLong(),
 				any(Time.class))).thenReturn(FutureUtils.completedExceptionally(new AskTimeoutException("Time out!")));
@@ -1368,6 +1389,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				eq(targetAddress),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				eq(1L),
 				any(Time.class));
@@ -1382,11 +1404,12 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				anyString(),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				anyLong(),
 				any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
 
-			final SlotStatus newSlotStatus = new SlotStatus(slotId, resourceProfile, jobId, allocationId, resourceProfile, 1L);
+			final SlotStatus newSlotStatus = new SlotStatus(slotId, resourceProfile, jobId, allocationId, resourceProfile,1L);
 			final SlotReport newSlotReport = new SlotReport(newSlotStatus);
 			slotManager.reportSlotStatus(taskExecutorConnection.getInstanceID(), newSlotReport);
 
@@ -1430,6 +1453,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				anyString(),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				anyLong(),
 				any(Time.class))).thenReturn(FutureUtils.completedExceptionally(new AskTimeoutException("Time out!")));
@@ -1448,6 +1472,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				eq(targetAddress),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				eq(1L),
 				any(Time.class));
@@ -1462,6 +1487,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				anyString(),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				anyLong(),
 				any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
@@ -1512,6 +1538,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				anyString(),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				anyLong(),
 				any(Time.class))).thenReturn(FutureUtils.completedExceptionally(new AskTimeoutException("Time out!")));
@@ -1530,6 +1557,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				eq(targetAddress),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				eq(1L),
 				any(Time.class));
@@ -1544,6 +1572,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				anyString(),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				anyLong(),
 				any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
@@ -1559,6 +1588,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile),
 				eq(targetAddress),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				eq(1L),
 				any(Time.class));
@@ -1578,12 +1608,12 @@ public class SlotManagerTest extends TestLogger {
 			final SlotRequest slotRequest = new SlotRequest(new JobID(), new AllocationID(), ResourceProfile.UNKNOWN, "foobar");
 			slotManager.registerSlotRequest(slotRequest);
 
-			final BlockingQueue<Tuple5<SlotID, JobID, AllocationID, String, ResourceManagerId>> requestSlotQueue = new ArrayBlockingQueue<>(1);
+			final BlockingQueue<Tuple6<SlotID, JobID, AllocationID, String, List<SlotTag>, ResourceManagerId>> requestSlotQueue = new ArrayBlockingQueue<>(1);
 			final BlockingQueue<CompletableFuture<Acknowledge>> responseQueue = new ArrayBlockingQueue<>(1);
 
 			final TestingTaskExecutorGateway testingTaskExecutorGateway = new TestingTaskExecutorGatewayBuilder()
-				.setRequestSlotFunction(slotIDJobIDAllocationIDStringResourceManagerIdTuple5 -> {
-					requestSlotQueue.offer(slotIDJobIDAllocationIDStringResourceManagerIdTuple5);
+				.setRequestSlotFunction(slotIDJobIDAllocationIDStringResourceManagerIdTuple6 -> {
+					requestSlotQueue.offer(slotIDJobIDAllocationIDStringResourceManagerIdTuple6);
 					try {
 						return responseQueue.take();
 					} catch (InterruptedException ignored) {
@@ -1601,7 +1631,7 @@ public class SlotManagerTest extends TestLogger {
 
 			slotManager.registerTaskManager(taskExecutionConnection, slotReport);
 
-			final Tuple5<SlotID, JobID, AllocationID, String, ResourceManagerId> firstRequest = requestSlotQueue.take();
+			final Tuple6<SlotID, JobID, AllocationID, String, List<SlotTag>, ResourceManagerId> firstRequest = requestSlotQueue.take();
 
 			final CompletableFuture<Acknowledge> secondManualSlotRequestResponse = new CompletableFuture<>();
 			responseQueue.offer(secondManualSlotRequestResponse);
@@ -1609,7 +1639,7 @@ public class SlotManagerTest extends TestLogger {
 			// fail first request
 			firstManualSlotRequestResponse.completeExceptionally(new SlotAllocationException("Test exception"));
 
-			final Tuple5<SlotID, JobID, AllocationID, String, ResourceManagerId> secondRequest = requestSlotQueue.take();
+			final Tuple6<SlotID, JobID, AllocationID, String, List<SlotTag>, ResourceManagerId> secondRequest = requestSlotQueue.take();
 
 			assertThat(secondRequest.f2, equalTo(firstRequest.f2));
 			assertThat(secondRequest.f0, equalTo(firstRequest.f0));
@@ -1739,6 +1769,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(allocationId),
 				eq(resourceProfile2),
 				anyString(),
+				eq(Collections.emptyList()),
 				eq(resourceManagerId),
 				anyLong(),
 				any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));

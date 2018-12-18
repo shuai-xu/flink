@@ -76,6 +76,7 @@ import org.apache.flink.runtime.query.KvStateServer;
 import org.apache.flink.runtime.registration.RegistrationConnectionListener;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.RpcEndpoint;
 import org.apache.flink.runtime.rpc.RpcService;
@@ -767,6 +768,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		final AllocationID allocationId,
 		final ResourceProfile allocationResourceProfile,
 		final String targetAddress,
+		final List<SlotTag> tags,
 		final ResourceManagerId resourceManagerId,
 		final long version,
 		final Time timeout) {
@@ -797,6 +799,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 							jobId,
 							allocationId,
 							allocationResourceProfile,
+							tags,
 							taskManagerConfiguration.getTimeout())) {
 					log.info("Allocated slot for {}.", allocationId);
 				} else {

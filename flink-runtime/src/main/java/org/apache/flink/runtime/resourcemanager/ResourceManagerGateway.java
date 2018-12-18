@@ -34,6 +34,7 @@ import org.apache.flink.runtime.jobmaster.JobMasterId;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.metrics.dump.MetricQueryService;
 import org.apache.flink.runtime.registration.RegistrationResponse;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.PlacementConstraint;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerInfo;
 import org.apache.flink.runtime.rpc.FencedRpcGateway;
 import org.apache.flink.runtime.rpc.RpcTimeout;
@@ -44,6 +45,7 @@ import org.apache.flink.runtime.util.FileOffsetRange;
 import javax.annotation.Nullable;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -66,6 +68,20 @@ public interface ResourceManagerGateway extends FencedRpcGateway<ResourceManager
 		ResourceID jobMasterResourceId,
 		String jobMasterAddress,
 		JobID jobId,
+		@RpcTimeout Time timeout);
+
+	/**
+	 * Set/Update a job's {@link PlacementConstraint}s to the resource manager.
+	 * This is a full synchronization, all constraints of a job should be set/updated in one invoke.
+	 *
+	 * @param jobMasterId ID of the JobMaster.
+	 * @param constraints Slot placement constraints of the job.
+	 * @param timeout Timeout for the acknowledgement.
+	 * @return The confirmation that placement constraints are set/updated.
+	 */
+	CompletableFuture<Acknowledge> setPlacementConstraints(
+		JobMasterId jobMasterId,
+		List<PlacementConstraint> constraints,
 		@RpcTimeout Time timeout);
 
 	/**

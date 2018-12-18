@@ -81,6 +81,8 @@ import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.registration.RegistrationResponse;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
+import org.apache.flink.runtime.resourcemanager.SlotRequest;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
 import org.apache.flink.runtime.resourcemanager.utils.TestingResourceManagerGateway;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.RpcService;
@@ -142,6 +144,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -554,6 +557,7 @@ public class TaskExecutorTest extends TestLogger {
 				allocationId,
 				ResourceProfile.UNKNOWN,
 				jobMasterAddress,
+				Collections.emptyList(),
 				rmLeaderId,
 				1,
 				timeout).get();
@@ -696,6 +700,7 @@ public class TaskExecutorTest extends TestLogger {
 				allocationId,
 				ResourceProfile.UNKNOWN,
 				jobMasterAddress,
+				Collections.emptyList(),
 				rmLeaderId,
 				1,
 				timeout).get();
@@ -804,6 +809,7 @@ public class TaskExecutorTest extends TestLogger {
 				new JobID(),
 				new AllocationID(),
 				resourceProfile,
+				Collections.emptyList(),
 				0L));
 
 		when(taskSlotTable.createSlotReport(any(ResourceID.class))).thenReturn(slotReport1, slotReport2);
@@ -878,6 +884,167 @@ public class TaskExecutorTest extends TestLogger {
 			assertEquals(slotReport2, actualSlotReport);
 		} finally {
 			RpcUtils.terminateRpcEndpoint(taskManager, timeout);
+		}
+	}
+
+	/**
+	 * Tests that the slot tags are correctly offered to JM and reported with heartbeat to RM.
+	 */
+	@Test
+	public void testAllocateSlotWithTags() throws Exception {
+		final long verificationTimeout = 1000L;
+		final long heartbeatTimeout = 10000L;
+		final String rmAddress = "rm";
+		final String jmAddress = "jm";
+		final ResourceManagerId rmId = ResourceManagerId.generate();
+		final UUID rmLeaderId = rmId.toUUID();
+
+		final JobID jobId = new JobID();
+		final AllocationID allocationId = new AllocationID();
+		final SlotID slotId = new SlotID(taskManagerLocation.getResourceID(), 0);
+		final ResourceProfile resourceProfile = new ResourceProfile(1.0, 1);
+		final List<SlotTag> slotTags = Arrays.asList(new SlotTag("TEST", jobId));
+		final SlotRequest slotRequest = new SlotRequest(jobId, allocationId, resourceProfile, jmAddress, slotTags);
+
+		// prepare RM for test
+		final TestingResourceManagerGateway rmGateway = new TestingResourceManagerGateway();
+		final CompletableFuture<ResourceID> taskExecutorRegistrationFuture = new CompletableFuture<>();
+		final ResourceID rmResourceId = rmGateway.getOwnResourceId();
+		final CompletableFuture<RegistrationResponse> registrationResponse = CompletableFuture.completedFuture(
+			new TaskExecutorRegistrationSuccess(
+				new InstanceID(),
+				rmResourceId,
+				10L,
+				new ClusterInformation("localhost", 1234)));
+
+		rmGateway.setRegisterTaskExecutorFunction(stringResourceIDIntegerHardwareDescriptionTuple4 -> {
+			taskExecutorRegistrationFuture.complete(stringResourceIDIntegerHardwareDescriptionTuple4.f1);
+			return registrationResponse;
+		});
+
+		final CompletableFuture<SlotReport> initialSlotReportFuture = new CompletableFuture<>();
+		rmGateway.setSendSlotReportFunction(resourceIDInstanceIDSlotReportTuple3 -> {
+			initialSlotReportFuture.complete(resourceIDInstanceIDSlotReportTuple3.f2);
+			return CompletableFuture.completedFuture(Acknowledge.get());
+		});
+
+		final CompletableFuture<SlotReport> heartbeatSlotReportFuture = new CompletableFuture<>();
+		rmGateway.setTaskExecutorHeartbeatConsumer((resourceID, slotReport) -> heartbeatSlotReportFuture.complete(slotReport));
+
+		rpc.registerGateway(rmAddress, rmGateway);
+
+		// prepare JM for test
+		final JobMasterGateway jmGateway = mock(JobMasterGateway.class);
+
+		List<SlotOffer> slotOffers = new ArrayList<>();
+		when(jmGateway.offerSlots(
+			any(ResourceID.class),
+			any(List.class),
+			any(Time.class)
+		)).thenAnswer(new Answer<CompletableFuture<Collection<SlotOffer>>>() {
+			@Override
+			public CompletableFuture<Collection<SlotOffer>> answer(InvocationOnMock invocation) throws Throwable {
+				Collection<SlotOffer> offers = (Collection<SlotOffer>)invocation.getArguments()[1];
+				slotOffers.addAll(offers);
+				return CompletableFuture.completedFuture(offers);
+			}
+		});
+		rpc.registerGateway(jmAddress, jmGateway);
+
+		// prepare TM for test
+		final TaskSlotTable taskSlotTable = new TaskSlotTable(Arrays.asList(resourceProfile), resourceProfile,
+			new TimerService<>(new ScheduledThreadPoolExecutor(1), 10000L));
+
+		final TaskExecutorLocalStateStoresManager localStateStoresManager = new TaskExecutorLocalStateStoresManager(
+			false,
+			new File[]{tmp.newFolder()},
+			Executors.directExecutor());
+
+		final JobManagerConnection jobManagerConnection = mock(JobManagerConnection.class);
+		when(jobManagerConnection.getJobManagerGateway()).thenReturn(jmGateway);
+		final JobManagerTable jobManagerTable = mock(JobManagerTable.class);
+		when(jobManagerTable.contains(any(JobID.class))).thenReturn(true);
+		when(jobManagerTable.get(any(JobID.class))).thenReturn(jobManagerConnection);
+
+		final TaskManagerServices taskManagerServices = new TaskManagerServicesBuilder()
+			.setTaskManagerLocation(taskManagerLocation)
+			.setTaskSlotTable(taskSlotTable)
+			.setTaskStateManager(localStateStoresManager)
+			.setJobManagerTable(jobManagerTable)
+			.build();
+
+		final HeartbeatServices heartbeatServices = mock(HeartbeatServices.class);
+		when(heartbeatServices.createHeartbeatManager(
+			eq(taskManagerLocation.getResourceID()),
+			any(HeartbeatListener.class),
+			any(ScheduledExecutor.class),
+			any(Logger.class))).thenAnswer(
+			new Answer<HeartbeatManagerImpl<SlotReport, Void>>() {
+				@Override
+				public HeartbeatManagerImpl<SlotReport, Void> answer(InvocationOnMock invocation) throws Throwable {
+					return spy(new HeartbeatManagerImpl<>(
+						heartbeatTimeout,
+						taskManagerLocation.getResourceID(),
+						(HeartbeatListener<SlotReport, Void>)invocation.getArguments()[1],
+						(Executor)invocation.getArguments()[2],
+						(ScheduledExecutor)invocation.getArguments()[2],
+						(Logger)invocation.getArguments()[3]));
+				}
+			}
+		);
+
+		final TaskExecutor taskExecutor = new TaskExecutor(
+			rpc,
+			taskManagerConfiguration,
+			haServices,
+			taskManagerServices,
+			heartbeatServices,
+			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
+			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
+			testingFatalErrorHandler
+		);
+
+		try {
+			taskExecutor.start();
+
+			// wait for spied heartbeat manager instance
+			HeartbeatManager<Void, SlotReport> heartbeatManager = taskExecutor.getResourceManagerHeartbeatManager();
+
+			// define a leader and see that a registration happens
+			resourceManagerLeaderRetriever.notifyListener(rmAddress, rmLeaderId);
+			verify(heartbeatManager, timeout(verificationTimeout)).monitorTarget(any(ResourceID.class), any(HeartbeatTarget.class));
+
+			// trigger a heartbeat asynchronously
+			TaskExecutorGateway taskExecutorGateway = taskExecutor.getSelfGateway(TaskExecutorGateway.class);
+			taskExecutorGateway.heartbeatFromResourceManager(rmResourceId);
+
+			// wait for heartbeat response
+			SlotReport slotReport1 = heartbeatSlotReportFuture.get();
+
+			// the slot report should not contain any tags
+			SlotStatus status1 = slotReport1.iterator().next();
+			assertEquals(Collections.emptyList(), status1.getTags());
+
+			// allocate slot with tags
+			taskExecutor.requestSlot(slotId, jobId, allocationId, resourceProfile, jmAddress, slotTags, rmId, 1L, timeout);
+			verify(jmGateway, timeout(verificationTimeout)).offerSlots(any(ResourceID.class), any(List.class), any(Time.class));
+
+			// the slot offer should contain allocated tags
+			assertEquals(1, slotOffers.size());
+			assertEquals(slotTags, slotOffers.iterator().next().getTags());
+
+			// trigger another heartbeat asynchronously
+			taskExecutorGateway.heartbeatFromResourceManager(rmResourceId);
+
+			// wait for heartbeat response
+			SlotReport slotReport2 = heartbeatSlotReportFuture.get();
+
+			// the slot report should contain allocated tags
+			SlotStatus status2 = slotReport2.iterator().next();
+			assertEquals(slotTags, status2.getTags());
+		} finally {
+			RpcUtils.terminateRpcEndpoint(taskExecutor, timeout);
 		}
 	}
 
@@ -1240,6 +1407,7 @@ public class TaskExecutorTest extends TestLogger {
 				allocationId,
 				new ResourceProfile(1, 100),
 				jobManagerAddress,
+				Collections.emptyList(),
 				resourceManagerLeaderId,
 				1L,
 				timeout);
@@ -1348,8 +1516,8 @@ public class TaskExecutorTest extends TestLogger {
 
 			assertThat(registrationFuture.get(), equalTo(taskManagerLocation.getResourceID()));
 
-			taskSlotTable.allocateSlot(0, jobId, allocationId1, new ResourceProfile(1, 100), Time.milliseconds(10000L));
-			taskSlotTable.allocateSlot(1, jobId, allocationId2, new ResourceProfile(1, 100), Time.milliseconds(10000L));
+			taskSlotTable.allocateSlot(0, jobId, allocationId1, new ResourceProfile(1, 100), Collections.emptyList(), Time.milliseconds(10000L));
+			taskSlotTable.allocateSlot(1, jobId, allocationId2, new ResourceProfile(1, 100), Collections.emptyList(), Time.milliseconds(10000L));
 
 			// we have to add the job after the TaskExecutor, because otherwise the service has not
 			// been properly started.
@@ -1471,8 +1639,8 @@ public class TaskExecutorTest extends TestLogger {
 
 			final TaskExecutorGateway tmGateway = taskManager.getSelfGateway(TaskExecutorGateway.class);
 
-			taskSlotTable.allocateSlot(0, jobId, allocationId1, new ResourceProfile(1, 100), Time.milliseconds(10000L));
-			taskSlotTable.allocateSlot(1, jobId, allocationId2, new ResourceProfile(1, 100), Time.milliseconds(10000L));
+			taskSlotTable.allocateSlot(0, jobId, allocationId1, new ResourceProfile(1, 100), Collections.emptyList(), Time.milliseconds(10000L));
+			taskSlotTable.allocateSlot(1, jobId, allocationId2, new ResourceProfile(1, 100), Collections.emptyList(), Time.milliseconds(10000L));
 
 			final JobVertexID jobVertexId = new JobVertexID();
 
@@ -1758,6 +1926,7 @@ public class TaskExecutorTest extends TestLogger {
 				allocationId,
 				new ResourceProfile(1, 100),
 				"foobar",
+				Collections.emptyList(),
 				resourceManagerId,
 				1L,
 				timeout).get();
@@ -1897,6 +2066,7 @@ public class TaskExecutorTest extends TestLogger {
 				new AllocationID(),
 				new ResourceProfile(1, 100),
 				"foobar",
+				Collections.emptyList(),
 				testingResourceManagerGateway.getFencingToken(),
 				1L,
 				timeout);

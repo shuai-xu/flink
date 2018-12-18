@@ -35,6 +35,7 @@ import org.apache.flink.runtime.jobmaster.JobMasterId;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.StackTraceSampleResponse;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
 import org.apache.flink.runtime.rpc.RpcGateway;
 import org.apache.flink.runtime.rpc.RpcTimeout;
 import org.apache.flink.runtime.taskmanager.Task;
@@ -43,6 +44,7 @@ import org.apache.flink.runtime.util.FileOffsetRange;
 import javax.annotation.Nullable;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 
@@ -59,6 +61,7 @@ public interface TaskExecutorGateway extends RpcGateway {
 	 * @param allocationId id for the request
 	 * @param allocationResourceProfile resource profile for the request
 	 * @param targetAddress to which to offer the requested slots
+	 * @param tags tags of the slot requested for
 	 * @param resourceManagerId current leader id of the ResourceManager
 	 * @param version version of a slot status
 	 * @param timeout for the operation
@@ -70,6 +73,7 @@ public interface TaskExecutorGateway extends RpcGateway {
 		AllocationID allocationId,
 		ResourceProfile allocationResourceProfile,
 		String targetAddress,
+		List<SlotTag> tags,
 		ResourceManagerId resourceManagerId,
 		long version,
 		@RpcTimeout Time timeout);
