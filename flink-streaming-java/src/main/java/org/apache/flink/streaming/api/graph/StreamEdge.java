@@ -142,8 +142,7 @@ public class StreamEdge implements Serializable {
 		this.outputPartitioner = partitioner;
 	}
 
-	@VisibleForTesting
-	void setDataExchangeMode(DataExchangeMode dataExchangeMode) {
+	public void setDataExchangeMode(DataExchangeMode dataExchangeMode) {
 		this.dataExchangeMode = dataExchangeMode;
 	}
 
