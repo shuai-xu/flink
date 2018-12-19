@@ -39,6 +39,7 @@ import org.apache.flink.table.api.types.TimestampType;
 import org.apache.flink.table.catalog.CatalogDatabase;
 import org.apache.flink.table.catalog.ExternalCatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
+import org.apache.flink.table.catalog.hive.config.HiveDbConfig;
 import org.apache.flink.util.PropertiesUtil;
 
 import org.apache.hadoop.hive.metastore.api.Database;
@@ -56,13 +57,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import static org.apache.flink.table.catalog.hive.HiveTableConfig.HIVE_TABLE_COMPRESSED;
-import static org.apache.flink.table.catalog.hive.HiveTableConfig.HIVE_TABLE_INPUT_FORMAT;
-import static org.apache.flink.table.catalog.hive.HiveTableConfig.HIVE_TABLE_LOCATION;
-import static org.apache.flink.table.catalog.hive.HiveTableConfig.HIVE_TABLE_NUM_BUCKETS;
-import static org.apache.flink.table.catalog.hive.HiveTableConfig.HIVE_TABLE_OUTPUT_FORMAT;
-import static org.apache.flink.table.catalog.hive.HiveTableConfig.HIVE_TABLE_SERDE_LIBRARY;
-import static org.apache.flink.table.catalog.hive.HiveTableConfig.HIVE_TABLE_TYPE;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_COMPRESSED;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_INPUT_FORMAT;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_LOCATION;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_NUM_BUCKETS;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_OUTPUT_FORMAT;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_SERDE_LIBRARY;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_TYPE;
 
 /**
  * Convert Hive data type to Blink data type.
@@ -146,6 +147,8 @@ public class HiveMetadataUtil {
 		prop.put(HIVE_TABLE_OUTPUT_FORMAT, sd.getOutputFormat());
 		prop.put(HIVE_TABLE_COMPRESSED, String.valueOf(sd.isCompressed()));
 		prop.put(HIVE_TABLE_NUM_BUCKETS, String.valueOf(sd.getNumBuckets()));
+
+		prop.putAll(table.getParameters());
 
 		return prop;
 	}

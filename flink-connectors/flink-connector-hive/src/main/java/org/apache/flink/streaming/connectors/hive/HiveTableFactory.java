@@ -26,9 +26,11 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.catalog.ExternalCatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
+import org.apache.flink.table.catalog.hive.FlinkHiveException;
 import org.apache.flink.table.catalog.hive.HiveCatalog;
-import org.apache.flink.table.catalog.hive.HiveCatalogConfig;
-import org.apache.flink.table.catalog.hive.TypeConverterUtil;
+import org.apache.flink.table.catalog.hive.HiveMetadataUtil;
+import org.apache.flink.table.catalog.hive.config.HiveCatalogConfig;
+import org.apache.flink.table.catalog.hive.config.HiveTableConfig;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.factories.BatchTableSourceFactory;
 import org.apache.flink.table.factories.TableSourceParserFactory;
@@ -47,8 +49,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_FIELD_NAMES;
-import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_FIELD_TYPES;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_FIELD_NAMES;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_FIELD_TYPES;
 import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CONNECTOR_PROPERTY_VERSION;
 import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CONNECTOR_TYPE;
 
@@ -78,7 +80,7 @@ public class HiveTableFactory implements BatchTableSourceFactory<GenericRow>, Ta
 		InternalType[] colTypes = new InternalType[fieldNames.length];
 		TypeInformation[] typeInformations = new TypeInformation[fieldNames.length];
 		for (int i = 0; i < hiveFieldTypes.length; i++) {
-			colTypes[i] = TypeConverterUtil.convert(hiveFieldTypes[i]);
+			colTypes[i] = HiveMetadataUtil.convert(hiveFieldTypes[i]);
 			typeInformations[i] = DataTypes.toTypeInfo(colTypes[i]);
 		}
 		try {
@@ -86,7 +88,7 @@ public class HiveTableFactory implements BatchTableSourceFactory<GenericRow>, Ta
 			return new HiveTableSource(new RowTypeInfo(typeInformations, fieldNames), jobConf, tableStats);
 		} catch (Exception e){
 			logger.error("Error when create hive batch table source ...", e);
-			throw new RuntimeException(e);
+			throw new FlinkHiveException(e);
 		}
 	}
 
@@ -100,22 +102,29 @@ public class HiveTableFactory implements BatchTableSourceFactory<GenericRow>, Ta
 	@Override
 	public List<String> supportedProperties() {
 		List<String> properties = new ArrayList<>();
-		properties.add(HiveCatalogConfig.HIVE_METASTORE_USERNAME);
-		properties.add(HiveCatalogConfig.HIVE_TABLE_COMPRESSED);
-		properties.add(HiveCatalogConfig.HIVE_TABLE_INPUT_FORMAT);
-		properties.add(HiveCatalogConfig.HIVE_TABLE_LOCATION);
-		properties.add(HiveCatalogConfig.HIVE_TABLE_NUM_BUCKETS);
-		properties.add(HiveCatalogConfig.HIVE_TABLE_OUTPUT_FORMAT);
-		properties.add(HiveCatalogConfig.HIVE_TABLE_SERDE_LIBRARY);
-		properties.add(HiveCatalogConfig.HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT);
-		properties.add(HIVE_TABLE_FIELD_NAMES);
-		properties.add(HiveCatalogConfig.HIVE_TABLE_FIELD_TYPES);
 		properties.add(CONNECTOR_PROPERTY_VERSION);
-		properties.add("transient_lastddltime");
-		properties.add("totalsize");
-		properties.add("rawdatasize");
-		properties.add("numrows");
-		properties.add("numfiles");
+
+		// Hive catalog configs
+		properties.add(HiveCatalogConfig.HIVE_METASTORE_USERNAME);
+
+		// Hive table configs
+		properties.add(HiveTableConfig.HIVE_TABLE_COMPRESSED);
+		properties.add(HiveTableConfig.HIVE_TABLE_INPUT_FORMAT);
+		properties.add(HiveTableConfig.HIVE_TABLE_LOCATION);
+		properties.add(HiveTableConfig.HIVE_TABLE_NUM_BUCKETS);
+		properties.add(HiveTableConfig.HIVE_TABLE_OUTPUT_FORMAT);
+		properties.add(HiveTableConfig.HIVE_TABLE_SERDE_LIBRARY);
+		properties.add(HiveTableConfig.HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT);
+		properties.add(HiveTableConfig.HIVE_TABLE_FIELD_NAMES);
+		properties.add(HiveTableConfig.HIVE_TABLE_FIELD_TYPES);
+
+		// Hive table parameters
+		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_TRANSIENT_LASTDDLTIME);
+		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_TOTALSIZE);
+		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_RAWDATASIZE);
+		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_NUMROWS);
+		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_NUMFILES);
+		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_LAST_MODIFIED_TIME);
 		return properties;
 	}
 

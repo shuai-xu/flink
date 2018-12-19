@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.client.catalog;
 
-import org.apache.flink.table.catalog.hive.HiveCatalogConfig;
+import org.apache.flink.table.catalog.hive.config.HiveCatalogConfig;
 
 /**
  * Configs for Catalog.

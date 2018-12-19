@@ -15,20 +15,18 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.catalog.hive;
-
-import org.apache.flink.table.catalog.CatalogFactory;
-import org.apache.flink.table.catalog.hive.config.HiveCatalogConfig;
-
-import java.util.Map;
+package org.apache.flink.table.catalog.hive.config;
 
 /**
- * Factory for HiveCatalog.
+ * HiveCatalog's configs.
  */
-public class HiveCatalogFactory implements CatalogFactory<HiveCatalog> {
+public class HiveCatalogConfig {
 
-	@Override
-	public HiveCatalog createCatalog(String catalogName, Map<String, String> properties) {
-		return new HiveCatalog(catalogName, properties.get(HiveCatalogConfig.HIVE_METASTORE_URIS));
-	}
+	// -------------------
+	// SQL Client yaml file configs
+	// -------------------
+
+	public static final String HIVE_METASTORE_URIS = "hive.metastore.uris";
+
+	public static final String HIVE_METASTORE_USERNAME = "hive.metastore.username";
 }

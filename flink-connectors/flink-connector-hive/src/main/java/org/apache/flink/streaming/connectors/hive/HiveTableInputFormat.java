@@ -23,7 +23,7 @@ import org.apache.flink.api.java.hadoop.mapred.HadoopInputFormatBase;
 import org.apache.flink.api.java.hadoop.mapred.wrapper.HadoopInputSplit;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
-import org.apache.flink.table.catalog.hive.HiveCatalogConfig;
+import org.apache.flink.table.catalog.hive.FlinkHiveException;
 import org.apache.flink.table.catalog.hive.TypeConverterUtil;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
@@ -52,6 +52,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_COMPRESSED;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_INPUT_FORMAT;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_LOCATION;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_NUM_BUCKETS;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_OUTPUT_FORMAT;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_SERDE_LIBRARY;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT;
 import static org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR;
 
 /**
@@ -165,16 +172,16 @@ public class HiveTableInputFormat extends HadoopInputFormatBase<Writable, Writab
 
 	private static StorageDescriptor createStorageDescriptor(JobConf jobConf, RowTypeInfo rowTypeInfo) {
 		StorageDescriptor storageDescriptor = new StorageDescriptor();
-		storageDescriptor.setLocation(jobConf.get(HiveCatalogConfig.HIVE_TABLE_LOCATION));
-		storageDescriptor.setInputFormat(jobConf.get(HiveCatalogConfig.HIVE_TABLE_INPUT_FORMAT));
-		storageDescriptor.setOutputFormat(jobConf.get(HiveCatalogConfig.HIVE_TABLE_OUTPUT_FORMAT));
-		storageDescriptor.setCompressed(Boolean.parseBoolean(jobConf.get(HiveCatalogConfig.HIVE_TABLE_COMPRESSED)));
-		storageDescriptor.setNumBuckets(Integer.parseInt(jobConf.get(HiveCatalogConfig.HIVE_TABLE_NUM_BUCKETS)));
+		storageDescriptor.setLocation(jobConf.get(HIVE_TABLE_LOCATION));
+		storageDescriptor.setInputFormat(jobConf.get(HIVE_TABLE_INPUT_FORMAT));
+		storageDescriptor.setOutputFormat(jobConf.get(HIVE_TABLE_OUTPUT_FORMAT));
+		storageDescriptor.setCompressed(Boolean.parseBoolean(jobConf.get(HIVE_TABLE_COMPRESSED)));
+		storageDescriptor.setNumBuckets(Integer.parseInt(jobConf.get(HIVE_TABLE_NUM_BUCKETS)));
 
 		SerDeInfo serDeInfo = new SerDeInfo();
-		serDeInfo.setSerializationLib(jobConf.get(HiveCatalogConfig.HIVE_TABLE_SERDE_LIBRARY));
+		serDeInfo.setSerializationLib(jobConf.get(HIVE_TABLE_SERDE_LIBRARY));
 		Map<String, String> parameters = new HashMap<>();
-		parameters.put(serdeConstants.SERIALIZATION_FORMAT, jobConf.get(HiveCatalogConfig.HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT));
+		parameters.put(serdeConstants.SERIALIZATION_FORMAT, jobConf.get(HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT));
 		serDeInfo.setParameters(parameters);
 		List<FieldSchema> fieldSchemas = new ArrayList<>();
 		for (int i = 0; i < rowTypeInfo.getArity(); i++) {
@@ -182,7 +189,7 @@ public class HiveTableInputFormat extends HadoopInputFormatBase<Writable, Writab
 			if (null == hiveType) {
 				logger.error("Now we don't support flink type of " + rowTypeInfo.getFieldTypes()[i] + " converting from " +
 							"hive");
-				throw new RuntimeException("Now we don't support flink type of "
+				throw new FlinkHiveException("Now we don't support flink type of "
 										+ rowTypeInfo.getFieldTypes()[i] + " converting from hive");
 			}
 			fieldSchemas.add(

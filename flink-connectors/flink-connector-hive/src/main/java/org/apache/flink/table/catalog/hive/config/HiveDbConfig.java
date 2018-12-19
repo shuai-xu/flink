@@ -16,26 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.catalog.hive;
+package org.apache.flink.table.catalog.hive.config;
 
 /**
- * Configs of Hive tables.
+ * Configs of Hive database.
  */
-public class HiveTableConfig {
+public class HiveDbConfig {
 
-	public static final String HIVE_TABLE_LOCATION = "hive.table.location";
+	public static final String HIVE_DB_DESCRIPTION = "hive.db.description";
 
-	public static final String HIVE_TABLE_TYPE = "hive.table.type";
+	public static final String HIVE_DB_LOCATION = "hive.db.location";
 
-	public static final String HIVE_TABLE_SERDE_LIBRARY = "hive.table.serde.library";
-
-	public static final String HIVE_TABLE_INPUT_FORMAT = "hive.table.input.format";
-
-	public static final String HIVE_TABLE_OUTPUT_FORMAT = "hive.table.output.format";
-
-	public static final String HIVE_TABLE_COMPRESSED = "hive.table.compressed";
-
-	public static final String HIVE_TABLE_NUM_BUCKETS = "hive.table.num.buckets";
-
-	public static final String HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT = "hive.table.storage.serialization.format";
+	public static final String HIVE_DB_OWNER = "hive.db.owner";
 }

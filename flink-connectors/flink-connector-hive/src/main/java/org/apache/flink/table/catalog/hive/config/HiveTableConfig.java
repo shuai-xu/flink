@@ -15,26 +15,19 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.catalog.hive;
+package org.apache.flink.table.catalog.hive.config;
 
 /**
- * HiveCatalog's configs.
+ * Config for Hive tables.
  */
-public class HiveCatalogConfig {
-
-	// -------------------
-	// SQL Client yaml file configs
-	// -------------------
-
-	public static final String HIVE_METASTORE_URIS = "hive.metastore.uris";
-
-	public static final String HIVE_METASTORE_USERNAME = "hive.metastore.username";
-
+public class HiveTableConfig {
 	// -------------------
 	// Hive storage information configs
 	// -------------------
 
 	public static final String HIVE_TABLE_LOCATION = "hive.table.location";
+
+	public static final String HIVE_TABLE_TYPE = "hive.table.type";
 
 	public static final String HIVE_TABLE_SERDE_LIBRARY = "hive.table.serde.library";
 
@@ -51,4 +44,20 @@ public class HiveCatalogConfig {
 	public static final String HIVE_TABLE_FIELD_NAMES = "hive.table.field.names";
 
 	public static final String HIVE_TABLE_FIELD_TYPES = "hive.table.field.types";
+
+	// -------------------
+	// Hive table parameters
+	// -------------------
+
+	public static final String HIVE_TABLE_PROPERTY_TRANSIENT_LASTDDLTIME = "transient_lastddltime";
+
+	public static final String HIVE_TABLE_PROPERTY_TOTALSIZE = "totalsize";
+
+	public static final String HIVE_TABLE_PROPERTY_RAWDATASIZE = "rawdatasize";
+
+	public static final String HIVE_TABLE_PROPERTY_NUMROWS = "numrows";
+
+	public static final String HIVE_TABLE_PROPERTY_NUMFILES = "numfiles";
+
+	public static final String HIVE_TABLE_PROPERTY_LAST_MODIFIED_TIME = "last_modified_time";
 }

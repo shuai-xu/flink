@@ -20,6 +20,7 @@ package org.apache.flink.table.catalog.hive;
 
 import org.apache.flink.table.catalog.CatalogTestBase;
 import org.apache.flink.table.catalog.ObjectPath;
+import org.apache.flink.table.catalog.hive.config.HiveTableConfig;
 
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.junit.After;
@@ -78,7 +79,7 @@ public class HiveCatalogTest extends CatalogTestBase {
 	@Override
 	protected Map<String, String> getTableProperties() {
 		return new HashMap<String, String>() {{
-			put(HiveCatalogConfig.HIVE_TABLE_LOCATION, warehouseDir + "/tmp");
+			put(HiveTableConfig.HIVE_TABLE_LOCATION, warehouseDir + "/tmp");
 		}};
 	}
 }

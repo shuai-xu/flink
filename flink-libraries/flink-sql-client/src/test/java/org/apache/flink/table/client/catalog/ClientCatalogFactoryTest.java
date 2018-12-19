@@ -20,7 +20,7 @@ package org.apache.flink.table.client.catalog;
 
 import org.apache.flink.table.catalog.FlinkInMemoryCatalog;
 import org.apache.flink.table.catalog.ReadableCatalog;
-import org.apache.flink.table.catalog.hive.HiveCatalogConfig;
+import org.apache.flink.table.catalog.hive.config.HiveCatalogConfig;
 import org.apache.flink.table.client.config.Catalog;
 import org.apache.flink.table.client.config.CatalogType;
 

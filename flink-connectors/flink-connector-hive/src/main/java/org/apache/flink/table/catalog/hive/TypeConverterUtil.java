@@ -21,20 +21,6 @@ package org.apache.flink.table.catalog.hive;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.table.api.types.BooleanType;
-import org.apache.flink.table.api.types.ByteType;
-import org.apache.flink.table.api.types.CharType;
-import org.apache.flink.table.api.types.DateType;
-import org.apache.flink.table.api.types.DecimalType;
-import org.apache.flink.table.api.types.DoubleType;
-import org.apache.flink.table.api.types.FloatType;
-import org.apache.flink.table.api.types.IntType;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.LongType;
-import org.apache.flink.table.api.types.ShortType;
-import org.apache.flink.table.api.types.StringType;
-import org.apache.flink.table.api.types.TimeType;
-import org.apache.flink.table.api.types.TimestampType;
 
 import org.apache.hadoop.hive.serde.serdeConstants;
 
@@ -61,39 +47,5 @@ public class TypeConverterUtil {
 		flinkTypeToHiveType.put(SqlTimeTypeInfo.TIME, serdeConstants.DATETIME_TYPE_NAME);
 		flinkTypeToHiveType.put(SqlTimeTypeInfo.TIMESTAMP, serdeConstants.TIMESTAMP_TYPE_NAME);
 		flinkTypeToHiveType.put(BasicTypeInfo.BIG_DEC_TYPE_INFO, serdeConstants.DECIMAL_TYPE_NAME);
-	}
-
-	public static InternalType convert(String hiveType) {
-		switch (hiveType) {
-			case serdeConstants.STRING_TYPE_NAME:
-				return StringType.INSTANCE;
-			case serdeConstants.CHAR_TYPE_NAME:
-				return CharType.INSTANCE;
-			case serdeConstants.BOOLEAN_TYPE_NAME:
-				return BooleanType.INSTANCE;
-			case serdeConstants.TINYINT_TYPE_NAME:
-				return ByteType.INSTANCE;
-			case serdeConstants.SMALLINT_TYPE_NAME:
-				return ShortType.INSTANCE;
-			case serdeConstants.INT_TYPE_NAME:
-				return IntType.INSTANCE;
-			case serdeConstants.BIGINT_TYPE_NAME:
-				return LongType.INSTANCE;
-			case serdeConstants.FLOAT_TYPE_NAME:
-				return FloatType.INSTANCE;
-			case serdeConstants.DOUBLE_TYPE_NAME:
-				return DoubleType.INSTANCE;
-			case serdeConstants.DATE_TYPE_NAME:
-				return DateType.DATE;
-			case serdeConstants.DATETIME_TYPE_NAME:
-				return TimeType.INSTANCE;
-			case serdeConstants.TIMESTAMP_TYPE_NAME:
-				return TimestampType.TIMESTAMP;
-			case serdeConstants.DECIMAL_TYPE_NAME:
-				return DecimalType.SYSTEM_DEFAULT;
-			default:
-				throw new UnsupportedOperationException(
-					String.format("Flink doesn't support Hive's type %s yet.", hiveType));
-		}
 	}
 }
