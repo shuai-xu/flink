@@ -164,7 +164,7 @@ object CommonTestData {
       Array(true, true, true),
       "\\|",
       "$",
-      tableStats = Some(new TableStats(data.size.toLong)))
+      tableStats = Some(TableStats(data.size.toLong)))
   }
 
   def getSmall5Data: mutable.MutableList[(Integer, lang.Long, Integer, String, lang.Long)] = {
@@ -193,7 +193,7 @@ object CommonTestData {
       Array(true, true, true, true, true),
       "\\|",
       "$",
-      tableStats = Some(new TableStats(data.size.toLong)))
+      tableStats = Some(TableStats(data.size.toLong)))
   }
 
   def get5NullDataRow(): (mutable.MutableList[Row], RowTypeInfo) = {
@@ -261,7 +261,7 @@ object CommonTestData {
       Array(true, true, true, true, true),
       "\\|",
       "$",
-      tableStats = Some(new TableStats(data.size.toLong)))
+      tableStats = Some(TableStats(data.size.toLong)))
   }
 
   def getInMemoryTestCatalog: ExternalCatalog = {

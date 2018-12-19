@@ -1,0 +1,381 @@
+<?xml version="1.0" ?>
+<!--
+Licensed to the Apache Software Foundation (ASF) under one or more
+contributor license agreements.  See the NOTICE file distributed with
+this work for additional information regarding copyright ownership.
+The ASF licenses this file to you under the Apache License, Version 2.0
+(the "License"); you may not use this file except in compliance with
+the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<Root>
+  <TestCase name="testAggRemove_Count[false]">
+    <Resource name="sql">
+      <![CDATA[SELECT a, COUNT(c) FROM MyTable2 GROUP BY a]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT($1)])
++- LogicalProject(a=[$0], c=[$2])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalAggregate(group=[{0}], EXPR$1=[COUNT($1)])
++- FlinkLogicalCalc(select=[a, c])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_Count[true]">
+    <Resource name="sql">
+      <![CDATA[SELECT a, COUNT(c) FROM MyTable2 GROUP BY a]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT($1)])
++- LogicalProject(a=[$0], c=[$2])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalAggregate(group=[{0}], EXPR$1=[COUNT($1)])
++- FlinkLogicalCalc(select=[a, c])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_CountStar[false]">
+    <Resource name="sql">
+      <![CDATA[SELECT a, COUNT(*) FROM MyTable2 GROUP BY a]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
++- LogicalProject(a=[$0])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
++- FlinkLogicalCalc(select=[a])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_CountStar[true]">
+    <Resource name="sql">
+      <![CDATA[SELECT a, COUNT(*) FROM MyTable2 GROUP BY a]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
++- LogicalProject(a=[$0])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
++- FlinkLogicalCalc(select=[a])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_GroupKeyIsNotUnique[false]">
+    <Resource name="sql">
+      <![CDATA[SELECT a, MAX(c) from MyTable1 GROUP BY a]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{0}], EXPR$1=[MAX($1)])
++- LogicalProject(a=[$0], c=[$2])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalAggregate(group=[{0}], EXPR$1=[MAX($1)])
++- FlinkLogicalCalc(select=[a, c])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable1]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_GroupKeyIsNotUnique[true]">
+    <Resource name="sql">
+      <![CDATA[SELECT a, MAX(c) from MyTable1 GROUP BY a]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{0}], EXPR$1=[MAX($1)])
++- LogicalProject(a=[$0], c=[$2])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalAggregate(group=[{0}], EXPR$1=[MAX($1)])
++- FlinkLogicalCalc(select=[a, c])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable1]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_WithDistinct[false]">
+    <Resource name="sql">
+      <![CDATA[SELECT a, SUM(DISTINCT b), MAX(DISTINCT b), MIN(DISTINCT c) FROM MyTable2 GROUP BY a]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{0}], EXPR$1=[SUM(DISTINCT $1)], EXPR$2=[MAX(DISTINCT $1)], EXPR$3=[MIN(DISTINCT $2)])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalCalc(select=[a, b AS EXPR$1, b AS EXPR$2, c AS EXPR$3])
++- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_WithDistinct[true]">
+    <Resource name="sql">
+      <![CDATA[SELECT a, SUM(DISTINCT b), MAX(DISTINCT b), MIN(DISTINCT c) FROM MyTable2 GROUP BY a]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{0}], EXPR$1=[SUM(DISTINCT $1)], EXPR$2=[MAX(DISTINCT $1)], EXPR$3=[MIN(DISTINCT $2)])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalCalc(select=[a, b AS EXPR$1, b AS EXPR$2, c AS EXPR$3])
++- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_WithFilter[false]">
+    <Resource name="sql">
+      <![CDATA[SELECT a, MIN(c) FILTER (WHERE b > 0), MAX(b) FROM MyTable2 GROUP BY a]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{0}], EXPR$1=[MIN($1) FILTER $2], EXPR$2=[MAX($3)])
++- LogicalProject(a=[$0], c=[$2], $f2=[IS TRUE(>($1, 0))], b=[$1])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalAggregate(group=[{0}], EXPR$1=[MIN($1) FILTER $2], EXPR$2=[MAX($3)])
++- FlinkLogicalCalc(select=[a, c, IS TRUE(>(b, 0)) AS $f2, b])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_WithFilter[true]">
+    <Resource name="sql">
+      <![CDATA[SELECT a, MIN(c) FILTER (WHERE b > 0), MAX(b) FROM MyTable2 GROUP BY a]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{0}], EXPR$1=[MIN($1) FILTER $2], EXPR$2=[MAX($3)])
++- LogicalProject(a=[$0], c=[$2], $f2=[IS TRUE(>($1, 0))], b=[$1])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalAggregate(group=[{0}], EXPR$1=[MIN($1) FILTER $2], EXPR$2=[MAX($3)])
++- FlinkLogicalCalc(select=[a, c, IS TRUE(>(b, 0)) AS $f2, b])
+   +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_WithoutAggCall[false]">
+    <Resource name="sql">
+      <![CDATA[SELECT a, b FROM MyTable2 GROUP BY a, b]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{0, 1}])
++- LogicalProject(a=[$0], b=[$1])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalCalc(select=[a, b])
++- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_WithoutAggCall[true]">
+    <Resource name="sql">
+      <![CDATA[SELECT a, b FROM MyTable2 GROUP BY a, b]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{0, 1}])
++- LogicalProject(a=[$0], b=[$1])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalCalc(select=[a, b])
++- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_WithoutFilter1[false]">
+    <Resource name="sql">
+      <![CDATA[SELECT a, b + 1, c, s FROM (SELECT a, MIN(b) AS b, SUM(b) AS s, MAX(c) AS c FROM MyTable2 GROUP BY a)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], EXPR$1=[+($1, 1)], c=[$3], s=[$2])
++- LogicalAggregate(group=[{0}], b=[MIN($1)], s=[SUM($1)], c=[MAX($2)])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalCalc(select=[a, +(b, 1) AS EXPR$1, c, b AS s])
++- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_WithoutFilter1[true]">
+    <Resource name="sql">
+      <![CDATA[SELECT a, b + 1, c, s FROM (SELECT a, MIN(b) AS b, SUM(b) AS s, MAX(c) AS c FROM MyTable2 GROUP BY a)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], EXPR$1=[+($1, 1)], c=[$3], s=[$2])
++- LogicalAggregate(group=[{0}], b=[MIN($1)], s=[SUM($1)], c=[MAX($2)])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalCalc(select=[a, +(b, 1) AS EXPR$1, c, b AS s])
++- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_WithoutFilter2[false]">
+    <Resource name="sql">
+      <![CDATA[SELECT a, SUM(b) AS s FROM MyTable2 GROUP BY a]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{0}], s=[SUM($1)])
++- LogicalProject(a=[$0], b=[$1])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalCalc(select=[a, b AS s])
++- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_WithoutFilter2[true]">
+    <Resource name="sql">
+      <![CDATA[SELECT a, SUM(b) AS s FROM MyTable2 GROUP BY a]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{0}], s=[SUM($1)])
++- LogicalProject(a=[$0], b=[$1])
+   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalCalc(select=[a, b AS s])
++- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_WithoutGroupBy1[false]">
+    <Resource name="sql">
+      <![CDATA[SELECT MAX(a), SUM(b), MIN(c) FROM MyTable2]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{}], EXPR$0=[MAX($0)], EXPR$1=[SUM($1)], EXPR$2=[MIN($2)])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalAggregate(group=[{}], EXPR$0=[MAX($0)], EXPR$1=[SUM($1)], EXPR$2=[MIN($2)])
++- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_WithoutGroupBy1[true]">
+    <Resource name="sql">
+      <![CDATA[SELECT MAX(a), SUM(b), MIN(c) FROM MyTable2]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{}], EXPR$0=[MAX($0)], EXPR$1=[SUM($1)], EXPR$2=[MIN($2)])
++- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalAggregate(group=[{}], EXPR$0=[MAX($0)], EXPR$1=[SUM($1)], EXPR$2=[MIN($2)])
++- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, MyTable2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_WithoutGroupBy2[true]">
+    <Resource name="sql">
+      <![CDATA[SELECT MAX(a), SUM(b), MIN(c) FROM (VALUES (1, 2, 3)) T(a, b, c)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{}], EXPR$0=[MAX($0)], EXPR$1=[SUM($1)], EXPR$2=[MIN($2)])
++- LogicalValues(tuples=[[{ 1, 2, 3 }]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalCalc(select=[CAST(a) AS EXPR$0, CAST(b) AS EXPR$1, CAST(c) AS EXPR$2])
++- FlinkLogicalValues(tuples=[[{ 1, 2, 3 }]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testAggRemove_WithoutGroupBy2[false]">
+    <Resource name="sql">
+      <![CDATA[SELECT MAX(a), SUM(b), MIN(c) FROM (VALUES (1, 2, 3)) T(a, b, c)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{}], EXPR$0=[MAX($0)], EXPR$1=[SUM($1)], EXPR$2=[MIN($2)])
++- LogicalValues(tuples=[[{ 1, 2, 3 }]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalCalc(select=[CAST(a) AS EXPR$0, CAST(b) AS EXPR$1, CAST(c) AS EXPR$2])
++- FlinkLogicalValues(tuples=[[{ 1, 2, 3 }]])
+]]>
+    </Resource>
+  </TestCase>
+</Root>

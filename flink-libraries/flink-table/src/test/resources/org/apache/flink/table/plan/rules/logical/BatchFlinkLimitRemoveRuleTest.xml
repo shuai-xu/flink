@@ -60,14 +60,7 @@ LogicalSort(fetch=[0])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[$f0], join=[a, b, c], joinType=[LeftSemiJoin], build=[right], singleRowJoin=[true])
-:- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
-+- Exchange(distribution=[broadcast])
-   +- Calc(select=[IS NOT NULL(m) AS $f0])
-      +- SortAggregate(isMerge=[false], select=[MIN(i) AS m])
-         +- Sort(orderBy=[i ASC])
-            +- Exchange(distribution=[single])
-               +- Values(tuples=[[]], values=[i])
+Values(tuples=[[]], values=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

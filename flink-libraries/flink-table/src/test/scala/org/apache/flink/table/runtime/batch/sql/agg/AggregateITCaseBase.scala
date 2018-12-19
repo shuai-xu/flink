@@ -21,16 +21,19 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.{TableConfig, TableException, Types}
 import org.apache.flink.table.api.types.DecimalType
+import org.apache.flink.table.api.{TableConfig, TableException, Types}
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.{binaryRow, row}
 import org.apache.flink.table.runtime.batch.sql.TestData._
+import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.types.Row
+
 import org.junit.{Before, Test}
 
+import scala.collection.JavaConverters._
 import scala.collection.Seq
 
 /**
@@ -510,7 +513,6 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
     )
   }
 
-
   @Test
   def testAggWithoutGroups(): Unit = {
     checkQuery(
@@ -838,6 +840,36 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
       "SELECT a FROM (SELECT b, MAX(a) AS a, COUNT(*), MAX(c) FROM SmallTable3 GROUP BY b) t",
       Seq(row(1), row(3))
     )
+  }
+
+  @Test
+  def testAggregateRemove(): Unit = {
+    tEnv.registerTableSource("MyTable",
+      CommonTestData.getSmall3Source(Array("a", "b", "c")), Set(Set("a").asJava).asJava)
+    checkResult(
+      "SELECT a, b + 1, c, s FROM (" +
+        "SELECT a, MIN(b) AS b, SUM(b) AS s, MAX(c) AS c FROM MyTable GROUP BY a)",
+      Seq(
+        row(1, 2L, "Hi", 1L),
+        row(2, 3L, "Hello", 2L),
+        row(3, 3L, "Hello world", 2L)
+      ))
+
+    checkResult("SELECT a, b FROM MyTable GROUP BY a, b",
+      Seq(row(1, 1L), row(2, 2L), row(3, 2L)))
+
+    checkResult(
+      "SELECT MAX(a), SUM(b), MIN(c) FROM (VALUES (1, 2, 3)) T(a, b, c)",
+      Seq(row(1, 2, 3))
+    )
+
+    checkQuery(
+      Seq[(Integer, Integer)]((null.asInstanceOf[Integer], null.asInstanceOf[Integer])),
+      "SELECT f0, SUM(f1), MAX(f1) FROM " +
+        "(SELECT f0, MAX(f1) AS f1 FROM TableName GROUP BY f0) t GROUP BY f0",
+      Seq((null, null, null))
+    )
+
   }
 
 }

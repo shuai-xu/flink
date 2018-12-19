@@ -1309,4 +1309,33 @@ class AggregateITCase(
     val expected = List("1", "3")
     assertEquals(expected, sink.getRetractResults)
   }
+
+  @Test
+  def testAggregateRemove(): Unit = {
+    val data = new mutable.MutableList[(Int, Int)]
+    data .+= ((1, 1))
+    data .+= ((2, 2))
+    data .+= ((3, 3))
+    data .+= ((4, 2))
+    data .+= ((4, 4))
+    data .+= ((6, 2))
+
+    val t = failingDataSource(data).toTable(tEnv, 'a, 'b)
+    tEnv.registerTable("T", t)
+
+    val t1 = tEnv.sqlQuery(
+      """
+        |select sum(b) from
+        | (select b from
+        |   (select b, sum(a) from
+        |     (select b, sum(a) as a from T group by b) t1
+        |   group by b) t2
+        | ) t3
+      """.stripMargin)
+    val sink = new TestingRetractSink
+    t1.toRetractStream[Row].addSink(sink).setParallelism(1)
+    env.execute()
+    val expected = List("10")
+    assertEquals(expected, sink.getRetractResults)
+  }
 }

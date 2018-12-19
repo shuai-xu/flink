@@ -19,13 +19,17 @@
 package org.apache.flink.table.runtime.batch.sql.agg
 
 import org.apache.flink.api.java.typeutils.RowTypeInfo
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{TableConfig, Types}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
+import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.types.Row
+
 import org.junit.{Before, Test}
 
+import scala.collection.JavaConverters._
 import scala.collection.Seq
 
 abstract class DistinctAggregateITCaseBase(testName: String) extends QueryTest {
@@ -300,6 +304,36 @@ abstract class DistinctAggregateITCaseBase(testName: String) extends QueryTest {
       s"SELECT $distinctList, $maxList FROM MyTable",
       Seq(expected)
     )
+  }
+
+  @Test
+  def testAggregateRemove(): Unit = {
+    tEnv.registerTableSource("MyTable",
+      CommonTestData.getSmall3Source(Array("a", "b", "c")), Set(Set("a").asJava).asJava)
+    checkResult(
+      "SELECT a, b + 1, c, s FROM (" +
+        "SELECT a, MIN(DISTINCT b) AS b, SUM(DISTINCT b) AS s, MAX(DISTINCT c) AS c" +
+        " FROM MyTable GROUP BY a)",
+      Seq(
+        row(1, 2L, "Hi", 1L),
+        row(2, 3L, "Hello", 2L),
+        row(3, 3L, "Hello world", 2L)
+      ))
+
+    checkResult(
+      "SELECT MAX(DISTINCT a), SUM(DISTINCT b), MIN(DISTINCT c) FROM (VALUES (1, 2, 3)) T(a, b, c)",
+      Seq(row(1, 2, 3))
+    )
+
+    tEnv.registerTableSource("MyTableNull",
+      CommonTestData.createCsvTableSource(
+        Seq(row(null, null)), Array("a", "b"), Array(DataTypes.INT, DataTypes.INT)))
+    checkResult(
+      "SELECT a, SUM(DISTINCT b), MAX(DISTINCT b) FROM " +
+        "(SELECT a, MAX(b) AS b FROM MyTableNull GROUP BY a) t GROUP BY a",
+      Seq(row(null, null, null))
+    )
+
   }
 
 }
