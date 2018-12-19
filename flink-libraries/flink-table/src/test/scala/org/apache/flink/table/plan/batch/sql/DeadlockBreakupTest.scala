@@ -24,6 +24,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.TableTestBatchExecBase
+
 import org.junit.{Before, Test}
 
 class DeadlockBreakupTest extends TableTestBatchExecBase {
@@ -100,6 +101,41 @@ class DeadlockBreakupTest extends TableTestBatchExecBase {
   }
 
   @Test
+  def testReuseSubPlan_SetExchangeAsBatch_OverAgg(): Unit = {
+    util.tableEnv.getConfig.setSubPlanReuse(true)
+    val sqlQuery =
+      """
+        |WITH r1 AS (SELECT SUM(a) OVER (PARTITION BY b ORDER BY b) AS a, b, c FROM x),
+        | r2 AS (SELECT MAX(a) OVER (PARTITION BY b ORDER BY b
+        | RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS a, b, c FROM r1),
+        | r3 AS (SELECT MIN(a) OVER (PARTITION BY b ORDER BY b
+        | RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS a, b, c FROM r1)
+        |
+        |SELECT * FROM r2, r3 WHERE r2.c = r3.c
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testReuseSubPlan_SetExchangeAsBatch_SortMergeJoin(): Unit = {
+    util.tableEnv.getConfig.setSubPlanReuse(true)
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin")
+    util.tableEnv.getConfig.getParameters.setInteger(
+      TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
+    val sqlQuery =
+      """
+        |
+        |WITH v1 AS (SELECT a, SUM(b) AS b, MAX(c) AS c FROM x GROUP BY a),
+        |     v2 AS (SELECT * FROM v1 r1, v1 r2 WHERE r1.a = r2.a AND r1.b > 10),
+        |     v3 AS (SELECT * FROM v1 r1, v1 r2 WHERE r1.a = r2.a AND r1.b < 5)
+        |
+        |select * from v2, v3 where v2.c = v3.c
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
   def testReusedNodeIsBarrierNode(): Unit = {
     util.tableEnv.getConfig.setSubPlanReuse(true)
     util.tableEnv.getConfig.setTableSourceReuse(false)
@@ -135,4 +171,5 @@ class DeadlockBreakupTest extends TableTestBatchExecBase {
     val sqlQuery = "SELECT * FROM t t1, t t2 WHERE t1.a = t2.b"
     util.verifyPlan(sqlQuery)
   }
+
 }

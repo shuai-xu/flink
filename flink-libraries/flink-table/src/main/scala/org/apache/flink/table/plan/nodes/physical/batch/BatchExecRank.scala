@@ -95,8 +95,6 @@ class BatchExecRank(
     )
   }
 
-  override def isBarrierNode: Boolean = false
-
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   override def explainTerms(pw: RelWriter): RelWriter = {

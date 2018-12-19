@@ -180,6 +180,102 @@ HashJoin(where=[=(b, e0)], join=[a, b, d, e, a0, b0, d0, e0], joinType=[InnerJoi
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testReuseSubPlan_SetExchangeAsBatch_OverAgg">
+    <Resource name="sql">
+      <![CDATA[
+WITH r1 AS (SELECT SUM(a) OVER (PARTITION BY b ORDER BY b) AS a, b, c FROM x),
+ r2 AS (SELECT MAX(a) OVER (PARTITION BY b ORDER BY b
+ RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS a, b, c FROM r1),
+ r3 AS (SELECT MIN(a) OVER (PARTITION BY b ORDER BY b
+ RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS a, b, c FROM r1)
+
+SELECT * FROM r2, r3 WHERE r2.c = r3.c
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2], a0=[$3], b0=[$4], c0=[$5])
++- LogicalFilter(condition=[=($2, $5)])
+   +- LogicalJoin(condition=[true], joinType=[inner])
+      :- LogicalProject(a=[MAX($0) OVER (PARTITION BY $1 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)], b=[$1], c=[$2])
+      :  +- LogicalProject(a=[CASE(>(COUNT($0) OVER (PARTITION BY $1 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 0), CAST($SUM0($0) OVER (PARTITION BY $1 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)):INTEGER, null)], b=[$1], c=[$2])
+      :     +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+      +- LogicalProject(a=[MIN($0) OVER (PARTITION BY $1 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)], b=[$1], c=[$2])
+         +- LogicalProject(a=[CASE(>(COUNT($0) OVER (PARTITION BY $1 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 0), CAST($SUM0($0) OVER (PARTITION BY $1 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)):INTEGER, null)], b=[$1], c=[$2])
+            +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+HashJoin(where=[=(c, c0)], join=[a, b, c, a0, b0, c0], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+:- Exchange(distribution=[hash[c]], exchange_mode=[BATCH])
+:  +- Calc(select=[w0$o0 AS a, b, c])
+:     +- OverAggregate(partitionBy=[b], orderBy=[b ASC], window#0=[MAX($2) AS w0$o0 RANG BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING], select=[b, c, $2, w0$o0])
+:        +- Calc(select=[b, c, CASE(>(w0$o0, 0), CAST(w0$o1), null) AS $2], reuse_id=[1])
+:           +- OverAggregate(partitionBy=[b], orderBy=[b ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 RANG BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, c, w0$o0, w0$o1])
+:              +- Sort(orderBy=[b ASC])
+:                 +- Exchange(distribution=[hash[b]])
+:                    +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
++- Exchange(distribution=[broadcast])
+   +- Calc(select=[w0$o0 AS a, b, c])
+      +- OverAggregate(partitionBy=[b], orderBy=[b ASC], window#0=[MIN($2) AS w0$o0 RANG BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING], select=[b, c, $2, w0$o0])
+         +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testReuseSubPlan_SetExchangeAsBatch_SortMergeJoin">
+    <Resource name="sql">
+      <![CDATA[
+
+WITH v1 AS (SELECT a, SUM(b) AS b, MAX(c) AS c FROM x GROUP BY a),
+     v2 AS (SELECT * FROM v1 r1, v1 r2 WHERE r1.a = r2.a AND r1.b > 10),
+     v3 AS (SELECT * FROM v1 r1, v1 r2 WHERE r1.a = r2.a AND r1.b < 5)
+
+select * from v2, v3 where v2.c = v3.c
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2], a0=[$3], b0=[$4], c0=[$5], a1=[$6], b1=[$7], c1=[$8], a00=[$9], b00=[$10], c00=[$11])
++- LogicalFilter(condition=[=($2, $8)])
+   +- LogicalJoin(condition=[true], joinType=[inner])
+      :- LogicalProject(a=[$0], b=[$1], c=[$2], a0=[$3], b0=[$4], c0=[$5])
+      :  +- LogicalFilter(condition=[AND(=($0, $3), >($1, 10))])
+      :     +- LogicalJoin(condition=[true], joinType=[inner])
+      :        :- LogicalAggregate(group=[{0}], b=[SUM($1)], c=[MAX($2)])
+      :        :  +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+      :        +- LogicalAggregate(group=[{0}], b=[SUM($1)], c=[MAX($2)])
+      :           +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+      +- LogicalProject(a=[$0], b=[$1], c=[$2], a0=[$3], b0=[$4], c0=[$5])
+         +- LogicalFilter(condition=[AND(=($0, $3), <($1, 5))])
+            +- LogicalJoin(condition=[true], joinType=[inner])
+               :- LogicalAggregate(group=[{0}], b=[SUM($1)], c=[MAX($2)])
+               :  +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+               +- LogicalAggregate(group=[{0}], b=[SUM($1)], c=[MAX($2)])
+                  +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+HashJoin(where=[=(c, c1)], join=[a, b, c, a0, b0, c0, a1, b1, c1, a00, b00, c00], joinType=[InnerJoin], build=[left])
+:- Exchange(distribution=[hash[c]])
+:  +- SortMergeJoin(where=[=(a, a0)], join=[a, b, c, a0, b0, c0], joinType=[InnerJoin], leftSorted=[true], rightSorted=[true])
+:     :- Calc(select=[a, b, c], where=[>(b, 10)])
+:     :  +- SortAggregate(isMerge=[true], groupBy=[a], select=[a, Final_SUM(sum$0) AS b, Final_MAX(max$1) AS c], reuse_id=[1])
+:     :     +- Sort(orderBy=[a ASC])
+:     :        +- Exchange(distribution=[hash[a]])
+:     :           +- LocalSortAggregate(groupBy=[a], select=[a, Partial_SUM(b) AS sum$0, Partial_MAX(c) AS max$1])
+:     :              +- Sort(orderBy=[a ASC])
+:     :                 +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+:     +- Reused(reference_id=[1])
++- Exchange(distribution=[hash[c]], exchange_mode=[BATCH])
+   +- SortMergeJoin(where=[=(a, a0)], join=[a, b, c, a0, b0, c0], joinType=[InnerJoin], leftSorted=[true], rightSorted=[true])
+      :- Calc(select=[a, b, c], where=[<(b, 5)])
+      :  +- Reused(reference_id=[1])
+      +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testScanTable_AddExchangeAsBatch_HashJoin">
     <Resource name="sql">
       <![CDATA[SELECT * FROM t INTERSECT SELECT * FROM t]]>

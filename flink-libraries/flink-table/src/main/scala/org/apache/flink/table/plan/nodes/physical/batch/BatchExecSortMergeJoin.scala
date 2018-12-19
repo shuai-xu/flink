@@ -82,7 +82,7 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
 
   lazy val (leftAllKey, rightAllKey) = JoinUtil.checkAndGetKeys(keyPairs, getLeft, getRight)
 
-  override def isBarrierNode: Boolean = true
+  override def isBarrierNode: Boolean = !leftSorted && !rightSorted
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 

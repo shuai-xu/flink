@@ -82,8 +82,6 @@ class BatchExecOverAggregate(
 
   override def deriveRowType: RelDataType = rowRelDataType
 
-  override def isBarrierNode: Boolean = true
-
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   def getGrouping: Array[Int] = grouping
