@@ -25,7 +25,6 @@ import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.sources.csv.CsvTableSource
-import org.apache.flink.test.util.TestBaseUtils
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Before, Ignore, Test}
@@ -129,13 +128,13 @@ object TpcDsBatchExecITCase {
       Array("q41", false), Array("q42", false), Array("q43", false), Array("q44", false),
       Array("q45", false), Array("q46", false), Array("q47", false), Array("q48", false),
       Array("q49", false), Array("q50", false), Array("q51", false), Array("q52", false),
-      Array("q53", false), Array("q54", false), Array("q55", false), Array("q56", false),
+      Array("q53", false), Array("q54", false), Array("q55", false), Array("q56", true),
       Array("q57", false), Array("q58", false), Array("q59", false), Array("q60", false),
       Array("q61", false), Array("q62", false), Array("q63", false), Array("q64", true),
       Array("q65", false), Array("q66", false), Array("q67", false), Array("q68", false),
       Array("q69", false), Array("q70", false), Array("q71", true), Array("q72", false),
       Array("q73", false), Array("q74", false), Array("q75", true), Array("q76", false),
-      Array("q77", false), Array("q79", true), Array("q80", false),
+      Array("q77", true), Array("q79", true), Array("q80", false),
       Array("q81", false), Array("q82", false), Array("q83", false), Array("q84", false),
       Array("q85", false), Array("q86", false), Array("q87", false), Array("q88", false),
       Array("q89", false), Array("q91", false), Array("q92", false), Array("q93", false),
