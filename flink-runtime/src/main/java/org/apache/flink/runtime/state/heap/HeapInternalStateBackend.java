@@ -19,62 +19,60 @@
 package org.apache.flink.runtime.state.heap;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.typeutils.runtime.RowSerializer;
 import org.apache.flink.core.fs.FSDataInputStream;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
-import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
+import org.apache.flink.runtime.io.async.AbstractAsyncCallableWithResources;
+import org.apache.flink.runtime.io.async.AsyncStoppableTaskWithCallback;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
-import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.CheckpointStreamWithResultProvider;
 import org.apache.flink.runtime.state.CheckpointedStateScope;
 import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
 import org.apache.flink.runtime.state.DoneFuture;
-import org.apache.flink.runtime.state.GroupOutOfRangeException;
 import org.apache.flink.runtime.state.GroupSet;
-import org.apache.flink.runtime.state.InternalColumnDescriptor;
-import org.apache.flink.runtime.state.InternalState;
-import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StreamStateHandle;
-import org.apache.flink.types.Pair;
-import org.apache.flink.types.Row;
+import org.apache.flink.runtime.state.VoidNamespace;
+import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.AbstractInternalStateBackend;
+import org.apache.flink.runtime.state.StateStorage;
+import org.apache.flink.runtime.state.heap.internal.StateTable;
+import org.apache.flink.runtime.state.heap.internal.StateTableSnapshot;
+import org.apache.flink.runtime.state.keyed.KeyedState;
+import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.function.SupplierWithException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
+
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.RunnableFuture;
 
 /**
  * Implementation of {@link AbstractInternalStateBackend} which stores the key-value
- * pairs of internal states in a nested in-memory map and makes snapshots synchronously.
+ * pairs of states on the Java Heap.
  */
 public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 
 	private static final Logger LOG = LoggerFactory.getLogger(HeapInternalStateBackend.class);
-
-	/**
-	 * The nested map which stores the key-value pairs of internal states. The
-	 * heap are successively partitioned by partition index and state name.
-	 */
-	private transient Map<Integer, Map<String, Map>> heap;
 
 	/**
 	 * The configuration for local recovery.
@@ -82,86 +80,83 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 	private final LocalRecoveryConfig localRecoveryConfig;
 
 	/**
-	 * Sole constructor.
+	 * Whether this backend supports async snapshot.
 	 */
+	private final boolean asynchronousSnapshot;
+
 	public HeapInternalStateBackend(
 		int numberOfGroups,
 		GroupSet groups,
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig,
-		TaskKvStateRegistry kvStateRegistry) {
+		TaskKvStateRegistry kvStateRegistry
+	) {
+		this(numberOfGroups, groups, userClassLoader, localRecoveryConfig, kvStateRegistry, true);
+	}
+
+	public HeapInternalStateBackend(
+		int numberOfGroups,
+		GroupSet groups,
+		ClassLoader userClassLoader,
+		LocalRecoveryConfig localRecoveryConfig,
+		TaskKvStateRegistry kvStateRegistry,
+		boolean asynchronousSnapshot
+	) {
 		super(numberOfGroups, groups, userClassLoader, kvStateRegistry);
 
-		this.heap = new HashMap<>();
 		this.localRecoveryConfig = Preconditions.checkNotNull(localRecoveryConfig);
+		this.asynchronousSnapshot = asynchronousSnapshot;
 
-		LOG.info("HeapInternalStateBackend is created.");
+		LOG.info("HeapInternalStateBackend is created with {} mode.", (asynchronousSnapshot ? "async" : "sync"));
 	}
 
 	@Override
 	public void closeImpl() {
-		heap.clear();
+
 	}
 
 	@Override
-	protected InternalState createInternalState(
-		InternalStateDescriptor stateDescriptor
-	) {
-		this.descriptor = stateDescriptor;
-		return new HeapInternalState(this, stateDescriptor);
+	@SuppressWarnings("unchecked")
+	protected StateStorage createStateStorageForKeyedState(KeyedStateDescriptor descriptor) {
+		String stateName = descriptor.getName();
+		StateStorage stateStorage = stateStorages.get(stateName);
+
+		if (stateStorage == null) {
+			stateStorage = new HeapStateStorage<>(
+				this,
+				descriptor.getKeySerializer(),
+				VoidNamespaceSerializer.INSTANCE,
+				descriptor.getValueSerializer(),
+				VoidNamespace.INSTANCE,
+				false,
+				asynchronousSnapshot
+			);
+			stateStorages.put(stateName, stateStorage);
+		}
+
+		return stateStorage;
 	}
 
-	/**
-	 * Returns the map containing the key-value pairs in the given group of
-	 * the state. Create the map if it does not exist in the heap and
-	 * {@code createIfMissing} is true.
-	 *
-	 * @param stateDescriptor The descriptor of the state.
-	 * @param group The group of the state.
-	 * @param createIfMissing True if needing to create the map in the cases
-	 *                        where it is not present.
-	 * @return The map containing the key-value pairs in the given group of
-	 *         the state.
-	 */
+	@Override
 	@SuppressWarnings("unchecked")
-	Map getRootMap(
-		InternalStateDescriptor stateDescriptor,
-		int group,
-		boolean createIfMissing
-	) {
-		String stateName = stateDescriptor.getName();
+	protected StateStorage createStateStorageForSubKeyedState(SubKeyedStateDescriptor descriptor) {
+		String stateName = descriptor.getName();
+		StateStorage stateStorage = stateStorages.get(stateName);
 
-		GroupSet groups = getGroups();
-		if (!groups.contains(group)) {
-			throw new GroupOutOfRangeException(stateName, groups, group);
+		if (stateStorage == null) {
+			stateStorage = new HeapStateStorage<>(
+				this,
+				descriptor.getKeySerializer(),
+				descriptor.getNamespaceSerializer(),
+				descriptor.getValueSerializer(),
+				null,
+				true,
+				asynchronousSnapshot
+			);
+			stateStorages.put(stateName, stateStorage);
 		}
 
-		Map<String, Map> stateMaps = heap.get(group);
-		if (stateMaps == null) {
-			if (!createIfMissing) {
-				return null;
-			}
-
-			stateMaps = new HashMap<>();
-			heap.put(group, stateMaps);
-		}
-
-		Map rootMap = stateMaps.get(stateName);
-		if (rootMap == null) {
-			if (!createIfMissing) {
-				return null;
-			}
-
-			InternalColumnDescriptor<?> firstColumnDescriptor =
-				stateDescriptor.getKeyColumnDescriptor(0);
-			rootMap = firstColumnDescriptor.isOrdered() ?
-				new TreeMap(firstColumnDescriptor.getComparator()) :
-				new HashMap();
-
-			stateMaps.put(stateName, rootMap);
-		}
-
-		return rootMap;
+		return stateStorage;
 	}
 
 	@Override
@@ -171,87 +166,191 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 		CheckpointStreamFactory primaryStreamFactory,
 		CheckpointOptions checkpointOptions
 	) throws Exception {
-		GroupSet groups = getGroups();
 
-		if (states.isEmpty()) {
+		if (stateStorages.isEmpty()) {
 			return DoneFuture.of(SnapshotResult.empty());
 		}
 
-		SupplierWithException<CheckpointStreamWithResultProvider, Exception> checkpointStreamSupplier =
+		long syncStartTime = System.currentTimeMillis();
+
+		final List<KeyedStateDescriptor> keyedStateDescriptors = new ArrayList<>(keyedStates.size());
+		final List<SubKeyedStateDescriptor> subKeyedStateDescriptors = new ArrayList<>(subKeyedStates.size());
+
+		final Map<String, Integer> keyedStateToId = new HashMap<>(keyedStates.size());
+		final Map<String, Integer> subKeyedStateToId = new HashMap<>(subKeyedStates.size());
+
+		final Map<String, org.apache.flink.runtime.state.heap.internal.StateTableSnapshot> keyedStateStableSnapshots = new HashMap<>(keyedStates.size());
+		final Map<String, org.apache.flink.runtime.state.heap.internal.StateTableSnapshot> subKeyedStateStableSnapshots = new HashMap<>(subKeyedStates.size());
+
+		for (Map.Entry<String, KeyedState> entry : keyedStates.entrySet()) {
+			String stateName = entry.getKey();
+			KeyedState keyedState = entry.getValue();
+			StateStorage stateStorage = stateStorages.get(stateName);
+
+			keyedStateToId.put(stateName, keyedStateToId.size());
+			keyedStateDescriptors.add(keyedState.getDescriptor());
+
+			org.apache.flink.runtime.state.heap.internal.StateTable stateTable = ((HeapStateStorage) stateStorage).getStateTable();
+			keyedStateStableSnapshots.put(stateName, stateTable.createSnapshot());
+		}
+
+		for (Map.Entry<String, SubKeyedState> entry : subKeyedStates.entrySet()) {
+			String stateName = entry.getKey();
+			SubKeyedState subKeyedState = entry.getValue();
+			StateStorage stateStorage = stateStorages.get(stateName);
+
+			subKeyedStateToId.put(stateName, subKeyedStateToId.size());
+			subKeyedStateDescriptors.add(subKeyedState.getDescriptor());
+
+			StateTable stateTable = ((HeapStateStorage) stateStorage).getStateTable();
+			subKeyedStateStableSnapshots.put(stateName, stateTable.createSnapshot());
+		}
+
+		final SupplierWithException<CheckpointStreamWithResultProvider, Exception> checkpointStreamSupplier =
 			localRecoveryConfig.isLocalRecoveryEnabled() ?
 
-					() -> CheckpointStreamWithResultProvider.createDuplicatingStream(
-						checkpointId,
-						CheckpointedStateScope.EXCLUSIVE,
-						primaryStreamFactory,
-						localRecoveryConfig.getLocalStateDirectoryProvider()) :
+				() -> CheckpointStreamWithResultProvider.createDuplicatingStream(
+					checkpointId,
+					CheckpointedStateScope.EXCLUSIVE,
+					primaryStreamFactory,
+					localRecoveryConfig.getLocalStateDirectoryProvider()) :
 
-					() -> CheckpointStreamWithResultProvider.createSimpleStream(
-						checkpointId,
-						CheckpointedStateScope.EXCLUSIVE,
-						primaryStreamFactory);
+				() -> CheckpointStreamWithResultProvider.createSimpleStream(
+					checkpointId,
+					CheckpointedStateScope.EXCLUSIVE,
+					primaryStreamFactory);
 
-		CheckpointStreamWithResultProvider streamWithResultProvider = null;
+		// implementation of the async IO operation, based on FutureTask
+		final AbstractAsyncCallableWithResources<SnapshotResult<StatePartitionSnapshot>> ioCallable =
+			new AbstractAsyncCallableWithResources<SnapshotResult<StatePartitionSnapshot>>() {
 
-		// Writes state descriptors into the checkpoint stream
-		try {
-			streamWithResultProvider = checkpointStreamSupplier.get();
-			cancelStreamRegistry.registerCloseable(streamWithResultProvider);
+				CheckpointStreamWithResultProvider streamAndResultExtractor = null;
 
-			CheckpointStreamFactory.CheckpointStateOutputStream outputStream =
-				streamWithResultProvider.getCheckpointOutputStream();
+				@Override
+				protected void acquireResources() throws Exception {
+					streamAndResultExtractor = checkpointStreamSupplier.get();
+					cancelStreamRegistry.registerCloseable(streamAndResultExtractor);
+				}
 
-			DataOutputViewStreamWrapper outputView =
-				new DataOutputViewStreamWrapper(outputStream);
+				@Override
+				protected void releaseResources() {
 
-			long startTime = System.currentTimeMillis();
+					unregisterAndCloseStreamAndResultExtractor();
 
-			// Writes state descriptors
-			outputView.writeInt(states.size());
-			for (InternalState state : states.values()) {
-				InternalStateDescriptor stateDescriptor = state.getDescriptor();
-				InstantiationUtil.serializeObject(outputStream, stateDescriptor);
-			}
+					for (org.apache.flink.runtime.state.heap.internal.StateTableSnapshot tableSnapshot : keyedStateStableSnapshots.values()) {
+						tableSnapshot.release();
+					}
 
-			// Writes data in state groups
-			Map<Integer, Tuple2<Long, Integer>> metaInfos =
-				snapshotData(outputStream, outputView);
+					for (org.apache.flink.runtime.state.heap.internal.StateTableSnapshot tableSnapshot : subKeyedStateStableSnapshots.values()) {
+						tableSnapshot.release();
+					}
+				}
 
-			SnapshotResult<StreamStateHandle> streamSnapshotResult =
-				streamWithResultProvider.closeAndFinalizeCheckpointStreamResult();
-			streamWithResultProvider = null;
+				@Override
+				protected void stopOperation() {
+					unregisterAndCloseStreamAndResultExtractor();
+				}
 
-			LOG.info("Successfully complete the snapshot of the states in " +
-				(System.currentTimeMillis() - startTime) + "ms");
+				private void unregisterAndCloseStreamAndResultExtractor() {
+					if (cancelStreamRegistry.unregisterCloseable(streamAndResultExtractor)) {
+						IOUtils.closeQuietly(streamAndResultExtractor);
+						streamAndResultExtractor = null;
+					}
+				}
 
-			StreamStateHandle streamStateHandle = streamSnapshotResult.getJobManagerOwnedSnapshot();
-			DefaultStatePartitionSnapshot snapshot =
-				new DefaultStatePartitionSnapshot(
-					groups,
-					metaInfos,
-					streamStateHandle
-				);
+				@Nonnull
+				@Override
+				protected SnapshotResult<StatePartitionSnapshot> performOperation() throws Exception {
 
-			StreamStateHandle localStreamStateHandle = streamSnapshotResult.getTaskLocalSnapshot();
-			if (localStreamStateHandle != null) {
-				DefaultStatePartitionSnapshot localSnapshot =
-					new DefaultStatePartitionSnapshot(
-						groups,
-						metaInfos,
-						localStreamStateHandle
-					);
+					long asyncStartTime = System.currentTimeMillis();
 
-				return DoneFuture.of(SnapshotResult.withLocalState(snapshot, localSnapshot));
-			} else {
-				return DoneFuture.of(SnapshotResult.of(snapshot));
-			}
+					CheckpointStreamFactory.CheckpointStateOutputStream localStream =
+						this.streamAndResultExtractor.getCheckpointOutputStream();
 
-		} finally {
-			if (streamWithResultProvider != null) {
-				IOUtils.closeQuietly(streamWithResultProvider);
-				cancelStreamRegistry.unregisterCloseable(streamWithResultProvider);
-			}
+					DataOutputViewStreamWrapper outView = new DataOutputViewStreamWrapper(localStream);
+
+					// writes keyed state descriptor
+					outView.writeInt(keyedStateDescriptors.size());
+					for (KeyedStateDescriptor descriptor : keyedStateDescriptors) {
+						InstantiationUtil.serializeObject(outView, descriptor);
+					}
+
+					// writes sub-keyed state descriptor
+					outView.writeInt(subKeyedStateDescriptors.size());
+					for (SubKeyedStateDescriptor descriptor : subKeyedStateDescriptors) {
+						InstantiationUtil.serializeObject(outView, descriptor);
+					}
+
+					Map<Integer, Tuple2<Long, Integer>> metaInfos = new HashMap<>();
+
+					GroupSet groups = getGroups();
+
+					for (int group : groups) {
+
+						long offset = localStream.getPos();
+						int numEntries = 0;
+
+						outView.writeInt(group);
+
+						// write keyed state
+						for (Map.Entry<String, org.apache.flink.runtime.state.heap.internal.StateTableSnapshot> entry : keyedStateStableSnapshots.entrySet()) {
+							String stateName = entry.getKey();
+							outView.writeInt(keyedStateToId.get(stateName));
+							numEntries += entry.getValue().writeMappingsInKeyGroup(outView, group);
+						}
+
+						// write sub-keyed state
+						for (Map.Entry<String, StateTableSnapshot> entry : subKeyedStateStableSnapshots.entrySet()) {
+							String stateName = entry.getKey();
+							outView.writeInt(subKeyedStateToId.get(stateName));
+							numEntries += entry.getValue().writeMappingsInKeyGroup(outView, group);
+						}
+
+						if (numEntries != 0) {
+							metaInfos.put(group, new Tuple2<>(offset, numEntries));
+						}
+					}
+
+					if (cancelStreamRegistry.unregisterCloseable(streamAndResultExtractor)) {
+						SnapshotResult<StreamStateHandle> streamSnapshotResult =
+							streamAndResultExtractor.closeAndFinalizeCheckpointStreamResult();
+						streamAndResultExtractor = null;
+
+						StreamStateHandle streamStateHandle = streamSnapshotResult.getJobManagerOwnedSnapshot();
+						StatePartitionSnapshot snapshot =
+							new DefaultStatePartitionSnapshot(
+								groups, metaInfos, streamStateHandle);
+
+						LOG.info("Heap backend snapshot (" + primaryStreamFactory + ", asynchronous part) in thread " +
+							Thread.currentThread() + " took " + (System.currentTimeMillis() - asyncStartTime) + " ms.");
+
+						StreamStateHandle localStreamStateHandle = streamSnapshotResult.getTaskLocalSnapshot();
+						if (localStreamStateHandle != null) {
+							StatePartitionSnapshot localSnapshot =
+								new DefaultStatePartitionSnapshot(
+									groups, metaInfos, localStreamStateHandle);
+
+							return SnapshotResult.withLocalState(snapshot, localSnapshot);
+						} else {
+							return SnapshotResult.of(snapshot);
+						}
+					} else {
+						throw new IOException("Stream already closed and cannot return a handle.");
+					}
+				}
+			};
+
+		AsyncStoppableTaskWithCallback<SnapshotResult<StatePartitionSnapshot>> task =
+			AsyncStoppableTaskWithCallback.from(ioCallable);
+
+		if (!asynchronousSnapshot) {
+			task.run();
 		}
+
+		LOG.info("Heap backend snapshot (" + primaryStreamFactory + ", synchronous part) in thread " +
+			Thread.currentThread() + " took " + (System.currentTimeMillis() - syncStartTime) + " ms.");
+
+		return task;
 	}
 
 	@Override
@@ -261,6 +360,8 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 		if (restoredSnapshots == null || restoredSnapshots.isEmpty()) {
 			return;
 		}
+
+		LOG.info("Initializing heap internal state backend from snapshot.");
 
 		for (StatePartitionSnapshot rawSnapshot : restoredSnapshots) {
 			Preconditions.checkState(rawSnapshot instanceof DefaultStatePartitionSnapshot);
@@ -273,28 +374,72 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 			}
 
 			FSDataInputStream inputStream = snapshotHandle.openInputStream();
+			cancelStreamRegistry.registerCloseable(inputStream);
+
 			try {
 				DataInputViewStreamWrapper inputView =
 					new DataInputViewStreamWrapper(inputStream);
 
-				int numRestoredStates = inputView.readInt();
-				for (int i = 0; i < numRestoredStates; ++i) {
-					InternalStateDescriptor restoredStateDescriptor =
-						InstantiationUtil.deserializeObject(
-							inputStream, getUserClassLoader());
+				int numRestoredKeyedStates = inputView.readInt();
+				Map<Integer, KeyedState> keyedStatesById = new HashMap<>();
+				for (int i = 0; i < numRestoredKeyedStates; i++) {
+					KeyedStateDescriptor descriptor = InstantiationUtil.deserializeObject(
+						inputStream, getUserClassLoader());
+					KeyedState state = descriptor.bind(this);
 
-					getInternalState(restoredStateDescriptor);
+					keyedStatesById.put(i, state);
+				}
+
+				int numRestoredSubKeyedStates = inputView.readInt();
+				Map<Integer, SubKeyedState> subKeyedStatesById = new HashMap<>();
+				for (int i = 0; i < numRestoredSubKeyedStates; ++i) {
+					SubKeyedStateDescriptor descriptor = InstantiationUtil.deserializeObject(
+						inputStream, getUserClassLoader());
+					SubKeyedState state = descriptor.bind(this);
+					subKeyedStatesById.put(i, state);
 				}
 
 				Map<Integer, Tuple2<Long, Integer>> metaInfos = snapshot.getMetaInfos();
-				restoreData(metaInfos, inputStream, inputView);
-			} finally {
-				if (inputStream != null) {
-					try {
-						inputStream.close();
-					} catch (Exception e) {
-						LOG.warn("Could not properly close the input stream.", e);
+				GroupSet groups = getGroups();
+
+				for (int group : groups) {
+					Tuple2<Long, Integer> tuple = metaInfos.get(group);
+
+					if (tuple == null) {
+						continue;
 					}
+
+					long offset = tuple.f0;
+					int totalEntries = tuple.f1;
+
+					inputStream.seek(offset);
+
+					int writtenKeyGroupIndex = inputView.readInt();
+					Preconditions.checkState(writtenKeyGroupIndex == group, "Unexpected key-group in restore.");
+
+					int numEntries = 0;
+
+					// restore keyed states
+					for (int i = 0; i < numRestoredKeyedStates; i++) {
+						int stateId = inputView.readInt();
+						KeyedStateDescriptor descriptor = keyedStatesById.get(stateId).getDescriptor();
+						HeapStateStorage stateStorage = (HeapStateStorage) stateStorages.get(descriptor.getName());
+						numEntries += readMappingsInKeyGroupForKeyedState(inputView, descriptor, stateStorage);
+					}
+
+					// restore sub-keyed states
+					for (int i = 0; i < numRestoredSubKeyedStates; i++) {
+						int stateId = inputView.readInt();
+						SubKeyedStateDescriptor descriptor = subKeyedStatesById.get(stateId).getDescriptor();
+						HeapStateStorage stateStorage = (HeapStateStorage) stateStorages.get(descriptor.getName());
+						numEntries += readMappingsInKeyGroupForSubKeyedState(inputView, descriptor, stateStorage);
+					}
+
+					Preconditions.checkState(totalEntries == numEntries, "Unexpected number of entries");
+				}
+			} finally {
+				if (cancelStreamRegistry.unregisterCloseable(inputStream)) {
+					IOUtils.closeQuietly(inputStream);
 				}
 			}
 		}
@@ -302,114 +447,45 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 
 	//------------------------------------------------------------------------------------------------------------------
 
-	/**
-	 * A helper method to take the snapshot of the states in the given scope.
-	 *
-	 * @param outputStream The output stream where the snapshot is written.
-	 * @param outputView The output view of the output stream.
-	 * @return A map composed of the offsets and the number of entries of the
-	 *         groups in the snapshot.
-	 * @throws IOException Thrown when the backend fails to serialize the state
-	 *                     data or to write the snapshot into the snapshot.
-	 */
-	private Map<Integer, Tuple2<Long, Integer>> snapshotData(
-		CheckpointStreamFactory.CheckpointStateOutputStream outputStream,
-		DataOutputView outputView
-	) throws IOException {
-		Map<Integer, Tuple2<Long, Integer>> metaInfos = new HashMap<>();
+	private int readMappingsInKeyGroupForKeyedState(
+		DataInputView inView,
+		KeyedStateDescriptor descriptor,
+		HeapStateStorage stateStorage
+	) throws Exception {
 
-		GroupSet groups = getGroups();
-		for (int group : groups) {
+		final TypeSerializer keySerializer = descriptor.getKeySerializer();
+		final TypeSerializer stateSerializer = descriptor.getValueSerializer();
 
-			long offset = outputStream.getPos();
-			int numEntries = 0;
-
-			for (InternalState state : states.values()) {
-				InternalStateDescriptor stateDescriptor = state.getDescriptor();
-
-				String stateName = stateDescriptor.getName();
-
-				RowSerializer keySerializer = stateDescriptor.getKeySerializer();
-				RowSerializer valueSerializer = stateDescriptor.getValueSerializer();
-
-				Iterator<Pair<Row, Row>> iterator = iterator(group, stateDescriptor);
-				while (iterator.hasNext()) {
-					Pair<Row, Row> pair = iterator.next();
-
-					StringSerializer.INSTANCE.serialize(stateName, outputView);
-					keySerializer.serialize(pair.getKey(), outputView);
-					valueSerializer.serialize(pair.getValue(), outputView);
-
-					numEntries++;
-				}
-			}
-
-			if (numEntries != 0) {
-				metaInfos.put(group, new Tuple2<>(offset, numEntries));
-			}
+		int numKeys = inView.readInt();
+		for (int i = 0; i < numKeys; ++i) {
+			Object key = keySerializer.deserialize(inView);
+			Object state = stateSerializer.deserialize(inView);
+			stateStorage.put(key, state);
 		}
 
-		return metaInfos;
+		return numKeys;
 	}
 
-	/**
-	 * A helper method to restore the data from the snapshot.
-	 *
-	 * @param metaInfos The offsets and the number of entries of the groups
-	 *                  in the snapshot.
-	 * @param inputStream The input stream where the snapshot is read.
-	 * @param inputView The input view of the input stream.
-	 * @throws IOException Thrown when the backend fails to read the snapshot or
-	 *                     to deserialize the state data from the snapshot.
-	 */
-	private void restoreData(
-		Map<Integer, Tuple2<Long, Integer>> metaInfos,
-		FSDataInputStream inputStream,
-		DataInputView inputView
-	) throws IOException {
-		GroupSet groups = getGroups();
-		for (int group : groups) {
-			Tuple2<Long, Integer> metaInfo = metaInfos.get(group);
-			if (metaInfo == null) {
-				continue;
-			}
+	private int readMappingsInKeyGroupForSubKeyedState(
+		DataInputView inView,
+		SubKeyedStateDescriptor descriptor,
+		HeapStateStorage stateStorage
+	) throws Exception {
 
-			long offset = metaInfo.f0;
-			int numEntries = metaInfo.f1;
+		final TypeSerializer keySerializer = descriptor.getKeySerializer();
+		final TypeSerializer namespaceSerializer = descriptor.getNamespaceSerializer();
+		final TypeSerializer stateSerializer = descriptor.getValueSerializer();
 
-			inputStream.seek(offset);
-
-			for (int i = 0; i < numEntries; ++i) {
-				String stateName = StringSerializer.INSTANCE.deserialize(inputView);
-
-				InternalState state = getInternalState(stateName);
-				Preconditions.checkState(state != null);
-
-				InternalStateDescriptor stateDescriptor = state.getDescriptor();
-				TypeSerializer<Row> keySerializer = stateDescriptor.getKeySerializer();
-				Row key = keySerializer.deserialize(inputView);
-
-				TypeSerializer<Row> valueSerializer = stateDescriptor.getValueSerializer();
-				Row value = valueSerializer.deserialize(inputView);
-
-				state.setCurrentGroup(getGroupForKey(key));
-				state.put(key, value);
-			}
-		}
-	}
-
-	private Iterator<Pair<Row, Row>> iterator(int group, InternalStateDescriptor descriptor) {
-		Map rootMap = getRootMap(descriptor, group, false);
-		if (rootMap == null) {
-			return Collections.emptyIterator();
+		int numKeys = inView.readInt();
+		for (int i = 0; i < numKeys; ++i) {
+			Object key = keySerializer.deserialize(inView);
+			Object namespace = namespaceSerializer.deserialize(inView);
+			Object state = stateSerializer.deserialize(inView);
+			stateStorage.setCurrentNamespace(namespace);
+			stateStorage.put(key, state);
 		}
 
-		return new PrefixHeapIterator(rootMap, descriptor.getNumKeyColumns(), null);
+		return numKeys;
 	}
 
-	private int getGroupForKey(Row key) {
-		int groupsToPartition = getNumGroups();
-
-		return descriptor.getPartitioner().partition(key, groupsToPartition);
-	}
 }

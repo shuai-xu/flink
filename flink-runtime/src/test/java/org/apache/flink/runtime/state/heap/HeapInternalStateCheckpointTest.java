@@ -18,17 +18,41 @@
 
 package org.apache.flink.runtime.state.heap;
 
-import org.apache.flink.runtime.state.AbstractInternalStateBackend;
+import org.apache.flink.runtime.checkpoint.CheckpointType;
 import org.apache.flink.runtime.state.GroupSet;
-import org.apache.flink.runtime.state.InternalStateCheckpointTestBase;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
-import org.junit.Test;
+import org.apache.flink.runtime.state.AbstractInternalStateBackend;
+import org.apache.flink.runtime.state.InternalStateCheckpointTestBase;
+import org.apache.flink.runtime.state.heap.HeapInternalStateBackend;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import java.util.ArrayList;
+import java.util.Collection;
 
 /**
- * Unit tests to validates that internal states can be correctly saved and
+ * Unit tests to validates that states can be correctly saved and
  * restored in {@link HeapInternalStateBackend}.
  */
+@RunWith(Parameterized.class)
 public class HeapInternalStateCheckpointTest extends InternalStateCheckpointTestBase {
+
+	@Parameterized.Parameters(name = "checkpointType: {0}, asyncSnapshot: {1}")
+	public static Collection<Object[]> checkpointTypes() {
+		Collection<Object[]> parameter = new ArrayList<>();
+
+		for (CheckpointType type : CheckpointType.values()) {
+			parameter.add(new Object[] {type, false});
+			parameter.add(new Object[] {type, true});
+		}
+		return parameter;
+	}
+
+	@Parameterized.Parameter
+	public CheckpointType checkpointType;
+
+	@Parameterized.Parameter(1)
+	public boolean asyncSnapshot;
 
 	@Override
 	protected AbstractInternalStateBackend createStateBackend(
@@ -36,11 +60,11 @@ public class HeapInternalStateCheckpointTest extends InternalStateCheckpointTest
 		GroupSet groups,
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig) {
-		return new HeapInternalStateBackend(numberOfGroups, groups, userClassLoader, localRecoveryConfig, null);
+		return new HeapInternalStateBackend(numberOfGroups, groups, userClassLoader, localRecoveryConfig, null, asyncSnapshot);
 	}
 
-	@Test
-	public void testDuplicateSerializersWhenAsyncSnapshot() throws Exception {
-		// ignore serializer duplication test.
+	@Override
+	protected CheckpointType getCheckpointType() {
+		return checkpointType;
 	}
 }

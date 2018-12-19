@@ -18,8 +18,6 @@
 
 package org.apache.flink.runtime.state.subkeyed;
 
-import org.apache.flink.api.common.functions.MapMerger;
-import org.apache.flink.api.common.functions.Merger;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.MapSerializer;
 import org.apache.flink.util.Preconditions;
@@ -59,31 +57,6 @@ public class SubKeyedMapStateDescriptor<K, N, MK, MV> extends SubKeyedStateDescr
 			new MapSerializer<>(mapKeySerializer, mapValueSerializer));
 	}
 
-	/**
-	 * Constructor with given name, scope, and the serializers for the keys, the
-	 * namespaces, the map keys and the map values, and the merger for the map
-	 * values in the state.
-	 *
-	 * @param name The name of the state.
-	 * @param keySerializer The serializer for the keys in the state.
-	 * @param namespaceSerializer The serializer for the namespaces in the state.
-	 * @param mapKeySerializer The serializer for the map keys in the state.
-	 * @param mapValueSerializer The serializer for the map values in the state.
-	 * @param mapValueMerger The merger for the map values in the state.
-	 */
-	public SubKeyedMapStateDescriptor(
-		String name,
-		TypeSerializer<K> keySerializer,
-		TypeSerializer<N> namespaceSerializer,
-		TypeSerializer<MK> mapKeySerializer,
-		TypeSerializer<MV> mapValueSerializer,
-		Merger<MV> mapValueMerger
-	) {
-		super(name, keySerializer, namespaceSerializer,
-			new MapSerializer<>(mapKeySerializer, mapValueSerializer),
-			new MapMerger<>(mapValueMerger));
-	}
-
 	@Override
 	public MapSerializer<MK, MV> getValueSerializer() {
 		TypeSerializer<Map<MK, MV>> mapSerializer = super.getValueSerializer();
@@ -107,27 +80,6 @@ public class SubKeyedMapStateDescriptor<K, N, MK, MV> extends SubKeyedStateDescr
 	 */
 	public TypeSerializer<MV> getMapValueSerializer() {
 		return getValueSerializer().getValueSerializer();
-	}
-
-	@Override
-	public MapMerger<MK, MV> getValueMerger() {
-		Merger<Map<MK, MV>> mapMerger = super.getValueMerger();
-		if (mapMerger == null) {
-			return null;
-		}
-
-		Preconditions.checkState(mapMerger instanceof MapMerger);
-		return (MapMerger<MK, MV>) mapMerger;
-	}
-
-	/**
-	 * Returns the merger for the map values in the state.
-	 *
-	 * @return The merger for the map values in the state.
-	 */
-	public Merger<MV> getMapValueMerger() {
-		MapMerger<MK, MV> mapMerger = getValueMerger();
-		return mapMerger == null ? null : mapMerger.getValueMerger();
 	}
 
 	@Override

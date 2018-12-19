@@ -26,8 +26,8 @@ public class StateIncompatibleAccessException extends RuntimeException {
 	private static final long serialVersionUID = 1L;
 
 	public StateIncompatibleAccessException(
-		InternalStateDescriptor oldStateDescriptor,
-		InternalStateDescriptor newStateDescriptor
+		Object oldStateDescriptor,
+		Object newStateDescriptor
 	) {
 		super("The state is accessed with an incompatible state descriptor. " +
 			"The state was created with " + oldStateDescriptor +

@@ -18,8 +18,6 @@
 
 package org.apache.flink.runtime.state.keyed;
 
-import org.apache.flink.api.common.functions.MapMerger;
-import org.apache.flink.api.common.functions.Merger;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.MapSerializer;
 import org.apache.flink.util.Preconditions;
@@ -73,47 +71,6 @@ public class KeyedMapStateDescriptor<K, MK, MV>
 		super(name, keySerializer, mapSerializer);
 	}
 
-	/**
-	 * Constructor with given name, scope, the serializers for the keys,
-	 * the map keys and the map values and the merger for the map values in the
-	 * state.
-	 *
-	 * @param name The name of the state.
-	 * @param keySerializer The serializer for the keys in the state.
-	 * @param mapKeySerializer The serializer for the map keys in the state.
-	 * @param mapValueSerializer The serializer for the map values in the state.
-	 * @param mapValueMerger The merger for the map values in the state.
-	 */
-	public KeyedMapStateDescriptor(
-		final String name,
-		final TypeSerializer<K> keySerializer,
-		final TypeSerializer<MK> mapKeySerializer,
-		final TypeSerializer<MV> mapValueSerializer,
-		final Merger<MV> mapValueMerger
-	) {
-		super(name, keySerializer,
-			new MapSerializer<>(mapKeySerializer, mapValueSerializer),
-			new MapMerger<>(mapValueMerger));
-	}
-
-	/**
-	 * Constructor with given name, scope, the serializer for the keys，the
-	 * serializer and the merger for the maps in the state.
-	 *
-	 * @param name The name of the state.
-	 * @param keySerializer The serializer for the keys in the state.
-	 * @param mapSerializer The serializer for the maps in the state.
-	 * @param mapMerger The merger for the maps in the state.
-	 */
-	public KeyedMapStateDescriptor(
-		final String name,
-		final TypeSerializer<K> keySerializer,
-		final MapSerializer<MK, MV> mapSerializer,
-		final MapMerger<MK, MV> mapMerger
-	) {
-		super(name, keySerializer, mapSerializer, mapMerger);
-	}
-
 	@Override
 	public MapSerializer<MK, MV> getValueSerializer() {
 		TypeSerializer<Map<MK, MV>> mapSerializer = super.getValueSerializer();
@@ -137,27 +94,6 @@ public class KeyedMapStateDescriptor<K, MK, MV>
 	 */
 	public TypeSerializer<MV> getMapValueSerializer() {
 		return getValueSerializer().getValueSerializer();
-	}
-
-	@Override
-	public MapMerger<MK, MV> getValueMerger() {
-		Merger<Map<MK, MV>> mapMerger = super.getValueMerger();
-		if (mapMerger == null) {
-			return null;
-		}
-
-		Preconditions.checkState(mapMerger instanceof MapMerger);
-		return (MapMerger<MK, MV>) mapMerger;
-	}
-
-	/**
-	 * Returns the merger for the map values in the state.
-	 *
-	 * @return The merger for the map values in the state.
-	 */
-	public Merger<MV> getMapValueMerger() {
-		MapMerger<MK, MV> mapMerger = getValueMerger();
-		return mapMerger == null ? null : mapMerger.getValueMerger();
 	}
 
 	@Override

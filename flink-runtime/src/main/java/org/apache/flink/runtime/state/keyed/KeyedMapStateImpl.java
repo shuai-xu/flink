@@ -18,20 +18,22 @@
 
 package org.apache.flink.runtime.state.keyed;
 
+import org.apache.flink.api.common.typeutils.SerializationException;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.queryablestate.client.state.serialization.KvStateSerializer;
-import org.apache.flink.runtime.state.FieldBasedPartitioner;
-import org.apache.flink.runtime.state.InternalColumnDescriptor;
-import org.apache.flink.runtime.state.InternalState;
-import org.apache.flink.runtime.state.InternalStateDescriptor;
-import org.apache.flink.runtime.state.InternalStateDescriptorBuilder;
+import org.apache.flink.runtime.state.AbstractInternalStateBackend;
+import org.apache.flink.runtime.state.StateStorage;
 import org.apache.flink.util.Preconditions;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * An implementation of {@link KeyedMapState} backed by an internal state.
+ * An implementation of {@link KeyedMapState} backed by a state storage.
  *
  * @param <K> Type of the keys in the state.
  * @param <MK> Type of the map keys in the state.
@@ -44,40 +46,39 @@ public final class KeyedMapStateImpl<K, MK, MV>
 	/**
 	 * The descriptor of current state.
 	 */
-	private static KeyedMapStateDescriptor stateDescriptor;
+	private KeyedMapStateDescriptor<K, MK, MV> stateDescriptor;
 
 	/**
-	 * Constructor with the internal state to store mappings.
+	 * Constructor with the state storage to store mappings.
 	 *
-	 * @param internalState The internal state where mappings are stored.
+	 * @param internalStateBackend The state backend who creates the current state.
+	 * @param descriptor The descriptor of current state.
+	 * @param stateStorage The state storage where mappings are stored.
 	 */
-	public KeyedMapStateImpl(InternalState internalState) {
-		super(internalState);
+	public KeyedMapStateImpl(
+		AbstractInternalStateBackend internalStateBackend,
+		KeyedMapStateDescriptor<K, MK, MV> descriptor,
+		StateStorage stateStorage) {
+		super(internalStateBackend, stateStorage);
+
+		this.stateDescriptor = Preconditions.checkNotNull(descriptor);
+		this.keySerializer = descriptor.getKeySerializer();
+		this.mapKeySerializer = descriptor.getMapKeySerializer();
+		this.mapValueSerializer = descriptor.getMapValueSerializer();
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		try {
+			StringSerializer.INSTANCE.serialize(descriptor.getName(), new DataOutputViewStreamWrapper(out));
+			stateNameByte = out.toByteArray();
+		} catch (IOException e) {
+			throw new SerializationException(e);
+		}
+		this.stateNameForSerialize = stateStorage.supportMultiColumnFamilies() ? null : stateNameByte;
+		this.serializedStateNameLength = stateNameForSerialize == null ? 0 : stateNameForSerialize.length;
 	}
 
-	/**
-	 * Creates and returns the descriptor for the internal state backing the
-	 * keyed state.
-	 *
-	 * @param keyedStateDescriptor The descriptor for the keyed state.
-	 * @param <K> Type of the keys in the state.
-	 * @param <MK> Type of the map keys in the state.
-	 * @param <MV> Type of the map values in the state.
-	 * @return The descriptor for the internal state backing the keyed state.
-	 */
-	public static <K, MK, MV> InternalStateDescriptor createInternalStateDescriptor(
-		final KeyedMapStateDescriptor<K, MK, MV> keyedStateDescriptor
-	) {
-		stateDescriptor = Preconditions.checkNotNull(keyedStateDescriptor);
-
-		return new InternalStateDescriptorBuilder(keyedStateDescriptor.getName())
-			.addKeyColumn("key", keyedStateDescriptor.getKeySerializer())
-			.addKeyColumn("mapKey", keyedStateDescriptor.getMapKeySerializer())
-			.addValueColumn("mapValue",
-				keyedStateDescriptor.getMapValueSerializer(),
-				keyedStateDescriptor.getMapValueMerger())
-			.setPartitioner(new FieldBasedPartitioner(KEY_FIELD_INDEX, partitioner))
-			.getDescriptor();
+	@Override
+	public KeyedMapStateDescriptor getDescriptor() {
+		return stateDescriptor;
 	}
 
 	@Override
@@ -85,20 +86,20 @@ public final class KeyedMapStateImpl<K, MK, MV>
 		return new HashMap<>();
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public byte[] getSerializedValue(byte[] serializedKey) throws Exception {
-		InternalStateDescriptor descriptor = internalState.getDescriptor();
-		InternalColumnDescriptor<K> keyDescriptor = (InternalColumnDescriptor<K>)descriptor.getKeyColumnDescriptor(KEY_FIELD_INDEX);
-		K key = KvStateSerializer.deserializeValue(serializedKey, keyDescriptor.getSerializer());
+		K key = KvStateSerializer.deserializeValue(serializedKey, stateDescriptor.getKeySerializer());
 
-		Map<MK, MV> map = get(key);
-		if (map == null) {
+		Map<MK, MV> value = get(key);
+		if (value == null) {
 			return null;
 		}
 
-		TypeSerializer<MK> mkSerializer = stateDescriptor.getMapKeySerializer();
-		TypeSerializer<MV> mvSerializer = stateDescriptor.getMapValueSerializer();
+		final TypeSerializer<MK> dupUserKeySerializer = stateDescriptor.getMapKeySerializer();
+		final TypeSerializer<MV> dupUserValueSerializer = stateDescriptor.getMapValueSerializer();
 
-		return KvStateSerializer.serializeMap(map.entrySet(), mkSerializer, mvSerializer);
+		return KvStateSerializer.serializeMap(value.entrySet(), dupUserKeySerializer, dupUserValueSerializer);
 	}
+
 }

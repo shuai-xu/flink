@@ -43,8 +43,6 @@ import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.DefaultKeyedStateStore;
-import org.apache.flink.runtime.state.InternalState;
-import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupStatePartitionStreamProvider;
 import org.apache.flink.runtime.state.KeyGroupsList;
@@ -531,18 +529,6 @@ public abstract class AbstractStreamOperator<OUT>
 	 */
 	public StreamingRuntimeContext getRuntimeContext() {
 		return runtimeContext;
-	}
-
-	/**
-	 * Creates an internal state described by the given descriptor.
-	 *
-	 * @param descriptor The descriptor of the internal state to be created.
-	 * @return The state described by the given descriptor.
-	 */
-	protected InternalState getInternalState(
-		final InternalStateDescriptor descriptor
-	) {
-		return internalStateBackend.getInternalState(descriptor);
 	}
 
 	/**

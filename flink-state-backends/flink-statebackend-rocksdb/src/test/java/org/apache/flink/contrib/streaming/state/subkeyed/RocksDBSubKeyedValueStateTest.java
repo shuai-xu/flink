@@ -18,33 +18,43 @@
 
 package org.apache.flink.contrib.streaming.state.subkeyed;
 
-import org.apache.flink.contrib.streaming.state.RocksDBStateBackend;
-import org.apache.flink.runtime.operators.testutils.DummyEnvironment;
-import org.apache.flink.runtime.state.GroupRange;
-import org.apache.flink.runtime.state.subkeyed.SubKeyedValueState;
-import org.apache.flink.runtime.state.subkeyed.SubKeyedValueStateTest;
+import org.apache.flink.contrib.streaming.state.RocksDBInternalStateBackend;
+import org.apache.flink.runtime.state.AbstractInternalStateBackend;
+import org.apache.flink.runtime.state.GroupSet;
+import org.apache.flink.runtime.state.LocalRecoveryConfig;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedValueStateTestBase;
 
 import org.junit.ClassRule;
 import org.junit.rules.TemporaryFolder;
+import org.rocksdb.ColumnFamilyOptions;
+import org.rocksdb.DBOptions;
 
 /**
- * Unit tests for {@link SubKeyedValueState} backed by {@link org.apache.flink.contrib.streaming.state.RocksDBInternalStateBackend}.
+ * Test for SubKeyedValueState which uses RocksDB as state backend.
  */
-public class RocksDBSubKeyedValueStateTest extends SubKeyedValueStateTest {
-
+public class RocksDBSubKeyedValueStateTest extends SubKeyedValueStateTestBase {
 	@ClassRule
 	public static TemporaryFolder temporaryFolder = new TemporaryFolder();
 
 	@Override
-	public void openStateBackend() throws Exception {
-		RocksDBStateBackend rocksDBStateBackend = new RocksDBStateBackend(temporaryFolder.newFolder().toURI());
-		rocksDBStateBackend.setDbStoragePath(temporaryFolder.newFolder().toString());
-		backend = rocksDBStateBackend.createInternalStateBackend(
-			new DummyEnvironment(),
-			"test_op",
-			10,
-			new GroupRange(0, 10));
-
-		backend.restore(null);
+	protected AbstractInternalStateBackend createStateBackend(
+		int numberOfGroups,
+		GroupSet groups,
+		ClassLoader userClassLoader,
+		LocalRecoveryConfig localRecoveryConfig
+	) throws Exception {
+		return new RocksDBInternalStateBackend(
+			userClassLoader,
+			temporaryFolder.newFolder().getAbsoluteFile(),
+			new DBOptions().setCreateIfMissing(true),
+			new ColumnFamilyOptions(),
+			numberOfGroups,
+			groups,
+			true,
+			localRecoveryConfig,
+			null
+		);
 	}
+
 }
+

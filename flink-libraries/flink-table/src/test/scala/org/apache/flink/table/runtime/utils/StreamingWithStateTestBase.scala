@@ -24,7 +24,6 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.configuration.{CheckpointingOptions, Configuration}
 import org.apache.flink.contrib.streaming.state.RocksDBStateBackend
-import org.apache.flink.runtime.state.gemini.GeminiConfiguration
 import org.apache.flink.runtime.state.memory.MemoryStateBackend
 import org.apache.flink.streaming.api.CheckpointingMode
 import org.apache.flink.streaming.api.functions.source.FromElementsFunction
@@ -56,7 +55,6 @@ class StreamingWithStateTestBase(state: StateBackendMode) extends StreamingTestB
       case HEAP_BACKEND =>
         val conf = new Configuration()
         conf.setBoolean(CheckpointingOptions.ASYNC_SNAPSHOTS, true)
-        conf.setString(GeminiConfiguration.GEMINI_COPY_VALUE, "true")
         env.setStateBackend(new MemoryStateBackend().configure(conf))
       case ROCKSDB_BACKEND =>
         val conf = new Configuration()

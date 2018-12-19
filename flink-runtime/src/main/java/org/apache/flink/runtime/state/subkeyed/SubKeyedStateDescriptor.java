@@ -18,11 +18,8 @@
 
 package org.apache.flink.runtime.state.subkeyed;
 
-import org.apache.flink.api.common.functions.Merger;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.util.Preconditions;
-
-import javax.annotation.Nullable;
 
 import java.io.Serializable;
 import java.util.Objects;
@@ -60,12 +57,6 @@ public abstract class SubKeyedStateDescriptor<K, N, V, S extends SubKeyedState<K
 	private final TypeSerializer<V> valueSerializer;
 
 	/**
-	 * The merger for the values in the state.
-	 */
-	@Nullable
-	private final Merger<V> valueMerger;
-
-	/**
 	 * Constructor for global states with given name and the serializers for
 	 * the keys, the namespaces and the values in the state.
 	 *
@@ -89,36 +80,6 @@ public abstract class SubKeyedStateDescriptor<K, N, V, S extends SubKeyedState<K
 		this.keySerializer = keySerializer;
 		this.namespaceSerializer = namespaceSerializer;
 		this.valueSerializer = valueSerializer;
-		this.valueMerger = null;
-	}
-
-	/**
-	 * Constructor with given name, scope, the serializers for the keys, the
-	 * namespaces and the values, and the merger for the values in the state.
-	 *
-	 * @param name The name of the state.
-	 * @param keySerializer The serializer for the keys in the state.
-	 * @param namespaceSerializer The serializer for the namespaces in the state.
-	 * @param valueSerializer The serializer for the values in the state.
-	 * @param valueMerger The merger for the values in the state.
-	 */
-	public SubKeyedStateDescriptor(
-		String name,
-		TypeSerializer<K> keySerializer,
-		TypeSerializer<N> namespaceSerializer,
-		TypeSerializer<V> valueSerializer,
-		Merger<V> valueMerger
-	) {
-		Preconditions.checkNotNull(name);
-		Preconditions.checkNotNull(keySerializer);
-		Preconditions.checkNotNull(namespaceSerializer);
-		Preconditions.checkNotNull(valueSerializer);
-
-		this.name = name;
-		this.keySerializer = keySerializer;
-		this.namespaceSerializer = namespaceSerializer;
-		this.valueSerializer = valueSerializer;
-		this.valueMerger = valueMerger;
 	}
 
 	/**
@@ -165,15 +126,6 @@ public abstract class SubKeyedStateDescriptor<K, N, V, S extends SubKeyedState<K
 		return valueSerializer;
 	}
 
-	/**
-	 * Returns the merger for the values in the state.
-	 *
-	 * @return The merger for the values in the state.
-	 */
-	public Merger<V> getValueMerger() {
-		return valueMerger;
-	}
-
 	//--------------------------------------------------------------------------
 
 	@Override
@@ -191,8 +143,7 @@ public abstract class SubKeyedStateDescriptor<K, N, V, S extends SubKeyedState<K
 		return Objects.equals(name, that.name) &&
 			Objects.equals(keySerializer, that.keySerializer) &&
 			Objects.equals(namespaceSerializer, that.namespaceSerializer) &&
-			Objects.equals(valueSerializer, that.valueSerializer) &&
-			Objects.equals(valueMerger, that.valueMerger);
+			Objects.equals(valueSerializer, that.valueSerializer);
 	}
 
 	@Override
@@ -201,7 +152,6 @@ public abstract class SubKeyedStateDescriptor<K, N, V, S extends SubKeyedState<K
 		result = 31 * result + Objects.hashCode(keySerializer);
 		result = 31 * result + Objects.hashCode(namespaceSerializer);
 		result = 31 * result + Objects.hashCode(valueSerializer);
-		result = 31 * result + Objects.hashCode(valueMerger);
 		return result;
 	}
 
@@ -212,7 +162,6 @@ public abstract class SubKeyedStateDescriptor<K, N, V, S extends SubKeyedState<K
 			", keySerializer=" + keySerializer +
 			", namespaceSerializer=" + namespaceSerializer +
 			", valueSerializer=" + valueSerializer +
-			", valueMerger =" + valueMerger +
 			"}";
 	}
 }

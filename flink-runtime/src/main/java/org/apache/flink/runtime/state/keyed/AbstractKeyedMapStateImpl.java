@@ -19,11 +19,24 @@
 package org.apache.flink.runtime.state.keyed;
 
 import org.apache.flink.api.common.functions.HashPartitioner;
-import org.apache.flink.runtime.state.InternalState;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
+import org.apache.flink.core.memory.DataOutputView;
+import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
+import org.apache.flink.runtime.state.AbstractInternalStateBackend;
+import org.apache.flink.runtime.state.BatchPutWrapper;
+import org.apache.flink.runtime.state.GroupIterator;
+import org.apache.flink.runtime.state.StateAccessException;
+import org.apache.flink.runtime.state.StateIteratorUtil;
+import org.apache.flink.runtime.state.StateSerializerUtil;
+import org.apache.flink.runtime.state.StateStorage;
+import org.apache.flink.runtime.state.StorageInstance;
+import org.apache.flink.runtime.state.StorageIterator;
+import org.apache.flink.runtime.state.heap.HeapStateStorage;
 import org.apache.flink.types.Pair;
-import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -31,10 +44,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import static org.apache.flink.runtime.state.StateSerializerUtil.KEY_END_BYTE;
+
 /**
- * The base implementation of {@link AbstractKeyedMapState} backed by an
- * internal state. The pairs in the internal state are formatted as
- * {(K, MK) -> MV}. Because the pairs are partitioned by K, the mappings under
+ * The base implementation of {@link AbstractKeyedMapState} backed by a
+ * {@link StateStorage}. The pairs are formatted as {(K, MK) -> MV}.
+ * Because the pairs are partitioned by K, the mappings under
  * the same key will be assigned to the same group and can be easily
  * retrieved with the prefix iterator on the key.
  *
@@ -46,33 +61,59 @@ import java.util.Map;
 abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 	implements AbstractKeyedMapState<K, MK, MV, M> {
 
-	/** The index of the field for keys in internal keys. */
-	static final int KEY_FIELD_INDEX = 0;
-
-	/** The index of the field for map keys in internal keys. */
-	static final int MAPKEY_FIELD_INDEX = 1;
-
-	/** The index of the field for map values in internal values. */
-	static final int MAPVALUE_FIELD_INDEX = 0;
+	/**
+	 * The state storage where the values are stored.
+	 */
+	protected final StateStorage stateStorage;
 
 	/**
-	 * The internal state where the mappings are stored.
+	 * Serialized bytes of current state name.
 	 */
-	final InternalState internalState;
+	protected byte[] stateNameByte;
+
+	protected byte[] stateNameForSerialize;
+
+	protected int serializedStateNameLength;
+
+	/**
+	 * The key serializer of current state.
+	 */
+	protected TypeSerializer<K> keySerializer;
+
+	/**
+	 * The mapKey serializer of current state.
+	 */
+	protected TypeSerializer<MK> mapKeySerializer;
+
+	/**
+	 * The mapValue serializer of current state.
+	 */
+	protected TypeSerializer<MV> mapValueSerializer;
+
+	/**
+	 * The state backend who created the current state.
+	 */
+	private AbstractInternalStateBackend internalStateBackend;
+
+	protected ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
+	protected DataOutputView outputView = new DataOutputViewStreamWrapper(outputStream);
 
 	/** partitioner used to generate key group. **/
-	protected static final HashPartitioner partitioner = HashPartitioner.INSTANCE;
+	protected static final HashPartitioner PARTITIONER = HashPartitioner.INSTANCE;
 
 	//--------------------------------------------------------------------------
 
 	/**
-	 * Constructor with the internal state to store mappings.
+	 * Constructor with the state storage to store mappings.
 	 *
-	 * @param internalState The internal state where the mappings are stored.
+	 * @param internalStateBackend The state backend who creates the current state.
+	 * @param stateStorage The state storage where the values are stored.
 	 */
-	AbstractKeyedMapStateImpl(InternalState internalState) {
-		Preconditions.checkNotNull(internalState);
-		this.internalState = internalState;
+	AbstractKeyedMapStateImpl(
+		AbstractInternalStateBackend internalStateBackend,
+		StateStorage stateStorage) {
+		this.internalStateBackend = Preconditions.checkNotNull(internalStateBackend);
+		this.stateStorage = Preconditions.checkNotNull(stateStorage);
 	}
 
 	/**
@@ -90,19 +131,43 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			return false;
 		}
 
-		Iterator<Map.Entry<MK, MV>> iterator = iterator(key);
-		return iterator.hasNext();
+		if (stateStorage.lazySerde()) {
+			Map<MK, MV> map = get(key);
+			return map != null;
+		} else {
+			Iterator<Map.Entry<MK, MV>> iterator = iterator(key);
+			return iterator.hasNext();
+		}
 	}
 
 	@Override
 	public boolean contains(K key, MK mapKey) {
-		if (key == null) {
+		if (key == null || mapKey == null) {
 			return false;
 		}
 
-		Row internalKey = Row.of(key, mapKey);
-		internalState.setCurrentGroup(getKeyGroup(key));
-		return internalState.get(internalKey) != null;
+		if (stateStorage.lazySerde()) {
+			Map<MK, MV> map = get(key);
+			return map != null && map.containsKey(mapKey);
+		} else {
+			try {
+				outputStream.reset();
+
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedMapState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					mapKey,
+					mapKeySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+
+				return stateStorage.get(serializedKey) != null;
+			} catch (Exception e) {
+				throw new StateAccessException(e);
+			}
+		}
 	}
 
 	@Override
@@ -116,18 +181,24 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			return defaultValue;
 		}
 
-		Iterator<Map.Entry<MK, MV>> iterator = iterator(key);
-		if (!iterator.hasNext()) {
-			return defaultValue;
+		try {
+			if (stateStorage.lazySerde()) {
+				M map = (M) stateStorage.get(key);
+				return map == null ? defaultValue : map;
+			} else {
+				Iterator<Map.Entry<MK, MV>> iterator = iterator(key);
+				M result = createMap();
+				while (iterator.hasNext()) {
+					Map.Entry<MK, MV> entry = iterator.next();
+					if (entry.getKey() != null && entry.getValue() != null) {
+						result.put(entry.getKey(), entry.getValue());
+					}
+				}
+				return result.isEmpty() ? defaultValue : result;
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
 		}
-
-		M result = createMap();
-		while (iterator.hasNext()) {
-			Map.Entry<MK, MV> entry = iterator.next();
-			result.put(entry.getKey(), entry.getValue());
-		}
-
-		return result;
 	}
 
 	@Override
@@ -138,14 +209,35 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 	@SuppressWarnings("unchecked")
 	@Override
 	public MV getOrDefault(K key, MK mapKey, MV defaultMapValue) {
-		if (key == null) {
+		if (key == null || mapKey == null) {
 			return defaultMapValue;
 		}
 
-		internalState.setCurrentGroup(getKeyGroup(key));
-		Row internalValue = internalState.get(Row.of(key, mapKey));
-		return internalValue == null ? defaultMapValue :
-			(MV) internalValue.getField(MAPVALUE_FIELD_INDEX);
+		try {
+			if (stateStorage.lazySerde()) {
+				Map<MK, MV> map = (Map<MK, MV>) stateStorage.get(key);
+				if (map == null) {
+					return defaultMapValue;
+				}
+				MV value = map.get(mapKey);
+				return value == null ? defaultMapValue : value;
+			} else {
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedMapState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					mapKey,
+					mapKeySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
+				return serializedValue == null ? defaultMapValue : StateSerializerUtil.getDeserializeSingleValue(serializedValue, mapValueSerializer);
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
 	}
 
 	@Override
@@ -176,29 +268,32 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			return createMap();
 		}
 
-		Collection<Row> internalKeys = new ArrayList<>(mapKeys.size());
-		for (MK mapKey : mapKeys) {
-			if (mapKey == null) {
-				continue;
-			}
-
-			internalKeys.add(Row.of(key, mapKey));
-		}
-
-		Map<Row, Row> internalPairs = internalState.getAll(internalKeys);
-
 		M results = createMap();
-		for (Map.Entry<Row, Row> internalPair : internalPairs.entrySet()) {
-			Row internalKey = internalPair.getKey();
-			MK mapKey = (MK) internalKey.getField(MAPKEY_FIELD_INDEX);
-
-			Row internalValue = internalPair.getValue();
-			MV mapValue = (MV) internalValue.getField(MAPVALUE_FIELD_INDEX);
-
-			results.put(mapKey, mapValue);
+		if (stateStorage.lazySerde()) {
+			M map = get(key);
+			if (map != null) {
+				for (MK mapKey : mapKeys) {
+					if (mapKey == null) {
+						continue;
+					}
+					MV value = map.get(mapKey);
+					if (value != null) {
+						results.put(mapKey, value);
+					}
+				}
+			}
+			return results;
+		} else {
+			for (MK mapKey : mapKeys) {
+				if (mapKey != null) {
+					MV value = get(key, mapKey);
+					if (value != null) {
+						results.put(mapKey, value);
+					}
+				}
+			}
+			return results;
 		}
-
-		return results;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -208,40 +303,36 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			return Collections.emptyMap();
 		}
 
-		Collection<Row> internalKeys = new ArrayList<>();
-		for (Map.Entry<K, ? extends Collection<? extends MK>> entry : map.entrySet()) {
-			K key = entry.getKey();
-			Collection<? extends MK> mapKeys = entry.getValue();
-
-			if (key == null || mapKeys == null || mapKeys.isEmpty()) {
-				continue;
-			}
-
-			for (MK mapKey : mapKeys) {
-				internalKeys.add(Row.of(key, mapKey));
-			}
-		}
-
-		Map<Row, Row> internalPairs = internalState.getAll(internalKeys);
-
 		Map<K, M> results = new HashMap<>();
-		for (Map.Entry<Row, Row> internalPair : internalPairs.entrySet()) {
-			Row internalKey = internalPair.getKey();
-			K key = (K) internalKey.getField(KEY_FIELD_INDEX);
-			MK mapKey = (MK) internalKey.getField(MAPKEY_FIELD_INDEX);
-
-			Row internalValue = internalPair.getValue();
-			MV mapValue = (MV) internalValue.getField(MAPVALUE_FIELD_INDEX);
-
-			M result = results.get(key);
-			if (result == null) {
-				result = createMap();
-				results.put(key, result);
+		if (stateStorage.lazySerde()) {
+			for (Map.Entry<K, ? extends Collection<? extends MK>> entry : map.entrySet()) {
+				K key = entry.getKey();
+				M keyMap = get(key);
+				if (keyMap != null) {
+					// lazy create
+					M subMap = null;
+					for (MK mk : entry.getValue()) {
+						MV mv = keyMap.get(mk);
+						if (mv != null) {
+							if (subMap == null) {
+								subMap = createMap();
+								results.put(key, subMap);
+							}
+							subMap.put(mk, mv);
+						}
+					}
+				}
 			}
-
-			result.put(mapKey, mapValue);
+		} else {
+			for (Map.Entry<K, ? extends Collection<? extends MK>> entry : map.entrySet()) {
+				K key = entry.getKey();
+				Collection<? extends MK> mapKeys = entry.getValue();
+				M resultMap = getAll(key, mapKeys);
+				if (!resultMap.isEmpty()) {
+					results.put(key, getAll(key, mapKeys));
+				}
+			}
 		}
-
 		return results;
 	}
 
@@ -249,8 +340,34 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 	public void add(K key, MK mapKey, MV mapValue) {
 		Preconditions.checkNotNull(key);
 
-		internalState.setCurrentGroup(getKeyGroup(key));
-		internalState.put(Row.of(key, mapKey), Row.of(mapValue));
+		try {
+			if (stateStorage.lazySerde()) {
+				Map<MK, MV> map = (Map<MK, MV>) stateStorage.get(key);
+				if (map == null) {
+					map = createMap();
+					stateStorage.put(key, map);
+				}
+				map.put(mapKey, mapValue);
+			} else {
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedMapState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					mapKey,
+					mapKeySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+
+				outputStream.reset();
+				mapValueSerializer.serialize(mapValue, outputView);
+				byte[] serializedValue = outputStream.toByteArray();
+				stateStorage.put(serializedKey, serializedValue);
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
 	}
 
 	@Override
@@ -261,8 +378,49 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			return;
 		}
 
-		internalState.setCurrentGroup(getKeyGroup(key));
-		internalState.rawPutAll(key, mappings);
+		try {
+			if (stateStorage.lazySerde()) {
+				Map<MK, MV> map = (Map<MK, MV>) stateStorage.get(key);
+				if (map == null) {
+					map = createMap();
+					stateStorage.put(key, map);
+				}
+				map.putAll(mappings);
+			} else {
+				StorageInstance instance = stateStorage.getStorageInstance();
+				try (BatchPutWrapper batchPutWrapper = instance.getBatchPutWrapper()){
+					outputStream.reset();
+					StateSerializerUtil.getSerializedPrefixKeyForKeyedMapState(
+						outputStream,
+						outputView,
+						key,
+						keySerializer,
+						getKeyGroup(key),
+						stateNameForSerialize);
+
+					int prefixLength = outputStream.getPosition();
+
+					ByteArrayOutputStreamWithPos valueOutputStream = new ByteArrayOutputStreamWithPos();
+					DataOutputView valueOutputView = new DataOutputViewStreamWrapper(valueOutputStream);
+					for (Map.Entry<? extends MK, ? extends MV> entry : mappings.entrySet()) {
+						Preconditions.checkNotNull(entry.getKey(), "Can not insert null key to mapstate");
+						Preconditions.checkNotNull(entry.getValue(), "Can not insert null value to mapstate");
+
+						outputStream.setPosition(prefixLength);
+						StateSerializerUtil.serializeItemWithKeyPrefix(outputView, entry.getKey(), mapKeySerializer);
+						byte[] byteKey = outputStream.toByteArray();
+
+						valueOutputStream.reset();
+						mapValueSerializer.serialize(entry.getValue(), valueOutputView);
+						byte[] byteValue = valueOutputStream.toByteArray();
+
+						batchPutWrapper.put(byteKey, byteValue);
+					}
+				}
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
 	}
 
 	@Override
@@ -271,25 +429,9 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			return;
 		}
 
-		Map<Row, Row> internalPairs = new HashMap<>();
-		for (Map.Entry<? extends K, ? extends Map<? extends MK, ? extends MV>> entry : map.entrySet()) {
-			K key = entry.getKey();
-			Preconditions.checkNotNull(key);
-
-			Map<? extends MK, ? extends MV> mappings = entry.getValue();
-			if (mappings == null || mappings.isEmpty()) {
-				continue;
-			}
-
-			for (Map.Entry<? extends MK, ? extends MV> mapping : mappings.entrySet()) {
-				MK mapKey = mapping.getKey();
-
-				MV mapValue = mapping.getValue();
-				internalPairs.put(Row.of(key, mapKey), Row.of(mapValue));
-			}
+		for (Map.Entry entry : map.entrySet()) {
+			addAll((K) entry.getKey(), (Map) entry.getValue());
 		}
-
-		internalState.putAll(internalPairs);
 	}
 
 	@Override
@@ -298,10 +440,18 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			return;
 		}
 
-		Iterator<Map.Entry<MK, MV>> iterator = iterator(key);
-		while (iterator.hasNext()) {
-			iterator.next();
-			iterator.remove();
+		try {
+			if (stateStorage.lazySerde()) {
+				stateStorage.remove(key);
+			} else {
+				Iterator<Map.Entry<MK, MV>> iterator = iterator(key);
+				while (iterator.hasNext()) {
+					Map.Entry<MK, MV> entry = iterator.next();
+					remove(key, entry.getKey());
+				}
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
 		}
 	}
 
@@ -311,8 +461,32 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			return;
 		}
 
-		internalState.setCurrentGroup(getKeyGroup(key));
-		internalState.remove(Row.of(key, mapKey));
+		try {
+			if (stateStorage.lazySerde()) {
+				Map map = (Map) stateStorage.get(key);
+				if (map == null) {
+					return;
+				}
+				map.remove(mapKey);
+				if (map.isEmpty()) {
+					remove(key);
+				}
+			} else {
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedMapState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					mapKey,
+					mapKeySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+				stateStorage.remove(serializedKey);
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
 	}
 
 	@Override
@@ -332,14 +506,27 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			return;
 		}
 
-		Collection<Row> internalKeys = new ArrayList<>(mapKeys.size());
-
-		for (MK mapKey : mapKeys) {
-			internalKeys.add(Row.of(key, mapKey));
+		try {
+			if (stateStorage.lazySerde()) {
+				Map map = (Map) stateStorage.get(key);
+				if (map != null) {
+					for (MK mapKey : mapKeys) {
+						map.remove(mapKey);
+					}
+					if (map.isEmpty()) {
+						remove(key);
+					}
+				}
+			} else {
+				for (MK mapKey : mapKeys) {
+					if (mapKey != null) {
+						remove(key, mapKey);
+					}
+				}
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
 		}
-
-		internalState.setCurrentGroup(getKeyGroup(key));
-		internalState.removeAll(internalKeys);
 	}
 
 	@Override
@@ -348,136 +535,248 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			return;
 		}
 
-		Collection<Row> internalKeys = new ArrayList<>();
 		for (Map.Entry<? extends K, ? extends Collection<? extends MK>> entry : map.entrySet()) {
-			K key = entry.getKey();
-			Collection<? extends MK> mapKeys = entry.getValue();
-
-			if (key == null || mapKeys == null || mapKeys.isEmpty()) {
-				continue;
-			}
-
-			for (MK mapKey : mapKeys) {
-				internalKeys.add(Row.of(key, mapKey));
-			}
+			removeAll(entry.getKey(), entry.getValue());
 		}
-
-		internalState.removeAll(internalKeys);
 	}
 
 	@Override
 	public Iterator<Map.Entry<MK, MV>> iterator(K key) {
 		Preconditions.checkNotNull(key);
 
-		Iterator<Pair<Row, Row>> pairIterator = internalState.prefixIterator(Row.of(key));
-		return new KeyedMapStateIterator<>(pairIterator);
-	}
+		if (stateStorage.lazySerde()) {
+			Map map = get(key);
+			return map == null ? Collections.emptyIterator() : map.entrySet().iterator();
+		} else {
+			try {
+				outputStream.reset();
+				byte[] keyPrefix = StateSerializerUtil.getSerializedPrefixKeyForKeyedMapState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
 
-	@Override
-	public Iterable<Map.Entry<MK, MV>> entries(K key) {
-		return new Iterable<Map.Entry<MK, MV>>() {
-			@Override
-			public Iterator<Map.Entry<MK, MV>> iterator() {
-				final Iterator<Map.Entry<MK, MV>> innerIter = AbstractKeyedMapStateImpl.this.iterator(key);
+				StorageIterator<byte[], byte[]> iterator = stateStorage.prefixIterator(keyPrefix);
+
 				return new Iterator<Map.Entry<MK, MV>>() {
+					Pair<byte[], byte[]> pair = null;
+
 					@Override
 					public boolean hasNext() {
-						return innerIter.hasNext();
+						return iterator.hasNext();
 					}
 
 					@Override
 					public Map.Entry<MK, MV> next() {
-						return innerIter.next();
+						pair = iterator.next();
+						return new Map.Entry<MK, MV>() {
+							@Override
+							public MK getKey() {
+								try {
+									return StateSerializerUtil.getDeserializedMapKeyForKeyedMapState(
+										pair.getKey(),
+										keySerializer,
+										mapKeySerializer,
+										serializedStateNameLength);
+								} catch (Exception e) {
+									throw new StateAccessException(e);
+								}
+							}
+
+							@Override
+							public MV getValue() {
+								try {
+									return StateSerializerUtil.getDeserializeSingleValue(pair.getValue(), mapValueSerializer);
+								} catch (Exception e) {
+									throw new StateAccessException(e);
+								}
+							}
+
+							@Override
+							public MV setValue(MV value) {
+								try {
+									ByteArrayOutputStreamWithPos valueOutputStream = new ByteArrayOutputStreamWithPos();
+									DataOutputView valueOutputView = new DataOutputViewStreamWrapper(valueOutputStream);
+									mapValueSerializer.serialize(value, valueOutputView);
+									return StateSerializerUtil.getDeserializeSingleValue(pair.setValue(valueOutputStream.toByteArray()), mapValueSerializer);
+								} catch (Exception e) {
+									throw new StateAccessException(e);
+								}
+							}
+						};
 					}
 
 					@Override
 					public void remove() {
-						innerIter.remove();
+						iterator.remove();
 					}
 				};
+			} catch (Exception e) {
+				throw new StateAccessException(e);
 			}
-		};
+		}
+	}
+
+	@Override
+	public Iterable<Map.Entry<MK, MV>> entries(K key) {
+		if (stateStorage.lazySerde()) {
+			Map map = get(key);
+			return map == null ? Collections.emptySet() : map.entrySet();
+		} else {
+			return new Iterable<Map.Entry<MK, MV>>() {
+				@Override
+				public Iterator<Map.Entry<MK, MV>> iterator() {
+					final Iterator<Map.Entry<MK, MV>> innerIter = AbstractKeyedMapStateImpl.this.iterator(key);
+					return new Iterator<Map.Entry<MK, MV>>() {
+						@Override
+						public boolean hasNext() {
+							return innerIter.hasNext();
+						}
+
+						@Override
+						public Map.Entry<MK, MV> next() {
+							return innerIter.next();
+						}
+
+						@Override
+						public void remove() {
+							innerIter.remove();
+						}
+					};
+				}
+			};
+		}
 	}
 
 	@Override
 	public Iterable<MK> mapKeys(K key) {
-		return new Iterable<MK>() {
-			@Override
-			public Iterator<MK> iterator() {
-				final Iterator<Map.Entry<MK, MV>> innerIter = AbstractKeyedMapStateImpl.this.iterator(key);
-				return new Iterator<MK>() {
-					@Override
-					public boolean hasNext() {
-						return innerIter.hasNext();
-					}
+		if (stateStorage.lazySerde()) {
+			Map map = get(key);
+			return map == null ? Collections.emptySet() : map.keySet();
+		} else {
+			return new Iterable<MK>() {
+				@Override
+				public Iterator<MK> iterator() {
+					final Iterator<Map.Entry<MK, MV>> innerIter = AbstractKeyedMapStateImpl.this.iterator(key);
+					return new Iterator<MK>() {
+						@Override
+						public boolean hasNext() {
+							return innerIter.hasNext();
+						}
 
-					@Override
-					public MK next() {
-						return innerIter.next().getKey();
-					}
+						@Override
+						public MK next() {
+							return innerIter.next().getKey();
+						}
 
-					@Override
-					public void remove() {
-						innerIter.remove();
-					}
-				};
-			}
-		};
+						@Override
+						public void remove() {
+							innerIter.remove();
+						}
+					};
+				}
+			};
+		}
 	}
 
 	@Override
 	public Iterable<MV> mapValues(K key) {
-		return new Iterable<MV>() {
-			@Override
-			public Iterator<MV> iterator() {
-				final Iterator<Map.Entry<MK, MV>> innerIter = AbstractKeyedMapStateImpl.this.iterator(key);
-				return new Iterator<MV>() {
-					@Override
-					public boolean hasNext() {
-						return innerIter.hasNext();
-					}
+		if (stateStorage.lazySerde()) {
+			Map map = get(key);
+			return map == null ? Collections.emptySet() : map.values();
+		} else {
+			return new Iterable<MV>() {
+				@Override
+				public Iterator<MV> iterator() {
+					final Iterator<Map.Entry<MK, MV>> innerIter = AbstractKeyedMapStateImpl.this.iterator(key);
+					return new Iterator<MV>() {
+						@Override
+						public boolean hasNext() {
+							return innerIter.hasNext();
+						}
 
-					@Override
-					public MV next() {
-						return innerIter.next().getValue();
-					}
+						@Override
+						public MV next() {
+							return innerIter.next().getValue();
+						}
 
-					@Override
-					public void remove() {
-						innerIter.remove();
-					}
-				};
-			}
-		};
+						@Override
+						public void remove() {
+							innerIter.remove();
+						}
+					};
+				}
+			};
+		}
 	}
 
 	@Override
 	public Map<K, M> getAll() {
-		Map<K, M> result = new HashMap<>();
-		Iterator<Pair<Row, Row>> iterator = internalState.iterator();
-		while (iterator.hasNext()) {
-			Pair<Row, Row> pair = iterator.next();
-			K key = (K) pair.getKey().getField(KEY_FIELD_INDEX);
-			MK mk = (MK) pair.getKey().getField(MAPKEY_FIELD_INDEX);
-			MV mv = (MV) pair.getValue().getField(MAPVALUE_FIELD_INDEX);
+		try {
+			Map<K, M> result = new HashMap<>();
+			if (stateStorage.lazySerde()) {
+				Iterator<Pair<K, M>> iterator = stateStorage.iterator();
+				while (iterator.hasNext()) {
+					Pair<K, M> pair = iterator.next();
+					result.put(pair.getKey(), pair.getValue());
+				}
 
-			M map = result.get(key);
-			if (map == null) {
-				map = createMap();
+			} else {
+				if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
+					for (Integer group : internalStateBackend.getGroups()) {
+						outputStream.reset();
+						StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
+						byte[] groupPrefix = outputStream.toByteArray();
+						outputStream.write(KEY_END_BYTE);
+						byte[] groupPrefixEnd = outputStream.toByteArray();
+
+						StorageIterator<byte[], byte[]> iterator = (StorageIterator<byte[], byte[]>) stateStorage.subIterator(groupPrefix, groupPrefixEnd);
+						iteratorToMap(iterator, result, stateNameByte.length);
+					}
+				} else {
+					StorageIterator<byte[], byte[]> iterator = stateStorage.iterator();
+					iteratorToMap(iterator, result, serializedStateNameLength);
+				}
 			}
-			map.put(mk, mv);
-			result.put(key, map);
-		}
 
-		return result;
+			return result;
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
 	}
 
 	@Override
 	public void removeAll() {
-		Iterator<Pair<Row, Row>> iterator = internalState.iterator();
-		while (iterator.hasNext()) {
-			iterator.next();
-			iterator.remove();
+		if (stateStorage.lazySerde()) {
+			((HeapStateStorage) stateStorage).removeAll();
+		} else {
+			try {
+				if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
+					for (Integer group : internalStateBackend.getGroups()) {
+						outputStream.reset();
+						StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
+						byte[] groupPrefix = outputStream.toByteArray();
+						outputStream.write(KEY_END_BYTE);
+						byte[] groupPrefixEnd = outputStream.toByteArray();
+
+						StorageIterator iterator = stateStorage.subIterator(groupPrefix, groupPrefixEnd);
+						while (iterator.hasNext()) {
+							iterator.next();
+							iterator.remove();
+						}
+					}
+				} else {
+					StorageIterator<byte[], byte[]> iterator = stateStorage.iterator();
+					while (iterator.hasNext()) {
+						iterator.next();
+						iterator.remove();
+					}
+				}
+			} catch (Exception e) {
+				throw new StateAccessException(e);
+			}
 		}
 	}
 
@@ -487,149 +786,73 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 		return new Iterable<K>() {
 			@Override
 			public Iterator<K> iterator() {
-				Iterator<Pair<Row, Row>> internalIterator = internalState.iterator();
+				try {
+					if (stateStorage.lazySerde()) {
+						Iterator<Pair<K, Map>> iterator = stateStorage.iterator();
+						return new Iterator<K>() {
+							@Override
+							public boolean hasNext() {
+								return iterator.hasNext();
+							}
 
-				return new Iterator<K>() {
-					@Override
-					public boolean hasNext() {
-						return internalIterator.hasNext();
-					}
+							@Override
+							public K next() {
+								return iterator.next().getKey();
+							}
 
-					@Override
-					public K next() {
-						return (K) internalIterator.next().getKey().getField(KEY_FIELD_INDEX);
-					}
+							@Override
+							public void remove() {
+								iterator.remove();
+							}
+						};
 
-					@Override
-					public void remove() {
-						internalIterator.remove();
+					} else {
+						if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
+							Collection<Iterator<Pair<byte[], byte[]>>> groupIterators = new ArrayList<>();
+							for (Integer group : internalStateBackend.getGroups()) {
+								outputStream.reset();
+								StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
+								byte[] groupPrefix = outputStream.toByteArray();
+								outputStream.write(KEY_END_BYTE);
+								byte[] groupPrefixEnd = outputStream.toByteArray();
+
+								StorageIterator iterator = stateStorage.subIterator(groupPrefix, groupPrefixEnd);
+								groupIterators.add(iterator);
+							}
+							GroupIterator groupIterator = new GroupIterator(groupIterators);
+							return StateIteratorUtil.createKeyIterator(groupIterator, keySerializer, stateNameByte.length);
+						} else {
+							StorageIterator<byte[], byte[]> iterator = stateStorage.iterator();
+
+							return StateIteratorUtil.createKeyIterator(iterator, keySerializer, serializedStateNameLength);
+						}
 					}
-				};
+				} catch (Exception e) {
+					throw new StateAccessException(e);
+				}
 			}
 		};
 	}
 
-	//--------------------------------------------------------------------------
-
-	/**
-	 * An {@link Map.Entry} in the map under a key in the state. The entry is
-	 * backed by the corresponding pair in the internal state. The changes to
-	 * the entry will be reflected in the sate, and vice versa.
-	 *
-	 * @param <MK> Type of the keys in the map.
-	 * @param <MV> Type of the values in the map.
-	 */
-	static class KeyedMapStateEntry<MK, MV> implements Map.Entry<MK, MV> {
-
-		/**
-		 * The corresponding pair in the internal state.
-		 */
-		private final Pair<Row, Row> internalPair;
-
-		/**
-		 * Constructor with the corresponding pair in the internal state.
-		 *
-		 * @param internalPair The corresponding pair in the internal state.
-		 */
-		KeyedMapStateEntry(Pair<Row, Row> internalPair) {
-			Preconditions.checkNotNull(internalPair);
-			this.internalPair = internalPair;
-		}
-
-		@SuppressWarnings("unchecked")
-		@Override
-		public MK getKey() {
-			Row internalKey = internalPair.getKey();
-			return (MK) internalKey.getField(MAPKEY_FIELD_INDEX);
-		}
-
-		@SuppressWarnings("unchecked")
-		@Override
-		public MV getValue() {
-			Row internalValue = internalPair.getValue();
-			return (MV) internalValue.getField(MAPVALUE_FIELD_INDEX);
-		}
-
-		@SuppressWarnings("unchecked")
-		@Override
-		public MV setValue(MV value) {
-			Row newInternalValue = Row.of(value);
-			Row oldInternalValue = internalPair.setValue(newInternalValue);
-			return (MV) oldInternalValue.getField(MAPVALUE_FIELD_INDEX);
-		}
-
-		@SuppressWarnings("unchecked")
-		@Override
-		public boolean equals(Object o) {
-			if (this == o) {
-				return true;
-			}
-
-			if (o == null || getClass() != o.getClass()) {
-				return false;
-			}
-
-			KeyedMapStateEntry<MK, MV> that = (KeyedMapStateEntry<MK, MV>) o;
-			return internalPair.equals(that.internalPair);
-		}
-
-		@Override
-		public int hashCode() {
-			return internalPair.hashCode();
-		}
-
-		@Override
-		public String toString() {
-			return "KeyedMapStateEntry{" + "internalPair=" + internalPair + "}";
-		}
+	protected  <K> int getKeyGroup(K key) {
+		return PARTITIONER.partition(key, internalStateBackend.getNumGroups());
 	}
 
+	private void iteratorToMap(StorageIterator<byte[], byte[]> iterator, Map<K, M> result, int stateNameByteLength) throws IOException {
+		while (iterator.hasNext()) {
+			Pair<byte[], byte[]> pair = iterator.next();
+			K key = StateSerializerUtil.getDeserializedKeyForKeyedMapState(pair.getKey(),
+				keySerializer, stateNameByteLength);
+			MK mapKey = StateSerializerUtil.getDeserializedMapKeyForKeyedMapState(pair.getKey(),
+				keySerializer, mapKeySerializer, stateNameByteLength);
+			MV mapValue = StateSerializerUtil.getDeserializeSingleValue(pair.getValue(), mapValueSerializer);
 
-	/**
-	 * An iterator over the mappings under a key. The iterator is backed by an
-	 * iterator over the key-value pairs in the internal state.
-	 *
-	 * @param <MK> Type of the keys in the map.
-	 * @param <MV> Type of the values in the map.
-	 */
-	static class KeyedMapStateIterator<MK, MV> implements Iterator<Map.Entry<MK, MV>> {
-
-		/**
-		 * The iterator over the key-value pairs with the same key in the
-		 * internal state.
-		 */
-		private final Iterator<Pair<Row, Row>> internalIterator;
-
-		/**
-		 * Constructor with the iterator over the corresponding pairs in the
-		 * internal state.
-		 *
-		 * @param internalIterator The iterator over the corresponding pairs
-		 *                         in the internal state.
-		 */
-		KeyedMapStateIterator(Iterator<Pair<Row, Row>> internalIterator) {
-			Preconditions.checkNotNull(internalIterator);
-			this.internalIterator = internalIterator;
+			M map = result.get(key);
+			if (map == null) {
+				map = createMap();
+				result.put(key, map);
+			}
+			map.put(mapKey, mapValue);
 		}
-
-		@Override
-		public boolean hasNext() {
-			return internalIterator.hasNext();
-		}
-
-		@Override
-		public Map.Entry<MK, MV> next() {
-			Pair<Row, Row> internalPair = internalIterator.next();
-			return new KeyedMapStateEntry<>(internalPair);
-		}
-
-		@Override
-		public void remove() {
-			internalIterator.remove();
-		}
-	}
-
-	private <K> int getKeyGroup(K key) {
-		return partitioner.partition(key, internalState.getNumGroups());
 	}
 }

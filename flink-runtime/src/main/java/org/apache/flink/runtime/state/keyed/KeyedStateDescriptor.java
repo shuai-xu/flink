@@ -18,7 +18,6 @@
 
 package org.apache.flink.runtime.state.keyed;
 
-import org.apache.flink.api.common.functions.Merger;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.util.Preconditions;
 
@@ -30,7 +29,7 @@ import java.util.Objects;
 /**
  * The descriptor for both local and global {@link KeyedState}.
  *
- * @param <K> The type of the keys in the state.
+ * @param <K> The type of the keys in the state3.
  * @param <V> The type of the values in the state.
  * @param <S> The type of the state described by the descriptor
  */
@@ -52,13 +51,6 @@ public abstract class KeyedStateDescriptor<K, V, S extends KeyedState<K, V>> imp
 	 * The serializer for the values in the state.
 	 */
 	private final TypeSerializer<V> valueSerializer;
-
-	/**
-	 * The merger for the values in the state. This is null in the cases where
-	 * the described state is global.
-	 */
-	@Nullable
-	private final Merger<V> valueMerger;
 
 	/** Name for queries against state created from this StateDescriptor. */
 	@Nullable
@@ -84,32 +76,6 @@ public abstract class KeyedStateDescriptor<K, V, S extends KeyedState<K, V>> imp
 		this.name = name;
 		this.keySerializer = keySerializer;
 		this.valueSerializer = valueSerializer;
-		this.valueMerger = null;
-	}
-
-	/**
-	 * Constructor for with given name, scope and the serializers for the keys
-	 * and the values in the state.
-	 *
-	 * @param name The name of the state.
-	 * @param keySerializer The serializer for the keys in the state.
-	 * @param valueSerializer The serializer for the values in the state.
-	 * @param valueMerger The merger for the values in the state.
-	 */
-	KeyedStateDescriptor(
-		final String name,
-		final TypeSerializer<K> keySerializer,
-		final TypeSerializer<V> valueSerializer,
-		final Merger<V> valueMerger
-	) {
-		Preconditions.checkNotNull(name);
-		Preconditions.checkNotNull(keySerializer);
-		Preconditions.checkNotNull(valueSerializer);
-
-		this.name = name;
-		this.keySerializer = keySerializer;
-		this.valueSerializer = valueSerializer;
-		this.valueMerger = valueMerger;
 	}
 
 	/**
@@ -147,15 +113,6 @@ public abstract class KeyedStateDescriptor<K, V, S extends KeyedState<K, V>> imp
 	 */
 	public TypeSerializer<V> getValueSerializer() {
 		return valueSerializer;
-	}
-
-	/**
-	 * Returns the merger for the values in the state.
-	 *
-	 * @return The merger for the values in the state.
-	 */
-	public Merger<V> getValueMerger() {
-		return valueMerger;
 	}
 
 	/**
@@ -211,8 +168,7 @@ public abstract class KeyedStateDescriptor<K, V, S extends KeyedState<K, V>> imp
 
 		return Objects.equals(name, that.name) &&
 			Objects.equals(keySerializer, that.keySerializer) &&
-			Objects.equals(valueSerializer, that.valueSerializer) &&
-			Objects.equals(valueMerger, that.valueMerger);
+			Objects.equals(valueSerializer, that.valueSerializer);
 	}
 
 	@Override
@@ -220,7 +176,6 @@ public abstract class KeyedStateDescriptor<K, V, S extends KeyedState<K, V>> imp
 		int result = Objects.hashCode(name);
 		result = 31 * result + Objects.hashCode(keySerializer);
 		result = 31 * result + Objects.hashCode(valueSerializer);
-		result = 31 * result + Objects.hashCode(valueMerger);
 		return result;
 	}
 
@@ -230,7 +185,6 @@ public abstract class KeyedStateDescriptor<K, V, S extends KeyedState<K, V>> imp
 			"name=" + name +
 			", keySerializer=" + keySerializer +
 			", valueSerializer=" + valueSerializer +
-			", valueMerger=" + valueMerger +
 			"}";
 	}
 }

@@ -18,15 +18,27 @@
 
 package org.apache.flink.runtime.state;
 
-import org.apache.flink.api.common.functions.HashPartitioner;
-import org.apache.flink.api.common.functions.Partitioner;
 import org.apache.flink.api.common.typeutils.base.FloatSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.CheckpointType;
+import org.apache.flink.runtime.state.CheckpointStorageLocationReference;
+import org.apache.flink.runtime.state.CheckpointStreamFactory;
+import org.apache.flink.runtime.state.GroupRange;
+import org.apache.flink.runtime.state.GroupRangePartitioner;
+import org.apache.flink.runtime.state.GroupSet;
+import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
+import org.apache.flink.runtime.state.LocalRecoveryConfig;
+import org.apache.flink.runtime.state.SharedStateRegistry;
+import org.apache.flink.runtime.state.SnapshotResult;
+import org.apache.flink.runtime.state.StatePartitionSnapshot;
+import org.apache.flink.runtime.state.TestLocalRecoveryConfig;
 import org.apache.flink.runtime.state.memory.MemCheckpointStreamFactory;
-import org.apache.flink.types.Pair;
-import org.apache.flink.types.Row;
+import org.apache.flink.runtime.state.keyed.KeyedMapState;
+import org.apache.flink.runtime.state.keyed.KeyedMapStateDescriptor;
+import org.apache.flink.runtime.state.keyed.KeyedState;
+import org.apache.flink.runtime.state.keyed.KeyedValueState;
+import org.apache.flink.runtime.state.keyed.KeyedValueStateDescriptor;
 import org.apache.flink.util.FutureUtil;
 import org.apache.flink.util.TestLogger;
 
@@ -35,15 +47,12 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.RunnableFuture;
@@ -53,25 +62,15 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
- * The base unit tests to validate that internal states can be correctly saved
+ * The base unit tests to validate that states can be correctly saved
  * and restored in the stateBackend.
  */
-@RunWith(Parameterized.class)
 public abstract class InternalStateCheckpointTestBase extends TestLogger {
 
 	@Rule
 	public TemporaryFolder tmpFolder = new TemporaryFolder();
-
-	@Parameterized.Parameters(name = "Checkpoint option: {0}")
-	public static Collection<CheckpointType> checkpointTypes() {
-		return Arrays.asList(CheckpointType.CHECKPOINT, CheckpointType.SAVEPOINT);
-	}
-
-	@Parameterized.Parameter
-	public CheckpointType checkpointType;
 
 	private CheckpointOptions checkpointOptions;
 
@@ -89,7 +88,6 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 
 	protected LocalRecoveryConfig localRecoveryConfig;
 
-	private static final FieldBasedPartitioner partitioner = new FieldBasedPartitioner(0, HashPartitioner.INSTANCE);
 	/**
 	 * Creates a new state stateBackend for testing.
 	 *
@@ -101,9 +99,11 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig) throws Exception;
 
+	protected abstract CheckpointType getCheckpointType();
+
 	@Before
 	public void open() throws Exception {
-		checkpointOptions = checkpointType.equals(CheckpointType.CHECKPOINT) ?
+		checkpointOptions = getCheckpointType().equals(CheckpointType.CHECKPOINT) ?
 			CheckpointOptions.forCheckpointWithDefaultLocation() :
 			new CheckpointOptions(CheckpointType.SAVEPOINT, new CheckpointStorageLocationReference(tmpFolder.newFolder().toURI().toString().getBytes(Charset.defaultCharset())));
 
@@ -148,20 +148,20 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			localRecoveryConfig);
 		stateBackend.restore(null);
 
-		Collection<InternalState> states = stateBackend.getInternalStates();
+		Map<String, StateStorage> states = stateBackend.getStateStorages();
 		assertTrue(states.isEmpty());
 	}
 
 	@Test
 	public void testCheckpointWithEmptyState() throws Exception {
 		// test empty backend with empty state.
-		InternalStateDescriptor globalStateDescriptor =
-			new InternalStateDescriptorBuilder("globalState1")
-				.addKeyColumn("key", IntSerializer.INSTANCE)
-				.addValueColumn("value", FloatSerializer.INSTANCE)
-				.setPartitioner(partitioner)
-				.getDescriptor();
-		stateBackend.getInternalState(globalStateDescriptor);
+		KeyedValueStateDescriptor<Integer, Float> descriptor =
+			new KeyedValueStateDescriptor<>(
+				"state1",
+				IntSerializer.INSTANCE,
+				FloatSerializer.INSTANCE
+			);
+		stateBackend.getKeyedState(descriptor);
 
 		RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshotFuture =
 			stateBackend.snapshot(0, 0, checkpointStreamFactory, checkpointOptions);
@@ -178,65 +178,71 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			localRecoveryConfig);
 		stateBackend.restore(Collections.singleton(snapshot));
 
-		Collection<InternalState> states = stateBackend.getInternalStates();
+		Collection<KeyedState> states = stateBackend.getKeyedStates().values();
 		assertEquals(1, states.size());
 
-		InternalState state = states.iterator().next();
-		assertEquals(globalStateDescriptor, state.getDescriptor());
-		assertFalse(state.iterator().hasNext());
+		KeyedState state = states.iterator().next();
+		assertEquals(descriptor, state.getDescriptor());
+		assertFalse(state.keys().iterator().hasNext());
 	}
 
 	@Test
 	public void testCheckpointWithoutParallelismChange() throws Exception {
 		SharedStateRegistry sharedStateRegistry = new SharedStateRegistry();
+		Random random = new Random(System.currentTimeMillis());
 
-		Map<String, Map<Row, Row>> stateMaps = new HashMap<>();
+		KeyedValueStateDescriptor<Integer, Float> descriptor1 =
+			new KeyedValueStateDescriptor<>(
+				"state1",
+				IntSerializer.INSTANCE,
+				FloatSerializer.INSTANCE
+			);
+		KeyedValueState<Integer, Float> valueState = stateBackend.getKeyedState(descriptor1);
 
-		InternalStateDescriptor globalStateDescriptor1 =
-			new InternalStateDescriptorBuilder("globalState1")
-				.addKeyColumn("key", IntSerializer.INSTANCE)
-				.addValueColumn("value", FloatSerializer.INSTANCE)
-				.setPartitioner(partitioner)
-				.getDescriptor();
-		InternalState globalState1 = stateBackend.getInternalState(globalStateDescriptor1);
-		populateStateData(stateMaps, globalState1);
+		Map<Integer, Float> valueStateMap = new HashMap<>();
+		for (int i = 0; i < 1000; i++) {
+			float value = random.nextFloat();
+			valueState.put(i, value);
+			valueStateMap.put(i, value);
+		}
 
-		InternalStateDescriptor globalStateDescriptor2 =
-			new InternalStateDescriptorBuilder("globalState2")
-				.addKeyColumn("key1", IntSerializer.INSTANCE)
-				.addKeyColumn("key2", IntSerializer.INSTANCE)
-				.addValueColumn("value", FloatSerializer.INSTANCE)
-				.setPartitioner(partitioner)
-				.getDescriptor();
-		InternalState globalState2 = stateBackend.getInternalState(globalStateDescriptor2);
-		populateStateData(stateMaps, globalState2);
+		KeyedMapStateDescriptor<Integer, Integer, Float> descriptor2 =
+			new KeyedMapStateDescriptor<>(
+				"state2",
+				IntSerializer.INSTANCE,
+				IntSerializer.INSTANCE,
+				FloatSerializer.INSTANCE
+			);
+		KeyedMapState<Integer, Integer, Float> mapState = stateBackend.getKeyedState(descriptor2);
 
-		InternalStateDescriptor emptyStateDescriptor =
-			new InternalStateDescriptorBuilder("emptyState")
-				.addKeyColumn("key", IntSerializer.INSTANCE)
-				.addValueColumn("value", FloatSerializer.INSTANCE)
-				.setPartitioner(partitioner)
-				.getDescriptor();
-		InternalState emptyState = stateBackend.getInternalState(emptyStateDescriptor);
+		Map<Integer, Map<Integer, Float>> mapStateMap = new HashMap<>();
+		for (int i = 0; i < 1000; i++) {
+			int key = i % 10;
+			int mkey = i / 10;
+			float value = random.nextFloat();
+			mapState.add(key, mkey, value);
+			Map<Integer, Float> map = mapStateMap.computeIfAbsent(key, K -> new HashMap<>());
+			map.put(mkey, value);
+		}
+
+		KeyedValueStateDescriptor<Integer, Float> descriptor3 =
+			new KeyedValueStateDescriptor<>(
+				"state3",
+				IntSerializer.INSTANCE,
+				FloatSerializer.INSTANCE
+			);
+		KeyedValueState<Integer, Float> emptyState = stateBackend.getKeyedState(descriptor3);
 
 		// Takes a snapshot of the states
 		StatePartitionSnapshot snapshot1 =
 			runSnapshot(stateBackend, 0, 0, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
 
 		// Does some updates to the states
-		Random random = new Random();
 		int index = 0;
 		for (int i = 0; i < 1000; ++i) {
 			if (index % 3 == 0) {
-				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
-				Row value1 = generateValue(random, globalStateDescriptor1.getNumValueColumns());
-				globalState1.setCurrentGroup(getCurrentGroup(key1, maxParallelism));
-				globalState1.put(key1, value1);
-
-				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
-				Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
-				globalState2.setCurrentGroup(getCurrentGroup(key2, maxParallelism));
-				globalState2.put(key2, value2);
+				valueState.put(i, random.nextFloat());
+				mapState.add(i % 10, i / 10, random.nextFloat());
 			}
 			index++;
 		}
@@ -251,42 +257,34 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			localRecoveryConfig);
 		stateBackend.restore(Collections.singleton(snapshot1));
 
-		// Validates that the states are correctly restored.
-		for (Map.Entry<String, Map<Row, Row>> stateEntry : stateMaps.entrySet()) {
-			String stateName = stateEntry.getKey();
-			InternalState state = stateBackend.getInternalState(stateName);
-			assertNotNull(state);
+		valueState = stateBackend.getKeyedState(descriptor1);
+		assertNotNull(valueState);
 
-			Map<Row, Row> pairs = stateEntry.getValue();
-			Iterator<Pair<Row, Row>> iterator = state.iterator();
-			validateStateData(pairs, iterator);
-		}
+		mapState = stateBackend.getKeyedState(descriptor2);
+		assertNotNull(mapState);
 
-		globalState1 = stateBackend.getInternalState(globalStateDescriptor1);
-		assertNotNull(globalState1);
-
-		globalState2 = stateBackend.getInternalState(globalStateDescriptor2);
-		assertNotNull(globalState2);
-
-		emptyState = stateBackend.getInternalState(emptyStateDescriptor);
+		emptyState = stateBackend.getKeyedState(descriptor3);
 		assertNotNull(emptyState);
+
+		// Validates that the states are correctly restored.
+		validateValueStateData(valueStateMap, valueState);
+		validateMapStateData(mapStateMap, mapState);
+		validateValueStateData(Collections.emptyMap(), emptyState);
 
 		// Does some updates to the states
 
 		index = 0;
 		for (int i = 200; i < 1200; ++i) {
 			if (index % 4 == 0) {
-				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
-				Row value1 = generateValue(random, globalStateDescriptor1.getNumValueColumns());
-				globalState1.setCurrentGroup(getCurrentGroup(key1, maxParallelism));
-				globalState1.put(key1, value1);
-				recordStatePair(stateMaps, globalState1, key1, value1);
+				float value1 = random.nextFloat();
+				valueState.put(i, value1);
+				valueStateMap.put(i, value1);
 
-				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
-				Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
-				globalState2.setCurrentGroup(getCurrentGroup(key2, maxParallelism));
-				globalState2.put(key2, value2);
-				recordStatePair(stateMaps, globalState2, key2, value2);
+				int key2 = i / 10;
+				int mkey = i % 10;
+				float value2 = random.nextFloat();
+				mapState.add(key2, mkey, value2);
+				mapStateMap.computeIfAbsent(key2, K -> new HashMap<>()).put(mkey, value2);
 			}
 
 			index++;
@@ -299,11 +297,9 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		index = 0;
 		for (int i = 300; i < 1300; ++i) {
 			if (index % 5 == 0) {
-				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
-				globalState1.remove(key1);
+				valueState.remove(i);
 
-				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
-				globalState2.remove(key2);
+				mapState.remove(i / 10, i % 10);
 			}
 
 			index++;
@@ -321,17 +317,19 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		stateBackend.restore(Collections.singleton(snapshot2));
 
 		// Validates that the states are correctly restored.
-		for (Map.Entry<String, Map<Row, Row>> stateEntry : stateMaps.entrySet()) {
-			String stateName = stateEntry.getKey();
-			InternalState state = stateBackend.getInternalState(stateName);
-			assertNotNull(state);
+		valueState = stateBackend.getKeyedState(descriptor1);
+		assertNotNull(valueState);
 
-			Map<Row, Row> pairs = stateEntry.getValue();
-			Iterator<Pair<Row, Row>> iterator = state.iterator();
+		mapState = stateBackend.getKeyedState(descriptor2);
+		assertNotNull(mapState);
 
-			validateStateData(pairs, iterator);
-		}
+		emptyState = stateBackend.getKeyedState(descriptor3);
+		assertNotNull(emptyState);
 
+		// Validates that the states are correctly restored.
+		validateValueStateData(valueStateMap, valueState);
+		validateMapStateData(mapStateMap, mapState);
+		validateValueStateData(Collections.emptyMap(), emptyState);
 	}
 
 	/**
@@ -340,54 +338,64 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 	@Test
 	public void testCheckpointWithParallelismChange() throws Exception {
 		SharedStateRegistry sharedStateRegistry = new SharedStateRegistry();
+		Random random = new Random(System.currentTimeMillis());
 
-		Map<Integer, Map<String, Map<Row, Row>>> globalGroupMaps = new HashMap<>();
+		KeyedValueStateDescriptor<Integer, Float> descriptor1 =
+			new KeyedValueStateDescriptor<>(
+				"state1",
+				IntSerializer.INSTANCE,
+				FloatSerializer.INSTANCE
+			);
+		KeyedValueState<Integer, Float> valueState = stateBackend.getKeyedState(descriptor1);
 
-		InternalStateDescriptor globalStateDescriptor1 =
-			new InternalStateDescriptorBuilder("globalState1")
-				.addKeyColumn("key", IntSerializer.INSTANCE)
-				.addValueColumn("value", FloatSerializer.INSTANCE)
-				.setPartitioner(partitioner)
-				.getDescriptor();
-		InternalState globalState1 = stateBackend.getInternalState(globalStateDescriptor1);
-		populateGroupStateData(globalGroupMaps, globalState1);
+		Map<Integer, Map<Integer, Float>> groupValueStateMap = new HashMap<>();
+		for (int i = 0; i < 1000; i++) {
+			float value = random.nextFloat();
+			valueState.put(i, value);
+			int group = getGroupForKey(i);
+			Map<Integer, Float> valueStateMap = groupValueStateMap.computeIfAbsent(group, K -> new HashMap<>());
+			valueStateMap.put(i, value);
+		}
 
-		InternalStateDescriptor globalStateDescriptor2 =
-			new InternalStateDescriptorBuilder("globalState2")
-				.addKeyColumn("key1", IntSerializer.INSTANCE)
-				.addKeyColumn("key2", IntSerializer.INSTANCE)
-				.addValueColumn("value", FloatSerializer.INSTANCE)
-				.setPartitioner(partitioner)
-				.getDescriptor();
-		InternalState globalState2 = stateBackend.getInternalState(globalStateDescriptor2);
-		populateGroupStateData(globalGroupMaps, globalState2);
+		KeyedMapStateDescriptor<Integer, Integer, Float> descriptor2 =
+			new KeyedMapStateDescriptor<>(
+				"state2",
+				IntSerializer.INSTANCE,
+				IntSerializer.INSTANCE,
+				FloatSerializer.INSTANCE
+			);
+		KeyedMapState<Integer, Integer, Float> mapState = stateBackend.getKeyedState(descriptor2);
 
-		InternalStateDescriptor emptyStateDescriptor =
-			new InternalStateDescriptorBuilder("emptyState")
-				.addKeyColumn("key", IntSerializer.INSTANCE)
-				.addValueColumn("value", FloatSerializer.INSTANCE)
-				.setPartitioner(partitioner)
-				.getDescriptor();
-		InternalState emptyState = stateBackend.getInternalState(emptyStateDescriptor);
+		Map<Integer, Map<Integer, Map<Integer, Float>>> groupMapStateMap = new HashMap<>();
+		for (int i = 0; i < 1000; i++) {
+			int key = i % 10;
+			int mkey = i / 10;
+			float value = random.nextFloat();
+			mapState.add(key, mkey, value);
+			int group = KeyGroupRangeAssignment.assignToKeyGroup(key, maxParallelism);
+			Map<Integer, Map<Integer, Float>> mapStateMap = groupMapStateMap.computeIfAbsent(group, K -> new HashMap<>());
+			Map<Integer, Float> map = mapStateMap.computeIfAbsent(key, K -> new HashMap<>());
+			map.put(mkey, value);
+		}
+
+		KeyedValueStateDescriptor<Integer, Float> descriptor3 =
+			new KeyedValueStateDescriptor<>(
+				"state3",
+				IntSerializer.INSTANCE,
+				FloatSerializer.INSTANCE
+			);
+		KeyedValueState<Integer, Float> emptyState = stateBackend.getKeyedState(descriptor3);
 
 		// Takes a snapshot of the states
 		StatePartitionSnapshot snapshot1 =
 			runSnapshot(stateBackend, 0, 0, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
 
 		// Does some updates to the states
-		Random random = new Random();
 		int index = 0;
 		for (int i = 0; i < 1000; ++i) {
 			if (index % 3 == 0) {
-				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
-				Row value1 = generateValue(random, globalStateDescriptor1.getNumValueColumns());
-				globalState1.setCurrentGroup(getCurrentGroup(key1, maxParallelism));
-				globalState1.put(key1, value1);
-
-				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
-				Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
-				globalState2.setCurrentGroup(getCurrentGroup(key2, maxParallelism));
-				globalState2.put(key2, value2);
+				valueState.put(i, random.nextFloat());
+				mapState.add(i % 10, i / 10, random.nextFloat());
 			}
 			index++;
 		}
@@ -403,39 +411,45 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		stateBackend.restore(Collections.singleton(firstSnapshot1));
 
 		// Validates that the states are correctly restored.
-		globalState1 = stateBackend.getInternalState(globalStateDescriptor1.getName());
-		assertNotNull(globalState1);
+		valueState = stateBackend.getKeyedState(descriptor1);
+		assertNotNull(valueState);
 
-		globalState2 = stateBackend.getInternalState(globalStateDescriptor2.getName());
-		assertNotNull(globalState2);
+		mapState = stateBackend.getKeyedState(descriptor2);
+		assertNotNull(mapState);
 
-		emptyState = stateBackend.getInternalState(emptyStateDescriptor.getName());
+		emptyState = stateBackend.getKeyedState(descriptor3);
 		assertNotNull(emptyState);
 
-		Iterator<Pair<Row, Row>> globalIterator1 = globalState1.iterator();
-		validateStateDataWithGroupSet(globalGroupMaps, globalIterator1, firstGroups1, globalStateDescriptor1.getName());
+		Map<Integer, Float> expectedFirstGroup1ValueStateData = new HashMap<>();
+		getDataWithGroupSet(groupValueStateMap, firstGroups1, expectedFirstGroup1ValueStateData);
+		validateValueStateData(expectedFirstGroup1ValueStateData, valueState);
 
-		Iterator<Pair<Row, Row>> globalIterator2 = globalState2.iterator();
-		validateStateDataWithGroupSet(globalGroupMaps, globalIterator2, firstGroups1, globalStateDescriptor2.getName());
+		Map<Integer, Map<Integer, Float>> expectedFirstGroup1MapStateData = new HashMap<>();
+		getDataWithGroupSet(groupMapStateMap, firstGroups1, expectedFirstGroup1MapStateData);
+		validateMapStateData(expectedFirstGroup1MapStateData, mapState);
 
 		// Does some updates to the stateBackend.
 		index = 0;
 		for (int i = 200; i < 1200; ++i) {
 			if (index % 2 == 0) {
-				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
+				int key1 = i;
 				if (isGroupContainsKey(firstGroups1, key1)) {
-					Row value1 = generateValue(random, globalStateDescriptor1.getNumValueColumns());
-					globalState1.setCurrentGroup(getCurrentGroup(key1, maxParallelism));
-					globalState1.put(key1, value1);
-					recordGroupPair(globalGroupMaps, globalState1, key1, value1);
+					float value1 = random.nextFloat();
+					valueState.put(key1, value1);
+					int group = getGroupForKey(key1);
+					Map<Integer, Float> map = groupValueStateMap.computeIfAbsent(group, K -> new HashMap<>());
+					map.put(key1, value1);
 				}
 
-				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
+				int key2 = i % 10;
 				if (isGroupContainsKey(firstGroups1, key2)) {
-					Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
-					globalState2.setCurrentGroup(getCurrentGroup(key2, maxParallelism));
-					globalState2.put(key2, value2);
-					recordGroupPair(globalGroupMaps, globalState2, key2, value2);
+					int mkey = i / 10;
+					float value2 = random.nextFloat();
+					mapState.add(key2, mkey, value2);
+					int group = getGroupForKey(key2);
+					Map<Integer, Map<Integer, Float>> mapStateMap = groupMapStateMap.computeIfAbsent(group, K -> new HashMap<>());
+					Map<Integer, Float> map = mapStateMap.computeIfAbsent(key2, K -> new HashMap<>());
+					map.put(mkey, value2);
 				}
 			}
 
@@ -457,40 +471,45 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		stateBackend.restore(Collections.singleton(secondSnapshot1));
 
 		// Validates that the states are correctly restored.
-		globalState1 = stateBackend.getInternalState(globalStateDescriptor1.getName());
-		assertNotNull(globalState1);
+		valueState = stateBackend.getKeyedState(descriptor1);
+		assertNotNull(valueState);
 
-		globalState2 = stateBackend.getInternalState(globalStateDescriptor2.getName());
-		assertNotNull(globalState2);
+		mapState = stateBackend.getKeyedState(descriptor2);
+		assertNotNull(mapState);
 
-		emptyState = stateBackend.getInternalState(emptyStateDescriptor.getName());
+		emptyState = stateBackend.getKeyedState(descriptor3);
 		assertNotNull(emptyState);
 
-		globalIterator1 = globalState1.iterator();
-		validateStateDataWithGroupSet(globalGroupMaps, globalIterator1, secondGroups1, globalStateDescriptor1.getName());
+		Map<Integer, Float> expectedSecondGroup1ValueStateData = new HashMap<>();
+		getDataWithGroupSet(groupValueStateMap, secondGroups1, expectedSecondGroup1ValueStateData);
+		validateValueStateData(expectedSecondGroup1ValueStateData, valueState);
 
-		globalIterator2 = globalState2.iterator();
-		validateStateDataWithGroupSet(globalGroupMaps, globalIterator2, secondGroups1, globalStateDescriptor2.getName());
+		Map<Integer, Map<Integer, Float>> expectedSecondGroup1MapStateData = new HashMap<>();
+		getDataWithGroupSet(groupMapStateMap, secondGroups1, expectedSecondGroup1MapStateData);
+		validateMapStateData(expectedSecondGroup1MapStateData, mapState);
 
 		// Does some updates to the stateBackend.
 		index = 0;
 		for (int i = 200; i < 1200; ++i) {
 			if (index % 3 == 0) {
-				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
+				int key1 = i;
 				if (isGroupContainsKey(secondGroups1, key1)) {
-					Row value1 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
-					globalState1.setCurrentGroup(getCurrentGroup(key1, maxParallelism));
-					globalState1.put(key1, value1);
-					recordGroupPair(globalGroupMaps, globalState1, key1, value1);
+					float value1 = random.nextFloat();
+					valueState.put(key1, value1);
+					int group = getGroupForKey(key1);
+					Map<Integer, Float> map = groupValueStateMap.computeIfAbsent(group, K -> new HashMap<>());
+					map.put(key1, value1);
 				}
 
-				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
+				int key2 = i % 10;
 				if (isGroupContainsKey(secondGroups1, key2)) {
-					Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
-					globalState2.setCurrentGroup(getCurrentGroup(key2, maxParallelism));
-					globalState2.put(key2, value2);
-
-					recordGroupPair(globalGroupMaps, globalState2, key2, value2);
+					int mkey = i / 10;
+					float value2 = random.nextFloat();
+					mapState.add(key2, mkey, value2);
+					int group = getGroupForKey(key2);
+					Map<Integer, Map<Integer, Float>> mapStateMap = groupMapStateMap.computeIfAbsent(group, K -> new HashMap<>());
+					Map<Integer, Float> map = mapStateMap.computeIfAbsent(key2, K -> new HashMap<>());
+					map.put(mkey, value2);
 				}
 			}
 
@@ -512,40 +531,45 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		stateBackend.restore(Collections.singleton(thirdSnapshot1));
 
 		// Validates that the states are correctly restored.
-		globalState1 = stateBackend.getInternalState(globalStateDescriptor1.getName());
-		assertNotNull(globalState1);
+		valueState = stateBackend.getKeyedState(descriptor1);
+		assertNotNull(valueState);
 
-		globalState2 = stateBackend.getInternalState(globalStateDescriptor2.getName());
-		assertNotNull(globalState2);
+		mapState = stateBackend.getKeyedState(descriptor2);
+		assertNotNull(mapState);
 
-		emptyState = stateBackend.getInternalState(emptyStateDescriptor.getName());
+		emptyState = stateBackend.getKeyedState(descriptor3);
 		assertNotNull(emptyState);
 
-		globalIterator1 = globalState1.iterator();
-		validateStateDataWithGroupSet(globalGroupMaps, globalIterator1, thirdGroups1, globalStateDescriptor1.getName());
+		Map<Integer, Float> expectedThirdGroup1ValueStateData = new HashMap<>();
+		getDataWithGroupSet(groupValueStateMap, thirdGroups1, expectedThirdGroup1ValueStateData);
+		validateValueStateData(expectedThirdGroup1ValueStateData, valueState);
 
-		globalIterator2 = globalState2.iterator();
-		validateStateDataWithGroupSet(globalGroupMaps, globalIterator2, thirdGroups1, globalStateDescriptor2.getName());
-
+		Map<Integer, Map<Integer, Float>> expectedThirdGroup1MapStateData = new HashMap<>();
+		getDataWithGroupSet(groupMapStateMap, thirdGroups1, expectedThirdGroup1MapStateData);
+		validateMapStateData(expectedThirdGroup1MapStateData, mapState);
 
 		// Does some updates to the stateBackend.
 		index = 0;
 		for (int i = 200; i < 1200; ++i) {
 			if (index % 4 == 0) {
-				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
+				int key1 = i;
 				if (isGroupContainsKey(thirdGroups1, key1)) {
-					Row value1 = generateValue(random, globalStateDescriptor1.getNumValueColumns());
-					globalState1.setCurrentGroup(getCurrentGroup(key1, maxParallelism));
-					globalState1.put(key1, value1);
-					recordGroupPair(globalGroupMaps, globalState1, key1, value1);
+					float value1 = random.nextFloat();
+					valueState.put(key1, value1);
+					int group = getGroupForKey(key1);
+					Map<Integer, Float> map = groupValueStateMap.computeIfAbsent(group, K -> new HashMap<>());
+					map.put(key1, value1);
 				}
 
-				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
+				int key2 = i % 10;
 				if (isGroupContainsKey(thirdGroups1, key2)) {
-					Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
-					globalState2.setCurrentGroup(getCurrentGroup(key2, maxParallelism));
-					globalState2.put(key2, value2);
-					recordGroupPair(globalGroupMaps, globalState2, key2, value2);
+					int mkey = i / 10;
+					float value2 = random.nextFloat();
+					mapState.add(key2, mkey, value2);
+					int group = getGroupForKey(key2);
+					Map<Integer, Map<Integer, Float>> mapStateMap = groupMapStateMap.computeIfAbsent(group, K -> new HashMap<>());
+					Map<Integer, Float> map = mapStateMap.computeIfAbsent(key2, K -> new HashMap<>());
+					map.put(mkey, value2);
 				}
 			}
 
@@ -574,35 +598,39 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			newRightBackend.restore(Arrays.asList(secondSnapshot3ForRight, thirdSnapshot3));
 
 			// Validates that the states are correctly restored.
-			InternalState leftGlobalState1 = newLeftBackend.getInternalState(globalStateDescriptor1.getName());
-			assertNotNull(leftGlobalState1);
+			KeyedValueState<Integer, Float> leftValueState1 = newLeftBackend.getKeyedState(descriptor1);
+			assertNotNull(leftValueState1);
 
-			InternalState rightGlobalState1 = newRightBackend.getInternalState(globalStateDescriptor1.getName());
-			assertNotNull(rightGlobalState1);
+			KeyedValueState<Integer, Float> rightValueState1 = newRightBackend.getKeyedState(descriptor1);
+			assertNotNull(rightValueState1);
 
-			InternalState leftGlobalState2 = newLeftBackend.getInternalState(globalStateDescriptor2.getName());
-			assertNotNull(leftGlobalState2);
+			KeyedMapState<Integer, Integer, Float> leftMapState2 = newLeftBackend.getKeyedState(descriptor2);
+			assertNotNull(leftMapState2);
 
-			InternalState rightGlobalState2 = newRightBackend.getInternalState(globalStateDescriptor2.getName());
-			assertNotNull(rightGlobalState2);
+			KeyedMapState<Integer, Integer, Float> rightMapState2 = newRightBackend.getKeyedState(descriptor2);
+			assertNotNull(rightMapState2);
 
-			emptyState = newLeftBackend.getInternalState(emptyStateDescriptor.getName());
+			emptyState = newLeftBackend.getKeyedState(descriptor3);
 			assertNotNull(emptyState);
 
-			emptyState = newRightBackend.getInternalState(emptyStateDescriptor.getName());
+			emptyState = newRightBackend.getKeyedState(descriptor3);
 			assertNotNull(emptyState);
 
-			Iterator<Pair<Row, Row>> leftGlobalIterator1 = leftGlobalState1.iterator();
-			validateStateDataWithGroupSet(globalGroupMaps, leftGlobalIterator1, leftGroups3, globalStateDescriptor1.getName());
+			Map<Integer, Float> expectedLeftValueStateData = new HashMap<>();
+			getDataWithGroupSet(groupValueStateMap, leftGroups3, expectedLeftValueStateData);
+			validateValueStateData(expectedLeftValueStateData, leftValueState1);
 
-			Iterator<Pair<Row, Row>> rightGlobalIterator1 = rightGlobalState1.iterator();
-			validateStateDataWithGroupSet(globalGroupMaps, rightGlobalIterator1, rightGroups3, globalStateDescriptor1.getName());
+			Map<Integer, Map<Integer, Float>> expectedLeftMapStateData = new HashMap<>();
+			getDataWithGroupSet(groupMapStateMap, leftGroups3, expectedLeftMapStateData);
+			validateMapStateData(expectedLeftMapStateData, leftMapState2);
 
-			Iterator<Pair<Row, Row>> leftGlobalIterator2 = leftGlobalState2.iterator();
-			validateStateDataWithGroupSet(globalGroupMaps, leftGlobalIterator2, leftGroups3, globalStateDescriptor2.getName());
+			Map<Integer, Float> expectedRightValueStateData = new HashMap<>();
+			getDataWithGroupSet(groupValueStateMap, rightGroups3, expectedRightValueStateData);
+			validateValueStateData(expectedRightValueStateData, rightValueState1);
 
-			Iterator<Pair<Row, Row>> rightGlobalIterator2 = rightGlobalState2.iterator();
-			validateStateDataWithGroupSet(globalGroupMaps, rightGlobalIterator2, rightGroups3, globalStateDescriptor2.getName());
+			Map<Integer, Map<Integer, Float>> expectedRightMapStateData = new HashMap<>();
+			getDataWithGroupSet(groupMapStateMap, rightGroups3, expectedRightMapStateData);
+			validateMapStateData(expectedRightMapStateData, rightMapState2);
 
 		} finally {
 			newLeftBackend.dispose();
@@ -610,209 +638,70 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		}
 	}
 
-	/**
-	 * Test whether the key/value serializers are duplicated for async snapshot.
-	 */
-	@Test
-	public void testDuplicateSerializersWhenAsyncSnapshot() throws Exception {
-		SharedStateRegistry sharedStateRegistry = new SharedStateRegistry();
+	//--------------------------------------------------------------------------
 
-		// test whether key serializer is duplicated.
-		InternalStateDescriptor keySerializerDescriptor =
-			new InternalStateDescriptorBuilder("keySerializerState")
-				.addKeyColumn("key", new TestDuplicateIntSerializer())
-				.addValueColumn("value", IntSerializer.INSTANCE)
-				.setPartitioner(partitioner)
-				.getDescriptor();
-		InternalState keySerializerState = stateBackend.getInternalState(keySerializerDescriptor);
-
-		Row internalKey = Row.of(1);
-		keySerializerState.setCurrentGroup(getCurrentGroup(internalKey, maxParallelism));
-		keySerializerState.put(internalKey, Row.of(2));
-
-		try {
-			runSnapshot(stateBackend, 0, 0, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
-			fail("Should throw DuplicateSerializerException");
-		} catch (Exception e) {
-			assertTrue(e.getCause() instanceof TestDuplicateIntSerializer.DuplicateSerializerException);
-		}
-
-		stateBackend.dispose();
-
-		stateBackend = createStateBackend(
-			maxParallelism,
-			getGroupsForSubtask(maxParallelism, initParallelism, initSubtaskIndex),
-			classLoader,
-			localRecoveryConfig);
-		stateBackend.restore(null);
-
-		// test whether value serializer is duplicated.
-		InternalStateDescriptor valueSerializerDescriptor =
-			new InternalStateDescriptorBuilder("valueSerializerState")
-				.addKeyColumn("key", IntSerializer.INSTANCE)
-				.addValueColumn("value", new TestDuplicateIntSerializer())
-				.getDescriptor();
-		InternalState valueSerializerState = stateBackend.getInternalState(valueSerializerDescriptor);
-
-		valueSerializerState.setCurrentGroup(getCurrentGroup(internalKey, maxParallelism));
-		valueSerializerState.put(internalKey, Row.of(2));
-
-		try {
-			runSnapshot(stateBackend, 0, 0, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
-			fail("Should throw DuplicateSerializerException");
-		} catch (Exception e) {
-			assertTrue(e.getCause() instanceof TestDuplicateIntSerializer.DuplicateSerializerException);
-		}
+	private boolean isGroupContainsKey(GroupSet groups, int key) {
+		return groups.contains(KeyGroupRangeAssignment.assignToKeyGroup(key, maxParallelism));
 	}
 
-	//--------------------------------------------------------------------------
+	private static int getGroupForKey(int key) {
+		return KeyGroupRangeAssignment.assignToKeyGroup(key, maxParallelism);
+	}
 
 	private GroupSet getGroupsForSubtask(int maxParallelism, int parallelism, int subtaskIndex) {
 		GroupRange groups = new GroupRange(0, maxParallelism);
 		return GroupRangePartitioner.getPartitionRange(groups, parallelism, subtaskIndex);
 	}
 
-	private boolean isGroupContainsKey(GroupSet groups, Row key) {
-		return groups.contains(partitioner.partition(key, maxParallelism));
+	private static void validateValueStateData(Map<Integer, Float> expectedData, KeyedValueState<Integer, Float> valueState) {
+		Map<Integer, Float> actualData = valueState.getAll();
+
+		if (expectedData == null || expectedData.isEmpty()) {
+			assertTrue(actualData.isEmpty());
+			return;
+		}
+
+		assertEquals(expectedData.size(), actualData.size());
+		for (Map.Entry<Integer, Float> entry : actualData.entrySet()) {
+			assertEquals(expectedData.get(entry.getKey()), entry.getValue());
+		}
 	}
 
-	private static Row generateKey(int number, int numKeyColumns) {
-		Row key = new Row(numKeyColumns);
-		for (int j = 0; j < numKeyColumns; ++j) {
-			if (j == numKeyColumns - 1) {
-				key.setField(j, number);
+	private static void validateMapStateData(Map<Integer, Map<Integer, Float>> expectedData, KeyedMapState<Integer, Integer, Float> mapState) {
+		Map<Integer, Map<Integer, Float>> actualData = mapState.getAll();
+
+		if (expectedData == null || expectedData.isEmpty()) {
+			assertTrue(actualData.isEmpty());
+			return;
+		}
+
+		assertEquals(expectedData.size(), actualData.size());
+		for (Map.Entry<Integer, Map<Integer, Float>> entry : actualData.entrySet()) {
+			int key = entry.getKey();
+			Map<Integer, Float> actualMap = entry.getValue();
+			Map<Integer, Float> expectedMap = expectedData.get(key);
+			if (expectedMap == null || expectedMap.isEmpty()) {
+				assertTrue(actualMap.isEmpty());
 			} else {
-				key.setField(j, number % 10);
-			}
-			number /= 10;
-		}
-		return key;
-	}
-
-	private static Row generateValue(Random random, int numValueColumns) {
-		Row value = new Row(numValueColumns);
-		for (int j = 0; j < numValueColumns; ++j) {
-			value.setField(j, random.nextFloat());
-		}
-		return value;
-	}
-
-	private static void recordGroupPair(Map<Integer, Map<String, Map<Row, Row>>> groupMaps, InternalState state, Row key, Row value) {
-		InternalStateDescriptor stateDescriptor = state.getDescriptor();
-		String stateName = stateDescriptor.getName();
-		Partitioner<Row> partitioner = stateDescriptor.getPartitioner();
-
-		int group = partitioner.partition(key, state.getNumGroups());
-		Map<String, Map<Row, Row>> stateMaps = groupMaps.computeIfAbsent(group, k -> new HashMap<>());
-		Map<Row, Row> pairs = stateMaps.computeIfAbsent(stateName, k -> new HashMap<>());
-		pairs.put(key, value);
-	}
-
-	private static void populateGroupStateData(Map<Integer, Map<String, Map<Row, Row>>> groupMaps, InternalState state) {
-		Random random = new Random();
-
-		InternalStateDescriptor stateDescriptor = state.getDescriptor();
-		int numKeyColumns = stateDescriptor.getNumKeyColumns();
-		int numValueColumns = stateDescriptor.getNumValueColumns();
-
-		for (int i = 0; i < 1000; ++i) {
-			Row key = generateKey(i, numKeyColumns);
-			Row value = generateValue(random, numValueColumns);
-
-			state.setCurrentGroup(getCurrentGroup(key, maxParallelism));
-			state.put(key, value);
-			recordGroupPair(groupMaps, state, key, value);
-		}
-	}
-
-	private static void populateStateData(Map<String, Map<Row, Row>> stateMaps, InternalState state) {
-		Random random = new Random();
-
-		InternalStateDescriptor stateDescriptor = state.getDescriptor();
-		int numKeyColumns = stateDescriptor.getNumKeyColumns();
-		int numValueColumns = stateDescriptor.getNumValueColumns();
-
-		for (int i = 0; i < 1000; ++i) {
-			Row key = generateKey(i, numKeyColumns);
-			Row value = generateValue(random, numValueColumns);
-
-			state.setCurrentGroup(getCurrentGroup(key, maxParallelism));
-			state.put(key, value);
-			recordStatePair(stateMaps, state, key, value);
-		}
-	}
-
-	private static void recordStatePair(Map<String, Map<Row, Row>> stateMaps, InternalState state, Row key, Row value) {
-		InternalStateDescriptor stateDescriptor = state.getDescriptor();
-
-		String stateName = stateDescriptor.getName();
-		Map<Row, Row> stateMap = stateMaps.computeIfAbsent(stateName, k -> new HashMap<>());
-
-		stateMap.put(key, value);
-	}
-
-	private static void validateStateData(Map<Row, Row> pairs, Iterator<Pair<Row, Row>> iterator) {
-		assertNotNull(iterator);
-
-		if (pairs == null || pairs.isEmpty()) {
-			assertFalse(iterator.hasNext());
-			return;
-		}
-
-		int numActualPairs = 0;
-		while (iterator.hasNext()) {
-			Pair<Row, Row> pair = iterator.next();
-
-			Row actualValue = pair.getValue();
-			Row expectedValue = pairs.get(pair.getKey());
-			assertEquals(expectedValue, actualValue);
-
-			numActualPairs++;
-		}
-
-		assertEquals(pairs.size(), numActualPairs);
-	}
-
-	private static void validateStateDataWithGroupSet(
-		Map<Integer, Map<String, Map<Row, Row>>> groupMaps,
-		Iterator<Pair<Row, Row>> iterator,
-		GroupSet groups, String stateName) {
-
-		assertNotNull(iterator);
-
-		if (groupMaps == null) {
-			assertFalse(iterator.hasNext());
-			return;
-		}
-
-		Map<Row, Row> pairs = new HashMap<>();
-		for (Integer group : groups) {
-			Map<String, Map<Row, Row>> stateMap = groupMaps.get(group);
-			if (stateMap != null) {
-				Map<Row, Row> rowMap = stateMap.get(stateName);
-				if (rowMap != null) {
-					pairs.putAll(rowMap);
+				assertEquals(expectedMap.size(), actualMap.size());
+				for (Map.Entry<Integer, Float> e : actualMap.entrySet()) {
+					assertEquals(expectedMap.get(e.getKey()), e.getValue());
 				}
 			}
 		}
+	}
 
-		if (pairs.isEmpty()) {
-			assertFalse(iterator.hasNext());
-			return;
+	private static<K, V> void getDataWithGroupSet(
+		Map<Integer, Map<K, V>> groupMaps,
+		GroupSet groups,
+		Map<K, V> returnedMap
+	) {
+		for (Integer group : groups) {
+			Map<K, V> data = groupMaps.get(group);
+			if (data != null) {
+				returnedMap.putAll(data);
+			}
 		}
-
-		int numActualPairs = 0;
-		while (iterator.hasNext()) {
-			Pair<Row, Row> pair = iterator.next();
-
-			Row actualValue = pair.getValue();
-			Row expectedValue = pairs.get(pair.getKey());
-			assertEquals(expectedValue, actualValue);
-
-			numActualPairs++;
-		}
-
-		assertEquals(pairs.size(), numActualPairs);
 	}
 
 	private static StatePartitionSnapshot runSnapshot(
@@ -844,7 +733,4 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		return snapshotResult == null ? null : snapshotResult.getJobManagerOwnedSnapshot();
 	}
 
-	private static  int getCurrentGroup(Row key, int numGroups) {
-		return partitioner.partition(key, numGroups);
-	}
 }

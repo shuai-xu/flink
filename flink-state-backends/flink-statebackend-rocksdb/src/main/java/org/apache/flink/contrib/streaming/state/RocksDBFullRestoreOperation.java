@@ -18,27 +18,32 @@
 
 package org.apache.flink.contrib.streaming.state;
 
-import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.api.common.typeutils.base.IntSerializer;
+import org.apache.flink.api.common.typeutils.base.array.BytePrimitiveArraySerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.FSDataInputStream;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
 import org.apache.flink.runtime.state.GroupSet;
-import org.apache.flink.runtime.state.InternalState;
-import org.apache.flink.runtime.state.InternalStateDescriptor;
+import org.apache.flink.runtime.state.StateAccessException;
 import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StreamStateHandle;
-import org.apache.flink.types.Row;
+import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.Preconditions;
 
+import org.rocksdb.ColumnFamilyHandle;
+import org.rocksdb.RocksDBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -48,7 +53,10 @@ public class RocksDBFullRestoreOperation {
 
 	private static final Logger LOG = LoggerFactory.getLogger(RocksDBFullRestoreOperation.class);
 
+	/** The state backend who wants to restore the snapshot.*/
 	private final RocksDBInternalStateBackend stateBackend;
+
+	private final Map<Integer, String> id2StateName = new HashMap<>();
 
 	RocksDBFullRestoreOperation(RocksDBInternalStateBackend stateBackend) {
 		this.stateBackend = stateBackend;
@@ -61,6 +69,9 @@ public class RocksDBFullRestoreOperation {
 			return;
 		}
 
+		long startMills = System.currentTimeMillis();
+
+		stateBackend.createDB();
 		for (StatePartitionSnapshot rawSnapshot : restoredSnapshots) {
 			Preconditions.checkState(rawSnapshot instanceof DefaultStatePartitionSnapshot);
 			DefaultStatePartitionSnapshot snapshot =
@@ -76,15 +87,34 @@ public class RocksDBFullRestoreOperation {
 				DataInputViewStreamWrapper inputView =
 					new DataInputViewStreamWrapper(inputStream);
 
-				int numRestoredStates = inputView.readInt();
-				for (int i = 0; i < numRestoredStates; ++i) {
-					InternalStateDescriptor restoredStateDescriptor =
+				int numRestoredKeyedStates = inputView.readInt();
+				List<KeyedStateDescriptor> keyedStateDescriptors = new ArrayList<>(numRestoredKeyedStates);
+				for (int i = 0; i < numRestoredKeyedStates; ++i) {
+					KeyedStateDescriptor restoredStateDescriptor =
+						InstantiationUtil.deserializeObject(
+							inputStream, stateBackend.getUserClassLoader());
+					keyedStateDescriptors.add(restoredStateDescriptor);
+				}
+
+				int numRestoredSubKeyedStates = inputView.readInt();
+				List<SubKeyedStateDescriptor> subKeyedStateDescriptors = new ArrayList<>(numRestoredSubKeyedStates);
+				for (int i = 0; i < numRestoredSubKeyedStates; ++i) {
+					SubKeyedStateDescriptor restoredStateDescriptor =
 						InstantiationUtil.deserializeObject(
 							inputStream, stateBackend.getUserClassLoader());
 
-					stateBackend.getInternalState(restoredStateDescriptor);
+					subKeyedStateDescriptors.add(restoredStateDescriptor);
+				}
+				int numStates = inputView.readInt();
+				for (int i = 0; i < numStates; ++i) {
+					String stateName = InstantiationUtil.deserializeObject(
+						inputStream, stateBackend.getUserClassLoader());
+					Integer id = InstantiationUtil.deserializeObject(
+						inputStream, stateBackend.getUserClassLoader());
+					id2StateName.put(id, stateName);
 				}
 
+				stateBackend.registAllStates(keyedStateDescriptors, subKeyedStateDescriptors);
 				Map<Integer, Tuple2<Long, Integer>> metaInfos = snapshot.getMetaInfos();
 				restoreData(metaInfos, inputStream, inputView);
 			} finally {
@@ -97,6 +127,9 @@ public class RocksDBFullRestoreOperation {
 				}
 			}
 		}
+
+		long endMills = System.currentTimeMillis();
+		LOG.info("Full Restored with RocksDB state backend using {} ms.", endMills - startMills);
 	}
 
 	//--------------------------------------------------------------------------
@@ -114,8 +147,7 @@ public class RocksDBFullRestoreOperation {
 	private void restoreData(
 		Map<Integer, Tuple2<Long, Integer>> metaInfos,
 		FSDataInputStream inputStream,
-		DataInputView inputView
-	) throws IOException {
+		DataInputView inputView) throws IOException {
 		GroupSet groups = stateBackend.getGroups();
 		for (int group : groups) {
 			Tuple2<Long, Integer> metaInfo = metaInfos.get(group);
@@ -129,28 +161,17 @@ public class RocksDBFullRestoreOperation {
 			inputStream.seek(offset);
 
 			for (int i = 0; i < numEntries; ++i) {
-				String stateName = StringSerializer.INSTANCE.deserialize(inputView);
-
-				InternalState state = stateBackend.getInternalState(stateName);
-				Preconditions.checkState(state != null);
-
-				InternalStateDescriptor stateDescriptor = state.getDescriptor();
-				TypeSerializer<Row> keySerializer = stateDescriptor.getKeySerializer();
-				Row key = keySerializer.deserialize(inputView);
-
-				TypeSerializer<Row> valueSerializer = stateDescriptor.getValueSerializer();
-				Row value = valueSerializer.deserialize(inputView);
-
-				state.setCurrentGroup(getGroupForKey(state.getDescriptor(), key));
-				state.put(key, value);
+				Integer id = IntSerializer.INSTANCE.deserialize(inputView);
+				String cfNameStr = id2StateName.get(id);
+				ColumnFamilyHandle columnFamilyHandle = stateBackend.getOrCreateColumnfamily(cfNameStr);
+				byte[] key = BytePrimitiveArraySerializer.INSTANCE.deserialize(inputView);
+				byte[] value = BytePrimitiveArraySerializer.INSTANCE.deserialize(inputView);
+				try {
+					stateBackend.getDbInstance().put(columnFamilyHandle, key, value);
+				} catch (RocksDBException e) {
+					throw new StateAccessException(e);
+				}
 			}
 		}
-	}
-
-	private int getGroupForKey(InternalStateDescriptor descriptor, Row key) {
-		int groupsToPartition = stateBackend.getNumGroups();
-
-		return descriptor.getPartitioner()
-			.partition(key, groupsToPartition);
 	}
 }

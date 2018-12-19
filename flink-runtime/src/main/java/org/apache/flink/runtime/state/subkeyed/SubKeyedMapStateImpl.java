@@ -18,17 +18,17 @@
 
 package org.apache.flink.runtime.state.subkeyed;
 
-import org.apache.flink.runtime.state.FieldBasedPartitioner;
-import org.apache.flink.runtime.state.InternalState;
-import org.apache.flink.runtime.state.InternalStateDescriptor;
-import org.apache.flink.runtime.state.InternalStateDescriptorBuilder;
+import org.apache.flink.api.common.typeutils.SerializationException;
+import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.runtime.state.AbstractInternalStateBackend;
+import org.apache.flink.runtime.state.StateStorage;
 import org.apache.flink.util.Preconditions;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * An implementation of {@link SubKeyedMapState} backed by an internal state.
+ * An implementation of {@link SubKeyedMapState} backed by a state storage.
  *
  * @param <K> Type of the keys in the state.
  * @param <N> Type of the namespaces in the state.
@@ -40,39 +40,41 @@ public final class SubKeyedMapStateImpl<K, N, MK, MV>
 	implements SubKeyedMapState<K, N, MK, MV> {
 
 	/**
-	 * Constructor with the internal state to store mappings.
-	 *
-	 * @param internalState The internal state where mappings are stored.
+	 * The descriptor of current state.
 	 */
-	public SubKeyedMapStateImpl(InternalState internalState) {
-		super(internalState);
-	}
+	private SubKeyedMapStateDescriptor stateDescriptor;
 
 	/**
-	 * Creates and returns the descriptor for the internal state backing the
-	 * subkeyed state.
+	 * Constructor with the state storage to store mappings.
 	 *
-	 * @param subKeyedStateDescriptor The descriptor for the subkeyed state.
-	 * @param <K> Type of the keys in the state.
-	 * @param <N> Type of the namespaces in the state.
-	 * @param <MK> Type of the map keys in the state.
-	 * @param <MV> Type of the map values in the state.
-	 * @return The descriptor for the internal state backing the keyed state.
+	 * @param stateStorage The state storage where mappings are stored.
 	 */
-	public static <K, N, MK, MV> InternalStateDescriptor createInternalStateDescriptor(
-		final SubKeyedMapStateDescriptor<K, N, MK, MV> subKeyedStateDescriptor
+	public SubKeyedMapStateImpl(
+		AbstractInternalStateBackend internalStateBackend,
+		SubKeyedMapStateDescriptor descriptor,
+		StateStorage stateStorage
 	) {
-		Preconditions.checkNotNull(subKeyedStateDescriptor);
+		super(internalStateBackend, stateStorage);
 
-		return new InternalStateDescriptorBuilder(subKeyedStateDescriptor.getName())
-			.addKeyColumn("key", subKeyedStateDescriptor.getKeySerializer())
-			.addKeyColumn("namespace", subKeyedStateDescriptor.getNamespaceSerializer())
-			.addKeyColumn("mapKey", subKeyedStateDescriptor.getMapKeySerializer())
-			.addValueColumn("mapValue",
-				subKeyedStateDescriptor.getMapValueSerializer(),
-				subKeyedStateDescriptor.getMapValueMerger())
-			.setPartitioner(new FieldBasedPartitioner(KEY_FIELD_INDEX, partitioner))
-			.getDescriptor();
+		this.stateDescriptor = Preconditions.checkNotNull(descriptor);
+		this.keySerializer = descriptor.getKeySerializer();
+		this.namespaceSerializer = descriptor.getNamespaceSerializer();
+		this.mapKeySerializer = descriptor.getMapKeySerializer();
+		this.mapValueSerializer = descriptor.getMapValueSerializer();
+		try {
+			outputStream.reset();
+			StringSerializer.INSTANCE.serialize(descriptor.getName(), outputView);
+			stateNameByte = outputStream.toByteArray();
+		} catch (Exception e) {
+			throw new SerializationException(e);
+		}
+		this.stateNameForSerialize = stateStorage.supportMultiColumnFamilies() ? null : stateNameByte;
+		this.serializedStateNameLength = stateNameForSerialize == null ? 0 : stateNameForSerialize.length;
+	}
+
+	@Override
+	public SubKeyedMapStateDescriptor getDescriptor() {
+		return stateDescriptor;
 	}
 
 	@Override

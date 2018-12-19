@@ -19,8 +19,6 @@
 package org.apache.flink.runtime.state.keyed;
 
 import org.apache.flink.api.common.functions.Comparator;
-import org.apache.flink.api.common.functions.Merger;
-import org.apache.flink.api.common.functions.SortedMapMerger;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.SortedMapSerializer;
 import org.apache.flink.util.Preconditions;
@@ -77,49 +75,6 @@ public final class KeyedSortedMapStateDescriptor<K, MK, MV>
 		super(name, keySerializer, sortedMapSerializer);
 	}
 
-	/**
-	 * Constructor with given name, scope, the comparator for the maps, the
-	 * serializers for the keys, the map keys and the map values and the merger
-	 * for the map values in the state.
-	 *
-	 * @param name The name of the state.
-	 * @param keySerializer The serializer for the keys in the state.
-	 * @param mapKeyComparator The comparator for the map keys in the state.
-	 * @param mapKeySerializer The serializer for the map keys in the state.
-	 * @param mapValueSerializer The serializer for the map values in the state.
-	 * @param mapValueMerger The merger for the map values in the state.
-	 */
-	public KeyedSortedMapStateDescriptor(
-		final String name,
-		final TypeSerializer<K> keySerializer,
-		final Comparator<MK> mapKeyComparator,
-		final TypeSerializer<MK> mapKeySerializer,
-		final TypeSerializer<MV> mapValueSerializer,
-		final Merger<MV> mapValueMerger
-	) {
-		super(name, keySerializer,
-			new SortedMapSerializer<>(mapKeyComparator, mapKeySerializer, mapValueSerializer),
-			new SortedMapMerger<>(mapValueMerger));
-	}
-
-	/**
-	 * Constructor with given name, scope, the serializer and the merger for the
-	 * sorted maps.
-	 *
-	 * @param name The name of the state.
-	 * @param keySerializer The serializer for the keys in the state.
-	 * @param sortedMapSerializer The serializer for the sorted maps in the state.
-	 * @param sortedMapMerger The merger for the sorted maps in the state.
-	 */
-	public KeyedSortedMapStateDescriptor(
-		final String name,
-		final TypeSerializer<K> keySerializer,
-		final SortedMapSerializer<MK, MV> sortedMapSerializer,
-		final SortedMapMerger<MK, MV> sortedMapMerger
-	) {
-		super(name, keySerializer, sortedMapSerializer, sortedMapMerger);
-	}
-
 	@Override
 	public SortedMapSerializer<MK, MV> getValueSerializer() {
 		TypeSerializer<SortedMap<MK, MV>> sortedMapSerializer = super.getValueSerializer();
@@ -154,27 +109,6 @@ public final class KeyedSortedMapStateDescriptor<K, MK, MV>
 	public TypeSerializer<MV> getMapValueSerializer() {
 		SortedMapSerializer<MK, MV> sortedMapSerializer = getValueSerializer();
 		return sortedMapSerializer.getValueSerializer();
-	}
-
-	@Override
-	public SortedMapMerger<MK, MV> getValueMerger() {
-		Merger<SortedMap<MK, MV>> sortedMapMerger = super.getValueMerger();
-		if (sortedMapMerger == null) {
-			return null;
-		}
-
-		Preconditions.checkState(sortedMapMerger instanceof SortedMapMerger);
-		return (SortedMapMerger<MK, MV>) sortedMapMerger;
-	}
-
-	/**
-	 * Returns the merger for the map values in the state.
-	 *
-	 * @return The merger for the map values in the state.
-	 */
-	public Merger<MV> getMapValueMerger() {
-		SortedMapMerger<MK, MV> sortedMapMerger = getValueMerger();
-		return sortedMapMerger == null ? null : sortedMapMerger.getValueMerger();
 	}
 
 	@Override

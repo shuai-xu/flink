@@ -65,6 +65,7 @@ public interface SubKeyedListState<K, N, E> extends SubKeyedState<K, N, List<E>>
 	 * @param elements The elements to be set.
 	 */
 	void putAll(K key, N namespace, Collection<? extends E> elements);
+
 	/**
 	 * Removes one occurrence of the given element from the list under the given
 	 * key and namespace, if it is present.

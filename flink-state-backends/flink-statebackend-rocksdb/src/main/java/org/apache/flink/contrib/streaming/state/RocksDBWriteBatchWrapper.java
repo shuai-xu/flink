@@ -99,3 +99,4 @@ public class RocksDBWriteBatchWrapper implements AutoCloseable {
 		IOUtils.closeQuietly(batch);
 	}
 }
+

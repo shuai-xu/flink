@@ -22,16 +22,10 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.ClosureCleaner;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.runtime.operators.testutils.MockEnvironment;
-import org.apache.flink.runtime.state.AbstractInternalStateBackend;
-import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.KeyedStateBackend;
 import org.apache.flink.runtime.state.heap.HeapKeyedStateBackend;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
-import org.apache.flink.types.Pair;
-import org.apache.flink.types.Row;
-
-import java.util.Iterator;
 
 /**
  * Extension of {@link OneInputStreamOperatorTestHarness} that allows the operator to get
@@ -94,20 +88,4 @@ public class KeyedOneInputStreamOperatorTestHarness<K, IN, OUT>
 		}
 	}
 
-	public int numInternalStateEntries() {
-		AbstractStreamOperator<?> abstractStreamOperator = (AbstractStreamOperator<?>) operator;
-		AbstractInternalStateBackend backend = abstractStreamOperator.getInternalStateBackend();
-
-		int total = 0;
-		for (InternalState state : backend.getInternalStates()) {
-			Iterator<Pair<Row, Row>> iterator = state.iterator();
-
-			while (iterator.hasNext()) {
-				iterator.next();
-				total = total + 1;
-			}
-		}
-
-		return total;
-	}
 }

@@ -19,19 +19,26 @@
 package org.apache.flink.runtime.state.keyed;
 
 import org.apache.flink.api.common.functions.HashPartitioner;
+import org.apache.flink.api.common.typeutils.SerializationException;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
+import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.queryablestate.client.state.serialization.KvStateSerializer;
-import org.apache.flink.runtime.state.FieldBasedPartitioner;
-import org.apache.flink.runtime.state.InternalColumnDescriptor;
-import org.apache.flink.runtime.state.InternalState;
-import org.apache.flink.runtime.state.InternalStateDescriptor;
-import org.apache.flink.runtime.state.InternalStateDescriptorBuilder;
+import org.apache.flink.runtime.state.AbstractInternalStateBackend;
+import org.apache.flink.runtime.state.GroupIterator;
+import org.apache.flink.runtime.state.StateAccessException;
+import org.apache.flink.runtime.state.StateIteratorUtil;
+import org.apache.flink.runtime.state.StateSerializerUtil;
+import org.apache.flink.runtime.state.StateStorage;
+import org.apache.flink.runtime.state.StorageIterator;
+import org.apache.flink.runtime.state.heap.HeapStateStorage;
 import org.apache.flink.types.Pair;
-import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -41,70 +48,88 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.flink.runtime.state.StateSerializerUtil.KEY_END_BYTE;
+
 /**
- * An implementation of {@link KeyedListState} backed by an internal state. The
- * pairs in the internal state are formatted as {K -> List{E}}. Because the
- * pairs are partitioned by K, all the elements under the same key reside in the
- * same group.
+ * An implementation of {@link KeyedListState} backed by a {@link StateStorage}.
+ * The pairs are formatted as {K -> List{E}}, and the pairs are partitioned by K.
  *
  * @param <K> Type of the keys in the state.
  * @param <E> Type of the elements in the state.
  */
 public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 
-	/** The index of the column for keys in the internal state. */
-	private static final int KEY_FIELD_INDEX = 0;
-
-	/** The index of the column for elements in the internal state. */
-	private static final int ELEMENTS_FIELD_INDEX = 0;
-
-	/**
-	 * The internal state where the elements are stored.
-	 */
-	private final InternalState internalState;
-
 	/**
 	 * The descriptor of current state.
 	 */
-	private static KeyedListStateDescriptor stateDescriptor;
+	private final KeyedListStateDescriptor<K, E> descriptor;
 
-	/** partitioner used to generate key group.**/
+	/**
+	 * The state storage where the values are stored.
+	 */
+	private final StateStorage stateStorage;
+
+	/**
+	 * Serializer for list element of current state.
+	 */
+	private TypeSerializer<E> elementSerializer;
+
+	/**
+	 * Serializer for key of current state.
+	 */
+	private TypeSerializer<K> keySerializer;
+
+	/**
+	 * Serialized bytes of current state name.
+	 */
+	private final byte[] stateNameByte;
+
+	private final byte[] stateNameForSerialize;
+
+	/**
+	 * State backend who creates the current state.
+	 */
+	private AbstractInternalStateBackend internalStateBackend;
+
+	/**
+	 * partitioner used to generate key group.
+	 **/
 	private static final HashPartitioner partitioner = HashPartitioner.INSTANCE;
+
+	private ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
+
+	private DataOutputView outputView = new DataOutputViewStreamWrapper(outputStream);
 
 	//--------------------------------------------------------------------------
 
 	/**
-	 * Constructor with the internal state to store elements.
+	 * Constructor with the state storage to store the values.
 	 *
-	 * @param internalState The internal state where elements are stored.
+	 * @param descriptor   The descriptor of this state.
+	 * @param stateStorage The state storage where the values are stored.
 	 */
-	public KeyedListStateImpl(InternalState internalState) {
-		Preconditions.checkNotNull(internalState);
-
-		this.internalState = internalState;
+	public KeyedListStateImpl(
+		AbstractInternalStateBackend backend,
+		KeyedListStateDescriptor<K, E> descriptor,
+		StateStorage stateStorage) {
+		this.stateStorage = Preconditions.checkNotNull(stateStorage);
+		this.descriptor = Preconditions.checkNotNull(descriptor);
+		this.elementSerializer = descriptor.getElementSerializer();
+		this.keySerializer = descriptor.getKeySerializer();
+		this.internalStateBackend = Preconditions.checkNotNull(backend);
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		try {
+			StringSerializer.INSTANCE.serialize(descriptor.getName(), new DataOutputViewStreamWrapper(out));
+			stateNameByte = out.toByteArray();
+		} catch (IOException e) {
+			throw new SerializationException(e);
+		}
+		stateNameForSerialize = stateStorage.supportMultiColumnFamilies() ? null : stateNameByte;
 	}
 
-	/**
-	 * Creates and returns the descriptor for the internal state backing the
-	 * keyed state.
-	 *
-	 * @param keyedStateDescriptor The descriptor for the keyed state.
-	 * @param <K> Type of the keys in the state.
-	 * @param <E> Type of the elements in the state.
-	 * @return The descriptor for the internal state backing the keyed state.
-	 */
-	public static <K, E> InternalStateDescriptor buildInternalStateDescriptor(
-		final KeyedListStateDescriptor<K, E> keyedStateDescriptor
-	) {
-		stateDescriptor = Preconditions.checkNotNull(keyedStateDescriptor);
-
-		return new InternalStateDescriptorBuilder(keyedStateDescriptor.getName())
-			.addKeyColumn("key", keyedStateDescriptor.getKeySerializer())
-			.addValueColumn("elements",
-				keyedStateDescriptor.getValueSerializer(),
-				keyedStateDescriptor.getValueMerger())
-			.setPartitioner(new FieldBasedPartitioner(KEY_FIELD_INDEX, partitioner))
-			.getDescriptor();
+	@Override
+	public KeyedListStateDescriptor getDescriptor() {
+		return descriptor;
 	}
 
 	//--------------------------------------------------------------------------
@@ -128,13 +153,29 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 			return defaultValue;
 		}
 
-		internalState.setCurrentGroup(getKeyGroup(key));
-		Row rowValue = this.internalState.get(Row.of(key));
-		List<E> list = defaultValue;
-		if (rowValue != null) {
-			list = (List<E>)rowValue.getField(ELEMENTS_FIELD_INDEX);
+		try {
+			if (stateStorage.lazySerde()) {
+				List<E> value = (List<E>) stateStorage.get(key);
+				return value == null ? defaultValue : value;
+			} else {
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+
+				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
+				if (serializedValue == null) {
+					return defaultValue;
+				}
+				return StateSerializerUtil.getDeserializeList(serializedValue, elementSerializer);
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
 		}
-		return list;
 	}
 
 	@Override
@@ -164,10 +205,33 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 		Preconditions.checkNotNull(key);
 		Preconditions.checkNotNull(element, "You can not add null value to list state.");
 
-		Row internalKey = Row.of(key);
-		Row internalValue = Row.of(new ArrayList<>(Arrays.asList(element)));
-		internalState.setCurrentGroup(getKeyGroup(key));
-		internalState.merge(internalKey, internalValue);
+		try {
+			if (stateStorage.lazySerde()) {
+				List<E> list = (List<E>) stateStorage.get(key);
+				if (list == null) {
+					list = new ArrayList<>();
+					stateStorage.put(key, list);
+				}
+
+				list.add(element);
+			} else {
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+
+				outputStream.reset();
+				elementSerializer.serialize(element, outputView);
+				byte[] serializedValue = outputStream.toByteArray();
+				stateStorage.merge(serializedKey, serializedValue);
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
 	}
 
 	@Override
@@ -179,16 +243,36 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 			return;
 		}
 
-		Row internalKey = Row.of(key);
-		List<E> internalList = new ArrayList<>();
-		for (E element : elements) {
-			Preconditions.checkNotNull(element, "You can not add null value to list state.");
-			internalList.add(element);
-		}
-		Row internalValue = Row.of(internalList);
+		try {
+			if (stateStorage.lazySerde()) {
+				((HeapStateStorage) stateStorage).transform(key, elements, (previousState, value) -> {
+					if (previousState == null) {
+						previousState = new ArrayList<>();
+					}
+					for (E v : elements) {
+						Preconditions.checkNotNull(v, "You cannot add null to a ListState.");
+						((List<E>) previousState).add(v);
+					}
+					return previousState;
+				});
+			} else {
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
 
-		internalState.setCurrentGroup(getKeyGroup(key));
-		internalState.merge(internalKey, internalValue);
+				outputStream.reset();
+				StateSerializerUtil.getPreMergedList(outputView, elements, elementSerializer);
+				byte[] preMergedValue = outputStream.toByteArray();
+				stateStorage.merge(serializedKey, preMergedValue);
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
 	}
 
 	@Override
@@ -197,29 +281,9 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 			return;
 		}
 
-		Map<Row, Row> internalPairs = new HashMap<>();
-
-		for (Map.Entry<? extends K,  ? extends Collection<? extends E>> entry : map.entrySet()) {
-			K key = entry.getKey();
-			Preconditions.checkNotNull(key);
-
-			Collection<? extends E> elements = entry.getValue();
-			Preconditions.checkNotNull(elements);
-			if (elements.isEmpty()) {
-				continue;
-			}
-
-			Row internalKey = Row.of(key);
-			List<E> internalList = new ArrayList<>();
-			for (E element : elements) {
-				Preconditions.checkNotNull(element);
-				internalList.add(element);
-			}
-			Row internalValue = Row.of(internalList);
-			internalPairs.put(internalKey, internalValue);
+		for (Map.Entry<? extends K, ? extends Collection<? extends E>> entry : map.entrySet()) {
+			addAll(entry.getKey(), entry.getValue());
 		}
-
-		internalState.mergeAll(internalPairs);
 	}
 
 	@Override
@@ -227,25 +291,60 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 		Preconditions.checkNotNull(key);
 		Preconditions.checkNotNull(element, "You can not add null value to list state.");
 
-		Row internalKey = Row.of(key);
-		Row internalValue = Row.of(new ArrayList<>(Arrays.asList(element)));
-		internalState.setCurrentGroup(getKeyGroup(key));
-		internalState.put(internalKey, internalValue);
+		try {
+			if (stateStorage.lazySerde()) {
+				List<E> list = new ArrayList<>(Arrays.asList(element));
+				stateStorage.put(key, list);
+			} else {
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+
+				outputStream.reset();
+				elementSerializer.serialize(element, outputView);
+				byte[] serializedValue = outputStream.toByteArray();
+				stateStorage.put(serializedKey, serializedValue);
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
 	}
 
 	@Override
 	public void putAll(K key, Collection<? extends E> elements) {
 		Preconditions.checkNotNull(key);
 
-		Row internalKey = Row.of(key);
-		List<E> internalList = new ArrayList<>();
-		for (E element : elements) {
-			Preconditions.checkNotNull(element);
-			internalList.add(element);
+		try {
+			if (stateStorage.lazySerde()) {
+				List<E> list = new ArrayList<>();
+				for (E element : elements) {
+					Preconditions.checkNotNull(element, "You cannot add null to a ListState.");
+					list.add(element);
+				}
+				stateStorage.put(key, list);
+			} else {
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+
+				outputStream.reset();
+				StateSerializerUtil.getPreMergedList(outputView, elements, elementSerializer);
+				byte[] preMergedValue = outputStream.toByteArray();
+				stateStorage.put(serializedKey, preMergedValue);
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
 		}
-		Row internalValue = Row.of(internalList);
-		internalState.setCurrentGroup(getKeyGroup(key));
-		internalState.put(internalKey, internalValue);
 	}
 
 	@Override
@@ -254,28 +353,9 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 			return;
 		}
 
-		Map<Row, Row> internalPairs = new HashMap<>();
 		for (Map.Entry<? extends K, ? extends Collection<? extends E>> entry : map.entrySet()) {
-			K key = entry.getKey();
-			Preconditions.checkNotNull(key);
-
-			Collection<? extends E> elements = entry.getValue();
-			Preconditions.checkNotNull(elements);
-			if (elements.isEmpty()) {
-				continue;
-			}
-
-			Row internalKey = Row.of(key);
-			List<E> internalList = new ArrayList<>();
-			for (E element : elements) {
-				Preconditions.checkNotNull(element);
-				internalList.add(element);
-			}
-			Row internalValue = Row.of(internalList);
-			internalPairs.put(internalKey, internalValue);
+			putAll(entry.getKey(), entry.getValue());
 		}
-
-		internalState.putAll(internalPairs);
 	}
 
 	@Override
@@ -284,8 +364,24 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 			return;
 		}
 
-		internalState.setCurrentGroup(getKeyGroup(key));
-		internalState.remove(Row.of(key));
+		try {
+			if (stateStorage.lazySerde()) {
+				stateStorage.remove(key);
+			} else {
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+
+				stateStorage.remove(serializedKey);
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
 	}
 
 	@Override
@@ -294,15 +390,47 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 			return false;
 		}
 
-		List<E> list = getOrDefault(key, Collections.emptyList());
-		internalState.setCurrentGroup(getKeyGroup(key));
-		boolean success = list.remove(elementToRemove);
-		if (list.isEmpty()) {
-			internalState.remove(Row.of(key));
-		} else {
-			internalState.put(Row.of(key), Row.of(list));
+		try {
+			boolean success = false;
+			if (stateStorage.lazySerde()) {
+				List<E> list = get(key);
+				if (list != null) {
+					success = list.remove(elementToRemove);
+					if (list.isEmpty()) {
+						remove(key);
+					}
+				}
+			} else {
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+
+				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
+				if (serializedValue == null) {
+					success = false;
+				} else {
+					List<E> list = StateSerializerUtil.getDeserializeList(serializedValue, elementSerializer);
+					success = list.remove(elementToRemove);
+					if (list.isEmpty()) {
+						stateStorage.remove(serializedKey);
+					} else {
+						outputStream.reset();
+						StateSerializerUtil.getPreMergedList(outputView, list, elementSerializer);
+						byte[] preMergedValueValue = outputStream.toByteArray();
+						stateStorage.put(serializedKey, preMergedValueValue);
+					}
+				}
+			}
+			return success;
+
+		} catch (Exception e) {
+			throw new StateAccessException(e);
 		}
-		return success;
 	}
 
 	@Override
@@ -322,26 +450,46 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 			return false;
 		}
 
-		List<E> list = get(key);
-		if (list == null) {
-			return false;
-		}
+		try {
+			boolean success = false;
+			if (stateStorage.lazySerde()) {
+				List<E> value = get(key);
+				if (value != null) {
+					success = value.removeAll(elementsToRemove);
+					if (value.isEmpty()) {
+						remove(key);
+					}
+				}
+			} else {
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
 
-		boolean success = false;
-		Iterator<E> iter = list.iterator();
-		while (iter.hasNext()) {
-			E element = iter.next();
-			if (elementsToRemove.contains(element)) {
-				iter.remove();
-				success = true;
+				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
+				if (serializedValue == null) {
+					success = false;
+				} else {
+					List<E> preList = StateSerializerUtil.getDeserializeList(serializedValue, elementSerializer);
+					success = preList.removeAll(elementsToRemove);
+					if (preList.isEmpty()) {
+						stateStorage.remove(serializedKey);
+					} else {
+						outputStream.reset();
+						StateSerializerUtil.getPreMergedList(outputView, preList, elementSerializer);
+						byte[] preMergedValueValue = outputStream.toByteArray();
+						stateStorage.put(serializedKey, preMergedValueValue);
+					}
+				}
 			}
+			return success;
+		} catch (Exception e) {
+			throw new StateAccessException(e);
 		}
-		if (!list.isEmpty()) {
-			internalState.put(Row.of(key), Row.of(list));
-		} else {
-			internalState.remove(Row.of(key));
-		}
-		return success;
 	}
 
 	@Override
@@ -362,70 +510,175 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 
 	@Override
 	public Map<K, List<E>> getAll() {
-		Map<K, List<E>> result = new HashMap<>();
+		try {
+			Map<K, List<E>> result = new HashMap<>();
 
-		Iterator<Pair<Row, Row>> iterator = internalState.iterator();
-		while (iterator.hasNext()) {
-			Pair<Row, Row> entry = iterator.next();
-			K key = (K) entry.getKey().getField(KEY_FIELD_INDEX);
-			List<E> value = result.getOrDefault(key, new ArrayList<>());
-			List<E> addValue = (List<E>) entry.getValue().getField(ELEMENTS_FIELD_INDEX);
-			value.addAll(addValue);
+			if (stateStorage.lazySerde()) {
+				Iterator<Pair<K, List<E>>> iterator = stateStorage.iterator();
+				while (iterator.hasNext()) {
+					Pair<K, List<E>> pair = iterator.next();
+					result.put(pair.getKey(), pair.getValue());
+				}
+			} else {
+				if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
+					for (Integer group : internalStateBackend.getGroups()) {
+						outputStream.reset();
+						StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
+						byte[] groupPrefix = outputStream.toByteArray();
 
-			result.put(key, value);
+						outputStream.write(KEY_END_BYTE);
+						byte[] groupPrefixEnd = outputStream.toByteArray();
+
+						StorageIterator<byte[], byte[]> iterator = (StorageIterator<byte[], byte[]>) stateStorage.subIterator(groupPrefix, groupPrefixEnd);
+						while (iterator.hasNext()) {
+							Pair<byte[], byte[]> pair = iterator.next();
+							K key = StateSerializerUtil.getDeserializedKeyForKeyedListState(
+								pair.getKey(),
+								keySerializer,
+								stateNameByte.length);
+							List<E> list = StateSerializerUtil.getDeserializeList(pair.getValue(), elementSerializer);
+							result.put(key, list);
+						}
+					}
+				} else {
+					StorageIterator<byte[], byte[]> iterator = (StorageIterator<byte[], byte[]>) stateStorage.iterator();
+					while (iterator.hasNext()) {
+						Pair<byte[], byte[]> pair = iterator.next();
+						K key = StateSerializerUtil.getDeserializedKeyForKeyedListState(
+							pair.getKey(),
+							keySerializer,
+							stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
+						List<E> list = StateSerializerUtil.getDeserializeList(pair.getValue(), elementSerializer);
+						result.put(key, list);
+					}
+				}
+			}
+			return result;
+
+		} catch (Exception e) {
+			throw new StateAccessException(e);
 		}
-		return result;
 	}
 
 	@Override
 	public void removeAll() {
-		Iterator<Pair<Row, Row>> iterator = internalState.iterator();
-		while (iterator.hasNext()) {
-			iterator.next();
-			iterator.remove();
+		if (stateStorage.lazySerde()) {
+			((HeapStateStorage) stateStorage).removeAll();
+		} else {
+			try {
+				if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
+					for (Integer group : internalStateBackend.getGroups()) {
+						outputStream.reset();
+
+						StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
+						byte[] groupPrefix = outputStream.toByteArray();
+
+						outputStream.write(KEY_END_BYTE);
+						byte[] groupPrefixEnd = outputStream.toByteArray();
+
+						StorageIterator iterator = stateStorage.subIterator(groupPrefix, groupPrefixEnd);
+						while (iterator.hasNext()) {
+							iterator.next();
+							iterator.remove();
+						}
+					}
+				} else {
+					StorageIterator<byte[], byte[]> iterator = stateStorage.iterator();
+					while (iterator.hasNext()) {
+						iterator.next();
+						iterator.remove();
+					}
+				}
+			} catch (Exception e) {
+				throw new StateAccessException(e);
+			}
 		}
 	}
 
 	@Override
 	public Iterable<K> keys() {
-
 		return new Iterable<K>() {
 			@Override
 			public Iterator<K> iterator() {
-				Iterator<Pair<Row, Row>> internalIterator = internalState.iterator();
+				try {
+					if (stateStorage.lazySerde()) {
+						Iterator<Pair<K, List<E>>> iterator = stateStorage.iterator();
+						return new Iterator<K>() {
 
-				return new Iterator<K>() {
-					@Override
-					public boolean hasNext() {
-						return internalIterator.hasNext();
-					}
+							@Override
+							public boolean hasNext() {
+								return iterator.hasNext();
+							}
 
-					@Override
-					public K next() {
-						return (K) internalIterator.next().getKey().getField(KEY_FIELD_INDEX);
-					}
+							@Override
+							public K next() {
+								return iterator.next().getKey();
+							}
 
-					@Override
-					public void remove() {
-						internalIterator.remove();
+							@Override
+							public void remove() {
+								iterator.remove();
+							}
+						};
+					} else {
+						if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
+							Collection<Iterator<Pair<byte[], byte[]>>> groupIterators = new ArrayList<>();
+							for (Integer group : internalStateBackend.getGroups()) {
+								outputStream.reset();
+								StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
+								byte[] groupPrefix = outputStream.toByteArray();
+								outputStream.write(KEY_END_BYTE);
+								byte[] groupPrefixEnd = outputStream.toByteArray();
+								StorageIterator iterator = stateStorage.subIterator(groupPrefix, groupPrefixEnd);
+								groupIterators.add(iterator);
+							}
+							GroupIterator groupIterator = new GroupIterator(groupIterators);
+							return StateIteratorUtil.createKeyIterator(groupIterator, keySerializer, stateNameByte.length);
+						} else {
+							StorageIterator<byte[], byte[]> iterator = stateStorage.iterator();
+							return StateIteratorUtil.createKeyIterator(iterator, keySerializer, stateStorage.supportMultiColumnFamilies() ? 0 : stateNameByte.length);
+						}
 					}
-				};
+				} catch (Exception e) {
+					throw new StateAccessException(e);
+				}
 			}
 		};
 	}
 
 	@Override
 	public E poll(K key) {
-		List<E> list = get(key);
+		try {
+			if (stateStorage.lazySerde()) {
+				List<E> value = (List<E>) stateStorage.get(key);
 
-		E element = null;
-		if (list != null) {
-			element = list.get(0);
-			list.remove(0);
+				if (value == null) {
+					return null;
+				}
+
+				E element = value.remove(0);
+
+				if (value.isEmpty()) {
+					stateStorage.remove(key);
+				}
+
+				return element;
+			} else {
+				List<E> value = get(key);
+				if (value == null) {
+					return null;
+				}
+				E element = value.remove(0);
+				if (value.isEmpty()) {
+					remove(key);
+				} else {
+					putAll(key, value);
+				}
+				return element;
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
 		}
-
-		internalState.put(Row.of(key), Row.of(list));
-		return element;
 	}
 
 	@Override
@@ -440,27 +693,23 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 		return element;
 	}
 
-
 	@Override
 	public byte[] getSerializedValue(byte[] serializedKey) throws Exception {
-		InternalStateDescriptor descriptor = internalState.getDescriptor();
-		InternalColumnDescriptor<K> keyDescriptor = (InternalColumnDescriptor<K>)descriptor.getKeyColumnDescriptor(KEY_FIELD_INDEX);
-		K key = KvStateSerializer.deserializeValue(serializedKey, keyDescriptor.getSerializer());
+		K key = KvStateSerializer.deserializeValue(serializedKey, descriptor.getKeySerializer());
 
-		List<E> result = get(key);
-		if (result == null) {
+		List<E> value = get(key);
+		if (value == null) {
 			return null;
 		}
 
-		TypeSerializer<E> serializer = stateDescriptor.getElementSerializer();
+		final TypeSerializer<E> dupSerializer = descriptor.getElementSerializer();
 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		DataOutputViewStreamWrapper view = new DataOutputViewStreamWrapper(baos);
 
-		// write the same as RocksDB writes lists, with one ',' separator
-		for (int i = 0; i < result.size(); i++) {
-			serializer.serialize(result.get(i), view);
-			if (i < result.size() -1) {
+		for (int i = 0; i < value.size(); i++) {
+			dupSerializer.serialize(value.get(i), view);
+			if (i < value.size() -1) {
 				view.writeByte(',');
 			}
 		}
@@ -470,7 +719,6 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 	}
 
 	private <K> int getKeyGroup(K key) {
-		return partitioner.partition(key, internalState.getNumGroups());
+		return partitioner.partition(key, internalStateBackend.getNumGroups());
 	}
 }
-

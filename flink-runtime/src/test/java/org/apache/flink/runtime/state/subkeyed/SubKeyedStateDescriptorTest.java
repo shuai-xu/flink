@@ -20,7 +20,6 @@ package org.apache.flink.runtime.state.subkeyed;
 
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.Comparator;
-import org.apache.flink.api.common.functions.Merger;
 import org.apache.flink.api.common.functions.NaturalComparator;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.FloatSerializer;
@@ -29,10 +28,10 @@ import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.api.java.typeutils.runtime.kryo.KryoSerializer;
 import org.apache.flink.core.testutils.CommonTestUtils;
+
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -40,20 +39,6 @@ import static org.junit.Assert.fail;
  * Unit tests for {@link SubKeyedStateDescriptor}s.
  */
 public class SubKeyedStateDescriptorTest {
-
-	private static final Merger<Float> TEST_MERGER = new Merger<Float>() {
-		private static final long serialVersionUID = -225918825511049156L;
-
-		@Override
-		public Float merge(Float value1, Float value2) {
-			return value1 + value2;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			return (obj == this) || (obj != null && obj.getClass() == getClass());
-		}
-	};
 
 	@Test
 	public void testSubKeyedValueStateDescriptor() throws Exception {
@@ -90,53 +75,16 @@ public class SubKeyedStateDescriptorTest {
 			assertTrue(e instanceof NullPointerException);
 		}
 
-		try {
-			new SubKeyedValueStateDescriptor<>(null,
-				IntSerializer.INSTANCE, StringSerializer.INSTANCE,
-				FloatSerializer.INSTANCE, TEST_MERGER);
-			fail("Should throw exceptions because the state name is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedValueStateDescriptor<>("testName",
-				(TypeSerializer<Integer>) null, StringSerializer.INSTANCE,
-				FloatSerializer.INSTANCE, TEST_MERGER);
-			fail("Should throw exceptions because the key serializer is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedValueStateDescriptor<>("testName",
-				IntSerializer.INSTANCE, (TypeSerializer<String>) null,
-				FloatSerializer.INSTANCE, TEST_MERGER);
-			fail("Should throw exceptions because the namespace serializer is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedValueStateDescriptor<>("testName",
-				IntSerializer.INSTANCE, StringSerializer.INSTANCE,
-				null, TEST_MERGER);
-			fail("Should throw exceptions because the value serializer is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
 		TypeSerializer<String> serializer =
 			new KryoSerializer<>(String.class, new ExecutionConfig());
 
 		SubKeyedValueStateDescriptor<Integer, String, Float> descriptor =
 			new SubKeyedValueStateDescriptor<>("testName",
-				IntSerializer.INSTANCE, serializer, FloatSerializer.INSTANCE, TEST_MERGER);
+				IntSerializer.INSTANCE, serializer, FloatSerializer.INSTANCE);
 		assertEquals("testName", descriptor.getName());
 		assertEquals(IntSerializer.INSTANCE, descriptor.getKeySerializer());
 		assertEquals(serializer, descriptor.getNamespaceSerializer());
 		assertEquals(FloatSerializer.INSTANCE, descriptor.getValueSerializer());
-		assertEquals(TEST_MERGER, descriptor.getValueMerger());
 
 		SubKeyedValueStateDescriptor<Integer, String, Float> descriptorCopy =
 			CommonTestUtils.createCopySerializable(descriptor);
@@ -148,43 +96,7 @@ public class SubKeyedStateDescriptorTest {
 
 		try {
 			new SubKeyedListStateDescriptor<>(null,
-				(TypeSerializer<Integer>) null, StringSerializer.INSTANCE,
-				FloatSerializer.INSTANCE);
-			fail("Should throw exceptions because the name is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedListStateDescriptor<>("testName",
-				(TypeSerializer<Integer>) null, StringSerializer.INSTANCE,
-				FloatSerializer.INSTANCE);
-			fail("Should throw exceptions because the key serializer is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedListStateDescriptor<>("testName",
-				IntSerializer.INSTANCE, (TypeSerializer<String>) null,
-				FloatSerializer.INSTANCE);
-			fail("Should throw exceptions because the namespace serializer is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedListStateDescriptor<>("testName",
 				IntSerializer.INSTANCE, StringSerializer.INSTANCE,
-				(TypeSerializer<Float>) null);
-			fail("Should throw exceptions because the value serializer is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedListStateDescriptor<>(null,
-				(TypeSerializer<Integer>) null, StringSerializer.INSTANCE,
 				FloatSerializer.INSTANCE);
 			fail("Should throw exceptions because the name is null.");
 		} catch (Exception e) {
@@ -228,7 +140,6 @@ public class SubKeyedStateDescriptorTest {
 		assertEquals(IntSerializer.INSTANCE, descriptor.getKeySerializer());
 		assertEquals(namespaceSerializer, descriptor.getNamespaceSerializer());
 		assertEquals(FloatSerializer.INSTANCE, descriptor.getElementSerializer());
-		assertNotNull(descriptor.getValueMerger());
 
 		SubKeyedListStateDescriptor<Integer, String, Float> descriptorCopy =
 			CommonTestUtils.createCopySerializable(descriptor);
@@ -283,60 +194,6 @@ public class SubKeyedStateDescriptorTest {
 			assertTrue(e instanceof NullPointerException);
 		}
 
-		try {
-			new SubKeyedMapStateDescriptor<>(null,
-				(TypeSerializer<Integer>) null, StringSerializer.INSTANCE,
-				LongSerializer.INSTANCE, FloatSerializer.INSTANCE, TEST_MERGER);
-			fail("Should throw exceptions because the key serializer is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedMapStateDescriptor<>("testName",
-				(TypeSerializer<Integer>) null, StringSerializer.INSTANCE,
-				LongSerializer.INSTANCE, FloatSerializer.INSTANCE, TEST_MERGER);
-			fail("Should throw exceptions because the key serializer is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedMapStateDescriptor<>("testName",
-				IntSerializer.INSTANCE, (TypeSerializer<String>) null,
-				LongSerializer.INSTANCE, FloatSerializer.INSTANCE, TEST_MERGER);
-			fail("Should throw exceptions because the namespace serializer is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedMapStateDescriptor<>("testName",
-				IntSerializer.INSTANCE, StringSerializer.INSTANCE,
-				(TypeSerializer<Long>) null, FloatSerializer.INSTANCE, TEST_MERGER);
-			fail("Should throw exceptions because the map key serializer is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedMapStateDescriptor<>("testName",
-				IntSerializer.INSTANCE, StringSerializer.INSTANCE,
-				LongSerializer.INSTANCE, null, TEST_MERGER);
-			fail("Should throw exceptions because the map value serializer is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedMapStateDescriptor<>("testName",
-				IntSerializer.INSTANCE, StringSerializer.INSTANCE,
-				LongSerializer.INSTANCE, FloatSerializer.INSTANCE, null);
-			fail("Should throw exceptions because the map value merger is null in the local state.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
 		ExecutionConfig executionConfig = new ExecutionConfig();
 		TypeSerializer<String> mapKeySerializer =
 			new KryoSerializer<>(String.class, executionConfig);
@@ -345,13 +202,12 @@ public class SubKeyedStateDescriptorTest {
 
 		SubKeyedMapStateDescriptor<Integer, Long, String, Float> descriptor =
 			new SubKeyedMapStateDescriptor<>("testName",
-				IntSerializer.INSTANCE, LongSerializer.INSTANCE, mapKeySerializer, mapValueSerializer, TEST_MERGER);
+				IntSerializer.INSTANCE, LongSerializer.INSTANCE, mapKeySerializer, mapValueSerializer);
 		assertEquals("testName", descriptor.getName());
 		assertEquals(IntSerializer.INSTANCE, descriptor.getKeySerializer());
 		assertEquals(LongSerializer.INSTANCE, descriptor.getNamespaceSerializer());
 		assertEquals(mapKeySerializer, descriptor.getMapKeySerializer());
 		assertEquals(mapValueSerializer, descriptor.getMapValueSerializer());
-		assertEquals(TEST_MERGER, descriptor.getMapValueMerger());
 
 		SubKeyedMapStateDescriptor<Integer, Long, String, Float> descriptorCopy =
 			CommonTestUtils.createCopySerializable(descriptor);
@@ -365,7 +221,7 @@ public class SubKeyedStateDescriptorTest {
 
 		try {
 			new SubKeyedSortedMapStateDescriptor<>(null,
-				(TypeSerializer<Integer>) null, FloatSerializer.INSTANCE,
+				IntSerializer.INSTANCE, FloatSerializer.INSTANCE,
 				comparator, StringSerializer.INSTANCE, LongSerializer.INSTANCE);
 			fail("Should throw exceptions because the name is null.");
 		} catch (Exception e) {
@@ -417,69 +273,6 @@ public class SubKeyedStateDescriptorTest {
 			assertTrue(e instanceof NullPointerException);
 		}
 
-		try {
-			new SubKeyedSortedMapStateDescriptor<>(null,
-				(TypeSerializer<Integer>) null, LongSerializer.INSTANCE,
-				comparator, StringSerializer.INSTANCE, FloatSerializer.INSTANCE, TEST_MERGER);
-			fail("Should throw exceptions because the name is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedSortedMapStateDescriptor<>("testName",
-				(TypeSerializer<Integer>) null, LongSerializer.INSTANCE,
-				comparator, StringSerializer.INSTANCE, FloatSerializer.INSTANCE, TEST_MERGER);
-			fail("Should throw exceptions because the key serializer is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedSortedMapStateDescriptor<>("testName",
-				IntSerializer.INSTANCE, (TypeSerializer<Long>) null,
-				comparator, StringSerializer.INSTANCE, FloatSerializer.INSTANCE, TEST_MERGER);
-			fail("Should throw exceptions because the key serializer is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedSortedMapStateDescriptor<>("testName",
-				IntSerializer.INSTANCE, LongSerializer.INSTANCE,
-				null, StringSerializer.INSTANCE, FloatSerializer.INSTANCE, TEST_MERGER);
-			fail("Should throw exceptions because the comparator is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedSortedMapStateDescriptor<>("testName",
-				IntSerializer.INSTANCE, LongSerializer.INSTANCE,
-				comparator, null, FloatSerializer.INSTANCE, TEST_MERGER);
-			fail("Should throw exceptions because the map key serializer is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedSortedMapStateDescriptor<>("testName",
-				IntSerializer.INSTANCE, LongSerializer.INSTANCE,
-				comparator, StringSerializer.INSTANCE, null, TEST_MERGER);
-			fail("Should throw exceptions because the map value serializer is null.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
-		try {
-			new SubKeyedSortedMapStateDescriptor<>("testName",
-				IntSerializer.INSTANCE, LongSerializer.INSTANCE,
-				comparator, StringSerializer.INSTANCE, FloatSerializer.INSTANCE, null);
-			fail("Should throw exceptions because the map value merger is null in the local state.");
-		} catch (Exception e) {
-			assertTrue(e instanceof NullPointerException);
-		}
-
 		ExecutionConfig executionConfig = new ExecutionConfig();
 		TypeSerializer<String> mapKeySerializer =
 			new KryoSerializer<>(String.class, executionConfig);
@@ -489,14 +282,13 @@ public class SubKeyedStateDescriptorTest {
 		SubKeyedSortedMapStateDescriptor<Integer, Long, String, Float> descriptor =
 			new SubKeyedSortedMapStateDescriptor<>("testName",
 				IntSerializer.INSTANCE, LongSerializer.INSTANCE,
-				comparator, mapKeySerializer, mapValueSerializer, TEST_MERGER);
+				comparator, mapKeySerializer, mapValueSerializer);
 		assertEquals("testName", descriptor.getName());
 		assertEquals(IntSerializer.INSTANCE, descriptor.getKeySerializer());
 		assertEquals(LongSerializer.INSTANCE, descriptor.getNamespaceSerializer());
 		assertEquals(comparator, descriptor.getComparator());
 		assertEquals(mapKeySerializer, descriptor.getMapKeySerializer());
 		assertEquals(mapValueSerializer, descriptor.getMapValueSerializer());
-		assertEquals(TEST_MERGER, descriptor.getMapValueMerger());
 
 		SubKeyedSortedMapStateDescriptor<Integer, Long, String, Float> descriptorCopy =
 			CommonTestUtils.createCopySerializable(descriptor);

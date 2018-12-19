@@ -19,17 +19,18 @@
 package org.apache.flink.runtime.state.subkeyed;
 
 import org.apache.flink.api.common.functions.Comparator;
-import org.apache.flink.runtime.state.FieldBasedPartitioner;
-import org.apache.flink.runtime.state.InternalColumnDescriptor;
-import org.apache.flink.runtime.state.InternalState;
-import org.apache.flink.runtime.state.InternalStateDescriptor;
-import org.apache.flink.runtime.state.InternalStateDescriptorBuilder;
+import org.apache.flink.api.common.typeutils.SerializationException;
+import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
+import org.apache.flink.core.memory.DataOutputView;
+import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
+import org.apache.flink.runtime.state.AbstractInternalStateBackend;
+import org.apache.flink.runtime.state.StateAccessException;
+import org.apache.flink.runtime.state.StateSerializerUtil;
+import org.apache.flink.runtime.state.StateStorage;
+import org.apache.flink.runtime.state.heap.HeapStateStorage;
 import org.apache.flink.types.Pair;
-import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -38,8 +39,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 /**
- * An implementation of {@link SubKeyedSortedMapState} backed by an internal
- * state.
+ * An implementation of {@link SubKeyedSortedMapState} backed by a state storage.
  *
  * @param <K> Type of the keys in the state.
  * @param <N> Type of the namespaces in the state.
@@ -50,60 +50,50 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 	extends AbstractSubKeyedMapStateImpl<K, N, MK, MV, SortedMap<MK, MV>>
 	implements SubKeyedSortedMapState<K, N, MK, MV> {
 
-	private static final Logger LOG = LoggerFactory.getLogger(SubKeyedSortedMapStateImpl.class);
+	/**
+	 * The descriptor of current state.
+	 */
+	private SubKeyedSortedMapStateDescriptor stateDescriptor;
 
 	/**
-	 * Constructor with the internal state to store mappings.
+	 * Constructor with the state storage to store mappings.
 	 *
-	 * @param internalState The internal state where the mappings are stored.
+	 * @param backend The state backend who creates the current state.
+	 * @param descriptor The descriptor of current state.
+	 * @param stateStorage The state storage where the mappings are stored.
 	 */
-	public SubKeyedSortedMapStateImpl(InternalState internalState) {
-		super(internalState);
+	public SubKeyedSortedMapStateImpl(
+		AbstractInternalStateBackend backend,
+		SubKeyedSortedMapStateDescriptor<K, N, MK, MV> descriptor,
+		StateStorage stateStorage
+	) {
+		super(backend, stateStorage);
+
+		this.stateDescriptor = Preconditions.checkNotNull(descriptor);
+		this.keySerializer = descriptor.getKeySerializer();
+		this.namespaceSerializer = descriptor.getNamespaceSerializer();
+		this.mapKeySerializer = descriptor.getMapKeySerializer();
+		this.mapValueSerializer = descriptor.getMapValueSerializer();
+		try {
+			outputStream.reset();
+			StringSerializer.INSTANCE.serialize(descriptor.getName(), outputView);
+			stateNameByte = outputStream.toByteArray();
+		} catch (Exception e) {
+			throw new SerializationException(e);
+		}
+		this.stateNameForSerialize = stateStorage.supportMultiColumnFamilies() ? null : stateNameByte;
+		this.serializedStateNameLength = stateNameForSerialize == null ? 0 : stateNameForSerialize.length;
 	}
 
-	/**
-	 * Creates and returns the descriptor for the internal state backing the
-	 * subkeyed state.
-	 *
-	 * @param subKeyedStateDescriptor The descriptor for the subkeyed state.
-	 * @param <K> Type of the keys in the state.
-	 * @param <N> Type of the namespaces in the state.
-	 * @param <MK> Type of the map keys in the state.
-	 * @param <MV> Type of the map values in the state.
-	 * @return The descriptor for the internal state backing the keyed state.
-	 */
-	public static <K, N, MK, MV> InternalStateDescriptor createInternalStateDescriptor(
-		final SubKeyedSortedMapStateDescriptor<K, N, MK, MV> subKeyedStateDescriptor
-	) {
-		Preconditions.checkNotNull(subKeyedStateDescriptor);
-
-		LOG.warn("If using stateBackend which would store keys in bytes format," +
-				" please ensure the mapKey's comparator: {} and serializer: {} are both ordered.",
-			subKeyedStateDescriptor.getMapKeySerializer(),
-			subKeyedStateDescriptor.getComparator());
-
-		return new InternalStateDescriptorBuilder(subKeyedStateDescriptor.getName())
-			.addKeyColumn("key",
-				subKeyedStateDescriptor.getKeySerializer())
-			.addKeyColumn("namespace",
-				subKeyedStateDescriptor.getNamespaceSerializer())
-			.addKeyColumn("mapKey",
-				subKeyedStateDescriptor.getMapKeySerializer(),
-				subKeyedStateDescriptor.getComparator())
-			.addValueColumn("mapValue",
-				subKeyedStateDescriptor.getMapValueSerializer(),
-				subKeyedStateDescriptor.getMapValueMerger())
-			.setPartitioner(new FieldBasedPartitioner(KEY_FIELD_INDEX, partitioner))
-			.getDescriptor();
+	@Override
+	public SubKeyedSortedMapStateDescriptor getDescriptor() {
+		return stateDescriptor;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	SortedMap<MK, MV> createMap() {
-		InternalColumnDescriptor<MK> mapKeyColumnDescriptor =
-			(InternalColumnDescriptor<MK>)
-				internalState.getDescriptor().getKeyColumnDescriptor(MAPKEY_FIELD_INDEX);
-		Comparator<MK> comparator = mapKeyColumnDescriptor.getComparator();
+		Comparator<MK> comparator = stateDescriptor.getComparator();
 		return new TreeMap<>(comparator);
 	}
 
@@ -115,10 +105,68 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 			return null;
 		}
 
-		Pair<Row, Row> firstInternalPair = internalState.firstPair(Row.of(key, namespace));
+		try {
+			if (stateStorage.lazySerde()) {
+				((HeapStateStorage) stateStorage).setCurrentNamespace(namespace);
+				TreeMap map = (TreeMap) stateStorage.get(key);
+				return map == null ? null : map.firstEntry();
+			} else {
+				outputStream.reset();
 
-		return firstInternalPair == null ? null :
-			new SubKeyedMapStateEntry<>(firstInternalPair);
+				byte[] prefixKey = StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					namespace,
+					namespaceSerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+
+				Pair<byte[], byte[]> firstEntry = stateStorage.firstEntry(prefixKey);
+				return new Map.Entry<MK, MV>() {
+					@Override
+					public MK getKey() {
+						try {
+							if (firstEntry == null || firstEntry.getKey() == null) {
+								return null;
+							} else {
+								return StateSerializerUtil.getDeserializedMapKeyForSubKeyedMapState(
+									firstEntry.getKey(),
+									keySerializer,
+									namespaceSerializer,
+									mapKeySerializer,
+									serializedStateNameLength);
+							}
+						} catch (Exception e) {
+							throw new StateAccessException(e);
+						}
+					}
+
+					@Override
+					public MV getValue() {
+						try {
+							if (firstEntry == null || firstEntry.getValue() == null) {
+								return null;
+							} else {
+								return StateSerializerUtil.getDeserializeSingleValue(
+									firstEntry.getValue(),
+									mapValueSerializer);
+							}
+						} catch (Exception e) {
+							throw new StateAccessException(e);
+						}
+					}
+
+					@Override
+					public MV setValue(MV value) {
+						return null;
+					}
+				};
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
 	}
 
 	@Override
@@ -127,10 +175,70 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 			return null;
 		}
 
-		Pair<Row, Row> lastInternalPair = internalState.lastPair(Row.of(key, namespace));
+		try {
+			if (stateStorage.lazySerde()) {
+				((HeapStateStorage) stateStorage).setCurrentNamespace(namespace);
+				TreeMap map = (TreeMap) stateStorage.get(key);
+				return map == null ? null : map.lastEntry();
+			} else {
+				outputStream.reset();
 
-		return lastInternalPair == null ? null :
-			new SubKeyedMapStateEntry<>(lastInternalPair);
+				byte[] prefixKey = StateSerializerUtil.getSerializedPrefixKeyEndForSubKeyedMapState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					namespace,
+					namespaceSerializer,
+					null,
+					mapKeySerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+
+				Pair<byte[], byte[]> firstEntry = stateStorage.lastEntry(prefixKey);
+				return new Map.Entry<MK, MV>(){
+					@Override
+					public MK getKey() {
+						try {
+							if (firstEntry == null || firstEntry.getKey() == null) {
+								return null;
+							} else {
+								return StateSerializerUtil.getDeserializedMapKeyForSubKeyedMapState(
+									firstEntry.getKey(),
+									keySerializer,
+									namespaceSerializer,
+									mapKeySerializer,
+									serializedStateNameLength);
+							}
+						} catch (Exception e) {
+							throw new StateAccessException(e);
+						}
+					}
+
+					@Override
+					public MV getValue() {
+						try {
+							if (firstEntry == null || firstEntry.getValue() == null) {
+								return null;
+							} else {
+								return StateSerializerUtil.getDeserializeSingleValue(
+									firstEntry.getValue(),
+									mapValueSerializer);
+							}
+						} catch (Exception e) {
+							throw new StateAccessException(e);
+						}
+					}
+
+					@Override
+					public MV setValue(MV value) {
+						return null;
+					}
+				};
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
 	}
 
 	@Override
@@ -139,10 +247,30 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 			return Collections.emptyIterator();
 		}
 
-		Iterator<Pair<Row, Row>> internalIterator =
-			internalState.headIterator(Row.of(key, namespace), endMapKey);
+		try {
+			if (stateStorage.lazySerde()) {
+				((HeapStateStorage) stateStorage).setCurrentNamespace(namespace);
+				TreeMap map = (TreeMap) stateStorage.get(key);
+				return map == null ? null : map.headMap(endMapKey).entrySet().iterator();
+			} else {
+				outputStream.reset();
 
-		return new SubKeyedMapStateIterator<>(internalIterator);
+				byte[] prefixKey = StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					namespace,
+					namespaceSerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, endMapKey, mapKeySerializer);
+				byte[] prefixKeyEnd = outputStream.toByteArray();
+				return subIterator(prefixKey, prefixKeyEnd);
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
 	}
 
 	@Override
@@ -151,10 +279,34 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 			return Collections.emptyIterator();
 		}
 
-		Iterator<Pair<Row, Row>> internalIterator =
-			internalState.tailIterator(Row.of(key, namespace), startMapKey);
+		try {
+			if (stateStorage.lazySerde()) {
+				((HeapStateStorage) stateStorage).setCurrentNamespace(namespace);
+				TreeMap map = (TreeMap) stateStorage.get(key);
+				return map == null ? null : map.tailMap(startMapKey).entrySet().iterator();
+			} else {
+				outputStream.reset();
+				StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					namespace,
+					namespaceSerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+				int namespacePosition = outputStream.getPosition();
+				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, startMapKey, mapKeySerializer);
+				byte[] prefixKey = outputStream.toByteArray();
 
-		return new SubKeyedMapStateIterator<>(internalIterator);
+				outputStream.setPosition(namespacePosition);
+				outputStream.write(StateSerializerUtil.KEY_END_BYTE);
+				byte[] prefixKeyEnd = outputStream.toByteArray();
+				return subIterator(prefixKey, prefixKeyEnd);
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
 	}
 
 	@Override
@@ -163,10 +315,108 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 			return Collections.emptyIterator();
 		}
 
-		Iterator<Pair<Row, Row>> internalIterator =
-			internalState.subIterator(Row.of(key, namespace), startMapKey, endMapKey);
+		try {
+			if (stateStorage.lazySerde()) {
+				((HeapStateStorage) stateStorage).setCurrentNamespace(namespace);
+				TreeMap map = (TreeMap) stateStorage.get(key);
+				return map == null ? null : map.subMap(startMapKey, endMapKey).entrySet().iterator();
+			} else {
+				outputStream.reset();
+				StateSerializerUtil.getSerializedPrefixKeyForSubKeyedState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					namespace,
+					namespaceSerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+				int namespacePosition = outputStream.getPosition();
+				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, startMapKey, mapKeySerializer);
+				byte[] prefixKey = outputStream.toByteArray();
 
-		return new SubKeyedMapStateIterator<>(internalIterator);
+				outputStream.setPosition(namespacePosition);
+				StateSerializerUtil.serializeItemWithKeyPrefix(outputView, endMapKey, mapKeySerializer);
+				byte[] prefixKeyEnd = outputStream.toByteArray();
+				return subIterator(prefixKey, prefixKeyEnd);
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
+	}
+
+	private Iterator<Map.Entry<MK, MV>> subIterator(byte[] prefixKeyStart, byte[] prefixKeyEnd) {
+		if (stateStorage.lazySerde()) {
+			return null;
+		} else {
+			try {
+				Iterator<Pair<byte[], byte[]>> subIterator = stateStorage.subIterator(prefixKeyStart, prefixKeyEnd);
+				return new Iterator<Map.Entry<MK, MV>>(){
+					@Override
+					public boolean hasNext() {
+						return subIterator.hasNext();
+					}
+
+					@Override
+					public Map.Entry<MK, MV> next() {
+						Pair<byte[], byte[]> nextByteEntry = subIterator.next();
+						return new Map.Entry<MK, MV>() {
+							@Override
+							public MK getKey() {
+								try {
+									return StateSerializerUtil.getDeserializedMapKeyForSubKeyedMapState(
+										nextByteEntry.getKey(),
+										keySerializer,
+										namespaceSerializer,
+										mapKeySerializer,
+										serializedStateNameLength);
+								} catch (Exception e) {
+									throw new StateAccessException(e);
+								}
+							}
+
+							@Override
+							public MV getValue() {
+								try {
+									if (nextByteEntry == null || nextByteEntry.getValue() == null) {
+										return null;
+									} else {
+										return StateSerializerUtil.getDeserializeSingleValue(
+											nextByteEntry.getValue(),
+											mapValueSerializer);
+									}
+								} catch (Exception e) {
+									throw new StateAccessException(e);
+								}
+							}
+
+							@Override
+							public MV setValue(MV value) {
+								Preconditions.checkNotNull(value);
+								try {
+									ByteArrayOutputStreamWithPos valueOutputStream = new ByteArrayOutputStreamWithPos();
+									DataOutputView valueOutputView = new DataOutputViewStreamWrapper(valueOutputStream);
+									mapValueSerializer.serialize(value, valueOutputView);
+									byte[] oldValue = nextByteEntry.setValue(valueOutputStream.toByteArray());
+
+									if (oldValue == null) {
+										return null;
+									} else {
+										return StateSerializerUtil.getDeserializeSingleValue(
+											oldValue,
+											mapValueSerializer);
+									}
+								} catch (Exception e) {
+									throw new StateAccessException(e);
+								}
+							}
+						};
+					}
+				};
+			} catch (Exception e) {
+				throw new StateAccessException(e);
+			}
+		}
 	}
 }
 

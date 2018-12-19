@@ -18,8 +18,6 @@
 
 package org.apache.flink.runtime.state.keyed;
 
-import org.apache.flink.api.common.functions.ListMerger;
-import org.apache.flink.api.common.functions.Merger;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.ListSerializer;
 import org.apache.flink.util.Preconditions;
@@ -49,7 +47,7 @@ public final class KeyedListStateDescriptor<K, E> extends KeyedStateDescriptor<K
 		final TypeSerializer<K> keySerializer,
 		final TypeSerializer<E> elementSerializer
 	) {
-		super(name, keySerializer, new ListSerializer<>(elementSerializer), new ListMerger<>());
+		super(name, keySerializer, new ListSerializer<>(elementSerializer));
 	}
 
 	/**
@@ -65,7 +63,7 @@ public final class KeyedListStateDescriptor<K, E> extends KeyedStateDescriptor<K
 		final TypeSerializer<K> keySerializer,
 		final ListSerializer<E> listSerializer
 	) {
-		super(name, keySerializer, listSerializer, new ListMerger());
+		super(name, keySerializer, listSerializer);
 	}
 
 	@Override
@@ -82,17 +80,6 @@ public final class KeyedListStateDescriptor<K, E> extends KeyedStateDescriptor<K
 	 */
 	public TypeSerializer<E> getElementSerializer() {
 		return getValueSerializer().getElementSerializer();
-	}
-
-	@Override
-	public ListMerger<E> getValueMerger() {
-		Merger<List<E>> listMerger = super.getValueMerger();
-		if (listMerger == null) {
-			return null;
-		}
-
-		Preconditions.checkState(listMerger instanceof ListMerger);
-		return (ListMerger<E>) listMerger;
 	}
 
 	@Override

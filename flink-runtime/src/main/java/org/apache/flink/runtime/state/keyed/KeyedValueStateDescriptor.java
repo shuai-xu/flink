@@ -18,7 +18,6 @@
 
 package org.apache.flink.runtime.state.keyed;
 
-import org.apache.flink.api.common.functions.Merger;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 
 /**
@@ -45,23 +44,6 @@ public final class KeyedValueStateDescriptor<K, V> extends KeyedStateDescriptor<
 		final TypeSerializer<V> valueSerializer
 	) {
 		super(name, keySerializer, valueSerializer);
-	}
-
-	/**
-	 * Constructor with given name, scope and the serializers for the keys and
-	 * the values in the state.
-	 *
-	 * @param name The name of the state.
-	 * @param keySerializer The serializer for the keys in the state.
-	 * @param valueSerializer The serializer for the values in the state.
-	 */
-	public KeyedValueStateDescriptor(
-		final String name,
-		final TypeSerializer<K> keySerializer,
-		final TypeSerializer<V> valueSerializer,
-		final Merger<V> valueMerger
-	) {
-		super(name, keySerializer, valueSerializer, valueMerger);
 	}
 
 	@Override

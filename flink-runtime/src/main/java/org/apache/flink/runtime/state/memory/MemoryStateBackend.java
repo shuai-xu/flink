@@ -36,9 +36,8 @@ import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.OperatorStateBackend;
 import org.apache.flink.runtime.state.TaskStateManager;
 import org.apache.flink.runtime.state.filesystem.AbstractFileStateBackend;
-import org.apache.flink.runtime.state.gemini.GeminiInternalStateBackend;
-import org.apache.flink.runtime.state.heap.HeapInternalStateBackend;
 import org.apache.flink.runtime.state.heap.HeapKeyedStateBackend;
+import org.apache.flink.runtime.state.heap.HeapInternalStateBackend;
 import org.apache.flink.util.TernaryBoolean;
 
 import javax.annotation.Nullable;
@@ -346,20 +345,14 @@ public class MemoryStateBackend extends AbstractFileStateBackend implements Conf
 		int numberOfGroups,
 		GroupSet groups) {
 
-		return isUsingAsynchronousSnapshots() ?
-			new GeminiInternalStateBackend(
+		return new HeapInternalStateBackend(
 				numberOfGroups,
 				groups,
 				env.getUserClassLoader(),
 				env.getTaskStateManager().createLocalRecoveryConfig(),
-				env.getTaskManagerInfo().getConfiguration(),
-				env.getTaskKvStateRegistry()) :
-			new HeapInternalStateBackend(
-				numberOfGroups,
-				groups,
-				env.getUserClassLoader(),
-				env.getTaskStateManager().createLocalRecoveryConfig(),
-				env.getTaskKvStateRegistry());
+				env.getTaskKvStateRegistry(),
+				isUsingAsynchronousSnapshots()
+			);
 	}
 
 	// ------------------------------------------------------------------------

@@ -44,7 +44,6 @@ import org.apache.flink.runtime.state.CheckpointedStateScope;
 import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.GroupRangePartitioner;
 import org.apache.flink.runtime.state.InternalStateBackend;
-import org.apache.flink.runtime.state.InternalStateDescriptorBuilder;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.SnapshotResult;
@@ -55,6 +54,7 @@ import org.apache.flink.runtime.state.TestLocalRecoveryConfig;
 import org.apache.flink.runtime.state.TestTaskStateManager;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.keyed.KeyedValueStateDescriptor;
 import org.apache.flink.runtime.state.memory.MemCheckpointStreamFactory;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.runtime.state.testutils.BackendForTestStream;
@@ -453,11 +453,13 @@ public class RocksDBAsyncSnapshotTest extends TestLogger {
 			internalBackend.restore(null);
 
 			// register a state so that the state backend has to checkpoint something
-			internalBackend.getInternalState(
-				new InternalStateDescriptorBuilder("foobar")
-					.addKeyColumn("key", StringSerializer.INSTANCE)
-					.addValueColumn("value", StringSerializer.INSTANCE)
-					.getDescriptor());
+			internalBackend.getKeyedState(
+				new KeyedValueStateDescriptor<String, String>(
+					"foobar",
+					StringSerializer.INSTANCE,
+					StringSerializer.INSTANCE
+				)
+			);
 
 			RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshotFuture = internalBackend.snapshot(checkpointId,
 				timestamp,

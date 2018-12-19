@@ -23,51 +23,31 @@ import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.InternalStateBackend;
 import org.apache.flink.runtime.state.InternalStateCheckpointTestBase;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
-import org.apache.flink.util.AbstractID;
 
-import org.junit.After;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.DBOptions;
-import org.rocksdb.NativeLibraryLoader;
-import org.rocksdb.RocksDB;
 
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.Collection;
 
 /**
- * Tests for {@link RocksDBInternalStateBackend}'s checkpoint.
+ * Test for checkpoint with RocksDB state backend.
  */
+@RunWith(Parameterized.class)
 public class RocksDBInternalStateCheckpointTest extends InternalStateCheckpointTestBase {
-
 	@ClassRule
 	public static TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-	private DBOptions dbOptions;
+	@Parameterized.Parameter
+	public CheckpointType checkpointType;
 
-	private ColumnFamilyOptions columnOptions;
-
-	private boolean rocksDbInitialized = false;
-
-	private static String rocksDBLoadPath;
-
-	@BeforeClass
-	public static void setupRocksLoadPath() throws IOException {
-		rocksDBLoadPath = temporaryFolder.newFolder().getAbsolutePath();
-	}
-
-	@After
-	public void disposeOptions() {
-		if (dbOptions != null) {
-			dbOptions.close();
-		}
-		if (columnOptions != null) {
-			columnOptions.close();
-		}
+	@Parameterized.Parameters(name = "checkpointType: {0}")
+	public static Collection<CheckpointType> checkpointTypes() {
+		return Arrays.asList(CheckpointType.values());
 	}
 
 	@Override
@@ -75,86 +55,23 @@ public class RocksDBInternalStateCheckpointTest extends InternalStateCheckpointT
 		int numberOfGroups,
 		GroupSet groups,
 		ClassLoader userClassLoader,
-		LocalRecoveryConfig localRecoveryConfig) throws IOException {
-		dbOptions = PredefinedOptions.FLASH_SSD_OPTIMIZED_HIGH_MEM.createDBOptions().setCreateIfMissing(true);
-		columnOptions = PredefinedOptions.FLASH_SSD_OPTIMIZED_HIGH_MEM.createColumnOptions();
-		ensureRocksDBIsLoaded(rocksDBLoadPath);
-		return new RocksDBInternalStateBackend(
-			userClassLoader,
-			temporaryFolder.newFolder(),
-			dbOptions,
-			columnOptions,
+		LocalRecoveryConfig localRecoveryConfig) throws Exception {
+		InternalStateBackend backend = new RocksDBInternalStateBackend(
+			Thread.currentThread().getContextClassLoader(),
+			temporaryFolder.newFolder().getAbsoluteFile(),
+			new DBOptions().setCreateIfMissing(true),
+			new ColumnFamilyOptions(),
 			numberOfGroups,
 			groups,
 			true,
 			localRecoveryConfig,
 			null);
+		return backend;
 	}
 
-	@Test
-	public void testDuplicateSerializersWhenAsyncSnapshot() throws Exception {
-		if (checkpointType == CheckpointType.CHECKPOINT) {
-			// ignore serializer duplication test for checkpoint
-			return;
-		}
-
-		super.testDuplicateSerializersWhenAsyncSnapshot();
-	}
-
-	private void ensureRocksDBIsLoaded(String tempDirectory) throws IOException {
-		synchronized (RocksDBInternalStateBackend.class) {
-			if (!rocksDbInitialized) {
-
-				final File tempDirParent = new File(tempDirectory).getAbsoluteFile();
-
-				Throwable lastException = null;
-				for (int attempt = 1; attempt <= 3; attempt++) {
-					try {
-						// when multiple instances of this class and RocksDB exist in different
-						// class loaders, then we can see the following exception:
-						// "java.lang.UnsatisfiedLinkError: Native Library /path/to/temp/dir/librocksdbjni-linux64.so
-						// already loaded in another class loader"
-
-						// to avoid that, we need to add a random element to the library file path
-						// (I know, seems like an unnecessary hack, since the JVM obviously can handle multiple
-						//  instances of the same JNI library being loaded in different class loaders, but
-						//  apparently not when coming from the same file path, so there we go)
-
-						final File rocksLibFolder = new File(tempDirParent, "rocksdb-lib-" + new AbstractID());
-
-						// make sure the temp path exists
-						// noinspection ResultOfMethodCallIgnored
-						rocksLibFolder.mkdirs();
-
-						// explicitly load the JNI dependency if it has not been loaded before
-						NativeLibraryLoader.getInstance().loadLibrary(rocksLibFolder.getAbsolutePath());
-
-						// this initialization here should validate that the loading succeeded
-						RocksDB.loadLibrary();
-
-						// seems to have worked
-						rocksDbInitialized = true;
-						return;
-					}
-					catch (Throwable t) {
-						lastException = t;
-
-						// try to force RocksDB to attempt reloading the library
-						try {
-							resetRocksDBLoadedFlag();
-						} catch (Throwable tt) {
-						}
-					}
-				}
-
-				throw new IOException("Could not load the native RocksDB library", lastException);
-			}
-		}
-	}
-
-	static void resetRocksDBLoadedFlag() throws Exception {
-		final Field initField = NativeLibraryLoader.class.getDeclaredField("initialized");
-		initField.setAccessible(true);
-		initField.setBoolean(null, false);
+	@Override
+	protected CheckpointType getCheckpointType() {
+		return checkpointType;
 	}
 }
+

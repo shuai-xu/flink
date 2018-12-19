@@ -31,6 +31,13 @@ import java.util.Map;
 public interface SubKeyedState<K, N, V> {
 
 	/**
+	 * Returns the descriptor of the state.
+	 *
+	 * @return The descriptor of the state.
+	 */
+	SubKeyedStateDescriptor getDescriptor();
+
+	/**
 	 * Returns true if the state contains a value under the given key and the
 	 * given namespace.
 	 *
@@ -92,7 +99,7 @@ public interface SubKeyedState<K, N, V> {
 	/**
 	 * Return an iterator over the namespaces under the given key.
 	 *
-	 * @param key The key whoes namespaces are to be iterated.
+	 * @param key The key whose namespaces are to be iterated.
 	 * @return An iterator over the namespace under the given key.
 	 */
 	Iterator<N> iterator(K key);

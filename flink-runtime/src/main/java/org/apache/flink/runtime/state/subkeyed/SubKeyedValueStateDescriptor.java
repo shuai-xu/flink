@@ -18,7 +18,6 @@
 
 package org.apache.flink.runtime.state.subkeyed;
 
-import org.apache.flink.api.common.functions.Merger;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 
 /**
@@ -48,25 +47,6 @@ public final class SubKeyedValueStateDescriptor<K, N, V> extends SubKeyedStateDe
 		TypeSerializer<V> valueSerializer
 	) {
 		super(name, keySerializer, namespaceSerializer, valueSerializer);
-	}
-
-	/**
-	 * Constructor with given name, scope and the serializers for the keys, the
-	 * namespaces and the values, and the merger for the values in the state.
-	 *
-	 * @param name The name of the state.
-	 * @param keySerializer The serializer for the keys in the state.
-	 * @param namespaceSerializer The serializer for the namespaces in the state.
-	 * @param valueSerializer The serializer for the values in the state.
-	 */
-	public SubKeyedValueStateDescriptor(
-		String name,
-		TypeSerializer<K> keySerializer,
-		TypeSerializer<N> namespaceSerializer,
-		TypeSerializer<V> valueSerializer,
-		Merger<V> valueMerger
-	) {
-		super(name, keySerializer, namespaceSerializer, valueSerializer, valueMerger);
 	}
 
 	@Override

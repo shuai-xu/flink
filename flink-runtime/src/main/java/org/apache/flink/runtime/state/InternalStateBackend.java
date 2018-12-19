@@ -19,21 +19,25 @@
 package org.apache.flink.runtime.state;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.runtime.state.GroupSet;
+import org.apache.flink.runtime.state.SnapshotResult;
+import org.apache.flink.runtime.state.Snapshotable;
+import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.util.Disposable;
 
-import java.io.Closeable;
 import java.util.Collection;
+import java.util.Map;
 
 /**
- * The class provides access and manage methods to {@link InternalState}. Each
+ * The class provides access and manage methods to {@link StateStorage}. Each
  * execution instance of an operator will deploy a backend to manage its
- * internal states.
+ * state storage.
  */
-public interface InternalStateBackend extends Snapshotable<SnapshotResult<StatePartitionSnapshot>, Collection<StatePartitionSnapshot>>, Closeable, Disposable {
+public interface InternalStateBackend extends Snapshotable<SnapshotResult<StatePartitionSnapshot>, Collection<StatePartitionSnapshot>>, Disposable {
 
 	/**
 	 * Dispose the backend. This method is called when the task completes its
@@ -43,31 +47,49 @@ public interface InternalStateBackend extends Snapshotable<SnapshotResult<StateP
 	void dispose();
 
 	/**
-	 * Returns the internal state described by the given descriptor. If the
-	 * state has already been created, the state will be returned immediately.
-	 * Otherwise, the state will be created first.
+	 * Returns the total number of groups in all subtasks.
 	 *
-	 * @param stateDescriptor The descriptor of the state to be retrieved.
-	 * @return The internal state described by the given descriptor.
+	 * @return The total number of groups in all subtasks.
 	 */
-	InternalState getInternalState(InternalStateDescriptor stateDescriptor);
+	int getNumGroups();
 
 	/**
-	 * Returns all internal states in this backend.
+	 * Returns the groups of the given scope in the backend.
 	 *
-	 * @return All internal states in this backend.
+	 * @return The groups of the given scope in the backend.
 	 */
-	@VisibleForTesting
-	Collection<InternalState> getInternalStates();
+	GroupSet getGroups();
 
 	/**
-	 * Returns the internal state with the given name in this backend.
+	 * Returns the class loader for the user code in this operator.
 	 *
-	 * @param stateName The name of the internal state to be retrieved.
-	 * @return The internal state with the given name in this backend.
+	 * @return The class loader for the user code in this operator.
+	 */
+	ClassLoader getUserClassLoader();
+
+	/**
+	 * Returns all state storages in this backend.
+	 *
+	 * @return AllMap state storages in this backend.
 	 */
 	@VisibleForTesting
-	InternalState getInternalState(String stateName);
+	Map<String, StateStorage> getStateStorages();
+
+	/**
+	 * Returns all keyed states in this backend.
+	 *
+	 * @return All keyed states in this backend.
+	 */
+	@VisibleForTesting
+	Map<String, KeyedState> getKeyedStates();
+
+	/**
+	 * Returns all sub-keyed states in this backend.
+	 *
+	 * @return All sub-keyed states in this backend.
+	 */
+	@VisibleForTesting
+	Map<String, SubKeyedState> getSubKeyedStates();
 
 	/**
 	 * Returns the keyed state with the given descriptor. The state will be
@@ -94,4 +116,5 @@ public interface InternalStateBackend extends Snapshotable<SnapshotResult<StateP
 	<K, N, V, S extends SubKeyedState<K, N, V>> S getSubKeyedState(
 		SubKeyedStateDescriptor<K, N, V, S> stateDescriptor
 	);
+
 }

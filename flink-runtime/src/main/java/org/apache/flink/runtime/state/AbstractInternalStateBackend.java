@@ -53,7 +53,8 @@ import org.apache.flink.runtime.state.subkeyed.SubKeyedValueStateImpl;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
 
-import java.util.Collection;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -62,7 +63,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 /**
  * The base implementation for {@link InternalStateBackend}.
  */
-public abstract class AbstractInternalStateBackend implements InternalStateBackend, KeyedStateBinder, SubKeyedStateBinder {
+public abstract class AbstractInternalStateBackend implements InternalStateBackend, Closeable, KeyedStateBinder, SubKeyedStateBinder {
 
 	/**
 	 * The total number of groups in all subtasks.
@@ -79,12 +80,7 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	 */
 	private ClassLoader userClassLoader;
 
-	/**
-	 * The states backed by the backend.
-	 */
-	protected transient Map<String, InternalState> states;
-
-	/** Registry for all opened streams, so they can be closed if the task using this backend is closed */
+	/** Registry for all opened streams, so they can be closed if the task using this backend is closed. */
 	protected CloseableRegistry cancelStreamRegistry;
 
 	/**
@@ -92,7 +88,20 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	 */
 	protected TaskKvStateRegistry kvStateRegistry;
 
-	protected InternalStateDescriptor descriptor;
+	/**
+	 * The state storages backend by the backend.
+	 */
+	protected final transient Map<String, StateStorage> stateStorages;
+
+	/**
+	 * The keyed state backed by the backend.
+	 */
+	protected final transient Map<String, KeyedState> keyedStates;
+
+	/**
+	 * The sub-keyed state backed by the backend.
+	 */
+	protected final transient Map<String, SubKeyedState> subKeyedStates;
 
 	/**
 	 * Subclasses should implement this method to release unused resources.
@@ -100,12 +109,20 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	protected void closeImpl() {}
 
 	/**
-	 * Creates the internal state described by the given descriptor.
+	 * Creates the state storage described by the given keyed descriptor.
 	 *
-	 * @param stateDescriptor The descriptor of the state to be created.
-	 * @return The internal state described by the given descriptor.
+	 * @param descriptor The descriptor of the state storage to be created.
+	 * @return The state storage described by the given descriptor.
 	 */
-	protected abstract InternalState createInternalState(InternalStateDescriptor stateDescriptor);
+	protected abstract StateStorage createStateStorageForKeyedState(KeyedStateDescriptor descriptor);
+
+	/**
+	 * Creates the state storage described by the given sub-keyed descriptor.
+	 *
+	 * @param descriptor The descriptor of the state storage to be created.
+	 * @return The state storage described by the given descriptor.
+	 */
+	protected abstract StateStorage createStateStorageForSubKeyedState(SubKeyedStateDescriptor descriptor);
 
 	//--------------------------------------------------------------------------
 
@@ -118,77 +135,60 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 		this.numberOfGroups = numberOfGroups;
 		this.groups = Preconditions.checkNotNull(groups);
 		this.userClassLoader = Preconditions.checkNotNull(userClassLoader);
-		this.states = new HashMap<>();
 		this.cancelStreamRegistry = new CloseableRegistry();
 		this.kvStateRegistry = kvStateRegistry;
+
+		this.stateStorages = new HashMap<>();
+		this.keyedStates = new HashMap<>();
+		this.subKeyedStates = new HashMap<>();
 	}
 
-	/**
-	 * Returns the total number of groups in all subtasks.
-	 *
-	 * @return The total number of groups in all subtasks.
-	 */
+	@Override
 	public int getNumGroups() {
 		return numberOfGroups;
 	}
 
-	/**
-	 * Returns the groups of the given scope in the backend.
-	 *
-	 * @return The groups of the given scope in the backend.
-	 */
+	@Override
 	public GroupSet getGroups() {
 		return groups;
 	}
 
-	/**
-	 * Returns the class loader for the user code in this operator.
-	 *
-	 * @return The class loader for the user code in this operator.
-	 */
+	@Override
 	public ClassLoader getUserClassLoader() {
 		return userClassLoader;
 	}
 
-	/**
-	 * Return the states backed by the state backend.
-	 *
-	 * @return The states backed by the state backend.
-	 */
-	public Map<String, InternalState> getStates() {
-		return states;
+	@Override
+	public Map<String, StateStorage> getStateStorages() {
+		return stateStorages;
+	}
+
+	@Override
+	public Map<String, KeyedState> getKeyedStates() {
+		return keyedStates;
+	}
+
+	@Override
+	public Map<String, SubKeyedState> getSubKeyedStates() {
+		return subKeyedStates;
 	}
 
 	//--------------------------------------------------------------------------
-
-	@Override
-	public void close() {
-	}
 
 	@Override
 	public void dispose() {
 		closeImpl();
 
 		IOUtils.closeQuietly(cancelStreamRegistry);
-		this.states.clear();
+
+		stateStorages.clear();
+		keyedStates.clear();
+		subKeyedStates.clear();
 	}
 
 	@Override
-	public InternalState getInternalState(InternalStateDescriptor stateDescriptor) {
-		checkNotNull(stateDescriptor);
-
-		String stateName = stateDescriptor.getName();
-		InternalState state = states.get(stateName);
-		if (state != null) {
-			if (!state.getDescriptor().equals(stateDescriptor)) {
-				throw new StateIncompatibleAccessException(state.getDescriptor(), stateDescriptor);
-			}
-		} else {
-			state = createInternalState(stateDescriptor);
-			states.put(stateName, state);
-		}
-
-		return state;
+	public void close() throws IOException {
+		cancelStreamRegistry.close();
 	}
 
 	@Override
@@ -211,91 +211,122 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 
 	@Override
 	public <K, V> KeyedValueState<K, V> createKeyedValueState(KeyedValueStateDescriptor<K, V> keyedStateDescriptor) {
-		InternalStateDescriptor internalStateDescriptor = KeyedValueStateImpl.buildInternalStateDescriptor(keyedStateDescriptor);
-		InternalState internalState = getInternalState(internalStateDescriptor);
+		StateStorage stateStorage = getStateStorageForKeyedState(keyedStateDescriptor);
+		KeyedValueState<K, V> state = new KeyedValueStateImpl<>(this, keyedStateDescriptor, stateStorage);
+		keyedStates.put(keyedStateDescriptor.getName(), state);
 
-		KeyedValueState<K, V> state = new KeyedValueStateImpl<>(internalState);
 		registQueryableStateIfNeeded(keyedStateDescriptor, state);
+
 		return state;
 	}
 
 	@Override
 	public <K, E> KeyedListState<K, E> createKeyedListState(KeyedListStateDescriptor<K, E> keyedStateDescriptor) {
-		InternalStateDescriptor internalStateDescriptor =
-			KeyedListStateImpl.buildInternalStateDescriptor(keyedStateDescriptor);
-		InternalState internalState = getInternalState(internalStateDescriptor);
+		StateStorage stateStorage = getStateStorageForKeyedState(keyedStateDescriptor);
+		KeyedListState<K, E> state = new KeyedListStateImpl<>(this, keyedStateDescriptor, stateStorage);
+		keyedStates.put(keyedStateDescriptor.getName(), state);
 
-		KeyedListState<K, E> state = new KeyedListStateImpl<>(internalState);
 		registQueryableStateIfNeeded(keyedStateDescriptor, state);
+
 		return state;
 	}
 
 	@Override
 	public <K, MK, MV> KeyedMapState<K, MK, MV> createKeyedMapState(KeyedMapStateDescriptor<K, MK, MV> keyedStateDescriptor) {
-		InternalStateDescriptor internalStateDescriptor =
-			KeyedMapStateImpl.createInternalStateDescriptor(keyedStateDescriptor);
-		InternalState internalState = getInternalState(internalStateDescriptor);
+		StateStorage stateStorage = getStateStorageForKeyedState(keyedStateDescriptor);
+		KeyedMapState<K, MK, MV> state = new KeyedMapStateImpl<>(this, keyedStateDescriptor, stateStorage);
+		keyedStates.put(keyedStateDescriptor.getName(), state);
 
-		KeyedMapState<K, MK, MV> state = new KeyedMapStateImpl<>(internalState);
 		registQueryableStateIfNeeded(keyedStateDescriptor, state);
+
 		return state;
 	}
 
 	@Override
 	public <K, MK, MV> KeyedSortedMapState<K, MK, MV> createKeyedSortedMapState(KeyedSortedMapStateDescriptor<K, MK, MV> keyedStateDescriptor) {
-		InternalStateDescriptor internalStateDescriptor =
-			KeyedSortedMapStateImpl.createInternalStateDescriptor(keyedStateDescriptor);
-		InternalState internalState = getInternalState(internalStateDescriptor);
+		StateStorage stateStorage = getStateStorageForKeyedState(keyedStateDescriptor);
+		KeyedSortedMapState<K, MK, MV> state = new KeyedSortedMapStateImpl<>(this, keyedStateDescriptor, stateStorage);
+		keyedStates.put(keyedStateDescriptor.getName(), state);
 
-		return new KeyedSortedMapStateImpl<>(internalState);
+		registQueryableStateIfNeeded(keyedStateDescriptor, state);
+
+		return state;
 	}
 
 	@Override
 	public <K, N, V> SubKeyedValueState<K, N, V> createSubKeyedValueState(SubKeyedValueStateDescriptor<K, N, V> subKeyedStateDescriptor) {
-		InternalStateDescriptor internalStateDescriptor =
-			SubKeyedValueStateImpl.buildInternalStateDescriptor(subKeyedStateDescriptor);
-		InternalState internalState = getInternalState(internalStateDescriptor);
+		StateStorage stateStorage = getStateStorageForSubKeyedState(subKeyedStateDescriptor);
+		SubKeyedValueState<K, N, V> state = new SubKeyedValueStateImpl<>(this, subKeyedStateDescriptor, stateStorage);
+		subKeyedStates.put(subKeyedStateDescriptor.getName(), state);
 
-		return new SubKeyedValueStateImpl<>(internalState);
+		return state;
 	}
 
 	@Override
 	public <K, N, E> SubKeyedListState<K, N, E> createSubKeyedListState(SubKeyedListStateDescriptor<K, N, E> subKeyedStateDescriptor) {
-		InternalStateDescriptor internalStateDescriptor =
-			SubKeyedListStateImpl.buildInternalStateDescriptor(subKeyedStateDescriptor);
-		InternalState internalState = getInternalState(internalStateDescriptor);
+		StateStorage stateStorage = getStateStorageForSubKeyedState(subKeyedStateDescriptor);
+		SubKeyedListState<K, N, E> state = new SubKeyedListStateImpl<>(this, subKeyedStateDescriptor, stateStorage);
+		subKeyedStates.put(subKeyedStateDescriptor.getName(), state);
 
-		return new SubKeyedListStateImpl<>(internalState);
+		return state;
 	}
 
 	@Override
 	public <K, N, MK, MV> SubKeyedMapState<K, N, MK, MV> createSubKeyedMapState(SubKeyedMapStateDescriptor<K, N, MK, MV> subKeyedStateDescriptor) {
-		InternalStateDescriptor internalStateDescriptor =
-			SubKeyedMapStateImpl.createInternalStateDescriptor(subKeyedStateDescriptor);
-		InternalState internalState = getInternalState(internalStateDescriptor);
+		StateStorage stateStorage = getStateStorageForSubKeyedState(subKeyedStateDescriptor);
+		SubKeyedMapState<K, N, MK, MV> state = new SubKeyedMapStateImpl<>(this, subKeyedStateDescriptor, stateStorage);
+		subKeyedStates.put(subKeyedStateDescriptor.getName(), state);
 
-		return new SubKeyedMapStateImpl<>(internalState);
+		return state;
 	}
 
 	@Override
 	public <K, N, MK, MV> SubKeyedSortedMapState<K, N, MK, MV> createSubKeyedSortedMapState(SubKeyedSortedMapStateDescriptor<K, N, MK, MV> subKeyedStateDescriptor) {
-		InternalStateDescriptor internalStateDescriptor =
-			SubKeyedSortedMapStateImpl.createInternalStateDescriptor(subKeyedStateDescriptor);
-		InternalState internalState = getInternalState(internalStateDescriptor);
+		StateStorage stateStorage = getStateStorageForSubKeyedState(subKeyedStateDescriptor);
+		SubKeyedSortedMapState<K, N, MK, MV> state = new SubKeyedSortedMapStateImpl<>(this, subKeyedStateDescriptor, stateStorage);
+		subKeyedStates.put(subKeyedStateDescriptor.getName(), state);
 
-		return new SubKeyedSortedMapStateImpl<>(internalState);
+		return state;
 	}
 
 	//--------------------------------------------------------------------------
 
-	@Override
-	public Collection<InternalState> getInternalStates() {
-		return states.values();
+	private StateStorage getStateStorageForKeyedState(KeyedStateDescriptor stateDescriptor) {
+		Preconditions.checkNotNull(stateDescriptor);
+
+		String stateName = stateDescriptor.getName();
+		StateStorage stateStorage = stateStorages.get(stateName);
+		if (stateStorage != null) {
+			KeyedState state = keyedStates.get(stateName);
+			Preconditions.checkNotNull(state, "Expect a created keyed state");
+			if (!state.getDescriptor().equals(stateDescriptor)) {
+				throw new StateIncompatibleAccessException(state.getDescriptor(), stateDescriptor);
+			}
+		} else {
+			stateStorage = createStateStorageForKeyedState(stateDescriptor);
+			stateStorages.put(stateName, stateStorage);
+		}
+
+		return stateStorage;
 	}
 
-	@Override
-	public InternalState getInternalState(String stateName) {
-		return states.get(stateName);
+	private StateStorage getStateStorageForSubKeyedState(SubKeyedStateDescriptor stateDescriptor) {
+		Preconditions.checkNotNull(stateDescriptor);
+
+		String stateName = stateDescriptor.getName();
+		StateStorage stateStorage = stateStorages.get(stateName);
+		if (stateStorage != null) {
+			SubKeyedState state = subKeyedStates.get(stateName);
+			Preconditions.checkNotNull(state, "Expect a created keyed state");
+			if (!state.getDescriptor().equals(stateDescriptor)) {
+				throw new StateIncompatibleAccessException(state.getDescriptor(), stateDescriptor);
+			}
+		} else {
+			stateStorage = createStateStorageForSubKeyedState(stateDescriptor);
+			stateStorages.put(stateName, stateStorage);
+		}
+
+		return stateStorage;
 	}
 
 	private void registQueryableStateIfNeeded(KeyedStateDescriptor descriptor, KeyedState state) {
@@ -308,4 +339,5 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 			this.kvStateRegistry.registerKvState(keyGroupRange, descriptor.getQueryableStateName(), state);
 		}
 	}
+
 }

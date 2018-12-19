@@ -28,18 +28,22 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.runtime.state.GroupRange;
-import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.IncrementalLocalStatePartitionSnapshot;
 import org.apache.flink.runtime.state.IncrementalStatePartitionSnapshot;
-import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.PlaceholderStreamStateHandle;
 import org.apache.flink.runtime.state.StateHandleID;
 import org.apache.flink.runtime.state.StatePartitionSnapshot;
+import org.apache.flink.runtime.state.StateSerializerUtil;
 import org.apache.flink.runtime.state.StreamStateHandle;
+import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
+import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.Preconditions;
 
-import org.rocksdb.RocksDBException;
+import org.rocksdb.ColumnFamilyDescriptor;
+import org.rocksdb.ColumnFamilyHandle;
+import org.rocksdb.RocksDB;
 import org.rocksdb.RocksIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,9 +54,11 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Objects;
+
+import static org.apache.flink.runtime.state.StateSerializerUtil.GROUP_WRITE_BYTES;
 
 /**
  * Incremental restore operation for RocksDB InternalStateBackend.
@@ -70,30 +76,11 @@ public class RocksDBIncrementalRestoreOperation {
 	private final CloseableRegistry closeableRegistry = new CloseableRegistry();
 
 	void restore(Collection<StatePartitionSnapshot> restoredSnapshots) throws Exception {
-		if (restoredSnapshots.size() == 1) {
-			StatePartitionSnapshot rawStateSnapshot = restoredSnapshots.iterator().next();
+		boolean hasExtraKeys = (restoredSnapshots.size() > 1 ||
+			!Objects.equals(restoredSnapshots.iterator().next().getGroups(), stateBackend.getGroups()));
 
-			if (rawStateSnapshot.getGroups().equals(stateBackend.getGroups())) {
-				stateBackend.setDbInstance(restoreIntegratedTabletInstance(rawStateSnapshot));
-				return;
-			}
-		}
-
-		long restoreSize = 0;
-		for (StatePartitionSnapshot restoreStateSnapshot : restoredSnapshots) {
-			restoreSize += restoreStateSnapshot.getStateSize();
-		}
-
-		LOG.info("The group range is changed. Constructing the backend " +
-			"from {} instances, size {} bytes.", restoredSnapshots.size(), restoreSize);
-		stateBackend.getCancelStreamRegistry().registerCloseable(closeableRegistry);
-
-		RocksDBInstance dbInstance = null;
-		Collection<Tuple2<RocksDBInstance, GroupSet>> extraInstanceAndGroups = new ArrayList<>();
-		Set<Path> extraInstancePaths = new HashSet<>();
-
-		try {
-			GroupRange groups = (GroupRange) stateBackend.getGroups();
+		if (hasExtraKeys) {
+			long startMillis = System.currentTimeMillis();
 			for (StatePartitionSnapshot rawStateSnapshot: restoredSnapshots) {
 				if (!(rawStateSnapshot instanceof IncrementalStatePartitionSnapshot)) {
 					throw new IllegalStateException("Unexpected state handle type, " +
@@ -101,62 +88,20 @@ public class RocksDBIncrementalRestoreOperation {
 						", but found: " + rawStateSnapshot.getClass());
 				}
 				IncrementalStatePartitionSnapshot stateSnapshot = (IncrementalStatePartitionSnapshot) rawStateSnapshot;
-
-				GroupRange snapshotGroups = (GroupRange) stateSnapshot.getGroups();
-				if (dbInstance == null &&
-					snapshotGroups.getStartGroup() >= groups.getStartGroup() &&
-					snapshotGroups.getEndGroup() <= groups.getEndGroup()) {
-
-					Path localDataPath = new Path(stateBackend.getInstanceRocksDBPath().getAbsolutePath());
-					dbInstance = restoreFragmentedTabletInstance(stateSnapshot, localDataPath);
-				} else {
-					Path localRestorePath = stateBackend.getLocalRestorePath(snapshotGroups);
-					RocksDBInstance extraInstance = restoreFragmentedTabletInstance(stateSnapshot, localRestorePath);
-					extraInstancePaths.add(localRestorePath);
-					extraInstanceAndGroups.add(Tuple2.of(extraInstance, snapshotGroups));
-				}
+				// temporary path.
+				Path temporaryRestoreInstancePath = stateBackend.getLocalRestorePath((GroupRange) stateBackend.getGroups());
+				restoreFragmentedTabletInstance(stateSnapshot, temporaryRestoreInstancePath);
 			}
-
-			if (dbInstance == null) {
-				File localDataPath = stateBackend.getInstanceRocksDBPath();
-				dbInstance = createRocksDBInstance(localDataPath);
-			}
-
-			for (Tuple2<RocksDBInstance, GroupSet> instanceAndGroups : extraInstanceAndGroups) {
-				RocksDBInstance instance = instanceAndGroups.f0;
-				GroupSet snapshotGroups = instanceAndGroups.f1;
-				restoreStateData(dbInstance, instance, snapshotGroups);
-			}
-			stateBackend.setDbInstance(dbInstance);
-		} catch (Exception e) {
-			LOG.error("Error while restoring rocksDB instance ", e);
-			if (dbInstance != null) {
-				dbInstance.close();
-			}
-			throw e;
-		} finally {
-			for (Tuple2<RocksDBInstance, GroupSet> instanceAndGroups : extraInstanceAndGroups) {
-				instanceAndGroups.f0.close();
-			}
-
-			for (Path extraInstancePath : extraInstancePaths) {
-				try {
-					FileSystem fileSystem = extraInstancePath.getFileSystem();
-					if (fileSystem.exists(extraInstancePath)) {
-						fileSystem.delete(extraInstancePath, true);
-					}
-				} catch (Exception ignored) {
-					// ignore exception when deleting candidate tablet paths.
-				}
-			}
-			stateBackend.getCancelStreamRegistry().unregisterCloseable(closeableRegistry);
+			long endMills = System.currentTimeMillis();
+			LOG.info("Restore Fragmented Tablet using {} ms", endMills - startMillis);
+		} else {
+			restoreIntegratedTabletInstance(restoredSnapshots.iterator().next());
 		}
 	}
 
-	private RocksDBInstance restoreIntegratedTabletInstance(
-		StatePartitionSnapshot rawStateSnapshot
-	) throws Exception {
+	private void restoreIntegratedTabletInstance(StatePartitionSnapshot rawStateSnapshot) throws Exception {
 
+		long startMills = System.currentTimeMillis();
 		Map<StateHandleID, Tuple2<String, StreamStateHandle>> sstFiles = null;
 		StreamStateHandle metaStateHandle = null;
 		long checkpointID = -1;
@@ -241,14 +186,35 @@ public class RocksDBIncrementalRestoreOperation {
 		}
 
 		// restore the state descriptors
-		restoreMetaData(metaStateHandle);
+		List<KeyedStateDescriptor> keyedStateDescriptors = new ArrayList<>();
+		List<SubKeyedStateDescriptor> subKeyedStateDescriptors = new ArrayList<>();
+		restoreMetaData(metaStateHandle, keyedStateDescriptors, subKeyedStateDescriptors);
+
+		int cfLength = 1 + keyedStateDescriptors.size() + subKeyedStateDescriptors.size();
+		List<ColumnFamilyDescriptor> columnFamilyDescriptors = new ArrayList<>(cfLength);
+		List<String> descriptorNames = new ArrayList<>(cfLength);
+		columnFamilyDescriptors.add(stateBackend.getDefaultColumnFamilyDescriptor());
+		descriptorNames.add(stateBackend.getDefaultColumnFamilyName());
+		for (KeyedStateDescriptor descriptor : keyedStateDescriptors) {
+			columnFamilyDescriptors.add(stateBackend.getAndRegistColumnFamilyDescriptor(descriptor.getName()));
+			descriptorNames.add(descriptor.getName());
+		}
+		for (SubKeyedStateDescriptor descriptor : subKeyedStateDescriptors) {
+			columnFamilyDescriptors.add(stateBackend.getAndRegistColumnFamilyDescriptor(descriptor.getName()));
+			descriptorNames.add(descriptor.getName());
+		}
+
+		stateBackend.createDBWithColumnFamily(columnFamilyDescriptors, descriptorNames);
+
+		stateBackend.registAllStates(keyedStateDescriptors, subKeyedStateDescriptors);
 
 		synchronized (stateBackend.materializedSstFiles) {
 			stateBackend.materializedSstFiles.put(checkpointID, sstFiles);
 		}
 		stateBackend.lastCompletedCheckpointId = checkpointID;
 
-		return createRocksDBInstance(localDataPath);
+		long endMills = System.currentTimeMillis();
+		LOG.info("Restore Integrated Tablet using {} ms.", endMills - startMills);
 	}
 
 	private void restoreFile(Path localRestorePath, String fileName, StreamStateHandle restoreStateHandle) throws IOException {
@@ -303,7 +269,10 @@ public class RocksDBIncrementalRestoreOperation {
 		}
 	}
 
-	private void restoreMetaData(StreamStateHandle metaStateDatum) throws Exception {
+	private void restoreMetaData(
+		StreamStateHandle metaStateDatum,
+		List<KeyedStateDescriptor> keyedStateDescriptors,
+		List<SubKeyedStateDescriptor> subKeyedStateDescriptors) throws Exception {
 		FSDataInputStream inputStream = null;
 
 		try {
@@ -312,13 +281,17 @@ public class RocksDBIncrementalRestoreOperation {
 
 			DataInputViewStreamWrapper inputView = new DataInputViewStreamWrapper(inputStream);
 
-			int numRestoredStates = inputView.readInt();
-			for (int i = 0; i < numRestoredStates; ++i) {
-				InternalStateDescriptor restoredStateDescriptor =
-					InstantiationUtil.deserializeObject(
-						inputStream, stateBackend.getUserClassLoader());
-
-				stateBackend.getInternalState(restoredStateDescriptor);
+			int numRestoredKeyedStates = inputView.readInt();
+			for (int i = 0; i < numRestoredKeyedStates; ++i) {
+				KeyedStateDescriptor restoredStateDescriptor =
+					InstantiationUtil.deserializeObject(inputStream, stateBackend.getUserClassLoader());
+				keyedStateDescriptors.add(restoredStateDescriptor);
+			}
+			int numRestoredSubKeyedStates = inputView.readInt();
+			for (int i = 0; i < numRestoredSubKeyedStates; ++i) {
+				SubKeyedStateDescriptor descriptor =
+					InstantiationUtil.deserializeObject(inputStream, stateBackend.getUserClassLoader());
+				subKeyedStateDescriptors.add(descriptor);
 			}
 
 			inputStream.close();
@@ -332,46 +305,10 @@ public class RocksDBIncrementalRestoreOperation {
 		}
 	}
 
-	private void restoreStateData(
-		RocksDBInstance dbInstance,
-		RocksDBInstance extraInstance,
-		GroupSet groups
-	) throws RocksDBException {
-		long numEntries = 0;
-		long startMillis = System.currentTimeMillis();
-
-		try (RocksIterator iterator = extraInstance.iterator();
-			RocksDBWriteBatchWrapper writeBatchWrapper = new RocksDBWriteBatchWrapper(dbInstance.getDb(), dbInstance.getWriteOptions())) {
-			for (int group : stateBackend.getGroups().intersect(groups)) {
-
-				byte[] keyGroupPrefix = serializeGroupPrefix(group);
-				iterator.seek(keyGroupPrefix);
-
-				while (iterator.isValid()) {
-					if (!RocksDBInstance.isPrefixWith(iterator.key(), keyGroupPrefix)) {
-						break;
-					}
-
-					writeBatchWrapper.put(dbInstance.getDefaultColumnFamily(), iterator.key(), iterator.value());
-					numEntries++;
-
-					iterator.next();
-				}
-			}
-		}
-
-		long endMillis = System.currentTimeMillis();
-		LOG.info("Successfully loaded {} state of {} entries from restore instance, {} ms.",
-			stateBackend.getStates().size(), numEntries, (endMillis - startMillis));
-	}
-
-	private RocksDBInstance restoreFragmentedTabletInstance(
+	private void restoreFragmentedTabletInstance(
 		IncrementalStatePartitionSnapshot stateSnapshot,
 		Path localRestorePath
 	) throws Exception {
-
-		long startMillis = System.currentTimeMillis();
-
 		FileSystem localFileSystem = localRestorePath.getFileSystem();
 		if (localFileSystem.exists(localRestorePath)) {
 			localFileSystem.delete(localRestorePath, true);
@@ -379,57 +316,93 @@ public class RocksDBIncrementalRestoreOperation {
 		localFileSystem.mkdirs(localRestorePath);
 
 		try {
-			StreamStateHandle metaStateHandle = stateSnapshot.getMetaStateHandle();
+			transferAllStateDataToDirectory(stateSnapshot, localRestorePath);
+			List<KeyedStateDescriptor> keyedStateDescriptors = new ArrayList<>();
+			List<SubKeyedStateDescriptor> subKeyedStateDescriptors = new ArrayList<>();
+			restoreMetaData(stateSnapshot.getMetaStateHandle(), keyedStateDescriptors, subKeyedStateDescriptors);
 
-			if (metaStateHandle == null) {
-				return createRocksDBInstance(localRestorePath);
+			int cfSize = 1 + keyedStateDescriptors.size() + subKeyedStateDescriptors.size();
+			List<String> cfName = new ArrayList<>(cfSize);
+			List<ColumnFamilyDescriptor> columnFamilyDescriptors = new ArrayList<>(cfSize);
+			columnFamilyDescriptors.add(stateBackend.getDefaultColumnFamilyDescriptor());
+			cfName.add(stateBackend.getDefaultColumnFamilyName());
+			for (KeyedStateDescriptor descriptor : keyedStateDescriptors) {
+				columnFamilyDescriptors.add(stateBackend.getAndRegistColumnFamilyDescriptor(descriptor.getName()));
+				cfName.add(descriptor.getName());
+			}
+			for (SubKeyedStateDescriptor descriptor : subKeyedStateDescriptors) {
+				columnFamilyDescriptors.add(stateBackend.getAndRegistColumnFamilyDescriptor(descriptor.getName()));
+				cfName.add(descriptor.getName());
 			}
 
-			restoreMetaData(metaStateHandle);
+			List<ColumnFamilyHandle> columnFamilyHandles = new ArrayList<>(cfSize);
 
-			Map<StateHandleID, Tuple2<String, StreamStateHandle>> newFileStateHandles = stateSnapshot.getSharedState();
-			for (Map.Entry<StateHandleID, Tuple2<String, StreamStateHandle>> stateHandleEntry : newFileStateHandles.entrySet()) {
-				String stateName = stateHandleEntry.getKey().getKeyString();
-				StreamStateHandle stateHandle = stateHandleEntry.getValue().f1;
-				restoreFile(localRestorePath, stateName, stateHandle);
+			try (RocksDB db = RocksDB.open(localRestorePath.getPath(), columnFamilyDescriptors, columnFamilyHandles);
+				RocksDBWriteBatchWrapper writeBatchWrapper = new RocksDBWriteBatchWrapper(stateBackend.getDbInstance())) {
+				final ColumnFamilyHandle defaultColumnFamily = columnFamilyHandles.get(0);
+				Preconditions.checkState(columnFamilyHandles.size() == columnFamilyDescriptors.size());
+				try {
+					ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos(GROUP_WRITE_BYTES);
+
+					int startGroup = ((GroupRange) stateBackend.getGroups().intersect(stateSnapshot.getGroups())).getStartGroup();
+					StateSerializerUtil.writeGroup(outputStream, startGroup);
+					byte[] startGroupBytes = outputStream.toByteArray();
+
+					for (int i = 1; i < columnFamilyDescriptors.size(); ++i) {
+						ColumnFamilyHandle columnFamilyHandle = columnFamilyHandles.get(i);
+						ColumnFamilyHandle targetFamilyHandle = stateBackend.getOrCreateColumnfamily(cfName.get(i));
+						try (RocksIterator iterator = db.newIterator(columnFamilyHandle)) {
+							iterator.seek(startGroupBytes);
+
+							while (iterator.isValid()) {
+								int keyGroup = StateSerializerUtil.getGroupFromSerializedKey(iterator.key());
+
+								if (stateBackend.getGroups().contains(keyGroup)) {
+									writeBatchWrapper.put(targetFamilyHandle, iterator.key(), iterator.value());
+								} else {
+									break;
+								}
+
+								iterator.next();
+							}
+						}
+					}
+				} finally {
+					//release native tmp db column family resources
+					IOUtils.closeQuietly(defaultColumnFamily);
+
+					for (ColumnFamilyHandle flinkColumnFamilyHandle : columnFamilyHandles) {
+						IOUtils.closeQuietly(flinkColumnFamilyHandle);
+					}
+				}
 			}
-
-			Map<StateHandleID, StreamStateHandle> oldFileStateHandles = stateSnapshot.getPrivateState();
-			for (Map.Entry<StateHandleID, StreamStateHandle> oldFileEntry : oldFileStateHandles.entrySet()) {
-				String oldFileName = oldFileEntry.getKey().getKeyString();
-				StreamStateHandle oldFileStateHandle = oldFileEntry.getValue();
-				restoreFile(localRestorePath, oldFileName, oldFileStateHandle);
-			}
-
-			long endMillis = System.currentTimeMillis();
-			LOG.info("Successfully restored the instance at {}, {} bytes, {} ms.",
-				localRestorePath, stateSnapshot.getStateSize(), (endMillis - startMillis));
-
-			return createRocksDBInstance(localRestorePath);
 		} catch (Exception e) {
 			if (localFileSystem.exists(localRestorePath)) {
-				localFileSystem.delete(localRestorePath, true);
+				try {
+					localFileSystem.delete(localRestorePath, true);
+				} catch (IOException e1) {
+					LOG.warn("Delete local path failed.", e);
+				}
 			}
 			throw e;
 		}
 	}
 
-	private static byte[] serializeGroupPrefix(int group) {
-		ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
-		RocksDBInternalState.writeInt(outputStream, group);
+	private void transferAllStateDataToDirectory(
+		IncrementalStatePartitionSnapshot stateSnapshot,
+		Path localRestorePath) throws IOException {
+		Map<StateHandleID, Tuple2<String, StreamStateHandle>> sharedState = stateSnapshot.getSharedState();
+		for (Map.Entry<StateHandleID, Tuple2<String, StreamStateHandle>> stateHandleEntry : sharedState.entrySet()) {
+			String stateName = stateHandleEntry.getKey().getKeyString();
+			StreamStateHandle stateHandle = stateHandleEntry.getValue().f1;
+			restoreFile(localRestorePath, stateName, stateHandle);
+		}
 
-		return outputStream.toByteArray();
-	}
-
-	private RocksDBInstance createRocksDBInstance(File instanceRocksDBPath) throws RocksDBException {
-		return new RocksDBInstance(
-			Preconditions.checkNotNull(stateBackend.dbOptions),
-			Preconditions.checkNotNull(stateBackend.columnOptions),
-			instanceRocksDBPath);
-	}
-
-	private RocksDBInstance createRocksDBInstance(Path instanceRocksDBPath) throws RocksDBException {
-		return createRocksDBInstance(new File(instanceRocksDBPath.getPath()));
+		Map<StateHandleID, StreamStateHandle> privateState = stateSnapshot.getPrivateState();
+		for (Map.Entry<StateHandleID, StreamStateHandle> privateFileEntry : privateState.entrySet()) {
+			String privateFileName = privateFileEntry.getKey().getKeyString();
+			StreamStateHandle privateFileStateHandle = privateFileEntry.getValue();
+			restoreFile(localRestorePath, privateFileName, privateFileStateHandle);
+		}
 	}
 }
-

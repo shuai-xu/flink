@@ -31,8 +31,6 @@ import org.apache.flink.runtime.state.CheckpointedStateScope;
 import org.apache.flink.runtime.state.DirectoryStateHandle;
 import org.apache.flink.runtime.state.IncrementalLocalStatePartitionSnapshot;
 import org.apache.flink.runtime.state.IncrementalStatePartitionSnapshot;
-import org.apache.flink.runtime.state.InternalState;
-import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.PlaceholderStreamStateHandle;
 import org.apache.flink.runtime.state.SnapshotDirectory;
@@ -43,7 +41,11 @@ import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StateUtil;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.filesystem.FileStateHandle;
+import org.apache.flink.runtime.state.keyed.KeyedState;
+import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
 import org.apache.flink.runtime.state.memory.ByteStreamStateHandle;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.InstantiationUtil;
@@ -62,7 +64,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.apache.flink.contrib.streaming.state.RocksDBInstance.SST_FILE_SUFFIX;
+import static org.apache.flink.contrib.streaming.state.RocksDBStorageInstance.SST_FILE_SUFFIX;
 
 /**
  * Incremental snapshot related operations of RocksDB state backend, this behaves better then {@link RocksDBFullSnapshotOperation} in general.
@@ -95,7 +97,9 @@ public class RocksDBIncrementalSnapshotOperation {
 
 	private final ResourceGuard.Lease dbLease;
 
-	private final Map<String, InternalState> states;
+	private final Map<String, KeyedState> keyedStates;
+
+	private final Map<String, SubKeyedState> subKeyedStates;
 
 	private SnapshotResult<StreamStateHandle> metaStateHandle = null;
 
@@ -110,11 +114,13 @@ public class RocksDBIncrementalSnapshotOperation {
 		this.checkpointId = checkpointId;
 		this.dbLease = this.stateBackend.rocksDBResourceGuard.acquireResource();
 		this.localBackupDirectory = localBackupDirectory;
-		this.states = new HashMap<>();
+		this.keyedStates = new HashMap<>();
+		this.subKeyedStates = new HashMap<>();
 	}
 
 	void takeSnapshot() throws Exception {
-		states.putAll(stateBackend.getStates());
+		keyedStates.putAll(stateBackend.getKeyedStates());
+		subKeyedStates.putAll(stateBackend.getSubKeyedStates());
 
 		final long lastCompletedCheckpoint;
 
@@ -134,7 +140,7 @@ public class RocksDBIncrementalSnapshotOperation {
 		}
 
 		// create hard links of living files in the snapshot path
-		stateBackend.getDbInstance().snapshot(localBackupDirectory.getDirectory().getPath());
+		stateBackend.takeDbSnapshot(localBackupDirectory.getDirectory().getPath());
 	}
 
 	@Nonnull
@@ -242,7 +248,6 @@ public class RocksDBIncrementalSnapshotOperation {
 	}
 
 	void stop() {
-
 		if (stateBackend.getCancelStreamRegistry().unregisterCloseable(closeableRegistry)) {
 			try {
 				closeableRegistry.close();
@@ -253,7 +258,6 @@ public class RocksDBIncrementalSnapshotOperation {
 	}
 
 	void releaseResources(boolean canceled) {
-
 		dbLease.close();
 
 		if (stateBackend.getCancelStreamRegistry().unregisterCloseable(closeableRegistry)) {
@@ -374,9 +378,14 @@ public class RocksDBIncrementalSnapshotOperation {
 				new DataOutputViewStreamWrapper(outputStream);
 
 			// Writes state descriptors
-			outputView.writeInt(states.size());
-			for (InternalState state : states.values()) {
-				InternalStateDescriptor stateDescriptor = state.getDescriptor();
+			outputView.writeInt(keyedStates.size());
+			for (KeyedState state : keyedStates.values()) {
+				KeyedStateDescriptor stateDescriptor = state.getDescriptor();
+				InstantiationUtil.serializeObject(outputStream, stateDescriptor);
+			}
+			outputView.writeInt(subKeyedStates.size());
+			for (SubKeyedState state : subKeyedStates.values()) {
+				SubKeyedStateDescriptor stateDescriptor = state.getDescriptor();
 				InstantiationUtil.serializeObject(outputStream, stateDescriptor);
 			}
 

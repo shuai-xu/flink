@@ -26,7 +26,6 @@ import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.configuration.{CheckpointingOptions, Configuration}
 import org.apache.flink.contrib.streaming.state.RocksDBStateBackend
 import org.apache.flink.runtime.state.StateBackend
-import org.apache.flink.runtime.state.gemini.GeminiConfiguration
 import org.apache.flink.runtime.state.memory.MemoryStateBackend
 import org.apache.flink.streaming.api.operators.{OneInputStreamOperator, TwoInputStreamOperator}
 import org.apache.flink.streaming.api.scala.DataStream
@@ -51,7 +50,6 @@ class HarnessTestBase(mode: StateBackendMode) extends StreamingTestBase {
       case HEAP_BACKEND =>
         val conf = new Configuration()
         conf.setBoolean(CheckpointingOptions.ASYNC_SNAPSHOTS, true)
-        conf.setString(GeminiConfiguration.GEMINI_COPY_VALUE, "true")
         new MemoryStateBackend().configure(conf)
 
       case ROCKSDB_BACKEND =>

@@ -30,6 +30,13 @@ import java.util.Map;
 public interface KeyedState<K, V> {
 
 	/**
+	 * Returns the descriptor of the state.
+	 *
+	 * @return The descriptor of the state.
+	 */
+	KeyedStateDescriptor getDescriptor();
+
+	/**
 	 * Returns true if the state contains a pair whose key is equal to the given
 	 * object.
 	 *
@@ -101,14 +108,14 @@ public interface KeyedState<K, V> {
 	Iterable<K> keys();
 
 	/**
-	 * Returns the serialized value for the given key and namespace.
+	 * Returns the serialized value for the given key.
 	 *
-	 * <p>If no value is associated with key and namespace, <code>null</code>
-	 * is returned.
+	 * <p>If no value is associated with key, <code>null</code> is returned.
 	 *
 	 * @param serializedKey Serialized key
-	 * @return Serialized value or <code>null</code> if no value is associated with the key and namespace.
+	 * @return Serialized value or <code>null</code> if no value is associated with the key.
 	 * @throws Exception Exceptions during serialization are forwarded
 	 */
 	byte[] getSerializedValue(byte[] serializedKey) throws Exception;
+
 }

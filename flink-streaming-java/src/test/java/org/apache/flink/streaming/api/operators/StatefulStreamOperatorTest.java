@@ -36,15 +36,13 @@ import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.GroupRangePartitioner;
-import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.InternalStateBackend;
-import org.apache.flink.runtime.state.InternalStateDescriptor;
-import org.apache.flink.runtime.state.InternalStateDescriptorBuilder;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StatePartitionSnapshot;
+import org.apache.flink.runtime.state.StateStorage;
 import org.apache.flink.runtime.state.TestTaskStateManager;
 import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
@@ -56,7 +54,6 @@ import org.apache.flink.runtime.state.subkeyed.SubKeyedValueState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedValueStateDescriptor;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.util.KeyedOneInputStreamOperatorTestHarness;
-import org.apache.flink.types.Row;
 
 import org.junit.Test;
 import org.powermock.reflect.Whitebox;
@@ -260,7 +257,7 @@ public class StatefulStreamOperatorTest {
 			String key = "K" + Integer.toString(i);
 			String value = "V" + Integer.toString(random.nextInt(1000));
 
-			int group = HashPartitioner.INSTANCE.partition(Row.of(key), 10);
+			int group = HashPartitioner.INSTANCE.partition(key, 10);
 			if (leftGroups.contains(group)) {
 				leftPairs.put(key, value);
 			} else if (rightGroups.contains(group)) {
@@ -319,7 +316,7 @@ public class StatefulStreamOperatorTest {
 			String key = "K" + Integer.toString(i);
 			String value = "V" + Integer.toString(random.nextInt(1000));
 
-			int group = HashPartitioner.INSTANCE.partition(Row.of(key), 10);
+			int group = HashPartitioner.INSTANCE.partition(key, 10);
 			if (leftGroups.contains(group)) {
 				leftTestHarness.processElement(new StreamRecord<>(new Tuple2<>("ADD", key + ":" + value)));
 				pairs.put(key, value);
@@ -369,22 +366,12 @@ public class StatefulStreamOperatorTest {
 		private static final long serialVersionUID = 1661814222618778988L;
 
 		@Override
-		protected InternalState createInternalState(InternalStateDescriptor stateDescriptor) {
+		protected StateStorage createStateStorageForKeyedState(KeyedStateDescriptor descriptor) {
 			return null;
 		}
 
 		@Override
-		public void close() {
-
-		}
-
-		@Override
-		public InternalState getInternalState(InternalStateDescriptor stateDescriptor) {
-			return null;
-		}
-
-		@Override
-		public InternalState getInternalState(String stateName) {
+		protected StateStorage createStateStorageForSubKeyedState(SubKeyedStateDescriptor descriptor) {
 			return null;
 		}
 
@@ -426,17 +413,18 @@ public class StatefulStreamOperatorTest {
 
 		private static final long serialVersionUID = 3569321590826278498L;
 
-		private transient InternalState state;
+		private transient KeyedValueState<String, String> state;
 
 		@Override
 		public void open() {
-			InternalStateDescriptor stateDescriptor =
-				new InternalStateDescriptorBuilder("test-state")
-					.addKeyColumn("key", StringSerializer.INSTANCE)
-					.addValueColumn("value", StringSerializer.INSTANCE)
-					.getDescriptor();
+			KeyedValueStateDescriptor<String, String> stateDescriptor =
+				new KeyedValueStateDescriptor<>(
+					"test-state",
+					StringSerializer.INSTANCE,
+					StringSerializer.INSTANCE
+				);
 
-			state = getInternalState(stateDescriptor);
+			state = getKeyedState(stateDescriptor);
 		}
 
 		@Override
@@ -446,13 +434,13 @@ public class StatefulStreamOperatorTest {
 
 			switch(command) {
 				case "ADD":
-					state.put(Row.of(args[0]), Row.of(args[1]));
+					state.put(args[0], args[1]);
 					break;
 				case "REMOVE":
-					state.remove(Row.of(args[0]));
+					state.remove(args[0]);
 					break;
 				case "GET":
-					String value = (String) state.get(Row.of(args[0])).getField(0);
+					String value = state.get(args[0]);
 					output.collect(new StreamRecord<>(value, 0));
 					break;
 				default:
