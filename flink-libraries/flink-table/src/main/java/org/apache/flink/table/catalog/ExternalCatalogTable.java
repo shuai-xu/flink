@@ -27,6 +27,7 @@ import org.apache.calcite.rex.RexNode;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Defines a table in a catalog.
@@ -151,5 +152,33 @@ public class ExternalCatalogTable {
 
 	public long getLastAccessTime() {
 		return lastAccessTime;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+
+		ExternalCatalogTable that = (ExternalCatalogTable) o;
+
+		// TODO: only compare the following few fields right now, may compare more in the future
+		return Objects.equals(tableType, that.tableType) &&
+			Objects.equals(tableSchema, that.tableSchema) &&
+			Objects.equals(tableStats, that.tableStats);
+	}
+
+	@Override
+	public int hashCode() {
+		// TODO: only compare the following few fields right now, may compare more in the future
+
+		return Objects.hash(
+			tableType,
+			tableSchema,
+			tableStats);
 	}
 }

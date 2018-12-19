@@ -92,7 +92,7 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 * @throws DatabaseNotExistException thrown if the database that this table belongs to doesn't exist
 	 */
 	void createTable(ObjectPath tableName, ExternalCatalogTable table, boolean ignoreIfExists)
-		throws TableAlreadyExistException;
+		throws TableAlreadyExistException, DatabaseNotExistException;
 
 	/**
 	 * Deletes table.
@@ -131,4 +131,28 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 */
 	void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists)
 		throws TableNotExistException, DatabaseNotExistException;
+
+	/**
+	 * Check if a database exists in this catalog.
+	 *
+	 * @param dbName		Name of the database.
+	 */
+	boolean dbExists(String dbName);
+
+	/**
+	 * Check if a table exists in this catalog.
+	 *
+	 * @param dbName		Name of the database.
+	 * @param tableName		Name of the table.
+	 */
+	boolean tableExists(String dbName, String tableName);
+
+	/**
+	 * Check if a table exists in this catalog.
+	 *
+	 * @param path			Path of the table.
+	 */
+	default boolean tableExists(ObjectPath path) {
+		return tableExists(path.getDbName(), path.getObjectName());
+	}
 }

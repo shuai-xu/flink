@@ -18,51 +18,32 @@
 
 package org.apache.flink.table.catalog.hive;
 
-import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.table.api.DatabaseAlreadyExistException;
 import org.apache.flink.table.api.DatabaseNotExistException;
 import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
-import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.catalog.CatalogDatabase;
 import org.apache.flink.table.catalog.ExternalCatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.ReadableWritableCatalog;
+import org.apache.flink.util.StringUtils;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.IMetaStoreClient;
 import org.apache.hadoop.hive.metastore.RetryingMetaStoreClient;
+import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
 import org.apache.hadoop.hive.metastore.api.Database;
-import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
-import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
-import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.api.UnknownDBException;
-import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.parquet.Strings;
 import org.apache.thrift.TException;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_COMPRESSED;
-import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_FIELD_NAMES;
-import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_FIELD_TYPES;
-import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_INPUT_FORMAT;
-import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_LOCATION;
-import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_NUM_BUCKETS;
-import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_OUTPUT_FORMAT;
-import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_SERDE_LIBRARY;
-import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT;
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -71,22 +52,26 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  */
 public class HiveCatalog implements ReadableWritableCatalog {
 
-	public static final String DEFAULT_FLINK_DATABASE = "default";
-	public static final String DEFAULT_FLINK_DATABASE_OWNER = "flink";
-
 	private final String catalogName;
-	private final IMetaStoreClient client;
+
+	private HiveConf hiveConf;
+	private IMetaStoreClient client;
 
 	public HiveCatalog(String catalogName, String hiveMetastoreURI) {
 		this(catalogName, getHiveConf(hiveMetastoreURI));
 	}
 
 	public HiveCatalog(String catalogName, HiveConf hiveConf)  {
-		this(catalogName, getMetastoreClient(hiveConf));
+		checkArgument(!StringUtils.isNullOrWhitespaceOnly(catalogName), "catalogName cannot be null or empty");
+		this.catalogName = catalogName;
+
+		this.hiveConf = checkNotNull(hiveConf, "hiveConf cannot be null");
 	}
 
 	public HiveCatalog(String catalogName, IMetaStoreClient client) {
-		this.catalogName = checkNotNull(catalogName, "catalogName cannot be null");
+		checkArgument(!StringUtils.isNullOrWhitespaceOnly(catalogName), "catalogName cannot be null or empty");
+		this.catalogName = catalogName;
+
 		this.client = checkNotNull(client, "client cannot be null");
 	}
 
@@ -113,112 +98,50 @@ public class HiveCatalog implements ReadableWritableCatalog {
 
 	@Override
 	public void open() {
-
+		if (client == null) {
+			client = getMetastoreClient(hiveConf);
+		}
 	}
 
 	@Override
-	public void close() throws IOException {
-		client.close();
+	public void close() {
+		if (client != null) {
+			client.close();
+			client = null;
+		}
 	}
 
 	// ------ tables ------
 
 	@Override
-	public ExternalCatalogTable getTable(ObjectPath tableName) throws TableNotExistException {
-		Table hiveTable;
-
-		String dbName = tableName.getDbName();
-		String tblName = tableName.getObjectName();
+	public ExternalCatalogTable getTable(ObjectPath path) throws TableNotExistException {
 		try {
-			hiveTable = client.getTable(dbName, tblName);
+			return HiveMetadataUtil.createExternalCatalogTable(client.getTable(path.getDbName(), path.getObjectName()));
 		} catch (NoSuchObjectException e) {
-			throw new TableNotExistException(catalogName, tblName);
+			throw new TableNotExistException(catalogName, path.getFullName());
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed getting table %s in database %s", dbName, tblName), e);
+				String.format("Failed getting table %s", path.getFullName()), e);
 		}
-
-		return new ExternalCatalogTable(
-			"hive", // TODO: Need a dedicate 'hive' type. Temporarily set to 'csv' for now
-			getTableSchema(hiveTable.getSd().getCols()),
-			getPropertiesFromHiveTable(hiveTable),
-			null,
-			null,
-			null,
-			new LinkedHashSet<>(),
-			false,
-			null,
-			null,
-			-1L,
-			(long) hiveTable.getCreateTime(),
-			(long) hiveTable.getLastAccessTime());
-	}
-
-	private Map<String, String> getPropertiesFromHiveTable(Table table) {
-		Map<String, String> prop = new HashMap<>(table.getParameters());
-
-		StorageDescriptor sd = table.getSd();
-
-		prop.put(HIVE_TABLE_LOCATION, sd.getLocation());
-		prop.put(HIVE_TABLE_SERDE_LIBRARY, sd.getSerdeInfo().getSerializationLib());
-		prop.put(HIVE_TABLE_INPUT_FORMAT, sd.getInputFormat());
-		prop.put(HIVE_TABLE_OUTPUT_FORMAT, sd.getOutputFormat());
-		prop.put(HIVE_TABLE_COMPRESSED, String.valueOf(sd.isCompressed()));
-		prop.put(HIVE_TABLE_NUM_BUCKETS, String.valueOf(sd.getNumBuckets()));
-		prop.put(HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT,
-				String.valueOf(sd.getSerdeInfo().getParameters().get(serdeConstants.SERIALIZATION_FORMAT)));
-		List<FieldSchema> fieldSchemas = sd.getCols();
-		String[] colNames = new String[fieldSchemas.size()];
-		String[] hiveTypes = new String[fieldSchemas.size()];
-		for (int i = 0; i < fieldSchemas.size(); i++) {
-			colNames[i] = fieldSchemas.get(i).getName();
-			hiveTypes[i] = fieldSchemas.get(i).getType();
-		}
-		prop.put(HIVE_TABLE_FIELD_NAMES, StringUtils.join(colNames, ","));
-		prop.put(HIVE_TABLE_FIELD_TYPES, StringUtils.join(hiveTypes, ","));
-		return prop;
-	}
-
-	@VisibleForTesting
-	protected TableSchema getTableSchema(List<FieldSchema> fieldSchemas) {
-		int colSize = fieldSchemas.size();
-
-		String[] colNames = new String[colSize];
-		InternalType[] colTypes = new InternalType[colSize];
-
-		for (int i = 0; i < colSize; i++) {
-			FieldSchema fs = fieldSchemas.get(i);
-
-			colNames[i] = fs.getName();
-			colTypes[i] = TypeConverterUtil.convert(fs.getType());
-		}
-
-		return new TableSchema(colNames, colTypes);
 	}
 
 	@Override
 	public List<ObjectPath> listTablesByDatabase(String dbName) throws DatabaseNotExistException {
-		List<String> tables;
-
 		try {
-			tables = client.getAllTables(dbName);
+			return client.getAllTables(dbName).stream()
+				.map(t -> new ObjectPath(dbName, t))
+				.collect(Collectors.toList());
 		} catch (UnknownDBException e) {
 			throw new DatabaseNotExistException(catalogName, dbName);
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed listing tables in database %s in HiveCatalog", dbName, catalogName), e);
+				String.format("Failed listing tables in database %s", dbName), e);
 		}
-
-		return tables.stream()
-			.map(t -> new ObjectPath(dbName, t))
-			.collect(Collectors.toList());
 	}
 
 	@Override
 	public List<ObjectPath> listAllTables() {
-
 		List<String> dbs = listDatabases();
-
 		List<ObjectPath> result = new ArrayList<>();
 
 		for (String db : dbs) {
@@ -229,44 +152,107 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void createTable(ObjectPath tableName, ExternalCatalogTable table, boolean ignoreIfExists) throws TableAlreadyExistException {
-		throw new UnsupportedOperationException();
+	public void createTable(ObjectPath path, ExternalCatalogTable table, boolean ignoreIfExists)
+		throws TableAlreadyExistException, DatabaseNotExistException {
+
+		try {
+			if (tableExists(path)) {
+				if (!ignoreIfExists) {
+					throw new TableAlreadyExistException(catalogName, path.getFullName());
+				}
+			} else {
+				// Testing shows that createTable() API in Hive 2.3.4 doesn't throw UnknownDBException as it claims
+				// Thus we have to manually check if the db exists or not
+				if (!dbExists(path.getDbName())) {
+					throw new DatabaseNotExistException(catalogName, path.getDbName());
+				}
+
+				client.createTable(HiveMetadataUtil.createHiveTable(path, table));
+			}
+		} catch (TException e) {
+			throw new FlinkHiveException(
+				String.format("Failed creating table %s", path.getFullName()), e);
+		}
 	}
 
 	@Override
-	public void dropTable(ObjectPath tableName, boolean ignoreIfNotExists) throws TableNotExistException {
-		throw new UnsupportedOperationException();
+	public void dropTable(ObjectPath path, boolean ignoreIfNotExists) throws TableNotExistException {
+		try {
+			client.dropTable(path.getDbName(), path.getObjectName(), true, ignoreIfNotExists);
+		} catch (NoSuchObjectException e) {
+			if (!ignoreIfNotExists) {
+				throw new TableNotExistException(catalogName, path.getFullName());
+			}
+		} catch (TException e) {
+			throw new FlinkHiveException(
+				String.format("Failed dropping table %s", path.getFullName()), e);
+		}
 	}
 
 	@Override
-	public void alterTable(ObjectPath tableName, ExternalCatalogTable newTable, boolean ignoreIfNotExists) throws TableNotExistException {
-		throw new UnsupportedOperationException();
+	public void alterTable(ObjectPath path, ExternalCatalogTable newTable, boolean ignoreIfNotExists) throws TableNotExistException {
+		try {
+			if (tableExists(path)) {
+				client.alter_table(path.getDbName(), path.getObjectName(), HiveMetadataUtil.createHiveTable(path, newTable));
+			} else if (!ignoreIfNotExists) {
+				throw new TableNotExistException(catalogName, path.getFullName());
+			}
+		} catch (TException e) {
+			throw new FlinkHiveException(
+				String.format("Failed creating table %s", path.getFullName()), e);
+		}
 	}
 
 	@Override
 	public void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists) throws TableNotExistException, DatabaseNotExistException {
+		// Hive metastore client doesn't support renaming yet
 		throw new UnsupportedOperationException();
 	}
 
 	// ------ databases ------
 
 	@Override
-	public void createDatabase(String dbName, CatalogDatabase database, boolean ignoreIfExists) throws DatabaseAlreadyExistException {
-		throw new UnsupportedOperationException();
+	public void createDatabase(String dbName, CatalogDatabase db, boolean ignoreIfExists) throws DatabaseAlreadyExistException {
+		try {
+			client.createDatabase(HiveMetadataUtil.createHiveDatabase(dbName, db));
+		} catch (AlreadyExistsException e) {
+			if (!ignoreIfExists) {
+				throw new DatabaseAlreadyExistException(catalogName, dbName);
+			}
+		} catch (TException e) {
+			throw new FlinkHiveException(String.format("Failed creating database %s", dbName), e);
+		}
 	}
 
 	@Override
 	public void dropDatabase(String dbName, boolean ignoreIfNotExists) throws DatabaseNotExistException {
-		throw new UnsupportedOperationException();
+		try {
+			client.dropDatabase(dbName, true, ignoreIfNotExists);
+		} catch (NoSuchObjectException e) {
+			if (!ignoreIfNotExists) {
+				throw new DatabaseNotExistException(catalogName, dbName);
+			}
+		} catch (TException e) {
+			throw new FlinkHiveException(String.format("Failed dropping database %s", dbName), e);
+		}
 	}
 
 	@Override
 	public void alterDatabase(String dbName, CatalogDatabase newDatabase, boolean ignoreIfNotExists) throws DatabaseNotExistException {
-		throw new UnsupportedOperationException();
+		try {
+			if (dbExists(dbName)) {
+				client.alterDatabase(dbName, HiveMetadataUtil.createHiveDatabase(dbName, newDatabase));
+			} else if (!ignoreIfNotExists) {
+				throw new DatabaseNotExistException(catalogName, dbName);
+			}
+		} catch (TException e) {
+			throw new FlinkHiveException(String.format("Failed altering database %s", dbName), e);
+		}
 	}
 
 	@Override
 	public void renameDatabase(String dbName, String newDbName, boolean ignoreIfNotExists) throws DatabaseNotExistException {
+		// Hive metastore client doesn't support renaming yet
 		throw new UnsupportedOperationException();
 	}
 
@@ -295,6 +281,30 @@ public class HiveCatalog implements ReadableWritableCatalog {
 
 		// TODO: Transform hiveDb to CatalogDatabase
 
-		return new CatalogDatabase();
+		return HiveMetadataUtil.createCatalogDatabase(hiveDb);
+	}
+
+	@Override
+	public boolean dbExists(String dbName) {
+		try {
+			return client.getDatabase(dbName) != null;
+		} catch (NoSuchObjectException e) {
+			return false;
+		} catch (Exception e) {
+			throw new FlinkHiveException(
+				String.format("Failed getting database %s", dbName), e);
+		}
+	}
+
+	@Override
+	public boolean tableExists(String dbName, String tableName) {
+		try {
+			return client.tableExists(dbName, tableName);
+		} catch (UnknownDBException e) {
+			return false;
+		} catch (Exception e) {
+			throw new FlinkHiveException(
+				String.format("Failed check if table %s exists in database %s", tableName, dbName), e);
+		}
 	}
 }

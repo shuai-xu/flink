@@ -18,105 +18,67 @@
 
 package org.apache.flink.table.catalog.hive;
 
-import org.apache.flink.table.catalog.ExternalCatalogTable;
+import org.apache.flink.table.catalog.CatalogTestBase;
 import org.apache.flink.table.catalog.ObjectPath;
 
-import org.apache.hadoop.hive.metastore.IMetaStoreClient;
-import org.apache.hadoop.hive.metastore.api.FieldSchema;
-import org.apache.hadoop.hive.metastore.api.SerDeInfo;
-import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
-import org.apache.hadoop.hive.metastore.api.Table;
-import org.apache.hadoop.hive.serde.serdeConstants;
-import org.apache.thrift.TException;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.apache.hadoop.hive.conf.HiveConf;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.rules.TemporaryFolder;
 
-import java.util.Arrays;
-import java.util.Collections;
+import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.anyString;
+import java.util.Map;
 
 /**
  * Test for HiveCatalog.
  */
-public class HiveCatalogTest {
-	private static final String TABLE_TYPE = "hive";
+public class HiveCatalogTest extends CatalogTestBase {
 
-	private static final String DB1 = "db1";
-	private static final String DB2 = "db2";
-	private static final String TB1 = "tb1";
-	private static final String TB2 = "tb2";
-	private static final String TB3 = "tb3";
+	@ClassRule
+	public static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();
 
-	private IMetaStoreClient mockedClient = Mockito.mock(IMetaStoreClient.class);
-	private HiveCatalog hiveCatalog = new HiveCatalog("test", mockedClient);
+	private static String warehouseDir;
+	private static String warehouseUri;
 
-	@Test
-	public void testGetTable() throws TException {
-		Mockito.when(mockedClient.getTable(anyString(), anyString())).thenReturn(getHiveTable());
+	@BeforeClass
+	public static void init() throws IOException {
+		warehouseDir = TEMPORARY_FOLDER.newFolder().getAbsolutePath() + "/metastore_db";
+		warehouseUri = String.format("jdbc:derby:;databaseName=%s;create=true", warehouseDir);
+		HiveConf hiveConf = new HiveConf();
+		hiveConf.setBoolVar(HiveConf.ConfVars.METASTORE_SCHEMA_VERIFICATION, false);
+		hiveConf.setBoolean("datanucleus.schema.autoCreateTables", true);
+		hiveConf.setVar(HiveConf.ConfVars.METASTOREWAREHOUSE, TEMPORARY_FOLDER.newFolder("hive_warehouse").getAbsolutePath());
+		hiveConf.setVar(HiveConf.ConfVars.METASTORECONNECTURLKEY, warehouseUri);
 
-		ExternalCatalogTable table = hiveCatalog.getTable(ObjectPath.fromString("default.hivetable"));
-
-		assertEquals(TABLE_TYPE, table.getTableType());
-		assertEquals(hiveCatalog.getTableSchema(getFieldSchemas()), table.getTableSchema());
+		catalog = new HiveCatalog("test", hiveConf);
+		catalog.open();
 	}
 
-	@Test
-	public void testListTables() throws TException {
-		Mockito.when(mockedClient.getAllDatabases()).thenReturn(Arrays.asList(DB1, DB2));
-		Mockito.when(mockedClient.getAllTables(DB1)).thenReturn(Arrays.asList(TB1));
-		Mockito.when(mockedClient.getAllTables(DB2)).thenReturn(Arrays.asList(TB2, TB3));
-
-		assertEquals(Arrays.asList(
-				new ObjectPath(DB1, TB1),
-				new ObjectPath(DB2, TB2),
-				new ObjectPath(DB2, TB3)
-			),
-			hiveCatalog.listAllTables());
+	@After
+	public void close() {
+		catalog.dropTable(new ObjectPath(db1, t1), true);
+		catalog.dropTable(new ObjectPath(db2, t2), true);
+		catalog.dropDatabase(db1, true);
+		catalog.dropDatabase(db2, true);
 	}
 
-	private Table getHiveTable() {
-		return new Table(
-			"hive_table",
-			"default",
-			"fake_owner",
-			-1,
-			-1,
-			-1,
-			getStorageDescriptor(),
-			Collections.emptyList(),
-			new HashMap<String, String>() {{
-				put("k1", "v1");
-				put("k2", "v2");
-			}},
-			null,
-			null,
-			TABLE_TYPE
-		);
+	@AfterClass
+	public static void clean() throws IOException {
+		catalog.close();
 	}
 
-	private StorageDescriptor getStorageDescriptor() {
-		return new StorageDescriptor(
-			getFieldSchemas(),
-			"mylocation",
-			"myinputformat",
-			"myoutputformat",
-			false,
-			1,
-			new SerDeInfo("myserde", "myserdelib", Collections.emptyMap()),
-			Collections.emptyList(),
-			Collections.emptyList(),
-			Collections.emptyMap()
-		);
+	@Override
+	public String getTableType() {
+		return "hive";
 	}
 
-	private List<FieldSchema> getFieldSchemas() {
-		return Arrays.asList(
-			new FieldSchema("a", serdeConstants.STRING_TYPE_NAME, null),
-			new FieldSchema("b", serdeConstants.INT_TYPE_NAME, null)
-		);
+	@Override
+	protected Map<String, String> getTableProperties() {
+		return new HashMap<String, String>() {{
+			put(HiveCatalogConfig.HIVE_TABLE_LOCATION, warehouseDir + "/tmp");
+		}};
 	}
 }

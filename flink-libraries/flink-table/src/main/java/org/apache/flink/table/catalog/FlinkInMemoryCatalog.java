@@ -66,20 +66,22 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	public void createTable(ObjectPath tableName, ExternalCatalogTable table, boolean ignoreIfExists)
 		throws TableAlreadyExistException, DatabaseNotExistException {
 
-		if (isTableRegistered(tableName) && !ignoreIfExists) {
-			throw new TableAlreadyExistException(catalogName, tableName.getFullName());
-		}
+		if (tableExists(tableName))  {
+			if (!ignoreIfExists) {
+				throw new TableAlreadyExistException(catalogName, tableName.getFullName());
+			}
+		} else {
+			if (!dbExists(tableName.getDbName())) {
+				throw new DatabaseNotExistException(catalogName, tableName.getDbName());
+			}
 
-		if (!isDbRegistered(tableName.getDbName())) {
-			throw new DatabaseNotExistException(catalogName, tableName.getDbName());
+			tables.put(tableName, table);
 		}
-
-		tables.put(tableName, table);
 	}
 
 	@Override
 	public void dropTable(ObjectPath tableName, boolean ignoreIfNotExists) throws TableNotExistException {
-		if (isTableRegistered(tableName)) {
+		if (tableExists(tableName)) {
 			tables.remove(tableName);
 		} else if (!ignoreIfNotExists) {
 			throw new TableNotExistException(catalogName, tableName.getFullName());
@@ -88,7 +90,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 
 	@Override
 	public void alterTable(ObjectPath tableName, ExternalCatalogTable newTable, boolean ignoreIfNotExists) throws TableNotExistException {
-		if (isTableRegistered(tableName)) {
+		if (tableExists(tableName)) {
 			tables.put(tableName, newTable);
 		} else if (!ignoreIfNotExists) {
 			throw new TableNotExistException(catalogName, tableName.getFullName());
@@ -99,7 +101,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	public void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists)
 		throws TableNotExistException, DatabaseNotExistException {
 
-		if (isTableRegistered(tableName)) {
+		if (tableExists(tableName)) {
 			tables.put(new ObjectPath(tableName.getDbName(), newTableName), tables.remove(tableName));
 		} else if (!ignoreIfNotExists) {
 			throw new TableNotExistException(catalogName, tableName.getFullName());
@@ -110,7 +112,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	public List<ObjectPath> listTablesByDatabase(String dbName) throws DatabaseNotExistException {
 		checkArgument(!StringUtils.isNullOrWhitespaceOnly(dbName), "dbName cannot be null or empty");
 
-		if (!isDbRegistered(dbName)) {
+		if (!dbExists(dbName)) {
 			throw new DatabaseNotExistException(catalogName, dbName);
 		}
 
@@ -127,7 +129,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	@Override
 	public ExternalCatalogTable getTable(ObjectPath tableName) throws TableNotExistException {
 
-		if (!isTableRegistered(tableName)) {
+		if (!tableExists(tableName)) {
 			throw new TableNotExistException(catalogName, tableName.getFullName());
 		} else {
 			return tables.get(tableName);
@@ -136,8 +138,10 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 
 	@Override
 	public void createDatabase(String dbName, CatalogDatabase db, boolean ignoreIfExists) throws DatabaseAlreadyExistException {
-		if (isDbRegistered(dbName) && !ignoreIfExists) {
-			throw new DatabaseAlreadyExistException(catalogName, dbName);
+		if (dbExists(dbName)) {
+			if (!ignoreIfExists) {
+				throw new DatabaseAlreadyExistException(catalogName, dbName);
+			}
 		} else {
 			databases.put(dbName, db);
 		}
@@ -145,14 +149,16 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 
 	@Override
 	public void dropDatabase(String dbName, boolean ignoreIfNotExists) throws DatabaseNotExistException {
-		if (databases.remove(dbName) == null && !ignoreIfNotExists) {
+		if (databases.containsKey(dbName)) {
+			databases.remove(dbName);
+		} else if (!ignoreIfNotExists) {
 			throw new DatabaseNotExistException(catalogName, dbName);
 		}
 	}
 
 	@Override
 	public void alterDatabase(String dbName, CatalogDatabase newDatabase, boolean ignoreIfNotExists) throws DatabaseNotExistException {
-		if (isDbRegistered(dbName)) {
+		if (dbExists(dbName)) {
 			databases.put(dbName, newDatabase);
 		} else if (!ignoreIfNotExists) {
 			throw new DatabaseNotExistException(catalogName, dbName);
@@ -161,7 +167,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 
 	@Override
 	public void renameDatabase(String dbName, String newDbName, boolean ignoreIfNotExists) throws DatabaseNotExistException {
-		if (isDbRegistered(dbName)) {
+		if (dbExists(dbName)) {
 			databases.put(newDbName, databases.remove(dbName));
 		} else if (!ignoreIfNotExists) {
 			throw new DatabaseNotExistException(catalogName, dbName);
@@ -175,34 +181,22 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 
 	@Override
 	public CatalogDatabase getDatabase(String dbName) throws DatabaseNotExistException {
-		if (!isDbRegistered(dbName)) {
+		if (!dbExists(dbName)) {
 			throw new DatabaseNotExistException(catalogName, dbName);
 		} else {
 			return databases.get(dbName);
 		}
 	}
 
-	/**
-	 * Check if a table is registered in this catalog.
-	 */
-	private boolean isTableRegistered(ObjectPath path) {
-		return isTableRegistered(path.getDbName(), path.getObjectName());
+	@Override
+	public boolean dbExists(String dbName) {
+		return databases.containsKey(dbName);
 	}
 
-	/**
-	 * Check if a table is registered in this catalog.
-	 */
-	private boolean isTableRegistered(String dbName, String tableName) {
-		return isDbRegistered(dbName) && listTablesByDatabase(dbName).stream()
+	@Override
+	public boolean tableExists(String dbName, String tableName) {
+		return dbExists(dbName) && listTablesByDatabase(dbName).stream()
 			.map(op -> op.getObjectName())
 			.anyMatch(e -> e.equals(tableName));
-	}
-
-	/**
-	 * Check if a database is registered in this catalog.
-	 */
-	private boolean isDbRegistered(String dbName) {
-		return listDatabases().stream()
-			.anyMatch(e -> e.equals(dbName));
 	}
 }

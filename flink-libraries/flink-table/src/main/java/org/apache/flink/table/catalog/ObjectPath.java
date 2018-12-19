@@ -83,9 +83,6 @@ public class ObjectPath {
 
 	@Override
 	public String toString() {
-		return "ObjectPath{" +
-			"dbName='" + dbName + '\'' +
-			", objectName='" + objectName + '\'' +
-			'}';
+		return String.format("%s.%s", dbName, objectName);
 	}
 }
