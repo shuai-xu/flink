@@ -58,4 +58,12 @@ public abstract class AbstractChannelWriterOutputView extends AbstractPagedOutpu
 	 * Get output compressed bytes, return num bytes if there is no compression.
 	 */
 	public abstract long getNumCompressedBytes() throws IOException;
+
+	public void deleteChannel() {
+		writer.deleteChannel();
+	}
+
+	public FileIOChannel.ID getChannelID() {
+		return writer.getChannelID();
+	}
 }

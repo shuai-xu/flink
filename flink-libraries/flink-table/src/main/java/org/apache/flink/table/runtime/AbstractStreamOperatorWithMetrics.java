@@ -51,6 +51,8 @@ public class AbstractStreamOperatorWithMetrics<OUT> extends AbstractStreamOperat
 
 	protected boolean closed = false;
 
+	private transient Configuration sqlConf;
+
 	public AbstractStreamOperatorWithMetrics() {
 		setChainingStrategy(ChainingStrategy.ALWAYS);
 	}
@@ -131,11 +133,15 @@ public class AbstractStreamOperatorWithMetrics<OUT> extends AbstractStreamOperat
 	}
 
 	public Configuration getSqlConf() {
+		if (sqlConf != null) {
+			return sqlConf;
+		}
 		Configuration conf = getContainingTask().getJobConfiguration();
 		ExecutionConfig.GlobalJobParameters paras = getExecutionConfig().getGlobalJobParameters();
 		if (paras != null) {
 			conf.addAll(paras.toMap());
 		}
+		this.sqlConf = conf;
 		return conf;
 	}
 }

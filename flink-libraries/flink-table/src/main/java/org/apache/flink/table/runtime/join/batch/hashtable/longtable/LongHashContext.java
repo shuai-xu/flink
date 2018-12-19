@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.runtime.join.batch.hashtable.longtable;
 
+import org.apache.flink.api.common.io.blockcompression.BlockCompressionFactory;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.table.runtime.util.MemorySegmentPool;
 
@@ -36,4 +37,9 @@ public interface LongHashContext extends MemorySegmentPool {
 
 	int spillPartition() throws IOException;
 
+	boolean compressionEnable();
+
+	BlockCompressionFactory compressionCodecFactory();
+
+	int compressionBlockSize();
 }

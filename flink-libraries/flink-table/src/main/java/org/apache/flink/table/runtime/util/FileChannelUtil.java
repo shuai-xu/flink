@@ -31,6 +31,7 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.apache.flink.core.memory.MemorySegmentFactory.allocateUnpooledSegment;
 
@@ -47,23 +48,21 @@ public class FileChannelUtil {
 			BlockCompressionFactory compressionCodecFactory,
 			int compressionBlockSize,
 			int segmentSize) throws IOException {
-		AbstractChannelReaderInputView inView;
 		if (compressionEnable) {
 			CompressedHeaderlessChannelReaderInputView in = new CompressedHeaderlessChannelReaderInputView(
 					channel.getChannel(), ioManager, compressionCodecFactory, compressionBlockSize, channel.getBlockCount());
-			inView = in;
 			channels.add(in.getReader());
+			return in;
 		} else {
 			BlockChannelReader<MemorySegment> reader =
 					ioManager.createBlockChannelReader(channel.getChannel());
 			channels.add(reader);
-			inView = new HeaderlessChannelReaderInputView(
+			return new HeaderlessChannelReaderInputView(
 					reader,
 					Arrays.asList(allocateUnpooledSegment(segmentSize), allocateUnpooledSegment(segmentSize)),
 					channel.getBlockCount(),
 					channel.getNumBytesInLastBlock(), false);
 		}
-		return inView;
 	}
 
 	public static AbstractChannelWriterOutputView createOutputView(
@@ -73,18 +72,50 @@ public class FileChannelUtil {
 			BlockCompressionFactory compressionCodecFactory,
 			int compressionBlockSize,
 			int segmentSize) throws IOException {
-		AbstractChannelWriterOutputView view;
 		if (compressionEnable) {
 			BufferFileWriter bufferWriter = ioManager.createBufferFileWriter(channel);
-			view = new CompressedHeaderlessChannelWriterOutputView(
+			return new CompressedHeaderlessChannelWriterOutputView(
 					bufferWriter, compressionCodecFactory, compressionBlockSize);
 		} else {
 			BlockChannelWriter<MemorySegment> blockWriter = ioManager.createBlockChannelWriter(channel);
-			view = new HeaderlessChannelWriterOutputView(
+			return new HeaderlessChannelWriterOutputView(
 					blockWriter,
 					Arrays.asList(allocateUnpooledSegment(segmentSize), allocateUnpooledSegment(segmentSize)),
 					segmentSize);
 		}
-		return view;
+	}
+
+	public static BlockChannelWriter<MemorySegment> createBlockChannelWriter(
+			IOManager ioManager,
+			FileIOChannel.ID channel,
+			LinkedBlockingQueue<MemorySegment> bufferReturnQueue,
+			boolean compressionEnable,
+			BlockCompressionFactory compressionCodecFactory,
+			int compressionBlockSize,
+			int segmentSize) throws IOException {
+		if (compressionEnable) {
+			return new CompressedBlockChannelWriter(
+					ioManager, channel, bufferReturnQueue, compressionCodecFactory,
+					compressionBlockSize, segmentSize);
+		} else {
+			return ioManager.createBlockChannelWriter(channel, bufferReturnQueue);
+		}
+	}
+
+	public static BlockChannelReader<MemorySegment> createBlockChannelReader(
+			IOManager ioManager,
+			FileIOChannel.ID channel,
+			LinkedBlockingQueue<MemorySegment> bufferReturnQueue,
+			boolean compressionEnable,
+			BlockCompressionFactory compressionCodecFactory,
+			int compressionBlockSize,
+			int segmentSize) throws IOException {
+		if (compressionEnable) {
+			return new CompressedBlockChannelReader(
+					ioManager, channel, bufferReturnQueue, compressionCodecFactory,
+					compressionBlockSize, segmentSize);
+		} else {
+			return ioManager.createBlockChannelReader(channel, bufferReturnQueue);
+		}
 	}
 }

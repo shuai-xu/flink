@@ -72,15 +72,18 @@ public final class HeaderlessChannelWriterOutputView extends AbstractChannelWrit
 	 */
 	@Override
 	public int close() throws IOException {
-		int currentPositionInSegment = getCurrentPositionInSegment();
-		// write last segment
-		writer.writeBlock(getCurrentSegment());
-		clear();
+		if (!writer.isClosed()) {
+			int currentPositionInSegment = getCurrentPositionInSegment();
+			// write last segment
+			writer.writeBlock(getCurrentSegment());
+			clear();
 
-		writer.getReturnQueue().clear();
-		this.writer.close();
+			writer.getReturnQueue().clear();
+			this.writer.close();
 
-		return currentPositionInSegment;
+			return currentPositionInSegment;
+		}
+		return -1;
 	}
 
 	@Override

@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.runtime.join.batch.hashtable.longtable;
 
+import org.apache.flink.api.common.io.blockcompression.BlockCompressionFactory;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.dataformat.BinaryRow;
@@ -44,11 +45,10 @@ import static org.apache.flink.table.runtime.join.batch.hashtable.longtable.Long
 public class LongHashPartitionTest {
 
 	private LongHashPartition table;
-	private LongHashContext context;
 
 	@Before
 	public void init() {
-		this.context = new TestLongHashContext();
+		LongHashContext context = new TestLongHashContext();
 		this.table = new LongHashPartition(context, 1,
 				new BinaryRowSerializer(DataTypes.LONG, DataTypes.STRING), 15, 15, 0);
 	}
@@ -72,7 +72,7 @@ public class LongHashPartitionTest {
 		table.append(3, row(3, "haha3"));
 		table.append(128, row(128, "hehe128"));
 
-		table.finalizeBuildPhase(null, null, null);
+		table.finalizeBuildPhase(null, null);
 
 		assertTable(0, Arrays.asList("haha0", "hehe0"));
 		assertTable(5, Arrays.asList("haha5", "hehe5"));
@@ -89,7 +89,7 @@ public class LongHashPartitionTest {
 		table.append(3, row(3, "haha3"));
 		table.append(1284444, row(1284444, "hehe1284444"));
 
-		table.finalizeBuildPhase(null, null, null);
+		table.finalizeBuildPhase(null, null);
 
 		assertTable(5, Arrays.asList("haha5", "hehe5"));
 		assertTable(3, Collections.singletonList("haha3"));
@@ -106,7 +106,7 @@ public class LongHashPartitionTest {
 
 		table.append(10000000L, row(10000000L, "hehe" + 10000000L));
 
-		table.finalizeBuildPhase(null, null, null);
+		table.finalizeBuildPhase(null, null);
 
 		for (int i = 0; i < 2500; i++) {
 			assertTable(i, Collections.singletonList("hehe" + i));
@@ -148,6 +148,21 @@ public class LongHashPartitionTest {
 		@Override
 		public int spillPartition() throws IOException {
 			throw new RuntimeException();
+		}
+
+		@Override
+		public boolean compressionEnable() {
+			return false;
+		}
+
+		@Override
+		public BlockCompressionFactory compressionCodecFactory() {
+			return null;
+		}
+
+		@Override
+		public int compressionBlockSize() {
+			return 0;
 		}
 	}
 }

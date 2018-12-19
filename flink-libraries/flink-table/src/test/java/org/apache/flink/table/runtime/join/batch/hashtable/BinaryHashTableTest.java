@@ -20,6 +20,7 @@ package org.apache.flink.table.runtime.join.batch.hashtable;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemoryType;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
@@ -27,6 +28,7 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
 import org.apache.flink.runtime.memory.MemoryAllocationException;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.operators.testutils.UnionIterator;
+import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.codegen.Projection;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
@@ -43,9 +45,12 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,12 +61,25 @@ import static org.junit.Assert.fail;
 /**
  * Hash table it case for binary row.
  */
+@RunWith(Parameterized.class)
 public class BinaryHashTableTest {
 
 	private static final int PAGE_SIZE = 32 * 1024;
 	private IOManager ioManager;
 	private BinaryRowSerializer buildSideSerializer;
 	private BinaryRowSerializer probeSideSerializer;
+
+	private boolean useCompress;
+	private Configuration conf;
+
+	public BinaryHashTableTest(boolean useCompress) {
+		this.useCompress = useCompress;
+	}
+
+	@Parameterized.Parameters(name = "useCompress-{0}")
+	public static List<Boolean> getVarSeg() {
+		return Arrays.asList(true, false);
+	}
 
 	@Before
 	public void setup() {
@@ -70,6 +88,9 @@ public class BinaryHashTableTest {
 		this.probeSideSerializer = new BinaryRowSerializer(types);
 
 		this.ioManager = new IOManagerAsync();
+
+		conf = new Configuration();
+		conf.setBoolean(TableConfig.SQL_EXEC_SPILL_COMPRESSION_ENABLE(), useCompress);
 	}
 
 	@After
@@ -574,7 +595,7 @@ public class BinaryHashTableTest {
 		MutableObjectIterator<BinaryRow> buildInput = new UniformBinaryRowGenerator(
 				numBuildKeys, numBuildVals, false);
 		MemoryManager memManager = new MemoryManager(96 * PAGE_SIZE, 1);
-		final BinaryHashTable table = new BinaryHashTable(new Object(),
+		final BinaryHashTable table = new BinaryHashTable(conf, new Object(),
 				this.buildSideSerializer, this.probeSideSerializer,
 				new MyProjection(), new MyProjection(), memManager, 96 * PAGE_SIZE,
 				ioManager, 24, 200000, true, HashJoinType.BUILD_OUTER, null, true, new boolean[] {true}, false);
@@ -637,7 +658,7 @@ public class BinaryHashTableTest {
 		MemoryManager memManager = new MemoryManager(35 * PAGE_SIZE, 1);
 		// ----------------------------------------------------------------------------------------
 
-		final BinaryHashTable table = new BinaryHashTable(new Object(),
+		final BinaryHashTable table = new BinaryHashTable(conf, new Object(),
 				this.buildSideSerializer, this.probeSideSerializer,
 				new MyProjection(), new MyProjection(),
 				memManager, 35 * PAGE_SIZE, ioManager, 24, 200000,
@@ -677,7 +698,7 @@ public class BinaryHashTableTest {
 		MutableObjectIterator<BinaryRow> probeInput = new UniformBinaryRowGenerator(numKeys, probeValsPerKey, true);
 		MemoryManager memManager = new MemoryManager(35 * PAGE_SIZE, 1);
 		// allocate the memory for the HashTable
-		final BinaryHashTable table = new BinaryHashTable(new Object(),
+		final BinaryHashTable table = new BinaryHashTable(conf, new Object(),
 				this.buildSideSerializer, this.probeSideSerializer,
 				new MyProjection(), new MyProjection(),
 				memManager, 35 * PAGE_SIZE, ioManager, 24, 200000, true,
@@ -753,7 +774,7 @@ public class BinaryHashTableTest {
 		};
 		MutableObjectIterator<BinaryRow> probeInput = new UniformBinaryRowGenerator(numKeys, probeValsPerKey, true);
 
-		final BinaryHashTable table = new BinaryHashTable(new Object(),
+		final BinaryHashTable table = new BinaryHashTable(conf, new Object(),
 				buildSideSerializer, probeSideSerializer, new MyProjection(), new MyProjection(), memManager,
 				40 * PAGE_SIZE, ioManager, 24, 200000,
 				true, HashJoinType.INNER, null, false, new boolean[] {true}, true);
@@ -799,7 +820,7 @@ public class BinaryHashTableTest {
 		MemoryManager memManager = new MemoryManager(35 * PAGE_SIZE, 1);
 		MutableObjectIterator<BinaryRow> probeInput = new UniformBinaryRowGenerator(numKeys, probeValsPerKey, true);
 
-		final BinaryHashTable table = new BinaryHashTable(new Object(),
+		final BinaryHashTable table = new BinaryHashTable(conf, new Object(),
 				buildSideSerializer, probeSideSerializer, new MyProjection(), new MyProjection(),
 				memManager, 35 * PAGE_SIZE, ioManager, 24, 200000,
 				true, HashJoinType.INNER, null, false, new boolean[] {true}, true);
@@ -851,7 +872,7 @@ public class BinaryHashTableTest {
 		}
 	}
 
-	private static BinaryHashTable newBinaryHashTable(
+	private BinaryHashTable newBinaryHashTable(
 			BinaryRowSerializer buildSideSerializer,
 			BinaryRowSerializer probeSideSerializer,
 			Projection<BaseRow, BinaryRow> buildSideProjection,
@@ -859,7 +880,7 @@ public class BinaryHashTableTest {
 			MemoryManager memoryManager,
 			long memory,
 			IOManager ioManager) {
-		return new BinaryHashTable(new Object(),
+		return new BinaryHashTable(conf, new Object(),
 				buildSideSerializer, probeSideSerializer, buildSideProjection,
 				probeSideProjection,
 				memoryManager,
@@ -867,7 +888,7 @@ public class BinaryHashTableTest {
 				true, HashJoinType.INNER, null, false, new boolean[]{true}, false);
 	}
 
-	private static BinaryHashTable newBinaryHashTable(
+	private BinaryHashTable newBinaryHashTable(
 			BinaryRowSerializer buildSideSerializer,
 			BinaryRowSerializer probeSideSerializer,
 			Projection<BaseRow, BinaryRow> buildSideProjection,
@@ -877,7 +898,7 @@ public class BinaryHashTableTest {
 			long maxMemory,
 			long permemory,
 			IOManager ioManager) {
-		return new BinaryHashTable(new Object(),
+		return new BinaryHashTable(conf, new Object(),
 				buildSideSerializer, probeSideSerializer, buildSideProjection,
 				probeSideProjection,
 				memoryManager,

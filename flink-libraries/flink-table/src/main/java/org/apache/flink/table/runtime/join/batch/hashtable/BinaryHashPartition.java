@@ -18,18 +18,20 @@
 
 package org.apache.flink.table.runtime.join.batch.hashtable;
 
+import org.apache.flink.api.common.io.blockcompression.BlockCompressionFactory;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentSource;
 import org.apache.flink.core.memory.SeekableDataInputView;
 import org.apache.flink.runtime.io.disk.RandomAccessInputView;
 import org.apache.flink.runtime.io.disk.iomanager.BlockChannelWriter;
 import org.apache.flink.runtime.io.disk.iomanager.BulkBlockChannelReader;
-import org.apache.flink.runtime.io.disk.iomanager.ChannelWriterOutputView;
 import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.memory.AbstractPagedInputView;
 import org.apache.flink.runtime.memory.AbstractPagedOutputView;
 import org.apache.flink.table.dataformat.BinaryRow;
+import org.apache.flink.table.runtime.util.AbstractChannelWriterOutputView;
+import org.apache.flink.table.runtime.util.FileChannelUtil;
 import org.apache.flink.table.runtime.util.MemorySegmentPool;
 import org.apache.flink.table.runtime.util.RowIterator;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
@@ -52,6 +54,10 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 	private final BinaryRowSerializer probeSideSerializer;
 	private final int segmentSizeBits; // the number of bits in the mem segment size;
 
+	private boolean compressionEnable;
+	private BlockCompressionFactory compressionCodecFactory;
+	private int compressionBlockSize;
+
 	private final int memorySegmentSize; // the size of the memory segments being used
 	final int partitionNumber; // the number of the partition
 
@@ -61,15 +67,12 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 	private int finalBufferLimit;
 
 	private BuildSideBuffer buildSideWriteBuffer;
-	private ChannelWriterOutputView probeSideBuffer;
+	AbstractChannelWriterOutputView probeSideBuffer;
 	private long buildSideRecordCounter; // number of build-side records in this partition
 	private int recursionLevel; // the recursion level on which this partition lives
 
 	// the channel writer for the build side, if partition is spilled
 	private BlockChannelWriter<MemorySegment> buildSideChannel;
-
-	// the channel writer from the probe side, if partition is spilled
-	private BlockChannelWriter<MemorySegment> probeSideChannel;
 
 	// bucket area of this partition
 	BinaryHashBucketArea bucketArea;
@@ -81,6 +84,8 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 	HashTableBloomFilter bloomFilter;
 
 	private MemorySegmentPool memPool;
+
+	int probeNumBytesInLastSeg;
 
 	/**
 	 * Creates a new partition, initially in memory, with one buffer for the build side. The
@@ -94,7 +99,8 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 	 */
 	BinaryHashPartition(BinaryHashBucketArea bucketArea, BinaryRowSerializer buildSideAccessors, BinaryRowSerializer probeSideAccessors,
 			int partitionNumber, int recursionLevel, MemorySegment initialBuffer,
-			MemorySegmentPool memPool, int segmentSize) {
+			MemorySegmentPool memPool, int segmentSize, boolean compressionEnable,
+			BlockCompressionFactory compressionCodecFactory, int compressionBlockSize) {
 		super(0);
 		this.bucketArea = bucketArea;
 		this.buildSideSerializer = buildSideAccessors;
@@ -103,6 +109,9 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 		this.recursionLevel = recursionLevel;
 		this.memorySegmentSize = segmentSize;
 		this.segmentSizeBits = MathUtils.log2strict(segmentSize);
+		this.compressionEnable = compressionEnable;
+		this.compressionCodecFactory = compressionCodecFactory;
+		this.compressionBlockSize = compressionBlockSize;
 		this.buildSideWriteBuffer = new BuildSideBuffer(initialBuffer, memPool);
 		this.memPool = memPool;
 	}
@@ -198,10 +207,6 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 
 	BlockChannelWriter<MemorySegment> getBuildSideChannel() {
 		return this.buildSideChannel;
-	}
-
-	BlockChannelWriter<MemorySegment> getProbeSideChannel() {
-		return this.probeSideChannel;
 	}
 
 	boolean testHashBloomFilter(int hash) {
@@ -300,7 +305,8 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 		// create the channel block writer and spill the current buffers
 		// that keep the build side buffers current block, as it is most likely not full, yet
 		// we return the number of blocks that become available
-		this.buildSideChannel = ioAccess.createBlockChannelWriter(targetChannel, bufferReturnQueue);
+		this.buildSideChannel = FileChannelUtil.createBlockChannelWriter(ioAccess, targetChannel, bufferReturnQueue,
+				compressionEnable, compressionCodecFactory, compressionBlockSize, memorySegmentSize);
 		return this.buildSideWriteBuffer.spill(this.buildSideChannel);
 	}
 
@@ -311,23 +317,24 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 		}
 	}
 
-	void finalizeBuildPhase(IOManager ioAccess, FileIOChannel.Enumerator probeChannelEnumerator,
-			LinkedBlockingQueue<MemorySegment> bufferReturnQueue) throws IOException {
+	/**
+	 * After build phase.
+	 * @return build spill return buffer, if have spilled, it returns the current write buffer,
+	 * because it was used all the time in build phase, so it can only be returned at this time.
+	 */
+	int finalizeBuildPhase(IOManager ioAccess, FileIOChannel.Enumerator probeChannelEnumerator) throws IOException {
 		this.finalBufferLimit = this.buildSideWriteBuffer.getCurrentPositionInSegment();
 		this.partitionBuffers = this.buildSideWriteBuffer.close();
 
 		if (!isInMemory()) {
-			// close the channel. note that in the spilled case, the build-side-buffer will have
-			// sent off the last segment and it will be returned to the write-behind-buffer queue.
+			// close the channel.
 			this.buildSideChannel.close();
 
-			// create the channel for the probe side and claim one buffer for it
-			this.probeSideChannel = ioAccess.createBlockChannelWriter(
-					probeChannelEnumerator.next(), bufferReturnQueue);
-			// creating the ChannelWriterOutputView without memory will cause it to draw one
-			// segment from the write behind queue, which is the spare segment we had above.
-			this.probeSideBuffer = new ChannelWriterOutputView(
-					this.probeSideChannel, this.memorySegmentSize);
+			this.probeSideBuffer = FileChannelUtil.createOutputView(ioAccess, probeChannelEnumerator.next(),
+					compressionEnable, compressionCodecFactory, compressionBlockSize, memorySegmentSize);
+			return 1;
+		} else {
+			return 0;
 		}
 	}
 
@@ -336,9 +343,8 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 	 *                                      no further probe
 	 *                                      requests will be retained; used for build-side outer
 	 *                                      joins.
-	 * @return The number of write-behind buffers reclaimable after this method call.
 	 */
-	int finalizeProbePhase(List<MemorySegment> freeMemory, List<BinaryHashPartition> spilledPartitions,
+	void finalizeProbePhase(List<MemorySegment> freeMemory, List<BinaryHashPartition> spilledPartitions,
 			boolean keepUnprobedSpilledPartitions) throws IOException {
 		if (isInMemory()) {
 			this.bucketArea.returnMemory(freeMemory);
@@ -346,27 +352,19 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 			// return the partition buffers
 			Collections.addAll(freeMemory, this.partitionBuffers);
 			this.partitionBuffers = null;
-			return 0;
 		} else {
 			if (bloomFilter != null) {
 				freeBloomFilter();
 			}
 			if (this.probeSideRecordCounter == 0 && !keepUnprobedSpilledPartitions) {
-				// partition is empty, no spilled buffers
-				// return the memory buffer
-				freeMemory.add(this.probeSideBuffer.getCurrentSegment());
-
 				// delete the spill files
-				this.probeSideChannel.close();
+				this.probeSideBuffer.close();
 				this.buildSideChannel.deleteChannel();
-				this.probeSideChannel.deleteChannel();
-				return 0;
+				this.probeSideBuffer.deleteChannel();
 			} else {
 				// flush the last probe side buffer and register this partition as pending
-				this.probeSideBuffer.close();
-				this.probeSideChannel.close();
+				probeNumBytesInLastSeg = this.probeSideBuffer.close();
 				spilledPartitions.add(this);
-				return 1;
 			}
 		}
 	}
@@ -380,10 +378,6 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 			target.addAll(this.buildSideWriteBuffer.targetList);
 			this.buildSideWriteBuffer.targetList.clear();
 			this.buildSideWriteBuffer = null;
-		}
-		if (this.probeSideBuffer != null && this.probeSideBuffer.getCurrentSegment() != null) {
-			target.add(this.probeSideBuffer.getCurrentSegment());
-			this.probeSideBuffer = null;
 		}
 
 		// return the overflow segments
@@ -407,13 +401,14 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 				this.buildSideChannel.close();
 				this.buildSideChannel.deleteChannel();
 			}
-			if (this.probeSideChannel != null) {
-				this.probeSideChannel.close();
-				this.probeSideChannel.deleteChannel();
+			if (this.probeSideBuffer != null) {
+				this.probeSideBuffer.close();
+				this.probeSideBuffer.deleteChannel();
+				this.probeSideBuffer = null;
 			}
 		} catch (IOException ioex) {
 			throw new RuntimeException("Error deleting the partition files. " +
-					"Some temporary files might not be removed.");
+					"Some temporary files might not be removed.", ioex);
 		}
 	}
 

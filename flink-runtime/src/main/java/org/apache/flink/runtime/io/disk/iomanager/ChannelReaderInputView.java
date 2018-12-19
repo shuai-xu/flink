@@ -271,4 +271,9 @@ public class ChannelReaderInputView extends AbstractChannelReaderInputView {
 	public FileIOChannel getChannel() {
 		return reader;
 	}
+
+	@Override
+	public void closeAndDelete() throws IOException {
+		reader.closeAndDelete();
+	}
 }

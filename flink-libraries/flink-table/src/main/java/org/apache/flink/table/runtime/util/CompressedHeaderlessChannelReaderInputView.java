@@ -122,6 +122,11 @@ public class CompressedHeaderlessChannelReaderInputView extends AbstractChannelR
 		return reader;
 	}
 
+	@Override
+	public void closeAndDelete() throws IOException {
+		reader.closeAndDelete();
+	}
+
 	public boolean isClosed() {
 		return reader.isClosed();
 	}

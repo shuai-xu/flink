@@ -20,12 +20,14 @@ package org.apache.flink.table.runtime.join.batch.hashtable.longtable;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
 import org.apache.flink.runtime.memory.MemoryAllocationException;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.operators.testutils.UnionIterator;
+import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.UniformBinaryRowGenerator;
@@ -37,9 +39,12 @@ import org.apache.flink.util.MutableObjectIterator;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,13 +55,26 @@ import static org.junit.Assert.fail;
 /**
  * Test for {@link LongHashPartition}.
  */
+@RunWith(Parameterized.class)
 public class LongHashTableTest {
 
 	private static final int PAGE_SIZE = 32 * 1024;
 	private IOManager ioManager;
 	private BinaryRowSerializer buildSideSerializer;
 	private BinaryRowSerializer probeSideSerializer;
-	MemoryManager memManager = new MemoryManager(896 * PAGE_SIZE, 1);
+	private MemoryManager memManager = new MemoryManager(896 * PAGE_SIZE, 1);
+
+	private boolean useCompress;
+	private Configuration conf;
+
+	public LongHashTableTest(boolean useCompress) {
+		this.useCompress = useCompress;
+	}
+
+	@Parameterized.Parameters(name = "useCompress-{0}")
+	public static List<Boolean> getVarSeg() {
+		return Arrays.asList(true, false);
+	}
 
 	@Before
 	public void init() {
@@ -64,12 +82,15 @@ public class LongHashTableTest {
 		this.buildSideSerializer = new BinaryRowSerializer(types);
 		this.probeSideSerializer = new BinaryRowSerializer(types);
 		this.ioManager = new IOManagerAsync();
+
+		conf = new Configuration();
+		conf.setBoolean(TableConfig.SQL_EXEC_SPILL_COMPRESSION_ENABLE(), useCompress);
 	}
 
 	private class MyHashTable extends LongHybridHashTable {
 
 		public MyHashTable(long memorySize) {
-			super(LongHashTableTest.this, buildSideSerializer, probeSideSerializer, memManager, memorySize,
+			super(conf, LongHashTableTest.this, buildSideSerializer, probeSideSerializer, memManager, memorySize,
 					memorySize, 0, LongHashTableTest.this.ioManager,
 					24, 200000);
 		}

@@ -24,12 +24,13 @@ import org.apache.flink.core.memory.SeekableDataInputView;
 import org.apache.flink.runtime.io.disk.iomanager.BlockChannelWriter;
 import org.apache.flink.runtime.io.disk.iomanager.BulkBlockChannelReader;
 import org.apache.flink.runtime.io.disk.iomanager.ChannelReaderInputView;
-import org.apache.flink.runtime.io.disk.iomanager.ChannelWriterOutputView;
 import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.memory.AbstractPagedInputView;
 import org.apache.flink.runtime.memory.AbstractPagedOutputView;
 import org.apache.flink.table.dataformat.BinaryRow;
+import org.apache.flink.table.runtime.util.AbstractChannelWriterOutputView;
+import org.apache.flink.table.runtime.util.FileChannelUtil;
 import org.apache.flink.table.runtime.util.RowIterator;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.util.MathUtils;
@@ -114,7 +115,7 @@ public class LongHashPartition extends AbstractPagedInputView implements Seekabl
 	private int finalBufferLimit;
 	private int currentBufferNum;
 	private BuildSideBuffer buildSideWriteBuffer;
-	private ChannelWriterOutputView probeSideBuffer;
+	AbstractChannelWriterOutputView probeSideBuffer;
 	long probeSideRecordCounter; // number of probe-side records in this partition
 
 	// The number of unique keys.
@@ -125,11 +126,10 @@ public class LongHashPartition extends AbstractPagedInputView implements Seekabl
 	// the channel writer for the build side, if partition is spilled
 	private BlockChannelWriter<MemorySegment> buildSideChannel;
 
-	// the channel writer from the probe side, if partition is spilled
-	private BlockChannelWriter<MemorySegment> probeSideChannel;
-
 	// number of build-side records in this partition
 	private long buildSideRecordCounter;
+
+	int probeNumBytesInLastSeg;
 
 	/**
 	 * Entrance 1: Init LongHashPartition for new insert and search.
@@ -393,8 +393,8 @@ public class LongHashPartition extends AbstractPagedInputView implements Seekabl
 		return this.buildSideChannel;
 	}
 
-	BlockChannelWriter<MemorySegment> getProbeSideChannel() {
-		return this.probeSideChannel;
+	FileIOChannel.ID getProbeSideChannelID() {
+		return probeSideBuffer.getChannelID();
 	}
 
 	int getPartitionNumber() {
@@ -432,53 +432,48 @@ public class LongHashPartition extends AbstractPagedInputView implements Seekabl
 		// create the channel block writer and spill the current buffers
 		// that keep the build side buffers current block, as it is most likely not full, yet
 		// we return the number of blocks that become available
-		this.buildSideChannel = ioAccess.createBlockChannelWriter(targetChannel, bufferReturnQueue);
+		this.buildSideChannel = FileChannelUtil.createBlockChannelWriter(ioAccess, targetChannel, bufferReturnQueue,
+			context.compressionEnable(), context.compressionCodecFactory(), context.compressionBlockSize(), segmentSize);
 		return this.buildSideWriteBuffer.spill(this.buildSideChannel);
 	}
 
-	void finalizeBuildPhase(IOManager ioAccess, FileIOChannel.Enumerator probeChannelEnumerator,
-			LinkedBlockingQueue<MemorySegment> bufferReturnQueue) throws IOException {
+	/**
+	 * After build phase.
+	 * @return build spill return buffer, if have spilled, it returns the current write buffer,
+	 * because it was used all the time in build phase, so it can only be returned at this time.
+	 */
+	int finalizeBuildPhase(IOManager ioAccess, FileIOChannel.Enumerator probeChannelEnumerator) throws IOException {
 		this.finalBufferLimit = this.buildSideWriteBuffer.getCurrentPositionInSegment();
 		this.partitionBuffers = this.buildSideWriteBuffer.close();
 
 		if (!isInMemory()) {
-			// close the channel. note that in the spilled case, the build-side-buffer will have
-			// sent off the last segment and it will be returned to the write-behind-buffer queue.
+			// close the channel.
 			this.buildSideChannel.close();
 
-			// create the channel for the probe side and claim one buffer for it
-			this.probeSideChannel = ioAccess.createBlockChannelWriter(
-					probeChannelEnumerator.next(), bufferReturnQueue);
-			// creating the ChannelWriterOutputView without memory will cause it to draw one
-			// segment from the write behind queue, which is the spare segment we had above.
-			this.probeSideBuffer = new ChannelWriterOutputView(
-					this.probeSideChannel, this.context.pageSize());
+			this.probeSideBuffer = FileChannelUtil.createOutputView(ioAccess, probeChannelEnumerator.next(),
+					context.compressionEnable(), context.compressionCodecFactory(),
+					context.compressionBlockSize(), segmentSize);
+			return 1;
+		} else {
+			return 0;
 		}
 	}
 
-	int finalizeProbePhase(List<LongHashPartition> spilledPartitions) throws IOException {
+	void finalizeProbePhase(List<LongHashPartition> spilledPartitions) throws IOException {
 		if (isInMemory()) {
 			releaseBuckets();
 			context.returnAll(partitionBuffers);
 			this.partitionBuffers = null;
-			return 0;
 		} else {
 			if (this.probeSideRecordCounter == 0) {
-				// partition is empty, no spilled buffers
-				// return the memory buffer
-				context.returnAll(Collections.singletonList(probeSideBuffer.getCurrentSegment()));
-
 				// delete the spill files
-				this.probeSideChannel.close();
+				this.probeSideBuffer.close();
 				this.buildSideChannel.deleteChannel();
-				this.probeSideChannel.deleteChannel();
-				return 0;
+				this.probeSideBuffer.deleteChannel();
 			} else {
 				// flush the last probe side buffer and register this partition as pending
-				this.probeSideBuffer.close();
-				this.probeSideChannel.close();
+				probeNumBytesInLastSeg = this.probeSideBuffer.close();
 				spilledPartitions.add(this);
-				return 1;
 			}
 		}
 	}
@@ -748,11 +743,6 @@ public class LongHashPartition extends AbstractPagedInputView implements Seekabl
 			this.buildSideWriteBuffer.targetList.clear();
 			this.buildSideWriteBuffer = null;
 		}
-		if (this.probeSideBuffer != null && this.probeSideBuffer.getCurrentSegment() != null) {
-			target.add(this.probeSideBuffer.getCurrentSegment());
-			this.probeSideBuffer = null;
-		}
-
 		releaseBuckets();
 
 		// return the partition buffers
@@ -767,13 +757,13 @@ public class LongHashPartition extends AbstractPagedInputView implements Seekabl
 				this.buildSideChannel.close();
 				this.buildSideChannel.deleteChannel();
 			}
-			if (this.probeSideChannel != null) {
-				this.probeSideChannel.close();
-				this.probeSideChannel.deleteChannel();
+			if (this.probeSideBuffer != null) {
+				this.probeSideBuffer.closeAndDelete();
+				this.probeSideBuffer = null;
 			}
 		} catch (IOException ioex) {
 			throw new RuntimeException("Error deleting the partition files. " +
-					"Some temporary files might not be removed.");
+					"Some temporary files might not be removed.", ioex);
 		}
 	}
 

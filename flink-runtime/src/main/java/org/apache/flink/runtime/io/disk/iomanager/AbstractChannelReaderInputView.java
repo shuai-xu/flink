@@ -35,4 +35,6 @@ public abstract class AbstractChannelReaderInputView extends AbstractPagedInputV
 	public abstract List<MemorySegment> close() throws IOException;
 
 	public abstract FileIOChannel getChannel();
+
+	public abstract void closeAndDelete() throws IOException;
 }

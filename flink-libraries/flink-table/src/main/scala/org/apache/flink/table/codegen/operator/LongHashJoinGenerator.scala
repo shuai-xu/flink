@@ -146,7 +146,7 @@ object LongHashJoinGenerator {
          |public class $tableTerm extends ${classOf[LongHybridHashTable].getCanonicalName} {
          |
          |  public $tableTerm() {
-         |    super(getContainingTask(), $buildSerTerm, $probeSerTerm,
+         |    super(getSqlConf(), getContainingTask(), $buildSerTerm, $probeSerTerm,
          |      getContainingTask().getEnvironment().getMemoryManager(),
          |      ${managedMemorySize}L, ${preferredMemorySize}L, ${perRequestSize}L,
          |      getContainingTask().getEnvironment().getIOManager(),

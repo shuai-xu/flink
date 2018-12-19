@@ -38,6 +38,7 @@ public final class CompressedHeaderlessChannelWriterOutputView extends AbstractC
 	private final LinkedBlockingQueue<MemorySegment> compressedBuffers = new LinkedBlockingQueue<>();
 	private final AbstractBlockCompressor compressor;
 	private final BufferFileWriter writer;
+	private final int compressionBlockSize;
 
 	private int blockCount;
 
@@ -48,11 +49,12 @@ public final class CompressedHeaderlessChannelWriterOutputView extends AbstractC
 			BufferFileWriter writer, BlockCompressionFactory compressionCodecFactory, int compressionBlockSize) throws IOException {
 		super(writer, compressionBlockSize, 0);
 
-		buffer = MemorySegmentFactory.wrap(new byte[segmentSize]);
+		this.compressionBlockSize = compressionBlockSize;
+		buffer = MemorySegmentFactory.wrap(new byte[compressionBlockSize]);
 		compressor = compressionCodecFactory.getCompressor();
 		for (int i = 0; i < 2; i++) {
 			compressedBuffers.add(MemorySegmentFactory.wrap(
-					new byte[compressor.getMaxCompressedSize(segmentSize)]));
+					new byte[compressor.getMaxCompressedSize(compressionBlockSize)]));
 		}
 		this.writer = writer;
 
@@ -65,17 +67,19 @@ public final class CompressedHeaderlessChannelWriterOutputView extends AbstractC
 
 	@Override
 	public int close() throws IOException {
-		int currentPositionInSegment = getCurrentPositionInSegment();
-		writeCompressed(buffer, currentPositionInSegment);
-		clear();
-		this.writer.close();
+		if (!writer.isClosed()) {
+			int currentPositionInSegment = getCurrentPositionInSegment();
+			writeCompressed(buffer, currentPositionInSegment);
+			clear();
+			this.writer.close();
+		}
 		return -1;
 	}
 
 	@Override
 	protected MemorySegment nextSegment(MemorySegment current, int positionInCurrent) throws IOException {
 		if (current != null) {
-			writeCompressed(current, segmentSize);
+			writeCompressed(current, compressionBlockSize);
 		}
 		return buffer;
 	}

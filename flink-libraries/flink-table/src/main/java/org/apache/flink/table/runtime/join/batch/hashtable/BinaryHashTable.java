@@ -19,12 +19,10 @@
 package org.apache.flink.table.runtime.join.batch.hashtable;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.ChannelReaderInputViewIterator;
-import org.apache.flink.runtime.io.disk.iomanager.BlockChannelReader;
-import org.apache.flink.runtime.io.disk.iomanager.BulkBlockChannelReader;
 import org.apache.flink.runtime.io.disk.iomanager.ChannelReaderInputView;
-import org.apache.flink.runtime.io.disk.iomanager.HeaderlessChannelReaderInputView;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.operators.util.BitSet;
@@ -35,6 +33,8 @@ import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.util.BinaryRowUtil;
 import org.apache.flink.table.runtime.join.batch.HashJoinType;
 import org.apache.flink.table.runtime.join.batch.NullAwareJoinHelper;
+import org.apache.flink.table.runtime.util.ChannelWithMeta;
+import org.apache.flink.table.runtime.util.FileChannelUtil;
 import org.apache.flink.table.runtime.util.PagedChannelReaderInputViewIterator;
 import org.apache.flink.table.runtime.util.RowIterator;
 import org.apache.flink.table.runtime.util.WrappedRowIterator;
@@ -45,7 +45,6 @@ import org.apache.flink.util.MathUtils;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 
@@ -164,6 +163,7 @@ public class BinaryHashTable extends BaseHybridHashTable {
 	BinaryRow reuseBuildRow;
 
 	public BinaryHashTable(
+			Configuration conf,
 			Object owner,
 			AbstractRowSerializer buildSideSerializer,
 			AbstractRowSerializer probeSideSerializer,
@@ -175,12 +175,13 @@ public class BinaryHashTable extends BaseHybridHashTable {
 			boolean useBloomFilters, HashJoinType type,
 			JoinConditionFunction condFunc, boolean reverseJoin, boolean[] filterNulls,
 			boolean tryDistinctBuildRow) {
-		this(owner, buildSideSerializer, probeSideSerializer, buildSideProjection, probeSideProjection, memManager,
+		this(conf, owner, buildSideSerializer, probeSideSerializer, buildSideProjection, probeSideProjection, memManager,
 				reservedMemorySize, reservedMemorySize, 0, ioManager, avgRecordLen, buildRowCount, useBloomFilters, type, condFunc,
 				reverseJoin, filterNulls, tryDistinctBuildRow);
 	}
 
 	public BinaryHashTable(
+			Configuration conf,
 			Object owner,
 			AbstractRowSerializer buildSideSerializer,
 			AbstractRowSerializer probeSideSerializer,
@@ -194,7 +195,7 @@ public class BinaryHashTable extends BaseHybridHashTable {
 			boolean useBloomFilters, HashJoinType type,
 			JoinConditionFunction condFunc, boolean reverseJoin, boolean[] filterNulls,
 			boolean tryDistinctBuildRow) {
-		super(owner, memManager, reservedMemorySize, preferredMemorySize, perRequestMemorySize,
+		super(conf, owner, memManager, reservedMemorySize, preferredMemorySize, perRequestMemorySize,
 				ioManager, avgRecordLen, buildRowCount, !type.buildLeftSemiOrAnti() && tryDistinctBuildRow);
 		// assign the members
 		this.originBuildSideSerializer = buildSideSerializer;
@@ -243,9 +244,11 @@ public class BinaryHashTable extends BaseHybridHashTable {
 	 */
 	public void endBuild() throws IOException {
 		// finalize the partitions
+		int buildWriteBuffers = 0;
 		for (BinaryHashPartition p : this.partitionsBeingBuilt) {
-			p.finalizeBuildPhase(this.ioManager, this.currentEnumerator, this.writeBehindBuffers);
+			buildWriteBuffers += p.finalizeBuildPhase(this.ioManager, this.currentEnumerator);
 		}
+		buildSpillRetBufferNumbers += buildWriteBuffers;
 
 		// the first prober is the probe-side input, but the input is null at beginning
 		this.probeIterator = new ProbeIterator(this.binaryProbeSideSerializer.createInstance());
@@ -378,13 +381,11 @@ public class BinaryHashTable extends BaseHybridHashTable {
 
 	private boolean prepareNextPartition() throws IOException {
 		// finalize and cleanup the partitions of the current table
-		int buffersAvailable = 0;
 		for (final BinaryHashPartition p : this.partitionsBeingBuilt) {
-			buffersAvailable += p.finalizeProbePhase(this.availableMemory, this.partitionsPending, type.needSetProbed());
+			p.finalizeProbePhase(this.availableMemory, this.partitionsPending, type.needSetProbed());
 		}
 
 		this.partitionsBeingBuilt.clear();
-		this.writeBehindBuffersAvailable += buffersAvailable;
 
 		if (this.currentSpilledBuildSide != null) {
 			this.currentSpilledBuildSide.closeAndDelete();
@@ -408,16 +409,10 @@ public class BinaryHashTable extends BaseHybridHashTable {
 		if (p.probeSideRecordCounter == 0) {
 			// unprobed spilled partitions are only re-processed for a build-side outer join;
 			// there is no need to create a hash table since there are no probe-side records
-
-			List<MemorySegment> memory = getTwoBuffer();
-
-			this.currentSpilledBuildSide = this.ioManager.createBlockChannelReader(p.getBuildSideChannel().getChannelID());
-			final ChannelReaderInputView inView = new HeaderlessChannelReaderInputView(currentSpilledBuildSide, memory,
-					p.getBuildSideBlockCount(), p.getLastSegmentLimit(), false);
-
+			this.currentSpilledBuildSide = createInputView(p.getBuildSideChannel().getChannelID(),
+					p.getBuildSideBlockCount(), p.getLastSegmentLimit());
 			this.buildIterator = new WrappedRowIterator<>(
-					new PagedChannelReaderInputViewIterator<>(inView,
-							this.availableMemory, this.binaryBuildSideSerializer),
+					new PagedChannelReaderInputViewIterator<>(currentSpilledBuildSide, this.binaryBuildSideSerializer),
 					binaryBuildSideSerializer.createInstance());
 
 			this.partitionsPending.remove(0);
@@ -431,14 +426,16 @@ public class BinaryHashTable extends BaseHybridHashTable {
 		// build the next table; memory must be allocated after this call
 		buildTableFromSpilledPartition(p);
 
-		// set the probe side - gather memory segments for reading
-		LinkedBlockingQueue<MemorySegment> returnQueue = new LinkedBlockingQueue<>();
-		this.currentSpilledProbeSide = this.ioManager.createBlockChannelReader(p.getProbeSideChannel().getChannelID(), returnQueue);
+		// set the probe side
+		ChannelWithMeta channelWithMeta = new ChannelWithMeta(
+				p.probeSideBuffer.getChannelID(),
+				p.probeSideBuffer.getBlockCount(),
+				p.probeNumBytesInLastSeg);
+		this.currentSpilledProbeSide = FileChannelUtil.createInputView(ioManager, channelWithMeta, new ArrayList<>(),
+				compressionEnable, compressionCodecFactory, compressionBlockSize, segmentSize);
 
-		List<MemorySegment> memory = getTwoBuffer();
-
-		ChannelReaderInputViewIterator<BinaryRow> probeReader = new ChannelReaderInputViewIterator<>(this.currentSpilledProbeSide,
-				returnQueue, memory, this.availableMemory, this.binaryProbeSideSerializer, p.getProbeSideBlockCount());
+		ChannelReaderInputViewIterator<BinaryRow> probeReader = new ChannelReaderInputViewIterator<>(
+				this.currentSpilledProbeSide, this.binaryProbeSideSerializer);
 		this.probeIterator.set(probeReader);
 		this.probeIterator.setReuse(binaryProbeSideSerializer.createInstance());
 
@@ -477,9 +474,11 @@ public class BinaryHashTable extends BaseHybridHashTable {
 		//        that single partition.
 		// 2) We can not guarantee that enough memory segments are available and read the partition
 		//    in, distributing its data among newly created partitions.
-		final int totalBuffersAvailable = this.availableMemory.size() + this.writeBehindBuffersAvailable;
-		if (totalBuffersAvailable != this.reservedNumBuffers + this.allocatedFloatingNum - this.numWriteBehindBuffers) {
-			throw new RuntimeException("Hash Join bug in memory management: Memory buffers leaked.");
+		final int totalBuffersAvailable = this.availableMemory.size() + this.buildSpillRetBufferNumbers;
+		if (totalBuffersAvailable != this.reservedNumBuffers + this.allocatedFloatingNum) {
+			throw new RuntimeException(String.format("Hash Join bug in memory management: Memory buffers leaked." +
+					" availableMemory(%s), buildSpillRetBufferNumbers(%s), reservedNumBuffers(%s), allocatedFloatingNum(%s)",
+					availableMemory.size(), buildSpillRetBufferNumbers, reservedNumBuffers, allocatedFloatingNum));
 		}
 
 		long numBuckets = p.getBuildSideRecordCount() / BinaryHashBucketArea.NUM_ENTRIES_PER_BUCKET + 1;
@@ -492,16 +491,8 @@ public class BinaryHashTable extends BaseHybridHashTable {
 		if (totalBuffersNeeded < totalBuffersAvailable) {
 			LOG.info(String.format("Build in memory hash table from spilled partition [%d]", p.getPartitionNumber()));
 
-			// we are guaranteed to stay in memory
-			ensureNumBuffersReturned(p.getBuildSideBlockCount());
-
 			// first read the partition in
-			final BulkBlockChannelReader reader = this.ioManager.createBulkBlockChannelReader(p.getBuildSideChannel().getChannelID(),
-					this.availableMemory, p.getBuildSideBlockCount());
-
-			reader.closeAndDelete();
-
-			final List<MemorySegment> partitionBuffers = reader.getFullSegments();
+			final List<MemorySegment> partitionBuffers = readAllBuffers(p.getBuildSideChannel().getChannelID(), p.getBuildSideBlockCount());
 			BinaryHashBucketArea area = new BinaryHashBucketArea(this, (int) p.getBuildSideRecordCount(), maxBucketAreaBuffers);
 			final BinaryHashPartition newPart = new BinaryHashPartition(area, this.binaryBuildSideSerializer, this.binaryProbeSideSerializer,
 					0, nextRecursionLevel, partitionBuffers, p.getBuildSideRecordCount(), this.segmentSize, p.getLastSegmentLimit());
@@ -519,9 +510,6 @@ public class BinaryHashTable extends BaseHybridHashTable {
 			}
 		} else {
 			// go over the complete input and insert every element into the hash table
-			// first set up the reader with some memory.
-			final List<MemorySegment> segments = getTwoBuffer();
-
 			// compute in how many splits, we'd need to partition the result
 			final int splits = (int) (totalBuffersNeeded / totalBuffersAvailable) + 1;
 			final int partitionFanOut = Math.min(Math.min(10 * splits, MAX_NUM_PARTITIONS), maxNumPartition());
@@ -530,23 +518,23 @@ public class BinaryHashTable extends BaseHybridHashTable {
 			LOG.info(String.format("Build hybrid hash table from spilled partition [%d] with recursion level [%d]",
 					p.getPartitionNumber(), nextRecursionLevel));
 
-			final BlockChannelReader<MemorySegment> inReader = this.ioManager.createBlockChannelReader(p.getBuildSideChannel().getChannelID());
-			final ChannelReaderInputView inView = new HeaderlessChannelReaderInputView(inReader, segments,
-					p.getBuildSideBlockCount(), p.getLastSegmentLimit(), false);
-			final PagedChannelReaderInputViewIterator<BinaryRow> inIter = new PagedChannelReaderInputViewIterator<>(inView,
-					this.availableMemory, this.binaryBuildSideSerializer);
+			ChannelReaderInputView inView = createInputView(p.getBuildSideChannel().getChannelID(), p.getBuildSideBlockCount(), p.getLastSegmentLimit());
+			final PagedChannelReaderInputViewIterator<BinaryRow> inIter =
+					new PagedChannelReaderInputViewIterator<>(inView, this.binaryBuildSideSerializer);
 			BinaryRow rec = this.binaryBuildSideSerializer.createInstance();
 			while ((rec = inIter.next(rec)) != null) {
 				final int hashCode = hash(this.buildSideProjection.apply(rec).hashCode(), nextRecursionLevel);
 				insertIntoTable(rec, hashCode);
 			}
 
-			inReader.closeAndDelete();
+			inView.closeAndDelete();
 
 			// finalize the partitions
+			int buildWriteBuffers = 0;
 			for (BinaryHashPartition part : this.partitionsBeingBuilt) {
-				part.finalizeBuildPhase(this.ioManager, this.currentEnumerator, this.writeBehindBuffers);
+				buildWriteBuffers += part.finalizeBuildPhase(this.ioManager, this.currentEnumerator);
 			}
+			buildSpillRetBufferNumbers += buildWriteBuffers;
 		}
 	}
 
@@ -574,7 +562,8 @@ public class BinaryHashTable extends BaseHybridHashTable {
 		for (int i = 0; i < numPartitions; i++) {
 			BinaryHashBucketArea area = new BinaryHashBucketArea(this, numRecordPerPartition, maxBuffer);
 			BinaryHashPartition p = new BinaryHashPartition(area, this.binaryBuildSideSerializer,
-					this.binaryProbeSideSerializer, i, recursionLevel, getNotNullNextBuffer(), this, this.segmentSize);
+					this.binaryProbeSideSerializer, i, recursionLevel, getNotNullNextBuffer(), this, this.segmentSize,
+					compressionEnable, compressionCodecFactory, compressionBlockSize);
 			area.setPartition(p);
 			this.partitionsBeingBuilt.add(p);
 		}
@@ -631,8 +620,8 @@ public class BinaryHashTable extends BaseHybridHashTable {
 
 		// spill the partition
 		int numBuffersFreed = p.spillPartition(this.ioManager,
-				this.currentEnumerator.next(), this.writeBehindBuffers);
-		this.writeBehindBuffersAvailable += numBuffersFreed;
+				this.currentEnumerator.next(), this.buildSpillReturnBuffers);
+		this.buildSpillRetBufferNumbers += numBuffersFreed;
 
 		LOG.info(String.format("Grace hash join: Ran out memory, choosing partition " +
 						"[%d] to spill, %d memory segments being freed",
@@ -640,9 +629,9 @@ public class BinaryHashTable extends BaseHybridHashTable {
 
 		// grab as many buffers as are available directly
 		MemorySegment currBuff;
-		while (this.writeBehindBuffersAvailable > 0 && (currBuff = this.writeBehindBuffers.poll()) != null) {
+		while (this.buildSpillRetBufferNumbers > 0 && (currBuff = this.buildSpillReturnBuffers.poll()) != null) {
 			this.availableMemory.add(currBuff);
-			this.writeBehindBuffersAvailable--;
+			this.buildSpillRetBufferNumbers--;
 		}
 		numSpillFiles++;
 		spillInBytes += numBuffersFreed * segmentSize;

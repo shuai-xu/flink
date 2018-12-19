@@ -19,13 +19,20 @@
 package org.apache.flink.table.runtime.join.batch.hashtable;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.api.common.io.blockcompression.BlockCompressionFactory;
+import org.apache.flink.api.common.io.blockcompression.BlockCompressionFactoryLoader;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.memory.MemorySegment;
+import org.apache.flink.runtime.io.disk.iomanager.AbstractChannelReaderInputView;
 import org.apache.flink.runtime.io.disk.iomanager.BlockChannelReader;
 import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
+import org.apache.flink.runtime.io.disk.iomanager.HeaderlessChannelReaderInputView;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.memory.MemoryAllocationException;
 import org.apache.flink.runtime.memory.MemoryManager;
+import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.runtime.join.batch.hashtable.longtable.LongHybridHashTable;
+import org.apache.flink.table.runtime.util.FileChannelUtil;
 import org.apache.flink.table.runtime.util.MemorySegmentPool;
 import org.apache.flink.util.MathUtils;
 
@@ -34,10 +41,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.apache.flink.core.memory.MemorySegmentFactory.allocateUnpooledSegment;
 import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**
@@ -106,9 +115,9 @@ public abstract class BaseHybridHashTable implements MemorySegmentPool {
 
 	/**
 	 * The queue of buffers that can be used for write-behind. Any buffer that is written
-	 * asynchronously to disk is returned through this queue. hence, it may sometimes contain more
+	 * asynchronously to disk is returned through this queue. hence
 	 */
-	protected final LinkedBlockingQueue<MemorySegment> writeBehindBuffers;
+	protected final LinkedBlockingQueue<MemorySegment> buildSpillReturnBuffers;
 
 	public final int segmentSizeBits;
 
@@ -132,25 +141,20 @@ public abstract class BaseHybridHashTable implements MemorySegmentPool {
 	protected int currentRecursionDepth;
 
 	/**
-	 * The number of write-behind buffers used.
-	 */
-	protected final int numWriteBehindBuffers = 6;
-
-	/**
-	 * The number of buffers in the write behind queue that are actually not write behind buffers,
+	 * The number of buffers in the build spill return buffer queue that are actually not write behind buffers,
 	 * but regular buffers that only have not yet returned. This is part of an optimization that the
 	 * spilling code needs not wait until the partition is completely spilled before proceeding.
 	 */
-	protected int writeBehindBuffersAvailable;
+	protected int buildSpillRetBufferNumbers;
 
 	/**
 	 * The reader for the spilled-file of the build partition that is currently read.
 	 */
-	protected BlockChannelReader<MemorySegment> currentSpilledBuildSide;
+	protected HeaderlessChannelReaderInputView currentSpilledBuildSide;
 	/**
 	 * The reader for the spilled-file of the probe partition that is currently read.
 	 */
-	protected BlockChannelReader<MemorySegment> currentSpilledProbeSide;
+	protected AbstractChannelReaderInputView currentSpilledProbeSide;
 
 	/**
 	 * The channel enumerator that is used while processing the current partition to create
@@ -158,10 +162,15 @@ public abstract class BaseHybridHashTable implements MemorySegmentPool {
 	 */
 	protected FileIOChannel.Enumerator currentEnumerator;
 
+	protected final boolean compressionEnable;
+	protected final BlockCompressionFactory compressionCodecFactory;
+	protected final int compressionBlockSize;
+
 	protected transient long numSpillFiles;
 	protected transient long spillInBytes;
 
 	public BaseHybridHashTable(
+			Configuration conf,
 			Object owner,
 			MemoryManager memManager,
 			long reservedMemorySize,
@@ -172,6 +181,12 @@ public abstract class BaseHybridHashTable implements MemorySegmentPool {
 			long buildRowCount,
 			boolean tryDistinctBuildRow) {
 
+		this.compressionEnable = conf.getBoolean(TableConfig.SQL_EXEC_SPILL_COMPRESSION_ENABLE());
+		this.compressionCodecFactory = this.compressionEnable
+				? BlockCompressionFactoryLoader.createBlockCompressionFactory(conf.getString(
+				TableConfig.SQL_EXEC_SPILL_COMPRESSION_CODEC()), conf)
+				: null;
+		this.compressionBlockSize = conf.getInteger(TableConfig.SQL_EXEC_SPILL_COMPRESSION_BLOCK_SIZE());
 		this.owner = owner;
 		this.avgRecordLen = avgRecordLen;
 		this.buildRowCount = buildRowCount;
@@ -198,15 +213,11 @@ public abstract class BaseHybridHashTable implements MemorySegmentPool {
 		checkArgument(MathUtils.isPowerOf2(segmentSize));
 
 		// take away the write behind buffers
-		this.writeBehindBuffers = new LinkedBlockingQueue<>();
+		this.buildSpillReturnBuffers = new LinkedBlockingQueue<>();
 
 		this.segmentSizeBits = MathUtils.log2strict(segmentSize);
 		this.segmentSizeMask = segmentSize - 1;
 
-		// grab the write behind buffers first
-		for (int i = this.numWriteBehindBuffers; i > 0; --i) {
-			this.writeBehindBuffers.add(getNextBuffer());
-		}
 		// open builds the initial table by consuming the build-side input
 		this.currentRecursionDepth = 0;
 
@@ -228,7 +239,7 @@ public abstract class BaseHybridHashTable implements MemorySegmentPool {
 	 * can be used because two Buffers are needed to read the data.
 	 */
 	protected int maxNumPartition() {
-		return (availableMemory.size() + writeBehindBuffersAvailable) / 2;
+		return (availableMemory.size() + buildSpillRetBufferNumbers) / 2;
 	}
 
 	/**
@@ -281,21 +292,21 @@ public abstract class BaseHybridHashTable implements MemorySegmentPool {
 		}
 
 		// check if there are write behind buffers that actually are to be used for the hash table
-		if (this.writeBehindBuffersAvailable > 0) {
+		if (this.buildSpillRetBufferNumbers > 0) {
 			// grab at least one, no matter what
 			MemorySegment toReturn;
 			try {
-				toReturn = this.writeBehindBuffers.take();
+				toReturn = this.buildSpillReturnBuffers.take();
 			} catch (InterruptedException iex) {
 				throw new RuntimeException("Hybrid Hash Join was interrupted while taking a buffer.");
 			}
-			this.writeBehindBuffersAvailable--;
+			this.buildSpillRetBufferNumbers--;
 
 			// grab as many more buffers as are available directly
 			MemorySegment currBuff;
-			while (this.writeBehindBuffersAvailable > 0 && (currBuff = this.writeBehindBuffers.poll()) != null) {
+			while (this.buildSpillRetBufferNumbers > 0 && (currBuff = this.buildSpillReturnBuffers.poll()) != null) {
 				this.availableMemory.add(currBuff);
-				this.writeBehindBuffersAvailable--;
+				this.buildSpillRetBufferNumbers--;
 			}
 			return toReturn;
 		} else {
@@ -349,21 +360,6 @@ public abstract class BaseHybridHashTable implements MemorySegmentPool {
 			throw new RuntimeException("Bug in HybridHashJoin: No memory became available.");
 		}
 		return buffer;
-	}
-
-	protected List<MemorySegment> getTwoBuffer() {
-		List<MemorySegment> memory = new ArrayList<>();
-		MemorySegment seg1 = getNextBuffer();
-		if (seg1 != null) {
-			memory.add(seg1);
-			MemorySegment seg2 = getNextBuffer();
-			if (seg2 != null) {
-				memory.add(seg2);
-			}
-		} else {
-			throw new IllegalStateException("Attempting to begin reading spilled partition without any memory available");
-		}
-		return memory;
 	}
 
 	/**
@@ -427,14 +423,14 @@ public abstract class BaseHybridHashTable implements MemorySegmentPool {
 	 * @param minRequiredAvailable The minimum number of buffers that needs to be reclaimed.
 	 */
 	public void ensureNumBuffersReturned(final int minRequiredAvailable) {
-		if (minRequiredAvailable > this.availableMemory.size() + this.writeBehindBuffersAvailable) {
+		if (minRequiredAvailable > this.availableMemory.size() + this.buildSpillRetBufferNumbers) {
 			throw new IllegalArgumentException("More buffers requested available than totally available.");
 		}
 
 		try {
 			while (this.availableMemory.size() < minRequiredAvailable) {
-				this.availableMemory.add(this.writeBehindBuffers.take());
-				this.writeBehindBuffersAvailable--;
+				this.availableMemory.add(this.buildSpillReturnBuffers.take());
+				this.buildSpillRetBufferNumbers--;
 			}
 		} catch (InterruptedException iex) {
 			throw new RuntimeException("Hash Join was interrupted.");
@@ -466,14 +462,14 @@ public abstract class BaseHybridHashTable implements MemorySegmentPool {
 		clearPartitions();
 
 		// return the write-behind buffers
-		for (int i = 0; i < this.numWriteBehindBuffers + this.writeBehindBuffersAvailable; i++) {
+		for (int i = 0; i < this.buildSpillRetBufferNumbers; i++) {
 			try {
-				this.availableMemory.add(this.writeBehindBuffers.take());
+				this.availableMemory.add(this.buildSpillReturnBuffers.take());
 			} catch (InterruptedException iex) {
 				throw new RuntimeException("Hashtable closing was interrupted");
 			}
 		}
-		this.writeBehindBuffersAvailable = 0;
+		this.buildSpillRetBufferNumbers = 0;
 	}
 
 	protected abstract void clearPartitions();
@@ -509,7 +505,7 @@ public abstract class BaseHybridHashTable implements MemorySegmentPool {
 
 	@Override
 	public int remainBuffers() {
-		return availableMemory.size() + writeBehindBuffersAvailable;
+		return availableMemory.size() + buildSpillRetBufferNumbers;
 	}
 
 	public long getUsedMemoryInBytes() {
@@ -529,7 +525,35 @@ public abstract class BaseHybridHashTable implements MemorySegmentPool {
 	 * Give up to one-sixth of the memory of the bucket area.
 	 */
 	public int maxInitBufferOfBucketArea(int partitions) {
-		return Math.max(1, ((reservedNumBuffers - numWriteBehindBuffers - 2) / 6) / partitions);
+		return Math.max(1, ((reservedNumBuffers - 2) / 6) / partitions);
+	}
+
+	protected List<MemorySegment> readAllBuffers(FileIOChannel.ID id, int blockCount) throws IOException {
+		// we are guaranteed to stay in memory
+		ensureNumBuffersReturned(blockCount);
+
+		LinkedBlockingQueue<MemorySegment> retSegments = new LinkedBlockingQueue<>();
+		BlockChannelReader<MemorySegment> reader = FileChannelUtil.createBlockChannelReader(
+				ioManager, id, retSegments,
+				compressionEnable, compressionCodecFactory, compressionBlockSize, segmentSize);
+		for (int i = 0; i < blockCount; i++) {
+			reader.readBlock(availableMemory.remove(availableMemory.size() - 1));
+		}
+		reader.closeAndDelete();
+
+		final List<MemorySegment> buffers = new ArrayList<>();
+		retSegments.drainTo(buffers);
+		return buffers;
+	}
+
+	protected HeaderlessChannelReaderInputView createInputView(FileIOChannel.ID id, int blockCount, int lastSegmentLimit) throws IOException {
+		BlockChannelReader<MemorySegment> inReader = FileChannelUtil.createBlockChannelReader(
+				ioManager, id, new LinkedBlockingQueue<>(),
+				compressionEnable, compressionCodecFactory, compressionBlockSize, segmentSize);
+		return new HeaderlessChannelReaderInputView(inReader,
+				Arrays.asList(allocateUnpooledSegment(segmentSize), allocateUnpooledSegment(segmentSize)),
+				blockCount, lastSegmentLimit, false);
+
 	}
 
 	/**

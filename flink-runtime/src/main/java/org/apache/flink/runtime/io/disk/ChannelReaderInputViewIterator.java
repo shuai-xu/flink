@@ -21,6 +21,7 @@ package org.apache.flink.runtime.io.disk;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -68,6 +69,13 @@ public class ChannelReaderInputViewIterator<E> implements ChannelBackendMutableO
 		this.freeMemTarget = freeMemTarget;
 		this.inView = new ChannelReaderInputView(reader, segments, numBlocks, false);
 	}
+
+	public ChannelReaderInputViewIterator(AbstractChannelReaderInputView inView, TypeSerializer<E> accessors)
+	{
+		this.inView = inView;
+		this.freeMemTarget = new ArrayList<>();
+		this.accessors = accessors;
+	}
 	
 	public ChannelReaderInputViewIterator(AbstractChannelReaderInputView inView, List<MemorySegment> freeMemTarget, TypeSerializer<E> accessors)
 	{
@@ -75,8 +83,6 @@ public class ChannelReaderInputViewIterator<E> implements ChannelBackendMutableO
 		this.freeMemTarget = freeMemTarget;
 		this.accessors = accessors;
 	}
-			
-
 
 	@Override
 	public E next(E reuse) throws IOException

@@ -25,6 +25,7 @@ import org.apache.flink.util.MutableObjectIterator;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -37,6 +38,10 @@ public class PagedChannelReaderInputViewIterator<E> implements MutableObjectIter
 	private final TypeSerializer<E> accessors;
 
 	private final List<MemorySegment> freeMemTarget;
+
+	public PagedChannelReaderInputViewIterator(ChannelReaderInputView inView, TypeSerializer<E> accessors) {
+		this(inView, new ArrayList<>(), accessors);
+	}
 
 	public PagedChannelReaderInputViewIterator(ChannelReaderInputView inView, List<MemorySegment> freeMemTarget, TypeSerializer<E> accessors) {
 		this.inView = inView;

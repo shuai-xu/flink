@@ -103,6 +103,7 @@ public abstract class HashJoinOperator extends AbstractStreamOperatorWithMetrics
 		int parallel = getRuntimeContext().getNumberOfParallelSubtasks();
 
 		this.table = new BinaryHashTable(
+				getSqlConf(),
 				getContainingTask(),
 				buildSerializer, probeSerializer,
 				buildProjectionClass.newInstance(), probeProjectionClass.newInstance(),
