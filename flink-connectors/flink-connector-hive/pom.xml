@@ -96,27 +96,13 @@ under the License.
 			<groupId>org.apache.hive</groupId>
 			<artifactId>hive-metastore</artifactId>
 			<version>${hive.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.apache.hive.hcatalog</groupId>
-			<artifactId>hive-hcatalog-core</artifactId>
-			<version>${hive.version}</version>
-			<exclusions>
-				<exclusion>
-					<groupId>org.apache.hive</groupId>
-					<artifactId>hive-cli</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.apache.hive</groupId>
-					<artifactId>hive-common</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.apache.hive</groupId>
-					<artifactId>hive-metastore</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
+            <exclusions>
+                <exclusion>
+                    <artifactId>hadoop-auth</artifactId>
+                    <groupId>org.apache.hadoop</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
 
 		<!-- test dependencies -->
 

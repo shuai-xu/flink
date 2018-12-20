@@ -41,7 +41,6 @@ import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hive.hcatalog.data.HCatRecordSerDe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -115,7 +114,7 @@ public class HiveTableInputFormat extends HadoopInputFormatBase<Writable, Writab
 			Object o = deserializer.deserialize(value);
 			for (int i = 0; i < fieldRefs.size(); i++) {
 				StructField fref = fieldRefs.get(i);
-				reuse.update(i, HCatRecordSerDe.serializeField(oi.getStructFieldData(o, fref), fref
+				reuse.update(i, HiveRecordSerDe.serializeField(oi.getStructFieldData(o, fref), fref
 						.getFieldObjectInspector()));
 			}
 		} catch (Exception e){

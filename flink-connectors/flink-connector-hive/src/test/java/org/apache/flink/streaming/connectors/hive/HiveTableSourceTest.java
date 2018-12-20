@@ -130,6 +130,6 @@ public class HiveTableSourceTest {
 //		Table table = tEnv.scan("myHive", "default", "test");
 //		table.printSchema();
 //		table.print();
-		tEnv.sqlQuery("select * from test").print();
+		tEnv.sqlQuery("select * from products").print();
 	}
 }
