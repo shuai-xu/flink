@@ -102,6 +102,7 @@ public class CatalogManager {
 		}
 
 		catalogs.put(catalogName, catalog);
+		catalog.open();
 		CatalogCalciteSchema.registerCatalog(rootSchema, catalogName, catalog, isStreaming);
 	}
 
