@@ -25,7 +25,6 @@ import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.memory.AbstractPagedInputView;
 import org.apache.flink.runtime.memory.AbstractPagedOutputView;
-import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
@@ -93,7 +92,7 @@ public class BaseRowSerializer<T extends BaseRow> extends AbstractRowSerializer<
 			mapping[i] = i;
 		}
 		return ProjectionCodeGenerator.generateProjection(
-				CodeGeneratorContext.apply(new TableConfig(), false), "BaseRowSerializerProjection",
+				CodeGeneratorContext.apply(null, false), "BaseRowSerializerProjection",
 				(BaseRowType) DataTypes.internal(baseType),
 				(BaseRowType) DataTypes.internal(new BaseRowTypeInfo<>(BinaryRow.class, types)),
 				mapping);

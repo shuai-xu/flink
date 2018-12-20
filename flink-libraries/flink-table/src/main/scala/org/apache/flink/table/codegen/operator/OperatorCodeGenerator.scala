@@ -268,6 +268,8 @@ object OperatorCodeGenerator extends Logging {
       public class $operatorName extends ${abstractBaseClass.getCanonicalName}
           implements ${baseClass.getCanonicalName}, ${classOf[WithReferences].getCanonicalName} {
 
+        public static org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger("$operatorName");
+
         private final Object[] references;
         ${ctx.reuseMemberCode()}
 

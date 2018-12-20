@@ -40,6 +40,7 @@ public class RuntimeFilterUtils {
 				context.queryPreAggregatedAccumulator(broadcastId);
 		return future.handleAsync((accumulator, e) -> {
 			if (e == null && accumulator != null) {
+				LOG.info("get runtime filter success, broadcastId: " + broadcastId);
 				return BloomFilter.fromBytes(accumulator.getLocalValue().getByteArray());
 			}
 			if (e != null) {

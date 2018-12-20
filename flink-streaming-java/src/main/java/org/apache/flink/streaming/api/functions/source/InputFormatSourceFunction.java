@@ -29,6 +29,9 @@ import org.apache.flink.runtime.jobgraph.tasks.InputSplitProvider;
 import org.apache.flink.runtime.jobgraph.tasks.InputSplitProviderException;
 import org.apache.flink.streaming.api.operators.StreamingRuntimeContext;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -37,6 +40,7 @@ import java.util.NoSuchElementException;
  */
 @Internal
 public class InputFormatSourceFunction<OUT> extends RichParallelSourceFunction<OUT> {
+	private static final Logger LOG = LoggerFactory.getLogger(InputFormatSourceFunction.class);
 	private static final long serialVersionUID = 1L;
 
 	private TypeInformation<OUT> typeInfo;
@@ -70,7 +74,10 @@ public class InputFormatSourceFunction<OUT> extends RichParallelSourceFunction<O
 		provider = context.getInputSplitProvider();
 		serializer = typeInfo.createSerializer(getRuntimeContext().getExecutionConfig());
 		splitIterator = getInputSplits();
+		long beforeNext = System.currentTimeMillis();
 		isRunning = splitIterator.hasNext();
+		long afterNext = System.currentTimeMillis();
+		LOG.info("get input split from splitProvider, elapsed time: " + (afterNext - beforeNext));
 	}
 
 	@Override
@@ -84,10 +91,14 @@ public class InputFormatSourceFunction<OUT> extends RichParallelSourceFunction<O
 
 			while (isRunning) {
 				OUT nextElement = serializer.createInstance();
+				long b0 = System.currentTimeMillis();
 				format.open(splitIterator.next());
 
 				// for each element we also check if cancel
 				// was called by checking the isRunning flag
+
+				long b1 = System.currentTimeMillis();
+				LOG.info("open the format, elapsed time: " + (b1 - b0));
 
 				while (isRunning && !format.reachedEnd()) {
 					nextElement = format.nextRecord(nextElement);
@@ -97,11 +108,17 @@ public class InputFormatSourceFunction<OUT> extends RichParallelSourceFunction<O
 						break;
 					}
 				}
+				long b2 = System.currentTimeMillis();
+				LOG.info("do work for a split, elapsed time: " + (b2 - b1));
 				format.close();
+				long b3 = System.currentTimeMillis();
+				LOG.info("close a split, cost: " + (b3 - b2));
 				completedSplitsCounter.inc();
 
 				if (isRunning) {
 					isRunning = splitIterator.hasNext();
+					long afterNext = System.currentTimeMillis();
+					LOG.info("get input split from splitProvider, elapsed time: " + (afterNext - b3));
 				}
 			}
 		} finally {

@@ -381,11 +381,17 @@ class BatchExecNestedLoopJoin(
          |return $probeSelection;
          |""".stripMargin
 
-    val buildEndCode = if (!singleRowJoin && isFull) {
+    var buildEndCode = if (!singleRowJoin && isFull) {
       s"$buildRowMatched = new $bitSetTerm($buffer.size());"
     } else {
       ""
     }
+
+    buildEndCode =
+        s"""
+           |LOG.info("Finish build phase.");
+           |$buildEndCode
+       """.stripMargin
 
     val buildOuterEmit = generatorCollect(
       if (leftIsBuild) {
@@ -394,7 +400,7 @@ class BatchExecNestedLoopJoin(
         s"$joinedRow.replace($probeNullRow, $buildRow)"
       })
 
-    val probeEndCode = if (isFull) {
+    var probeEndCode = if (isFull) {
       if (singleRowJoin) {
         s"""
            |if ($buildRow != null && !$buildRowMatched) {
@@ -417,6 +423,13 @@ class BatchExecNestedLoopJoin(
     } else {
       ""
     }
+
+    probeEndCode =
+      s"""
+         |LOG.info("Finish probe phase.");
+         |$probeEndCode
+         |LOG.info("Finish rebuild phase.");
+       """.stripMargin
 
     (processCode, buildEndCode, probeEndCode)
   }

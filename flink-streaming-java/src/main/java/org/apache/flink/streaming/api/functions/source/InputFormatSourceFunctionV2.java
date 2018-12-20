@@ -29,6 +29,9 @@ import org.apache.flink.runtime.jobgraph.tasks.InputSplitProvider;
 import org.apache.flink.runtime.jobgraph.tasks.InputSplitProviderException;
 import org.apache.flink.streaming.api.operators.StreamingRuntimeContext;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -40,6 +43,7 @@ import java.util.NoSuchElementException;
  */
 @Internal
 public class InputFormatSourceFunctionV2<OUT> extends RichParallelSourceFunctionV2<OUT> {
+	private static final Logger LOG = LoggerFactory.getLogger(InputFormatSourceFunctionV2.class);
 	private static final long serialVersionUID = 1L;
 
 	private TypeInformation<OUT> typeInfo;
@@ -61,6 +65,8 @@ public class InputFormatSourceFunctionV2<OUT> extends RichParallelSourceFunction
 	private transient boolean isObjectReuse;
 
 	private transient boolean hasMoreData;
+
+	private transient long afterOpen;
 
 	/**
 	 * Instantiates a new Input format source function V2.
@@ -92,9 +98,15 @@ public class InputFormatSourceFunctionV2<OUT> extends RichParallelSourceFunction
 		if (format instanceof RichInputFormat) {
 			((RichInputFormat) format).openInputFormat();
 		}
+		long beforeNext = System.currentTimeMillis();
 		hasMoreData = splitIterator.hasNext();
+		long afterNext = System.currentTimeMillis();
+		LOG.info("get input split from splitProvider, elapsed time: " + (afterNext - beforeNext));
 		if (hasMoreData) {
+			long beforeOpen = System.currentTimeMillis();
 			format.open(splitIterator.next());
+			afterOpen = System.currentTimeMillis();
+			LOG.info("open the format, elapsed time: " + (afterOpen - beforeOpen));
 		}
 		isObjectReuse = getRuntimeContext().getExecutionConfig().isObjectReuseEnabled();
 		sourceRecord = new SourceRecord<>();
@@ -108,7 +120,6 @@ public class InputFormatSourceFunctionV2<OUT> extends RichParallelSourceFunction
 
 	@Override
 	public SourceRecord<OUT> next() throws Exception {
-
 		while (hasMoreData) {
 			if (!format.reachedEnd()) {
 				OUT element = format.nextRecord(reusableElement);
@@ -133,10 +144,20 @@ public class InputFormatSourceFunctionV2<OUT> extends RichParallelSourceFunction
 	}
 
 	private void requestNextSplit() throws IOException {
+		long b1 = System.currentTimeMillis();
+		LOG.info("do a split, cost: " + (b1 - afterOpen));
 		format.close();
+		long b2 = System.currentTimeMillis();
+		LOG.info("close a split, cost: " + (b2 - b1));
 		if (splitIterator.hasNext()) {
+			long b3 = System.currentTimeMillis();
+			LOG.info("get input split from splitProvider, elapsed time: " + (b3 - b2));
 			format.open(splitIterator.next());
+			afterOpen = System.currentTimeMillis();
+			LOG.info("open the format, elapsed time: " + (afterOpen - b3));
 		} else {
+			long b3 = System.currentTimeMillis();
+			LOG.info("get input split from splitProvider, elapsed time: " + (b3 - b2));
 			hasMoreData = false;
 		}
 	}

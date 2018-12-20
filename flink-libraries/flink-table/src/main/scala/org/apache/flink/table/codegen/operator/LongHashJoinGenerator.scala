@@ -297,6 +297,7 @@ object LongHashJoinGenerator {
          |return $FIRST;
        """.stripMargin,
       s"""
+         |LOG.info("Finish build phase.");
          |table.endBuild();
        """.stripMargin,
       s"""
@@ -311,9 +312,11 @@ object LongHashJoinGenerator {
          |return $SECOND;
        """.stripMargin,
       s"""
+         |LOG.info("Finish probe phase.");
          |while (this.table.nextMatching()) {
          |  joinWithNextKey();
          |}
+         |LOG.info("Finish rebuild phase.");
        """.stripMargin,
       buildType,
       probeType)

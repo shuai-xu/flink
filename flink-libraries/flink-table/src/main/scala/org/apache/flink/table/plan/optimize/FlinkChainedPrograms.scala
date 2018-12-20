@@ -22,6 +22,7 @@ import java.util
 
 import org.apache.calcite.rel.RelNode
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.util.Logging
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -36,7 +37,7 @@ import scala.collection.mutable
   *
   * @tparam OC OptimizeContext
   */
-class FlinkChainedPrograms[OC <: OptimizeContext] {
+class FlinkChainedPrograms[OC <: OptimizeContext] extends Logging {
   private val programMap = new mutable.HashMap[String, FlinkOptimizeProgram[OC]]()
   private val programNames = new mutable.ListBuffer[String]()
 
@@ -48,9 +49,13 @@ class FlinkChainedPrograms[OC <: OptimizeContext] {
 
     programNames.filterNot(blackList.contains).foldLeft(root) {
       (input, name) =>
-        get(name)
-          .getOrElse(throw new RuntimeException(s"program of $name does not exist"))
-          .optimize(input, context)
+        val start = System.currentTimeMillis()
+        val result = get(name)
+            .getOrElse(throw new RuntimeException(s"program of $name does not exist"))
+            .optimize(input, context)
+        val end = System.currentTimeMillis()
+        LOG.info("optimize " + name + " cost " + (end - start) + " ms.")
+        result
     }
   }
 
