@@ -41,6 +41,7 @@ public class TypeConverterUtil {
 		flinkTypeToHiveType.put(BasicTypeInfo.SHORT_TYPE_INFO, serdeConstants.SMALLINT_TYPE_NAME);
 		flinkTypeToHiveType.put(BasicTypeInfo.INT_TYPE_INFO, serdeConstants.INT_TYPE_NAME);
 		flinkTypeToHiveType.put(BasicTypeInfo.BIG_INT_TYPE_INFO, serdeConstants.BIGINT_TYPE_NAME);
+		flinkTypeToHiveType.put(BasicTypeInfo.LONG_TYPE_INFO, serdeConstants.BIGINT_TYPE_NAME);
 		flinkTypeToHiveType.put(BasicTypeInfo.FLOAT_TYPE_INFO, serdeConstants.FLOAT_TYPE_NAME);
 		flinkTypeToHiveType.put(BasicTypeInfo.DOUBLE_TYPE_INFO, serdeConstants.DOUBLE_TYPE_NAME);
 		flinkTypeToHiveType.put(BasicTypeInfo.DATE_TYPE_INFO, serdeConstants.DATE_TYPE_NAME);
