@@ -318,15 +318,15 @@ public final class NestedRow implements BaseRow {
 	}
 
 	@Override
-	public BinaryArray getArray(int ordinal) {
+	public BaseArray getBaseArray(int ordinal) {
 		final long offsetAndSize = getLong(ordinal);
-		return BinaryRow.getArray(segments, baseOffset, offsetAndSize);
+		return BinaryRow.getBinaryArray(segments, baseOffset, offsetAndSize);
 	}
 
 	@Override
-	public BinaryMap getMap(int ordinal) {
+	public BaseMap getBaseMap(int ordinal) {
 		final long offsetAndSize = getLong(ordinal);
-		return BinaryRow.getMap(segments, baseOffset, offsetAndSize);
+		return BinaryRow.getBinaryMap(segments, baseOffset, offsetAndSize);
 	}
 
 	@Override

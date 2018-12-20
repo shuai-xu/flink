@@ -138,9 +138,9 @@ public final class BaseRowUtil {
 		} else if (type.equals(BYTE_PRIMITIVE_ARRAY_TYPE_INFO)) {
 			return row.getByteArray(ordinal);
 		} else if (TypeUtils.isInternalArrayType(type)) {
-			return row.getArray(ordinal);
+			return row.getBaseArray(ordinal);
 		} else if (type instanceof MapTypeInfo) {
-			return row.getMap(ordinal);
+			return row.getBaseMap(ordinal);
 		} else if (TypeUtils.isInternalCompositeType(type)) {
 			return row.getBaseRow(ordinal, type.getArity());
 		} else {

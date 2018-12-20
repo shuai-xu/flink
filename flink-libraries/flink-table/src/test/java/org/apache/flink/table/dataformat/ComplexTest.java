@@ -141,10 +141,10 @@ public class ComplexTest {
 		//2.test write to binary row.
 		BinaryRow row2 = new BinaryRow(1);
 		BinaryRowWriter writer2 = new BinaryRowWriter(row2);
-		writer2.writeBinaryArray(0, array);
+		writer2.writeBaseArray(0, array, null);
 		writer2.complete();
 
-		BinaryArray array2 = row2.getArray(0);
+		BinaryArray array2 = (BinaryArray) row2.getBaseArray(0);
 		assertEquals(array2, array);
 		assertEquals(array2.getInt(0), 6);
 		assertTrue(array2.isNullAt(1));
@@ -173,10 +173,10 @@ public class ComplexTest {
 
 		BinaryRow row = new BinaryRow(1);
 		BinaryRowWriter rowWriter = new BinaryRowWriter(row);
-		rowWriter.writeBinaryMap(0, binaryMap);
+		rowWriter.writeBaseMap(0, binaryMap, null);
 		rowWriter.complete();
 
-		BinaryMap map = row.getMap(0);
+		BinaryMap map = (BinaryMap) row.getBaseMap(0);
 		BinaryArray key = map.keyArray();
 		BinaryArray value = map.valueArray();
 

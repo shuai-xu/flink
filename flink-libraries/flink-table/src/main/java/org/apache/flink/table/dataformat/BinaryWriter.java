@@ -39,6 +39,8 @@ import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.MapType;
 import org.apache.flink.table.api.types.TimestampType;
 import org.apache.flink.table.runtime.util.StringUtf8Utils;
+import org.apache.flink.table.typeutils.BaseArraySerializer;
+import org.apache.flink.table.typeutils.BaseMapSerializer;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
 import org.apache.flink.table.typeutils.BinaryStringTypeInfo;
 import org.apache.flink.table.typeutils.DecimalTypeInfo;
@@ -155,12 +157,26 @@ public abstract class BinaryWriter {
 		cursor += roundedSize;
 	}
 
-	public void writeBinaryArray(int pos, BinaryArray input) {
-		writeSegs(pos, input.getSegments(), input.getBaseOffset(), input.getSizeInBytes());
+	public void writeBaseArray(int pos, BaseArray input, BaseArraySerializer serializer) {
+		BinaryArray binaryArray;
+		if (input instanceof BinaryArray) {
+			binaryArray = (BinaryArray) input;
+		} else {
+			binaryArray = serializer.baseArrayToBinary(input);
+		}
+
+		writeSegs(pos, binaryArray.getSegments(), binaryArray.getBaseOffset(), binaryArray.getSizeInBytes());
 	}
 
-	public void writeBinaryMap(int pos, BinaryMap input) {
-		writeSegs(pos, input.getSegments(), input.getBaseOffset(), input.getSizeInBytes());
+	public void writeBaseMap(int pos, BaseMap input, BaseMapSerializer serializer) {
+		BinaryMap binaryMap;
+		if (input instanceof BinaryMap) {
+			binaryMap = (BinaryMap) input;
+		} else {
+			binaryMap = serializer.baseMapToBinary(input);
+		}
+
+		writeSegs(pos, binaryMap.getSegments(), binaryMap.getBaseOffset(), binaryMap.getSizeInBytes());
 	}
 
 	@VisibleForTesting
@@ -314,9 +330,9 @@ public abstract class BinaryWriter {
 		}  else if (type.equals(BYTE_PRIMITIVE_ARRAY_TYPE_INFO)) {
 			writeByteArray(pos, (byte[]) o);
 		} else if (TypeUtils.isInternalArrayType(type)) {
-			writeBinaryArray(pos, (BinaryArray) o);
+			writeBaseArray(pos, (BaseArray) o, (BaseArraySerializer) serializer);
 		} else if (type instanceof MapTypeInfo) {
-			writeBinaryMap(pos, (BinaryMap) o);
+			writeBaseMap(pos, (BinaryMap) o, (BaseMapSerializer) serializer);
 		} else if (TypeUtils.isInternalCompositeType(type)) {
 			writeBaseRow(pos, (BaseRow) o, (BaseRowSerializer) serializer);
 		} else {
@@ -355,9 +371,9 @@ public abstract class BinaryWriter {
 		} else if (type.equals(DataTypes.BYTE_ARRAY)) {
 			writeByteArray(pos, (byte[]) o);
 		} else if (type instanceof ArrayType) {
-			writeBinaryArray(pos, (BinaryArray) o);
+			writeBaseArray(pos, (BaseArray) o, (BaseArraySerializer) TypeUtils.createSerializer(type));
 		} else if (type instanceof MapType) {
-			writeBinaryMap(pos, (BinaryMap) o);
+			writeBaseMap(pos, (BinaryMap) o, (BaseMapSerializer) TypeUtils.createSerializer(type));
 		} else if (type instanceof BaseRowType) {
 			writeBaseRow(pos, (BaseRow) o, (BaseRowSerializer) TypeUtils.createSerializer(type));
 		} else {

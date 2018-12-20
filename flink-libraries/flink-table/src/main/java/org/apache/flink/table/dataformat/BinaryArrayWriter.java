@@ -57,6 +57,10 @@ public class BinaryArrayWriter extends BinaryWriter {
 		this.segment.putInt(0, numElements);
 	}
 
+	public int getNumElements() {
+		return numElements;
+	}
+
 	private void setNullBit(int ordinal) {
 		BitSetUtil.set(segment, 4, ordinal);
 	}

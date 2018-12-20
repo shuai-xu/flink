@@ -179,6 +179,30 @@ class MapTypeTest extends MapTypeTestBase {
       "true")
 
     testAllApis(
+      'f8 === 'f9,
+      "f8 === f9",
+      "f8 = f9",
+      "true")
+
+    testAllApis(
+      'f10 === 'f11,
+      "f10 === f11",
+      "f10 = f11",
+      "true")
+
+    testAllApis(
+      'f8 !== 'f9,
+      "f8 !== f9",
+      "f8 <> f9",
+      "false")
+
+    testAllApis(
+      'f10 !== 'f11,
+      "f10 !== f11",
+      "f10 <> f11",
+      "false")
+
+    testAllApis(
       'f0.at("map is null"),
       "f0.at('map is null')",
       "f0['map is null']",

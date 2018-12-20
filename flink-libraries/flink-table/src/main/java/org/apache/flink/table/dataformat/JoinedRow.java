@@ -211,20 +211,20 @@ public final class JoinedRow implements BaseRow {
 	}
 
 	@Override
-	public BinaryArray getArray(int i) {
+	public BaseArray getBaseArray(int i) {
 		if (i < row1.getArity()) {
-			return row1.getArray(i);
+			return row1.getBaseArray(i);
 		} else {
-			return row2.getArray(i - row1.getArity());
+			return row2.getBaseArray(i - row1.getArity());
 		}
 	}
 
 	@Override
-	public BinaryMap getMap(int i) {
+	public BaseMap getBaseMap(int i) {
 		if (i < row1.getArity()) {
-			return row1.getMap(i);
+			return row1.getBaseMap(i);
 		} else {
-			return row2.getMap(i - row1.getArity());
+			return row2.getBaseMap(i - row1.getArity());
 		}
 	}
 

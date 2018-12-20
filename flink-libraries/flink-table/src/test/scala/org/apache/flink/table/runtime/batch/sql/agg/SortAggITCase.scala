@@ -19,6 +19,7 @@
 package org.apache.flink.table.runtime.batch.sql.agg
 
 import java.lang.{Iterable => JIterable}
+import java.util
 
 import org.apache.flink.api.java.typeutils.{RowTypeInfo, TypeExtractor}
 import org.apache.flink.api.scala._
@@ -51,6 +52,15 @@ class SortAggITCase
     registerFunction("countFun", new CountAggFunction())
     registerFunction("intSumFun", new IntSumAggFunction())
     registerFunction("weightedAvg", new WeightedAvgWithMergeAndReset())
+
+    registerFunction("myPrimitiveArrayUdaf", new MyPrimitiveArrayUdaf())
+    registerFunction("myObjectArrayUdaf", new MyObjectArrayUdaf())
+    registerFunction("myNestedLongArrayUdaf", new MyNestedLongArrayUdaf())
+    registerFunction("myNestedStringArrayUdaf", new MyNestedStringArrayUdaf())
+
+    registerFunction("myPrimitiveMapUdaf", new MyPrimitiveMapUdaf())
+    registerFunction("myObjectMapUdaf", new MyObjectMapUdaf())
+    registerFunction("myNestedMapUdaf", new MyNestedMapUdf())
   }
 
   @Test
@@ -246,6 +256,58 @@ class SortAggITCase
       )
     )
   }
+
+  @Test
+  def testArrayUdaf(): Unit = {
+    checkResult(
+      "SELECT myPrimitiveArrayUdaf(a, b) FROM Table3",
+      Seq(row(Array(231, 91)))
+    )
+    checkResult(
+      "SELECT myObjectArrayUdaf(c) FROM Table3",
+      Seq(row(Array("HHHHILCCCCCCCCCCCCCCC", "iod?.r123456789012345")))
+    )
+    checkResult(
+      "SELECT myNestedLongArrayUdaf(a, b)[2] FROM Table3",
+      Seq(row(Array(91, 231)))
+    )
+    checkResult(
+      "SELECT myNestedStringArrayUdaf(c)[2] FROM Table3",
+      Seq(row(Array("iod?.r123456789012345", "HHHHILCCCCCCCCCCCCCCC")))
+    )
+  }
+
+  @Test
+  def testMapUdaf(): Unit = {
+    checkResult(
+      "SELECT myPrimitiveMapUdaf(a, b)[3] FROM Table3",
+      Seq(row(15))
+    )
+    checkResult(
+      "SELECT myPrimitiveMapUdaf(a, b)[6] FROM Table3",
+      Seq(row(111))
+    )
+    checkResult(
+      "SELECT myObjectMapUdaf(a, c)['Co'] FROM Table3",
+      Seq(row(210))
+    )
+    checkResult(
+      "SELECT myObjectMapUdaf(a, c)['He'] FROM Table3",
+      Seq(row(9))
+    )
+    checkResult(
+      "SELECT myNestedMapUdaf(a, b, c)[6]['Co'] FROM Table3",
+      Seq(row(111))
+    )
+    checkResult(
+      "SELECT myNestedMapUdaf(a, b, c)[3]['He'] FROM Table3",
+      Seq(row(4))
+    )
+    checkResult(
+      "SELECT myNestedMapUdaf(a, b, c)[3]['Co'] FROM Table3",
+      Seq(row("null"))
+    )
+  }
 }
 
 class MyPojoAggFunction extends AggregateFunction[MyPojo, CountAccumulator] {
@@ -298,13 +360,13 @@ class VarArgsAggFunction extends AggregateFunction[Long, CountAccumulator] {
   @varargs
   def accumulate(acc: CountAccumulator, value: Long, args: String*): Unit = {
     acc.f0 += value
-    args.foreach((s) => acc.f0 += s.toLong)
+    args.foreach(s => acc.f0 += s.toLong)
   }
 
   @varargs
   def retract(acc: CountAccumulator, value: Long, args: String*): Unit = {
     acc.f0 -= value
-    args.foreach((s) => acc.f0 -= s.toLong)
+    args.foreach(s => acc.f0 -= s.toLong)
   }
 
   override def getValue(acc: CountAccumulator): Long = {
@@ -329,4 +391,149 @@ class VarArgsAggFunction extends AggregateFunction[Long, CountAccumulator] {
   override def getAccumulatorType: DataType = {
     DataTypes.createTupleType(classOf[CountAccumulator], DataTypes.LONG)
   }
+}
+
+class MyPrimitiveArrayUdaf extends AggregateFunction[Array[Long], Array[Long]] {
+
+  override def createAccumulator(): Array[Long] = new Array[Long](2)
+
+  override def getValue(accumulator: Array[Long]): Array[Long] = accumulator
+
+  def accumulate(accumulator: Array[Long], a: Int, b: Long): Unit = {
+    accumulator(0) += a
+    accumulator(1) += b
+  }
+
+  override def getAccumulatorType: DataType = DataTypes.createPrimitiveArrayType(DataTypes.LONG)
+
+  override def getResultType: DataType = DataTypes.createPrimitiveArrayType(DataTypes.LONG)
+}
+
+class MyObjectArrayUdaf extends AggregateFunction[Array[String], Array[String]] {
+
+  override def createAccumulator(): Array[String] = Array("", "")
+
+  override def getValue(accumulator: Array[String]): Array[String] = accumulator
+
+  def accumulate(accumulator: Array[String], c: String): Unit = {
+    accumulator(0) = accumulator(0) + c.charAt(0)
+    accumulator(1) = accumulator(1) + c.charAt(c.length - 1)
+  }
+
+  override def getAccumulatorType: DataType = DataTypes.createArrayType(DataTypes.STRING)
+
+  override def getResultType: DataType = DataTypes.createArrayType(DataTypes.STRING)
+}
+
+class MyNestedLongArrayUdaf extends AggregateFunction[Array[Array[Long]], Array[Array[Long]]] {
+
+  override def createAccumulator(): Array[Array[Long]] = Array(Array(0, 0), Array(0, 0))
+
+  override def getValue(accumulator: Array[Array[Long]]): Array[Array[Long]] = accumulator
+
+  def accumulate(accumulator: Array[Array[Long]], a: Int, b: Long): Unit = {
+    accumulator(0)(0) += a
+    accumulator(0)(1) += b
+    accumulator(1)(0) += b
+    accumulator(1)(1) += a
+  }
+
+  override def getAccumulatorType: DataType =
+    DataTypes.createArrayType(DataTypes.createPrimitiveArrayType(DataTypes.LONG))
+
+  override def getResultType: DataType =
+    DataTypes.createArrayType(DataTypes.createPrimitiveArrayType(DataTypes.LONG))
+}
+
+class MyNestedStringArrayUdaf extends AggregateFunction[
+    Array[Array[String]], Array[Array[String]]] {
+
+  override def createAccumulator(): Array[Array[String]] = Array(Array("", ""), Array("", ""))
+
+  override def getValue(accumulator: Array[Array[String]]): Array[Array[String]] = accumulator
+
+  def accumulate(accumulator: Array[Array[String]], c: String): Unit = {
+    accumulator(0)(0) = accumulator(0)(0) + c.charAt(0)
+    accumulator(0)(1) = accumulator(0)(1) + c.charAt(c.length - 1)
+    accumulator(1)(0) = accumulator(1)(0) + c.charAt(c.length - 1)
+    accumulator(1)(1) = accumulator(1)(1) + c.charAt(0)
+  }
+
+  override def getAccumulatorType: DataType =
+    DataTypes.createArrayType(DataTypes.createArrayType(DataTypes.STRING))
+
+  override def getResultType: DataType =
+    DataTypes.createArrayType(DataTypes.createArrayType(DataTypes.STRING))
+}
+
+class MyPrimitiveMapUdaf extends AggregateFunction[
+    java.util.Map[Long, Int], java.util.Map[Long, Int]] {
+
+  override def createAccumulator(): util.Map[Long, Int] = new util.HashMap[Long, Int]()
+
+  override def getValue(accumulator: util.Map[Long, Int]): util.Map[Long, Int] =
+    accumulator
+
+  def accumulate(accumulator: util.Map[Long, Int], a: Int, b: Long): Unit = {
+    accumulator.putIfAbsent(b, 0)
+    accumulator.put(b, accumulator.get(b) + a)
+  }
+
+  override def getAccumulatorType: DataType =
+    DataTypes.createMapType(DataTypes.LONG, DataTypes.INT)
+
+  override def getResultType: DataType =
+    DataTypes.createMapType(DataTypes.LONG, DataTypes.INT)
+}
+
+class MyObjectMapUdaf extends AggregateFunction[
+    java.util.Map[String, Int], java.util.Map[String, Int]] {
+
+  override def createAccumulator(): util.Map[String, Int] = new util.HashMap[String, Int]()
+
+  override def getValue(accumulator: util.Map[String, Int]): util.Map[String, Int] =
+    accumulator
+
+  def accumulate(accumulator: util.Map[String, Int], a: Int, c: String): Unit = {
+    val key = c.substring(0, 2)
+    accumulator.putIfAbsent(key, 0)
+    accumulator.put(key, accumulator.get(key) + a)
+  }
+
+  override def getAccumulatorType: DataType =
+    DataTypes.createMapType(DataTypes.STRING, DataTypes.INT)
+
+  override def getResultType: DataType =
+    DataTypes.createMapType(DataTypes.STRING, DataTypes.INT)
+}
+
+class MyNestedMapUdf extends AggregateFunction[
+    java.util.Map[Long, java.util.Map[String, Int]],
+    java.util.Map[Long, java.util.Map[String, Int]]] {
+
+  override def createAccumulator(): java.util.Map[Long, java.util.Map[String, Int]] =
+    new java.util.HashMap[Long, java.util.Map[String, Int]]()
+
+  override def getValue(accumulator: java.util.Map[Long, java.util.Map[String, Int]])
+      : java.util.Map[Long, java.util.Map[String, Int]] =
+    accumulator
+
+  def accumulate(
+      accumulator: java.util.Map[Long, java.util.Map[String, Int]],
+      a: Int, b: Long, c: String): Unit = {
+    val key = c.substring(0, 2)
+    accumulator.putIfAbsent(b, new java.util.HashMap[String, Int]())
+    accumulator.get(b).putIfAbsent(key, 0)
+    accumulator.get(b).put(key, accumulator.get(b).get(key) + a)
+  }
+
+  override def getAccumulatorType: DataType =
+    DataTypes.createMapType(
+      DataTypes.LONG,
+      DataTypes.createMapType(DataTypes.STRING, DataTypes.INT))
+
+  override def getResultType: DataType =
+    DataTypes.createMapType(
+      DataTypes.LONG,
+      DataTypes.createMapType(DataTypes.STRING, DataTypes.INT))
 }

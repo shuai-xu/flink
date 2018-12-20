@@ -86,6 +86,12 @@ object TypeUtils {
     }
   }
 
+  def getBaseArraySerializer(t: InternalType): BaseArraySerializer = {
+    t match {
+      case a: ArrayType => new BaseArraySerializer(a.isPrimitive, a.getElementType)
+    }
+  }
+
   def getArrayElementType(t: TypeInformation[_]): TypeInformation[_] = {
     t match {
       case a: PrimitiveArrayTypeInfo[_] => a.getComponentType
@@ -303,8 +309,10 @@ object TypeUtils {
     case SqlTimeTypeInfo.TIMESTAMP => LongSerializer.INSTANCE
     case SqlTimeTypeInfo.DATE => IntSerializer.INSTANCE
     case SqlTimeTypeInfo.TIME => IntSerializer.INSTANCE
-    case _ if isInternalArrayType(t) => BinaryArraySerializer.INSTANCE
-    case _: MapTypeInfo[_, _] => BinaryMapSerializer.INSTANCE
+    case _ if isInternalArrayType(t) => getBaseArraySerializer(DataTypes.internal(t))
+    case mi: MapTypeInfo[_, _] =>
+      new BaseMapSerializer(
+        DataTypes.internal(mi.getKeyTypeInfo), DataTypes.internal(mi.getValueTypeInfo))
     case d: BigDecimalTypeInfo => new DecimalSerializer(d.precision(), d.scale())
     case ti => ti.createSerializer(new ExecutionConfig)
   }

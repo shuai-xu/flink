@@ -225,16 +225,11 @@ object ScalarOperators {
     }
     // array types
     else if (isArray(left.resultType) && left.resultType == right.resultType) {
-      generateOperatorIfNotNull(ctx, nullCheck, DataTypes.BOOLEAN, left, right) {
-        (leftTerm, rightTerm) => s"$leftTerm.equals($rightTerm)"
-      }
+      generateArrayComparison(ctx, nullCheck, left, right)
     }
     // map types
-    else if (isMap(left.resultType) &&
-      left.resultType == right.resultType) {
-      generateOperatorIfNotNull(ctx, nullCheck, DataTypes.BOOLEAN, left, right) {
-        (leftTerm, rightTerm) => s"$leftTerm.equals($rightTerm)"
-      }
+    else if (isMap(left.resultType) && left.resultType == right.resultType) {
+      generateMapComparison(ctx, nullCheck, left, right)
     }
     // comparable types of same type
     else if (isComparable(left.resultType) && left.resultType == right.resultType) {
@@ -310,16 +305,15 @@ object ScalarOperators {
     }
     // array types
     else if (isArray(left.resultType) && left.resultType == right.resultType) {
-      generateOperatorIfNotNull(ctx, nullCheck, DataTypes.BOOLEAN, left, right) {
-        (leftTerm, rightTerm) => s"!$leftTerm.equals($rightTerm)"
-      }
+      val equalsExpr = generateEquals(ctx, nullCheck, left, right)
+      GeneratedExpression(
+        s"(!${equalsExpr.resultTerm})", equalsExpr.nullTerm, equalsExpr.code, DataTypes.BOOLEAN)
     }
     // map types
-    else if (isMap(left.resultType) &&
-      left.resultType == right.resultType) {
-      generateOperatorIfNotNull(ctx, nullCheck, DataTypes.BOOLEAN, left, right) {
-        (leftTerm, rightTerm) => s"!$leftTerm.equals($rightTerm)"
-      }
+    else if (isMap(left.resultType) && left.resultType == right.resultType) {
+      val equalsExpr = generateEquals(ctx, nullCheck, left, right)
+      GeneratedExpression(
+        s"(!${equalsExpr.resultTerm})", equalsExpr.nullTerm, equalsExpr.code, DataTypes.BOOLEAN)
     }
     // comparable types
     else if (isComparable(left.resultType) && left.resultType == right.resultType) {
@@ -393,6 +387,151 @@ object ScalarOperators {
       }
     }
   }
+
+  def generateArrayComparison(
+      ctx: CodeGeneratorContext,
+      nullCheck: Boolean,
+      left: GeneratedExpression,
+      right: GeneratedExpression): GeneratedExpression =
+    generateCallWithStmtIfArgsNotNull(ctx, nullCheck, DataTypes.BOOLEAN, Seq(left, right)) {
+      args =>
+        val leftTerm = args.head
+        val rightTerm = args(1)
+
+        val resultTerm = newName("compareResult")
+        val binaryArrayCls = classOf[BinaryArray].getCanonicalName
+
+        val elementType = left.resultType.asInstanceOf[ArrayType].getElementType
+        val elementCls = primitiveTypeTermForType(elementType)
+        val elementDefault = primitiveDefaultValue(elementType)
+
+        val leftElementTerm = newName("leftElement")
+        val leftElementNullTerm = newName("leftElementIsNull")
+        val leftElementExpr =
+          GeneratedExpression(leftElementTerm, leftElementNullTerm, "", elementType)
+
+        val rightElementTerm = newName("rightElement")
+        val rightElementNullTerm = newName("rightElementIsNull")
+        val rightElementExpr =
+          GeneratedExpression(rightElementTerm, rightElementNullTerm, "", elementType)
+
+        val indexTerm = newName("index")
+        val elementEqualsExpr = generateEquals(ctx, nullCheck, leftElementExpr, rightElementExpr)
+
+        val stmt =
+          s"""
+             |boolean $resultTerm;
+             |if ($leftTerm instanceof $binaryArrayCls && $rightTerm instanceof $binaryArrayCls) {
+             |  $resultTerm = $leftTerm.equals($rightTerm);
+             |} else {
+             |  if ($leftTerm.numElements() == $rightTerm.numElements()) {
+             |    $resultTerm = true;
+             |    for (int $indexTerm = 0; $indexTerm < $leftTerm.numElements(); $indexTerm++) {
+             |      $elementCls $leftElementTerm = $elementDefault;
+             |      boolean $leftElementNullTerm = $leftTerm.isNullAt($indexTerm);
+             |      if (!$leftElementNullTerm) {
+             |        $leftElementTerm =
+             |          ${baseRowFieldReadAccess(ctx, indexTerm, leftTerm, elementType)};
+             |      }
+             |
+             |      $elementCls $rightElementTerm = $elementDefault;
+             |      boolean $rightElementNullTerm = $rightTerm.isNullAt($indexTerm);
+             |      if (!$rightElementNullTerm) {
+             |        $rightElementTerm =
+             |          ${baseRowFieldReadAccess(ctx, indexTerm, rightTerm, elementType)};
+             |      }
+             |
+             |      ${elementEqualsExpr.code}
+             |      if (!${elementEqualsExpr.resultTerm}) {
+             |        $resultTerm = false;
+             |        break;
+             |      }
+             |    }
+             |  } else {
+             |    $resultTerm = false;
+             |  }
+             |}
+             """.stripMargin
+        (stmt, resultTerm)
+    }
+
+  def generateMapComparison(
+      ctx: CodeGeneratorContext,
+      nullCheck: Boolean,
+      left: GeneratedExpression,
+      right: GeneratedExpression): GeneratedExpression =
+    generateCallWithStmtIfArgsNotNull(ctx, nullCheck, DataTypes.BOOLEAN, Seq(left, right)) {
+      args =>
+        val leftTerm = args.head
+        val rightTerm = args(1)
+
+        val resultTerm = newName("compareResult")
+        val binaryMapCls = classOf[BinaryMap].getCanonicalName
+
+        val mapType = left.resultType.asInstanceOf[MapType]
+        val mapCls = classOf[java.util.Map[AnyRef, AnyRef]].getCanonicalName
+        val keyCls = boxedTypeTermForType(mapType.getKeyType)
+        val valueCls = boxedTypeTermForType(mapType.getValueType)
+
+        val leftMapTerm = newName("leftMap")
+        val leftKeyTerm = newName("leftKey")
+        val leftValueTerm = newName("leftValue")
+        val leftValueNullTerm = newName("leftValueIsNull")
+        val leftValueExpr =
+          GeneratedExpression(leftValueTerm, leftValueNullTerm, "", mapType.getValueType)
+
+        val rightMapTerm = newName("rightMap")
+        val rightValueTerm = newName("rightValue")
+        val rightValueNullTerm = newName("rightValueIsNull")
+        val rightValueExpr =
+          GeneratedExpression(rightValueTerm, rightValueNullTerm, "", mapType.getValueType)
+
+        val entryTerm = newName("entry")
+        val entryCls = classOf[java.util.Map.Entry[AnyRef, AnyRef]].getCanonicalName
+        val valueEqualsExpr = generateEquals(ctx, nullCheck, leftValueExpr, rightValueExpr)
+
+        val internalTypeCls = classOf[InternalType].getCanonicalName
+        val keyTypeTerm =
+          ctx.addReusableObject(mapType.getKeyType, "keyType", internalTypeCls)
+        val valueTypeTerm =
+          ctx.addReusableObject(mapType.getValueType, "valueType", internalTypeCls)
+
+        val stmt =
+          s"""
+             |boolean $resultTerm;
+             |if ($leftTerm instanceof $binaryMapCls && $rightTerm instanceof $binaryMapCls) {
+             |  $resultTerm = $leftTerm.equals($rightTerm);
+             |} else {
+             |  if ($leftTerm.numElements() == $rightTerm.numElements()) {
+             |    $resultTerm = true;
+             |    $mapCls $leftMapTerm = $leftTerm.toJavaMap($keyTypeTerm, $valueTypeTerm);
+             |    $mapCls $rightMapTerm = $rightTerm.toJavaMap($keyTypeTerm, $valueTypeTerm);
+             |
+             |    for ($entryCls $entryTerm : $leftMapTerm.entrySet()) {
+             |      $keyCls $leftKeyTerm = ($keyCls) $entryTerm.getKey();
+             |      if ($rightMapTerm.containsKey($leftKeyTerm)) {
+             |        $valueCls $leftValueTerm = ($valueCls) $entryTerm.getValue();
+             |        $valueCls $rightValueTerm = ($valueCls) $rightMapTerm.get($leftKeyTerm);
+             |        boolean $leftValueNullTerm = ($leftValueTerm == null);
+             |        boolean $rightValueNullTerm = ($rightValueTerm == null);
+             |
+             |        ${valueEqualsExpr.code}
+             |        if (!${valueEqualsExpr.resultTerm}) {
+             |          $resultTerm = false;
+             |          break;
+             |        }
+             |      } else {
+             |        $resultTerm = false;
+             |        break;
+             |      }
+             |    }
+             |  } else {
+             |    $resultTerm = false;
+             |  }
+             |}
+             """.stripMargin
+        (stmt, resultTerm)
+    }
 
   def generateIsNull(
       nullCheck: Boolean,
@@ -758,11 +897,17 @@ object ScalarOperators {
     case (mt: MapType, DataTypes.STRING) =>
       generateReturnStringCallWithStmtIfArgsNotNull(ctx, Seq(operand)) {
         terms =>
+          val resultTerm = newName("toStringResult")
+
           val builderCls = classOf[StringBuilder].getCanonicalName
           val builderTerm = newName("builder")
           ctx.addReusableMember(s"$builderCls $builderTerm = new $builderCls();")
 
           val mapTerm = terms.head
+          val genericMapCls = classOf[GenericMap].getCanonicalName
+          val genericMapTerm = newName("genericMap")
+          val binaryMapCls = classOf[BinaryMap].getCanonicalName
+          val binaryMapTerm = newName("binaryMap")
           val arrayCls = classOf[BinaryArray].getCanonicalName
           val keyArrayTerm = newName("keyArray")
           val valueArrayTerm = newName("valueArray")
@@ -790,36 +935,46 @@ object ScalarOperators {
 
           val stmt =
             s"""
-               |$arrayCls $keyArrayTerm = $mapTerm.keyArray();
-               |$arrayCls $valueArrayTerm = $mapTerm.valueArray();
+               |String $resultTerm;
+               |if ($mapTerm instanceof $binaryMapCls) {
+               |  $binaryMapCls $binaryMapTerm = ($binaryMapCls) $mapTerm;
                |
-               |$builderTerm.setLength(0);
-               |$builderTerm.append("{");
+               |  $arrayCls $keyArrayTerm = $binaryMapTerm.keyArray();
+               |  $arrayCls $valueArrayTerm = $binaryMapTerm.valueArray();
                |
-               |int $numTerm = $mapTerm.numElements();
-               |for (int $indexTerm = 0; $indexTerm < $numTerm; $indexTerm++) {
-               |  if ($indexTerm != 0) {
-               |    $builderTerm.append(", ");
+               |  $builderTerm.setLength(0);
+               |  $builderTerm.append("{");
+               |
+               |  int $numTerm = $binaryMapTerm.numElements();
+               |  for (int $indexTerm = 0; $indexTerm < $numTerm; $indexTerm++) {
+               |    if ($indexTerm != 0) {
+               |      $builderTerm.append(", ");
+               |    }
+               |
+               |    ${keyCastExpr.code}
+               |    if (${keyCastExpr.nullTerm}) {
+               |      $builderTerm.append("null");
+               |    } else {
+               |      $builderTerm.append(${keyCastExpr.resultTerm});
+               |    }
+               |    $builderTerm.append("=");
+               |
+               |    ${valueCastExpr.code}
+               |    if (${valueCastExpr.nullTerm}) {
+               |      $builderTerm.append("null");
+               |    } else {
+               |      $builderTerm.append(${valueCastExpr.resultTerm});
+               |    }
                |  }
+               |  $builderTerm.append("}");
                |
-               |  ${keyCastExpr.code}
-               |  if (${keyCastExpr.nullTerm}) {
-               |    $builderTerm.append("null");
-               |  } else {
-               |    $builderTerm.append(${keyCastExpr.resultTerm});
-               |  }
-               |  $builderTerm.append("=");
-               |
-               |  ${valueCastExpr.code}
-               |  if (${valueCastExpr.nullTerm}) {
-               |    $builderTerm.append("null");
-               |  } else {
-               |    $builderTerm.append(${valueCastExpr.resultTerm});
-               |  }
+               |  $resultTerm = $builderTerm.toString();
+               |} else {
+               |  $genericMapCls $genericMapTerm = ($genericMapCls) $mapTerm;
+               |  $resultTerm = $genericMapTerm.toString();
                |}
-               |$builderTerm.append("}");
              """.stripMargin
-          (stmt, s"$builderTerm.toString()")
+          (stmt, resultTerm)
       }
 
     // composite type -> String
@@ -1384,7 +1539,7 @@ object ScalarOperators {
         s"""
            |${element.code}
            |if (${element.nullTerm}) {
-           |  ${binaryArraySetNull(idx, writerTerm, elementType)};
+           |  ${baseArraySetNull(idx, writerTerm, elementType)};
            |} else {
            |  ${binaryWriterWriteField(
           ctx, idx, element.resultTerm, writerTerm, elementType)};
@@ -1447,7 +1602,7 @@ object ScalarOperators {
             s"""
                |${element.code}
                |if (${element.nullTerm}) {
-               |  ${binaryArraySetNull(idx, array.resultTerm, elementType)};
+               |  ${baseArraySetNull(idx, array.resultTerm, elementType)};
                |} else {
                |  ${binaryRowFieldSetAccess(
               idx, array.resultTerm, elementType, element.resultTerm)};
@@ -1581,7 +1736,7 @@ object ScalarOperators {
           s"""
              |${key.code}
              |if (${key.nullTerm}) {
-             |  ${CodeGenUtils.binaryArraySetNull(i, arrayTerm, tpe)};
+             |  ${CodeGenUtils.baseArraySetNull(i, arrayTerm, tpe)};
              |} else {
              |  $arrayTerm.setNotNullAt($i);
              |  ${binaryRowFieldSetAccess(i, arrayTerm, tpe, key.resultTerm)};
@@ -1598,6 +1753,7 @@ object ScalarOperators {
 
     val mapType = resultType.asInstanceOf[MapType]
     val mapTerm = newName("map")
+    val binaryMapTerm = newName("binaryMap")
 
     // Prepare map key array
     val keyElements = elements.grouped(2).map { case Seq(key, _) => key }.toSeq
@@ -1634,12 +1790,15 @@ object ScalarOperators {
       }
 
     // Construct binary map
-    val mapCls = classOf[BinaryMap].getCanonicalName
+    val mapCls = classOf[BaseMap].getCanonicalName
+    val binaryMapCls = classOf[BinaryMap].getCanonicalName
     val initMap = if (!keyNeedsRefill && !valueNeedsRefill) {
         s"""
-           |$mapTerm = $mapCls.valueOf(${keyArr.resultTerm}, ${valueArr.resultTerm});
-           |${keyArr.resultTerm} = $mapTerm.keyArray();
-           |${valueArr.resultTerm} = $mapTerm.valueArray();
+           |$binaryMapCls $binaryMapTerm =
+           |  $binaryMapCls.valueOf(${keyArr.resultTerm}, ${valueArr.resultTerm});
+           |${keyArr.resultTerm} = $binaryMapTerm.keyArray();
+           |${valueArr.resultTerm} = $binaryMapTerm.valueArray();
+           |$mapTerm = $binaryMapTerm;
            |""".stripMargin
       } else {
         ""
@@ -1651,7 +1810,7 @@ object ScalarOperators {
       s"""
          |$keyUpdate
          |$valueUpdate
-         |$mapTerm = $mapCls.valueOf(${keyArr.resultTerm}, ${valueArr.resultTerm});
+         |$mapTerm = $binaryMapCls.valueOf(${keyArr.resultTerm}, ${valueArr.resultTerm});
          |""".stripMargin
     } else {
       s"""
@@ -1670,6 +1829,7 @@ object ScalarOperators {
       nullCheck: Boolean): GeneratedExpression = {
     val Seq(resultTerm, nullTerm) = newNames(Seq("result", "isNull"))
     val tmpKey = newName("key")
+    val tmpValue = newName("value")
     val length = newName("length")
     val keys = newName("keys")
     val values = newName("values")
@@ -1682,9 +1842,14 @@ object ScalarOperators {
 
     val keyTypeTerm = primitiveTypeTermForType(keyType)
     val valueTypeTerm = primitiveTypeTermForType(valueType)
+    val boxedValueTypeTerm = boxedTypeTermForType(valueType)
     val valueDefault = primitiveDefaultValue(valueType)
 
     val mapTerm = map.resultTerm
+    val binaryMapTypeTerm = classOf[BinaryMap].getCanonicalName
+    val binaryMapTerm = newName("binaryMap")
+    val genericMapTypeTerm = classOf[GenericMap].getCanonicalName
+    val genericMapTerm = newName("genericMap")
 
     val arrayTypeTerm = classOf[BinaryArray].getCanonicalName
 
@@ -1692,28 +1857,41 @@ object ScalarOperators {
       ctx, nullCheck, key, GeneratedExpression(tmpKey, "false", "", keyType))
     val code =
       s"""
-        final int $length = $mapTerm.numElements();
-        final $arrayTypeTerm $keys = $mapTerm.keyArray();
-        final $arrayTypeTerm $values = $mapTerm.valueArray();
-
-        int $index = 0;
-        boolean $found = false;
-        while ($index < $length && !$found) {
-          final $keyTypeTerm $tmpKey = ${baseRowFieldReadAccess(ctx, index, keys, keyType)};
-          ${equal.code}
-          if (${equal.resultTerm}) {
-            $found = true;
-          } else {
-            $index++;
-          }
-        }
-
-        if (!$found || $values.isNullAt($index)) {
-          $nullTerm = true;
-        } else {
-          $resultTerm = ${baseRowFieldReadAccess(ctx, index, values, valueType)};
-        }
-      """.stripMargin
+         |if ($mapTerm instanceof $binaryMapTypeTerm) {
+         |  $binaryMapTypeTerm $binaryMapTerm = ($binaryMapTypeTerm) $mapTerm;
+         |
+         |  final int $length = $binaryMapTerm.numElements();
+         |  final $arrayTypeTerm $keys = $binaryMapTerm.keyArray();
+         |  final $arrayTypeTerm $values = $binaryMapTerm.valueArray();
+         |
+         |  int $index = 0;
+         |  boolean $found = false;
+         |  while ($index < $length && !$found) {
+         |    final $keyTypeTerm $tmpKey = ${baseRowFieldReadAccess(ctx, index, keys, keyType)};
+         |    ${equal.code}
+         |    if (${equal.resultTerm}) {
+         |      $found = true;
+         |    } else {
+         |      $index++;
+         |    }
+         |  }
+         |
+         |  if (!$found || $values.isNullAt($index)) {
+         |    $nullTerm = true;
+         |  } else {
+         |    $resultTerm = ${baseRowFieldReadAccess(ctx, index, values, valueType)};
+         |  }
+         |} else {
+         |  $genericMapTypeTerm $genericMapTerm = ($genericMapTypeTerm) $mapTerm;
+         |  $boxedValueTypeTerm $tmpValue =
+         |    ($boxedValueTypeTerm) $genericMapTerm.get(($keyTypeTerm) ${key.resultTerm});
+         |  if ($tmpValue == null) {
+         |    $nullTerm = true;
+         |  } else {
+         |    $resultTerm = $tmpValue;
+         |  }
+         |}
+        """.stripMargin
 
     val accessCode =
       s"""
@@ -1724,7 +1902,7 @@ object ScalarOperators {
          |if (!$nullTerm) {
          | $code
          |}
-         |""".stripMargin.trim
+        """.stripMargin.trim
 
     GeneratedExpression(resultTerm, nullTerm, accessCode, valueType)
   }

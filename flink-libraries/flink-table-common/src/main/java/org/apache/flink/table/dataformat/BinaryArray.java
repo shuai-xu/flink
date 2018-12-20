@@ -46,7 +46,7 @@ import static org.apache.flink.table.dataformat.util.BinaryRowUtil.UNSAFE;
  *
  * <p>[numElements(int)] + [null bits(4-byte word boundaries)] + [values or offset&length] + [variable length part].
  */
-public class BinaryArray implements TypeGetterSetters {
+public class BinaryArray extends BaseArray {
 
 	public static int calculateHeaderInBytes(int numFields) {
 		return 4 + ((numFields + 31) / 32) * 4;
@@ -110,6 +110,7 @@ public class BinaryArray implements TypeGetterSetters {
 		return sizeInBytes;
 	}
 
+	@Override
 	public int numElements() {
 		return numElements;
 	}
@@ -134,11 +135,19 @@ public class BinaryArray implements TypeGetterSetters {
 		this.elementOffset = baseOffset + calculateHeaderInBytes(this.numElements);
 	}
 
+	@Override
 	public boolean isNullAt(int pos) {
 		assertIndexIsValid(pos);
 		return MultiSegUtil.bitGet(segments, baseOffset + 4, pos);
 	}
 
+	@Override
+	public void setNullAt(int pos) {
+		assertIndexIsValid(pos);
+		MultiSegUtil.bitSet(segments, baseOffset + 4, pos);
+	}
+
+	@Override
 	public void setNotNullAt(int pos) {
 		assertIndexIsValid(pos);
 		MultiSegUtil.bitUnSet(segments, baseOffset + 4, pos);
@@ -156,6 +165,7 @@ public class BinaryArray implements TypeGetterSetters {
 		MultiSegUtil.setLong(segments, getElementOffset(pos, 8), value);
 	}
 
+	@Override
 	public void setNullLong(int pos) {
 		assertIndexIsValid(pos);
 		MultiSegUtil.bitSet(segments, baseOffset + 4, pos);
@@ -174,6 +184,7 @@ public class BinaryArray implements TypeGetterSetters {
 		MultiSegUtil.setInt(segments, getElementOffset(pos, 4), value);
 	}
 
+	@Override
 	public void setNullInt(int pos) {
 		assertIndexIsValid(pos);
 		MultiSegUtil.bitSet(segments, baseOffset + 4, pos);
@@ -228,6 +239,7 @@ public class BinaryArray implements TypeGetterSetters {
 		MultiSegUtil.setBoolean(segments, getElementOffset(pos, 1), value);
 	}
 
+	@Override
 	public void setNullBoolean(int pos) {
 		assertIndexIsValid(pos);
 		MultiSegUtil.bitSet(segments, baseOffset + 4, pos);
@@ -246,6 +258,7 @@ public class BinaryArray implements TypeGetterSetters {
 		MultiSegUtil.setByte(segments, getElementOffset(pos, 1), value);
 	}
 
+	@Override
 	public void setNullByte(int pos) {
 		assertIndexIsValid(pos);
 		MultiSegUtil.bitSet(segments, baseOffset + 4, pos);
@@ -264,6 +277,7 @@ public class BinaryArray implements TypeGetterSetters {
 		MultiSegUtil.setShort(segments, getElementOffset(pos, 2), value);
 	}
 
+	@Override
 	public void setNullShort(int pos) {
 		assertIndexIsValid(pos);
 		MultiSegUtil.bitSet(segments, baseOffset + 4, pos);
@@ -282,6 +296,7 @@ public class BinaryArray implements TypeGetterSetters {
 		MultiSegUtil.setFloat(segments, getElementOffset(pos, 4), value);
 	}
 
+	@Override
 	public void setNullFloat(int pos) {
 		assertIndexIsValid(pos);
 		MultiSegUtil.bitSet(segments, baseOffset + 4, pos);
@@ -300,6 +315,7 @@ public class BinaryArray implements TypeGetterSetters {
 		MultiSegUtil.setDouble(segments, getElementOffset(pos, 8), value);
 	}
 
+	@Override
 	public void setNullDouble(int pos) {
 		assertIndexIsValid(pos);
 		MultiSegUtil.bitSet(segments, baseOffset + 4, pos);
@@ -316,6 +332,13 @@ public class BinaryArray implements TypeGetterSetters {
 	public void setChar(int pos, char value) {
 		assertIndexIsValid(pos);
 		MultiSegUtil.setChar(segments, getElementOffset(pos, 2), value);
+	}
+
+	@Override
+	public void setNullChar(int pos) {
+		assertIndexIsValid(pos);
+		MultiSegUtil.bitSet(segments, baseOffset + 4, pos);
+		MultiSegUtil.setChar(segments, getElementOffset(pos, 2), '\0');
 	}
 
 	@Override
@@ -353,12 +376,6 @@ public class BinaryArray implements TypeGetterSetters {
 		}
 	}
 
-	public void setNullChar(int pos) {
-		assertIndexIsValid(pos);
-		MultiSegUtil.bitSet(segments, baseOffset + 4, pos);
-		MultiSegUtil.setChar(segments, getElementOffset(pos, 2), '\0');
-	}
-
 	public BinaryArray copy() {
 		return copy(new BinaryArray());
 	}
@@ -373,6 +390,7 @@ public class BinaryArray implements TypeGetterSetters {
 		return MultiSegUtil.getBytes(segments, baseOffset, sizeInBytes);
 	}
 
+	@Override
 	public boolean[] toBooleanArray() {
 		boolean[] values = new boolean[numElements];
 		BinaryRowUtil.copyToUnsafe(
@@ -380,6 +398,7 @@ public class BinaryArray implements TypeGetterSetters {
 		return values;
 	}
 
+	@Override
 	public byte[] toByteArray() {
 		byte[] values = new byte[numElements];
 		BinaryRowUtil.copyToUnsafe(
@@ -387,6 +406,7 @@ public class BinaryArray implements TypeGetterSetters {
 		return values;
 	}
 
+	@Override
 	public short[] toShortArray() {
 		short[] values = new short[numElements];
 		BinaryRowUtil.copyToUnsafe(
@@ -394,6 +414,7 @@ public class BinaryArray implements TypeGetterSetters {
 		return values;
 	}
 
+	@Override
 	public int[] toIntArray() {
 		int[] values = new int[numElements];
 		BinaryRowUtil.copyToUnsafe(
@@ -401,6 +422,7 @@ public class BinaryArray implements TypeGetterSetters {
 		return values;
 	}
 
+	@Override
 	public long[] toLongArray() {
 		long[] values = new long[numElements];
 		BinaryRowUtil.copyToUnsafe(
@@ -408,6 +430,7 @@ public class BinaryArray implements TypeGetterSetters {
 		return values;
 	}
 
+	@Override
 	public float[] toFloatArray() {
 		float[] values = new float[numElements];
 		BinaryRowUtil.copyToUnsafe(
@@ -415,6 +438,7 @@ public class BinaryArray implements TypeGetterSetters {
 		return values;
 	}
 
+	@Override
 	public double[] toDoubleArray() {
 		double[] values = new double[numElements];
 		BinaryRowUtil.copyToUnsafe(
@@ -471,27 +495,8 @@ public class BinaryArray implements TypeGetterSetters {
 		return fromPrimitiveArray(arr, DOUBLE_ARRAY_OFFSET, arr.length, 8);
 	}
 
-	public Object toPrimitiveArray(InternalType type) {
-		if (type.equals(Types.BOOLEAN)) {
-			return toBooleanArray();
-		} else if (type.equals(Types.BYTE)) {
-			return toByteArray();
-		} else if (type.equals(Types.SHORT)) {
-			return toShortArray();
-		} else if (type.equals(Types.INT)) {
-			return toIntArray();
-		} else if (type.equals(Types.LONG)) {
-			return toLongArray();
-		} else if (type.equals(Types.FLOAT)) {
-			return toFloatArray();
-		} else if (type.equals(Types.DOUBLE)) {
-			return toDoubleArray();
-		} else {
-			throw new RuntimeException();
-		}
-	}
-
-	public Object[] toArray(InternalType elementType) {
+	@Override
+	public Object[] toObjectArray(InternalType elementType) {
 		int size = numElements();
 		Object[] values = new Object[size];
 		for (int i = 0; i < size; i++) {
@@ -518,15 +523,15 @@ public class BinaryArray implements TypeGetterSetters {
 	}
 
 	@Override
-	public BinaryArray getArray(int ordinal) {
+	public BaseArray getBaseArray(int ordinal) {
 		final long offsetAndSize = getLong(ordinal);
-		return BinaryRow.getArray(segments, baseOffset, offsetAndSize);
+		return BinaryRow.getBinaryArray(segments, baseOffset, offsetAndSize);
 	}
 
 	@Override
-	public BinaryMap getMap(int ordinal) {
+	public BaseMap getBaseMap(int ordinal) {
 		final long offsetAndSize = getLong(ordinal);
-		return BinaryRow.getMap(segments, baseOffset, offsetAndSize);
+		return BinaryRow.getBinaryMap(segments, baseOffset, offsetAndSize);
 	}
 
 	@Override
@@ -549,7 +554,7 @@ public class BinaryArray implements TypeGetterSetters {
 
 	@Override
 	public boolean equals(Object o) {
-		if (o != null && o instanceof BinaryArray) {
+		if (o instanceof BinaryArray) {
 			BinaryArray other = (BinaryArray) o;
 			return sizeInBytes == other.sizeInBytes && BinaryRowUtil.equals(
 					segments,

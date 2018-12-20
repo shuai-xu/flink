@@ -166,12 +166,12 @@ public final class ColumnarRow implements BaseRow {
 	}
 
 	@Override
-	public BinaryArray getArray(int ordinal) {
+	public BaseArray getBaseArray(int ordinal) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public BinaryMap getMap(int ordinal) {
+	public BaseMap getBaseMap(int ordinal) {
 		throw new UnsupportedOperationException();
 	}
 

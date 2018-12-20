@@ -35,7 +35,13 @@ class MapTypeTestBase extends ExpressionTestBase {
     val map2 = new JHashMap[Int, String]()
     map2.put(12, "a")
     map2.put(13, "b")
-    val testData = new Row(8)
+    val map3 = new JHashMap[Long, Int]()
+    map3.put(10L, 1)
+    map3.put(20L, 2)
+    val map4 = new JHashMap[Int, Array[Int]]()
+    map4.put(1, Array(10, 100))
+    map4.put(2, Array(20, 200))
+    val testData = new Row(12)
     testData.setField(0, null)
     testData.setField(1, new JHashMap[String, Int]())
     testData.setField(2, map1)
@@ -44,6 +50,10 @@ class MapTypeTestBase extends ExpressionTestBase {
     testData.setField(5, 12)
     testData.setField(6, Array(1.2, 1.3))
     testData.setField(7, ImmutableMap.of(12, "a", 13, "b"))
+    testData.setField(8, map3)
+    testData.setField(9, map3)
+    testData.setField(10, map4)
+    testData.setField(11, map4)
     testData
   }
 
@@ -56,7 +66,11 @@ class MapTypeTestBase extends ExpressionTestBase {
       Types.STRING,
       Types.INT,
       Types.OBJECT_ARRAY(Types.DOUBLE),
-      new MapTypeInfo(BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.STRING_TYPE_INFO)
+      new MapTypeInfo(BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.STRING_TYPE_INFO),
+      new MapTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO),
+      new MapTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO),
+      new MapTypeInfo(BasicTypeInfo.INT_TYPE_INFO, Types.PRIMITIVE_ARRAY(Types.INT)),
+      new MapTypeInfo(BasicTypeInfo.INT_TYPE_INFO, Types.PRIMITIVE_ARRAY(Types.INT))
     )
   }
 }

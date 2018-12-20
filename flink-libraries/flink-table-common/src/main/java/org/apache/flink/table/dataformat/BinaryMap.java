@@ -20,8 +20,12 @@ package org.apache.flink.table.dataformat;
 
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.util.BinaryRowUtil;
 import org.apache.flink.table.dataformat.util.MultiSegUtil;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 
@@ -29,7 +33,7 @@ import static org.apache.flink.util.Preconditions.checkArgument;
  * [4 byte(keyArray size in bytes)] + [Key BinaryArray] + [Value BinaryArray].
  * TODO Optimize query performance.
  */
-public class BinaryMap {
+public class BinaryMap implements BaseMap {
 
 	private MemorySegment[] segments;
 	private int baseOffset;
@@ -56,8 +60,21 @@ public class BinaryMap {
 		return sizeInBytes;
 	}
 
+	@Override
 	public int numElements() {
 		return keys.numElements();
+	}
+
+	@Override
+	public Map<Object, Object> toJavaMap(InternalType keyType, InternalType valueType) {
+		Object[] keyArray = keys.toObjectArray(keyType);
+		Object[] valueArray = values.toObjectArray(valueType);
+
+		HashMap<Object, Object> map = new HashMap<>();
+		for (int i = 0; i < keyArray.length; i++) {
+			map.put(keyArray[i], valueArray[i]);
+		}
+		return map;
 	}
 
 	public void pointTo(MemorySegment segment, int baseOffset, int sizeInBytes) {
@@ -118,7 +135,7 @@ public class BinaryMap {
 
 	@Override
 	public boolean equals(Object o) {
-		if (o != null && o instanceof BinaryMap) {
+		if (o instanceof BinaryMap) {
 			BinaryMap other = (BinaryMap) o;
 			return sizeInBytes == other.sizeInBytes && BinaryRowUtil.equals(
 					segments,

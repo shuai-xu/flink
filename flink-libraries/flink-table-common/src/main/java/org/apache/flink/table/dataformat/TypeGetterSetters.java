@@ -25,7 +25,6 @@ import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.MapType;
 import org.apache.flink.table.api.types.Types;
-//import org.apache.flink.table.api.types.TypeInfoWrappedType;
 
 /**
  * Provide type specialized getters and setters to reduce if/else and eliminate box and unbox.
@@ -125,12 +124,12 @@ public interface TypeGetterSetters {
 	/**
 	 * Get array value.
 	 */
-	BinaryArray getArray(int ordinal);
+	BaseArray getBaseArray(int ordinal);
 
 	/**
 	 * Get map value.
 	 */
-	BinaryMap getMap(int ordinal);
+	BaseMap getBaseMap(int ordinal);
 
 	default Object get(int ordinal, DataType type) {
 		if (type.equals(Types.BOOLEAN)) {
@@ -165,9 +164,9 @@ public interface TypeGetterSetters {
 		} else if (type.equals(Types.BYTE_ARRAY)) {
 			return getByteArray(ordinal);
 		} else if (type instanceof ArrayType) {
-			return getArray(ordinal);
+			return getBaseArray(ordinal);
 		} else if (type instanceof MapType) {
-			return getMap(ordinal);
+			return getBaseMap(ordinal);
 		} else if (type instanceof BaseRowType) {
 			return getBaseRow(ordinal, ((BaseRowType) type).getArity());
 		} else if (type instanceof GenericType) {

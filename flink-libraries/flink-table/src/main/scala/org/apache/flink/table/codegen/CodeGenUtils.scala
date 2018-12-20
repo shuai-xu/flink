@@ -160,8 +160,8 @@ object CodeGenUtils {
     case DataTypes.STRING => BINARY_STRING
     case DataTypes.BYTE_ARRAY => "byte[]"
     case _: DecimalType => classOf[Decimal].getCanonicalName
-    case _: ArrayType => classOf[BinaryArray].getCanonicalName
-    case _: MapType => classOf[BinaryMap].getCanonicalName
+    case _: ArrayType => classOf[BaseArray].getCanonicalName
+    case _: MapType => classOf[BaseMap].getCanonicalName
     case _: BaseRowType => classOf[BaseRow].getCanonicalName
 
     case gt: GenericType[_] => gt.getTypeInfo.getTypeClass.getCanonicalName
@@ -189,8 +189,8 @@ object CodeGenUtils {
     case DataTypes.TIME => clazz == classOf[Integer] || clazz == Integer.TYPE
     case DataTypes.TIMESTAMP => clazz == classOf[java.lang.Long] || clazz == java.lang.Long.TYPE
 
-    case _: ArrayType => clazz == classOf[BinaryArray]
-    case _: MapType => clazz == classOf[BinaryMap]
+    case _: ArrayType => clazz == classOf[BaseArray]
+    case _: MapType => clazz == classOf[BaseMap]
     case _: BaseRowType => clazz == classOf[BaseRow]
     case _: GenericType[_] => true
     case _: ExternalType => false
@@ -882,8 +882,8 @@ object CodeGenUtils {
       case _: DateType => s"$rowTerm.getInt($pos)"
       case DataTypes.TIME => s"$rowTerm.getInt($pos)"
       case DataTypes.BYTE_ARRAY => s"$rowTerm.getByteArray($pos)"
-      case _: ArrayType => s"$rowTerm.getArray($pos)"
-      case _: MapType  => s"$rowTerm.getMap($pos)"
+      case _: ArrayType => s"$rowTerm.getBaseArray($pos)"
+      case _: MapType  => s"$rowTerm.getBaseMap($pos)"
       case rt: BaseRowType =>
         s"$rowTerm.getBaseRow($pos, ${rt.getArity})"
 
@@ -953,8 +953,16 @@ object CodeGenUtils {
       case DataTypes.TIME => s"$writerTerm.writeInt($pos, $fieldValTerm)"
       case _: TimestampType => s"$writerTerm.writeLong($pos, $fieldValTerm)"
       case DataTypes.BYTE_ARRAY => s"$writerTerm.writeByteArray($pos, $fieldValTerm)"
-      case _: ArrayType => s"$writerTerm.writeBinaryArray($pos, $fieldValTerm)"
-      case _: MapType => s"$writerTerm.writeBinaryMap($pos, $fieldValTerm)"
+      case _: ArrayType =>
+        s"$writerTerm.writeBaseArray($pos, $fieldValTerm, " +
+          s"(${classOf[BaseArraySerializer].getCanonicalName}) " +
+          s"${ctx.addReusableTypeSerializer(fieldType)})"
+
+      case _: MapType =>
+        s"$writerTerm.writeBaseMap($pos, $fieldValTerm, " +
+          s"(${classOf[BaseMapSerializer].getCanonicalName}) " +
+          s"${ctx.addReusableTypeSerializer(fieldType)})"
+
       case _: BaseRowType =>
         s"$writerTerm.writeBaseRow($pos, $fieldValTerm, " +
           s"(${classOf[BaseRowSerializer[_]].getCanonicalName}) " +
@@ -964,7 +972,7 @@ object CodeGenUtils {
         s"${ctx.addReusableTypeSerializer(fieldType)})"
     }
 
-  def binaryArraySetNull(
+  def baseArraySetNull(
       pos: Int,
       term: String,
       t: InternalType): String = t match {

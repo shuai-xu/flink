@@ -22,6 +22,7 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.tools.RelBuilder
+import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.runtime.util.SingleElementIterator
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
@@ -35,6 +36,7 @@ import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
+import org.apache.flink.table.typeutils.TypeUtils
 
 import scala.collection.JavaConverters._
 
@@ -271,16 +273,18 @@ trait BatchExecAggregateCodeGen {
 
     aggBufferExprs.zip(initAggBufferExprs).map {
       case (aggBufVar, initExpr) =>
-        val needCopy = aggBufVar.resultType match {
-          case _: StringType | _: ByteArrayType | _: ArrayType | _: MapType =>
-            true
-          case _ => false
+        val resultCode = aggBufVar.resultType match {
+          case _: StringType | _: BaseRowType | _: ArrayType | _: MapType =>
+            val serializer = TypeUtils.createSerializer(aggBufVar.resultType)
+            val term = ctx.addReusableObject(
+              serializer, "serializer", serializer.getClass.getCanonicalName)
+            s"$term.copy(${initExpr.resultTerm})"
+          case _ => initExpr.resultTerm
         }
-        val copyCode = if (needCopy) ".copy()" else ""
         s"""
            |${initExpr.code}
            |${aggBufVar.nullTerm} = ${initExpr.nullTerm};
-           |${aggBufVar.resultTerm} = (${initExpr.resultTerm})$copyCode;
+           |${aggBufVar.resultTerm} = $resultCode;
          """.stripMargin.trim
     } mkString "\n"
   }

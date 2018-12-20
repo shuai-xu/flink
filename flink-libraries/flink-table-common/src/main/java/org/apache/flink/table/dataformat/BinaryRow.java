@@ -462,12 +462,12 @@ public final class BinaryRow implements BaseRow {
 	}
 
 	@Override
-	public BinaryArray getArray(int ordinal) {
+	public BaseArray getBaseArray(int ordinal) {
 		final long offsetAndSize = getLong(ordinal);
-		return getArray(allSegments, baseOffset, offsetAndSize);
+		return getBinaryArray(allSegments, baseOffset, offsetAndSize);
 	}
 
-	public static BinaryArray getArray(
+	public static BinaryArray getBinaryArray(
 			MemorySegment[] segments, int baseOffset, long offsetAndSize) {
 		final int size = ((int) offsetAndSize);
 		int offset = (int) (offsetAndSize >> 32);
@@ -477,12 +477,12 @@ public final class BinaryRow implements BaseRow {
 	}
 
 	@Override
-	public BinaryMap getMap(int ordinal) {
+	public BaseMap getBaseMap(int ordinal) {
 		final long offsetAndSize = getLong(ordinal);
-		return getMap(allSegments, baseOffset, offsetAndSize);
+		return getBinaryMap(allSegments, baseOffset, offsetAndSize);
 	}
 
-	public static BinaryMap getMap(
+	public static BinaryMap getBinaryMap(
 			MemorySegment[] segments, int baseOffset, long offsetAndSize) {
 		final int size = ((int) offsetAndSize);
 		int offset = (int) (offsetAndSize >> 32);
