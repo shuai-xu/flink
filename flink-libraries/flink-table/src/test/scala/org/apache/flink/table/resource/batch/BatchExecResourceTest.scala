@@ -196,13 +196,13 @@ object BatchExecResourceTest {
     tableConfig.getParameters.setLong(
       TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION,
       2L)
-    tableConfig.getParameters.setLong(
+    tableConfig.getParameters.setInteger(
       TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION,
       50000)
-    tableConfig.getParameters.setLong(
+    tableConfig.getParameters.setInteger(
       TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM,
       1000)
-    tableConfig.getParameters.setLong(
+    tableConfig.getParameters.setInteger(
       TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM,
       800)
     tableConfig.getParameters.setInteger(
@@ -249,7 +249,7 @@ object BatchExecResourceTest {
       TableConfig.SQL_EXEC_SORT_MAX_BUFFER_MEM,
       57
     )
-    tableConfig.getParameters.setInteger(
+    tableConfig.getParameters.setLong(
       TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION,
       1000000
     )

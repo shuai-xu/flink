@@ -52,7 +52,7 @@ public class DefaultParallelismCalculatorTest {
 		tableConfig = new TableConfig();
 		mq = mock(RelMetadataQuery.class);
 		tableConfig.getParameters().setString(TableConfig.SQL_EXEC_INFER_RESOURCE_MODE(), ExecResourceUtil.InferMode.ONLY_SOURCE.toString());
-		tableConfig.getParameters().setInteger(TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION(), 100);
+		tableConfig.getParameters().setLong(TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION(), 100);
 		tableConfig.getParameters().setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM(), 50);
 		when(mq.getRowCount(tableSourceScan)).thenReturn(3000d);
 		when(mq.getAverageRowSize(tableSourceScan)).thenReturn(4d);

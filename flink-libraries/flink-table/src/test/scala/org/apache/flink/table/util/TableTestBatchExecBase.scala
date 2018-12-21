@@ -163,7 +163,7 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
   def disableBroadcastHashJoin(): Unit = {
     val config = new Configuration()
     config.addAll(tableEnv.getConfig.getParameters)
-    config.setInteger(TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
+    config.setLong(TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
     tableEnv.getConfig.setParameters(config)
   }
 

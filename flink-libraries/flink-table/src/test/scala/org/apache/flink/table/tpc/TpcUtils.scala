@@ -65,7 +65,7 @@ object TpcUtils {
   def disableBroadcastHashJoin(tEnv: BatchTableEnvironment): Unit = {
     val config = new Configuration()
     config.addAll(tEnv.getConfig.getParameters)
-    config.setInteger(TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
+    config.setLong(TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
     tEnv.getConfig.setParameters(config)
   }
 

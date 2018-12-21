@@ -52,10 +52,9 @@ class SortTest extends TableTestBatchExecBase {
 
   @Test
   def testSortWithForcedSinglePartitionAndLimit(): Unit = {
-    val oldSortEnable = tableConfig.getParameters.getBoolean(
-      TableConfig.SQL_EXEC_SORT_ENABLE_RANGE, TableConfig.SQL_EXEC_SORT_ENABLE_RANGE_DEFAULT)
+    val oldSortEnable = tableConfig.getParameters.getBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE)
     val oldLimitValue = tableConfig.getParameters.getInteger(
-      TableConfig.SQL_EXEC_SORT_DEFAULT_LIMIT, TableConfig.SQL_EXEC_SORT_DEFAULT_LIMIT_DEFAULT)
+      TableConfig.SQL_EXEC_SORT_DEFAULT_LIMIT)
     tableConfig.getParameters.setBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE, false)
     tableConfig.getParameters.setInteger(TableConfig.SQL_EXEC_SORT_DEFAULT_LIMIT, 200)
 

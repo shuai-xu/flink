@@ -249,7 +249,7 @@ class InnerJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITC
       tEnv.getConfig.getParameters.setBoolean(TableConfig.SQL_RUNTIME_FILTER_ENABLE, true)
       tEnv.getConfig.getParameters.setBoolean(TableConfig.SQL_RUNTIME_FILTER_WAIT, true)
       InsertRuntimeFilterRule.resetBroadcastIdCounter()
-      tEnv.getConfig.getParameters.setInteger(
+      tEnv.getConfig.getParameters.setLong(
         TableConfig.SQL_RUNTIME_FILTER_PROBE_ROW_COUNT_MIN, 5)
       tEnv.getConfig.getParameters.setInteger(
         TableConfig.SQL_RUNTIME_FILTER_ROW_COUNT_NUM_BITS_RATIO, 1)

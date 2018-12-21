@@ -23,15 +23,16 @@ import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import _root_.java.lang.{Boolean => JBoolean}
 import _root_.java.lang.{Long => JLong}
 import _root_.java.lang.{Double => JDouble}
+import _root_.java.lang.{String => JString}
+import org.apache.flink.configuration.ConfigOptions.key
 
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.configuration.{ConfigOption, ConfigOptions, Configuration, GlobalConfiguration}
 import org.apache.flink.table.api.OperatorType.OperatorType
 import org.apache.flink.table.calcite.CalciteConfig
-import org.apache.flink.table.sources.TableSource
 import org.apache.flink.util.StringUtils
 import org.apache.flink.table.api.TableConfig._
-import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
+import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.codegen.JavaSourceManipulator
 
 /**
@@ -69,7 +70,7 @@ class TableConfig {
     * runtime phase.
     */
   def getOperatorMetricCollect: Boolean = parameters.getBoolean(
-    SQL_EXEC_COLLECT_OPERATOR_METRIC_ENABLED, SQL_EXEC_COLLECT_OPERATOR_METRIC_ENABLED_DEFAULT)
+    SQL_EXEC_COLLECT_OPERATOR_METRIC_ENABLED)
 
   /**
     * Sets the operatorMetricCollect.If enabled, the operator metrics need to be collected
@@ -82,7 +83,7 @@ class TableConfig {
     * Returns optimizedPlanCollect. If enabled, the optimized plan need to be collected.
     */
   def getOptimizedPlanCollect: Boolean = parameters.getBoolean(
-    SQL_CBO_COLLECT_OPTIMIZED_PLAN_ENABLED, SQL_CBO_COLLECT_OPTIMIZED_PLAN_ENABLED_DEFAULT)
+    SQL_CBO_COLLECT_OPTIMIZED_PLAN_ENABLED)
 
   /**
     * Sets the optimizedPlanCollect.If enabled, the optimized plan need to be collected.
@@ -94,7 +95,7 @@ class TableConfig {
     * Returns the file path to dump stream graph plan with collected operator metrics.
     */
   def getDumpFileOfPlanWithMetrics: String = parameters.getString(
-    SQL_EXEC_COLLECT_OPERATOR_METRIC_PATH, SQL_EXEC_COLLECT_OPERATOR_METRIC_PATH_DEFAULT)
+    SQL_EXEC_COLLECT_OPERATOR_METRIC_PATH)
 
   /**
     * Sets the file path to dump stream graph plan with collected operator metrics.
@@ -106,7 +107,7 @@ class TableConfig {
     * Returns the file path to dump optimized plan.
     */
   def getDumpFileOfOptimizedPlan: String = parameters.getString(
-    SQL_CBO_COLLECT_OPTIMIZED_PLAN_PATH, SQL_CBO_COLLECT_OPTIMIZED_PLAN_PATH_DEFAULT)
+    SQL_CBO_COLLECT_OPTIMIZED_PLAN_PATH)
 
   /**
     * Sets the file path to dump optimized plan.
@@ -118,7 +119,7 @@ class TableConfig {
     * Returns true if sub-plan reuse is enabled, else false.
     */
   def getSubPlanReuse: Boolean = parameters.getBoolean(
-    SQL_EXEC_REUSE_SUB_PLAN_ENABLED, SQL_EXEC_REUSE_SUB_PLAN_ENABLED_DEFAULT)
+    SQL_EXEC_REUSE_SUB_PLAN_ENABLED)
 
   /**
     * Sets whether sub-plan reuse is enabled.
@@ -130,7 +131,7 @@ class TableConfig {
     * Returns true if table-source reuse is disabled, else false.
     */
   def isTableSourceReuseDisabled: Boolean = !parameters.getBoolean(
-    SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED_DEFAULT)
+    SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED)
 
   /**
     * Sets whether table-source reuse is enabled.
@@ -143,8 +144,7 @@ class TableConfig {
     * Returns true if nondeterministic-operator reuse is enabled, else false.
     */
   def getNondeterministicOperatorReuse: Boolean = parameters.getBoolean(
-    SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED,
-    SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED_DEFAULT)
+    SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED)
 
   /**
     * Sets whether nondeterministic-operator reuse is enabled.
@@ -212,7 +212,7 @@ class TableConfig {
     * Returns whether join reorder is enabled.
     */
   def joinReorderEnabled: Boolean = {
-    parameters.getBoolean(SQL_CBO_JOIN_REORDER_ENABLED, SQL_CBO_JOIN_REORDER_ENABLED_DEFAULT)
+    parameters.getBoolean(SQL_CBO_JOIN_REORDER_ENABLED)
   }
 
   /**
@@ -226,8 +226,7 @@ class TableConfig {
     * Returns whether join shuffle by partial join keys.
     */
   def joinShuffleByPartialKeyEnabled: Boolean = {
-    parameters.getBoolean(SQL_CBO_JOIN_SHUFFLE_BY_PARTIALKEY_ENABLED,
-      SQL_CBO_JOIN_SHUFFLE_BY_PARTIALKEY_ENABLED_DEFAULT)
+    parameters.getBoolean(SQL_CBO_JOIN_SHUFFLE_BY_PARTIALKEY_ENABLED)
   }
 
   /**
@@ -241,8 +240,7 @@ class TableConfig {
     * Returns whether aggregate shuffle by partial group keys.
     */
   def aggregateShuffleByPartialKeyEnabled: Boolean = {
-    parameters.getBoolean(SQL_CBO_AGG_SHUFFLE_BY_PARTIALKEY_ENABLED,
-      SQL_CBO_AGG_SHUFFLE_BY_PARTIALKEY_ENABLED_DEFAULT)
+    parameters.getBoolean(SQL_CBO_AGG_SHUFFLE_BY_PARTIALKEY_ENABLED)
   }
 
   /**
@@ -256,8 +254,7 @@ class TableConfig {
     * Returns whether rank shuffle by partial partition keys.
     */
   def rankShuffleByPartialKeyEnabled: Boolean = {
-    parameters.getBoolean(SQL_CBO_RANK_SHUFFLE_BY_PARTIALKEY_ENABLED,
-      SQL_CBO_RANK_SHUFFLE_BY_PARTIALKEY_ENABLED_DEFAULT)
+    parameters.getBoolean(SQL_CBO_RANK_SHUFFLE_BY_PARTIALKEY_ENABLED)
   }
 
   /**
@@ -285,8 +282,7 @@ class TableConfig {
     * Returns whether union all is disabled as breakpoint in subsection optimization.
     */
   def isUnionAllAsBreakPointInSubsectionOptimizationDisabled: Boolean =
-    parameters.getBoolean(SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED,
-                          SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED_DEFAULT)
+    parameters.getBoolean(SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED)
 
   /**
     * Sets whether to forbid union all as breakpoint in subsection optimization. If flag is true,
@@ -299,8 +295,7 @@ class TableConfig {
   }
 
   def enabledGivenOpType(operator: OperatorType): Boolean = {
-    val disableOperators = parameters.getString(
-      SQL_PHYSICAL_OPERATORS_DISABLED, SQL_PHYSICAL_OPERATORS_DISABLED_DEFAULT)
+    val disableOperators = parameters.getString(SQL_PHYSICAL_OPERATORS_DISABLED)
         .split(",")
         .map(_.trim)
     if (disableOperators.contains("HashJoin") &&
@@ -316,14 +311,14 @@ class TableConfig {
     * @return current maxGeneratedCodeLength
     */
   def getMaxGeneratedCodeLength: Int =
-    parameters.getInteger(SQL_CODEGEN_MAX_LENGTH, SQL_CODEGEN_MAX_LENGTH_DEFAULT)
+    parameters.getInteger(SQL_CODEGEN_MAX_LENGTH)
 
   /**
     * set value to 'sql.codegen.maxLength',
     * generated code will be split if code length exceeds this limitation
     */
   def setMaxGeneratedCodeLength(maxGeneratedCodeLength: Int): Unit = {
-    parameters.setInteger(SQL_CODEGEN_MAX_LENGTH , maxGeneratedCodeLength)
+    parameters.setInteger(SQL_CODEGEN_MAX_LENGTH, maxGeneratedCodeLength)
   }
 
   /**
@@ -407,13 +402,12 @@ class TableConfig {
   }
 
   def enableRangePartition: Boolean = {
-    parameters.getBoolean(
-      SQL_EXEC_SORT_ENABLE_RANGE, SQL_EXEC_SORT_ENABLE_RANGE_DEFAULT)
+    parameters.getBoolean(SQL_EXEC_SORT_ENABLE_RANGE)
   }
 
   /** Return max cnf node limit */
   def getMaxCnfNodeCount: Int = {
-    parameters.getInteger(SQL_CBO_CNF_NODES_LIMIT, SQL_CBO_CNF_NODES_LIMIT_DEFAULT)
+    parameters.getInteger(SQL_CBO_CNF_NODES_LIMIT)
   }
 
   private val DEFAULT_FIRE_INTERVAL = Long.MinValue
@@ -456,13 +450,6 @@ class TableConfig {
     * keep track of user defined parameters for each state table.
     */
   var queryableState2ParamMap: Map[String, Map[String, String]] = Map.empty
-
-//  /**
-//    * Sets user-defined configuration
-//    */
-//  def setParameters(parameters: JMap[String, String]): Unit = {
-//    this.parameters.addAll(parameters)
-//  }
 
   /**
     * Specifies the time interval for how long idle state, i.e., state which was not updated, will
@@ -786,630 +773,547 @@ object TableConfig {
   def DEFAULT = new TableConfig()
 
   // =================================== Sort ===================================
-  /**
-    * Sets whether to enable range sort, use range sort to sort all data in
-    * several partitions. When it is false, sorting in only one partition, default false.
-    */
-  val SQL_EXEC_SORT_ENABLE_RANGE = "sql.exec.sort.enable-range"
-  val SQL_EXEC_SORT_ENABLE_RANGE_DEFAULT: Boolean = false
+  val SQL_EXEC_SORT_ENABLE_RANGE: ConfigOption[JBoolean] =
+    key("sql.exec.sort.enable-range")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("Sets whether to enable range sort, use range sort to sort all " +
+            "data in several partitions. When it is false, sorting in only one partition")
 
-  /**
-    * Default limit when user don't set a limit after order by. This default value will be
-    * invalidated if [[SQL_EXEC_SORT_ENABLE_RANGE]] is set to be true.
-    */
-  val SQL_EXEC_SORT_DEFAULT_LIMIT = "sql.exec.sort.default-limit"
-  val SQL_EXEC_SORT_DEFAULT_LIMIT_DEFAULT: Int = 200
+  val SQL_EXEC_SORT_DEFAULT_LIMIT: ConfigOption[Integer] =
+    key("sql.exec.sort.default-limit")
+      .defaultValue(new Integer(200))
+      .withDescription("Default limit when user don't set a limit after order by. " +
+            "This default value will be invalidated if [[SQL_EXEC_SORT_ENABLE_RANGE]] " +
+            "is set to be true.")
 
   val SQL_EXEC_SORT_BUFFER_MEM: ConfigOption[Integer] =
-    ConfigOptions.key("sql.exec.sort.buffer-memory-mb")
+    key("sql.exec.sort.buffer-memory-mb")
       .defaultValue(new Integer(256))
       .withDescription(
         "Sets the buffer reserved memory size for sort. " +
           "It defines the lower limit for the sort.")
 
   val SQL_EXEC_SORT_PREFER_BUFFER_MEM: ConfigOption[Integer] =
-    ConfigOptions.key("sql.exec.sort.prefer-buffer-memory-mb")
+    key("sql.exec.sort.prefer-buffer-memory-mb")
       .defaultValue(new Integer(256))
       .withDescription(
         "Sets the preferred buffer memory size for sort. " +
           "It defines the applied memory for the sort.")
 
   val SQL_EXEC_SORT_MAX_BUFFER_MEM: ConfigOption[Integer] =
-    ConfigOptions.key("sql.exec.sort.max-buffer-memory-mb")
+    key("sql.exec.sort.max-buffer-memory-mb")
       .defaultValue(new Integer(256))
       .withDescription(
         "Sets the max buffer memory size for sort. " +
           "It defines the upper memory for the sort.")
 
   val SQL_EXEC_SORT_MAX_NUM_FILE_HANDLES: ConfigOption[Integer] =
-    ConfigOptions.key("sql.exec.sort.max-num-file-handles")
-        .defaultValue(new Integer(128))
-        .withDescription(
+    key("sql.exec.sort.max-num-file-handles")
+      .defaultValue(new Integer(128))
+      .withDescription(
           "Sort merge's maximum number of roads, too many roads, may cause too many files to be" +
               " read at the same time, resulting in excessive use of memory.")
 
   val SQL_EXEC_SPILL_COMPRESSION_ENABLE: ConfigOption[JBoolean] =
-    ConfigOptions.key("sql.exec.spill.compression.enable")
-        .defaultValue(new JBoolean(true))
+    key("sql.exec.spill.compression.enable")
+      .defaultValue(JBoolean.TRUE)
 
   val SQL_EXEC_SPILL_COMPRESSION_CODEC: ConfigOption[String] =
-    ConfigOptions.key("sql.exec.spill.compression.codec")
-        .defaultValue("lz4")
+    key("sql.exec.spill.compression.codec")
+      .defaultValue("lz4")
 
   val SQL_EXEC_SPILL_COMPRESSION_BLOCK_SIZE: ConfigOption[Integer] =
-    ConfigOptions.key("sql.exec.spill.compression.block-size")
-        .defaultValue(new Integer(64 * 1024))
+    key("sql.exec.spill.compression.block-size")
+      .defaultValue(new Integer(64 * 1024))
 
   val SQL_EXEC_SORT_ASYNC_MERGE_ENABLE: ConfigOption[JBoolean] =
-    ConfigOptions.key("sql.exec.sort.async-merge.enable")
-        .defaultValue(new JBoolean(true))
+    key("sql.exec.sort.async-merge.enable")
+      .defaultValue(JBoolean.TRUE)
 
   // =================================== Join ===================================
-  /**
-    * Sets the HashTable reserved memory for hashJoin operator. It defines the lower limit for.
-    */
-  val SQL_EXEC_HASH_JOIN_TABLE_MEM = "sql.exec.hash-join.table-memory-mb"
-  /**
-   * The default value for the hash-join's reserved and prefer buffer.
-   */
-  val SQL_EXEC_HASH_JOIN_TABLE_MEM_DEFAULT = 512
+  val SQL_EXEC_HASH_JOIN_TABLE_MEM: ConfigOption[Integer] =
+    key("sql.exec.hash-join.table-memory-mb")
+      .defaultValue(new Integer(512))
+      .withDescription("Sets the HashTable reserved memory for hashJoin operator." +
+            "It defines the lower limit for.")
 
-  /**
-    * Maximum size in bytes for data that could be broadcast to each parallel instance that holds
-    * a partition of all data when performing a hash join.
-    * Broadcast will be disabled if the value is -1.
-    */
-  val SQL_HASH_JOIN_BROADCAST_THRESHOLD = "sql.exec.hash-join.broadcast-threshold"
-  val SQL_HASH_JOIN_BROADCAST_THRESHOLD_DEFAULT: Long = 1 * 1024 * 1024
+  val SQL_HASH_JOIN_BROADCAST_THRESHOLD: ConfigOption[JLong] =
+    key("sql.exec.hash-join.broadcast-threshold")
+      .defaultValue(new JLong(1 * 1024 * 1024))
+      .withDescription("Maximum size in bytes for data that could be broadcast to each parallel" +
+            " instance that holds a partition of all data when performing a hash join. " +
+            "Broadcast will be disabled if the value is -1.")
 
   // =================================== Aggregate ===================================
-  /**
-    * Sets the window elements buffer limit in size used in group window agg operator.
-    */
-  val SQL_EXEC_WINDOW_AGG_BUFFER_LIMIT_SIZE = "sql.exec.window-agg.buffer-limit-size"
-  val SQL_EXEC_WINDOW_AGG_BUFFER_LIMIT_SIZE_DEFAULT: Int = 100 * 1000
 
-  /**
-    * Sets the table reserved memory size of hashAgg operator. It defines the lower limit.
-    */
-  val SQL_EXEC_HASH_AGG_TABLE_MEM = "sql.exec.hash-agg.table-memory-mb"
-  /**
-   * The default value for the hash-agg's reserved and prefer buffer.
-   */
-  val SQL_EXEC_HASH_AGG_TABLE_MEM_DEFAULT = 128
+  val SQL_EXEC_WINDOW_AGG_BUFFER_LIMIT_SIZE: ConfigOption[Integer] =
+    key("sql.exec.window-agg.buffer-limit-size")
+      .defaultValue(new Integer(100 * 1000))
+      .withDescription("Sets the window elements buffer limit in size used in" +
+            " group window agg operator.")
 
-  /**
-    * Sets the ratio of aggregation. If outputRowCount/inputRowCount of an aggregate is less than
-    * this ratio, HashAggregate would be thought better than SortAggregate.
-    */
-  val SQL_EXEC_AGG_GROUPS_NDV_RATIO = "sql.exec.agg.groups.ndv.ratio"
-  val SQL_EXEC_AGG_GROUPS_NDV_RATIO_DEFAULT: Double = 0.8
+  val SQL_EXEC_HASH_AGG_TABLE_MEM: ConfigOption[Integer] =
+    key("sql.exec.hash-agg.table-memory-mb")
+      .defaultValue(new Integer(128))
+      .withDescription("Sets the table reserved memory size of hashAgg operator." +
+            "It defines the lower limit.")
 
-  val SQL_EXEC_SEMI_BUILD_DISTINCT_NDV_RATIO = "sql.exec.semi.build.dictinct.ndv.ratio"
-  val SQL_EXEC_SEMI_BUILD_DISTINCT_NDV_RATIO_DEFAULT: Double = 0.8
+  val SQL_EXEC_AGG_GROUPS_NDV_RATIO: ConfigOption[JDouble] =
+    key("sql.exec.agg.groups.ndv.ratio")
+      .defaultValue(new JDouble(0.8))
+      .withDescription("Sets the ratio of aggregation. If outputRowCount/inputRowCount of an " +
+            "aggregate is less than this ratio, HashAggregate would be thought " +
+            "better than SortAggregate.")
+
+  val SQL_EXEC_SEMI_BUILD_DISTINCT_NDV_RATIO: ConfigOption[JDouble] =
+    key("sql.exec.semi.build.dictinct.ndv.ratio")
+      .defaultValue(new JDouble(0.8))
 
   // =================================== Buffer ===================================
-  /**
-    * Sets the externalBuffer memory size that is used in sortMergeJoin and overWindow.
-    */
-  val SQL_EXEC_EXTERNAL_BUFFER_MEM = "sql.exec.external-buffer.memory-mb"
 
-  /**
-   * The default value for the external-buffer's buffer.
-   */
-  val SQL_EXEC_EXTERNAL_BUFFER_MEM_DEFAULT = 10
+  val SQL_EXEC_EXTERNAL_BUFFER_MEM: ConfigOption[Integer] =
+    key("sql.exec.external-buffer.memory-mb")
+      .defaultValue(new Integer(128))
+      .withDescription("Sets the externalBuffer memory size that is used in " +
+            "sortMergeJoin and overWindow.")
 
   // =================================== Source ===================================
-  /**
-    * Sets the heap memory size of source operator.
-    */
-  val SQL_EXEC_SOURCE_MEM = "sql.exec.source.default-memory-mb"
-  val SQL_EXEC_SOURCE_MEM_DEFAULT = 128
+  val SQL_EXEC_SOURCE_MEM: ConfigOption[Integer] =
+    key("sql.exec.source.default-memory-mb")
+      .defaultValue(new Integer(128))
+      .withDescription("Sets the heap memory size of source operator.")
 
-  /**
-    * Sets source parallelism if [[SQL_EXEC_INFER_RESOURCE_MODE]] is NONE. If it is not set,
-    * use [[SQL_EXEC_DEFAULT_PARALLELISM]] to set source parallelism.
-    */
-  val SQL_EXEC_SOURCE_PARALLELISM = "sql.exec.source.parallelism"
+  // TODO [[ConfigOption]] need to support no default int value
+  val SQL_EXEC_SOURCE_PARALLELISM: ConfigOption[Integer] =
+    key("sql.exec.source.parallelism")
+      .defaultValue(new Integer(-1))
+      .withDescription("Sets source parallelism if [[SQL_EXEC_INFER_RESOURCE_MODE]] is NONE." +
+            "If it is not set, use [[SQL_EXEC_DEFAULT_PARALLELISM]] to set source parallelism.")
 
   // =================================== resource ================================
 
-  /**
-    * Sets infer resource mode according to statics.
-    * Only NONE, ONLY_SOURCE or ALL can be set.
-    * If set NONE, parallelism and memory of all node are set by config.
-    * If set ONLY_SOURCE, only source parallelism is inferred according to statics.
-    * If set ALL, parallelism and memory of all node are inferred according to statics.
-    */
-  val SQL_EXEC_INFER_RESOURCE_MODE= "sql.exec.infer-resource.mode"
-  val SQL_EXEC_INFER_RESOURCE_MODE_DEFAULT = "NONE"
+  val SQL_EXEC_INFER_RESOURCE_MODE: ConfigOption[JString] =
+    key("sql.exec.infer-resource.mode")
+      .defaultValue("NONE")
+      .withDescription("Sets infer resource mode according to statics." +
+            "Only NONE, ONLY_SOURCE or ALL can be set." +
+            "If set NONE, parallelism and memory of all node are set by config." +
+            "If set ONLY_SOURCE, only source parallelism is inferred according to statics." +
+            "If set ALL, parallelism and memory of all node are inferred according to statics.")
 
-  /**
-    * Default parallelism of the job. If any node do not have special
-    * parallelism, use it. Its default value is the num of cpu cores in the client host.
-    */
-  val SQL_EXEC_DEFAULT_PARALLELISM = "sql.exec.default-parallelism"
-  def SQL_EXEC_DEFAULT_PARALLELISM_DEFAULT: Int = Runtime.getRuntime.availableProcessors
+  // TODO [[ConfigOption]] need to support no default int value
+  val SQL_EXEC_DEFAULT_PARALLELISM: ConfigOption[Integer] =
+    key("sql.exec.default-parallelism")
+      .defaultValue(new Integer(-1))
+      .withDescription("Default parallelism of the job. If any node do not have special " +
+            "parallelism, use it. Its default value is the num of cpu cores in the client host.")
 
-  /**
-    * Default cpu for each operator.
- *
- */
-  val SQL_EXEC_DEFAULT_CPU = "sql.exec.default-cpu"
-  val SQL_EXEC_DEFAULT_CPU_DEFAULT = 0.3
+  val SQL_EXEC_DEFAULT_CPU: ConfigOption[JDouble] =
+    key("sql.exec.default-cpu")
+      .defaultValue(new JDouble(0.3))
+      .withDescription("Default cpu for each operator.")
 
-  /**
-    * Default heap memory size for each operator.
-    */
-  val SQL_EXEC_DEFAULT_MEM = "sql.exec.default-memory-mb"
-  val SQL_EXEC_DEFAULT_MEM_DEFAULT = 64
+  val SQL_EXEC_DEFAULT_MEM: ConfigOption[Integer] =
+    key("sql.exec.default-memory-mb")
+      .defaultValue(new Integer(64))
+      .withDescription("Default heap memory size for each operator.")
 
-  // infer parallelism and memory
+  val SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION: ConfigOption[JLong] =
+    key("sql.exec.infer-resource.rows-per-partition")
+      .defaultValue(new JLong(1000000))
+      .withDescription("Sets how many rows one partition processes. " +
+            "We will infer parallelism according to input row count.")
 
-  /**
-    * Sets how many rows one partition processes. We will infer parallelism
-    * according to input row count.
-    */
-  val SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION = "sql.exec.infer-resource.rows-per-partition"
-  val SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION_DEFAULT = 1000000
+  val SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM: ConfigOption[Integer] =
+    key("sql.exec.infer-resource.source.max-parallelism")
+      .defaultValue(new Integer(1000))
+      .withDescription("Sets max parallelism for source operator.")
 
-  /**
-    * Sets max parallelism for source operator.
-    */
-  val SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM =
-    "sql.exec.infer-resource.source.max-parallelism"
-  val SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM_DEFAULT = 1000
+  val SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION: ConfigOption[Integer] =
+    key("sql.exec.infer-resource.source.mb-per-partition")
+      .defaultValue(Integer.valueOf(Integer.MAX_VALUE))
+      .withDescription("Sets how many data size in MB one partition processes. " +
+            "We will infer the source parallelism according to source data size.")
 
-  /**
-    * Sets how many data size in MB one partition processes. We will infer the
-    * source parallelism according to source data size.
-    */
-  val SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION  =
-    "sql.exec.infer-resource.source.mb-per-partition"
-  val SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION_DEFAULT: Int = Int.MaxValue
+  val SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM: ConfigOption[Integer] =
+    key("sql.exec.infer-resource.operator.max-parallelism")
+      .defaultValue(new Integer(800))
+      .withDescription("Sets max parallelism for all operators.")
 
-  /**
-    * Sets max parallelism for all operators.
- *
- */
-  val SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM =
-    "sql.exec.infer-resource.operator.max-parallelism"
-  val SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM_DEFAULT = 800
-
-  /**
-    * Maybe inferred operator mem is too large, so this setting is upper limit for
-    * the inferred operator mem.
-    */
-  val SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB =
-    "sql.exec.infer-resource.operator.max-memory-mb"
-  val SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB_DEFAULT: Int = 1024
+  val SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB: ConfigOption[Integer] =
+    key("sql.exec.infer-resource.operator.max-memory-mb")
+      .defaultValue(new Integer(1024))
+      .withDescription("Maybe inferred operator mem is too large, " +
+            "so this setting is upper limit for the inferred operator mem.")
 
   val SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU: ConfigOption[JDouble] =
-    ConfigOptions.key("sql.resource.runningUnit.total-cpu")
-        .defaultValue(JDouble.valueOf(0d))
-        .withDescription("total cpu limit of a runningUnit. 0 means no limit.")
+    key("sql.resource.runningUnit.total-cpu")
+      .defaultValue(JDouble.valueOf(0d))
+      .withDescription("total cpu limit of a runningUnit. 0 means no limit.")
 
   // ================================ Schedule =================================
 
-  /**
-    * Whether to schedule according to runningUnits.
-    */
-  val SQL_SCHEDULE_RUNNING_UNIT_ENABLE = "sql.schedule.running-unit.enable"
-  val SQL_SCHEDULE_RUNNING_UNIT_ENABLE_DEFAULT = true
+  val SQL_SCHEDULE_RUNNING_UNIT_ENABLE: ConfigOption[JBoolean] =
+    key("sql.schedule.running-unit.enable")
+      .defaultValue(JBoolean.TRUE)
+      .withDescription("Whether to schedule according to runningUnits.")
 
   // ================================= PushDown ================================
 
-  /**
-   * Allow trying to push filter down to a parquet [[TableSource]]. the default value is true,
-   * means allow the attempt.
-   */
-  val SQL_EXEC_SOURCE_PARQUET_ENABLE_PREDICATE_PUSHDOWN =
-    "sql.exec.source.parquet.enable-predicate-pushdown"
-  val SQL_EXEC_SOURCE_PARQUET_ENABLE_PREDICATE_PUSHDOWN_DEFAULT = true
+  val SQL_EXEC_SOURCE_PARQUET_ENABLE_PREDICATE_PUSHDOWN: ConfigOption[JBoolean] =
+    key("sql.exec.source.parquet.enable-predicate-pushdown")
+      .defaultValue(JBoolean.TRUE)
+      .withDescription("Allow trying to push filter down to a parquet [[TableSource]]. " +
+            "the default value is true, means allow the attempt.")
 
-  /**
-    * Allow trying to push filter down to a orc [[TableSource]]. the default value is true,
-    * means allow the attempt.
-    */
-  val SQL_EXEC_SOURCE_ORC_ENABLE_PREDICATE_PUSHDOWN =
-    "sql.exec.source.orc.enable-predicate-pushdown"
-  val SQL_EXEC_SOURCE_ORC_ENABLE_PREDICATE_PUSHDOWN_DEFAULT = true
+  val SQL_EXEC_SOURCE_ORC_ENABLE_PREDICATE_PUSHDOWN: ConfigOption[JBoolean] =
+    key("sql.exec.source.orc.enable-predicate-pushdown")
+      .defaultValue(JBoolean.TRUE)
+      .withDescription("Allow trying to push filter down to a orc [[TableSource]]. " +
+            "The default value is true, means allow the attempt.")
 
   // =================================== Sink ===================================
-  /**
-    * Sets the heap memory size of sink operator.
-    */
-  val SQL_EXEC_SINK_MEM = "sql.exec.sink.default-memory-mb"
-  val SQL_EXEC_SINK_MEM_DEFAULT = 100
+  val SQL_EXEC_SINK_MEM: ConfigOption[Integer] =
+    key("sql.exec.sink.default-memory-mb")
+      .defaultValue(new Integer(100))
+      .withDescription("Sets the heap memory size of sink operator.")
 
-  /**
-    * Sets sink parallelism if [[SQL_EXEC_SINK_PARALLELISM]] is set. If it is not set,
-    * sink nodes will chain with ahead nodes as far as possible.
-    */
-  val SQL_EXEC_SINK_PARALLELISM = "sql.exec.sink.parallelism"
+  // TODO [[ConfigOption]] need to support no default int value
+  val SQL_EXEC_SINK_PARALLELISM: ConfigOption[Integer] =
+    key("sql.exec.sink.parallelism")
+      .defaultValue(new Integer(-1))
+      .withDescription("Sets sink parallelism if [[SQL_EXEC_SINK_PARALLELISM]] is set. If it " +
+            "is not set, sink nodes will chain with ahead nodes as far as possible.")
 
   // =================================== Miscellaneous ===================================
-  /**
-    * Mainly for testing.
-    * A comma-separated list of name of the [[OperatorType]], each name means a kind of disabled
-    * operator. Its default value is empty that means no operators are disabled. If the configure's
-    * value is "NestedLoopJoin, ShuffleHashJoin", NestedLoopJoin and ShuffleHashJoin are disabled.
-    * If the configure's value is "HashJoin", ShuffleHashJoin and BroadcastHashJoin are disabled.
-    */
-  val SQL_PHYSICAL_OPERATORS_DISABLED = "sql.exec.operators.disabled"
-  val SQL_PHYSICAL_OPERATORS_DISABLED_DEFAULT: String = ""
+  val SQL_PHYSICAL_OPERATORS_DISABLED: ConfigOption[JString] =
+    key("sql.exec.operators.disabled")
+      .defaultValue("")
+      .withDescription("Mainly for testing. " +
+            "A comma-separated list of name of the [[OperatorType]], " +
+            "each name means a kind of disabled operator." +
+            " Its default value is empty that means no operators are disabled. If the configure's" +
+            "value is \"NestedLoopJoin, ShuffleHashJoin\", NestedLoopJoin and ShuffleHashJoin are" +
+            " disabled. If the configure's value " +
+            "is \"HashJoin\", ShuffleHashJoin and BroadcastHashJoin are disabled.")
 
   // =================================== Shuffle ===================================
 
-  val SQL_EXEC_ALL_DATA_EXCHANGE_MODE_BATCH: ConfigOption[JBoolean] = ConfigOptions
-      .key("sql.exec.all.data-exchange-mode.batch")
+  val SQL_EXEC_ALL_DATA_EXCHANGE_MODE_BATCH: ConfigOption[JBoolean] =
+    key("sql.exec.all.data-exchange-mode.batch")
       .defaultValue(JBoolean.FALSE)
       .withDescription("Sets Whether all data-exchange-mode is batch.")
 
   // ================================== Collect Operator Metrics ======================
-  /**
-    * If collect operator metric is enabled, the operator metrics need to be collected
-    * during runtime phase.
-    */
-  val SQL_EXEC_COLLECT_OPERATOR_METRIC_ENABLED = "sql.exec.collect.operator.metric.enabled"
-  val SQL_EXEC_COLLECT_OPERATOR_METRIC_ENABLED_DEFAULT: Boolean = false
 
-  /**
-    * Sets the file path to dump stream graph plan with collected operator metrics.
-    * Default is null.
-    */
-  val SQL_EXEC_COLLECT_OPERATOR_METRIC_PATH = "sql.exec.collect.operator.metric.path"
-  val SQL_EXEC_COLLECT_OPERATOR_METRIC_PATH_DEFAULT: String = null
+  val SQL_EXEC_COLLECT_OPERATOR_METRIC_ENABLED: ConfigOption[JBoolean] =
+    key("sql.exec.collect.operator.metric.enabled")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("If collect operator metric is enabled, the operator metrics need to " +
+            "be collected during runtime phase.")
+
+  val SQL_EXEC_COLLECT_OPERATOR_METRIC_PATH: ConfigOption[JString] =
+    key("sql.exec.collect.operator.metric.path")
+      .noDefaultValue()
+      .withDescription("Sets the file path to dump stream graph plan with collected" +
+            " operator metrics. Default is null.")
 
   // ================================== Collect Optimized Plan =======================
-  /**
-    * If collect optimized plan is enabled, the optimized plan need to be collected.
-    */
-  val SQL_CBO_COLLECT_OPTIMIZED_PLAN_ENABLED = "sql.cbo.collect.optimized.plan.enabled"
-  val SQL_CBO_COLLECT_OPTIMIZED_PLAN_ENABLED_DEFAULT: Boolean = false
+  val SQL_CBO_COLLECT_OPTIMIZED_PLAN_ENABLED: ConfigOption[JBoolean] =
+    key("sql.cbo.collect.optimized.plan.enabled")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("If collect optimized plan is enabled, " +
+            "the optimized plan need to be collected.")
 
-  /**
-    * Sets the file path to dump optimized plan. Default is null.
-    */
-  val SQL_CBO_COLLECT_OPTIMIZED_PLAN_PATH = "sql.cbo.collect.optimized.plan.path"
-  val SQL_CBO_COLLECT_OPTIMIZED_PLAN_PATH_DEFAULT: String = null
+  val SQL_CBO_COLLECT_OPTIMIZED_PLAN_PATH: ConfigOption[JString] =
+    key("sql.cbo.collect.optimized.plan.path")
+      .noDefaultValue()
+      .withDescription("Sets the file path to dump optimized plan.")
 
   // =============================== Reuse Sub-Plan ===============================
 
-  /**
-    * When true, the planner will try to find out duplicated sub-plan and reuse them.
-    */
-  val SQL_EXEC_REUSE_SUB_PLAN_ENABLED = "sql.exec.reuse.sub-plan.enabled"
-  val SQL_EXEC_REUSE_SUB_PLAN_ENABLED_DEFAULT = false
+  val SQL_EXEC_REUSE_SUB_PLAN_ENABLED: ConfigOption[JBoolean] =
+    key("sql.exec.reuse.sub-plan.enabled")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("When true, the planner will try to find out duplicated" +
+            " sub-plan and reuse them.")
 
-  /**
-    * When true, the planner will try to find out duplicated table-source and reuse them.
-    * This works only when `sql.exec.reuse.sub-plan.enabled` is true.
-    */
-  val SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED = "sql.exec.reuse.table-source.enabled"
-  val SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED_DEFAULT = false
+  val SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED: ConfigOption[JBoolean] =
+    key("sql.exec.reuse.table-source.enabled")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("When true, the planner will try to find out duplicated table-source and" +
+            " reuse them. This works only when `sql.exec.reuse.sub-plan.enabled` is true.")
 
-  /**
-    * When true, the planner will try to find out duplicated nondeterministic-operator and
-    * reuse them. This works only when `sql.exec.reuse.sub-plan.enabled` is true.
-    * nondeterministic-operator contains
-    * 1. nondeterministic [[ScalarFunction]] (UDF, e.g. now),
-    * 2. nondeterministic [[AggregateFunction]](UDAF),
-    * 3. nondeterministic [[TableFunction]] (UDTF)
-    */
-  val SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED =
-    "sql.exec.reuse.nondeterministic-operator.enabled"
-  val SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED_DEFAULT = false
+  val SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED: ConfigOption[JBoolean] =
+    key("sql.exec.reuse.nondeterministic-operator.enabled")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("When true, the planner will try to find out duplicated " +
+            "nondeterministic-operator and reuse them. This works only when" +
+            " [[sql.exec.reuse.sub-plan.enabled]] is true. Nondeterministic-operator contains " +
+            "1. nondeterministic [[ScalarFunction]] (UDF, e.g. now)," +
+            "2. nondeterministic [[AggregateFunction]](UDAF)," +
+            "3. nondeterministic [[TableFunction]] (UDTF)")
 
   // =================================== Cbo ===================================
 
-  /**
-    * Enables join reorder in CBO. Default is disabled.
-    */
-  val SQL_CBO_JOIN_REORDER_ENABLED = "sql.cbo.joinReorder.enabled"
-  val SQL_CBO_JOIN_REORDER_ENABLED_DEFAULT: Boolean = false
+  val SQL_CBO_JOIN_REORDER_ENABLED: ConfigOption[JBoolean] =
+    key("sql.cbo.joinReorder.enabled")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("Enables join reorder in CBO. Default is disabled.")
 
-  /**
-    * Strategy for agg phase. Only NONE, TWO_PHASE or ONE_PHASE can be set.
-    * NONE: No special enforcer for aggregate stage. Whether to choose two stage aggregate or one
-    * stage aggregate depends on cost.
-    * TWO_PHASE: Enforce to use two stage aggregate which has localAggregate and globalAggregate.
-    * NOTE:
-    * 1. If aggregate call does not support split into two phase, still use one stage aggregate.
-    * ONE_PHASE: Enforce to use one stage aggregate which only has CompleteGlobalAggregate.
-    * Default is NONE.
-    */
-  val SQL_CBO_AGG_PHASE_ENFORCER = "sql.cbo.agg.phase.enforcer"
-  val SQL_CBO_AGG_PHASE_ENFORCER_DEFAULT = "NONE"
+  val SQL_CBO_AGG_PHASE_ENFORCER: ConfigOption[JString] =
+    key("sql.cbo.agg.phase.enforcer")
+      .defaultValue("NONE")
+      .withDescription("Strategy for agg phase. Only NONE, TWO_PHASE or ONE_PHASE can be set." +
+            "NONE: No special enforcer for aggregate stage. Whether to choose two stage " +
+          "aggregate or one stage aggregate depends on cost." +
+            "TWO_PHASE: Enforce to use two stage aggregate which has localAggregate " +
+            "and globalAggregate." +
+            "NOTE: 1. If aggregate call does not support split into two phase, " +
+            "still use one stage aggregate." +
+            "ONE_PHASE: Enforce to use one stage aggregate " +
+            "which only has CompleteGlobalAggregate.")
 
-  /**
-    * Factor to punish operator which is processing skew data. Default is 100.
-    */
-  val SQL_CBO_SKEW_PUNISH_FACTOR = "sql.cbo.skew.punish.factor"
-  val SQL_CBO_SKEW_PUNISH_FACTOR_DEFAULT: Int = 100
+  val SQL_CBO_SKEW_PUNISH_FACTOR: ConfigOption[Integer] =
+    key("sql.cbo.skew.punish.factor")
+      .defaultValue(new Integer(100))
+      .withDescription("Factor to punish operator which is processing skew data.")
 
-  /**
-    * Sets comparison selectivity, the value should be between 0.0 (inclusive) and 1.0 (inclusive).
-    * This value is only used for a binary comparison operator, including <, <=, >, >=.
-    */
-  val SQL_CBO_SELECTIVITY_COMPARISON_DEFAULT = "sql.cbo.selectivity.default-comparison"
+  val SQL_CBO_SELECTIVITY_COMPARISON_DEFAULT: ConfigOption[JDouble] =
+    key("sql.cbo.selectivity.default-comparison")
+      .defaultValue(new JDouble(0.5))
+      .withDescription("Sets comparison selectivity, the value should be between 0.0 (inclusive)" +
+            " and 1.0 (inclusive). This value is only used for a binary comparison operator, " +
+            "including <, <=, >, >=.")
 
-  /**
-    * Sets equals selectivity, the value should be between 0.0 (inclusive) and 1.0 (inclusive).
-    * This value is only used for a binary equals operator.
-    */
-  val SQL_CBO_SELECTIVITY_EQUALS_DEFAULT = "sql.cbo.selectivity.default-equals"
+  val SQL_CBO_SELECTIVITY_EQUALS_DEFAULT: ConfigOption[JDouble] =
+    key("sql.cbo.selectivity.default-equals")
+      .defaultValue(new JDouble(0.15))
+      .withDescription("Sets equals selectivity, the value should be between 0.0 (inclusive) and" +
+            " 1.0 (inclusive). This value is only used for a binary equals operator.")
 
-  /**
-    * Sets IS NULL selectivity, the value should be between 0.0 (inclusive) and 1.0 (inclusive).
-    * This value is only used for IS_NULL operator.
-    */
-  val SQL_CBO_SELECTIVITY_ISNULL_DEFAULT = "sql.cbo.selectivity.default-isnull"
+  val SQL_CBO_SELECTIVITY_ISNULL_DEFAULT: ConfigOption[JDouble] =
+    key("sql.cbo.selectivity.default-isnull")
+      .defaultValue(new JDouble(0.1))
+      .withDescription("Sets IS NULL selectivity, the value should be between 0.0 (inclusive) " +
+            "and 1.0 (inclusive). This value is only used for IS_NULL operator.")
 
-  /**
-    * Sets like selectivity, the value should be between 0.0 (inclusive) and 1.0 (inclusive).
-    * This value is only used for like operator.
-    */
-  val SQL_CBO_SELECTIVITY_LIKE_DEFAULT = "sql.cbo.selectivity.default-like"
+  val SQL_CBO_SELECTIVITY_LIKE_DEFAULT: ConfigOption[JDouble] =
+    key("sql.cbo.selectivity.default-like")
+      .defaultValue(new JDouble(0.05))
+      .withDescription("Sets like selectivity, the value should be between 0.0 (inclusive) and" +
+            " 1.0 (inclusive). This value is only used for like operator.")
 
-  /**
-    * Sets aggCall selectivity, the value should be between 0.0 (inclusive) and 1.0 (inclusive).
-    */
-  val SQL_CBO_SELECTIVITY_AGG_CALL_DEFAULT = "sql.cbo.selectivity.default-aggcall"
+  val SQL_CBO_SELECTIVITY_AGG_CALL_DEFAULT: ConfigOption[JDouble] =
+    key("sql.cbo.selectivity.default-aggcall")
+      .defaultValue(new JDouble(0.01))
+      .withDescription("Sets aggCall selectivity, the value should be between 0.0 (inclusive)" +
+            " and 1.0 (inclusive).")
 
-  /**
-    * Sets default selectivity, the value should be between 0.0 (inclusive) and 1.0 (inclusive).
-    * This value is used for other operators.
-    */
-  val SQL_CBO_SELECTIVITY_DEFAULT = "sql.cbo.selectivity.default"
+  val SQL_CBO_SELECTIVITY_DEFAULT: ConfigOption[JDouble] =
+    key("sql.cbo.selectivity.default")
+      .defaultValue(new JDouble(0.25))
+      .withDescription("Sets default selectivity, the value should be between 0.0 (inclusive)" +
+            " and 1.0 (inclusive). This value is used for other operators.")
 
-  /**
-    * When converting to conjunctive normal form (CNF), fail if the expression exceeds
-    * this threshold; the threshold is expressed in terms of number of nodes
-    * (only count RexCall node, including leaves and interior nodes).
-    * negative number to use the default threshold: double of number of nodes.
-    */
-  val SQL_CBO_CNF_NODES_LIMIT = "sql.cbo.cnf.nodes.limit"
-  val SQL_CBO_CNF_NODES_LIMIT_DEFAULT: Int = -1
+  val SQL_CBO_CNF_NODES_LIMIT: ConfigOption[Integer] =
+    key("sql.cbo.cnf.nodes.limit")
+      .defaultValue(new Integer(-1))
+      .withDescription("When converting to conjunctive normal form (CNF), fail if the expression" +
+            " exceeds this threshold; the threshold is expressed in terms of number of nodes " +
+            "(only count RexCall node, including leaves and interior nodes). Negative number to" +
+            " use the default threshold: double of number of nodes.")
 
-  /**
-    * Enables join shuffle by partial join keys.
-    * For example: A join with join condition: L.c1 = R.c1 and L.c2 = R.c2.
-    * If this flag is enabled, there are 3 shuffle strategy:
-    * 1. L and R shuffle by c1
-    * 2. L and R shuffle by c2
-    * 3. L and R shuffle by c1 and c2
-    */
-  val SQL_CBO_JOIN_SHUFFLE_BY_PARTIALKEY_ENABLED = "sql.cbo.join.shuffle-by.partial-key.enabled"
-  val SQL_CBO_JOIN_SHUFFLE_BY_PARTIALKEY_ENABLED_DEFAULT: Boolean = false
+  val SQL_CBO_JOIN_SHUFFLE_BY_PARTIALKEY_ENABLED: ConfigOption[JBoolean] =
+    key("sql.cbo.join.shuffle-by.partial-key.enabled")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("Enables join shuffle by partial join keys. " +
+            "For example: A join with join condition: L.c1 = R.c1 and L.c2 = R.c2. " +
+            "If this flag is enabled, there are 3 shuffle strategy: 1. L and R shuffle by " +
+          "c1 2. L and R shuffle by c2 3. L and R shuffle by c1 and c2")
 
-  /**
-    * Enables aggregate shuffle by partial group keys.
-    */
-  val SQL_CBO_AGG_SHUFFLE_BY_PARTIALKEY_ENABLED = "sql.cbo.agg.shuffle-by.partial-key.enabled"
-  val SQL_CBO_AGG_SHUFFLE_BY_PARTIALKEY_ENABLED_DEFAULT: Boolean = false
+  val SQL_CBO_AGG_SHUFFLE_BY_PARTIALKEY_ENABLED: ConfigOption[JBoolean] =
+    key("sql.cbo.agg.shuffle-by.partial-key.enabled")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("Enables aggregate shuffle by partial group keys.")
 
-  /**
-    * Enables rank shuffle by partial partition keys.
-    */
-  val SQL_CBO_RANK_SHUFFLE_BY_PARTIALKEY_ENABLED = "sql.cbo.rank.shuffle-by.partial-key.enabled"
-  val SQL_CBO_RANK_SHUFFLE_BY_PARTIALKEY_ENABLED_DEFAULT: Boolean = false
-
+  val SQL_CBO_RANK_SHUFFLE_BY_PARTIALKEY_ENABLED: ConfigOption[JBoolean] =
+    key("sql.cbo.rank.shuffle-by.partial-key.enabled")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("Enables rank shuffle by partial partition keys.")
 
   // =================================== Code Gen ===================================
 
-  /**
-    * generated code will be split if code length exceeds this limitation
-    */
-  val SQL_CODEGEN_MAX_LENGTH = "sql.codegen.maxLength"
-  val SQL_CODEGEN_MAX_LENGTH_DEFAULT: Int = 48 * 1024
+  val SQL_CODEGEN_MAX_LENGTH: ConfigOption[Integer] =
+    key("sql.codegen.maxLength")
+      .defaultValue(new Integer(48 * 1024))
+      .withDescription("Generated code will be split if code length exceeds this limitation.")
 
-  /**
-    * generated code will be rewrite if JVM limitations are touched
-    */
-  val SQL_CODEGEN_REWRITE_ENABLED = "sql.codegen.rewrite"
+  val SQL_RUNTIME_FILTER_ENABLE: ConfigOption[JBoolean] =
+    key("sql.runtime-filter.enable")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("Runtime filter for hash join.")
 
-  /**
-    * method will be split if method length exceeds
-    */
-  val SQL_CODEGEN_REWRITE_MAX_METHOD_LENGTH = "sql.codegen.rewrite.maxMethodLength"
+  val SQL_RUNTIME_FILTER_WAIT: ConfigOption[JBoolean] =
+    key("sql.runtime-filter.wait")
+      .defaultValue(JBoolean.FALSE)
 
-  /**
-    * method length max size after split
-    */
-  val SQL_CODEGEN_REWRITE_MAX_METHOD_LENGTH_AFTER_SPLIT =
-    "sql.codegen.rewrite.maxMethodLengthAfterSplit"
+  val SQL_RUNTIME_FILTER_SIZE_MAX_MB: ConfigOption[Integer] =
+    key("sql.runtime-filter.size.max.mb")
+      .defaultValue(Integer.valueOf(10))
+      .withDescription("The max size of MB to BloomFilter. A too large BloomFilter will cause " +
+            "the JobMaster bandwidth to fill up and affect scheduling.")
 
-  /**
-    * max field number in one Java Class.
-    */
-  val SQL_CODEGEN_REWRITE_MAX_FIELD_COUNT = "sql.codegen.rewrite.maxFieldCount"
+  val SQL_RUNTIME_FILTER_PROBE_FILTER_DEGREE_MIN: ConfigOption[JDouble] =
+    key("sql.runtime-filter.probe.filter-degree.min")
+      .defaultValue(JDouble.valueOf(0.5))
+      .withDescription("The minimum filtering degree of the probe side to enable runtime filter." +
+            "(1 - buildNdv / probeNdv) * (1 - minFpp) >= minProbeFilter.")
 
-  /**
-    * Runtime filter for hash join.
-    */
-  val SQL_RUNTIME_FILTER_ENABLE = "sql.runtime-filter.enable"
-  val SQL_RUNTIME_FILTER_ENABLE_DEFAULT = false
+  val SQL_RUNTIME_FILTER_PROBE_ROW_COUNT_MIN: ConfigOption[JLong] =
+    key("sql.runtime-filter.probe.row-count.min")
+      .defaultValue(JLong.valueOf(100000000L))
+      .withDescription("The minimum row count of probe side to enable runtime filter." +
+            "Probe.rowCount >= minProbeRowCount.")
 
-  val SQL_RUNTIME_FILTER_WAIT = "sql.runtime-filter.wait"
-  val SQL_RUNTIME_FILTER_WAIT_DEFAULT = false
+  val SQL_RUNTIME_FILTER_BUILD_PROBE_ROW_COUNT_RATIO_MAX: ConfigOption[JDouble] =
+    key("sql.runtime-filter.build-probe.row-count-ratio.max")
+      .defaultValue(JDouble.valueOf(0.5))
+      .withDescription("The rowCount of the build side and the rowCount of the probe should " +
+            "have a certain ratio before using the RuntimeFilter. " +
+            "Builder.rowCount / probe.rowCount <= maxRowCountRatio.")
 
-  /**
-    * The max size of MB to BloomFilter.
-    * A too large BloomFilter will cause the JobMaster bandwidth to fill up and affect scheduling.
-    */
-  val SQL_RUNTIME_FILTER_SIZE_MAX_MB = "sql.runtime-filter.size.max.mb"
-  val SQL_RUNTIME_FILTER_SIZE_MAX_MB_DEFAULT = 10
+  val SQL_RUNTIME_FILTER_ROW_COUNT_NUM_BITS_RATIO: ConfigOption[Integer] =
+    key("sql.runtime-filter.row-count.num-bits.ratio")
+      .defaultValue(Integer.valueOf(40))
+      .withDescription("A ratio between the probe row count and the BloomFilter size. If the " +
+            "probe row count is too small, we should not use too large BloomFilter. maxBfBits = " +
+            "Math.min(probeRowCount / ratioOfRowAndBits, [[SQL_RUNTIME_FILTER_SIZE_MAX_MB]])")
 
-  /**
-    * The minimum filtering degree of the probe side to enable runtime filter.
-    * (1 - buildNdv / probeNdv) * (1 - minFpp) >= minProbeFilter.
-    */
-  val SQL_RUNTIME_FILTER_PROBE_FILTER_DEGREE_MIN = "sql.runtime-filter.probe.filter-degree.min"
-  val SQL_RUNTIME_FILTER_PROBE_FILTER_DEGREE_MIN_DEFAULT = 0.5
+  val SQL_RUNTIME_FILTER_BUILDER_PUSH_DOWN_MAX_RATIO: ConfigOption[JDouble] =
+    key("sql.runtime-filter.builder.push-down.max.ratio")
+      .defaultValue(JDouble.valueOf(1.2))
+      .withDescription("If the join key is the same, we can push down the BloomFilter" +
+          " builder to the input node build, but we need to ensure that the NDV " +
+          "and row count doesn't change much. " +
+          "PushDownNdv / ndv <= maxRatio && pushDownRowCount / rowCount <= maxRatio.")
 
-  /**
-    * The minimum row count of probe side to enable runtime filter.
-    * probe.rowCount >= minProbeRowCount.
-    */
-  val SQL_RUNTIME_FILTER_PROBE_ROW_COUNT_MIN = "sql.runtime-filter.probe.row-count.min"
-  val SQL_RUNTIME_FILTER_PROBE_ROW_COUNT_MIN_DEFAULT = 100000000L
+  val SQL_EXEC_SINK_PARQUET_BLOCK_SIZE: ConfigOption[Integer] =
+    key("sql.exec.sink.parquet.block.siz")
+      .defaultValue(Integer.valueOf(128 * 1024 * 1024))
+      .withDescription("Parquet block size in bytes, this value would be set as " +
+            "parquet.block.size and dfs.blocksize to improve alignment between " +
+            "row group and hdfs block.")
 
-  /**
-    * The rowCount of the build side and the rowCount of the probe should have a certain ratio
-    * before using the RuntimeFilter.
-    * builder.rowCount / probe.rowCount <= maxRowCountRatio.
-    */
-  val SQL_RUNTIME_FILTER_BUILD_PROBE_ROW_COUNT_RATIO_MAX =
-    "sql.runtime-filter.build-probe.row-count-ratio.max"
-  val SQL_RUNTIME_FILTER_BUILD_PROBE_ROW_COUNT_RATIO_MAX_DEFAULT = 0.5
+  val SQL_EXEC_SINK_PARQUET_DICTIONARY_ENABLE: ConfigOption[JBoolean] =
+    key("sql.exec.sink.parquet.dictionary.enable")
+      .defaultValue(JBoolean.TRUE)
+      .withDescription("Enable Parquet dictionary encoding.")
 
-  /**
-    * A ratio between the probe row count and the BloomFilter size. If the probe row count is
-    * too small, we should not use too large BloomFilter.
-    * maxBfBits = Math.min(probeRowCount / ratioOfRowAndBits, [[SQL_RUNTIME_FILTER_SIZE_MAX_MB]]).
-    */
-  val SQL_RUNTIME_FILTER_ROW_COUNT_NUM_BITS_RATIO = "sql.runtime-filter.row-count.num-bits.ratio"
-  val SQL_RUNTIME_FILTER_ROW_COUNT_NUM_BITS_RATIO_DEFAULT = 40
-
-  /**
-    * If the join key is the same, we can push down the BloomFilter builder to the input node build,
-    * but we need to ensure that the NDV and row count doesn't change much.
-    * pushDownNdv / ndv <= maxRatio && pushDownRowCount / rowCount <= maxRatio.
-    */
-  val SQL_RUNTIME_FILTER_BUILDER_PUSH_DOWN_MAX_RATIO =
-    "sql.runtime-filter.builder.push-down.max.ratio"
-  val SQL_RUNTIME_FILTER_BUILDER_PUSH_DOWN_MAX_RATIO_DEFAULT = 1.2
-
-  /**
-    * Parquet block size in bytes, this value would be set as parquet.block.size and dfs.blocksize
-    * to improve alignment between row group and hdfs block.
-    */
-  val SQL_EXEC_SINK_PARQUET_BLOCK_SIZE = "sql.exec.sink.parquet.block.size"
-  val SQL_EXEC_SINK_PARQUET_BLOCK_SIZE_DEFAULT: Int = 128 * 1024 * 1024
-
-  /**
-    * enable Parquet dictionary encoding by default.
-    */
-  val SQL_EXEC_SINK_PARQUET_DICTIONARY_ENABLE = "sql.exec.sink.parquet.dictionary.enable"
-  val SQL_EXEC_SINK_PARQUET_DICTIONARY_ENABLE_DEFAULT: Boolean = true
-
-  /**
-    * Disable union all as breakpoint in subsection optimization. Default is false.
-    */
-  val SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED =
-    "sql.subsection-optimization.unionall-as-breakpoint.disabled"
-  val SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED_DEFAULT: Boolean = false
+  val SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED: ConfigOption[JBoolean] =
+    key("sql.subsection-optimization.unionall-as-breakpoint.disabled")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("Disable union all as breakpoint in subsection optimization")
 
   // ================================= streaming =======================================
 
-  /** configure number of buckets in partial final mode */
-  val SQL_EXEC_AGG_PARTIAL_BUCKET_NUM: ConfigOption[Integer] = ConfigOptions
-      .key("sql.exec.partialAgg.bucket.num")
-      .defaultValue(256)
+  val SQL_EXEC_AGG_PARTIAL_BUCKET_NUM: ConfigOption[Integer] =
+    key("sql.exec.partialAgg.bucket.num")
+      .defaultValue(new Integer(256))
+      .withDescription("Configure number of buckets in partial final mode.")
 
-  /** microbatch allow latency (ms) */
-  val BLINK_MICROBATCH_ALLOW_LATENCY: ConfigOption[JLong] = ConfigOptions
-      .key("blink.microBatch.allowLatencyMs")
-      .defaultValue(Long.MinValue)
+  val BLINK_MICROBATCH_ALLOW_LATENCY: ConfigOption[JLong] =
+    key("blink.microBatch.allowLatencyMs")
+      .defaultValue(new JLong(Long.MinValue))
+      .withDescription("Microbatch allow latency (ms).")
 
-  /** minibatch allow latency(ms) */
-  val BLINK_MINIBATCH_ALLOW_LATENCY: ConfigOption[JLong] = ConfigOptions
-      .key("blink.miniBatch.allowLatencyMs")
-      .defaultValue(Long.MinValue)
+  val BLINK_MINIBATCH_ALLOW_LATENCY: ConfigOption[JLong] =
+    key("blink.miniBatch.allowLatencyMs")
+      .defaultValue(new JLong(Long.MinValue))
+      .withDescription("Minibatch allow latency(ms).")
 
-  /** minibatch size, default 100 */
-  val BLINK_MINIBATCH_SIZE: ConfigOption[JLong] = ConfigOptions
-      .key("blink.miniBatch.size")
-      .defaultValue(Long.MinValue)
+  val BLINK_MINIBATCH_SIZE: ConfigOption[JLong] =
+    key("blink.miniBatch.size")
+      .defaultValue(new JLong(Long.MinValue))
+      .withDescription("Minibatch size.")
 
-  /** whether to enable local agg */
-  val SQL_EXEC_AGG_LOCAL_ENABLED: ConfigOption[JBoolean] = ConfigOptions
-      .key("blink.localAgg.enabled")
-      .defaultValue(true)
+  val SQL_EXEC_AGG_LOCAL_ENABLED: ConfigOption[JBoolean] =
+    key("blink.localAgg.enabled")
+      .defaultValue(JBoolean.TRUE)
+      .withDescription("Whether to enable local agg.")
 
-  /** whether to enable partial agg */
-  val SQL_EXEC_AGG_PARTIAL_ENABLED: ConfigOption[JBoolean] = ConfigOptions
-      .key("blink.partialAgg.enabled")
-      .defaultValue(false)
+  val SQL_EXEC_AGG_PARTIAL_ENABLED: ConfigOption[JBoolean] =
+    key("blink.partialAgg.enabled")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("Whether to enable partial agg.")
 
-  /** whether to enable miniBatch join */
-  val BLINK_MINIBATCH_JOIN_ENABLED: ConfigOption[JBoolean] = ConfigOptions
-      .key("blink.miniBatch.join.enabled")
-      .defaultValue(true)
+  val BLINK_MINIBATCH_JOIN_ENABLED: ConfigOption[JBoolean] =
+    key("blink.miniBatch.join.enabled")
+      .defaultValue(JBoolean.TRUE)
+      .withDescription("Whether to enable miniBatch join.")
 
-  /** switch on/off topn approximate update rank operator, default is false */
-  val BLINK_TOPN_APPROXIMATE_ENABLED: ConfigOption[JBoolean] = ConfigOptions
-      .key("blink.topn.approximate.enabled")
-      .defaultValue(false)
+  val BLINK_TOPN_APPROXIMATE_ENABLED: ConfigOption[JBoolean] =
+    key("blink.topn.approximate.enabled")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("Switch on/off topn approximate update rank operator.")
 
-  /** cache size of every topn task, default is 10000 */
-  val BLINK_TOPN_CACHE_SIZE: ConfigOption[JLong] = ConfigOptions
-      .key("blink.topn.cache.size")
-      .defaultValue(10000L)
+  val BLINK_TOPN_CACHE_SIZE: ConfigOption[JLong] =
+    key("blink.topn.cache.size")
+      .defaultValue(new JLong(10000L))
+      .withDescription("Cache size of every topn task.")
 
-  /** in-memory sort map size multiplier (x2, for example) for topn update rank
-    * when approximation is enabled, default is 2. NOTE, We should make sure
-    * sort map size limit * blink.topn.approximate.buffer.multiplier < blink.topn.cache.size.
-    */
-  val BLINK_TOPN_APPROXIMATE_BUFFER_MULTIPLIER: ConfigOption[JLong] = ConfigOptions
-      .key("blink.topn.approximate.buffer.multiplier")
-      .defaultValue(2L)
+  val BLINK_TOPN_APPROXIMATE_BUFFER_MULTIPLIER: ConfigOption[JLong] =
+    key("blink.topn.approximate.buffer.multiplier")
+      .defaultValue(new JLong(2L))
+      .withDescription("In-memory sort map size multiplier (x2, for example) for topn update" +
+            " rank. When approximation is enabled, default is 2. NOTE, We should make sure " +
+            "sort map size limit * blink.topn.approximate.buffer.multiplier < " +
+            "blink.topn.cache.size.")
 
-  /** in-memory sort map size low minimal size. default is 400, and 0 meaning no low limit
-    * for each topn job, if buffer.multiplier * topn < buffer.minsize, then buffer is set
-    * to buffer.minsize.
-    */
-  val BLINK_TOPN_APPROXIMATE_BUFFER_MINSIZE: ConfigOption[JLong] = ConfigOptions
-      .key("blink.topn.approximate.buffer.minsize")
-      .defaultValue(400L)
+  val BLINK_TOPN_APPROXIMATE_BUFFER_MINSIZE: ConfigOption[JLong] =
+    key("blink.topn.approximate.buffer.minsize")
+      .defaultValue(new JLong(400L))
+      .withDescription("In-memory sort map size low minimal size. default is 400, " +
+            "and 0 meaning no low limit for each topn job, if" +
+            " buffer.multiplier * topn < buffer.minsize, then buffer is set to buffer.minsize.")
 
-  /**
-    * Whether support values source input
-    *
-    * The reason for disabling this feature is that checkpoint will not work properly when
-    * source finished
-    */
-  val BLINK_VALUES_SOURCE_INPUT_ENABLED: ConfigOption[JBoolean] = ConfigOptions
-      .key("blink.values.source.input.enabled")
-      .defaultValue(false)
+  val BLINK_VALUES_SOURCE_INPUT_ENABLED: ConfigOption[JBoolean] =
+    key("blink.values.source.input.enabled")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("Whether support values source input. The reason for disabling this " +
+            "feature is that checkpoint will not work properly when source finished.")
 
-  /** switch on/off stream sort without temporal or limit
-    * Set whether to enable universal sort for stream.
-    * When it is false, universal sort can't use for stream, default false.
-    * Just for testing.
-    */
-  val BLINK_NON_TEMPORAL_SORT_ENABLED: ConfigOption[JBoolean] = ConfigOptions
-      .key("blink.non-temporal-sort.enabled")
-      .defaultValue(false)
+  val BLINK_NON_TEMPORAL_SORT_ENABLED: ConfigOption[JBoolean] =
+    key("blink.non-temporal-sort.enabled")
+      .defaultValue(JBoolean.FALSE)
+      .withDescription("Switch on/off stream sort without temporal or limit." +
+            "Set whether to enable universal sort for stream. When it is false, " +
+            "universal sort can't use for stream, default false. Just for testing.")
 
-  /**
-    * The minimum time until state which was not updated will be retained.
-    * State might be cleared and removed if it was not updated for the defined period of time.
-    */
-  val BLINK_STATE_TTL_MS: ConfigOption[JLong] = ConfigOptions
-      .key("blink.state.ttl.ms")
-      .defaultValue(Long.MinValue)
+  val BLINK_STATE_TTL_MS: ConfigOption[JLong] =
+    key("blink.state.ttl.ms")
+      .defaultValue(new JLong(JLong.MIN_VALUE))
+      .withDescription("The minimum time until state that was not updated will be retained. State" +
+            " might be cleared and removed if it was not updated for the defined period of time.")
 
-  /**
-    * The maximum time until state which was not updated will be retained.
-    * State will be cleared and removed if it was not updated for the defined period of time.
-    */
-  val BLINK_STATE_TTL_MAX_MS: ConfigOption[JLong] = ConfigOptions
-      .key("blink.state.ttl.max.ms")
-      .defaultValue(Long.MinValue)
+  val BLINK_STATE_TTL_MAX_MS: ConfigOption[JLong] =
+    key("blink.state.ttl.max.ms")
+      .defaultValue(JLong.valueOf(Long.MinValue))
+      .withDescription("The maximum time until state which was not updated will be retained." +
+            "State will be cleared and removed if it was not updated for the defined " +
+            "period of time.")
 
-  /** whether to enable flushing buffered data before snapshot, enabled by default*/
-  val BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT: ConfigOption[JBoolean] = ConfigOptions
-      .key("blink.miniBatch.flushBeforeSnapshot")
-      .defaultValue(true)
+  val BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT: ConfigOption[JBoolean] =
+    key("blink.miniBatch.flushBeforeSnapshot")
+      .defaultValue(JBoolean.TRUE)
+      .withDescription("Whether to enable flushing buffered data before snapshot.")
 
-  /** whether to enable incremental aggregate, default is enabled/ */
-  val SQL_EXEC_AGG_INCREMENTAL_ENABLED: ConfigOption[JBoolean] = ConfigOptions
-      .key("blink.incrementalAgg.enabled")
-      .defaultValue(true)
+  val SQL_EXEC_AGG_INCREMENTAL_ENABLED: ConfigOption[JBoolean] =
+    key("blink.incrementalAgg.enabled")
+      .defaultValue(JBoolean.TRUE)
+      .withDescription("Whether to enable incremental aggregate.")
 
-  val SQL_EXEC_NULL_COUNT_ADD_FILTER_MIN: ConfigOption[JLong] = ConfigOptions
-      .key("sql.exec.null-count.add-filter.min")
+  val SQL_EXEC_NULL_COUNT_ADD_FILTER_MIN: ConfigOption[JLong] =
+    key("sql.exec.null-count.add-filter.min")
       .defaultValue(2000000L)
 }

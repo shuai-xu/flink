@@ -724,7 +724,7 @@ class CalcITCase extends QueryTest {
       ))
     conf.getParameters.setInteger(
       TableConfig.SQL_CODEGEN_MAX_LENGTH,
-      TableConfig.SQL_EXEC_DEFAULT_MEM_DEFAULT)
+      TableConfig.SQL_CODEGEN_MAX_LENGTH.defaultValue())
   }
 }
 

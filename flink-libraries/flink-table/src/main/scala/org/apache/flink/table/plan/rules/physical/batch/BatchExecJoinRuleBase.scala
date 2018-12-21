@@ -64,8 +64,7 @@ trait BatchExecJoinRuleBase {
     val tableConfig = FlinkRelOptUtil.getTableConfig(buildRel)
     val mq = buildRel.getCluster.getMetadataQuery
     val ratioConf = tableConfig.getParameters.getDouble(
-      TableConfig.SQL_EXEC_SEMI_BUILD_DISTINCT_NDV_RATIO,
-      TableConfig.SQL_EXEC_SEMI_BUILD_DISTINCT_NDV_RATIO_DEFAULT)
+      TableConfig.SQL_EXEC_SEMI_BUILD_DISTINCT_NDV_RATIO)
     val inputRows = mq.getRowCount(buildRel)
     val ndvOfGroupKey = mq.getDistinctRowCount(
       buildRel, ImmutableBitSet.of(distinctKeys: _*), null)

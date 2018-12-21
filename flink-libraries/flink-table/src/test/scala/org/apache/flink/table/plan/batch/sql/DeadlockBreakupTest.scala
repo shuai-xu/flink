@@ -74,7 +74,7 @@ class DeadlockBreakupTest extends TableTestBatchExecBase {
     util.tableEnv.getConfig.setTableSourceReuse(true)
     util.tableEnv.getConfig.getParameters.setString(
       TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
-    util.tableEnv.getConfig.getParameters.setInteger(
+    util.tableEnv.getConfig.getParameters.setLong(
       TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
     val sqlQuery =
       """
@@ -121,7 +121,7 @@ class DeadlockBreakupTest extends TableTestBatchExecBase {
     util.tableEnv.getConfig.setSubPlanReuse(true)
     util.tableEnv.getConfig.getParameters.setString(
       TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin")
-    util.tableEnv.getConfig.getParameters.setInteger(
+    util.tableEnv.getConfig.getParameters.setLong(
       TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
     val sqlQuery =
       """
@@ -152,8 +152,7 @@ class DeadlockBreakupTest extends TableTestBatchExecBase {
   @Test
   def testScanTable_SetExchangeAsBatch(): Unit = {
     util.tableEnv.getConfig.setSubPlanReuse(false)
-    util.tableEnv.getConfig.getParameters
-      .setInteger(TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, 1)
+    util.tableEnv.getConfig.getParameters.setLong(TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, 1)
     val sqlQuery = "SELECT * FROM t t1, t t2 WHERE t1.a = t2.a AND t1.b > 10 AND t2.c LIKE 'Test%'"
     util.verifyPlan(sqlQuery)
   }

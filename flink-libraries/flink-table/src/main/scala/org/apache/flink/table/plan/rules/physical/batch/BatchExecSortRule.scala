@@ -38,8 +38,7 @@ class BatchExecSortRule extends RelOptRule(
   override def onMatch(call: RelOptRuleCall): Unit = {
     val sort = call.rels(0).asInstanceOf[FlinkLogicalSort]
     val conf = sort.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
-    val enableRangeSort = conf.getParameters.getBoolean(
-      TableConfig.SQL_EXEC_SORT_ENABLE_RANGE, TableConfig.SQL_EXEC_SORT_ENABLE_RANGE_DEFAULT)
+    val enableRangeSort = conf.getParameters.getBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE)
     val distribution = if (enableRangeSort) {
       FlinkRelDistribution.range(sort.getCollation.getFieldCollations)
     } else {

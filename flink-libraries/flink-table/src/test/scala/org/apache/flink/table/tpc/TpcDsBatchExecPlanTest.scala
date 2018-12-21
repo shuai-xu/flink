@@ -69,7 +69,7 @@ abstract class TpcDsBatchExecPlanTest(
     tEnv.getConfig.setSubPlanReuse(true)
     tEnv.getConfig.setTableSourceReuse(false)
     tEnv.getConfig.getParameters.setBoolean(TableConfig.SQL_RUNTIME_FILTER_ENABLE, true)
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD,
+    tEnv.getConfig.getParameters.setLong(TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD,
                                             10 * 1024 * 1024)
   }
 

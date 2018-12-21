@@ -27,7 +27,7 @@ import org.apache.flink.table.runtime.batch.sql.joins.JoinType.{JoinType, Broadc
 trait JoinITCaseBase {
 
   def disableBroadcastHashJoin(tEnv: TableEnvironment): Unit = {
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
+    tEnv.getConfig.getParameters.setLong(TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
   }
 
   def disableOtherJoinOpForJoin(tEnv: TableEnvironment, expected: JoinType): Unit = {

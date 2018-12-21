@@ -76,8 +76,7 @@ class FlinkRelMdDistribution private extends MetadataHandler[FlinkDistribution] 
 
   def flinkDistribution(sort: Sort, mq: RelMetadataQuery): FlinkRelDistribution = {
     val conf = sort.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
-    val enableRangeSort = conf.getParameters.getBoolean(
-      TableConfig.SQL_EXEC_SORT_ENABLE_RANGE, TableConfig.SQL_EXEC_SORT_ENABLE_RANGE_DEFAULT)
+    val enableRangeSort = conf.getParameters.getBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE)
     if ((sort.getCollation.getFieldCollations.nonEmpty &&
       sort.fetch == null && sort.offset == null) && enableRangeSort) {
       //If Sort is global sort, and the table config allows the range partition.

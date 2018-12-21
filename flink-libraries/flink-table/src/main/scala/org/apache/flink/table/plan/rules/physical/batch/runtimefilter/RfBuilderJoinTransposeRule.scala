@@ -56,8 +56,7 @@ class RfBuilderJoinTransposeRule extends BaseRuntimeFilterPushDownRule(
 
     val conf = FlinkRelOptUtil.getTableConfig(rel)
     val maxRatio = conf.getParameters.getDouble(
-      TableConfig.SQL_RUNTIME_FILTER_BUILDER_PUSH_DOWN_MAX_RATIO,
-      TableConfig.SQL_RUNTIME_FILTER_BUILDER_PUSH_DOWN_MAX_RATIO_DEFAULT)
+      TableConfig.SQL_RUNTIME_FILTER_BUILDER_PUSH_DOWN_MAX_RATIO)
 
     val joinKeys = rel.joinInfo.leftKeys ++
         rel.joinInfo.rightKeys.map(_ + rel.getLeft.getRowType.getFieldCount)

@@ -131,7 +131,7 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		 */
 		tEnv.getConfig().getParameters().setString(TableConfig.SQL_EXEC_INFER_RESOURCE_MODE(), ExecResourceUtil.InferMode.ONLY_SOURCE.toString());
 		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM(), 50);
-		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION(), 100);
+		tEnv.getConfig().getParameters().setLong(TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION(), 100);
 		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION(), 1000);
 		createRelList(2);
 		BatchExecTableSourceScan scan = mock(BatchExecTableSourceScan.class, RETURNS_DEEP_STUBS);
@@ -156,7 +156,7 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		 */
 		tEnv.getConfig().getParameters().setString(TableConfig.SQL_EXEC_INFER_RESOURCE_MODE(), ExecResourceUtil.InferMode.ONLY_SOURCE.toString());
 		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM(), 50);
-		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION(), 100);
+		tEnv.getConfig().getParameters().setLong(TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION(), 100);
 		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION(), 1000);
 		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM(), 100);
 		createRelList(2);
@@ -183,7 +183,7 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		 */
 		tEnv.getConfig().getParameters().setString(TableConfig.SQL_EXEC_INFER_RESOURCE_MODE(), ExecResourceUtil.InferMode.ONLY_SOURCE.toString());
 		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM(), 50);
-		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION(), 100);
+		tEnv.getConfig().getParameters().setLong(TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION(), 100);
 		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION(), 1000);
 		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM(), 100);
 		createRelList(2);

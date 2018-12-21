@@ -69,13 +69,11 @@ class ParquetTableSink(
 
     val blockSize =
       tableConfig.getParameters.getInteger(
-        TableConfig.SQL_EXEC_SINK_PARQUET_BLOCK_SIZE,
-        TableConfig.SQL_EXEC_SINK_PARQUET_BLOCK_SIZE_DEFAULT)
+        TableConfig.SQL_EXEC_SINK_PARQUET_BLOCK_SIZE)
 
     val enableDictionary =
       tableConfig.getParameters.getBoolean(
-        TableConfig.SQL_EXEC_SINK_PARQUET_DICTIONARY_ENABLE,
-        TableConfig.SQL_EXEC_SINK_PARQUET_DICTIONARY_ENABLE_DEFAULT)
+        TableConfig.SQL_EXEC_SINK_PARQUET_DICTIONARY_ENABLE)
 
     boundedStream.writeUsingOutputFormat(new RowParquetOutputFormat(
       dir, getFieldTypes.map(DataTypes.internal), getFieldNames, compression,

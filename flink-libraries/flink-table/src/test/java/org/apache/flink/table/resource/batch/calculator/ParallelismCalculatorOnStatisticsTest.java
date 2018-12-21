@@ -59,7 +59,7 @@ public class ParallelismCalculatorOnStatisticsTest {
 	public void setUp() {
 		tableConfig = new TableConfig();
 		mq = mock(RelMetadataQuery.class);
-		tableConfig.getParameters().setInteger(TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION(), 100);
+		tableConfig.getParameters().setLong(TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION(), 100);
 		tableConfig.getParameters().setInteger(TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION(), 100);
 		tableConfig.getParameters().setInteger(TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM(), 50);
 		tableConfig.getParameters().setInteger(TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM(), 100);

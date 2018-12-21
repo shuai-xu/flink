@@ -39,7 +39,7 @@ class RemoveRedundantLocalHashAggRuleTest extends TableTestBatchExecBase {
     util.tableEnv.getConfig.getParameters.setString(
       TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortMergeJoin,NestedLoopJoin,SortAgg")
     // disable BroadcastHashJoin
-    util.tableEnv.getConfig.getParameters.setInteger(
+    util.tableEnv.getConfig.getParameters.setLong(
       TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
     val sqlQuery =
       """

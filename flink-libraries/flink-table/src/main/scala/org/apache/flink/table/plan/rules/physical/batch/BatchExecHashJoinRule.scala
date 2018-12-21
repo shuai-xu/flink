@@ -176,9 +176,7 @@ class BatchExecHashJoinRule(joinClass: Class[_ <: Join])
       return (false, false)
     }
     val conf = join.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
-    val threshold = conf.getParameters.getLong(
-      TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD,
-      TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD_DEFAULT)
+    val threshold = conf.getParameters.getLong(TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD)
     val joinType = getFlinkJoinRelType(join)
     joinType match {
       case FlinkJoinRelType.LEFT => (rightSize <= threshold, false)

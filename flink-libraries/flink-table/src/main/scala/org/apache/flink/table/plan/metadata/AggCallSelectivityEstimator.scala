@@ -53,7 +53,7 @@ class AggCallSelectivityEstimator(agg: RelNode, mq: FlinkRelMetadataQuery)
   // create SelectivityEstimator instance to use its default selectivity values
   private val se = new SelectivityEstimator(agg, mq)
   private[flink] val defaultAggCallSelectivity =
-    se.getDefaultSelectivity(SQL_CBO_SELECTIVITY_AGG_CALL_DEFAULT, 0.01)
+    se.getDefaultSelectivity(SQL_CBO_SELECTIVITY_AGG_CALL_DEFAULT)
 
   /**
     * Gets AggregateCall from aggregate node

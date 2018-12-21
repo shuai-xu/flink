@@ -20,7 +20,11 @@ package org.apache.flink.table.util;
 
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.TableConfig;
+
+import static org.apache.flink.configuration.ConfigOptions.key;
 
 /**
  * Deal with resource config.
@@ -28,51 +32,48 @@ import org.apache.flink.table.api.TableConfig;
 public class ExecResourceUtil {
 
 	/**
-	 * Sets the HashTable preferred memory for hashJoin operator. It defines the upper limit.
-	 */
-	public static final String SQL_EXEC_HASH_JOIN_TABLE_PREFER_MEM = "sql.exec.hash-join.table-prefer-memory-mb";
-
-	/**
-	 * Sets the table preferred memory size of hashAgg operator. It defines the upper limit.
-	 */
-	public static final String SQL_EXEC_HASH_AGG_TABLE_PREFER_MEM = "sql.exec.hash-agg.table-prefer-memory-mb";
-
-	/**
-	 * Sets min parallelism for operators.
-	 */
-	public static final String SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM = "sql.exec.infer-resource.operator.min-parallelism";
-	public static final int SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM_DEFAULT = 1;
-
-	/**
-	 * Maybe the infer's reserved manager mem is too small, so this setting is lower limit for
-	 * the infer's manager mem.
-	 */
-	public static final String SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB = "sql.exec.infer-resource.operator.min-memory-mb";
-	public static final int SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB_DEFAULT = 32;
-
-	/**
-	 * Sets reserve mem discount.
-	 */
-	public static final String SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT = "sql.exec.infer-resource.reserve-mem.discount";
-	public static final double SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT_DEFAULT = 1;
-
-	/**
-	 * Sets the number of per-requested buffers when the operator allocates much more segments
-	 * from the floating memory pool.
-	 */
-	public static final String SQL_EXEC_PER_REQUEST_MEM = "sql.exec.per-request.mem-mb";
-	public static final int SQL_EXEC_PER_REQUEST_MEM_DEFAULT = 32;
-
-
-	/**
 	 * How many Bytes per MB.
 	 */
 	public static final long SIZE_IN_MB =  1024L * 1024;
 
+	/**
+	 * Sets the HashTable preferred memory for hashJoin operator. It defines the upper limit.
+	 */
+	public static final ConfigOption<Integer> SQL_EXEC_HASH_JOIN_TABLE_PREFER_MEM =
+			key("sql.exec.hash-join.table-prefer-memory-mb")
+			.defaultValue(-1)
+			.withDescription("Sets the HashTable preferred memory for hashJoin operator. It defines the upper limit.");
+
+	public static final ConfigOption<Integer> SQL_EXEC_HASH_AGG_TABLE_PREFER_MEM =
+			key("sql.exec.hash-agg.table-prefer-memory-mb")
+			.defaultValue(-1)
+			.withDescription("Sets the table preferred memory size of hashAgg operator. It defines the upper limit.");
+
+	public static final ConfigOption<Integer> SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM =
+			key("sql.exec.infer-resource.operator.min-parallelism")
+			.defaultValue(1)
+			.withDescription("Sets min parallelism for operators.");
+
+	public static final ConfigOption<Integer> SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB =
+			key("sql.exec.infer-resource.operator.min-memory-mb")
+			.defaultValue(32)
+			.withDescription("Maybe the infer's reserved manager mem is too small, so this " +
+					"setting is lower limit for the infer's manager mem.");
+
+	public static final ConfigOption<Double> SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT =
+			key("sql.exec.infer-resource.reserve-mem.discount")
+			.defaultValue(1.0d)
+			.withDescription("Sets reserve mem discount.");
+
+	public static final ConfigOption<Integer> SQL_EXEC_PER_REQUEST_MEM =
+			key("sql.exec.per-request.mem-mb")
+			.defaultValue(32)
+			.withDescription("Sets the number of per-requested buffers when the operator " +
+					"allocates much more segments from the floating memory pool.");
+
 	public static double getDefaultCpu(TableConfig tConfig) {
 		return tConfig.getParameters().getDouble(
-				TableConfig.SQL_EXEC_DEFAULT_CPU(),
-				TableConfig.SQL_EXEC_DEFAULT_CPU_DEFAULT());
+				TableConfig.SQL_EXEC_DEFAULT_CPU());
 	}
 
 	/**
@@ -81,9 +82,12 @@ public class ExecResourceUtil {
 	 * @return default parallelism of operator.
 	 */
 	public static int getOperatorDefaultParallelism(TableConfig tConfig) {
-		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_DEFAULT_PARALLELISM(),
-				TableConfig.SQL_EXEC_DEFAULT_PARALLELISM_DEFAULT());
+		int parallelism = tConfig.getParameters().getInteger(
+				TableConfig.SQL_EXEC_DEFAULT_PARALLELISM());
+		if (parallelism <= 0) {
+			parallelism = StreamExecutionEnvironment.getDefaultLocalParallelism();
+		}
+		return parallelism;
 	}
 
 	/**
@@ -116,8 +120,7 @@ public class ExecResourceUtil {
 
 	public static int getDefaultHeapMem(TableConfig tConfig) {
 		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_DEFAULT_MEM(),
-				TableConfig.SQL_EXEC_DEFAULT_MEM_DEFAULT());
+				TableConfig.SQL_EXEC_DEFAULT_MEM());
 	}
 
 	/**
@@ -157,8 +160,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getExternalBufferManagedMemory(TableConfig tConfig) {
 		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_EXTERNAL_BUFFER_MEM(),
-				TableConfig.SQL_EXEC_EXTERNAL_BUFFER_MEM_DEFAULT());
+				TableConfig.SQL_EXEC_EXTERNAL_BUFFER_MEM());
 	}
 
 	/**
@@ -167,9 +169,7 @@ public class ExecResourceUtil {
 	 * @return the config managedMemory for hashJoin table.
 	 */
 	public static int getHashJoinTableManagedMemory(TableConfig tConfig) {
-		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_HASH_JOIN_TABLE_MEM(),
-				TableConfig.SQL_EXEC_HASH_JOIN_TABLE_MEM_DEFAULT());
+		return tConfig.getParameters().getInteger(TableConfig.SQL_EXEC_HASH_JOIN_TABLE_MEM());
 	}
 
 	/**
@@ -179,8 +179,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getSourceMem(TableConfig tConfig) {
 		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_SOURCE_MEM(),
-				TableConfig.SQL_EXEC_SOURCE_MEM_DEFAULT());
+				TableConfig.SQL_EXEC_SOURCE_MEM());
 	}
 
 	/**
@@ -189,10 +188,12 @@ public class ExecResourceUtil {
 	 * @return the config parallelism for source.
 	 */
 	public static int getSourceParallelism(TableConfig tConfig) {
-		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_SOURCE_PARALLELISM(),
-				getOperatorDefaultParallelism(tConfig)
-		);
+		int parallelism = tConfig.getParameters().getInteger(
+				TableConfig.SQL_EXEC_SOURCE_PARALLELISM());
+		if (parallelism <= 0) {
+			parallelism = getOperatorDefaultParallelism(tConfig);
+		}
+		return parallelism;
 	}
 
 	/**
@@ -201,10 +202,7 @@ public class ExecResourceUtil {
 	 * @return the config parallelism for sink.
 	 */
 	public static int getSinkParallelism(TableConfig tConfig) {
-		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_SINK_PARALLELISM(),
-				-1
-		);
+		return tConfig.getParameters().getInteger(TableConfig.SQL_EXEC_SINK_PARALLELISM());
 	}
 
 	/**
@@ -214,8 +212,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getSinkMem(TableConfig tConfig) {
 		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_SINK_MEM(),
-				TableConfig.SQL_EXEC_SINK_MEM_DEFAULT());
+				TableConfig.SQL_EXEC_SINK_MEM());
 	}
 
 	/**
@@ -225,8 +222,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getHashAggManagedMemory(TableConfig tConfig) {
 		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_HASH_AGG_TABLE_MEM(),
-				TableConfig.SQL_EXEC_HASH_AGG_TABLE_MEM_DEFAULT());
+				TableConfig.SQL_EXEC_HASH_AGG_TABLE_MEM());
 	}
 
 	/**
@@ -236,8 +232,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getWindowAggBufferLimitSize(TableConfig tConfig) {
 		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_WINDOW_AGG_BUFFER_LIMIT_SIZE(),
-				TableConfig.SQL_EXEC_WINDOW_AGG_BUFFER_LIMIT_SIZE_DEFAULT());
+				TableConfig.SQL_EXEC_WINDOW_AGG_BUFFER_LIMIT_SIZE());
 	}
 
 	/**
@@ -247,9 +242,7 @@ public class ExecResourceUtil {
 	 */
 	public static long getRelCountPerPartition(TableConfig tConfig) {
 		return tConfig.getParameters().getLong(
-				TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION(),
-				TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION_DEFAULT()
-		);
+				TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION());
 	}
 
 	/**
@@ -257,11 +250,9 @@ public class ExecResourceUtil {
 	 * @param tConfig TableConfig.
 	 * @return the config data size that one partition processes.
 	 */
-	public static long getSourceSizePerPartition(TableConfig tConfig) {
-		return tConfig.getParameters().getLong(
-				TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION(),
-				TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION_DEFAULT()
-		);
+	public static int getSourceSizePerPartition(TableConfig tConfig) {
+		return tConfig.getParameters().getInteger(
+				TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION());
 	}
 
 	/**
@@ -271,9 +262,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getSourceMaxParallelism(TableConfig tConfig) {
 		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM(),
-				TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM_DEFAULT()
-		);
+				TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM());
 	}
 
 	/**
@@ -283,9 +272,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getOperatorMaxParallelism(TableConfig tConfig) {
 		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM(),
-				TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM_DEFAULT()
-		);
+				TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM());
 	}
 
 	/**
@@ -294,10 +281,7 @@ public class ExecResourceUtil {
 	 * @return the config max num of operator parallelism.
 	 */
 	public static int getOperatorMinParallelism(TableConfig tConfig) {
-		return tConfig.getParameters().getInteger(
-				SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM,
-				SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM_DEFAULT
-		);
+		return tConfig.getParameters().getInteger(SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM);
 	}
 
 	/**
@@ -319,9 +303,11 @@ public class ExecResourceUtil {
 	 * @return the preferred managedMemory for hashJoin table.
 	 */
 	public static int getHashJoinTableManagedPreferredMemory(TableConfig tConfig) {
-		return tConfig.getParameters().getInteger(
-				SQL_EXEC_HASH_JOIN_TABLE_PREFER_MEM,
-				getHashJoinTableManagedMemory(tConfig));
+		int memory = tConfig.getParameters().getInteger(SQL_EXEC_HASH_JOIN_TABLE_PREFER_MEM);
+		if (memory <= 0) {
+			memory = getHashJoinTableManagedMemory(tConfig);
+		}
+		return memory;
 	}
 
 	/**
@@ -330,9 +316,11 @@ public class ExecResourceUtil {
 	 * @return the preferred managedMemory for hashAgg.
 	 */
 	public static int getHashAggManagedPreferredMemory(TableConfig tConfig) {
-		return tConfig.getParameters().getInteger(
-				SQL_EXEC_HASH_AGG_TABLE_PREFER_MEM,
-				getHashAggManagedMemory(tConfig));
+		int memory = tConfig.getParameters().getInteger(SQL_EXEC_HASH_AGG_TABLE_PREFER_MEM);
+		if (memory <= 0) {
+			memory = getHashAggManagedMemory(tConfig);
+		}
+		return memory;
 	}
 
 	/**
@@ -341,9 +329,7 @@ public class ExecResourceUtil {
 	 * @return the min managedMemory.
 	 */
 	public static int getOperatorMinManagedMem(TableConfig tConfig) {
-		return tConfig.getParameters().getInteger(
-				SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB,
-				SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB_DEFAULT);
+		return tConfig.getParameters().getInteger(SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB);
 	}
 
 	/**
@@ -354,16 +340,13 @@ public class ExecResourceUtil {
 	 * @param memCostInMB the infer mem of per partition.
 	 */
 	public static Tuple3<Integer, Integer, Integer> reviseAndGetInferManagedMem(TableConfig tConfig, int memCostInMB) {
-		double reservedDiscount = tConfig.getParameters().getDouble(
-				SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT,
-				SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT_DEFAULT);
+		double reservedDiscount = tConfig.getParameters().getDouble(SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT);
 		if (reservedDiscount > 1 || reservedDiscount <= 0) {
 			throw new IllegalArgumentException(SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT + " should be > 0 and <= 1");
 		}
 
 		int maxMem = tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB(),
-				TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB_DEFAULT());
+				TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB());
 
 		int minMem = getOperatorMinManagedMem(tConfig);
 
@@ -378,18 +361,14 @@ public class ExecResourceUtil {
 	 * Gets the managedMemory for per-allocating.
 	 */
 	public static int getPerRequestManagedMemory(TableConfig tConfig) {
-		return tConfig.getParameters().getInteger(
-				SQL_EXEC_PER_REQUEST_MEM,
-				SQL_EXEC_PER_REQUEST_MEM_DEFAULT);
+		return tConfig.getParameters().getInteger(SQL_EXEC_PER_REQUEST_MEM);
 	}
 
 	/**
 	 * Whether to enable schedule with runningUnit.
 	 */
 	public static boolean enableRunningUnitSchedule(TableConfig tConfig) {
-		return tConfig.getParameters().getBoolean(
-				TableConfig.SQL_SCHEDULE_RUNNING_UNIT_ENABLE(),
-				TableConfig.SQL_SCHEDULE_RUNNING_UNIT_ENABLE_DEFAULT());
+		return tConfig.getParameters().getBoolean(TableConfig.SQL_SCHEDULE_RUNNING_UNIT_ENABLE());
 	}
 
 	/**
@@ -400,8 +379,8 @@ public class ExecResourceUtil {
 	}
 
 	public static InferMode getInferMode(TableConfig tConfig) {
-		String config = tConfig.getParameters().getString(TableConfig.SQL_EXEC_INFER_RESOURCE_MODE(),
-				TableConfig.SQL_EXEC_INFER_RESOURCE_MODE_DEFAULT());
+		String config = tConfig.getParameters().getString(
+				TableConfig.SQL_EXEC_INFER_RESOURCE_MODE());
 		try {
 			return InferMode.valueOf(config);
 		} catch (IllegalArgumentException ex) {
