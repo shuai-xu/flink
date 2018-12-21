@@ -101,6 +101,7 @@ public class CatalogManager {
 			throw new CatalogAlreadyExistException(catalogName);
 		}
 
+		catalog.open();
 		catalogs.put(catalogName, catalog);
 		catalog.open();
 		CatalogCalciteSchema.registerCatalog(rootSchema, catalogName, catalog, isStreaming);

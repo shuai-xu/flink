@@ -72,4 +72,5 @@ public class HiveCatalogTest extends CatalogTestBase {
 		String hivePartitionName = "name=bob/year=2018";
 
 	}
+
 }
