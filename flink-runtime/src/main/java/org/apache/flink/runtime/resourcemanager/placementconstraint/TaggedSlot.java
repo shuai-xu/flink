@@ -35,6 +35,10 @@ public class TaggedSlot {
 		this.scope = scope;
 	}
 
+	public boolean isWithTag() { return withTag; }
+
+	public List<SlotTag> getTags() { return tags; }
+
 	public boolean matchSlotWithTags(List<SlotTag> tags) {
 		if (withTag) {
 			for (SlotTag tag1 : this.tags) {

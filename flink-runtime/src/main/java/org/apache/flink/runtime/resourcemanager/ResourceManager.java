@@ -397,10 +397,10 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 
 	@Override
 	public CompletableFuture<Acknowledge> setPlacementConstraints(
-		JobMasterId jobMasterId,
+		JobID jobId,
 		List<PlacementConstraint> constraints,
 		@RpcTimeout Time timeout) {
-		// TODO implement pc maintaining and checking
+		slotManager.setJobConstraints(jobId, constraints);
 		return CompletableFuture.completedFuture(Acknowledge.get());
 	}
 

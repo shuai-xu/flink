@@ -100,4 +100,6 @@ public class SlotRequest implements Serializable {
 	public String getTargetAddress() {
 		return targetAddress;
 	}
+
+	public List<SlotTag> getTags() { return tags; }
 }

@@ -18,27 +18,16 @@
 
 package org.apache.flink.runtime.resourcemanager.placementconstraint;
 
-import java.util.List;
-
 /**
- * A PlacementConstraint describes a constraint on the context to which certain slots should be placed.
+ * Unique identifier of a {@link PlacementConstraint}.
  */
-public abstract class PlacementConstraint {
+public class PlacementConstraintID {
+	private static long current = 0L;
+	private long id;
 
-	/** Describes the slots that this constraint applies to.  */
-	protected final TaggedSlot slot;
+	private PlacementConstraintID(long id) { this.id = id; }
 
-	public PlacementConstraint(TaggedSlot slot) {
-		this.slot = slot;
+	static PlacementConstraintID generate() {
+		return new PlacementConstraintID(current++);
 	}
-
-	public TaggedSlot getSlot() {
-		return slot;
-	}
-
-	public boolean applyTo(List<SlotTag> slotTags) {
-		return slot.matchSlotWithTags(slotTags);
-	}
-
-	public abstract boolean check(List<List<SlotTag>> taskExecutorTags);
 }

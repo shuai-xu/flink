@@ -19,10 +19,10 @@
 package org.apache.flink.runtime.resourcemanager.slotmanager;
 
 import org.apache.flink.api.common.time.Time;
-import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.clusterframework.types.SlotID;
 import org.apache.flink.runtime.clusterframework.types.TaskManagerSlot;
 import org.apache.flink.runtime.concurrent.ScheduledExecutor;
+import org.apache.flink.runtime.resourcemanager.SlotRequest;
 import org.apache.flink.util.Preconditions;
 
 import java.util.Iterator;
@@ -43,7 +43,7 @@ public class StrictlyMatchingSlotManager extends SlotManager {
 	}
 
 	@Override
-	protected TaskManagerSlot findMatchingSlot(ResourceProfile requestResourceProfile) {
+	protected TaskManagerSlot findMatchingSlot(SlotRequest slotRequest) {
 		Iterator<Map.Entry<SlotID, TaskManagerSlot>> iterator = freeSlots.entrySet().iterator();
 		while (iterator.hasNext()) {
 			TaskManagerSlot taskManagerSlot = iterator.next().getValue();
@@ -52,7 +52,11 @@ public class StrictlyMatchingSlotManager extends SlotManager {
 			Preconditions.checkState(taskManagerSlot.getState() == TaskManagerSlot.State.FREE,
 				String.format("Slot %s is in state %s", taskManagerSlot.getSlotId(), taskManagerSlot.getState()));
 
-			if (taskManagerSlot.getResourceProfile().equals(requestResourceProfile)) {
+			if (taskManagerSlot.getResourceProfile().equals(slotRequest.getResourceProfile()) &&
+				placementConstraintManager.check(
+					slotRequest.getJobId(),
+					allocationIdTags.get(slotRequest.getAllocationId()),
+					getTaskExecutorSlotTags(taskManagerSlot.getSlotId()))) {
 				freeSlots.remove(taskManagerSlot.getSlotId());
 				return taskManagerSlot;
 			}
@@ -63,8 +67,12 @@ public class StrictlyMatchingSlotManager extends SlotManager {
 	@Override
 	protected PendingSlotRequest findMatchingRequest(TaskManagerSlot taskManagerSlot) {
 		for (PendingSlotRequest pendingSlotRequest : pendingSlotRequests.values()) {
-			if (taskManagerSlot.getResourceProfile().equals(pendingSlotRequest.getResourceProfile())
-				&& !pendingSlotRequest.isAssigned()) {
+			if (taskManagerSlot.getResourceProfile().equals(pendingSlotRequest.getResourceProfile()) &&
+				!pendingSlotRequest.isAssigned() &&
+				placementConstraintManager.check(
+					pendingSlotRequest.getJobId(),
+					allocationIdTags.get(pendingSlotRequest.getAllocationId()),
+					getTaskExecutorSlotTags(taskManagerSlot.getSlotId()))) {
 				return pendingSlotRequest;
 			}
 		}

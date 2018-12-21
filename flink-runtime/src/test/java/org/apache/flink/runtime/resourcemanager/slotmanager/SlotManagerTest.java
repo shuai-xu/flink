@@ -49,6 +49,7 @@ import org.apache.flink.runtime.testingUtils.TestingUtils;
 import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.TestLogger;
 
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -1812,6 +1813,85 @@ public class SlotManagerTest extends TestLogger {
 			assertEquals(TaskManagerSlot.State.ALLOCATED, slotManager.getSlot(slotId2).getState());
 			assertEquals(1L, slotManager.getSlot(slotId2).getVersion());
 			assertEquals(allocationId, slotManager.getSlot(slotId2).getAllocationId());
+		}
+	}
+
+	/**
+	 * Tests that SlotManager maintains correct tags of slot requests.
+	 */
+	@Test
+	public void testSlotTagOfPendingSlotRequest() throws Exception {
+		final ResourceManagerId resourceManagerId = ResourceManagerId.generate();
+		final ResourceProfile resourceProfile = new ResourceProfile(1, 100);
+		final JobID jobId = new JobID();
+		final List<SlotTag> slotTags = Arrays.asList(new SlotTag("tag1", jobId));
+		final SlotRequest slotRequest1 = new SlotRequest(
+			jobId,
+			new AllocationID(),
+			resourceProfile,
+			"localhost",
+			Collections.emptyList());
+		final SlotRequest slotRequest2 = new SlotRequest(
+			jobId,
+			new AllocationID(),
+			resourceProfile,
+			"localhost",
+			slotTags);
+		ResourceActions resourceManagerActions = mock(ResourceActions.class);
+
+		try (SlotManager slotManager = createSlotManager(resourceManagerId, resourceManagerActions)) {
+			slotManager.registerSlotRequest(slotRequest1);
+			Assert.assertEquals(slotRequest1.getTags(), slotManager.getTagsForSlotRequest(slotRequest1));
+			Assert.assertNull(slotManager.getTagsForSlotRequest(slotRequest2));
+
+			slotManager.registerSlotRequest(slotRequest2);
+			Assert.assertEquals(slotRequest1.getTags(), slotManager.getTagsForSlotRequest(slotRequest1));
+			Assert.assertEquals(slotRequest2.getTags(), slotManager.getTagsForSlotRequest(slotRequest2));
+		}
+	}
+
+	/**
+	 * Tests that SlotManager maintains correct tags of allocated slots.
+	 */
+	@Test
+	public void testSlotTagOfAllocatedSlot() throws Exception {
+		final ResourceManagerId resourceManagerId = ResourceManagerId.generate();
+		final ResourceProfile resourceProfile = new ResourceProfile(1, 100);
+		final ResourceID resourceId = ResourceID.generate();
+		final SlotID slotId = new SlotID(resourceId, 0);
+		final AllocationID allocationId = new AllocationID();
+		final JobID jobId = new JobID();
+		final List<SlotTag> slotTags = Arrays.asList(new SlotTag("tag1", jobId));
+		final SlotRequest slotRequest = new SlotRequest(
+			jobId,
+			allocationId,
+			resourceProfile,
+			"localhost",
+			slotTags);
+
+		ResourceActions resourceManagerActions = mock(ResourceActions.class);
+
+		final TaskExecutorGateway taskExecutorGateway = mock(TaskExecutorGateway.class);
+		when(taskExecutorGateway.requestSlot(
+			eq(slotId),
+			eq(jobId),
+			eq(allocationId),
+			eq(resourceProfile),
+			anyString(),
+			any(List.class),
+			eq(resourceManagerId),
+			anyLong(),
+			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
+		final TaskExecutorConnection taskExecutorConnection = new TaskExecutorConnection(resourceId, taskExecutorGateway);
+		final SlotStatus slotStatus = new SlotStatus(slotId, resourceProfile);
+		final SlotReport slotReport = new SlotReport(slotStatus);
+
+		try (SlotManager slotManager = createSlotManager(resourceManagerId, resourceManagerActions)) {
+			slotManager.registerTaskManager(taskExecutorConnection, slotReport);
+			Assert.assertEquals(Collections.emptyList(), slotManager.getTagsForTaskExecutor(resourceId));
+
+			assertTrue("The slot request should be accepted", slotManager.registerSlotRequest(slotRequest));
+			Assert.assertEquals(Arrays.asList(slotTags), slotManager.getTagsForTaskExecutor(resourceId));
 		}
 	}
 

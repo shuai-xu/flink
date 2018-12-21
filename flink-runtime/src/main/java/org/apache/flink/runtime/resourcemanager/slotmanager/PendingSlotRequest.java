@@ -78,4 +78,6 @@ public class PendingSlotRequest {
 	public CompletableFuture<Acknowledge> getRequestFuture() {
 		return requestFuture;
 	}
+
+	public SlotRequest getSlotRequest() { return slotRequest; }
 }

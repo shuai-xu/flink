@@ -184,7 +184,7 @@ public class TestingResourceManagerGateway implements ResourceManagerGateway {
 
 	@Override
 	public CompletableFuture<Acknowledge> setPlacementConstraints(
-		JobMasterId jobMasterId,
+		JobID jobId,
 		List<PlacementConstraint> constraints,
 		@RpcTimeout Time timeout) {
 		return CompletableFuture.completedFuture(Acknowledge.get());

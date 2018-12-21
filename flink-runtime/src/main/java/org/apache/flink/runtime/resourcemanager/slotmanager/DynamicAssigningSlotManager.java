@@ -27,6 +27,7 @@ import org.apache.flink.runtime.clusterframework.types.SlotID;
 import org.apache.flink.runtime.clusterframework.types.TaskManagerSlot;
 import org.apache.flink.runtime.concurrent.ScheduledExecutor;
 
+import org.apache.flink.runtime.resourcemanager.SlotRequest;
 import org.apache.flink.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -121,23 +122,27 @@ public class DynamicAssigningSlotManager extends SlotManager {
 	}
 
 	@Override
-	protected TaskManagerSlot findMatchingSlot(ResourceProfile requestResourceProfile) {
+	protected TaskManagerSlot findMatchingSlot(SlotRequest slotRequest) {
 		if (slotPlacementPolicy == SlotPlacementPolicy.RANDOM) {
-			return findMatchingSlotRandomly(requestResourceProfile);
+			return findMatchingSlotRandomly(slotRequest);
 		} else {
-			return findMatchingSlotSpreading(requestResourceProfile);
+			return findMatchingSlotSpreading(slotRequest);
 		}
 	}
 
-	protected TaskManagerSlot findMatchingSlotRandomly(ResourceProfile requestResourceProfile) {
+	protected TaskManagerSlot findMatchingSlotRandomly(SlotRequest slotRequest) {
 		Random random = new Random();
 		List<TaskManagerSlot> resourceSlots = new ArrayList<>(freeSlots.values());
 		int count = 0;
 		while (count++ < freeSlots.size() / 2) {
 			int index = random.nextInt(freeSlots.size());
 			TaskManagerSlot slot = resourceSlots.get(index);
-			if (hasEnoughResource(slot.getSlotId().getResourceID(), requestResourceProfile)) {
-				recordAllocatedSlotAndResource(slot.getSlotId(), requestResourceProfile);
+			if (hasEnoughResource(slot.getSlotId().getResourceID(), slotRequest.getResourceProfile()) &&
+				placementConstraintManager.check(
+					slotRequest.getJobId(),
+					allocationIdTags.get(slotRequest.getAllocationId()),
+					getTaskExecutorSlotTags(slot.getSlotId()))) {
+				recordAllocatedSlotAndResource(slot.getSlotId(), slotRequest.getResourceProfile());
 				freeSlots.remove(slot.getSlotId());
 				return slot;
 			}
@@ -146,8 +151,12 @@ public class DynamicAssigningSlotManager extends SlotManager {
 		Iterator<Map.Entry<SlotID, TaskManagerSlot>> iterator = freeSlots.entrySet().iterator();
 		while (iterator.hasNext()) {
 			TaskManagerSlot slot = iterator.next().getValue();
-			if (hasEnoughResource(slot.getSlotId().getResourceID(), requestResourceProfile)) {
-				recordAllocatedSlotAndResource(slot.getSlotId(), requestResourceProfile);
+			if (hasEnoughResource(slot.getSlotId().getResourceID(), slotRequest.getResourceProfile()) &&
+				placementConstraintManager.check(
+					slotRequest.getJobId(),
+					allocationIdTags.get(slotRequest.getAllocationId()),
+					getTaskExecutorSlotTags(slot.getSlotId()))) {
+				recordAllocatedSlotAndResource(slot.getSlotId(), slotRequest.getResourceProfile());
 				freeSlots.remove(slot.getSlotId());
 				return slot;
 			}
@@ -155,12 +164,16 @@ public class DynamicAssigningSlotManager extends SlotManager {
 		return null;
 	}
 
-	protected TaskManagerSlot findMatchingSlotSpreading(ResourceProfile requestResourceProfile) {
+	protected TaskManagerSlot findMatchingSlotSpreading(SlotRequest slotRequest) {
 		List<TaskManagerSlot> slots = new ArrayList<>(freeSlots.values());
 		Collections.sort(slots, Preconditions.checkNotNull(slotComparator));
 		for (TaskManagerSlot slot : slots) {
-			if (hasEnoughResource(slot.getSlotId().getResourceID(), requestResourceProfile)) {
-				recordAllocatedSlotAndResource(slot.getSlotId(), requestResourceProfile);
+			if (hasEnoughResource(slot.getSlotId().getResourceID(), slotRequest.getResourceProfile()) &&
+				placementConstraintManager.check(
+					slotRequest.getJobId(),
+					allocationIdTags.get(slotRequest.getAllocationId()),
+					getTaskExecutorSlotTags(slot.getSlotId()))) {
+				recordAllocatedSlotAndResource(slot.getSlotId(), slotRequest.getResourceProfile());
 				freeSlots.remove(slot.getSlotId());
 				return slot;
 			}
@@ -172,7 +185,11 @@ public class DynamicAssigningSlotManager extends SlotManager {
 	protected PendingSlotRequest findMatchingRequest(TaskManagerSlot taskManagerSlot) {
 		for (PendingSlotRequest pendingSlotRequest : pendingSlotRequests.values()) {
 			if (!pendingSlotRequest.isAssigned() &&
-					hasEnoughResource(taskManagerSlot.getSlotId().getResourceID(), pendingSlotRequest.getResourceProfile())) {
+				hasEnoughResource(taskManagerSlot.getSlotId().getResourceID(), pendingSlotRequest.getResourceProfile()) &&
+				placementConstraintManager.check(
+					pendingSlotRequest.getJobId(),
+					allocationIdTags.get(pendingSlotRequest.getAllocationId()),
+					getTaskExecutorSlotTags(taskManagerSlot.getSlotId()))) {
 				recordAllocatedSlotAndResource(taskManagerSlot.getSlotId(), pendingSlotRequest.getResourceProfile());
 				return pendingSlotRequest;
 			}

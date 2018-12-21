@@ -74,13 +74,13 @@ public interface ResourceManagerGateway extends FencedRpcGateway<ResourceManager
 	 * Set/Update a job's {@link PlacementConstraint}s to the resource manager.
 	 * This is a full synchronization, all constraints of a job should be set/updated in one invoke.
 	 *
-	 * @param jobMasterId ID of the JobMaster.
+	 * @param jobId ID of the job.
 	 * @param constraints Slot placement constraints of the job.
 	 * @param timeout Timeout for the acknowledgement.
 	 * @return The confirmation that placement constraints are set/updated.
 	 */
 	CompletableFuture<Acknowledge> setPlacementConstraints(
-		JobMasterId jobMasterId,
+		JobID jobId,
 		List<PlacementConstraint> constraints,
 		@RpcTimeout Time timeout);
 
