@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 import scala.Option;
 
@@ -85,4 +86,23 @@ public class CatalogTestUtil {
 
 		return row;
 	}
+
+	public static ExternalCatalogTable createExternalCatalogTable(String tableType, TableSchema schema,
+																Map<String, String> tableProperties) {
+		return new ExternalCatalogTable(
+			tableType,
+			schema,
+			tableProperties,
+			null,
+			null,
+			null,
+			new LinkedHashSet<>(),
+			false,
+			null,
+			null,
+			-1L,
+			0L,
+			-1L);
+	}
+
 }

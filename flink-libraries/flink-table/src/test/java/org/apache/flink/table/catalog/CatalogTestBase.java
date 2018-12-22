@@ -29,7 +29,6 @@ import org.apache.flink.table.api.types.InternalType;
 import org.junit.Test;
 
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -319,20 +318,10 @@ public abstract class CatalogTestBase {
 	}
 
 	private ExternalCatalogTable createTable(TableSchema schema) {
-		return new ExternalCatalogTable(
+		return CatalogTestUtil.createExternalCatalogTable(
 			getTableType(),
 			schema,
-			getTableProperties(),
-			null,
-			null,
-			null,
-			new LinkedHashSet<>(),
-			false,
-			null,
-			null,
-			-1L,
-			0L,
-			-1L);
+			getTableProperties());
 	}
 
 	protected Map<String, String> getTableProperties() {

@@ -22,12 +22,9 @@ import org.apache.flink.table.catalog.CatalogTestBase;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.hive.config.HiveTableConfig;
 
-import org.apache.hadoop.hive.conf.HiveConf;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -38,23 +35,9 @@ import java.util.Map;
  */
 public class HiveCatalogTest extends CatalogTestBase {
 
-	@ClassRule
-	public static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();
-
-	private static String warehouseDir;
-	private static String warehouseUri;
-
 	@BeforeClass
 	public static void init() throws IOException {
-		warehouseDir = TEMPORARY_FOLDER.newFolder().getAbsolutePath() + "/metastore_db";
-		warehouseUri = String.format("jdbc:derby:;databaseName=%s;create=true", warehouseDir);
-		HiveConf hiveConf = new HiveConf();
-		hiveConf.setBoolVar(HiveConf.ConfVars.METASTORE_SCHEMA_VERIFICATION, false);
-		hiveConf.setBoolean("datanucleus.schema.autoCreateTables", true);
-		hiveConf.setVar(HiveConf.ConfVars.METASTOREWAREHOUSE, TEMPORARY_FOLDER.newFolder("hive_warehouse").getAbsolutePath());
-		hiveConf.setVar(HiveConf.ConfVars.METASTORECONNECTURLKEY, warehouseUri);
-
-		catalog = new HiveCatalog("test", hiveConf);
+		catalog = HiveTestUtils.createHiveCatalog();
 		catalog.open();
 	}
 
@@ -79,7 +62,8 @@ public class HiveCatalogTest extends CatalogTestBase {
 	@Override
 	protected Map<String, String> getTableProperties() {
 		return new HashMap<String, String>() {{
-			put(HiveTableConfig.HIVE_TABLE_LOCATION, warehouseDir + "/tmp");
+			put(HiveTableConfig.HIVE_TABLE_LOCATION, HiveTestUtils.warehouseDir + "/tmp");
 		}};
 	}
+
 }

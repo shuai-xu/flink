@@ -230,6 +230,8 @@ public class HiveMetadataUtil {
 				return TimestampType.TIMESTAMP;
 			case serdeConstants.DECIMAL_TYPE_NAME:
 				return DecimalType.SYSTEM_DEFAULT;
+			case serdeConstants.BINARY_TYPE_NAME:
+				return ByteArrayType.INSTANCE;
 			default:
 				throw new UnsupportedOperationException(
 					String.format("Flink doesn't support Hive's type %s yet.", hiveType));
