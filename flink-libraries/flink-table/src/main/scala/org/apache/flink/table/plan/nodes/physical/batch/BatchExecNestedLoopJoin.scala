@@ -35,15 +35,16 @@ import org.apache.flink.table.runtime.TwoInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.util.ResettableExternalBuffer
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
-
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.ImmutableIntList
-
 import java.util
+
+import org.apache.flink.runtime.operators.DamBehavior
+import org.apache.flink.streaming.api.transformations.TwoInputTransformation.ReadOrder
 
 import scala.collection.JavaConversions._
 
@@ -244,6 +245,8 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
       resultPartitionCount
     )
     tableEnv.getRUKeeper().addTransformation(this, transformation)
+    transformation.setReadOrderHint(
+      if (leftIsBuild) ReadOrder.INPUT1_FIRST else ReadOrder.INPUT2_FIRST)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
   }

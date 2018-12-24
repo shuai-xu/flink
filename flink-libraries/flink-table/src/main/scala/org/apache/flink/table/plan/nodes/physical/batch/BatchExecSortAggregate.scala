@@ -29,7 +29,6 @@ import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.BatchExecRelVisitor
-
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
 import org.apache.calcite.rel.RelDistribution.Type._
 import org.apache.calcite.rel._
@@ -37,6 +36,7 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.util.{ImmutableIntList, Util}
+import org.apache.flink.runtime.operators.DamBehavior
 
 import scala.collection.JavaConversions._
 
@@ -176,7 +176,9 @@ class BatchExecSortAggregate(
       DataTypes.toTypeInfo(outputRowType).asInstanceOf[BaseRowTypeInfo[BaseRow]],
       resultPartitionCount)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
-
+    if (grouping.length == 0) {
+      transformation.setDamBehavior(DamBehavior.FULL_DAM)
+    }
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
   }

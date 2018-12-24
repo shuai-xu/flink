@@ -33,13 +33,14 @@ import org.apache.flink.table.runtime.join.batch.hashtable.BinaryHashBucketArea
 import org.apache.flink.table.runtime.join.batch.{HashJoinOperator, HashJoinType}
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
-
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.{ImmutableIntList, Util}
+import org.apache.flink.runtime.operators.DamBehavior
+import org.apache.flink.streaming.api.transformations.TwoInputTransformation.ReadOrder
 
 import scala.collection.JavaConversions._
 
@@ -232,6 +233,9 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
       getOutputType,
       resultPartitionCount)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
+    transformation.setDamBehavior(
+      if (hashJoinType.buildLeftSemiOrAnti()) DamBehavior.FULL_DAM else DamBehavior.MATERIALIZING)
+    transformation.setReadOrderHint(ReadOrder.INPUT1_FIRST)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
   }

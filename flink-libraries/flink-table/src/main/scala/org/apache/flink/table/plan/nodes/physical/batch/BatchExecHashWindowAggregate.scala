@@ -29,14 +29,14 @@ import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
-
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.tools.RelBuilder
-
 import java.util
+
+import org.apache.flink.runtime.operators.DamBehavior
 
 class BatchExecHashWindowAggregate(
     window: LogicalWindow,
@@ -131,7 +131,7 @@ class BatchExecHashWindowAggregate(
       DataTypes.toTypeInfo(outputRowType).asInstanceOf[BaseRowTypeInfo[BaseRow]],
       resultPartitionCount)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
-
+    transformation.setDamBehavior(DamBehavior.FULL_DAM)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
   }

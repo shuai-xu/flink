@@ -36,9 +36,9 @@ import org.apache.flink.table.runtime.BinaryHashPartitioner
 import org.apache.flink.table.runtime.range._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.BatchExecRelVisitor
-
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.{RelDistribution, RelNode, RelWriter}
+import org.apache.flink.runtime.operators.DamBehavior
 
 import scala.collection.JavaConverters._
 
@@ -298,6 +298,7 @@ class BatchExecExchange(
           new LocalSampleOperator(localSampleProjection, TOTAL_SAMPLE_SIZE),
           isdType,
           input.getParallelism)
+        localSample.setDamBehavior(DamBehavior.FULL_DAM)
         localSample.setResources(reservedResSpec, preferResSpec)
 
         // 2. Fixed size sample in a single coordinator
@@ -341,6 +342,7 @@ class BatchExecExchange(
             TOTAL_RANGES_NUM),
           boundariesType,
           1)
+        sampleAndHistogram.setDamBehavior(DamBehavior.FULL_DAM)
         sampleAndHistogram.setResources(reservedResSpec, preferResSpec)
         reusedSampleAndHistogram = Some(sampleAndHistogram)
         sampleAndHistogram

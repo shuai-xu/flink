@@ -30,12 +30,12 @@ import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.sort.SortOperator
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
-
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
 import org.apache.calcite.rel.core.Sort
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelCollation, RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
+import org.apache.flink.runtime.operators.DamBehavior
 
 import scala.collection.JavaConversions._
 
@@ -119,7 +119,7 @@ class BatchExecSort(
       binaryType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
       resultPartitionCount)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
-
+    transformation.setDamBehavior(DamBehavior.FULL_DAM)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
   }

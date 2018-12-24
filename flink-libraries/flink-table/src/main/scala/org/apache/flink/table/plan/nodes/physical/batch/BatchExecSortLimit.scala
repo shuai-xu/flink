@@ -28,12 +28,12 @@ import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.sort.SortLimitOperator
 import org.apache.flink.table.typeutils._
 import org.apache.flink.table.util.BatchExecRelVisitor
-
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
 import org.apache.calcite.rel.core.Sort
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelCollation, RelNode, RelWriter}
 import org.apache.calcite.rex.{RexLiteral, RexNode}
+import org.apache.flink.runtime.operators.DamBehavior
 
 import _root_.scala.collection.JavaConverters._
 
@@ -175,6 +175,7 @@ class BatchExecSortLimit(
       inputType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
       resultPartitionCount)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
+    transformation.setDamBehavior(DamBehavior.FULL_DAM)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
   }

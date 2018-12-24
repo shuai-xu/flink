@@ -35,13 +35,13 @@ import org.apache.flink.table.runtime.sort.BinaryExternalSorter
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
 import org.apache.flink.table.util.ExecResourceUtil.InferMode
-
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelCollationTraitDef, RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.ImmutableIntList
+import org.apache.flink.runtime.operators.DamBehavior
 
 import scala.collection.JavaConversions._
 
@@ -306,6 +306,9 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       getOutputType,
       resultPartitionCount)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
+    if (!leftSorted && !rightSorted) {
+      transformation.setDamBehavior(DamBehavior.FULL_DAM)
+    }
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
   }
