@@ -340,7 +340,7 @@ public abstract class BinaryWriter {
 		}
 	}
 
-	public void write(int pos, Object o, InternalType type) {
+	public void write(int pos, Object o, InternalType type, TypeSerializer serializer) {
 		if (type.equals(DataTypes.BOOLEAN)) {
 			writeBoolean(pos, (boolean) o);
 		} else if (type.equals(DataTypes.BYTE)) {
@@ -371,11 +371,11 @@ public abstract class BinaryWriter {
 		} else if (type.equals(DataTypes.BYTE_ARRAY)) {
 			writeByteArray(pos, (byte[]) o);
 		} else if (type instanceof ArrayType) {
-			writeBaseArray(pos, (BaseArray) o, (BaseArraySerializer) TypeUtils.createSerializer(type));
+			writeBaseArray(pos, (BaseArray) o, (BaseArraySerializer) serializer);
 		} else if (type instanceof MapType) {
-			writeBaseMap(pos, (BinaryMap) o, (BaseMapSerializer) TypeUtils.createSerializer(type));
+			writeBaseMap(pos, (BinaryMap) o, (BaseMapSerializer) serializer);
 		} else if (type instanceof BaseRowType) {
-			writeBaseRow(pos, (BaseRow) o, (BaseRowSerializer) TypeUtils.createSerializer(type));
+			writeBaseRow(pos, (BaseRow) o, (BaseRowSerializer) serializer);
 		} else {
 			writeGeneric(pos, o, (GenericType) type);
 		}

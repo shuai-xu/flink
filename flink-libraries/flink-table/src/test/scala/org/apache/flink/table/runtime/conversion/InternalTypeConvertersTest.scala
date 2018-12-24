@@ -26,6 +26,7 @@ import org.apache.flink.table.api.types._
 import org.apache.flink.table.dataformat.BinaryString.fromString
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.types.Row
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
@@ -89,9 +90,7 @@ class InternalTypeConvertersTest {
       javaArray.zipWithIndex.foreach { case (field, index) =>
         if (field == null) {
           writer.setNullAt(index, t)
-        } else {
-          writer.write(index, field, t)
-        }
+        } else writer.write(index, field, t, TypeUtils.createSerializer(t))
       }
       writer.complete()
       array

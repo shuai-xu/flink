@@ -24,7 +24,14 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.typeutils.MapTypeInfo;
+import org.apache.flink.table.api.types.ArrayType;
+import org.apache.flink.table.api.types.BaseRowType;
+import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.api.types.DecimalType;
+import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.MapType;
+import org.apache.flink.table.api.types.TypeInfoWrappedType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo;
@@ -145,6 +152,53 @@ public final class BaseRowUtil {
 			return row.getBaseRow(ordinal, type.getArity());
 		} else {
 			return row.getGeneric(ordinal, serializer);
+		}
+	}
+
+	public static Object get(BaseRow row, int ordinal, DataType type) {
+		if (type.equals(org.apache.flink.table.api.types.Types.BOOLEAN)) {
+			return row.getBoolean(ordinal);
+		} else if (type.equals(org.apache.flink.table.api.types.Types.BYTE)) {
+			return row.getByte(ordinal);
+		} else if (type.equals(org.apache.flink.table.api.types.Types.SHORT)) {
+			return row.getShort(ordinal);
+		} else if (type.equals(org.apache.flink.table.api.types.Types.INT)) {
+			return row.getInt(ordinal);
+		} else if (type.equals(org.apache.flink.table.api.types.Types.LONG)) {
+			return row.getLong(ordinal);
+		} else if (type.equals(org.apache.flink.table.api.types.Types.FLOAT)) {
+			return row.getFloat(ordinal);
+		} else if (type.equals(org.apache.flink.table.api.types.Types.DOUBLE)) {
+			return row.getDouble(ordinal);
+		} else if (type instanceof DecimalType) {
+			DecimalType dt = (DecimalType) type;
+			return row.getDecimal(ordinal, dt.precision(), dt.scale());
+		} else if (type.equals(org.apache.flink.table.api.types.Types.STRING)) {
+			return row.getBinaryString(ordinal);
+		} else if (type.equals(org.apache.flink.table.api.types.Types.CHAR)) {
+			return row.getChar(ordinal);
+		} else if (type.equals(org.apache.flink.table.api.types.Types.ROWTIME_INDICATOR)) {
+			return row.getLong(ordinal);
+		} else if (type.equals(org.apache.flink.table.api.types.Types.DATE)) {
+			return row.getInt(ordinal);
+		} else if (type.equals(org.apache.flink.table.api.types.Types.TIME)) {
+			return row.getInt(ordinal);
+		} else if (type.equals(org.apache.flink.table.api.types.Types.TIMESTAMP)) {
+			return row.getLong(ordinal);
+		} else if (type.equals(org.apache.flink.table.api.types.Types.BYTE_ARRAY)) {
+			return row.getByteArray(ordinal);
+		} else if (type instanceof ArrayType) {
+			return row.getBaseArray(ordinal);
+		} else if (type instanceof MapType) {
+			return row.getBaseMap(ordinal);
+		} else if (type instanceof BaseRowType) {
+			return row.getBaseRow(ordinal, ((BaseRowType) type).getArity());
+		} else if (type instanceof GenericType) {
+			return row.getGeneric(ordinal, (GenericType) type);
+		} else if (type instanceof TypeInfoWrappedType) {
+			return row.get(ordinal, ((TypeInfoWrappedType) type).toInternalType());
+		} else {
+			throw new RuntimeException("Not support type: " + type);
 		}
 	}
 

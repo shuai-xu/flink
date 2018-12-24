@@ -147,7 +147,7 @@ public class BaseArraySerializer extends TypeSerializer<BaseArray> {
 		}
 
 		for (int i = 0; i < numElements; i++) {
-			reuseBinaryWriter.write(i, from.get(i, eleType), eleType);
+			reuseBinaryWriter.write(i, from.get(i, eleType), eleType, elementSerializer);
 		}
 		reuseBinaryWriter.complete();
 

@@ -20,9 +20,9 @@ package org.apache.flink.table.dataformat;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.table.api.types.ArrayType;
 import org.apache.flink.table.api.types.BaseRowType;
-import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.GenericType;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.MapType;
 import org.apache.flink.table.api.types.Types;
 
@@ -131,7 +131,7 @@ public interface TypeGetterSetters {
 	 */
 	BaseMap getBaseMap(int ordinal);
 
-	default Object get(int ordinal, DataType type) {
+	default Object get(int ordinal, InternalType type) {
 		if (type.equals(Types.BOOLEAN)) {
 			return getBoolean(ordinal);
 		} else if (type.equals(Types.BYTE)) {
@@ -171,9 +171,6 @@ public interface TypeGetterSetters {
 			return getBaseRow(ordinal, ((BaseRowType) type).getArity());
 		} else if (type instanceof GenericType) {
 			return getGeneric(ordinal, (GenericType) type);
-		// TODO: Move TypeInfoWrappedType from flink-table to flink-table-common
-		//} else if (type instanceof TypeInfoWrappedType) {
-		//	return get(ordinal, ((TypeInfoWrappedType) type).toInternalType());
 		} else {
 			throw new RuntimeException("Not support type: " + type);
 		}

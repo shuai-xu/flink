@@ -20,7 +20,6 @@ package org.apache.flink.table.dataformat;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
-import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.InternalType;
@@ -572,11 +571,11 @@ public final class BinaryRow implements BaseRow {
 		}
 	}
 
-	public String toOriginString(DataType... types) {
+	public String toOriginString(InternalType... types) {
 		return toOriginString(this, types);
 	}
 
-	public String toOriginString(BaseRow row, DataType[] types) {
+	public String toOriginString(BaseRow row, InternalType[] types) {
 		checkArgument(types.length == row.getArity());
 		StringBuilder build = new StringBuilder("[");
 		build.append(row.getHeader());

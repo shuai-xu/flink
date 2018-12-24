@@ -33,6 +33,7 @@ import org.apache.flink.table.api.types.TimestampType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryString;
 import org.apache.flink.table.dataformat.Decimal;
+import org.apache.flink.table.dataformat.util.BaseRowUtil;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.hadoop.io.BooleanWritable;
@@ -101,7 +102,7 @@ public class OrcSerializer implements Serializable {
 			if (row.isNullAt(i)) {
 				struct.setFieldValue(i, null);
 			} else {
-				struct.setFieldValue(i, fieldConverters[i].convert(row.get(i, fieldTypes[i])));
+				struct.setFieldValue(i, fieldConverters[i].convert(BaseRowUtil.get(row, i, fieldTypes[i])));
 			}
 		}
 		return struct;

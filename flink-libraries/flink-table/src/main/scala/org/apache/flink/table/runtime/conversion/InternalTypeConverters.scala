@@ -31,6 +31,7 @@ import org.apache.commons.codec.binary.Base64
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_PRIMITIVE_ARRAY_TYPE_INFO
 import org.apache.flink.api.common.typeinfo.{BasicArrayTypeInfo, PrimitiveArrayTypeInfo}
+import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.api.java.tuple.Tuple
 import org.apache.flink.api.java.typeutils._
 import org.apache.flink.api.scala.typeutils.{CaseClassSerializer, CaseClassTypeInfo}
@@ -43,7 +44,7 @@ import org.apache.flink.table.dataformat.BinaryArray.calculateElementSize
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.runtime.functions.BuildInScalarFunctions
 import org.apache.flink.table.typeutils.TypeUtils._
-import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, DecimalTypeInfo, TypeUtils}
+import org.apache.flink.table.typeutils._
 import org.apache.flink.types.Row
 import org.apache.flink.util.InstantiationUtil
 
@@ -342,6 +343,7 @@ object InternalTypeConverters {
 
     val internalEleT: InternalType = DataTypes.internal(eleType)
     val elementConverter: InternalTypeConverter[Any, Any, Any] = getConverterForType(eleType)
+    val internalEleSer: TypeSerializer[_] = TypeUtils.createSerializer(internalEleT)
     private val elementSize = calculateElementSize(internalEleT)
 
     override protected def toInternalImpl(scalaValue: Any): BaseArray = {
@@ -356,7 +358,8 @@ object InternalTypeConverters {
         if (o == null) {
           arrayWriter.setNullAt(i, internalEleT)
         } else {
-          arrayWriter.write(i, elementConverter.toInternal(o), internalEleT)
+          arrayWriter.write(
+            i, elementConverter.toInternal(o), internalEleT, internalEleSer)
         }
       scalaValue match {
         case a: Array[_] => a.zipWithIndex.foreach(e => writeElement(e._1, e._2))
@@ -412,6 +415,9 @@ object InternalTypeConverters {
     private val internalKeyT = DataTypes.internal(keyType)
     private val internalValueT = DataTypes.internal(valueType)
 
+    private val internalKeySer = TypeUtils.createSerializer(internalKeyT)
+    private val internalValueSer = TypeUtils.createSerializer(internalValueT)
+
     private val keyConverter = getConverterForType(keyType)
     private val valueConverter = getConverterForType(valueType)
 
@@ -422,14 +428,17 @@ object InternalTypeConverters {
         a: Array[_],
         elementSize: Int,
         elementType: InternalType,
+        elementSerializer: TypeSerializer[_],
         elementConverter: InternalTypeConverter[_, _, _]) = {
+
       val array = new BinaryArray
       val arrayWriter = new BinaryArrayWriter(array, a.length, elementSize)
       a.zipWithIndex.foreach { case (o, index: Int) =>
         if (o == null) {
           arrayWriter.setNullAt(index, elementType)
         } else {
-          arrayWriter.write(index, elementConverter.toInternal(o), elementType)
+          arrayWriter.write(
+            index, elementConverter.toInternal(o), elementType, elementSerializer)
         }
       }
       arrayWriter.complete()
@@ -466,8 +475,8 @@ object InternalTypeConverters {
       }
 
       BinaryMap.valueOf(
-        toBinaryArray(keys, keyElementSize, internalKeyT, keyConverter),
-        toBinaryArray(values, valueElementSize, internalValueT, valueConverter))
+        toBinaryArray(keys, keyElementSize, internalKeyT, internalKeySer, keyConverter),
+        toBinaryArray(values, valueElementSize, internalValueT, internalValueSer, valueConverter))
     }
 
     override def toExternalImpl(internalValue: BaseMap): Any = {

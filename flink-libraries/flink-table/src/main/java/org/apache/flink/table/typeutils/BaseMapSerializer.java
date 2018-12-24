@@ -147,8 +147,8 @@ public class BaseMapSerializer extends TypeSerializer<BaseMap> {
 
 		int i = 0;
 		for (Map.Entry<Object, Object> entry : javaMap.entrySet()) {
-			reuseKeyWriter.write(i, entry.getKey(), keyType);
-			reuseValueWriter.write(i, entry.getValue(), valueType);
+			reuseKeyWriter.write(i, entry.getKey(), keyType, keySerializer);
+			reuseValueWriter.write(i, entry.getValue(), valueType, valueSerializer);
 		}
 		reuseKeyWriter.complete();
 		reuseValueWriter.complete();
