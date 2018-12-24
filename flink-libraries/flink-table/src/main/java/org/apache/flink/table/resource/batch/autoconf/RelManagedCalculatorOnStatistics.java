@@ -309,7 +309,8 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 
 	@Override
 	public Void visit(BatchExecRel<?> batchExec) {
-		throw new TableException("could not reach here. " + batchExec.getClass());
+		calculateNoManagedMem(batchExec);
+		return null;
 	}
 
 	private void visitChildren(BatchExecRel<?> rowBatchExec) {

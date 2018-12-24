@@ -375,7 +375,11 @@ public class RunningUnitGenerator implements BatchExecRelVisitor<List<RelStageEx
 
 	@Override
 	public List<RelStageExchangeInfo> visit(BatchExecRel<?> batchExec) {
-		throw new TableException("could not reach here.");
+		if (batchExec instanceof SingleRel) {
+			return visitOneStageSingleRel((SingleRel & BatchExecRel<?>) batchExec);
+		} else {
+			throw new TableException("Unsupported rel: " + batchExec);
+		}
 	}
 
 	/**

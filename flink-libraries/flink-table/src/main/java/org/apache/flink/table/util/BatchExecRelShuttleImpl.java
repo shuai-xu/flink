@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.util;
 
-import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
@@ -192,7 +191,7 @@ public class BatchExecRelShuttleImpl implements BatchExecRelVisitor<BatchExecRel
 
 	@Override
 	public BatchExecRel<?> visit(BatchExecRel<?> other) {
-		throw new TableException("Unknown BatchExecRel: " + other.getClass().getCanonicalName());
+		return visitInputs(other);
 	}
 
 	protected BatchExecRel<?> visitInputs(BatchExecRel<?> batchExecRel) {
