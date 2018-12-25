@@ -145,9 +145,10 @@ public class SlotManagerTest extends TestLogger {
 
 		final JobID jobId = new JobID();
 		final AllocationID allocationID = new AllocationID();
+		final List<SlotTag> tags = Arrays.asList(new SlotTag("tag-1", jobId), new SlotTag("tag-2", jobId));
 
 		final SlotStatus slotStatus1 = new SlotStatus(slotId1, resourceProfile, null, null, null, 3L);
-		final SlotStatus slotStatus2 = new SlotStatus(slotId2, resourceProfile, jobId, allocationID, resourceProfile, 6L);
+		final SlotStatus slotStatus2 = new SlotStatus(slotId2, resourceProfile, jobId, allocationID, resourceProfile, tags, 6L);
 		final SlotReport slotReport = new SlotReport(Arrays.asList(slotStatus1, slotStatus2));
 
 		try (SlotManager slotManager = createSlotManager(resourceManagerId, resourceManagerActions)) {
@@ -164,6 +165,8 @@ public class SlotManagerTest extends TestLogger {
 			assertNotNull(slotTwo);
 			assertEquals(TaskManagerSlot.State.ALLOCATED, slotTwo.getState());
 			assertEquals(6L, slotTwo.getVersion());
+
+			assertEquals(tags, slotManager.allocationIdTags.get(allocationID));
 		}
 	}
 

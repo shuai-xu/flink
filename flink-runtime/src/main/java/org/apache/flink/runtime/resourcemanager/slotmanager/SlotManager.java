@@ -393,7 +393,8 @@ public class SlotManager implements AutoCloseable {
 					slotStatus.getAllocationResourceProfile(),
 					slotStatus.getResourceProfile(),
 					taskExecutorConnection,
-					slotStatus.getVersion());
+					slotStatus.getVersion(),
+					slotStatus.getTags());
 			}
 		}
 	}
@@ -602,7 +603,8 @@ public class SlotManager implements AutoCloseable {
 			ResourceProfile allocationResourceProfile,
 			ResourceProfile resourceProfile,
 			TaskExecutorConnection taskManagerConnection,
-			long initialVersion) {
+			long initialVersion,
+			List<SlotTag> tags) {
 
 		if (slots.containsKey(slotId)) {
 			// remove the old slot first
@@ -618,6 +620,14 @@ public class SlotManager implements AutoCloseable {
 		slots.put(slotId, slot);
 
 		updateSlot(slotId, allocationId, jobId);
+
+		if (allocationId != null) {
+			if (tags == null) {
+				LOG.warn("Slot with SlotID {} is registered with AllocationID {}, slot tags should not be null.", slotId, allocationId);
+			} else {
+				allocationIdTags.put(allocationId, tags);
+			}
+		}
 
 		if (slotListener != null && allocationId != null) {
 			Preconditions.checkNotNull(allocationResourceProfile,
