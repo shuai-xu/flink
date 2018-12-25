@@ -44,7 +44,7 @@ public class SlotTag {
 			case JOB:
 				return jobId.equals(tag.getJobId()) && tagName.equals(tag.getTagName());
 			case FLINK:
-				return tagName.equals(getTagName());
+				return tagName.equals(tag.getTagName());
 			default:
 				// should never happen
 				throw new RuntimeException("Unknown slot tag scope {}.");
