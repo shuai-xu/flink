@@ -68,8 +68,8 @@ public class SubtaskMetricsHandlerTest extends TestLogger {
 		Map<String, String> metrics = handler.getMapFor(pathParams, store);
 
 		assertEquals("4", metrics.get("abc.metric5"));
-		assertEquals("5", metrics.get("opname.abc.metric6"));
-		assertEquals("6", metrics.get("opname.abc.metric7"));
+		assertEquals("5", metrics.get("opid.abc.metric6"));
+		assertEquals("6", metrics.get("opid.abc.metric7"));
 	}
 
 	@Test

@@ -178,9 +178,9 @@ export class DagreService {
     const vertices = this.sourceData.verticesDetail.vertices.find(v => v.id === operators.vertex_id);
 
     const numRecordsIn = Math.max(
-      ...vertices.subtask_metrics.map(m => this.parseFloat(m[ `${operators.metric_name}.numRecordsInOperator` ])));
+      ...vertices.subtask_metrics.map(m => this.parseFloat(m[ `${operators.operator_id}.numRecordsInOperator` ])));
     const numRecordsOut = Math.max(
-      ...vertices.subtask_metrics.map(m => this.parseFloat(m[ `${operators.metric_name}.numRecordsOutOperator` ])));
+      ...vertices.subtask_metrics.map(m => this.parseFloat(m[ `${operators.operator_id}.numRecordsOutOperator` ])));
     this.operatorsDetailsCache.set(nodeRenderInfo, {
         displayName: displayName,
         name: operators.name,

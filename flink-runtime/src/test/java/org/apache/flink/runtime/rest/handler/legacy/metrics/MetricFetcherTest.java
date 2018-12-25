@@ -154,11 +154,11 @@ public class MetricFetcherTest extends TestLogger {
 		c2.inc(2);
 		c3.inc(2);
 		c4.inc(2);
-
-		counters.put(c1, new Tuple2<>(new QueryScopeInfo.OperatorQueryScopeInfo(jobID.toString(), "taskid", 2, "opname", "abc"), "numRecordsInOperator"));
+		QueryScopeInfo.OperatorQueryScopeInfo operatorQueryScopeInfo = new QueryScopeInfo.OperatorQueryScopeInfo(jobID.toString(), "taskid", 2, "opname", "abc", "opid");
+		counters.put(c1, new Tuple2<>(operatorQueryScopeInfo, "numRecordsInOperator"));
 		counters.put(c2, new Tuple2<>(new QueryScopeInfo.TaskQueryScopeInfo(jobID.toString(), "taskid", 2, "abc"), "tc"));
-		counters.put(c3, new Tuple2<>(new QueryScopeInfo.OperatorQueryScopeInfo(jobID.toString(), "taskid", 2, "opname", "abc"), "tps"));
-		counters.put(c4, new Tuple2<>(new QueryScopeInfo.OperatorQueryScopeInfo(jobID.toString(), "taskid", 2, "opname", "abc"), "delay"));
+		counters.put(c3, new Tuple2<>(operatorQueryScopeInfo, "tps"));
+		counters.put(c4, new Tuple2<>(operatorQueryScopeInfo, "delay"));
 		meters.put(new Meter() {
 			@Override
 			public void markEvent() {

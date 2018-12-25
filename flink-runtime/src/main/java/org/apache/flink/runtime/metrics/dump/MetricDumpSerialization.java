@@ -238,6 +238,7 @@ public class MetricDumpSerialization {
 				out.writeUTF(operatorInfo.jobID);
 				out.writeUTF(operatorInfo.vertexID);
 				out.writeInt(operatorInfo.subtaskIndex);
+				out.writeUTF(operatorInfo.operatorId);
 				out.writeUTF(operatorInfo.operatorName);
 				break;
 			default:
@@ -421,8 +422,9 @@ public class MetricDumpSerialization {
 				jobID = dis.readUTF();
 				vertexID = dis.readUTF();
 				subtaskIndex = dis.readInt();
+				String operatorId = dis.readUTF();
 				String operatorName = dis.readUTF();
-				return new QueryScopeInfo.OperatorQueryScopeInfo(jobID, vertexID, subtaskIndex, operatorName, scope);
+				return new QueryScopeInfo.OperatorQueryScopeInfo(jobID, vertexID, subtaskIndex, operatorName, scope, operatorId);
 			default:
 				throw new IOException("Unknown scope category: " + cat);
 		}

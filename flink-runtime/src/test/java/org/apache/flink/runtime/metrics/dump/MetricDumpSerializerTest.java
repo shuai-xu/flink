@@ -138,18 +138,17 @@ public class MetricDumpSerializerTest {
 				return 10;
 			}
 		};
-
+		QueryScopeInfo.OperatorQueryScopeInfo operatorQueryScopeInfo = new QueryScopeInfo.OperatorQueryScopeInfo("jid", "vid", 2, "opname", "E", "opid");
 		counters.put(c1, new Tuple2<QueryScopeInfo, String>(new QueryScopeInfo.JobManagerQueryScopeInfo("A"), "c1"));
 		counters.put(c2, new Tuple2<QueryScopeInfo, String>(new QueryScopeInfo.TaskManagerQueryScopeInfo("tmid", "B"), "c2"));
-		counters.put(c3, new Tuple2<QueryScopeInfo, String>(new QueryScopeInfo.OperatorQueryScopeInfo("jid", "vid", 2, "opname", "E"), "numRecordsInOperator"));
-		counters.put(c4, new Tuple2<QueryScopeInfo, String>(new QueryScopeInfo.OperatorQueryScopeInfo("jid", "vid", 2, "opname", "E"), "numRecordsOutOperator"));
+		counters.put(c3, new Tuple2<QueryScopeInfo, String>(operatorQueryScopeInfo, "numRecordsInOperator"));
+		counters.put(c4, new Tuple2<QueryScopeInfo, String>(operatorQueryScopeInfo, "numRecordsOutOperator"));
 		meters.put(m1, new Tuple2<QueryScopeInfo, String>(new QueryScopeInfo.JobQueryScopeInfo("jid", "C"), "c3"));
 		gauges.put(g1, new Tuple2<QueryScopeInfo, String>(new QueryScopeInfo.TaskQueryScopeInfo("jid", "vid", 2, "D"), "g1"));
-		histograms.put(h1, new Tuple2<QueryScopeInfo, String>(new QueryScopeInfo.OperatorQueryScopeInfo("jid", "vid", 2, "opname", "E"), "h1"));
+		histograms.put(h1, new Tuple2<QueryScopeInfo, String>(operatorQueryScopeInfo, "h1"));
 
 		MetricDumpSerialization.MetricSerializationResult serialized = serializer.serialize(counters, gauges, histograms, meters);
 		List<MetricDump> deserialized = deserializer.deserialize(serialized);
-
 		// ===== Counters ==============================================================================================
 		assertEquals(6, deserialized.size());
 

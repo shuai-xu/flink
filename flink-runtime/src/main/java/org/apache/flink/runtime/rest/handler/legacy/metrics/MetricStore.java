@@ -229,7 +229,7 @@ public class MetricStore {
 					 * divide by operator and instead use the concatenation of subtask index, operator name and metric name
 					 * as the name.
 					 */
-					addMetric(subtask.metrics, operatorInfo.operatorName + "." + name, metric);
+					addMetric(subtask.metrics, operatorInfo.operatorId + "." + name, metric);
 					addMetric(task.metrics, operatorInfo.subtaskIndex + "." + operatorInfo.operatorName + "." + name, metric);
 					break;
 				default:
