@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.batch.sql.subquery
 
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.INT_TYPE_INFO
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
@@ -33,7 +33,7 @@ class SubQueryITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     InternalTypeConverters.createToExternalConverter(DataTypes.createRowType())
     registerCollection("t1", Seq(row(1, 2, 3)),
       new RowTypeInfo(INT_TYPE_INFO, INT_TYPE_INFO, INT_TYPE_INFO), "t1a, t1b, t1c")

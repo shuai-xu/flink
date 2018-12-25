@@ -18,14 +18,15 @@
 
 package org.apache.flink.table.plan.rules.physical.batch
 
-import org.apache.calcite.plan.RelOptRule._
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
-import org.apache.calcite.rel.RelNode
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSort
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalSort
+
+import org.apache.calcite.plan.RelOptRule._
+import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
+import org.apache.calcite.rel.RelNode
 
 class BatchExecSortRule extends RelOptRule(
   operand(classOf[FlinkLogicalSort], operand(classOf[RelNode], any)), "BatchExecSortRule") {
@@ -38,7 +39,7 @@ class BatchExecSortRule extends RelOptRule(
   override def onMatch(call: RelOptRuleCall): Unit = {
     val sort = call.rels(0).asInstanceOf[FlinkLogicalSort]
     val conf = sort.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
-    val enableRangeSort = conf.getParameters.getBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE)
+    val enableRangeSort = conf.getConf.getBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE)
     val distribution = if (enableRangeSort) {
       FlinkRelDistribution.range(sort.getCollation.getFieldCollations)
     } else {

@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.util
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.table.api.dataview.Order
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
-import org.apache.flink.table.api.{TableConfig, TableException}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
@@ -65,7 +65,9 @@ object RankUtil {
       config: TableConfig): (Option[RankRange], Option[RexNode]) = {
 
     // Converts the condition to conjunctive normal form (CNF)
-    val cnfCondition = FlinkRexUtil.toCnf(rexBuilder, config.getMaxCnfNodeCount, predicate)
+    val cnfCondition = FlinkRexUtil.toCnf(rexBuilder,
+      config.getConf.getInteger(TableConfigOptions.SQL_CBO_CNF_NODES_LIMIT),
+      predicate)
 
     // split the condition into sort limit condition and other condition
     val (limitPreds: Seq[LimitPredicate], otherPreds: Seq[RexNode]) = cnfCondition match {
@@ -456,7 +458,7 @@ object RankUtil {
             // we can utilize unary rank function to speed up processing
             UnaryUpdateRank(uniqueKeys.iterator().next().toArray)
           } else {
-            if (tableConfig.isTopNApproxEnabled) {
+            if (tableConfig.getConf.getBoolean(TableConfigOptions.BLINK_TOPN_APPROXIMATE_ENABLED)) {
               // if enabled in config, we can use approximate rank function in this scenario.
               // It is accurate in most situations, and faster than retract rank
               ApproxUpdateRank(uniqueKeys.iterator().next().toArray)

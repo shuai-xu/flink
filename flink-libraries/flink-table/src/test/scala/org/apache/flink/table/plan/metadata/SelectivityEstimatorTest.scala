@@ -21,7 +21,7 @@ package org.apache.flink.table.plan.metadata
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.types.DataType
-import org.apache.flink.table.api.{TableConfig, TableSchema}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableSchema}
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
@@ -1150,10 +1150,10 @@ class SelectivityEstimatorTest {
   @Test
   def testSelectivityWithTableConfig(): Unit = {
     val tableConfig1 = new TableConfig()
-    tableConfig1.getParameters.setDouble(TableConfig.SQL_CBO_SELECTIVITY_COMPARISON_DEFAULT, 0.05)
-    tableConfig1.getParameters.setDouble(TableConfig.SQL_CBO_SELECTIVITY_EQUALS_DEFAULT, 0.015)
-    tableConfig1.getParameters.setDouble(TableConfig.SQL_CBO_SELECTIVITY_ISNULL_DEFAULT, 0.015)
-    tableConfig1.getParameters.setDouble(TableConfig.SQL_CBO_SELECTIVITY_DEFAULT, 0.025)
+    tableConfig1.getConf.setDouble(TableConfigOptions.SQL_CBO_SELECTIVITY_COMPARISON_DEFAULT, 0.05)
+    tableConfig1.getConf.setDouble(TableConfigOptions.SQL_CBO_SELECTIVITY_EQUALS_DEFAULT, 0.015)
+    tableConfig1.getConf.setDouble(TableConfigOptions.SQL_CBO_SELECTIVITY_ISNULL_DEFAULT, 0.015)
+    tableConfig1.getConf.setDouble(TableConfigOptions.SQL_CBO_SELECTIVITY_DEFAULT, 0.025)
     val scan1 = mockScan(tableConfig = Some(tableConfig1))
     val estimator1 = new SelectivityEstimator(scan1, mq)
     // amount = 50
@@ -1173,7 +1173,7 @@ class SelectivityEstimatorTest {
 
     // illegal selectivity value in config
     val tableConfig2 = new TableConfig()
-    tableConfig2.getParameters.setDouble(TableConfig.SQL_CBO_SELECTIVITY_COMPARISON_DEFAULT, 10)
+    tableConfig2.getConf.setDouble(TableConfigOptions.SQL_CBO_SELECTIVITY_COMPARISON_DEFAULT, 10)
     val scan2 = mockScan(tableConfig = Some(tableConfig2))
     val estimator2 = new SelectivityEstimator(scan2, mq)
     assertEquals(Some(0.15), estimator2.evaluate(predicate1))

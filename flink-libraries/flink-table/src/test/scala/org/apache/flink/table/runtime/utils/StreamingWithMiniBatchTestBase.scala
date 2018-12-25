@@ -19,8 +19,9 @@ package org.apache.flink.table.runtime.utils
 
 import java.util
 
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
-import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.{MiniBatchMode, MiniBatchOff, MiniBatchOn, MicroBatchOn}
+import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.{MicroBatchOn, MiniBatchMode, MiniBatchOff, MiniBatchOn}
 import org.junit.runners.Parameterized
 
 import scala.collection.JavaConversions._
@@ -34,19 +35,20 @@ abstract class StreamingWithMiniBatchTestBase(minibatch: MiniBatchMode, state: S
     val tableConfig = tEnv.getConfig
     minibatch match {
       case MiniBatchOn =>
+        tableConfig.getConf.setBoolean(TableConfigOptions.BLINK_MINIBATCH_JOIN_ENABLED, true)
         tableConfig
         .enableMiniBatch
-        .enableMiniBatchJoin
         .withMiniBatchTriggerTime(1000L)
         .withMiniBatchTriggerSize(3)
       case MicroBatchOn =>
+        tableConfig.getConf.setBoolean(TableConfigOptions.BLINK_MINIBATCH_JOIN_ENABLED, true)
         tableConfig
         .enableMicroBatch
-        .enableMiniBatchJoin
         .withMicroBatchTriggerTime(1000L)
         .withMiniBatchTriggerSize(3)
       case MiniBatchOff =>
-        tableConfig.disableMiniBatch.disableMiniBatchJoin
+        tableConfig.getConf.setBoolean(TableConfigOptions.BLINK_MINIBATCH_JOIN_ENABLED, false)
+        tableConfig.disableMiniBatch
     }
   }
 

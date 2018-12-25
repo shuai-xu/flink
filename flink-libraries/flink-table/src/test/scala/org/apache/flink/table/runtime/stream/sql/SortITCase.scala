@@ -19,6 +19,7 @@
 package org.apache.flink.table.runtime.stream.sql
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.{StreamingWithStateTestBase, TestingRetractSink}
@@ -52,7 +53,7 @@ class SortITCase(mode: StateBackendMode)
     tEnv.registerTable("a", da)
 
     val sink = new TestingRetractSink
-    tEnv.getConfig.enableNonTemporalSort
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.BLINK_NON_TEMPORAL_SORT_ENABLED, true)
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
     results.addSink(sink).setParallelism(1)
     env.execute()
@@ -82,7 +83,7 @@ class SortITCase(mode: StateBackendMode)
     tEnv.registerTable("a", da)
 
     val sink = new TestingRetractSink
-    tEnv.getConfig.enableNonTemporalSort
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.BLINK_NON_TEMPORAL_SORT_ENABLED, true)
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
     results.addSink(sink).setParallelism(1)
     env.execute()
@@ -112,7 +113,7 @@ class SortITCase(mode: StateBackendMode)
     tEnv.registerTable("a", da)
 
     val sink = new TestingRetractSink
-    tEnv.getConfig.enableNonTemporalSort
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.BLINK_NON_TEMPORAL_SORT_ENABLED, true)
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
     results.addSink(sink).setParallelism(1)
     env.execute()
@@ -142,7 +143,7 @@ class SortITCase(mode: StateBackendMode)
     tEnv.registerTable("a", da)
 
     val sink = new TestingRetractSink
-    tEnv.getConfig.enableNonTemporalSort
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.BLINK_NON_TEMPORAL_SORT_ENABLED, true)
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
     results.addSink(sink).setParallelism(1)
     env.execute()
@@ -178,7 +179,7 @@ class SortITCase(mode: StateBackendMode)
     tEnv.registerTable("a", da)
 
     val sink = new TestingRetractSink
-    tEnv.getConfig.enableNonTemporalSort
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.BLINK_NON_TEMPORAL_SORT_ENABLED, true)
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
     results.addSink(sink).setParallelism(1)
     env.execute()
@@ -208,7 +209,7 @@ class SortITCase(mode: StateBackendMode)
     tEnv.registerTable("a", da)
 
     val sink = new TestingRetractSink
-    tEnv.getConfig.enableNonTemporalSort
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.BLINK_NON_TEMPORAL_SORT_ENABLED, true)
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
     results.addSink(sink).setParallelism(1)
     env.execute()

@@ -18,7 +18,7 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.api.functions.UserDefinedFunction
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.codegen.CodeGeneratorContext
@@ -98,7 +98,8 @@ class BatchExecSortAggregate(
           FlinkRelDistribution.hash(grouping.map(Integer.valueOf).toList, requireStrict = false)
         } else {
           val tableConfig = FlinkRelOptUtil.getTableConfig(this)
-          if (tableConfig.aggregateShuffleByPartialKeyEnabled &&
+          if (tableConfig.getConf.getBoolean(
+            TableConfigOptions.SQL_CBO_AGG_SHUFFLE_BY_PARTIALKEY_ENABLED) &&
               groupKeysList.containsAll(shuffleKeys)) {
             // If partialKey is enabled, push down partialKey requirement into input.
             FlinkRelDistribution.hash(shuffleKeys.map(k => Integer.valueOf(grouping(k))),

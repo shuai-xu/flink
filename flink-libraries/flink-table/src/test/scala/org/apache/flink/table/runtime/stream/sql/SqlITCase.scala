@@ -23,6 +23,7 @@ import java.io.{ByteArrayOutputStream, PrintStream}
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.utils.{Func15, SplitUDF}
 import org.apache.flink.table.runtime.utils._
@@ -178,7 +179,7 @@ class SqlITCase extends StreamingTestBase {
   /** test union of multiple inputs **/
   @Test
   def testUnionOfMultiInputs(): Unit = {
-    tEnv.getConfig.enableValuesSourceInput
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.BLINK_VALUES_SOURCE_INPUT_ENABLED, true)
 
     val sqlQuery = "select max(v) as x, min(v) as n from \n" +
       "(values cast(-100 as double), cast(2 as double), cast(-86.4 as double)) as t(v)"

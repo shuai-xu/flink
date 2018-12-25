@@ -105,7 +105,8 @@ class BatchExecSortWindowAggregate(
     val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
     val outputRowType = getOutputType
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
-    val groupBufferLimitSize = ExecResourceUtil.getWindowAggBufferLimitSize(tableEnv.getConfig)
+    val groupBufferLimitSize = ExecResourceUtil.getWindowAggBufferLimitSize(
+      tableEnv.getConfig.getConf)
 
     val inputType = DataTypes.internal(input.getOutputType).asInstanceOf[BaseRowType]
     val generatedOperator = if (grouping.isEmpty) {

@@ -17,10 +17,10 @@
  */
 package org.apache.flink.table.runtime.batch.sql
 
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{DOUBLE_TYPE_INFO, FLOAT_TYPE_INFO, INT_TYPE_INFO, STRING_TYPE_INFO, SHORT_TYPE_INFO}
+import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{DOUBLE_TYPE_INFO, FLOAT_TYPE_INFO, INT_TYPE_INFO, SHORT_TYPE_INFO, STRING_TYPE_INFO}
 import org.apache.flink.api.scala._
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.functions.aggregate.CountAggFunction
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
@@ -36,7 +36,7 @@ class OverWindowAggITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     registerCollection("Table5", data5, type5, "d, e, f, g, h", nullablesOfData5)
     registerCollection("ShuflledTable5",
       Random.shuffle(data5), type5, "sd, se, sf, sg, sh", nullablesOfData5)

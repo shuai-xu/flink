@@ -30,7 +30,7 @@ import org.apache.flink.runtime.io.disk.iomanager.HeaderlessChannelReaderInputVi
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.memory.MemoryAllocationException;
 import org.apache.flink.runtime.memory.MemoryManager;
-import org.apache.flink.table.api.TableConfig;
+import org.apache.flink.table.api.TableConfigOptions;
 import org.apache.flink.table.runtime.join.batch.hashtable.longtable.LongHybridHashTable;
 import org.apache.flink.table.runtime.util.FileChannelUtil;
 import org.apache.flink.table.runtime.util.MemorySegmentPool;
@@ -181,12 +181,12 @@ public abstract class BaseHybridHashTable implements MemorySegmentPool {
 			long buildRowCount,
 			boolean tryDistinctBuildRow) {
 
-		this.compressionEnable = conf.getBoolean(TableConfig.SQL_EXEC_SPILL_COMPRESSION_ENABLE());
+		this.compressionEnable = conf.getBoolean(TableConfigOptions.SQL_EXEC_SPILL_COMPRESSION_ENABLE);
 		this.compressionCodecFactory = this.compressionEnable
 				? BlockCompressionFactoryLoader.createBlockCompressionFactory(conf.getString(
-				TableConfig.SQL_EXEC_SPILL_COMPRESSION_CODEC()), conf)
+				TableConfigOptions.SQL_EXEC_SPILL_COMPRESSION_CODEC), conf)
 				: null;
-		this.compressionBlockSize = conf.getInteger(TableConfig.SQL_EXEC_SPILL_COMPRESSION_BLOCK_SIZE());
+		this.compressionBlockSize = conf.getInteger(TableConfigOptions.SQL_EXEC_SPILL_COMPRESSION_BLOCK_SIZE);
 		this.owner = owner;
 		this.avgRecordLen = avgRecordLen;
 		this.buildRowCount = buildRowCount;

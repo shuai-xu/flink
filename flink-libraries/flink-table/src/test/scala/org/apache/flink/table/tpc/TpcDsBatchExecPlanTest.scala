@@ -18,7 +18,7 @@
 package org.apache.flink.table.tpc
 
 import org.apache.flink.core.fs.Path
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.dataformat.ColumnarRow
 import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.InsertRuntimeFilterRule
@@ -65,11 +65,12 @@ abstract class TpcDsBatchExecPlanTest(
       tEnv.alterTableStats(tableName, Some(tableStats))
     }
     TpcUtils.disableParquetFilterPushDown(tEnv)
-    tEnv.getConfig.setJoinReorderEnabled(joinReorderEnabled)
-    tEnv.getConfig.setSubPlanReuse(true)
-    tEnv.getConfig.setTableSourceReuse(false)
-    tEnv.getConfig.getParameters.setBoolean(TableConfig.SQL_RUNTIME_FILTER_ENABLE, true)
-    tEnv.getConfig.getParameters.setLong(TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD,
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, joinReorderEnabled)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, false)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_RUNTIME_FILTER_ENABLE, true)
+    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_HASH_JOIN_BROADCAST_THRESHOLD,
                                             10 * 1024 * 1024)
   }
 

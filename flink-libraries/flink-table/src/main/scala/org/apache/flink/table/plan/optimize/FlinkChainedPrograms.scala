@@ -21,7 +21,7 @@ package org.apache.flink.table.plan.optimize
 import java.util
 
 import org.apache.calcite.rel.RelNode
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.util.Logging
 
 import scala.collection.JavaConverters._
@@ -63,7 +63,8 @@ class FlinkChainedPrograms[OC <: OptimizeContext] extends Logging {
     val blackList = mutable.ListBuffer[String]()
     if (context.getContext != null) {
       val tableConfig = context.getContext.unwrap(classOf[TableConfig])
-      if (tableConfig != null && !tableConfig.joinReorderEnabled) {
+      if (tableConfig != null &&
+          !tableConfig.getConf.getBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED)) {
         blackList += "join_reorder"
       }
     }

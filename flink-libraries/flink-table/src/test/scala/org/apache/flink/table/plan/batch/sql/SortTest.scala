@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.batch.sql
 
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.util.{BatchExecTableTestUtil, TableTestBatchExecBase}
 import org.junit.{Before, Test}
@@ -31,7 +31,7 @@ class SortTest extends TableTestBatchExecBase {
 
   @Before
   def setup(): Unit = {
-    tableConfig.getParameters.setBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE, true)
+    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, true)
     util.addTable[(Int, Long, Long)]("MyTable", 'a, 'b, 'c)
   }
 
@@ -43,8 +43,8 @@ class SortTest extends TableTestBatchExecBase {
 
   @Test
   def testSortWithForcedSinglePartition(): Unit = {
-    tableConfig.getParameters.setBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE, false)
-    tableConfig.getParameters.setInteger(TableConfig.SQL_EXEC_SORT_DEFAULT_LIMIT, -1)
+    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, false)
+    tableConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_DEFAULT_LIMIT, -1)
 
     val sqlQuery = "SELECT a, c FROM MyTable ORDER BY a DESC"
     util.verifyPlan(sqlQuery)
@@ -52,16 +52,17 @@ class SortTest extends TableTestBatchExecBase {
 
   @Test
   def testSortWithForcedSinglePartitionAndLimit(): Unit = {
-    val oldSortEnable = tableConfig.getParameters.getBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE)
-    val oldLimitValue = tableConfig.getParameters.getInteger(
-      TableConfig.SQL_EXEC_SORT_DEFAULT_LIMIT)
-    tableConfig.getParameters.setBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE, false)
-    tableConfig.getParameters.setInteger(TableConfig.SQL_EXEC_SORT_DEFAULT_LIMIT, 200)
+    val oldSortEnable = tableConfig.getConf.getBoolean(
+      TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE)
+    val oldLimitValue = tableConfig.getConf.getInteger(
+      TableConfigOptions.SQL_EXEC_SORT_DEFAULT_LIMIT)
+    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, false)
+    tableConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_DEFAULT_LIMIT, 200)
 
     val sqlQuery = "SELECT a, c FROM MyTable ORDER BY a DESC"
     util.verifyPlan(sqlQuery)
-    tableConfig.getParameters.setBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE, oldSortEnable)
-    tableConfig.getParameters.setInteger(TableConfig.SQL_EXEC_SORT_DEFAULT_LIMIT, oldLimitValue)
+    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, oldSortEnable)
+    tableConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_DEFAULT_LIMIT, oldLimitValue)
   }
 
   @Test

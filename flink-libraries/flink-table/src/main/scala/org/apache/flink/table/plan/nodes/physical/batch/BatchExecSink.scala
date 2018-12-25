@@ -111,14 +111,14 @@ class BatchExecSink[T](
     val streamTransformation = boundedStream.getTransformation
     val preferredResources = sinkTransformation.getPreferredResources
     if (preferredResources == null) {
-      val heapMem = ExecResourceUtil.getSinkMem(tableConfig)
-      val resource = ExecResourceUtil.getResourceSpec(tableConfig, heapMem)
+      val heapMem = ExecResourceUtil.getSinkMem(tableConfig.getConf)
+      val resource = ExecResourceUtil.getResourceSpec(tableConfig.getConf, heapMem)
       sinkTransformation.setResources(resource, resource)
     }
     if (sinkTransformation.getMaxParallelism > 0) {
       sinkTransformation.setParallelism(sinkTransformation.getMaxParallelism)
     } else {
-      val configSinkParallelism = ExecResourceUtil.getSinkParallelism(tableConfig)
+      val configSinkParallelism = ExecResourceUtil.getSinkParallelism(tableConfig.getConf)
       if (configSinkParallelism > 0) {
         sinkTransformation.setParallelism(configSinkParallelism)
       } else if (streamTransformation.getParallelism > 0) {
@@ -198,7 +198,7 @@ class BatchExecSink[T](
           operator,
           outputTypeInfo,
           input.getParallelism)
-        val defaultResource = ExecResourceUtil.getDefaultResourceSpec(config)
+        val defaultResource = ExecResourceUtil.getDefaultResourceSpec(config.getConf)
         transformation.setResources(defaultResource, defaultResource)
         transformation
     }

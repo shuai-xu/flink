@@ -25,8 +25,7 @@ import java.math.{BigDecimal => JBigDecimal}
 import java.util
 
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.types.Row
 
@@ -64,24 +63,24 @@ object TpcUtils {
 
   def disableBroadcastHashJoin(tEnv: BatchTableEnvironment): Unit = {
     val config = new Configuration()
-    config.addAll(tEnv.getConfig.getParameters)
-    config.setLong(TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
-    tEnv.getConfig.setParameters(config)
+    config.addAll(tEnv.getConfig.getConf)
+    config.setLong(TableConfigOptions.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
+    tEnv.getConfig.setConf(config)
   }
 
   def disableRangeSort(tEnv: BatchTableEnvironment): Unit = {
     val config = new Configuration()
-    config.addAll(tEnv.getConfig.getParameters)
-    config.setBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE, false)
-    tEnv.getConfig.setParameters(config)
+    config.addAll(tEnv.getConfig.getConf)
+    config.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, false)
+    tEnv.getConfig.setConf(config)
   }
 
   def disableParquetFilterPushDown(tEnv: BatchTableEnvironment): Unit = {
     val config = new Configuration()
-    config.addAll(tEnv.getConfig.getParameters)
-    config.setBoolean(TableConfig.SQL_EXEC_SOURCE_PARQUET_ENABLE_PREDICATE_PUSHDOWN, false)
-    config.getBoolean(TableConfig.SQL_EXEC_SOURCE_ORC_ENABLE_PREDICATE_PUSHDOWN, false)
-    tEnv.getConfig.setParameters(config)
+    config.addAll(tEnv.getConfig.getConf)
+    config.setBoolean(TableConfigOptions.SQL_EXEC_SOURCE_PARQUET_ENABLE_PREDICATE_PUSHDOWN, false)
+    config.getBoolean(TableConfigOptions.SQL_EXEC_SOURCE_ORC_ENABLE_PREDICATE_PUSHDOWN, false)
+    tEnv.getConfig.setConf(config)
   }
 
   def formatResult(result: Seq[Row]): JList[String] = {

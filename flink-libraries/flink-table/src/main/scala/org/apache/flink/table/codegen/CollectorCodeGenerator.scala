@@ -17,12 +17,11 @@
  */
 package org.apache.flink.table.codegen
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.runtime.collector.{TableAsyncCollector, TableFunctionCollector}
-
 
 /**
   * A code generator for generating [[org.apache.flink.util.Collector]]s.
@@ -60,7 +59,7 @@ object CollectorCodeGenerator {
 
     val unboxingCodeSplit = generateSplitFunctionCalls(
       ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-      config.getMaxGeneratedCodeLength,
+      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
       "inputUnbox",
       "private final void",
       ctx.reuseFieldCode().length,
@@ -168,7 +167,7 @@ object CollectorCodeGenerator {
 
     val unboxingCodeSplit = generateSplitFunctionCalls(
       ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-      config.getMaxGeneratedCodeLength,
+      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
       "inputUnbox",
       "private final void",
       ctx.reuseFieldCode().length,

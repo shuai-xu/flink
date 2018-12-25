@@ -24,10 +24,11 @@ import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks.{BatchTableSink, TableSinkBase}
+
 import org.apache.hadoop.fs.FileUtil
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 
@@ -68,12 +69,12 @@ class ParquetTableSink(
     }
 
     val blockSize =
-      tableConfig.getParameters.getInteger(
-        TableConfig.SQL_EXEC_SINK_PARQUET_BLOCK_SIZE)
+      tableConfig.getConf.getInteger(
+        TableConfigOptions.SQL_EXEC_SINK_PARQUET_BLOCK_SIZE)
 
     val enableDictionary =
-      tableConfig.getParameters.getBoolean(
-        TableConfig.SQL_EXEC_SINK_PARQUET_DICTIONARY_ENABLE)
+      tableConfig.getConf.getBoolean(
+        TableConfigOptions.SQL_EXEC_SINK_PARQUET_DICTIONARY_ENABLE)
 
     boundedStream.writeUsingOutputFormat(new RowParquetOutputFormat(
       dir, getFieldTypes.map(DataTypes.internal), getFieldNames, compression,

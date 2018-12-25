@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.stream
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.types.{DataType, DataTypes}
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableException}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedAggsHandleFunction}
@@ -210,8 +210,8 @@ class StreamExecGlobalGroupAggregate(
         aggFunction,
         AggregateUtil.getMiniBatchTrigger(tableConfig, useLocalAgg = true),
         valueTypeInfo,
-        tableConfig.getParameters.getBoolean(
-          TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+        tableConfig.getConf.getBoolean(
+          TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
     } else {
       throw new TableException("Local-Global optimization is only worked in minibatch mode")
     }

@@ -26,8 +26,8 @@ import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.bundle.{CoBundleTrigger, CombinedCoBundleTrigger, CountCoBundleTrigger, TimeCoBundleTrigger}
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
-import org.apache.flink.streaming.util.{KeyedTwoInputStreamOperatorTestHarness}
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.streaming.util.KeyedTwoInputStreamOperatorTestHarness
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedJoinConditionFunction, ProjectionCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
@@ -50,7 +50,7 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
   tableConfig.enableMiniBatch
   tableConfig.withMiniBatchTriggerTime(5)
   tableConfig.withMiniBatchTriggerSize(1000)
-  tableConfig.enableMiniBatchJoin
+  tableConfig.getConf.setBoolean(TableConfigOptions.BLINK_MINIBATCH_JOIN_ENABLED, true)
   private val baseRow = classOf[BaseRow].getCanonicalName
 
   private val rowType = new BaseRowTypeInfo(
@@ -102,8 +102,8 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       true,
       Array[Boolean](false),
       getMiniBatchTrigger(tableConfig),
-      tableConfig.getParameters.getBoolean(
-        TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+      tableConfig.getConf.getBoolean(
+        TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     val testHarness =
       new KeyedTwoInputStreamOperatorTestHarness(
@@ -198,8 +198,8 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       true,
       Array[Boolean](false),
       getMiniBatchTrigger(tableConfig),
-      tableConfig.getParameters.getBoolean(
-        TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+      tableConfig.getConf.getBoolean(
+        TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     val testHarness =
       new KeyedTwoInputStreamOperatorTestHarness(
@@ -301,8 +301,8 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       true,
       Array[Boolean](false),
       getMiniBatchTrigger(tableConfig),
-      tableConfig.getParameters.getBoolean(
-        TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+      tableConfig.getConf.getBoolean(
+        TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     val testHarness =
       new KeyedTwoInputStreamOperatorTestHarness(

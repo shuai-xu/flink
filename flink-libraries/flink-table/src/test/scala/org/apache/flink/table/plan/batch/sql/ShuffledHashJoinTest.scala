@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.batch.sql
 
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.{Before, Test}
@@ -30,10 +30,11 @@ class ShuffledHashJoinTest extends TableTestBatchExecBase {
 
   @Before
   def before(): Unit = {
-    util.setJoinReorderEnabled(true)
+    util.getTableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
     util.disableBroadcastHashJoin()
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortMergeJoin, NestedLoopJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortMergeJoin, NestedLoopJoin")
     util.addTable[(Int, Long, String)]("Table3", 'a, 'b, 'c)
     util.addTable[(Int, Long, Int, String, Long)]("Table5", 'd, 'e, 'f, 'g, 'h)
   }

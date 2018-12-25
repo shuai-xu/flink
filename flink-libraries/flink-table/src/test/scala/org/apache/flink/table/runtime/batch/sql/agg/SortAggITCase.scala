@@ -24,11 +24,10 @@ import java.util
 import org.apache.flink.api.java.typeutils.{RowTypeInfo, TypeExtractor}
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.Types
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, Types}
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.batch.sql.MyPojo
-import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.functions.aggregate.{CountAccumulator, CountAggFunction, IntSumAggFunction}
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
@@ -46,8 +45,8 @@ import scala.collection.Seq
 class SortAggITCase
     extends AggregateITCaseBase("SortAggregate") {
   override def prepareAggOp(): Unit = {
-    tEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+    tEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
 
     registerFunction("countFun", new CountAggFunction())
     registerFunction("intSumFun", new IntSumAggFunction())

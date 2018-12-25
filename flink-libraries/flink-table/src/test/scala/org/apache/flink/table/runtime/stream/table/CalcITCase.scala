@@ -19,7 +19,7 @@
 package org.apache.flink.table.runtime.stream.table
 
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.TableException
+import org.apache.flink.table.api.{TableConfigOptions, TableException}
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.dataformat.BaseRow
@@ -128,7 +128,8 @@ class CalcITCase extends StreamingTestBase {
     val ds = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
 
     val filterDs = ds.filter( Literal(false) )
-    tEnv.getConfig.enableValuesSourceInput // enable values source input
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.BLINK_VALUES_SOURCE_INPUT_ENABLED, true) // enable values source input
     val results = filterDs.toAppendStream[Row]
     val sink = new TestingAppendSink
 
@@ -257,7 +258,7 @@ class CalcITCase extends StreamingTestBase {
   @Test
   def testFunctionSplitWhenCodegenOverLengthLimit(): Unit = {
     // test function split
-    tEnv.getConfig.setMaxGeneratedCodeLength(10)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH, 10)
 
     val udfLen = TestUDFLength
     tEnv.registerFunction("RichFunc1", new RichFunc1)

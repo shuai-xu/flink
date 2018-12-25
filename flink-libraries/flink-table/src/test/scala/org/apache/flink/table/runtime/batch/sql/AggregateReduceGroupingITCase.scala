@@ -19,7 +19,7 @@ package org.apache.flink.table.runtime.batch.sql
 
 import java.sql.Date
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.utils.CommonTestData
@@ -114,7 +114,7 @@ class AggregateReduceGroupingITCase extends QueryTest {
 
   @Test
   def testSingleAggOnTable_SortAgg(): Unit = {
-    tEnv.getConfig.getParameters.setString(TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
     testSingleAggOnTable()
     checkResult("SELECT a6, b6, max(c6), count(d6), sum(e6) FROM T6 GROUP BY a6, b6",
       (0 until 50000).map(i => row(i, 1L, if (i % 500 == 0) null else s"Hello$i", 1L, 10))
@@ -123,17 +123,17 @@ class AggregateReduceGroupingITCase extends QueryTest {
 
   @Test
   def testSingleAggOnTable_HashAgg_WithLocalAgg(): Unit = {
-    tEnv.getConfig.getParameters.setString(TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
-    tEnv.getConfig.getParameters.setString(TableConfig.SQL_CBO_AGG_PHASE_ENFORCER, "TWO_PHASE")
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_HASH_AGG_TABLE_MEM, 2) // 1M
+    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
+    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_CBO_AGG_PHASE_ENFORCER, "TWO_PHASE")
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM, 2) // 1M
     testSingleAggOnTable()
   }
 
   @Test
   def testSingleAggOnTable_HashAgg_WithoutLocalAgg(): Unit = {
-    tEnv.getConfig.getParameters.setString(TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
-    tEnv.getConfig.getParameters.setString(TableConfig.SQL_CBO_AGG_PHASE_ENFORCER, "ONE_PHASE")
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_HASH_AGG_TABLE_MEM, 2) // 1M
+    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
+    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_CBO_AGG_PHASE_ENFORCER, "ONE_PHASE")
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM, 2) // 1M
     testSingleAggOnTable()
   }
 

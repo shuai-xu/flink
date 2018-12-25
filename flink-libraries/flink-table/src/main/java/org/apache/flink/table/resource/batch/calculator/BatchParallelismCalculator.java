@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.resource.batch.calculator;
 
-import org.apache.flink.table.api.TableConfig;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
 import org.apache.flink.table.resource.batch.ShuffleStage;
@@ -33,8 +33,8 @@ import java.util.Set;
  */
 public class BatchParallelismCalculator extends ShuffleStageParallelismCalculator {
 
-	public BatchParallelismCalculator(RelMetadataQuery mq, TableConfig tableConfig) {
-		super(mq, tableConfig);
+	public BatchParallelismCalculator(RelMetadataQuery mq, Configuration tableConf) {
+		super(mq, tableConf);
 	}
 
 	@Override
@@ -55,7 +55,7 @@ public class BatchParallelismCalculator extends ShuffleStageParallelismCalculato
 		if (maxSourceParallelism > 0) {
 			shuffleStage.setResultParallelism(maxSourceParallelism, false);
 		} else {
-			shuffleStage.setResultParallelism(ExecResourceUtil.getOperatorDefaultParallelism(getTableConfig()), false);
+			shuffleStage.setResultParallelism(ExecResourceUtil.getOperatorDefaultParallelism(getTableConf()), false);
 		}
 	}
 }

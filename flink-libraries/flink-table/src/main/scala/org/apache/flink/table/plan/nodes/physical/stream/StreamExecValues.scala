@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions, TableException}
 import org.apache.flink.table.codegen.ValuesCodeGenerator
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.schema.BaseRowSchema
@@ -30,7 +30,6 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.Values
 import org.apache.calcite.rex.RexLiteral
-
 
 /**
   * DataStream RelNode for LogicalValues.
@@ -59,7 +58,8 @@ class StreamExecValues(
   override def isDeterministic: Boolean = true
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
-    if (tableEnv.getConfig.isValuesSourceInputEnabled) {
+    if (tableEnv.getConfig.getConf.getBoolean(
+      TableConfigOptions.BLINK_VALUES_SOURCE_INPUT_ENABLED)) {
       val inputFormat = ValuesCodeGenerator.generatorInputFormat(
         tableEnv,
         getRowType,

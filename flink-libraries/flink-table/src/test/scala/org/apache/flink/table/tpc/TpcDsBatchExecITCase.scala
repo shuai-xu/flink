@@ -22,7 +22,7 @@ import java.util
 
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.core.fs.FileSystem.WriteMode
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.junit.runner.RunWith
@@ -74,10 +74,10 @@ class TpcDsBatchExecITCase(
           .enableEmptyColumnAsNull().build()
      tEnv.registerTableSource(tableName, tableSource, schema.getUniqueKeys)
     }
-    tEnv.getConfig.setJoinReorderEnabled(true)
-    tEnv.getConfig.setSubPlanReuse(true)
-    tEnv.getConfig.setTableSourceReuse(false)
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_SORT_DEFAULT_LIMIT, 10000)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, false)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_DEFAULT_LIMIT, 10000)
     TpcUtils.disableBroadcastHashJoin(tEnv)
   }
 

@@ -20,7 +20,7 @@ package org.apache.flink.table.tpc
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.{TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.flink.table.runtime.utils.TestingRetractSink
@@ -51,10 +51,10 @@ class TpcHStreamExecPlanTest(caseName: String, twoStageAgg: Boolean) {
   @Before
   def prepare(): Unit = {
     val tableConfig = new TableConfig
-    tableConfig.setJoinReorderEnabled(true)
+    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
     if (twoStageAgg) {
       tableConfig.enableMiniBatch
-      tableConfig.enableLocalAgg
+      tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
     }
     tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
     for ((tableName, schema) <- TpcHSchemaProvider.schemaMap) {

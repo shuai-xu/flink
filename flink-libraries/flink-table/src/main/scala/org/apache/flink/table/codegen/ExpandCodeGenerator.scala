@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.codegen
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils.boxedTypeTermForType
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
@@ -66,7 +66,7 @@ object ExpandCodeGenerator {
 
     val splitFunc = CodeGenUtils.generateSplitFunctionCalls(
       processCodes,
-      config.getMaxGeneratedCodeLength,
+      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
       "applyExpand",
       "private final void",
       ctx.reuseFieldCode().length,

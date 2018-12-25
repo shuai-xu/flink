@@ -19,6 +19,7 @@
 package org.apache.flink.table.api.stream.sql
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.{CalciteConfigBuilder, FlinkChainContext}
@@ -71,7 +72,8 @@ class ModifiedMonotonicityTest extends TableTestBase {
     streamUtil.tableEnv.getConfig
       .enableMiniBatch
       .withMiniBatchTriggerTime(100)
-      .enableLocalAgg
+    streamUtil.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
     val query = "SELECT a1, max(a3) from (SELECT a1, a2, max(a3) as a3 FROM A GROUP BY a1, a2) " +
       "group by a1"
     streamUtil.verifyPlanAndTrait(query)
@@ -82,7 +84,8 @@ class ModifiedMonotonicityTest extends TableTestBase {
     streamUtil.tableEnv.getConfig
       .enableMiniBatch
       .withMiniBatchTriggerTime(100)
-      .enableLocalAgg
+    streamUtil.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
     val query = "SELECT min(a3) from (SELECT a1, a2, min(a3) as a3 FROM A GROUP BY a1, a2)"
     streamUtil.verifyPlanAndTrait(query)
   }
@@ -92,7 +95,8 @@ class ModifiedMonotonicityTest extends TableTestBase {
     streamUtil.tableEnv.getConfig
       .enableMiniBatch
       .withMiniBatchTriggerTime(100)
-      .enableLocalAgg
+    streamUtil.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
     val query = "SELECT a1, min(a3) from (SELECT a1, a2, max(a3) as a3 FROM A GROUP BY a1, a2) " +
       "group by a1"
     streamUtil.verifyPlanAndTrait(query)

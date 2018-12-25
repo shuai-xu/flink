@@ -19,10 +19,11 @@ package org.apache.flink.table.codegen.calls
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.CompletableFuture
+
 import org.apache.calcite.avatica.util.DateTimeUtils.MILLIS_PER_DAY
 import org.apache.calcite.avatica.util.{DateTimeUtils, TimeUnitRange}
 import org.apache.calcite.util.BuiltInMethod
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types._
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.calls.CallGenerator._
@@ -1985,7 +1986,7 @@ object ScalarOperators {
     val bfField = classOf[BloomFilter].getCanonicalName
     val bf = newName("bf")
     val rfResult = newName("rfResult")
-    val waitRf = ctx.getTableConfig.getParameters.getBoolean(TableConfig.SQL_RUNTIME_FILTER_WAIT)
+    val waitRf = ctx.getTableConfig.getConf.getBoolean(TableConfigOptions.SQL_RUNTIME_FILTER_WAIT)
     val (hashCode, hash) = runtimeFilterHash(operands.head)
     var verify =
       s"""

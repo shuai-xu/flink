@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.rules.physical.batch.runtimefilter
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.functions.sql.internal.{SqlRuntimeFilterBuilderFunction, SqlRuntimeFilterFunction}
 import org.apache.flink.table.plan.FlinkJoinRelType._
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCalc, BatchExecExchange, BatchExecHashJoinBase}
@@ -31,7 +31,6 @@ import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex.RexProgramBuilder
 import org.apache.calcite.util.ImmutableBitSet
-
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -51,7 +50,7 @@ class InsertRuntimeFilterRule
 
     val conf = FlinkRelOptUtil.getTableConfig(join)
 
-    val enableRuntimeFilter = conf.getParameters.getBoolean(TableConfig.SQL_RUNTIME_FILTER_ENABLE)
+    val enableRuntimeFilter = conf.getConf.getBoolean(TableConfigOptions.SQL_RUNTIME_FILTER_ENABLE)
 
     enableRuntimeFilter &&
         !join.isBroadcast && // now not support broadcast join.

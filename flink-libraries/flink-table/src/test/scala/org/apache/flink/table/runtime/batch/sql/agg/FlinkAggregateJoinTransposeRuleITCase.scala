@@ -19,7 +19,7 @@
 package org.apache.flink.table.runtime.batch.sql.agg
 
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.api.{TableConfig, TableException}
+import org.apache.flink.table.api.{TableConfigOptions, TableException}
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.logical.{AggregateReduceGroupingRule, FlinkAggregateJoinTransposeRule}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
@@ -69,7 +69,7 @@ class FlinkAggregateJoinTransposeRuleITCase extends QueryTest {
         .build()
     )
 
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     registerCollection("T3", data3, type3, "a, b, c", nullablesOfData3)
     tEnv.registerTableSource("T2",
       CommonTestData.createCsvTableSource(

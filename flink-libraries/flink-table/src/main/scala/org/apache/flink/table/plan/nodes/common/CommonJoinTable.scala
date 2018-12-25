@@ -24,7 +24,7 @@ import org.apache.flink.streaming.api.functions.async.AsyncFunction
 import org.apache.flink.streaming.api.operators.ProcessOperator
 import org.apache.flink.streaming.api.operators.async.AsyncWaitOperator
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils._
@@ -356,7 +356,7 @@ abstract class CommonJoinTable(
 
     val unboxingCodeSplit = generateSplitFunctionCalls(
       ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-      config.getMaxGeneratedCodeLength,
+      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
       "inputUnbox",
       "private final void",
       ctx.reuseFieldCode().length,

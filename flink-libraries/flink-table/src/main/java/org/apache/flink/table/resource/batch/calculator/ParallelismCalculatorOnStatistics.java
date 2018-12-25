@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.resource.batch.calculator;
 
-import org.apache.flink.table.api.TableConfig;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
@@ -33,8 +33,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-
-
 /**
  * Infer result partition count according to statistics.
  */
@@ -44,8 +42,8 @@ public class ParallelismCalculatorOnStatistics extends ShuffleStageParallelismCa
 
 	public ParallelismCalculatorOnStatistics(
 			RelMetadataQuery mq,
-			TableConfig tableConfig) {
-		super(mq, tableConfig);
+			Configuration tableConf) {
+		super(mq, tableConf);
 		this.mq = mq;
 	}
 
@@ -80,12 +78,12 @@ public class ParallelismCalculatorOnStatistics extends ShuffleStageParallelismCa
 
 	private int calculateSingle(SingleRel singleRel) {
 		double rowCount = mq.getRowCount(singleRel.getInput());
-		return ExecResourceUtil.calOperatorParallelism(rowCount, getTableConfig());
+		return ExecResourceUtil.calOperatorParallelism(rowCount, getTableConf());
 	}
 
 	private int calculateBiRel(BiRel biRel) {
 		double maxRowCount = Math.max(mq.getRowCount(biRel.getLeft()), mq.getRowCount(biRel.getRight()));
-		return ExecResourceUtil.calOperatorParallelism(maxRowCount, getTableConfig());
+		return ExecResourceUtil.calOperatorParallelism(maxRowCount, getTableConf());
 	}
 
 }

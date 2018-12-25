@@ -19,10 +19,11 @@
 package org.apache.flink.table.plan.nodes.common
 
 import java.util.{List => JList}
+
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils._
@@ -123,7 +124,7 @@ trait CommonScan[T] {
 
         codeSplit = CodeGenUtils.generateSplitFunctionCalls(
           conversion.codeBuffer,
-          config.getMaxGeneratedCodeLength,
+          config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
           "SourceConversionApply",
           "private final void",
           ctx.reuseFieldCode().length,

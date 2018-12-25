@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.runtime.batch.sql
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData.numericType
 import org.junit.{Before, Test}
@@ -30,7 +30,7 @@ import scala.collection.Seq
 class FlinkLimitRemoveRuleITCase extends QueryTest {
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
 
     lazy val numericData = Seq(
       row(null, 1L, 1.0f, 1.0d, JBigDecimal.valueOf(1)),

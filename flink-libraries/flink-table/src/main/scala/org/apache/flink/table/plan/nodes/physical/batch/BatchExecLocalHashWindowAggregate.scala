@@ -102,7 +102,8 @@ class BatchExecLocalHashWindowAggregate(
     val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
     val outputRowType = getOutputType
 
-    val groupBufferLimitSize = ExecResourceUtil.getWindowAggBufferLimitSize(tableEnv.getConfig)
+    val groupBufferLimitSize = ExecResourceUtil.getWindowAggBufferLimitSize(
+      tableEnv.getConfig.getConf)
 
     val (windowSize: Long, slideSize: Long) = getWindowDef(window)
     val windowStart = 0L

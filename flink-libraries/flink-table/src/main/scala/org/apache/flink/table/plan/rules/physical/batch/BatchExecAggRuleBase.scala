@@ -23,7 +23,7 @@ import org.apache.calcite.plan.RelOptRuleCall
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.Aggregate
 import org.apache.calcite.rel.{RelCollations, RelFieldCollation}
-import org.apache.flink.table.api.{AggPhaseEnforcer, TableConfig, TableException}
+import org.apache.flink.table.api.{AggPhaseEnforcer, TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
@@ -183,7 +183,7 @@ trait BatchExecAggRuleBase {
 
   protected def getAggEnforceStrategy(call: RelOptRuleCall): AggPhaseEnforcer.Value = {
     val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])
-    val aggPrefConfig = tableConfig.getParameters.getString(TableConfig.SQL_CBO_AGG_PHASE_ENFORCER)
+    val aggPrefConfig = tableConfig.getConf.getString(TableConfigOptions.SQL_CBO_AGG_PHASE_ENFORCER)
     AggPhaseEnforcer.values.find(_.toString.equalsIgnoreCase(aggPrefConfig)).getOrElse(
       throw new IllegalArgumentException(
         "Agg phase enforcer can only set to be: NONE, ONE_PHASE, TWO_PHASE!"))

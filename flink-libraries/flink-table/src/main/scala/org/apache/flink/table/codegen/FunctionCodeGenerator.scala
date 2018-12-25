@@ -20,7 +20,7 @@ package org.apache.flink.table.codegen
 import org.apache.flink.api.common.functions._
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.ProcessFunction
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils.boxedTypeTermForType
 import org.apache.flink.table.codegen.CodeGenUtils.getDefineParamsByFunctionClass
@@ -126,7 +126,7 @@ object FunctionCodeGenerator {
 
     val unboxingCodeSplit = generateSplitFunctionCalls(
       ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-      tableConfig.getMaxGeneratedCodeLength,
+      tableConfig.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
       "inputUnbox",
       "private final void",
       ctx.reuseFieldCode().length,
@@ -265,7 +265,7 @@ object FunctionCodeGenerator {
 
     val unboxingCodeSplit = generateSplitFunctionCalls(
       ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-      config.getMaxGeneratedCodeLength,
+      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
       "inputUnbox",
       "private final void",
       ctx.reuseFieldCode().length,

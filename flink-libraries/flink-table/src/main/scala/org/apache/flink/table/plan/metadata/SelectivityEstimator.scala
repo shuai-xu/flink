@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.plan.metadata
 
-import org.apache.flink.table.api.TableConfig._
 import org.apache.flink.table.functions.sql.internal.{SqlRuntimeFilterBuilderFunction, SqlRuntimeFilterFunction}
 import org.apache.flink.table.plan.metadata.SelectivityEstimator._
 import org.apache.flink.table.plan.schema.{FlinkTable, TableSourceTable}
@@ -39,6 +38,7 @@ import org.apache.calcite.util.{ImmutableBitSet, TimeString}
 import java.lang.{Double => JDouble}
 
 import org.apache.flink.configuration.ConfigOption
+import org.apache.flink.table.api.TableConfigOptions
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -67,22 +67,23 @@ class SelectivityEstimator(rel: RelNode, mq: FlinkRelMetadataQuery)
   private val maxCnfNodeCount = FlinkRelOptUtil.getMaxCnfNodeCount(rel)
 
   private[flink] def getDefaultSelectivity(configOption: ConfigOption[JDouble]): Option[Double] = {
-    val v = tableConfig.getParameters.getDouble(configOption)
+    val v = tableConfig.getConf.getDouble(configOption)
     val selectivity = if (0.0 <= v && v <= 1.0) v else configOption.defaultValue().doubleValue()
     Some(selectivity)
   }
 
   // these default values is referred to RelMdUtil#guessSelectivity
   private[flink] val defaultComparisonSelectivity =
-    getDefaultSelectivity(SQL_CBO_SELECTIVITY_COMPARISON_DEFAULT)
+    getDefaultSelectivity(TableConfigOptions.SQL_CBO_SELECTIVITY_COMPARISON_DEFAULT)
   private[flink] val defaultEqualsSelectivity =
-    getDefaultSelectivity(SQL_CBO_SELECTIVITY_EQUALS_DEFAULT)
+    getDefaultSelectivity(TableConfigOptions.SQL_CBO_SELECTIVITY_EQUALS_DEFAULT)
   private[flink] val defaultIsNullSelectivity =
-    getDefaultSelectivity(SQL_CBO_SELECTIVITY_ISNULL_DEFAULT)
+    getDefaultSelectivity(TableConfigOptions.SQL_CBO_SELECTIVITY_ISNULL_DEFAULT)
   private[flink] val defaultIsNotNullSelectivity = Some(1.0 - defaultIsNullSelectivity.get)
   private[flink] val defaultLikeSelectivity =
-    getDefaultSelectivity(SQL_CBO_SELECTIVITY_LIKE_DEFAULT)
-  private[flink] val defaultSelectivity = getDefaultSelectivity(SQL_CBO_SELECTIVITY_DEFAULT)
+    getDefaultSelectivity(TableConfigOptions.SQL_CBO_SELECTIVITY_LIKE_DEFAULT)
+  private[flink] val defaultSelectivity = getDefaultSelectivity(
+    TableConfigOptions.SQL_CBO_SELECTIVITY_DEFAULT)
 
   /**
     * Returns a percentage of rows meeting a filter predicate on TableScan node.

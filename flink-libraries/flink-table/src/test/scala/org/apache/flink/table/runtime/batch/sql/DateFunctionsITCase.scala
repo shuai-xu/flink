@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.batch.sql
 
 import java.sql.Date
 
-import org.apache.flink.table.api.{TableConfig, ValidationException}
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData.{buildInData, buildInType}
 import org.apache.flink.table.runtime.functions.BuildInScalarFunctions
@@ -31,7 +31,7 @@ class DateFunctionsITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     registerCollection("testTable", buildInData, buildInType, "a,b,c,d,e,f,g,h,i,j")
   }
 

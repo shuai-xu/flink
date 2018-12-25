@@ -23,7 +23,7 @@ import java.util
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.batch.sql.joins.JoinType.{BroadcastHashJoin, HashJoin, JoinType, NestedLoopJoin, SortMergeJoin}
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
@@ -39,7 +39,7 @@ class SetOperatorsITCase(joinType: JoinType) extends QueryTest with JoinITCaseBa
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     registerCollection("AllNullTable3", allNullData3, type3, allNullablesOfNullData3, 'a, 'b, 'c)
     registerCollection("SmallTable3", smallData3, type3, nullablesOfSmallData3, 'a, 'b, 'c)
     registerCollection("Table3", data3, type3, nullablesOfData3, 'a, 'b, 'c)

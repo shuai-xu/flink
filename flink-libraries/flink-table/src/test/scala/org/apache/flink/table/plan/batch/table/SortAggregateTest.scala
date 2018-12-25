@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.batch.table
 
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.{Before, Test}
@@ -33,8 +33,8 @@ class SortAggregateTest extends TableTestBatchExecBase {
 
   @Before
   def before(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
   }
 
   @Test

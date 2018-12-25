@@ -21,7 +21,7 @@ package org.apache.flink.table.api.stream.sql
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
-import org.apache.flink.table.api.{TableException, Types}
+import org.apache.flink.table.api.{TableConfigOptions, TableException, Types}
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes, TypeInfoWrappedType}
@@ -89,7 +89,8 @@ class AggregateTest extends TableTestBase {
       .enableMiniBatch
       .withMiniBatchTriggerTime(1000L)
       .withMiniBatchTriggerSize(3)
-      .enableLocalAgg
+    streamUtil.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
 
     streamUtil.addTable[(Int, String, Long)]("T1", 'a, 'b, 'c)
     streamUtil.addTable[(Int, String, Long)]("T2", 'a, 'b, 'c)
@@ -129,7 +130,8 @@ class AggregateTest extends TableTestBase {
     streamUtil.addTable[(Int, Long, String, Boolean)]("T", 'a, 'b, 'c, 'd)
     streamUtil.tableEnv.getConfig
       .enableMiniBatch
-      .enableLocalAgg
+    streamUtil.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
 
     val sql =
       """

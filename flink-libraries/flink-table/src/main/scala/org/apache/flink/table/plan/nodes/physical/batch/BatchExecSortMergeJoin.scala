@@ -219,12 +219,12 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
 
     val condFunc = generateConditionFunction(config, leftType, rightType)
 
-    val externalBufferMemory = ExecResourceUtil.getExternalBufferManagedMemory(config)
+    val externalBufferMemory = ExecResourceUtil.getExternalBufferManagedMemory(config.getConf)
     val externalBufferMemorySize = externalBufferMemory * ExecResourceUtil.SIZE_IN_MB
 
     val perRequestSize =
-      ExecResourceUtil.getPerRequestManagedMemory(config)* ExecResourceUtil.SIZE_IN_MB
-    val infer = ExecResourceUtil.getInferMode(config).equals(InferMode.ALL)
+      ExecResourceUtil.getPerRequestManagedMemory(config.getConf)* ExecResourceUtil.SIZE_IN_MB
+    val infer = ExecResourceUtil.getInferMode(config.getConf).equals(InferMode.ALL)
 
     val totalReservedSortMemory = (resource.getReservedManagedMem -
       externalBufferMemory * getExternalBufferNum) * ExecResourceUtil.SIZE_IN_MB

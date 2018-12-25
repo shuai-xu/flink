@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.runtime.batch.sql.subquery
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
@@ -73,7 +73,7 @@ class ScalaSubqueryITCase extends QueryTest {
         emptyColumnAsNull = true)
       tEnv.registerTableSource(tableName, tableSource)
     }
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
   }
 
   @Test

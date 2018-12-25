@@ -24,7 +24,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.table.api.scala.{StreamTableEnvironment, _}
-import org.apache.flink.table.api.{TableConfig, TableEnvironment, TableSchema, Types}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableEnvironment, TableSchema, Types}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
@@ -50,7 +50,7 @@ class CodeSplitStreamITCase {
 
   val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
   val tableConfig = new TableConfig
-  tableConfig.setMaxGeneratedCodeLength(1)
+  tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH,1)
   val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env, tableConfig)
 
   val data = new mutable.MutableList[(Int, Long, String)]

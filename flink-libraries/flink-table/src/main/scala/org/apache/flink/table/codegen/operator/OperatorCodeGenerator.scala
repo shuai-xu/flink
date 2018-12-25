@@ -18,7 +18,7 @@
 package org.apache.flink.table.codegen.operator
 
 import org.apache.flink.streaming.api.operators.{OneInputStreamOperator, StreamOperator, TwoInputStreamOperator}
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext.DEFAULT_OPERATOR_COLLECTOR_TERM
@@ -75,7 +75,7 @@ object OperatorCodeGenerator extends Logging {
     val inputTypeTerm = boxedTypeTermForType(inputType)
     val unboxingCodeSplit = generateSplitFunctionCalls(
       ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-      config.getMaxGeneratedCodeLength,
+      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
       "inputUnbox",
       "private final void",
       ctx.reuseFieldCode().length,

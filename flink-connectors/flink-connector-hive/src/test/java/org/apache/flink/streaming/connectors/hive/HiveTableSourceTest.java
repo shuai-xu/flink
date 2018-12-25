@@ -23,6 +23,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableConfig;
+import org.apache.flink.table.api.TableConfigOptions;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.java.BatchTableEnvironment;
 import org.apache.flink.table.api.types.DoubleType;
@@ -49,8 +50,8 @@ public class HiveTableSourceTest {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(1, config);
 		env.setParallelism(1);
 		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
-		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_SINK_PARALLELISM(), 1);
-		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM(), 1);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SINK_PARALLELISM, 1);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1);
 
 		HiveTableFactory hiveTableFactory = new HiveTableFactory();
 		RichTableSchema richTableSchema = new RichTableSchema(
@@ -73,8 +74,8 @@ public class HiveTableSourceTest {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(1, config);
 		env.setParallelism(1);
 		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
-		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_SINK_PARALLELISM(), 1);
-		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM(), 1);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SINK_PARALLELISM, 1);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1);
 
 		HiveTableFactory hiveTableFactory = new HiveTableFactory();
 		RichTableSchema richTableSchema = new RichTableSchema(
@@ -98,8 +99,8 @@ public class HiveTableSourceTest {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(1, config);
 		env.setParallelism(1);
 		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
-		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_SINK_PARALLELISM(), 1);
-		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM(), 1);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SINK_PARALLELISM, 1);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1);
 
 		HiveTableFactory hiveTableFactory = new HiveTableFactory();
 		RichTableSchema richTableSchema = new RichTableSchema(
@@ -123,8 +124,8 @@ public class HiveTableSourceTest {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(1, config);
 		env.setParallelism(1);
 		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
-		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_SINK_PARALLELISM(), 1);
-		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM(), 1);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SINK_PARALLELISM, 1);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1);
 		tEnv.registerCatalog("myHive", new HiveCatalog("myHive", "thrift://localhost:9083"));
 		tEnv.setDefaultDatabase("myHive", "default");
 //		Table table = tEnv.scan("myHive", "default", "test");

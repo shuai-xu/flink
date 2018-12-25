@@ -161,14 +161,12 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
   tableEnv.getConfig.setSubsectionOptimization(true)
 
   def disableBroadcastHashJoin(): Unit = {
-    val config = new Configuration()
-    config.addAll(tableEnv.getConfig.getParameters)
-    config.setLong(TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
-    tableEnv.getConfig.setParameters(config)
+    tableEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
   }
 
   def setJoinReorderEnabled(joinReorderEnabled: Boolean): Unit = {
-    tableEnv.getConfig.setJoinReorderEnabled(joinReorderEnabled)
+    tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, joinReorderEnabled)
   }
 
   def addFunction[T: TypeInformation](

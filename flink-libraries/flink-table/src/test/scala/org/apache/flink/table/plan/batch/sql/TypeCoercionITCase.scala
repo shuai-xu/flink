@@ -21,8 +21,7 @@ package org.apache.flink.table.plan.batch.sql
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
 import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo._
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.Types
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, Types}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
@@ -128,7 +127,7 @@ class TypeCoercionITCase extends QueryTest {
       "v",
       Seq(true)
     )
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
   }
 
   @Test

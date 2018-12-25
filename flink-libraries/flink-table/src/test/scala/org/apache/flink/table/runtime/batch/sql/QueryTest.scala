@@ -26,7 +26,7 @@ import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => Scala
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnv}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv}
-import org.apache.flink.table.api.{SqlParserException, Table, TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{SqlParserException, Table, TableConfig, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.dataformat.{BinaryRow, BinaryRowWriter}
 import org.apache.flink.table.expressions.{Expression, ExpressionParser}
 import org.apache.flink.table.plan.util.FlinkRelOptUtil
@@ -457,16 +457,16 @@ object QueryTest {
   }
 
   def initConfigForTest(conf: TableConfig): TableConfig = {
-    conf.getParameters.setString(TableConfig.SQL_EXEC_INFER_RESOURCE_MODE,
+    conf.getConf.setString(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE,
       InferMode.ONLY_SOURCE.toString)
-    conf.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
-    conf.getParameters.setInteger(TableConfig.SQL_EXEC_SORT_BUFFER_MEM, 5)
-    conf.getParameters.setInteger(TableConfig.SQL_EXEC_HASH_JOIN_TABLE_MEM, 5)
-    conf.getParameters.setInteger(TableConfig.SQL_EXEC_HASH_AGG_TABLE_MEM, 5)
-    conf.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_MEM, 1)
-    conf.getParameters.setInteger(TableConfig.SQL_EXEC_EXTERNAL_BUFFER_MEM, 2)
+    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_BUFFER_MEM, 5)
+    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_HASH_JOIN_TABLE_MEM, 5)
+    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM, 5)
+    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_MEM, 1)
+    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_EXTERNAL_BUFFER_MEM, 2)
     //dynamic allocate memory.
-    conf.getParameters.setInteger(ExecResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 1)
+    conf.getConf.setInteger(ExecResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 1)
     conf
   }
 

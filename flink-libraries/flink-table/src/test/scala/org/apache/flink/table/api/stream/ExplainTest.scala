@@ -21,7 +21,7 @@ package org.apache.flink.table.api.stream
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{Table, TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{Table, TableConfig, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.runtime.utils.{StreamTestData, TestingAppendTableSink, TestingRetractTableSink, TestingUpsertTableSink}
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.util.{StreamTableTestUtil, TableFunc1, TableTestBase}
@@ -284,7 +284,8 @@ class ExplainTest extends TableTestBase {
   def testMultiLevelViewForSQL(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
-    conf.disableUnionAllAsBreakPointInSubsectionOptimization(true)
+    conf.getConf.setBoolean(
+      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env, conf)
 
@@ -326,7 +327,8 @@ class ExplainTest extends TableTestBase {
   def testSharedUnionNode(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
-    conf.disableUnionAllAsBreakPointInSubsectionOptimization(true)
+    conf.getConf.setBoolean(
+      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env, conf)
 
@@ -400,7 +402,8 @@ class ExplainTest extends TableTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.disableUnionAllAsBreakPointInSubsectionOptimization(true)
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
@@ -424,7 +427,8 @@ class ExplainTest extends TableTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.disableUnionAllAsBreakPointInSubsectionOptimization(true)
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
@@ -450,8 +454,8 @@ class ExplainTest extends TableTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.disableUnionAllAsBreakPointInSubsectionOptimization(true)
-
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
     tEnv.registerDataStream("t3", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
@@ -478,7 +482,8 @@ class ExplainTest extends TableTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.disableUnionAllAsBreakPointInSubsectionOptimization(true)
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
@@ -506,7 +511,8 @@ class ExplainTest extends TableTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.disableUnionAllAsBreakPointInSubsectionOptimization(true)
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
@@ -531,7 +537,8 @@ class ExplainTest extends TableTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.disableUnionAllAsBreakPointInSubsectionOptimization(true)
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
@@ -553,7 +560,8 @@ class ExplainTest extends TableTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.disableUnionAllAsBreakPointInSubsectionOptimization(true)
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)

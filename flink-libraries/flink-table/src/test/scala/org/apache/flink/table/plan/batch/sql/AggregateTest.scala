@@ -19,7 +19,7 @@ package org.apache.flink.table.plan.batch.sql
 
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.api.{TableConfig, TableSchema}
+import org.apache.flink.table.api.{TableConfigOptions, TableSchema}
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.sources.BatchTableSource
@@ -65,11 +65,11 @@ class AggregateTest extends TableTestBatchExecBase {
     }
     util.addTable("t1", table)
     // sets the table memory size of hashAgg operator to 1MB
-    util.getTableEnv.getConfig.getParameters
-      .setInteger(TableConfig.SQL_EXEC_HASH_AGG_TABLE_MEM, 1)
+    util.getTableEnv.getConfig.getConf
+      .setInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM, 1)
     // sets the agg ratio to 0.8
-    util.getTableEnv.getConfig.getParameters
-      .setDouble(TableConfig.SQL_EXEC_AGG_GROUPS_NDV_RATIO, 0.8D)
+    util.getTableEnv.getConfig.getConf
+      .setDouble(TableConfigOptions.SQL_EXEC_AGG_GROUPS_NDV_RATIO, 0.8D)
   }
 
   @Test

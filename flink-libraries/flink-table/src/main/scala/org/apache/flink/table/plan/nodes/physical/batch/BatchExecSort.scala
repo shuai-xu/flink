@@ -18,6 +18,7 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
+import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
@@ -30,12 +31,12 @@ import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.sort.SortOperator
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
+
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
 import org.apache.calcite.rel.core.Sort
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelCollation, RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
-import org.apache.flink.runtime.operators.DamBehavior
 
 import scala.collection.JavaConversions._
 
@@ -101,7 +102,7 @@ class BatchExecSort(
     val preferMangedMemorySize = resource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB
     val perRequestSize =
       ExecResourceUtil.getPerRequestManagedMemory(
-        tableEnv.getConfig)* ExecResourceUtil.SIZE_IN_MB
+        tableEnv.getConfig.getConf)* ExecResourceUtil.SIZE_IN_MB
 
     val operator = new SortOperator(
       reservedMangedMemorySize,

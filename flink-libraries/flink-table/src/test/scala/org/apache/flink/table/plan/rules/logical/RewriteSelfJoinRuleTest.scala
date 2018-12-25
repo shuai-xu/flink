@@ -19,6 +19,7 @@
 package org.apache.flink.table.plan.rules.logical
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms._
@@ -28,7 +29,6 @@ import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.flink.table.util.TableTestBatchExecBase
 
 import org.apache.calcite.plan.hep.HepMatchOrder
-
 import org.junit.{Before, Ignore, Test}
 import org.scalatest.prop.PropertyChecks
 
@@ -86,7 +86,7 @@ class RewriteSelfJoinRuleTest extends TableTestBatchExecBase with PropertyChecks
     val calciteConfig = new CalciteConfigBuilder().replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
-    tEnv.getConfig.setJoinReorderEnabled(true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
     util.addTable[(Int, Int, String, Int, String)]("person",
       Set(Set("name")), 'id, 'age, 'name, 'height, 'sex)
 

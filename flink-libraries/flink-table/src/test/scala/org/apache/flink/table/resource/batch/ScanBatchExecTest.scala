@@ -25,7 +25,7 @@ import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.streaming.api.functions.source.SourceFunction
 import org.apache.flink.streaming.api.operators.StreamSource
 import org.apache.flink.streaming.api.transformations.SourceTransformation
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.Assert._
@@ -45,8 +45,8 @@ class ScanBatchExecTest extends TableTestBatchExecBase  {
       Mockito.mock(classOf[RelDataType]));
     exec.resultPartitionCount = 2
     val defaultResource = newResource(
-      TableConfig.SQL_EXEC_DEFAULT_CPU.defaultValue(),
-      TableConfig.SQL_EXEC_SOURCE_MEM.defaultValue())
+      TableConfigOptions.SQL_EXEC_DEFAULT_CPU.defaultValue(),
+      TableConfigOptions.SQL_EXEC_SOURCE_MEM.defaultValue())
     exec.sourceResSpec = defaultResource
     val transformation = new SourceTransformation[Integer](
       "test",
@@ -67,8 +67,8 @@ class ScanBatchExecTest extends TableTestBatchExecBase  {
 
   def newResource(cpu: Double, memory: Int): ResourceSpec = {
     val builder = ResourceSpec.newBuilder()
-    builder.setCpuCores(TableConfig.SQL_EXEC_DEFAULT_CPU.defaultValue())
-    builder.setHeapMemoryInMB(TableConfig.SQL_EXEC_SOURCE_MEM.defaultValue())
+    builder.setCpuCores(TableConfigOptions.SQL_EXEC_DEFAULT_CPU.defaultValue())
+    builder.setHeapMemoryInMB(TableConfigOptions.SQL_EXEC_SOURCE_MEM.defaultValue())
     builder.build()
   }
 }

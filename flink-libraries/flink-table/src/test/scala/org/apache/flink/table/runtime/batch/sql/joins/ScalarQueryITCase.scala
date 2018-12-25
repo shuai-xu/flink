@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.runtime.batch.sql.joins
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
@@ -51,7 +51,7 @@ class ScalarQueryITCase extends QueryTest with JoinITCaseBase {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     registerCollection("l", l, INT_DOUBLE, "a, b", Seq(true, true))
     registerCollection("r", r, INT_DOUBLE, "c, d", Seq(true, true))
   }

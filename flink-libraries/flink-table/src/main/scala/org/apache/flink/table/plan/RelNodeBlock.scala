@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan
 
-import org.apache.flink.table.api.{TableEnvironment, TableException}
+import org.apache.flink.table.api.{TableConfigOptions, TableEnvironment, TableException}
 import org.apache.flink.table.plan.nodes.calcite.Sink
 import org.apache.flink.table.plan.schema.RelTable
 import org.apache.flink.table.plan.logical.{LogicalNode, SinkNode}
@@ -186,8 +186,9 @@ class RelNodeBlockPlanBuilder private (tEnv: TableEnvironment) {
   private val node2Wrapper = new IdentityHashMap[RelNode, RelNodeWrapper]()
   private val node2Block = new IdentityHashMap[RelNode, RelNodeBlock]()
 
-  private val isUnionAllAsBreakPointDisabled = tEnv.config
-                                           .isUnionAllAsBreakPointInSubsectionOptimizationDisabled
+  private val isUnionAllAsBreakPointDisabled = tEnv.config.getConf.getBoolean(
+    TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED)
+
 
   /**
     * Decompose the [[RelNode]] plan into many [[RelNodeBlock]]s,

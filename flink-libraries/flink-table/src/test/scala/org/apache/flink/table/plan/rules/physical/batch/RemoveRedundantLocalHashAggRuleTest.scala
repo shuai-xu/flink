@@ -17,30 +17,28 @@
  */
 package org.apache.flink.table.plan.rules.physical.batch
 
-import org.apache.flink.configuration.Configuration
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.{BatchExecTableTestUtil, TableTestBatchExecBase}
 import org.junit.{Before, Test}
 
 class RemoveRedundantLocalHashAggRuleTest extends TableTestBatchExecBase {
 
-  private val util = batchExecTestUtil()
+  private var util: BatchExecTableTestUtil = _
 
   @Before
-  def setup(): Unit = {
-    // clear parameters
-    util.tableEnv.getConfig.setParameters(new Configuration)
+  def before(): Unit = {
+    util = batchExecTestUtil()
     util.addTable("x", CommonTestData.get3Source(Array("a", "b", "c")))
     util.addTable("y", CommonTestData.get3Source(Array("d", "e", "f")))  }
 
   @Test
   def testRemoveRedundantLocalHashAgg(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortMergeJoin,NestedLoopJoin,SortAgg")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortMergeJoin,NestedLoopJoin,SortAgg")
     // disable BroadcastHashJoin
-    util.tableEnv.getConfig.getParameters.setLong(
-      TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
+    util.tableEnv.getConfig.getConf.setLong(
+      TableConfigOptions.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
     val sqlQuery =
       """
         |WITH r AS (SELECT * FROM x, y WHERE a = d AND c LIKE 'He%')
@@ -51,9 +49,10 @@ class RemoveRedundantLocalHashAggRuleTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveRedundantLocalHashAgg1(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
-    util.tableEnv.getConfig.setRankShuffleByPartialKeyEnabled(true)
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_CBO_RANK_SHUFFLE_BY_PARTIALKEY_ENABLED, true)
     val sqlQuery =
       """
         |SELECT a, SUM(b) FROM (

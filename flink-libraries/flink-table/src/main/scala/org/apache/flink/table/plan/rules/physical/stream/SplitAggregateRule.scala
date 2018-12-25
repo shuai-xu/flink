@@ -28,7 +28,7 @@ import org.apache.calcite.sql.fun.{SqlMinMaxAggFunction, SqlStdOperatorTable}
 import org.apache.calcite.sql.{SqlAggFunction, SqlKind}
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.{ImmutableBitSet, ImmutableIntList}
-import org.apache.flink.table.api.{TableConfig, TableException}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.{FlinkLogicalRelFactories, FlinkRelBuilder}
 import org.apache.flink.table.functions.sql.{AggSqlFunctions, ScalarSqlFunctions, SqlFirstLastValueAggFunction}
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions.DIVIDE
@@ -113,7 +113,7 @@ class SplitAggregateRule extends RelOptRule(
     val agg: FlinkLogicalAggregate = call.rel(0)
 
     (tableConfig.isMiniBatchEnabled || tableConfig.isMicroBatchEnabled) &&
-      tableConfig.isPartialAggEnabled &&
+      tableConfig.getConf.getBoolean(TableConfigOptions.SQL_EXEC_AGG_PARTIAL_ENABLED) &&
       agg.partialFinal == PartialFinalType.NORMAL &&
       containsDistinctAgg(agg.getAggCallList) &&
       doAllAggSupportSplit(agg.getAggCallList)

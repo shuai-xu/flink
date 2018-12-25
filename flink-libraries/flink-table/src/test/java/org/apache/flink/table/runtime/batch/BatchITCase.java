@@ -22,6 +22,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableConfig;
+import org.apache.flink.table.api.TableConfigOptions;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.runtime.utils.CommonTestData;
@@ -64,7 +65,7 @@ public class BatchITCase extends AbstractTestBase {
 	public void setUp() {
 		env = StreamExecutionEnvironment.getExecutionEnvironment();
 		tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
-		tableEnv.getConfig().getParameters().setString(TableConfig.SQL_EXEC_INFER_RESOURCE_MODE(),
+		tableEnv.getConfig().getConf().setString(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE,
 				ExecResourceUtil.InferMode.ONLY_SOURCE.toString());
 		deleteFiles();
 	}
@@ -105,9 +106,9 @@ public class BatchITCase extends AbstractTestBase {
 	public void testInSubQueryThreshold() throws Exception {
 		CsvTableSource csvTable = CommonTestData.getCsvTableSource();
 
-		tableEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM(), 1);
-		tableEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_HASH_AGG_TABLE_MEM(), 32);
-		tableEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_SORT_BUFFER_MEM(), 32);
+		tableEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1);
+		tableEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM, 32);
+		tableEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SORT_BUFFER_MEM, 32);
 		tableEnv.registerTableSource("persons", csvTable);
 
 		// default InSubQueryThreshold value is 20
@@ -193,7 +194,7 @@ public class BatchITCase extends AbstractTestBase {
 
 	@Test
 	public void testSinkParallelism() throws IOException {
-		tableEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_SINK_PARALLELISM(), 5);
+		tableEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SINK_PARALLELISM, 5);
 		BatchTableSource csvTable = CommonTestData.getCsvTableSource();
 
 		tableEnv.registerTableSource("persons", csvTable);

@@ -69,7 +69,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
 
     // create aggregate map
     val mapTypeTerm = classOf[BytesHashMap].getName
-    val perRequestSize = ExecResourceUtil.getPerRequestManagedMemory(config) *
+    val perRequestSize = ExecResourceUtil.getPerRequestManagedMemory(config.getConf) *
         ExecResourceUtil.SIZE_IN_MB
     ctx.addReusableMember(s"private transient $mapTypeTerm $aggregateMapTerm;")
     ctx.addReusableOpenStatement(s"$aggregateMapTerm " +

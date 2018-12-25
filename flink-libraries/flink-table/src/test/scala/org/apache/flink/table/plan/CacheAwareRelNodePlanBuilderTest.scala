@@ -25,7 +25,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import org.apache.calcite.rel.logical.{LogicalFilter, LogicalJoin, LogicalTableScan}
 import org.apache.calcite.rel.{AbstractRelNode, BiRel, RelNode, SingleRel}
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.{Table, TableEnvironment}
+import org.apache.flink.table.api.{Table, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment, _}
 import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.calcite.FlinkTypeFactory
@@ -100,7 +100,7 @@ class CacheAwareRelNodePlanBuilderTest(
   @Before
   def init(): Unit = {
     conf.setSubsectionOptimization(true)
-    conf.setSubPlanReuse(true)
+    conf.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
 
     tableEnv = TableEnvironment.getBatchTableEnvironment(env, conf)
     tableEnv.tableServiceManager.setTableService(factory, properties)

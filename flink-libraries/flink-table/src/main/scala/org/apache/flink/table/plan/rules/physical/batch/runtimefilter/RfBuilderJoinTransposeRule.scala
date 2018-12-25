@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.rules.physical.batch.runtimefilter
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.functions.sql.internal.SqlRuntimeFilterBuilderFunction
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCalc, BatchExecHashJoinBase}
@@ -55,8 +55,8 @@ class RfBuilderJoinTransposeRule extends BaseRuntimeFilterPushDownRule(
       cond: RexNode): Boolean = {
 
     val conf = FlinkRelOptUtil.getTableConfig(rel)
-    val maxRatio = conf.getParameters.getDouble(
-      TableConfig.SQL_RUNTIME_FILTER_BUILDER_PUSH_DOWN_MAX_RATIO)
+    val maxRatio = conf.getConf.getDouble(
+      TableConfigOptions.SQL_RUNTIME_FILTER_BUILDER_PUSH_DOWN_MAX_RATIO)
 
     val joinKeys = rel.joinInfo.leftKeys ++
         rel.joinInfo.rightKeys.map(_ + rel.getLeft.getRowType.getFieldCount)

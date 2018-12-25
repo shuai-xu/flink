@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.plan.metadata
 
-import org.apache.flink.table.api.TableConfig.SQL_CBO_SELECTIVITY_AGG_CALL_DEFAULT
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecGroupAggregateBase, BatchExecLocalHashWindowAggregate, BatchExecLocalSortWindowAggregate, BatchExecWindowAggregateBase}
 import org.apache.flink.table.plan.stats.{ValueInterval, _}
 import org.apache.flink.table.plan.util.FlinkRelOptUtil.checkAndSplitAggCalls
@@ -32,6 +31,8 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.sql.{SqlKind, SqlOperator}
 
 import java.lang.{Double => JDouble}
+
+import org.apache.flink.table.api.TableConfigOptions
 
 import scala.collection.JavaConversions._
 
@@ -53,7 +54,7 @@ class AggCallSelectivityEstimator(agg: RelNode, mq: FlinkRelMetadataQuery)
   // create SelectivityEstimator instance to use its default selectivity values
   private val se = new SelectivityEstimator(agg, mq)
   private[flink] val defaultAggCallSelectivity =
-    se.getDefaultSelectivity(SQL_CBO_SELECTIVITY_AGG_CALL_DEFAULT)
+    se.getDefaultSelectivity(TableConfigOptions.SQL_CBO_SELECTIVITY_AGG_CALL_DEFAULT)
 
   /**
     * Gets AggregateCall from aggregate node

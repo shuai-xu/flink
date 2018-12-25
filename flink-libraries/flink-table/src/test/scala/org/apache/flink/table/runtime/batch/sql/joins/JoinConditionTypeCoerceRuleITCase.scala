@@ -18,18 +18,16 @@
 
 package org.apache.flink.table.runtime.batch.sql.joins
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
-import org.apache.flink.table.runtime.batch.sql.TestData.{
-  numericData, nullablesOfNumericData, numericType
-}
+import org.apache.flink.table.runtime.batch.sql.TestData.{nullablesOfNumericData, numericData, numericType}
 import org.junit.{Before, Test}
 
 class JoinConditionTypeCoerceRuleITCase extends QueryTest {
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     registerCollection(
       "t1",
       numericData,
@@ -43,8 +41,8 @@ class JoinConditionTypeCoerceRuleITCase extends QueryTest {
       "a, b, c, d, e",
       nullablesOfNumericData)
     // Disable NestedLoopJoin.
-    tEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED,
+    tEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED,
       "NestedLoopJoin")
   }
 

@@ -19,7 +19,7 @@ package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.types.{DataType, DataTypes}
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedAggsHandleFunction}
@@ -171,8 +171,8 @@ class StreamExecIncrementalGroupAggregate(
       aggFunction,
       AggregateUtil.getMiniBatchTrigger(tableEnv.getConfig, useLocalAgg = true),
       valueTypeInfo,
-      tableEnv.getConfig.getParameters.getBoolean(
-        TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+      tableEnv.getConfig.getConf.getBoolean(
+        TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     // partitioned aggregation
     val ret = new OneInputTransformation(

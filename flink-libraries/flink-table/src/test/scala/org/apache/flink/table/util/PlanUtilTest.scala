@@ -27,7 +27,7 @@ import org.apache.flink.streaming.api.graph.StreamGraphGenerator
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator.Context
 import org.apache.flink.table.api.java.BatchTableEnvironment
 import org.apache.flink.table.api.types.{DataType, DataTypes}
-import org.apache.flink.table.api.{Table, TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{Table, TableConfig, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.plan.rules.physical.batch.{BatchExecNestedLoopJoinRule, BatchExecSortMergeJoinRule}
@@ -55,12 +55,12 @@ class PlanUtilTest extends AbstractTestBase {
 
   @Before
   def before(): Unit = {
-    conf.setOperatorMetricCollect(true)
+    conf.getConf.setBoolean(TableConfigOptions.SQL_EXEC_COLLECT_OPERATOR_METRIC_ENABLED, true)
     env = StreamExecutionEnvironment.getExecutionEnvironment
     tableEnv = TableEnvironment.getBatchTableEnvironment(env, conf)
-    tableEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 2)
-    tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_EXEC_INFER_RESOURCE_MODE,
+    tableEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 2)
+    tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE,
       InferMode.NONE.toString
     )
     tableEnv.getConfig.setCalciteConfig(new CalciteConfigBuilder().build())
@@ -83,7 +83,7 @@ class PlanUtilTest extends AbstractTestBase {
 
   @Test
   def testDumpPlanWithMetricsOfJoin(): Unit = {
-    tableEnv.getConfig.setJoinReorderEnabled(true)
+    tableEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
     val program = tableEnv.getConfig.getCalciteConfig.getBatchPrograms
         .getFlinkRuleSetProgram(FlinkBatchPrograms.PHYSICAL)
     program.get.remove(RuleSets.ofList(
@@ -146,7 +146,7 @@ class PlanUtilTest extends AbstractTestBase {
     * Sets dumpFileOfPlanWithMetrics to execute environment.
     */
   private def setDumpFileToConfig(): Unit = {
-    conf.setDumpFileOfPlanWithMetrics(tmpFile)
+    conf.getConf.setString(TableConfigOptions.SQL_EXEC_COLLECT_OPERATOR_METRIC_PATH, tmpFile)
     tableEnv.setupOperatorMetricCollect()
   }
 

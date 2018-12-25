@@ -96,7 +96,7 @@ class StreamExecTemporalSort(
       throw new TableException(
         TableErrors.INST.sqlSortOrderError())}
 
-    val managedMemory = ExecResourceUtil.getSortBufferManagedMemory(tableEnv.getConfig)
+    val managedMemory = ExecResourceUtil.getSortBufferManagedMemory(tableEnv.getConfig.getConf)
     val mangedMemorySize = managedMemory * ExecResourceUtil.SIZE_IN_MB
 
     // enable to extend for other types of aggregates that will not be implemented in a window

@@ -24,7 +24,7 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
 
   @Before
   def setUp(): Unit = {
-    streamUtil.tableEnv.getConfig.setParameters(new Configuration())
+    streamUtil.tableEnv.getConfig.setConf(new Configuration())
   }
 
   @Test

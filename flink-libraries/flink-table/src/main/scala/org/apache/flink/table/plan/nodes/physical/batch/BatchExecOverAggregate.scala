@@ -21,7 +21,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.functions.UserDefinedFunction
 import org.apache.flink.table.api.types._
-import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
+import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.newName
 import org.apache.flink.table.codegen._
@@ -161,7 +161,8 @@ class BatchExecOverAggregate(
           val isAllFieldsFromInput = requiredDistribution.getKeys.forall(_ < inputFieldCnt)
           if (isAllFieldsFromInput) {
             val tableConfig = FlinkRelOptUtil.getTableConfig(this)
-            if (tableConfig.aggregateShuffleByPartialKeyEnabled) {
+            if (tableConfig.getConf.getBoolean(
+              TableConfigOptions.SQL_CBO_AGG_SHUFFLE_BY_PARTIALKEY_ENABLED)) {
               ImmutableIntList.of(grouping: _*).containsAll(requiredDistribution.getKeys)
             } else {
               requiredDistribution.getKeys == ImmutableIntList.of(grouping: _*)

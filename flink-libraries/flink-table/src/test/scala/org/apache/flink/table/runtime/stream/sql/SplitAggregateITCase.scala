@@ -21,6 +21,7 @@ package org.apache.flink.table.runtime.stream.sql
 import java.util
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.stream.sql.SplitAggregateITCase.PartialAggMode
 import org.apache.flink.table.runtime.utils.{StreamingWithAggTestBase, TestingRetractSink}
@@ -48,9 +49,9 @@ class SplitAggregateITCase(
     super.before()
 
     if (partialAggMode.isPartialAggEnabled) {
-      tEnv.getConfig.enablePartialAgg
+      tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_AGG_PARTIAL_ENABLED, true)
     } else {
-      tEnv.getConfig.disablePartialAgg
+      tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_AGG_PARTIAL_ENABLED, false)
     }
 
     val data = List(

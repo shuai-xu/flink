@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.resource;
 
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.api.BatchTableEnvironment;
-import org.apache.flink.table.api.TableConfig;
 
 import org.apache.calcite.rel.RelNode;
 
@@ -27,12 +27,12 @@ import org.apache.calcite.rel.RelNode;
  * Calculating resources such as parallelism, cpu and mem etc..
  */
 public abstract class ResourceCalculator<T> {
-	protected final TableConfig tConfig;
+	protected final Configuration tableConf;
 	protected final BatchTableEnvironment tEnv;
 
 	protected ResourceCalculator(BatchTableEnvironment tEnv) {
 		this.tEnv = tEnv;
-		this.tConfig = tEnv.getConfig();
+		this.tableConf = tEnv.getConfig().getConf();
 	}
 
 	public abstract void calculate(T rel);

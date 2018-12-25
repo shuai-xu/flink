@@ -17,7 +17,7 @@
  */
 package org.apache.flink.table.plan.util
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.functions.sql.internal.SqlAuxiliaryGroupAggFunction
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, FunctionCatalog}
@@ -74,9 +74,12 @@ object FlinkRelOptUtil {
     val config = getTableConfig(rel)
     val isPhysicalRel = rel.isInstanceOf[FlinkPhysicalRel]
     // only print reuse info of physical plan
-    val (subplanReuseContext, newRel) = if (isPhysicalRel && config.getSubPlanReuse) {
+    val (subplanReuseContext, newRel) = if (isPhysicalRel && config.getConf.getBoolean(
+          TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED)) {
       val planWithoutSameRef = rel.accept(new SameRelObjectShuttle)
-      (Some(new SubplanReuseContext(config.isTableSourceReuseDisabled, planWithoutSameRef)),
+      (Some(new SubplanReuseContext(
+        !config.getConf.getBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED),
+        planWithoutSameRef)),
         planWithoutSameRef)
     } else {
       (None, rel)
@@ -205,7 +208,7 @@ object FlinkRelOptUtil {
 
   /** Get max cnf node limit by context of rel */
   def getMaxCnfNodeCount(rel: RelNode): Int = {
-    getTableConfig(rel).getMaxCnfNodeCount
+    getTableConfig(rel).getConf.getInteger(TableConfigOptions.SQL_CBO_CNF_NODES_LIMIT)
   }
 
   /**

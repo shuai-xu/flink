@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.tpc
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.sinks.parquet.ParquetTableSink
 import org.apache.flink.table.sources.csv.CsvTableSource
@@ -43,9 +43,9 @@ class ParquetTool extends QueryTest{
       val tableSourceName = s"csv_$tableName"
       tEnv.registerTableSource(tableSourceName, csvTableSource)
 
-      tEnv.getConfig.getParameters.setString(
-        TableConfig.SQL_EXEC_INFER_RESOURCE_MODE, InferMode.NONE.toString)
-      tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 1)
+      tEnv.getConfig.getConf.setString(
+        TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE, InferMode.NONE.toString)
+      tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1)
       tEnv.sqlQuery(s"SELECT * from $tableSourceName")
           .writeToSink(new ParquetTableSink(s"$parquetPath/$tableName"))
       tEnv.execute()

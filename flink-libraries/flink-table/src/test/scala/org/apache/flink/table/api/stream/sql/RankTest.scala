@@ -21,7 +21,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.functions.{Monotonicity, ScalarFunction}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TableConfig, TableEnvironment, TableException}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableEnvironment, TableException}
 import org.apache.flink.table.functions.aggregate.LongSumAggFunction
 import org.apache.flink.table.runtime.utils.TestingRetractTableSink
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
@@ -371,8 +371,9 @@ class RankTest extends TableTestBase {
          |WHERE rank_num <= 10
       """.stripMargin
 
-      streamUtil.tableEnv.getConfig.enableTopNApprox
-      .withTopNApproxBufferMinSize(20)
+      streamUtil.tableEnv.getConfig.getConf.setBoolean(
+        TableConfigOptions.BLINK_TOPN_APPROXIMATE_ENABLED, true)
+    streamUtil.tableEnv.getConfig.withTopNApproxBufferMinSize(20)
 
     streamUtil.verifyPlanAndTrait(sql)
   }
@@ -489,11 +490,13 @@ class RankTest extends TableTestBase {
   @Test
   def testTopNWithPartialFinalAgg(): Unit = {
     // BLINK-17146809: fix monotonicity derivation not works when partial final optimization
-    streamUtil.tableEnv.getConfig
-      .enableMiniBatch
-      .enableLocalAgg
-      .enablePartialAgg
-      .disableIncrementalAgg
+    streamUtil.tableEnv.getConfig.enableMiniBatch
+    streamUtil.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
+    streamUtil.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_AGG_PARTIAL_ENABLED, true)
+    streamUtil.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_AGG_INCREMENTAL_ENABLED, false)
 
     val subquery =
       """

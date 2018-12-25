@@ -18,15 +18,17 @@
 package org.apache.flink.table.plan.rules.physical.stream
 
 import java.util.Collections
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptUtil}
-import org.apache.calcite.plan.RelOptRule.{any, operand}
-import org.apache.flink.table.api.TableConfig
+
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.PartialFinalType
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecExchange, StreamExecGlobalGroupAggregate, StreamExecIncrementalGroupAggregate, StreamExecLocalGroupAggregate}
 import org.apache.flink.table.plan.util.AggregateUtil.{inferLocalAggRowType, transformToStreamAggregateInfoList}
 import org.apache.flink.table.plan.util.{AggregateInfoList, DistinctInfo}
 import org.apache.flink.util.Preconditions
+
+import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptUtil}
+import org.apache.calcite.plan.RelOptRule.{any, operand}
 
 class IncrementalAggregateRule
   extends RelOptRule(
@@ -44,8 +46,8 @@ class IncrementalAggregateRule
     val config = partialAgg.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
 
     // whether incremental aggregate is enabled
-    val incrAggEnabled = config.getParameters.getBoolean(
-      TableConfig.SQL_EXEC_AGG_INCREMENTAL_ENABLED)
+    val incrAggEnabled = config.getConf.getBoolean(
+      TableConfigOptions.SQL_EXEC_AGG_INCREMENTAL_ENABLED)
 
     partialAgg.partialFinal == PartialFinalType.PARTIAL &&
       finalLocalAgg.partialFinal == PartialFinalType.FINAL &&

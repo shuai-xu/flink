@@ -21,7 +21,7 @@ package org.apache.flink.table.tpc
 import java.util
 
 import org.apache.flink.core.fs.Path
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.sources.parquet.ParquetVectorizedColumnRowTableSource
@@ -51,11 +51,11 @@ class TpcHBatchExecWithParquetSourceITCase(caseName: String) extends QueryTest w
       )
       tEnv.registerTableSource(tableName, tableSource)
     }
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_SORT_DEFAULT_LIMIT, -1)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_DEFAULT_LIMIT, -1)
     TpcUtils.disableBroadcastHashJoin(tEnv)
     TpcUtils.disableRangeSort(tEnv)
-    tEnv.getConfig.setJoinReorderEnabled(true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
   }
 
   def execute(caseName: String): Unit = {

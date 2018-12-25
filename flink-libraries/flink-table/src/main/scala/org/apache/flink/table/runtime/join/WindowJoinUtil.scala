@@ -18,7 +18,7 @@
 package org.apache.flink.table.runtime.join
 
 import org.apache.flink.api.common.functions.FlatJoinFunction
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.types.BaseRowType
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
@@ -77,7 +77,9 @@ object WindowJoinUtil {
     config: TableConfig): (Option[WindowBounds], Option[RexNode]) = {
 
     // Converts the condition to conjunctive normal form (CNF)
-    val cnfCondition = FlinkRexUtil.toCnf(rexBuilder, config.getMaxCnfNodeCount,predicate)
+    val cnfCondition = FlinkRexUtil.toCnf(rexBuilder,
+      config.getConf.getInteger(TableConfigOptions.SQL_CBO_CNF_NODES_LIMIT),
+      predicate)
 
     // split the condition into time predicates and other predicates
     // We need two range predicates or an equality predicate for a properly bounded window join.

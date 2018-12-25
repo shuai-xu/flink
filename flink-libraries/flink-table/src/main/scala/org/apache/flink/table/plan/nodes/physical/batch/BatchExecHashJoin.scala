@@ -182,7 +182,7 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
         (rInput, lInput, rProj, lProj, rType, lType, true)
       }
     val perRequestSize =
-      ExecResourceUtil.getPerRequestManagedMemory(config) * ExecResourceUtil.SIZE_IN_MB
+      ExecResourceUtil.getPerRequestManagedMemory(config.getConf) * ExecResourceUtil.SIZE_IN_MB
     val mq = getCluster.getMetadataQuery
 
     val buildRowSize = Util.first(mq.getAverageRowSize(buildRel), 24).toInt

@@ -21,10 +21,11 @@ package org.apache.flink.table.plan.rules.logical
 import java.util
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.{AggMode, LocalGlobalOff, LocalGlobalOn}
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
-import org.junit.{Before, Ignore, Test}
+import org.junit.{Before, Test}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
@@ -40,11 +41,16 @@ class SplitAggregateTest(aggMode: AggMode) extends TableTestBase {
     streamUtil= streamTestUtil()
     streamUtil.addTable[(Long, Int, String)](
       "MyTable", 'a, 'b, 'c)
-    val tableConfig = streamUtil.tableEnv.getConfig.enableMiniBatch.enablePartialAgg
+
+    val tableConfig = streamUtil.tableEnv.getConfig.enableMiniBatch
+    tableConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_AGG_PARTIAL_ENABLED, true)
 
     aggMode match {
-      case LocalGlobalOn => tableConfig.enableLocalAgg
-      case LocalGlobalOff => tableConfig.disableLocalAgg
+      case LocalGlobalOn => tableConfig.getConf.setBoolean(
+        TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
+      case LocalGlobalOff => tableConfig.getConf.setBoolean(
+        TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, false)
     }
   }
 

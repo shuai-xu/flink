@@ -21,6 +21,7 @@ import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.rel.rules.{FilterMultiJoinMergeRule, ProjectMultiJoinMergeRule, _}
 import org.apache.calcite.tools.RuleSets
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize._
@@ -172,7 +173,8 @@ class RewriteMultiJoinConditionRuleTest extends TableTestBatchExecBase {
     val builder = new CalciteConfigBuilder()
       .replaceBatchPrograms(buildPrograms())
     util.tableEnv.config.setCalciteConfig(builder.build())
-    util.setJoinReorderEnabled(true)
+    util.getTableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
 
     util.addTable[(Int, Long)]("A", 'a1, 'a2)
     util.addTable[(Int, Long)]("B", 'b1, 'b2)

@@ -24,7 +24,7 @@ import junit.framework.TestCase.assertTrue
 import junit.framework.TestCase.fail
 import org.apache.flink.runtime.io.network.DataExchangeMode
 import org.apache.flink.streaming.api.graph.{StreamEdge, StreamGraph, StreamNode}
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.utils.CommonTestData.createCsvTableSource
@@ -41,8 +41,8 @@ class DataExchangeModeTest extends QueryTest {
   @Test
   def testReuseBatch(): Unit = {
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.setSubPlanReuse(true)
-    tEnv.getConfig.setTableSourceReuse(true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, true)
     val data = (1 until 100).map(row(_))
     tEnv.registerTableSource("t", createCsvTableSource(data, Array("a"), Array(DataTypes.LONG)))
     verifySql(
@@ -55,9 +55,10 @@ class DataExchangeModeTest extends QueryTest {
   @Test
   def testAllDataExchangeModeBatch(): Unit = {
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.getParameters.setBoolean(TableConfig.SQL_EXEC_ALL_DATA_EXCHANGE_MODE_BATCH, true)
-    tEnv.getConfig.setSubPlanReuse(true)
-    tEnv.getConfig.setTableSourceReuse(true)
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_ALL_DATA_EXCHANGE_MODE_BATCH, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, true)
     val data = (1 until 100).map(row(_))
     tEnv.registerTableSource("t", createCsvTableSource(data, Array("a"), Array(DataTypes.LONG)))
     verifySql(
@@ -70,8 +71,8 @@ class DataExchangeModeTest extends QueryTest {
   @Test
   def testNotContainsBatch(): Unit = {
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.setSubPlanReuse(true)
-    tEnv.getConfig.setTableSourceReuse(true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, true)
     val data = (1 until 100).map(row(_))
     tEnv.registerTableSource("t1", createCsvTableSource(data, Array("a"), Array(DataTypes.LONG)))
     tEnv.registerTableSource("t2", createCsvTableSource(data, Array("b"), Array(DataTypes.LONG)))

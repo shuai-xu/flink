@@ -19,6 +19,7 @@
 package org.apache.flink.table.plan.batch.table
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.util.TableTestBatchExecBase
@@ -32,7 +33,8 @@ class SubsectionOptimizationTest extends TableTestBatchExecBase {
   def setup(): Unit = {
     util.addTable[(Int, Long, String)]("SmallTable3", 'a, 'b, 'c)
     util.tableEnv.getConfig.setSubsectionOptimization(true)
-    util.tableEnv.getConfig.disableUnionAllAsBreakPointInSubsectionOptimization(true)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
   }
 
   @Test

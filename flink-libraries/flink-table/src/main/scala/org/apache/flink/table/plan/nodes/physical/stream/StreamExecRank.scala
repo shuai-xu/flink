@@ -19,7 +19,7 @@ package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableException}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.calcite.Rank
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
@@ -155,7 +155,7 @@ class StreamExecRank(
     val (sortKeyType, sorter) = createSortKeyTypeAndSorter(inputSchema, fieldCollation)
 
     val generateRetraction = StreamExecRetractionRules.isAccRetract(this)
-    val cacheSize = tableConfig.getTopNCacheSize
+    val cacheSize = tableConfig.getConf.getLong(TableConfigOptions.BLINK_TOPN_CACHE_SIZE)
 
     val processFunction = getStrategy(Some(tableConfig), forceRecompute = true) match {
       case AppendFastRank =>
@@ -189,7 +189,8 @@ class StreamExecRank(
 
       case ApproxUpdateRank(primaryKeys) =>
         val approxBufferMultiplier = tableConfig.getTopNApproxBufferMultiplier
-        val approxBufferMinSize = tableConfig.getTopNApproxBufferMinSize
+        val approxBufferMinSize = tableConfig.getConf.getLong(
+          TableConfigOptions.BLINK_TOPN_APPROXIMATE_BUFFER_MINSIZE)
         val rowKeyType = createRowKeyType(primaryKeys, inputSchema)
         val rowKeySelector = createKeySelector(primaryKeys, inputSchema)
         new ApproxUpdateRankFunction(

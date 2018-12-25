@@ -23,7 +23,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{Table, Types}
+import org.apache.flink.table.api.{Table, TableConfigOptions, Types}
 import org.apache.flink.table.expressions.utils.Func1
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
@@ -138,7 +138,7 @@ class ModifiedMonotonicityTest extends TableTestBase {
   def testOneAggWithLocalGlobal(): Unit = {
     val util = streamTestUtil()
     util.tableEnv.getConfig.withMiniBatchTriggerTime(1000)
-    util.tableEnv.getConfig.enableLocalAgg
+    util.tableEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
     util.tableEnv.getConfig.enableMiniBatch
 
     val table = util.addTable[(Long, Int, String)]('a, 'b, 'c)
@@ -167,7 +167,7 @@ class ModifiedMonotonicityTest extends TableTestBase {
   def testTwoAggWithLocalGlobal(): Unit = {
     val util = streamTestUtil()
     util.tableEnv.getConfig.withMiniBatchTriggerTime(1000)
-    util.tableEnv.getConfig.enableLocalAgg
+    util.tableEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
     util.tableEnv.getConfig.enableMiniBatch
 
     val table = util.addTable[(Long, Int, String)]('a, 'b, 'c)

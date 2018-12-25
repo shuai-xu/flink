@@ -21,10 +21,9 @@ package org.apache.flink.table.sinks
 import java.lang.{Boolean => JBoolean}
 
 import org.apache.flink.api.scala._
-
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.dataformat.BinaryString.fromString
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.table.dataformat.BinaryRow
@@ -33,6 +32,7 @@ import org.apache.flink.table.runtime.batch.sql.QueryTest.binaryRow
 import org.apache.flink.table.runtime.utils._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.types.Row
+
 import org.junit.Before
 import org.junit._
 import org.junit.Assert._
@@ -53,10 +53,10 @@ class BatchTableSinksITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     tEnv.registerCollection("sTable", data, dataType, 'a, 'b, 'c)
-    tEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+    tEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
   }
 
   @Test

@@ -19,8 +19,7 @@
 package org.apache.flink.table.plan.batch.sql
 
 import org.apache.flink.api.scala._
-import org.apache.flink.configuration.Configuration
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.functions.{ScalarFunction, TableFunction}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
@@ -28,7 +27,7 @@ import org.apache.flink.table.plan.rules.logical.PushLimitIntoTableSourceScanRul
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.functions.aggfunctions.{IntFirstValueAggFunction, LongLastValueAggFunction}
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.{BatchExecTableTestUtil, TableTestBatchExecBase}
 
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.tools.RuleSets
@@ -38,10 +37,11 @@ import java.util.Random
 
 class ReuseSubPlanTest extends TableTestBatchExecBase {
 
-  private val util = batchExecTestUtil()
+  private var util: BatchExecTableTestUtil = _
 
   @Before
   def before(): Unit = {
+    util = batchExecTestUtil()
     // For #testReuseSubPlan_Limit
     util.tableEnv.getConfig.getCalciteConfig
       .getBatchPrograms
@@ -49,9 +49,11 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
       .get.remove(RuleSets.ofList(PushLimitIntoTableSourceScanRule.INSTANCE))
 
     // clear parameters
-    util.tableEnv.getConfig.setParameters(new Configuration)
-    util.tableEnv.getConfig.setSubPlanReuse(true)
-    util.tableEnv.getConfig.setTableSourceReuse(false)
+    util.tableEnv.getConfig.getConf
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, false)
     util.addTable("x", CommonTestData.get3Source(Array("a", "b", "c")))
     util.addTable("y", CommonTestData.get3Source(Array("d", "e", "f")))
     util.tableEnv.alterTableStats("x", Some(TableStats(100L)))
@@ -60,7 +62,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testDisableReuseSubPlan(): Unit = {
-    util.tableEnv.getConfig.setSubPlanReuse(false)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, false)
     val sqlQuery =
       """
         |WITH r AS (
@@ -73,7 +76,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testReuseSubPlan_DifferentRowType(): Unit = {
-    util.tableEnv.getConfig.setTableSourceReuse(false)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, false)
     // can not reuse because of different row-type
     val sqlQuery =
       """
@@ -86,8 +90,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testReuseSubPlan_Calc(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
     val sqlQuery =
       """
         |WITH r AS (SELECT a, b, c FROM x WHERE c LIKE 'test%')
@@ -100,8 +104,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testReuseSubPlan_Correlate(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
     val sqlQuery =
       """
         |WITH r AS (SELECT a, b, c, v FROM x, LATERAL TABLE(STRING_SPLIT(c, '-')) AS T(v))
@@ -116,8 +120,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
   def testReuseSubPlan_Exchange(): Unit = {
     util.tableEnv.alterTableStats("x", Some(TableStats(100000000L)))
     util.tableEnv.alterTableStats("y", Some(TableStats(1000000000L)))
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
     val sqlQuery =
       """
         |WITH r AS (SELECT a, b, c FROM x WHERE c LIKE 'test%')
@@ -152,8 +156,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testReuseSubPlan_HashAggregate(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
     val sqlQuery =
       """
         |WITH r AS (SELECT c, SUM(a) a, SUM(b) b FROM x GROUP BY c)
@@ -164,8 +168,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testReuseSubPlan_SortAggregate(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
     val sqlQuery =
       """
         |WITH r AS (SELECT c, SUM(a) a, SUM(b) b FROM x GROUP BY c)
@@ -176,7 +180,7 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testReuseSubPlan_Sort(): Unit = {
-    util.tableEnv.getConfig.getParameters.setBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE, true)
+    util.tableEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, true)
     val sqlQuery =
       """
         |WITH r AS (SELECT c, SUM(a) a, SUM(b) b FROM x GROUP BY c ORDER BY a, b DESC)
@@ -187,9 +191,10 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testReuseSubPlan_Source_With_Limit(): Unit = {
-    util.tableEnv.getConfig.setTableSourceReuse(true)
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,SortMergeJoin")
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, true)
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,SortMergeJoin")
     val sqlQuery =
       """
         |WITH r AS (SELECT a, b FROM x LIMIT 10)
@@ -200,8 +205,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testReuseSubPlan_Limit(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,SortMergeJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,SortMergeJoin")
     val sqlQuery =
       """
         |WITH r AS (SELECT a, b FROM x LIMIT 10)
@@ -222,8 +227,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testReuseSubPlan_SortMergeJoin(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
     val sqlQuery =
       """
         |WITH r AS (SELECT * FROM x, y WHERE a = d AND c LIKE 'He%')
@@ -234,8 +239,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testReuseSubPlan_HashJoin(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
     val sqlQuery =
       """
         |WITH r AS (SELECT * FROM x, y WHERE a = d AND c LIKE 'He%')
@@ -246,8 +251,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testReuseSubPlan_NestedLoopJoin(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,SortMergeJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,SortMergeJoin")
     val sqlQuery =
       """
         |WITH r AS (SELECT * FROM x, y WHERE a = d AND c LIKE 'He%')
@@ -268,8 +273,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testBreakupDeadlock_HashJoin(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
     val sqlQuery =
       """
         |WITH r AS (SELECT a FROM x LIMIT 10)
@@ -280,8 +285,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testBreakupDeadlock_NestedLoopJoin(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,SortMergeJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,SortMergeJoin")
     val sqlQuery =
       """
         |WITH r AS (SELECT a FROM x LIMIT 10)
@@ -292,7 +297,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testEnableReuseTableSource(): Unit = {
-    util.tableEnv.getConfig.setTableSourceReuse(true)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, true)
     val sqlQuery =
       """
         |WITH t AS (SELECT x.a AS a, x.b AS b, y.d AS d, y.e AS e FROM x, y WHERE x.a = y.d)
@@ -305,7 +311,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testDisableReuseTableSource(): Unit = {
-    util.tableEnv.getConfig.setTableSourceReuse(false)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, false)
     val sqlQuery =
       """
         |WITH t AS (SELECT x.a AS a, x.b AS b, y.d AS d, y.e AS e FROM x, y WHERE x.a = y.d)
@@ -318,8 +325,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test @Ignore // FIXME: BLINK-16477898
   def testNestedReusableSubPlan(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin,SortAgg")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin,SortAgg")
     val sqlQuery =
       """
         |WITH v1 AS (
@@ -392,7 +399,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
   @Test
   def testReusableSubPlan_NonDeterministicJoinCondition_Disabled(): Unit = {
     util.tableEnv.registerFunction("random_udf", RandomUdf)
-    util.tableEnv.getConfig.setNondeterministicOperatorReuse(false)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED, false)
     val sqlQuery =
       """
         |WITH r AS (SELECT * FROM x FULL OUTER JOIN y ON random_udf(a) = random_udf(d) OR c = f
@@ -405,7 +413,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
   @Test
   def testReusableSubPlan_NonDeterministicJoinCondition_Enabled(): Unit = {
     util.tableEnv.registerFunction("random_udf", RandomUdf)
-    util.tableEnv.getConfig.setNondeterministicOperatorReuse(true)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED, true)
     val sqlQuery =
       """
         |WITH r AS (SELECT * FROM x FULL OUTER JOIN y ON random_udf(a) = random_udf(d) OR c = f
@@ -419,7 +428,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
   def testReusableSubPlan_NonDeterministicAgg_Disabled(): Unit = {
     util.tableEnv.registerFunction("MyFirst", new IntFirstValueAggFunction)
     util.tableEnv.registerFunction("MyLast", new LongLastValueAggFunction)
-    util.tableEnv.getConfig.setNondeterministicOperatorReuse(false)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED, false)
 
     val sqlQuery =
       """
@@ -433,7 +443,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
   def testReusableSubPlan_NonDeterministicAgg_Enabled(): Unit = {
     util.tableEnv.registerFunction("MyFirst", new IntFirstValueAggFunction)
     util.tableEnv.registerFunction("MyLast", new LongLastValueAggFunction)
-    util.tableEnv.getConfig.setNondeterministicOperatorReuse(true)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED, true)
 
     val sqlQuery =
       """
@@ -460,7 +471,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
   @Test
   def testReusableSubPlan_NonDeterministicOverWindowAgg_Disabled(): Unit = {
     util.tableEnv.registerFunction("MyFirst", new IntFirstValueAggFunction)
-    util.tableEnv.getConfig.setNondeterministicOperatorReuse(false)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED, false)
 
     val sqlQuery =
       """
@@ -474,7 +486,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
   @Test
   def testReusableSubPlan_NonDeterministicOverWindowAgg_Enabled(): Unit = {
     util.tableEnv.registerFunction("MyFirst", new IntFirstValueAggFunction)
-    util.tableEnv.getConfig.setNondeterministicOperatorReuse(true)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED, true)
 
     val sqlQuery =
       """
@@ -487,7 +500,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
   @Test
   def testReusableSubPlan_NonDeterministicUDTF_Disabled(): Unit = {
     util.tableEnv.registerFunction("MyTable", new MyTableFunc)
-    util.tableEnv.getConfig.setNondeterministicOperatorReuse(false)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED, false)
 
     val sqlQuery =
       """
@@ -500,7 +514,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
   @Test
   def testReusableSubPlan_NonDeterministicUDTF_Enabled(): Unit = {
     util.tableEnv.registerFunction("MyTable", new MyTableFunc)
-    util.tableEnv.getConfig.setNondeterministicOperatorReuse(true)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED, true)
 
     val sqlQuery =
       """
@@ -527,8 +542,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testGetOptimizedPlanWithCost(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,SortMergeJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,SortMergeJoin")
     val sqlQuery =
       """
         |WITH r AS (SELECT * FROM x, y WHERE a = d AND c LIKE 'He%')

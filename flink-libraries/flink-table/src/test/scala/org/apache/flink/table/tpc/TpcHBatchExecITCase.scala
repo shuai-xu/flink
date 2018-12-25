@@ -17,7 +17,7 @@
  */
 package org.apache.flink.table.tpc
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.table.tpc.TpcUtils.getTpcHQuery
@@ -54,8 +54,8 @@ class TpcHBatchExecITCase(caseName: String,
           .build()
       tEnv.registerTableSource(tableName, tableSource, schema.getUniqueKeys)
     }
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_SORT_DEFAULT_LIMIT, -1)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_DEFAULT_LIMIT, -1)
     TpcUtils.disableBroadcastHashJoin(tEnv)
     TpcUtils.disableRangeSort(tEnv)
     tEnv.getConfig.setSubsectionOptimization(subsectionOptimization)

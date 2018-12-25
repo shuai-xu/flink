@@ -25,7 +25,7 @@ import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.bundle.{CoBundleTrigger, CombinedCoBundleTrigger, CountCoBundleTrigger, TimeCoBundleTrigger}
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
 import org.apache.flink.table.codegen._
@@ -238,8 +238,8 @@ class StreamExecJoin(
             rightIsAccRetract,
             filterNulls,
             getMiniBatchTrigger(tableConfig),
-            tableConfig.getParameters.getBoolean(
-              TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+            tableConfig.getConf.getBoolean(
+              TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.LEFT =>
           new LeftOuterBatchJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -259,8 +259,8 @@ class StreamExecJoin(
             rightIsAccRetract,
             filterNulls,
             getMiniBatchTrigger(tableConfig),
-            tableConfig.getParameters.getBoolean(
-              TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+            tableConfig.getConf.getBoolean(
+              TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.RIGHT =>
           new RightOuterBatchJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -280,8 +280,8 @@ class StreamExecJoin(
             rightIsAccRetract,
             filterNulls,
             getMiniBatchTrigger(tableConfig),
-            tableConfig.getParameters.getBoolean(
-              TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+            tableConfig.getConf.getBoolean(
+              TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.FULL =>
           new FullOuterBatchJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -301,8 +301,8 @@ class StreamExecJoin(
             rightIsAccRetract,
             filterNulls,
             getMiniBatchTrigger(tableConfig),
-            tableConfig.getParameters.getBoolean(
-              TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+            tableConfig.getConf.getBoolean(
+              TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.ANTI | FlinkJoinRelType.SEMI =>
           new AntiSemiBatchJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -324,8 +324,8 @@ class StreamExecJoin(
             joinInfo.isEqui,
             filterNulls,
             getMiniBatchTrigger(tableConfig),
-            tableConfig.getParameters.getBoolean(
-              TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+            tableConfig.getConf.getBoolean(
+              TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
       }
     } else {
       joinType match {

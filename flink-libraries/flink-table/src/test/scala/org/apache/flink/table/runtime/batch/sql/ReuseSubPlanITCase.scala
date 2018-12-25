@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.runtime.batch.sql
 
-import org.apache.flink.configuration.{Configuration, TaskManagerOptions}
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.configuration.Configuration
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData
@@ -35,14 +35,15 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.setParameters(new Configuration)
-    tEnv.getConfig.setSubPlanReuse(subPlanReuse)
-    tEnv.getConfig.setTableSourceReuse(false)
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 1)
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_HASH_AGG_TABLE_MEM, 32)
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_SORT_BUFFER_MEM, 32)
-    tEnv.getConfig.getParameters.setInteger(ExecResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 2)
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_HASH_JOIN_TABLE_MEM, 5)
+    tEnv.getConfig.setConf(new Configuration)
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, subPlanReuse)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, false)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM, 32)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_BUFFER_MEM, 32)
+    tEnv.getConfig.getConf.setInteger(ExecResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 2)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_HASH_JOIN_TABLE_MEM, 5)
 
     registerCollection("SmallTable3", smallData3, type3, "a, b, c", nullablesOfSmallData3)
     registerCollection("SmallTable5", smallData5, type5, "a, b, c, d, e", nullablesOfSmallData5)
@@ -103,7 +104,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends QueryTest {
 
   @Test
   def testReuseSubPlan_HashAggregate(): Unit = {
-    tEnv.getConfig.getParameters.setString(TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
+    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
     checkResult(
       """
         |WITH r AS (SELECT b, SUM(a) a, SUM(e) e FROM y GROUP BY b)
@@ -115,7 +116,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends QueryTest {
 
   @Test
   def testReuseSubPlan_SortAggregate(): Unit = {
-    tEnv.getConfig.getParameters.setString(TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
     checkResult(
       """
         |WITH r AS (SELECT b, SUM(a) a, SUM(e) e FROM y GROUP BY b)
@@ -127,7 +128,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends QueryTest {
 
   @Test
   def testReuseSubPlan_Sort(): Unit = {
-    tEnv.getConfig.getParameters.setBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, true)
     checkResult(
       """
         |WITH r AS (SELECT b, SUM(a) a, SUM(e) e FROM y GROUP BY b ORDER BY a, e DESC)
@@ -150,7 +151,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends QueryTest {
 
   @Test
   def testReuseSubPlan_SortLimit(): Unit = {
-    tEnv.getConfig.getParameters.setBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, true)
     checkResult(
       """
         |WITH r AS (SELECT b, SUM(a) a, SUM(e) e FROM y GROUP BY b ORDER BY a, e DESC LIMIT 5)
@@ -162,8 +163,8 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends QueryTest {
 
   @Test
   def testReuseSubPlan_SortMergeJoin(): Unit = {
-    tEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
+    tEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
     checkResult(
       """
         |WITH r AS (SELECT x.a as xa, x.b xb, y.a ya, y.b yb, y.e ye FROM x, y
@@ -179,8 +180,8 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends QueryTest {
 
   @Test
   def testReuseSubPlan_HashJoin(): Unit = {
-    tEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
+    tEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
     checkResult(
       """
         |WITH r AS (SELECT x.a as xa, x.b xb, y.a ya, y.b yb, y.e ye FROM x, y
@@ -196,8 +197,8 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends QueryTest {
 
   @Test
   def testReuseSubPlan_NestedLoopJoin(): Unit = {
-    tEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,SortMergeJoin")
+    tEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,SortMergeJoin")
     checkResult(
       """
         |WITH r AS (SELECT x.a as xa, x.b xb, y.a ya, y.b yb, y.e ye FROM x, y
@@ -224,9 +225,9 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends QueryTest {
 
   @Test
   def testEnableReuseTableSource(): Unit = {
-    tEnv.getConfig.setTableSourceReuse(true)
-    tEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, true)
+    tEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
     checkResult(
       """
         |WITH t AS (SELECT x.a AS xa, x.b AS xb, y.a AS ya, y.e AS ye FROM x, y WHERE x.a = y.a)
@@ -238,9 +239,9 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends QueryTest {
 
   @Test
   def testDisableReuseTableSource(): Unit = {
-    tEnv.getConfig.setTableSourceReuse(false)
-    tEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, false)
+    tEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
     checkResult(
       """
         |WITH t AS (SELECT x.a AS xa, x.b AS xb, y.a AS ya, y.e AS ye FROM x, y WHERE x.a = y.a)

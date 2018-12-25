@@ -92,7 +92,7 @@ class ExpressionReducer(config: TableConfig)
     val clazz = compile(getClass.getClassLoader, generatedFunction.name, generatedFunction.code)
     val function = clazz.newInstance()
 
-    val parameters = if (config.getParameters != null) config.getParameters else new Configuration()
+    val parameters = if (config.getConf != null) config.getConf else new Configuration()
     val reduced = try {
       function.open(parameters)
       // execute

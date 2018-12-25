@@ -97,16 +97,16 @@ public class BatchResultPartitionCalculator extends ResourceCalculator<BatchExec
 				tableSourceScan.setResultPartitionCount(transformation.getMaxParallelism());
 				return;
 			}
-			boolean infer = !ExecResourceUtil.getInferMode(tConfig).equals(ExecResourceUtil.InferMode.NONE);
+			boolean infer = !ExecResourceUtil.getInferMode(tableConf).equals(ExecResourceUtil.InferMode.NONE);
 			LOG.info("infer source partitions num: " + infer);
 			if (infer) {
 				double rowCount = mq.getRowCount(tableSourceScan);
 				double io = rowCount * mq.getAverageRowSize(tableSourceScan);
 				LOG.info("source row count is : " + rowCount);
 				LOG.info("source data size is : " + io);
-				long rowsPerPartition = ExecResourceUtil.getRelCountPerPartition(tConfig);
-				long sizePerPartition = ExecResourceUtil.getSourceSizePerPartition(tConfig);
-				int maxNum = ExecResourceUtil.getSourceMaxParallelism(tConfig);
+				long rowsPerPartition = ExecResourceUtil.getRelCountPerPartition(tableConf);
+				long sizePerPartition = ExecResourceUtil.getSourceSizePerPartition(tableConf);
+				int maxNum = ExecResourceUtil.getSourceMaxParallelism(tableConf);
 				tableSourceScan.setResultPartitionCount(Math.min(maxNum,
 						Math.max(
 								(int) Math.max(
@@ -115,7 +115,7 @@ public class BatchResultPartitionCalculator extends ResourceCalculator<BatchExec
 								1)));
 			} else {
 				tableSourceScan.setResultPartitionCount(ExecResourceUtil
-						.getSourceParallelism(tConfig));
+						.getSourceParallelism(tableConf));
 			}
 
 		}
@@ -124,7 +124,7 @@ public class BatchResultPartitionCalculator extends ResourceCalculator<BatchExec
 	private void calculateUnion(BatchExecUnion unionBatchExec) {
 		calculateInputs(unionBatchExec);
 		unionBatchExec.setResultPartitionCount(ExecResourceUtil.
-				getOperatorDefaultParallelism(tConfig));
+				getOperatorDefaultParallelism(tableConf));
 	}
 
 	private void calculateExchange(BatchExecExchange exchangeBatchExec) {
@@ -132,7 +132,7 @@ public class BatchResultPartitionCalculator extends ResourceCalculator<BatchExec
 		if (exchangeBatchExec.getDistribution().getType() == RelDistribution.Type.SINGLETON) {
 			exchangeBatchExec.setResultPartitionCount(1);
 		} else {
-			exchangeBatchExec.setResultPartitionCount(ExecResourceUtil.getOperatorDefaultParallelism(tConfig));
+			exchangeBatchExec.setResultPartitionCount(ExecResourceUtil.getOperatorDefaultParallelism(tableConf));
 		}
 	}
 

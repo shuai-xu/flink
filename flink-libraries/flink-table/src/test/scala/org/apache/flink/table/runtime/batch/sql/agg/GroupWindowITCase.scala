@@ -44,7 +44,7 @@ class GroupWindowITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     // common case
     registerCollection("Table3WithTimestamp", data3WithTimestamp, type3WithTimestamp,
       "a, b, c, ts", nullablesOfData3WithTimestamp)
@@ -83,8 +83,8 @@ class GroupWindowITCase extends QueryTest {
       override def getTableSchema = TableSchema.fromDataType(getReturnType)
     }
     tEnv.registerTableSource("Table3WithTimestamp1", table)
-    tEnv.getConfig.getParameters
-        .setDouble(TableConfig.SQL_EXEC_AGG_GROUPS_NDV_RATIO, 0.8D)
+    tEnv.getConfig.getConf
+        .setDouble(TableConfigOptions.SQL_EXEC_AGG_GROUPS_NDV_RATIO, 0.8D)
     // time unit
     registerCollection("Table6", data6, type6, "a, b, c, d, e, f", nullablesOfData6)
   }

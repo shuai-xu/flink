@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
-import org.apache.flink.table.api.{AggPhaseEnforcer, BatchTableEnvironment, TableConfig, TableException}
+import org.apache.flink.table.api.{AggPhaseEnforcer, BatchTableEnvironment, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.BatchExecAggregateCodeGen
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCollect
@@ -224,12 +224,12 @@ abstract class BatchExecGroupAggregateBase(
 
   protected def getSkewPunishFactor: Int = {
     val tableConfig = FlinkRelOptUtil.getTableConfig(this)
-    tableConfig.getParameters.getInteger(TableConfig.SQL_CBO_SKEW_PUNISH_FACTOR)
+    tableConfig.getConf.getInteger(TableConfigOptions.SQL_CBO_SKEW_PUNISH_FACTOR)
   }
 
   protected def isEnforceTwoStageAgg: Boolean = {
     val tableConfig = FlinkRelOptUtil.getTableConfig(this)
-    val aggConfig = tableConfig.getParameters.getString(TableConfig.SQL_CBO_AGG_PHASE_ENFORCER)
+    val aggConfig = tableConfig.getConf.getString(TableConfigOptions.SQL_CBO_AGG_PHASE_ENFORCER)
     AggPhaseEnforcer.TWO_PHASE.toString.equalsIgnoreCase(aggConfig)
   }
 }

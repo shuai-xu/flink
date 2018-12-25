@@ -19,25 +19,23 @@
 package org.apache.flink.table.plan
 
 import org.apache.flink.api.scala._
-import org.apache.flink.configuration.Configuration
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.functions.TableFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.util.{TableFunc1, TableTestBatchExecBase}
+import org.apache.flink.table.util.{BatchExecTableTestUtil, TableFunc1, TableTestBatchExecBase}
 
 import org.apache.commons.lang3.StringUtils
 import org.junit.{Before, Test}
 
 class RemoveCollationTest extends TableTestBatchExecBase {
 
-  private val util = batchExecTestUtil()
+  private var util: BatchExecTableTestUtil = _
 
   @Before
   def before(): Unit = {
-    // clear parameters
-    util.tableEnv.getConfig.setParameters(new Configuration)
+    util = batchExecTestUtil()
     util.addTable("x", CommonTestData.get3Source(Array("a", "b", "c")))
     util.addTable("y", CommonTestData.get3Source(Array("d", "e", "f")))
     util.addTable("t1", CommonTestData.get3Source(Array("a1", "b1", "c1")))
@@ -51,8 +49,8 @@ class RemoveCollationTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveCollation_OverWindowAgg(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin,HashAgg")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin,HashAgg")
     val sqlQuery =
       """
         | SELECT
@@ -67,8 +65,8 @@ class RemoveCollationTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveCollation_Aggregate(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
     val sqlQuery =
       """
         |WITH r AS (SELECT * FROM x, y WHERE a = d AND c LIKE 'He%')
@@ -79,8 +77,8 @@ class RemoveCollationTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveCollation_Aggregate_1(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
     val sqlQuery =
       """
         |WITH r AS (SELECT * FROM x, y WHERE a = d AND c LIKE 'He%')
@@ -91,7 +89,7 @@ class RemoveCollationTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveCollation_Sort(): Unit = {
-    util.tableEnv.getConfig.getParameters.setBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE, true)
+    util.tableEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, true)
     val sqlQuery =
       """
         |WITH r AS (SELECT a, b, COUNT(c) AS cnt FROM x GROUP BY a, b)
@@ -102,9 +100,9 @@ class RemoveCollationTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveCollation_Aggregate_3(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
-    util.tableEnv.getConfig.getParameters.setBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE, true)
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+    util.tableEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, true)
     val sqlQuery =
       """
         |WITH r AS (SELECT * FROM x ORDER BY a, b)
@@ -115,8 +113,8 @@ class RemoveCollationTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveCollation_Rank_1(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
     val sqlQuery =
       """
         |SELECT a, SUM(b) FROM (
@@ -130,8 +128,8 @@ class RemoveCollationTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveCollation_Rank_2(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
     val sqlQuery =
       """
         |SELECT a, b, MAX(c) FROM (
@@ -159,8 +157,8 @@ class RemoveCollationTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveCollation_Rank_4(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
     val sqlQuery =
       """
         |SELECT * FROM (
@@ -174,8 +172,8 @@ class RemoveCollationTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveCollation_Rank_Singleton(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
     val sqlQuery =
       """
         |SELECT COUNT(a), SUM(b) FROM (
@@ -189,8 +187,8 @@ class RemoveCollationTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveCollation_MultipleSortMergeJoins1(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
 
     val sql =
       """
@@ -205,8 +203,8 @@ class RemoveCollationTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveCollation_MultipleSortMergeJoins_MultiJoinKeys1(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
 
     val sql =
       """
@@ -221,8 +219,8 @@ class RemoveCollationTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveCollation_MultipleSortMergeJoins2(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
 
     val sql =
       """
@@ -237,8 +235,8 @@ class RemoveCollationTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveCollation_MultipleSortMergeJoins_MultiJoinKeys2(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
 
     val sql =
       """
@@ -253,8 +251,8 @@ class RemoveCollationTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveCollation_MultipleSortMergeJoins3(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
     util.addTable[(String, String, String, String, String)]("tb1",
       Set(Set("id")), 'id, 'key, 'tb2_ids, 'tb3_ids, 'name)
     util.addTable[(String, String)]("tb2", Set(Set("id")), 'id, 'name)
@@ -309,8 +307,8 @@ class RemoveCollationTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveCollation_Correlate1(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin,HashAgg")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin,HashAgg")
     util.tableEnv.registerFunction("split", new TableFunc1)
     val sqlQuery =
       """
@@ -323,8 +321,8 @@ class RemoveCollationTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveCollation_Correlate2(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin,HashAgg")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin,HashAgg")
     util.tableEnv.registerFunction("split", new TableFunc1)
     val sqlQuery =
       """
@@ -338,8 +336,8 @@ class RemoveCollationTest extends TableTestBatchExecBase {
   @Test
   def testRemoveCollation_Correlate3(): Unit = {
     // do not remove shuffle
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin,HashAgg")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin,HashAgg")
     util.tableEnv.registerFunction("split", new TableFunc1)
     val sqlQuery =
       """

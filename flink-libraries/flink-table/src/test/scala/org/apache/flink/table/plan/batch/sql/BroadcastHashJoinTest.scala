@@ -19,8 +19,10 @@
 package org.apache.flink.table.plan.batch.sql
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.util.TableTestBatchExecBase
+
 import org.junit.{Before, Test}
 
 class BroadcastHashJoinTest extends TableTestBatchExecBase {
@@ -29,7 +31,8 @@ class BroadcastHashJoinTest extends TableTestBatchExecBase {
 
   @Before
   def before(): Unit = {
-    util.setJoinReorderEnabled(true)
+    util.getTableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
   }
 
   @Test

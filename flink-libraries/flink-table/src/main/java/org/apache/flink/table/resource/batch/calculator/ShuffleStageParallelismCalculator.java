@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.resource.batch.calculator;
 
-import org.apache.flink.table.api.TableConfig;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
 import org.apache.flink.table.resource.batch.ShuffleStage;
 import org.apache.flink.table.util.ExecResourceUtil;
@@ -37,11 +37,11 @@ import java.util.Set;
 public abstract class ShuffleStageParallelismCalculator {
 	private static final Logger LOG = LoggerFactory.getLogger(ShuffleStageParallelismCalculator.class);
 	private final RelMetadataQuery mq;
-	private final TableConfig tableConfig;
+	private final Configuration tableConf;
 
-	public ShuffleStageParallelismCalculator(RelMetadataQuery mq, TableConfig tableConfig) {
+	public ShuffleStageParallelismCalculator(RelMetadataQuery mq, Configuration tableConf) {
 		this.mq = mq;
-		this.tableConfig = tableConfig;
+		this.tableConf = tableConf;
 	}
 
 	public void calculate(Collection<ShuffleStage> shuffleStages) {
@@ -52,16 +52,16 @@ public abstract class ShuffleStageParallelismCalculator {
 	protected abstract void calculate(ShuffleStage shuffleStage);
 
 	protected int calculateSource(BatchExecScan scanBatchExec) {
-		boolean infer = !ExecResourceUtil.getInferMode(tableConfig).equals(ExecResourceUtil.InferMode.NONE);
+		boolean infer = !ExecResourceUtil.getInferMode(tableConf).equals(ExecResourceUtil.InferMode.NONE);
 		LOG.info("infer source partitions num: " + infer);
 		if (infer) {
 			double rowCount = mq.getRowCount(scanBatchExec);
 			double io = rowCount * mq.getAverageRowSize(scanBatchExec);
 			LOG.info("source row count is : " + rowCount);
 			LOG.info("source data size is : " + io);
-			long rowsPerPartition = ExecResourceUtil.getRelCountPerPartition(tableConfig);
-			long sizePerPartition = ExecResourceUtil.getSourceSizePerPartition(tableConfig);
-			int maxNum = ExecResourceUtil.getSourceMaxParallelism(tableConfig);
+			long rowsPerPartition = ExecResourceUtil.getRelCountPerPartition(tableConf);
+			long sizePerPartition = ExecResourceUtil.getSourceSizePerPartition(tableConf);
+			int maxNum = ExecResourceUtil.getSourceMaxParallelism(tableConf);
 			return Math.min(maxNum,
 					Math.max(
 							(int) Math.max(
@@ -69,11 +69,11 @@ public abstract class ShuffleStageParallelismCalculator {
 									rowCount / rowsPerPartition),
 							1));
 		} else {
-			return ExecResourceUtil.getSourceParallelism(tableConfig);
+			return ExecResourceUtil.getSourceParallelism(tableConf);
 		}
 	}
 
-	protected TableConfig getTableConfig() {
-		return this.tableConfig;
+	protected Configuration getTableConf() {
+		return this.tableConf;
 	}
 }

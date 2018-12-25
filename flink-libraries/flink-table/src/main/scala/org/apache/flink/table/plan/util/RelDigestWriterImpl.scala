@@ -18,10 +18,9 @@
 
 package org.apache.flink.table.plan.util
 
-import org.apache.flink.table.api.{TableConfig, TableException}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.plan.nodes.FlinkRelNode
 import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalLastRow, Rank, Sink, WatermarkAssigner}
-import org.apache.flink.table.plan.util.{AggregateUtil, CalcUtil, ExpandUtil, MatchUtil, OverAggregateUtil, SortUtil}
 
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.core._
@@ -99,7 +98,9 @@ class RelDigestWriterImpl(sw: StringWriter, tableConfig: TableConfig)
     s.append("rowType=[").append(rel.getRowType.toString).append("]")
     // if the given rel contains non-deterministic `SqlOperator`,
     // add a unique id to distinguish each other
-    if (!tableConfig.getNondeterministicOperatorReuse && !isDeterministicOperator(rel)) {
+    if (!tableConfig.getConf.getBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED) &&
+        !isDeterministicOperator(rel)) {
       s.append(",nonDeterministicId=[")
         .append(RelDigestWriterImpl.nonDeterministicIdCounter.incrementAndGet()).append("]")
     }

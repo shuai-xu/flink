@@ -24,7 +24,7 @@ import org.apache.calcite.sql.SqlKind
 import org.apache.flink.api.common.functions.Function
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
-import org.apache.flink.table.api.{TableConfig, TableException}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForType, newNames}
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
@@ -168,7 +168,7 @@ object CalcCodeGenerator {
 
       splitFunc = CodeGenUtils.generateSplitFunctionCalls(
         projectionExpression.codeBuffer,
-        config.getMaxGeneratedCodeLength,
+        config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
         "calcProjectApply",
         "private final void",
         ctx.reuseFieldCode().length,

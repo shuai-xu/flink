@@ -27,7 +27,7 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
 import org.apache.flink.runtime.memory.MemoryAllocationException;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.operators.testutils.UnionIterator;
-import org.apache.flink.table.api.TableConfig;
+import org.apache.flink.table.api.TableConfigOptions;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.UniformBinaryRowGenerator;
@@ -84,7 +84,7 @@ public class LongHashTableTest {
 		this.ioManager = new IOManagerAsync();
 
 		conf = new Configuration();
-		conf.setBoolean(TableConfig.SQL_EXEC_SPILL_COMPRESSION_ENABLE(), useCompress);
+		conf.setBoolean(TableConfigOptions.SQL_EXEC_SPILL_COMPRESSION_ENABLE, useCompress);
 	}
 
 	private class MyHashTable extends LongHybridHashTable {

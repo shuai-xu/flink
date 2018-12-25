@@ -20,9 +20,10 @@ package org.apache.flink.table.runtime.utils
 import java.util
 
 import org.apache.flink.api.common.time.Time
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase._
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
-import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.{MiniBatchMode, MiniBatchOff, MiniBatchOn, MicroBatchOn}
+import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.{MicroBatchOn, MiniBatchMode, MiniBatchOff, MiniBatchOn}
 import org.junit.Before
 import org.junit.runners.Parameterized
 
@@ -38,9 +39,9 @@ class StreamingWithAggTestBase(
     super.before()
     tEnv.getConfig.withIdleStateRetentionTime(Time.hours(1), Time.hours(2))
     if (aggMode.isLocalAggEnabled) {
-      tEnv.getConfig.enableLocalAgg
+      tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
     } else {
-      tEnv.getConfig.disableLocalAgg
+      tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, false)
     }
   }
 }

@@ -24,7 +24,7 @@ import org.apache.flink.api.java.typeutils.{RowTypeInfo, TypeExtractor}
 import org.apache.flink.api.scala._
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.functions.{ScalarFunction, TableFunction}
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.dataformat.BinaryString
@@ -44,7 +44,7 @@ class TableFunctionITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     registerCollection("inputT", TableFunctionITCase.testData, type3, 'a, 'b, 'c)
     registerCollection("inputTWithNull", TableFunctionITCase.testDataWithNull, type3, 'a, 'b, 'c)
     registerCollection("SmallTable3", smallData3, type3, 'a, 'b, 'c)

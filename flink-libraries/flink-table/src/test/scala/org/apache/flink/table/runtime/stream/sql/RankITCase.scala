@@ -21,6 +21,7 @@ package org.apache.flink.table.runtime.stream.sql
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.{StreamingWithStateTestBase, TestingRetractSink, TestingRetractTableSink, TestingUpsertTableSink}
@@ -260,8 +261,8 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
         |WHERE rank_num <= 3
       """.stripMargin
 
-      tEnv.getConfig.enableTopNApprox
-      .withTopNApproxBufferMinSize(20)
+      tEnv.getConfig.getConf.setBoolean(TableConfigOptions.BLINK_TOPN_APPROXIMATE_ENABLED, true)
+    tEnv.getConfig.getConf.setLong(TableConfigOptions.BLINK_TOPN_APPROXIMATE_BUFFER_MINSIZE, 20)
 
     val sink = new TestingUpsertTableSink(Array(0, 3))
     tEnv.sqlQuery(sql).writeToSink(sink)
@@ -592,8 +593,8 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
         |WHERE rank_num <= 2
       """.stripMargin
 
-    tEnv.getConfig.enableTopNApprox
-      .withTopNApproxBufferMinSize(20)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.BLINK_TOPN_APPROXIMATE_ENABLED, true)
+    tEnv.getConfig.getConf.setLong(TableConfigOptions.BLINK_TOPN_APPROXIMATE_BUFFER_MINSIZE, 20)
 
     val tableSink = new TestingUpsertTableSink(Array(0, 4))
     tEnv.sqlQuery(sql).writeToSink(tableSink)
@@ -683,8 +684,8 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
         |WHERE rank_num = 2
       """.stripMargin
 
-     tEnv.getConfig.enableTopNApprox
-      .withTopNApproxBufferMinSize(20)
+     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.BLINK_TOPN_APPROXIMATE_ENABLED, true)
+    tEnv.getConfig.getConf.setLong(TableConfigOptions.BLINK_TOPN_APPROXIMATE_BUFFER_MINSIZE, 20)
 
     val tableSink = new TestingUpsertTableSink(Array(0, 4))
     tEnv.sqlQuery(sql).writeToSink(tableSink)
@@ -1020,8 +1021,8 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
         |WHERE rank_num <= 4
       """.stripMargin
 
-    tEnv.getConfig.enableTopNApprox
-      .withTopNApproxBufferMinSize(0)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.BLINK_TOPN_APPROXIMATE_ENABLED, true)
+    tEnv.getConfig.getConf.setLong(TableConfigOptions.BLINK_TOPN_APPROXIMATE_BUFFER_MINSIZE, 0)
 
     val tableSink = new TestingUpsertTableSink(Array(0, 4))
     tEnv.sqlQuery(sql).writeToSink(tableSink)
@@ -1184,8 +1185,8 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       """.stripMargin
 
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
-    tEnv.getConfig.enableTopNApprox
-      .withTopNApproxBufferMinSize(0)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.BLINK_TOPN_APPROXIMATE_ENABLED, true)
+    tEnv.getConfig.getConf.setLong(TableConfigOptions.BLINK_TOPN_APPROXIMATE_BUFFER_MINSIZE, 0)
     tEnv.sqlQuery(sql).writeToSink(tableSink)
     env.execute()
 

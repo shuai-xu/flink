@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.rules.logical
 
 import java.util
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.util.{FlinkRelOptUtil, RexNodeExtractor}
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
@@ -53,12 +53,12 @@ class PushFilterIntoTableSourceScanRule extends RelOptRule(
           case source: ParquetTableSource[_] if !source.isFilterPushedDown  =>
             //FIXME This is not a very elegant solution.
             val tableConfig = scan.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
-            tableConfig.getParameters.getBoolean(
-              TableConfig.SQL_EXEC_SOURCE_PARQUET_ENABLE_PREDICATE_PUSHDOWN)
+            tableConfig.getConf.getBoolean(
+              TableConfigOptions.SQL_EXEC_SOURCE_PARQUET_ENABLE_PREDICATE_PUSHDOWN)
           case source: OrcTableSource[_] if !source.isFilterPushedDown =>
             val tableConfig = scan.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
-            tableConfig.getParameters.getBoolean(
-              TableConfig.SQL_EXEC_SOURCE_ORC_ENABLE_PREDICATE_PUSHDOWN)
+            tableConfig.getConf.getBoolean(
+              TableConfigOptions.SQL_EXEC_SOURCE_ORC_ENABLE_PREDICATE_PUSHDOWN)
           case source: FilterableTableSource if !source.isFilterPushedDown => true
           case _ => false
         }

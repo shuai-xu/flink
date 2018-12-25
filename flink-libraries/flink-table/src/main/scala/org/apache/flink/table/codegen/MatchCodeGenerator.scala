@@ -20,17 +20,10 @@ package org.apache.flink.table.codegen
 
 import java.math.{BigDecimal => JBigDecimal}
 
-import org.apache.calcite.rel.RelCollation
-import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.rex._
-import org.apache.calcite.sql.`type`.{ReturnTypes, SqlTypeName}
-import org.apache.calcite.sql.fun.SqlStdOperatorTable._
-import org.apache.calcite.sql.{SqlAggFunction, SqlOperator}
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.cep.pattern.conditions.IterativeCondition
 import org.apache.flink.cep.{PatternFlatSelectFunction, PatternFlatTimeoutFunction, PatternSelectFunction, PatternTimeoutFunction}
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes, GenericType, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils._
@@ -41,6 +34,14 @@ import org.apache.flink.table.plan.util.AggregateUtil
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
 import org.apache.flink.table.runtime.functions.AggsHandleFunction
+
+import org.apache.calcite.rel.RelCollation
+import org.apache.calcite.rel.core.AggregateCall
+import org.apache.calcite.rex._
+import org.apache.calcite.sql.`type`.{ReturnTypes, SqlTypeName}
+import org.apache.calcite.sql.fun.SqlStdOperatorTable._
+import org.apache.calcite.sql.{SqlAggFunction, SqlOperator}
+import org.apache.calcite.tools.RelBuilder
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -140,7 +141,7 @@ class MatchCodeGenerator(
 
     val unboxingCodeSplit = generateSplitFunctionCalls(
       ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-      config.getMaxGeneratedCodeLength,
+      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
       "inputUnbox",
       "private final void",
       ctx.reuseFieldCode().length,
@@ -235,7 +236,7 @@ class MatchCodeGenerator(
 
     val unboxingCodeSplit = generateSplitFunctionCalls(
       ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-      config.getMaxGeneratedCodeLength,
+      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
       "inputUnbox",
       "private final void",
       ctx.reuseFieldCode().length,
@@ -327,7 +328,7 @@ class MatchCodeGenerator(
 
     val unboxingCodeSplit = generateSplitFunctionCalls(
       ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-      config.getMaxGeneratedCodeLength,
+      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
       "inputUnbox",
       "private final void",
       ctx.reuseFieldCode().length,
@@ -419,7 +420,7 @@ class MatchCodeGenerator(
 
     val unboxingCodeSplit = generateSplitFunctionCalls(
       ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-      config.getMaxGeneratedCodeLength,
+      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
       "inputUnbox",
       "private final void",
       ctx.reuseFieldCode().length,
@@ -513,7 +514,7 @@ class MatchCodeGenerator(
 
     val unboxingCodeSplit = generateSplitFunctionCalls(
       ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-      config.getMaxGeneratedCodeLength,
+      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
       "inputUnbox",
       "private final void",
       ctx.reuseFieldCode().length,

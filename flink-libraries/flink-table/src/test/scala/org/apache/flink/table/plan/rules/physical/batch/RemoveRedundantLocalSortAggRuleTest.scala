@@ -17,30 +17,28 @@
  */
 package org.apache.flink.table.plan.rules.physical.batch
 
-import org.apache.flink.configuration.Configuration
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.{BatchExecTableTestUtil, TableTestBatchExecBase}
 import org.junit.{Before, Test}
 
 class RemoveRedundantLocalSortAggRuleTest extends TableTestBatchExecBase {
 
-  private val util = batchExecTestUtil()
+  private var util: BatchExecTableTestUtil = _
 
   @Before
-  def setup(): Unit = {
-    // clear parameters
-    util.tableEnv.getConfig.setParameters(new Configuration)
+  def before(): Unit = {
+    util = batchExecTestUtil()
     util.addTable("x", CommonTestData.get3Source(Array("a", "b", "c")))
     util.addTable("y", CommonTestData.get3Source(Array("d", "e", "f")))  }
 
   @Test
   def testRemoveRedundantLocalSortAggWithSort(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortMergeJoin,NestedLoopJoin,HashAgg")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortMergeJoin,NestedLoopJoin,HashAgg")
     // disable BroadcastHashJoin
-    util.tableEnv.getConfig.getParameters.setLong(
-      TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
+    util.tableEnv.getConfig.getConf.setLong(
+      TableConfigOptions.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
     val sqlQuery =
       """
         |WITH r AS (SELECT * FROM x, y WHERE a = d AND c LIKE 'He%')
@@ -51,8 +49,8 @@ class RemoveRedundantLocalSortAggRuleTest extends TableTestBatchExecBase {
 
   @Test
   def testRemoveRedundantLocalSortAggWithoutSort(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin,HashAgg")
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin,HashAgg")
     val sqlQuery =
       """
         |WITH r AS (SELECT * FROM x, y WHERE a = d AND c LIKE 'He%')

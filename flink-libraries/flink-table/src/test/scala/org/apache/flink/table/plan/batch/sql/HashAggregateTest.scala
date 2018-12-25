@@ -22,7 +22,7 @@ import java.util
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.AggPhaseEnforcer._
-import org.apache.flink.table.api.{AggPhaseEnforcer, OperatorType, TableConfig}
+import org.apache.flink.table.api.{AggPhaseEnforcer, OperatorType, TableConfigOptions}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.runtime.utils.CommonTestData
@@ -47,10 +47,10 @@ class HashAggregateTest(
 
   @Before
   def before(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, OperatorType.SortAgg.toString)
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_CBO_AGG_PHASE_ENFORCER, aggStrategy.toString)
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, OperatorType.SortAgg.toString)
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_CBO_AGG_PHASE_ENFORCER, aggStrategy.toString)
     util.addTable("MyTable", CommonTestData.get3Source(Array("a", "b", "c")))
     val tableStats = if (withNdv) {
       TableStats(100000000L, Map[String, ColumnStats](

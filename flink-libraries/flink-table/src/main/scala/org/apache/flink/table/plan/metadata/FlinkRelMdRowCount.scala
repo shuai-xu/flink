@@ -125,7 +125,7 @@ class FlinkRelMdRowCount private extends MetadataHandler[BuiltInMetadata.RowCoun
     } else {
       val childRowCount = mq.getRowCount(rel.getInput)
       val tableConfig = FlinkRelOptUtil.getTableConfig(rel)
-      val nParallelism = ExecResourceUtil.calOperatorParallelism(childRowCount, tableConfig)
+      val nParallelism = ExecResourceUtil.calOperatorParallelism(childRowCount, tableConfig.getConf)
       if (nParallelism == 1) {
         ndvOfGroupKeysOnGlobalAgg
       } else if (grouping.isEmpty) {

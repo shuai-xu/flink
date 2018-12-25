@@ -21,6 +21,7 @@ package org.apache.flink.table.plan.batch.sql
 import java.lang.{Long => JLong}
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.utils.CommonTestData
@@ -36,7 +37,8 @@ class JoinTest extends TableTestBatchExecBase {
 
   @Before
   def before(): Unit = {
-    util.setJoinReorderEnabled(true)
+    util.getTableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
     util.addTable[(Int, Long)]("x", 'a, 'b)
     util.addTable[(Int, Long)]("y", 'c, 'd)
 

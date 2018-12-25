@@ -21,11 +21,13 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.api.java.sampling.IntermediateSampleData
 import org.apache.flink.api.java.typeutils.{TupleTypeInfo, TypeExtractor}
+import org.apache.flink.configuration.Configuration
 import org.apache.flink.runtime.io.network.DataExchangeMode
+import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, PartitionTransformation, StreamTransformation, TwoInputTransformation}
 import org.apache.flink.streaming.runtime.partitioner._
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
-import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, GenericRow}
@@ -36,9 +38,9 @@ import org.apache.flink.table.runtime.BinaryHashPartitioner
 import org.apache.flink.table.runtime.range._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.BatchExecRelVisitor
+
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.{RelDistribution, RelNode, RelWriter}
-import org.apache.flink.runtime.operators.DamBehavior
 
 import scala.collection.JavaConverters._
 
@@ -130,7 +132,7 @@ class BatchExecExchange(
 
   override def isBarrierNode: Boolean = {
     val tableConfig = FlinkRelOptUtil.getTableConfig(this)
-    val exchangeMode = getDataExchangeModeForDeadlockBreakup(tableConfig)
+    val exchangeMode = getDataExchangeModeForDeadlockBreakup(tableConfig.getConf)
     if (exchangeMode eq DataExchangeMode.BATCH) {
       return true
     }
@@ -155,15 +157,15 @@ class BatchExecExchange(
   }
 
   private[flink] def getDataExchangeModeForDeadlockBreakup(
-      tableConfig: TableConfig): DataExchangeMode = {
+      tableConf: Configuration): DataExchangeMode = {
     requiredExchangeMode match {
       case Some(mode) if mode eq DataExchangeMode.BATCH => mode
-      case _ => getDataExchangeModeForExternalShuffle(tableConfig)
+      case _ => getDataExchangeModeForExternalShuffle(tableConf)
     }
   }
 
-  private def getDataExchangeModeForExternalShuffle(tableConfig: TableConfig): DataExchangeMode = {
-    if (tableConfig.isAllDataExchangeModeBatch) {
+  private def getDataExchangeModeForExternalShuffle(tableConf: Configuration): DataExchangeMode = {
+    if (tableConf.getBoolean(TableConfigOptions.SQL_EXEC_ALL_DATA_EXCHANGE_MODE_BATCH)) {
       DataExchangeMode.BATCH
     } else {
       DataExchangeMode.AUTO
@@ -193,7 +195,7 @@ class BatchExecExchange(
         input
     }
 
-    val exchangeMode = getDataExchangeModeForDeadlockBreakup(tableEnv.getConfig)
+    val exchangeMode = getDataExchangeModeForDeadlockBreakup(tableEnv.getConfig.getConf)
 
     val inputType = input.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
     val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BinaryRow])
@@ -352,7 +354,7 @@ class BatchExecExchange(
     val broadcast = new PartitionTransformation(
       sampleAndHistogram,
       new BroadcastPartitioner[Array[Array[AnyRef]]],
-      getDataExchangeModeForExternalShuffle(tableEnv.getConfig))
+      getDataExchangeModeForExternalShuffle(tableEnv.getConfig.getConf))
 
     // 4. add batch dataExchange
     val batchExchange = new PartitionTransformation(
@@ -384,7 +386,7 @@ class BatchExecExchange(
       new CustomPartitionerWrapper(
         new IdPartitioner(TOTAL_RANGES_NUM),
         new FirstIntFieldKeyExtractor),
-      getDataExchangeModeForExternalShuffle(tableEnv.getConfig))
+      getDataExchangeModeForExternalShuffle(tableEnv.getConfig.getConf))
 
     // 6. Remove the partition id.
     val removeIdTransformation = new OneInputTransformation(

@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.bundle.{BundleTrigger, CombinedBundleTrigger, CountBundleTrigger, TimeBundleTrigger}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
@@ -123,8 +123,8 @@ class StreamExecLastRow(
         processFunction,
         getMiniBatchTrigger(tableConfig),
         rowTypeInfo,
-        tableConfig.getParameters.getBoolean(
-          TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+        tableConfig.getConf.getBoolean(
+          TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
     } else {
       val processFunction = new LastRowFunction(
         rowTypeInfo,

@@ -112,7 +112,7 @@ class ExpressionReductionRulesStreamTest extends TableTestBase {
     util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
     val func = new ConstantFunc
     util.tableEnv.registerFunction("constant_fun", func)
-    util.tableEnv.getConfig.getParameters.setString(func.BASE_VALUE_KEY, "1000")
+    util.tableEnv.getConfig.getConf.setString(func.BASE_VALUE_KEY, "1000")
 
     val sqlQuery = "SELECT a, b, c, constant_fun() as f, constant_fun(500) as f500 " +
       "FROM MyTable WHERE a > constant_fun() AND b < constant_fun(500) AND constant_fun() = 1000"
@@ -198,7 +198,7 @@ class ExpressionReductionRulesStreamTest extends TableTestBase {
     val util = streamTestUtil()
     val table = util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
     val func = new ConstantFunc
-    util.tableEnv.getConfig.getParameters.setString(func.BASE_VALUE_KEY, "1000")
+    util.tableEnv.getConfig.getConf.setString(func.BASE_VALUE_KEY, "1000")
 
     val result = table
       .where('a > func() && 'b < func(500) && func() === 1000)

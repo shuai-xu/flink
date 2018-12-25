@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.resource.batch;
 
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.io.network.DataExchangeMode;
-import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
@@ -70,10 +70,10 @@ public class RunningUnitGenerator implements BatchExecRelVisitor<List<RelStageEx
 
 	private final Map<BatchExecRel<?>, List<RelStageExchangeInfo>> outputInfoMap = new LinkedHashMap<>();
 	private final List<RelRunningUnit> runningUnits = new LinkedList<>();
-	private final TableConfig tableConfig;
+	private final Configuration tableConf;
 
-	public RunningUnitGenerator(TableConfig tableConfig) {
-		this.tableConfig = tableConfig;
+	public RunningUnitGenerator(Configuration tableConf) {
+		this.tableConf = tableConf;
 	}
 
 	public List<RelRunningUnit> getRunningUnits() {
@@ -284,7 +284,7 @@ public class RunningUnitGenerator implements BatchExecRelVisitor<List<RelStageEx
 		List<RelStageExchangeInfo> outputInfoList = outputInfoMap.get(exchange);
 		if (outputInfoList == null) {
 			List<RelStageExchangeInfo>  inputInfoList = ((BatchExecRel<?>) exchange.getInput()).accept(this);
-			if (exchange.getDataExchangeModeForDeadlockBreakup(tableConfig) == DataExchangeMode.BATCH) {
+			if (exchange.getDataExchangeModeForDeadlockBreakup(tableConf) == DataExchangeMode.BATCH) {
 				outputInfoList = new ArrayList<>(inputInfoList.size());
 				for (RelStageExchangeInfo relStageExchangeInfo : inputInfoList) {
 					outputInfoList.add(new RelStageExchangeInfo(relStageExchangeInfo.outStage, DataExchangeMode.BATCH));

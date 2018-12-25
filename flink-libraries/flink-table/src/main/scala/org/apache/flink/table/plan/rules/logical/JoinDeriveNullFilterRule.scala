@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.rules.logical
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.util.FlinkRelOptUtil
 
@@ -54,7 +54,7 @@ class JoinDeriveNullFilterRule extends RelOptRule(
     val mq = join.getCluster.getMetadataQuery.asInstanceOf[FlinkRelMetadataQuery]
     val rexBuilder = join.getCluster.getRexBuilder
     val conf = FlinkRelOptUtil.getTableConfig(join)
-    val minNullCount = conf.getParameters.getLong(TableConfig.SQL_EXEC_NULL_COUNT_ADD_FILTER_MIN)
+    val minNullCount = conf.getConf.getLong(TableConfigOptions.SQL_EXEC_NULL_COUNT_ADD_FILTER_MIN)
 
     def genFilter(rel: RelNode, keys: ImmutableIntList): RelNode = {
       val relBuilder = call.builder()

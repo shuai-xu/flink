@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.batch.sql.joins
 
 import java.util
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
@@ -40,7 +40,7 @@ class SemiJoinITCase(
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     registerCollection(
       "leftT", SemiJoinITCase.leftT, INT_DOUBLE, "a, b", SemiJoinITCase.nullablesOfLeftT)
     registerCollection(
@@ -66,8 +66,8 @@ class SemiJoinITCase(
 
   @Test
   def testSemiWithDistinct(): Unit = {
-    tEnv.getConfig.getParameters.setDouble(
-      TableConfig.SQL_EXEC_SEMI_BUILD_DISTINCT_NDV_RATIO, 0.8D)
+    tEnv.getConfig.getConf.setDouble(
+      TableConfigOptions.SQL_EXEC_SEMI_BUILD_DISTINCT_NDV_RATIO, 0.8D)
     val stats = TableStats(7L, Map[String, ColumnStats](
       "c" -> ColumnStats(4L, 0L, 4.0D, 4, 99, 0),
       "c" -> ColumnStats(3L, 0L, 4.0D, 4, 99, 0)))

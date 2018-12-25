@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
+import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{GeneratedSorter, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
@@ -147,7 +147,8 @@ class BatchExecRank(
           FlinkRelDistribution.hash(partitionKeyList, requireStrict = false)
         } else {
           val tableConfig = FlinkRelOptUtil.getTableConfig(this)
-          if (tableConfig.rankShuffleByPartialKeyEnabled &&
+          if (tableConfig.getConf.getBoolean(
+            TableConfigOptions.SQL_CBO_RANK_SHUFFLE_BY_PARTIALKEY_ENABLED) &&
             partitionKeyList.containsAll(shuffleKeys)) {
             // If partialKey is enabled, push down partialKey requirement into input.
             FlinkRelDistribution.hash(shuffleKeys.map(partitionKeyList(_)), requireStrict = false)

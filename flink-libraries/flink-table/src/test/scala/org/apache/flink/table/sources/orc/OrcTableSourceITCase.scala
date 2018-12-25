@@ -21,7 +21,7 @@ package org.apache.flink.table.sources.orc
 import java.util
 
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.{TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.runtime.utils.{TableProgramsCollectionTestBase, TableProgramsTestBase}
 import org.apache.flink.table.runtime.utils.TableProgramsTestBase.TableConfigMode
 import org.apache.flink.table.sources.orc.OrcTableSourceITCase.CopyMode
@@ -132,8 +132,8 @@ class OrcTableSourceITCase(configMode: TableConfigMode, copyToFlink: CopyMode)
       expected: String): Unit = {
 
     val tableConfig = config
-    tableConfig.getParameters.setInteger(
-      TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM, 1)
+    tableConfig.getConf.setInteger(
+      TableConfigOptions.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM, 1)
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getBatchTableEnvironment(env, tableConfig)

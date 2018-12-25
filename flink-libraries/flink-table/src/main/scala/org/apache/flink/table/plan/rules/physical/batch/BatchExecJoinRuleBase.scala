@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.rules.physical.batch
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalJoin, FlinkLogicalSemiJoin}
@@ -63,8 +63,8 @@ trait BatchExecJoinRuleBase {
       distinctKeys: Seq[Int]): Boolean = {
     val tableConfig = FlinkRelOptUtil.getTableConfig(buildRel)
     val mq = buildRel.getCluster.getMetadataQuery
-    val ratioConf = tableConfig.getParameters.getDouble(
-      TableConfig.SQL_EXEC_SEMI_BUILD_DISTINCT_NDV_RATIO)
+    val ratioConf = tableConfig.getConf.getDouble(
+      TableConfigOptions.SQL_EXEC_SEMI_BUILD_DISTINCT_NDV_RATIO)
     val inputRows = mq.getRowCount(buildRel)
     val ndvOfGroupKey = mq.getDistinctRowCount(
       buildRel, ImmutableBitSet.of(distinctKeys: _*), null)

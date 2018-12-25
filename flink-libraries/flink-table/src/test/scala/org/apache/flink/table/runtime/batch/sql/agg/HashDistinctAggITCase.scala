@@ -18,12 +18,8 @@
 
 package org.apache.flink.table.runtime.batch.sql.agg
 
-import java.util
-
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.table.api.TableConfig
-import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
+import org.apache.flink.table.api.TableConfigOptions
 
 /**
   * HashDistinctAggITCase using HashAgg Operator.
@@ -34,9 +30,9 @@ class HashDistinctAggITCase
   override def prepareAggOp(): Unit = {
     // for hash agg fallback test
     val configuration = new Configuration()
-    configuration.setInteger(TableConfig.SQL_EXEC_HASH_AGG_TABLE_MEM, 4)
-    tEnv.getConfig.getParameters.addAll(configuration)
-    tEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
+    configuration.setInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM, 4)
+    tEnv.getConfig.getConf.addAll(configuration)
+    tEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
   }
 }

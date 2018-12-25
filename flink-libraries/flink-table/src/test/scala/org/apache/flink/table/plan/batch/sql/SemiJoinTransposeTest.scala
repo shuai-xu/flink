@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.plan.batch.sql
 
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.TableTestBatchExecBase
@@ -34,7 +35,8 @@ class SemiJoinTransposeTest extends TableTestBatchExecBase {
     util.tableEnv.alterTableStats("T1", Some(TableStats(10000L)))
     util.tableEnv.alterTableStats("T2", Some(TableStats(20000L)))
     util.tableEnv.alterTableStats("T3", Some(TableStats(30000L)))
-    util.setJoinReorderEnabled(true)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
   }
 
   @Test

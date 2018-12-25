@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.SortCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
@@ -65,7 +65,8 @@ trait BatchExecRel[T] extends FlinkPhysicalRel with Logging {
         val transformation = translateToPlanInternal(tableEnv)
         reusedTransformation = Some(transformation)
         val config = FlinkRelOptUtil.getTableConfig(this)
-        if (config.getOperatorMetricCollect) {
+        if (config.getConf.getBoolean(
+          TableConfigOptions.SQL_EXEC_COLLECT_OPERATOR_METRIC_ENABLED)) {
           val nameWithId = s"${transformation.getName}, __id__=[$getId]"
           transformation.setName(nameWithId)
         }

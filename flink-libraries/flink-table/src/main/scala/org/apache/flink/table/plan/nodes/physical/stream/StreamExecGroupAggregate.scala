@@ -21,7 +21,7 @@ import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
@@ -217,8 +217,8 @@ class StreamExecGroupAggregate(
         aggFunction,
         AggregateUtil.getMiniBatchTrigger(tableConfig, useLocalAgg = false),
         valueType,
-        tableConfig.getParameters.getBoolean(
-          TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+        tableConfig.getConf.getBoolean(
+          TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
     } else {
       val aggFunction = new GroupAggFunction(
         aggsHandler,

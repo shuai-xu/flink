@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.rules.physical.batch
 
-import org.apache.flink.table.api.{OperatorType, TableConfig}
+import org.apache.flink.table.api.{OperatorType, TableConfig, TableConfigOptions}
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
@@ -148,7 +148,8 @@ class BatchExecHashJoinRule(joinClass: Class[_ <: Join])
         toHashTraitByColumns(joinInfo.rightKeys))
       // add more possibility to only shuffle by partial joinKeys, now only single one
       val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])
-      val isShuffleByPartialKeyEnabled = tableConfig.joinShuffleByPartialKeyEnabled
+      val isShuffleByPartialKeyEnabled = tableConfig.getConf.getBoolean(
+        TableConfigOptions.SQL_CBO_JOIN_SHUFFLE_BY_PARTIALKEY_ENABLED)
       if (isShuffleByPartialKeyEnabled && joinInfo.pairs().length > 1) {
         joinInfo.pairs().foreach { pair =>
           transformToEquiv(
@@ -176,7 +177,7 @@ class BatchExecHashJoinRule(joinClass: Class[_ <: Join])
       return (false, false)
     }
     val conf = join.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
-    val threshold = conf.getParameters.getLong(TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD)
+    val threshold = conf.getConf.getLong(TableConfigOptions.SQL_HASH_JOIN_BROADCAST_THRESHOLD)
     val joinType = getFlinkJoinRelType(join)
     joinType match {
       case FlinkJoinRelType.LEFT => (rightSize <= threshold, false)

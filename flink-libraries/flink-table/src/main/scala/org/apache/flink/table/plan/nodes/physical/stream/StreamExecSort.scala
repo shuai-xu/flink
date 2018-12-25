@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.SortUtil
@@ -95,7 +95,8 @@ class StreamExecSort(
   override def translateToPlan(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
-    if (!tableEnv.getConfig.isNonTemporalSortEnabled) {
+    if (!tableEnv.getConfig.getConf.getBoolean(
+      TableConfigOptions.BLINK_NON_TEMPORAL_SORT_ENABLED)) {
       throw new TableException("Sort on a non-time-attribute field is not supported.")
     }
 
@@ -104,7 +105,7 @@ class StreamExecSort(
 
     val mangedMemorySize =
       ExecResourceUtil.getPerRequestManagedMemory(
-        tableEnv.getConfig)* ExecResourceUtil.SIZE_IN_MB
+        tableEnv.getConfig.getConf)* ExecResourceUtil.SIZE_IN_MB
 
     createSort(inputTransformation, mangedMemorySize)
   }

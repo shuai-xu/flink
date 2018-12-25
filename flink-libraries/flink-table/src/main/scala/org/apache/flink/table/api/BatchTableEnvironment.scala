@@ -176,7 +176,7 @@ class BatchTableEnvironment(
     jobName: Option[String]): StreamGraph = {
     mergeParameters()
     val context = StreamGraphGenerator.Context.buildBatchProperties(streamEnv)
-    if (getConfig.isAllDataExchangeModeBatch) {
+    if (getConfig.getConf.getBoolean(TableConfigOptions.SQL_EXEC_ALL_DATA_EXCHANGE_MODE_BATCH)) {
       context.getExecutionConfig.setExecutionMode(ExecutionMode.BATCH)
     } else {
       context.getExecutionConfig.setExecutionMode(ExecutionMode.PIPELINED)
@@ -213,7 +213,9 @@ class BatchTableEnvironment(
     */
   @VisibleForTesting
   private[flink] def setupOperatorMetricCollect(): Unit = {
-    if (streamEnv != null && streamEnv.getConfig != null && config.getOperatorMetricCollect) {
+    if (streamEnv != null &&
+        streamEnv.getConfig != null &&
+        config.getConf.getBoolean(TableConfigOptions.SQL_EXEC_COLLECT_OPERATOR_METRIC_ENABLED)) {
       val parameters = new Configuration()
       Option(streamEnv.getConfig.getGlobalJobParameters).foreach(gb =>
         gb.toMap.foreach(kv => parameters.setString(kv._1, kv._2))
@@ -526,8 +528,11 @@ class BatchTableEnvironment(
     // Rewrite same rel object to different rel objects.
     val diffObjPlan = optimizedPlan.accept(new SameRelObjectShuttle())
     // reuse sub-plan if enabled
-    val reusedPlan = if (config.getSubPlanReuse) {
-      val context = new SubplanReuseContext(config.isTableSourceReuseDisabled, diffObjPlan)
+    val reusedPlan = if (config.getConf.getBoolean(
+      TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED)) {
+      val context = new SubplanReuseContext(
+        !config.getConf.getBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED),
+        diffObjPlan)
       diffObjPlan.accept(new SubplanReuseShuttle(context))
     } else {
       diffObjPlan
@@ -777,8 +782,8 @@ class BatchTableEnvironment(
   private def mergeParameters(): Unit = {
     if (streamEnv != null && streamEnv.getConfig != null) {
       val parameters = new Configuration()
-      if (config != null && config.getParameters != null) {
-        parameters.addAll(config.getParameters)
+      if (config != null && config.getConf != null) {
+        parameters.addAll(config.getConf)
       }
 
       if (streamEnv.getConfig.getGlobalJobParameters != null) {
@@ -885,8 +890,10 @@ class BatchTableEnvironment(
   private[this] def dumpPlanWithMetricsIfNeed(
       streamGraph: StreamGraph,
       jobResult: JobExecutionResult): Unit = {
-    val dumpFilePath = config.getDumpFileOfPlanWithMetrics
-    if (config.getOperatorMetricCollect && dumpFilePath != null) {
+    val dumpFilePath = config.getConf.getString(
+      TableConfigOptions.SQL_EXEC_COLLECT_OPERATOR_METRIC_PATH)
+    if (config.getConf.getBoolean(TableConfigOptions.SQL_EXEC_COLLECT_OPERATOR_METRIC_ENABLED)
+        && dumpFilePath != null) {
       streamGraph.dumpPlanWithMetrics(dumpFilePath, jobResult)
     }
   }
@@ -897,8 +904,11 @@ class BatchTableEnvironment(
    * @param optimizedNode optimized plan
    */
   private[this] def dumpOptimizedPlanIfNeed(optimizedNode: RelNode): Unit = {
-    val dumpFilePath = config.getDumpFileOfOptimizedPlan
-    if (config.getOptimizedPlanCollect && dumpFilePath != null) {
+    val dumpFilePath = config.getConf.getString(
+      TableConfigOptions.SQL_CBO_COLLECT_OPTIMIZED_PLAN_PATH)
+
+    if (config.getConf.getBoolean(TableConfigOptions.SQL_CBO_COLLECT_OPTIMIZED_PLAN_ENABLED) &&
+        dumpFilePath != null) {
       dumpRelNode(optimizedNode, dumpFilePath)
     }
   }

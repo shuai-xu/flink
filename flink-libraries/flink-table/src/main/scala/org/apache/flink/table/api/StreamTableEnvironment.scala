@@ -179,10 +179,11 @@ abstract class StreamTableEnvironment(
       Seq.empty
     }
     if (getConfig.isMiniBatchEnabled) {
-      if (getConfig.getMiniBatchTriggerTime <= 0L) {
+      if (config.getConf.getLong(TableConfigOptions.BLINK_MINIBATCH_ALLOW_LATENCY) <= 0L) {
         throw new RuntimeException(TableErrors.INST.sqlCompileMiniBatchTriggerTimeError())
       }
-      MiniBatchHelper.assignTriggerTimeEqually(execEnv, getConfig.getMiniBatchTriggerTime)
+      MiniBatchHelper.assignTriggerTimeEqually(execEnv,
+        config.getConf.getLong(TableConfigOptions.BLINK_MINIBATCH_ALLOW_LATENCY))
     }
      result
   }
@@ -956,8 +957,8 @@ abstract class StreamTableEnvironment(
   private def mergeParameters(): Unit = {
     if (!isConfigMerged && execEnv != null && execEnv.getConfig != null) {
       val parameters = new Configuration()
-      if (config != null && config.getParameters != null) {
-        parameters.addAll(config.getParameters)
+      if (config != null && config.getConf != null) {
+        parameters.addAll(config.getConf)
       }
 
       if (execEnv.getConfig.getGlobalJobParameters != null) {

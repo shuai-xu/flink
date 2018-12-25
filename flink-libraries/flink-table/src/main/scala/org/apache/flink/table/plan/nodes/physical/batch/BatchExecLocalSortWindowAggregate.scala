@@ -105,7 +105,8 @@ class BatchExecLocalSortWindowAggregate(
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
     val (windowSize: Long, slideSize: Long) = getWindowDef(window)
     val windowStart = 0L
-    val groupBufferLimitSize = ExecResourceUtil.getWindowAggBufferLimitSize(tableEnv.getConfig)
+    val groupBufferLimitSize = ExecResourceUtil.getWindowAggBufferLimitSize(
+      tableEnv.getConfig.getConf)
 
     val inputType = DataTypes.internal(input.getOutputType).asInstanceOf[BaseRowType]
     val generatedOperator = if (grouping.isEmpty) {

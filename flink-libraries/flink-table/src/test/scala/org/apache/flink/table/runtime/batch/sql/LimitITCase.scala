@@ -19,8 +19,7 @@
 package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.util.TestLimitableTableSource
 import org.junit._
@@ -29,7 +28,7 @@ class LimitITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     registerCollection("Table3", data3, type3, "a, b, c", nullablesOfData3)
 
     val rowType = new RowTypeInfo(type3.getFieldTypes, Array("a", "b", "c"))

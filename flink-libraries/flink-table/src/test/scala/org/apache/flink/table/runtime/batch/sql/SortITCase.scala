@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.api.java.typeutils.TypeExtractor
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.api.{TableConfig, TableEnvironment, TableException}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableEnvironment, TableException}
 import org.apache.flink.table.runtime.utils.SortTestUtils._
 import org.apache.flink.table.runtime.utils.{CommonTestData, RowsCollectTableSink}
 import org.apache.flink.test.util.{AbstractTestBase, TestBaseUtils}
@@ -39,8 +39,8 @@ class SortITCase extends AbstractTestBase {
 
   @Before
   def setUp(): Unit = {
-    conf.getParameters.setBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE, true)
-    conf.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    conf.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, true)
+    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
   }
 
   @Rule

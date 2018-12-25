@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.batch.table
 
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.{Before, Test}
@@ -31,7 +31,7 @@ class SortTest extends TableTestBatchExecBase {
 
   @Before
   def setup(): Unit = {
-    tableConfig.getParameters.setBoolean(TableConfig.SQL_EXEC_SORT_ENABLE_RANGE, true)
+    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, true)
   }
 
   @Test

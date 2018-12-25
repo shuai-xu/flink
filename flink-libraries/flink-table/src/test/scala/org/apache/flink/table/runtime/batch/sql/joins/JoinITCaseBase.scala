@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.runtime.batch.sql.joins
 
-import org.apache.flink.table.api.{TableConfig, TableEnvironment}
-import org.apache.flink.table.runtime.batch.sql.joins.JoinType.{JoinType, BroadcastHashJoin, HashJoin, SortMergeJoin, NestedLoopJoin}
+import org.apache.flink.table.api.{TableConfigOptions, TableEnvironment}
+import org.apache.flink.table.runtime.batch.sql.joins.JoinType.{BroadcastHashJoin, HashJoin, JoinType, NestedLoopJoin, SortMergeJoin}
 
 /**
   * providing join it case utility functions.
@@ -27,7 +27,7 @@ import org.apache.flink.table.runtime.batch.sql.joins.JoinType.{JoinType, Broadc
 trait JoinITCaseBase {
 
   def disableBroadcastHashJoin(tEnv: TableEnvironment): Unit = {
-    tEnv.getConfig.getParameters.setLong(TableConfig.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
+    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
   }
 
   def disableOtherJoinOpForJoin(tEnv: TableEnvironment, expected: JoinType): Unit = {
@@ -39,8 +39,8 @@ trait JoinITCaseBase {
       case SortMergeJoin => "HashJoin, NestedLoopJoin"
       case NestedLoopJoin => "HashJoin, SortMergeJoin"
     }
-    tEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, disabledOperators)
+    tEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, disabledOperators)
   }
 }
 

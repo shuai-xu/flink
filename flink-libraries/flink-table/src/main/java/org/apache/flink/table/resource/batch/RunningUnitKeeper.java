@@ -18,11 +18,12 @@
 
 package org.apache.flink.table.resource.batch;
 
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.table.api.BatchTableEnvironment;
-import org.apache.flink.table.api.TableConfig;
+import org.apache.flink.table.api.TableConfigOptions;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink;
 import org.apache.flink.table.resource.RelResource;
@@ -60,7 +61,6 @@ import static org.apache.flink.table.resource.batch.schedule.RunningUnitGraphMan
  */
 public class RunningUnitKeeper {
 	private static final Logger LOG = LoggerFactory.getLogger(RunningUnitKeeper.class);
-	private final TableConfig tableConfig;
 	private final BatchTableEnvironment tableEnv;
 	private List<RelRunningUnit> runningUnits;
 	private final Map<BatchExecRel<?>, Set<RelRunningUnit>> relRunningUnitMap = new LinkedHashMap<>();
@@ -69,7 +69,6 @@ public class RunningUnitKeeper {
 	private boolean supportRunningUnit = true;
 
 	public RunningUnitKeeper(BatchTableEnvironment tableEnv) {
-		this.tableConfig = tableEnv.getConfig();
 		this.tableEnv = tableEnv;
 	}
 
@@ -81,17 +80,21 @@ public class RunningUnitKeeper {
 		relStagesMap.clear();
 	}
 
+	private Configuration getTableConf() {
+		return tableEnv.getConfig().getConf();
+	}
+
 	public void buildRUs(BatchExecRel<?> rootNode) {
 		if (rootNode instanceof BatchExecSink<?>) {
 			rootNode = (BatchExecRel<?>) ((BatchExecSink) rootNode).getInput();
 		}
 		// not support subsectionOptimization or external shuffle temporarily
-		if (tableConfig.getSubsectionOptimization()
-				|| tableConfig.enableRangePartition()) {
+		if (tableEnv.getConfig().getSubsectionOptimization()
+				|| getTableConf().getBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE)) {
 			supportRunningUnit = false;
 			return;
 		}
-		RunningUnitGenerator visitor = new RunningUnitGenerator(tableConfig);
+		RunningUnitGenerator visitor = new RunningUnitGenerator(getTableConf());
 		rootNode.accept(visitor);
 		runningUnits = visitor.getRunningUnits();
 		for (RelRunningUnit runningUnit : runningUnits) {
@@ -104,8 +107,8 @@ public class RunningUnitKeeper {
 
 	public void setScheduleConfig(StreamGraphGenerator.Context context) {
 		if (supportRunningUnit &&
-				ExecResourceUtil.enableRunningUnitSchedule(tableConfig) &&
-				!tableConfig.isAllDataExchangeModeBatch()) {
+				ExecResourceUtil.enableRunningUnitSchedule(getTableConf()) &&
+				!getTableConf().getBoolean(TableConfigOptions.SQL_EXEC_ALL_DATA_EXCHANGE_MODE_BATCH)) {
 			context.getConfiguration().setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, RunningUnitGraphManagerPlugin.class.getName());
 			try {
 				InstantiationUtil.writeObjectToConfig(runningUnits, context.getConfiguration(), RUNNING_UNIT_CONF_KEY);
@@ -126,18 +129,18 @@ public class RunningUnitKeeper {
 			// if runningUnit cannot be build, or no statics, we set resource according to config.
 			// we are not able to set resource according to statics when runningUnits are not build.
 			BatchResultPartitionCalculator.calculate(tableEnv, mq, rootNode);
-			rootNode.accept(new BatchRelManagedCalculator(tableConfig, relResourceMap));
+			rootNode.accept(new BatchRelManagedCalculator(getTableConf(), relResourceMap));
 			for (Map.Entry<BatchExecRel<?>, RelResource> entry : relResourceMap.entrySet()) {
 				entry.getKey().setResource(entry.getValue());
 				LOG.info(entry.getKey() + " resource: " + entry.getValue());
 			}
 			return;
 		}
-		InferMode inferMode = ExecResourceUtil.getInferMode(tableConfig);
+		InferMode inferMode = ExecResourceUtil.getInferMode(getTableConf());
 		RelFinalParallelismSetter.calculate(tableEnv, rootNode);
 		Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap = ShuffleStageGenerator.generate(rootNode);
-		getShuffleStageParallelismCalculator(mq, tableConfig, inferMode).calculate(relShuffleStageMap.values());
-		Double cpuLimit = tableConfig.getParameters().getDouble(TableConfig.SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU());
+		getShuffleStageParallelismCalculator(mq, getTableConf(), inferMode).calculate(relShuffleStageMap.values());
+		Double cpuLimit = getTableConf().getDouble(TableConfigOptions.SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU);
 		if (cpuLimit > 0) {
 			RelParallelismAdjuster.adjustParallelism(cpuLimit, relResourceMap, relRunningUnitMap, relShuffleStageMap);
 		}
@@ -151,12 +154,12 @@ public class RunningUnitKeeper {
 
 	private ShuffleStageParallelismCalculator getShuffleStageParallelismCalculator(
 			RelMetadataQuery mq,
-			TableConfig tableConfig,
+			Configuration tableConf,
 			InferMode inferMode) {
 		if (inferMode.equals(InferMode.ALL)) {
-			return new ParallelismCalculatorOnStatistics(mq, tableConfig);
+			return new ParallelismCalculatorOnStatistics(mq, tableConf);
 		} else {
-			return new BatchParallelismCalculator(mq, tableConfig);
+			return new BatchParallelismCalculator(mq, tableConf);
 		}
 	}
 
@@ -165,9 +168,9 @@ public class RunningUnitKeeper {
 			InferMode inferMode, RelMetadataQuery mq,
 			Map<BatchExecRel<?>, RelResource> relResourceMap) {
 		if (inferMode.equals(InferMode.ALL)) {
-			return new RelManagedCalculatorOnStatistics(tableConfig, relShuffleStageMap, mq, relResourceMap);
+			return new RelManagedCalculatorOnStatistics(getTableConf(), relShuffleStageMap, mq, relResourceMap);
 		} else {
-			return new BatchRelManagedCalculator(tableConfig, relResourceMap);
+			return new BatchRelManagedCalculator(getTableConf(), relResourceMap);
 		}
 	}
 

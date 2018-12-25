@@ -19,6 +19,7 @@
 package org.apache.flink.table.plan.batch.sql
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.{Before, Test}
@@ -29,7 +30,8 @@ class SingleRowJoinTest extends TableTestBatchExecBase {
 
   @Before
   def before(): Unit = {
-    util.setJoinReorderEnabled(true)
+    util.getTableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
     util.addTable[(Int, Long)]("A", 'a1, 'a2)
     util.addTable[(Int, Long)]("B", 'b1, 'b2)
   }

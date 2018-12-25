@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.stream
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
@@ -177,8 +177,8 @@ class StreamExecLocalGroupAggregate(
       selector.getProducedType,
       valueTypeInfo,
       selector,
-      tableEnv.getConfig.getParameters.getBoolean(
-      TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+      tableEnv.getConfig.getConf.getBoolean(
+        TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     new OneInputTransformation(
       inputTransformation,

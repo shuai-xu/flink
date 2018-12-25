@@ -85,8 +85,8 @@ public class BatchRelCpuHeapMemCalculator extends ResourceCalculator<BatchExecRe
 		StreamTransformation transformation = tableSourceScan.getSourceTransformation(tEnv.streamEnv());
 		ResourceSpec sourceRes = transformation.getMinResources();
 		if (sourceRes == ResourceSpec.DEFAULT || sourceRes == null) {
-			int heap = ExecResourceUtil.getSourceMem(tConfig);
-			sourceRes = ExecResourceUtil.getResourceSpec(tConfig, heap);
+			int heap = ExecResourceUtil.getSourceMem(tableConf);
+			sourceRes = ExecResourceUtil.getResourceSpec(tableConf, heap);
 		}
 		calculateBatchScan(tableSourceScan, sourceRes);
 	}
@@ -95,7 +95,7 @@ public class BatchRelCpuHeapMemCalculator extends ResourceCalculator<BatchExecRe
 		RelResource relResource = new RelResource();
 		ResourceSpec conversionRes = ResourceSpec.DEFAULT;
 		if (batchExecScan.needInternalConversion()) {
-			conversionRes = ExecResourceUtil.getDefaultResourceSpec(tConfig);
+			conversionRes = ExecResourceUtil.getDefaultResourceSpec(tableConf);
 		}
 		ResourceSpec totalRes = sourceRes.merge(conversionRes);
 		relResource.setCpu(totalRes.getCpuCores());
@@ -120,8 +120,8 @@ public class BatchRelCpuHeapMemCalculator extends ResourceCalculator<BatchExecRe
 	}
 
 	private RelResource getDefaultRelResource() {
-		double cpu = ExecResourceUtil.getDefaultCpu(tConfig);
-		int heap = ExecResourceUtil.getDefaultHeapMem(tConfig);
+		double cpu = ExecResourceUtil.getDefaultCpu(tableConf);
+		int heap = ExecResourceUtil.getDefaultHeapMem(tableConf);
 		RelResource relResource = new RelResource();
 		relResource.setCpu(cpu);
 		relResource.setHeapMem(heap);

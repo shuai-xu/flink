@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.batch.sql
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.InsertRuntimeFilterRule
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.runtime.utils.CommonTestData
@@ -33,8 +33,9 @@ class RuntimeFilterTest extends TableTestBatchExecBase {
 
   @Before
   def before(): Unit = {
-    util.setJoinReorderEnabled(true)
-    util.tableEnv.getConfig.getParameters.setBoolean(TableConfig.SQL_RUNTIME_FILTER_ENABLE, true)
+    util.getTableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
+    util.tableEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_RUNTIME_FILTER_ENABLE, true)
     util.addTable("x", CommonTestData.get3Source(Array("a", "b", "c")))
     util.addTable("y", CommonTestData.get3Source(Array("a", "b", "c")))
 
@@ -81,8 +82,8 @@ class RuntimeFilterTest extends TableTestBatchExecBase {
   @Test
   def testPushDownRfBuilder2(): Unit = {
     // TODO: why ndv(x.b) is not equal to y.b?
-    util.tableEnv.getConfig.getParameters.setDouble(
-      TableConfig.SQL_RUNTIME_FILTER_BUILDER_PUSH_DOWN_MAX_RATIO, 1.8)
+    util.tableEnv.getConfig.getConf.setDouble(
+      TableConfigOptions.SQL_RUNTIME_FILTER_BUILDER_PUSH_DOWN_MAX_RATIO, 1.8)
     val query = "SELECT * FROM (SELECT x.b FROM x, y WHERE x.b = y.b) z, y WHERE y.b = z.b"
     util.verifyPlan(query)
   }

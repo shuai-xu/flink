@@ -26,7 +26,7 @@ import org.apache.flink.core.fs.{FileStatus, Path}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.java.BatchTableEnvironment
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
-import org.apache.flink.table.api.{TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.dataformat.Decimal
 import org.apache.flink.table.runtime.utils.TableProgramsTestBase.TableConfigMode
 import org.apache.flink.table.runtime.utils.{CommonTestData, TableProgramsCollectionTestBase}
@@ -58,8 +58,8 @@ class ParquetTableSinkITCase(configMode: TableConfigMode)
   {
     env = StreamExecutionEnvironment.getExecutionEnvironment
     tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig)
-    tEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_EXEC_INFER_RESOURCE_MODE,
+    tEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE,
       ExecResourceUtil.InferMode.ONLY_SOURCE.toString)
   }
 

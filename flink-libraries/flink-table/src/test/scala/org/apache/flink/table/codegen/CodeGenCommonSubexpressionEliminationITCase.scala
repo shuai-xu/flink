@@ -22,7 +22,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.api.scala.StreamTableEnvironment
 import org.apache.flink.table.runtime.utils._
 import org.apache.flink.types.Row
@@ -55,7 +55,7 @@ class CodeGenCommonSubexpressionEliminationITCase {
   def testIf(): Unit = {
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val configs = Array(new TableConfig, new TableConfig)
-    configs(0).setMaxGeneratedCodeLength(1)
+    configs(0).getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH,1)
 
     configs.foreach { config =>
 
@@ -96,7 +96,7 @@ class CodeGenCommonSubexpressionEliminationITCase {
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val configs = Array(new TableConfig(), new TableConfig)
 
-    configs(0).setMaxGeneratedCodeLength(1)
+    configs(0).getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH,1)
 
     configs.foreach(tableConfig => {
       val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env, tableConfig)
@@ -288,7 +288,7 @@ class CodeGenCommonSubexpressionEliminationITCase {
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val configs = Array(new TableConfig(), new TableConfig)
 
-    configs(0).setMaxGeneratedCodeLength(1)
+    configs(0).getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH,1)
 
     configs.foreach( tableConfig => {
       val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env, tableConfig)
@@ -325,7 +325,7 @@ class CodeGenCommonSubexpressionEliminationITCase {
   @Test
   def testMapArray(): Unit = {
     val config = new TableConfig()
-    config.setMaxGeneratedCodeLength(1)
+    config.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH,1)
 
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env, config)

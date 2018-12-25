@@ -19,7 +19,7 @@
 package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.Types
+import org.apache.flink.table.api.{TableConfigOptions, Types}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
@@ -32,8 +32,8 @@ class DeadlockBreakupITCase extends QueryTest {
 
   @Test
   def testReuseSubPlan_ReusedNodeIsNotBarrierNode(): Unit = {
-    tEnv.getConfig.setSubPlanReuse(true)
-    tEnv.getConfig.setTableSourceReuse(true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, true)
     // make sure that buffer pool of channel can't hold all data
     val data = (1 until 100000).map(row(_))
     tEnv.registerTableSource("t", createCsvTableSource(data, Array("a"), Array(DataTypes.LONG)))
@@ -48,8 +48,8 @@ class DeadlockBreakupITCase extends QueryTest {
 
   @Test
   def testReuseSubPlan_ReusedNodeIsBarrierNode(): Unit = {
-    tEnv.getConfig.setSubPlanReuse(true)
-    tEnv.getConfig.setTableSourceReuse(true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, true)
     // make sure that buffer pool of channel can't hold all data
     val data = (1 until 100000).map {
       i => row(i.toLong, i.toLong, ((i / 10) + 1).toLong)
@@ -67,7 +67,7 @@ class DeadlockBreakupITCase extends QueryTest {
 
   @Test
   def testDataStreamScan(): Unit = {
-    tEnv.getConfig.setSubPlanReuse(false)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, false)
     // make sure that buffer pool of channel can't hold all data
     val data = (1 until 100000).map(i => row(i.toLong))
     tEnv.registerCollection("t", data, new RowTypeInfo(Types.LONG), 'a)

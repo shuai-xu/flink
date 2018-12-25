@@ -19,7 +19,7 @@
 package org.apache.flink.table.tpc
 
 import org.apache.flink.core.fs.Path
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.dataformat.ColumnarRow
@@ -65,8 +65,9 @@ abstract class TpcHBatchExecPlanTest(
       tEnv.alterTableStats(tableName, Some(tableStats))
     }
     TpcUtils.disableParquetFilterPushDown(tEnv)
-    tEnv.getConfig.setJoinReorderEnabled(joinReorderEnabled)
-    tEnv.getConfig.getParameters.setBoolean(TableConfig.SQL_RUNTIME_FILTER_ENABLE, true)
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, joinReorderEnabled)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_RUNTIME_FILTER_ENABLE, true)
   }
 
   // create a new ParquetTableSource to override `createTableSource` and `getTableStats` methods

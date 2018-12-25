@@ -21,7 +21,7 @@ package org.apache.flink.table.resource.batch.calculator;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.BatchTableEnvironment;
-import org.apache.flink.table.api.TableConfig;
+import org.apache.flink.table.api.TableConfigOptions;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
@@ -74,9 +74,9 @@ public class BatchRelCpuHeapMemCalculatorTest extends MockRelTestBase {
 		 *                \         /
 		 *                 6, HashJoin
 		 */
-		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_SOURCE_MEM(), 40);
-		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_DEFAULT_MEM(), 20);
-		tEnv.getConfig().getParameters().setDouble(TableConfig.SQL_EXEC_DEFAULT_CPU(), 0.5);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SOURCE_MEM, 40);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_MEM, 20);
+		tEnv.getConfig().getConf().setDouble(TableConfigOptions.SQL_EXEC_DEFAULT_CPU, 0.5);
 		createRelList(8);
 		BatchExecScan scan0 = mock(BatchExecBoundedStreamScan.class);
 		updateRel(0, scan0);

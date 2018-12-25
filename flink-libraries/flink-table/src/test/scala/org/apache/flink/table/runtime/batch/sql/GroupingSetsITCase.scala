@@ -19,7 +19,7 @@
 package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.{TableConfig, Types}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, Types}
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.util.DateTimeTestUtil._
@@ -96,7 +96,7 @@ class GroupingSetsITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     registerCollection(TABLE_NAME, data3, type3, "f0, f1, f2", nullablesOfData3)
     val nullableData3 = data3.map { r =>
       val newField2 = if (r.getField(2).asInstanceOf[String].contains("world")) {

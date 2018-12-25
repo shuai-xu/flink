@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.rules.physical.batch
 
-import org.apache.flink.table.api.{OperatorType, TableConfig}
+import org.apache.flink.table.api.{OperatorType, TableConfig, TableConfigOptions}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalJoin, FlinkLogicalSemiJoin}
@@ -137,7 +137,8 @@ class BatchExecSortMergeJoinRule(joinClass: Class[_ <: Join])
 
     // add more possibility to only shuffle by partial joinKeys, now only single one
     val tableConfig = FlinkRelOptUtil.getTableConfig(join)
-    val isShuffleByPartialKeyEnabled = tableConfig.joinShuffleByPartialKeyEnabled
+    val isShuffleByPartialKeyEnabled = tableConfig.getConf.getBoolean(
+      TableConfigOptions.SQL_CBO_JOIN_SHUFFLE_BY_PARTIALKEY_ENABLED)
     if (isShuffleByPartialKeyEnabled && joinInfo.pairs().length > 1) {
       joinInfo.pairs().foreach { pair =>
         // sort require full key not partial key,
