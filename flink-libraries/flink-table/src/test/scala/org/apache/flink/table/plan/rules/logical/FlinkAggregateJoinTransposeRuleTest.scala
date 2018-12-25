@@ -35,19 +35,30 @@ class FlinkAggregateJoinTransposeRuleTest extends TableTestBatchExecBase {
   def setup(): Unit = {
     val programs = new FlinkChainedPrograms[BatchOptimizeContext]()
     programs.addLast(
-      "test",
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(RuleSets.ofList(
-          FlinkFilterJoinRule.FILTER_ON_JOIN,
-          FlinkFilterJoinRule.JOIN,
-          FilterAggregateTransposeRule.INSTANCE,
-          FilterProjectTransposeRule.INSTANCE,
-          FilterMergeRule.INSTANCE,
-          AggregateProjectMergeRule.INSTANCE,
-          FlinkAggregateJoinTransposeRule.EXTENDED
-        )).build()
+      "rules",
+      FlinkGroupProgramBuilder.newBuilder[BatchOptimizeContext]
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
+            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+            .add(RuleSets.ofList(
+              AggregateReduceGroupingRule.INSTANCE
+            )).build(), "reduce unless grouping")
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
+            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+            .add(RuleSets.ofList(
+              AggregateReduceGroupingRule.INSTANCE,
+              FlinkFilterJoinRule.FILTER_ON_JOIN,
+              FlinkFilterJoinRule.JOIN,
+              FilterAggregateTransposeRule.INSTANCE,
+              FilterProjectTransposeRule.INSTANCE,
+              FilterMergeRule.INSTANCE,
+              AggregateProjectMergeRule.INSTANCE,
+              FlinkAggregateJoinTransposeRule.EXTENDED
+            )).build(), "aggregate join transpose")
+        .build()
     )
     val calciteConfig = new CalciteConfigBuilder().replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
@@ -84,6 +95,50 @@ class FlinkAggregateJoinTransposeRuleTest extends TableTestBatchExecBase {
   def testSomeAggCallColumnsAndJoinConditionColumnsIsSame(): Unit = {
     util.verifyPlan("SELECT MIN(a2), MIN(b2), a, b, COUNT(c2) FROM " +
       "(SELECT * FROM T2, T WHERE b2 = a) t GROUP BY a, b")
+  }
+
+  @Test
+  def testAggregateWithAuxGroup_JoinKeyIsUnique1(): Unit = {
+    val sqlQuery =
+      """
+        |select a2, b2, c2, SUM(a) FROM (
+        | SELECT * FROM T2, T WHERE b2 = b
+        |) GROUP BY a2, b2, c2
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testAggregateWithAuxGroup_JoinKeyIsUnique2(): Unit = {
+    val sqlQuery =
+      """
+        |select a2, b2, c, SUM(a) FROM (
+        | SELECT * FROM T2, T WHERE b2 = b
+        |) GROUP BY a2, b2, c
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testAggregateWithAuxGroup_JoinKeyIsNotUnique1(): Unit = {
+    val sqlQuery =
+      """
+        |select a2, b2, c2, SUM(a) FROM (
+        | SELECT * FROM T2, T WHERE a2 = a
+        |) GROUP BY a2, b2, c2
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testAggregateWithAuxGroup_JoinKeyIsNotUnique2(): Unit = {
+    val sqlQuery =
+      """
+        |select a2, b2, c, SUM(a) FROM (
+        | SELECT * FROM T2, T WHERE a2 = a
+        |) GROUP BY a2, b2, c
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
   }
 
 }

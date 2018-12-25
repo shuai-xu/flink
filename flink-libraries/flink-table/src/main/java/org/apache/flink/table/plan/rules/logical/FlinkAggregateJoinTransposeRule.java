@@ -17,6 +17,7 @@
 
 package org.apache.flink.table.plan.rules.logical;
 
+import org.apache.flink.table.plan.util.FlinkRelOptUtil;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.calcite.linq4j.Ord;
@@ -38,6 +39,7 @@ import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.calcite.rel.logical.LogicalTemporalTableScan;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
@@ -50,6 +52,7 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.Bug;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 import org.apache.calcite.util.mapping.Mapping;
 import org.apache.calcite.util.mapping.Mappings;
@@ -62,12 +65,17 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import scala.Tuple2;
+import scala.collection.JavaConverters;
+import scala.collection.Seq;
+
 /**
  * This rule is copied from Calcite's {@link org.apache.calcite.rel.rules.AggregateJoinTransposeRule}.
  * Modification:
  * - Do not match TemporalTableScan since it means that it is a dimension table scan currently.
  * - Support Left/Right Outer Join
  * - Fix type mismatch error
+ * - Support aggregate with AUXILIARY_GROUP
  */
 
 /**
@@ -176,9 +184,9 @@ public class FlinkAggregateJoinTransposeRule extends RelOptRule {
 	}
 
 	public void onMatch(RelOptRuleCall call) {
-		final Aggregate aggregate = call.rel(0);
+		final Aggregate origAgg = call.rel(0);
 		final Join join = call.rel(1);
-		final RexBuilder rexBuilder = aggregate.getCluster().getRexBuilder();
+		final RexBuilder rexBuilder = origAgg.getCluster().getRexBuilder();
 		final RelBuilder relBuilder = call.builder();
 
 		boolean isLeftOrRightOuterJoin =
@@ -187,6 +195,13 @@ public class FlinkAggregateJoinTransposeRule extends RelOptRule {
 		if (join.getJoinType() != JoinRelType.INNER && !(allowLeftOrRightOuterJoin && isLeftOrRightOuterJoin)) {
 			return;
 		}
+
+		// converts an aggregate with AUXILIARY_GROUP to a regular aggregate.
+		// if the converted aggregate can be push down,
+		// AggregateReduceGroupingRule will try reduce grouping of new aggregates created by this rule
+		final Pair<Aggregate, List<RexNode>> newAggAndProject = toRegularAggregate(origAgg);
+		final Aggregate aggregate = newAggAndProject.left;
+		final List<RexNode> projectAfterAgg = newAggAndProject.right;
 
 		// If any aggregate functions do not support splitting, bail out
 		// If any aggregate call has a filter or distinct, bail out
@@ -220,7 +235,7 @@ public class FlinkAggregateJoinTransposeRule extends RelOptRule {
 					mq.getPulledUpPredicates(join).pulledUpPredicates);
 		} else {
 			// this is an incomplete implementation
-			if (isAggregateKeyApplicable(aggregateColumns, join)){
+			if (isAggregateKeyApplicable(aggregateColumns, join)) {
 				keyColumns = keyColumns(aggregateColumns,
 						com.google.common.collect.ImmutableList.copyOf(RelOptUtil.conjunctions(join.getCondition())));
 			} else {
@@ -448,13 +463,56 @@ public class FlinkAggregateJoinTransposeRule extends RelOptRule {
 							Mappings.apply2(mapping, aggregate.getGroupSets())),
 					newAggCalls);
 		}
+		if (projectAfterAgg != null) {
+			relBuilder.project(projectAfterAgg, origAgg.getRowType().getFieldNames());
+		}
 
 		call.transformTo(relBuilder.build());
 	}
 
-	/** Computes the closure of a set of columns according to a given list of
+	/**
+	 * Convert aggregate with AUXILIARY_GROUP to regular aggregate.
+	 * Return original aggregate and null project if the given aggregate does not contain AUXILIARY_GROUP,
+	 * else new aggregate without AUXILIARY_GROUP and a project to permute output columns if needed.
+	 */
+	private Pair<Aggregate, List<RexNode>> toRegularAggregate(Aggregate aggregate) {
+		Tuple2<int[], Seq<AggregateCall>> auxGroupAndRegularAggCalls = FlinkRelOptUtil.checkAndSplitAggCalls(aggregate);
+		final int[] auxGroup = auxGroupAndRegularAggCalls._1;
+		final Seq<AggregateCall> regularAggCalls = auxGroupAndRegularAggCalls._2;
+		if (auxGroup.length != 0) {
+			int[] fullGroupSet = FlinkRelOptUtil.checkAndGetFullGroupSet(aggregate);
+			ImmutableBitSet newGroupSet = ImmutableBitSet.of(fullGroupSet);
+			List<AggregateCall> aggCalls = JavaConverters.seqAsJavaListConverter(regularAggCalls).asJava();
+			final Aggregate newAgg = aggregate.copy(
+					aggregate.getTraitSet(),
+					aggregate.getInput(),
+					aggregate.indicator,
+					newGroupSet,
+					com.google.common.collect.ImmutableList.of(newGroupSet),
+					aggCalls);
+			final List<RelDataTypeField> aggFields = aggregate.getRowType().getFieldList();
+			final List<RexNode> projectAfterAgg = new ArrayList<>();
+			for (int i = 0; i < fullGroupSet.length; ++i) {
+				int group = fullGroupSet[i];
+				int index = newGroupSet.indexOf(group);
+				projectAfterAgg.add(new RexInputRef(index, aggFields.get(i).getType()));
+			}
+			int fieldCntOfAgg = aggFields.size();
+			for (int i = fullGroupSet.length; i < fieldCntOfAgg; ++i) {
+				projectAfterAgg.add(new RexInputRef(i, aggFields.get(i).getType()));
+			}
+			Preconditions.checkArgument(projectAfterAgg.size() == fieldCntOfAgg);
+			return new Pair<>(newAgg, projectAfterAgg);
+		} else {
+			return new Pair<>(aggregate, null);
+		}
+	}
+
+	/**
+	 * Computes the closure of a set of columns according to a given list of
 	 * constraints. Each 'x = y' constraint causes bit y to be set if bit x is
-	 * set, and vice versa. */
+	 * set, and vice versa.
+	 */
 	private static ImmutableBitSet keyColumns(ImmutableBitSet aggregateColumns,
 			com.google.common.collect.ImmutableList<RexNode> predicates) {
 		SortedMap<Integer, BitSet> equivalence = new TreeMap<>();
@@ -492,7 +550,8 @@ public class FlinkAggregateJoinTransposeRule extends RelOptRule {
 		JoinInfo joinInfo = join.analyzeCondition();
 		return (join.getJoinType() == JoinRelType.LEFT && joinInfo.leftSet().contains(aggregateKeys)) ||
 				(join.getJoinType() == JoinRelType.RIGHT &&
-						joinInfo.rightSet().shift(join.getInput(0).getRowType().getFieldCount()).contains(aggregateKeys));
+						joinInfo.rightSet().shift(join.getInput(0).getRowType().getFieldCount())
+								.contains(aggregateKeys));
 	}
 
 	private static void populateEquivalence(Map<Integer, BitSet> equivalence,
@@ -505,8 +564,10 @@ public class FlinkAggregateJoinTransposeRule extends RelOptRule {
 		bitSet.set(i1);
 	}
 
-	/** Creates a {@link org.apache.calcite.sql.SqlSplittableAggFunction.Registry}
-	 * that is a view of a list. */
+	/**
+	 * Creates a {@link org.apache.calcite.sql.SqlSplittableAggFunction.Registry}
+	 * that is a view of a list.
+	 */
 	private static <E> SqlSplittableAggFunction.Registry<E> registry(
 			final List<E> list) {
 		return new SqlSplittableAggFunction.Registry<E>() {
