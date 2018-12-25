@@ -20,6 +20,7 @@ package org.apache.flink.runtime.executiongraph;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.CommonExtendedResource;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
@@ -35,6 +36,7 @@ import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
+import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobmanager.scheduler.LocationPreferenceConstraint;
@@ -58,9 +60,13 @@ import org.mockito.stubbing.Answer;
 
 import javax.annotation.Nonnull;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -442,21 +448,38 @@ public class ExecutionTest extends TestLogger {
 
 	@Test
 	public void testResourceCalculationBeforeSlotAllocationInScheduled() throws Exception {
-		// Prepare input gates and input channels.
+		// Prepares input gates and input channels.
+		// 0. Prepares for various settings.
 		final int numPipelineChannelsPerGate = 10;
 		final int numPipelineGates = 2;
+		final int numConsumersPerExternalResultPartition = 10;
+		final int numExternalResultPartitions = 3;
 
-		IntermediateResult mockIntermediateResult = new IntermediateResult(
+		final int networkBuffersPerChannel = 100;
+		final int networkBuffersPerSubpartition = 50;
+		final int networkExtraBuffersPerGate = 20;
+		final int taskManagerOutputMemoryMB = 170;
+
+		final float cpuCores = 1.0f;
+		final int heapMemoryInMB = 1024;
+		final int directMemoryInMB = 200;
+		final int nativeMemoryInMB = 100;
+		final int managedMemoryInMB = 1000;
+
+		// 1. Prepares for pipelined input edges.
+		IntermediateResult mockPipelinedIntermediateResult = new IntermediateResult(
 			new IntermediateDataSetID(),
 			mock(ExecutionJobVertex.class),
 			numPipelineChannelsPerGate,
 			ResultPartitionType.PIPELINED);
 
-		IntermediateResultPartition mockIntermediateResultPartition = mock(IntermediateResultPartition.class);
-		when(mockIntermediateResultPartition.getIntermediateResult()).thenReturn(mockIntermediateResult);
+		IntermediateResultPartition mockPipelinedIntermediateResultPartition =
+			mock(IntermediateResultPartition.class);
+		when(mockPipelinedIntermediateResultPartition.getIntermediateResult())
+			.thenReturn(mockPipelinedIntermediateResult);
 
 		ExecutionEdge mockExecutionEdge = mock(ExecutionEdge.class);
-		when(mockExecutionEdge.getSource()).thenReturn(mockIntermediateResultPartition);
+		when(mockExecutionEdge.getSource()).thenReturn(mockPipelinedIntermediateResultPartition);
 
 		ExecutionEdge[][] inputEdges = new ExecutionEdge[numPipelineGates][numPipelineChannelsPerGate];
 		for (int i = 0; i < numPipelineGates; i++) {
@@ -467,12 +490,41 @@ public class ExecutionTest extends TestLogger {
 			inputEdges[i] = edgesPerGate;
 		}
 
+		// 2. Prepares for blocking output edges using external shuffle service.
+		IntermediateResult mockBlockingIntermediateResult = new IntermediateResult(
+			new IntermediateDataSetID(),
+			mock(ExecutionJobVertex.class),
+			numPipelineChannelsPerGate,
+			ResultPartitionType.BLOCKING);
+
+		IntermediateResultPartition mockBlockingIntermediateResultPartition =
+			mock(IntermediateResultPartition.class);
+		when(mockBlockingIntermediateResultPartition.getIntermediateResult())
+			.thenReturn(mockBlockingIntermediateResult);
+		List<List<ExecutionEdge>> consumersPerExternalResultPartition = new ArrayList<>();
+		consumersPerExternalResultPartition.add(new ArrayList<>());
+		for (int i = 0; i < numConsumersPerExternalResultPartition; i++) {
+			consumersPerExternalResultPartition.get(0).add(mockExecutionEdge);
+		}
+		when(mockBlockingIntermediateResultPartition.getConsumers())
+			.thenReturn(consumersPerExternalResultPartition);
+
+		Map<IntermediateResultPartitionID, IntermediateResultPartition> producedPartitions =
+			new HashMap<>();
+		for (int i = 0; i < numExternalResultPartitions; i++) {
+			producedPartitions.put(new IntermediateResultPartitionID(),
+				mockBlockingIntermediateResultPartition);
+		}
+
+		// 3. Prepares other facilities for this unittest.
 		final JobVertex jobVertex = spy(createNoOpJobVertex());
 		when(jobVertex.getMinResources()).thenReturn(ResourceSpec.newBuilder()
-			.setCpuCores(1.0)
-			.setHeapMemoryInMB(1024)
-			.setDirectMemoryInMB(200)
-			.setNativeMemoryInMB(100)
+			.setCpuCores(cpuCores)
+			.setHeapMemoryInMB(heapMemoryInMB)
+			.setDirectMemoryInMB(directMemoryInMB)
+			.setNativeMemoryInMB(nativeMemoryInMB)
+			.addExtendedResource(new CommonExtendedResource(
+				ResourceSpec.MANAGED_MEMORY_NAME, managedMemoryInMB))
 			.build());
 
 		final JobVertexID jobVertexId = jobVertex.getID();
@@ -505,9 +557,12 @@ public class ExecutionTest extends TestLogger {
 		slotProvider.addSlot(jobVertexId, 0, CompletableFuture.completedFuture(slot));
 
 		Configuration jobManagerConfiguration = new Configuration();
-		jobManagerConfiguration.setInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_CHANNEL, 100);
-		jobManagerConfiguration.setInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_SUBPARTITION, 50);
-		jobManagerConfiguration.setInteger(TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_GATE, 20);
+		jobManagerConfiguration.setInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_CHANNEL, networkBuffersPerChannel);
+		jobManagerConfiguration.setInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_SUBPARTITION, networkBuffersPerSubpartition);
+		jobManagerConfiguration.setInteger(TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_GATE, networkExtraBuffersPerGate);
+		jobManagerConfiguration.setString(TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE,
+			BlockingShuffleType.YARN.toString());
+		jobManagerConfiguration.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MEMORY_MB, taskManagerOutputMemoryMB);
 
 		ExecutionGraph executionGraph = ExecutionGraphTestUtils.createSimpleTestGraph(
 			new JobID(),
@@ -530,6 +585,7 @@ public class ExecutionTest extends TestLogger {
 				return inputEdges[index];
 			}
 		}).when(executionVertex).getInputEdges(any(int.class));
+		when(executionVertex.getProducedPartitions()).thenReturn(producedPartitions);
 
 		when(execution.getVertex()).thenReturn(executionVertex);
 
@@ -552,7 +608,11 @@ public class ExecutionTest extends TestLogger {
 		assertEquals(slot, slotOwner.getReturnedSlotFuture().get());
 
 		assertTrue(actualSlotProfile.get() != null);
-		assertEquals(64, actualSlotProfile.get().getResourceProfile().getNetworkMemoryInMB());
+		assertEquals((int) Math.ceil(1.0 * (networkBuffersPerChannel * numPipelineChannelsPerGate * numPipelineGates
+			+ networkExtraBuffersPerGate * numPipelineGates) * 32 / 1024),
+			actualSlotProfile.get().getResourceProfile().getNetworkMemoryInMB());
+		assertEquals(managedMemoryInMB + taskManagerOutputMemoryMB * numExternalResultPartitions,
+			actualSlotProfile.get().getResourceProfile().getManagedMemoryInMB());
 	}
 
 	@Test

@@ -27,6 +27,9 @@ import org.apache.flink.runtime.io.network.partition.BlockingShuffleType;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Optional;
 
 /**
@@ -39,6 +42,7 @@ import java.util.Optional;
  * @param <T> The type of the records that are serialized or deserialized.
  */
 public class SerializerManager<T extends IOReadableWritable> {
+	private static final Logger LOG = LoggerFactory.getLogger(SerializerManager.class);
 
 	/** Whether uses compression during serialization or deserialization. */
 	private final boolean useCompression;
@@ -57,13 +61,8 @@ public class SerializerManager<T extends IOReadableWritable> {
 		if (!resultPartitionType.isBlocking()) {
 			this.useCompression = false;
 		} else {
-			BlockingShuffleType shuffleType;
-			try {
-				shuffleType = BlockingShuffleType.valueOf(configuration.getString(
-					TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE).toUpperCase());
-			} catch (IllegalArgumentException e) {
-				shuffleType = BlockingShuffleType.valueOf(TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE.defaultValue());
-			}
+			BlockingShuffleType shuffleType =
+				BlockingShuffleType.getBlockingShuffleTypeFromConfiguration(configuration, LOG);
 			this.useCompression = (shuffleType == BlockingShuffleType.YARN) &&
 				configuration.getBoolean(TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_ENABLE_COMPRESSION);
 		}

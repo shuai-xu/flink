@@ -18,6 +18,10 @@
 
 package org.apache.flink.runtime.io.network.partition;
 
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.TaskManagerOptions;
+import org.slf4j.Logger;
+
 /**
  * This enumeration defines the shuffle type when the {@link ResultPartitionType} is
  * {@link ResultPartitionType#BLOCKING}. The BlockingShuffleType is configured by
@@ -32,5 +36,28 @@ public enum BlockingShuffleType {
 	/**
 	 * Yarn refers to the external yarn shuffle service deployed on the yarn nodemanager.
 	 */
-	YARN
+	YARN;
+
+	/**
+	 * Utility method for retrieving shuffle type from current configuration.
+	 * @param configuration current configuration
+	 * @param logger omitting to log if logger is set null.
+	 * @return configured blocking shuffle type
+	 */
+	static public BlockingShuffleType getBlockingShuffleTypeFromConfiguration(
+		final Configuration configuration, Logger logger) {
+		BlockingShuffleType shuffleType;
+		try {
+			shuffleType = BlockingShuffleType.valueOf(configuration.getString(
+				TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE).toUpperCase());
+		} catch (IllegalArgumentException e) {
+			shuffleType = BlockingShuffleType.valueOf(TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE.defaultValue());
+			if (logger != null) {
+				logger.warn("The configured blocking shuffle type ["
+					+ configuration.getString(TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE)
+					+ "] is illegal, using default value: " + shuffleType, e);
+			}
+		}
+		return shuffleType;
+	}
 }

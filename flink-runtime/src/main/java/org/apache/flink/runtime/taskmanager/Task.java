@@ -882,7 +882,8 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		String taskNameWithSubtaskAndId,
 		Collection<ResultPartitionDeploymentDescriptor> resultPartitionDeploymentDescriptors,
 		ResultPartitionConsumableNotifier resultPartitionConsumableNotifier) {
-		final BlockingShuffleType shuffleType = getBlockingShuffleType();
+		final BlockingShuffleType shuffleType =
+			BlockingShuffleType.getBlockingShuffleTypeFromConfiguration(taskManagerConfiguration, LOG);
 
 		int counter = 0;
 		for (ResultPartitionDeploymentDescriptor desc: resultPartitionDeploymentDescriptors) {
@@ -933,7 +934,8 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		} else {
 			maxConcurrentPartitionRequests = Integer.MAX_VALUE;
 		}
-		final BlockingShuffleType shuffleType = getBlockingShuffleType();
+		final BlockingShuffleType shuffleType =
+			BlockingShuffleType.getBlockingShuffleTypeFromConfiguration(taskManagerConfiguration, LOG);
 
 		PartitionRequestManager partitionRequestManager = new PartitionRequestManager(
 			maxConcurrentPartitionRequests, inputGates.length);
@@ -957,18 +959,6 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 
 			++counter;
 		}
-	}
-
-	private BlockingShuffleType getBlockingShuffleType() {
-		BlockingShuffleType shuffleType;
-		try {
-			shuffleType = BlockingShuffleType.valueOf(taskManagerConfiguration.getString(
-				TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE).toUpperCase());
-		} catch (IllegalArgumentException e) {
-			LOG.warn("The configured blocking shuffle is illegal, using default value.", e);
-			shuffleType = BlockingShuffleType.valueOf(TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE.defaultValue());
-		}
-		return shuffleType;
 	}
 
 	private ClassLoader createUserCodeClassloader() throws Exception {

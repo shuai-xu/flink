@@ -22,6 +22,7 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.Archiveable;
 import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.CommonExtendedResource;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
@@ -607,9 +608,17 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 		if (executionVertex.getJobVertex().getJobVertex().getMinResources().equals(ResourceSpec.DEFAULT)) {
 			return ResourceProfile.UNKNOWN;
 		}
+
 		int networkMemory = calculateTaskNetworkMemory(executionVertex);
+
+		int additionalManagedMemory = calculateTaskExtraManagedMemory(executionVertex);
+		ResourceSpec additionalResourceSpec = ResourceSpec.newBuilder().addExtendedResource(
+			new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, additionalManagedMemory))
+			.build();
+
 		return ResourceProfile.fromResourceSpec(
-			executionVertex.getJobVertex().getJobVertex().getMinResources(), networkMemory);
+			executionVertex.getJobVertex().getJobVertex().getMinResources()
+				.merge(additionalResourceSpec), networkMemory);
 	}
 
 	@VisibleForTesting
@@ -617,15 +626,8 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 
 		Configuration config = getVertex().getJobVertex().getGraph().getJobManagerConfiguration();
 
-		BlockingShuffleType shuffleType;
-		try {
-			shuffleType = BlockingShuffleType.valueOf(config.getString(
-				TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE).toUpperCase());
-		} catch (IllegalArgumentException e) {
-			LOG.warn("The configured blocking shuffle is illegal, using default value.", e);
-			shuffleType = BlockingShuffleType.valueOf(TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE.defaultValue());
-		}
-
+		BlockingShuffleType shuffleType =
+			BlockingShuffleType.getBlockingShuffleTypeFromConfiguration(config, LOG);
 		int numSubpartitions = 0;
 		for (IntermediateResultPartition irp : executionVertex.getProducedPartitions().values()) {
 			if (!(shuffleType == BlockingShuffleType.YARN && irp.getIntermediateResult().getResultType().isBlocking())) {
@@ -671,6 +673,23 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 				numExternalBlockingChannels, numExternalBlockingGates);
 
 		return networkMemory;
+	}
+
+	@VisibleForTesting
+	int calculateTaskExtraManagedMemory(ExecutionVertex executionVertex) {
+		Configuration config = getVertex().getJobVertex().getGraph().getJobManagerConfiguration();
+
+		// Calculates managed memory for external result partition.
+		BlockingShuffleType shuffleType =
+			BlockingShuffleType.getBlockingShuffleTypeFromConfiguration(config, LOG);
+		int numExternalResultPartitions = 0;
+		for (IntermediateResultPartition irp : executionVertex.getProducedPartitions().values()) {
+			if (shuffleType == BlockingShuffleType.YARN && irp.getIntermediateResult().getResultType().isBlocking()) {
+				numExternalResultPartitions++;
+			}
+		}
+		int mapOutputMemoryInMB = config.getInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MEMORY_MB);
+		return mapOutputMemoryInMB * numExternalResultPartitions;
 	}
 
 	/**

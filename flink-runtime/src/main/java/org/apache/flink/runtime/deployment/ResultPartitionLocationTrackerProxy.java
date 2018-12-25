@@ -19,7 +19,6 @@
 package org.apache.flink.runtime.deployment;
 
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.executiongraph.IntermediateResult;
 import org.apache.flink.runtime.io.network.partition.BlockingShuffleType;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
@@ -71,15 +70,8 @@ public class ResultPartitionLocationTrackerProxy {
 		TaskManagerLocation consumerLocation,
 		IntermediateResult intermediateResult) {
 
-		BlockingShuffleType shuffleType;
-		try {
-			shuffleType = BlockingShuffleType.valueOf(configuration.getString(
-				TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE).toUpperCase());
-		} catch (IllegalArgumentException e) {
-			LOG.warn("The configured blocking shuffle type is illegal, using default value.", e);
-			shuffleType = BlockingShuffleType.valueOf(TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE.defaultValue());
-		}
-
+		BlockingShuffleType shuffleType =
+			BlockingShuffleType.getBlockingShuffleTypeFromConfiguration(configuration, LOG);
 		if (intermediateResult.getResultType() == ResultPartitionType.BLOCKING
 			&& shuffleType == BlockingShuffleType.YARN) {
 			// use the yarn shuffle service
