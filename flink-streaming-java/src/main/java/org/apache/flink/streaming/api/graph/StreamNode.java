@@ -349,6 +349,8 @@ public class StreamNode implements Serializable {
 	enum ReadPriority {
 		HIGHER,
 
-		LOWER
+		LOWER,
+
+		DYNAMIC
 	}
 }
