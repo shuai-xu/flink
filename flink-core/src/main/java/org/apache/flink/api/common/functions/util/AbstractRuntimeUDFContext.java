@@ -42,6 +42,8 @@ import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.ReducingState;
 import org.apache.flink.api.common.state.ReducingStateDescriptor;
+import org.apache.flink.api.common.state.SortedMapState;
+import org.apache.flink.api.common.state.SortedMapStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.core.fs.Path;
@@ -257,6 +259,12 @@ public abstract class AbstractRuntimeUDFContext implements RuntimeContext {
 	public <UK, UV> MapState<UK, UV> getMapState(MapStateDescriptor<UK, UV> stateProperties) {
 		throw new UnsupportedOperationException(
 				"This state is only accessible by functions executed on a KeyedStream");
+	}
+
+	@Override
+	public <UK, UV> SortedMapState<UK, UV> getSortedMapState(SortedMapStateDescriptor<UK, UV> stateProperties) {
+		throw new UnsupportedOperationException(
+			"This state is only accessible by functions executed on a KeyedStream");
 	}
 
 	@Internal
