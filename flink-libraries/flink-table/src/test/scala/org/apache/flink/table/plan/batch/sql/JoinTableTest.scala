@@ -327,7 +327,7 @@ class JoinTableTest extends TableTestBatchExecBase {
     override def getAsyncConfig: AsyncConfig = new AsyncConfig
 
     /** Returns the table schema of the table source */
-    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
+    override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
 
     override def explainSource(): String = ""
   }
