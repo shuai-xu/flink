@@ -43,6 +43,7 @@ import org.apache.flink.runtime.dispatcher.MemoryArchivedExecutionGraphStore;
 import org.apache.flink.runtime.dispatcher.StandaloneDispatcher;
 import org.apache.flink.runtime.entrypoint.ClusterInformation;
 import org.apache.flink.runtime.executiongraph.AccessExecutionGraph;
+import org.apache.flink.runtime.healthmanager.HealthManager;
 import org.apache.flink.runtime.heartbeat.HeartbeatServices;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServicesUtils;
@@ -171,6 +172,9 @@ public class MiniCluster implements JobExecutorService, AutoCloseableAsync {
 
 	@GuardedBy("lock")
 	private RpcGatewayRetriever<DispatcherId, DispatcherGateway> dispatcherGatewayRetriever;
+
+	@GuardedBy("lock")
+	private HealthManager healthManager;
 
 	/** Flag marking the mini cluster as started/running. */
 	private volatile boolean running;
@@ -356,6 +360,8 @@ public class MiniCluster implements JobExecutorService, AutoCloseableAsync {
 
 				restAddressURI = new URI(dispatcherRestEndpoint.getRestBaseUrl());
 
+				LOG.info("Rest endpoint:" + dispatcherRestEndpoint.getRestBaseUrl());
+
 				// bring up the dispatcher that launches JobManagers when jobs submitted
 				LOG.info("Starting job dispatcher(s) for JobManger");
 
@@ -387,6 +393,10 @@ public class MiniCluster implements JobExecutorService, AutoCloseableAsync {
 
 				resourceManagerLeaderRetriever.start(resourceManagerGatewayRetriever);
 				dispatcherLeaderRetriever.start(dispatcherGatewayRetriever);
+
+				this.healthManager = new HealthManager(
+						configuration, dispatcherRestEndpoint.getRestBaseUrl());
+				this.healthManager.start();
 			}
 			catch (Exception e) {
 				// cleanup everything
@@ -441,6 +451,10 @@ public class MiniCluster implements JobExecutorService, AutoCloseableAsync {
 					if (resourceManagerRunner != null) {
 						componentTerminationFutures.add(resourceManagerRunner.closeAsync());
 						resourceManagerRunner = null;
+					}
+
+					if (healthManager != null) {
+						healthManager.stop();
 					}
 
 					final FutureUtils.ConjunctFuture<Void> componentsTerminationFuture = FutureUtils.completeAll(componentTerminationFutures);

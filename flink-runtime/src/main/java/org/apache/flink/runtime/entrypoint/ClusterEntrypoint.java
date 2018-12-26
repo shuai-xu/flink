@@ -44,6 +44,7 @@ import org.apache.flink.runtime.dispatcher.DispatcherGateway;
 import org.apache.flink.runtime.dispatcher.DispatcherId;
 import org.apache.flink.runtime.dispatcher.HistoryServerArchivist;
 import org.apache.flink.runtime.dispatcher.MiniDispatcher;
+import org.apache.flink.runtime.healthmanager.HealthManager;
 import org.apache.flink.runtime.heartbeat.HeartbeatServices;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServicesUtils;
@@ -166,6 +167,9 @@ public abstract class ClusterEntrypoint implements FatalErrorHandler, LeaderShip
 	private JobManagerMetricGroup jobManagerMetricGroup;
 
 	private final Thread shutDownHook;
+
+	@GuardedBy("lock")
+	private HealthManager  healthManager;
 
 	protected ClusterEntrypoint(Configuration configuration) {
 		this.configuration = generateClusterConfiguration(configuration);
@@ -372,6 +376,10 @@ public abstract class ClusterEntrypoint implements FatalErrorHandler, LeaderShip
 			LOG.debug("Starting Dispatcher.");
 			dispatcher.start();
 			dispatcherLeaderRetrievalService.start(dispatcherGatewayRetriever);
+
+			LOG.debug("Starting HeathManager");
+			healthManager = new HealthManager(configuration, webMonitorEndpoint.getRestBaseUrl());
+			healthManager.start();
 		}
 	}
 
@@ -508,6 +516,10 @@ public abstract class ClusterEntrypoint implements FatalErrorHandler, LeaderShip
 			if (resourceManager != null) {
 				resourceManager.shutDown();
 				terminationFutures.add(resourceManager.getTerminationFuture());
+			}
+
+			if (healthManager != null) {
+				healthManager.stop();
 			}
 
 			if (exception != null) {
