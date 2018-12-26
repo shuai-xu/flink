@@ -18,32 +18,23 @@
 package org.apache.flink.streaming.runtime.partitioner;
 
 import org.apache.flink.api.java.tuple.Tuple;
-import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 
-import org.junit.Before;
 import org.junit.Test;
-
-import static org.junit.Assert.assertArrayEquals;
 
 /**
  * Tests for {@link GlobalPartitioner}.
  */
-public class GlobalPartitionerTest {
+public class GlobalPartitionerTest extends StreamPartitionerTest {
 
-	private GlobalPartitioner<Tuple> globalPartitioner;
-	private StreamRecord<Tuple> streamRecord = new StreamRecord<Tuple>(null);
-
-	@Before
-	public void setPartitioner() {
-		globalPartitioner = new GlobalPartitioner<Tuple>();
+	@Override
+	public StreamPartitioner<Tuple> createPartitioner() {
+		return new GlobalPartitioner<>();
 	}
 
 	@Test
 	public void testSelectChannels() {
-		int[] result = new int[] { 0 };
-
-		assertArrayEquals(result, globalPartitioner.selectChannels(streamRecord, 1));
-		assertArrayEquals(result, globalPartitioner.selectChannels(streamRecord, 2));
-		assertArrayEquals(result, globalPartitioner.selectChannels(streamRecord, 1024));
+		assertSelectedChannel(0, 1);
+		assertSelectedChannel(0, 2);
+		assertSelectedChannel(0, 1024);
 	}
 }

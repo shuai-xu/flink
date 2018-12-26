@@ -18,42 +18,33 @@
 package org.apache.flink.streaming.runtime.partitioner;
 
 import org.apache.flink.api.java.tuple.Tuple;
-import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 
-import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for {@link ShufflePartitioner}.
  */
-public class ShufflePartitionerTest {
+public class ShufflePartitionerTest extends StreamPartitionerTest {
 
-	private ShufflePartitioner<Tuple> shufflePartitioner;
-	private StreamRecord<Tuple> streamRecord = new StreamRecord<Tuple>(null);
-
-	@Before
-	public void setPartitioner() {
-		shufflePartitioner = new ShufflePartitioner<Tuple>();
-	}
-
-	@Test
-	public void testSelectChannelsLength() {
-		assertEquals(1, shufflePartitioner.selectChannels(streamRecord, 1).length);
-		assertEquals(1, shufflePartitioner.selectChannels(streamRecord, 2).length);
-		assertEquals(1, shufflePartitioner.selectChannels(streamRecord, 1024).length);
+	@Override
+	public StreamPartitioner<Tuple> createPartitioner() {
+		return new ShufflePartitioner<>();
 	}
 
 	@Test
 	public void testSelectChannelsInterval() {
-		assertEquals(0, shufflePartitioner.selectChannels(streamRecord, 1)[0]);
+		assertSelectedChannel(0, 1);
 
-		assertTrue(0 <= shufflePartitioner.selectChannels(streamRecord, 2)[0]);
-		assertTrue(2 > shufflePartitioner.selectChannels(streamRecord, 2)[0]);
+		assertTrue(0 <= selectChannel(2));
+		assertTrue(2 > selectChannel(2));
 
-		assertTrue(0 <= shufflePartitioner.selectChannels(streamRecord, 1024)[0]);
-		assertTrue(1024 > shufflePartitioner.selectChannels(streamRecord, 1024)[0]);
+		assertTrue(0 <= selectChannel(1024));
+		assertTrue(1024 > selectChannel(1024));
+	}
+
+	private int selectChannel(int numberOfChannels) {
+		return streamPartitioner.selectChannels(streamRecord, numberOfChannels)[0];
 	}
 }

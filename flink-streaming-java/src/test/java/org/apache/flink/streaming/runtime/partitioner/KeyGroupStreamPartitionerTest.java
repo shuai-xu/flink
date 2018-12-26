@@ -34,12 +34,12 @@ import static org.junit.Assert.assertEquals;
 public class KeyGroupStreamPartitionerTest extends TestLogger {
 
 	private KeyGroupStreamPartitioner<Tuple2<String, Integer>, String> keyGroupPartitioner;
-	private StreamRecord<Tuple2<String, Integer>> streamRecord1 = new StreamRecord<Tuple2<String, Integer>>(new Tuple2<String, Integer>("test", 0));
-	private StreamRecord<Tuple2<String, Integer>> streamRecord2 = new StreamRecord<Tuple2<String, Integer>>(new Tuple2<String, Integer>("test", 42));
+	private StreamRecord<Tuple2<String, Integer>> streamRecord1 = new StreamRecord<>(new Tuple2<>("test", 0));
+	private StreamRecord<Tuple2<String, Integer>> streamRecord2 = new StreamRecord<>(new Tuple2<>("test", 42));
 
 	@Before
 	public void setPartitioner() {
-		keyGroupPartitioner = new KeyGroupStreamPartitioner<Tuple2<String, Integer>, String>(new KeySelector<Tuple2<String, Integer>, String>() {
+		keyGroupPartitioner = new KeyGroupStreamPartitioner<>(new KeySelector<Tuple2<String, Integer>, String>() {
 
 			private static final long serialVersionUID = 1L;
 

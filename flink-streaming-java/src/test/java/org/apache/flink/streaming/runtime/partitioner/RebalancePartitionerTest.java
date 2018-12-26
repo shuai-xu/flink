@@ -18,38 +18,29 @@
 package org.apache.flink.streaming.runtime.partitioner;
 
 import org.apache.flink.api.java.tuple.Tuple;
-import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 
-import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for {@link RebalancePartitioner}.
  */
-public class RebalancePartitionerTest {
+public class RebalancePartitionerTest extends StreamPartitionerTest {
 
-	private RebalancePartitioner<Tuple> distributePartitioner;
-	private StreamRecord<Tuple> streamRecord = new StreamRecord<Tuple>(null);
-
-	@Before
-	public void setPartitioner() {
-		distributePartitioner = new RebalancePartitioner<Tuple>();
-	}
-
-	@Test
-	public void testSelectChannelsLength() {
-		assertEquals(1, distributePartitioner.selectChannels(streamRecord, 1).length);
-		assertEquals(1, distributePartitioner.selectChannels(streamRecord, 2).length);
-		assertEquals(1, distributePartitioner.selectChannels(streamRecord, 1024).length);
+	@Override
+	public StreamPartitioner<Tuple> createPartitioner() {
+		return new RebalancePartitioner<>();
 	}
 
 	@Test
 	public void testSelectChannelsInterval() {
-		assertEquals(0, distributePartitioner.selectChannels(streamRecord, 3)[0]);
-		assertEquals(1, distributePartitioner.selectChannels(streamRecord, 3)[0]);
-		assertEquals(2, distributePartitioner.selectChannels(streamRecord, 3)[0]);
-		assertEquals(0, distributePartitioner.selectChannels(streamRecord, 3)[0]);
+		int initialChannel = streamPartitioner.selectChannels(streamRecord, 3)[0];
+		assertTrue(0 <= initialChannel);
+		assertTrue(3 > initialChannel);
+
+		assertSelectedChannel((initialChannel + 1) % 3, 3);
+		assertSelectedChannel((initialChannel + 2) % 3, 3);
+		assertSelectedChannel((initialChannel + 3) % 3, 3);
 	}
 }

@@ -39,11 +39,8 @@ import org.apache.flink.runtime.testingUtils.TestingUtils;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.source.ParallelSourceFunction;
-import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.util.Collector;
-import org.apache.flink.util.TestLogger;
 
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -60,29 +57,19 @@ import static org.junit.Assert.assertFalse;
  * Tests for {@link RescalePartitioner}.
  */
 @SuppressWarnings("serial")
-public class RescalePartitionerTest extends TestLogger {
+public class RescalePartitionerTest extends StreamPartitionerTest {
 
-	private RescalePartitioner<Tuple> distributePartitioner;
-	private StreamRecord<Tuple> streamRecord = new StreamRecord<Tuple>(null);
-
-	@Before
-	public void setPartitioner() {
-		distributePartitioner = new RescalePartitioner<Tuple>();
-	}
-
-	@Test
-	public void testSelectChannelsLength() {
-		assertEquals(1, distributePartitioner.selectChannels(streamRecord, 1).length);
-		assertEquals(1, distributePartitioner.selectChannels(streamRecord, 2).length);
-		assertEquals(1, distributePartitioner.selectChannels(streamRecord, 1024).length);
+	@Override
+	public StreamPartitioner<Tuple> createPartitioner() {
+		return new RescalePartitioner<>();
 	}
 
 	@Test
 	public void testSelectChannelsInterval() {
-		assertEquals(0, distributePartitioner.selectChannels(streamRecord, 3)[0]);
-		assertEquals(1, distributePartitioner.selectChannels(streamRecord, 3)[0]);
-		assertEquals(2, distributePartitioner.selectChannels(streamRecord, 3)[0]);
-		assertEquals(0, distributePartitioner.selectChannels(streamRecord, 3)[0]);
+		assertSelectedChannel(0, 3);
+		assertSelectedChannel(1, 3);
+		assertSelectedChannel(2, 3);
+		assertSelectedChannel(0, 3);
 	}
 
 	@Test
