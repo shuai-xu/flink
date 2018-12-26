@@ -32,7 +32,7 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexKey}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.{TableSchemaUtil, TableTestBatchExecBase}
 
 import org.junit.Assert.{assertTrue, fail}
 import org.junit.{Before, Test}
@@ -148,7 +148,7 @@ class JoinTableTest extends TableTestBatchExecBase {
     // can't follow a period specification
     expectExceptionThrown(
       "SELECT * FROM MyTable AS T JOIN LATERAL dimStatic " +
-        "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id",
+          "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id",
       "Table 'dimStatic' is not a temporal table",
       classOf[ValidationException])
 
@@ -162,23 +162,23 @@ class JoinTableTest extends TableTestBatchExecBase {
   @Test
   def testJoinTemporalTable(): Unit = {
     val sql = "SELECT * FROM MyTable AS T JOIN LATERAL dimTemporal " +
-      "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id"
+        "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id"
     testUtil.verifyPlan(sql)
   }
 
   @Test
   def testLeftJoinTemporalTable(): Unit = {
     val sql = "SELECT * FROM MyTable AS T LEFT JOIN LATERAL dimTemporal " +
-      "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id"
+        "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id"
     testUtil.verifyPlan(sql)
   }
 
   @Test
   def testJoinTemporalTableWithNestedQuery(): Unit = {
     val sql = "SELECT * FROM " +
-      "(SELECT a, b FROM MyTable WHERE c > 1000) AS T " +
-      "JOIN LATERAL dimTemporal " +
-      "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id"
+        "(SELECT a, b FROM MyTable WHERE c > 1000) AS T " +
+        "JOIN LATERAL dimTemporal " +
+        "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id"
     testUtil.verifyPlan(sql)
   }
 
@@ -312,8 +312,8 @@ class JoinTableTest extends TableTestBatchExecBase {
     }
 
     /**
-      * Returns true if this dimension table could be queried asynchronously
-      */
+     * Returns true if this dimension table could be queried asynchronously
+     */
     override def isAsync: Boolean = false
 
     override def getAsyncLookupFunction(
@@ -322,8 +322,8 @@ class JoinTableTest extends TableTestBatchExecBase {
     }
 
     /**
-      * Returns config that defines the runtime behavior of async join table
-      */
+     * Returns config that defines the runtime behavior of async join table
+     */
     override def getAsyncConfig: AsyncConfig = new AsyncConfig
 
     /** Returns the table schema of the table source */

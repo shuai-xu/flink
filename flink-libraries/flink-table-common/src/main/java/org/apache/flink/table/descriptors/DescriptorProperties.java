@@ -23,7 +23,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.table.api.TableException;
-import org.apache.flink.table.api.TableSchema2;
+import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.utils.EncodingUtils;
@@ -161,7 +161,7 @@ public class DescriptorProperties {
 	/**
 	 * Adds a table schema under the given key.
 	 */
-	public void putTableSchema(String key, TableSchema2 schema) {
+	public void putTableSchema(String key, TableSchema schema) {
 		checkNotNull(key);
 		checkNotNull(schema);
 
@@ -478,7 +478,7 @@ public class DescriptorProperties {
 	/**
 	 * Returns a table schema under the given key if it exists.
 	 */
-	public Optional<TableSchema2> getOptionalTableSchema(String key) {
+	public Optional<TableSchema> getOptionalTableSchema(String key) {
 		// filter for number of fields
 		final int fieldCount = properties.keySet().stream()
 			.filter((k) -> k.startsWith(key) && k.endsWith('.' + TABLE_SCHEMA_NAME))
@@ -490,7 +490,7 @@ public class DescriptorProperties {
 		}
 
 		// validate fields and build schema
-		final TableSchema2.Builder schemaBuilder = TableSchema2.builder();
+		final TableSchema.Builder schemaBuilder = TableSchema.builder();
 		for (int i = 0; i < fieldCount; i++) {
 			final String nameKey = key + '.' + i + '.' + TABLE_SCHEMA_NAME;
 			final String typeKey = key + '.' + i + '.' + TABLE_SCHEMA_TYPE;
@@ -509,7 +509,7 @@ public class DescriptorProperties {
 	/**
 	 * Returns a table schema under the given existing key.
 	 */
-	public TableSchema2 getTableSchema(String key) {
+	public TableSchema getTableSchema(String key) {
 		return getOptionalTableSchema(key).orElseThrow(exceptionSupplier(key));
 	}
 

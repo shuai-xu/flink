@@ -40,6 +40,7 @@ import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBack
 import org.apache.flink.table.runtime.utils.{StreamingTestBase, StreamingWithStateTestBase, TestingAppendSink, TestingRetractSink}
 import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexKey}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.util.TableSchemaUtil
 import org.apache.flink.types.Row
 import org.apache.flink.util.{Collector, ExceptionUtils}
 import org.junit.Assert.{assertEquals, assertTrue, fail}
@@ -804,7 +805,7 @@ class TestDimensionTableSource(
   }
 
   /** Returns the table schema of the table source */
-  override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
+  override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
 }
 
 // lookup data table using id index

@@ -279,8 +279,8 @@ public class MetaConverter {
 			TableSchema tableSchema) {
 
 		for (ColumnStatisticsObj statisticsObj : stats) {
-			int colIndex = (int) tableSchema.columnNameToIndex()
-					.get(statisticsObj.getColName()).get();
+			int colIndex = tableSchema.columnNameToIndex()
+					.get(statisticsObj.getColName());
 			if (colIndex >= 0 && colIndex < tableSchema.getColumns().length) {
 				Column column = tableSchema.getColumn(colIndex);
 				InternalType flinkType = column.internalType();

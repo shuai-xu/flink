@@ -26,6 +26,7 @@ import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.plan.schema.StreamTableSourceTable
 import org.apache.flink.table.sources.StreamTableSource
+import org.apache.flink.table.util.TableSchemaUtil
 import org.apache.flink.types.Row
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
@@ -73,7 +74,7 @@ class MockTableSourceConverter extends TableSourceConverter[StreamTableSource[Ro
       }
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = TableSchema.fromDataType(getReturnType)
+      override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
     }
   }
 }

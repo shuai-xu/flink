@@ -28,6 +28,7 @@ import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
+import org.apache.flink.table.util.TableSchemaUtil;
 
 import org.apache.hadoop.mapred.JobConf;
 import org.slf4j.Logger;
@@ -72,7 +73,7 @@ public class HiveTableSource implements BatchTableSource<GenericRow> {
 
 	@Override
 	public TableSchema getTableSchema() {
-		return TableSchema.fromDataType(getReturnType(), Option.empty());
+		return TableSchemaUtil.fromDataType(getReturnType(), Option.empty());
 	}
 
 	@Override

@@ -24,6 +24,7 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.types.Row;
 
 import java.util.ArrayList;
@@ -47,7 +48,7 @@ public class CatalogTestUtil {
 	}
 
 	public static ExternalCatalogTable getTestExternalCatalogTable(List<Row> data) {
-		TableSchema tableSchema = TableSchema.fromDataType(DataTypes.of(getRowTypeInfo()), Option.empty());
+		TableSchema tableSchema = TableSchemaUtil.fromDataType(DataTypes.of(getRowTypeInfo()), Option.empty());
 
 		RichTableSchema richTableSchema = new RichTableSchema(tableSchema.getColumnNames(), tableSchema.getTypes());
 		richTableSchema.setPrimaryKey("a");

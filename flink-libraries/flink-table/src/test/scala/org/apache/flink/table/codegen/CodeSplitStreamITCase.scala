@@ -35,7 +35,7 @@ import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{CountDi
 import org.apache.flink.table.runtime.utils.{StreamTestData, StreamTestSink, TestingAppendSink, UserDefinedFunctionTestUtils}
 import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexKey}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.{PojoTableFunc, TableFunc0}
+import org.apache.flink.table.util.{PojoTableFunc, TableFunc0, TableSchemaUtil}
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
 import org.junit.{Before, Test}
@@ -312,5 +312,5 @@ class AsyncDimensionTableSource extends DimensionTableSource[BaseRow] {
   }
 
   /** Returns the table schema of the table source */
-  override def getTableSchema = TableSchema.fromDataType(getReturnType)
+  override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
 }

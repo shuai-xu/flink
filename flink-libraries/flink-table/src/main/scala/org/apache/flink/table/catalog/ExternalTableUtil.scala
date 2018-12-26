@@ -39,9 +39,9 @@ object ExternalTableUtil extends Logging {
   private def convertTableSchemaToRichTableSchema(
       tableSchema: TableSchema): RichTableSchema = {
 
-    val colNames = tableSchema.getColumnNames
-    val colTypes = tableSchema.getTypes
-    val colNullables = tableSchema.getNullables
+    val colNames = tableSchema.getFieldNames
+    val colTypes = tableSchema.getFieldTypes
+    val colNullables = tableSchema.getFieldNullables
     val richTableSchema = new RichTableSchema(
       colNames, colTypes, colNullables)
     val primaryKeys = tableSchema.getPrimaryKeys

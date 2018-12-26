@@ -16,26 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.factories
-
-import java.util
-
-import org.apache.flink.api.common.serialization.SerializationSchema
+package org.apache.flink.table.api;
 
 /**
-  * Factory for creating configured instances of [[SerializationSchema]].
-  *
-  * @tparam T record type that the format produces or consumes
-  */
-trait SerializationSchemaFactory[T] extends TableFormatFactory[T] {
+ * computed column.
+ */
+public class ComputedColumn {
 
-  /**
-    * Creates and configures a [[SerializationSchema]] using the given properties.
-    *
-    * @param properties normalized properties describing the format
-    * @return the configured serialization schema or null if the factory cannot provide an
-    *         instance of this class
-    */
-  def createSerializationSchema(properties: util.Map[String, String]): SerializationSchema[T]
+	private final String name;
 
+	private final String expression;
+
+	public ComputedColumn(String name, String expression) {
+		this.name = name;
+		this.expression = expression;
+	}
+
+	public String name() {
+		return this.name;
+	}
+
+	public String expression() {
+		return this.expression;
+	}
 }

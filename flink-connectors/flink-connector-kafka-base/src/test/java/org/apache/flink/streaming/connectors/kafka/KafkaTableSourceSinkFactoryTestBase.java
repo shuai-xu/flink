@@ -55,6 +55,7 @@ import org.apache.flink.table.sources.TableSource;
 import org.apache.flink.table.sources.TableSourceUtil;
 import org.apache.flink.table.sources.tsextractors.ExistingField;
 import org.apache.flink.table.sources.wmstrategies.AscendingTimestamps;
+import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.TestLogger;
 
@@ -127,12 +128,12 @@ public abstract class KafkaTableSourceSinkFactoryTestBase extends TestLogger {
 		specificOffsets.put(new KafkaTopicPartition(TOPIC, PARTITION_1), OFFSET_1);
 
 		final TestDeserializationSchema deserializationSchema = new TestDeserializationSchema(
-			DataTypes.toTypeInfo(TableSchema.builder()
+			DataTypes.toTypeInfo(TableSchemaUtil.toRowType(
+				TableSchema.builder()
 				.field(NAME, DataTypes.STRING)
 				.field(COUNT, DecimalType.SYSTEM_DEFAULT)
 				.field(TIME, DataTypes.TIMESTAMP)
-				.build()
-				.toRowType())
+				.build()))
 		);
 
 		final KafkaTableSource expected = getExpectedKafkaTableSource(
@@ -198,7 +199,7 @@ public abstract class KafkaTableSourceSinkFactoryTestBase extends TestLogger {
 			TOPIC,
 			KAFKA_PROPERTIES,
 			Optional.of(new FlinkFixedPartitioner<>()),
-			new TestSerializationSchema(DataTypes.toTypeInfo(schema.toRowType())));
+			new TestSerializationSchema(DataTypes.toTypeInfo(TableSchemaUtil.toRowType(schema))));
 
 		// construct table sink using descriptors and table sink factory
 
@@ -226,7 +227,7 @@ public abstract class KafkaTableSourceSinkFactoryTestBase extends TestLogger {
 		// test Kafka producer
 		final KafkaTableSink actualKafkaSink = (KafkaTableSink) actualSink;
 		final DataStreamMock streamMock = new DataStreamMock(new StreamExecutionEnvironmentMock(),
-			DataTypes.toTypeInfo(schema.toRowType()));
+			DataTypes.toTypeInfo(TableSchemaUtil.toRowType(schema)));
 		actualKafkaSink.emitDataStream(streamMock);
 		assertTrue(getExpectedFlinkKafkaProducer().isAssignableFrom(streamMock.sinkFunction.getClass()));
 	}

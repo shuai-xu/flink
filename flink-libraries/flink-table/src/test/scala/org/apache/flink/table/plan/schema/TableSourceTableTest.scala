@@ -25,7 +25,7 @@ import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sources.TableSource
-import org.apache.flink.table.util.TestTableSourceTable
+import org.apache.flink.table.util.{TableSchemaUtil, TestTableSourceTable}
 import org.junit.Test
 import org.junit.Assert._
 
@@ -56,7 +56,7 @@ class TableSourceTableTest {
         new RowTypeInfo(Array[TypeInformation[_]](Types.LONG, Types.STRING), Array("a", "b")))
 
     /** Returns the table schema of the table source */
-    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
+    override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
   }
 
   class TestTableSourceWithSchema extends TableSource {

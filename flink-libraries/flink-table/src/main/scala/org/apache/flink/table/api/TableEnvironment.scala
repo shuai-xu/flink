@@ -1541,7 +1541,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     * {{{
     *   tEnv.registerTable(sourceTable)
     *       .withSchema(
-    *         new TableSchemaBuilder()
+    *         new TableSchema.Builder()
     *         .field("a", DataTypes.INT)
     *         .field("b", DataTypes.STRING).build())
     *       .withProperties(

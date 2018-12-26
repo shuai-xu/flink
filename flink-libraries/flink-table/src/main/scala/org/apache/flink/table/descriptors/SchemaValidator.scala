@@ -23,7 +23,7 @@ import java.util.Optional
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.common.typeutils.CompositeType
-import org.apache.flink.table.api.{TableException, TableSchema2 => TableSchema, ValidationException}
+import org.apache.flink.table.api.{TableException, TableSchema, ValidationException}
 import org.apache.flink.table.descriptors.RowtimeValidator._
 import org.apache.flink.table.descriptors.SchemaValidator._
 import org.apache.flink.table.sources.RowtimeAttributeDescriptor

@@ -19,7 +19,7 @@
 package org.apache.flink.table.factories;
 
 import org.apache.flink.annotation.PublicEvolving;
-import org.apache.flink.table.api.TableSchema2;
+import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.descriptors.FormatDescriptorValidator;
@@ -128,13 +128,13 @@ public abstract class TableFormatFactoryBase<T> implements TableFormatFactory<T>
 	/**
 	 * Finds the table schema that can be used for a format schema (without time attributes).
 	 */
-	public static TableSchema2 deriveSchema(Map<String, String> properties) {
+	public static TableSchema deriveSchema(Map<String, String> properties) {
 		final DescriptorProperties descriptorProperties = new DescriptorProperties();
 		descriptorProperties.putProperties(properties);
 
-		final TableSchema2.Builder builder = TableSchema2.builder();
+		final TableSchema.Builder builder = TableSchema.builder();
 
-		final TableSchema2 baseSchema = descriptorProperties.getTableSchema(SCHEMA);
+		final TableSchema baseSchema = descriptorProperties.getTableSchema(SCHEMA);
 		for (int i = 0; i < baseSchema.getFieldCount(); i++) {
 			final String fieldName = baseSchema.getFieldNames()[i];
 			final InternalType fieldType = baseSchema.getFieldTypes()[i];

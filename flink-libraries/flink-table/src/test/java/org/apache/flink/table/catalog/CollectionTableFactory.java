@@ -58,6 +58,7 @@ import org.apache.flink.table.sources.DimensionTableSource;
 import org.apache.flink.table.sources.IndexKey;
 import org.apache.flink.table.sources.StreamTableSource;
 import org.apache.flink.table.util.TableProperties;
+import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.Preconditions;
@@ -290,7 +291,7 @@ public class CollectionTableFactory<T1> implements StreamTableSourceFactory<T1>,
 
 		@Override
 		public TableSchema getTableSchema() {
-			return TableSchema.fromDataType(getReturnType(), Option.empty());
+			return TableSchemaUtil.fromDataType(getReturnType(), Option.empty());
 		}
 
 		@Override
@@ -350,7 +351,7 @@ public class CollectionTableFactory<T1> implements StreamTableSourceFactory<T1>,
 
 		@Override
 		public TableSchema getTableSchema() {
-			return TableSchema.fromDataType(getReturnType(), Option.empty());
+			return TableSchemaUtil.fromDataType(getReturnType(), Option.empty());
 		}
 
 		@Override

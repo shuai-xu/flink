@@ -25,7 +25,7 @@ import org.apache.flink.table.codegen.ExpressionReducer
 import org.apache.flink.table.plan.cost.FlinkStreamCostFactory
 import org.apache.flink.table.plan.stats.{ColumnStats, FlinkStatistic, TableStats}
 import org.apache.flink.table.sources.TableSource
-import org.apache.flink.table.util.TestTableSourceTable
+import org.apache.flink.table.util.{TableSchemaUtil, TestTableSourceTable}
 import org.apache.flink.table.validate.BuiltInFunctionCatalog
 import com.google.common.collect.ImmutableSet
 import org.apache.calcite.config.{CalciteConnectionConfigImpl, CalciteConnectionProperty, Lex}
@@ -119,7 +119,7 @@ object MetadataTestUtil {
       override def getTableStats: TableStats = TableStats(50L, colStatsOfT2)
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = TableSchema.fromDataType(getReturnType)
+      override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
     }
     val uniqueKeysOfT2: util.Set[util.Set[String]] = ImmutableSet.of()
     rootSchema.add("t2",
@@ -132,7 +132,7 @@ object MetadataTestUtil {
       override def getTableStats: TableStats = TableStats(100L)
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = TableSchema.fromDataType(getReturnType)
+      override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
     }
     val uniqueKeysOfT3 = ImmutableSet.of(ImmutableSet.of("id"))
     rootSchema.add("t3", new TestTableSourceTable(ts3, FlinkStatistic.of(uniqueKeysOfT3)))
@@ -188,7 +188,7 @@ object MetadataTestUtil {
       override def getTableStats: TableStats = TableStats(100L)
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = TableSchema.fromDataType(getReturnType)
+      override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
     }
     val uniqueKeysOfT7 = ImmutableSet.of(ImmutableSet.of("a", "b"), ImmutableSet.of("a"))
     rootSchema.add("t7", new TestTableSourceTable(ts7, FlinkStatistic.of(uniqueKeysOfT7)))
@@ -207,7 +207,7 @@ object MetadataTestUtil {
       override def getTableStats: TableStats = TableStats(80L, colStatsOfT8)
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = TableSchema.fromDataType(getReturnType)
+      override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
     }
     rootSchema.add("t8", new TestTableSourceTable(ts8))
 
@@ -303,7 +303,7 @@ object MetadataTestUtil {
           "c" -> ColumnStats(48L, 0L, 8D, 8, 50, 0)))
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = TableSchema.fromDataType(getReturnType)
+      override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
     }
     rootSchema.add("bigTemporalTable", new TestTableSourceTable(bigTimeSource))
     rootSchema

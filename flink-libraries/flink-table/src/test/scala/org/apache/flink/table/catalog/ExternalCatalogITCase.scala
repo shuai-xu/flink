@@ -33,6 +33,7 @@ import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.table.expressions.{Proctime, ResolvedFieldReference}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex.RexNode
+import org.apache.flink.table.util.TableSchemaUtil
 import org.junit.Assert.assertEquals
 import org.junit.{Before, Test}
 import org.mockito.Mockito
@@ -75,7 +76,7 @@ class ExternalCatalogITCase {
     data.add(toRow(new Integer(1), new Integer(2)))
     data.add(toRow(new Integer(1), new Integer(3)))
     val physicalSchema =
-      TableSchema.fromDataType(DataTypes.of(rowTypeInfo))
+      TableSchemaUtil.fromDataType(DataTypes.of(rowTypeInfo))
     val richTableSchema =
       new RichTableSchema(physicalSchema.getColumnNames, physicalSchema.getTypes)
     richTableSchema.setPrimaryKey("a")
@@ -146,7 +147,7 @@ class ExternalCatalogITCase {
     data.add(toRow(new Integer(1), new Integer(3)))
     data.add(toRow(new Integer(1), new Integer(4)))
     val physicalSchema =
-      TableSchema.fromDataType(DataTypes.of(rowTypeInfo))
+      TableSchemaUtil.fromDataType(DataTypes.of(rowTypeInfo))
     val richTableSchema =
       new RichTableSchema(physicalSchema.getColumnNames, physicalSchema.getTypes)
     richTableSchema.setPrimaryKey("a")
@@ -214,7 +215,7 @@ class ExternalCatalogITCase {
     data.add(toRow(new Integer(1), new Integer(3), new Timestamp(3)))
     data.add(toRow(new Integer(1), new Integer(4), new Timestamp(4)))
     val physicalSchema =
-      TableSchema.fromDataType(DataTypes.of(rowTypeInfo))
+      TableSchemaUtil.fromDataType(DataTypes.of(rowTypeInfo))
     val richTableSchema =
       new RichTableSchema(physicalSchema.getColumnNames, physicalSchema.getTypes)
     richTableSchema.setPrimaryKey("a")
@@ -284,7 +285,7 @@ class ExternalCatalogITCase {
     data.add(toRow(new Integer(1), new Integer(3)))
     data.add(toRow(new Integer(1), new Integer(4)))
     val physicalSchema =
-      TableSchema.fromDataType(DataTypes.of(rowTypeInfo))
+      TableSchemaUtil.fromDataType(DataTypes.of(rowTypeInfo))
     val richTableSchema =
       new RichTableSchema(physicalSchema.getColumnNames, physicalSchema.getTypes)
     richTableSchema.setPrimaryKey("a")
@@ -351,7 +352,7 @@ class ExternalCatalogITCase {
     data.add(toRow(new Integer(1), new Integer(3), new Timestamp(3)))
     data.add(toRow(new Integer(1), new Integer(4), new Timestamp(4)))
     val physicalSchema =
-      TableSchema.fromDataType(DataTypes.of(rowTypeInfo))
+      TableSchemaUtil.fromDataType(DataTypes.of(rowTypeInfo))
     val richTableSchema =
       new RichTableSchema(physicalSchema.getColumnNames, physicalSchema.getTypes)
     richTableSchema.setPrimaryKey("a")

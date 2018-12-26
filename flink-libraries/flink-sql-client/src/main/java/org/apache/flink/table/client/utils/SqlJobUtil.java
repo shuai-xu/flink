@@ -34,7 +34,6 @@ import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.api.TableSchemaBuilder;
 import org.apache.flink.table.api.functions.UserDefinedFunction;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
@@ -78,8 +77,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import scala.collection.JavaConverters;
 
 /**
  * Util to transform a sql context (a sequence of sql statements) into a flink job.
@@ -464,7 +461,7 @@ public class SqlJobUtil {
 			rowtimeField = sqlCreateTable.getWatermark().getColumnName().toString();
 		}
 
-		TableSchemaBuilder builder = TableSchema.builder();
+		TableSchema.Builder builder = TableSchema.builder();
 		if (sqlCreateTable.containsComputedColumn()) {
 			TableSchema originalSchema = new TableSchema(
 					richTableSchema.getColumnNames(),
@@ -506,13 +503,9 @@ public class SqlJobUtil {
 			}
 		}
 
-		builder.primaryKey(
-				JavaConverters.asScalaIteratorConverter(
-						richTableSchema.getPrimaryKeys().iterator()).asScala().toSeq());
+		builder.primaryKey(richTableSchema.getPrimaryKeys().stream().toArray(String[]::new));
 		for (List<String> uniqueKey: richTableSchema.getUniqueKeys()) {
-			builder.primaryKey(
-					JavaConverters.asScalaIteratorConverter(
-							uniqueKey.iterator()).asScala().toSeq());
+			builder.primaryKey(uniqueKey.stream().toArray(String[]::new));
 		}
 		return builder.build();
 	}

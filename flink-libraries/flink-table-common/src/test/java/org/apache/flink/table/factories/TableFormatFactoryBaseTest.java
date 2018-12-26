@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.factories;
 
-import org.apache.flink.table.api.TableSchema2;
+import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.Types;
 
 import org.junit.Test;
@@ -49,8 +49,8 @@ public class TableFormatFactoryBaseTest {
 		properties.put("schema.3.rowtime.timestamps.type", "from-source");
 		properties.put("schema.3.rowtime.watermarks.type", "from-source");
 
-		final TableSchema2 actualSchema = TableFormatFactoryBase.deriveSchema(properties);
-		final TableSchema2 expectedSchema = TableSchema2.builder()
+		final TableSchema actualSchema = TableFormatFactoryBase.deriveSchema(properties);
+		final TableSchema expectedSchema = TableSchema.builder()
 			.field("csvField", Types.STRING) // aliased
 			.field("abcField", Types.STRING)
 			.build();
@@ -74,8 +74,8 @@ public class TableFormatFactoryBaseTest {
 		properties.put("schema.3.rowtime.timestamps.from", "myTime");
 		properties.put("schema.3.rowtime.watermarks.type", "from-source");
 
-		final TableSchema2 actualSchema = TableFormatFactoryBase.deriveSchema(properties);
-		final TableSchema2 expectedSchema = TableSchema2.builder()
+		final TableSchema actualSchema = TableFormatFactoryBase.deriveSchema(properties);
+		final TableSchema expectedSchema = TableSchema.builder()
 			.field("csvField", Types.STRING) // aliased
 			.field("abcField", Types.STRING)
 			.field("myTime", Types.TIMESTAMP)

@@ -22,7 +22,7 @@ import java.util
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.api.{ValidationException, TableSchema2 => TableSchema}
+import org.apache.flink.table.api.{TableSchema, ValidationException}
 import org.apache.flink.table.descriptors.SchemaValidator._
 import org.apache.flink.table.utils.TypeStringUtils
 

@@ -25,6 +25,7 @@ import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.descriptors.ConnectorDescriptor;
 import org.apache.flink.table.sources.StreamTableSource;
+import org.apache.flink.table.util.TableSchemaUtil;
 
 import java.util.Map;
 import java.util.Properties;
@@ -66,7 +67,7 @@ public abstract class KafkaJsonTableSource extends KafkaTableSource {
 			tableSchema,
 			topic,
 			properties,
-			new JsonRowDeserializationSchema(DataTypes.toTypeInfo(jsonSchema.toRowType())));
+			new JsonRowDeserializationSchema(DataTypes.toTypeInfo(TableSchemaUtil.toRowType(jsonSchema))));
 	}
 
 	@Override

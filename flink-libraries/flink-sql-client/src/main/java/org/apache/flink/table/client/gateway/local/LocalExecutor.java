@@ -52,6 +52,7 @@ import org.apache.flink.table.client.gateway.local.result.ChangelogResult;
 import org.apache.flink.table.client.gateway.local.result.DynamicResult;
 import org.apache.flink.table.client.gateway.local.result.MaterializedResult;
 import org.apache.flink.table.client.utils.SqlJobUtil;
+import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.StringUtils;
 
@@ -469,7 +470,7 @@ public class LocalExecutor implements Executor {
 		// initialize result
 		final DynamicResult<C> result = resultStore.createResult(
 			context.getMergedEnvironment(),
-			table.getSchema().withoutTimeAttributes(),
+			TableSchemaUtil.withoutTimeAttributes(table.getSchema()),
 			envInst.getExecutionConfig());
 
 		// create job graph with dependencies

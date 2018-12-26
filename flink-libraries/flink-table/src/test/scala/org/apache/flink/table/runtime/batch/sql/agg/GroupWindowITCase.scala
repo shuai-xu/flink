@@ -37,6 +37,7 @@ import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.sources.BatchTableSource
 import org.apache.flink.table.util.DateTimeTestUtil.UTCTimestamp
+import org.apache.flink.table.util.TableSchemaUtil
 import org.apache.flink.types.Row
 import org.junit.{Before, Test}
 
@@ -80,7 +81,7 @@ class GroupWindowITCase extends QueryTest {
       }
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = TableSchema.fromDataType(getReturnType)
+      override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
     }
     tEnv.registerTableSource("Table3WithTimestamp1", table)
     tEnv.getConfig.getConf

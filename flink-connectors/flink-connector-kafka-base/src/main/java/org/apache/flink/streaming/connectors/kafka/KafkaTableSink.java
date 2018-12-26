@@ -30,6 +30,7 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.sinks.AppendStreamTableSink;
 import org.apache.flink.table.util.TableConnectorUtil;
+import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 
@@ -153,7 +154,7 @@ public abstract class KafkaTableSink implements AppendStreamTableSink<Row> {
 	@Override
 	public DataType getOutputType() {
 		return schema
-			.map(TableSchema::toRowType)
+			.map(s -> TableSchemaUtil.toRowType(s))
 			.orElseGet(() -> DataTypes.createRowType(getFieldTypes()));
 	}
 

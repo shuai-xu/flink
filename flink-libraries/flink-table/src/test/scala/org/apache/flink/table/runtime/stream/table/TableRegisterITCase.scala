@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.runtime.stream.table
 
-import org.apache.flink.table.api.TableSchemaBuilder
+import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.factories.utils.TestingTableSink
@@ -38,7 +38,7 @@ class TableRegisterITCase extends StreamingTestBase {
     val tableSource = "tableSource"
     tEnv.registerTable(tableSource)
       .withSchema(
-        new TableSchemaBuilder()
+        new TableSchema.Builder()
           .column("a", DataTypes.INT)
           .column("b", DataTypes.LONG)
           .column("c", DataTypes.STRING).build())
@@ -50,7 +50,7 @@ class TableRegisterITCase extends StreamingTestBase {
     val tableSink = "tableSink"
     tEnv.registerTable(tableSink)
       .withSchema(
-        new TableSchemaBuilder()
+        new TableSchema.Builder()
           .column("a", DataTypes.INT)
           .column("b", DataTypes.LONG)
           .column("c", DataTypes.STRING).build())

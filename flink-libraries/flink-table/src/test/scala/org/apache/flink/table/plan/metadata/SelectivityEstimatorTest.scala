@@ -18,17 +18,9 @@
 
 package org.apache.flink.table.plan.metadata
 
-import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.functions.ScalarFunction
-import org.apache.flink.table.api.types.DataType
-import org.apache.flink.table.api.{TableConfig, TableSchema}
-import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
-import org.apache.flink.table.expressions.Expression
-import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
-import org.apache.flink.table.plan.schema._
-import org.apache.flink.table.plan.stats.{ColumnStats, FlinkStatistic, TableStats}
-import org.apache.flink.table.sources.{Partition, PartitionableTableSource, TableSource}
-import org.apache.flink.util.Preconditions
+import java.math.BigDecimal
+import java.sql.{Date, Time, Timestamp}
+import java.util
 
 import org.apache.calcite.plan.{AbstractRelOptPlanner, Context, Contexts, RelOptCluster}
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
@@ -40,16 +32,24 @@ import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.{DateString, TimeString, TimestampString}
+import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.table.api.functions.ScalarFunction
+import org.apache.flink.table.api.types.DataType
+import org.apache.flink.table.api.{TableConfig, TableSchema}
+import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
+import org.apache.flink.table.expressions.Expression
+import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
+import org.apache.flink.table.plan.schema._
+import org.apache.flink.table.plan.stats.{ColumnStats, FlinkStatistic, TableStats}
+import org.apache.flink.table.sources.{Partition, PartitionableTableSource, TableSource}
+import org.apache.flink.table.util.TableSchemaUtil
+import org.apache.flink.util.Preconditions
 import org.junit.Assert._
 import org.junit.runner.RunWith
 import org.junit.{Before, BeforeClass, Test}
 import org.powermock.api.mockito.PowerMockito._
 import org.powermock.core.classloader.annotations.PrepareForTest
 import org.powermock.modules.junit4.PowerMockRunner
-
-import java.math.BigDecimal
-import java.sql.{Date, Time, Timestamp}
-import java.util
 
 import scala.collection.JavaConverters._
 
@@ -1240,7 +1240,7 @@ class SelectivityEstimatorTest {
 
     override def isFilterPushedDown: Boolean = filterPushedDown
 
-    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
+    override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
   }
 
 }

@@ -234,7 +234,7 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
       uniqueKeys: Set[Set[String]],
       fields: Expression*): Table = {
     val typeInfo: TypeInformation[T] = implicitly[TypeInformation[T]]
-    val physicalSchema = TableSchema.fromDataType(DataTypes.of(typeInfo))
+    val physicalSchema = TableSchemaUtil.fromDataType(DataTypes.of(typeInfo))
     val (fieldNames, fieldIdxs) =
       tableEnv.getFieldInfo(DataTypes.of(typeInfo), fields.toArray)
     val fieldTypes = fieldIdxs.map(physicalSchema.getType)
@@ -463,7 +463,7 @@ class TestBatchTableSource(tableSchema: TableSchema,
   }
 
   /** Returns the table schema of the table source */
-  override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
+  override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
 
   override def explainSource(): String = ""
 

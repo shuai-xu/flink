@@ -22,7 +22,7 @@ import java.util.Optional
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.api.{TableException, Types, TableSchema2 => TableSchema}
+import org.apache.flink.table.api.{TableException, TableSchema, Types}
 import org.apache.flink.table.api.types.{Types => InternalTypes}
 import org.apache.flink.table.descriptors.RowtimeTest.CustomExtractor
 import org.apache.flink.table.sources.tsextractors.{ExistingField, StreamRecordTimestamp}

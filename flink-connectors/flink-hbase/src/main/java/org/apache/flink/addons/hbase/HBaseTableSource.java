@@ -29,6 +29,7 @@ import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.ProjectableTableSource;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
+import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
@@ -115,7 +116,7 @@ public class HBaseTableSource implements BatchTableSource<GenericRow>, Projectab
 
 	@Override
 	public TableSchema getTableSchema() {
-		return TableSchema.fromDataType(getReturnType(), Option.empty());
+		return TableSchemaUtil.fromDataType(getReturnType(), Option.empty());
 	}
 
 	private String[] getFieldNames() {

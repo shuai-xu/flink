@@ -27,7 +27,7 @@ import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, Inter
 import org.apache.flink.table.api.{SqlParserException, TableException, TableSchema, ValidationException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexKey}
-import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
+import org.apache.flink.table.util.{StreamTableTestUtil, TableSchemaUtil, TableTestBase}
 import org.junit.Assert.{assertTrue, fail}
 import org.junit.Test
 
@@ -277,7 +277,7 @@ class JoinTableTest extends TableTestBase {
     override def getAsyncConfig: AsyncConfig = new AsyncConfig
 
     /** Returns the table schema of the table source */
-    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
+    override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
 
     override def explainSource(): String = ""
   }

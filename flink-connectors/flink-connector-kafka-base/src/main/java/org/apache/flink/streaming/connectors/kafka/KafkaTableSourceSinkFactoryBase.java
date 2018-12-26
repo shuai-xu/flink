@@ -27,7 +27,6 @@ import org.apache.flink.streaming.connectors.kafka.partitioner.FlinkFixedPartiti
 import org.apache.flink.streaming.connectors.kafka.partitioner.FlinkKafkaPartitioner;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.api.TableSchema2;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.descriptors.KafkaValidator;
@@ -40,6 +39,7 @@ import org.apache.flink.table.factories.TableFactoryService;
 import org.apache.flink.table.sinks.StreamTableSink;
 import org.apache.flink.table.sources.RowtimeAttributeDescriptor;
 import org.apache.flink.table.sources.StreamTableSource;
+import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.InstantiationUtil;
 
@@ -147,9 +147,7 @@ public abstract class KafkaTableSourceSinkFactoryBase implements
 		final DeserializationSchema<Row> deserializationSchema = getDeserializationSchema(properties);
 		final StartupOptions startupOptions = getStartupOptions(descriptorProperties, topic);
 
-		final TableSchema2 schema2 = descriptorProperties.getTableSchema(SCHEMA());
-		final TableSchema schema = new TableSchema(
-			schema2.getFieldNames(), schema2.getFieldTypes());
+		final TableSchema schema = descriptorProperties.getTableSchema(SCHEMA());
 
 		return createKafkaTableSource(
 			schema,
@@ -169,9 +167,7 @@ public abstract class KafkaTableSourceSinkFactoryBase implements
 	public StreamTableSink<Row> createStreamTableSink(Map<String, String> properties) {
 		final DescriptorProperties descriptorProperties = getValidatedProperties(properties);
 
-		final TableSchema2 schema2 = descriptorProperties.getTableSchema(SCHEMA());
-		final TableSchema schema = new TableSchema(
-			schema2.getFieldNames(), schema2.getFieldTypes());
+		final TableSchema schema = descriptorProperties.getTableSchema(SCHEMA());
 		final String topic = descriptorProperties.getString(CONNECTOR_TOPIC);
 		final Optional<String> proctime = SchemaValidator.deriveProctimeAttribute(descriptorProperties);
 		final List<RowtimeAttributeDescriptor> rowtimeAttributeDescriptors =
@@ -355,7 +351,7 @@ public abstract class KafkaTableSourceSinkFactoryBase implements
 		final Map<String, String> fieldMapping = SchemaValidator.deriveFieldMapping(
 			descriptorProperties,
 			// until FLINK-9870 is fixed we assume that the table schema is the output type
-			Optional.of((TypeInformation<?>) DataTypes.toTypeInfo(schema.toRowType())));
+			Optional.of((TypeInformation<?>) DataTypes.toTypeInfo(TableSchemaUtil.toRowType(schema))));
 		return fieldMapping.size() != schema.getColumnNames().length ||
 			!fieldMapping.entrySet().stream().allMatch(mapping -> mapping.getKey().equals(mapping.getValue()));
 	}

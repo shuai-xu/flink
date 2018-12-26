@@ -40,6 +40,7 @@ import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.sources.{AsyncConfig, BatchTableSource, DimensionTableSource, IndexKey}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.util.TableSchemaUtil
 import org.apache.flink.util.Collector
 import org.junit.Assert._
 import org.junit.{Before, Ignore, Test}
@@ -289,7 +290,7 @@ class JoinDimensionTableITCase extends QueryTest {
     }
 
     /** Returns the table schema of the table source */
-    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
+    override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
   }
 
   class TestDimensionTableSource(
@@ -339,7 +340,7 @@ class JoinDimensionTableITCase extends QueryTest {
     }
 
     /** Returns the table schema of the table source */
-    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
+    override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
   }
 
   class TestDimensionTableSourceCombinedWithBatchTableSource(
@@ -412,7 +413,7 @@ class JoinDimensionTableITCase extends QueryTest {
       rowCount, new util.HashMap[String, ColumnStats]())
 
     /** Returns the table schema of the table source */
-    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
+    override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
   }
 }
 

@@ -36,10 +36,10 @@ import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
 import org.apache.flink.table.runtime.util.StreamRecordCollector
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.SemiJoinType
+import org.apache.flink.table.util.TableSchemaUtil
 
 import scala.collection.JavaConversions._
 
@@ -280,7 +280,7 @@ object CorrelateCodeGenerator {
   }
 
   private def toGenericRowType(fromType: InternalType): BaseRowType = {
-    val tableSchema = TableSchema.fromDataType(fromType)
+    val tableSchema = TableSchemaUtil.fromDataType(fromType)
     val fieldNames = tableSchema.getColumnNames
     val fieldTypes = tableSchema.getTypes
     new BaseRowType(classOf[GenericRow], fieldTypes, fieldNames)

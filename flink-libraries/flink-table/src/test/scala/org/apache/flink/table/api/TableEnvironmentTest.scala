@@ -32,7 +32,7 @@ import org.apache.flink.table.catalog._
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.MemoryTableSourceSinkUtil.UnsafeMemoryAppendTableSink
-import org.apache.flink.table.util.TableTestBase
+import org.apache.flink.table.util.{TableSchemaUtil, TableTestBase}
 import org.apache.flink.types.Row
 import org.junit.Test
 
@@ -116,13 +116,13 @@ class TableEnvironmentTest extends TableTestBase {
       CatalogManager.DEFAULT_CATALOG_NAME, CatalogManager.DEFAULT_DATABASE_NAME, "t1").getSchema
 
     assert(tableSchema.getColumnNames.sameElements(Array("a", "b")))
-    assert(tableSchema.toRowType == DataTypes.of(CatalogTestUtil.getRowTypeInfo))
+    assert(TableSchemaUtil.toRowType(tableSchema) == DataTypes.of(CatalogTestUtil.getRowTypeInfo))
 
     // test table inference
     tableSchema = tEnv.scan("t1").getSchema
 
     assert(tableSchema.getColumnNames.sameElements(Array("a", "b")))
-    assert(tableSchema.toRowType == DataTypes.of(CatalogTestUtil.getRowTypeInfo))
+    assert(TableSchemaUtil.toRowType(tableSchema) == DataTypes.of(CatalogTestUtil.getRowTypeInfo))
   }
 
   @Test(expected = classOf[TableException])

@@ -33,6 +33,7 @@ import org.apache.flink.table.descriptors.TestTableDescriptor;
 import org.apache.flink.table.factories.StreamTableSinkFactory;
 import org.apache.flink.table.factories.TableFactoryService;
 import org.apache.flink.table.sinks.TableSink;
+import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.TestLogger;
 
@@ -79,7 +80,7 @@ public abstract class ElasticsearchUpsertTableSinkFactoryTestBase extends TestLo
 			DOC_TYPE,
 			KEY_DELIMITER,
 			KEY_NULL_LITERAL,
-			new JsonRowSerializationSchema(DataTypes.toTypeInfo(schema.toRowType())),
+			new JsonRowSerializationSchema(DataTypes.toTypeInfo(TableSchemaUtil.toRowType(schema))),
 			XContentType.JSON,
 			new DummyFailureHandler(),
 			createTestSinkOptions());

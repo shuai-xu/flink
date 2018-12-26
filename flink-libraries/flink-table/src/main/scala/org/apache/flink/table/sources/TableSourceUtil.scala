@@ -115,7 +115,7 @@ object TableSourceUtil {
               s"'$rowtimeAttribute' but field '$rowtimeAttribute' does not exist in table.")
           }
           // ensure that field is of type TIMESTAMP
-          if (schema.getTypes(rowtimeIdx) != DataTypes.TIMESTAMP) {
+          if (schema.getFieldType(rowtimeIdx).get() != DataTypes.TIMESTAMP) {
             throw new ValidationException(s"Found a RowtimeAttributeDescriptor for field " +
               s"'$rowtimeAttribute' but field '$rowtimeAttribute' is not of type TIMESTAMP.")
           }
@@ -139,7 +139,7 @@ object TableSourceUtil {
             s"'$proctimeAttribute' but field '$proctimeAttribute' does not exist in table.")
         }
         // ensure that field is of type TIMESTAMP
-        if (schema.getTypes(proctimeIdx) != DataTypes.TIMESTAMP) {
+        if (schema.getFieldType(proctimeIdx).get() != DataTypes.TIMESTAMP) {
           throw new ValidationException(s"Found a ProctimeAttribute for field " +
             s"'$proctimeAttribute' but field '$proctimeAttribute' is not of type TIMESTAMP.")
         }
@@ -252,9 +252,9 @@ object TableSourceUtil {
       streaming: Boolean,
       typeFactory: FlinkTypeFactory): RelDataType = {
 
-    val fieldNames = tableSource.getTableSchema.getColumnNames
-    var fieldTypes = tableSource.getTableSchema.getTypes
-    var fieldNullables = tableSource.getTableSchema.getNullables
+    val fieldNames = tableSource.getTableSchema.getFieldNames
+    var fieldTypes = tableSource.getTableSchema.getFieldTypes
+    var fieldNullables = tableSource.getTableSchema.getFieldNullables
 
     if (streaming) {
       // adjust the type of time attributes for streaming tables

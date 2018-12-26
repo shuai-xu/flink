@@ -32,7 +32,7 @@ import org.apache.flink.table.temptable.FlinkTableServiceFactory.{TABLESERVICE_D
 import org.apache.flink.table.temptable.rpc.TableServiceClient
 import org.apache.flink.table.temptable.util.TableServiceUtil
 import org.apache.flink.table.typeutils.{BaseRowSerializer, TypeUtils}
-import org.apache.flink.table.util.TableProperties
+import org.apache.flink.table.util.{TableProperties, TableSchemaUtil}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -68,7 +68,7 @@ class FlinkTableServiceSource(
 
   override def getReturnType: DataType = resultType
 
-  override def getTableSchema: TableSchema = TableSchema.fromDataType(resultType)
+  override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(resultType)
 }
 
 /**

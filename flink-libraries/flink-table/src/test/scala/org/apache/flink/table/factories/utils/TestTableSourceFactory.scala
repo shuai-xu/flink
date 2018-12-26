@@ -23,12 +23,12 @@ import java.util
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.types.DataType
-import org.apache.flink.table.api.{RichTableSchema, TableSchema}
+import org.apache.flink.table.api.RichTableSchema
 import org.apache.flink.table.descriptors.ConnectorDescriptorValidator.{CONNECTOR_PROPERTY_VERSION, CONNECTOR_TYPE}
 import org.apache.flink.table.factories.utils.TestTableSinkFactory.CONNECTOR_TYPE_VALUE_TEST
 import org.apache.flink.table.factories.{StreamTableSourceFactory, TableFactory}
 import org.apache.flink.table.sources.StreamTableSource
-import org.apache.flink.table.util.TableProperties
+import org.apache.flink.table.util.{TableProperties, TableSchemaUtil}
 import org.apache.flink.types.Row
 import java.lang.{Integer => JInt, Long => JLong}
 
@@ -91,7 +91,7 @@ case class TestingTableSource(
   }
 
   /** Returns the table schema of the table source */
-  override def getTableSchema = TableSchema.fromDataType(getReturnType)
+  override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
 
   override def explainSource(): String = ""
 }

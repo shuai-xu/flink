@@ -33,6 +33,7 @@ import org.apache.flink.table.sinks.TableSink;
 import org.apache.flink.table.sinks.UpsertStreamTableSink;
 import org.apache.flink.table.typeutils.TypeCheckUtils;
 import org.apache.flink.table.util.TableConnectorUtil;
+import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 
@@ -165,7 +166,7 @@ public abstract class ElasticsearchUpsertTableSinkBase implements UpsertStreamTa
 
 	@Override
 	public DataType getRecordType() {
-		return schema.toRowType();
+		return TableSchemaUtil.toRowType(schema);
 	}
 
 	@Override

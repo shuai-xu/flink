@@ -31,8 +31,8 @@ class TableSchemaValidationTest extends TableTestBase {
       "Number of column indexes and column names must be equal." +
         "\nColumn names count is [3]" +
         "\nColumn types count is [2]" +
-        "\nColumn names:[ a, b, c ]" +
-        "\nColumn types:[ IntType, StringType ]")
+        "\nColumn names: [a, b, c]" +
+        "\nColumn types: [IntType, StringType]")
 
     val fieldNames = Array("a", "b", "c")
     new TableSchema(fieldNames, Array(DataTypes.INT, DataTypes.STRING))
@@ -43,8 +43,8 @@ class TableSchemaValidationTest extends TableTestBase {
     thrown.expect(classOf[TableException])
     thrown.expectMessage(
       "Table column names must be unique." +
-        "\nThe duplicate columns are: [ a ]" +
-        "\nAll column names: [ a, a, c ]")
+        "\nThe duplicate columns are: [a]" +
+        "\nAll column names: [a, a, c]")
 
     val fieldNames = Array("a", "a", "c")
     new TableSchema(fieldNames, Array(DataTypes.INT, DataTypes.INT, DataTypes.STRING))

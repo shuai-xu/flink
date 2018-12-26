@@ -23,7 +23,7 @@ import org.apache.flink.table.api.{TableConfigOptions, TableSchema}
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.sources.BatchTableSource
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.{TableSchemaUtil, TableTestBatchExecBase}
 import org.apache.flink.types.Row
 import org.junit.{Before, Test}
 
@@ -59,7 +59,7 @@ class AggregateTest extends TableTestBatchExecBase {
       override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[Row] = null
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = TableSchema.fromDataType(getReturnType)
+      override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
 
       override def explainSource(): String = ""
     }

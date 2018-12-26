@@ -49,7 +49,7 @@ class TestTableSourceWithUniqueKeys[T](
 
   override def getTableSchema: TableSchema = {
     val builder = TableSchema.builder()
-    val physicalSchema = TableSchema.fromDataType(getReturnType)
+    val physicalSchema = TableSchemaUtil.fromDataType(getReturnType)
     fieldNames.zipWithIndex.foreach {
       case (name, idx) => builder.field(name, physicalSchema.getType(fieldIndices.apply(idx)))
     }
@@ -66,7 +66,7 @@ class TestTableSourceWithUniqueKeys[T](
   override def explainSource(): String = ""
 
   override def getFieldMapping = {
-    val physicalSchema = TableSchema.fromDataType(getReturnType)
+    val physicalSchema = TableSchemaUtil.fromDataType(getReturnType)
     val mapping = new java.util.HashMap[String, String]()
     fieldNames.zipWithIndex.foreach {
       case (name, idx) => mapping.put(name, physicalSchema.getColumnName(fieldIndices.apply(idx)))

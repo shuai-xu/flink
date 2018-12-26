@@ -166,6 +166,6 @@ class TestFilterableTableSource(val recordNum: Int = 33)
   }
 
   /** Returns the table schema of the table source */
-  override def getTableSchema = TableSchema.fromDataType(getReturnType)
+  override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
 }
 

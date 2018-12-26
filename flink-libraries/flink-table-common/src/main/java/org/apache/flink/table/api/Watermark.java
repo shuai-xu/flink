@@ -18,47 +18,32 @@
 
 package org.apache.flink.table.api;
 
-import org.apache.flink.table.api.types.InternalType;
-
 /**
- * A column that represents a table's column with field name, type and nullability.
+ * watermark.
  */
-public class Column2 {
-	private final String name;
-	private final InternalType type;
-	private final Boolean isNullable;
+public class Watermark {
 
-	public Column2(String name, InternalType type, Boolean isNullable) {
+	private final String name;
+
+	private final String eventTime;
+
+	private final long offset;
+
+	public Watermark(String name, String eventTime, long offset) {
 		this.name = name;
-		this.type = type;
-		this.isNullable = isNullable;
+		this.eventTime = eventTime;
+		this.offset = offset;
 	}
 
 	public String name() {
 		return this.name;
 	}
 
-	public InternalType type() {
-		return this.type;
+	public String eventTime() {
+		return this.eventTime;
 	}
 
-	public Boolean isNullable() {
-		return this.isNullable;
-	}
-
-	@Override
-	public boolean equals(Object o) {
-		if (this == o) {
-			return true;
-		}
-
-		if (o == null || getClass() != o.getClass()) {
-			return false;
-		}
-
-		Column2 other = (Column2) o;
-		return name.equals(other.name) &&
-			type.equals(other.type()) &&
-			isNullable.equals(other.isNullable());
+	public long offset() {
+		return this.offset;
 	}
 }

@@ -25,13 +25,13 @@ import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.api.{TableEnvironment, TableSchema, Types}
+import org.apache.flink.table.api.{TableEnvironment, Types}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils._
-import org.apache.flink.table.util.{TestFlinkLogicalLastRowRule, TestTableSourceWithTime, TestTableSourceWithUniqueKeys}
+import org.apache.flink.table.util.{TableSchemaUtil, TestFlinkLogicalLastRowRule, TestTableSourceWithTime, TestTableSourceWithUniqueKeys}
 import org.apache.flink.types.Row
 
 import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
@@ -136,8 +136,8 @@ class LastRowITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
         .asInstanceOf[Array[TypeInformation[_]]],
       Array("a", "pk", "c", "d"))
 
-    val schema = TableSchema.builder().fromDataType(DataTypes.of(rowType))
-      .primaryKey("pk").build()
+    val schema = TableSchemaUtil.builderFromDataType(DataTypes.of(rowType))
+          .primaryKey("pk").build()
 
     tEnv.registerTableSource(tableName, new TestTableSourceWithTime(
       schema,
@@ -184,8 +184,8 @@ class LastRowITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
       Array(Types.SQL_TIMESTAMP, Types.LONG, Types.STRING, Types.INT)
         .asInstanceOf[Array[TypeInformation[_]]],
       Array("a", "pk", "c", "d"))
-    val schema = TableSchema.builder().fromDataType(DataTypes.of(rowType))
-      .primaryKey("pk").build()
+    val schema = TableSchemaUtil.builderFromDataType(DataTypes.of(rowType))
+          .primaryKey("pk").build()
 
     tEnv.registerTableSource(tableName, new TestTableSourceWithTime(
       schema,

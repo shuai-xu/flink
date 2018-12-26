@@ -22,7 +22,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.util.TableTestBase
-import org.junit.Assert.{assertEquals, assertTrue, fail}
+import org.junit.Assert.{assertEquals, assertFalse, fail}
 import org.junit.Test
 
 class TableSchemaTest extends TableTestBase {
@@ -40,18 +40,18 @@ class TableSchemaTest extends TableTestBase {
     assertEquals(DataTypes.STRING, DataTypes.internal(schema.getTypes.apply(1)))
 
     val expectedString = "root\n" +
-      " |--    name: a\n"      +
-      "    |-- type: IntType\n" +
-      "    |-- isNullable: true\n" +
-      " |--    name: b\n" +
-      "    |-- type: StringType\n" +
-      "    |-- isNullable: true\n"
+      " |-- name: a\n"      +
+      " |-- type: IntType\n" +
+      " |-- isNullable: true\n" +
+      " |-- name: b\n" +
+      " |-- type: StringType\n" +
+      " |-- isNullable: true\n"
     assertEquals(expectedString, schema.toString)
 
     assertEquals("a", schema.getColumnName(0))
 
     try {
-      schema.getColumnNames(-1)
+      schema.getColumnName(-1)
       fail("Should never reach here")
     } catch {
       case _ =>
@@ -64,7 +64,7 @@ class TableSchemaTest extends TableTestBase {
       case _ =>
     }
 
-    assertTrue(schema.getType("c").isEmpty)
+    assertFalse(schema.getType("c").isPresent)
   }
 
 }

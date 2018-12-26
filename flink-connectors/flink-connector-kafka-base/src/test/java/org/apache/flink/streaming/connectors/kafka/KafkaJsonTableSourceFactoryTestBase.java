@@ -36,6 +36,7 @@ import org.apache.flink.table.sources.TableSource;
 import org.apache.flink.table.sources.TableSourceUtil;
 import org.apache.flink.table.sources.tsextractors.ExistingField;
 import org.apache.flink.table.sources.wmstrategies.AscendingTimestamps;
+import org.apache.flink.table.util.TableSchemaUtil;
 
 import org.junit.Test;
 
@@ -118,7 +119,7 @@ public abstract class KafkaJsonTableSourceFactoryTestBase {
 		specificOffsets.put(new KafkaTopicPartition(TOPIC, 1), 123L);
 
 		final KafkaTableSource builderSource = builder()
-				.forJsonSchema(TableSchema.fromDataType(DataTypes.of(
+				.forJsonSchema(TableSchemaUtil.fromDataType(DataTypes.of(
 					JsonRowSchemaConverter.convert(JSON_SCHEMA)), Option.empty()))
 				.failOnMissingField(true)
 				.withTableToJsonMapping(tableJsonMapping)
