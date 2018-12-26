@@ -98,6 +98,6 @@ public final class OrderedBooleanSerializer extends TypeSerializerSingleton<Bool
 
 	@Override
 	public boolean canEqual(Object obj) {
-		return obj instanceof OrderedIntSerializer;
+		return obj instanceof OrderedBooleanSerializer;
 	}
 }
