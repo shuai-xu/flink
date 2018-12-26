@@ -353,7 +353,8 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 			timeout,
 			responseHeaders,
 			JobTaskManagersHeaders.getInstance(),
-			resourceManagerRetriever);
+			resourceManagerRetriever,
+			executionGraphCache);
 
 		TaskManagerDetailsHandler taskManagerDetailsHandler = new TaskManagerDetailsHandler(
 			restAddressFuture,
