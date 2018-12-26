@@ -27,15 +27,32 @@ import org.apache.flink.api.java.typeutils.MapTypeInfo;
 import org.apache.flink.table.api.types.ArrayType;
 import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.DateType;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.MapType;
+import org.apache.flink.table.api.types.TimestampType;
 import org.apache.flink.table.api.types.TypeInfoWrappedType;
+import org.apache.flink.table.dataformat.BaseArray;
+import org.apache.flink.table.dataformat.BaseMap;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.dataformat.BinaryArray;
+import org.apache.flink.table.dataformat.BinaryMap;
+import org.apache.flink.table.dataformat.BinaryRow;
+import org.apache.flink.table.dataformat.BinaryString;
+import org.apache.flink.table.dataformat.BinaryWriter;
+import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.dataformat.GenericRow;
+import org.apache.flink.table.dataformat.NestedRow;
+import org.apache.flink.table.typeutils.BaseArraySerializer;
+import org.apache.flink.table.typeutils.BaseMapSerializer;
+import org.apache.flink.table.typeutils.BaseRowSerializer;
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo;
 import org.apache.flink.table.typeutils.TypeUtils;
+
+import java.io.IOException;
 
 import static org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_PRIMITIVE_ARRAY_TYPE_INFO;
 import static org.apache.flink.util.Preconditions.checkArgument;
@@ -156,36 +173,36 @@ public final class BaseRowUtil {
 	}
 
 	public static Object get(BaseRow row, int ordinal, DataType type) {
-		if (type.equals(org.apache.flink.table.api.types.Types.BOOLEAN)) {
+		if (type.equals(DataTypes.BOOLEAN)) {
 			return row.getBoolean(ordinal);
-		} else if (type.equals(org.apache.flink.table.api.types.Types.BYTE)) {
+		} else if (type.equals(DataTypes.BYTE)) {
 			return row.getByte(ordinal);
-		} else if (type.equals(org.apache.flink.table.api.types.Types.SHORT)) {
+		} else if (type.equals(DataTypes.SHORT)) {
 			return row.getShort(ordinal);
-		} else if (type.equals(org.apache.flink.table.api.types.Types.INT)) {
+		} else if (type.equals(DataTypes.INT)) {
 			return row.getInt(ordinal);
-		} else if (type.equals(org.apache.flink.table.api.types.Types.LONG)) {
+		} else if (type.equals(DataTypes.LONG)) {
 			return row.getLong(ordinal);
-		} else if (type.equals(org.apache.flink.table.api.types.Types.FLOAT)) {
+		} else if (type.equals(DataTypes.FLOAT)) {
 			return row.getFloat(ordinal);
-		} else if (type.equals(org.apache.flink.table.api.types.Types.DOUBLE)) {
+		} else if (type.equals(DataTypes.DOUBLE)) {
 			return row.getDouble(ordinal);
 		} else if (type instanceof DecimalType) {
 			DecimalType dt = (DecimalType) type;
 			return row.getDecimal(ordinal, dt.precision(), dt.scale());
-		} else if (type.equals(org.apache.flink.table.api.types.Types.STRING)) {
+		} else if (type.equals(DataTypes.STRING)) {
 			return row.getBinaryString(ordinal);
-		} else if (type.equals(org.apache.flink.table.api.types.Types.CHAR)) {
+		} else if (type.equals(DataTypes.CHAR)) {
 			return row.getChar(ordinal);
-		} else if (type.equals(org.apache.flink.table.api.types.Types.ROWTIME_INDICATOR)) {
+		} else if (type.equals(DataTypes.ROWTIME_INDICATOR)) {
 			return row.getLong(ordinal);
-		} else if (type.equals(org.apache.flink.table.api.types.Types.DATE)) {
+		} else if (type.equals(DataTypes.DATE)) {
 			return row.getInt(ordinal);
-		} else if (type.equals(org.apache.flink.table.api.types.Types.TIME)) {
+		} else if (type.equals(DataTypes.TIME)) {
 			return row.getInt(ordinal);
-		} else if (type.equals(org.apache.flink.table.api.types.Types.TIMESTAMP)) {
+		} else if (type.equals(DataTypes.TIMESTAMP)) {
 			return row.getLong(ordinal);
-		} else if (type.equals(org.apache.flink.table.api.types.Types.BYTE_ARRAY)) {
+		} else if (type.equals(DataTypes.BYTE_ARRAY)) {
 			return row.getByteArray(ordinal);
 		} else if (type instanceof ArrayType) {
 			return row.getBaseArray(ordinal);
@@ -217,5 +234,85 @@ public final class BaseRowUtil {
 		}
 		build.append(']');
 		return build.toString();
+	}
+
+	public static void write(BinaryWriter writer, int pos, Object o, InternalType type, TypeSerializer serializer) {
+		if (type.equals(DataTypes.BOOLEAN)) {
+			writer.writeBoolean(pos, (boolean) o);
+		} else if (type.equals(DataTypes.BYTE)) {
+			writer.writeByte(pos, (byte) o);
+		} else if (type.equals(DataTypes.SHORT)) {
+			writer.writeShort(pos, (short) o);
+		} else if (type.equals(DataTypes.INT)) {
+			writer.writeInt(pos, (int) o);
+		} else if (type.equals(DataTypes.LONG)) {
+			writer.writeLong(pos, (long) o);
+		} else if (type.equals(DataTypes.FLOAT)) {
+			writer.writeFloat(pos, (float) o);
+		} else if (type.equals(DataTypes.DOUBLE)) {
+			writer.writeDouble(pos, (double) o);
+		} else if (type.equals(DataTypes.STRING)) {
+			writer.writeBinaryString(pos, (BinaryString) o);
+		} else if (type.equals(DataTypes.CHAR)) {
+			writer.writeChar(pos, (char) o);
+		} else if (type instanceof DecimalType) {
+			DecimalType t = (DecimalType) type;
+			writer.writeDecimal(pos, (Decimal) o, t.precision(), t.scale());
+		} else if (type instanceof DateType) {
+			writer.writeInt(pos, (int) o);
+		} else if (type.equals(DataTypes.TIME)) {
+			writer.writeInt(pos, (int) o);
+		} else if (type instanceof TimestampType) {
+			writer.writeLong(pos, (long) o);
+		} else if (type.equals(DataTypes.BYTE_ARRAY)) {
+			writer.writeByteArray(pos, (byte[]) o);
+		} else if (type instanceof ArrayType) {
+			writeBaseArray(writer, pos, (BaseArray) o, (BaseArraySerializer) serializer);
+		} else if (type instanceof MapType) {
+			writeBaseMap(writer, pos, (BinaryMap) o, (BaseMapSerializer) serializer);
+		} else if (type instanceof BaseRowType) {
+			writeBaseRow(writer, pos, (BaseRow) o, (BaseRowSerializer) serializer);
+		} else {
+			writer.writeGeneric(pos, o, (GenericType) type);
+		}
+	}
+
+	public static void writeBaseArray(BinaryWriter writer, int pos, BaseArray input, BaseArraySerializer serializer) {
+		BinaryArray binaryArray;
+		if (input instanceof BinaryArray) {
+			binaryArray = (BinaryArray) input;
+		} else {
+			binaryArray = serializer.baseArrayToBinary(input);
+		}
+
+		writer.writeBinaryArray(pos, binaryArray);
+	}
+
+	public static void writeBaseMap(BinaryWriter writer, int pos, BaseMap input, BaseMapSerializer serializer) {
+		BinaryMap binaryMap;
+		if (input instanceof BinaryMap) {
+			binaryMap = (BinaryMap) input;
+		} else {
+			binaryMap = serializer.baseMapToBinary(input);
+		}
+
+		writer.writeBinaryMap(pos, binaryMap);
+	}
+
+	public static void writeBaseRow(BinaryWriter writer, int pos, BaseRow input, BaseRowSerializer serializer) {
+		if (input instanceof BinaryRow) {
+			BinaryRow row = (BinaryRow) input;
+			writer.writeSegments(pos, row.getAllSegments(), row.getBaseOffset(), row.getSizeInBytes());
+		} else if (input instanceof NestedRow) {
+			NestedRow row = (NestedRow) input;
+			writer.writeNestedRow(pos, row);
+		} else {
+			try {
+				BinaryRow row = serializer.baseRowToBinary(input);
+				writer.writeBinaryRow(pos, row);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
 	}
 }

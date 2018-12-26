@@ -32,6 +32,7 @@ import org.apache.flink.table.dataformat.BinaryArray;
 import org.apache.flink.table.dataformat.BinaryArrayWriter;
 import org.apache.flink.table.dataformat.BinaryMap;
 import org.apache.flink.table.dataformat.GenericMap;
+import org.apache.flink.table.dataformat.util.BaseRowUtil;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -147,8 +148,8 @@ public class BaseMapSerializer extends TypeSerializer<BaseMap> {
 
 		int i = 0;
 		for (Map.Entry<Object, Object> entry : javaMap.entrySet()) {
-			reuseKeyWriter.write(i, entry.getKey(), keyType, keySerializer);
-			reuseValueWriter.write(i, entry.getValue(), valueType, valueSerializer);
+			BaseRowUtil.write(reuseKeyWriter, i, entry.getKey(), keyType, keySerializer);
+			BaseRowUtil.write(reuseValueWriter, i, entry.getValue(), valueType, valueSerializer);
 		}
 		reuseKeyWriter.complete();
 		reuseValueWriter.complete();

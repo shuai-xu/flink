@@ -29,6 +29,7 @@ import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.dataformat._
+import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.runtime.functions.FunctionContextImpl
 import org.apache.flink.table.runtime.util.{ResettableExternalBuffer, RowIterator}
@@ -934,6 +935,8 @@ object CodeGeneratorContext {
   val BASE_ROW_SERIALIZER: String = classOf[BaseRowSerializer[_]].getCanonicalName
 
   val BINARY_ROW_SERIALIZER: String = classOf[BinaryRowSerializer].getCanonicalName
+
+  val BASE_ROW_UTIL: String = classOf[BaseRowUtil].getCanonicalName
 
   val DEFAULT_TIMEZONE_TERM = "timeZone"
 

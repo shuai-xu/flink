@@ -308,7 +308,7 @@ public class InMemorySortTest {
 			BinaryRow row = new BinaryRow(1);
 			BinaryRowWriter writer = new BinaryRowWriter(row);
 			writer.reset();
-			writer.writeBaseRow(0, GenericRow.of(next.f0, next.f1), serializer);
+			writer.writeBinaryRow(0, serializer.baseRowToBinary(GenericRow.of(next.f0, next.f1)));
 			writer.complete();
 			data.add(next);
 			if (!sortBuffer.write(row)) {

@@ -125,7 +125,8 @@ abstract class AggregateFunctionTestBase {
     fields.zipWithIndex.foreach { case (field, index) =>
       val typeInfo = tpe.getTypeAt(index)
       if (field == null) writer.setNullAt(index)
-      else writer.write(
+      else BaseRowUtil.write(
+        writer,
         index,
         if (typeInfo == Types.STRING) {
           BinaryString.fromString(field.asInstanceOf[String])
@@ -136,7 +137,7 @@ abstract class AggregateFunctionTestBase {
         } else {
           field
         },
-        typeInfo,
+        DataTypes.internal(typeInfo),
         typeInfo.createSerializer(null))
     }
     writer.complete()

@@ -27,6 +27,7 @@ import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.table.api.Types;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.dataformat.BinaryRowTest.MyObj;
+import org.apache.flink.table.dataformat.util.BaseRowUtil;
 import org.apache.flink.table.typeutils.BaseRowComparator;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
 
@@ -57,7 +58,7 @@ public class ComplexTest {
 
 		BaseRowSerializer<GenericRow> serializer = new BaseRowSerializer<>(
 				Types.INT(), Types.LONG(), Types.STRING(), Types.STRING(), info);
-		writer.writeBaseRow(0, gRow, serializer);
+		BaseRowUtil.writeBaseRow(writer, 0, gRow, serializer);
 		writer.complete();
 
 		{
@@ -96,13 +97,13 @@ public class ComplexTest {
 		BinaryRow row = new BinaryRow(2);
 		BinaryRowWriter writer = new BinaryRowWriter(row);
 		writer.writeString(0, "hahahahafff");
-		writer.writeBaseRow(1, gRow, serializer);
+		BaseRowUtil.writeBaseRow(writer, 1, gRow, serializer);
 		writer.complete();
 
 		//3.layer3
 		BinaryRow row2 = new BinaryRow(1);
 		BinaryRowWriter writer2 = new BinaryRowWriter(row2);
-		writer2.writeBaseRow(0, row, null);
+		BaseRowUtil.writeBaseRow(writer2, 0, row, null);
 		writer2.complete();
 
 		// verify
@@ -141,7 +142,7 @@ public class ComplexTest {
 		//2.test write to binary row.
 		BinaryRow row2 = new BinaryRow(1);
 		BinaryRowWriter writer2 = new BinaryRowWriter(row2);
-		writer2.writeBaseArray(0, array, null);
+		writer2.writeBinaryArray(0, array);
 		writer2.complete();
 
 		BinaryArray array2 = (BinaryArray) row2.getBaseArray(0);
@@ -173,7 +174,7 @@ public class ComplexTest {
 
 		BinaryRow row = new BinaryRow(1);
 		BinaryRowWriter rowWriter = new BinaryRowWriter(row);
-		rowWriter.writeBaseMap(0, binaryMap, null);
+		rowWriter.writeBinaryMap(0, binaryMap);
 		rowWriter.complete();
 
 		BinaryMap map = (BinaryMap) row.getBaseMap(0);

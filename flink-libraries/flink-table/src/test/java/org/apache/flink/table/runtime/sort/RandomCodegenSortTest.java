@@ -30,6 +30,7 @@ import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.operators.sort.QuickSort;
 import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.dataformat.BinaryString;
@@ -97,6 +98,8 @@ public class RandomCodegenSortTest {
 			new BigDecimalTypeInfo(18, 2),
 			BIG_DEC_TYPE_INFO
 	};
+	private final InternalType[] internalTypes = Arrays.stream(types).map(DataTypes::internal)
+			.toArray(InternalType[]::new);
 	private final TypeSerializer[] serializers = new TypeSerializer[types.length];
 	{
 		for (int i = 0; i < types.length; i++) {
@@ -151,7 +154,7 @@ public class RandomCodegenSortTest {
 			if (value == null) {
 				writer.setNullAt(j);
 			} else {
-				writer.write(j, value, types[fields[j]], serializers[fields[j]]);
+				BaseRowUtil.write(writer, j, value, internalTypes[fields[j]], serializers[fields[j]]);
 			}
 		}
 

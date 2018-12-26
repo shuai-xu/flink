@@ -65,13 +65,13 @@ class EqualiserCodeGeneratorTest {
     writer = new BinaryRowWriter(c2Row)
     writer.writeInt(0, c21)
     writer.writeString(1, c22)
-    writer.writeBaseRow(2, c23, null)
+    writer.writeBinaryRow(2, c23)
     writer.complete()
 
     val row = new BinaryRow(3)
     writer = new BinaryRowWriter(row)
     writer.writeInt(0, c1)
-    writer.writeBaseRow(1, c2Row, null)
+    writer.writeBinaryRow(1, c2Row)
     writer.writeLong(2, c3)
     writer.complete()
     row

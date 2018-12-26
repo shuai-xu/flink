@@ -34,6 +34,7 @@ import org.apache.flink.table.dataformat.BaseArray;
 import org.apache.flink.table.dataformat.BinaryArray;
 import org.apache.flink.table.dataformat.BinaryArrayWriter;
 import org.apache.flink.table.dataformat.GenericArray;
+import org.apache.flink.table.dataformat.util.BaseRowUtil;
 import org.apache.flink.util.InstantiationUtil;
 
 import java.io.IOException;
@@ -147,7 +148,7 @@ public class BaseArraySerializer extends TypeSerializer<BaseArray> {
 		}
 
 		for (int i = 0; i < numElements; i++) {
-			reuseBinaryWriter.write(i, from.get(i, eleType), eleType, elementSerializer);
+			BaseRowUtil.write(reuseBinaryWriter, i, from.get(i, eleType), eleType, elementSerializer);
 		}
 		reuseBinaryWriter.complete();
 

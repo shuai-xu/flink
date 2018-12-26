@@ -31,7 +31,7 @@ import org.apache.flink.api.common.functions.{FlatJoinFunction, FlatMapFunction,
 import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo._
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.table.api.types._
-import org.apache.flink.table.codegen.CodeGeneratorContext.BINARY_STRING
+import org.apache.flink.table.codegen.CodeGeneratorContext.{BASE_ROW_UTIL, BINARY_STRING}
 import org.apache.flink.table.codegen.GeneratedExpression.NEVER_NULL
 import org.apache.flink.table.codegen.calls.ScalarOperators._
 import org.apache.flink.table.codegen.calls.{BinaryStringCallGen, BuiltInMethods, CurrentTimePointCallGen, FunctionGenerator}
@@ -955,17 +955,17 @@ object CodeGenUtils {
       case _: TimestampType => s"$writerTerm.writeLong($pos, $fieldValTerm)"
       case DataTypes.BYTE_ARRAY => s"$writerTerm.writeByteArray($pos, $fieldValTerm)"
       case _: ArrayType =>
-        s"$writerTerm.writeBaseArray($pos, $fieldValTerm, " +
+        s"$BASE_ROW_UTIL.writeBaseArray($writerTerm, $pos, $fieldValTerm, " +
           s"(${classOf[BaseArraySerializer].getCanonicalName}) " +
-          s"${ctx.addReusableTypeSerializer(fieldType)})"
+            s"${ctx.addReusableTypeSerializer(fieldType)})"
 
       case _: MapType =>
-        s"$writerTerm.writeBaseMap($pos, $fieldValTerm, " +
+        s"$BASE_ROW_UTIL.writeBaseMap($writerTerm, $pos, $fieldValTerm, " +
           s"(${classOf[BaseMapSerializer].getCanonicalName}) " +
           s"${ctx.addReusableTypeSerializer(fieldType)})"
 
       case _: BaseRowType =>
-        s"$writerTerm.writeBaseRow($pos, $fieldValTerm, " +
+        s"$BASE_ROW_UTIL.writeBaseRow($writerTerm, $pos, $fieldValTerm, " +
           s"(${classOf[BaseRowSerializer[_]].getCanonicalName}) " +
           s"${ctx.addReusableTypeSerializer(fieldType)})"
 

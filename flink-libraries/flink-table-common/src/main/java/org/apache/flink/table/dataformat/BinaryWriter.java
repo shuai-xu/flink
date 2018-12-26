@@ -18,39 +18,18 @@
 package org.apache.flink.table.dataformat;
 
 import org.apache.flink.annotation.VisibleForTesting;
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
-import org.apache.flink.api.common.typeinfo.BigDecimalTypeInfo;
-import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.java.typeutils.MapTypeInfo;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.core.memory.MemorySegmentWritable;
-import org.apache.flink.table.api.types.ArrayType;
-import org.apache.flink.table.api.types.BaseRowType;
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.DateType;
-import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.GenericType;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.MapType;
-import org.apache.flink.table.api.types.TimestampType;
 import org.apache.flink.table.runtime.util.StringUtf8Utils;
-import org.apache.flink.table.typeutils.BaseArraySerializer;
-import org.apache.flink.table.typeutils.BaseMapSerializer;
-import org.apache.flink.table.typeutils.BaseRowSerializer;
-import org.apache.flink.table.typeutils.BinaryStringTypeInfo;
-import org.apache.flink.table.typeutils.DecimalTypeInfo;
-import org.apache.flink.table.typeutils.TypeUtils;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 
-import static org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_PRIMITIVE_ARRAY_TYPE_INFO;
 import static org.apache.flink.table.runtime.util.StringUtf8Utils.MAX_BYTES_PER_CHAR;
 
 /**
@@ -120,24 +99,23 @@ public abstract class BinaryWriter {
 
 	public abstract void writeDecimal(int pos, Decimal value, int precision, int scale);
 
-	public void writeBaseRow(int pos, BaseRow input, BaseRowSerializer serializer) {
-		if (input instanceof BinaryRow) {
-			BinaryRow row = (BinaryRow) input;
-			writeSegs(pos, row.getAllSegments(), row.getBaseOffset(), row.getSizeInBytes());
-		} else if (input instanceof NestedRow) {
-			NestedRow row = (NestedRow) input;
-			writeSegs(pos, row.getSegments(), row.getBaseOffset(), row.getSizeInBytes());
-		} else {
-			try {
-				BinaryRow row = serializer.baseRowToBinary(input);
-				writeSegs(pos, row.getAllSegments(), row.getBaseOffset(), row.getSizeInBytes());
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
-		}
+	public void writeBinaryArray(int pos, BinaryArray value) {
+		writeSegments(pos, value.getSegments(), value.getBaseOffset(), value.getSizeInBytes());
 	}
 
-	public void writeSegs(int pos, MemorySegment[] segments, int offset, int size) {
+	public void writeBinaryMap(int pos, BinaryMap value) {
+		writeSegments(pos, value.getSegments(), value.getBaseOffset(), value.getSizeInBytes());
+	}
+
+	public void writeBinaryRow(int pos, BinaryRow value) {
+		writeSegments(pos, value.getAllSegments(), value.getBaseOffset(), value.getSizeInBytes());
+	}
+
+	public void writeNestedRow(int pos, NestedRow value) {
+		writeSegments(pos, value.getSegments(), value.getBaseOffset(), value.getSizeInBytes());
+	}
+
+	public void writeSegments(int pos, MemorySegment[] segments, int offset, int size) {
 		final int roundedSize = roundNumberOfBytesToNearestWord(size);
 
 		// grow the global buffer before writing data.
@@ -155,28 +133,6 @@ public abstract class BinaryWriter {
 
 		// move the cursor forward.
 		cursor += roundedSize;
-	}
-
-	public void writeBaseArray(int pos, BaseArray input, BaseArraySerializer serializer) {
-		BinaryArray binaryArray;
-		if (input instanceof BinaryArray) {
-			binaryArray = (BinaryArray) input;
-		} else {
-			binaryArray = serializer.baseArrayToBinary(input);
-		}
-
-		writeSegs(pos, binaryArray.getSegments(), binaryArray.getBaseOffset(), binaryArray.getSizeInBytes());
-	}
-
-	public void writeBaseMap(int pos, BaseMap input, BaseMapSerializer serializer) {
-		BinaryMap binaryMap;
-		if (input instanceof BinaryMap) {
-			binaryMap = (BinaryMap) input;
-		} else {
-			binaryMap = serializer.baseMapToBinary(input);
-		}
-
-		writeSegs(pos, binaryMap.getSegments(), binaryMap.getBaseOffset(), binaryMap.getSizeInBytes());
 	}
 
 	@VisibleForTesting
@@ -295,95 +251,6 @@ public abstract class BinaryWriter {
 	public abstract void writeDouble(int pos, double value);
 
 	public abstract void writeChar(int pos, char value);
-
-	public void write(int pos, Object o, TypeInformation type, TypeSerializer serializer) {
-		if (type.equals(Types.BOOLEAN)) {
-			writeBoolean(pos, (boolean) o);
-		} else if (type.equals(Types.BYTE)) {
-			writeByte(pos, (byte) o);
-		} else if (type.equals(Types.SHORT)) {
-			writeShort(pos, (short) o);
-		} else if (type.equals(Types.INT)) {
-			writeInt(pos, (int) o);
-		} else if (type.equals(Types.LONG)) {
-			writeLong(pos, (long) o);
-		} else if (type.equals(Types.FLOAT)) {
-			writeFloat(pos, (float) o);
-		} else if (type.equals(Types.DOUBLE)) {
-			writeDouble(pos, (double) o);
-		} else if (type.equals(Types.STRING) || type.equals(BinaryStringTypeInfo.INSTANCE)) {
-			writeBinaryString(pos, (BinaryString) o);
-		} else if (type instanceof BigDecimalTypeInfo) {
-			BigDecimalTypeInfo t = (BigDecimalTypeInfo) type;
-			writeDecimal(pos, (Decimal) o, t.precision(), t.scale());
-		} else if (type instanceof DecimalTypeInfo) {
-			DecimalTypeInfo t = (DecimalTypeInfo) type;
-			writeDecimal(pos, (Decimal) o, t.precision(), t.scale());
-		} else if (type.equals(BasicTypeInfo.CHAR_TYPE_INFO)) {
-			writeChar(pos, (char) o);
-		} else if (type.equals(SqlTimeTypeInfo.DATE)) {
-			writeInt(pos, (int) o);
-		} else if (type.equals(SqlTimeTypeInfo.TIME)) {
-			writeInt(pos, (int) o);
-		} else if (type.equals(SqlTimeTypeInfo.TIMESTAMP)) {
-			writeLong(pos, (long) o);
-		}  else if (type.equals(BYTE_PRIMITIVE_ARRAY_TYPE_INFO)) {
-			writeByteArray(pos, (byte[]) o);
-		} else if (TypeUtils.isInternalArrayType(type)) {
-			writeBaseArray(pos, (BaseArray) o, (BaseArraySerializer) serializer);
-		} else if (type instanceof MapTypeInfo) {
-			writeBaseMap(pos, (BinaryMap) o, (BaseMapSerializer) serializer);
-		} else if (TypeUtils.isInternalCompositeType(type)) {
-			writeBaseRow(pos, (BaseRow) o, (BaseRowSerializer) serializer);
-		} else {
-			writeGeneric(pos, o, serializer);
-		}
-	}
-
-	public void write(int pos, Object o, InternalType type, TypeSerializer serializer) {
-		if (type.equals(DataTypes.BOOLEAN)) {
-			writeBoolean(pos, (boolean) o);
-		} else if (type.equals(DataTypes.BYTE)) {
-			writeByte(pos, (byte) o);
-		} else if (type.equals(DataTypes.SHORT)) {
-			writeShort(pos, (short) o);
-		} else if (type.equals(DataTypes.INT)) {
-			writeInt(pos, (int) o);
-		} else if (type.equals(DataTypes.LONG)) {
-			writeLong(pos, (long) o);
-		} else if (type.equals(DataTypes.FLOAT)) {
-			writeFloat(pos, (float) o);
-		} else if (type.equals(DataTypes.DOUBLE)) {
-			writeDouble(pos, (double) o);
-		} else if (type.equals(DataTypes.STRING)) {
-			writeBinaryString(pos, (BinaryString) o);
-		} else if (type.equals(DataTypes.CHAR)) {
-			writeChar(pos, (char) o);
-		} else if (type instanceof DecimalType) {
-			DecimalType t = (DecimalType) type;
-			writeDecimal(pos, (Decimal) o, t.precision(), t.scale());
-		} else if (type instanceof DateType) {
-			writeInt(pos, (int) o);
-		} else if (type.equals(DataTypes.TIME)) {
-			writeInt(pos, (int) o);
-		} else if (type instanceof TimestampType) {
-			writeLong(pos, (long) o);
-		} else if (type.equals(DataTypes.BYTE_ARRAY)) {
-			writeByteArray(pos, (byte[]) o);
-		} else if (type instanceof ArrayType) {
-			writeBaseArray(pos, (BaseArray) o, (BaseArraySerializer) serializer);
-		} else if (type instanceof MapType) {
-			writeBaseMap(pos, (BinaryMap) o, (BaseMapSerializer) serializer);
-		} else if (type instanceof BaseRowType) {
-			writeBaseRow(pos, (BaseRow) o, (BaseRowSerializer) serializer);
-		} else {
-			writeGeneric(pos, o, (GenericType) type);
-		}
-	}
-
-	public void write(int pos, Object o, TypeInformation type) {
-		write(pos, o, type, null);
-	}
 
 	private void zeroBytes(int offset, int size) {
 		for (int i = offset; i < offset + size; i++) {

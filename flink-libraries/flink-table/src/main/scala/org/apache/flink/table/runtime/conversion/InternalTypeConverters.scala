@@ -22,7 +22,6 @@ import java.math.{BigDecimal => JBigDecimal}
 import java.sql.{Date, Time, Timestamp}
 import java.util
 import java.util.{Map => JavaMap}
-
 import javax.annotation.Nullable
 
 import scala.collection.convert.WrapAsJava
@@ -42,6 +41,7 @@ import org.apache.flink.table.codegen.CodeGeneratorContext.BINARY_STRING
 import org.apache.flink.table.codegen.{CodeGenUtils, CodeGeneratorContext}
 import org.apache.flink.table.dataformat.BinaryArray.calculateElementSize
 import org.apache.flink.table.dataformat._
+import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.runtime.functions.BuildInScalarFunctions
 import org.apache.flink.table.typeutils.TypeUtils._
 import org.apache.flink.table.typeutils._
@@ -358,8 +358,8 @@ object InternalTypeConverters {
         if (o == null) {
           arrayWriter.setNullAt(i, internalEleT)
         } else {
-          arrayWriter.write(
-            i, elementConverter.toInternal(o), internalEleT, internalEleSer)
+          BaseRowUtil.write(
+            arrayWriter, i, elementConverter.toInternal(o), internalEleT, internalEleSer)
         }
       scalaValue match {
         case a: Array[_] => a.zipWithIndex.foreach(e => writeElement(e._1, e._2))
@@ -437,8 +437,8 @@ object InternalTypeConverters {
         if (o == null) {
           arrayWriter.setNullAt(index, elementType)
         } else {
-          arrayWriter.write(
-            index, elementConverter.toInternal(o), elementType, elementSerializer)
+          BaseRowUtil.write(
+            arrayWriter, index, elementConverter.toInternal(o), elementType, elementSerializer)
         }
       }
       arrayWriter.complete()

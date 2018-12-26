@@ -18,10 +18,10 @@
 package org.apache.flink.table.dataformat;
 
 import org.apache.flink.core.memory.MemorySegmentFactory;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DateType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.TimestampType;
+import org.apache.flink.table.api.types.Types;
 import org.apache.flink.table.dataformat.util.BitSetUtil;
 
 /**
@@ -127,27 +127,27 @@ public class BinaryArrayWriter extends BinaryWriter {
 	}
 
 	public void setNullAt(int pos, InternalType type) {
-		if (type.equals(DataTypes.BOOLEAN)) {
+		if (type.equals(Types.BOOLEAN)) {
 			setNullBoolean(pos);
-		} else if (type.equals(DataTypes.BYTE)) {
+		} else if (type.equals(Types.BYTE)) {
 			setNullByte(pos);
-		} else if (type.equals(DataTypes.SHORT)) {
+		} else if (type.equals(Types.SHORT)) {
 			setNullShort(pos);
-		} else if (type.equals(DataTypes.INT)) {
+		} else if (type.equals(Types.INT)) {
 			setNullInt(pos);
-		} else if (type.equals(DataTypes.LONG)) {
+		} else if (type.equals(Types.LONG)) {
 			setNullLong(pos);
-		} else if (type.equals(DataTypes.FLOAT)) {
+		} else if (type.equals(Types.FLOAT)) {
 			setNullFloat(pos);
-		} else if (type.equals(DataTypes.DOUBLE)) {
+		} else if (type.equals(Types.DOUBLE)) {
 			setNullDouble(pos);
 		} else if (type instanceof DateType) {
-			setNullAt(pos, DataTypes.INT);
-		} else if (type.equals(DataTypes.TIME)) {
-			setNullAt(pos, DataTypes.INT);
+			setNullInt(pos);
+		} else if (type.equals(Types.TIME)) {
+			setNullInt(pos);
 		} else if (type instanceof TimestampType) {
-			setNullAt(pos, DataTypes.LONG);
-		} else if (type.equals(DataTypes.CHAR)) {
+			setNullLong(pos);
+		} else if (type.equals(Types.CHAR)) {
 			setNullShort(pos);
 		} else {
 			setNull(pos);
