@@ -17,14 +17,16 @@
  */
 package org.apache.flink.table.runtime.batch.sql
 
-import org.apache.calcite.plan.hep.HepMatchOrder
-import org.apache.calcite.rel.rules._
-import org.apache.calcite.tools.RuleSets
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.Types
+import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.logical.FlinkAggregateJoinTransposeRule
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+
+import org.apache.calcite.plan.hep.HepMatchOrder
+import org.apache.calcite.rel.rules._
+import org.apache.calcite.tools.RuleSets
 import org.junit.{Before, Test}
 
 class DistinctAggOnJoinITCase extends QueryTest {
@@ -45,28 +47,29 @@ class DistinctAggOnJoinITCase extends QueryTest {
   def before(): Unit = {
     registerCollection(t1Name, t1Data, t1Types, t1FieldNames, t1Nullables)
     registerCollection(t2Name, t2Data, t2Types, t2FieldNames, t2Nullables)
-    val logicalProgram = tEnv.getConfig.getCalciteConfig.getBatchPrograms
-        .get(FlinkBatchPrograms.LOGICAL).get
+    val batchPrograms = FlinkBatchPrograms.buildPrograms(tEnv.getConfig.getConf)
+    val logicalProgram = batchPrograms.get(FlinkBatchPrograms.LOGICAL).get
     assert(logicalProgram.isInstanceOf[FlinkRuleSetProgram[_]])
     logicalProgram.asInstanceOf[FlinkRuleSetProgram[_]].remove(
       RuleSets.ofList(FlinkAggregateJoinTransposeRule.EXTENDED))
-    tEnv.getConfig.getCalciteConfig.getBatchPrograms.addBefore(
+    batchPrograms.addBefore(
       FlinkBatchPrograms.LOGICAL,
       "aggregateTranspose",
       FlinkHepRuleSetProgramBuilder.newBuilder
-          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-          .add(RuleSets.ofList(
-            AggregateProjectMergeRule.INSTANCE,
-            FlinkAggregateJoinTransposeRule.EXTENDED
-          )).build()
+        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+        .add(RuleSets.ofList(
+          AggregateProjectMergeRule.INSTANCE,
+          FlinkAggregateJoinTransposeRule.EXTENDED
+        )).build()
     )
+    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(batchPrograms).build()
+    tEnv.getConfig.setCalciteConfig(calciteConfig)
   }
 
   @Test
   def testDistinctAgg(): Unit = {
-    checkResult("select count (distinct a) from t1, t2 where t1.b = t2.c", Seq(row(2))
-    )
+    checkResult("select count (distinct a) from t1, t2 where t1.b = t2.c", Seq(row(2)))
   }
 
 }

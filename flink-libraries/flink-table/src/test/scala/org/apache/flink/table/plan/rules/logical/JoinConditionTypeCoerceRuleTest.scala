@@ -73,7 +73,7 @@ class JoinConditionTypeCoerceRuleTest extends TableTestBatchExecBase {
         .add(FlinkBatchExecRuleSets.BATCH_EXEC_DEFAULT_REWRITE_RULES)
         .build())
 
-    val calciteConfig = new CalciteConfigBuilder().replaceBatchPrograms(programs).build()
+    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.addTable[(Int, Long, Float, Double, java.math.BigDecimal)]("t1", 'a, 'b, 'c, 'd, 'e)

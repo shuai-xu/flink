@@ -17,21 +17,23 @@
  */
 package org.apache.flink.table.plan.batch.sql
 
-import java.util
-import java.util.Collections
-
 import org.apache.flink.api.common.functions.FlatMapFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.functions.async.AsyncFunction
+
+import java.util
+import java.util.Collections
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexKey}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.TableTestBatchExecBase
+
 import org.junit.Assert.{assertTrue, fail}
 import org.junit.{Before, Test}
 
@@ -74,8 +76,12 @@ class JoinTableTest extends TableTestBatchExecBase {
     util.addTable[(Int, String, Long, Double)]("T1", 'a, 'b, 'c, 'd)
     util.tableEnv.registerTableSource("dimTemporal", new TestDimensionTable(true))
     util.tableEnv.registerTableSource("dimStatic", new TestDimensionTable(false))
-    util.tableEnv.getConfig.getCalciteConfig.
-        getBatchPrograms.remove(FlinkBatchPrograms.PHYSICAL)
+
+    val programs = FlinkBatchPrograms.buildPrograms(util.tableEnv.getConfig.getConf)
+    programs.remove(FlinkBatchPrograms.PHYSICAL)
+    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
+
     util.verifyPlan(sql)
   }
 
@@ -85,8 +91,12 @@ class JoinTableTest extends TableTestBatchExecBase {
     util.addTable[(Int, String, Long)]("MyTable", 'a, 'b, 'c)
     util.addTable[(Int, String, Long, Double)]("T1", 'a, 'b, 'c, 'd)
     util.tableEnv.registerTableSource("dimTemporal", new TestDimensionTable(true))
-    util.tableEnv.getConfig.getCalciteConfig.
-      getBatchPrograms.remove(FlinkBatchPrograms.PHYSICAL)
+
+    val programs = FlinkBatchPrograms.buildPrograms(util.tableEnv.getConfig.getConf)
+    programs.remove(FlinkBatchPrograms.PHYSICAL)
+    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
+
     util.verifyPlan("SELECT * FROM MyTable AS T JOIN LATERAL dimTemporal "
       + "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.b = D.id")
   }
@@ -109,7 +119,7 @@ class JoinTableTest extends TableTestBatchExecBase {
     // can't on non-key fields
     expectExceptionThrown(
       "SELECT * FROM MyTable AS T JOIN LATERAL dimTemporal " +
-          "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.b = D.name",
+        "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.b = D.name",
       "Join Dimension table requires an equality condition on ALL of table's primary key(s) or " +
         "unique key(s) or index field(s).",
       classOf[AssertionError]
@@ -118,7 +128,7 @@ class JoinTableTest extends TableTestBatchExecBase {
     // only support left or inner join
     expectExceptionThrown(
       "SELECT * FROM MyTable AS T RIGHT JOIN LATERAL dimTemporal " +
-          "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id",
+        "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id",
       "Join[type: stream to table join] only support LEFT JOIN or INNER JOIN, but was RIGHT",
       classOf[AssertionError]
     )
@@ -126,7 +136,7 @@ class JoinTableTest extends TableTestBatchExecBase {
     // only support join on raw key of right table
     expectExceptionThrown(
       "SELECT * FROM MyTable AS T LEFT JOIN LATERAL dimTemporal " +
-          "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON concat('rk:', T.a) = concat(D.id, '=rk')",
+        "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON concat('rk:', T.a) = concat(D.id, '=rk')",
       "Join Dimension table requires an equality condition on ALL of table's primary key(s) or " +
         "unique key(s) or index field(s).",
       classOf[AssertionError]
@@ -138,7 +148,7 @@ class JoinTableTest extends TableTestBatchExecBase {
     // can't follow a period specification
     expectExceptionThrown(
       "SELECT * FROM MyTable AS T JOIN LATERAL dimStatic " +
-          "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id",
+        "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id",
       "Table 'dimStatic' is not a temporal table",
       classOf[ValidationException])
 
@@ -152,23 +162,23 @@ class JoinTableTest extends TableTestBatchExecBase {
   @Test
   def testJoinTemporalTable(): Unit = {
     val sql = "SELECT * FROM MyTable AS T JOIN LATERAL dimTemporal " +
-        "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id"
+      "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id"
     testUtil.verifyPlan(sql)
   }
 
   @Test
   def testLeftJoinTemporalTable(): Unit = {
     val sql = "SELECT * FROM MyTable AS T LEFT JOIN LATERAL dimTemporal " +
-        "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id"
+      "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id"
     testUtil.verifyPlan(sql)
   }
 
   @Test
   def testJoinTemporalTableWithNestedQuery(): Unit = {
     val sql = "SELECT * FROM " +
-        "(SELECT a, b FROM MyTable WHERE c > 1000) AS T " +
-        "JOIN LATERAL dimTemporal " +
-        "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id"
+      "(SELECT a, b FROM MyTable WHERE c > 1000) AS T " +
+      "JOIN LATERAL dimTemporal " +
+      "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id"
     testUtil.verifyPlan(sql)
   }
 
@@ -302,8 +312,8 @@ class JoinTableTest extends TableTestBatchExecBase {
     }
 
     /**
-     * Returns true if this dimension table could be queried asynchronously
-     */
+      * Returns true if this dimension table could be queried asynchronously
+      */
     override def isAsync: Boolean = false
 
     override def getAsyncLookupFunction(
@@ -312,8 +322,8 @@ class JoinTableTest extends TableTestBatchExecBase {
     }
 
     /**
-     * Returns config that defines the runtime behavior of async join table
-     */
+      * Returns config that defines the runtime behavior of async join table
+      */
     override def getAsyncConfig: AsyncConfig = new AsyncConfig
 
     /** Returns the table schema of the table source */

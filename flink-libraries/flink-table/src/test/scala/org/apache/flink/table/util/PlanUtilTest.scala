@@ -18,9 +18,6 @@
 
 package org.apache.flink.table.util
 
-import java.nio.file.{Files, Paths}
-
-import org.apache.calcite.tools.RuleSets
 import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator
@@ -35,15 +32,18 @@ import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData._
 import org.apache.flink.table.sinks.{CollectRowTableSink, CollectTableSink}
-import ExecResourceUtil.InferMode
+import org.apache.flink.table.util.ExecResourceUtil.InferMode
 import org.apache.flink.table.util.PlanUtil.toPlanWihMetrics
 import org.apache.flink.test.util.AbstractTestBase
 import org.apache.flink.types.Row
 import org.apache.flink.util.AbstractID
+
+import org.apache.calcite.tools.RuleSets
 import org.junit._
 
-import scala.collection.JavaConversions._
+import java.nio.file.{Files, Paths}
 
+import scala.collection.JavaConversions._
 import scala.io.Source
 
 class PlanUtilTest extends AbstractTestBase {
@@ -71,7 +71,7 @@ class PlanUtilTest extends AbstractTestBase {
     tmpFile = "filter-plan.tmp"
     tableEnv.registerCollection("Table3", data3, type3, "a, b, c")
     val sqlQuery = "SELECT * FROM Table3 WHERE a > 0 " +
-        "ORDER BY a OFFSET 2 ROWS FETCH NEXT 5 ROWS ONLY"
+      "ORDER BY a OFFSET 2 ROWS FETCH NEXT 5 ROWS ONLY"
     val table = tableEnv.sqlQuery(sqlQuery)
     val sink = createCollectTableSink(
       Array("a, b, c"),
@@ -84,11 +84,14 @@ class PlanUtilTest extends AbstractTestBase {
   @Test
   def testDumpPlanWithMetricsOfJoin(): Unit = {
     tableEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
-    val program = tableEnv.getConfig.getCalciteConfig.getBatchPrograms
-        .getFlinkRuleSetProgram(FlinkBatchPrograms.PHYSICAL)
-    program.get.remove(RuleSets.ofList(
+    val programs = FlinkBatchPrograms.buildPrograms(tableEnv.getConfig.getConf)
+    val physicalProgram = programs.getFlinkRuleSetProgram(FlinkBatchPrograms.PHYSICAL)
+    physicalProgram.get.remove(RuleSets.ofList(
       BatchExecSortMergeJoinRule.INSTANCE,
       BatchExecNestedLoopJoinRule.INSTANCE))
+    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    tableEnv.getConfig.setCalciteConfig(calciteConfig)
+
     tmpFile = "join-plan.tmp"
     tableEnv.registerCollection("Table3", get3DataRow()._1, get3DataRow()._2, "a, b, c")
     tableEnv.registerCollection("Table5", get5DataRow()._1, get5DataRow()._2, "d, e, f, g, h")
@@ -121,7 +124,7 @@ class PlanUtilTest extends AbstractTestBase {
     val sink = originSink.configure(fieldNames, fieldTypes).asInstanceOf[CollectTableSink[Row]]
     val sinkTyp = sink.getOutputType
     val typeSerializer = DataTypes.to(sinkTyp).createSerializer(env.getConfig)
-        .asInstanceOf[TypeSerializer[Row]]
+      .asInstanceOf[TypeSerializer[Row]]
     sink.init(typeSerializer, new AbstractID().toString)
     sink
   }

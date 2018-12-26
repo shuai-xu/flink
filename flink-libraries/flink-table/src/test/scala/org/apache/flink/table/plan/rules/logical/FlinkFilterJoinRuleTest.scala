@@ -17,16 +17,18 @@
  */
 package org.apache.flink.table.plan.rules.logical
 
-import java.util.Random
-
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.util.TableTestBatchExecBase
+
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Before, Test}
+
+import java.util.Random
 
 @RunWith(classOf[Parameterized])
 class FlinkFilterJoinRuleTest(fieldsNullable: Boolean) extends TableTestBatchExecBase {
@@ -34,8 +36,10 @@ class FlinkFilterJoinRuleTest(fieldsNullable: Boolean) extends TableTestBatchExe
 
   @Before
   def setup(): Unit = {
-    val calciteConfig = util.tableEnv.getConfig.getCalciteConfig
-    calciteConfig.getBatchPrograms.remove(FlinkBatchPrograms.PHYSICAL)
+    val programs = FlinkBatchPrograms.buildPrograms(util.getTableEnv.getConfig.getConf)
+    programs.remove(FlinkBatchPrograms.PHYSICAL)
+    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.addTable[(Int, Long)]("leftT", 'a, 'b)
     util.addTable[(Int, Long)]("rightT", 'c, 'd)

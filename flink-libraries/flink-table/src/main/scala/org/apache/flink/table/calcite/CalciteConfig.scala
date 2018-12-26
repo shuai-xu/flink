@@ -18,15 +18,16 @@
 
 package org.apache.flink.table.calcite
 
-import java.util.Properties
+import org.apache.flink.table.plan.optimize._
+import org.apache.flink.util.Preconditions
 
 import org.apache.calcite.config.{CalciteConnectionConfig, CalciteConnectionConfigImpl, CalciteConnectionProperty}
 import org.apache.calcite.sql.SqlOperatorTable
 import org.apache.calcite.sql.parser.SqlParser
 import org.apache.calcite.sql.util.ChainedSqlOperatorTable
 import org.apache.calcite.sql2rel.SqlToRelConverter
-import org.apache.flink.table.plan.optimize._
-import org.apache.flink.util.Preconditions
+
+import java.util.Properties
 
 /**
   * Builder for creating a Calcite configuration.
@@ -36,12 +37,12 @@ class CalciteConfigBuilder {
   /**
     * Defines the optimize programs for batch table plan.
     */
-  private var batchPrograms = FlinkBatchPrograms.buildPrograms()
+  private var batchPrograms: Option[FlinkChainedPrograms[BatchOptimizeContext]] = None
 
   /**
     * Defines the optimize programs for stream table plan.
     */
-  private var streamPrograms = FlinkStreamPrograms.buildPrograms()
+  private var streamPrograms: Option[FlinkChainedPrograms[StreamOptimizeContext]] = None
 
   /**
     * Defines the SQL operator tables.
@@ -50,36 +51,22 @@ class CalciteConfigBuilder {
   private var operatorTables: List[SqlOperatorTable] = Nil
 
   /**
-    * Gets batch table optimize programs.
-    *
-    * @return batch table optimize programs instance.
+    * Sets batch table optimize programs.
     */
-  def getBatchPrograms: FlinkChainedPrograms[BatchOptimizeContext] = batchPrograms
-
-  /**
-    * Replaces the built-in batch table optimize programs.
-    */
-  def replaceBatchPrograms(
-      programs: FlinkChainedPrograms[BatchOptimizeContext])
-  : CalciteConfigBuilder = {
-    batchPrograms = Preconditions.checkNotNull(programs)
+  def setBatchPrograms(
+      programs: FlinkChainedPrograms[BatchOptimizeContext]): CalciteConfigBuilder = {
+    Preconditions.checkNotNull(programs)
+    batchPrograms = Some(programs)
     this
   }
 
   /**
-    * Gets stream table optimize programs.
-    *
-    * @return stream table optimize programs instance.
+    * Sets stream table optimize programs.
     */
-  def getStreamPrograms: FlinkChainedPrograms[StreamOptimizeContext] = streamPrograms
-
-  /**
-    * Replaces the built-in stream table optimize programs.
-    */
-  def replaceStreamPrograms(
-    programs: FlinkChainedPrograms[StreamOptimizeContext])
-  : CalciteConfigBuilder = {
-    streamPrograms = Preconditions.checkNotNull(programs)
+  def setStreamPrograms(
+      programs: FlinkChainedPrograms[StreamOptimizeContext]): CalciteConfigBuilder = {
+    Preconditions.checkNotNull(programs)
+    streamPrograms = Some(programs)
     this
   }
 
@@ -128,20 +115,22 @@ class CalciteConfigBuilder {
   }
 
   private class CalciteConfigImpl(
-      val getBatchPrograms: FlinkChainedPrograms[BatchOptimizeContext],
-      val getStreamPrograms: FlinkChainedPrograms[StreamOptimizeContext],
+      val getBatchPrograms: Option[FlinkChainedPrograms[BatchOptimizeContext]],
+      val getStreamPrograms: Option[FlinkChainedPrograms[StreamOptimizeContext]],
       val getSqlOperatorTable: Option[SqlOperatorTable],
       val replacesSqlOperatorTable: Boolean,
       val getSqlParserConfig: Option[SqlParser.Config],
       val getSqlToRelConverterConfig: Option[SqlToRelConverter.Config])
-    extends CalciteConfig
+    extends CalciteConfig {
+
+  }
 
   /**
     * Builds a new [[CalciteConfig]].
     */
   def build(): CalciteConfig = new CalciteConfigImpl(
-    getBatchPrograms,
-    getStreamPrograms,
+    batchPrograms,
+    streamPrograms,
     operatorTables match {
       case Nil => None
       case h :: Nil => Some(h)
@@ -160,14 +149,14 @@ class CalciteConfigBuilder {
 trait CalciteConfig {
 
   /**
-    * Returns batch table optimize programs.
+    * Returns a custom batch table optimize programs.
     */
-  def getBatchPrograms: FlinkChainedPrograms[BatchOptimizeContext]
+  def getBatchPrograms: Option[FlinkChainedPrograms[BatchOptimizeContext]]
 
   /**
-    * Returns stream table optimize programs.
+    * Returns a custom stream table optimize programs.
     */
-  def getStreamPrograms: FlinkChainedPrograms[StreamOptimizeContext]
+  def getStreamPrograms: Option[FlinkChainedPrograms[StreamOptimizeContext]]
 
   /**
     * Returns whether this configuration replaces the built-in SQL operator table.
@@ -201,7 +190,7 @@ object CalciteConfig {
     new CalciteConfigBuilder
   }
 
-  def connectionConfig(parserConfig : SqlParser.Config): CalciteConnectionConfig = {
+  def connectionConfig(parserConfig: SqlParser.Config): CalciteConnectionConfig = {
     val prop = new Properties()
     prop.setProperty(CalciteConnectionProperty.CASE_SENSITIVE.camelName,
       String.valueOf(parserConfig.caseSensitive))

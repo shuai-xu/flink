@@ -39,7 +39,7 @@ import org.apache.flink.table.plan.logical.{LogicalRelNode, SinkNode}
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.calcite._
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecRel, _}
-import org.apache.flink.table.plan.optimize.StreamOptimizeContext
+import org.apache.flink.table.plan.optimize.{FlinkStreamPrograms, StreamOptimizeContext}
 import org.apache.flink.table.plan.schema.{TableSourceSinkTable, _}
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.plan.util.{FlinkRelOptUtil, UpdatingPlanChecker}
@@ -843,6 +843,7 @@ abstract class StreamTableEnvironment(
       isSinkBlock: Boolean = true): RelNode = {
 
     val programs = config.getCalciteConfig.getStreamPrograms
+      .getOrElse(FlinkStreamPrograms.buildPrograms(config.getConf))
     Preconditions.checkNotNull(programs)
 
     val flinkChainContext = getPlanner.getContext.asInstanceOf[FlinkChainContext]

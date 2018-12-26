@@ -37,16 +37,14 @@ import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.tools.RuleSet
 import org.apache.calcite.util.ImmutableBitSet
-
 import org.apache.commons.lang3.SystemUtils
-
-import java.util
-import java.util.{ArrayList => JArrayList}
-
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}
 import org.mockito.Mockito.{mock, when}
+
+import java.util
+import java.util.{ArrayList => JArrayList}
 
 /**
   * Test base for testing Table API / SQL plans.
@@ -75,8 +73,7 @@ abstract class TableTestBase {
   }
 
   def injectRules(tEnv: TableEnvironment, phase: String, injectRuleSet: RuleSet): Unit = {
-    val builder = new CalciteConfigBuilder()
-    val programs = builder.getStreamPrograms
+    val programs = FlinkStreamPrograms.buildPrograms(tEnv.getConfig.getConf)
     programs.get(phase) match {
       case Some(groupProg: FlinkGroupProgram[StreamOptimizeContext]) =>
         groupProg.addProgram(
@@ -89,6 +86,7 @@ abstract class TableTestBase {
       case _ =>
         throw new RuntimeException(s"$phase does not exist")
     }
+    val builder = new CalciteConfigBuilder().setStreamPrograms(programs)
     tEnv.getConfig.setCalciteConfig(builder.build())
   }
 }
@@ -144,7 +142,7 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
   def addTable[T: TypeInformation](
       name: String,
       fields: Expression*)
-    : Table = {
+  : Table = {
 
     val ds = mock(classOf[DataStream[T]])
     val jDs = mock(classOf[JDataStream[T]])
@@ -220,7 +218,7 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
   }
 
   def verifyUniqueKeys(table: Table, expect: Set[Int]*): Unit = {
-    val node = tableEnv.optimize(table.getRelNode,  updatesAsRetraction = false)
+    val node = tableEnv.optimize(table.getRelNode, updatesAsRetraction = false)
     val mq: FlinkRelMetadataQuery = FlinkRelMetadataQuery.instance()
     val actual = mq.getUniqueKeys(node)
     val expectSet = new util.HashSet[ImmutableBitSet]

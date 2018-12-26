@@ -20,6 +20,7 @@ package org.apache.flink.table.runtime.batch.sql.agg
 
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{TableConfigOptions, TableException}
+import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.logical.{AggregateReduceGroupingRule, FlinkAggregateJoinTransposeRule}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
@@ -38,7 +39,7 @@ class FlinkAggregateJoinTransposeRuleITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    val programs = tEnv.getConfig.getCalciteConfig.getBatchPrograms
+    val programs = FlinkBatchPrograms.buildPrograms(tEnv.getConfig.getConf)
     // remove FlinkAggregateJoinTransposeRule from logical program (volcano planner)
     programs.getFlinkRuleSetProgram(FlinkBatchPrograms.LOGICAL)
       .getOrElse(throw new TableException(s"${FlinkBatchPrograms.LOGICAL} does not exist"))
@@ -68,6 +69,8 @@ class FlinkAggregateJoinTransposeRuleITCase extends QueryTest {
             )).build(), "aggregate join transpose")
         .build()
     )
+    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    tEnv.getConfig.setCalciteConfig(calciteConfig)
 
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     registerCollection("T3", data3, type3, "a, b, c", nullablesOfData3)

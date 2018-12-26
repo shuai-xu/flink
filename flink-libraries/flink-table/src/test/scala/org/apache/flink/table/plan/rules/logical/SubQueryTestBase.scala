@@ -17,12 +17,13 @@
  */
 package org.apache.flink.table.plan.rules.logical
 
-import org.apache.calcite.plan.hep.HepMatchOrder
-import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 import org.apache.flink.table.util._
+
+import org.apache.calcite.plan.hep.HepMatchOrder
+import org.apache.calcite.sql2rel.SqlToRelConverter
 
 class SubQueryTestBase(fieldsNullable: Boolean) extends TableTestBatchExecBase {
   val util: NullableBatchExecTableTestUtil = nullableBatchExecTestUtil(fieldsNullable)
@@ -61,7 +62,7 @@ class SubQueryTestBase(fieldsNullable: Boolean) extends TableTestBatchExecBase {
       .withExpand(false)
       .withInSubQueryThreshold(3)
       .build())
-    .replaceBatchPrograms(buildPrograms())
+    .setBatchPrograms(buildPrograms())
 
   util.tableEnv.config.setCalciteConfig(builder.build())
 }

@@ -58,7 +58,7 @@ class FlinkAggregateRemoveRuleTest(fieldsNullable: Boolean) extends TableTestBat
           FlinkLogicalSink.CONVERTER))
         .setTargetTraits(Array(FlinkConventions.LOGICAL))
         .build())
-    val calciteConfig = new CalciteConfigBuilder().replaceBatchPrograms(programs).build()
+    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.addTable[(Int, Int, String)]("MyTable1", 'a, 'b, 'c)

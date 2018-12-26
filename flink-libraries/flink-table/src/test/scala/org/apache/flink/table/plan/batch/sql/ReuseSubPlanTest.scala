@@ -22,6 +22,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.functions.{ScalarFunction, TableFunction}
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.plan.rules.logical.PushLimitIntoTableSourceScanRule
 import org.apache.flink.table.plan.stats.TableStats
@@ -43,10 +44,11 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
   def before(): Unit = {
     util = batchExecTestUtil()
     // For #testReuseSubPlan_Limit
-    util.tableEnv.getConfig.getCalciteConfig
-      .getBatchPrograms
-      .getFlinkRuleSetProgram(FlinkBatchPrograms.LOGICAL)
+    val programs = FlinkBatchPrograms.buildPrograms(util.tableEnv.getConfig.getConf)
+    programs.getFlinkRuleSetProgram(FlinkBatchPrograms.LOGICAL)
       .get.remove(RuleSets.ofList(PushLimitIntoTableSourceScanRule.INSTANCE))
+    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     // clear parameters
     util.tableEnv.getConfig.getConf
@@ -323,7 +325,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
     util.verifyPlan(sqlQuery)
   }
 
-  @Test @Ignore // FIXME: BLINK-16477898
+  @Test
+  @Ignore // FIXME: BLINK-16477898
   def testNestedReusableSubPlan(): Unit = {
     util.tableEnv.getConfig.getConf.setString(
       TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin,SortAgg")
@@ -455,7 +458,7 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
   }
 
 
-  @Ignore  // [BLINK-14928444]
+  @Ignore // [BLINK-14928444]
   @Test
   def testReusableSubPlan_NonDeterministicOverWindowAgg(): Unit = {
     util.tableEnv.registerFunction("MyFirst", new IntFirstValueAggFunction)
@@ -467,7 +470,7 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
     util.verifyPlan(sqlQuery)
   }
 
-  @Ignore  // [BLINK-14928444]
+  @Ignore // [BLINK-14928444]
   @Test
   def testReusableSubPlan_NonDeterministicOverWindowAgg_Disabled(): Unit = {
     util.tableEnv.registerFunction("MyFirst", new IntFirstValueAggFunction)
@@ -482,7 +485,7 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
     util.verifyPlan(sqlQuery)
   }
 
-  @Ignore  // [BLINK-14928444]
+  @Ignore // [BLINK-14928444]
   @Test
   def testReusableSubPlan_NonDeterministicOverWindowAgg_Enabled(): Unit = {
     util.tableEnv.registerFunction("MyFirst", new IntFirstValueAggFunction)

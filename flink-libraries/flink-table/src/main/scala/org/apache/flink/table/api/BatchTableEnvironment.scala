@@ -38,10 +38,10 @@ import org.apache.flink.table.plan.cost.{FlinkBatchCost, FlinkCostFactory}
 import org.apache.flink.table.plan.logical.SinkNode
 import org.apache.flink.table.plan.nodes.calcite.Sink
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExecSink}
-import org.apache.flink.table.plan.optimize.BatchOptimizeContext
+import org.apache.flink.table.plan.optimize.{BatchOptimizeContext, FlinkBatchPrograms}
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.plan.util.{DeadlockBreakupProcessor, SameRelObjectShuttle, SubplanReuseContext, SubplanReuseShuttle, FlinkRelOptUtil}
+import org.apache.flink.table.plan.util.{DeadlockBreakupProcessor, FlinkRelOptUtil, SameRelObjectShuttle, SubplanReuseContext, SubplanReuseShuttle}
 import org.apache.flink.table.plan.{RelNodeBlock, RelNodeBlockPlanBuilder}
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
@@ -516,6 +516,7 @@ class BatchTableEnvironment(
    */
   private[flink] def optimize(relNode: RelNode): RelNode = {
     val programs = config.getCalciteConfig.getBatchPrograms
+      .getOrElse(FlinkBatchPrograms.buildPrograms(config.getConf))
     Preconditions.checkNotNull(programs)
 
     val optimizedPlan = programs.optimize(relNode, new BatchOptimizeContext {

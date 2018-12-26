@@ -18,9 +18,11 @@
 
 package org.apache.flink.table.plan.optimize
 
-import org.apache.calcite.plan.hep.HepMatchOrder
+import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.rules.{FlinkBatchExecRuleSets, FlinkStreamExecRuleSets}
+
+import org.apache.calcite.plan.hep.HepMatchOrder
 
 /**
   * Defines a sequence of programs to optimize for stream table plan.
@@ -40,7 +42,7 @@ object FlinkStreamPrograms {
   val PHYSICAL = "physical"
   val PHYSICAL_REWRITE = "physical_rewrite"
 
-  def buildPrograms(): FlinkChainedPrograms[StreamOptimizeContext] = {
+  def buildPrograms(config: Configuration): FlinkChainedPrograms[StreamOptimizeContext] = {
     val programs = new FlinkChainedPrograms[StreamOptimizeContext]()
 
     // rewrite sub-queries to joins

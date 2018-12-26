@@ -17,15 +17,15 @@
  */
 package org.apache.flink.table.api
 
-import _root_.java.util.TimeZone
-
-import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-
 import org.apache.flink.api.common.time.Time
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.configuration.{Configuration, GlobalConfiguration}
 import org.apache.flink.table.api.OperatorType.OperatorType
-import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.calcite.CalciteConfig
+import org.apache.flink.util.Preconditions
+
+import _root_.java.util.TimeZone
 
 /**
   * A config to define the runtime behavior of the Table API.
@@ -95,7 +95,7 @@ class TableConfig {
     * Changing the configuration has no effect after the first query has been defined.
     */
   def setCalciteConfig(calciteConfig: CalciteConfig): Unit = {
-    this.calciteConfig = calciteConfig
+    this.calciteConfig = Preconditions.checkNotNull(calciteConfig)
   }
 
   /**

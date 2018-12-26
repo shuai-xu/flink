@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.plan.optimize
 
+import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 
@@ -39,7 +40,7 @@ object FlinkBatchPrograms {
   val PHYSICAL = "physical"
   val PHYSICAL_REWRITE = "physical_rewrite"
 
-  def buildPrograms(): FlinkChainedPrograms[BatchOptimizeContext] = {
+  def buildPrograms(config: Configuration): FlinkChainedPrograms[BatchOptimizeContext] = {
     val programs = new FlinkChainedPrograms[BatchOptimizeContext]()
 
     programs.addLast(

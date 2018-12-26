@@ -25,6 +25,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.{CalciteConfigBuilder, FlinkChainContext}
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.optimize.FlinkStreamPrograms
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithMerge
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 
@@ -268,12 +269,16 @@ class ModifiedMonotonicityTest extends TableTestBase {
     verifyMono(sql, Array(), expect)
   }
 
-  def verifyMono(sql: String, planBlackList: Array[String], expect: RelModifiedMonotonicity)
-  : Unit = {
-    val oldPrograms = streamUtil.tableEnv.getConfig.getCalciteConfig.getStreamPrograms
+  def verifyMono(
+      sql: String,
+      planBlackList: Array[String],
+      expect: RelModifiedMonotonicity): Unit = {
+    val tableConfig = streamUtil.tableEnv.getConfig
+    val oldPrograms = tableConfig.getCalciteConfig.getStreamPrograms
+      .getOrElse(FlinkStreamPrograms.buildPrograms(tableConfig.getConf))
     planBlackList.foreach(e => oldPrograms.remove(e))
     val builder = new CalciteConfigBuilder()
-    builder.replaceStreamPrograms(oldPrograms)
+    builder.setStreamPrograms(oldPrograms)
     val config = builder.build()
     streamUtil.tableEnv.getConfig.setCalciteConfig(config)
 

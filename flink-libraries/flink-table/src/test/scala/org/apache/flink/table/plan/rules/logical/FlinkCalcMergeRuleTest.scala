@@ -55,7 +55,7 @@ class FlinkCalcMergeRuleTest extends TableTestBatchExecBase {
         ))
         .setTargetTraits(Array(FlinkConventions.LOGICAL))
         .build())
-    val calciteConfig = new CalciteConfigBuilder().replaceBatchPrograms(programs).build()
+    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.addTable[(Int, Int, String)]("MyTable", 'a, 'b, 'c)

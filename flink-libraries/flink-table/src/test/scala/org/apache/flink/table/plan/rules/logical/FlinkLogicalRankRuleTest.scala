@@ -20,8 +20,10 @@ package org.apache.flink.table.plan.rules.logical
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.util.TableTestBase
+
 import org.junit.{Before, Test}
 
 import scala.collection.JavaConversions._
@@ -32,17 +34,18 @@ class FlinkLogicalRankRuleTest extends TableTestBase {
   @Before
   def setup(): Unit = {
     var startRemove = false
-    val calciteConfig = util.tableEnv.getConfig.getCalciteConfig
-    calciteConfig.getStreamPrograms.getProgramNames.foreach {
-      name =>
-        if (name.equals(FlinkBatchPrograms.PHYSICAL)) {
-          startRemove = true
-        }
-        if (startRemove) {
-          calciteConfig.getStreamPrograms.remove(name)
-        }
+    val programs = FlinkStreamPrograms.buildPrograms(util.tableEnv.getConfig.getConf)
+    programs.getProgramNames.foreach { name =>
+      if (name.equals(FlinkBatchPrograms.PHYSICAL)) {
+        startRemove = true
+      }
+      if (startRemove) {
+        programs.remove(name)
+      }
     }
 
+    val calciteConfig = new CalciteConfigBuilder().setStreamPrograms(programs).build()
+    util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
     util.addTable[(Int, Long, String)]("x", 'a, 'b, 'c)
   }
 

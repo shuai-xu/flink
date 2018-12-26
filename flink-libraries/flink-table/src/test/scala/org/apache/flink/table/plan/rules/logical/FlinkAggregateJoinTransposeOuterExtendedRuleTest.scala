@@ -50,7 +50,7 @@ class FlinkAggregateJoinTransposeOuterExtendedRuleTest extends TableTestBase {
           FlinkAggregateJoinTransposeRule.LEFT_RIGHT_OUTER_JOIN_EXTENDED
         )).build()
     )
-    val calciteConfig = new CalciteConfigBuilder().replaceStreamPrograms(programs).build()
+    val calciteConfig = new CalciteConfigBuilder().setStreamPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
     util.addTable[(Int, Long, String, Int)]("T", 'a, 'b, 'c, 'd)
   }

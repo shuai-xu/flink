@@ -18,16 +18,9 @@
 
 package org.apache.flink.table.runtime.stream.table
 
-import java.lang.{Integer => JInt, Long => JLong}
-import org.apache.calcite.plan.hep.HepMatchOrder
-import org.apache.calcite.runtime.SqlFunctions.{internalToTimestamp => toTimestamp}
-import org.apache.calcite.tools.RuleSets
-import org.apache.flink.table.runtime.utils._
-import org.apache.flink.table.util.{TestFlinkLogicalLastRowRule, TestTableSourceWithTime, TestTableSourceWithUniqueKeys}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
-import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
@@ -37,11 +30,21 @@ import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
+import org.apache.flink.table.runtime.utils._
+import org.apache.flink.table.util.{TestFlinkLogicalLastRowRule, TestTableSourceWithTime, TestTableSourceWithUniqueKeys}
 import org.apache.flink.types.Row
-import org.junit.Test
+
+import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
+
+import org.apache.calcite.plan.hep.HepMatchOrder
+import org.apache.calcite.runtime.SqlFunctions.{internalToTimestamp => toTimestamp}
+import org.apache.calcite.tools.RuleSets
 import org.junit.Assert.assertEquals
+import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+
+import java.lang.{Integer => JInt, Long => JLong}
 
 import scala.collection.mutable
 
@@ -134,7 +137,7 @@ class LastRowITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
       Array("a", "pk", "c", "d"))
 
     val schema = TableSchema.builder().fromDataType(DataTypes.of(rowType))
-          .primaryKey("pk").build()
+      .primaryKey("pk").build()
 
     tEnv.registerTableSource(tableName, new TestTableSourceWithTime(
       schema,
@@ -182,7 +185,7 @@ class LastRowITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
         .asInstanceOf[Array[TypeInformation[_]]],
       Array("a", "pk", "c", "d"))
     val schema = TableSchema.builder().fromDataType(DataTypes.of(rowType))
-          .primaryKey("pk").build()
+      .primaryKey("pk").build()
 
     tEnv.registerTableSource(tableName, new TestTableSourceWithTime(
       schema,
@@ -203,17 +206,18 @@ class LastRowITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
   }
 
   def injectLastRowRule(tEnv: TableEnvironment): Unit = {
-    val builder = new CalciteConfigBuilder()
-    val programs: FlinkOptimizeProgram[_] = builder.getStreamPrograms
-      .get(FlinkStreamPrograms.LOGICAL_REWRITE)
+    val programs = FlinkStreamPrograms.buildPrograms(tEnv.getConfig.getConf)
+
+    val logocalRewriteProgram = programs.get(FlinkStreamPrograms.LOGICAL_REWRITE)
       .getOrElse(throw new RuntimeException(s"${FlinkStreamPrograms.LOGICAL_REWRITE} not exist"))
 
-    programs.asInstanceOf[FlinkGroupProgram[StreamOptimizeContext]].addProgram(
-      FlinkHepRuleSetProgramBuilder.newBuilder
+    logocalRewriteProgram.asInstanceOf[FlinkGroupProgram[StreamOptimizeContext]]
+      .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
         .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
         .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
         .add(RuleSets.ofList(TestFlinkLogicalLastRowRule.INSTANCE)).build(), "test logical lastRow")
 
+    val builder = new CalciteConfigBuilder().setStreamPrograms(programs)
     tEnv.getConfig.setCalciteConfig(builder.build())
   }
 }

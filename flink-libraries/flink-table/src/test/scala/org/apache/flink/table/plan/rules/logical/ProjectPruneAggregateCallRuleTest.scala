@@ -17,8 +17,9 @@
  */
 package org.apache.flink.table.plan.rules.logical
 
+import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms.LOGICAL
-import org.apache.flink.table.plan.optimize.{FlinkHepRuleSetProgramBuilder, HEP_RULES_EXECUTION_TYPE}
+import org.apache.flink.table.plan.optimize.{FlinkBatchPrograms, FlinkHepRuleSetProgramBuilder, HEP_RULES_EXECUTION_TYPE}
 
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule
@@ -30,16 +31,15 @@ class ProjectPruneAggregateCallRuleTest extends PruneAggregateCallRuleTest {
 
   override def setup(): Unit = {
     super.setup()
-    val batchPrograms = util.tableEnv.getConfig.getCalciteConfig.getBatchPrograms
+    val batchPrograms = FlinkBatchPrograms.buildPrograms(util.getTableEnv.getConfig.getConf)
     var startRemove = false
-    batchPrograms.getProgramNames.foreach {
-      name =>
-        if (name.equals(LOGICAL)) {
-          startRemove = true
-        }
-        if (startRemove) {
-          batchPrograms.remove(name)
-        }
+    batchPrograms.getProgramNames.foreach { name =>
+      if (name.equals(LOGICAL)) {
+        startRemove = true
+      }
+      if (startRemove) {
+        batchPrograms.remove(name)
+      }
     }
     batchPrograms.addLast(
       LOGICAL,
@@ -51,5 +51,8 @@ class ProjectPruneAggregateCallRuleTest extends PruneAggregateCallRuleTest {
           ProjectFilterTransposeRule.INSTANCE,
           PruneAggregateCallRule.PROJECT_ON_AGGREGATE)
         ).build())
+
+    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(batchPrograms).build()
+    util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
   }
 }

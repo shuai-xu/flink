@@ -41,7 +41,7 @@ class FilterSimplifyExpressionsRuleTest extends TableTestBatchExecBase {
           .add(RuleSets.ofList(FilterSimplifyExpressionsRule.EXTENDED))
           .build()
     )
-    val calciteConfig = new CalciteConfigBuilder().replaceBatchPrograms(programs).build()
+    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.addTable[(Int, Long, String)]("x", 'a, 'b, 'c)

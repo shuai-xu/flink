@@ -17,12 +17,15 @@
  */
 package org.apache.flink.table.plan.rules.logical
 
+import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.plan.optimize._
+
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.rel.rules.SemiJoinFilterTransposeRule
 import org.apache.calcite.tools.RuleSets
-import org.apache.flink.api.scala._
-import org.apache.flink.table.api.scala._
-import org.apache.flink.table.plan.optimize._
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Before, Test}
@@ -33,18 +36,20 @@ class FlinkSemiJoinJoinTransposeRuleTest(fieldsNullable: Boolean)
 
   @Before
   def setup(): Unit = {
-    util.tableEnv.config
-      .getCalciteConfig
-      .getBatchPrograms
-      .addLast("semi_join_transpose",
-        FlinkHepRuleSetProgramBuilder.newBuilder
-          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
-          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-          .add(RuleSets.ofList(
-            FlinkSemiJoinJoinTransposeRule.INSTANCE,
-            FlinkSemiJoinProjectTransposeRule.INSTANCE,
-            SemiJoinFilterTransposeRule.INSTANCE))
-          .build())
+    // update programs inited in parent class
+    val programs = util.getTableEnv.getConfig.getCalciteConfig.getBatchPrograms
+      .getOrElse(throw new TableException("optimize programs is not set in parent class"))
+    programs.addLast("semi_join_transpose",
+      FlinkHepRuleSetProgramBuilder.newBuilder
+        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
+        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+        .add(RuleSets.ofList(
+          FlinkSemiJoinJoinTransposeRule.INSTANCE,
+          FlinkSemiJoinProjectTransposeRule.INSTANCE,
+          SemiJoinFilterTransposeRule.INSTANCE))
+        .build())
+    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    util.getTableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.addTable[(Int, Long, String)]("x", 'a, 'b, 'c)
     util.addTable[(Int, Long, String)]("y", 'd, 'e, 'f)

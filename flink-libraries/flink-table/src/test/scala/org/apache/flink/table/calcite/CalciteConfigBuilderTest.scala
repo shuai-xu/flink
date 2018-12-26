@@ -18,9 +18,11 @@
 
 package org.apache.flink.table.calcite
 
+import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.plan.optimize._
+
 import org.apache.calcite.sql.fun.{OracleSqlOperatorTable, SqlStdOperatorTable}
 import org.apache.calcite.sql2rel.SqlToRelConverter
-import org.apache.flink.table.plan.optimize._
 import org.junit.Assert._
 import org.junit.Test
 
@@ -31,16 +33,16 @@ class CalciteConfigBuilderTest {
   @Test
   def testPrograms(): Unit = {
     val cc: CalciteConfig = new CalciteConfigBuilder().build()
-
-    assertNotNull(cc.getStreamPrograms)
+    assertTrue(cc.getStreamPrograms.isEmpty)
 
     val builder = new CalciteConfigBuilder()
-    val streamPrograms = FlinkStreamPrograms.buildPrograms()
+    val streamPrograms = FlinkStreamPrograms.buildPrograms(TableConfig.DEFAULT.getConf)
     streamPrograms.remove(FlinkStreamPrograms.PHYSICAL_REWRITE)
-    builder.replaceStreamPrograms(streamPrograms)
+    builder.setStreamPrograms(streamPrograms)
 
     val config = builder.build()
-    assertTrue(streamPrograms == config.getStreamPrograms)
+    assertTrue(config.getStreamPrograms.isDefined)
+    assertTrue(streamPrograms == config.getStreamPrograms.get)
   }
 
   @Test

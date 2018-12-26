@@ -17,17 +17,19 @@
  */
 package org.apache.flink.table.plan.rules.logical
 
-import java.sql.Timestamp
+import org.apache.flink.api.scala._
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.plan.optimize._
+import org.apache.flink.table.util.TableTestBatchExecBase
 
 import org.apache.calcite.rel.rules.AggregateRemoveRule
 import org.apache.calcite.tools.RuleSets
-import org.apache.flink.api.scala._
-import org.apache.flink.table.api.scala._
-import org.apache.flink.table.plan.optimize._
-import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Before, Test}
+
+import java.sql.Timestamp
 
 import scala.collection.JavaConversions._
 
@@ -38,7 +40,7 @@ class AggregateReduceGroupingRuleTest(plan: String) extends TableTestBatchExecBa
   @Before
   def setup(): Unit = {
     if (plan == "logical") {
-      val programs = util.tableEnv.getConfig.getCalciteConfig.getBatchPrograms
+      val programs = FlinkBatchPrograms.buildPrograms(util.getTableEnv.getConfig.getConf)
       var startRemove = false
       programs.getProgramNames.foreach { name =>
         if (startRemove) {
@@ -47,6 +49,8 @@ class AggregateReduceGroupingRuleTest(plan: String) extends TableTestBatchExecBa
           startRemove = true
         }
       }
+      val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+      util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
     }
 
     util.addTable[(Int, Int, String, String)]("T1", Set(Set("a1")), 'a1, 'b1, 'c1, 'd1)
@@ -58,8 +62,11 @@ class AggregateReduceGroupingRuleTest(plan: String) extends TableTestBatchExecBa
   @Test
   def testAggWithoutAggCall(): Unit = {
     val programs = util.tableEnv.getConfig.getCalciteConfig.getBatchPrograms
+      .getOrElse(FlinkBatchPrograms.buildPrograms(util.getTableEnv.getConfig.getConf))
     programs.getFlinkRuleSetProgram(FlinkBatchPrograms.LOGICAL)
       .get.remove(RuleSets.ofList(AggregateRemoveRule.INSTANCE)) // to prevent the agg from removing
+    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
     util.verifyPlan("SELECT a1, b1, c1 FROM T1 GROUP BY a1, b1, c1")
   }
 

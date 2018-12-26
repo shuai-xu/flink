@@ -69,7 +69,7 @@ class FlinkRewriteCoalesceRuleTest extends TableTestBatchExecBase {
         .add(FlinkBatchExecRuleSets.BATCH_EXEC_DEFAULT_REWRITE_RULES)
         .build())
 
-    val calciteConfig = new CalciteConfigBuilder().replaceBatchPrograms(programs).build()
+    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.addTable[(Int, String, String, Int, Date, Double, Double, Int)]("scott_emp",
