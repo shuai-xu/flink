@@ -122,7 +122,7 @@ object TableFactoryUtil {
       tableProperties: TableProperties): ToolConnectorDescriptor = {
 
     // get table discriptor
-    val typeName = tableProperties.getString("connector.type", "").toLowerCase()
+    val typeName = tableProperties.getString("connector.type", "")
     tableProperties.remove("connector.type")
     if (typeName.trim.length == 0) {
       throw new TableException("Connector type should not be null!")
