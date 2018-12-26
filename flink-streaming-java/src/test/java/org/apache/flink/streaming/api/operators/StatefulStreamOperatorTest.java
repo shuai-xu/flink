@@ -35,9 +35,9 @@ import org.apache.flink.runtime.operators.testutils.MockInputSplitProvider;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.GroupRange;
-import org.apache.flink.runtime.state.GroupRangePartitioner;
 import org.apache.flink.runtime.state.InternalStateBackend;
 import org.apache.flink.runtime.state.KeyGroupRange;
+import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.SnapshotResult;
@@ -246,10 +246,12 @@ public class StatefulStreamOperatorTest {
 
 		testHarness.open();
 
-		GroupRange leftGroups = GroupRangePartitioner.getPartitionRange(GroupRange.of(0, 10), 3, 0);
+		KeyGroupRange leftKeyGroupRange = KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(10, 3, 0);
+		GroupRange leftGroups = GroupRange.of(leftKeyGroupRange.getStartKeyGroup(), leftKeyGroupRange.getEndKeyGroup() + 1);
 		Map<String, String> leftPairs = new HashMap<>();
 
-		GroupRange rightGroups = GroupRangePartitioner.getPartitionRange(GroupRange.of(0, 10), 3, 2);
+		KeyGroupRange rightKeyGroupRange = KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(10, 3, 2);
+		GroupRange rightGroups = GroupRange.of(rightKeyGroupRange.getStartKeyGroup(), rightKeyGroupRange.getEndKeyGroup() + 1);
 		Map<String, String> rightPairs = new HashMap<>();
 
 		Random random = new Random();

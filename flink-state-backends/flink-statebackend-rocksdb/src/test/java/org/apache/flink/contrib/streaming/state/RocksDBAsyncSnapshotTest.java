@@ -42,9 +42,9 @@ import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.CheckpointStreamFactory.CheckpointStateOutputStream;
 import org.apache.flink.runtime.state.CheckpointedStateScope;
 import org.apache.flink.runtime.state.GroupRange;
-import org.apache.flink.runtime.state.GroupRangePartitioner;
 import org.apache.flink.runtime.state.InternalStateBackend;
 import org.apache.flink.runtime.state.KeyGroupRange;
+import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateBackend;
@@ -438,10 +438,9 @@ public class RocksDBAsyncSnapshotTest extends TestLogger {
 
 		int maxParallelism = env.getTaskInfo().getMaxNumberOfParallelSubtasks();
 
-		GroupRange groups = GroupRangePartitioner.getPartitionRange(
-			new GroupRange(0, maxParallelism),
-			env.getTaskInfo().getNumberOfParallelSubtasks(),
-			env.getTaskInfo().getIndexOfThisSubtask());
+		KeyGroupRange keyGroupRange = KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(
+			maxParallelism, env.getTaskInfo().getNumberOfParallelSubtasks(), env.getTaskInfo().getIndexOfThisSubtask());
+		GroupRange groups = GroupRange.of(keyGroupRange.getStartKeyGroup(), keyGroupRange.getEndKeyGroup() + 1);
 
 		InternalStateBackend internalBackend = backend.createInternalStateBackend(
 			env,

@@ -31,7 +31,6 @@ import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.DefaultOperatorStateBackend;
 import org.apache.flink.runtime.state.GroupRange;
-import org.apache.flink.runtime.state.GroupRangePartitioner;
 import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
@@ -273,11 +272,11 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 
 		TaskInfo taskInfo = environment.getTaskInfo();
 
-		final GroupRange range = GroupRangePartitioner.getPartitionRange(
-			GroupRange.of(0, taskInfo.getMaxNumberOfParallelSubtasks()),
+		KeyGroupRange keyGroupRange = KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(
+			taskInfo.getMaxNumberOfParallelSubtasks(),
 			taskInfo.getNumberOfParallelSubtasks(),
-			taskInfo.getIndexOfThisSubtask()
-		);
+			taskInfo.getIndexOfThisSubtask());
+		final GroupRange range = GroupRange.of(keyGroupRange.getStartKeyGroup(), keyGroupRange.getEndKeyGroup() + 1);
 
 		BackendRestorerProcedure<AbstractInternalStateBackend, StatePartitionSnapshot> backendRestorer =
 			new BackendRestorerProcedure<>(

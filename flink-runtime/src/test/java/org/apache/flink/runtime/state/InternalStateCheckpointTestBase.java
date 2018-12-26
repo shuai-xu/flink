@@ -22,17 +22,6 @@ import org.apache.flink.api.common.typeutils.base.FloatSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.CheckpointType;
-import org.apache.flink.runtime.state.CheckpointStorageLocationReference;
-import org.apache.flink.runtime.state.CheckpointStreamFactory;
-import org.apache.flink.runtime.state.GroupRange;
-import org.apache.flink.runtime.state.GroupRangePartitioner;
-import org.apache.flink.runtime.state.GroupSet;
-import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
-import org.apache.flink.runtime.state.LocalRecoveryConfig;
-import org.apache.flink.runtime.state.SharedStateRegistry;
-import org.apache.flink.runtime.state.SnapshotResult;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
-import org.apache.flink.runtime.state.TestLocalRecoveryConfig;
 import org.apache.flink.runtime.state.memory.MemCheckpointStreamFactory;
 import org.apache.flink.runtime.state.keyed.KeyedMapState;
 import org.apache.flink.runtime.state.keyed.KeyedMapStateDescriptor;
@@ -649,8 +638,8 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 	}
 
 	private GroupSet getGroupsForSubtask(int maxParallelism, int parallelism, int subtaskIndex) {
-		GroupRange groups = new GroupRange(0, maxParallelism);
-		return GroupRangePartitioner.getPartitionRange(groups, parallelism, subtaskIndex);
+		KeyGroupRange keyGroupRange = KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(maxParallelism, parallelism, subtaskIndex);
+		return GroupRange.of(keyGroupRange.getStartKeyGroup(), keyGroupRange.getEndKeyGroup() + 1);
 	}
 
 	private static void validateValueStateData(Map<Integer, Float> expectedData, KeyedValueState<Integer, Float> valueState) {
