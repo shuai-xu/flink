@@ -88,12 +88,18 @@ public class ContextSubKeyedListState<N, E>
 	}
 
 	@Override
-	public void update(List<E> values) throws Exception {
-
+	public void update(List<E> values) {
+		if (values == null || values.isEmpty()) {
+			subKeyedListState.remove(getCurrentKey(), getNamespace());
+		} else {
+			subKeyedListState.putAll(getCurrentKey(), getNamespace(), values);
+		}
 	}
 
 	@Override
-	public void addAll(List<E> values) throws Exception {
-
+	public void addAll(List<E> values) {
+		if (values != null && !values.isEmpty()) {
+			subKeyedListState.addAll(getCurrentKey(), getNamespace(), values);
+		}
 	}
 }

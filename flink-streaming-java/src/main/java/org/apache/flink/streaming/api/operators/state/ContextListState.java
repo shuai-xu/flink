@@ -54,14 +54,14 @@ public class ContextListState<E> implements ListState<E> {
 	}
 
 	@Override
-	public Iterable<E> get() throws Exception {
+	public Iterable<E> get() {
 		final List<E> value = keyedState.get(operator.getCurrentKey());
 		final List<E> ret = value == null ? Collections.emptyList() : value;
 		return () -> ret.iterator();
 	}
 
 	@Override
-	public void add(E value) throws Exception {
+	public void add(E value) {
 		keyedState.add(operator.getCurrentKey(), value);
 	}
 
@@ -71,18 +71,19 @@ public class ContextListState<E> implements ListState<E> {
 	}
 
 	@Override
-	public void update(List<E> values) throws Exception {
-		keyedState.remove(operator.getCurrentKey());
-
-		if (values.isEmpty()) {
-			return;
+	public void update(List<E> values) {
+		if (values == null || values.isEmpty()) {
+			keyedState.remove(operator.getCurrentKey());
+		} else {
+			keyedState.putAll(operator.getCurrentKey(), values);
 		}
-		keyedState.addAll(operator.getCurrentKey(), values);
 	}
 
 	@Override
-	public void addAll(List<E> values) throws Exception {
-		keyedState.addAll(operator.getCurrentKey(), values);
+	public void addAll(List<E> values) {
+		if (values != null && !values.isEmpty()) {
+			keyedState.addAll(operator.getCurrentKey(), values);
+		}
 	}
 }
 
