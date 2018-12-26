@@ -21,7 +21,7 @@ package org.apache.flink.table.plan.metadata
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.types.DataType
-import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableSchema}
+import org.apache.flink.table.api.{TableConfig, TableSchema}
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
@@ -1145,38 +1145,6 @@ class SelectivityEstimatorTest {
       createInputRef(partition_idx),
       createInputRef(name_idx))
     assertEquals(estimator.defaultComparisonSelectivity, estimator.evaluate(predicate2))
-  }
-
-  @Test
-  def testSelectivityWithTableConfig(): Unit = {
-    val tableConfig1 = new TableConfig()
-    tableConfig1.getConf.setDouble(TableConfigOptions.SQL_CBO_SELECTIVITY_COMPARISON_DEFAULT, 0.05)
-    tableConfig1.getConf.setDouble(TableConfigOptions.SQL_CBO_SELECTIVITY_EQUALS_DEFAULT, 0.015)
-    tableConfig1.getConf.setDouble(TableConfigOptions.SQL_CBO_SELECTIVITY_ISNULL_DEFAULT, 0.015)
-    tableConfig1.getConf.setDouble(TableConfigOptions.SQL_CBO_SELECTIVITY_DEFAULT, 0.025)
-    val scan1 = mockScan(tableConfig = Some(tableConfig1))
-    val estimator1 = new SelectivityEstimator(scan1, mq)
-    // amount = 50
-    val predicate1 = createCall(EQUALS, createInputRef(amount_idx), createNumericLiteral(50))
-    assertEquals(Some(0.015), estimator1.evaluate(predicate1))
-    // amount > 50
-    val predicate2 = createCall(GREATER_THAN, createInputRef(amount_idx), createNumericLiteral(50))
-    assertEquals(Some(0.05), estimator1.evaluate(predicate2))
-    // name is null
-    val predicate3 = createCall(IS_NULL, createInputRefWithNullability(name_idx, true))
-    assertEquals(Some(0.015), estimator1.evaluate(predicate3))
-    // (account = 10) is true
-    val predicate4 = createCall(IS_TRUE,
-      createCall(EQUALS, createInputRef(amount_idx), createNumericLiteral(10))
-    )
-    assertEquals(Some(0.015), estimator1.evaluate(predicate4))
-
-    // illegal selectivity value in config
-    val tableConfig2 = new TableConfig()
-    tableConfig2.getConf.setDouble(TableConfigOptions.SQL_CBO_SELECTIVITY_COMPARISON_DEFAULT, 10)
-    val scan2 = mockScan(tableConfig = Some(tableConfig2))
-    val estimator2 = new SelectivityEstimator(scan2, mq)
-    assertEquals(Some(0.15), estimator2.evaluate(predicate1))
   }
 
   @Test

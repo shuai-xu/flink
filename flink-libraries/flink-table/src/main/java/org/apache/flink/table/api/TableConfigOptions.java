@@ -313,43 +313,6 @@ public class TableConfigOptions {
 			.defaultValue(100)
 			.withDescription("Factor to punish operator which is processing skew data.");
 
-	public static final ConfigOption<Double> SQL_CBO_SELECTIVITY_COMPARISON_DEFAULT =
-			key("sql.cbo.selectivity.default-comparison")
-			.defaultValue(0.5)
-			.withDescription("Sets comparison selectivity, the value should be between 0.0 (inclusive)" +
-				" and 1.0 (inclusive). This value is only used for a binary comparison operator, " +
-				"including <, <=, >, >=.");
-
-	public static final ConfigOption<Double> SQL_CBO_SELECTIVITY_EQUALS_DEFAULT =
-			key("sql.cbo.selectivity.default-equals")
-			.defaultValue(0.15)
-			.withDescription("Sets equals selectivity, the value should be between 0.0 (inclusive) and" +
-				" 1.0 (inclusive). This value is only used for a binary equals operator.");
-
-	public static final ConfigOption<Double> SQL_CBO_SELECTIVITY_ISNULL_DEFAULT =
-			key("sql.cbo.selectivity.default-isnull")
-			.defaultValue(0.1)
-			.withDescription("Sets IS NULL selectivity, the value should be between 0.0 (inclusive) " +
-				"and 1.0 (inclusive). This value is only used for IS_NULL operator.");
-
-	public static final ConfigOption<Double> SQL_CBO_SELECTIVITY_LIKE_DEFAULT =
-			key("sql.cbo.selectivity.default-like")
-			.defaultValue(0.05)
-			.withDescription("Sets like selectivity, the value should be between 0.0 (inclusive) and" +
-				" 1.0 (inclusive). This value is only used for like operator.");
-
-	public static final ConfigOption<Double> SQL_CBO_SELECTIVITY_AGG_CALL_DEFAULT =
-			key("sql.cbo.selectivity.default-aggcall")
-			.defaultValue(0.01)
-			.withDescription("Sets aggCall selectivity, the value should be between 0.0 (inclusive) " +
-				"and 1.0 (inclusive).");
-
-	public static final ConfigOption<Double> SQL_CBO_SELECTIVITY_DEFAULT =
-			key("sql.cbo.selectivity.default")
-			.defaultValue(0.25)
-			.withDescription("Sets default selectivity, the value should be between 0.0 (inclusive)" +
-				" and 1.0 (inclusive). This value is used for other operators.");
-
 	public static final ConfigOption<Integer> SQL_CBO_CNF_NODES_LIMIT =
 			key("sql.cbo.cnf.nodes.limit")
 			.defaultValue(-1)

@@ -32,8 +32,6 @@ import org.apache.calcite.sql.{SqlKind, SqlOperator}
 
 import java.lang.{Double => JDouble}
 
-import org.apache.flink.table.api.TableConfigOptions
-
 import scala.collection.JavaConversions._
 
 /**
@@ -53,8 +51,7 @@ class AggCallSelectivityEstimator(agg: RelNode, mq: FlinkRelMetadataQuery)
   private val rexBuilder = agg.getCluster.getRexBuilder
   // create SelectivityEstimator instance to use its default selectivity values
   private val se = new SelectivityEstimator(agg, mq)
-  private[flink] val defaultAggCallSelectivity =
-    se.getDefaultSelectivity(TableConfigOptions.SQL_CBO_SELECTIVITY_AGG_CALL_DEFAULT)
+  private[flink] val defaultAggCallSelectivity = Some(0.01d)
 
   /**
     * Gets AggregateCall from aggregate node
