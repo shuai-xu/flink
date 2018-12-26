@@ -73,6 +73,11 @@ public class TableProperties extends Configuration {
 		return this;
 	}
 
+	public TableProperties property(String key, String value) {
+		this.setString(key, value);
+		return this;
+	}
+
 	public void putSchemaIntoProperties(RichTableSchema schema) {
 		try {
 			byte[] serialized = InstantiationUtil.serializeObject(schema);

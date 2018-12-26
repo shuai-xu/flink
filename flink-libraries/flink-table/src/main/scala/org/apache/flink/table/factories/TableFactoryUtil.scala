@@ -18,11 +18,12 @@
 
 package org.apache.flink.table.factories
 
-import org.apache.flink.table.api.{BatchTableEnvironment, NoMatchingTableFactoryException,
-  StreamTableEnvironment, TableEnvironment, TableException}
+import org.apache.flink.table.api._
+import org.apache.flink.table.catalog.ToolConnectorDescriptor
 import org.apache.flink.table.descriptors.Descriptor
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
+import org.apache.flink.table.util.TableProperties
 
 /**
   * Utility for dealing with [[TableFactory]] using the [[TableFactoryService]].
@@ -115,5 +116,17 @@ object TableFactoryUtil {
       case e@_ =>
         throw new TableException(s"Unsupported table environment: ${e.getClass.getName}")
     }
+  }
+
+  def getDiscriptorFromTableProperties(
+      tableProperties: TableProperties): ToolConnectorDescriptor = {
+
+    // get table discriptor
+    val typeName = tableProperties.getString("connector.type", "").toLowerCase()
+    tableProperties.remove("connector.type")
+    if (typeName.trim.length == 0) {
+      throw new TableException("Connector type should not be null!")
+    }
+    new ToolConnectorDescriptor(typeName, tableProperties.toMap)
   }
 }

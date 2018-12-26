@@ -28,7 +28,9 @@ import _root_.scala.collection.mutable.ArrayBuffer
 class TableSchema(
     private val columns: Array[Column],
     private val primaryKey: Array[String],
-    private val uniqueKeys: Array[Array[String]]) {
+    private val uniqueKeys: Array[Array[String]],
+    private val computedColumns: Array[ComputedColumn],
+    private val watermarks: Array[Watermark]) {
 
   val columnNameToIndex: Map[String, Int] = columns.zipWithIndex.map {
     case (column, index) => (column.name, index)
@@ -50,7 +52,12 @@ class TableSchema(
   }
 
   def this(columns: Array[Column]) = {
-    this(columns, new Array[String](0), new Array[Array[String]](0))
+    this(
+      columns,
+      new Array[String](0),
+      new Array[Array[String]](0),
+      new Array[ComputedColumn](0),
+      new Array[Watermark](0))
   }
 
   def this(names: Array[String], types: Array[InternalType], nullables: Array[Boolean]) = {
@@ -113,6 +120,10 @@ class TableSchema(
   def getTypes: Array[InternalType] = columns.map(_.internalType)
 
   def getColumnNames: Array[String] = columns.map(_.name)
+
+  def getComputedColumns: Array[ComputedColumn] = computedColumns
+
+  def getWatermarks: Array[Watermark] = watermarks
 
   /**
    * Returns the specified column for the given column index.
@@ -225,6 +236,9 @@ case class Column(
     isNullable: Boolean = true  // is nullable
 )
 
+case class ComputedColumn(name: String, expression: String)
+
+case class Watermark(name: String, eventTime: String, offset: Long)
 
 object TableSchema {
 
@@ -264,19 +278,43 @@ class TableSchemaBuilder {
   private val columns: ArrayBuffer[Column] = new ArrayBuffer[Column]()
   private val primaryKey: ArrayBuffer[String] = new ArrayBuffer[String]()
   private val uniqueKeys: ArrayBuffer[ArrayBuffer[String]] = new ArrayBuffer[ArrayBuffer[String]]()
+  private val computedColumns: ArrayBuffer[ComputedColumn] = new ArrayBuffer[ComputedColumn]()
+  private val watermarks: ArrayBuffer[Watermark] = new ArrayBuffer[Watermark]()
 
   def fromDataType(dataType: DataType): TableSchemaBuilder = {
     columns.append(TableSchema.fromDataType(dataType).getColumns:_*)
     this
   }
 
+  @deprecated
   def field(name: String, tpe: DataType): TableSchemaBuilder = {
     columns.append(Column(name, DataTypes.internal(tpe)))
     this
   }
 
+  @deprecated
   def field(name: String, tpe: DataType, nullable: Boolean): TableSchemaBuilder = {
     columns.append(Column(name, DataTypes.internal(tpe), nullable))
+    this
+  }
+
+  def column(name: String, tpe: DataType): TableSchemaBuilder = {
+    columns.append(Column(name, DataTypes.internal(tpe)))
+    this
+  }
+
+  def column(name: String, tpe: DataType, nullable: Boolean): TableSchemaBuilder = {
+    columns.append(Column(name, DataTypes.internal(tpe), nullable))
+    this
+  }
+
+  def computedColumn(name: String, expression: String): TableSchemaBuilder = {
+    computedColumns.append(ComputedColumn(name, expression))
+    this
+  }
+
+  def watermark(name: String, from: String, offset: Long): TableSchemaBuilder = {
+    watermarks.append(Watermark(name, from, offset))
     this
   }
 
@@ -293,6 +331,12 @@ class TableSchemaBuilder {
   }
 
   def build(): TableSchema = {
-    new TableSchema(columns.toArray, primaryKey.toArray, uniqueKeys.map(_.toArray).toArray)
+    new TableSchema(
+      columns.toArray,
+      primaryKey.toArray,
+      uniqueKeys.map(_.toArray).toArray,
+      computedColumns.toArray,
+      watermarks.toArray
+    )
   }
 }

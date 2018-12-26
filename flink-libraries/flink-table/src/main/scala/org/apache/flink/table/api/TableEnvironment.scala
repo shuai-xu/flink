@@ -62,7 +62,9 @@ import _root_.java.lang.reflect.Modifier
 import _root_.java.util
 import _root_.java.util.concurrent.atomic.AtomicInteger
 
+import org.apache.flink.table.factories.TableFactoryUtil
 import org.apache.flink.table.temptable.FlinkTableServiceManager
+import org.apache.flink.table.util.TableProperties
 
 import _root_.scala.annotation.varargs
 import _root_.scala.collection.JavaConversions._
@@ -121,6 +123,9 @@ abstract class TableEnvironment(val config: TableConfig) {
 
   // sink nodes collection
   private[flink] val sinkNodes = new mutable.MutableList[LogicalNode]
+
+  protected val tableMetas = new mutable.HashMap[String, TableMeta]
+  protected var userClassloader: ClassLoader = null
 
   // a manager for table service
   private[flink] val tableServiceManager = new FlinkTableServiceManager(this)
@@ -321,17 +326,27 @@ abstract class TableEnvironment(val config: TableConfig) {
 
     val catalogSchema = catalogManager.getRootSchema.getSubSchema(catalogName)
 
-    if (catalogSchema == null) {
-      return Option.empty
-    } else {
-      val dbSchema = catalogSchema.getSubSchema(dbName)
-
-      if (dbSchema == null) {
-        return Option.empty
+    val result =
+      if (catalogSchema == null) {
+        Option.empty
       } else {
-        return Option(dbSchema.getTable(tableName))
+        val dbSchema = catalogSchema.getSubSchema(dbName)
+
+        if (dbSchema == null) {
+          Option.empty
+        } else {
+          Option(dbSchema.getTable(tableName))
+        }
+      }
+
+    if (result.isEmpty) {
+      if (tableMetas.contains(tableName)) {
+        val tableMeta = tableMetas.remove(tableName)
+        registerTableSourceFromTableMetas(tableName, tableMeta.get)
+        return getTable(paths)
       }
     }
+    return result
   }
 
   // ------ APIs for old catalog architecture ------
@@ -1167,7 +1182,14 @@ abstract class TableEnvironment(val config: TableConfig) {
     }
 
     if (!catalogManager.isRegistered(sinkTableName)) {
-      throw new TableException(TableErrors.INST.sqlTableNotRegistered(sinkTableName))
+      // if the target table still in table meta, we should register it first.
+      if (tableMetas.contains(sinkTableName)) {
+        val tableMeta = tableMetas.remove(sinkTableName)
+        registerTableSinkFromTableMetas(sinkTableName, tableMeta.get)
+
+      } else {
+        throw new TableException(TableErrors.INST.sqlTableNotRegistered(sinkTableName))
+      }
     }
     val targetTable = getTable(sinkTableName).get
 
@@ -1506,6 +1528,75 @@ abstract class TableEnvironment(val config: TableConfig) {
     (fieldNames, fieldIndexes)
   }
 
+  def setUserClassLoader(userClassLoader: ClassLoader): Unit = {
+    this.userClassloader = userClassLoader
+  }
+
+  /**
+    * Lazy register table. This function only return a TableMeta which can store table infos.
+    * Table will be truly registered when calling scan.
+    *
+    * Example:
+    *
+    * {{{
+    *   tEnv.registerTable(sourceTable)
+    *       .withSchema(
+    *         new TableSchemaBuilder()
+    *         .field("a", DataTypes.INT)
+    *         .field("b", DataTypes.STRING).build())
+    *       .withProperties(
+    *         new TableProperties()
+    *         .property("type", "csv")
+    *         .property("path", inputFilePath)
+    *         .property("fieldDelim", " "));
+    *
+    *   tEnv.scan(sourceTable).select("a, b").insertInto(sinkTable)
+    * }}}
+    *
+    */
+  def registerTable(name: String): TableMeta = {
+    if (tableMetas.get(name.trim.toLowerCase).nonEmpty) {
+      throw new TableException(s"Table \'$name\' already exists. " +
+        s"Please, choose a different name.")
+    }
+
+    val tableMeta = new TableMeta()
+    tableMetas.put(name, tableMeta)
+    tableMeta
+  }
+
+  /**
+    * Register a table source from table metas. This is used in TableApi.
+    */
+  private[flink] def registerTableSourceFromTableMetas(name: String, tableMeta: TableMeta): Unit
+
+  /**
+    * Register a table sink from table metas. This is used in TableApi.
+    */
+  def registerTableSinkFromTableMetas(name: String, tableMeta: TableMeta): Unit = {
+
+    // table schema
+    val tableSchema = new RichTableSchema(
+      tableMeta.getSchema.getColumnNames,
+      tableMeta.getSchema.getTypes)
+
+    // table properties
+    val tableProperties: TableProperties = tableMeta.getProperties.toKeyLowerCase
+    val richTableSchema = new RichTableSchema(
+      tableMeta.getSchema.getColumnNames,
+      tableMeta.getSchema.getTypes)
+    tableProperties.putSchemaIntoProperties(richTableSchema)
+
+    val simpleDiscriptor = TableFactoryUtil.getDiscriptorFromTableProperties(tableProperties)
+    val tableSink = TableFactoryUtil.findAndCreateTableSink(
+      this, simpleDiscriptor, this.userClassloader)
+
+    registerTableSink(
+      name,
+      tableSchema.getColumnNames,
+      tableSchema.getColumnTypes.asInstanceOf[Array[DataType]],
+      tableSink)
+  }
 }
 
 /**

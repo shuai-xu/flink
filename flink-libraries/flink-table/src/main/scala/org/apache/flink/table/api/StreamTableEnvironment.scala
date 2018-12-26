@@ -49,14 +49,14 @@ import org.apache.flink.table.sources._
 import org.apache.flink.table.typeutils.TypeCheckUtils
 import org.apache.flink.table.util._
 import org.apache.flink.util.Preconditions
-
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexBuilder
 import org.apache.calcite.sql2rel.SqlToRelConverter
-
 import _root_.java.util
+
+import org.apache.flink.table.factories.{TableFactoryService, TableFactoryUtil, TableSourceParserFactory}
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
@@ -1268,6 +1268,96 @@ abstract class StreamTableEnvironment(
       }
     } else {
       null
+    }
+  }
+
+  override def registerTableSourceFromTableMetas(name: String, tableMeta: TableMeta): Unit = {
+    // table schema
+    val tableSchema: TableSchema = tableMeta.getSchema
+    // table properties
+    val tableProperties: TableProperties = tableMeta.getProperties.toKeyLowerCase
+
+    if (tableSchema == null || tableProperties == null) {
+      throw new TableException("TableSchema or TableProperties should not be null! " +
+        "Register Table should with a TableSchema and TableProperties!")
+    }
+
+    // table schema
+    val richTableSchema = new RichTableSchema(
+      tableMeta.getSchema.getColumnNames,
+      tableMeta.getSchema.getTypes)
+    tableProperties.putSchemaIntoProperties(richTableSchema)
+
+    // table source
+    val tableDiscriptor = TableFactoryUtil.getDiscriptorFromTableProperties(tableProperties)
+    val tableSource = TableFactoryUtil.findAndCreateTableSource(
+      this, tableDiscriptor, this.userClassloader)
+    // parser
+    val parser = try {
+      TableFactoryService
+        .find(classOf[TableSourceParserFactory], tableDiscriptor, this.userClassloader)
+        .createParser(name, richTableSchema, tableProperties)
+    } catch {
+      case _: NoMatchingTableFactoryException => null
+    }
+
+    val hasParser = parser != null
+    val hasComputedColumn = tableSchema.getComputedColumns.size > 0
+    val hasPk = tableSchema.getPrimaryKeys.size > 0
+    val hasWatermark = tableSchema.getWatermarks.size > 0
+
+    var tempTable = name
+    if (hasParser || hasComputedColumn || hasPk || hasWatermark) {
+      tempTable = createUniqueTableName()
+    }
+
+    // 1. source
+    registerTableSource(tempTable, tableSource)
+
+    // 2. parser
+    if (hasParser) {
+      val tableFunction = parser.getParser
+      val tfName = tableFunction.toString
+      val functionName = createUniqueAttributeName(tfName)
+      this.registerFunction(functionName, tableFunction)
+      val tab2 = scan(tempTable)
+        .join(new Table(this, s"$functionName(f0)"))
+        .select(s"${tableSchema.getColumnNames.mkString(", ")}")
+
+      tempTable = name
+      if (hasComputedColumn || hasPk || hasWatermark) {
+        tempTable = createUniqueTableName()
+      }
+      registerTable(tempTable, tab2)
+    }
+
+    // 3. computed column
+    if (hasComputedColumn) {
+      val tab3 = scan(tempTable)
+        .select(s"${tableSchema.getColumnNames.mkString(", ")}" + ", " +
+          s"${tableSchema.getComputedColumns.map(e =>
+            e.expression + s" as ${e.name}").mkString(", ")}")
+      tempTable = name
+      if (hasWatermark || hasPk) {
+        tempTable = createUniqueTableName()
+      }
+      registerTable(tempTable, tab3)
+    }
+
+    // 4. watermark
+    if (hasWatermark) {
+      val watermark = tableSchema.getWatermarks.head
+      val tab4 = scan(tempTable)
+      tempTable = name
+      if (hasPk) {
+        tempTable = createUniqueTableName()
+      }
+      registerTableWithWatermark(tempTable, tab4, watermark.eventTime, watermark.offset)
+    }
+
+    // 5. pk
+    if (hasPk) {
+      registerTableWithPk(name, scan(tempTable), tableSchema.getPrimaryKeys.toList)
     }
   }
 

@@ -920,4 +920,9 @@ class BatchTableEnvironment(
   override def registerCatalog(name: String, catalog: ReadableCatalog): Unit = {
     registerCatalogInternal(name, catalog, false)
   }
+
+  override def registerTableSourceFromTableMetas(name: String, tableMeta: TableMeta): Unit = {
+    throw new TableException("Currently, registerTable(name: String) is not supported in Batch, " +
+      "user registerTable(name: String, table: Table) instead.")
+  }
 }
