@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,29 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sources.vector;
+package org.apache.flink.table.dataformat.vector;
 
 import org.apache.flink.util.TimeConvertUtils;
 
 /**
  * This class represents a nullable int column vector.
- * This class will be used for operations on all timestamp types
+ * This class will be used for operations on all time types
  * The vector[] field is public by design for high-performance access in the inner
  * loop of query execution.
  */
-public class TimestampColumnVector extends LongColumnVector {
+public class TimeColumnVector extends IntegerColumnVector {
 
 	/**
 	 * Don't use this except for testing purposes.
 	 *
 	 * @param len the number of rows
 	 */
-	public TimestampColumnVector(int len) {
+	public TimeColumnVector(int len) {
 		super(len);
 	}
 
 	@Override
 	public Object get(int index) {
-		return TimeConvertUtils.internalToTimestamp(vector[index]);
+		return TimeConvertUtils.internalToTime(vector[index]);
 	}
 }

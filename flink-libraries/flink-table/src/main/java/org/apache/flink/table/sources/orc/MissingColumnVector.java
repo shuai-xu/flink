@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.sources.orc;
 
-import org.apache.flink.table.sources.vector.ColumnVector;
+import org.apache.flink.table.dataformat.vector.ColumnVector;
 
 import java.util.Arrays;
 

@@ -24,9 +24,9 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
+import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch;
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters;
 import org.apache.flink.table.sinks.parquet.RowParquetOutputFormat;
-import org.apache.flink.table.sources.vector.VectorizedColumnBatch;
 import org.apache.flink.types.Row;
 
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;

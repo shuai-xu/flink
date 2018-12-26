@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,9 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sources.vector;
-
-import org.apache.parquet.column.Dictionary;
+package org.apache.flink.table.dataformat.vector;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -37,10 +35,10 @@ import java.util.Arrays;
 public abstract class ColumnVector implements Serializable {
 	private static final long serialVersionUID = 5340018531388047747L;
 	/*
-		 * If hasNulls is true, then this array contains true if the value
-		 * is null, otherwise false. The array is always allocated, so a batch can be re-used
-		 * later and nulls added.
-		 */
+	 * If hasNulls is true, then this array contains true if the value
+	 * is null, otherwise false. The array is always allocated, so a batch can be re-used
+	 * later and nulls added.
+	 */
 	public boolean[] isNull;
 	// If the whole column vector has no nulls, this is true, otherwise false.
 	public boolean noNulls;

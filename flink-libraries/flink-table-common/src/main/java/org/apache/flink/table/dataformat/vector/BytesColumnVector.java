@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sources.vector;
+package org.apache.flink.table.dataformat.vector;
 
 /**
- * This class supports string and binary data -- i.e. each field is
+ * This class supports string and binary data by value reference -- i.e. each field is
  * explicitly present, as opposed to provided by a dictionary reference.
  * In some cases, all the values will be in the same byte array to begin with,
  * but this need not be the case. If each value is in a separate byte
@@ -33,45 +33,73 @@ package org.apache.flink.table.sources.vector;
  * You can mix "by value" and "by reference" in the same column vector,
  * though that use is probably not typical.
  */
-public class BinaryColumnVector extends ColumnVector {
+public class BytesColumnVector extends ColumnVector {
 	private static final long serialVersionUID = -8529155738773478597L;
 
-	public byte[][] vector;
-	private int nextFree;    // next free position in buffer
+	public int[] start;          // start offset of each field
+	/*
+	 * The length of each field. If the value repeats for every entry, then it is stored
+	 * * in vector[0] and isRepeating from the superclass is set to true.
+	 */
+	public int[] length;
+	// A call to increaseBufferSpace() or ensureValPreallocated() will ensure that buffer[] points to
+	// a byte[] with sufficient space for the specified size.
+	public byte[] buffer;   // buffer to use when actually copying in data
+	// Hang onto a byte array for holding smaller byte values
+	private int elementsAppended = 0;
+	private int capacity;
 
 	/**
 	 * Don't call this constructor except for testing purposes.
 	 *
 	 * @param size number of elements in the column vector
 	 */
-	public BinaryColumnVector(int size) {
+	public BytesColumnVector(int size) {
 		super(size);
-		vector = new byte[size][];
+		capacity = size;
+		buffer = new byte[capacity];
+		start = new int[size];
+		length = new int[size];
+	}
+
+	@Override
+	public void reset() {
+		super.reset();
+		elementsAppended = 0;
 	}
 
 	@Override
 	public Object get(int index) {
-		return vector[index];
+		return buffer;
 	}
 
 	/**
-	 * Additional reset work for BytesColumnVector (releasing scratch bytes for by value strings).
+	 * @return amount of buffer space currently allocated
 	 */
-	@Override
-	public void reset() {
-		super.reset();
+	public int bufferSize() {
+		if (buffer == null) {
+			return 0;
+		}
+		return buffer.length;
 	}
 
 	/**
-	 * Set a field by reference.
+	 * Set a field by actually copying in to a local buffer.
+	 * If you must actually copy data in to the array, use this method.
+	 * DO NOT USE this method unless it's not practical to set data by reference with setRef().
+	 * Setting data by reference tends to run a lot faster than copying data in.
 	 *
 	 * @param elementNum index within column vector to set
 	 * @param sourceBuf  container of source data
 	 * @param start      start byte position within source
 	 * @param length     length of source byte sequence
 	 */
-	public void setRef(int elementNum, byte[] sourceBuf, int start, int length) {
-		vector[elementNum] = sourceBuf;
+	public void setVal(int elementNum, byte[] sourceBuf, int start, int length) {
+		reserve(elementsAppended + length);
+		System.arraycopy(sourceBuf, start, buffer, elementsAppended, length);
+		this.start[elementNum] = elementsAppended;
+		this.length[elementNum] = length;
+		elementsAppended += length;
 	}
 
 	/**
@@ -84,8 +112,9 @@ public class BinaryColumnVector extends ColumnVector {
 	 * @param sourceBuf  container of source data
 	 */
 	public void setVal(int elementNum, byte[] sourceBuf) {
-		vector[elementNum] = sourceBuf;
+		setVal(elementNum, sourceBuf, 0, sourceBuf.length);
 	}
+
 
 	/**
 	 * Copy the current object contents into the output. Only copy selected entries,
@@ -101,11 +130,11 @@ public class BinaryColumnVector extends ColumnVector {
 		if (selectedInUse) {
 			for (int j = 0; j < size; j++) {
 				int i = sel[j];
-				((BinaryColumnVector) output).setVal(i, vector[i]);
+				((BytesColumnVector) output).setVal(i, buffer, start[i], length[i]);
 			}
 		} else {
 			for (int i = 0; i < size; i++) {
-				((BinaryColumnVector) output).setVal(i, vector[i]);
+				((BytesColumnVector) output).setVal(i, buffer, start[i], length[i]);
 			}
 		}
 
@@ -117,23 +146,42 @@ public class BinaryColumnVector extends ColumnVector {
 	public void setElement(int outElementNum, int inputElementNum, ColumnVector inputVector) {
 		if (inputVector.noNulls || !inputVector.isNull[inputElementNum]) {
 			isNull[outElementNum] = false;
-			BinaryColumnVector in = (BinaryColumnVector) inputVector;
-			setVal(outElementNum, in.vector[inputElementNum]);
+			BytesColumnVector in = (BytesColumnVector) inputVector;
+			setVal(outElementNum, in.buffer, in.start[inputElementNum], in.length[inputElementNum]);
 		} else {
 			isNull[outElementNum] = true;
 			noNulls = false;
 		}
 	}
 
-	@Override
-	public void init() {
+	private void reserve(int requiredCapacity) {
+		if (requiredCapacity > capacity) {
+			int newCapacity = requiredCapacity * 2;
+				try {
+					byte[] newData = new byte[newCapacity];
+					System.arraycopy(buffer, 0, newData, 0, elementsAppended);
+					buffer = newData;
+					capacity = newCapacity;
+				} catch (OutOfMemoryError outOfMemoryError) {
+					throw new UnsupportedOperationException(requiredCapacity + " cannot be satisfied.", outOfMemoryError);
+				}
+		}
 	}
 
 	@Override
 	public void shallowCopyTo(ColumnVector otherCv) {
-		BinaryColumnVector other = (BinaryColumnVector) otherCv;
+		BytesColumnVector other = (BytesColumnVector) otherCv;
 		super.shallowCopyTo(other);
-		other.nextFree = nextFree;
-		other.vector = vector;
+		other.start = start;
+		other.length = length;
+		other.buffer = buffer;
+	}
+
+	public String toString(int row) {
+		if (noNulls || !isNull[row]) {
+			return new String(buffer, start[row], length[row]);
+		} else {
+			return null;
+		}
 	}
 }

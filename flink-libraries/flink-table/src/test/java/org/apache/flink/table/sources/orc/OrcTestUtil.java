@@ -38,9 +38,9 @@ import org.apache.flink.table.api.types.TimestampType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.ColumnarRow;
 import org.apache.flink.table.dataformat.GenericRow;
+import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch;
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters;
 import org.apache.flink.table.sinks.orc.RowOrcOutputFormat;
-import org.apache.flink.table.sources.vector.VectorizedColumnBatch;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.TimeConvertUtils;
 

@@ -18,15 +18,15 @@
 
 package org.apache.flink.table.sources.parquet;
 
-import org.apache.flink.table.sources.vector.BooleanColumnVector;
-import org.apache.flink.table.sources.vector.ByteColumnVector;
-import org.apache.flink.table.sources.vector.BytesColumnVector;
-import org.apache.flink.table.sources.vector.ColumnVector;
-import org.apache.flink.table.sources.vector.DoubleColumnVector;
-import org.apache.flink.table.sources.vector.FloatColumnVector;
-import org.apache.flink.table.sources.vector.IntegerColumnVector;
-import org.apache.flink.table.sources.vector.LongColumnVector;
-import org.apache.flink.table.sources.vector.ShortColumnVector;
+import org.apache.flink.table.dataformat.vector.BooleanColumnVector;
+import org.apache.flink.table.dataformat.vector.ByteColumnVector;
+import org.apache.flink.table.dataformat.vector.BytesColumnVector;
+import org.apache.flink.table.dataformat.vector.ColumnVector;
+import org.apache.flink.table.dataformat.vector.DoubleColumnVector;
+import org.apache.flink.table.dataformat.vector.FloatColumnVector;
+import org.apache.flink.table.dataformat.vector.IntegerColumnVector;
+import org.apache.flink.table.dataformat.vector.LongColumnVector;
+import org.apache.flink.table.dataformat.vector.ShortColumnVector;
 
 /**
  * A values reader for Parquet's run-length encoded data for definition ids and reading actual data

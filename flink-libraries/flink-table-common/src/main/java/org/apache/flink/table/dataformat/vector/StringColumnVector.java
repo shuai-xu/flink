@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sources.vector;
+package org.apache.flink.table.dataformat.vector;
 
 import org.apache.flink.util.TimeConvertUtils;
 

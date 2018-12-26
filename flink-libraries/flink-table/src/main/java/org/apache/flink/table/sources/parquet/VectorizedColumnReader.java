@@ -22,16 +22,16 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.Decimal;
-import org.apache.flink.table.sources.vector.BooleanColumnVector;
-import org.apache.flink.table.sources.vector.ByteColumnVector;
-import org.apache.flink.table.sources.vector.BytesColumnVector;
-import org.apache.flink.table.sources.vector.ColumnVector;
-import org.apache.flink.table.sources.vector.DoubleColumnVector;
-import org.apache.flink.table.sources.vector.FloatColumnVector;
-import org.apache.flink.table.sources.vector.IntegerColumnVector;
-import org.apache.flink.table.sources.vector.LongColumnVector;
-import org.apache.flink.table.sources.vector.ShortColumnVector;
-import org.apache.flink.table.sources.vector.VectorizedColumnBatch;
+import org.apache.flink.table.dataformat.vector.BooleanColumnVector;
+import org.apache.flink.table.dataformat.vector.ByteColumnVector;
+import org.apache.flink.table.dataformat.vector.BytesColumnVector;
+import org.apache.flink.table.dataformat.vector.ColumnVector;
+import org.apache.flink.table.dataformat.vector.DoubleColumnVector;
+import org.apache.flink.table.dataformat.vector.FloatColumnVector;
+import org.apache.flink.table.dataformat.vector.IntegerColumnVector;
+import org.apache.flink.table.dataformat.vector.LongColumnVector;
+import org.apache.flink.table.dataformat.vector.ShortColumnVector;
+import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch;
 
 import org.apache.parquet.bytes.BytesUtils;
 import org.apache.parquet.column.ColumnDescriptor;
@@ -144,7 +144,7 @@ public class VectorizedColumnReader {
 					// Column vector supports lazy decoding of dictionary values so just set the dictionary.
 					// We can't do this if rowId != 0 AND the column doesn't have a dictionary (i.e. some
 					// non-dictionary encoded values have already been added).
-					column.setDictionary(dictionary);
+					column.setDictionary(new ParquetDictionary(dictionary));
 				} else {
 					decodeDictionaryIds(rowId, num, column, dictionaryIds, fieldType);
 				}

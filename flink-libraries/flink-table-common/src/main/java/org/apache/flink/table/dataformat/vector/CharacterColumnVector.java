@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sources.vector;
+package org.apache.flink.table.dataformat.vector;
 
 /**
  * This class represents a nullable int column vector.

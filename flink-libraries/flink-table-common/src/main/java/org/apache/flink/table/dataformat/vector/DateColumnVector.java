@@ -16,29 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sources.vector;
+package org.apache.flink.table.dataformat.vector;
 
 import org.apache.flink.util.TimeConvertUtils;
 
 /**
  * This class represents a nullable int column vector.
- * This class will be used for operations on all time types
+ * This class will be used for operations on all date types
  * The vector[] field is public by design for high-performance access in the inner
  * loop of query execution.
  */
-public class TimeColumnVector extends IntegerColumnVector {
+public class DateColumnVector extends IntegerColumnVector {
 
 	/**
 	 * Don't use this except for testing purposes.
 	 *
 	 * @param len the number of rows
 	 */
-	public TimeColumnVector(int len) {
+	public DateColumnVector(int len) {
 		super(len);
 	}
 
 	@Override
 	public Object get(int index) {
-		return TimeConvertUtils.internalToTime(vector[index]);
+		return TimeConvertUtils.internalToDate(vector[index]);
 	}
 }

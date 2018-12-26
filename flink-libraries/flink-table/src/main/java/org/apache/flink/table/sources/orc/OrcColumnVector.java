@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sources.vector;
+package org.apache.flink.table.sources.orc;
 
 import org.apache.flink.table.api.types.BooleanType;
 import org.apache.flink.table.api.types.ByteArrayType;
@@ -32,6 +32,8 @@ import org.apache.flink.table.api.types.ShortType;
 import org.apache.flink.table.api.types.StringType;
 import org.apache.flink.table.api.types.TimestampType;
 import org.apache.flink.table.dataformat.Decimal;
+import org.apache.flink.table.dataformat.vector.TypeGetVector;
+import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch;
 
 import org.apache.orc.storage.ql.exec.vector.BytesColumnVector;
 import org.apache.orc.storage.ql.exec.vector.ColumnVector;
@@ -47,7 +49,7 @@ import java.util.Arrays;
  *  A column vector class wrapping hive's ColumnVector.
  *  This column vector is used to adapt hive's ColumnVector to Flink's ColumnVector.
  */
-public class OrcColumnVector extends org.apache.flink.table.sources.vector.ColumnVector {
+public class OrcColumnVector extends TypeGetVector {
 	private DataType fieldType;
 	private ColumnVector baseData;
 	private LongColumnVector longData;
@@ -127,6 +129,7 @@ public class OrcColumnVector extends org.apache.flink.table.sources.vector.Colum
 		}
 	}
 
+	@Override
 	public boolean getBoolean(int rowId) {
 		if (baseData.isRepeating) {
 			rowId = 0;
@@ -134,6 +137,7 @@ public class OrcColumnVector extends org.apache.flink.table.sources.vector.Colum
 		return longData.vector[rowId] == 1;
 	}
 
+	@Override
 	public byte getByte(int rowId) {
 		if (baseData.isRepeating) {
 			rowId = 0;
@@ -141,6 +145,7 @@ public class OrcColumnVector extends org.apache.flink.table.sources.vector.Colum
 		return (byte) longData.vector[rowId];
 	}
 
+	@Override
 	public short getShort(int rowId) {
 		if (baseData.isRepeating) {
 			rowId = 0;
@@ -148,6 +153,7 @@ public class OrcColumnVector extends org.apache.flink.table.sources.vector.Colum
 		return (short) longData.vector[rowId];
 	}
 
+	@Override
 	public int getInt(int rowId) {
 		if (baseData.isRepeating) {
 			rowId = 0;
@@ -155,6 +161,7 @@ public class OrcColumnVector extends org.apache.flink.table.sources.vector.Colum
 		return (int) longData.vector[rowId];
 	}
 
+	@Override
 	public long getLong(int rowId) {
 		if (baseData.isRepeating) {
 			rowId = 0;
@@ -167,6 +174,7 @@ public class OrcColumnVector extends org.apache.flink.table.sources.vector.Colum
 		}
 	}
 
+	@Override
 	public float getFloat(int rowId) {
 		if (baseData.isRepeating) {
 			rowId = 0;
@@ -174,6 +182,7 @@ public class OrcColumnVector extends org.apache.flink.table.sources.vector.Colum
 		return (float) doubleData.vector[rowId];
 	}
 
+	@Override
 	public double getDouble(int rowId) {
 		if (baseData.isRepeating) {
 			rowId = 0;
@@ -181,6 +190,7 @@ public class OrcColumnVector extends org.apache.flink.table.sources.vector.Colum
 		return doubleData.vector[rowId];
 	}
 
+	@Override
 	public VectorizedColumnBatch.ByteArray getByteArray(int rowId) {
 		if (baseData.isRepeating) {
 			rowId = 0;
@@ -191,6 +201,7 @@ public class OrcColumnVector extends org.apache.flink.table.sources.vector.Colum
 		return new VectorizedColumnBatch.ByteArray(data[rowId], start[rowId], length[rowId]);
 	}
 
+	@Override
 	public Decimal getDecimal(int rowId, int precision, int scala) {
 		if (baseData.isRepeating) {
 			rowId = 0;
@@ -204,7 +215,7 @@ public class OrcColumnVector extends org.apache.flink.table.sources.vector.Colum
 	public void setElement(
 			int outElementNum,
 			int inputElementNum,
-			org.apache.flink.table.sources.vector.ColumnVector inputVector) {
+			org.apache.flink.table.dataformat.vector.ColumnVector inputVector) {
 		throw new UnsupportedOperationException();
 	}
 

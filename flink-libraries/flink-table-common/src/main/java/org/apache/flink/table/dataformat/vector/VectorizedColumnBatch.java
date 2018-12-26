@@ -16,16 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sources.vector;
+package org.apache.flink.table.dataformat.vector;
 
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.Types;
 import org.apache.flink.table.dataformat.BinaryString;
 import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.util.TimeConvertUtils;
-
-import org.apache.parquet.io.api.Binary;
 
 import java.io.Serializable;
 import java.sql.Date;
@@ -82,32 +80,32 @@ public class VectorizedColumnBatch implements Serializable {
 	}
 
 	private void createColumn(ColumnVector[] columns, int index, InternalType fieldType, int maxRows) {
-		if (fieldType.equals(DataTypes.BOOLEAN)) {
+		if (fieldType.equals(Types.BOOLEAN)) {
 			columns[index] = new BooleanColumnVector(maxRows);
-		} else if (fieldType.equals(DataTypes.BYTE)) {
+		} else if (fieldType.equals(Types.BYTE)) {
 			columns[index] = new ByteColumnVector(maxRows);
-		} else if (fieldType.equals(DataTypes.DOUBLE)) {
+		} else if (fieldType.equals(Types.DOUBLE)) {
 			columns[index] = new DoubleColumnVector(maxRows);
-		} else if (fieldType.equals(DataTypes.FLOAT)) {
+		} else if (fieldType.equals(Types.FLOAT)) {
 			columns[index] = new FloatColumnVector(maxRows);
-		} else if (fieldType.equals(DataTypes.INT) ||
+		} else if (fieldType.equals(Types.INT) ||
 				(fieldType instanceof DecimalType && Decimal.is32BitDecimal(((DecimalType) fieldType).precision()))) {
 			columns[index] = new IntegerColumnVector(maxRows);
-		} else if (fieldType.equals(DataTypes.LONG) ||
+		} else if (fieldType.equals(Types.LONG) ||
 				(fieldType instanceof DecimalType && Decimal.is64BitDecimal(((DecimalType) fieldType).precision()))) {
 			columns[index] = new LongColumnVector(maxRows);
-		} else if (fieldType.equals(DataTypes.SHORT)) {
+		} else if (fieldType.equals(Types.SHORT)) {
 			columns[index] = new ShortColumnVector(maxRows);
-		} else if (fieldType.equals(DataTypes.STRING)) {
+		} else if (fieldType.equals(Types.STRING)) {
 			columns[index] = new StringColumnVector(maxRows);
-		} else if (fieldType.equals(DataTypes.BYTE_ARRAY) ||
+		} else if (fieldType.equals(Types.BYTE_ARRAY) ||
 				(fieldType instanceof DecimalType && Decimal.isByteArrayDecimal(((DecimalType) fieldType).precision()))) {
 			columns[index] = new BytesColumnVector(maxRows);
-		} else if (fieldType.equals(DataTypes.DATE)) {
+		} else if (fieldType.equals(Types.DATE)) {
 			columns[index] = new DateColumnVector(maxRows);
-		} else if (fieldType.equals(DataTypes.TIME)) {
+		} else if (fieldType.equals(Types.TIME)) {
 			columns[index] = new TimeColumnVector(maxRows);
-		} else if (fieldType.equals(DataTypes.TIMESTAMP)) {
+		} else if (fieldType.equals(Types.TIMESTAMP)) {
 			columns[index] = new TimestampColumnVector(maxRows);
 		} else {
 			throw new UnsupportedOperationException(fieldType  + " is not supported now.");
@@ -122,8 +120,8 @@ public class VectorizedColumnBatch implements Serializable {
 	 * Resets the batch for writing.
 	 */
 	public void reset() {
-		for (int i = 0; i < columns.length; ++i) {
-			columns[i].reset();
+		for (ColumnVector column : columns) {
+			column.reset();
 		}
 		this.numRows = 0;
 	}
@@ -150,7 +148,7 @@ public class VectorizedColumnBatch implements Serializable {
 
 	public boolean getBoolean(int rowId, int colId) {
 		if (!copyToInternal) {
-			return ((OrcColumnVector) columns[colId]).getBoolean(rowId);
+			return ((TypeGetVector) columns[colId]).getBoolean(rowId);
 		}
 
 		ColumnVector columnVector = columns[colId];
@@ -164,7 +162,7 @@ public class VectorizedColumnBatch implements Serializable {
 
 	public byte getByte(int rowId, int colId) {
 		if (!copyToInternal) {
-			return ((OrcColumnVector) columns[colId]).getByte(rowId);
+			return ((TypeGetVector) columns[colId]).getByte(rowId);
 		}
 
 		ColumnVector columnVector = columns[colId];
@@ -178,7 +176,7 @@ public class VectorizedColumnBatch implements Serializable {
 
 	public short getShort(int rowId, int colId) {
 		if (!copyToInternal) {
-			return ((OrcColumnVector) columns[colId]).getShort(rowId);
+			return ((TypeGetVector) columns[colId]).getShort(rowId);
 		}
 
 		ColumnVector columnVector = columns[colId];
@@ -192,7 +190,7 @@ public class VectorizedColumnBatch implements Serializable {
 
 	public int getInt(int rowId, int colId) {
 		if (!copyToInternal) {
-			return ((OrcColumnVector) columns[colId]).getInt(rowId);
+			return ((TypeGetVector) columns[colId]).getInt(rowId);
 		}
 
 		ColumnVector columnVector = columns[colId];
@@ -206,7 +204,7 @@ public class VectorizedColumnBatch implements Serializable {
 
 	public long getLong(int rowId, int colId) {
 		if (!copyToInternal) {
-			return ((OrcColumnVector) columns[colId]).getLong(rowId);
+			return ((TypeGetVector) columns[colId]).getLong(rowId);
 		}
 
 		ColumnVector columnVector = columns[colId];
@@ -220,7 +218,7 @@ public class VectorizedColumnBatch implements Serializable {
 
 	public float getFloat(int rowId, int colId) {
 		if (!copyToInternal) {
-			return ((OrcColumnVector) columns[colId]).getFloat(rowId);
+			return ((TypeGetVector) columns[colId]).getFloat(rowId);
 		}
 		ColumnVector columnVector = columns[colId];
 		if (columns[colId].dictionary == null) {
@@ -233,7 +231,7 @@ public class VectorizedColumnBatch implements Serializable {
 
 	public double getDouble(int rowId, int colId) {
 		if (!copyToInternal) {
-			return ((OrcColumnVector) columns[colId]).getDouble(rowId);
+			return ((TypeGetVector) columns[colId]).getDouble(rowId);
 		}
 
 		ColumnVector columnVector = columns[colId];
@@ -247,7 +245,7 @@ public class VectorizedColumnBatch implements Serializable {
 
 	public ByteArray getByteArray(int rowId, int colId) {
 		if (!copyToInternal) {
-			return ((OrcColumnVector) columns[colId]).getByteArray(rowId);
+			return ((TypeGetVector) columns[colId]).getByteArray(rowId);
 		}
 
 		ColumnVector columnVector = columns[colId];
@@ -257,8 +255,7 @@ public class VectorizedColumnBatch implements Serializable {
 				bytesColumnVector.start[rowId],
 				bytesColumnVector.length[rowId]);
 		} else {
-			Binary binary = columnVector.dictionary.decodeToBinary(columnVector.dictionaryIds.vector[rowId]);
-			byte[] bytes = binary.getBytes();
+			byte[] bytes = columnVector.dictionary.decodeToBinary(columnVector.dictionaryIds.vector[rowId]);
 			return new ByteArray(bytes, 0, bytes.length);
 		}
 	}
@@ -298,7 +295,7 @@ public class VectorizedColumnBatch implements Serializable {
 		int scale = decimalTypeInfo.scale();
 
 		if (!copyToInternal) {
-			return ((OrcColumnVector) columns[colId]).getDecimal(rowId, precision, scale);
+			return ((TypeGetVector) columns[colId]).getDecimal(rowId, precision, scale);
 		}
 
 		if (Decimal.is32BitDecimal(precision)) {
@@ -314,29 +311,29 @@ public class VectorizedColumnBatch implements Serializable {
 	public Object getInternalObject(int rowId, int colId) {
 		if (!columns[colId].noNulls && columns[colId].isNull[rowId]) {
 			return null;
-		} else if (DataTypes.INT.equals(fieldTypes[colId])) {
+		} else if (Types.INT.equals(fieldTypes[colId])) {
 			return getInt(rowId, colId);
-		} else if (DataTypes.SHORT.equals(fieldTypes[colId])) {
+		} else if (Types.SHORT.equals(fieldTypes[colId])) {
 			return getShort(rowId, colId);
-		} else if (DataTypes.BOOLEAN.equals(fieldTypes[colId])) {
+		} else if (Types.BOOLEAN.equals(fieldTypes[colId])) {
 			return getBoolean(rowId, colId);
-		} else if (DataTypes.BYTE.equals(fieldTypes[colId])) {
+		} else if (Types.BYTE.equals(fieldTypes[colId])) {
 			return getByte(rowId, colId);
-		} else if (DataTypes.DOUBLE.equals(fieldTypes[colId])) {
+		} else if (Types.DOUBLE.equals(fieldTypes[colId])) {
 			return getDouble(rowId, colId);
-		} else if (DataTypes.FLOAT.equals(fieldTypes[colId])) {
+		} else if (Types.FLOAT.equals(fieldTypes[colId])) {
 			return getFloat(rowId, colId);
-		} else if (DataTypes.LONG.equals(fieldTypes[colId])) {
+		} else if (Types.LONG.equals(fieldTypes[colId])) {
 			return getLong(rowId, colId);
-		} else if (DataTypes.STRING.equals(fieldTypes[colId])) {
+		} else if (Types.STRING.equals(fieldTypes[colId])) {
 			return BinaryString.fromBytes(getBytes(rowId, colId));
-		} else if (DataTypes.TIMESTAMP.equals(fieldTypes[colId])) {
+		} else if (Types.TIMESTAMP.equals(fieldTypes[colId])) {
 			return getLong(rowId, colId);
-		} else if (DataTypes.DATE.equals(fieldTypes[colId])) {
+		} else if (Types.DATE.equals(fieldTypes[colId])) {
 			return getInt(rowId, colId);
-		} else if (DataTypes.TIME.equals(fieldTypes[colId])) {
+		} else if (Types.TIME.equals(fieldTypes[colId])) {
 			return getInt(rowId, colId);
-		} else if (DataTypes.BYTE_ARRAY.equals(fieldTypes[colId])) {
+		} else if (Types.BYTE_ARRAY.equals(fieldTypes[colId])) {
 			return getBytes(rowId, colId);
 		} else if (fieldTypes[colId] instanceof DecimalType) {
 			return getDecimal(rowId, colId);
@@ -348,29 +345,29 @@ public class VectorizedColumnBatch implements Serializable {
 	public Object getObject(int rowId, int colId) {
 		if (!columns[colId].noNulls && columns[colId].isNull[rowId]) {
 			return null;
-		} else if (DataTypes.INT.equals(fieldTypes[colId])) {
+		} else if (Types.INT.equals(fieldTypes[colId])) {
 			return getInt(rowId, colId);
-		} else if (DataTypes.SHORT.equals(fieldTypes[colId])) {
+		} else if (Types.SHORT.equals(fieldTypes[colId])) {
 			return getShort(rowId, colId);
-		} else if (DataTypes.BOOLEAN.equals(fieldTypes[colId])) {
+		} else if (Types.BOOLEAN.equals(fieldTypes[colId])) {
 			return getBoolean(rowId, colId);
-		} else if (DataTypes.BYTE.equals(fieldTypes[colId])) {
+		} else if (Types.BYTE.equals(fieldTypes[colId])) {
 			return getByte(rowId, colId);
-		} else if (DataTypes.DOUBLE.equals(fieldTypes[colId])) {
+		} else if (Types.DOUBLE.equals(fieldTypes[colId])) {
 			return getDouble(rowId, colId);
-		} else if (DataTypes.FLOAT.equals(fieldTypes[colId])) {
+		} else if (Types.FLOAT.equals(fieldTypes[colId])) {
 			return getFloat(rowId, colId);
-		} else if (DataTypes.LONG.equals(fieldTypes[colId])) {
+		} else if (Types.LONG.equals(fieldTypes[colId])) {
 			return getLong(rowId, colId);
-		} else if (DataTypes.STRING.equals(fieldTypes[colId])) {
+		} else if (Types.STRING.equals(fieldTypes[colId])) {
 			return getString(rowId, colId);
-		} else if (DataTypes.TIMESTAMP.equals(fieldTypes[colId])) {
+		} else if (Types.TIMESTAMP.equals(fieldTypes[colId])) {
 			return getTimestamp(rowId, colId);
-		} else if (DataTypes.DATE.equals(fieldTypes[colId])) {
+		} else if (Types.DATE.equals(fieldTypes[colId])) {
 			return getDate(rowId, colId);
-		} else if (DataTypes.TIME.equals(fieldTypes[colId])) {
+		} else if (Types.TIME.equals(fieldTypes[colId])) {
 			return getTime(rowId, colId);
-		} else if (DataTypes.BYTE_ARRAY.equals(fieldTypes[colId])) {
+		} else if (Types.BYTE_ARRAY.equals(fieldTypes[colId])) {
 			return getBytes(rowId, colId);
 		} else if (fieldTypes[colId] instanceof DecimalType) {
 			return getDecimal(rowId, colId);

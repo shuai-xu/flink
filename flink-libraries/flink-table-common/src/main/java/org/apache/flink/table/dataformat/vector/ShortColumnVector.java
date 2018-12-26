@@ -16,27 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sources.vector;
+package org.apache.flink.table.dataformat.vector;
 
 /**
  * This class represents a nullable int column vector.
- * This class will be used for operations on all long types
+ * This class will be used for operations on all short types
  * The vector[] field is public by design for high-performance access in the inner
  * loop of query execution.
  */
-public class LongColumnVector extends ColumnVector {
-	private static final long serialVersionUID = 8534925169458006397L;
+public class ShortColumnVector extends ColumnVector {
+	private static final long serialVersionUID = -8278486456144676292L;
 
-	public long[] vector;
+	public short[] vector;
 
 	/**
 	 * Don't use this except for testing purposes.
 	 *
 	 * @param len the number of rows
 	 */
-	public LongColumnVector(int len) {
+	public ShortColumnVector(int len) {
 		super(len);
-		vector = new long[len];
+		vector = new short[len];
 	}
 
 	@Override
@@ -48,7 +48,6 @@ public class LongColumnVector extends ColumnVector {
 	// as indicated by selectedInUse and the sel array.
 	@Override
 	public void copySelected(boolean selectedInUse, int[] sel, int size, ColumnVector output) {
-
 		// Output has nulls if and only if input has nulls.
 		output.noNulls = noNulls;
 
@@ -56,10 +55,10 @@ public class LongColumnVector extends ColumnVector {
 		if (selectedInUse) {
 			for (int j = 0; j < size; j++) {
 				int i = sel[j];
-				((LongColumnVector) output).vector[i] = vector[i];
+				((ShortColumnVector) output).vector[i] = vector[i];
 			}
 		} else {
-			System.arraycopy(vector, 0, ((LongColumnVector) output).vector, 0, size);
+			System.arraycopy(vector, 0, ((ShortColumnVector) output).vector, 0, size);
 		}
 
 		// Copy nulls over if needed
@@ -70,7 +69,7 @@ public class LongColumnVector extends ColumnVector {
 	public void setElement(int outElementNum, int inputElementNum, ColumnVector inputVector) {
 		if (inputVector.noNulls || !inputVector.isNull[inputElementNum]) {
 			isNull[outElementNum] = false;
-			vector[outElementNum] = ((LongColumnVector) inputVector).vector[inputElementNum];
+			vector[outElementNum] = ((ShortColumnVector) inputVector).vector[inputElementNum];
 		} else {
 			isNull[outElementNum] = true;
 			noNulls = false;
@@ -79,8 +78,9 @@ public class LongColumnVector extends ColumnVector {
 
 	@Override
 	public void shallowCopyTo(ColumnVector otherCv) {
-		LongColumnVector other = (LongColumnVector) otherCv;
+		ShortColumnVector other = (ShortColumnVector) otherCv;
 		super.shallowCopyTo(other);
 		other.vector = vector;
 	}
+
 }

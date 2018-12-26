@@ -16,27 +16,31 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sources.vector;
+package org.apache.flink.table.dataformat.vector;
 
 /**
  * This class represents a nullable int column vector.
- * This class will be used for operations on all int types
+ * This class will be used for operations on all boolean types
  * The vector[] field is public by design for high-performance access in the inner
  * loop of query execution.
  */
-public class IntegerColumnVector extends ColumnVector {
-	private static final long serialVersionUID = -2749499358889718254L;
+public class BooleanColumnVector extends ColumnVector {
+	private static final long serialVersionUID = 4131239076731313596L;
 
-	public int[] vector;
+	public boolean[] vector;
 
 	/**
 	 * Don't use this except for testing purposes.
 	 *
 	 * @param len the number of rows
 	 */
-	public IntegerColumnVector(int len) {
+	public BooleanColumnVector(int len) {
 		super(len);
-		vector = new int[len];
+		vector = new boolean[len];
+	}
+
+	public BooleanColumnVector createInstance(int len) {
+		return new BooleanColumnVector(len);
 	}
 
 	@Override
@@ -48,7 +52,6 @@ public class IntegerColumnVector extends ColumnVector {
 	// as indicated by selectedInUse and the sel array.
 	@Override
 	public void copySelected(boolean selectedInUse, int[] sel, int size, ColumnVector output) {
-
 		// Output has nulls if and only if input has nulls.
 		output.noNulls = noNulls;
 
@@ -56,10 +59,10 @@ public class IntegerColumnVector extends ColumnVector {
 		if (selectedInUse) {
 			for (int j = 0; j < size; j++) {
 				int i = sel[j];
-				((IntegerColumnVector) output).vector[i] = vector[i];
+				((BooleanColumnVector) output).vector[i] = vector[i];
 			}
 		} else {
-			System.arraycopy(vector, 0, ((IntegerColumnVector) output).vector, 0, size);
+			System.arraycopy(vector, 0, ((BooleanColumnVector) output).vector, 0, size);
 		}
 
 		// Copy nulls over if needed
@@ -70,7 +73,7 @@ public class IntegerColumnVector extends ColumnVector {
 	public void setElement(int outElementNum, int inputElementNum, ColumnVector inputVector) {
 		if (inputVector.noNulls || !inputVector.isNull[inputElementNum]) {
 			isNull[outElementNum] = false;
-			vector[outElementNum] = ((IntegerColumnVector) inputVector).vector[inputElementNum];
+			vector[outElementNum] = ((BooleanColumnVector) inputVector).vector[inputElementNum];
 		} else {
 			isNull[outElementNum] = true;
 			noNulls = false;
@@ -79,7 +82,7 @@ public class IntegerColumnVector extends ColumnVector {
 
 	@Override
 	public void shallowCopyTo(ColumnVector otherCv) {
-		IntegerColumnVector other = (IntegerColumnVector) otherCv;
+		BooleanColumnVector other = (BooleanColumnVector) otherCv;
 		super.shallowCopyTo(other);
 		other.vector = vector;
 	}

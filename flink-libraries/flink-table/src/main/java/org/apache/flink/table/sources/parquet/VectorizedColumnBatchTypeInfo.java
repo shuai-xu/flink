@@ -21,7 +21,7 @@ package org.apache.flink.table.sources.parquet;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.table.sources.vector.VectorizedColumnBatch;
+import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch;
 
 import java.util.Arrays;
 

@@ -16,29 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sources.vector;
+package org.apache.flink.table.dataformat.vector;
 
 /**
- * This class represents a nullable double precision floating point column vector.
- * This class will be used for operations on all floating point double types
- * and as such will use a 64-bit double value to hold the biggest possible value.
- *
- * <p>The vector[] field is public by design for high-performance access in the inner
+ * This class represents a nullable int column vector.
+ * This class will be used for operations on all long types
+ * The vector[] field is public by design for high-performance access in the inner
  * loop of query execution.
  */
-public class DoubleColumnVector extends ColumnVector {
-	private static final long serialVersionUID = 6193940154117411328L;
+public class LongColumnVector extends ColumnVector {
+	private static final long serialVersionUID = 8534925169458006397L;
 
-	public double[] vector;
+	public long[] vector;
 
 	/**
 	 * Don't use this except for testing purposes.
 	 *
 	 * @param len the number of rows
 	 */
-	public DoubleColumnVector(int len) {
+	public LongColumnVector(int len) {
 		super(len);
-		vector = new double[len];
+		vector = new long[len];
 	}
 
 	@Override
@@ -50,6 +48,7 @@ public class DoubleColumnVector extends ColumnVector {
 	// as indicated by selectedInUse and the sel array.
 	@Override
 	public void copySelected(boolean selectedInUse, int[] sel, int size, ColumnVector output) {
+
 		// Output has nulls if and only if input has nulls.
 		output.noNulls = noNulls;
 
@@ -57,10 +56,10 @@ public class DoubleColumnVector extends ColumnVector {
 		if (selectedInUse) {
 			for (int j = 0; j < size; j++) {
 				int i = sel[j];
-				((DoubleColumnVector) output).vector[i] = vector[i];
+				((LongColumnVector) output).vector[i] = vector[i];
 			}
 		} else {
-			System.arraycopy(vector, 0, ((DoubleColumnVector) output).vector, 0, size);
+			System.arraycopy(vector, 0, ((LongColumnVector) output).vector, 0, size);
 		}
 
 		// Copy nulls over if needed
@@ -71,7 +70,7 @@ public class DoubleColumnVector extends ColumnVector {
 	public void setElement(int outElementNum, int inputElementNum, ColumnVector inputVector) {
 		if (inputVector.noNulls || !inputVector.isNull[inputElementNum]) {
 			isNull[outElementNum] = false;
-			vector[outElementNum] = ((DoubleColumnVector) inputVector).vector[inputElementNum];
+			vector[outElementNum] = ((LongColumnVector) inputVector).vector[inputElementNum];
 		} else {
 			isNull[outElementNum] = true;
 			noNulls = false;
@@ -80,9 +79,8 @@ public class DoubleColumnVector extends ColumnVector {
 
 	@Override
 	public void shallowCopyTo(ColumnVector otherCv) {
-		DoubleColumnVector other = (DoubleColumnVector) otherCv;
+		LongColumnVector other = (LongColumnVector) otherCv;
 		super.shallowCopyTo(other);
 		other.vector = vector;
 	}
-
 }

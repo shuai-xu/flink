@@ -16,28 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sources.vector;
+package org.apache.flink.table.dataformat.vector;
 
 /**
- * This class represents a nullable double precision floating point column vector.
- * This class will be used for operations on all floating point float types.
- *
- * <p>The vector[] field is public by design for high-performance access in the inner
+ * This class represents a nullable int column vector.
+ * This class will be used for operations on all byte types
+ * The vector[] field is public by design for high-performance access in the inner
  * loop of query execution.
  */
-public class FloatColumnVector extends ColumnVector {
-	private static final long serialVersionUID = 8928878923550041110L;
+public class ByteColumnVector extends ColumnVector {
+	private static final long serialVersionUID = 7216045902943789034L;
 
-	public float[] vector;
+	public byte[] vector;
 
 	/**
 	 * Don't use this except for testing purposes.
 	 *
 	 * @param len the number of rows
 	 */
-	public FloatColumnVector(int len) {
+	public ByteColumnVector(int len) {
 		super(len);
-		vector = new float[len];
+		vector = new byte[len];
 	}
 
 	@Override
@@ -45,25 +44,24 @@ public class FloatColumnVector extends ColumnVector {
 		return vector[index];
 	}
 
-	// Copy the current object contents into the output. Only copy selected entries,
-	// as indicated by selectedInUse and the sel array.
+	//Copy the current object contents into the output. Only copy selected entries,
+	//as indicated by selectedInUse and the sel array.
 	@Override
 	public void copySelected(boolean selectedInUse, int[] sel, int size, ColumnVector output) {
-
-		// Output has nulls if and only if input has nulls.
+		//Output has nulls if and only if input has nulls.
 		output.noNulls = noNulls;
 
-		// Copy data values over
+		//Copy data values over
 		if (selectedInUse) {
 			for (int j = 0; j < size; j++) {
 				int i = sel[j];
-				((FloatColumnVector) output).vector[i] = vector[i];
+				((ByteColumnVector) output).vector[i] = vector[i];
 			}
 		} else {
-			System.arraycopy(vector, 0, ((FloatColumnVector) output).vector, 0, size);
+			System.arraycopy(vector, 0, ((ByteColumnVector) output).vector, 0, size);
 		}
 
-		// Copy nulls over if needed
+		//Copy nulls over if needed
 		super.copySelected(selectedInUse, sel, size, output);
 	}
 
@@ -71,8 +69,7 @@ public class FloatColumnVector extends ColumnVector {
 	public void setElement(int outElementNum, int inputElementNum, ColumnVector inputVector) {
 		if (inputVector.noNulls || !inputVector.isNull[inputElementNum]) {
 			isNull[outElementNum] = false;
-			vector[outElementNum] =
-					((FloatColumnVector) inputVector).vector[inputElementNum];
+			vector[outElementNum] = ((ByteColumnVector) inputVector).vector[inputElementNum];
 		} else {
 			isNull[outElementNum] = true;
 			noNulls = false;
@@ -81,8 +78,9 @@ public class FloatColumnVector extends ColumnVector {
 
 	@Override
 	public void shallowCopyTo(ColumnVector otherCv) {
-		FloatColumnVector other = (FloatColumnVector) otherCv;
+		ByteColumnVector other = (ByteColumnVector) otherCv;
 		super.shallowCopyTo(other);
 		other.vector = vector;
 	}
+
 }

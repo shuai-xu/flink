@@ -24,7 +24,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.ColumnarRow
-import org.apache.flink.table.sources.vector.VectorizedColumnBatch
+import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 /**
