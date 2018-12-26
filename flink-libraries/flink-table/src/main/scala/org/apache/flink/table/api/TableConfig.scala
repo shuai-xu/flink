@@ -25,9 +25,7 @@ import org.apache.flink.api.common.time.Time
 import org.apache.flink.configuration.{Configuration, GlobalConfiguration}
 import org.apache.flink.table.api.OperatorType.OperatorType
 import org.apache.flink.table.calcite.CalciteConfig
-import org.apache.flink.util.StringUtils
 import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.codegen.JavaSourceManipulator
 
 /**
   * A config to define the runtime behavior of the Table API.
@@ -137,82 +135,6 @@ class TableConfig {
       false
     } else {
       !disableOperators.contains(operator.toString)
-    }
-  }
-
-  /**
-    * @return code rewrite enabled
-    */
-  def codegenRewriteEnabled: Boolean =
-    JavaSourceManipulator.isRewriteEnable
-
-
-  /**
-    * set value to 'sql.codegen.rewrite'
-    * generated code will be rewrite to avoid JVM limitations.
-    */
-  def setCodegenRewriteEnabled(codegenRewriteEnabled: Boolean): Unit = {
-    JavaSourceManipulator.setRewriteEnable(codegenRewriteEnabled)
-  }
-
-  /**
-    * @return value of 'sql.codegen.rewrite.maxMethodLength'
-    */
-  def getCodegenRewriteMaxMethodLength: Long =
-    JavaSourceManipulator.getMaxMethodLengthForJvm
-
-  /**
-    * set value to 'sql.codegen.rewrite.maxMethodLength'
-    */
-  def setCodegenRewriteMaxMethodLength(maxLength: Long): Unit = {
-    JavaSourceManipulator.setMaxMethodLengthForJvm(maxLength)
-  }
-
-  /**
-    * @return value of 'sql.codegen.rewrite.maxMethodLengthAfterSplit'
-    */
-  def getCodegenRewriteMaxMethodLengthAfterSplit: Long =
-    JavaSourceManipulator.getMaxMethodLengthForJit
-
-  /**
-    * set value to 'sql.codegen.rewrite.maxMethodLengthAfterSplit'
-    */
-  def setCodegenRewriteMaxMethodLengthAfterSplit(maxLength: Long): Unit = {
-    JavaSourceManipulator.setMaxMethodLengthForJit(maxLength)
-  }
-
-  /**
-    * @return value of 'sql.codegen.rewrite.maxFieldCount'
-    */
-  def getCodegenRewriteMaxFieldCount: Int =
-    JavaSourceManipulator.getMaxFieldCount
-
-  /**
-    * set value to 'sql.codegen.rewrite.maxFieldCount'
-    */
-  def setCodegenRewriteMaxFieldCount(maxFieldCount: Int): Unit = {
-    JavaSourceManipulator.setMaxFieldCount(maxFieldCount)
-  }
-
-  /**
-    * enable code generate debug for janino
-    * like "gcc -g"
-    */
-  def enableCodeGenerateDebug: TableConfig = {
-    System.setProperty("org.codehaus.janino.source_debugging.enable", "true")
-    this
-  }
-
-  def disableCodeGenerateDebug: TableConfig = {
-    System.setProperty("org.codehaus.janino.source_debugging.enable", "false")
-    this
-  }
-
-  def setCodeGenerateTmpDir(path: String): Unit = {
-    if (!StringUtils.isNullOrWhitespaceOnly(path)) {
-      System.setProperty("org.codehaus.janino.source_debugging.dir", path)
-    } else {
-      throw new RuntimeException("code generate tmp dir can't be empty")
     }
   }
 

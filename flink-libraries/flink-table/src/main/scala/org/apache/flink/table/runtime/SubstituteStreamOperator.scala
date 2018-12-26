@@ -19,14 +19,14 @@
 package org.apache.flink.table.runtime
 
 import org.apache.flink.streaming.api.operators.{ChainingStrategy, StreamOperator}
-import org.apache.flink.table.codegen.{Compiler, JavaSourceManipulator}
+import org.apache.flink.table.codegen.Compiler
 import org.apache.flink.table.util.Logging
 
 import scala.collection.mutable
 
 abstract class SubstituteStreamOperator[OUT <: Any](
     name: String,
-    @transient var code: String,
+    var code: String,
     var chainingStrategy: ChainingStrategy = ChainingStrategy.ALWAYS,
     val references: mutable.ArrayBuffer[AnyRef] = new mutable.ArrayBuffer[AnyRef]())
   extends StreamOperator[OUT]
@@ -35,16 +35,10 @@ abstract class SubstituteStreamOperator[OUT <: Any](
 
   private var relID: Int = _
 
-  private var rewritedCode = JavaSourceManipulator.rewrite(code)
-
-  private val hasRewrited = JavaSourceManipulator.isRewriteEnable
-
   def getActualStreamOperator(cl: ClassLoader): StreamOperator[OUT] = {
-    LOG.debug(s"Compiling StreamOperator: $name \n\n Code:\n$rewritedCode.")
-    LOG.debug(s"StreamOperator code has been rewrited: $hasRewrited")
-    val clazz = compile(cl, name, rewritedCode)
+    LOG.debug(s"Compiling StreamOperator: $name \n\n Code:\n$code.")
+    val clazz = compile(cl, name, code)
     code = null
-    rewritedCode = null
     LOG.debug("Instantiating StreamOperator.")
     val streamOperator = clazz match {
       case cls if classOf[WithReferences].isAssignableFrom(cls) =>

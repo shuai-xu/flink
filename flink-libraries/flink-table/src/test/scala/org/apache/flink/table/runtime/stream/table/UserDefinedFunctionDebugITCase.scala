@@ -23,8 +23,10 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.{TableConfig, TableEnvironment}
+import org.apache.flink.table.codegen.CodeGenUtils
 import org.apache.flink.table.runtime.utils.TestingAppendSink
 import org.apache.flink.types.Row
+
 import org.junit.Test
 
 class UserDefinedFunctionDebugITCase {
@@ -41,7 +43,7 @@ class UserDefinedFunctionDebugITCase {
     val tableConfig = new TableConfig
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
-    tEnv.getConfig.enableCodeGenerateDebug
+    CodeGenUtils.enableCodeGenerateDebug()
     val stream = env.fromCollection(data)
     val table = stream.toTable(tEnv, 'a, 'b, 'c)
     val result = table.select('a, DebugUDF('b) as 'b, 'c)

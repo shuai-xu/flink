@@ -23,7 +23,6 @@ import java.lang.{Boolean => JBoolean, Byte => JByte, Character => JChar, Double
 import java.math.{BigDecimal => JBigDecimal}
 import java.sql.{Date, Time, Timestamp}
 import java.util.concurrent.atomic.AtomicInteger
-
 import org.apache.calcite.sql.SqlOperator
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.BuiltInMethod
@@ -43,7 +42,9 @@ import org.apache.flink.table.functions.sql.internal.{SqlRuntimeFilterBuilderFun
 import org.apache.flink.table.typeutils.TypeCheckUtils.{isNumeric, isTemporal, isTimeInterval}
 import org.apache.flink.table.typeutils._
 import org.apache.flink.table.util.Logging.CODE_LOG
-import org.codehaus.commons.compiler.CompileException
+import org.apache.flink.util.StringUtils
+
+import org.codehaus.commons.compiler.{CompileException, ICookable}
 import org.codehaus.janino.SimpleCompiler
 
 import scala.collection.mutable.ListBuffer
@@ -1027,6 +1028,26 @@ object CodeGenUtils {
             "This is a bug. Please file an issue.", t)
     }
     compiler.getClassLoader.loadClass(name).asInstanceOf[Class[T]]
+  }
+
+  /**
+    * enable code generate debug for janino
+    * like "gcc -g"
+    */
+  def enableCodeGenerateDebug(): Unit = {
+    System.setProperty(ICookable.SYSTEM_PROPERTY_SOURCE_DEBUGGING_ENABLE, "true")
+  }
+
+  def disableCodeGenerateDebug(): Unit = {
+    System.setProperty(ICookable.SYSTEM_PROPERTY_SOURCE_DEBUGGING_ENABLE, "false")
+  }
+
+  def setCodeGenerateTmpDir(path: String): Unit = {
+    if (!StringUtils.isNullOrWhitespaceOnly(path)) {
+      System.setProperty(ICookable.SYSTEM_PROPERTY_SOURCE_DEBUGGING_DIR, path)
+    } else {
+      throw new RuntimeException("code generate tmp dir can't be empty")
+    }
   }
 
   // ----------------------------------------------------------------------------------------------
