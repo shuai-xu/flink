@@ -40,7 +40,7 @@ The sample dataflow in the figure below is executed with five subtasks, and henc
 In the original *chain* version, the operator after head must be *OneInputStreamOperator*. The operator structure in *chain* is linear or tree-like.
 Currently as an extension, we support *TwoInputStreamOperator* at any position in *chain*. The operator structure in *chain* becomes a DAG.
 This behavior also can be configured, see [chaining docs](../dev/stream/operators/#task-chaining-and-resource-groups).
-The figure below described a typical scenario.
+The figure below describes a typical scenario.
 
 **Attention**: the current implementation is not completed yet since there are some trial functions need to support better.
 The main reason is that there is a conflict between *EXACTLY_ONCE* checkpoint mode and input dynamic selection of *TwoInputStreamOperator*.
