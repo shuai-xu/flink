@@ -33,6 +33,9 @@ public class ContaineredTaskManagerParameters implements java.io.Serializable {
 
 	private static final long serialVersionUID = -3096987654278064670L;
 
+	/** Total container cpu cores. */
+	private final double totalContainerCpuCore;
+
 	/** Total container memory, in bytes. */
 	private final long totalContainerMemoryMB;
 
@@ -69,12 +72,26 @@ public class ContaineredTaskManagerParameters implements java.io.Serializable {
 			HashMap<String, String> taskManagerEnv,
 			int youngMemoryMB) {
 
+		this(totalContainerMemoryMB, taskManagerHeapSizeMB, taskManagerDirectMemoryLimitMB, numSlots, taskManagerEnv, youngMemoryMB, -1.0);
+	}
+
+	public ContaineredTaskManagerParameters(
+		long totalContainerMemoryMB,
+		long taskManagerHeapSizeMB,
+		long taskManagerDirectMemoryLimitMB,
+		int numSlots,
+		HashMap<String, String> taskManagerEnv,
+		int youngMemoryMB,
+		double totalContainerCpuCore) {
+
 		this.totalContainerMemoryMB = totalContainerMemoryMB;
 		this.taskManagerHeapSizeMB = taskManagerHeapSizeMB;
 		this.taskManagerDirectMemoryLimitMB = taskManagerDirectMemoryLimitMB;
 		this.numSlots = numSlots;
 		this.taskManagerEnv = taskManagerEnv;
 		this.youngMemoryMB = youngMemoryMB;
+		this.totalContainerCpuCore = totalContainerCpuCore;
+
 	}
 
 	// ------------------------------------------------------------------------
@@ -103,6 +120,9 @@ public class ContaineredTaskManagerParameters implements java.io.Serializable {
 		return taskManagerEnv;
 	}
 
+	public double taskManagerTotalCpuCore() {
+		return totalContainerCpuCore;
+	}
 
 	// ------------------------------------------------------------------------
 
@@ -193,6 +213,18 @@ public class ContaineredTaskManagerParameters implements java.io.Serializable {
 			int numSlots,
 			int youngMemorySizeMB) {
 
+		return create(config, containerMemorySizeMB, heapMemorySizeMB, directMemorySizeMB, numSlots, youngMemorySizeMB, -1.0);
+	}
+
+	public static ContaineredTaskManagerParameters create(
+		Configuration config,
+		long containerMemorySizeMB,
+		int heapMemorySizeMB,
+		int directMemorySizeMB,
+		int numSlots,
+		int youngMemorySizeMB,
+		double containerCpuCore) {
+
 		// obtain the additional environment variables from the configuration
 		final HashMap<String, String> envVars = new HashMap<>();
 		final String prefix = ResourceManagerOptions.CONTAINERIZED_TASK_MANAGER_ENV_PREFIX;
@@ -205,11 +237,12 @@ public class ContaineredTaskManagerParameters implements java.io.Serializable {
 		}
 
 		return new ContaineredTaskManagerParameters(
-				containerMemorySizeMB,
-				heapMemorySizeMB,
-				directMemorySizeMB,
-				numSlots,
-				envVars,
-				youngMemorySizeMB);
+			containerMemorySizeMB,
+			heapMemorySizeMB,
+			directMemorySizeMB,
+			numSlots,
+			envVars,
+			youngMemorySizeMB,
+			containerCpuCore);
 	}
 }

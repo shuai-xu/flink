@@ -101,6 +101,11 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 	private static final int FAST_YARN_HEARTBEAT_INTERVAL_MS = 500;
 
 	/**
+	 * Yarn vcore ratio, how many virtual cores will use a physical core.
+	 * */
+	private final double yarnVcoreRatio;
+
+	/**
 	 * Environment variable name of the final container id used by the YarnResourceManager.
 	 * Container ID generation may vary across Hadoop versions.
 	 */
@@ -217,6 +222,8 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 
 		this.executor = Executors.newScheduledThreadPool(
 				flinkConfig.getInteger(YarnConfigOptions.CONTAINER_LAUNCHER_NUMBER));
+
+		this.yarnVcoreRatio = flinkConfig.getInteger(YarnConfigOptions.YARN_VCORE_RATIO);
 
 		this.webInterfaceUrl = webInterfaceUrl;
 
@@ -527,7 +534,8 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 						taskManagerResource.getTotalNativeMemory()),
 				taskManagerResource.getTotalDirectMemory(),
 				slotNumber,
-				taskManagerResource.getYoungHeapMemory());
+				taskManagerResource.getYoungHeapMemory(),
+				container.getResource().getVirtualCores() / yarnVcoreRatio);
 
 		log.info("TaskExecutor {} will be started with container size {} MB, JVM heap size {} MB, " +
 					"new generation size {} MB, JVM direct memory limit {} MB on {}",

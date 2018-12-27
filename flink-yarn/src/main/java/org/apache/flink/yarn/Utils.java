@@ -703,7 +703,8 @@ public final class Utils {
 		containerEnv.put(YarnConfigKeys.ENV_TM_NETWORK_BUFFERS_MEMORY_MIN, String.valueOf(taskManagerConfig.getLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN)));
 		containerEnv.put(YarnConfigKeys.ENV_TM_NETWORK_BUFFERS_MEMORY_MAX, String.valueOf(taskManagerConfig.getLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX)));
 		containerEnv.put(YarnConfigKeys.ENV_TM_PROCESS_NETTY_MEMORY, String.valueOf(taskManagerConfig.getInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY)));
-
+		containerEnv.put(YarnConfigKeys.ENV_TM_CAPACITY_CPU_CORE, String.valueOf(tmParams.taskManagerTotalCpuCore()));
+		containerEnv.put(YarnConfigKeys.ENV_TM_CAPACITY_MEMORY_MB, String.valueOf(tmParams.taskManagerTotalMemoryMB()));
 		ctx.setEnvironment(containerEnv);
 
 		// For TaskManager YARN container context, read the tokens from the jobmanager yarn container local file.

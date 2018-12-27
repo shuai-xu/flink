@@ -59,6 +59,8 @@ public class YarnConfigKeys {
 	public static final String ENV_TM_NETWORK_BUFFERS_MEMORY_MIN = "_NETWORK_BUFFERS_MEMORY_MIN";
 	public static final String ENV_TM_NETWORK_BUFFERS_MEMORY_MAX = "_NETWORK_BUFFERS_MEMORY_MAX";
 	public static final String ENV_TM_PROCESS_NETTY_MEMORY = "_TM_PROCESS_NETTY_MEMORY";
+	public static final String ENV_TM_CAPACITY_MEMORY_MB = "_TM_CAPACITY_MEMORY_MB";
+	public static final String ENV_TM_CAPACITY_CPU_CORE = "_TM_CAPACITY_CPU_CORE";
 
 	// ------------------------------------------------------------------------
 

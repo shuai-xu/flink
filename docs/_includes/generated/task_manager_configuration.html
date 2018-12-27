@@ -8,6 +8,11 @@
     </thead>
     <tbody>
         <tr>
+            <td><h5>io.manager.async.num-read-write-thread</h5></td>
+            <td style="word-wrap: break-word;">1</td>
+            <td>The number of async read write thread.</td>
+        </tr>
+        <tr>
             <td><h5>io.manager.buffered.read.size</h5></td>
             <td style="word-wrap: break-word;">-1</td>
             <td>The buffer size of io manager buffered read, -1 mean not use buffered read, this will reduce random IO, but will result in more than one copy.</td>
@@ -16,11 +21,6 @@
             <td><h5>io.manager.buffered.write.size</h5></td>
             <td style="word-wrap: break-word;">-1</td>
             <td>The buffer size of io manager buffered write, -1 mean not use buffered write, this will reduce random IO, but will result in more than one copy.</td>
-        </tr>
-        <tr>
-            <td><h5>io.manager.async.num-read-write-thread</h5></td>
-            <td style="word-wrap: break-word;">1</td>
-            <td>The number of async read write thread.</td>
         </tr>
         <tr>
             <td><h5>task.blocking.shuffle.type</h5></td>
@@ -66,6 +66,16 @@
             <td><h5>task.external.shuffle.max-concurrent-requests</h5></td>
             <td style="word-wrap: break-word;">10</td>
             <td></td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.capacity.cpu.core</h5></td>
+            <td style="word-wrap: break-word;">-1.0</td>
+            <td>The overall cpu cores allocated to the task manager.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.capacity.memory.mb</h5></td>
+            <td style="word-wrap: break-word;">-1</td>
+            <td>The overall memory in MB that allocated to the task manager.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.cpu.core</h5></td>

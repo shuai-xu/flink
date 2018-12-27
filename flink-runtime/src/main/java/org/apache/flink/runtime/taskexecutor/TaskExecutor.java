@@ -22,6 +22,7 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.accumulators.AccumulatorSnapshot;
 import org.apache.flink.runtime.blob.BlobCacheService;
 import org.apache.flink.runtime.blob.TransientBlobKey;
@@ -156,6 +157,12 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
 	public static final String TASK_MANAGER_NAME = "taskmanager";
 
+	@Nullable
+	private final Double capacityCpuCore;
+
+	@Nullable
+	private final Integer capacityMemoryMB;
+
 	/** The access to the leader election and retrieval services. */
 	private final HighAvailabilityServices haServices;
 
@@ -241,6 +248,12 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 			FatalErrorHandler fatalErrorHandler) {
 
 		super(rpcService, AkkaRpcServiceUtils.createRandomName(TASK_MANAGER_NAME));
+
+		double capacityCpu = taskManagerConfiguration.getConfiguration().getDouble(TaskManagerOptions.TASK_MANAGER_CAPACITY_CPU_CORE);
+		int capacityMem = taskManagerConfiguration.getConfiguration().getInteger(TaskManagerOptions.TASK_MANAGER_CAPACITY_MEMORY_MB);
+
+		this.capacityCpuCore = capacityCpu;
+		this.capacityMemoryMB = capacityMem;
 
 		checkArgument(taskManagerConfiguration.getNumberSlots() > 0, "The number of slots has to be larger than 0.");
 

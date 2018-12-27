@@ -311,6 +311,16 @@ public class TaskManagerOptions {
 			.withDeprecatedKeys("taskmanager.debug.memory.logIntervalMs")
 			.withDescription("The interval (in ms) for the log thread to log the current memory usage.");
 
+	public static final ConfigOption<Integer> TASK_MANAGER_CAPACITY_MEMORY_MB =
+		key("taskmanager.capacity.memory.mb")
+			.defaultValue(-1)
+			.withDescription("The overall memory in MB that allocated to the task manager.");
+
+	public static final ConfigOption<Double> TASK_MANAGER_CAPACITY_CPU_CORE =
+		key("taskmanager.capacity.cpu.core")
+			.defaultValue(-1.0)
+			.withDescription("The overall cpu cores allocated to the task manager.");
+
 	// ------------------------------------------------------------------------
 	//  External Shuffle Options
 	// ------------------------------------------------------------------------

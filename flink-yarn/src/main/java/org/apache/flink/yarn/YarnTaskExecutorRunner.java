@@ -126,6 +126,8 @@ public class YarnTaskExecutorRunner {
 			configuration.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN, Long.valueOf(ENV.get(YarnConfigKeys.ENV_TM_NETWORK_BUFFERS_MEMORY_MIN)));
 			configuration.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX, Long.valueOf(ENV.get(YarnConfigKeys.ENV_TM_NETWORK_BUFFERS_MEMORY_MAX)));
 			configuration.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY, Integer.valueOf(ENV.get(YarnConfigKeys.ENV_TM_PROCESS_NETTY_MEMORY)));
+			configuration.setInteger(TaskManagerOptions.TASK_MANAGER_CAPACITY_MEMORY_MB, Integer.valueOf(ENV.get(YarnConfigKeys.ENV_TM_CAPACITY_MEMORY_MB)));
+			configuration.setDouble(TaskManagerOptions.TASK_MANAGER_CAPACITY_CPU_CORE, Double.valueOf(ENV.get(YarnConfigKeys.ENV_TM_CAPACITY_CPU_CORE)));
 
 			FileSystem.initialize(configuration);
 
