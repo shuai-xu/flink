@@ -37,6 +37,16 @@ The sample dataflow in the figure below is executed with five subtasks, and henc
 
 <img src="../fig/tasks_chains.svg" alt="Operator chaining into Tasks" class="offset" width="80%" />
 
+In the original *chain* version, the operator after head must be *OneInputStreamOperator*. The operator structure in *chain* is linear or tree-like.
+Currently as an extension, we support *TwoInputStreamOperator* at any position in *chain*. The operator structure in *chain* becomes a DAG.
+This behavior also can be configured, see [chaining docs](../dev/stream/operators/#task-chaining-and-resource-groups).
+The figure below described a typical scenario.
+
+**Attention**: the current implementation is not completed yet since there are some trial functions need to support better.
+The main reason is that there is a conflict between *EXACTLY_ONCE* checkpoint mode and input dynamic selection of *TwoInputStreamOperator*.
+
+<img src="../fig/two_input_chain.svg" alt="Complex chain structure" class="offset" />
+
 {% top %}
 
 ## Job Managers, Task Managers, Clients

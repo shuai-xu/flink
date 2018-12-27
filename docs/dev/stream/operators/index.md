@@ -1087,6 +1087,16 @@ someStream.map(...).disableChaining();
         </p>
       </td>
     </tr>
+     <tr>
+          <td>Enable complex chain mode</td>
+          <td>
+            <p>Enable complex chain mode in this job
+{% highlight java %}
+streamExecutionEnvironment.setMultiHeadChainMode(true);
+{% endhighlight %}
+            </p>
+          </td>
+        </tr>
     <tr>
       <td>Set slot sharing group</td>
       <td>
