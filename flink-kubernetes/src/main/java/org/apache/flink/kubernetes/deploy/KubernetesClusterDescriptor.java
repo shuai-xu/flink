@@ -35,6 +35,7 @@ import org.apache.flink.kubernetes.configuration.KubernetesConfigOptions;
 import org.apache.flink.kubernetes.entrypoint.KubernetesJobClusterEntrypoint;
 import org.apache.flink.kubernetes.entrypoint.KubernetesSessionClusterEntrypoint;
 import org.apache.flink.kubernetes.utils.KubernetesClientFactory;
+import org.apache.flink.kubernetes.utils.KubernetesUtils;
 import org.apache.flink.runtime.clusterframework.BootstrapTools;
 import org.apache.flink.runtime.entrypoint.ClusterEntrypoint;
 import org.apache.flink.runtime.jobgraph.JobGraph;
@@ -45,6 +46,7 @@ import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerStatus;
+import io.fabric8.kubernetes.api.model.KeyToPath;
 import io.fabric8.kubernetes.api.model.LoadBalancerIngress;
 import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
@@ -58,25 +60,25 @@ import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.apache.flink.configuration.ConfigConstants.ENV_FLINK_CONF_DIR;
 import static org.apache.flink.configuration.GlobalConfiguration.FLINK_CONF_FILENAME;
 import static org.apache.flink.kubernetes.configuration.Constants.CONFIG_FILE_LOG4J_NAME;
 import static org.apache.flink.kubernetes.configuration.Constants.ENV_FLINK_CLASSPATH;
+import static org.apache.flink.kubernetes.configuration.Constants.FILES_SEPARATOR;
 import static org.apache.flink.kubernetes.configuration.Constants.FLINK_CONF_VOLUME;
 import static org.apache.flink.kubernetes.configuration.Constants.JOBMANAGER_BLOB_PORT;
 import static org.apache.flink.kubernetes.configuration.Constants.JOBMANAGER_RC_NAME_SUFFIX;
@@ -237,7 +239,7 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 
 		// 2. create the jobmanager replication controller.
 		Container container = createJobManagerContainer(entryPoint, clusterSpecification.getMasterMemoryMB());
-		ReplicationController jobManagerRc = createReplicationController(clusterId, labels, container);
+		ReplicationController jobManagerRc = createReplicationController(clusterId, labels, container, configMap);
 
 		// 3. create the service.
 		Service service = createService(clusterId, labels);
@@ -249,9 +251,11 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 	}
 
 	private ReplicationController createReplicationController(KubernetesClusterId clusterId,
-			Map<String, String> labels, Container container) {
+			Map<String, String> labels, Container container, ConfigMap configMap) {
 		String jobManagerRcName = clusterId.toString() + JOBMANAGER_RC_NAME_SUFFIX;
 		String configMapName = clusterId.toString() + JOB_MANAGER_CONFIG_MAP_SUFFIX;
+		List<KeyToPath> configMapItems = configMap.getData().keySet().stream()
+			.map(e -> new KeyToPath(e, null, e)).collect(Collectors.toList());
 		return new ReplicationControllerBuilder()
 			.editOrNewMetadata()
 				.withName(jobManagerRcName)
@@ -269,14 +273,7 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 							.withName(FLINK_CONF_VOLUME)
 							.withNewConfigMap()
 								.withName(configMapName)
-								.addNewItem()
-									.withKey(FLINK_CONF_FILENAME)
-									.withPath(FLINK_CONF_FILENAME)
-									.endItem()
-								.addNewItem()
-									.withKey(CONFIG_FILE_LOG4J_NAME)
-									.withPath(CONFIG_FILE_LOG4J_NAME)
-									.endItem()
+								.addAllToItems(configMapItems)
 								.endConfigMap()
 							.endVolume()
 						.endSpec()
@@ -403,6 +400,27 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 		flinkConfiguration.setString(HighAvailabilityOptions.HA_CLUSTER_ID, clusterId.toString());
 		// TM use servicename to discover jobmanager
 		flinkConfiguration.setString(JobManagerOptions.ADDRESS, clusterId.toString() + SERVICE_NAME_SUFFIX);
+		// parse files
+		String files = flinkConfiguration.getString(KubernetesConfigOptions.CONTAINER_FILES);
+		Map<String, String> fileMap = new LinkedHashMap<>();
+		if (files != null && !files.isEmpty()) {
+			for (String filePath : files.split(FILES_SEPARATOR)) {
+				if (filePath.indexOf(File.separatorChar) == -1) {
+					filePath = configurationDirectory + File.separator + filePath;
+				}
+				String fileName = filePath.substring(filePath.lastIndexOf(File.separator) + 1);
+				String fileContent = KubernetesUtils.getContentFromFile(filePath);
+				if (fileContent != null) {
+					fileMap.put(fileName, fileContent);
+				} else {
+					LOG.info("File {} not exist, will not add to configMap", filePath);
+				}
+			}
+		}
+		if (!fileMap.isEmpty()) {
+			flinkConfiguration.setString(KubernetesConfigOptions.CONTAINER_FILES,
+				StringUtils.join(fileMap.keySet(), ','));
+		}
 		flinkConfiguration.toMap().forEach((k, v) ->
 			flinkConfContent.append(k).append(": ").append(v).append(System.lineSeparator()));
 
@@ -412,9 +430,15 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 			.withName(configMapName)
 			.endMetadata()
 			.addToData(FLINK_CONF_FILENAME, flinkConfContent.toString());
-		String log4jContent = getContentFromFile(configurationDirectory + File.separator + CONFIG_FILE_LOG4J_NAME);
+		String log4jContent = KubernetesUtils.getContentFromFile(configurationDirectory + File.separator + CONFIG_FILE_LOG4J_NAME);
 		if (log4jContent != null) {
 			configMapBuilder.addToData(CONFIG_FILE_LOG4J_NAME, log4jContent);
+		} else {
+			LOG.info("File {} not exist, will not add to configMap",
+				configurationDirectory + File.separator + CONFIG_FILE_LOG4J_NAME);
+		}
+		if (!fileMap.isEmpty()) {
+			fileMap.entrySet().stream().forEach(e -> configMapBuilder.addToData(e.getKey(), e.getValue()));
 		}
 		return configMapBuilder.build();
 	}
@@ -493,24 +517,5 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 			.build();
 		rc.getMetadata().setOwnerReferences(Collections.singletonList(ownerReference));
 		configMap.getMetadata().setOwnerReferences(Collections.singletonList(ownerReference));
-	}
-
-	private String getContentFromFile(String filePath) {
-		File file = new File(filePath);
-		if (file.exists()) {
-			StringBuilder content = new StringBuilder();
-			String line;
-			try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file)))){
-				while ((line = reader.readLine()) != null) {
-					content.append(line).append(System.lineSeparator());
-				}
-			} catch (IOException e) {
-				throw new RuntimeException("Error read file content.", e);
-			}
-			return content.toString();
-		} else {
-			LOG.info("File {} not exist, will not add to configMap", filePath);
-		}
-		return null;
 	}
 }

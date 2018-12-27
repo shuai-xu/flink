@@ -73,6 +73,7 @@ import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.TestLogger;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
 import io.fabric8.kubernetes.api.model.DoneablePod;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
@@ -223,6 +224,7 @@ public class KubernetesResourceManagerITCase extends TestLogger {
 		}
 
 		protected void setupTaskManagerConfigMap() {
+			tmConfigMap = new ConfigMapBuilder().build();
 		}
 
 		protected void setupOwnerReference() {

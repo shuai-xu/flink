@@ -37,6 +37,8 @@ public final class Constants {
 
 	public static final String NAME_SEPARATOR = "-";
 
+	public static final String FILES_SEPARATOR = ",";
+
 	public static final String JOBMANAGER_RC_NAME_SUFFIX = "-jobmanager-rc";
 
 	public static final String JOB_MANAGER_NAME_SUFFIX = "-jobmanager";

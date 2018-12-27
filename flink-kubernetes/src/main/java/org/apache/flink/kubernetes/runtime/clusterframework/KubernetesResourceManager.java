@@ -86,6 +86,9 @@ public class KubernetesResourceManager extends ResourceManager<KubernetesWorkerN
 	final ConcurrentMap<ResourceID, KubernetesWorkerNode> workerNodeMap;
 
 	private final Configuration flinkConfig;
+
+	protected ConfigMap tmConfigMap;
+
 	/**
 	 * Client to communicate with the Resource Manager (Kubernetes's master).
 	 */
@@ -408,9 +411,9 @@ public class KubernetesResourceManager extends ResourceManager<KubernetesWorkerN
 	}
 
 	protected void setupTaskManagerConfigMap() {
-		ConfigMap configMap = KubernetesRMUtils.createTaskManagerConfigMap(flinkConfig, confDir,
+		tmConfigMap = KubernetesRMUtils.createTaskManagerConfigMap(flinkConfig, confDir,
 			ownerReference, taskManagerConfigMapName);
-		resourceManagerClient.configMaps().createOrReplace(configMap);
+		resourceManagerClient.configMaps().createOrReplace(tmConfigMap);
 	}
 
 	protected Watch createAndStartWatcher() {
@@ -540,7 +543,7 @@ public class KubernetesResourceManager extends ResourceManager<KubernetesWorkerN
 			currentLabels.put(Constants.LABEL_PRIORITY_KEY, String.valueOf(priority));
 			Pod taskManagerPod = KubernetesRMUtils
 				.createTaskManagerPod(currentLabels, taskManagerPodName,
-					taskManagerConfigMapName, ownerReference, container);
+					taskManagerConfigMapName, ownerReference, container, tmConfigMap);
 			requestPod(taskManagerPod);
 			// update pending worker nodes
 			Set<ResourceID> curPendingWorkerNodes = pendingWorkerNodes.get(priority);

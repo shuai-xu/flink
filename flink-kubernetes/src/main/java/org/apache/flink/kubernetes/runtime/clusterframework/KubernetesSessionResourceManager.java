@@ -85,6 +85,9 @@ public class KubernetesSessionResourceManager extends
 	final ConcurrentMap<ResourceID, KubernetesWorkerNode> workerNodeMap;
 
 	private final Configuration flinkConfig;
+
+	private ConfigMap tmConfigMap;
+
 	/**
 	 * Client to communicate with the Resource Manager (Kubernetes's master).
 	 */
@@ -344,9 +347,9 @@ public class KubernetesSessionResourceManager extends
 	}
 
 	protected void setupTaskManagerConfigMap() {
-		ConfigMap configMap = KubernetesRMUtils.createTaskManagerConfigMap(flinkConfig, confDir,
+		tmConfigMap = KubernetesRMUtils.createTaskManagerConfigMap(flinkConfig, confDir,
 			ownerReference, taskManagerConfigMapName);
-		resourceManagerClient.configMaps().createOrReplace(configMap);
+		resourceManagerClient.configMaps().createOrReplace(tmConfigMap);
 	}
 
 	protected Watch createAndStartWatcher() {
@@ -448,7 +451,7 @@ public class KubernetesSessionResourceManager extends
 		log.info("Task manager start command: " + container.getArgs());
 		Pod taskManagerPod = KubernetesRMUtils
 			.createTaskManagerPod(taskManagerPodLabels, taskManagerPodName,
-				taskManagerConfigMapName, ownerReference, container);
+				taskManagerConfigMapName, ownerReference, container, tmConfigMap);
 		requestPod(taskManagerPod);
 		return new ResourceID(taskManagerPodName);
 	}

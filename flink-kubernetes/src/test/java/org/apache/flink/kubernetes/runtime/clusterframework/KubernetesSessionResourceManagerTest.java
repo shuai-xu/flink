@@ -175,7 +175,6 @@ public class KubernetesSessionResourceManagerTest extends TestLogger {
 		Mockito.doNothing().when(spyKubernetesSessionRM).setupOwnerReference();
 		spyKubernetesSessionRM.setOwnerReference(new OwnerReferenceBuilder().build());
 		Mockito.doReturn(kubernetesClient).when(spyKubernetesSessionRM).createKubernetesClient();
-		Mockito.doNothing().when(spyKubernetesSessionRM).setupTaskManagerConfigMap();
 		return spyKubernetesSessionRM;
 	}
 

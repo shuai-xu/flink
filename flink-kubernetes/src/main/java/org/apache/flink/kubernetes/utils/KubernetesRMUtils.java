@@ -38,6 +38,7 @@ import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import io.fabric8.kubernetes.api.model.KeyToPath;
 import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -51,22 +52,21 @@ import org.apache.commons.net.util.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.apache.flink.configuration.ConfigConstants.ENV_FLINK_CONF_DIR;
 import static org.apache.flink.configuration.GlobalConfiguration.FLINK_CONF_FILENAME;
 import static org.apache.flink.kubernetes.configuration.Constants.CONFIG_FILE_LOG4J_NAME;
+import static org.apache.flink.kubernetes.configuration.Constants.FILES_SEPARATOR;
 import static org.apache.flink.kubernetes.configuration.Constants.FLINK_CONF_VOLUME;
 import static org.apache.flink.kubernetes.configuration.Constants.POD_RESTART_POLICY;
 import static org.apache.flink.kubernetes.configuration.Constants.PROTOCOL_TCP;
@@ -99,28 +99,41 @@ public class KubernetesRMUtils {
 		flinkConfig.toMap().forEach((k, v) ->
 			flinkConfContent.append(k).append(": ").append(v).append(System.lineSeparator()));
 
-		File log4jFile = new File(confDir + File.separator + CONFIG_FILE_LOG4J_NAME);
-		StringBuilder log4JContent = new StringBuilder();
-		String line;
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(log4jFile)))){
-			while ((line = reader.readLine()) != null) {
-				log4JContent.append(line).append(System.lineSeparator());
-			}
-		} catch (IOException e) {
-			throw new RuntimeException("Error read log4j properties.", e);
-		}
-		return new ConfigMapBuilder()
+		ConfigMapBuilder configMapBuilder = new ConfigMapBuilder()
 			.withNewMetadata()
 			.withName(configMapName)
 			.withOwnerReferences(ownerReference)
 			.endMetadata()
-			.addToData(FLINK_CONF_FILENAME, flinkConfContent.toString())
-			.addToData(CONFIG_FILE_LOG4J_NAME, log4JContent.toString())
-			.build();
+			.addToData(FLINK_CONF_FILENAME, flinkConfContent.toString());
+		String log4jPath = confDir + File.separator + CONFIG_FILE_LOG4J_NAME;
+		String log4jContent = KubernetesUtils.getContentFromFile(log4jPath);
+		if (log4jContent != null) {
+			configMapBuilder.addToData(CONFIG_FILE_LOG4J_NAME, log4jContent);
+		} else {
+			LOG.info("File {} not exist, will not add to configMap", log4jPath);
+		}
+		String files = flinkConfig.getString(KubernetesConfigOptions.CONTAINER_FILES);
+		if (files != null && !files.isEmpty()) {
+			for (String filePath : files.split(FILES_SEPARATOR)) {
+				if (filePath.indexOf(File.separatorChar) == -1) {
+					filePath = confDir + File.separator + filePath;
+				}
+				String fileName = filePath.substring(filePath.lastIndexOf(File.separator) + 1);
+				String fileContent = KubernetesUtils.getContentFromFile(filePath);
+				if (fileContent != null) {
+					configMapBuilder.addToData(fileName, fileContent);
+				} else {
+					LOG.info("File {} not exist, will not add to configMap", filePath);
+				}
+			}
+		}
+		return configMapBuilder.build();
 	}
 
 	public static Pod createTaskManagerPod(Map<String, String> labels, String name,
-		String configMapName, OwnerReference ownerReference, Container container) {
+		String configMapName, OwnerReference ownerReference, Container container, ConfigMap configMap) {
+		List<KeyToPath> configMapItems = configMap.getData().keySet().stream()
+			.map(e -> new KeyToPath(e, null, e)).collect(Collectors.toList());
 		return new PodBuilder()
 			.editOrNewMetadata()
 			.withLabels(labels)
@@ -134,14 +147,7 @@ public class KubernetesRMUtils {
 			.withName(FLINK_CONF_VOLUME)
 			.withNewConfigMap()
 			.withName(configMapName)
-			.addNewItem()
-			.withKey(FLINK_CONF_FILENAME)
-			.withPath(FLINK_CONF_FILENAME)
-			.endItem()
-			.addNewItem()
-			.withKey(CONFIG_FILE_LOG4J_NAME)
-			.withPath(CONFIG_FILE_LOG4J_NAME)
-			.endItem()
+			.addAllToItems(configMapItems)
 			.endConfigMap()
 			.endVolume()
 			.endSpec()

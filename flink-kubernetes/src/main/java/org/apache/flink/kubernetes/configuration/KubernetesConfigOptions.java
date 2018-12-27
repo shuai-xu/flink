@@ -71,6 +71,12 @@ public class KubernetesConfigOptions {
 			"(e.g. jobmanager or taskmanager) can also be configured to use different images if desired, " +
 			"by setting the container type-specific image name.");
 
+	public static final ConfigOption<String> CONTAINER_FILES =
+		key("kubernetes.container.files")
+			.noDefaultValue()
+			.withDescription("Files to be used for Flink containers, will be transferred to flink conf directory " +
+				"and appended to classpath in containers.");
+
 	public static final ConfigOption<String> CONTAINER_IMAGE_PULL_POLICY =
 		key("kubernetes.container.image.pullPolicy")
 		.defaultValue("IfNotPresent")
