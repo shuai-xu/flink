@@ -81,20 +81,23 @@ Java/Scala program that triggers the execution, or in the command line process `
 Each worker (TaskManager) is a *JVM process*, and may execute one or more subtasks in separate threads.
 To control how many tasks a worker accepts, a worker has so called **task slots** (at least one).
 
-Each *task slot* represents a fixed subset of resources of the TaskManager. A TaskManager with three slots, for example,
-will dedicate 1/3 of its managed memory to each slot. Slotting the resources means that a subtask will not
-compete with subtasks from other jobs for managed memory, but instead has a certain amount of reserved
-managed memory. Note that no CPU isolation happens here; currently slots only separate the managed memory of tasks.
+Each *task slot* represents a subset of resources of the TaskManager.
+**Resource profiles** quantitatively describe the resources of each task slot: CPU cores, memory size (heap, direct, native and network), and other extended resources.
+The resources of a task slot can be either defined at starting of the TaskManager (in *per-job* mode), or dynamically decided when scheduling tasks onto the slot (in *session* mode).
+A special *unknown* resource profile is used for task slots whose resources could not (or not yet) be decided.
 
-By adjusting the number of task slots, users can define how subtasks are isolated from each other.
-Having one slot per TaskManager means each task group runs in a separate JVM (which can be started in a
-separate container, for example). Having multiple slots
-means more subtasks share the same JVM. Tasks in the same JVM share TCP connections (via multiplexing) and
-heartbeat messages. They may also share data sets and data structures, thus reducing the per-task overhead.
+By adjusting the number of task slots and resource profile of each slot, users can define how subtasks are isolated from each other and the amount of resources they should use.
+Having one slot per TaskManager means each task group runs in a separate JVM (which can be started in a separate container, for example).
+Having multiple slots means more subtasks share the same JVM.
+Tasks in the same JVM share TCP connections (via multiplexing) and heartbeat messages.
+They may also share data sets and data structures, thus reducing the per-task overhead.
 
-<img src="../fig/tasks_slots.svg" alt="A TaskManager with Task Slots and Tasks" class="offset" width="80%" />
+Note that while the quantitative resource management helps balancing workloads over TaskManagers, there is no resource isolation between tasks running on the same TaskManager.
 
-By default, Flink allows subtasks to share slots even if they are subtasks of different tasks, so long as
+<img src="../fig/tasks_slots.svg" alt="A TaskManager with Task Slots and Tasks" class="offset" width="100%" />
+
+In cases where the resources needed for running individual tasks can not be well estimated, a **slot sharing** based scheduling strategy can be used.
+Flink allows subtasks to share slots even if they are subtasks of different tasks, so long as
 they are from the same job. The result is that one slot may hold an entire pipeline of the
 job. Allowing this *slot sharing* has two main benefits:
 
@@ -108,7 +111,7 @@ job. Allowing this *slot sharing* has two main benefits:
 
 <img src="../fig/slot_sharing.svg" alt="TaskManagers with shared Task Slots" class="offset" width="80%" />
 
-The APIs also include a *[resource group](../dev/stream/operators/#task-chaining-and-resource-groups)* mechanism which can be used to prevent undesirable slot sharing. 
+The APIs also include a *[resource group](../dev/stream/operators/#task-chaining-and-resource-groups)* mechanism which can be used to prevent undesirable slot sharing.
 
 As a rule-of-thumb, a good default number of task slots would be the number of CPU cores.
 With hyper-threading, each slot then takes 2 or more hardware thread contexts.
@@ -128,7 +131,7 @@ take a point-in-time snapshot of the key/value state and store that snapshot as 
 
 ## Savepoints
 
-Programs written in the Data Stream API can resume execution from a **savepoint**. Savepoints allow both updating your programs and your Flink cluster without losing any state. 
+Programs written in the Data Stream API can resume execution from a **savepoint**. Savepoints allow both updating your programs and your Flink cluster without losing any state.
 
 [Savepoints](../ops/state/savepoints.html) are **manually triggered checkpoints**, which take a snapshot of the program and write it out to a state backend. They rely on the regular checkpointing mechanism for this. During execution programs are periodically snapshotted on the worker nodes and produce checkpoints. For recovery only the last completed checkpoint is needed and older checkpoints can be safely discarded as soon as a new one is completed.
 
