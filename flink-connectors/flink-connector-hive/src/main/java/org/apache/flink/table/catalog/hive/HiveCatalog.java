@@ -22,7 +22,11 @@ import org.apache.flink.table.api.DatabaseAlreadyExistException;
 import org.apache.flink.table.api.DatabaseNotExistException;
 import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
+import org.apache.flink.table.api.exceptions.PartitionAlreadyExistException;
+import org.apache.flink.table.api.exceptions.PartitionNotExistException;
+import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
 import org.apache.flink.table.catalog.CatalogDatabase;
+import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.ExternalCatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.ReadableWritableCatalog;
@@ -34,8 +38,10 @@ import org.apache.hadoop.hive.metastore.IMetaStoreClient;
 import org.apache.hadoop.hive.metastore.RetryingMetaStoreClient;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
 import org.apache.hadoop.hive.metastore.api.Database;
+import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
+import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.api.UnknownDBException;
 import org.apache.parquet.Strings;
 import org.apache.thrift.TException;
@@ -115,8 +121,12 @@ public class HiveCatalog implements ReadableWritableCatalog {
 
 	@Override
 	public ExternalCatalogTable getTable(ObjectPath path) throws TableNotExistException {
+		return HiveMetadataUtil.createExternalCatalogTable(getHiveTable(path));
+	}
+
+	private Table getHiveTable(ObjectPath path) {
 		try {
-			return HiveMetadataUtil.createExternalCatalogTable(client.getTable(path.getDbName(), path.getObjectName()));
+			return client.getTable(path.getDbName(), path.getObjectName());
 		} catch (NoSuchObjectException e) {
 			throw new TableNotExistException(catalogName, path.getFullName());
 		} catch (TException e) {
@@ -126,7 +136,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public List<ObjectPath> listTablesByDatabase(String dbName) throws DatabaseNotExistException {
+	public List<ObjectPath> listTables(String dbName) throws DatabaseNotExistException {
 		try {
 			return client.getAllTables(dbName).stream()
 				.map(t -> new ObjectPath(dbName, t))
@@ -145,7 +155,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 		List<ObjectPath> result = new ArrayList<>();
 
 		for (String db : dbs) {
-			result.addAll(listTablesByDatabase(db));
+			result.addAll(listTables(db));
 		}
 
 		return result;
@@ -207,6 +217,18 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	public void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists) throws TableNotExistException, DatabaseNotExistException {
 		// Hive metastore client doesn't support renaming yet
 		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public boolean tableExists(ObjectPath path) {
+		try {
+			return client.tableExists(path.getDbName(), path.getObjectName());
+		} catch (UnknownDBException e) {
+			return false;
+		} catch (TException e) {
+			throw new FlinkHiveException(
+				String.format("Failed check if table %s exists in database %s", path.getObjectName(), path.getDbName()), e);
+		}
 	}
 
 	// ------ databases ------
@@ -290,21 +312,100 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			return client.getDatabase(dbName) != null;
 		} catch (NoSuchObjectException e) {
 			return false;
-		} catch (Exception e) {
+		} catch (TException e) {
 			throw new FlinkHiveException(
 				String.format("Failed getting database %s", dbName), e);
 		}
 	}
 
+	// ------ partitions ------
+
 	@Override
-	public boolean tableExists(String dbName, String tableName) {
-		try {
-			return client.tableExists(dbName, tableName);
-		} catch (UnknownDBException e) {
-			return false;
-		} catch (Exception e) {
-			throw new FlinkHiveException(
-				String.format("Failed check if table %s exists in database %s", tableName, dbName), e);
+	public void createParition(ObjectPath tablePath, CatalogPartition partition, boolean ignoreIfExists)
+		throws TableNotExistException, TableNotPartitionedException, PartitionAlreadyExistException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public void dropParition(ObjectPath tablePath, CatalogPartition.PartitionSpec partition, boolean ignoreIfNotExists)
+		throws TableNotExistException, TableNotPartitionedException, PartitionAlreadyExistException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public void alterParition(ObjectPath tablePath, CatalogPartition newPartition, boolean ignoreIfNotExists)
+		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public List<CatalogPartition.PartitionSpec> listPartitions(ObjectPath path)
+		throws TableNotExistException, TableNotPartitionedException {
+
+		if (!isTablePartitioned(path)) {
+			throw new TableNotPartitionedException(catalogName, path);
 		}
+
+		try {
+			return client.listPartitionNames(path.getDbName(), path.getObjectName(), (short) -1).stream()
+				.map(n -> HiveMetadataUtil.createPartitionSpec(n))
+				.collect(Collectors.toList());
+		} catch (TException e) {
+			throw new FlinkHiveException(
+				String.format("Failed listing partitions of table %s", path), e);
+		}
+	}
+
+	@Override
+	public List<CatalogPartition.PartitionSpec> listPartitions(ObjectPath path, CatalogPartition.PartitionSpec partitionSpecs)
+		throws TableNotExistException, TableNotPartitionedException {
+
+		if (!isTablePartitioned(path)) {
+			throw new TableNotPartitionedException(catalogName, path);
+		}
+
+		try {
+			return client.listPartitionNames(path.getDbName(), path.getObjectName(), getOrderedPartitionValues(path, partitionSpecs), (short) -1).stream()
+				.map(n -> HiveMetadataUtil.createPartitionSpec(n))
+				.collect(Collectors.toList());
+		} catch (TException e) {
+			throw new FlinkHiveException(
+				String.format("Failed listing partitions of table %s", path), e);
+		}
+	}
+
+	@Override
+	public CatalogPartition getPartition(ObjectPath path, CatalogPartition.PartitionSpec partitionSpecs)
+		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException {
+		if (!isTablePartitioned(path)) {
+			throw new TableNotPartitionedException(catalogName, path);
+		}
+
+		try {
+			return HiveMetadataUtil.createCatalogPartition(
+				partitionSpecs,
+				client.getPartition(path.getDbName(), path.getObjectName(), getOrderedPartitionValues(path, partitionSpecs)));
+		} catch (NoSuchObjectException e) {
+			throw new PartitionNotExistException(catalogName, path, partitionSpecs);
+		} catch (TException e) {
+			throw new FlinkHiveException(
+				String.format("Failed listing partitions of table %s", path), e);
+		}
+	}
+
+	private List<String> getOrderedPartitionValues(ObjectPath tablePath, CatalogPartition.PartitionSpec partitionSpec) {
+		return partitionSpec.getOrderedValues(getPartitionKeys(tablePath));
+	}
+
+	private List<String> getPartitionKeys(ObjectPath tablePath) {
+		List<FieldSchema> fieldSchemas = getHiveTable(tablePath).getPartitionKeys();
+
+		List<String> partitionKeys = new ArrayList<>(fieldSchemas.size());
+
+		for (FieldSchema fs : fieldSchemas) {
+			partitionKeys.add(fs.getName());
+		}
+
+		return partitionKeys;
 	}
 }

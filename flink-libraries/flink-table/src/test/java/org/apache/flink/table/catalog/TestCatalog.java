@@ -19,9 +19,10 @@
 package org.apache.flink.table.catalog;
 
 import org.apache.flink.table.api.DatabaseNotExistException;
+import org.apache.flink.table.api.PartitionNotExistException;
 import org.apache.flink.table.api.TableNotExistException;
+import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
 
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -45,7 +46,7 @@ public class TestCatalog implements ReadableCatalog {
 	}
 
 	@Override
-	public List<ObjectPath> listTablesByDatabase(String dbName) throws DatabaseNotExistException {
+	public List<ObjectPath> listTables(String dbName) throws DatabaseNotExistException {
 		return null;
 	}
 
@@ -60,7 +61,37 @@ public class TestCatalog implements ReadableCatalog {
 	}
 
 	@Override
-	public void close() throws IOException {
+	public boolean tableExists(ObjectPath path) {
+		return false;
+	}
+
+	@Override
+	public List<CatalogPartition.PartitionSpec> listPartitions(ObjectPath tablePath) throws TableNotExistException, TableNotPartitionedException {
+		return null;
+	}
+
+	@Override
+	public List<CatalogPartition.PartitionSpec> listPartitions(ObjectPath tablePath, CatalogPartition.PartitionSpec partitionSpecs) throws TableNotExistException, TableNotPartitionedException {
+		return null;
+	}
+
+	@Override
+	public CatalogPartition getPartition(ObjectPath tablePath, CatalogPartition.PartitionSpec partitionSpecs) throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException {
+		return null;
+	}
+
+	@Override
+	public boolean isTablePartitioned(ObjectPath tablePath) throws TableNotExistException {
+		return false;
+	}
+
+	@Override
+	public boolean dbExists(String dbName) {
+		return false;
+	}
+
+	@Override
+	public void close() {
 
 	}
 }

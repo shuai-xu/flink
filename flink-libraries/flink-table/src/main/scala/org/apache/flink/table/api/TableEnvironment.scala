@@ -986,7 +986,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     * @return A list of the names of all registered tables.
     */
   def listTables(): Array[String] = {
-    catalogManager.getDefaultCatalog.listTablesByDatabase(catalogManager.getDefaultDatabaseName)
+    catalogManager.getDefaultCatalog.listTables(catalogManager.getDefaultDatabaseName)
       .map(op => op.getObjectName)
       .toArray
   }

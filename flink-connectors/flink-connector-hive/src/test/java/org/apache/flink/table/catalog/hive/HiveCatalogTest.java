@@ -25,6 +25,7 @@ import org.apache.flink.table.catalog.hive.config.HiveTableConfig;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -66,4 +67,9 @@ public class HiveCatalogTest extends CatalogTestBase {
 		}};
 	}
 
+	@Test
+	public void testCreatePartitionSpec() {
+		String hivePartitionName = "name=bob/year=2018";
+
+	}
 }

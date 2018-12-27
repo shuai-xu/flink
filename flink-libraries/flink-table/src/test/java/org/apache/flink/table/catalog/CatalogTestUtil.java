@@ -106,4 +106,24 @@ public class CatalogTestUtil {
 			-1L);
 	}
 
+	public static ExternalCatalogTable createExternalCatalogTable(
+		String tableType,
+		TableSchema schema,
+		Map<String, String> tableProperties,
+		LinkedHashSet<String> partitionCols) {
+		return new ExternalCatalogTable(
+			tableType,
+			schema,
+			tableProperties,
+			null,
+			null,
+			null,
+			partitionCols,
+			true,
+			null,
+			null,
+			-1L,
+			0L,
+			-1L);
+	}
 }

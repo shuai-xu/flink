@@ -20,13 +20,18 @@ package org.apache.flink.table.catalog;
 
 import org.apache.flink.table.api.DatabaseAlreadyExistException;
 import org.apache.flink.table.api.DatabaseNotExistException;
+import org.apache.flink.table.api.PartitionAlreadyExistException;
+import org.apache.flink.table.api.PartitionNotExistException;
 import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
+import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
 
 /**
  * Responsible for creating, dropping, altering, and renaming databases/tables/views/UDFs.
  */
 public interface ReadableWritableCatalog extends ReadableCatalog {
+
+	// ------ databases ------
 
 	/**
 	 * Adds a database to this catalog.
@@ -80,6 +85,8 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	void renameDatabase(String dbName, String newDbName, boolean ignoreIfNotExists)
 		throws DatabaseNotExistException;
 
+	// ------ tables ------
+
 	/**
 	 * Adds a table.
 	 *
@@ -132,27 +139,50 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists)
 		throws TableNotExistException, DatabaseNotExistException;
 
-	/**
-	 * Check if a database exists in this catalog.
-	 *
-	 * @param dbName		Name of the database.
-	 */
-	boolean dbExists(String dbName);
+	// ------ partitions ------
 
 	/**
-	 * Check if a table exists in this catalog.
+	 * Creates a partition.
 	 *
-	 * @param dbName		Name of the database.
-	 * @param tableName		Name of the table.
+	 * @param tablePath		Path of the table.
+	 * @param partition		The partition to add.
+	 * @param ignoreIfExists Flag to specify behavior if a table with the given name already exists:
+	 *                       if set to false, it throws a TableAlreadyExistException,
+	 *                       if set to true, nothing happens.
+	 * @throws TableNotExistException
+	 * @throws TableNotPartitionedException
+	 * @throws PartitionAlreadyExistException
 	 */
-	boolean tableExists(String dbName, String tableName);
+	void createParition(ObjectPath tablePath, CatalogPartition partition, boolean ignoreIfExists)
+		throws TableNotExistException, TableNotPartitionedException, PartitionAlreadyExistException;
 
 	/**
-	 * Check if a table exists in this catalog.
+	 * Drops a partition.
 	 *
-	 * @param path			Path of the table.
+	 * @param tablePath			Path of the table.
+	 * @param partitionSpec		Partition spec of the partition to drop
+	 * @param ignoreIfNotExists Flag to specify behavior if the database does not exist:
+	 *                          if set to false, throw an exception,
+	 *                          if set to true, nothing happens.
+	 * @throws TableNotExistException
+	 * @throws TableNotPartitionedException
+	 * @throws PartitionNotExistException
 	 */
-	default boolean tableExists(ObjectPath path) {
-		return tableExists(path.getDbName(), path.getObjectName());
-	}
+	void dropParition(ObjectPath tablePath, CatalogPartition.PartitionSpec partitionSpec, boolean ignoreIfNotExists)
+		throws TableNotExistException, TableNotPartitionedException, PartitionAlreadyExistException;
+
+	/**
+	 * Alters a partition.
+	 *
+	 * @param tablePath			Path of the table
+	 * @param newPartition		New partition to replace the old one
+	 * @param ignoreIfNotExists Flag to specify behavior if the database does not exist:
+	 *                          if set to false, throw an exception,
+	 *                          if set to true, nothing happens.
+	 * @throws TableNotExistException
+	 * @throws TableNotPartitionedException
+	 * @throws PartitionNotExistException
+	 */
+	void alterParition(ObjectPath tablePath, CatalogPartition newPartition, boolean ignoreIfNotExists)
+		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException;
 }

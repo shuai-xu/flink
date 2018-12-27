@@ -37,6 +37,7 @@ import org.apache.flink.table.api.types.StringType;
 import org.apache.flink.table.api.types.TimeType;
 import org.apache.flink.table.api.types.TimestampType;
 import org.apache.flink.table.catalog.CatalogDatabase;
+import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.ExternalCatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.hive.config.HiveDbConfig;
@@ -44,6 +45,7 @@ import org.apache.flink.util.PropertiesUtil;
 
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.Partition;
 import org.apache.hadoop.hive.metastore.api.SerDeInfo;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.metastore.api.Table;
@@ -51,11 +53,13 @@ import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_COMPRESSED;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_INPUT_FORMAT;
@@ -93,17 +97,29 @@ public class HiveMetadataUtil {
 		sd.setCols(createHiveColumns(table.getTableSchema()));
 		sd.setSortCols(new ArrayList<>());
 
-		Table t = new Table();
-		t.setSd(sd);
-		t.setPartitionKeys(new ArrayList<>());
-		t.setParameters(new HashMap<>());
-		t.setTableType(prop.getProperty(HIVE_TABLE_TYPE));
-		t.setDbName(tablePath.getDbName());
-		t.setTableName(tablePath.getObjectName());
-		t.setCreateTime((int) (System.currentTimeMillis() / 1000));
-		t.setParameters(table.getProperties());
+		Table hiveTable = new Table();
+		hiveTable.setSd(sd);
 
-		return t;
+		// Partitions
+		List<FieldSchema> partitionKeys = new ArrayList<>();
+		if (table.isPartitioned()) {
+			LinkedHashSet<String> cols = table.getPartitionColumnNames();
+
+			for (String col : cols) {
+				FieldSchema fieldSchema = new FieldSchema(col, serdeConstants.STRING_TYPE_NAME, null);
+				partitionKeys.add(fieldSchema);
+			}
+		}
+		hiveTable.setPartitionKeys(partitionKeys);
+
+		hiveTable.setParameters(new HashMap<>());
+		hiveTable.setTableType(prop.getProperty(HIVE_TABLE_TYPE));
+		hiveTable.setDbName(tablePath.getDbName());
+		hiveTable.setTableName(tablePath.getObjectName());
+		hiveTable.setCreateTime((int) (System.currentTimeMillis() / 1000));
+		hiveTable.setParameters(table.getProperties());
+
+		return hiveTable;
 	}
 
 	private static List<FieldSchema> createHiveColumns(TableSchema schema) {
@@ -126,13 +142,19 @@ public class HiveMetadataUtil {
 			null,
 			null,
 			null,
-			new LinkedHashSet<>(),
-			false,
+			getPartitionCols(hiveTable),
+			hiveTable.getPartitionKeysSize() != 0,
 			null,
 			null,
 			-1L,
 			(long) hiveTable.getCreateTime(),
 			(long) hiveTable.getLastAccessTime());
+	}
+
+	private static LinkedHashSet<String> getPartitionCols(Table hiveTable) {
+		return hiveTable.getPartitionKeys().stream()
+			.map(fs -> fs.getName())
+			.collect(Collectors.toCollection(LinkedHashSet::new));
 	}
 
 	private static Map<String, String> getPropertiesFromHiveTable(Table table) {
@@ -196,6 +218,26 @@ public class HiveMetadataUtil {
 //		prop.put(HiveDbConfig.HIVE_DB_OWNER, hiveDb.getOwnerName());
 
 		return new CatalogDatabase(prop);
+	}
+
+	public static CatalogPartition createCatalogPartition(CatalogPartition.PartitionSpec spec, Partition partition) {
+		Map<String, String> prop = new HashMap<>(partition.getParameters());
+
+		StorageDescriptor sd = partition.getSd();
+		prop.put(HIVE_TABLE_LOCATION, sd.getLocation());
+		prop.put(HIVE_TABLE_SERDE_LIBRARY, sd.getSerdeInfo().getSerializationLib());
+		prop.put(HIVE_TABLE_INPUT_FORMAT, sd.getInputFormat());
+		prop.put(HIVE_TABLE_OUTPUT_FORMAT, sd.getOutputFormat());
+		prop.put(HIVE_TABLE_COMPRESSED, String.valueOf(sd.isCompressed()));
+		prop.put(HIVE_TABLE_NUM_BUCKETS, String.valueOf(sd.getNumBuckets()));
+
+		prop.putAll(partition.getParameters());
+
+		return new CatalogPartition(spec, prop);
+	}
+
+	public static CatalogPartition.PartitionSpec createPartitionSpec(String hivePartitionName) {
+		return CatalogPartition.fromStrings(Arrays.asList(hivePartitionName.split("/")));
 	}
 
 	/**

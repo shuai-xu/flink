@@ -22,6 +22,9 @@ import org.apache.flink.table.api.DatabaseAlreadyExistException;
 import org.apache.flink.table.api.DatabaseNotExistException;
 import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
+import org.apache.flink.table.api.exceptions.PartitionAlreadyExistException;
+import org.apache.flink.table.api.exceptions.PartitionNotExistException;
+import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.StringUtils;
 
@@ -43,6 +46,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 
 	private final Map<String, CatalogDatabase> databases;
 	private final Map<ObjectPath, ExternalCatalogTable> tables;
+	private final Map<ObjectPath, Map<CatalogPartition.PartitionSpec, CatalogPartition>> partitions;
 
 	public FlinkInMemoryCatalog(String name) {
 		Preconditions.checkArgument(!StringUtils.isNullOrWhitespaceOnly(name), "name cannot be null or empty");
@@ -50,6 +54,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 		this.catalogName = name;
 		this.databases = new HashMap<>();
 		this.tables = new HashMap<>();
+		this.partitions = new HashMap<>();
 	}
 
 	@Override
@@ -66,7 +71,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	public void createTable(ObjectPath tableName, ExternalCatalogTable table, boolean ignoreIfExists)
 		throws TableAlreadyExistException, DatabaseNotExistException {
 
-		if (tableExists(tableName))  {
+		if (tableExists(tableName)) {
 			if (!ignoreIfExists) {
 				throw new TableAlreadyExistException(catalogName, tableName.getFullName());
 			}
@@ -76,6 +81,10 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 			}
 
 			tables.put(tableName, table);
+
+			if (table.isPartitioned()) {
+				partitions.put(tableName, new HashMap<>());
+			}
 		}
 	}
 
@@ -109,7 +118,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public List<ObjectPath> listTablesByDatabase(String dbName) throws DatabaseNotExistException {
+	public List<ObjectPath> listTables(String dbName) throws DatabaseNotExistException {
 		checkArgument(!StringUtils.isNullOrWhitespaceOnly(dbName), "dbName cannot be null or empty");
 
 		if (!dbExists(dbName)) {
@@ -135,6 +144,15 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 			return tables.get(tableName);
 		}
 	}
+
+	@Override
+	public boolean tableExists(ObjectPath path) {
+		return dbExists(path.getDbName()) && listTables(path.getDbName()).stream()
+			.map(op -> op.getObjectName())
+			.anyMatch(e -> e.equals(path.getObjectName()));
+	}
+
+	// ------ databases ------
 
 	@Override
 	public void createDatabase(String dbName, CatalogDatabase db, boolean ignoreIfExists) throws DatabaseAlreadyExistException {
@@ -193,10 +211,54 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 		return databases.containsKey(dbName);
 	}
 
+	// ------ partitions ------
+
 	@Override
-	public boolean tableExists(String dbName, String tableName) {
-		return dbExists(dbName) && listTablesByDatabase(dbName).stream()
-			.map(op -> op.getObjectName())
-			.anyMatch(e -> e.equals(tableName));
+	public void createParition(ObjectPath path, CatalogPartition partition, boolean ignoreIfExists)
+		throws TableNotExistException, TableNotPartitionedException, PartitionAlreadyExistException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public void dropParition(ObjectPath path, CatalogPartition.PartitionSpec partition, boolean ignoreIfNotExists)
+		throws TableNotExistException, TableNotPartitionedException, PartitionAlreadyExistException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public void alterParition(ObjectPath path, CatalogPartition newPartition, boolean ignoreIfNotExists)
+		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public List<CatalogPartition.PartitionSpec> listPartitions(ObjectPath path)
+		throws TableNotExistException, TableNotPartitionedException {
+		return new ArrayList<>(partitions.get(path).keySet());
+	}
+
+	@Override
+	public List<CatalogPartition.PartitionSpec> listPartitions(ObjectPath path, CatalogPartition.PartitionSpec partitionSpecs)
+		throws TableNotExistException, TableNotPartitionedException {
+		return partitions.get(path).keySet().stream()
+			.filter(ps -> ps.contains(partitionSpecs))
+			.collect(Collectors.toList());
+	}
+
+	@Override
+	public CatalogPartition getPartition(ObjectPath path, CatalogPartition.PartitionSpec partitionSpec)
+		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException {
+
+		ExternalCatalogTable table = getTable(path);
+
+		if (!table.isPartitioned()) {
+			throw new TableNotPartitionedException(catalogName, path);
+		}
+
+		if (partitions.get(new ObjectPath(path.getDbName(), path.getObjectName())).get(partitionSpec) != null) {
+			return partitions.get(path).get(partitionSpec);
+		} else {
+			throw new PartitionNotExistException(catalogName, path, partitionSpec);
+		}
 	}
 }

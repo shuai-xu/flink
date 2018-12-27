@@ -23,12 +23,15 @@ import org.apache.flink.table.api.DatabaseNotExistException;
 import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.table.api.exceptions.PartitionNotExistException;
+import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 
 import org.junit.Test;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -56,6 +59,8 @@ public abstract class CatalogTestBase {
 
 	public abstract String getTableType();
 
+	// ------ tables ------
+
 	@Test
 	public void testCreateTable() {
 		assertTrue(catalog.listAllTables().isEmpty());
@@ -67,7 +72,7 @@ public abstract class CatalogTestBase {
 		assertEquals(1, tables.size());
 		assertEquals(path1.getFullName(), tables.get(0).getFullName());
 
-		List<ObjectPath> s1Tables = catalog.listTablesByDatabase(db1);
+		List<ObjectPath> s1Tables = catalog.listTables(db1);
 
 		assertEquals(1, s1Tables.size());
 		assertEquals(path1.getFullName(), tables.get(0).getFullName());
@@ -176,6 +181,19 @@ public abstract class CatalogTestBase {
 	}
 
 	@Test
+	public void testTableExists() {
+		catalog.createDatabase(db1, createDb(), false);
+
+		assertFalse(catalog.tableExists(path1));
+
+		catalog.createTable(path1, createTable(), false);
+
+		assertTrue(catalog.tableExists(path1));
+	}
+
+	// ------ databases ------
+
+	@Test
 	public void testCreateDb() {
 		catalog.createDatabase(db2, createDb(), false);
 
@@ -266,15 +284,66 @@ public abstract class CatalogTestBase {
 		assertTrue(catalog.dbExists(db1));
 	}
 
-	@Test
-	public void testTableExists() {
+	// ------ partitions ------
+
+	@Test (expected = TableNotExistException.class)
+	public void testGetPartition_TableNotExistException() {
+		catalog.getPartition(path1, createPartitionSpec());
+	}
+
+	@Test (expected = TableNotPartitionedException.class)
+	public void testGetPartition_TableNotPartitionedException() {
 		catalog.createDatabase(db1, createDb(), false);
-
-		assertFalse(catalog.tableExists(path1));
-
 		catalog.createTable(path1, createTable(), false);
+		catalog.getPartition(path1, createPartitionSpec());
+	}
 
-		assertTrue(catalog.tableExists(path1));
+	@Test (expected = PartitionNotExistException.class)
+	public void testGetParition_PartitionNotExistException() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createPartitionedTable(), false);
+		catalog.getPartition(path1, createPartitionSpec());
+	}
+
+	// ------ utilities ------
+
+	protected LinkedHashSet<String> createPartitionCols() {
+		return new LinkedHashSet<String>() {{
+			add("name");
+			add("year");
+		}};
+	}
+
+	protected CatalogPartition.PartitionSpec createPartitionSpec() {
+		return new CatalogPartition.PartitionSpec(
+			new HashMap<String, String>() {{
+				put("year", "2000");
+				put("name", "bob");
+			}});
+	}
+
+	protected CatalogPartition.PartitionSpec createAnotherPartitionSpec() {
+		return new CatalogPartition.PartitionSpec(
+			new HashMap<String, String>() {{
+				put("year", "2010");
+				put("name", "bob");
+			}});
+	}
+
+	protected ExternalCatalogTable createPartitionedTable() {
+		return CatalogTestUtil.createExternalCatalogTable(
+			getTableType(),
+			createTableSchema(),
+			getTableProperties(),
+			createPartitionCols());
+	}
+
+	protected ExternalCatalogTable createAnotherPartition() {
+		return CatalogTestUtil.createExternalCatalogTable(
+			getTableType(),
+			createTableSchema(),
+			getTableProperties(),
+			createPartitionCols());
 	}
 
 	private List<String> filterBuiltInDb(List<String> dbs) {
@@ -294,34 +363,37 @@ public abstract class CatalogTestBase {
 	}
 
 	protected ExternalCatalogTable createTable() {
-		TableSchema schema = new TableSchema(
+		return CatalogTestUtil.createExternalCatalogTable(
+			getTableType(),
+			createTableSchema(),
+			getTableProperties());
+	}
+
+	protected ExternalCatalogTable createAnotherTable() {
+		return CatalogTestUtil.createExternalCatalogTable(
+			getTableType(),
+			createAnotherTableSchema(),
+			getTableProperties());
+	}
+
+	private TableSchema createTableSchema() {
+		return new TableSchema(
 			new String[] {"first", "second"},
 			new InternalType[]{
 				DataTypes.STRING,
 				DataTypes.INT
 			}
 		);
-
-		return createTable(schema);
 	}
 
-	protected ExternalCatalogTable createAnotherTable() {
-		TableSchema schema = new TableSchema(
+	private TableSchema createAnotherTableSchema() {
+		return new TableSchema(
 			new String[] {"first", "second"},
 			new InternalType[]{
 				DataTypes.STRING,
 				DataTypes.STRING  // different from create table instance.
 			}
 		);
-
-		return createTable(schema);
-	}
-
-	private ExternalCatalogTable createTable(TableSchema schema) {
-		return CatalogTestUtil.createExternalCatalogTable(
-			getTableType(),
-			schema,
-			getTableProperties());
 	}
 
 	protected Map<String, String> getTableProperties() {

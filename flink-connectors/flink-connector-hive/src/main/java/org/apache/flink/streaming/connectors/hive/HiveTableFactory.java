@@ -120,6 +120,8 @@ public class HiveTableFactory implements BatchTableSourceFactory<GenericRow>, Ta
 
 		// Hive table parameters
 		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_TRANSIENT_LASTDDLTIME);
+		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_NUM_FILES);
+		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_NUM_PARTITIONS);
 		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_TOTALSIZE);
 		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_RAWDATASIZE);
 		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_NUMROWS);

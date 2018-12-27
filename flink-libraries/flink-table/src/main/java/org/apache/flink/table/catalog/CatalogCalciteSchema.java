@@ -192,7 +192,7 @@ public class CatalogCalciteSchema implements Schema {
 
 		@Override
 		public Set<String> getTableNames() {
-			return catalog.listTablesByDatabase(dbName).stream()
+			return catalog.listTables(dbName).stream()
 				.map(op -> op.getObjectName())
 				.collect(Collectors.toSet());
 		}

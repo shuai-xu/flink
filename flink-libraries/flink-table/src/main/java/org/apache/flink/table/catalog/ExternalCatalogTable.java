@@ -37,7 +37,6 @@ public class ExternalCatalogTable {
 	private final String tableType;
 	// Schema of the table (column names and types)
 	private final TableSchema tableSchema;
-
 	// Properties of the table
 	private Map<String, String> properties = new HashMap<>();
 	// RichTableSchema of the table
@@ -166,19 +165,20 @@ public class ExternalCatalogTable {
 
 		ExternalCatalogTable that = (ExternalCatalogTable) o;
 
-		// TODO: only compare the following few fields right now, may compare more in the future
 		return Objects.equals(tableType, that.tableType) &&
 			Objects.equals(tableSchema, that.tableSchema) &&
-			Objects.equals(tableStats, that.tableStats);
+			Objects.equals(tableStats, that.tableStats) &&
+			isPartitioned == that.isPartitioned &&
+			partitionColumnNames.equals(that.partitionColumnNames);
 	}
 
 	@Override
 	public int hashCode() {
-		// TODO: only compare the following few fields right now, may compare more in the future
-
 		return Objects.hash(
 			tableType,
 			tableSchema,
-			tableStats);
+			tableStats,
+			isPartitioned,
+			partitionColumnNames);
 	}
 }

@@ -209,7 +209,7 @@ public class CatalogManager {
 	public boolean isRegistered(String tableName) {
 		// TODO: need to consider if there's no default database
 		return getCatalog(getDefaultCatalogName())
-			.listTablesByDatabase(getDefaultDatabaseName())
+			.listTables(getDefaultDatabaseName())
 			.stream()
 			.map(op -> op.getObjectName())
 			.anyMatch(o -> o.equals(tableName));
