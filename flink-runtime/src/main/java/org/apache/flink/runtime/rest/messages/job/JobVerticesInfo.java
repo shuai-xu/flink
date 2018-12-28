@@ -102,6 +102,8 @@ public class JobVerticesInfo implements ResponseBody {
 
 		public static final String FIELD_NAME_JOB_VERTEX_NAME = "name";
 
+		public static final String FIELD_NAME_JOB_VERTEX_PARALLELISM = "parallelism";
+
 		public static final String FIELD_NAME_JOB_VERTEX_SUBTASK_METRICS = "subtask_metrics";
 
 		@JsonProperty(FIELD_NAME_JOB_VERTEX_ID)
@@ -111,6 +113,9 @@ public class JobVerticesInfo implements ResponseBody {
 		@JsonProperty(FIELD_NAME_JOB_VERTEX_NAME)
 		private final String name;
 
+		@JsonProperty(FIELD_NAME_JOB_VERTEX_PARALLELISM)
+		private final int parallelism;
+
 		@JsonProperty(FIELD_NAME_JOB_VERTEX_SUBTASK_METRICS)
 		private final Collection<Map<String, String>> jobVertexSubTaskMetrics;
 
@@ -118,9 +123,11 @@ public class JobVerticesInfo implements ResponseBody {
 		public JobVertex(
 				@JsonDeserialize(using = JobVertexIDDeserializer.class) @JsonProperty(FIELD_NAME_JOB_VERTEX_ID) JobVertexID jobVertexID,
 				@JsonProperty(FIELD_NAME_JOB_VERTEX_NAME) String name,
+				@JsonProperty(FIELD_NAME_JOB_VERTEX_PARALLELISM) int parallelism,
 				@JsonProperty(FIELD_NAME_JOB_VERTEX_SUBTASK_METRICS) Collection<Map<String, String>> jobVertexSubTaskMetrics) {
 			this.jobVertexID = Preconditions.checkNotNull(jobVertexID);
 			this.name = Preconditions.checkNotNull(name);
+			this.parallelism = parallelism;
 			this.jobVertexSubTaskMetrics = Preconditions.checkNotNull(jobVertexSubTaskMetrics);
 		}
 
@@ -132,6 +139,11 @@ public class JobVerticesInfo implements ResponseBody {
 		@JsonIgnore
 		public String getName() {
 			return name;
+		}
+
+		@JsonIgnore
+		public int getParallelism() {
+			return parallelism;
 		}
 
 		@JsonIgnore
@@ -150,12 +162,13 @@ public class JobVerticesInfo implements ResponseBody {
 			JobVertex that = (JobVertex) o;
 			return Objects.equals(jobVertexID, that.jobVertexID) &&
 				Objects.equals(name, that.name) &&
+				parallelism == that.parallelism &&
 				Objects.equals(jobVertexSubTaskMetrics, that.jobVertexSubTaskMetrics);
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(jobVertexID, name, jobVertexSubTaskMetrics);
+			return Objects.hash(jobVertexID, name, parallelism, jobVertexSubTaskMetrics);
 		}
 	}
 

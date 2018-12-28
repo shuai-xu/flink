@@ -131,7 +131,7 @@ public class JobVerticesInfoHandler extends AbstractExecutionGraphHandler<JobVer
 			JobVerticesInfo.JobOperator jobOperator = createJobOperator(ejv.getJobVertexId(), od);
 			jobOperators.add(jobOperator);
 		}
-		return new JobVerticesInfo.JobVertex(ejv.getJobVertexId(), ejv.getName(), subTaskMetrics);
+		return new JobVerticesInfo.JobVertex(ejv.getJobVertexId(), ejv.getName(), ejv.getParallelism(), subTaskMetrics);
 	}
 
 	private static JobVerticesInfo.JobOperator createJobOperator(JobVertexID jobVertexID, OperatorDescriptor operatorDescriptor){

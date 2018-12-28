@@ -16,24 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.rest.messages;
+package org.apache.flink.runtime.webmonitor.testutils;
 
-import org.apache.flink.runtime.jobgraph.JobGraph;
-import org.apache.flink.runtime.jobgraph.jsonplan.JsonPlanGenerator;
+import org.apache.flink.api.java.ExecutionEnvironment;
 
 /**
- * Tests that the {@link JobPlanInfo} can be marshalled and unmarshalled.
+ * Simple test program that exposes passed arguments.
  */
-public class JobPlanInfoTest extends RestResponseMarshallingTestBase<JobPlanInfo> {
+public class ParameterProgram {
 
-	@Override
-	protected Class<JobPlanInfo> getTestResponseClass() {
-		return JobPlanInfo.class;
-	}
+	public static volatile String[] actualArguments = null;
 
-	@Override
-	protected JobPlanInfo getTestResponseInstance() {
-		JobGraph jg = new JobGraph("job_007");
-		return new JobPlanInfo(JsonPlanGenerator.generatePlan(jg));
+	public static void main(String[] args) throws Exception {
+		actualArguments = args;
+
+		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+		env.fromElements("hello", "world").print();
 	}
 }

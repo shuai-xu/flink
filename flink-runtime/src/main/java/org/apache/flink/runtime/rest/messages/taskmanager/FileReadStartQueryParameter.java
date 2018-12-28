@@ -22,7 +22,7 @@ import org.apache.flink.runtime.rest.messages.ConversionException;
 import org.apache.flink.runtime.rest.messages.MessageQueryParameter;
 
 /**
- * FileRangeRead page index query parameter used by range read log REST  related handlers.
+ * FileRangeRead start query parameter used by range read log REST related handlers.
  */
 public class FileReadStartQueryParameter extends MessageQueryParameter<Long> {
 

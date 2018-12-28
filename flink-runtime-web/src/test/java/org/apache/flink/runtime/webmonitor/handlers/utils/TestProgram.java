@@ -16,27 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.rest.messages.taskmanager;
+package org.apache.flink.runtime.webmonitor.handlers.utils;
 
-import org.apache.flink.runtime.rest.messages.ConversionException;
-import org.apache.flink.runtime.rest.messages.MessageQueryParameter;
+import org.apache.flink.api.java.ExecutionEnvironment;
 
 /**
- * TaskManager id path parameter used by TaskManager related handlers.
+ * Simple test program.
  */
-public class FileStartQueryParameter extends MessageQueryParameter<Long> {
-
-	FileStartQueryParameter() {
-		super("start", MessageParameterRequisiteness.MANDATORY);
-	}
-
-	@Override
-	public Long convertStringToValue(String value) throws ConversionException {
-		return Long.parseLong(value);
-	}
-
-	@Override
-	public String convertValueToString(Long value) {
-		return "" + value;
+public class TestProgram {
+	public static void main(String[] args) throws Exception {
+		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+		env.fromElements("hello", "world").print();
 	}
 }
