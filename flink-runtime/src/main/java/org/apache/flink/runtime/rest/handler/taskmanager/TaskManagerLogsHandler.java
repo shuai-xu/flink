@@ -81,14 +81,7 @@ public class TaskManagerLogsHandler extends AbstractTaskManagerHandler<RestfulGa
 		} else {
 			fileName = fileNameTmpList.get(0);
 		}
-		final ResourceManagerGateway resourceManagerGateway = resourceManagerGatewayRetriever
-			.getNow()
-			.orElseThrow(() -> {
-				log.debug("Cannot connect to ResourceManager right now.");
-				return new RestHandlerException(
-					"Cannot connect to ResourceManager right now. Please try to refresh.",
-					HttpResponseStatus.NOT_FOUND);
-			});
+		final ResourceManagerGateway resourceManagerGateway = getResourceManagerGateway(resourceManagerGatewayRetriever);
 		final CompletableFuture<Collection<Tuple2<String, Long>>> logsWithLengthFuture = resourceManagerGateway.requestTaskManagerLogList(taskManagerId, timeout);
 
 		return logsWithLengthFuture.thenApply(logName2Sizes -> {

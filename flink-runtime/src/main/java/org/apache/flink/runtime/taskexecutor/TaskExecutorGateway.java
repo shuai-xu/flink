@@ -241,4 +241,11 @@ public interface TaskExecutorGateway extends RpcGateway {
 	 * @return
 	 */
 	CompletableFuture<Tuple2<String, Long>> requestJmx(@RpcTimeout Time timeout);
+
+	/**
+	 * Requests taskmanager log and stdout file path.
+	 * @param timeout
+	 * @return
+	 */
+	CompletableFuture<Tuple2<String, String>> requestTmLogAndStdoutFileName(@RpcTimeout Time timeout);
 }

@@ -115,6 +115,8 @@ public class JobVertexDetailsInfo implements ResponseBody {
 		public static final String FIELD_NAME_DURATION = "duration";
 		public static final String FIELD_NAME_METRICS = "metrics";
 		public static final String FIELD_NAME_RESOURCE_ID = "resource-id";
+		public static final String FIELD_NAME_LOG_FILE_NAME = "log-file-name";
+		public static final String FIELD_NAME_STDOUT_FILE_NAME = "stdout-file-name";
 
 		@JsonProperty(FIELD_NAME_SUBTASK)
 		private final int subtask;
@@ -143,6 +145,12 @@ public class JobVertexDetailsInfo implements ResponseBody {
 		@JsonProperty(FIELD_NAME_RESOURCE_ID)
 		private final String resourceId;
 
+		@JsonProperty(FIELD_NAME_LOG_FILE_NAME)
+		private final String logFileName;
+
+		@JsonProperty(FIELD_NAME_STDOUT_FILE_NAME)
+		private final String stdoutFileName;
+
 		@JsonCreator
 		public VertexTaskDetail(
 				@JsonProperty(FIELD_NAME_SUBTASK) int subtask,
@@ -153,7 +161,9 @@ public class JobVertexDetailsInfo implements ResponseBody {
 				@JsonProperty(FIELD_NAME_END_TIME) long endTime,
 				@JsonProperty(FIELD_NAME_DURATION) long duration,
 				@JsonProperty(FIELD_NAME_METRICS) IOMetricsInfo metrics,
-				@JsonProperty(FIELD_NAME_RESOURCE_ID) String resourceId) {
+				@JsonProperty(FIELD_NAME_RESOURCE_ID) String resourceId,
+				@JsonProperty(FIELD_NAME_LOG_FILE_NAME) String logFileName,
+				@JsonProperty(FIELD_NAME_STDOUT_FILE_NAME) String stdoutFileName) {
 			this.subtask = subtask;
 			this.status = checkNotNull(status);
 			this.attempt = attempt;
@@ -163,6 +173,8 @@ public class JobVertexDetailsInfo implements ResponseBody {
 			this.duration = duration;
 			this.metrics = checkNotNull(metrics);
 			this.resourceId = checkNotNull(resourceId);
+			this.logFileName = checkNotNull(logFileName);
+			this.stdoutFileName = checkNotNull(stdoutFileName);
 		}
 
 		@Override
@@ -184,12 +196,15 @@ public class JobVertexDetailsInfo implements ResponseBody {
 				endTime == that.endTime &&
 				duration == that.duration &&
 				Objects.equals(metrics, that.metrics) &&
-				Objects.equals(resourceId, that.resourceId);
+				Objects.equals(resourceId, that.resourceId) &&
+				Objects.equals(logFileName, that.logFileName) &&
+				Objects.equals(stdoutFileName, that.stdoutFileName);
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(subtask, status, attempt, host, startTime, endTime, duration, metrics, resourceId);
+			return Objects.hash(subtask, status, attempt, host, startTime, endTime,
+				duration, metrics, resourceId, logFileName, stdoutFileName);
 		}
 	}
 }

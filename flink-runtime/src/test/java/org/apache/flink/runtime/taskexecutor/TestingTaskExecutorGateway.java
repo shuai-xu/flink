@@ -181,6 +181,11 @@ public class TestingTaskExecutorGateway implements TaskExecutorGateway {
 	}
 
 	@Override
+	public CompletableFuture<Tuple2<String, String>> requestTmLogAndStdoutFileName(Time timeout) {
+		return FutureUtils.completedExceptionally(new UnsupportedOperationException());
+	}
+
+	@Override
 	public String getAddress() {
 		return address;
 	}

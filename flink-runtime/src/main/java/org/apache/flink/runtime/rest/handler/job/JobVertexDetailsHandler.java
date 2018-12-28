@@ -20,13 +20,17 @@ package org.apache.flink.runtime.rest.handler.job;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.AccessExecutionGraph;
 import org.apache.flink.runtime.executiongraph.AccessExecutionJobVertex;
 import org.apache.flink.runtime.executiongraph.AccessExecutionVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.rest.NotFoundException;
 import org.apache.flink.runtime.rest.handler.HandlerRequest;
+import org.apache.flink.runtime.rest.handler.RestHandlerException;
 import org.apache.flink.runtime.rest.handler.legacy.ExecutionGraphCache;
 import org.apache.flink.runtime.rest.handler.legacy.metrics.MetricFetcher;
 import org.apache.flink.runtime.rest.handler.util.MutableIOMetrics;
@@ -43,6 +47,7 @@ import org.apache.flink.runtime.webmonitor.RestfulGateway;
 import org.apache.flink.runtime.webmonitor.history.ArchivedJson;
 import org.apache.flink.runtime.webmonitor.history.JsonArchivist;
 import org.apache.flink.runtime.webmonitor.retriever.GatewayRetriever;
+import org.apache.flink.util.Preconditions;
 
 import javax.annotation.Nullable;
 
@@ -59,6 +64,8 @@ import java.util.concurrent.Executor;
  */
 public class JobVertexDetailsHandler extends AbstractExecutionGraphHandler<JobVertexDetailsInfo, JobVertexMessageParameters> implements JsonArchivist {
 	private final MetricFetcher<? extends RestfulGateway> metricFetcher;
+	private final GatewayRetriever<ResourceManagerGateway> resourceManagerGatewayRetriever;
+	private final Time timeout;
 
 	public JobVertexDetailsHandler(
 			CompletableFuture<String> localRestAddress,
@@ -68,7 +75,8 @@ public class JobVertexDetailsHandler extends AbstractExecutionGraphHandler<JobVe
 			MessageHeaders<EmptyRequestBody, JobVertexDetailsInfo, JobVertexMessageParameters> messageHeaders,
 			ExecutionGraphCache executionGraphCache,
 			Executor executor,
-			MetricFetcher<? extends RestfulGateway> metricFetcher) {
+			MetricFetcher<? extends RestfulGateway> metricFetcher,
+			GatewayRetriever<ResourceManagerGateway> resourceManagerGatewayRetriever) {
 		super(
 			localRestAddress,
 			leaderRetriever,
@@ -78,12 +86,15 @@ public class JobVertexDetailsHandler extends AbstractExecutionGraphHandler<JobVe
 			executionGraphCache,
 			executor);
 		this.metricFetcher = metricFetcher;
+		this.resourceManagerGatewayRetriever = Preconditions.checkNotNull(resourceManagerGatewayRetriever);
+		this.timeout = timeout;
+
 	}
 
 	@Override
 	protected JobVertexDetailsInfo handleRequest(
 			HandlerRequest<EmptyRequestBody, JobVertexMessageParameters> request,
-			AccessExecutionGraph executionGraph) throws NotFoundException {
+			AccessExecutionGraph executionGraph) throws RestHandlerException {
 		JobID jobID = request.getPathParameter(JobIDPathParameter.class);
 		JobVertexID jobVertexID = request.getPathParameter(JobVertexIdPathParameter.class);
 		AccessExecutionJobVertex jobVertex = executionGraph.getJobVertex(jobVertexID);
@@ -91,8 +102,7 @@ public class JobVertexDetailsHandler extends AbstractExecutionGraphHandler<JobVe
 		if (jobVertex == null) {
 			throw new NotFoundException(String.format("JobVertex %s not found", jobVertexID));
 		}
-
-		return createJobVertexDetailsInfo(jobVertex, jobID, metricFetcher);
+		return createJobVertexDetailsInfo(jobVertex, jobID, metricFetcher, resourceManagerGatewayRetriever, timeout);
 	}
 
 	@Override
@@ -100,7 +110,7 @@ public class JobVertexDetailsHandler extends AbstractExecutionGraphHandler<JobVe
 		Collection<? extends AccessExecutionJobVertex> vertices = graph.getAllVertices().values();
 		List<ArchivedJson> archive = new ArrayList<>(vertices.size());
 		for (AccessExecutionJobVertex task : vertices) {
-			ResponseBody json = createJobVertexDetailsInfo(task, graph.getJobID(), metricFetcher);
+			ResponseBody json = createJobVertexDetailsInfo(task, graph.getJobID(), metricFetcher, resourceManagerGatewayRetriever, timeout);
 			String path = getMessageHeaders().getTargetRestEndpointURL()
 				.replace(':' + JobIDPathParameter.KEY, graph.getJobID().toString())
 				.replace(':' + JobVertexIdPathParameter.KEY, task.getJobVertexId().toString());
@@ -109,7 +119,15 @@ public class JobVertexDetailsHandler extends AbstractExecutionGraphHandler<JobVe
 		return archive;
 	}
 
-	private static JobVertexDetailsInfo createJobVertexDetailsInfo(AccessExecutionJobVertex jobVertex, JobID jobID, @Nullable MetricFetcher<?> metricFetcher) {
+	private JobVertexDetailsInfo createJobVertexDetailsInfo(AccessExecutionJobVertex jobVertex, JobID jobID,
+																@Nullable MetricFetcher<?> metricFetcher,
+																GatewayRetriever<ResourceManagerGateway> resourceManagerGatewayRetriever,
+																Time timeout) {
+		ResourceManagerGateway resourceManagerGateway = null;
+		try {
+			resourceManagerGateway = getResourceManagerGateway(resourceManagerGatewayRetriever);
+		} catch (RestHandlerException ignore) {
+		}
 		List<JobVertexDetailsInfo.VertexTaskDetail> subtasks = new ArrayList<>();
 		final long now = System.currentTimeMillis();
 		int num = 0;
@@ -125,17 +143,28 @@ public class JobVertexDetailsHandler extends AbstractExecutionGraphHandler<JobVe
 			}
 			long endTime = status.isTerminal() ? vertex.getStateTimestamp(status) : -1;
 			long duration = startTime > 0 ? ((endTime > 0 ? endTime : now) - startTime) : -1;
-
 			MutableIOMetrics counts = new MutableIOMetrics();
 			counts.addIOMetrics(
 				vertex.getCurrentExecutionAttempt(),
 				metricFetcher,
 				jobID.toString(),
 				jobVertex.getJobVertexId().toString());
-			String resourceId = "";
+			String resourceIdStr = "";
+			String logfileName = "";
+			String stdoutFileName = "";
 			TaskManagerLocation taskManagerLocation = vertex.getCurrentAssignedResourceLocation();
 			if (taskManagerLocation != null) {
-				resourceId = taskManagerLocation.getResourceID().getResourceIdString();
+				ResourceID resourceId = taskManagerLocation.getResourceID();
+				resourceIdStr = resourceId.toString();
+				if (resourceManagerGateway != null) {
+					try {
+						Tuple2<String, String> logAndStoutFileName = resourceManagerGateway.requestTmLogAndStdoutFileName(resourceId, timeout)
+							.get(timeout.toMilliseconds(), timeout.getUnit());
+						logfileName = logAndStoutFileName.f0;
+						stdoutFileName = logAndStoutFileName.f1;
+					} catch (Exception ignore) {
+					}
+				}
 			}
 			subtasks.add(new JobVertexDetailsInfo.VertexTaskDetail(
 				num,
@@ -146,7 +175,9 @@ public class JobVertexDetailsHandler extends AbstractExecutionGraphHandler<JobVe
 				endTime,
 				duration,
 				new IOMetricsInfo(counts),
-				resourceId));
+				resourceIdStr,
+				logfileName,
+				stdoutFileName));
 
 			num++;
 		}

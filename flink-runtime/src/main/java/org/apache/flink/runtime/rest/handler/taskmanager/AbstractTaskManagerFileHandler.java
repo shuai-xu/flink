@@ -209,14 +209,8 @@ public abstract class AbstractTaskManagerFileHandler<M extends TaskManagerMessag
 
 	private CompletableFuture<TransientBlobKey> loadTaskManagerFile(FileReadDetail fd) throws RestHandlerException {
 		log.debug("Load file range from FileReadDetail:[{}].", fd);
-		final ResourceManagerGateway resourceManagerGateway = resourceManagerGatewayRetriever
-			.getNow()
-			.orElseThrow(() -> {
-				log.debug("Cannot connect to ResourceManager right now.");
-				return new RestHandlerException(
-					"Cannot connect to ResourceManager right now. Please try to refresh.",
-					HttpResponseStatus.NOT_FOUND);
-			});
+		final ResourceManagerGateway resourceManagerGateway = getResourceManagerGateway(resourceManagerGatewayRetriever);
+
 		return requestFileUpload(resourceManagerGateway, fd);
 	}
 

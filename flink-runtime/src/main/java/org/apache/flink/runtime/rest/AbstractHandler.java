@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.rest;
 
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.rest.handler.FileUploads;
 import org.apache.flink.runtime.rest.handler.HandlerRequest;
 import org.apache.flink.runtime.rest.handler.HandlerRequestException;
@@ -195,4 +196,21 @@ public abstract class AbstractHandler<T extends RestfulGateway, R extends Reques
 		HttpRequest httpRequest,
 		HandlerRequest<R, M> handlerRequest,
 		T gateway) throws RestHandlerException;
+
+	/**
+	 * get ResourceManagerGateway from GatewayRetriever ResourceManagerGateway.
+	 * @param resourceManagerGatewayRetriever
+	 * @return ResourceManagerGateway
+	 * @throws RestHandlerException
+	 */
+	protected ResourceManagerGateway getResourceManagerGateway(GatewayRetriever<ResourceManagerGateway> resourceManagerGatewayRetriever) throws RestHandlerException {
+		ResourceManagerGateway resourceManagerGateway = resourceManagerGatewayRetriever
+			.getNow()
+			.orElseThrow(() -> {
+				return new RestHandlerException(
+					"Cannot connect to ResourceManager right now. Please try to refresh.",
+					HttpResponseStatus.NOT_FOUND);
+			});
+		return resourceManagerGateway;
+	}
 }

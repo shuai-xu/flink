@@ -277,11 +277,19 @@ public interface ResourceManagerGateway extends FencedRpcGateway<ResourceManager
 	CompletableFuture<Collection<Tuple2<String, Long>>> requestTaskManagerLogList(ResourceID taskManagerId, @RpcTimeout Time timeout);
 
 	/**
-	 * Request jmx port from from the given {@link TaskExecutor}.
+	 * Request jmx port from the given {@link TaskExecutor}.
 	 * @param taskManagerId
 	 * @param timeout
 	 * @return
 	 */
 	CompletableFuture<Tuple2<String, Long>> requestJmx(ResourceID taskManagerId, @RpcTimeout Time timeout);
+
+	/**
+	 * Request log and stdout file name from the given {@link TaskExecutor}.
+	 * @param taskManagerId
+	 * @param timeout
+	 * @return
+	 */
+	CompletableFuture<Tuple2<String, String>> requestTmLogAndStdoutFileName(ResourceID taskManagerId, @RpcTimeout Time timeout);
 
 }

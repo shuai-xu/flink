@@ -586,7 +586,8 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 			JobVertexDetailsHeaders.getInstance(),
 			executionGraphCache,
 			executor,
-			metricFetcher);
+			metricFetcher,
+			resourceManagerRetriever);
 
 		final SavepointDisposalHandlers savepointDisposalHandlers = new SavepointDisposalHandlers();
 

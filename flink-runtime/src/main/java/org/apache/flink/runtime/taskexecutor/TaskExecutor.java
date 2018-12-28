@@ -868,6 +868,16 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		return CompletableFuture.completedFuture(Acknowledge.get());
 	}
 
+	@Override
+	public CompletableFuture<Tuple2<String, String>> requestTmLogAndStdoutFileName(Time timeout) {
+		try {
+			Tuple2<String, String> logAndStoutFilePath = requestLogAndStdoutFileName();
+			return CompletableFuture.completedFuture(logAndStoutFilePath);
+		} catch (FlinkException e) {
+			return FutureUtils.completedExceptionally(e);
+		}
+	}
+
 	public Tuple2<TransientBlobKey, Long> requestFileUploadUtil(
 		String filename,
 		@Nullable FileOffsetRange fileOffsetRange
@@ -2057,5 +2067,21 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 					() -> taskSlotTable.createSlotReport(getResourceID()),
 					taskManagerConfiguration.getTimeout());
 		}
+	}
+
+	private Tuple2<String, String> requestLogAndStdoutFileName() throws FlinkException {
+		final String logDir = taskManagerConfiguration.getTaskManagerLogDir();
+		if (logDir == null) {
+			throw new FlinkException("There is no log file available on the TaskExecutor.");
+		}
+		final File logFile = new File(taskManagerConfiguration.getTaskManagerLogPath());
+		final File stdoutFile = new File(taskManagerConfiguration.getTaskManagerStdoutPath());
+		if (!logFile.exists()) {
+			throw new FlinkException("The log file in" + logDir + " is not available on the TaskExecutor.");
+		}
+		if (!stdoutFile.exists()) {
+			throw new FlinkException("The stdout file in" + logDir + " is not available on the TaskExecutor.");
+		}
+		return new Tuple2<>(logFile.getName(), stdoutFile.getName());
 	}
 }
