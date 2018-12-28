@@ -39,6 +39,7 @@ import org.apache.flink.runtime.state.KeyedStateFunction;
 import org.apache.flink.runtime.state.StateInitializationContext;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.keyed.ContextKeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedMapState;
 import org.apache.flink.runtime.state.keyed.KeyedMapStateDescriptor;
 import org.apache.flink.runtime.state.keyed.KeyedValueState;
@@ -49,12 +50,14 @@ import org.apache.flink.streaming.api.operators.InternalTimerService;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.operators.Triggerable;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.OutputTag;
 import org.apache.flink.util.Preconditions;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -159,24 +162,33 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 	}
 
 	private void migrateOldState() throws Exception {
-		getKeyedStateBackend().applyToAllKeys(
-			VoidNamespace.INSTANCE,
-			VoidNamespaceSerializer.INSTANCE,
-			new ValueStateDescriptor<>(
-				"nfaOperatorStateName",
-				new NFA.NFASerializer<>(inputSerializer)
-			),
-			new KeyedStateFunction<Object, ValueState<MigratedNFA<IN>>>() {
-				@Override
-				public void process(Object key, ValueState<MigratedNFA<IN>> state) throws Exception {
-					MigratedNFA<IN> oldState = state.value();
-					computationStates.put((KEY) key, new NFAState(oldState.getComputationStates()));
-					org.apache.flink.cep.nfa.SharedBuffer<IN> sharedBuffer = oldState.getSharedBuffer();
-					partialMatches.init(sharedBuffer.getEventsBuffer(), sharedBuffer.getPages());
-					state.clear();
-				}
+		ValueStateDescriptor<MigratedNFA<IN>> stateDescriptor = new ValueStateDescriptor<>(
+			"nfaOperatorStateName",
+			new NFA.NFASerializer<>(inputSerializer));
+		ValueState<MigratedNFA<IN>> state = stateDescriptor.bind(contextStateBinder);
+		Preconditions.checkState(state instanceof ContextKeyedState, "Only apply to state warps on top of KeyedState");
+
+		KeyedStateFunction<Object, ValueState<MigratedNFA<IN>>> function = new KeyedStateFunction<Object, ValueState<MigratedNFA<IN>>>() {
+			@Override
+			public void process(Object key, ValueState<MigratedNFA<IN>> state) throws Exception {
+				MigratedNFA<IN> oldState = state.value();
+				computationStates.put((KEY) key, new NFAState(oldState.getComputationStates()));
+				org.apache.flink.cep.nfa.SharedBuffer<IN> sharedBuffer = oldState.getSharedBuffer();
+				partialMatches.init(sharedBuffer.getEventsBuffer(), sharedBuffer.getPages());
+				state.clear();
 			}
-		);
+		};
+
+		Iterator<KEY> keys = ((ContextKeyedState) state).getKeyedState().keys().iterator();
+		while (keys.hasNext()) {
+			KEY key = keys.next();
+			setCurrentKey(key);
+			try {
+				function.process(key, state);
+			} catch (Throwable e) {
+				ExceptionUtils.rethrow(e);
+			}
+		}
 	}
 
 	@Override

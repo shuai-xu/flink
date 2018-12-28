@@ -19,7 +19,9 @@
 package org.apache.flink.streaming.api.operators.state;
 
 import org.apache.flink.api.common.state.ListState;
+import org.apache.flink.runtime.state.keyed.ContextKeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedListState;
+import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.util.Preconditions;
 
@@ -34,7 +36,7 @@ import java.util.List;
  *
  * @param <E> The type of the elements in the state.
  */
-public class ContextListState<E> implements ListState<E> {
+public class ContextListState<E> implements ListState<E>, ContextKeyedState {
 
 	/** The operator to which the state belongs. */
 	private final AbstractStreamOperator<?> operator;
@@ -84,6 +86,11 @@ public class ContextListState<E> implements ListState<E> {
 		if (values != null && !values.isEmpty()) {
 			keyedState.addAll(operator.getCurrentKey(), values);
 		}
+	}
+
+	@Override
+	public KeyedState<Object, List<E>> getKeyedState() {
+		return keyedState;
 	}
 }
 

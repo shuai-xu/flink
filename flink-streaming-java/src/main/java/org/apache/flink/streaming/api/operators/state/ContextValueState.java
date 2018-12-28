@@ -20,6 +20,8 @@ package org.apache.flink.streaming.api.operators.state;
 
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.runtime.state.keyed.ContextKeyedState;
+import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedValueState;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.util.Preconditions;
@@ -34,7 +36,7 @@ import java.io.IOException;
  *
  * @param <T> The type of the values in the state.
  */
-public class ContextValueState<T> implements ValueState<T> {
+public class ContextValueState<T> implements ValueState<T>, ContextKeyedState {
 
 	/** The operator to which the state belongs. */
 	private final AbstractStreamOperator<?> operator;
@@ -76,5 +78,10 @@ public class ContextValueState<T> implements ValueState<T> {
 	@Override
 	public void clear() {
 		keyedState.remove(operator.getCurrentKey());
+	}
+
+	@Override
+	public KeyedState getKeyedState() {
+		return keyedState;
 	}
 }

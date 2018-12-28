@@ -21,6 +21,8 @@ package org.apache.flink.streaming.api.operators.state;
 import org.apache.flink.api.common.functions.FoldFunction;
 import org.apache.flink.api.common.state.FoldingState;
 import org.apache.flink.api.common.state.FoldingStateDescriptor;
+import org.apache.flink.runtime.state.keyed.ContextKeyedState;
+import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedValueState;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.util.Preconditions;
@@ -33,7 +35,7 @@ import org.apache.flink.util.Preconditions;
  *
  * @param <T> The type of the values in the state.
  */
-public class ContextFoldingState<T, ACC> implements FoldingState<T, ACC> {
+public class ContextFoldingState<T, ACC> implements FoldingState<T, ACC>, ContextKeyedState {
 
 	/** The operator to which the state belongs. */
 	private final AbstractStreamOperator<?> operator;
@@ -81,5 +83,10 @@ public class ContextFoldingState<T, ACC> implements FoldingState<T, ACC> {
 
 	private ACC getInitialValue() {
 		return stateDescriptor.getInitialValue();
+	}
+
+	@Override
+	public KeyedState getKeyedState() {
+		return keyedState;
 	}
 }

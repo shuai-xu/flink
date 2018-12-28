@@ -25,10 +25,10 @@ import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.ReadOnlyBroadcastState;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
-import org.apache.flink.runtime.state.KeyedStateBackend;
 import org.apache.flink.runtime.state.KeyedStateFunction;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.keyed.ContextKeyedState;
 import org.apache.flink.streaming.api.SimpleTimerService;
 import org.apache.flink.streaming.api.TimeDomain;
 import org.apache.flink.streaming.api.TimerService;
@@ -46,6 +46,7 @@ import org.apache.flink.util.OutputTag;
 import org.apache.flink.util.Preconditions;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -102,7 +103,7 @@ public class CoBroadcastWithKeyedOperator<KS, IN1, IN2, OUT>
 			broadcastStates.put(descriptor, getOperatorStateBackend().getBroadcastState(descriptor));
 		}
 
-		rwContext = new ReadWriteContextImpl(getExecutionConfig(), getKeyedStateBackend(), userFunction, broadcastStates, timerService);
+		rwContext = new ReadWriteContextImpl(getExecutionConfig(), userFunction, broadcastStates, timerService);
 		rContext = new ReadOnlyContextImpl(getExecutionConfig(), userFunction, broadcastStates, timerService);
 		onTimerContext = new OnTimerContextImpl(getExecutionConfig(), userFunction, broadcastStates, timerService);
 	}
@@ -165,8 +166,6 @@ public class CoBroadcastWithKeyedOperator<KS, IN1, IN2, OUT>
 
 		private final ExecutionConfig config;
 
-		private final KeyedStateBackend<KS> keyedStateBackend;
-
 		private final Map<MapStateDescriptor<?, ?>, BroadcastState<?, ?>> states;
 
 		private final TimerService timerService;
@@ -175,14 +174,12 @@ public class CoBroadcastWithKeyedOperator<KS, IN1, IN2, OUT>
 
 		ReadWriteContextImpl (
 				final ExecutionConfig executionConfig,
-				final KeyedStateBackend<KS> keyedStateBackend,
 				final KeyedBroadcastProcessFunction<KS, IN1, IN2, OUT> function,
 				final Map<MapStateDescriptor<?, ?>, BroadcastState<?, ?>> broadcastStates,
 				final TimerService timerService) {
 
 			function.super();
 			this.config = Preconditions.checkNotNull(executionConfig);
-			this.keyedStateBackend = Preconditions.checkNotNull(keyedStateBackend);
 			this.states = Preconditions.checkNotNull(broadcastStates);
 			this.timerService = Preconditions.checkNotNull(timerService);
 		}
@@ -232,11 +229,20 @@ public class CoBroadcastWithKeyedOperator<KS, IN1, IN2, OUT>
 				final StateDescriptor<S, VS> stateDescriptor,
 				final KeyedStateFunction<KS, S> function) throws Exception {
 
-			keyedStateBackend.applyToAllKeys(
-					VoidNamespace.INSTANCE,
-					VoidNamespaceSerializer.INSTANCE,
-					Preconditions.checkNotNull(stateDescriptor),
-					Preconditions.checkNotNull(function));
+			S state = stateDescriptor.bind(contextStateBinder);
+			Preconditions.checkState(state instanceof ContextKeyedState, "Only apply to state warps on top of KeyedState");
+			Iterator<KS> keys = ((ContextKeyedState) state).getKeyedState().keys().iterator();
+			while (keys.hasNext()) {
+				KS key = keys.next();
+				setCurrentKey(key);
+				try {
+					function.process(key, state);
+				} catch (Throwable e) {
+					// we wrap the checked exception in an unchecked
+					// one and catch it (and re-throw it) later.
+					throw new RuntimeException(e);
+				}
+			}
 		}
 	}
 

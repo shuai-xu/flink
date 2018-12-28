@@ -19,7 +19,9 @@
 package org.apache.flink.streaming.api.operators.state;
 
 import org.apache.flink.api.common.state.MapState;
+import org.apache.flink.runtime.state.keyed.ContextKeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedMapState;
+import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 
 import java.util.Iterator;
@@ -34,7 +36,7 @@ import java.util.Map;
  * @param <K> The type of the keys in the state.
  * @param <V> The type of the values in the state.
  */
-public class ContextMapState<K, V> implements MapState<K, V> {
+public class ContextMapState<K, V> implements MapState<K, V>, ContextKeyedState {
 
 	/** The operator to which the state belongs. */
 	private final AbstractStreamOperator<?> operator;
@@ -127,5 +129,10 @@ public class ContextMapState<K, V> implements MapState<K, V> {
 	@Override
 	public Iterator<Map.Entry<K, V>> iterator() throws Exception {
 		return keyedState.iterator(operator.getCurrentKey());
+	}
+
+	@Override
+	public KeyedState getKeyedState() {
+		return keyedState;
 	}
 }

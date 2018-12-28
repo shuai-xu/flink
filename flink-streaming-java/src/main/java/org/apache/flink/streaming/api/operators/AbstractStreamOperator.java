@@ -149,7 +149,7 @@ public abstract class AbstractStreamOperator<OUT>
 	private transient DefaultKeyedStateStore keyedStateStore;
 
 	/** The binder to create user-facing states. */
-	private transient StateBinder contextStateBinder;
+	protected transient StateBinder contextStateBinder;
 
 	/** The binder to create sub keyed states. */
 	protected transient ContextSubKeyedStateBinder contextSubKeyedStateBinder;
