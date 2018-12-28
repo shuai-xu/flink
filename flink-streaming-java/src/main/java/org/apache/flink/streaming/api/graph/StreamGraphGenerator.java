@@ -657,38 +657,40 @@ public class StreamGraphGenerator {
 		streamGraph.setMaxParallelism(transform.getId(), transform.getMaxParallelism());
 		streamGraph.setMainOutputDamBehavior(transform.getId(), transform.getDamBehavior());
 
-		Map<Integer, ReadPriority> readPriorityHintMap = new HashMap<>();
-		ReadPriority readPriority1, readPriority2;
+		ReadPriority readPriority1 = null, readPriority2 = null;
 		ReadOrder readOrderHint = transform.getReadOrderHint();
-		if (readOrderHint != null) {
-			readPriority1 = (readOrderHint == ReadOrder.INPUT1_FIRST) ? ReadPriority.HIGHER : ReadPriority.LOWER;
-			readPriority2 = readOrderHint == ReadOrder.INPUT2_FIRST ? ReadPriority.HIGHER : ReadPriority.LOWER;
-		} else {
+		if (ReadOrder.INPUT1_FIRST.equals(readOrderHint)) {
+			readPriority1 = ReadPriority.HIGHER;
+			readPriority2 = ReadPriority.LOWER;
+		} else if (ReadOrder.INPUT2_FIRST.equals(readOrderHint)) {
+			readPriority1 = ReadPriority.LOWER;
+			readPriority2 = ReadPriority.HIGHER;
+		} else if (ReadOrder.SPECIAL_ORDER.equals(readOrderHint)) {
 			readPriority1 = ReadPriority.DYNAMIC;
 			readPriority2 = ReadPriority.DYNAMIC;
 		}
 
+		Integer vertexID = transform.getId();
 		for (Integer inputId: inputIds1) {
-			streamGraph.addEdge(inputId,
+			StreamEdge inEdge = streamGraph.addEdge(inputId,
 					transform.getId(),
 					1
 			);
 
-			readPriorityHintMap.put(inputId, readPriority1);
+			if (readPriority1 != null) {
+				streamGraph.setReadPriorityHint(vertexID, inEdge, readPriority1);
+			}
 		}
 
 		for (Integer inputId: inputIds2) {
-			streamGraph.addEdge(inputId,
+			StreamEdge inEdge = streamGraph.addEdge(inputId,
 					transform.getId(),
 					2
 			);
 
-			readPriorityHintMap.put(inputId, readPriority2);
-		}
-
-		Integer vertexID = transform.getId();
-		for (StreamEdge inEdge : streamGraph.getStreamNode(vertexID).getInEdges()) {
-			streamGraph.setReadPriorityHint(vertexID, inEdge, readPriorityHintMap.get(inEdge.getSourceId()));
+			if (readPriority2 != null) {
+				streamGraph.setReadPriorityHint(vertexID, inEdge, readPriority2);
+			}
 		}
 
 		return Collections.singleton(transform.getId());

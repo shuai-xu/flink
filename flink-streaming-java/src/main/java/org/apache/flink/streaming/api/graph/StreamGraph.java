@@ -469,8 +469,8 @@ public class StreamGraph extends StreamingPlan {
 		}
 	}
 
-	public void addEdge(Integer upStreamVertexID, Integer downStreamVertexID, int typeNumber) {
-		addEdgeInternal(upStreamVertexID,
+	public StreamEdge addEdge(Integer upStreamVertexID, Integer downStreamVertexID, int typeNumber) {
+		return addEdgeInternal(upStreamVertexID,
 			downStreamVertexID,
 			typeNumber,
 			null,
@@ -481,13 +481,13 @@ public class StreamGraph extends StreamingPlan {
 	}
 
 	@VisibleForTesting
-	void addEdge(Integer upStreamVertexID,
+	StreamEdge addEdge(Integer upStreamVertexID,
 		Integer downStreamVertexID,
 		int typeNumber,
 		@Nullable DataExchangeMode dataExchangeMode,
 		@Nullable DamBehavior damBehavior) {
 
-		addEdgeInternal(upStreamVertexID,
+		return addEdgeInternal(upStreamVertexID,
 				downStreamVertexID,
 				typeNumber,
 				null,
@@ -498,7 +498,7 @@ public class StreamGraph extends StreamingPlan {
 
 	}
 
-	private void addEdgeInternal(Integer upStreamVertexID,
+	private StreamEdge addEdgeInternal(Integer upStreamVertexID,
 			Integer downStreamVertexID,
 			int typeNumber,
 			StreamPartitioner<?> partitioner,
@@ -517,7 +517,7 @@ public class StreamGraph extends StreamingPlan {
 			if (damBehavior == null) {
 				damBehavior = DamBehavior.PIPELINED;
 			}
-			addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, null, outputTag, dataExchangeMode, damBehavior);
+			return addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, null, outputTag, dataExchangeMode, damBehavior);
 		} else if (virtualSelectNodes.containsKey(upStreamVertexID)) {
 			int virtualId = upStreamVertexID;
 			upStreamVertexID = virtualSelectNodes.get(virtualId).f0;
@@ -525,7 +525,7 @@ public class StreamGraph extends StreamingPlan {
 				// selections that happen downstream override earlier selections
 				outputNames = virtualSelectNodes.get(virtualId).f1;
 			}
-			addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, outputNames, outputTag, dataExchangeMode, null);
+			return addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, outputNames, outputTag, dataExchangeMode, null);
 		} else if (virtualPartitionNodes.containsKey(upStreamVertexID)) {
 			int virtualId = upStreamVertexID;
 			upStreamVertexID = virtualPartitionNodes.get(virtualId).f0;
@@ -533,7 +533,7 @@ public class StreamGraph extends StreamingPlan {
 				partitioner = virtualPartitionNodes.get(virtualId).f1;
 				dataExchangeMode = virtualPartitionNodes.get(virtualId).f2;
 			}
-			addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, outputNames, outputTag, dataExchangeMode, null);
+			return addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, outputNames, outputTag, dataExchangeMode, null);
 		} else {
 			StreamNode upstreamNode = getStreamNode(upStreamVertexID);
 			StreamNode downstreamNode = getStreamNode(downStreamVertexID);
@@ -580,6 +580,8 @@ public class StreamGraph extends StreamingPlan {
 
 			getStreamNode(edge.getSourceId()).addOutEdge(edge);
 			getStreamNode(edge.getTargetId()).addInEdge(edge);
+
+			return edge;
 		}
 	}
 
