@@ -183,6 +183,7 @@ class CalcITCase extends StreamingTestBase {
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
+  @Test
   def testNonPrimitiveMapType(): Unit = {
     val sqlQuery = "SELECT MAP[a, c] FROM MyTableRow"
 

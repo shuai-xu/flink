@@ -54,6 +54,7 @@ class PrintCallGen extends CallGenerator {
 
     val resultCode =
       s"""
+         |${operands(1).code};
          |$resultTypeTerm $resultTerm = ${operands(1).resultTerm};
          |boolean $nullTerm = ${operands(1).nullTerm};
          |org.slf4j.MDC.put("fromUser", "TRUE");
