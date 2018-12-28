@@ -28,7 +28,7 @@ from simple word counting to graph algorithms. The code samples illustrate the
 use of [Flink's DataSet API]({{ site.baseurl }}/dev/batch/index.html).
 
 The full source code of the following and more examples can be found in the __flink-examples-batch__
-or __flink-examples-streaming__ module of the Flink source repository.
+ module of the Flink source repository.
 
 * This will be replaced by the TOC
 {:toc}

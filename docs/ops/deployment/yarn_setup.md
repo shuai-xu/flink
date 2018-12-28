@@ -226,6 +226,12 @@ You can check the number of TaskManagers in the JobManager web interface. The ad
 
 If the TaskManagers do not show up after a minute, you should investigate the issue using the log files.
 
+### Submit Job to Existed YARN Session
+You can get session appId from yarn, then submit flink job use `-yid`. 
+
+{% highlight bash %}
+./bin/flink run -m yarn-cluster -yid ${appId} ./examples/streaming/WordCount.jar
+{% endhighlight %}
 
 ## Run a single Flink job on YARN
 

@@ -243,6 +243,12 @@ window of processing time, as long as words are floating in.
 $ nc -l 9000
 {% endhighlight %}
 
+If you get an error "Ncat: socket: Address family not supported by protocol QUITTING". Please try to start the service with the following command: 
+
+{% highlight bash %}
+$ nc -l 0.0.0.0 9000
+{% endhighlight %}
+
 * Submit the Flink program:
 
 {% highlight bash %}
@@ -273,6 +279,8 @@ lorem ipsum
 ipsum ipsum ipsum
 bye
 {% endhighlight %}
+
+If you get an error "Ncat: socket: Address family not supported by protocol QUITTING". Please replace the "nc -l 9000" command with the "nc -l 0.0.0.0 9000" command. 
 
   The `.out` file will print the counts at the end of each time window as long
   as words are floating in, e.g.:
