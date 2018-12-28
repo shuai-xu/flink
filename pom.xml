@@ -90,7 +90,6 @@ under the License.
 		<module>flink-catalog</module>
 		<module>flink-dist</module>
 		<module>flink-service</module>
-		<module>flink-shaded-jetcd</module>
 	</modules>
 
 	<properties>
