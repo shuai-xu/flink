@@ -107,7 +107,8 @@ class StreamExecGroupWindowAggregate(
 
   override def isDeterministic: Boolean = AggregateUtil.isDeterministic(aggCalls)
 
-  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+  override def translateToPlanInternal(
+      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     val config = tableEnv.getConfig
 

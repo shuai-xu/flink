@@ -149,7 +149,7 @@ class StreamExecGlobalGroupAggregate(
       isGlobal = true)}))"
   }
 
-  override def translateToPlan(
+  override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val tableConfig = tableEnv.getConfig
 

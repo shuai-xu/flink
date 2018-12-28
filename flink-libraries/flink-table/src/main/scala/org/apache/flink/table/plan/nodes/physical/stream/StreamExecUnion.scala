@@ -68,7 +68,8 @@ class StreamExecUnion(
 
   override def isDeterministic: Boolean = true
 
-  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+  override def translateToPlanInternal(
+      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val inputs = getInputs
     val firstInputRowType = inputs.head.getRowType
     val firstInputFields = firstInputRowType.getFieldList.asScala.map(
