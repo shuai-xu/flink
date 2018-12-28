@@ -1,6 +1,6 @@
 {
   "name": "flink-runtime-web",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "scripts": {
     "ng": "node node_modules/@angular/cli/bin/ng",
     "start": "ng serve",
@@ -21,15 +21,18 @@
     "@angular/platform-browser": "~7.0.0",
     "@angular/platform-browser-dynamic": "~7.0.0",
     "@angular/router": "~7.0.0",
+    "@ant-design/icons-angular": "^2.0.0-beta.1",
+    "@ng-zorro/ng-plus": "0.0.16",
     "@antv/g2": "^3.3.4",
     "@types/prismjs": "^1.9.0",
     "classlist.js": "^1.1.20150312",
     "core-js": "^2.5.4",
     "d3": "^5.7.0",
     "dagre": "^0.8.2",
+    "g2": "^2.3.13",
     "lodash": "^4.17.11",
     "monaco-editor": "^0.14.3",
-    "ng-zorro-antd": "^7.0.0-rc.0",
+    "ng-zorro-antd": "^7.0.0-rc.3",
     "prismjs": "^1.15.0",
     "rxjs": "~6.3.3",
     "zone.js": "~0.8.26"

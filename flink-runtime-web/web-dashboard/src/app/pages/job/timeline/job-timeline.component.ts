@@ -1,3 +1,19 @@
+/*
+ *   Licensed to the Apache Software Foundation (ASF) under one
+ *   or more contributor license agreements.  See the NOTICE file
+ *   distributed with this work for additional information
+ *   regarding copyright ownership.  The ASF licenses this file
+ *   to you under the Apache License, Version 2.0 (the
+ *   "License"); you may not use this file except in compliance
+ *   with the License.  You may obtain a copy of the License at
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
 import {
   AfterViewInit,
   Component,
@@ -11,9 +27,8 @@ import {
 import * as G2 from '@antv/g2';
 import { Subject } from 'rxjs';
 import { filter, first, takeUntil } from 'rxjs/operators';
-import { COLOR_MAP } from '../../../app.config';
-import { VerticesItemInterface } from 'interfaces';
-import { JobService } from 'services';
+import { VerticesItemInterface } from 'flink-interfaces';
+import { ConfigService, JobService } from 'flink-services';
 
 @Component({
   selector       : 'flink-job-timeline',
@@ -93,7 +108,7 @@ export class JobTimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     });
     this.mainChartInstance.axis('id', false);
     this.mainChartInstance.coord().transpose().scale(1, -1);
-    this.mainChartInstance.interval().position('id*range').color('status', (type) => COLOR_MAP[ type ]).label('name', {
+    this.mainChartInstance.interval().position('id*range').color('status', (type) => this.configService.COLOR_MAP[ type ]).label('name', {
       offset   : -20,
       formatter: (text) => {
         if (text.length <= 120) {
@@ -112,7 +127,7 @@ export class JobTimelineComponent implements OnInit, AfterViewInit, OnDestroy {
       title: 'name'
     });
     this.mainChartInstance.on('click', (e) => {
-      const data = this.mainChartInstance.getSnapRecords(e)[0]._origin;
+      const data = this.mainChartInstance.getSnapRecords(e)[ 0 ]._origin;
       this.selectedName = data.name;
       this.updateSubTaskChart(data.id);
     });
@@ -127,10 +142,10 @@ export class JobTimelineComponent implements OnInit, AfterViewInit, OnDestroy {
       padding  : [ 50, 50, 50, 300 ]
     });
     this.subTaskChartInstance.coord().transpose().scale(1, -1);
-    this.subTaskChartInstance.interval().position('name*range').color('status', (type) => COLOR_MAP[ type ]);
+    this.subTaskChartInstance.interval().position('name*range').color('status', (type) => this.configService.COLOR_MAP[ type ]);
   }
 
-  constructor(private jobService: JobService, private cdr: ChangeDetectorRef) {
+  constructor(private jobService: JobService, private cdr: ChangeDetectorRef, private configService: ConfigService) {
   }
 
   ngOnInit() {

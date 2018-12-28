@@ -1,4 +1,34 @@
-@import '../../../../../theme';
+/*
+ *   Licensed to the Apache Software Foundation (ASF) under one
+ *   or more contributor license agreements.  See the NOTICE file
+ *   distributed with this work for additional information
+ *   regarding copyright ownership.  The ASF licenses this file
+ *   to you under the Apache License, Version 2.0 (the
+ *   "License"); you may not use this file except in compliance
+ *   with the License.  You may obtain a copy of the License at
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
+@import 'theme';
+
+@nzg-edge-color: @text-color;
+@nzg-group-node-fill: fade(@primary-color, 15%);
+@nzg-group-node-expanded-fill: fade(@primary-color, 20%);
+@nzg-group-node-expanded-stroke: @primary-color;
+@nzg-group-node-stroke: @primary-color;
+@nzg-group-node-color: @text-color;
+@nzg-group-header: @primary-color;
+@nzg-op-node-fill: fade(@primary-color, 20%);
+@nzg-op-node-stroke: fade(@primary-color, 10%);
+@nzg-base-node-color: @text-color;
+@nzg-highlight-color: @primary-color;
+@nzg-title-color: @heading-color;
+@nzg-group-title-color: @heading-color-dark;
 
 :host {
   font-family: Menlo, Monaco, "Courier New", monospace;
@@ -78,6 +108,7 @@
     .token.bold {
       font-weight: bold;
     }
+
     .token.italic {
       font-style: italic;
     }
@@ -85,35 +116,44 @@
     .token.entity {
       cursor: help;
     }
-  }
 
+  }
+}
+
+::ng-deep .op-name-popover .ant-popover-inner-content {
+  max-width: 600px;
+  max-height: 400px;
+  overflow-x: auto;
+  word-break: break-all;
 }
 
 .danger-node {
   border-color: @highlight-color !important;
+
   .group-header {
     background-color: @highlight-color !important;
   }
 }
 
-::ng-deep .selected {
+::ng-deep g.selected {
   .op-wrapper, .group-wrapper {
-    border-color: @nzg-highlight-color !important;
-    background-color: @nzg-group-node-expanded-fill !important;
+    border-color: @primary-color !important;
+    background-color: fade(@primary-color, 40%) !important;
 
     &.danger-node {
       border-color: @highlight-color !important;
+
       .group-header {
         background-color: @highlight-color !important;
       }
     }
   }
 }
+
 .group-wrapper {
   width: 100%;
   height: 100%;
   box-sizing: border-box;
-  border-radius: 5px;
   border: 1px solid @nzg-group-node-stroke;
   font-size: 12px;
   background: @nzg-group-node-fill;
@@ -133,7 +173,6 @@
     line-height: 24px;
     background: @nzg-group-header;
     padding: 0 10px;
-    border-radius: 4px 4px 0 0;
   }
 
   .group-body {
@@ -158,9 +197,11 @@
     margin: 0;
     color: @nzg-group-title-color;
     transition: color ease .3s;
+
     .action-title {
       cursor: pointer;
     }
+
     .more-icon {
       display: none;
     }
@@ -173,9 +214,8 @@
   }
 
   .sub-title {
-    margin: 0;
     font-size: 12px;
-    margin-top: 6px;
+    margin: 6px 0 0;
     font-weight: 400;
     word-break: break-all;
     color: @nzg-base-node-color;
@@ -187,11 +227,14 @@
     left: 8px;
     bottom: 8px;
     color: @nzg-base-node-color;
+
     .attr {
       margin: 0;
+
       &.danger-attr {
         color: @highlight-color;
       }
+
       .attr-name {
         font-weight: 700;
         width: 90px;
@@ -206,7 +249,6 @@
   width: 100%;
   height: 100%;
   box-sizing: border-box;
-  border-radius: 4px;
   padding: 10px;
   border: 1px solid @nzg-op-node-stroke;
   font-size: 12px;
@@ -226,6 +268,7 @@
     margin: 0;
     color: @nzg-title-color;
     transition: color ease .3s;
+
     .action-title {
       .edit-icon {
         display: none;
@@ -244,9 +287,11 @@
         border-radius: 50%;
         margin-left: 2px;
         cursor: pointer;
+
         &:hover {
           color: @nzg-op-node-stroke;
         }
+
         &.active {
           background: @nzg-op-node-stroke;
           color: @nzg-op-node-fill;
@@ -263,8 +308,10 @@
 
   .attr-wrap {
     margin-top: 8px;
+
     .attr {
       margin: 0;
+
       .attr-name {
         font-weight: 700;
         width: 105px;

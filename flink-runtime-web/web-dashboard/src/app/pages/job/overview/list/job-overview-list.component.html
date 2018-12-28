@@ -1,8 +1,24 @@
+<!--
+  ~   Licensed to the Apache Software Foundation (ASF) under one
+  ~   or more contributor license agreements.  See the NOTICE file
+  ~   distributed with this work for additional information
+  ~   regarding copyright ownership.  The ASF licenses this file
+  ~   to you under the Apache License, Version 2.0 (the
+  ~   "License"); you may not use this file except in compliance
+  ~   with the License.  You may obtain a copy of the License at
+  ~       http://www.apache.org/licenses/LICENSE-2.0
+  ~   Unless required by applicable law or agreed to in writing, software
+  ~   distributed under the License is distributed on an "AS IS" BASIS,
+  ~   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~   See the License for the specific language governing permissions and
+  ~   limitations under the License.
+  -->
+
 <nz-table
   class="no-border small"
   [nzSize]="'small'"
   [nzData]="nodes"
-  [nzScroll]="{x:((1760+left)+'px')}"
+  [nzScroll]="{x:((1810+left)+'px')}"
   [nzFrontPagination]="false"
   [nzShowPagination]="false">
   <thead (nzSortChange)="sort($event)" nzSingleSort>
@@ -19,7 +35,7 @@
       <th nzSortKey="detail.metrics.write-records" nzShowSort nzWidth="120px">Records Sent</th>
       <th nzSortKey="parallelism" nzShowSort nzWidth="120px">Parallelism</th>
       <th nzSortKey="detail.start-time" nzShowSort nzWidth="150px">Start Time</th>
-      <th nzSortKey="detail.duration" nzShowSort nzWidth="100px">Duration</th>
+      <th nzSortKey="detail.duration" nzShowSort nzWidth="150px">Duration</th>
       <th nzSortKey="detail.end-time" nzShowSort nzWidth="150px">End Time</th>
       <th nzWidth="100px" nzRight="0px">Tasks</th>
     </tr>
@@ -54,7 +70,7 @@
       </td>
       <td>
         <span *ngIf="node.detail.metrics['read-bytes-complete'];else loadingTemplate">
-          {{ node.detail.metrics['read-bytes'] | humanizeBytes }}
+          {{ node.detail.metrics['read-bytes'] | nzHumanizeBytes }}
         </span>
       </td>
       <td>
@@ -64,7 +80,7 @@
       </td>
       <td>
         <span *ngIf="node.detail.metrics['write-bytes-complete'];else loadingTemplate">
-          {{ node.detail.metrics['write-bytes'] | humanizeBytes }}
+          {{ node.detail.metrics['write-bytes'] | nzHumanizeBytes }}
         </span>
       </td>
       <td>
@@ -73,16 +89,16 @@
         </span>
       </td>
       <td>{{ node.parallelism }}</td>
-      <td>{{ node.detail["start-time"] | humanizeDate: 'yyyy-MM-dd HH:mm:ss' }}</td>
-      <td>{{ node.detail.duration | humanizeDuration }}</td>
-      <td>{{ node.detail["end-time"] | humanizeDate: 'yyyy-MM-dd HH:mm:ss' }}</td>
+      <td>{{ node.detail["start-time"] | nzHumanizeDate: 'yyyy-MM-dd HH:mm:ss' }}</td>
+      <td>{{ node.detail.duration | nzHumanizeDuration: 's' }}</td>
+      <td>{{ node.detail["end-time"] | nzHumanizeDate: 'yyyy-MM-dd HH:mm:ss' }}</td>
       <td nzRight="0px" [class.selected]="selectedNode?.id === node.id">
         <flink-task-badge [tasks]="node.detail.tasks"></flink-task-badge>
       </td>
     </tr>
   </tbody>
 </nz-table>
-<flink-resize [(left)]="left" [baseElement]="elementRef" [resizeMin]="390"></flink-resize>
+<nz-resize [nzLeft]="left" [nzShowBorder]="true" [nzBaseElement]="elementRef.nativeElement" [nzMin]="390" (resizeChange)="left = $event.left"></nz-resize>
 <ng-template #loadingTemplate>
   <i nz-icon type="loading"></i>
 </ng-template>

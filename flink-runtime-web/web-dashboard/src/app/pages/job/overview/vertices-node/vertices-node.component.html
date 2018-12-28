@@ -1,3 +1,19 @@
+<!--
+  ~   Licensed to the Apache Software Foundation (ASF) under one
+  ~   or more contributor license agreements.  See the NOTICE file
+  ~   distributed with this work for additional information
+  ~   regarding copyright ownership.  The ASF licenses this file
+  ~   to you under the Apache License, Version 2.0 (the
+  ~   "License"); you may not use this file except in compliance
+  ~   with the License.  You may obtain a copy of the License at
+  ~       http://www.apache.org/licenses/LICENSE-2.0
+  ~   Unless required by applicable law or agreed to in writing, software
+  ~   distributed under the License is distributed on an "AS IS" BASIS,
+  ~   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~   See the License for the specific language governing permissions and
+  ~   limitations under the License.
+  -->
+
 <ng-container *ngIf="nodeInfo.node.isGroupNode">
   <div class="group-wrapper"
     [class.danger-node]="verticesDetail.inQueue >=1 || verticesDetail.outQueue >=1"
@@ -5,13 +21,9 @@
     <div class="group-header">
       <h4 class="node-title">
       <span class="action-title">
-        <span *ngIf="!nodeInfo.expanded">Operators({{nodeInfo.node.cardinality}})</span>
+        <span *ngIf="!nodeInfo.expanded">Vertex ({{nodeInfo.node.cardinality}} Operators)</span>
         <span *ngIf="nodeInfo.expanded">
-          Parallel, InQ, OutQ(
-          {{verticesDetail.parallelism}},
-          {{verticesDetail.inQueueDisplay}},
-          {{verticesDetail.outQueueDisplay}}
-          )
+          Parallel: {{verticesDetail.parallelism}} <nz-divider nzType="vertical"></nz-divider> InQ: {{(verticesDetail.inQueue | percent) || '-'}} <nz-divider nzType="vertical"></nz-divider> OutQ: {{(verticesDetail.outQueue | percent) || '-'}}
         </span>
       </span>
       </h4>
@@ -25,21 +37,39 @@
     <div class="group-body">
       <h5 class="sub-title">{{verticesDetail.displayName}}</h5>
       <div class="attr-wrap">
-        <p class="attr"><span class="attr-name">Parallelism:</span>{{verticesDetail.parallelism}} </p>
-        <p class="attr" [class.danger-attr]="verticesDetail.inQueue  >= 1"><span class="attr-name">In Queue:</span>{{verticesDetail.inQueueDisplay}}</p>
-        <p class="attr" [class.danger-attr]="verticesDetail.outQueue  >= 1"><span class="attr-name">Out Queue:</span>{{verticesDetail.outQueueDisplay}}</p>
+        <p class="attr"><span class="attr-name">Parallelism</span>: {{verticesDetail.parallelism}} </p>
+        <p class="attr" [class.danger-attr]="verticesDetail.inQueue  >= 1">
+          <span class="attr-name">In Queue</span>: {{(verticesDetail.inQueue | percent) || '-'}}
+        </p>
+        <p class="attr" [class.danger-attr]="verticesDetail.outQueue  >= 1">
+          <span class="attr-name">Out Queue</span>: {{(verticesDetail.outQueue | percent) || '-'}}
+        </p>
       </div>
     </div>
   </div>
 </ng-container>
 <ng-container *ngIf="!nodeInfo.node.isGroupNode">
-  <div class="op-wrapper">
+  <div
+    class="op-wrapper"
+    [class.danger-node]="operatorsDetail.abnormal">
     <div class="attr-wrap">
-      <p class="attr"><span class="attr-name">RecordsIn:</span>{{operatorsDetail?.numRecordsIn}}</p>
-      <p class="attr"><span class="attr-name">RecordsOut:</span>{{operatorsDetail?.numRecordsOut}}</p>
+      <p class="attr"><span class="attr-name">RecordsIn</span>: {{operatorsDetail?.numRecordsIn}}</p>
+      <p class="attr"><span class="attr-name">RecordsOut</span>: {{operatorsDetail?.numRecordsOut}}</p>
     </div>
     <div class="node-name">
-      <p>{{operatorsDetail?.name}}</p>
+      <p *ngIf="operatorsDetail.name && operatorsDetail.name.length > 512; else fullName"
+        nz-popover
+        nzOverlayClassName="op-name-popover"
+        [nzOverlayStyle]="{
+          'max-width': '600px',
+          'max-height': '400px'
+        }"
+        [nzContent]="operatorsDetail.name">
+        {{operatorsDetail?.displayName}}
+      </p>
+      <ng-template #fullName>
+        <p>{{operatorsDetail?.displayName}}</p>
+      </ng-template>
     </div>
   </div>
 </ng-container>

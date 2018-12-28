@@ -1,20 +1,46 @@
-import { BrowserModule } from '@angular/platform-browser';
-import { APP_INITIALIZER, Injector, NgModule } from '@angular/core';
-import { Router } from '@angular/router';
-import { AppRoutingModule } from './app-routing.module';
+/*
+ *   Licensed to the Apache Software Foundation (ASF) under one
+ *   or more contributor license agreements.  See the NOTICE file
+ *   distributed with this work for additional information
+ *   regarding copyright ownership.  The ASF licenses this file
+ *   to you under the Apache License, Version 2.0 (the
+ *   "License"); you may not use this file except in compliance
+ *   with the License.  You may obtain a copy of the License at
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
 
-import { AppComponent } from './app.component';
+import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { FormsModule } from '@angular/forms';
-import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
-import { NgZorroAntdModule, NZ_I18N, en_US, NZ_ICONS } from 'ng-zorro-antd';
 import { registerLocaleData } from '@angular/common';
+import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
+import { APP_INITIALIZER, Injector, NgModule } from '@angular/core';
 import en from '@angular/common/locales/en';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+
+import { NZ_MONACO_EDITOR_CONFIG, NzMonacoEditorConfig, NzMonacoEditorTheme } from '@ng-zorro/ng-plus';
+import { NgZorroAntdModule, NZ_I18N, en_US, NZ_ICONS } from 'ng-zorro-antd';
+
+import { StatusService, ConfigService } from 'flink-services';
+import { ShareModule } from 'flink-share/share.module';
+
+import { AppRoutingModule } from './app-routing.module';
+import { AppComponent } from './app.component';
 import { AppInterceptor } from './app.interceptor';
-import { StatusService } from 'services';
-import { ShareModule } from 'share/share.module';
 
 registerLocaleData(en);
+
+export function NzMonacoEditorConfigFactory(configService: ConfigService): NzMonacoEditorConfig {
+  return {
+    defaultEditorOptions: { language: 'apex' },
+    defaultTheme        : `${configService.theme}` as NzMonacoEditorTheme
+  };
+}
 
 export function AppInitServiceFactory(statusService: StatusService, injector: Injector): Function {
   return () => {
@@ -53,7 +79,8 @@ import {
   FileTextOutline,
   FullscreenOutline,
   ArrowsAltOutline,
-  ShrinkOutline
+  ShrinkOutline,
+  PicCenterOutline
 } from '@ant-design/icons-angular/icons';
 
 
@@ -71,6 +98,12 @@ import {
     AppRoutingModule
   ],
   providers   : [
+    {
+      provide   : NZ_MONACO_EDITOR_CONFIG,
+      useFactory: NzMonacoEditorConfigFactory,
+      deps      : [ ConfigService ],
+      multi     : true
+    },
     {
       provide : HTTP_INTERCEPTORS,
       useClass: AppInterceptor,
@@ -112,7 +145,8 @@ import {
         FileTextOutline,
         FullscreenOutline,
         ArrowsAltOutline,
-        ShrinkOutline
+        ShrinkOutline,
+        PicCenterOutline
       ]
     },
     {

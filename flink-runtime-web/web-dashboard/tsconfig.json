@@ -3,20 +3,17 @@
   "compilerOptions": {
     "baseUrl": "./",
     "paths": {
-      "services": [
+      "flink-services": [
         "src/app/services"
       ],
-      "interfaces": [
+      "flink-interfaces": [
         "src/app/interfaces"
       ],
-      "core": [
+      "flink-core": [
         "src/app/core"
       ],
-      "share/*": [
+      "flink-share/*": [
         "src/app/share/*"
-      ],
-      "pipes/*": [
-        "src/app/pipes/*"
       ]
     },
     "outDir": "./dist/out-tsc",

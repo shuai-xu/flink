@@ -41,25 +41,22 @@ The framework has very lightweight dependencies.
 The code is regular Java code built via Maven. To add additional request handlers, follow the
 example of the `org.apache.flink.runtime.webmonitor.handlers.JobSummaryHandler`.
 
-
 ## Dashboard Frontend 
 
-The web dashboard is implemented using *angular.js*. The dashboard build infrastructure uses *node.js*.
-The dashboard files are all pre-built, so one can try it out without building it.
+The web dashboard is implemented using *Angular*. The dashboard build infrastructure uses *node.js*.
+
 
 
 ### Preparing the Build Environment
 
 Depending on your version of Linux, Windows or MacOS, you may need to manually install *node.js*
-and *bower*.
 
 
 #### Ubuntu Linux
 
 Install *node.js* by following [these instructions](https://github.com/joyent/node/wiki/installing-node.js-via-package-manager).
 
-Verify that the installed version is at least *6.4.1*, via `npm -version`.
-
+Verify that the installed version is at least *10.9.0*, via `npm -version`.
 
 
 #### MacOS
@@ -75,7 +72,7 @@ brew install node
 ### Building
 
 The build process downloads all requires libraries via the *node.js* package management tool (*npm*)
-and the *bower* dependency management tool. The final build tool is *gulp*.
+The final build tool is *@angular/cli*.
 
 ```
 cd flink-runtime-web/web-dashboard
@@ -99,5 +96,17 @@ mvn -DskipTests clean package
 To simplify continuous development, one can use a *standalone proxy server*, together with automatic
 re-compilation:
 
-1. Start the proxy server via `npm run proxy`
+1. Start the proxy server via `npm run proxy` (You can modify the proxy target in the `proxy.conf.json`, the default proxy target is `localhost:8081`)
 2. Access the dashboard at [`http://localhost:4200`](http://localhost:4200)
+
+### CodeStyle & Lint
+
+```bash
+$ npm run lint
+```
+
+### Dependency
+
+- Framework: [Angular](https://angular.io)
+- CLI Tools: [Angular CLI](https://cli.angular.io)
+- UI Components: [NG-ZORRO](https://github.com/NG-ZORRO/ng-zorro-antd)
