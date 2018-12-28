@@ -1,8 +1,8 @@
 ---
 title: "JobManager High Availability (HA)"
-nav-title: High Availability (HA)
-nav-parent_id: ops
-nav-pos: 2
+nav-title: JobManager High Availability (HA)
+nav-parent_id: ha
+nav-pos: 1
 ---
 <!--
 Licensed to the Apache Software Foundation (ASF) under one
