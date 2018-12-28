@@ -60,6 +60,136 @@ Again, use `kubectl` to delete the cluster:
     kubectl delete -f jobmanager-service.yaml
     kubectl delete -f taskmanager-deployment.yaml
 
+## Run Flink Natively On Kubernetes
+
+**Running Flink natively on kubernetes is an experimental feature. There may be behavioral changes of configuration and cli arguments.**
+
+### Requirements
+
+- Kubernetes 1.6 or above
+- kubectl has access to list, create, delete pods and services (can be configured in ~/.kube/config). You can verify that by `kubectl auth can-i <list|create|edit|delete> pods`
+- [Kubernetes DNS](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/) enabled
+
+### Docker images
+
+Use the following command to build a image with user jar
+
+{% highlight bash %}
+cd flink-container/docker
+
+./build.sh --job-jar examples/streaming/WordCount.jar --from-local-dist --image-name <ImageName>
+
+docker push <ImageName>
+{% endhighlight %}
+
+### Flink Kubernetes Session
+
+#### Start a Session
+
+Use the following command to start a session
+{% highlight bash %}
+./bin/kubernetes-session.sh
+{% endhighlight %}
+
+This command will show you the following overview:
+{% highlight bash %}
+Usage:
+   Required
+     -ms,--master <arg>   Kubernetes cluster master url
+     -n,--pods <arg>      Number of kubernetes pods to allocate (=Number of Task Managers)
+   Optional
+     -D <property=value>             use value for given property
+     -d,--detached                   If present, runs the job in detached mode
+     -h,--help                       Help for the kubernetes session CLI.
+     -i,--image <arg>                Container image to use for Flink containers.
+                                     Individual container types (e.g. jobmanager or taskmanager)
+                                     can also be configured to use different images if desired,
+                                     by setting the container type-specific image name.
+     -jm,--jobManagerMemory <arg>    Memory for JobManager Container [in MB]
+     -nm,--name <arg>                Set a custom name for the flink cluster on kubernetes
+     -ns,--namespace <arg>           Specify kubernetes namespace.
+     -s,--slots <arg>                Number of slots per TaskManager
+     -sa,--serviceaddress <arg>      The exposed address of kubernetes service to submit job and view dashboard.
+     -tm,--taskManagerMemory <arg>   Memory per TaskManager Container [in MB]
+{% endhighlight %}
+
+**Example:** Issue the following command to allocate 4 Task Managers, with 8GB of memory and 32 processing slots each:
+{% highlight bash %}
+./bin/kubernetes-session.sh -ms https://k8s-master:port -n 4 -tm 8192 -i flink-k8s:latest
+{% endhighlight %}
+
+Blob Server and Task Manager are required to use nonrandom RPC ports. They can be configured with the following config options, either in flink-conf.yaml or as `-D` flags at starting the session.
+
+{% highlight bash %}
+blob.server.port: 7788
+taskmanager.rpc.port: 7789
+{% endhighlight %}
+
+Once Flink is deployed in your kubernetes cluster, it will show you the connection details of the Job Manager.
+
+#### Detached Kubernetes Session
+
+In detached mode, the Flink client will exit after submitting the the service to the kubernetes cluster. If you want to stop the Kubernetes session, please use the Kubernetes utilities(`kubectl delete service <ServiceName>`). You can also start another client and attach to the session to stop it.
+
+#### Accessing Job Manager UI
+
+There are several ways to expose a Service onto an external (outside of your cluster) IP address. This could be changed by `kubernetes.service.exposed.type`.
+
+- ClusterIP: Default value, exposes the service on a cluster-internal IP. The Service is only reachable from within the cluster. If you want to access the Job Manager ui or submit job to the existing session, you need to start a local proxy.
+{% highlight bash %}
+kubectl port-forward service/<ServiceName> 8081
+{% endhighlight %}
+- NodePort: Exposes the service on each Node’s IP at a static port (the `NodePort`). `<NodeIP>:<NodePort>` could be used to contact the Job Manager Service.
+- LoadBalancer: Exposes the service externally using a cloud provider’s load balancer. You could use `kubectl get services/<ServiceName>` to get EXTERNAL-IP for ServiceAddress argument. 
+- ExternalName: Map a service to a DNS name, not supported in current version.
+
+Navigate to [publishing services in Kubernetes](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types) to get more information.
+
+#### Submitting job to an existing Session
+
+Use the following command to submit job
+{% highlight bash %}
+bin/flink run -m kubernetes-cluster -knm <ClusterId> -ksa <ServiceAddress> examples/streaming/WordCount.jar
+{% endhighlight %}
+
+- The ClusterId is specified by `-nm` when starting a session. If you do not specify a certain name, Flink client will generate a UUID for you session cluster.
+- The ServiceName is auto generated following the pattern `<ClusterId>-service`
+- The ServiceAddress is the address of Job Manager service. It could be `localhost`, `<NodeIP>:<NodePort>` or `EXTERNAL-IP` based on exposed type.
+
+#### Attach to an existing Session
+Use the following command to attach to a session.
+{% highlight bash %}
+./bin/kubernetes-session.sh -ms https://k8s-master:port -nm <ClusterId> -sa <ServiceAddress>
+{% endhighlight %}
+
+### Run a single Flink job on Kubernetes
+
+The documentation above describes how to start a Flink cluster within a Kubernetes environment. It is also possible to launch a new Flink cluster for executing each individual job with better isolation.
+
+***Example:***
+
+{% highlight bash %}
+./bin/flink run -m kubernetes-cluster -kms https://k8s-master:port -kn 4 -ki flink-k8s:latest examples/streaming/WordCount.jar
+{% endhighlight %}
+
+The command line options of the Kubernetes session are also available with the ./bin/flink tool. They are prefixed with a k or kubernetes (for the long argument options).
+
+Note: In attach mode, the argument `-kn` (number of TaskManagers) is required and `kubernetes.service.exposed.type` must be either `NODE_PORT` or `LOAD_BALANCER`.
+
+Note: You can use a different configuration directory per job by setting the environment variable FLINK_CONF_DIR. To use this copy the conf directory from the Flink distribution and modify, for example, the logging settings on a per-job basis.
+
+Note: It is also possible to "fire and forget" a Flink job to the Kubernetes cluster in detached mode. Use -m to specify the kubernetes-cluster and -d for detached mode. The `-kn` argument will not take effect and **resource is allocated as demand.** Also in this case, your application will not get any accumulator results or exceptions from the ExecutionEnvironment.execute() call!
+
+Note: If you want to accessing the Job Manager UI or get the logs, set `kubernetes.destroy-perjob-cluster.after-job-finished=false` and the Flink cluster will not be destroyed after finished.
+
+### Debug a failed Kubernetes cluster
+
+Users could use the following command to retrieve logs of Job Manager and Task Manager.
+{% highlight bash %}
+kubectl logs pod/<PodName>
+{% endhighlight %}
+
+
 ## Advanced Cluster Deployment
 
 An early version of a [Flink Helm chart](https://github.com/docker-flink/
@@ -154,4 +284,17 @@ spec:
     component: jobmanager
 {% endhighlight %}
 
+### Run Flink Natively On Kubernetes Internals
+
+This section briefly describes how Flink and Kubernetes interact.
+
+<img src="{{ site.baseurl }}/fig/FlinkOnKubernetesNative.svg" class="img-responsive">
+
+When starting a Kubernetes session, Flink client will first (step 1) contact to Kubernetes ApiServer to submit the cluster description, including ConfigMap spec, Job Manager Service spec, Job Manager Replica Controller spec and Owner Reference.
+
+The next step (step 2), Kubernetes Master create the required components. The Kubelet will pull the image, prepare and mount the volume and then execute the start command.
+
+Once Flink JobManager pod is launched, the ResourceManager will allocate (step 3) the specified number of Task Managers. The JobManager will generate a new configuration for the TaskManagers, with the address of Job Manager set to ServiceName. This allows the TaskManagers to connect back to the JobManager after failover).
+
+After all TaskManagers are launched and registered to ResourceManager and JobManager, the session is ready to accept jobs.
 {% top %}

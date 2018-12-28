@@ -106,6 +106,21 @@ Usage:
      -q,--query                      Display available YARN resources (memory, cores)
      -qu,--queue <arg>               Specify YARN queue.
      -s,--slots <arg>                Number of slots per TaskManager
+     -sl,--sharedLib <path>          Upload a copy of Flink lib beforehand and specify the path
+                                     to use public visibility feature of YARN NM localizing resources
+     -t,--ship <arg>                 Ship jars, files and directory for cluster (t for transfer),
+                                     Use ',' to separate multiple files.
+                                     The files could be in local file system or distributed file system.
+                                     Use URI schema to specify which file system the jar belongs.
+                                     If schema is missing, would try to get the files in local file system.
+                                     (eg: -t file:///tmp/dict,hdfs:///$namenode_address/tmp/dependency2.jar)
+     -ta,--shipArchives <arg>        Ship archives for cluster (t for transfer),
+                                     Use ',' to separate multiple files.
+                                     The archives could be in local file system or distributed file system.
+                                     Use URI schema to specify which file system the file belongs.
+                                     If schema is missing, would try to get the archives in local file system. 
+                                     Use '#' after the file path to specify a new name in workdir.
+                                     (eg: -ta file:///tmp/a.tar.gz#dict1,hdfs:///$namenode_address/tmp/b.tar.gz)
      -tm,--taskManagerMemory <arg>   Memory per TaskManager Container [in MB]
      -z,--zookeeperNamespace <arg>   Namespace to create the Zookeeper sub-paths for HA mode
 {% endhighlight %}
@@ -131,7 +146,7 @@ Once Flink is deployed in your YARN cluster, it will show you the connection det
 Stop the YARN session by stopping the unix process (using CTRL+C) or by entering 'stop' into the client.
 
 Flink on YARN will only start all requested containers if enough resources are available on the cluster. Most YARN schedulers account for the requested memory of the containers,
-some account also for the number of vcores. By default, the number of vcores is equal to the processing slots (`-s`) argument. The `yarn.containers.vcores` allows overwriting the
+some account also for the number of vcores. By default, the number of vcores is equal to the processing slots (`-s`) argument. The `taskmanager.cpu.core` allows overwriting the
 number of vcores with a custom value.
 
 #### Detached YARN Session
@@ -202,9 +217,33 @@ Action "run" compiles and runs a program.
                                       program. Optional flag to override the
                                       default value specified in the
                                       configuration
+     --files <files>                  Attach custom files for job. Directory
+                                      could not be supported. Use ',' to
+                                      separate multiple files. The files
+                                      could be in local file system or
+                                      distributed file system. Use URI
+                                      schema to specify which file system
+                                      the file belongs. If schema is
+                                      missing, would try to get the file in
+                                      local file system. Use '#' after the
+                                      file path to specify retrieval key in
+                                      runtime. (eg: --file
+                                      file:///tmp/a.txt#file_key,hdfs:///$na
+                                      menode_address/tmp/b.txt)
+     --libjars <libraryJars>          Attach custom library jars for job.
+                                      Directory could not be supported. Use
+                                      ',' to separate multiple jars. The
+                                      jars could be in local file system or
+                                      distributed file system. Use URI
+                                      schema to specify which file system
+                                      the jar belongs. If schema is missing,
+                                      would try to get the jars in local
+                                      file system. (eg: --libjars
+                                      file:///tmp/dependency1.jar,hdfs:///
+                                      $namenode_address/tmp/dependency2.jar)
 {% endhighlight %}
 
-Use the *run* action to submit a job to YARN. The client is able to determine the address of the JobManager. In the rare event of a problem, you can also pass the JobManager address using the `-m` argument. The JobManager address is visible in the YARN console.
+Use the *run* action to submit a job to YARN. The client is able to determine the address of the JobManager. In the rare event of a problem, you can also pass the YARN applicationId using the `-yid` argument. The applicationId is visible in the YARN console.
 
 **Example**
 
@@ -237,7 +276,7 @@ You can get session appId from yarn, then submit flink job use `-yid`.
 
 The documentation above describes how to start a Flink cluster within a Hadoop YARN environment. It is also possible to launch Flink within YARN only for executing a single job.
 
-Please note that the client then expects the `-yn` value to be set (number of TaskManagers).
+Please note that the client then expects the `-yn` value to be set (number of TaskManagers) in attach mode.
 
 ***Example:***
 
@@ -249,7 +288,7 @@ The command line options of the YARN session are also available with the `./bin/
 
 Note: You can use a different configuration directory per job by setting the environment variable `FLINK_CONF_DIR`. To use this copy the `conf` directory from the Flink distribution and modify, for example, the logging settings on a per-job basis.
 
-Note: It is possible to combine `-m yarn-cluster` with a detached YARN submission (`-yd`) to "fire and forget" a Flink job to the YARN cluster. In this case, your application will not get any accumulator results or exceptions from the ExecutionEnvironment.execute() call!
+Note: It is possible to combine `-m yarn-cluster` with a detached YARN submission (`-d`) to "fire and forget" a Flink job to the YARN cluster. The `-yn` will not take effect and resource is allocated as demand. Also in this case, your application will not get any accumulator results or exceptions from the ExecutionEnvironment.execute() call!
 
 ### User jars & Classpath
 
