@@ -25,7 +25,7 @@ public class HiveDbConfig {
 
 	public static final String HIVE_DB_DESCRIPTION = "hive.db.description";
 
-	public static final String HIVE_DB_LOCATION = "hive.db.location";
+	public static final String HIVE_DB_OWNER_NAME = "hive.db.owner.name";
 
-	public static final String HIVE_DB_OWNER = "hive.db.owner";
+	public static final String HIVE_DB_LOCATION_URI = "hive.db.location.uri";
 }

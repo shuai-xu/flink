@@ -212,13 +212,13 @@ public abstract class CatalogTestBase {
 		catalog.createDatabase(db1, cd1, false);
 		List<String> dbs = catalog.listDatabases();
 
-		assertEquals(cd1, catalog.getDatabase(db1));
+		assertTrue(catalog.getDatabase(db1).getProperties().entrySet().containsAll(cd1.getProperties().entrySet()));
 		assertEquals(1, filterBuiltInDb(dbs).size());
 		assertEquals(db1, filterBuiltInDb(dbs).get(0));
 
 		catalog.createDatabase(db1, createAnotherDb(), true);
 
-		assertEquals(cd1, catalog.getDatabase(db1));
+		assertTrue(catalog.getDatabase(db1).getProperties().entrySet().containsAll(cd1.getProperties().entrySet()));
 		assertEquals(1, filterBuiltInDb(dbs).size());
 		assertEquals(db1, filterBuiltInDb(dbs).get(0));
 	}
@@ -254,13 +254,13 @@ public abstract class CatalogTestBase {
 		CatalogDatabase db = createDb();
 		catalog.createDatabase(db1, db, false);
 
-		assertEquals(db, catalog.getDatabase(db1));
+		assertTrue(catalog.getDatabase(db1).getProperties().entrySet().containsAll(db.getProperties().entrySet()));
 
 		CatalogDatabase newDb = createAnotherDb();
 		catalog.alterDatabase(db1, newDb, false);
 
-		assertNotEquals(db, catalog.getDatabase(db1));
-		assertEquals(newDb, catalog.getDatabase(db1));
+		assertFalse(catalog.getDatabase(db1).getProperties().entrySet().containsAll(db.getProperties().entrySet()));
+		assertTrue(catalog.getDatabase(db1).getProperties().entrySet().containsAll(newDb.getProperties().entrySet()));
 	}
 
 	@Test(expected = DatabaseNotExistException.class)
@@ -353,12 +353,14 @@ public abstract class CatalogTestBase {
 	}
 
 	protected CatalogDatabase createDb() {
-		return new CatalogDatabase(new HashMap<>());
+		return new CatalogDatabase(new HashMap<String, String>() {{
+			put("k1", "v1");
+		}});
 	}
 
 	protected CatalogDatabase createAnotherDb() {
 		return new CatalogDatabase(new HashMap<String, String>() {{
-			put("key", "value");
+			put("k2", "v2");
 		}});
 	}
 

@@ -198,12 +198,11 @@ public class HiveMetadataUtil {
 	public static Database createHiveDatabase(String dbName, CatalogDatabase catalogDb) {
 		Map<String, String> prop = catalogDb.getProperties();
 
-		Database db = new Database(
+		return new Database(
 			dbName,
 			prop.get(HiveDbConfig.HIVE_DB_DESCRIPTION),
-			prop.get(HiveDbConfig.HIVE_DB_LOCATION),
+			prop.get(HiveDbConfig.HIVE_DB_LOCATION_URI),
 			catalogDb.getProperties());
-		return db;
 	}
 
 	/**
@@ -212,10 +211,9 @@ public class HiveMetadataUtil {
 	public static CatalogDatabase createCatalogDatabase(Database hiveDb) {
 		Map<String, String> prop = new HashMap<>(hiveDb.getParameters());
 
-		// TODO: enable comparing CatalogDatabase
-//		prop.put(HiveDbConfig.HIVE_DB_LOCATION, hiveDb.getLocationUri());
-//		prop.put(HiveDbConfig.HIVE_DB_DESCRIPTION, hiveDb.getDescription());
-//		prop.put(HiveDbConfig.HIVE_DB_OWNER, hiveDb.getOwnerName());
+		prop.put(HiveDbConfig.HIVE_DB_LOCATION_URI, hiveDb.getLocationUri());
+		prop.put(HiveDbConfig.HIVE_DB_DESCRIPTION, hiveDb.getDescription());
+		prop.put(HiveDbConfig.HIVE_DB_OWNER_NAME, hiveDb.getOwnerName());
 
 		return new CatalogDatabase(prop);
 	}
