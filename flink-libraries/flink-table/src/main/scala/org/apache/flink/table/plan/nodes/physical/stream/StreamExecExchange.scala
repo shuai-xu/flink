@@ -57,8 +57,7 @@ class StreamExecExchange(
 
   override def isDeterministic: Boolean = true
 
-  override def translateToPlanInternal(
-      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val input = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
     val inputType = input.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
     val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BaseRow])

@@ -135,8 +135,7 @@ class StreamExecRank(
     result
   }
 
-  override def translateToPlanInternal(
-      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val tableConfig = tableEnv.getConfig
     val rankKind = rankFunction.getKind match {
       case SqlKind.ROW_NUMBER => SqlKind.ROW_NUMBER

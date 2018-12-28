@@ -112,8 +112,7 @@ class StreamExecOverAggregate(
 
   override def isDeterministic: Boolean = OverAggregateUtil.isDeterministic(logicWindow.groups)
 
-  override def translateToPlanInternal(
-      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val tableConfig = tableEnv.getConfig
 
     if (logicWindow.groups.size > 1) {

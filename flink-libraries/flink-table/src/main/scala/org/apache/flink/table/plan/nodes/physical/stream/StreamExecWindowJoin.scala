@@ -117,8 +117,7 @@ class StreamExecWindowJoin(
     FlinkRexUtil.isDeterministicOperator(joinCondition)
   }
 
-  override def translateToPlanInternal(
-      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     val config = tableEnv.getConfig
 

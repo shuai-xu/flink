@@ -191,8 +191,7 @@ class StreamExecJoin(
    * @param tableEnv The [[StreamTableEnvironment]] of the translated Table.
    * @return DataStream of type expectedType or RowTypeInfo
    */
-  override def translateToPlanInternal(
-      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val tableConfig = tableEnv.getConfig
 
     val returnType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[JoinedRow])

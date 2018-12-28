@@ -70,8 +70,7 @@ class StreamExecExpand(
     s"StreamExecExpand: ${rowType.getFieldList.map(_.getName).mkString(", ")}"
   }
 
-  override def translateToPlanInternal(
-      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val config = tableEnv.getConfig
     val inputTransformation = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
     val inputType = DataTypes.internal(inputTransformation.getOutputType)

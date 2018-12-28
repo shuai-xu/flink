@@ -73,8 +73,7 @@ class StreamExecCalc(
     FlinkLogicalCalc.computeCost(calcProgram, planner, metadata, this)
   }
 
-  override def translateToPlanInternal(
-      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val config = tableEnv.getConfig
     val inputTransform = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
     // materialize time attributes in condition

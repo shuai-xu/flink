@@ -92,7 +92,7 @@ class StreamExecSort(
 
   override def isDeterministic: Boolean = true
 
-  override def translateToPlanInternal(
+  override def translateToPlan(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     if (!tableEnv.getConfig.getConf.getBoolean(

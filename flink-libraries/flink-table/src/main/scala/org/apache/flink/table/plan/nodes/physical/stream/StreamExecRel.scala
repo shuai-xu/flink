@@ -28,31 +28,13 @@ import org.apache.calcite.rel.RelNode
 
 trait StreamExecRel[T] extends FlinkPhysicalRel {
 
-  private var reusedTransformation: Option[StreamTransformation[T]] = None
-
   /**
     * Translates the FlinkRelNode into a Flink operator.
     *
     * @param tableEnv    The [[StreamTableEnvironment]] of the translated Table.
     * @return StreamTransformation
     */
-  def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[T] = {
-    reusedTransformation match {
-      case Some(transformation) => transformation
-      case _ =>
-        val transformation = translateToPlanInternal(tableEnv)
-        reusedTransformation = Some(transformation)
-        transformation
-    }
-  }
-
-  /**
-    * Internal method, Translates the FlinkRelNode into a Flink operator.
-    *
-    * @param tableEnv    The [[StreamTableEnvironment]] of the translated Table.
-    * @return StreamTransformation
-    */
-  protected def translateToPlanInternal(tableEnv: StreamTableEnvironment): StreamTransformation[T]
+  def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[T]
 
   /**
     * Whether the [[FlinkRelNode]] produces update and delete changes.
