@@ -1170,10 +1170,16 @@ public class BucketingSink<T>
 		// try to get the Hadoop File System via the Flink File Systems
 		// that way we get the proper configuration
 
-		final org.apache.flink.core.fs.FileSystem flinkFs =
-				org.apache.flink.core.fs.FileSystem.getUnguardedFileSystem(path.toUri());
-		final FileSystem hadoopFs = (flinkFs instanceof HadoopFileSystem) ?
-				((HadoopFileSystem) flinkFs).getHadoopFileSystem() : null;
+		org.apache.flink.core.fs.FileSystem flinkFs = null;
+		try {
+			flinkFs = org.apache.flink.core.fs.FileSystem.getUnguardedFileSystem(path.toUri());
+		} catch (Exception e) {
+			// try again with overridden config, if possible.
+			LOG.info("Create filesystem exception with built-in configuration and path {}, " +
+				"will try again with config overridden by setFsConfig.", path.toUri());
+		}
+		final FileSystem hadoopFs = (flinkFs != null && flinkFs instanceof HadoopFileSystem) ?
+			((HadoopFileSystem) flinkFs).getHadoopFileSystem() : null;
 
 		// fast path: if the Flink file system wraps Hadoop anyways and we need no extra config,
 		// then we use it directly
