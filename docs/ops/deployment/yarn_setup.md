@@ -330,17 +330,21 @@ This section briefly describes how Flink and YARN interact.
 
 <img src="{{ site.baseurl }}/fig/FlinkOnYarn.svg" class="img-responsive">
 
+There are two execution modes to start a Flink application:
+* session mode: All required Flink services (JobManager and TaskManagers) will be started at first even though there is no job submitted, and keep running until the flink cluster has stopped, so that you can submit jobs to the cluster whenever you want. This mode can effectively enhance the execution efficiency for short-term jobs.
+* per-job mode: Flink services will be started based on a specific job, and will be stopped after the job finished. In this mode, job will use exactly as many resources as needed, and will release them right after the tasks finished, it's better for resource isolation between jobs and resource efficiency of the cluster.
+
 The YARN client needs to access the Hadoop configuration to connect to the YARN resource manager and to HDFS. It determines the Hadoop configuration using the following strategy:
 
 * Test if `YARN_CONF_DIR`, `HADOOP_CONF_DIR` or `HADOOP_CONF_PATH` are set (in that order). If one of these variables are set, they are used to read the configuration.
 * If the above strategy fails (this should not be the case in a correct YARN setup), the client is using the `HADOOP_HOME` environment variable. If it is set, the client tries to access `$HADOOP_HOME/etc/hadoop` (Hadoop 2) and `$HADOOP_HOME/conf` (Hadoop 1).
 
-When starting a new Flink YARN session, the client first checks if the requested resources (containers and memory) are available. After that, it uploads a jar that contains Flink and the configuration to HDFS (step 1).
+When starting a new Flink application, the client first checks if the requested resources (containers and memory) are available. After that, it uploads required jars (including Flink framework jar and user jars), job graph (only in per-job mode) and the configuration to HDFS as distributed cache of this application (step 1).
 
 The next step of the client is to request (step 2) a YARN container to start the *ApplicationMaster* (step 3). Since the client registered the configuration and jar-file as a resource for the container, the NodeManager of YARN running on that particular machine will take care of preparing the container (e.g. downloading the files). Once that has finished, the *ApplicationMaster* (AM) is started.
 
-The *JobManager* and AM are running in the same container. Once they successfully started, the AM knows the address of the JobManager (its own host). It is generating a new Flink configuration file for the TaskManagers (so that they can connect to the JobManager). The file is also uploaded to HDFS. Additionally, the *AM* container is also serving Flink's web interface. All ports the YARN code is allocating are *ephemeral ports*. This allows users to execute multiple Flink YARN sessions in parallel.
+The *JobManager* and AM are running in the same container. Once they successfully started, the AM knows the address of the JobManager (its own host). It is generating a new Flink configuration file for the TaskManagers (so that they can connect to the JobManager). The file is also uploaded to HDFS. Additionally, the *AM* container is also serving Flink's web interface. All ports the YARN code is allocating are *ephemeral ports*. This allows users to execute multiple Flink YARN applications in parallel.
 
-After that, the AM starts allocating the containers for Flink's TaskManagers, which will download the jar file and the modified configuration from the HDFS. Once these steps are completed, Flink is set up and ready to accept Jobs.
+After that, the AM starts allocating the containers for Flink's TaskManagers, which will download the required jars and the modified configuration from the HDFS. In session mode, TaskManagers are allocated based on configuration which defines the resource and number of TaskManagers, once these steps are completed, Flink is set up and ready to accept Jobs. In per-job mode, TaskManagers are allocated based on the job graph retrieved from distributed cache, Flink ResourceManager can internally combine several tiny slots with the same resource profile in one container to enhance scheduling efficiency.
 
 {% top %}
