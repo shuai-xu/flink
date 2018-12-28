@@ -36,7 +36,7 @@ Overview & Examples
 
 The Table API is available for Scala and Java. The Scala Table API leverages on Scala expressions, the Java Table API is based on strings which are parsed and converted into equivalent expressions.
 
-The following example shows the differences between the Scala and Java Table API. The table program is executed in a batch environment. It scans the `Orders` table, groups by field `a`, and counts the resulting rows per group. The result of the table program is converted into a `DataSet` of type `Row` and printed.
+The following example shows the differences between the Scala and Java Table API. The table program is executed in a batch environment. It scans the `Orders` table, groups by field `a`, and counts the resulting rows per group. The result of the table program is converted into a bounded `DataStream` of type `Row` and printed.
 
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
@@ -45,7 +45,7 @@ The Java Table API is enabled by importing `org.apache.flink.table.api.java.*`. 
 
 {% highlight java %}
 // environment configuration
-ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 BatchTableEnvironment tEnv = TableEnvironment.getTableEnvironment(env);
 
 // register Orders table in table environment
@@ -54,13 +54,10 @@ BatchTableEnvironment tEnv = TableEnvironment.getTableEnvironment(env);
 // specify table program
 Table orders = tEnv.scan("Orders"); // schema (a, b, c, rowtime)
 
-Table counts = orders
-        .groupBy("a")
-        .select("a, b.count as cnt");
-
-// conversion to DataSet
-DataSet<Row> result = tableEnv.toDataSet(counts, Row.class);
-result.print();
+orders
+    .groupBy("a")
+    .select("a, b.count as cnt")
+    .print();
 {% endhighlight %}
 
 </div>
@@ -76,7 +73,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 
 // environment configuration
-val env = ExecutionEnvironment.getExecutionEnvironment
+val env = StreamExecutionEnvironment.getExecutionEnvironment
 val tEnv = TableEnvironment.getTableEnvironment(env)
 
 // register Orders table in table environment
@@ -85,11 +82,10 @@ val tEnv = TableEnvironment.getTableEnvironment(env)
 // specify table program
 val orders = tEnv.scan("Orders") // schema (a, b, c, rowtime)
 
-val result = orders
-               .groupBy('a)
-               .select('a, 'b.count as 'cnt)
-               .toDataSet[Row] // conversion to DataSet
-               .print()
+orders
+    .groupBy('a)
+    .select('a, 'b.count as 'cnt)
+    .print()
 {% endhighlight %}
 
 </div>
@@ -496,8 +492,8 @@ val result = orders.distinct()
       <td>
         <p>Similar to a SQL JOIN clause. Joins two tables. Both tables must have distinct field names and at least one equality join predicate must be defined through join operator or using a where or filter operator.</p>
 {% highlight java %}
-Table left = tableEnv.fromDataSet(ds1, "a, b, c");
-Table right = tableEnv.fromDataSet(ds2, "d, e, f");
+Table left = tableEnv.fromBoundedStream(bs1, "a, b, c");
+Table right = tableEnv.fromBoundedStream(bs2, "d, e, f");
 Table result = left.join(right).where("a = d").select("a, b, e");
 {% endhighlight %}
 <p><b>Note:</b> For streaming queries the required state to compute the query result might grow infinitely depending on the number of distinct input rows. Please provide a query configuration with valid retention interval to prevent excessive state size. See <a href="streaming.html">Streaming Concepts</a> for details.</p>
@@ -512,8 +508,8 @@ Table result = left.join(right).where("a = d").select("a, b, e");
       <td>
         <p>Similar to SQL LEFT/RIGHT/FULL OUTER JOIN clauses. Joins two tables. Both tables must have distinct field names and at least one equality join predicate must be defined.</p>
 {% highlight java %}
-Table left = tableEnv.fromDataSet(ds1, "a, b, c");
-Table right = tableEnv.fromDataSet(ds2, "d, e, f");
+Table left = tableEnv.fromBoundedStream(bs1, "a, b, c");
+Table right = tableEnv.fromBoundedStream(bs2, "d, e, f");
 
 Table leftOuterResult = left.leftOuterJoin(right, "a = d").select("a, b, e");
 Table rightOuterResult = left.rightOuterJoin(right, "a = d").select("a, b, e");
@@ -538,8 +534,8 @@ Table fullOuterResult = left.fullOuterJoin(right, "a = d").select("a, b, e");
         </ul>
         
 {% highlight java %}
-Table left = tableEnv.fromDataSet(ds1, "a, b, c, ltime.rowtime");
-Table right = tableEnv.fromDataSet(ds2, "d, e, f, rtime.rowtime");
+Table left = tableEnv.fromBoundedStream(bs1, "a, b, c, ltime.rowtime");
+Table right = tableEnv.fromBoundedStream(bs2, "d, e, f, rtime.rowtime");
 
 Table result = left.join(right)
   .where("a = d && ltime >= rtime - 5.minutes && ltime < rtime + 10.minutes")
@@ -653,8 +649,8 @@ val result = left.join(right).where('a === 'd).select('a, 'b, 'e)
       <td>
         <p>Similar to SQL LEFT/RIGHT/FULL OUTER JOIN clauses. Joins two tables. Both tables must have distinct field names and at least one equality join predicate must be defined.</p>
 {% highlight scala %}
-val left = tableEnv.fromDataSet(ds1, 'a, 'b, 'c)
-val right = tableEnv.fromDataSet(ds2, 'd, 'e, 'f)
+val left = tableEnv.fromBoundedStream(ds1, 'a, 'b, 'c)
+val right = tableEnv.fromBoundedStream(ds2, 'd, 'e, 'f)
 
 val leftOuterResult = left.leftOuterJoin(right, 'a === 'd).select('a, 'b, 'e)
 val rightOuterResult = left.rightOuterJoin(right, 'a === 'd).select('a, 'b, 'e)
@@ -780,8 +776,8 @@ val result = orders
       <td>
         <p>Similar to a SQL UNION clause. Unions two tables with duplicate records removed. Both tables must have identical field types.</p>
 {% highlight java %}
-Table left = tableEnv.fromDataSet(ds1, "a, b, c");
-Table right = tableEnv.fromDataSet(ds2, "a, b, c");
+Table left = tableEnv.fromBoundedStream(bs1, "a, b, c");
+Table right = tableEnv.fromBoundedStream(bs2, "a, b, c");
 Table result = left.union(right);
 {% endhighlight %}
       </td>
@@ -795,8 +791,8 @@ Table result = left.union(right);
       <td>
         <p>Similar to a SQL UNION ALL clause. Unions two tables. Both tables must have identical field types.</p>
 {% highlight java %}
-Table left = tableEnv.fromDataSet(ds1, "a, b, c");
-Table right = tableEnv.fromDataSet(ds2, "a, b, c");
+Table left = tableEnv.fromBoundedStream(bs1, "a, b, c");
+Table right = tableEnv.fromBoundedStream(bs2, "a, b, c");
 Table result = left.unionAll(right);
 {% endhighlight %}
       </td>
@@ -810,8 +806,8 @@ Table result = left.unionAll(right);
       <td>
         <p>Similar to a SQL INTERSECT clause. Intersect returns records that exist in both tables. If a record is present one or both tables more than once, it is returned just once, i.e., the resulting table has no duplicate records. Both tables must have identical field types.</p>
 {% highlight java %}
-Table left = tableEnv.fromDataSet(ds1, "a, b, c");
-Table right = tableEnv.fromDataSet(ds2, "d, e, f");
+Table left = tableEnv.fromBoundedStream(bs1, "a, b, c");
+Table right = tableEnv.fromBoundedStream(bs2, "d, e, f");
 Table result = left.intersect(right);
 {% endhighlight %}
       </td>
@@ -825,8 +821,8 @@ Table result = left.intersect(right);
       <td>
         <p>Similar to a SQL INTERSECT ALL clause. IntersectAll returns records that exist in both tables. If a record is present in both tables more than once, it is returned as many times as it is present in both tables, i.e., the resulting table might have duplicate records. Both tables must have identical field types.</p>
 {% highlight java %}
-Table left = tableEnv.fromDataSet(ds1, "a, b, c");
-Table right = tableEnv.fromDataSet(ds2, "d, e, f");
+Table left = tableEnv.fromBoundedStream(bs1, "a, b, c");
+Table right = tableEnv.fromBoundedStream(bs2, "d, e, f");
 Table result = left.intersectAll(right);
 {% endhighlight %}
       </td>
@@ -840,8 +836,8 @@ Table result = left.intersectAll(right);
       <td>
         <p>Similar to a SQL EXCEPT clause. Minus returns records from the left table that do not exist in the right table. Duplicate records in the left table are returned exactly once, i.e., duplicates are removed. Both tables must have identical field types.</p>
 {% highlight java %}
-Table left = tableEnv.fromDataSet(ds1, "a, b, c");
-Table right = tableEnv.fromDataSet(ds2, "a, b, c");
+Table left = tableEnv.fromBoundedStream(bs1, "a, b, c");
+Table right = tableEnv.fromBoundedStream(bs2, "a, b, c");
 Table result = left.minus(right);
 {% endhighlight %}
       </td>
@@ -855,8 +851,8 @@ Table result = left.minus(right);
       <td>
         <p>Similar to a SQL EXCEPT ALL clause. MinusAll returns the records that do not exist in the right table. A record that is present n times in the left table and m times in the right table is returned (n - m) times, i.e., as many duplicates as are present in the right table are removed. Both tables must have identical field types.</p>
 {% highlight java %}
-Table left = tableEnv.fromDataSet(ds1, "a, b, c");
-Table right = tableEnv.fromDataSet(ds2, "a, b, c");
+Table left = tableEnv.fromBoundedStream(bs1, "a, b, c");
+Table right = tableEnv.fromBoundedStream(bs2, "a, b, c");
 Table result = left.minusAll(right);
 {% endhighlight %}
       </td>
@@ -1029,7 +1025,7 @@ val result = left.select('a, 'b, 'c).where('a.in(right))
       <td>
         <p>Similar to a SQL ORDER BY clause. Returns records globally sorted across all parallel partitions.</p>
 {% highlight java %}
-Table in = tableEnv.fromDataSet(ds, "a, b, c");
+Table in = tableEnv.fromBoundedStream(bs, "a, b, c");
 Table result = in.orderBy("a.asc");
 {% endhighlight %}
       </td>
@@ -1043,7 +1039,7 @@ Table result = in.orderBy("a.asc");
       <td>
         <p>Similar to the SQL OFFSET and FETCH clauses. Offset and Fetch limit the number of records returned from a sorted result. Offset and Fetch are technically part of the Order By operator and thus must be preceded by it.</p>
 {% highlight java %}
-Table in = tableEnv.fromDataSet(ds, "a, b, c");
+Table in = tableEnv.fromBoundedStream(bs, "a, b, c");
 
 // returns the first 5 records from the sorted result
 Table result1 = in.orderBy("a.asc").fetch(5); 
@@ -1250,7 +1246,7 @@ val table = input
 </div>
 </div>
 
-The `Window` parameter defines how rows are mapped to windows. `Window` is not an interface that users can implement. Instead, the Table API provides a set of predefined `Window` classes with specific semantics, which are translated into underlying `DataStream` or `DataSet` operations. The supported window definitions are listed below.
+The `Window` parameter defines how rows are mapped to windows. `Window` is not an interface that users can implement. Instead, the Table API provides a set of predefined `Window` classes with specific semantics, which are translated into underlying `DataStream` operations. The supported window definitions are listed below.
 
 #### Tumble (Tumbling Windows)
 
@@ -1594,28 +1590,28 @@ The `OverWindow` defines a range of rows over which aggregates are computed. `Ov
 Data Types
 ----------
 
-The Table API is built on top of Flink's DataSet and DataStream APIs. Internally, it also uses Flink's `TypeInformation` to define data types. Fully supported types are listed in `org.apache.flink.table.api.Types`. The following table summarizes the relation between Table API types, SQL types, and the resulting Java class.
+The Table API is built on top of Flink's DataStream APIs. Internally, it uses tables `InternalType` to define data types. Fully supported types are listed in `org.apache.flink.table.api.Types`. The following table summarizes the relation between Table API types, SQL types, and the resulting Java class.
 
-| Table API              | SQL                         | Java type              |
-| :--------------------- | :-------------------------- | :--------------------- |
-| `Types.STRING`         | `VARCHAR`                   | `java.lang.String`     |
-| `Types.BOOLEAN`        | `BOOLEAN`                   | `java.lang.Boolean`    |
-| `Types.BYTE`           | `TINYINT`                   | `java.lang.Byte`       |
-| `Types.SHORT`          | `SMALLINT`                  | `java.lang.Short`      |
-| `Types.INT`            | `INTEGER, INT`              | `java.lang.Integer`    |
-| `Types.LONG`           | `BIGINT`                    | `java.lang.Long`       |
-| `Types.FLOAT`          | `REAL, FLOAT`               | `java.lang.Float`      |
-| `Types.DOUBLE`         | `DOUBLE`                    | `java.lang.Double`     |
-| `Types.DECIMAL`        | `DECIMAL`                   | `java.math.BigDecimal` |
-| `Types.SQL_DATE`       | `DATE`                      | `java.sql.Date`        |
-| `Types.SQL_TIME`       | `TIME`                      | `java.sql.Time`        |
-| `Types.SQL_TIMESTAMP`  | `TIMESTAMP(3)`              | `java.sql.Timestamp`   |
-| `Types.INTERVAL_MONTHS`| `INTERVAL YEAR TO MONTH`    | `java.lang.Integer`    |
-| `Types.INTERVAL_MILLIS`| `INTERVAL DAY TO SECOND(3)` | `java.lang.Long`       |
-| `Types.PRIMITIVE_ARRAY`| `ARRAY`                     | e.g. `int[]`           |
-| `Types.OBJECT_ARRAY`   | `ARRAY`                     | e.g. `java.lang.Byte[]`|
-| `Types.MAP`            | `MAP`                       | `java.util.HashMap`    |
-| `Types.MULTISET`       | `MULTISET`                  | e.g. `java.util.HashMap<String, Integer>` for a multiset of `String` |
+| Table API                  | SQL                         | Java type              |
+| :------------------------- | :-------------------------- | :--------------------- |
+| `DataTypes.STRING`         | `VARCHAR`                   | `java.lang.String`     |
+| `DataTypes.BOOLEAN`        | `BOOLEAN`                   | `java.lang.Boolean`    |
+| `DataTypes.BYTE`           | `TINYINT`                   | `java.lang.Byte`       |
+| `DataTypes.SHORT`          | `SMALLINT`                  | `java.lang.Short`      |
+| `DataTypes.INT`            | `INTEGER, INT`              | `java.lang.Integer`    |
+| `DataTypes.LONG`           | `BIGINT`                    | `java.lang.Long`       |
+| `DataTypes.FLOAT`          | `REAL, FLOAT`               | `java.lang.Float`      |
+| `DataTypes.DOUBLE`         | `DOUBLE`                    | `java.lang.Double`     |
+| `DataTypes.DECIMAL`        | `DECIMAL`                   | `java.math.BigDecimal` |
+| `DataTypes.SQL_DATE`       | `DATE`                      | `java.sql.Date`        |
+| `DataTypes.SQL_TIME`       | `TIME`                      | `java.sql.Time`        |
+| `DataTypes.SQL_TIMESTAMP`  | `TIMESTAMP(3)`              | `java.sql.Timestamp`   |
+| `DataTypes.INTERVAL_MONTHS`| `INTERVAL YEAR TO MONTH`    | `java.lang.Integer`    |
+| `DataTypes.INTERVAL_MILLIS`| `INTERVAL DAY TO SECOND(3)` | `java.lang.Long`       |
+| `DataTypes.PRIMITIVE_ARRAY`| `ARRAY`                     | e.g. `int[]`           |
+| `DataTypes.OBJECT_ARRAY`   | `ARRAY`                     | e.g. `java.lang.Byte[]`|
+| `DataTypes.MAP`            | `MAP`                       | `java.util.HashMap`    |
+| `DataTypes.MULTISET`       | `MULTISET`                  | e.g. `java.util.HashMap<String, Integer>` for a multiset of `String` |
 
 Generic types and composite types (e.g., POJOs or Tuples) can be fields of a row as well. Generic types are treated as a black box and can be passed on or processed by [user-defined functions](udfs.html). Composite types can be accessed with [built-in functions](#built-in-functions) (see *Value access functions* section).
 
@@ -1847,6 +1843,28 @@ ANY.in(TABLE)
         <p>Returns true if an expression exists in a given table sub-query. The sub-query table must consist of one column. This column must have the same data type as the expression. Note: This operation is not supported in a streaming environment yet.</p>
       </td>
     </tr>
+    
+    <tr>
+      <td>
+        {% highlight java %}
+ANY.between(lowerBound, upperBound)
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Returns true if an expression exists in a given range. The lower bound and upper bound are all inclusive.</p>
+      </td>
+    </tr>
+    
+    <tr>
+      <td>
+        {% highlight java %}
+ANY.notBetween(lowerBound, upperBound)
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Returns true if an expression does not exist in a given range.</p>
+      </td>
+    </tr>        
 
   </tbody>
 </table>
@@ -2948,7 +2966,39 @@ FIELD.collect
         <p>Returns the multiset aggregate of the input value.</p>
       </td>
     </tr>
+    
+    <tr>
+      <td>
+        {% highlight java %}
+FIELD.concat_agg(sep)
+        {% endhighlight %}
+      </td>
+      <td>
+        <p>Concat all the column values to one string, will ignore null values, a separator can be specified.</p>
+      </td>
+    </tr>
 
+    <tr>
+      <td>
+        {% highlight java %}
+first_value()
+        {% endhighlight %}
+      </td>
+      <td>
+        <p>Fetch the first not null value of a group and return, if all the values are null, then return null.</p>
+      </td>
+    </tr>
+    
+    <tr>
+      <td>
+        {% highlight java %}
+last_value()
+        {% endhighlight %}
+      </td>
+      <td>
+        <p>Fetch the last not null value of a group and return, if all the values are null, then return null.</p>
+      </td>
+    </tr>
     </tbody>
 </table>
 
@@ -4370,6 +4420,39 @@ FIELD.collect
       </td>
     </tr>
   </tbody>
+
+    <tr>
+      <td>
+        {% highlight java %}
+FIELD.concat_agg(sep)
+        {% endhighlight %}
+      </td>
+      <td>
+        <p>Concat all the column values to one string, will ignore null values, a separator can be specified.</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        {% highlight java %}
+first_value()
+        {% endhighlight %}
+      </td>
+      <td>
+        <p>Fetch the first not null value of a group and return, if all the values are null, then return null.</p>
+      </td>
+    </tr>
+    
+    <tr>
+      <td>
+        {% highlight java %}
+last_value()
+        {% endhighlight %}
+      </td>
+      <td>
+        <p>Fetch the last not null value of a group and return, if all the values are null, then return null.</p>
+      </td>
+    </tr>      
 </table>
 
 <table class="table table-bordered">
@@ -4627,6 +4710,5 @@ The following operations are not supported yet:
 - Binary string operators and functions
 - System functions
 - Aggregate functions like REGR_xxx
-- Distinct aggregate functions like COUNT DISTINCT
 
 {% top %}

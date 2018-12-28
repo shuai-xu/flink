@@ -313,7 +313,7 @@ GROUP BY TUMBLE(rowtime, INTERVAL '1' DAY), user
     <tr>
     	<td>
         <strong>Over Window aggregation</strong><br>
-        <span class="label label-primary">Streaming</span>
+        <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span>
       </td>
     	<td>
         <p><b>Note:</b> All aggregates must be defined over the same window, i.e., same partitioning, sorting, and range. Currently, only windows with PRECEDING (UNBOUNDED and bounded) to CURRENT ROW range are supported. Ranges with FOLLOWING are not supported yet. ORDER BY must be specified on a single <a href="streaming.html#time-attributes">time attribute</a></p>
@@ -877,28 +877,28 @@ val result4 = tableEnv.sqlQuery(
 Data Types
 ----------
 
-The SQL runtime is built on top of Flink's DataSet and DataStream APIs. Internally, it also uses Flink's `TypeInformation` to define data types. Fully supported types are listed in `org.apache.flink.table.api.Types`. The following table summarizes the relation between SQL Types, Table API types, and the resulting Java class.
+The SQL runtime is built on top of Flink's DataStream APIs. Internally, it uses table's `InternalType` to define data types. Fully supported types are listed in `org.apache.flink.table.api.Types`. The following table summarizes the relation between SQL Types, Table API types, and the resulting Java class.
 
-| Table API              | SQL                         | Java type              |
-| :--------------------- | :-------------------------- | :--------------------- |
-| `Types.STRING`         | `VARCHAR`                   | `java.lang.String`     |
-| `Types.BOOLEAN`        | `BOOLEAN`                   | `java.lang.Boolean`    |
-| `Types.BYTE`           | `TINYINT`                   | `java.lang.Byte`       |
-| `Types.SHORT`          | `SMALLINT`                  | `java.lang.Short`      |
-| `Types.INT`            | `INTEGER, INT`              | `java.lang.Integer`    |
-| `Types.LONG`           | `BIGINT`                    | `java.lang.Long`       |
-| `Types.FLOAT`          | `REAL, FLOAT`               | `java.lang.Float`      |
-| `Types.DOUBLE`         | `DOUBLE`                    | `java.lang.Double`     |
-| `Types.DECIMAL`        | `DECIMAL`                   | `java.math.BigDecimal` |
-| `Types.SQL_DATE`       | `DATE`                      | `java.sql.Date`        |
-| `Types.SQL_TIME`       | `TIME`                      | `java.sql.Time`        |
-| `Types.SQL_TIMESTAMP`  | `TIMESTAMP(3)`              | `java.sql.Timestamp`   |
-| `Types.INTERVAL_MONTHS`| `INTERVAL YEAR TO MONTH`    | `java.lang.Integer`    |
-| `Types.INTERVAL_MILLIS`| `INTERVAL DAY TO SECOND(3)` | `java.lang.Long`       |
-| `Types.PRIMITIVE_ARRAY`| `ARRAY`                     | e.g. `int[]`           |
-| `Types.OBJECT_ARRAY`   | `ARRAY`                     | e.g. `java.lang.Byte[]`|
-| `Types.MAP`            | `MAP`                       | `java.util.HashMap`    |
-| `Types.MULTISET`       | `MULTISET`                  | e.g. `java.util.HashMap<String, Integer>` for a multiset of `String` |
+| Table API                  | SQL                         | Java type              |
+| :------------------------- | :-------------------------- | :--------------------- |
+| `DataTypes.STRING`         | `VARCHAR`                   | `java.lang.String`     |
+| `DataTypes.BOOLEAN`        | `BOOLEAN`                   | `java.lang.Boolean`    |
+| `DataTypes.BYTE`           | `TINYINT`                   | `java.lang.Byte`       |
+| `DataTypes.SHORT`          | `SMALLINT`                  | `java.lang.Short`      |
+| `DataTypes.INT`            | `INTEGER, INT`              | `java.lang.Integer`    |
+| `DataTypes.LONG`           | `BIGINT`                    | `java.lang.Long`       |
+| `DataTypes.FLOAT`          | `REAL, FLOAT`               | `java.lang.Float`      |
+| `DataTypes.DOUBLE`         | `DOUBLE`                    | `java.lang.Double`     |
+| `DataTypes.DECIMAL`        | `DECIMAL`                   | `java.math.BigDecimal` |
+| `DataTypes.SQL_DATE`       | `DATE`                      | `java.sql.Date`        |
+| `DataTypes.SQL_TIME`       | `TIME`                      | `java.sql.Time`        |
+| `DataTypes.SQL_TIMESTAMP`  | `TIMESTAMP(3)`              | `java.sql.Timestamp`   |
+| `DataTypes.INTERVAL_MONTHS`| `INTERVAL YEAR TO MONTH`    | `java.lang.Integer`    |
+| `DataTypes.INTERVAL_MILLIS`| `INTERVAL DAY TO SECOND(3)` | `java.lang.Long`       |
+| `DataTypes.PRIMITIVE_ARRAY`| `ARRAY`                     | e.g. `int[]`           |
+| `DataTypes.OBJECT_ARRAY`   | `ARRAY`                     | e.g. `java.lang.Byte[]`|
+| `DataTypes.MAP`            | `MAP`                       | `java.util.HashMap`    |
+| `DataTypes.MULTISET`       | `MULTISET`                  | e.g. `java.util.HashMap<String, Integer>` for a multiset of `String` |
 
 Generic types and composite types (e.g., POJOs or Tuples) can be fields of a row as well. Generic types are treated as a black box and can be passed on or processed by [user-defined functions](udfs.html). Composite types can be accessed with [built-in functions](#built-in-functions) (see *Value access functions* section).
 
@@ -2238,6 +2238,39 @@ VAR_SAMP(value)
           <p>Returns a multiset of the <i>value</i>s. null input <i>value</i> will be ignored. Return an empty multiset if only null values are added. </p>
       </td>
     </tr>
+    
+    <tr>
+      <td>
+        {% highlight java %}
+concat_agg(value, sep)
+        {% endhighlight %}
+      </td>
+      <td>
+        <p>Concat all the column values to one string, will ignore null values, a separator can be specified.</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        {% highlight java %}
+first_value()
+        {% endhighlight %}
+      </td>
+      <td>
+        <p>Fetch the first not null value of a group and return, if all the values are null, then return null.</p>
+      </td>
+    </tr>
+    
+    <tr>
+      <td>
+        {% highlight java %}
+last_value()
+        {% endhighlight %}
+      </td>
+      <td>
+        <p>Fetch the last not null value of a group and return, if all the values are null, then return null.</p>
+      </td>
+    </tr>    
   </tbody>
 </table>
 
