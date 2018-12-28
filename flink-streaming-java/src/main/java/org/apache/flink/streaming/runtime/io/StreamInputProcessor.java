@@ -192,7 +192,19 @@ public class StreamInputProcessor<IN> {
 				if (result.isFullRecord()) {
 					StreamElement recordOrMark = deserializationDelegate.getInstance();
 
-					if (recordOrMark.isWatermark()) {
+					if (recordOrMark.isRecord()) {
+						reusedObject = ((StreamRecord<IN>) recordOrMark).getValue();
+
+						// now we can do the actual processing
+						StreamRecord<IN> record = recordOrMark.asRecord();
+						synchronized (lock) {
+							numRecordsIn.inc();
+							streamOperator.setKeyContextElement1(record);
+							streamOperator.processElement(record);
+						}
+
+						return true;
+					} else if (recordOrMark.isWatermark()) {
 						// handle watermark
 						statusWatermarkValve.inputWatermark(recordOrMark.asWatermark(), currentChannel);
 						continue;
@@ -207,17 +219,7 @@ public class StreamInputProcessor<IN> {
 						}
 						continue;
 					} else {
-						reusedObject = ((StreamRecord<IN>) recordOrMark).getValue();
-
-						// now we can do the actual processing
-						StreamRecord<IN> record = recordOrMark.asRecord();
-						synchronized (lock) {
-							numRecordsIn.inc();
-							streamOperator.setKeyContextElement1(record);
-							streamOperator.processElement(record);
-						}
-
-						return true;
+						throw new RuntimeException("Unexpected stream element type " + recordOrMark);
 					}
 				}
 			}

@@ -487,9 +487,24 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 
 		chainedOperator.addInputEdge(inputEdge);
 
+		 // 1. Output to the origin operator when it's an OneInputStreamOperator
+		 // 2. Output to the proxy operator when it's a TwoInputStreamOperator
+		 // 3. Fork multiple output class to reduce cost of per record processing introduced by inheritance
 		WatermarkGaugeExposingOutput<StreamRecord<IN>> currentOperatorOutput;
 		if (containingTask.getExecutionConfig().isObjectReuseEnabled()) {
-			currentOperatorOutput = new ChainingOutput<>(chainedOperator, this, inputEdge);
+			if (chainedOperator instanceof OneInputStreamOperator) {
+				currentOperatorOutput = new ChainingWithOneInputStreamOperatorOutput<>((OneInputStreamOperator<IN, ?>) chainedOperator.getOperator(), this, inputEdge);
+			} else if (chainedOperator instanceof TwoInputStreamOperator) {
+				if (inputEdge.getTypeNumber() == 1) {
+					currentOperatorOutput = new ChainingWithFirstInputOfTwoInputStreamOperatorOutput<>((TwoInputStreamOperator<IN, ?, ?>) chainedOperator, this, inputEdge);
+				} else if (inputEdge.getTypeNumber() == 2) {
+					currentOperatorOutput = new ChainingWithSecondInputOfTwoInputStreamOperatorOutput<>((TwoInputStreamOperator<?, IN, ?>) chainedOperator, this, inputEdge);
+				} else {
+					throw new RuntimeException("Unexpected type number of edge " + inputEdge);
+				}
+			} else {
+				throw new RuntimeException("Unexpected operator type " + chainedOperator.getOperator());
+			}
 		}
 		else {
 			final TypeSerializer<IN> inSerializer;
@@ -498,7 +513,19 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 			} else {
 				inSerializer = operatorConfig.getTypeSerializerIn1(userCodeClassloader);
 			}
-			currentOperatorOutput = new CopyingChainingOutput<>(chainedOperator, inSerializer, inputEdge, this);
+			if (chainedOperator instanceof OneInputStreamOperator) {
+				currentOperatorOutput = new CopyingChainingWithOneInputStreamOperatorOutput<>((OneInputStreamOperator<IN, ?>) chainedOperator.getOperator(), inSerializer, inputEdge, this);
+			} else if (chainedOperator instanceof TwoInputStreamOperator) {
+				if (inputEdge.getTypeNumber() == 1) {
+					currentOperatorOutput = new CopyingChainingWithFirstInputOfTwoInputStreamOperatorOutput<>((TwoInputStreamOperator<IN, ?, ?>) chainedOperator, inSerializer, inputEdge, this);
+				} else if (inputEdge.getTypeNumber() == 2) {
+					currentOperatorOutput = new CopyingChainingWithSecondInputOfTwoInputStreamOperatorOutput<>((TwoInputStreamOperator<?, IN, ?>) chainedOperator, inSerializer, inputEdge, this);
+				} else {
+					throw new RuntimeException("Unexpected type number of edge " + inputEdge);
+				}
+			} else {
+				throw new RuntimeException("Unexpected operator type " + chainedOperator.getOperator());
+			}
 		}
 
 		chainedOperator.getMetricGroup().gauge(MetricNames.IO_CURRENT_INPUT_WATERMARK, currentOperatorOutput.getWatermarkGauge()::getValue);
@@ -545,9 +572,9 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 		Gauge<Long> getWatermarkGauge();
 	}
 
-	private static class ChainingOutput<T> implements WatermarkGaugeExposingOutput<StreamRecord<T>> {
+	private static class ChainingWithOneInputStreamOperatorOutput<T> implements WatermarkGaugeExposingOutput<StreamRecord<T>> {
 
-		protected final OutputBinder<T> binder;
+		protected final OneInputStreamOperator<T, ?> operator;
 		protected final Counter numRecordsIn;
 		protected final WatermarkGauge watermarkGauge = new WatermarkGauge();
 
@@ -555,23 +582,21 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 
 		protected final OutputTag<T> outputTag;
 
-		public ChainingOutput(
-				StreamOperator<?> operator,
+		public ChainingWithOneInputStreamOperatorOutput(
+				OneInputStreamOperator<T, ?> operator,
 				StreamStatusProvider streamStatusProvider,
 				StreamEdge edge) {
-			this.binder = OutputBinder.bind(operator, edge);
 
-			{
-				Counter tmpNumRecordsIn;
-				try {
-					OperatorIOMetricGroup ioMetricGroup = ((OperatorMetricGroup) operator.getMetricGroup()).getIOMetricGroup();
-					tmpNumRecordsIn = ioMetricGroup.getNumRecordsInCounter();
-				} catch (Exception e) {
-					LOG.warn("An exception occurred during the metrics setup.", e);
-					tmpNumRecordsIn = new SimpleCounter();
-				}
-				numRecordsIn = tmpNumRecordsIn;
+			this.operator = operator;
+			Counter tmpNumRecordsIn;
+			try {
+				OperatorIOMetricGroup ioMetricGroup = ((OperatorMetricGroup) operator.getMetricGroup()).getIOMetricGroup();
+				tmpNumRecordsIn = ioMetricGroup.getNumRecordsInCounter();
+			} catch (Exception e) {
+				LOG.warn("An exception occurred during the metrics setup.", e);
+				tmpNumRecordsIn = new SimpleCounter();
 			}
+			numRecordsIn = tmpNumRecordsIn;
 
 			this.streamStatusProvider = streamStatusProvider;
 			this.outputTag = edge.getOutputTag();
@@ -603,10 +628,11 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 				// we know that the given outputTag matches our OutputTag so the record
 				// must be of the type that our operator expects.
 				@SuppressWarnings("unchecked")
-				StreamRecord<T> castRecord = (StreamRecord<T>) record;
+				final StreamRecord<T> castRecord = (StreamRecord<T>) record;
 
 				numRecordsIn.inc();
-				binder.processElement(castRecord);
+				operator.setKeyContextElement1(castRecord);
+				operator.processElement(castRecord);
 			}
 			catch (Exception e) {
 				throw new ExceptionInChainedOperatorException(e);
@@ -618,7 +644,7 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 			try {
 				watermarkGauge.setCurrentWatermark(mark.getTimestamp());
 				if (streamStatusProvider.getStreamStatus().isActive()) {
-					binder.processWatermark(mark);
+					operator.processWatermark(mark);
 				}
 			}
 			catch (Exception e) {
@@ -629,7 +655,7 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 		@Override
 		public void emitLatencyMarker(LatencyMarker latencyMarker) {
 			try {
-				binder.processLatencyMarker(latencyMarker);
+				operator.processLatencyMarker(latencyMarker);
 			}
 			catch (Exception e) {
 				throw new ExceptionInChainedOperatorException(e);
@@ -639,7 +665,7 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 		@Override
 		public void close() {
 			try {
-				binder.close();
+				operator.close();
 			}
 			catch (Exception e) {
 				throw new ExceptionInChainedOperatorException(e);
@@ -652,17 +678,34 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 		}
 	}
 
-	private static final class CopyingChainingOutput<T> extends ChainingOutput<T> {
+	private static class ChainingWithFirstInputOfTwoInputStreamOperatorOutput<T> implements WatermarkGaugeExposingOutput<StreamRecord<T>> {
 
-		private final TypeSerializer<T> serializer;
+		protected final TwoInputStreamOperator<T, ?, ?> operator;
+		protected final Counter numRecordsIn;
+		protected final WatermarkGauge watermarkGauge = new WatermarkGauge();
 
-		public CopyingChainingOutput(
-				StreamOperator<?> operator,
-				TypeSerializer<T> serializer,
-				StreamEdge edge,
-				StreamStatusProvider streamStatusProvider) {
-			super(operator, streamStatusProvider, edge);
-			this.serializer = checkNotNull(serializer);
+		protected final StreamStatusProvider streamStatusProvider;
+
+		protected final OutputTag<T> outputTag;
+
+		public ChainingWithFirstInputOfTwoInputStreamOperatorOutput(
+			TwoInputStreamOperator<T, ?, ?> operator,
+			StreamStatusProvider streamStatusProvider,
+			StreamEdge edge) {
+
+			this.operator = operator;
+			Counter tmpNumRecordsIn;
+			try {
+				OperatorIOMetricGroup ioMetricGroup = ((OperatorMetricGroup) operator.getMetricGroup()).getIOMetricGroup();
+				tmpNumRecordsIn = ioMetricGroup.getNumRecordsInCounter();
+			} catch (Exception e) {
+				LOG.warn("An exception occurred during the metrics setup.", e);
+				tmpNumRecordsIn = new SimpleCounter();
+			}
+			numRecordsIn = tmpNumRecordsIn;
+
+			this.streamStatusProvider = streamStatusProvider;
+			this.outputTag = edge.getOutputTag();
 		}
 
 		@Override
@@ -686,17 +729,286 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 			pushToOperator(record);
 		}
 
-		@Override
 		protected <X> void pushToOperator(StreamRecord<X> record) {
+			try {
+				// we know that the given outputTag matches our OutputTag so the record
+				// must be of the type that our operator expects.
+				@SuppressWarnings("unchecked")
+				final StreamRecord<T> castRecord = (StreamRecord<T>) record;
+
+				numRecordsIn.inc();
+				operator.setKeyContextElement1(castRecord);
+				operator.processElement1(castRecord);
+			}
+			catch (Exception e) {
+				throw new ExceptionInChainedOperatorException(e);
+			}
+		}
+
+		@Override
+		public void emitWatermark(Watermark mark) {
+			try {
+				watermarkGauge.setCurrentWatermark(mark.getTimestamp());
+				if (streamStatusProvider.getStreamStatus().isActive()) {
+					operator.processWatermark1(mark);
+				}
+			}
+			catch (Exception e) {
+				throw new ExceptionInChainedOperatorException(e);
+			}
+		}
+
+		@Override
+		public void emitLatencyMarker(LatencyMarker latencyMarker) {
+			try {
+				operator.processLatencyMarker2(latencyMarker);
+			}
+			catch (Exception e) {
+				throw new ExceptionInChainedOperatorException(e);
+			}
+		}
+
+		@Override
+		public void close() {
+			try {
+				operator.close();
+			}
+			catch (Exception e) {
+				throw new ExceptionInChainedOperatorException(e);
+			}
+		}
+
+		@Override
+		public Gauge<Long> getWatermarkGauge() {
+			return watermarkGauge;
+		}
+	}
+
+	private static class ChainingWithSecondInputOfTwoInputStreamOperatorOutput<T> implements WatermarkGaugeExposingOutput<StreamRecord<T>> {
+
+		protected final TwoInputStreamOperator<?, T, ?> operator;
+		protected final Counter numRecordsIn;
+		protected final WatermarkGauge watermarkGauge = new WatermarkGauge();
+
+		protected final StreamStatusProvider streamStatusProvider;
+
+		protected final OutputTag<T> outputTag;
+
+		public ChainingWithSecondInputOfTwoInputStreamOperatorOutput(
+			TwoInputStreamOperator<?, T, ?> operator,
+			StreamStatusProvider streamStatusProvider,
+			StreamEdge edge) {
+
+			this.operator = operator;
+			Counter tmpNumRecordsIn;
+			try {
+				OperatorIOMetricGroup ioMetricGroup = ((OperatorMetricGroup) operator.getMetricGroup()).getIOMetricGroup();
+				tmpNumRecordsIn = ioMetricGroup.getNumRecordsInCounter();
+			} catch (Exception e) {
+				LOG.warn("An exception occurred during the metrics setup.", e);
+				tmpNumRecordsIn = new SimpleCounter();
+			}
+			numRecordsIn = tmpNumRecordsIn;
+
+			this.streamStatusProvider = streamStatusProvider;
+			this.outputTag = edge.getOutputTag();
+		}
+
+		@Override
+		public void collect(StreamRecord<T> record) {
+			if (this.outputTag != null) {
+				// we are only responsible for emitting to the main input
+				return;
+			}
+
+			pushToOperator(record);
+		}
+
+		@Override
+		public <X> void collect(OutputTag<X> outputTag, StreamRecord<X> record) {
+			if (this.outputTag == null || !this.outputTag.equals(outputTag)) {
+				// we are only responsible for emitting to the side-output specified by our
+				// OutputTag.
+				return;
+			}
+
+			pushToOperator(record);
+		}
+
+		protected <X> void pushToOperator(StreamRecord<X> record) {
+			try {
+				// we know that the given outputTag matches our OutputTag so the record
+				// must be of the type that our operator expects.
+				@SuppressWarnings("unchecked")
+				final StreamRecord<T> castRecord = (StreamRecord<T>) record;
+
+				numRecordsIn.inc();
+				operator.setKeyContextElement2(castRecord);
+				operator.processElement2(castRecord);
+			}
+			catch (Exception e) {
+				throw new ExceptionInChainedOperatorException(e);
+			}
+		}
+
+		@Override
+		public void emitWatermark(Watermark mark) {
+			try {
+				watermarkGauge.setCurrentWatermark(mark.getTimestamp());
+				if (streamStatusProvider.getStreamStatus().isActive()) {
+					operator.processWatermark2(mark);
+				}
+			}
+			catch (Exception e) {
+				throw new ExceptionInChainedOperatorException(e);
+			}
+		}
+
+		@Override
+		public void emitLatencyMarker(LatencyMarker latencyMarker) {
+			try {
+				operator.processLatencyMarker2(latencyMarker);
+			}
+			catch (Exception e) {
+				throw new ExceptionInChainedOperatorException(e);
+			}
+		}
+
+		@Override
+		public void close() {
+			try {
+				operator.close();
+			}
+			catch (Exception e) {
+				throw new ExceptionInChainedOperatorException(e);
+			}
+		}
+
+		@Override
+		public Gauge<Long> getWatermarkGauge() {
+			return watermarkGauge;
+		}
+	}
+
+	private static final class CopyingChainingWithOneInputStreamOperatorOutput<T> extends ChainingWithOneInputStreamOperatorOutput<T> {
+
+		private final TypeSerializer<T> serializer;
+
+		public CopyingChainingWithOneInputStreamOperatorOutput(
+				OneInputStreamOperator<T, ?> operator,
+				TypeSerializer<T> serializer,
+				StreamEdge edge,
+				StreamStatusProvider streamStatusProvider) {
+			super(operator, streamStatusProvider, edge);
+			this.serializer = checkNotNull(serializer);
+		}
+
+		@Override
+		protected final <X> void pushToOperator(StreamRecord<X> record) {
 			try {
 				// we know that the given outputTag matches our OutputTag so the record
 				// must be of the type that our operator (and Serializer) expects.
 				@SuppressWarnings("unchecked")
-				StreamRecord<T> castRecord = (StreamRecord<T>) record;
+				final StreamRecord<T> castRecord = (StreamRecord<T>) record;
 
 				numRecordsIn.inc();
-				StreamRecord<T> copy = castRecord.copy(serializer.copy(castRecord.getValue()));
-				binder.processElement(copy);
+				final StreamRecord<T> copy = castRecord.copy(serializer.copy(castRecord.getValue()));
+				operator.setKeyContextElement1(copy);
+				operator.processElement(copy);
+			} catch (ClassCastException e) {
+				if (outputTag != null) {
+					// Enrich error message
+					ClassCastException replace = new ClassCastException(
+						String.format(
+							"%s. Failed to push OutputTag with id '%s' to operator. " +
+								"This can occur when multiple OutputTags with different types " +
+								"but identical names are being used.",
+							e.getMessage(),
+							outputTag.getId()));
+
+					throw new ExceptionInChainedOperatorException(replace);
+				} else {
+					throw new ExceptionInChainedOperatorException(e);
+				}
+			} catch (Exception e) {
+				throw new ExceptionInChainedOperatorException(e);
+			}
+
+		}
+	}
+
+	private static final class CopyingChainingWithFirstInputOfTwoInputStreamOperatorOutput<T> extends ChainingWithFirstInputOfTwoInputStreamOperatorOutput<T> {
+
+		private final TypeSerializer<T> serializer;
+
+		public CopyingChainingWithFirstInputOfTwoInputStreamOperatorOutput(
+			TwoInputStreamOperator<T, ?, ?> operator,
+			TypeSerializer<T> serializer,
+			StreamEdge edge,
+			StreamStatusProvider streamStatusProvider) {
+			super(operator, streamStatusProvider, edge);
+			this.serializer = checkNotNull(serializer);
+		}
+
+		@Override
+		protected final <X> void pushToOperator(StreamRecord<X> record) {
+			try {
+				// we know that the given outputTag matches our OutputTag so the record
+				// must be of the type that our operator (and Serializer) expects.
+				@SuppressWarnings("unchecked")
+				final StreamRecord<T> castRecord = (StreamRecord<T>) record;
+
+				numRecordsIn.inc();
+				final StreamRecord<T> copy = castRecord.copy(serializer.copy(castRecord.getValue()));
+				operator.setKeyContextElement1(copy);
+				operator.processElement1(copy);
+			} catch (ClassCastException e) {
+				if (outputTag != null) {
+					// Enrich error message
+					ClassCastException replace = new ClassCastException(
+						String.format(
+							"%s. Failed to push OutputTag with id '%s' to operator. " +
+								"This can occur when multiple OutputTags with different types " +
+								"but identical names are being used.",
+							e.getMessage(),
+							outputTag.getId()));
+
+					throw new ExceptionInChainedOperatorException(replace);
+				} else {
+					throw new ExceptionInChainedOperatorException(e);
+				}
+			} catch (Exception e) {
+				throw new ExceptionInChainedOperatorException(e);
+			}
+
+		}
+	}
+
+	private static final class CopyingChainingWithSecondInputOfTwoInputStreamOperatorOutput<T> extends ChainingWithSecondInputOfTwoInputStreamOperatorOutput<T> {
+
+		private final TypeSerializer<T> serializer;
+
+		public CopyingChainingWithSecondInputOfTwoInputStreamOperatorOutput(
+			TwoInputStreamOperator<?, T, ?> operator,
+			TypeSerializer<T> serializer,
+			StreamEdge edge,
+			StreamStatusProvider streamStatusProvider) {
+			super(operator, streamStatusProvider, edge);
+			this.serializer = checkNotNull(serializer);
+		}
+
+		@Override
+		protected final <X> void pushToOperator(StreamRecord<X> record) {
+			try {
+				// we know that the given outputTag matches our OutputTag so the record
+				// must be of the type that our operator (and Serializer) expects.
+				@SuppressWarnings("unchecked")
+				final StreamRecord<T> castRecord = (StreamRecord<T>) record;
+
+				numRecordsIn.inc();
+				final StreamRecord<T> copy = castRecord.copy(serializer.copy(castRecord.getValue()));
+				operator.setKeyContextElement2(copy);
+				operator.processElement2(copy);
 			} catch (ClassCastException e) {
 				if (outputTag != null) {
 					// Enrich error message
@@ -1291,119 +1603,6 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 		@Override
 		public boolean requireState() {
 			return getOperator().requireState();
-		}
-	}
-
-	private interface OutputBinder<IN> {
-
-		void processElement(StreamRecord<IN> element) throws Exception;
-
-		void processWatermark(Watermark mark) throws Exception;
-
-		void processLatencyMarker(LatencyMarker latencyMarker) throws Exception;
-
-		void close() throws Exception;
-
-		@SuppressWarnings("unchecked")
-		static <IN, OUT> OutputBinder<IN> bind(StreamOperator<OUT> streamOperator, StreamEdge edge) {
-			if (streamOperator instanceof OneInputStreamOperator) {
-				if (streamOperator instanceof AbstractStreamOperatorProxy) {
-					// Bind original stream operator to speed processing up when it is one input stream operator proxy.
-					return new OneInputOutputBinder<>((OneInputStreamOperator<IN, OUT>) ((AbstractStreamOperatorProxy<OUT>) streamOperator).getOperator());
-				}
-				return new OneInputOutputBinder<>((OneInputStreamOperator) streamOperator);
-			} else if (streamOperator instanceof TwoInputStreamOperator) {
-				if (edge.getTypeNumber() == 1) {
-					return new FirstInputOutputBinder<>((TwoInputStreamOperator) streamOperator);
-				} else if (edge.getTypeNumber() == 2) {
-					return new SecondInputOutputBinder<>((TwoInputStreamOperator) streamOperator);
-				} else {
-					throw new RuntimeException("Unknown type number " + edge.getTypeNumber());
-				}
-			} else {
-				throw new RuntimeException("Unknown stream operator " + streamOperator);
-			}
-		}
-	}
-
-	private static class OneInputOutputBinder<IN> implements OutputBinder<IN> {
-
-		private final OneInputStreamOperator<IN, ?> operator;
-
-		public OneInputOutputBinder(OneInputStreamOperator<IN, ?> operator) {
-			this.operator = operator;
-		}
-
-		public void processElement(StreamRecord<IN> element) throws Exception {
-			operator.setKeyContextElement1(element);
-			operator.processElement(element);
-		}
-
-		public void processWatermark(Watermark mark) throws Exception {
-			operator.processWatermark(mark);
-		}
-
-		public void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
-			operator.processLatencyMarker(latencyMarker);
-		}
-
-		@Override
-		public void close() throws Exception {
-			operator.close();
-		}
-	}
-
-	private static class FirstInputOutputBinder<IN> implements OutputBinder<IN> {
-
-		private final TwoInputStreamOperator<IN, ?, ?> operator;
-
-		public FirstInputOutputBinder(TwoInputStreamOperator<IN, ?, ?> operator) {
-			this.operator = operator;
-		}
-
-		public void processElement(StreamRecord<IN> element) throws Exception {
-			operator.setKeyContextElement1(element);
-			operator.processElement1(element);
-		}
-
-		public void processWatermark(Watermark mark) throws Exception {
-			operator.processWatermark1(mark);
-		}
-
-		public void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
-			operator.processLatencyMarker1(latencyMarker);
-		}
-
-		@Override
-		public void close() throws Exception {
-			operator.close();
-		}
-	}
-
-	private static class SecondInputOutputBinder<IN> implements OutputBinder<IN> {
-
-		private final TwoInputStreamOperator<?, IN, ?> operator;
-
-		public SecondInputOutputBinder(TwoInputStreamOperator<?, IN, ?> operator) {
-			this.operator = operator;
-		}
-
-		public void processElement(StreamRecord<IN> element) throws Exception {
-			operator.setKeyContextElement2(element);
-			operator.processElement2(element);
-		}
-
-		public void processWatermark(Watermark mark) throws Exception {
-			operator.processWatermark2(mark);
-		}
-
-		public void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
-			operator.processLatencyMarker2(latencyMarker);
-		}
-
-		@Override
-		public void close() throws Exception {
-			operator.close();
 		}
 	}
 
