@@ -70,9 +70,9 @@ KafkaTableSource source = Kafka010JsonTableSource.builder()
   .withKafkaProperties(kafkaProps)
   // set Table schema
   .withSchema(TableSchema.builder()
-    .field("sensorId", Types.LONG())  
-    .field("temp", Types.DOUBLE())
-    .field("time", Types.SQL_TIMESTAMP()).build())
+    .field("sensorId", DataTypes.LONG())  
+    .field("temp", DataTypes.DOUBLE())
+    .field("time", DataTypes.TIMESTAMP()).build())
   .build();
 {% endhighlight %}
 </div>
@@ -87,9 +87,9 @@ val source: KafkaTableSource = Kafka010JsonTableSource.builder()
   .withKafkaProperties(kafkaProps)
   // set Table schema
   .withSchema(TableSchema.builder()
-    .field("sensorId", Types.LONG)
-    .field("temp", Types.DOUBLE)
-    .field("time", Types.SQL_TIMESTAMP).build())
+    .field("sensorId", DataTypes.LONG)
+    .field("temp", DataTypes.DOUBLE)
+    .field("time", DataTypes.TIMESTAMP).build())
   .build()
 {% endhighlight %}
 </div>
@@ -112,12 +112,12 @@ KafkaTableSource source = Kafka010JsonTableSource.builder()
   // ...
   // set Table schema
   .withSchema(TableSchema.builder()
-    .field("sensorId", Types.LONG())
-    .field("temperature", Types.DOUBLE()).build())
+    .field("sensorId", DataTypes.LONG())
+    .field("temperature", DataTypes.DOUBLE()).build())
   // set JSON parsing schema
   .forJsonSchema(TableSchema.builder()
-    .field("id", Types.LONG())
-    .field("temp", Types.DOUBLE()).build())
+    .field("id", DataTypes.LONG())
+    .field("temp", DataTypes.DOUBLE()).build())
   // set mapping from table fields to JSON fields
   .withTableToJsonMapping(mapping)
   .build();
@@ -130,12 +130,12 @@ val source: KafkaTableSource = Kafka010JsonTableSource.builder()
   // ...
   // set Table schema
   .withSchema(TableSchema.builder()
-    .field("sensorId", Types.LONG)
-    .field("temperature", Types.DOUBLE).build())
+    .field("sensorId", DataTypes.LONG)
+    .field("temperature", DataTypes.DOUBLE).build())
   // set JSON parsing schema
   .forJsonSchema(TableSchema.builder()
-    .field("id", Types.LONG)
-    .field("temp", Types.DOUBLE).build())
+    .field("id", DataTypes.LONG)
+    .field("temp", DataTypes.DOUBLE).build())
   // set mapping from table fields to JSON fields
   .withTableToJsonMapping(Map(
     "sensorId" -> "id", 
@@ -212,9 +212,9 @@ KafkaTableSource source = Kafka010AvroTableSource.builder()
   .withKafkaProperties(kafkaProps)
   // set Table schema
   .withSchema(TableSchema.builder()
-    .field("sensorId", Types.LONG())
-    .field("temp", Types.DOUBLE())
-    .field("time", Types.SQL_TIMESTAMP()).build())
+    .field("sensorId", DataTypes.LONG())
+    .field("temp", DataTypes.DOUBLE())
+    .field("time", DataTypes.TIMESTAMP()).build())
   // set class of Avro record
   .forAvroRecordClass(SensorReading.class)
   .build();
@@ -231,9 +231,9 @@ val source: KafkaTableSource = Kafka010JsonTableSource.builder()
   .withKafkaProperties(kafkaProps)
   // set Table schema
   .withSchema(TableSchema.builder()
-    .field("sensorId", Types.LONG)
-    .field("temp", Types.DOUBLE)
-    .field("time", Types.SQL_TIMESTAMP).build())
+    .field("sensorId", DataTypes.LONG)
+    .field("temp", DataTypes.DOUBLE)
+    .field("time", DataTypes.TIMESTAMP).build())
   // set class of Avro record
   .forAvroRecordClass(classOf[SensorReading])
   .build()
@@ -260,8 +260,8 @@ KafkaTableSource source = Kafka010AvroTableSource.builder()
   // ...
   // set Table schema
   .withSchema(TableSchema.builder()
-    .field("sensorId", Types.LONG())
-    .field("temperature", Types.DOUBLE()).build())
+    .field("sensorId", DataTypes.LONG())
+    .field("temperature", DataTypes.DOUBLE()).build())
   // set class of Avro record with fields [id, temp]
   .forAvroRecordClass(SensorReading.class)
   // set mapping from table fields to Avro fields
@@ -276,8 +276,8 @@ val source: KafkaTableSource = Kafka010AvroTableSource.builder()
   // ...
   // set Table schema
   .withSchema(TableSchema.builder()
-    .field("sensorId", Types.LONG)
-    .field("temperature", Types.DOUBLE).build())
+    .field("sensorId", DataTypes.LONG)
+    .field("temperature", DataTypes.DOUBLE).build())
   // set class of Avro record with fields [id, temp]
   .forAvroRecordClass(classOf[SensorReading])
   // set mapping from table fields to Avro fields
@@ -321,7 +321,7 @@ val source: KafkaTableSource = Kafka010AvroTableSource.builder()
 
 Batch queries support processing time attributes as well. However, processing time attributes are initialized with the wall-clock time of the table scan operator and keep this value throughout the query evaluation. 
 
-A table schema field of type `SQL_TIMESTAMP` can be declared as a processing time attribute as shown in the following example.
+A table schema field of type `PROCTIME_INDICATOR` can be declared as a processing time attribute as shown in the following example.
 
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
@@ -329,10 +329,10 @@ A table schema field of type `SQL_TIMESTAMP` can be declared as a processing tim
 KafkaTableSource source = Kafka010JsonTableSource.builder()
   // ... 
   .withSchema(TableSchema.builder()
-    .field("sensorId", Types.LONG())  
-    .field("temp", Types.DOUBLE())
-    // field "ptime" is of type SQL_TIMESTAMP
-    .field("ptime", Types.SQL_TIMESTAMP()).build())
+    .field("sensorId", DataTypes.LONG())  
+    .field("temp", DataTypes.DOUBLE())
+    // field "ptime" is of type TIMESTAMP
+    .field("ptime", DataTypes.PROCTIME_INDICATOR()).build())
   // declare "ptime" as processing time attribute
   .withProctimeAttribute("ptime")
   .build();
@@ -344,10 +344,10 @@ KafkaTableSource source = Kafka010JsonTableSource.builder()
 val source: KafkaTableSource = Kafka010JsonTableSource.builder()
   // ...
   .withSchema(TableSchema.builder()
-    .field("sensorId", Types.LONG)
-    .field("temp", Types.DOUBLE)
-    // field "ptime" is of type SQL_TIMESTAMP
-    .field("ptime", Types.SQL_TIMESTAMP).build())
+    .field("sensorId", DataTypes.LONG)
+    .field("temp", DataTypes.DOUBLE)
+    // field "ptime" is of type TIMESTAMP
+    .field("ptime", DataTypes.PROCTIME_INDICATOR).build())
   // declare "ptime" as processing time attribute
   .withProctimeAttribute("ptime")
   .build()
@@ -359,9 +359,9 @@ val source: KafkaTableSource = Kafka010JsonTableSource.builder()
 
 ### Configuring a Rowtime Attribute
 
-[Rowtime attributes](streaming.html#event-time) are attributes of type `TIMESTAMP` and handled in a unified way in stream and batch queries.
+[Rowtime attributes](streaming.html#event-time) are attributes of type `ROWTIME_INDICATOR` and handled in a unified way in stream and batch queries.
 
-A table schema field of type `SQL_TIMESTAMP` can be declared as rowtime attribute by specifying 
+A table schema field of type `ROWTIME_INDICATOR` can be declared as rowtime attribute by specifying 
 
 * the name of the field, 
 * a `TimestampExtractor` that computes the actual value for the attribute (usually from one or more other attributes), and
@@ -375,10 +375,10 @@ The following example shows how to configure a rowtime attribute.
 KafkaTableSource source = Kafka010JsonTableSource.builder()
   // ...
   .withSchema(TableSchema.builder()
-    .field("sensorId", Types.LONG())
-    .field("temp", Types.DOUBLE())
-    // field "rtime" is of type SQL_TIMESTAMP
-    .field("rtime", Types.SQL_TIMESTAMP()).build())
+    .field("sensorId", DataTypes.LONG())
+    .field("temp", DataTypes.DOUBLE())
+    // field "rtime" is of type ROWTIME_INDICATOR
+    .field("rtime", DataTypes.ROWTIME_INDICATOR()).build())
   .withRowtimeAttribute(
     // "rtime" is rowtime attribute
     "rtime",
@@ -395,10 +395,10 @@ KafkaTableSource source = Kafka010JsonTableSource.builder()
 val source: KafkaTableSource = Kafka010JsonTableSource.builder()
   // ...
   .withSchema(TableSchema.builder()
-    .field("sensorId", Types.LONG)
-    .field("temp", Types.DOUBLE)
-    // field "rtime" is of type SQL_TIMESTAMP
-    .field("rtime", Types.SQL_TIMESTAMP).build())
+    .field("sensorId", DataTypes.LONG)
+    .field("temp", DataTypes.DOUBLE)
+    // field "rtime" is of type ROWTIME_INDICATOR
+    .field("rtime", DataTypes.ROWTIME_INDICATOR).build())
   .withRowtimeAttribute(
     // "rtime" is rowtime attribute
     "rtime",
@@ -421,10 +421,10 @@ Since Kafka 0.10, Kafka messages have a timestamp as metadata that specifies whe
 KafkaTableSource source = Kafka010JsonTableSource.builder()
   // ...
   .withSchema(TableSchema.builder()
-    .field("sensorId", Types.LONG())
-    .field("temp", Types.DOUBLE())
-    // field "rtime" is of type SQL_TIMESTAMP
-    .field("rtime", Types.SQL_TIMESTAMP()).build())
+    .field("sensorId", DataTypes.LONG())
+    .field("temp", DataTypes.DOUBLE())
+    // field "rtime" is of type ROWTIME_INDICATOR
+    .field("rtime", DataTypes.ROWTIME_INDICATOR()).build())
   // use Kafka timestamp as rowtime attribute
   .withKafkaTimestampAsRowtimeAttribute()(
     // "rtime" is rowtime attribute
@@ -440,10 +440,10 @@ KafkaTableSource source = Kafka010JsonTableSource.builder()
 val source: KafkaTableSource = Kafka010JsonTableSource.builder()
   // ...
   .withSchema(TableSchema.builder()
-    .field("sensorId", Types.LONG)
-    .field("temp", Types.DOUBLE)
-    // field "rtime" is of type SQL_TIMESTAMP
-    .field("rtime", Types.SQL_TIMESTAMP).build())
+    .field("sensorId", DataTypes.LONG)
+    .field("temp", DataTypes.DOUBLE)
+    // field "rtime" is of type ROWTIME_INDICATOR
+    .field("rtime", DataTypes.ROWTIME_INDICATOR).build())
   // use Kafka timestamp as rowtime attribute
   .withKafkaTimestampAsRowtimeAttribute()(
     // "rtime" is rowtime attribute
@@ -460,7 +460,7 @@ val source: KafkaTableSource = Kafka010JsonTableSource.builder()
 Flink provides `TimestampExtractor` implementations for common use cases.
 The following `TimestampExtractor` implementations are currently available:
 
-* `ExistingField(fieldName)`: Extracts the value of a rowtime attribute from an existing `LONG` or `SQL_TIMESTAMP` field.
+* `ExistingField(fieldName)`: Extracts the value of a rowtime attribute from an existing `LONG` or `TIMESTAMP` field.
 * `StreamRecordTimestamp()`: Extracts the value of a rowtime attribute from the timestamp of the `DataStream` `StreamRecord`. Note, this `TimestampExtractor` is not available for batch table sources.
 
 A custom `TimestampExtractor` can be defined by implementing the corresponding interface.
@@ -484,7 +484,7 @@ The `CsvTableSource` is already included in `flink-table` without additional dep
 The easiest way to create a `CsvTableSource` is by using the enclosed builder `CsvTableSource.builder()`, the builder has the following methods to configure properties:
 
  - `path(String path)` Sets the path to the CSV file, required.
- - `field(String fieldName, TypeInformation<?> fieldType)` Adds a field with the field name and field type information, can be called multiple times, required. The call order of this method defines also the order of the fields in a row.
+ - `field(String fieldName, InternalType fieldType)` Adds a field with the field name and field type, can be called multiple times, required. The call order of this method defines also the order of the fields in a row.
  - `fieldDelimiter(String delim)` Sets the field delimiter, `","` by default.
  - `lineDelimiter(String delim)` Sets the line delimiter, `"\n"` by default.
  - `quoteCharacter(Character quote)` Sets the quote character for String values, `null` by default.
@@ -500,10 +500,10 @@ You can create the source as follows:
 CsvTableSource csvTableSource = CsvTableSource
     .builder()
     .path("/path/to/your/file.csv")
-    .field("name", Types.STRING())
-    .field("id", Types.INT())
-    .field("score", Types.DOUBLE())
-    .field("comments", Types.STRING())
+    .field("name", DataTypes.STRING())
+    .field("id", DataTypes.INT())
+    .field("score", DataTypes.DOUBLE())
+    .field("comments", DataTypes.STRING())
     .fieldDelimiter("#")
     .lineDelimiter("$")
     .ignoreFirstLine()
@@ -518,10 +518,10 @@ CsvTableSource csvTableSource = CsvTableSource
 val csvTableSource = CsvTableSource
     .builder
     .path("/path/to/your/file.csv")
-    .field("name", Types.STRING)
-    .field("id", Types.INT)
-    .field("score", Types.DOUBLE)
-    .field("comments", Types.STRING)
+    .field("name", DataTypes.STRING)
+    .field("id", DataTypes.INT)
+    .field("score", DataTypes.DOUBLE)
+    .field("comments", DataTypes.STRING)
     .fieldDelimiter("#")
     .lineDelimiter("$")
     .ignoreFirstLine
@@ -699,7 +699,7 @@ JDBCAppendTableSink sink = JDBCAppendTableSink.builder()
   .setDrivername("org.apache.derby.jdbc.EmbeddedDriver")
   .setDBUrl("jdbc:derby:memory:ebookshop")
   .setQuery("INSERT INTO books (id) VALUES (?)")
-  .setParameterTypes(INT_TYPE_INFO)
+  .setParameterTypes(DataTypes.INT)
   .build();
 
 Table table = ...
@@ -779,11 +779,11 @@ If a `TableSource` is used in a streaming query it must implement the `StreamTab
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
 {% highlight java %}
-TableSource<T> {
+TableSource {
 
   public TableSchema getTableSchema();
 
-  public TypeInformation<T> getReturnType();
+  public DataType getReturnType();
 
   public String explainSource();
 }
@@ -792,11 +792,11 @@ TableSource<T> {
 
 <div data-lang="scala" markdown="1">
 {% highlight scala %}
-TableSource[T] {
+TableSource {
 
   def getTableSchema: TableSchema
 
-  def getReturnType: TypeInformation[T]
+  def getReturnType: DataType
 
   def explainSource: String
 
@@ -805,13 +805,13 @@ TableSource[T] {
 </div>
 </div>
 
-* `getTableSchema()`: Returns the schema of the table, i.e., the names and types of the fields of the table. The field types are defined using Flink's `TypeInformation` (see [Table API types](tableApi.html#data-types) and [SQL types](sql.html#data-types)).
+* `getTableSchema()`: Returns the schema of the table, i.e., the names and types of the fields of the table. The field types are defined using Flink's `DataType` (see [Table API types](tableApi.html#data-types) and [SQL types](sql.html#data-types)).
 
 * `getReturnType()`: Returns the physical type of the `DataStream` (`StreamTableSource`) or `DataSet` (`BatchTableSource`) and the records that are produced by the `TableSource`.
 
 * `explainSource()`: Returns a String that describes the `TableSource`. This method is optional and used for display purposes only.
 
-The `TableSource` interface separates the logical table schema from the physical type of the returned `DataStream` or `DataSet`. As a consequence, all fields of the table schema (`getTableSchema()`) must be mapped to a field with corresponding type of the physical return type (`getReturnType()`). By default, this mapping is done based on field names. For example, a `TableSource` that defines a table schema with two fields `[name: String, size: Integer]` requires a `TypeInformation` with at least two fields called `name` and `size` of type `String` and `Integer`, respectively. This could be a `PojoTypeInfo` or a `RowTypeInfo` that have two fields named `name` and `size` with matching types. 
+The `TableSource` interface separates the logical table schema from the physical type of the returned `DataStream` or `DataSet`. As a consequence, all fields of the table schema (`getTableSchema()`) must be mapped to a field with corresponding type of the physical return type (`getReturnType()`). By default, this mapping is done based on field names. For example, a `TableSource` that defines a table schema with two fields `[name: String, size: Integer]` requires a `DataType` with at least two fields called `name` and `size` of type `String` and `Integer`, respectively. This could be a `TypeInfoWrappedType` decorating a `PojoTypeInfo` or a `RowTypeInfo` that have two fields named `name` and `size` with matching types. 
 
 However, some types, such as Tuple or CaseClass types, do support custom field names. If a `TableSource` returns a `DataStream` or `DataSet` of a type with fixed field names, it can implement the `DefinedFieldMapping` interface to map field names from the table schema to field names of the physical return type.
 
@@ -822,24 +822,24 @@ The `BatchTableSource` interface extends the `TableSource` interface and defines
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
 {% highlight java %}
-BatchTableSource<T> extends TableSource<T> {
+BatchTableSource<T> extends TableSource {
 
-  public DataSet<T> getDataSet(ExecutionEnvironment execEnv);
+  public DataStream<T> getBoundedStream(StreamExecutionEnvironment execEnv);
 }
 {% endhighlight %}
 </div>
 
 <div data-lang="scala" markdown="1">
 {% highlight scala %}
-BatchTableSource[T] extends TableSource[T] {
+BatchTableSource[T] extends TableSource {
 
-  def getDataSet(execEnv: ExecutionEnvironment): DataSet[T]
+  def getBoundedStream(execEnv: StreamExecutionEnvironment): DataStream[T]
 }
 {% endhighlight %}
 </div>
 </div>
 
-* `getDataSet(execEnv)`: Returns a `DataSet` with the data of the table. The type of the `DataSet` must be identical to the return type defined by the `TableSource.getReturnType()` method. The `DataSet` can by created using a regular [data source]({{ site.baseurl }}/dev/batch/#data-sources) of the DataSet API. Commonly, a `BatchTableSource` is implemented by wrapping a `InputFormat` or [batch connector]({{ site.baseurl }}/dev/batch/connectors.html).
+* `getBoundedStream(execEnv)`: Returns a `DataStream` with the data of the table. The type of the `DataStream` must be identical to the return type defined by the `TableSource.getReturnType()` method. The `DataStream` can by created using a regular [data source]({{ site.baseurl }}/dev/datastream_api.html#data-sources)) of the DataStream API. Commonly, a `BatchTableSource` is implemented by wrapping a `InputFormat` or a finite [stream connector]({{ site.baseurl }}/dev/connectors/).
 
 {% top %}
 
@@ -850,7 +850,7 @@ The `StreamTableSource` interface extends the `TableSource` interface and define
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
 {% highlight java %}
-StreamTableSource<T> extends TableSource<T> {
+StreamTableSource<T> extends TableSource {
 
   public DataStream<T> getDataStream(StreamExecutionEnvironment execEnv);
 }
@@ -859,7 +859,7 @@ StreamTableSource<T> extends TableSource<T> {
 
 <div data-lang="scala" markdown="1">
 {% highlight scala %}
-StreamTableSource[T] extends TableSource[T] {
+StreamTableSource[T] extends TableSource {
 
   def getDataStream(execEnv: StreamExecutionEnvironment): DataStream[T]
 }
@@ -873,7 +873,7 @@ StreamTableSource[T] extends TableSource[T] {
 
 Time-based operations of streaming [Table API](tableApi.html#group-windows) and [SQL](sql.html#group-windows) queries, such as windowed aggregations or joins, require explicitly specified [time attributes]({{ site.baseurl }}/dev/table/streaming.html#time-attributes). 
 
-A `TableSource` defines a time attribute as a field of type `Types.SQL_TIMESTAMP` in its table schema. In contrast to all regular fields in the schema, a time attribute must not be matched to a physical field in the return type of the table source. Instead, a `TableSource` defines a time attribute by implementing a certain interface.
+A `TableSource` defines a time attribute as a field of type `DataTypes.ROWTIME_INDICATOR` or `DataTypes.PROCTIME_INDICATOR` in its table schema. In contrast to all regular fields in the schema, a time attribute must not be matched to a physical field in the return type of the table source. Instead, a `TableSource` defines a time attribute by implementing a certain interface.
 
 #### Defining a Processing Time Attribute
 
@@ -899,7 +899,7 @@ DefinedProctimeAttribute {
 </div>
 </div>
 
-* `getProctimeAttribute()`: Returns the name of the processing time attribute. The specified attribute must be defined of type `Types.SQL_TIMESTAMP` in the table schema and can be used in time-based operations. A `DefinedProctimeAttribute` table source can define no processing time attribute by returning `null`.
+* `getProctimeAttribute()`: Returns the name of the processing time attribute. The specified attribute must be defined of type `DataTypes.PROCTIME_INDICATOR` in the table schema and can be used in time-based operations. A `DefinedProctimeAttribute` table source can define no processing time attribute by returning `null`.
 
 **Note** Both `StreamTableSource` and `BatchTableSource` can implement `DefinedProctimeAttribute` and define a processing time attribute. In case of a `BatchTableSource` the processing time field is initialized with the current timestamp during the table scan.
 
@@ -928,7 +928,7 @@ DefinedRowtimeAttributes {
 </div>
 
 * `getRowtimeAttributeDescriptors()`: Returns a list of `RowtimeAttributeDescriptor`. A `RowtimeAttributeDescriptor` describes a rowtime attribute with the following properties:
-  * `attributeName`: The name of the rowtime attribute in the table schema. The field must be defined with type `Types.SQL_TIMESTAMP`.
+  * `attributeName`: The name of the rowtime attribute in the table schema. The field must be defined with type `DataTypes.ROWTIME_INDICATOR`.
   * `timestampExtractor`: The timestamp extractor extracts the timestamp from a record with the return type. For example, it can convert convert a Long field into a timestamp or parse a String-encoded timestamp. Flink comes with a set of built-in `TimestampExtractor` implementation for common use cases. It is also possible to provide a custom implementation.
   * `watermarkStrategy`: The watermark strategy defines how watermarks are generated for the rowtime attribute. Flink comes with a set of built-in `WatermarkStrategy` implementations for common use cases. It is also possible to provide a custom implementation.
 * **Note** Although the `getRowtimeAttributeDescriptors()` method returns a list of descriptors, only a single rowtime attribute is support at the moment. We plan to remove this restriction in the future and support tables with more than one rowtime attribute.
@@ -944,24 +944,24 @@ A `TableSource` supports projection push-down by implementing the `ProjectableTa
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
 {% highlight java %}
-ProjectableTableSource<T> {
+ProjectableTableSource {
 
-  public TableSource<T> projectFields(int[] fields);
+  public TableSource projectFields(int[] fields);
 }
 {% endhighlight %}
 </div>
 
 <div data-lang="scala" markdown="1">
 {% highlight scala %}
-ProjectableTableSource[T] {
+ProjectableTableSource {
 
-  def projectFields(fields: Array[Int]): TableSource[T]
+  def projectFields(fields: Array[Int]): TableSource
 }
 {% endhighlight %}
 </div>
 </div>
 
-* `projectFields(fields)`: Returns a *copy* of the `TableSource` with adjusted physical return type. The `fields` parameter provides the indexes of the fields that must be provided by the `TableSource`. The indexes relate to the `TypeInformation` of the physical return type, *not* to the logical table schema. The copied `TableSource` must adjust its return type and the returned `DataStream` or `DataSet`. The `TableSchema` of the copied `TableSource` must not be changed, i.e, it must be the same as the original `TableSource`. If the `TableSource` implements the `DefinedFieldMapping` interface, the field mapping must be adjusted to the new return type.
+* `projectFields(fields)`: Returns a *copy* of the `TableSource` with adjusted physical return type. The `fields` parameter provides the indexes of the fields that must be provided by the `TableSource`. The indexes relate to the `DataType` of the physical return type, *not* to the logical table schema. The copied `TableSource` must adjust its return type and the returned `DataStream`. The `TableSchema` of the copied `TableSource` must not be changed, i.e, it must be the same as the original `TableSource`. If the `TableSource` implements the `DefinedFieldMapping` interface, the field mapping must be adjusted to the new return type.
 
 The `ProjectableTableSource` adds support to project flat fields. If the `TableSource` defines a table with nested schema, it can implement the `NestedFieldsProjectableTableSource` to extend the projection to nested fields. The `NestedFieldsProjectableTableSource` is defined as follows:
 
@@ -991,16 +991,16 @@ NestedFieldsProjectableTableSource[T] {
 
 ### Defining a TableSource with Filter Push-Down
 
-The `FilterableTableSource` interface adds support for filter push-down to a `TableSource`. A `TableSource` extending this interface is able to filter records such that the returned `DataStream` or `DataSet` returns fewer records.
+The `FilterableTableSource` interface adds support for filter push-down to a `TableSource`. A `TableSource` extending this interface is able to filter records such that the returned `DataStream` returns fewer records.
 
 The interface looks as follows:
 
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
 {% highlight java %}
-FilterableTableSource<T> {
+FilterableTableSource {
 
-  public TableSource<T> applyPredicate(List<Expression> predicates);
+  public TableSource applyPredicate(List<Expression> predicates);
 
   public boolean isFilterPushedDown();
 }
@@ -1009,9 +1009,9 @@ FilterableTableSource<T> {
 
 <div data-lang="scala" markdown="1">
 {% highlight scala %}
-FilterableTableSource[T] {
+FilterableTableSource {
 
-  def applyPredicate(predicates: java.util.List[Expression]): TableSource[T]
+  def applyPredicate(predicates: java.util.List[Expression]): TableSource
 
   def isFilterPushedDown: Boolean
 }
@@ -1036,13 +1036,13 @@ The general interface looks as follows:
 {% highlight java %}
 TableSink<T> {
 
-  public TypeInformation<T> getOutputType();
+  public DataType getOutputType();
 
   public String[] getFieldNames();
 
-  public TypeInformation[] getFieldTypes();
+  public DataType[] getFieldTypes();
 
-  public TableSink<T> configure(String[] fieldNames, TypeInformation[] fieldTypes);
+  public TableSink<T> configure(String[] fieldNames, DataType[] fieldTypes);
 }
 {% endhighlight %}
 </div>
@@ -1051,13 +1051,13 @@ TableSink<T> {
 {% highlight scala %}
 TableSink[T] {
 
-  def getOutputType: TypeInformation<T>
+  def getOutputType: DataType
 
   def getFieldNames: Array[String]
 
-  def getFieldTypes: Array[TypeInformation]
+  def getFieldTypes: Array[DataType]
 
-  def configure(fieldNames: Array[String], fieldTypes: Array[TypeInformation]): TableSink[T]
+  def configure(fieldNames: Array[String], fieldTypes: Array[DataType]): TableSink[T]
 }
 {% endhighlight %}
 </div>
@@ -1076,7 +1076,9 @@ The interface looks as follows:
 {% highlight java %}
 BatchTableSink<T> extends TableSink<T> {
 
-  public void emitDataSet(DataSet<T> dataSet);
+  public DataStreamSink<?> emitBoundedStream(DataStream<T> boundedStream,
+    TableConfig tableConfig,
+    ExecutionConfig executionConfig);
 }
 {% endhighlight %}
 </div>
@@ -1085,7 +1087,9 @@ BatchTableSink<T> extends TableSink<T> {
 {% highlight scala %}
 BatchTableSink[T] extends TableSink[T] {
 
-  def emitDataSet(dataSet: DataSet[T]): Unit
+  def emitDataSet(boundedStream: DataStream[T],
+    tableConfig: TableConfig,
+    executionConfig: ExecutionConfig): DataStreamSink[_]
 }
 {% endhighlight %}
 </div>
@@ -1134,7 +1138,7 @@ The interface looks as follows:
 {% highlight java %}
 RetractStreamTableSink<T> extends TableSink<Tuple2<Boolean, T>> {
 
-  public TypeInformation<T> getRecordType();
+  public DataType getRecordType();
 
   public void emitDataStream(DataStream<Tuple2<Boolean, T>> dataStream);
 }
@@ -1145,7 +1149,7 @@ RetractStreamTableSink<T> extends TableSink<Tuple2<Boolean, T>> {
 {% highlight scala %}
 RetractStreamTableSink[T] extends TableSink[Tuple2[Boolean, T]] {
 
-  def getRecordType: TypeInformation[T]
+  def getRecordType: DataType
 
   def emitDataStream(dataStream: DataStream[Tuple2[Boolean, T]]): Unit
 }
@@ -1172,7 +1176,7 @@ UpsertStreamTableSink<T> extends TableSink<Tuple2<Boolean, T>> {
 
   public void setIsAppendOnly(boolean isAppendOnly);
 
-  public TypeInformation<T> getRecordType();
+  public DataType getRecordType();
 
   public void emitDataStream(DataStream<Tuple2<Boolean, T>> dataStream);
 }
@@ -1187,7 +1191,7 @@ UpsertStreamTableSink[T] extends TableSink[Tuple2[Boolean, T]] {
 
   def setIsAppendOnly(isAppendOnly: Boolean): Unit
 
-  def getRecordType: TypeInformation[T]
+  def getRecordType: DataType
 
   def emitDataStream(dataStream: DataStream[Tuple2[Boolean, T]]): Unit
 }
