@@ -167,6 +167,8 @@ public class FlinkYarnSessionCli extends AbstractCustomCommandLine<ApplicationId
 
 	private final YarnConfiguration yarnConfiguration;
 
+	private int taskManagerContainerMemoryMB;
+
 	public FlinkYarnSessionCli(
 			Configuration configuration,
 			String configurationDirectory,
@@ -443,7 +445,7 @@ public class FlinkYarnSessionCli extends AbstractCustomCommandLine<ApplicationId
 		final int jobManagerMemoryMB = configuration.getInteger(JobManagerOptions.JOB_MANAGER_HEAP_MEMORY);
 
 		// Task Managers memory
-		final int taskManagerMemoryMB = configuration.getInteger(TaskManagerOptions.TASK_MANAGER_HEAP_MEMORY);
+		final int taskManagerMemoryMB = taskManagerContainerMemoryMB;
 
 		int slotsPerTaskManager = configuration.getInteger(TaskManagerOptions.NUM_TASK_SLOTS);
 
@@ -558,7 +560,9 @@ public class FlinkYarnSessionCli extends AbstractCustomCommandLine<ApplicationId
 		}
 
 		if (commandLine.hasOption(tmMemory.getOpt())) {
-			effectiveConfiguration.setInteger(TaskManagerOptions.TASK_MANAGER_HEAP_MEMORY, Integer.parseInt(commandLine.getOptionValue(tmMemory.getOpt())));
+			taskManagerContainerMemoryMB = Integer.parseInt(commandLine.getOptionValue(tmMemory.getOpt()));
+		} else {
+			taskManagerContainerMemoryMB = -1;
 		}
 
 		if (commandLine.hasOption(slots.getOpt())) {

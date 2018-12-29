@@ -74,8 +74,8 @@ public class TaskManagerResourceCalculator {
   public static long calculateNetworkBufferMemory(Configuration flinkConfig) {
     long networkBufBytes;
     if (TaskManagerServicesConfiguration.hasNewNetworkBufConf(flinkConfig)) {
-      // new configuration based on max
-      networkBufBytes = flinkConfig.getLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX);
+      // get network buffer based on min, and max should be set same as min when start task manager
+      networkBufBytes = flinkConfig.getLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN);
     } else {
       // use old (deprecated) network buffers parameter
       int networkBuffersNum = flinkConfig.getInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS);
@@ -96,10 +96,10 @@ public class TaskManagerResourceCalculator {
     long managedMemory = flinkConfig.getLong(TaskManagerOptions.MANAGED_MEMORY_SIZE);
     Map<String, Resource> resourceMap = new HashMap<>();
     resourceMap.put(ResourceSpec.MANAGED_MEMORY_NAME,
-        new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, managedMemory));
+        new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, Math.max(0, managedMemory)));
     long floatingManagedMemory = flinkConfig.getLong(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE);
     resourceMap.put(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME,
-        new CommonExtendedResource(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME, floatingManagedMemory));
+        new CommonExtendedResource(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME, Math.max(0, floatingManagedMemory)));
     return new ResourceProfile(
         core,
         heapMemory,

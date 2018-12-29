@@ -29,20 +29,34 @@ import static org.mockito.Mockito.when;
 
 public class TaskManagerResourceCalculatorTest {
 
+  public static int TM_HEAP_MEMORY_MB = 2048;
+  public static int TM_PROCESS_NETTY_MEMORY_MB = 256;
+  public static int TM_MANAGED_MEMORY_MB = 1024;
+  public static int TM_FLOATING_MEMORY_MB = 1024;
+
   @Test
   public void testTaskManagerResourceCalculator(){
     Configuration flinkConfig = new Configuration();
-    flinkConfig.setInteger(TaskManagerOptions.TASK_MANAGER_HEAP_MEMORY, 2048);
-    flinkConfig.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY, 256);
+    flinkConfig.setInteger(TaskManagerOptions.TASK_MANAGER_HEAP_MEMORY, TM_HEAP_MEMORY_MB);
+    flinkConfig.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY, TM_PROCESS_NETTY_MEMORY_MB);
     flinkConfig.setBoolean(TaskManagerOptions.MEMORY_OFF_HEAP, false);
-    flinkConfig.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, 1024L);
-    flinkConfig.setLong(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE, 1024L);
+    flinkConfig.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, TM_MANAGED_MEMORY_MB);
+    flinkConfig.setLong(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE, TM_FLOATING_MEMORY_MB);
 
-    String taskManagerResource = "TotalHeapMemory:2176,YoungHeapMemory:204,TotalDirectMemory:1280";
+    int totalHeapSizeMB = TM_HEAP_MEMORY_MB + TaskManagerOptions.TASK_MANAGER_PROCESS_HEAP_MEMORY.defaultValue()
+      + TM_MANAGED_MEMORY_MB + TM_FLOATING_MEMORY_MB;
+    String taskManagerResource = String.format("TotalHeapMemory:%s,YoungHeapMemory:%s,TotalDirectMemory:%s",
+      totalHeapSizeMB, (int) (totalHeapSizeMB * TaskManagerOptions.TASK_MANAGER_MEMORY_DYNAMIC_YOUNG_RATIO.defaultValue()),
+      TM_PROCESS_NETTY_MEMORY_MB + (TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN.defaultValue() >> 20));
     Assert.assertEquals(taskManagerResource, TaskManagerResourceCalculator.getTaskManagerResourceFromConf(flinkConfig));
 
+    totalHeapSizeMB = TM_HEAP_MEMORY_MB + TaskManagerOptions.TASK_MANAGER_PROCESS_HEAP_MEMORY.defaultValue();
     flinkConfig.setBoolean(TaskManagerOptions.MEMORY_OFF_HEAP, true);
-    taskManagerResource = "TotalHeapMemory:2176,YoungHeapMemory:544,TotalDirectMemory:3328";
+    taskManagerResource = String.format("TotalHeapMemory:%s,YoungHeapMemory:%s,TotalDirectMemory:%s",
+      totalHeapSizeMB, (int) (totalHeapSizeMB * TaskManagerOptions.TASK_MANAGER_MEMORY_DYNAMIC_YOUNG_RATIO.defaultValue()),
+      TM_PROCESS_NETTY_MEMORY_MB + (TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN.defaultValue() >> 20)
+      + TM_MANAGED_MEMORY_MB + TM_FLOATING_MEMORY_MB);
+    Assert.assertEquals(taskManagerResource, TaskManagerResourceCalculator.getTaskManagerResourceFromConf(flinkConfig));
     Assert.assertEquals(taskManagerResource, TaskManagerResourceCalculator.getTaskManagerResourceFromConf(flinkConfig));
   }
 
@@ -52,6 +66,6 @@ public class TaskManagerResourceCalculatorTest {
     when(flinkConf.getFloat(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_FRACTION)).thenReturn(0.2f);
     when(flinkConf.getLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN)).thenReturn(128L << 20);
     when(flinkConf.getLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX)).thenReturn(512L << 20);
-    Assert.assertEquals(512L << 20, TaskManagerResourceCalculator.calculateNetworkBufferMemory(flinkConf));
+    Assert.assertEquals(128L << 20, TaskManagerResourceCalculator.calculateNetworkBufferMemory(flinkConf));
   }
 }

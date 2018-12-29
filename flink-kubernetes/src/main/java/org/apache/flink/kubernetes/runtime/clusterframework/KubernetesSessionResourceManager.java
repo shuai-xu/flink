@@ -171,7 +171,7 @@ public class KubernetesSessionResourceManager extends
 
 		if (slotManager instanceof DynamicAssigningSlotManager) {
 			((DynamicAssigningSlotManager) slotManager).setTotalResourceOfTaskExecutor(
-				TaskManagerResource.convertToResourceProfile(taskManagerResource));
+				taskManagerResource.getTaskResourceProfile());
 			log.info("The resource for user in a task executor is {}.", taskManagerResource);
 		}
 

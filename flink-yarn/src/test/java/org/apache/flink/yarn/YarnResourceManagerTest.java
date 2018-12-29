@@ -19,8 +19,6 @@
 package org.apache.flink.yarn;
 
 import org.apache.flink.api.common.JobID;
-import org.apache.flink.api.common.operators.ResourceSpec;
-import org.apache.flink.api.common.resources.CommonExtendedResource;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.ResourceManagerOptions;
@@ -658,29 +656,6 @@ public class YarnResourceManagerTest extends TestLogger {
 			// It's now safe to access the SlotManager state since the ResourceManager has been stopped.
 			assertTrue(rmServices.slotManager.getNumberRegisteredSlots() == 0);
 			assertTrue(resourceManager.getNumberOfRegisteredTaskManagers().get() == 0);
-		}};
-	}
-
-	@Test
-	public void testAllocateNewWorkerWithFloatingManagedMemory() throws Exception {
-		new Context() {{
-			startResourceManager();
-			ResourceSpec rs = new ResourceSpec.Builder().setCpuCores(0.3).setHeapMemoryInMB(128)
-					.addExtendedResource(new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, 128))
-					.addExtendedResource(new CommonExtendedResource(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME, 256)).build();
-			ResourceProfile resourceProfile0 = ResourceProfile.fromResourceSpec(rs, 0);
-
-			resourceManager.startNewWorker(resourceProfile0);
-			resourceManager.startNewWorker(resourceProfile0);
-			resourceManager.startNewWorker(resourceProfile0);
-
-			ArgumentCaptor<AMRMClient.ContainerRequest> containerRequestCaptor =
-					ArgumentCaptor.forClass(AMRMClient.ContainerRequest.class);
-			// Three slots will be merged to one container
-			verify(mockResourceManagerClient, times(1)).addContainerRequest(containerRequestCaptor.capture());
-			AMRMClient.ContainerRequest request = containerRequestCaptor.getAllValues().get(0);
-			// Check memory allocated for YARN should contain managed and floating managed memory
-			assertEquals(1024, request.getCapability().getMemory());
 		}};
 	}
 }

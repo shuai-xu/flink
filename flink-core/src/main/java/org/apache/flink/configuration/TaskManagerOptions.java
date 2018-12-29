@@ -38,9 +38,7 @@ public class TaskManagerOptions {
 	public static final ConfigOption<Integer> TASK_MANAGER_HEAP_MEMORY =
 			key("taskmanager.heap.mb")
 			.defaultValue(1024)
-			.withDescription("JVM heap size (in megabytes) for the TaskManagers, which are the parallel workers of" +
-				" the system. On YARN setups, this value is automatically configured to the size of the TaskManager's" +
-				" YARN container, minus a certain tolerance value.");
+			.withDescription("How many heap memory (in megabytes) a task manager will supply for user, not including managed memory.");
 
 	/**
 	 * How many cores a task manager will supply for user.
@@ -73,7 +71,8 @@ public class TaskManagerOptions {
 	 */
 	public static final ConfigOption<String> TASK_MANAGER_EXTENDED_RESOURCES =
 			key("taskmanager.extended.resources")
-			.defaultValue("Extended resources will supply for user. " +
+			.noDefaultValue()
+			.withDescription("Extended resources will supply for user. " +
 				"Specified as resource-type:value pairs separated by commas. such as GPU:1,FPGA:1.");
 
 	/**
@@ -89,7 +88,7 @@ public class TaskManagerOptions {
 	 */
 	public static final ConfigOption<Integer> TASK_MANAGER_PROCESS_NATIVE_MEMORY =
 			key("taskmanager.process.native.memory.mb")
-			.defaultValue(128)
+			.defaultValue(0)
 			.withDescription("The native memory (in megabytes) used for task manager process.");
 
 	/**
@@ -97,7 +96,7 @@ public class TaskManagerOptions {
 	 */
 	public static final ConfigOption<Integer> TASK_MANAGER_PROCESS_NETTY_MEMORY =
 			key("taskmanager.process.netty.memory.mb")
-			.defaultValue(90)
+			.defaultValue(64)
 			.withDescription("The direct memory (in megabytes) used for netty framework in the task manager process.");
 
 	/**
@@ -433,8 +432,9 @@ public class TaskManagerOptions {
 	 * set, a relative fraction will be allocated, as defined by {@link #MANAGED_MEMORY_FRACTION}.
 	 */
 	public static final ConfigOption<Long> MANAGED_MEMORY_SIZE =
-			key("taskmanager.memory.size")
+			key("taskmanager.managed.memory.size")
 			.defaultValue(-1L)
+			.withDeprecatedKeys("taskmanager.memory.size")
 			.withDescription("Amount of memory to be allocated by the task manager's memory manager (in megabytes)." +
 				" If not set, a relative fraction will be allocated.");
 

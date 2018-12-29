@@ -114,8 +114,8 @@
         </tr>
         <tr>
             <td><h5>taskmanager.extended.resources</h5></td>
-            <td style="word-wrap: break-word;">"Extended resources will supply for user. Specified as resource-type:value pairs separated by commas. such as GPU:1,FPGA:1."</td>
-            <td></td>
+            <td style="word-wrap: break-word;">(none)</td>
+            <td>Extended resources will supply for user. Specified as resource-type:value pairs separated by commas. such as GPU:1,FPGA:1.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.floating.memory.size</h5></td>
@@ -125,7 +125,7 @@
         <tr>
             <td><h5>taskmanager.heap.mb</h5></td>
             <td style="word-wrap: break-word;">1024</td>
-            <td>JVM heap size (in megabytes) for the TaskManagers, which are the parallel workers of the system. On YARN setups, this value is automatically configured to the size of the TaskManager's YARN container, minus a certain tolerance value.</td>
+            <td>How many heap memory (in megabytes) a task manager will supply for user, not including managed memory.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.host</h5></td>
@@ -148,9 +148,14 @@
             <td>Ratio of young generation for persistent memory in task manager.</td>
         </tr>
         <tr>
+            <td><h5>taskmanager.managed.memory.size</h5></td>
+            <td style="word-wrap: break-word;">-1</td>
+            <td>Amount of memory to be allocated by the task manager's memory manager (in megabytes). If not set, a relative fraction will be allocated.</td>
+        </tr>
+        <tr>
             <td><h5>taskmanager.memory.fraction</h5></td>
             <td style="word-wrap: break-word;">0.7</td>
-            <td>The relative amount of memory (after subtracting the amount of memory used by network buffers) that the task manager reserves for sorting, hash tables, and caching of intermediate results. For example, a value of `0.8` means that a task manager reserves 80% of its memory for internal data buffers, leaving 20% of free memory for the task manager's heap for objects created by user-defined functions. This parameter is only evaluated, if taskmanager.memory.size is not set.</td>
+            <td>The relative amount of memory (after subtracting the amount of memory used by network buffers) that the task manager reserves for sorting, hash tables, and caching of intermediate results. For example, a value of `0.8` means that a task manager reserves 80% of its memory for internal data buffers, leaving 20% of free memory for the task manager's heap for objects created by user-defined functions. This parameter is only evaluated, if taskmanager.managed.memory.size is not set.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.memory.off-heap</h5></td>
@@ -166,11 +171,6 @@
             <td><h5>taskmanager.memory.segment-size</h5></td>
             <td style="word-wrap: break-word;">32768</td>
             <td>Size of memory buffers used by the network stack and the memory manager (in bytes).</td>
-        </tr>
-        <tr>
-            <td><h5>taskmanager.memory.size</h5></td>
-            <td style="word-wrap: break-word;">-1</td>
-            <td>Amount of memory to be allocated by the task manager's memory manager (in megabytes). If not set, a relative fraction will be allocated.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.multi-slots.max.cpu.core</h5></td>
@@ -309,12 +309,12 @@
         </tr>
         <tr>
             <td><h5>taskmanager.process.native.memory.mb</h5></td>
-            <td style="word-wrap: break-word;">128</td>
+            <td style="word-wrap: break-word;">0</td>
             <td>The native memory (in megabytes) used for task manager process.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.process.netty.memory.mb</h5></td>
-            <td style="word-wrap: break-word;">90</td>
+            <td style="word-wrap: break-word;">64</td>
             <td>The direct memory (in megabytes) used for netty framework in the task manager process.</td>
         </tr>
         <tr>

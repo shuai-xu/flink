@@ -96,11 +96,11 @@ public class TaskManagerResourceTest {
 			NUM_SLOTS
 		);
 
-		assertEquals(TM_HEAP_MEMORY_MB + HEAP_MEMORY_MB * NUM_SLOTS,
+		assertEquals(TM_HEAP_MEMORY_MB + (HEAP_MEMORY_MB + managedMemoryInMB) * NUM_SLOTS,
 			tmResource.getTotalHeapMemory());
 		assertEquals((DIRECT_MEMORY_MB + networkMemoryInMB) * NUM_SLOTS + TM_NETTY_MEMORY_MB, tmResource.getTotalDirectMemory());
 		assertEquals(TM_NATIVE_MEMORY_MB + TM_HEAP_MEMORY_MB + TM_NETTY_MEMORY_MB
-			+ (HEAP_MEMORY_MB + DIRECT_MEMORY_MB + NATIVE_MEMORY_MB + networkMemoryInMB) * NUM_SLOTS,
+			+ (HEAP_MEMORY_MB + managedMemoryInMB + DIRECT_MEMORY_MB + NATIVE_MEMORY_MB + networkMemoryInMB) * NUM_SLOTS,
 			tmResource.getTotalContainerMemory());
 		assertEquals(taskResourceProfile.getManagedMemoryInMB() * NUM_SLOTS, tmResource.getManagedMemorySize());
 		assertEquals(taskResourceProfile.getNetworkMemoryInMB() * NUM_SLOTS, tmResource.getNetworkMemorySize());
@@ -150,7 +150,7 @@ public class TaskManagerResourceTest {
 				taskResourceProfile,
 				NUM_SLOTS
 		);
-		Assert.assertEquals(TM_HEAP_MEMORY_MB + HEAP_MEMORY_MB * NUM_SLOTS,
+		Assert.assertEquals(TM_HEAP_MEMORY_MB + (HEAP_MEMORY_MB + managedMemoryInMB + floatingMemoryInMB) * NUM_SLOTS,
 				tmResource.getTotalHeapMemory());
 		Assert.assertEquals((DIRECT_MEMORY_MB + networkMemoryInMB) * NUM_SLOTS + NETTY_MEMORY_MB, tmResource.getTotalDirectMemory());
 
@@ -168,36 +168,36 @@ public class TaskManagerResourceTest {
 	}
 
 	@Test
-	public void testGetManagedMemoryFromFraction() {
-		int floating = 3;
+	public void testGetYoungHeapMemory() {
+		int managedMemMB = 5;
 		Map<String, Resource> extendedResourceMap = new HashMap<>();
 		extendedResourceMap.put(ResourceSpec.MANAGED_MEMORY_NAME,
-				new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, -1));
-		extendedResourceMap.put(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME,
-				new CommonExtendedResource(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME, floating));
+			new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, managedMemMB));
 		int taskDirectMem = 1, taskNetworkMem = 1;
 		final ResourceProfile taskResourceProfile = new ResourceProfile(CORE, HEAP_MEMORY_MB,
-				taskDirectMem, 0, taskNetworkMem, extendedResourceMap);
-		// On heap.
+			taskDirectMem, 0, taskNetworkMem, extendedResourceMap);
+		// pre-allocation is false
 		final Configuration config = initializeConfiguration();
 		config.setBoolean(TaskManagerOptions.MEMORY_OFF_HEAP, false);
 		TaskManagerResource tmResource = TaskManagerResource.fromConfiguration(
-				config,
-				taskResourceProfile,
-				NUM_SLOTS
+			config,
+			taskResourceProfile,
+			NUM_SLOTS
 		);
-		float fraction = config.getFloat(TaskManagerOptions.MANAGED_MEMORY_FRACTION);
-		Assert.assertEquals((int)((TM_HEAP_MEMORY_MB + HEAP_MEMORY_MB * NUM_SLOTS)  * fraction), tmResource.getManagedMemorySize());
+		Assert.assertEquals((int) (((HEAP_MEMORY_MB + managedMemMB) * NUM_SLOTS + TM_HEAP_MEMORY_MB)
+				* TaskManagerOptions.TASK_MANAGER_MEMORY_DYNAMIC_YOUNG_RATIO.defaultValue()),
+			tmResource.getYoungHeapMemory());
 
-		// Off heap.
-		config.setBoolean(TaskManagerOptions.MEMORY_OFF_HEAP, true);
+		// pre-allocation is true
+		config.setBoolean(TaskManagerOptions.MANAGED_MEMORY_PRE_ALLOCATE, true);
 		tmResource = TaskManagerResource.fromConfiguration(
-				config,
-				taskResourceProfile,
-				NUM_SLOTS
+			config,
+			taskResourceProfile,
+			NUM_SLOTS
 		);
-		Assert.assertEquals((int)((TM_HEAP_MEMORY_MB + (HEAP_MEMORY_MB + taskDirectMem + floating) * NUM_SLOTS) / (1 - fraction) * fraction),
-				tmResource.getManagedMemorySize());
+		Assert.assertEquals((int) ((HEAP_MEMORY_MB* NUM_SLOTS + TM_HEAP_MEMORY_MB)
+			* TaskManagerOptions.TASK_MANAGER_MEMORY_DYNAMIC_YOUNG_RATIO.defaultValue()),
+			tmResource.getYoungHeapMemory());
 	}
 
 	private Configuration initializeConfiguration() {
@@ -205,8 +205,6 @@ public class TaskManagerResourceTest {
 		config.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NATIVE_MEMORY, TM_NATIVE_MEMORY_MB);
 		config.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_HEAP_MEMORY, TM_HEAP_MEMORY_MB);
 		config.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY, TM_NETTY_MEMORY_MB);
-		config.setDouble(TaskManagerOptions.TASK_MANAGER_MEMORY_DYNAMIC_YOUNG_RATIO, 0);
-		config.setDouble(TaskManagerOptions.TASK_MANAGER_MEMORY_PERSISTENT_YOUNG_RATIO, 0);
 		config.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX, DEFAULT_NETWORK_MEMORY_MB << 20);
 		return config;
 	}

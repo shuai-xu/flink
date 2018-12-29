@@ -78,6 +78,7 @@ import static org.mockito.Mockito.when;
 public class YarnSessionResourceManagerTest extends TestLogger {
 	private YarnSessionResourceManager yarnSessionResourceManager;
 	private static final int TASK_MANAGER_COUNT = 5;
+	private static final int TASK_MANAGER_MEMORY = 4096;
 	ApplicationAttemptId applicationAttemptId;
 
 	@Before
@@ -105,7 +106,7 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 			any(Logger.class))).thenReturn(mock(HeartbeatManager.class));
 		Map<String, String> env = new HashMap<>();
 		env.put(YarnConfigKeys.ENV_TM_COUNT, String.valueOf(TASK_MANAGER_COUNT));
-		env.put(YarnConfigKeys.ENV_TM_MEMORY, "4096");
+		env.put(YarnConfigKeys.ENV_TM_MEMORY, String.valueOf(TASK_MANAGER_MEMORY));
 		return new YarnSessionResourceManager(
 			new TestingRpcService(), "sessionResourceManager", ResourceID.generate(), conf,
 			env, rmConfig,
@@ -169,7 +170,7 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 		verify(yarnClient, times(5)).addContainerRequest(containerRequestCaptor.capture());
 		AMRMClient.ContainerRequest request = containerRequestCaptor.getAllValues().get(0);
 		// Check memory allocated for YARN should contain managed and floating managed memory
-		assertEquals(1434, request.getCapability().getMemory());
+		assertEquals(TASK_MANAGER_MEMORY, request.getCapability().getMemory());
 	}
 
 	@Test

@@ -10,12 +10,12 @@
         <tr>
             <td><h5>containerized.heap-cutoff-min</h5></td>
             <td style="word-wrap: break-word;">600</td>
-            <td>Minimum amount of heap memory to remove in containers, as a safety margin.</td>
+            <td>Minimum amount of heap memory to remove in containers, as a safety margin. This config option will not take effect in all session mode of Yarn/Kubernetes/Standalone. Please use fine-grained config option instead. (taskmanager.process.heap.memory.mb,taskmanager.process.netty.memory.mb,taskmanager.process.native.memory.mb)</td>
         </tr>
         <tr>
             <td><h5>containerized.heap-cutoff-ratio</h5></td>
             <td style="word-wrap: break-word;">0.25</td>
-            <td>Percentage of heap space to remove from containers (YARN / Mesos), to compensate for other JVM memory usage.</td>
+            <td>Percentage of heap space to remove from containers (YARN / Mesos), to compensate for other JVM memory usage. This config option will not take effect in all session mode of Yarn/Kubernetes/Standalone. Please use fine-grained config option instead. (taskmanager.process.heap.memory.mb,taskmanager.process.netty.memory.mb,taskmanager.process.native.memory.mb)</td>
         </tr>
         <tr>
             <td><h5>local.number-resourcemanager</h5></td>

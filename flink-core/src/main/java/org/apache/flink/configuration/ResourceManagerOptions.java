@@ -58,8 +58,11 @@ public class ResourceManagerOptions {
 		.key("containerized.heap-cutoff-ratio")
 		.defaultValue(0.25f)
 		.withDeprecatedKeys("yarn.heap-cutoff-ratio")
-		.withDescription("Percentage of heap space to remove from containers (YARN / Mesos), to compensate" +
-			" for other JVM memory usage.");
+		.withDescription("Percentage of heap space to remove from containers (YARN / Mesos), to compensate for other JVM memory usage. " +
+			"This config option will not take effect in all session mode of Yarn/Kubernetes/Standalone. " +
+			"Please use fine-grained config option instead. (" + TaskManagerOptions.TASK_MANAGER_PROCESS_HEAP_MEMORY.key() + "," +
+			TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY.key() + "," +
+			TaskManagerOptions.TASK_MANAGER_PROCESS_NATIVE_MEMORY.key() + ")");
 
 	/**
 	 * Minimum amount of heap memory to remove in containers, as a safety margin.
@@ -68,7 +71,11 @@ public class ResourceManagerOptions {
 		.key("containerized.heap-cutoff-min")
 		.defaultValue(600)
 		.withDeprecatedKeys("yarn.heap-cutoff-min")
-		.withDescription("Minimum amount of heap memory to remove in containers, as a safety margin.");
+		.withDescription("Minimum amount of heap memory to remove in containers, as a safety margin. " +
+			"This config option will not take effect in all session mode of Yarn/Kubernetes/Standalone. " +
+			"Please use fine-grained config option instead. (" + TaskManagerOptions.TASK_MANAGER_PROCESS_HEAP_MEMORY.key() + "," +
+			TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY.key() + "," +
+			TaskManagerOptions.TASK_MANAGER_PROCESS_NATIVE_MEMORY.key() + ")");
 
 	/**
 	 * The timeout for a slot request to be discarded, in milliseconds.

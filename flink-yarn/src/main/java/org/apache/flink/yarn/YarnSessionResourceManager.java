@@ -48,6 +48,7 @@ import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.taskexecutor.TaskManagerConfiguration;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
+import org.apache.flink.util.Preconditions;
 import org.apache.flink.yarn.configuration.YarnConfigOptions;
 
 import org.apache.commons.net.util.Base64;
@@ -228,13 +229,16 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 		this.webInterfaceUrl = webInterfaceUrl;
 
 		// build the task manager's total resource according to user's resource
-		taskManagerResource =
-				TaskManagerResource.fromConfiguration(flinkConfig, initContainerResourceConfig(), 1);
-		log.info("taskManagerResource: " + taskManagerResource);
+		Preconditions.checkNotNull(env.get(YarnConfigKeys.ENV_TM_MEMORY));
+		int taskManagerTotalMemorySizeMB = Integer.parseInt(env.get(YarnConfigKeys.ENV_TM_MEMORY));
+		// slotNum is 1, the resource profile is total resource shared by all slots in session mode.
+		taskManagerResource = TaskManagerResource.fromConfiguration(
+			flinkConfig, initContainerResourceConfig(), 1, taskManagerTotalMemorySizeMB);
+		log.info(taskManagerResource.toString());
 
 		if (slotManager instanceof DynamicAssigningSlotManager) {
 			((DynamicAssigningSlotManager) slotManager).setTotalResourceOfTaskExecutor(
-				TaskManagerResource.convertToResourceProfile(taskManagerResource));
+				taskManagerResource.getTaskResourceProfile());
 			log.info("The resource for user in a task executor is {}.", taskManagerResource);
 		}
 
@@ -416,7 +420,8 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 	}
 
 	private ResourceProfile initContainerResourceConfig() {
-		double core = flinkConfig.getDouble(TaskManagerOptions.TASK_MANAGER_CORE);
+
+		double core = flinkConfig.getDouble(TaskManagerOptions.TASK_MANAGER_CORE, slotNumber);
 		int heapMemory = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_HEAP_MEMORY);
 		int nativeMemory = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_NATIVE_MEMORY);
 		int directMemory = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_DIRECT_MEMORY);
@@ -426,10 +431,10 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 		long managedMemory = flinkConfig.getLong(TaskManagerOptions.MANAGED_MEMORY_SIZE);
 		Map<String, org.apache.flink.api.common.resources.Resource> resourceMap = getExtendedResources();
 		resourceMap.put(ResourceSpec.MANAGED_MEMORY_NAME,
-				new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, managedMemory));
+				new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, Math.max(0, managedMemory)));
 		long floatingManagedMemory = flinkConfig.getLong(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE);
 		resourceMap.put(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME,
-				new CommonExtendedResource(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME, floatingManagedMemory));
+				new CommonExtendedResource(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME, Math.max(0, floatingManagedMemory)));
 		return new ResourceProfile(
 				core,
 				heapMemory,
@@ -569,6 +574,12 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 		// config the netty framework memory of task manager
 		taskManagerConfig.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY.key(),
 				taskManagerResource.getTaskManagerNettyMemorySizeMB());
+
+		taskManagerConfig.setFloat(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_FRACTION,
+			flinkConfig.getFloat(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_FRACTION));
+		long networkBufBytes = taskManagerResource.getNetworkMemorySize() << 20;
+		taskManagerConfig.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN, networkBufBytes);
+		taskManagerConfig.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX, networkBufBytes);
 
 		log.debug("TaskManager configuration: {}", taskManagerConfig);
 

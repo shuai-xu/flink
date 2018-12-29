@@ -103,11 +103,11 @@ public class StandaloneResourceManager extends ResourceManager<ResourceID> {
 		taskManagerResource =
 				TaskManagerResource.fromConfiguration(configuration,
 						TaskManagerResourceCalculator.initContainerResourceConfig(configuration), 1);
-		log.info("taskManagerResource: " + taskManagerResource);
+		log.info(taskManagerResource.toString());
 
 		if (slotManager instanceof DynamicAssigningSlotManager) {
 			((DynamicAssigningSlotManager) slotManager).setTotalResourceOfTaskExecutor(
-					TaskManagerResource.convertToResourceProfile(taskManagerResource));
+				taskManagerResource.getTaskResourceProfile());
 			log.info("TaskExecutors should be started with JVM heap size {} MB, " +
 							"new generation size {} MB, JVM direct memory limit {} MB",
 					taskManagerResource.getTotalHeapMemory(),

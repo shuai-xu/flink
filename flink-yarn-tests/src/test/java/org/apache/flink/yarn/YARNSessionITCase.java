@@ -74,6 +74,8 @@ import static org.apache.flink.yarn.util.YarnTestUtils.getTestJarPath;
 public class YARNSessionITCase extends YarnTestBase {
 	private static final Logger LOG = LoggerFactory.getLogger(YARNSessionITCase.class);
 
+	private static final int TM_MEMORY = 1024;
+
 	private static ArrayList<String> appsToIgnore = new ArrayList<>();
 
 	@Rule
@@ -97,7 +99,7 @@ public class YARNSessionITCase extends YarnTestBase {
 		Runner runner = startWithArgs(new String[]{"-j", flinkUberjar.getAbsolutePath(), "-t", flinkLibFolder.getAbsolutePath(),
 				"-n", "1",
 				"-jm", "768",
-				"-tm", "1024",
+				"-tm", String.valueOf(TM_MEMORY),
 				"-s", "3", // set the slots 3 to check if the vCores are set properly!
 				"-nm", "customName",
 				"-D", TaskManagerOptions.TASK_MANAGER_CORE.key() + "=2",
@@ -165,7 +167,7 @@ public class YARNSessionITCase extends YarnTestBase {
 			getRunningContainers() >= 2);
 
 		// Check container resource
-		checkAllocatedContainers(2400, 1);
+		checkAllocatedContainers(TM_MEMORY, 1);
 
 		// Submit a job and the session has enough resource to execute
 		File exampleJarLocation = getTestJarPath("StreamingWordCount.jar");
@@ -208,11 +210,11 @@ public class YARNSessionITCase extends YarnTestBase {
 		Runner runner = startWithArgs(new String[]{"-j", flinkUberjar.getAbsolutePath(), "-t", flinkLibFolder.getAbsolutePath(),
 						"-n", "1",
 						"-jm", "768",
-						"-tm", "1024",
+						"-tm", String.valueOf(TM_MEMORY),
 						"-s", "3", // set the slots 3 to check if the vCores are set properly!
 						"-nm", "customName",
 						"-D", TaskManagerOptions.TASK_MANAGER_CORE.key() + "=2",
-						"-D", TaskManagerOptions.MANAGED_MEMORY_SIZE.key() + "=1024",
+						"-D", TaskManagerOptions.MANAGED_MEMORY_SIZE.key() + "=128",
 						"-D", TaskManagerOptions.MEMORY_OFF_HEAP.key() + "=true"},
 				"Flink JobManager is now running",
 				RunTypes.YARN_SESSION);
@@ -277,7 +279,7 @@ public class YARNSessionITCase extends YarnTestBase {
 				getRunningContainers() >= 2);
 
 		// Check container resource
-		checkAllocatedContainers(3424, 1);
+		checkAllocatedContainers(TM_MEMORY, 1);
 
 		// Submit a job and the session has enough resource to execute
 		File exampleJarLocation = getTestJarPath("StreamingWordCount.jar");
@@ -320,7 +322,7 @@ public class YARNSessionITCase extends YarnTestBase {
 		Runner runner = startWithArgs(new String[]{"-j", flinkUberjar.getAbsolutePath(), "-t", flinkLibFolder.getAbsolutePath(),
 				"-n", "1",
 				"-jm", "768",
-				"-tm", "1024",
+				"-tm", String.valueOf(TM_MEMORY),
 				"-s", "3", // set the slots 3 to check if the vCores are set properly!
 				"-nm", "customName",
 				"-D" + TaskManagerOptions.TASK_MANAGER_CORE.key() + "=2",
@@ -388,7 +390,7 @@ public class YARNSessionITCase extends YarnTestBase {
 			getRunningContainers() >= 2);
 
 		// Check container resource
-		checkAllocatedContainers(2400, 1);
+		checkAllocatedContainers(TM_MEMORY, 1);
 
 		// Submit a job and the session has enough resource to execute
 		File exampleJarLocation = getTestJarPath("StreamingWordCount.jar");
@@ -435,7 +437,7 @@ public class YARNSessionITCase extends YarnTestBase {
 		Runner runner = startWithArgs(new String[]{"-j", flinkUberjar.getAbsolutePath(), "-t", flinkLibFolder.getAbsolutePath(),
 				"-n", "1",
 				"-jm", "768",
-				"-tm", "1024",
+				"-tm", String.valueOf(TM_MEMORY),
 				"-s", "3", // set the slots 3 to check if the vCores are set properly!
 				"-nm", "customName",
 				"-D" + TaskManagerOptions.TASK_MANAGER_CORE.key() + "=2",
@@ -507,7 +509,7 @@ public class YARNSessionITCase extends YarnTestBase {
 			getRunningContainers() >= 2);
 
 		// Check container resource
-		checkAllocatedContainers(2400, 1);
+		checkAllocatedContainers(TM_MEMORY, 1);
 
 		// Submit a job and the session has enough resource to execute
 		File exampleJarLocation = getTestJarPath("StreamingWordCount.jar");
@@ -521,7 +523,7 @@ public class YARNSessionITCase extends YarnTestBase {
 			Runner jobRunner = startWithArgs(new String[]{"run",
 					exampleJarLocation.getAbsolutePath(),
 					//"--input", tmpInFile.getAbsoluteFile().toString(),
-					"--resource", "vcores:1,memory:100",
+					"--resource", "vcores:1,memory:1024",
 					"--parallelism", "3"},
 				"Job Runtime: ", RunTypes.CLI_FRONTEND, 20, true);
 			jobRunner.join();
@@ -567,7 +569,7 @@ public class YARNSessionITCase extends YarnTestBase {
 		Runner runner = startWithArgs(new String[]{"-j", flinkUberjar.getAbsolutePath(),
 						"-n", "1",
 						"-jm", "768",
-						"-tm", "1024",
+						"-tm", String.valueOf(TM_MEMORY),
 						"-s", "3", // set the slots 3 to check if the vCores are set properly!
 						"-nm", "customName",
 						"-t", flinkLibFolder.getAbsolutePath() + "," + shipFile.getAbsolutePath(),

@@ -323,7 +323,11 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 			throw new YarnDeploymentException("Couldn't get cluster description, please check on the YarnConfiguration", e);
 		}
 
-		int configuredVcores = flinkConfiguration.getInteger(YarnConfigOptions.VCORES, clusterSpecification.getSlotsPerTaskManager());
+		int configuredVcores = flinkConfiguration.getInteger(YarnConfigOptions.VCORES);
+		if (configuredVcores < 0) {
+			configuredVcores = (int) (flinkConfiguration.getDouble(TaskManagerOptions.TASK_MANAGER_CORE,
+				clusterSpecification.getSlotsPerTaskManager()) * flinkConfiguration.getInteger(YarnConfigOptions.YARN_VCORE_RATIO));
+		}
 		// don't configure more than the maximum configured number of vcores
 		if (configuredVcores > numYarnMaxVcores) {
 			throw new IllegalConfigurationException(
@@ -331,7 +335,7 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 						" exceeds the maximum number of virtual cores %d available in the Yarn Cluster." +
 						" Please note that the number of virtual cores is set to the number of task slots by default" +
 						" unless configured in the Flink config with '%s.'",
-					configuredVcores, numYarnMaxVcores, YarnConfigOptions.VCORES.key()));
+					configuredVcores, numYarnMaxVcores, TaskManagerOptions.TASK_MANAGER_CORE.key()));
 		}
 
 		// check if required Hadoop environment variables are set. If not, warn user
@@ -629,7 +633,8 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 		int jobManagerMemoryMb = clusterSpecification.getMasterMemoryMB();
 		int taskManagerMemoryMb = clusterSpecification.getTaskManagerMemoryMB();
 
-		if (jobManagerMemoryMb < yarnMinAllocationMB || taskManagerMemoryMb < yarnMinAllocationMB) {
+		if (jobManagerMemoryMb < yarnMinAllocationMB ||
+			(taskManagerMemoryMb < yarnMinAllocationMB && taskManagerMemoryMb > 0)) {
 			LOG.warn("The JobManager or TaskManager memory is below the smallest possible YARN Container size. "
 				+ "The value of 'yarn.scheduler.minimum-allocation-mb' is '" + yarnMinAllocationMB + "'. Please increase the memory size." +
 				"YARN will allocate the smaller containers but the scheduler will account for the minimum-allocation-mb, maybe not all instances " +
@@ -640,7 +645,9 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 		if (jobManagerMemoryMb < yarnMinAllocationMB) {
 			jobManagerMemoryMb =  yarnMinAllocationMB;
 		}
-		if (taskManagerMemoryMb < yarnMinAllocationMB) {
+		// When taskManagerMemoryMb is less than 0, it means than user do not specify the total task manager,
+		// so it be calculated by fine-grained configuration options
+		if (taskManagerMemoryMb < yarnMinAllocationMB && taskManagerMemoryMb > 0) {
 			taskManagerMemoryMb =  yarnMinAllocationMB;
 		}
 
@@ -935,9 +942,10 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 			TaskManagerOptions.NUM_TASK_SLOTS,
 			clusterSpecification.getSlotsPerTaskManager());
 
-		configuration.setInteger(
-			TaskManagerOptions.TASK_MANAGER_HEAP_MEMORY,
-			clusterSpecification.getTaskManagerMemoryMB());
+		int configuredVcores = flinkConfiguration.getInteger(YarnConfigOptions.VCORES);
+		if (configuredVcores > 0) {
+			configuration.setDouble(TaskManagerOptions.TASK_MANAGER_CORE, configuredVcores);
+		}
 
 		// Upload the flink configuration
 		// write out configuration file

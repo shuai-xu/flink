@@ -18,14 +18,11 @@
 
 package org.apache.flink.runtime.clusterframework.types;
 
-import org.apache.flink.api.common.operators.ResourceSpec;
-import org.apache.flink.api.common.resources.CommonExtendedResource;
-import org.apache.flink.api.common.resources.Resource;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
+import org.apache.flink.runtime.clusterframework.standalone.TaskManagerResourceCalculator;
+import org.apache.flink.util.Preconditions;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -41,24 +38,17 @@ public class TaskManagerResource {
 	/** The reserved native memory for TaskManager process. */
 	private final int taskManagerNativeMemorySizeMB;
 
-	/** The reserved heap memory for TaskManager process.  */
+	/** The reserved heap memory for TaskManager process. */
 	private final int taskManagerHeapMemorySizeMB;
 
-	/** Fraction of memory allocated by the memory manager
-	 * On heap, jvmTotalMem = heapMem(tmHeapMem + taskTotalHeapMem(taskHeapMem + managedMem + floatingMem))
-	 *                        + directMem(tmNettyMem + taskDirectMem + taskNetworkMem)
-	 *          fraction = managedMem / heapMem
-	 *          managedMem = heapMem * fraction
-	 * Off heap, jvmTotalMem = heapMem(tmHeapMem + taskTotalHeapMem(taskHeapMem))
-	 *                        + directMem(tmNettyMem + taskDirectMem + taskNetworkMem + managedMem + floatingMem)
-	 *          fraction = managedMem / jvmTotalMemNoNet(jvmTotalMem - tmNettyMem - taskNetworkMem)
-	 *          managedMem = (tmHeapMem + taskHeapMem + taskDirectMem + floatingMem) / (1 - fraction) * fraction
-	 * {@link TaskManagerOptions#MANAGED_MEMORY_FRACTION}
-	 * Calculation is same as TaskManagerServices#createMemoryManager() */
+	/** Fraction of memory allocated by the memory manager. */
 	private final float managedMemoryFraction;
 
 	/** The memory type used for NetworkBufferPool and MemoryManager, heap or off-heap. */
 	private final boolean offHeap;
+
+	/** Whether TaskManager managed memory should be pre-allocated when the TaskManager is starting. */
+	private final boolean managedMemoryPreAllocate;
 
 	/** The ratio for young generation of persistent memory. */
 	private final double persistentYoungHeapRatio;
@@ -75,28 +65,43 @@ public class TaskManagerResource {
 	/** The default network memory size in MB when no network memory is specified in resource profile. */
 	private final int defaultNetworkMemMB;
 
+	/** The default heap memory size in MB when no heap memory is specified in resource profile. */
+	private final int defaultHeapMemMB;
+
+	/** The user specified total TaskManager memory size.
+	 *  In session mode, it could be specified by tm argument.
+	 *  In perjob mode, it will be dynamic calculated based on resource profile and framework overhead.
+	 * */
+	private int taskManagerTotalMemoryMB;
+
 	private TaskManagerResource(
 		int taskManagerNettyMemorySizeMB,
 		int taskManagerNativeMemorySizeMB,
 		int taskManagerHeapMemorySizeMB,
 		float managedMemoryFraction,
 		boolean offHeap,
+		boolean preAllocate,
 		int defaultNetworkMemMB,
+		int defaultHeapMemMB,
 		double dynamicYoungHeapRatio,
 		double persistentYoungHeapRatio,
 		ResourceProfile taskResourceProfile,
-		int slotNum) {
+		int slotNum,
+		int taskManagerTotalMemoryMB) {
 
 		this.taskManagerNettyMemorySizeMB = taskManagerNettyMemorySizeMB;
 		this.taskManagerNativeMemorySizeMB = taskManagerNativeMemorySizeMB;
 		this.taskManagerHeapMemorySizeMB = taskManagerHeapMemorySizeMB;
 		this.managedMemoryFraction = managedMemoryFraction;
 		this.offHeap = offHeap;
+		this.managedMemoryPreAllocate = preAllocate;
 		this.defaultNetworkMemMB = defaultNetworkMemMB;
+		this.defaultHeapMemMB = defaultHeapMemMB;
 		this.taskResourceProfile = taskResourceProfile;
 		this.slotNum = slotNum;
 		this.persistentYoungHeapRatio = persistentYoungHeapRatio;
 		this.dynamicYoungHeapRatio = dynamicYoungHeapRatio;
+		this.taskManagerTotalMemoryMB = taskManagerTotalMemoryMB;
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -108,26 +113,17 @@ public class TaskManagerResource {
 	}
 
 	public int getTotalContainerMemory() {
+		if (taskManagerTotalMemoryMB > 0) {
+			return taskManagerTotalMemoryMB;
+		}
 		return getTotalHeapMemory() + getTotalDirectMemory() + getTotalNativeMemory();
 	}
 
 	/**
-	 * Calculate the managed memory based on the fraction when it is not set.
 	 * @return managedMemory size
 	 */
 	public int getManagedMemorySize() {
-		int managedMemory =  taskResourceProfile.getManagedMemoryInMB() * slotNum;
-		if (taskResourceProfile.getManagedMemoryInMB() == TaskManagerOptions.MANAGED_MEMORY_SIZE.defaultValue()) {
-			if (offHeap) {
-				managedMemory = (int)((taskManagerHeapMemorySizeMB + taskResourceProfile.getHeapMemoryInMB() * slotNum
-						+ taskResourceProfile.getDirectMemoryInMB() * slotNum + getFloatingManagedMemorySize())
-						/ (1 - managedMemoryFraction) * managedMemoryFraction);
-			} else {
-				managedMemory = (int)((taskManagerHeapMemorySizeMB +
-						taskResourceProfile.getHeapMemoryInMB() * slotNum) * managedMemoryFraction);
-			}
-		}
-		return managedMemory;
+		return taskResourceProfile.getManagedMemoryInMB() * slotNum;
 	}
 
 	public int getFloatingManagedMemorySize() {
@@ -165,7 +161,19 @@ public class TaskManagerResource {
 	 * TaskManager more GC friendly when persistent memory is not pre-allocated.
 	 */
 	public int getTotalHeapMemory() {
-		return taskManagerHeapMemorySizeMB + taskResourceProfile.getHeapMemoryInMB() * slotNum;
+		if (taskManagerTotalMemoryMB > 0) {
+			int heap = taskManagerTotalMemoryMB - getTotalNativeMemory() - getTotalDirectMemory();
+			Preconditions.checkArgument(heap > 0,
+				String.format("Total task manager memory(%s) should be more than the sum of native(%s) and direct(%s)",
+				taskManagerTotalMemoryMB, getTotalNativeMemory(), getTotalDirectMemory()));
+			return heap;
+		}
+		int heapMemory =  taskManagerHeapMemorySizeMB + (taskResourceProfile.getHeapMemoryInMB() > 0 ?
+			taskResourceProfile.getHeapMemoryInMB() * slotNum : defaultHeapMemMB);
+		if (!offHeap) {
+			heapMemory += getManagedMemorySize() + getFloatingManagedMemorySize();
+		}
+		return heapMemory;
 	}
 
 	public int getTotalDirectMemory() {
@@ -193,7 +201,7 @@ public class TaskManagerResource {
 	 */
 	private int getPersistentHeapMemory() {
 		int persistentMemory = 0;
-		if (!offHeap) {
+		if (!offHeap && managedMemoryPreAllocate) {
 			persistentMemory += getManagedMemorySize() + getFloatingManagedMemorySize();
 		}
 		return persistentMemory;
@@ -214,7 +222,17 @@ public class TaskManagerResource {
 	}
 
 	public ResourceProfile getTaskResourceProfile() {
-		return taskResourceProfile;
+		int userHeap = taskResourceProfile.getHeapMemoryInMB();
+		if (taskManagerTotalMemoryMB > 0) {
+			if (offHeap) {
+				userHeap = getTotalHeapMemory() - taskManagerHeapMemorySizeMB;
+			} else {
+				userHeap = getTotalHeapMemory() - taskManagerHeapMemorySizeMB - getManagedMemorySize() - getFloatingManagedMemorySize();
+			}
+		}
+		return new ResourceProfile(taskResourceProfile.getCpuCores(), userHeap,
+			taskResourceProfile.getDirectMemoryInMB(), taskResourceProfile.getNativeMemoryInMB(),
+			taskResourceProfile.getNetworkMemoryInMB(), taskResourceProfile.getExtendedResources());
 	}
 
 	public double getContainerCpuCores() {
@@ -230,12 +248,15 @@ public class TaskManagerResource {
 	 *
 	 * @param configuration The configuration.
 	 * @param resourceProfile The resource profile of task in the task manager.
+	 * @param slotNum Slot number in each task manager.
+	 * @param taskManagerTotalMemorySize Total memory size of task manager, user specified in session and -1 in perJob.
 	 * @return TaskManagerResourceProfile
 	 */
 	public static TaskManagerResource fromConfiguration(
 			Configuration configuration,
 			ResourceProfile resourceProfile,
-			int slotNum) {
+			int slotNum,
+			int taskManagerTotalMemorySize) {
 
 		final int taskManagerNettyMemorySizeMB = configuration.getInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY);
 		final int taskManagerNativeMemorySizeMB = configuration.getInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NATIVE_MEMORY);
@@ -250,7 +271,12 @@ public class TaskManagerResource {
 
 		// check whether we use heap or off-heap memory
 		final boolean useOffHeap = configuration.getBoolean(TaskManagerOptions.MEMORY_OFF_HEAP);
-		final int defaultNetworkMemMB = (int) Math.ceil(configuration.getLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX) / (1024.0 * 1024.0));
+
+		final boolean preAllocate = configuration.getBoolean(TaskManagerOptions.MANAGED_MEMORY_PRE_ALLOCATE);
+
+		final int defaultNetworkMemMB = (int) Math.ceil(TaskManagerResourceCalculator.calculateNetworkBufferMemory(configuration) / (1024.0 * 1024.0));
+
+		final int defaultHeapMemMB = configuration.getInteger(TaskManagerOptions.TASK_MANAGER_HEAP_MEMORY);
 
 		return new TaskManagerResource(
 				taskManagerNettyMemorySizeMB,
@@ -258,32 +284,21 @@ public class TaskManagerResource {
 				taskManagerHeapMemorySizeMB,
 				managedMemoryFraction,
 				useOffHeap,
+			  preAllocate,
 				defaultNetworkMemMB,
+				defaultHeapMemMB,
 				dynamicYoungRatio,
 				persistentYoungRatio,
 				resourceProfile,
-				slotNum);
+				slotNum,
+			  taskManagerTotalMemorySize);
 	}
 
-	/**
-	 * Utility method to convert from TaskManagerResource to ResourceProfile.
-	 *
-	 * @param taskManagerResource The input resource configuration.
-	 * @return ResourceProfile equivalent to taskManagerResource.
-	 */
-	public static ResourceProfile convertToResourceProfile(TaskManagerResource taskManagerResource) {
-		Map<String, Resource> extendedResources = new HashMap<>();
-		extendedResources.put(ResourceSpec.MANAGED_MEMORY_NAME,
-			new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, taskManagerResource.getManagedMemorySize()));
-		extendedResources.put(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME,
-			new CommonExtendedResource(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME, taskManagerResource.getFloatingManagedMemorySize()));
-		return new ResourceProfile(taskManagerResource.getTaskResourceProfile().getCpuCores(),
-			taskManagerResource.getTaskResourceProfile().getHeapMemoryInMB(),
-			taskManagerResource.getTaskResourceProfile().getDirectMemoryInMB(),
-			taskManagerResource.getTaskResourceProfile().getNativeMemoryInMB(),
-			taskManagerResource.getNetworkMemorySize(),
-			extendedResources);
-
+	public static TaskManagerResource fromConfiguration(
+		Configuration configuration,
+		ResourceProfile resourceProfile,
+		int slotNum) {
+		return fromConfiguration(configuration, resourceProfile, slotNum, -1);
 	}
 
 	@Override
@@ -315,8 +330,9 @@ public class TaskManagerResource {
 
 	@Override
 	public String toString() {
-		return "TaskManagerResourceProfile {" +
-				"TaskResourceProfile=" + taskResourceProfile +
+		return "TaskManagerResource {" +
+			  "taskManagerTotalMemoryMB=" + taskManagerTotalMemoryMB +
+				", taskResourceProfile=" + getTaskResourceProfile() +
 				", taskManagerNettyMemoryInMB=" + taskManagerNettyMemorySizeMB +
 				", taskManagerNativeMemorySizeMB=" + taskManagerNativeMemorySizeMB +
 				", taskManagerHeapMemorySizeMB=" + taskManagerHeapMemorySizeMB +
