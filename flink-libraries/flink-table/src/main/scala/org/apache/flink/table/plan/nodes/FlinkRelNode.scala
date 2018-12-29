@@ -55,6 +55,11 @@ trait FlinkRelNode extends RelNode {
       expressionFormat: ExpressionFormat): String = {
 
     expr match {
+      case pr: RexPatternFieldRef =>
+        val alpha = pr.getAlpha
+        val field = inFields.get(pr.getIndex)
+        s"$alpha.$field"
+
       case i: RexInputRef =>
         inFields.get(i.getIndex)
 

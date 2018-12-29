@@ -20,8 +20,10 @@ package org.apache.flink.table.runtime.`match`
 
 import java.util
 
-import org.apache.flink.cep.PatternTimeoutFunction
-import org.apache.flink.table.codegen.GeneratedPatternTimeoutFunction
+import org.apache.flink.api.common.functions.util.FunctionUtils
+import org.apache.flink.cep.RichPatternTimeoutFunction
+import org.apache.flink.configuration.Configuration
+import org.apache.flink.table.codegen.{GeneratedClass, GeneratedPatternTimeoutFunction}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.util.Logging
 
@@ -29,25 +31,24 @@ import org.apache.flink.table.util.Logging
   * PatternTimeoutFunctionRunner with [[BaseRow]] input and [[BaseRow]] output.
   */
 class PatternTimeoutFunctionRunner(
-    genFunction: GeneratedPatternTimeoutFunction)
-  extends PatternTimeoutFunction[BaseRow, BaseRow]
+    genFunction: GeneratedClass[_])
+  extends RichPatternTimeoutFunction[BaseRow, BaseRow]
   with Logging {
 
-  private var function: PatternTimeoutFunction[BaseRow, BaseRow] = _
+  @transient private var function: RichPatternTimeoutFunction[BaseRow, BaseRow] = _
 
-  def init(): Unit = {
+  override def open(parameters: Configuration): Unit = {
     LOG.debug(s"Compiling PatternTimeoutFunction: ${genFunction.name} \n\n " +
                 s"Code:\n${genFunction.code}")
-    function = genFunction.newInstance(Thread.currentThread().getContextClassLoader)
+    function = genFunction.asInstanceOf[GeneratedPatternTimeoutFunction]
+      .newInstance(Thread.currentThread().getContextClassLoader)
+    FunctionUtils.setFunctionRuntimeContext(function, getRuntimeContext)
+    FunctionUtils.openFunction(function, parameters)
   }
 
   override def timeout(
       pattern: util.Map[String, util.List[BaseRow]],
       timeoutTimestamp: Long): BaseRow = {
-    if (function == null) {
-      init()
-    }
-
     function.timeout(pattern, timeoutTimestamp)
   }
 }

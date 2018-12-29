@@ -293,52 +293,46 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
     setOp.copy(setOp.getTraitSet, inputs, setOp.all)
   }
 
-  private def convertMatch(`match`: Match): LogicalMatch = {
-    val rowType = `match`.getInput.getRowType
+  private def convertMatch(matchRel: Match): LogicalMatch = {
+    // visit children and update inputs
+    val input = matchRel.getInput.accept(this)
+    val rowType = matchRel.getInput.getRowType
 
     val materializer = new RexTimeIndicatorMaterializer(
       rexBuilder,
       rowType.getFieldList.map(_.getType))
 
-    val patternDefinitions =
-      `match`.getPatternDefinitions.foldLeft(mutable.Map[String, RexNode]()) {
-        case (m, (k, v)) => m += k -> v.accept(materializer)
-      }
-
-    val measures = `match`.getMeasures.foldLeft(mutable.Map[String, RexNode]()) {
-      case (m, (k, v)) => m += k -> v.accept(materializer)
-    }
-
-    val interval = `match`.getInterval match {
+    val patternDefs = matchRel.getPatternDefinitions.mapValues(_.accept(materializer))
+    val measures = matchRel.getMeasures
+      .mapValues(_.accept(materializer))
+      .mapValues(materializerUtils.materialize)
+    val partitionKeys = matchRel.getPartitionKeys
+      .map(_.accept(materializer))
+      .map(materializerUtils.materialize)
+    val interval = matchRel.getInterval match {
       case interval: RexNode => interval.accept(materializer)
       case _ => null
     }
 
-    val outputTypeBuilder = rexBuilder
-      .getTypeFactory
-      .asInstanceOf[FlinkTypeFactory]
-      .builder()
-    `match`.getRowType.getFieldList.asScala
-      .foreach(x => measures.get(x.getName) match {
-        case Some(measure) => outputTypeBuilder.add(x.getName, measure.getType)
-        case None => outputTypeBuilder.add(x)
-      })
+    // materialize all output types
+    // TODO allow passing through for rowtime accessor function, once introduced
+    val outputType = materializerUtils.getRowTypeWithoutIndicators(matchRel.getRowType)
 
     LogicalMatch.create(
-      `match`.getInput,
-      outputTypeBuilder.build(),
-      `match`.getPattern,
-      `match`.isStrictStart,
-      `match`.isStrictEnd,
-      patternDefinitions,
+      input,
+      outputType,
+      matchRel.getPattern,
+      matchRel.isStrictStart,
+      matchRel.isStrictEnd,
+      patternDefs,
       measures,
-      `match`.getAfter,
-      `match`.getSubsets.asInstanceOf[java.util.Map[String, java.util.TreeSet[String]]],
-      `match`.getRowsPerMatch,
-      `match`.getPartitionKeys,
-      `match`.getOrderKeys,
+      matchRel.getAfter,
+      matchRel.getSubsets.asInstanceOf[java.util.Map[String, java.util.TreeSet[String]]],
+      matchRel.getRowsPerMatch,
+      partitionKeys,
+      matchRel.getOrderKeys,
       interval,
-      `match`.getEmit)
+      matchRel.getEmit)
   }
 
   private def gatherIndicesToMaterialize(

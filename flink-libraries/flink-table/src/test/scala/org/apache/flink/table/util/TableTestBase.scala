@@ -23,6 +23,7 @@ import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.datastream.{DataStream => JDataStream}
 import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JStreamExecutionEnvironment}
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
+import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.api.java.{StreamTableEnvironment => JStreamTableEnvironment}
 import org.apache.flink.table.api.scala._
@@ -33,7 +34,6 @@ import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.util.FlinkRelOptUtil
-
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.tools.RuleSet
 import org.apache.calcite.util.ImmutableBitSet
@@ -147,9 +147,12 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
 
     val ds = mock(classOf[DataStream[T]])
     val jDs = mock(classOf[JDataStream[T]])
+    val jTrans = mock(classOf[StreamTransformation[T]])
     when(ds.javaStream).thenReturn(jDs)
     val typeInfo: TypeInformation[T] = implicitly[TypeInformation[T]]
     when(jDs.getType).thenReturn(typeInfo)
+    when(jDs.getTransformation).thenReturn(jTrans)
+    when(jTrans.getParallelism).thenReturn(1)
 
     val t = ds.toTable(tableEnv, fields: _*)
     tableEnv.registerTable(name, t)

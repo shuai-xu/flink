@@ -92,7 +92,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 			AbstractStreamOperator<?> operator,
 			RuntimeContext runtimeContext,
 			TypeSerializer<?> namespaceSerializer) {
-		this.operator = Preconditions.checkNotNull(operator);
+		this.operator = operator;
 		this.runtimeContext = Preconditions.checkNotNull(runtimeContext);
 		this.namespaceSerializer = namespaceSerializer;
 		this.registeredStateDataViews = new ArrayList<>();

@@ -22,8 +22,8 @@ import org.apache.flink.api.common.functions
 import org.apache.flink.api.common.functions.Function
 import org.apache.flink.api.common.io.InputFormat
 import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
-import org.apache.flink.cep.pattern.conditions.IterativeCondition
-import org.apache.flink.cep.{PatternFlatSelectFunction, PatternFlatTimeoutFunction, PatternSelectFunction, PatternTimeoutFunction}
+import org.apache.flink.cep.pattern.conditions.RichIterativeCondition
+import org.apache.flink.cep._
 import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForType, newName}
 import org.apache.flink.table.dataformat.BaseRow
@@ -141,7 +141,7 @@ case class GeneratedInput[F <: InputFormat[_, _], T <: Any](
 case class GeneratedCollector(name: String, var code: String)
 
 /**
-  * Describes a generated [[org.apache.flink.cep.pattern.conditions.IterativeCondition]].
+  * Describes a generated [[org.apache.flink.cep.pattern.conditions.RichIterativeCondition]].
   *
   * @param name class name of the generated IterativeCondition.
   * @param code code of the generated IterativeCondition.
@@ -150,10 +150,10 @@ case class GeneratedIterativeCondition(
     name: String,
     var code: String,
     references: Array[AnyRef])
-  extends GeneratedClass[IterativeCondition[BaseRow]]
+  extends GeneratedClass[RichIterativeCondition[BaseRow]]
 
 /**
-  * Describes a generated [[org.apache.flink.cep.PatternSelectFunction]].
+  * Describes a generated [[org.apache.flink.cep.RichPatternSelectFunction]].
   *
   * @param name class name of the generated PatternSelectFunction.
   * @param code code of the generated PatternSelectFunction.
@@ -162,10 +162,10 @@ case class GeneratedPatternSelectFunction(
     name: String,
     var code: String,
     references: Array[AnyRef])
-  extends GeneratedClass[PatternSelectFunction[BaseRow, BaseRow]]
+  extends GeneratedClass[RichPatternSelectFunction[BaseRow, BaseRow]]
 
 /**
-  * Describes a generated [[org.apache.flink.cep.PatternTimeoutFunction]].
+  * Describes a generated [[org.apache.flink.cep.RichPatternTimeoutFunction]].
   *
   * @param name class name of the generated PatternTimeoutFunction.
   * @param code code of the generated PatternTimeoutFunction.
@@ -174,10 +174,10 @@ case class GeneratedPatternTimeoutFunction(
     name: String,
     var code: String,
     references: Array[AnyRef])
-  extends GeneratedClass[PatternTimeoutFunction[BaseRow, BaseRow]]
+  extends GeneratedClass[RichPatternTimeoutFunction[BaseRow, BaseRow]]
 
 /**
-  * Describes a generated [[org.apache.flink.cep.PatternFlatSelectFunction]].
+  * Describes a generated [[org.apache.flink.cep.RichPatternFlatSelectFunction]].
   *
   * @param name class name of the generated PatternFlatSelectFunction.
   * @param code code of the generated PatternFlatSelectFunction.
@@ -186,10 +186,10 @@ case class GeneratedPatternFlatSelectFunction(
     name: String,
     var code: String,
     references: Array[AnyRef])
-  extends GeneratedClass[PatternFlatSelectFunction[BaseRow, BaseRow]]
+  extends GeneratedClass[RichPatternFlatSelectFunction[BaseRow, BaseRow]]
 
 /**
-  * Describes a generated [[org.apache.flink.cep.PatternFlatTimeoutFunction]].
+  * Describes a generated [[org.apache.flink.cep.RichPatternFlatTimeoutFunction]].
   *
   * @param name class name of the generated PatternFlatTimeoutFunction.
   * @param code code of the generated PatternFlatTimeoutFunction.
@@ -198,7 +198,7 @@ case class GeneratedPatternFlatTimeoutFunction(
     name: String,
     var code: String,
     references: Array[AnyRef])
-  extends GeneratedClass[PatternFlatTimeoutFunction[BaseRow, BaseRow]]
+  extends GeneratedClass[RichPatternFlatTimeoutFunction[BaseRow, BaseRow]]
 
 /**
   * Describes a generated [[org.apache.flink.streaming.api.operators.StreamOperator]].

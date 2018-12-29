@@ -19,27 +19,29 @@
 package org.apache.flink.table.plan.util
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.cep.pattern.conditions.IterativeCondition
-import org.apache.flink.cep.{EventComparator, PatternFlatSelectFunction, PatternFlatTimeoutFunction, PatternSelectFunction, PatternTimeoutFunction}
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.cep.pattern.conditions.{IterativeCondition, RichIterativeCondition}
+import org.apache.flink.cep._
+import org.apache.flink.table.api.{TableConfig, ValidationException}
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.codegen.{CodeGeneratorContext, Compiler, GenConditionFunction, GenSelectFunction, GeneratedSorter, MatchCodeGenerator}
+import org.apache.flink.table.codegen.{CodeGeneratorContext, Compiler, GeneratedSorter, MatchCodeGenerator}
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.logical.MatchRecognize
 import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.runtime.`match`.{IterativeConditionRunner, PatternFlatSelectFunctionRunner, PatternFlatTimeoutFunctionRunner, PatternSelectFunctionRunner, PatternTimeoutFunctionRunner}
+import org.apache.flink.table.runtime.`match`._
 import org.apache.flink.table.runtime.aggregate.{CollectionBaseRowComparator, SorterHelper}
 import org.apache.flink.table.runtime.sort.RecordComparator
 import org.apache.flink.table.util.Logging
-
 import org.apache.calcite.rel.RelCollation
 import org.apache.calcite.rel.core.Match
-import org.apache.calcite.rex.RexNode
+import org.apache.calcite.rex.{RexCall, RexNode, RexPatternFieldRef}
 import org.apache.calcite.tools.RelBuilder
-
 import java.util
 import java.util.Comparator
 
-import scala.collection.JavaConverters._
+import org.apache.flink.table.codegen.MatchCodeGenerator.ALL_PATTERN_VARIABLE
+
+import _root_.scala.collection.JavaConversions._
+import _root_.scala.collection.JavaConverters._
 
 /**
   * An util class to generate match functions.
@@ -54,6 +56,16 @@ object MatchUtil {
       `match`.getPartitionKeys.asScala.forall(FlinkRexUtil.isDeterministicOperator) &&
       FlinkRexUtil.isDeterministicOperator(`match`.getInterval) &&
       FlinkRexUtil.isDeterministicOperator(`match`.getEmit)
+  }
+
+  def isDeterministic(logicalMatch: MatchRecognize): Boolean = {
+    FlinkRexUtil.isDeterministicOperator(logicalMatch.after) &&
+      FlinkRexUtil.isDeterministicOperator(logicalMatch.pattern) &&
+      FlinkRexUtil.isDeterministicOperator(logicalMatch.rowsPerMatch) &&
+      logicalMatch.patternDefinitions.values().forall(FlinkRexUtil.isDeterministicOperator) &&
+      logicalMatch.partitionKeys.forall(FlinkRexUtil.isDeterministicOperator) &&
+      FlinkRexUtil.isDeterministicOperator(logicalMatch.interval) &&
+      FlinkRexUtil.isDeterministicOperator(logicalMatch.emit)
   }
 
   private[flink] def generateIterativeCondition(
@@ -71,11 +83,10 @@ object MatchUtil {
       false,
       config.getNullCheck,
       patternNames,
-      GenConditionFunction,
       Some(patternName))
         .bindInput(DataTypes.internal(inputTypeInfo))
         .asInstanceOf[MatchCodeGenerator]
-    val condition = generator.generateExpression(patternDefinition)
+    val condition = generator.generateCondition(patternDefinition)
     val body =
       s"""
         |${condition.code}
@@ -83,7 +94,10 @@ object MatchUtil {
         |""".stripMargin
 
     val genCondition = generator
-      .generateIterativeCondition("MatchRecognizeCondition", body, config)
+      .generateMatchFunction("MatchRecognizeCondition",
+        config,
+        classOf[RichIterativeCondition[_]],
+        body)
     new IterativeConditionRunner(genCondition)
   }
 
@@ -102,12 +116,11 @@ object MatchUtil {
       relBuilder,
       false,
       config.getNullCheck,
-      patternNames,
-      GenSelectFunction)
+      patternNames)
         .bindInput(DataTypes.internal(inputTypeInfo))
         .asInstanceOf[MatchCodeGenerator]
 
-    val resultExpression = generator.generateSelectOutputExpression(
+    val resultExpression = generator.generateOneRowPerMatchExpression(
       partitionKeys,
       measures,
       returnType)
@@ -117,10 +130,11 @@ object MatchUtil {
         |return ${resultExpression.resultTerm};
         |""".stripMargin
 
-    generator.addReusableStatements()
-    val genFunction = generator.generatePatternSelectFunction(
+    val genFunction = generator.generateMatchFunction(
       "MatchRecognizePatternSelectFunction",
-      body, config)
+      config,
+      classOf[RichPatternSelectFunction[_, _]],
+      body)
     new PatternSelectFunctionRunner(genFunction)
   }
 
@@ -139,12 +153,11 @@ object MatchUtil {
       relBuilder,
       false,
       config.getNullCheck,
-      patternNames,
-      GenSelectFunction)
+      patternNames)
         .bindInput(DataTypes.internal(inputTypeInfo))
         .asInstanceOf[MatchCodeGenerator]
 
-    val resultExpression = generator.generateSelectOutputExpression(
+    val resultExpression = generator.generateOneRowPerMatchExpression(
       partitionKeys,
       measures,
       returnType)
@@ -154,10 +167,11 @@ object MatchUtil {
          |return ${resultExpression.resultTerm};
          |""".stripMargin
 
-    generator.addReusableStatements()
-    val genFunction = generator.generatePatternTimeoutFunction(
+    val genFunction = generator.generateMatchFunction(
       "MatchRecognizePatternTimeoutFunction",
-      body, config)
+      config,
+      classOf[RichPatternTimeoutFunction[_, _]],
+      body)
     new PatternTimeoutFunctionRunner(genFunction)
   }
 
@@ -177,12 +191,11 @@ object MatchUtil {
       relBuilder,
       false,
       config.getNullCheck,
-      patternNames,
-      GenSelectFunction)
+      patternNames)
         .bindInput(DataTypes.internal(inputTypeInfo))
         .asInstanceOf[MatchCodeGenerator]
 
-    val resultExpression = generator.generateFlatSelectOutputExpression(
+    val resultExpression = generator.generateAllRowsPerMatchExpression(
       partitionKeys,
       orderKeys,
       measures,
@@ -192,10 +205,11 @@ object MatchUtil {
         |${resultExpression.code}
         |""".stripMargin
 
-    generator.addReusableStatements()
-    val genFunction = generator.generatePatternFlatSelectFunction(
+    val genFunction = generator.generateMatchFunction(
       "MatchRecognizePatternFlatSelectFunction",
-      body, config)
+      config,
+      classOf[RichPatternFlatSelectFunction[_, _]],
+      body)
     new PatternFlatSelectFunctionRunner(genFunction)
   }
 
@@ -215,12 +229,11 @@ object MatchUtil {
       relBuilder,
       false,
       config.getNullCheck,
-      patternNames,
-      GenSelectFunction)
+      patternNames)
         .bindInput(DataTypes.internal(inputTypeInfo))
         .asInstanceOf[MatchCodeGenerator]
 
-    val resultExpression = generator.generateFlatSelectOutputExpression(
+    val resultExpression = generator.generateAllRowsPerMatchExpression(
       partitionKeys,
       orderKeys,
       measures,
@@ -230,39 +243,32 @@ object MatchUtil {
          |${resultExpression.code}
          |""".stripMargin
 
-    generator.addReusableStatements()
-    val genFunction = generator.generatePatternFlatTimeoutFunction(
+    val genFunction = generator.generateMatchFunction(
       "MatchRecognizePatternFlatTimeoutFunction",
-      body, config)
+      config,
+      classOf[RichPatternFlatTimeoutFunction[_, _]],
+      body)
     new PatternFlatTimeoutFunctionRunner(genFunction)
   }
 
   private[flink] def createRowTimeSortFunction(
       orderKeys: RelCollation,
       inputSchema: BaseRowSchema): EventComparator[BaseRow] = {
-    if (orderKeys.getFieldCollations.size() > 1) {
-      val sorter = SorterHelper.createSorter(
-        inputSchema.internalType(classOf[BaseRow]),
-        orderKeys.getFieldCollations.asScala.tail) // strip off time collation
+    val sorter = SorterHelper.createSorter(
+      inputSchema.internalType(classOf[BaseRow]),
+      orderKeys.getFieldCollations.asScala.tail) // strip off time collation
 
-      new CustomEventComparator(sorter)
-    } else {
-      null
-    }
+    new CustomEventComparator(sorter)
   }
 
   private[flink] def createProcTimeSortFunction(
       orderKeys: RelCollation,
       inputSchema: BaseRowSchema): EventComparator[BaseRow] = {
-    if (orderKeys.getFieldCollations.size() > 1) {
-      val sorter = SorterHelper.createSorter(
-        inputSchema.internalType(classOf[BaseRow]),
-        orderKeys.getFieldCollations.asScala.tail) // strip off time collation
+    val sorter = SorterHelper.createSorter(
+      inputSchema.internalType(classOf[BaseRow]),
+      orderKeys.getFieldCollations.asScala.tail) // strip off time collation
 
-      new CustomEventComparator(sorter)
-    } else {
-      null
-    }
+    new CustomEventComparator(sorter)
   }
 
   /**
@@ -290,5 +296,30 @@ object MatchUtil {
 
       rowComp.compare(arg0, arg1)
     }
+  }
+
+  class AggregationPatternVariableFinder extends RexDefaultVisitor[Option[String]] {
+
+    override def visitPatternFieldRef(patternFieldRef: RexPatternFieldRef): Option[String] = Some(
+      patternFieldRef.getAlpha)
+
+    override def visitCall(call: RexCall): Option[String] = {
+      if (call.operands.size() == 0) {
+        Some(ALL_PATTERN_VARIABLE)
+      } else {
+        call.operands.asScala.map(n => n.accept(this)).reduce((op1, op2) => (op1, op2) match {
+          case (None, None) => None
+          case (x, None) => x
+          case (None, x) => x
+          case (Some(var1), Some(var2)) if var1.equals(var2) =>
+            Some(var1)
+          case _ =>
+            throw new ValidationException(s"Aggregation must be applied to a single pattern " +
+              s"variable. Malformed expression: $call")
+        })
+      }
+    }
+
+    override def visitNode(rexNode: RexNode): Option[String] = None
   }
 }

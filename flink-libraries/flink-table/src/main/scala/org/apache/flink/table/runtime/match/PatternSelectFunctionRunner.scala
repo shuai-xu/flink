@@ -19,8 +19,11 @@
 package org.apache.flink.table.runtime.`match`
 
 import java.util
-import org.apache.flink.cep.PatternSelectFunction
-import org.apache.flink.table.codegen.GeneratedPatternSelectFunction
+
+import org.apache.flink.api.common.functions.util.FunctionUtils
+import org.apache.flink.cep.{PatternSelectFunction, RichPatternSelectFunction}
+import org.apache.flink.configuration.Configuration
+import org.apache.flink.table.codegen.{GeneratedClass, GeneratedPatternSelectFunction}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.util.Logging
@@ -29,23 +32,27 @@ import org.apache.flink.table.util.Logging
   * PatternSelectFunctionRunner with [[BaseRow]] input and [[BaseRow]] output.
   */
 class PatternSelectFunctionRunner(
-    genFunction: GeneratedPatternSelectFunction)
-  extends PatternSelectFunction[BaseRow, BaseRow]
+    genFunction: GeneratedClass[_])
+  extends RichPatternSelectFunction[BaseRow, BaseRow]
   with Logging {
 
-  private var function: PatternSelectFunction[BaseRow, BaseRow] = _
+  @transient private var function: PatternSelectFunction[BaseRow, BaseRow] = _
 
-  def init(): Unit = {
-    LOG.debug(s"Compiling PatternSelectFunction: ${genFunction.name} \n\n " +
+  override def open(parameters: Configuration): Unit = {
+    LOG.debug(s"Compiling PatternSelectFunction: ${genFunction.name} \n\n" +
                 s"Code:\n${genFunction.code}")
-    function = genFunction.newInstance(Thread.currentThread().getContextClassLoader)
+    LOG.debug("Instantiating PatternSelectFunction.")
+    function = genFunction.asInstanceOf[GeneratedPatternSelectFunction]
+      .newInstance(Thread.currentThread().getContextClassLoader)
+    FunctionUtils.setFunctionRuntimeContext(function, getRuntimeContext)
+    FunctionUtils.openFunction(function, parameters)
   }
 
   override def select(pattern: util.Map[String, util.List[BaseRow]]): BaseRow = {
-    if (function == null) {
-      init()
-    }
-
     BaseRowUtil.setAccumulate(function.select(pattern))
+  }
+
+  override def close(): Unit = {
+    FunctionUtils.closeFunction(function)
   }
 }
