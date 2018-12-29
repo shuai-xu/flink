@@ -855,7 +855,30 @@ Using 'curl' you can upload a jar via 'curl -X POST -H "Expect:" -F "jarfile=#pa
               },
               "write-records-complete" : {
                 "type" : "boolean"
-              }
+              },
+              "buffers-in-pool-usage-max" : {
+                "type" : "float"
+              },
+              "buffers-in-pool-usage-max-complete" : {
+                "type" : "boolean"
+              },
+              "buffers-out-pool-usage-max" : {
+                "type" : "float"
+              },
+              "buffers-out-pool-usage-max-complete" : {
+                "type" : "boolean"
+              },
+              "tps" : {
+                "type" : "float"
+              },
+              "tps-complete" : {
+                "type" : "boolean"
+              },
+              "delay" : {
+                "type" : "long"
+              },
+              "delay-complete" : {
+                "type" : "boolean"
             }
           }
         }
@@ -2478,6 +2501,12 @@ Using 'curl' you can upload a jar via 'curl -X POST -H "Expect:" -F "jarfile=#pa
           "duration" : {
             "type" : "integer"
           },
+          "log-file-name" : {
+            "type" : "string"
+          },
+          "stdout-file-name" : {
+            "type" : "string"
+          },
           "metrics" : {
             "type" : "object",
             "id" : "urn:jsonschema:org:apache:flink:runtime:rest:messages:job:metrics:IOMetricsInfo",
@@ -2504,6 +2533,30 @@ Using 'curl' you can upload a jar via 'curl -X POST -H "Expect:" -F "jarfile=#pa
                 "type" : "integer"
               },
               "write-records-complete" : {
+                "type" : "boolean"
+              },
+              "buffers-in-pool-usage-max" : {
+                "type" : "float"
+              },
+              "buffers-in-pool-usage-max-complete" : {
+                "type" : "boolean"
+              },
+              "buffers-out-pool-usage-max" : {
+                "type" : "float"
+              },
+              "buffers-out-pool-usage-max-complete" : {
+                "type" : "boolean"
+              },
+              "tps" : {
+                "type" : "float"
+              },
+              "tps-complete" : {
+                "type" : "boolean"
+              },
+              "delay" : {
+                "type" : "long"
+              },
+              "delay-complete" : {
                 "type" : "boolean"
               }
             }
@@ -2982,8 +3035,31 @@ Using 'curl' you can upload a jar via 'curl -X POST -H "Expect:" -F "jarfile=#pa
         },
         "write-records-complete" : {
           "type" : "boolean"
+        },
+        "buffers-in-pool-usage-max" : {
+          "type" : "float"
+        },
+        "buffers-in-pool-usage-max-complete" : {
+          "type" : "boolean"
+        },
+        "buffers-out-pool-usage-max" : {
+          "type" : "float"
+        },
+        "buffers-out-pool-usage-max-complete" : {
+          "type" : "boolean"
+        },
+        "tps" : {
+          "type" : "float"
+        },
+        "tps-complete" : {
+          "type" : "boolean"
+        },
+        "delay" : {
+          "type" : "long"
+        },
+        "delay-complete" : {
+          "type" : "boolean"
         }
-      }
     }
   }
 }            </code>
@@ -3087,6 +3163,30 @@ Using 'curl' you can upload a jar via 'curl -X POST -H "Expect:" -F "jarfile=#pa
           "type" : "integer"
         },
         "write-records-complete" : {
+          "type" : "boolean"
+        },
+        "buffers-in-pool-usage-max" : {
+          "type" : "float"
+        },
+        "buffers-in-pool-usage-max-complete" : {
+          "type" : "boolean"
+        },
+        "buffers-out-pool-usage-max" : {
+          "type" : "float"
+        },
+        "buffers-out-pool-usage-max-complete" : {
+          "type" : "boolean"
+        },
+        "tps" : {
+          "type" : "float"
+        },
+        "tps-complete" : {
+          "type" : "boolean"
+        },
+        "delay" : {
+          "type" : "long"
+        },
+        "delay-complete" : {
           "type" : "boolean"
         }
       }
@@ -3426,6 +3526,30 @@ Using 'curl' you can upload a jar via 'curl -X POST -H "Expect:" -F "jarfile=#pa
                 "type" : "integer"
               },
               "write-records-complete" : {
+                "type" : "boolean"
+              },
+              "buffers-in-pool-usage-max" : {
+                "type" : "float"
+              },
+              "buffers-in-pool-usage-max-complete" : {
+                "type" : "boolean"
+              },
+              "buffers-out-pool-usage-max" : {
+                "type" : "float"
+              },
+              "buffers-out-pool-usage-max-complete" : {
+                "type" : "boolean"
+              },
+              "tps" : {
+                "type" : "float"
+              },
+              "tps-complete" : {
+                "type" : "boolean"
+              },
+              "delay" : {
+                "type" : "long"
+              },
+              "delay-complete" : {
                 "type" : "boolean"
               }
             }
