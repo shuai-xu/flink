@@ -116,6 +116,17 @@ retrieve an `Iterable` over all currently stored mappings. Mappings are added us
 `putAll(Map<UK, UV>)`. The value associated with a user key can be retrieved using `get(UK)`. The iterable
 views for mappings, keys and values can be retrieved using `entries()`, `keys()` and `values()` respectively.
 
+* `SortedMapState<UK, UV>`: This keeps a list of sorted mappings. You can put key-value pairs into the state and
+retrieve an `Iterable` over all currently stored mappings. Mappings are add using `put(UK, UV)` or `putAll(Map<UK, UV)`.
+The value associated with a user key can be retrieved using `get(UK)`. The iterable views for mappings, keys
+and values can be retrieved using `entries()`, `keys()`, and `values()` respectively. You can retrieve the first and
+last entry of the stored mappings, using `firstEntry()`, and `lastEntry()`, respectively. The head iterable view for mappings,
+tail iterable view and sub iterable view of the current sorted mappings can be retrieved by `headIterator()`,
+`tailIterator` and `subIterator`. **`Be careful when using SortedMapState. For RocksDBStateBackend, 
+we only support BytewiseComparator. The serialized forms in BytewiseComparator are identical to that of the values
+only when the numbers to compare are both not negative. Serializers under org.apache.flink.table.typeutils.ordered 
+maybe helpful if you want to use SortedMapState.`**
+
 All types of state also have a method `clear()` that clears the state for the currently
 active key, i.e. the key of the input element.
 
@@ -145,6 +156,7 @@ is available in a `RichFunction` has these methods for accessing state:
 * `AggregatingState<IN, OUT> getAggregatingState(AggregatingState<IN, OUT>)`
 * `FoldingState<T, ACC> getFoldingState(FoldingStateDescriptor<T, ACC>)`
 * `MapState<UK, UV> getMapState(MapStateDescriptor<UK, UV>)`
+* `SortedMapState<UK, UV> getSortedMapState(SortedMapStateDescriptor<UK, UV>)`
 
 This is an example `FlatMapFunction` that shows how all of the parts fit together:
 
@@ -265,6 +277,114 @@ This example implements a poor man's counting window. We key the tuples by the f
 a `ValueState`. Once the count reaches 2 it will emit the average and clear the state so that
 we start over from `0`. Note that this would keep a different state value for each different input
 key if we had tuples with different values in the first field.
+
+The following example shows how to use SortedMapState's firstEntry to retrieve the first entry of current state.
+<div class="codetabs" markdown="1">
+<div data-lang="java" markdown="1">
+{% highlight java %}
+public class CountWindowFirstEntry extends RichFlatMapFunction<Tuple2<Long, Long>, Tuple3<Long, Long, Long>> {
+
+		/**
+		 * The SortedMapState handle. The first field is the user key, the second field a running count.
+		 */
+		private transient SortedMapState<Long, Long> state;
+
+		@Override
+		public void flatMap(Tuple2<Long, Long> input, Collector<Tuple3<Long, Long, Long>> out) throws Exception {
+
+			// access the state
+			Long count = state.get(input.f1);
+			// If it hasn't been used before, it will be null
+			if (count == null) {
+				count = 0L;
+			}
+			// update the state
+			state.put(input.f1, count + 1);
+
+			out.collect(new Tuple3<>(input.f0, state.firstEntry().getKey(), state.firstEntry().getValue()));
+		}
+
+		@Override
+		public void open(Configuration config) {
+			SortedMapStateDescriptor<Long, Long> descriptor =
+				new SortedMapStateDescriptor<>(
+					"sortedmapstate", // the state name
+					BytewiseComparator.LONG_INSTANCE,
+					Long.class,
+					Long.class);
+			state = getRuntimeContext().getSortedMapState(descriptor);
+		}
+	}
+
+	public static void main(String[] args) throws Exception {
+		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		// this can be used in a streaming program like this (assuming we have a StreamExecutionEnvironment env)
+		env.fromElements(Tuple2.of(1L, 3L), Tuple2.of(1L, 5L), Tuple2.of(1L, 3L), Tuple2.of(1L, 7L), Tuple2.of(1L, 4L), Tuple2.of(1L, 2L),
+			Tuple2.of(1L, 2L), Tuple2.of(1L, 1L))
+			.keyBy(0)
+			.flatMap(new CountWindowFirstEntry())
+			.print();
+		// the printed output will be (1, 3, 1), (1, 3, 1), (1, 3, 2), (1, 3, 2), (1, 3, 2), (1, 2, 1) (1, 2, 2) and (1, 1, 1)
+		env.execute();
+	}
+{% endhighlight %}
+</div>
+
+<div data-lang="scala" markdown="1">
+{% highlight scala %}
+class CountWindowFirstEntry extends RichFlatMapFunction[(Long, Long), (Long, Long, Long)] {
+
+    private var state: SortedMapState[java.lang.Long, java.lang.Long] = _
+
+    override def flatMap(input: (Long, Long), out: Collector[(Long, Long, Long)]): Unit = {
+
+      // access the state value
+      val tmpCurrentCount = state.get(input._2)
+
+      // If it hasn't been used before, it will be null
+      val count : Long = if (tmpCurrentCount != null) {
+        tmpCurrentCount
+      } else {
+        0L
+      }
+
+      // update the state
+      state.put(input._2, count + 1)
+
+      val entry = state.firstEntry()
+      out.collect((input._1, entry.getKey, entry.getValue))
+    }
+
+    override def open(parameters: Configuration): Unit = {
+      state = getRuntimeContext.getSortedMapState(
+       new SortedMapStateDescriptor[java.lang.Long, java.lang.Long]
+       ("sortedmpastate", BytewiseComparator.LONG_INSTANCE, classOf[java.lang.Long], classOf[java.lang.Long])
+      )
+    }
+  }
+
+object CountWindowFirstEntry extends App {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+
+    env.fromCollection(List[(Long, Long)](
+      (1L, 3L),
+      (1L, 5L),
+      (1L, 3L),
+      (1L, 7L),
+      (1L, 4L),
+      (1L, 2L),
+      (1L, 2L),
+      (1L, 1L)
+    )).keyBy(_._1)
+      .flatMap(new CountWindowFirstEntry())
+      .print()
+    // the printed output will be (1, 3, 1), (1, 3, 1), (1, 3, 2), (1, 3, 2), (1, 3, 2), (1, 2, 1) (1, 2, 2) and (1, 1, 1)
+
+    env.execute("ExampleManagedState")
+  }
+{% endhighlight %}
+</div>
+</div>
 
 ### State in the Scala DataStream API
 
