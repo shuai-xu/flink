@@ -25,7 +25,7 @@ import {
   RenderNodeInfo,
   RenderMetaedgeInfo
 } from '@ng-zorro/ng-plus/graph';
-import { JobDetailCorrectInterface, NodesItemCorrectInterface, OperatorsItem, SubtaskMetricsItem } from 'flink-interfaces';
+import { JobDetailCorrectInterface, NodesItemCorrectInterface, OperatorsItem, SubtaskMetricsItem, VerticesMetrics } from 'flink-interfaces';
 
 import * as d3 from 'd3';
 
@@ -205,24 +205,40 @@ export class JobOverviewGraphService {
     }
 
     let displayName = '';
+    let inQueue = null;
+    let outQueue = null;
     if (vertices.name) {
       displayName = `${vertices.name.substring(0, 125)}...`;
     } else {
       displayName = vertices.name;
     }
 
-    const inQueue = Math.max(
-      ...vertices.subtask_metrics
-      .map(m => this.parseFloat(m[ 'buffers.inPoolUsage' ])));
+    if (vertices.metrics && vertices.metrics[ 'buffers-in-pool-usage-max' ]) {
+      inQueue = vertices.metrics[ 'buffers-in-pool-usage-max' ] === -1
+        ? null
+        : vertices.metrics[ 'buffers-in-pool-usage-max' ];
+    } else {
+      inQueue = Math.max(
+        ...vertices.subtask_metrics
+        .map(m => this.parseFloat(m[ 'buffers.inPoolUsage' ]))
+      );
+    }
 
-    const outQueue = Math.max(
-      ...vertices.subtask_metrics
-      .map(m => this.parseFloat(m[ 'buffers.outPoolUsage' ])));
+    if (vertices.metrics && vertices.metrics[ 'buffers-out-pool-usage-max' ]) {
+      outQueue = vertices.metrics[ 'buffers-out-pool-usage-max' as keyof VerticesMetrics ] === -1
+        ? null
+        : vertices.metrics[ 'buffers-out-pool-usage-max' ];
+    } else {
+      outQueue = Math.max(
+        ...vertices.subtask_metrics
+        .map(m => this.parseFloat(m[ 'buffers.outPoolUsage' ]))
+      );
+    }
 
     this.verticesDetailsCache.set(nodeRenderInfo, {
       displayName,
-      inQueue    : Number.isFinite(inQueue) ? inQueue : 0,
-      outQueue   : Number.isFinite(outQueue) ? outQueue : 0,
+      inQueue    : Number.isFinite(inQueue) ? inQueue : null,
+      outQueue   : Number.isFinite(outQueue) ? outQueue : null,
       parallelism: this.parseFloat(vertices.parallelism) || vertices.subtask_metrics.length
     });
 
@@ -233,7 +249,9 @@ export class JobOverviewGraphService {
     if (this.operatorsDetailsCache.has(nodeRenderInfo) && !force) {
       return this.operatorsDetailsCache.get(nodeRenderInfo);
     }
-    const operator = this.sourceData.verticesDetail.operators.find(o => o.operator_id === nodeRenderInfo.node.attr[ 'operator_id' ]);
+    const operator = this.sourceData.verticesDetail.operators
+    .find(o => o.operator_id === nodeRenderInfo.node.attr[ 'operator_id' ]);
+
     if (!operator) {
       return null;
     }

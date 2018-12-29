@@ -77,7 +77,7 @@ export interface VerticesItemInterface {
   'end-time': number;
   duration: number;
   tasks: TasksStatus;
-  metrics: MetricsStatus;
+  metrics: JobMetricsStatus;
 }
 
 interface TasksStatus {
@@ -92,13 +92,21 @@ interface TasksStatus {
   CANCELING: number;
 }
 
-interface MetricsStatus {
+export interface JobMetricsStatus {
+  'buffers-in-pool-usage-max': number;
+  'buffers-in-pool-usage-max-complete': boolean;
+  'buffers-out-pool-usage-max': number;
+  'buffers-out-pool-usage-max-complete': boolean;
+  'delay': number;
+  'delay-complete': boolean;
   'read-bytes': number;
   'read-bytes-complete': boolean;
-  'write-bytes': number;
-  'write-bytes-complete': boolean;
   'read-records': number;
   'read-records-complete': boolean;
+  'tps': number;
+  'tps-complete': boolean;
+  'write-bytes': number;
+  'write-bytes-complete': boolean;
   'write-records': number;
   'write-records-complete': boolean;
 }
@@ -145,6 +153,28 @@ export interface VerticesItem {
   name: string;
   parallelism?: number;
   subtask_metrics: SubtaskMetricsItem[];
+  metrics?: VerticesMetrics;
+}
+
+export interface VerticesMetrics {
+  'read-bytes': number;
+  'read-bytes-complete': boolean;
+  'write-bytes': number;
+  'write-bytes-complete': boolean;
+  'read-records': number;
+  'read-records-complete': boolean;
+  'write-records': number;
+  'write-records-complete': boolean;
+  'buffers-in-pool-usage-max': number;
+  'buffers-in-pool-usage-max-complete': boolean;
+  'buffers-out-pool-usage-max': number;
+  'buffers-out-pool-usage-max-complete': boolean;
+  tps: number;
+  'tps-complete': boolean;
+  delay: number;
+  'delay-complete': boolean;
+} {
+
 }
 
 export interface SubtaskMetricsItem {

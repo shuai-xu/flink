@@ -20,7 +20,7 @@ import { ConfigService } from './config.service';
 import { forkJoin, ReplaySubject } from 'rxjs';
 import { flatMap, map } from 'rxjs/operators';
 import {
-  JobBackpressureInterface,
+  JobBackpressureInterface, JobMetricsStatus,
   JobOverviewInterface,
   JobsItemInterface,
   NodesItemCorrectInterface,
@@ -143,7 +143,14 @@ export class JobService {
       `${this.configService.BASE_URL}/${this.jobPrefix}/${jobId}/vertices/${vertexId}`
     ).pipe(map(
       item => {
-        item.subtasks.forEach(task => this.setEndTimes(task));
+        item.subtasks.forEach(task => {
+          this.setEndTimes(task);
+          if (task.metrics) {
+            if (task.metrics) {
+              this.setMetricNull(task.metrics);
+            }
+          }
+        });
         return item.subtasks;
       }
     ));
@@ -192,7 +199,12 @@ export class JobService {
   convertJob(job: JobDetailInterface): JobDetailCorrectInterface {
     const links = [];
     if (job.vertices) {
-      job.vertices.forEach(vertex => this.setEndTimes(vertex));
+      job.vertices.forEach(vertex => {
+        this.setEndTimes(vertex);
+        if (vertex.metrics) {
+          this.setMetricNull(vertex.metrics);
+        }
+      });
     }
     if (job.plan.nodes.length) {
       job.plan.nodes.forEach(node => {
@@ -217,6 +229,14 @@ export class JobService {
   private setEndTimes(item: JobsItemInterface | VerticesItemInterface | JobSubTaskInterface | VertexTaskManagerDetailInterface) {
     if (item[ 'end-time' ] <= -1) {
       item[ 'end-time' ] = (item[ 'start-time' ] || item[ 'start_time' ]) + item.duration;
+    }
+  }
+
+  private setMetricNull(metrics: JobMetricsStatus) {
+    for (const key in metrics) {
+      if (metrics[ key ] === -1) {
+        metrics[ key ] = null;
+      }
     }
   }
 }

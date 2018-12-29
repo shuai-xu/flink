@@ -58,7 +58,7 @@
           <nz-form-control [nzSpan]="15">
             <nz-form-text>
             <span *ngIf="node.detail.metrics['buffers-in-pool-usage-max-complete'];else loadingTemplate">
-              {{ node.detail.metrics['buffers-in-pool-usage-max'] | percent }}
+              {{ node.detail.metrics['buffers-in-pool-usage-max'] | percent | nzHumanizeCheckNull }}
             </span>
             </nz-form-text>
           </nz-form-control>
@@ -68,7 +68,7 @@
           <nz-form-control [nzSpan]="15">
             <nz-form-text>
             <span *ngIf="node.detail.metrics['tps-complete'];else loadingTemplate">
-              {{ node.detail.metrics['tps'] | number:'1.0-0' }}
+              {{ node.detail.metrics['tps'] | number:'1.0-0' | nzHumanizeCheckNull }}
             </span>
             </nz-form-text>
           </nz-form-control>
@@ -90,7 +90,7 @@
           <nz-form-control [nzSpan]="15">
             <nz-form-text>
             <span *ngIf="node.detail.metrics['write-records-complete'];else loadingTemplate">
-              {{ node.detail.metrics['write-records'] | number:'1.0-0' }}
+              {{ node.detail.metrics['write-records'] | number:'1.0-0' | nzHumanizeCheckNull}}
             </span>
             </nz-form-text>
           </nz-form-control>
@@ -100,7 +100,7 @@
           <nz-form-control [nzSpan]="15">
             <nz-form-text>
             <span *ngIf="node.detail.metrics['read-bytes-complete'];else loadingTemplate">
-              {{ node.detail.metrics['read-bytes'] | nzHumanizeBytes }}
+              {{ node.detail.metrics['read-bytes'] | nzHumanizeBytes | nzHumanizeCheckNull}}
             </span>
             </nz-form-text>
           </nz-form-control>
@@ -110,7 +110,7 @@
           <nz-form-control [nzSpan]="15">
             <nz-form-text>
             <span *ngIf="node.detail.metrics['read-records-complete'];else loadingTemplate">
-              {{ node.detail.metrics['read-records'] | number:'1.0-0' }}
+              {{ node.detail.metrics['read-records'] | number:'1.0-0' | nzHumanizeCheckNull}}
             </span>
             </nz-form-text>
           </nz-form-control>
@@ -120,7 +120,7 @@
           <nz-form-control [nzSpan]="15">
             <nz-form-text>
             <span *ngIf="node.detail.metrics['write-bytes-complete'];else loadingTemplate">
-              {{ node.detail.metrics['write-bytes'] | nzHumanizeBytes }}
+              {{ node.detail.metrics['write-bytes'] | nzHumanizeBytes | nzHumanizeCheckNull}}
             </span>
             </nz-form-text>
           </nz-form-control>
@@ -130,7 +130,7 @@
           <nz-form-control [nzSpan]="15">
             <nz-form-text>
             <span *ngIf="node.detail.metrics['buffers-out-pool-usage-max-complete'];else loadingTemplate">
-              {{ node.detail.metrics['buffers-out-pool-usage-max'] | percent }}
+              {{ node.detail.metrics['buffers-out-pool-usage-max'] | percent | nzHumanizeCheckNull}}
             </span>
             </nz-form-text>
           </nz-form-control>
@@ -140,7 +140,7 @@
           <nz-form-control [nzSpan]="15">
             <nz-form-text>
             <span *ngIf="node.detail.metrics['delay-complete'];else loadingTemplate">
-              {{ node.detail.metrics['delay'] | number:'1.0-0' }} ms
+              {{ node.detail.metrics['delay'] | number:'1.0-0' | nzHumanizeCheckNull }} ms
             </span>
             </nz-form-text>
           </nz-form-control>

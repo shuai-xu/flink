@@ -22,11 +22,21 @@ export interface JobSubTaskInterface {
   'start_time': number;
   'status': string;
   'subtask': number;
+  'resource-id': string;
+  'stdout-file-name': string;
   'metrics': {
+    'buffers-in-pool-usage-max': number;
+    'buffers-in-pool-usage-max-complete': boolean;
+    'buffers-out-pool-usage-max': number;
+    'buffers-out-pool-usage-max-complete': boolean;
+    'delay': number;
+    'delay-complete': boolean;
     'read-bytes': number;
     'read-bytes-complete': boolean;
-    'read-records': number
+    'read-records': number;
     'read-records-complete': boolean;
+    'tps': number;
+    'tps-complete': boolean;
     'write-bytes': number;
     'write-bytes-complete': boolean;
     'write-records': number;

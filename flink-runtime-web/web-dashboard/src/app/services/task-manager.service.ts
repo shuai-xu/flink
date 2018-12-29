@@ -66,6 +66,8 @@ export class TaskManagerService {
     return this.httpClient.get<JMXInterface>(`${this.configService.BASE_URL}/taskmanagers/${taskManagerId}/jmx`).pipe(tap(data => {
       if (data) {
         this.nzMessageService.info(`JMX Link: ${data.host}:${data.port}`, { nzDuration: 3000 });
+      } else {
+        this.nzMessageService.info(`JMX Link Not Found`, { nzDuration: 3000 });
       }
     }));
   }

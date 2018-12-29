@@ -52,42 +52,42 @@
       </td>
       <td>
         <span *ngIf="task.metrics['buffers-in-pool-usage-max-complete'];else loadingTemplate">
-          {{ task.metrics['buffers-in-pool-usage-max'] | percent }}
+          {{ task.metrics['buffers-in-pool-usage-max'] | percent | nzHumanizeCheckNull }}
         </span>
       </td>
       <td>
         <span *ngIf="task.metrics['buffers-out-pool-usage-max-complete'];else loadingTemplate">
-          {{ task.metrics['buffers-out-pool-usage-max'] | percent }}
+          {{ task.metrics['buffers-out-pool-usage-max'] | percent | nzHumanizeCheckNull }}
         </span>
       </td>
       <td>
         <span *ngIf="task.metrics['tps-complete'];else loadingTemplate">
-          {{ task.metrics['tps'] | number:'1.0-0' }}
+          {{ task.metrics['tps'] | number:'1.0-0' | nzHumanizeCheckNull }}
         </span>
       </td>
       <td>
         <span *ngIf="task.metrics['delay-complete'];else loadingTemplate">
-          {{ task.metrics['delay'] | number:'1.0-0' }}
+          {{ task.metrics['delay'] | number:'1.0-0' | nzHumanizeCheckNull }}
         </span>
       </td>
       <td>
         <span *ngIf="task.metrics['read-bytes-complete'];else loadingTemplate">
-          {{ task.metrics['read-bytes'] | nzHumanizeBytes }}
+          {{ task.metrics['read-bytes'] | nzHumanizeBytes | nzHumanizeCheckNull}}
         </span>
       </td>
       <td>
         <span *ngIf="task.metrics['read-records-complete'];else loadingTemplate">
-          {{ task.metrics['read-records'] | number:'1.0-0' }}
+          {{ task.metrics['read-records'] | number:'1.0-0' | nzHumanizeCheckNull}}
         </span>
       </td>
       <td>
         <span *ngIf="task.metrics['write-bytes-complete'];else loadingTemplate">
-          {{ task.metrics['write-bytes'] | nzHumanizeBytes }}
+          {{ task.metrics['write-bytes'] | nzHumanizeBytes | nzHumanizeCheckNull}}
         </span>
       </td>
       <td>
         <span *ngIf="task.metrics['write-records-complete'];else loadingTemplate">
-          {{ task.metrics['write-records'] | number:'1.0-0' }}
+          {{ task.metrics['write-records'] | number:'1.0-0' | nzHumanizeCheckNull }}
         </span>
       </td>
       <td>{{ task.attempt + 1 }}</td>
