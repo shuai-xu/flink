@@ -25,7 +25,7 @@ import org.apache.flink.streaming.api.graph.StreamGraphGenerator.Context
 import org.apache.flink.table.api.java.BatchTableEnvironment
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.{Table, TableConfig, TableConfigOptions, TableEnvironment}
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.plan.rules.physical.batch.{BatchExecNestedLoopJoinRule, BatchExecSortMergeJoinRule}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
@@ -63,7 +63,7 @@ class PlanUtilTest extends AbstractTestBase {
       TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE,
       InferMode.NONE.toString
     )
-    tableEnv.getConfig.setCalciteConfig(new CalciteConfigBuilder().build())
+    tableEnv.getConfig.setCalciteConfig(CalciteConfig.createBuilder().build())
   }
 
   @Test
@@ -89,7 +89,8 @@ class PlanUtilTest extends AbstractTestBase {
     physicalProgram.get.remove(RuleSets.ofList(
       BatchExecSortMergeJoinRule.INSTANCE,
       BatchExecNestedLoopJoinRule.INSTANCE))
-    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    val calciteConfig = CalciteConfig.createBuilder(tableEnv.getConfig.getCalciteConfig)
+      .replaceBatchPrograms(programs).build()
     tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     tmpFile = "join-plan.tmp"

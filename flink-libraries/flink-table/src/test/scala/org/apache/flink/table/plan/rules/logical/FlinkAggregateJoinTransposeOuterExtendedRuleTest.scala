@@ -18,14 +18,15 @@
 
 package org.apache.flink.table.plan.rules.logical
 
+import org.apache.flink.api.scala._
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.calcite.CalciteConfig
+import org.apache.flink.table.plan.optimize._
+import org.apache.flink.table.util.TableTestBase
+
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.rel.rules._
 import org.apache.calcite.tools.RuleSets
-import org.apache.flink.api.scala._
-import org.apache.flink.table.api.scala._
-import org.apache.flink.table.calcite.CalciteConfigBuilder
-import org.apache.flink.table.plan.optimize._
-import org.apache.flink.table.util.TableTestBase
 import org.junit.{Before, Test}
 
 class FlinkAggregateJoinTransposeOuterExtendedRuleTest extends TableTestBase {
@@ -50,7 +51,8 @@ class FlinkAggregateJoinTransposeOuterExtendedRuleTest extends TableTestBase {
           FlinkAggregateJoinTransposeRule.LEFT_RIGHT_OUTER_JOIN_EXTENDED
         )).build()
     )
-    val calciteConfig = new CalciteConfigBuilder().setStreamPrograms(programs).build()
+    val calciteConfig = CalciteConfig.createBuilder(util.tableEnv.getConfig.getCalciteConfig)
+      .replaceStreamPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
     util.addTable[(Int, Long, String, Int)]("T", 'a, 'b, 'c, 'd)
   }

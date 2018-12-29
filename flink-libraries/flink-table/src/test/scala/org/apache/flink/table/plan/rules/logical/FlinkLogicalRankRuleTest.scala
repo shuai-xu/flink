@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.rules.logical
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.util.TableTestBase
 
@@ -44,7 +44,8 @@ class FlinkLogicalRankRuleTest extends TableTestBase {
       }
     }
 
-    val calciteConfig = new CalciteConfigBuilder().setStreamPrograms(programs).build()
+    val calciteConfig = CalciteConfig.createBuilder(util.tableEnv.getConfig.getCalciteConfig)
+      .replaceStreamPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
     util.addTable[(Int, Long, String)]("x", 'a, 'b, 'c)
   }

@@ -51,9 +51,9 @@ class CalciteConfigBuilder {
   private var operatorTables: List[SqlOperatorTable] = Nil
 
   /**
-    * Sets batch table optimize programs.
+    * Replaces the default batch table optimize programs with the given programs.
     */
-  def setBatchPrograms(
+  def replaceBatchPrograms(
       programs: FlinkChainedPrograms[BatchOptimizeContext]): CalciteConfigBuilder = {
     Preconditions.checkNotNull(programs)
     batchPrograms = Some(programs)
@@ -61,9 +61,9 @@ class CalciteConfigBuilder {
   }
 
   /**
-    * Sets stream table optimize programs.
+    * Replaces the default stream table optimize programs with the given programs.
     */
-  def setStreamPrograms(
+  def replaceStreamPrograms(
       programs: FlinkChainedPrograms[StreamOptimizeContext]): CalciteConfigBuilder = {
     Preconditions.checkNotNull(programs)
     streamPrograms = Some(programs)
@@ -188,6 +188,34 @@ object CalciteConfig {
     */
   def createBuilder(): CalciteConfigBuilder = {
     new CalciteConfigBuilder
+  }
+
+  /**
+    * Creates a new builder for constructing a [[CalciteConfig]] based on a given [[CalciteConfig]].
+    */
+  def createBuilder(calciteConfig: CalciteConfig): CalciteConfigBuilder = {
+    val builder = new CalciteConfigBuilder
+    if (calciteConfig.getBatchPrograms.isDefined) {
+      builder.replaceBatchPrograms(calciteConfig.getBatchPrograms.get)
+    }
+    if (calciteConfig.getStreamPrograms.isDefined) {
+      builder.replaceStreamPrograms(calciteConfig.getStreamPrograms.get)
+    }
+    if (calciteConfig.getSqlOperatorTable.isDefined) {
+      if (calciteConfig.replacesSqlOperatorTable) {
+        builder.replaceSqlOperatorTable(calciteConfig.getSqlOperatorTable.get)
+      } else {
+        builder.addSqlOperatorTable(calciteConfig.getSqlOperatorTable.get)
+      }
+    }
+    if (calciteConfig.getSqlParserConfig.isDefined) {
+      builder.replaceSqlParserConfig(calciteConfig.getSqlParserConfig.get)
+    }
+    if (calciteConfig.getSqlToRelConverterConfig.isDefined) {
+      builder.replaceSqlToRelConverterConfig(calciteConfig.getSqlToRelConverterConfig.get)
+    }
+
+    builder
   }
 
   def connectionConfig(parserConfig: SqlParser.Config): CalciteConnectionConfig = {

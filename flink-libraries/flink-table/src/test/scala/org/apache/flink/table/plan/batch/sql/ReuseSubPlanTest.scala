@@ -22,7 +22,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.functions.{ScalarFunction, TableFunction}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.plan.rules.logical.PushLimitIntoTableSourceScanRule
 import org.apache.flink.table.plan.stats.TableStats
@@ -47,7 +47,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
     val programs = FlinkBatchPrograms.buildPrograms(util.tableEnv.getConfig.getConf)
     programs.getFlinkRuleSetProgram(FlinkBatchPrograms.LOGICAL)
       .get.remove(RuleSets.ofList(PushLimitIntoTableSourceScanRule.INSTANCE))
-    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    val calciteConfig = CalciteConfig.createBuilder(util.tableEnv.getConfig.getCalciteConfig)
+      .replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     // clear parameters

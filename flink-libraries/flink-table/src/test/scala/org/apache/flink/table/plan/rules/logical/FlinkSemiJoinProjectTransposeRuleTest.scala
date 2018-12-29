@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.rules.logical
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
 
 import org.apache.calcite.plan.hep.HepMatchOrder
@@ -48,7 +48,8 @@ class FlinkSemiJoinProjectTransposeRuleTest(fieldsNullable: Boolean)
           FlinkSemiJoinProjectTransposeRule.INSTANCE,
           SemiJoinFilterTransposeRule.INSTANCE))
         .build())
-    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    val calciteConfig = CalciteConfig.createBuilder(util.tableEnv.getConfig.getCalciteConfig)
+      .replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.addTable[(Int, Long, String)]("x", 'a, 'b, 'c)

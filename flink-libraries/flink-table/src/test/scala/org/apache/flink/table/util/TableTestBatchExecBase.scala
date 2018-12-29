@@ -23,7 +23,6 @@ import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.api.common.typeinfo.{AtomicType, TypeInformation}
 import org.apache.flink.api.java.typeutils.TupleTypeInfo
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
-import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JavaEnv}
 import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment, DataStream => ScalaStream}
@@ -32,31 +31,29 @@ import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, 
 import org.apache.flink.table.api.scala.BatchTableEnvironment
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.{Table, TableException, _}
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.RelNodeBlock
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
-import org.apache.flink.table.plan.util.FlinkRelOptUtil
-
-import org.apache.calcite.sql.SqlExplainLevel
-
-import org.apache.commons.lang3.SystemUtils
-
-import _root_.scala.collection.mutable
-import _root_.scala.collection.JavaConversions._
-import _root_.scala.collection.JavaConverters._
-
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
+import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSource}
 import org.apache.flink.types.Row
+
+import org.apache.calcite.sql.SqlExplainLevel
+import org.apache.commons.lang3.SystemUtils
 import org.junit.Assert._
 import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}
-import org.mockito.Mockito._
 import org.mockito.Matchers._
+import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
+
+import _root_.scala.collection.JavaConversions._
+import _root_.scala.collection.JavaConverters._
+import _root_.scala.collection.mutable
 
 /**
   * Test batch exec base for testing Table API / SQL plans.
@@ -157,7 +154,7 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
   when(javaEnv.clean[Function](any[Function])).thenAnswer(answer(ivk => ivk.getArguments.head))
   when(env.getWrappedStreamExecutionEnvironment).thenReturn(javaEnv)
   val tableEnv: BatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(env)
-  tableEnv.getConfig.setCalciteConfig(new CalciteConfigBuilder().build())
+  tableEnv.getConfig.setCalciteConfig(CalciteConfig.createBuilder().build())
   tableEnv.getConfig.setSubsectionOptimization(true)
 
   def disableBroadcastHashJoin(): Unit = {

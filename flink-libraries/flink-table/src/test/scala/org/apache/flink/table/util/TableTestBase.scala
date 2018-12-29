@@ -28,7 +28,7 @@ import org.apache.flink.table.api.java.{StreamTableEnvironment => JStreamTableEn
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.api.{Table, TableEnvironment, TableSchema}
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.optimize._
@@ -86,7 +86,8 @@ abstract class TableTestBase {
       case _ =>
         throw new RuntimeException(s"$phase does not exist")
     }
-    val builder = new CalciteConfigBuilder().setStreamPrograms(programs)
+    val builder = CalciteConfig.createBuilder(tEnv.getConfig.getCalciteConfig)
+      .replaceStreamPrograms(programs)
     tEnv.getConfig.setCalciteConfig(builder.build())
   }
 }

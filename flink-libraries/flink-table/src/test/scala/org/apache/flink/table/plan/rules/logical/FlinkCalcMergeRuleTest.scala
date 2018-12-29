@@ -17,17 +17,18 @@
  */
 package org.apache.flink.table.plan.rules.logical
 
-import org.apache.calcite.plan.hep.HepMatchOrder
-import org.apache.calcite.rel.rules._
-import org.apache.calcite.tools.RuleSets
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalCalc, FlinkLogicalNativeTableScan}
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 import org.apache.flink.table.util.TableTestBatchExecBase
+
+import org.apache.calcite.plan.hep.HepMatchOrder
+import org.apache.calcite.rel.rules._
+import org.apache.calcite.tools.RuleSets
 import org.junit.{Before, Test}
 
 class FlinkCalcMergeRuleTest extends TableTestBatchExecBase {
@@ -55,7 +56,8 @@ class FlinkCalcMergeRuleTest extends TableTestBatchExecBase {
         ))
         .setTargetTraits(Array(FlinkConventions.LOGICAL))
         .build())
-    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    val calciteConfig = CalciteConfig.createBuilder(util.tableEnv.getConfig.getCalciteConfig)
+      .replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.addTable[(Int, Int, String)]("MyTable", 'a, 'b, 'c)

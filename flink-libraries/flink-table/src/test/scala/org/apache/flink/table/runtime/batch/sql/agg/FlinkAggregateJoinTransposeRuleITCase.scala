@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.batch.sql.agg
 
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{TableConfigOptions, TableException}
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.logical.{AggregateReduceGroupingRule, FlinkAggregateJoinTransposeRule}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
@@ -69,7 +69,8 @@ class FlinkAggregateJoinTransposeRuleITCase extends QueryTest {
             )).build(), "aggregate join transpose")
         .build()
     )
-    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    val calciteConfig = CalciteConfig.createBuilder(tEnv.getConfig.getCalciteConfig)
+      .replaceBatchPrograms(programs).build()
     tEnv.getConfig.setCalciteConfig(calciteConfig)
 
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)

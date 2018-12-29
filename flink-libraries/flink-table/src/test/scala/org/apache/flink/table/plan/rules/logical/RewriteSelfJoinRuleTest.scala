@@ -21,7 +21,7 @@ package org.apache.flink.table.plan.rules.logical
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms._
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
@@ -83,7 +83,8 @@ class RewriteSelfJoinRuleTest extends TableTestBatchExecBase with PropertyChecks
         .add(FlinkBatchExecRuleSets.BATCH_EXEC_JOIN_REORDER)
         .build())
     // replace the programs.
-    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    val calciteConfig = CalciteConfig.createBuilder(util.tableEnv.getConfig.getCalciteConfig)
+      .replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)

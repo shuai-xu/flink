@@ -26,7 +26,7 @@ import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{TableEnvironment, Types}
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
@@ -217,7 +217,8 @@ class LastRowITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
         .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
         .add(RuleSets.ofList(TestFlinkLogicalLastRowRule.INSTANCE)).build(), "test logical lastRow")
 
-    val builder = new CalciteConfigBuilder().setStreamPrograms(programs)
+    val builder = CalciteConfig.createBuilder(tEnv.getConfig.getCalciteConfig)
+      .replaceStreamPrograms(programs)
     tEnv.getConfig.setCalciteConfig(builder.build())
   }
 }

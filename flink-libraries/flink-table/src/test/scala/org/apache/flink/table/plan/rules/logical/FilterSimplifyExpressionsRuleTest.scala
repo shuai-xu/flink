@@ -17,13 +17,14 @@
  */
 package org.apache.flink.table.plan.rules.logical
 
-import org.apache.calcite.plan.hep.HepMatchOrder
-import org.apache.calcite.tools.RuleSets
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.util.TableTestBatchExecBase
+
+import org.apache.calcite.plan.hep.HepMatchOrder
+import org.apache.calcite.tools.RuleSets
 import org.junit.{Before, Test}
 
 class FilterSimplifyExpressionsRuleTest extends TableTestBatchExecBase {
@@ -41,7 +42,8 @@ class FilterSimplifyExpressionsRuleTest extends TableTestBatchExecBase {
           .add(RuleSets.ofList(FilterSimplifyExpressionsRule.EXTENDED))
           .build()
     )
-    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    val calciteConfig = CalciteConfig.createBuilder(util.tableEnv.getConfig.getCalciteConfig)
+      .replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.addTable[(Int, Long, String)]("x", 'a, 'b, 'c)

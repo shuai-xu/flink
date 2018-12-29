@@ -17,7 +17,7 @@
  */
 package org.apache.flink.table.plan.rules.logical
 
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 import org.apache.flink.table.util._
@@ -54,7 +54,7 @@ class SubQueryTestBase(fieldsNullable: Boolean) extends TableTestBatchExecBase {
     programs
   }
 
-  val builder = new CalciteConfigBuilder()
+  val builder = CalciteConfig.createBuilder(util.tableEnv.getConfig.getCalciteConfig)
   builder.replaceSqlToRelConverterConfig(
     SqlToRelConverter.configBuilder()
       .withTrimUnusedFields(false)
@@ -62,7 +62,7 @@ class SubQueryTestBase(fieldsNullable: Boolean) extends TableTestBatchExecBase {
       .withExpand(false)
       .withInSubQueryThreshold(3)
       .build())
-    .setBatchPrograms(buildPrograms())
+    .replaceBatchPrograms(buildPrograms())
 
   util.tableEnv.config.setCalciteConfig(builder.build())
 }

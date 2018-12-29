@@ -22,7 +22,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.calcite.{CalciteConfigBuilder, FlinkChainContext}
+import org.apache.flink.table.calcite.{CalciteConfig, CalciteConfigBuilder, FlinkChainContext}
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.optimize.FlinkStreamPrograms
@@ -277,8 +277,8 @@ class ModifiedMonotonicityTest extends TableTestBase {
     val oldPrograms = tableConfig.getCalciteConfig.getStreamPrograms
       .getOrElse(FlinkStreamPrograms.buildPrograms(tableConfig.getConf))
     planBlackList.foreach(e => oldPrograms.remove(e))
-    val builder = new CalciteConfigBuilder()
-    builder.setStreamPrograms(oldPrograms)
+    val builder = CalciteConfig.createBuilder(tableConfig.getCalciteConfig)
+    builder.replaceStreamPrograms(oldPrograms)
     val config = builder.build()
     streamUtil.tableEnv.getConfig.setCalciteConfig(config)
 

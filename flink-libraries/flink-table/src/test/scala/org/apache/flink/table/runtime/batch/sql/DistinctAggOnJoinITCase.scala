@@ -19,7 +19,7 @@ package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.Types
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.logical.FlinkAggregateJoinTransposeRule
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
@@ -63,7 +63,8 @@ class DistinctAggOnJoinITCase extends QueryTest {
           FlinkAggregateJoinTransposeRule.EXTENDED
         )).build()
     )
-    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(batchPrograms).build()
+    val calciteConfig = CalciteConfig.createBuilder(tEnv.getConfig.getCalciteConfig)
+      .replaceBatchPrograms(batchPrograms).build()
     tEnv.getConfig.setCalciteConfig(calciteConfig)
   }
 

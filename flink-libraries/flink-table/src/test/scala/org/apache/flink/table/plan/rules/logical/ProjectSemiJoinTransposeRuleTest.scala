@@ -18,12 +18,12 @@
 
 package org.apache.flink.table.plan.rules.logical
 
-import org.apache.calcite.tools.RuleSets
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 
+import org.apache.calcite.tools.RuleSets
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Before, Test}
@@ -39,7 +39,8 @@ class ProjectSemiJoinTransposeRuleTest(fieldsNullable: Boolean)
       .getOrElse(throw new TableException("optimize programs is not set in parent class"))
     programs.getFlinkRuleSetProgram("semi_join").get
       .add(RuleSets.ofList(ProjectSemiJoinTransposeRule.INSTANCE))
-    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    val calciteConfig = CalciteConfig.createBuilder(util.tableEnv.getConfig.getCalciteConfig)
+      .replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)

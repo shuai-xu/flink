@@ -19,7 +19,7 @@ package org.apache.flink.table.plan.rules.logical
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalAggregate, FlinkLogicalCalc, FlinkLogicalNativeTableScan, FlinkLogicalSink, FlinkLogicalTableSourceScan, FlinkLogicalValues}
 import org.apache.flink.table.plan.optimize._
@@ -58,7 +58,8 @@ class FlinkAggregateRemoveRuleTest(fieldsNullable: Boolean) extends TableTestBat
           FlinkLogicalSink.CONVERTER))
         .setTargetTraits(Array(FlinkConventions.LOGICAL))
         .build())
-    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    val calciteConfig = CalciteConfig.createBuilder(util.tableEnv.getConfig.getCalciteConfig)
+      .replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.addTable[(Int, Int, String)]("MyTable1", 'a, 'b, 'c)

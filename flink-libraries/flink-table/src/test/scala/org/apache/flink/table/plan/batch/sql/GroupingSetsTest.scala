@@ -22,7 +22,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.util.{TableTestBatchExecBase, TestTableSourceWithFieldNullables}
 
@@ -36,7 +36,8 @@ class GroupingSetsTest extends TableTestBatchExecBase {
   def before(): Unit = {
     val programs = FlinkBatchPrograms.buildPrograms(util.tableEnv.getConfig.getConf)
     programs.remove(FlinkBatchPrograms.PHYSICAL)
-    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    val calciteConfig = CalciteConfig.createBuilder(util.tableEnv.getConfig.getCalciteConfig)
+      .replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.addTable[(Int, Long, Int)]("MyTable", 'a, 'b, 'c)

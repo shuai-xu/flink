@@ -27,7 +27,7 @@ import java.util.Collections
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes}
-import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexKey}
@@ -79,7 +79,8 @@ class JoinTableTest extends TableTestBatchExecBase {
 
     val programs = FlinkBatchPrograms.buildPrograms(util.tableEnv.getConfig.getConf)
     programs.remove(FlinkBatchPrograms.PHYSICAL)
-    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    val calciteConfig = CalciteConfig.createBuilder(util.tableEnv.getConfig.getCalciteConfig)
+      .replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.verifyPlan(sql)
@@ -94,7 +95,8 @@ class JoinTableTest extends TableTestBatchExecBase {
 
     val programs = FlinkBatchPrograms.buildPrograms(util.tableEnv.getConfig.getConf)
     programs.remove(FlinkBatchPrograms.PHYSICAL)
-    val calciteConfig = new CalciteConfigBuilder().setBatchPrograms(programs).build()
+    val calciteConfig = CalciteConfig.createBuilder(util.tableEnv.getConfig.getCalciteConfig)
+      .replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.verifyPlan("SELECT * FROM MyTable AS T JOIN LATERAL dimTemporal "
