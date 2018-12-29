@@ -52,8 +52,16 @@ public class TaskManagerResourceCalculator {
 
   // Utility methods
 
+  /**
+   * In Standalone mode, taskmanager.sh use this method to get JVM_ARGS.
+   * @param configuration flink configuration
+   * @return All jvm args
+   */
   @VisibleForTesting
   public static String getTaskManagerResourceFromConf(Configuration configuration) {
+    // Set min of network buffer equals to max to make sure the task manager has sufficient direct memory.
+    configuration.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN,
+      configuration.getLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX));
     TaskManagerResource taskManagerResource =
         TaskManagerResource.fromConfiguration(configuration, initContainerResourceConfig(configuration), 1);
     return String.format("TotalHeapMemory:%s,YoungHeapMemory:%s,TotalDirectMemory:%s",
