@@ -21,6 +21,7 @@ package org.apache.flink.runtime.rest.messages.job;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.rest.messages.ResponseBody;
+import org.apache.flink.runtime.rest.messages.job.metrics.IOMetricsInfo;
 import org.apache.flink.runtime.rest.messages.json.JobVertexIDDeserializer;
 import org.apache.flink.runtime.rest.messages.json.JobVertexIDSerializer;
 import org.apache.flink.runtime.rest.messages.json.JobVertexOperatorIDDeserializer;
@@ -106,6 +107,8 @@ public class JobVerticesInfo implements ResponseBody {
 
 		public static final String FIELD_NAME_JOB_VERTEX_SUBTASK_METRICS = "subtask_metrics";
 
+		public static final String FIELD_NAME_JOB_VERTEX_METRICS = "metrics";
+
 		@JsonProperty(FIELD_NAME_JOB_VERTEX_ID)
 		@JsonSerialize(using = JobVertexIDSerializer.class)
 		private final JobVertexID jobVertexID;
@@ -119,16 +122,21 @@ public class JobVerticesInfo implements ResponseBody {
 		@JsonProperty(FIELD_NAME_JOB_VERTEX_SUBTASK_METRICS)
 		private final Collection<Map<String, String>> jobVertexSubTaskMetrics;
 
+		@JsonProperty(FIELD_NAME_JOB_VERTEX_METRICS)
+		private final IOMetricsInfo jobVertexMetrics;
+
 		@JsonCreator
 		public JobVertex(
 				@JsonDeserialize(using = JobVertexIDDeserializer.class) @JsonProperty(FIELD_NAME_JOB_VERTEX_ID) JobVertexID jobVertexID,
 				@JsonProperty(FIELD_NAME_JOB_VERTEX_NAME) String name,
 				@JsonProperty(FIELD_NAME_JOB_VERTEX_PARALLELISM) int parallelism,
-				@JsonProperty(FIELD_NAME_JOB_VERTEX_SUBTASK_METRICS) Collection<Map<String, String>> jobVertexSubTaskMetrics) {
+				@JsonProperty(FIELD_NAME_JOB_VERTEX_SUBTASK_METRICS) Collection<Map<String, String>> jobVertexSubTaskMetrics,
+				@JsonProperty(FIELD_NAME_JOB_VERTEX_METRICS) IOMetricsInfo jobVertexMetrics) {
 			this.jobVertexID = Preconditions.checkNotNull(jobVertexID);
 			this.name = Preconditions.checkNotNull(name);
 			this.parallelism = parallelism;
 			this.jobVertexSubTaskMetrics = Preconditions.checkNotNull(jobVertexSubTaskMetrics);
+			this.jobVertexMetrics = Preconditions.checkNotNull(jobVertexMetrics);
 		}
 
 		@JsonIgnore
@@ -151,6 +159,11 @@ public class JobVerticesInfo implements ResponseBody {
 			return jobVertexSubTaskMetrics;
 		}
 
+		@JsonIgnore
+		public IOMetricsInfo getJobVertexMetrics() {
+			return jobVertexMetrics;
+		}
+
 		@Override
 		public boolean equals(Object o) {
 			if (this == o) {
@@ -163,12 +176,13 @@ public class JobVerticesInfo implements ResponseBody {
 			return Objects.equals(jobVertexID, that.jobVertexID) &&
 				Objects.equals(name, that.name) &&
 				parallelism == that.parallelism &&
-				Objects.equals(jobVertexSubTaskMetrics, that.jobVertexSubTaskMetrics);
+				Objects.equals(jobVertexSubTaskMetrics, that.jobVertexSubTaskMetrics) &&
+				Objects.equals(jobVertexMetrics, that.jobVertexMetrics);
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(jobVertexID, name, parallelism, jobVertexSubTaskMetrics);
+			return Objects.hash(jobVertexID, name, parallelism, jobVertexSubTaskMetrics, jobVertexMetrics);
 		}
 	}
 

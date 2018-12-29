@@ -56,9 +56,9 @@ public class MutableIOMetrics extends IOMetrics {
 	private float bufferOutPoolUsageMax = 0.0f;
 	private boolean bufferInPoolUsageMaxComplete = true;
 	private boolean bufferOutPoolUsageMaxComplete = true;
-	private double tps = 0L;
+	private double tps = -1D;
 	private boolean tpsComplete = true;
-	private long delay = 0L;
+	private long delay = -1L;
 	private boolean delayComplete = true;
 
 	public MutableIOMetrics() {
@@ -150,11 +150,11 @@ public class MutableIOMetrics extends IOMetrics {
 					 * false.
 					 */
 					boolean findTps = false;
-					double tps = 0.0;
+					double tps = 0.0D;
 					for (Map.Entry<String, String> entry : metrics.getMetrics().entrySet()) {
 						if (entry.getKey().endsWith("." + MetricNames.IO_NUM_TPS) &&
 							StringUtils.isNotBlank(entry.getValue())) {
-							this.tps += Double.valueOf(entry.getValue());
+							tps = Double.valueOf(entry.getValue());
 							findTps = true;
 						} else if (entry.getKey().endsWith("." + MetricNames.IO_NUM_DELAY) &&
 							StringUtils.isNotBlank(entry.getValue())) {

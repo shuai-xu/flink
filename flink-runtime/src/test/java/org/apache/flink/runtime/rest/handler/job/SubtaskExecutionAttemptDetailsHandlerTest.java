@@ -172,9 +172,9 @@ public class SubtaskExecutionAttemptDetailsHandlerTest extends TestLogger {
 			true,
 			0.0f,
 			true,
-			0L,
+			-1L,
 			true,
-			0L,
+			-1L,
 			true
 		);
 

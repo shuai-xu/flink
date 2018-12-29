@@ -31,12 +31,14 @@ import org.apache.flink.runtime.rest.handler.RestHandlerException;
 import org.apache.flink.runtime.rest.handler.legacy.ExecutionGraphCache;
 import org.apache.flink.runtime.rest.handler.legacy.metrics.MetricFetcher;
 import org.apache.flink.runtime.rest.handler.legacy.metrics.MetricStore;
+import org.apache.flink.runtime.rest.handler.util.MutableIOMetrics;
 import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
 import org.apache.flink.runtime.rest.messages.JobIDPathParameter;
 import org.apache.flink.runtime.rest.messages.JobMessageParameters;
 import org.apache.flink.runtime.rest.messages.MessageHeaders;
 import org.apache.flink.runtime.rest.messages.ResponseBody;
 import org.apache.flink.runtime.rest.messages.job.JobVerticesInfo;
+import org.apache.flink.runtime.rest.messages.job.metrics.IOMetricsInfo;
 import org.apache.flink.runtime.webmonitor.RestfulGateway;
 import org.apache.flink.runtime.webmonitor.history.ArchivedJson;
 import org.apache.flink.runtime.webmonitor.history.JsonArchivist;
@@ -117,10 +119,16 @@ public class JobVerticesInfoHandler extends AbstractExecutionGraphHandler<JobVer
 	private static JobVerticesInfo.JobVertex createJobVertex(AccessExecutionJobVertex ejv,
 			JobID jobId, MetricFetcher<?> metricFetcher, Collection<JobVerticesInfo.JobOperator> jobOperators) {
 		Collection<Map<String, String>> subTaskMetrics = new ArrayList<>();
+		MutableIOMetrics counts = new MutableIOMetrics();
 		for (AccessExecutionVertex vertex : ejv.getTaskVertices()) {
 			MetricStore.ComponentMetricStore subTaskMetric = metricFetcher.getMetricStore()
 					.getSubtaskMetricStore(jobId.toString(),
 						ejv.getJobVertexId().toString(), vertex.getCurrentExecutionAttempt().getParallelSubtaskIndex());
+			counts.addIOMetrics(
+				vertex.getCurrentExecutionAttempt(),
+				metricFetcher,
+				jobId.toString(),
+				ejv.getJobVertexId().toString());
 			if (subTaskMetric != null) {
 				subTaskMetrics.add(subTaskMetric.getMetrics());
 			} else {
@@ -131,7 +139,13 @@ public class JobVerticesInfoHandler extends AbstractExecutionGraphHandler<JobVer
 			JobVerticesInfo.JobOperator jobOperator = createJobOperator(ejv.getJobVertexId(), od);
 			jobOperators.add(jobOperator);
 		}
-		return new JobVerticesInfo.JobVertex(ejv.getJobVertexId(), ejv.getName(), ejv.getParallelism(), subTaskMetrics);
+		final IOMetricsInfo jobVertexMetrics = new IOMetricsInfo(counts);
+		return new JobVerticesInfo.JobVertex(
+			ejv.getJobVertexId(),
+			ejv.getName(),
+			ejv.getParallelism(),
+			subTaskMetrics,
+			jobVertexMetrics);
 	}
 
 	private static JobVerticesInfo.JobOperator createJobOperator(JobVertexID jobVertexID, OperatorDescriptor operatorDescriptor){
