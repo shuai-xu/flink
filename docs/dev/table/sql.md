@@ -44,6 +44,7 @@ The following examples show how to specify a SQL queries on registered and inlin
 StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
 
+
 // ingest a DataStream from an external source
 DataStream<Tuple3<Long, String, Integer>> ds = env.addSource(...);
 
@@ -101,6 +102,7 @@ tableEnv.registerTableSink("RubberOrders", fieldNames, fieldTypes, csvSink)
 tableEnv.sqlUpdate(
   "INSERT INTO RubberOrders SELECT product, amount FROM Orders WHERE product LIKE '%Rubber%'")
 {% endhighlight %}
+
 </div>
 </div>
 
@@ -287,7 +289,7 @@ SELECT PRETTY_PRINT(user) FROM Orders
         <span class="label label-info">Result Updating</span>
       </td>
       <td>
-        <p><b>Note:</b> GroupBy on a streaming table produces an updating result. See the <a href="streaming.html">Streaming Concepts</a> page for details.
+        <p><b>Note:</b> GroupBy on a streaming table produces an updating result. See the <a href="streaming.html">Streaming Concepts</a> page and <a href="#groupby-aggregation-optimization">GroupBy Aggregation Optmization</a> section for more details about aggregation and optimization meaures.
         </p>
 {% highlight sql %}
 SELECT a, SUM(b) as d
@@ -316,7 +318,7 @@ GROUP BY TUMBLE(rowtime, INTERVAL '1' DAY), user
         <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span>
       </td>
     	<td>
-        <p><b>Note:</b> All aggregates must be defined over the same window, i.e., same partitioning, sorting, and range. Currently, only windows with PRECEDING (UNBOUNDED and bounded) to CURRENT ROW range are supported. Ranges with FOLLOWING are not supported yet. ORDER BY must be specified on a single <a href="streaming.html#time-attributes">time attribute</a></p>
+        <p><b>Note:</b> All aggregates must be defined over the same window, i.e., same partitioning, sorting, and range. Currently, only windows with PRECEDING (UNBOUNDED and bounded) to CURRENT ROW range are supported. Ranges with FOLLOWING are not supported yet. ORDER BY must be specified on a single <a href="streaming.html#time-attributes">time attribute</a>. Besides, TopN is also implemented based on Over Window Aggregation. See <a href="streaming.html#topn"> TopN </a> for more details. </p>
 {% highlight sql %}
 SELECT COUNT(amount) OVER (
   PARTITION BY user
@@ -530,6 +532,99 @@ WHERE
 
 {% top %}
 
+### TopN
+TopN is used to calculate the maximal/minimal N records in a stream. It can be flexibly completed based on OVER window aggregation. The grammar is shown as below:
+{% highlight sql %}
+SELECT *
+FROM (
+   SELECT * ,
+   ROW_NUMBER() OVER ([PARTITION BY col1[, col2..]
+   ORDER BY col1 [asc|desc][, col2 [asc|desc]...]) AS rownum
+   FROM table_name)
+WHERE rownum <= N [AND conditions]
+
+{% endhighlight %}
+
+**Parameter Specification**
+* ROW_NUMBER(): An over window function to calculate the row number, starting from 1.
+* PARTITION BY col1[, col2..]: Specifying the columns by which the records are partitioned.
+* ORDER BY col1\[,asc\|desc\] \[, col2 \[asc\|desc\]...\]: Specifying the columns by which the records are ordered. The ordering direction can be different on different columns.
+
+Flink SQL will sort the input data stream according to the order key, so if the topN records have been changed, the changed ones will be sent as retract records to downstream. In addition, if the TopN records needs to be stored to external storage, the result table must be defined with a primary key.
+
+**NOTE**: The usage of TopN has some constraints: To enable Flink SQL recognize that this query is a TopN query, the "`where  rownum <= N`" clause is necessary for the outer sql query, and it cannot be substituted by expressions containing "rownum", for example, "`where rownum - 5 <= N`". Besides, it is free to add other conditions in where clause, but they can only be joined using "And".
+
+#### No Ranking Number Optimization
+As stated above, the "rownum" field will be written into the result table as one field of the primary key, which leads to many duplicate records being written to the result table. For example, when the 9th record is updated as the 1st, all the first 9 records will be rewritten to the result table as updating result. If the result table receives too many data, it will become the bottleneck of the SQL job.
+
+The optimization method is discarding "rownum" field when writing records to result table. This is reasonable because the number of TopN records is usually not large, thus the consumers can sort the records themselves quickly. Without "rownum" field, in the example above, only the changed record needs to be send to downstream, which can reduce much burden of the result table.
+
+**Grammar**
+{% highlight sql %}
+SELECT col1, col2, col3
+FROM (
+  SELECT col1, col2, col3
+    ROW_NUMBER() OVER ([PARTITION BY col1[, col2..]]
+    ORDER BY col1 [asc|desc][, col2 [asc|desc]...]) AS rownum
+  FROM table_name)
+WHERE rownum <= N [AND conditions]
+{% endhighlight %}
+
+**Note**: When this optimization is enabled, the primary keys of the result table should be consistent with keys of groupby aggregation upstream before TopN operator. Otherwise, the results may be incorrect.
+
+The following examples show how to specify SQL queries with TopN on streaming tables.
+
+<div class="codetabs" markdown="1">
+<div data-lang="java" markdown="1">
+{% highlight java %}
+StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
+
+// ingest a DataStream from an external source
+DataStream<Tuple3<String, Long, Integer>> ds = env.addSource(...);
+// register the DataStream as table "Orders"
+tableEnv.registerDataStream("Orders", ds, "category, shopId, num");
+
+// select Top2 goods of different categories which are sold well .
+Table result1 = tableEnv.sqlQuery(
+  "SELECT * " +
+  "FROM (" +
+  "   SELECT category, shopId, num," +
+  "       ROW_NUMBER() OVER (PARTITION BY category ORDER BY num DESC) as rank_num" +
+  "   FROM T)" +
+  "WHERE rank_num <= 2");
+
+{% endhighlight %}
+</div>
+
+<div data-lang="scala" markdown="1">
+{% highlight scala %}
+val env = StreamExecutionEnvironment.getExecutionEnvironment
+val tableEnv = TableEnvironment.getTableEnvironment(env)
+
+// read a DataStream from an external source
+val ds: DataStream[(String, Long, Int)] = env.addSource(...)
+// register the DataStream under the name "Orders"
+tableEnv.registerDataStream("Orders", ds, 'category, 'shopId, 'num)
+
+
+// select Top2 goods of different categories which are sold well .
+val result1 = tableEnv.sqlQuery(
+    """
+      |SELECT *
+      |FROM (
+      |   SELECT category, shopId, num,
+      |       ROW_NUMBER() OVER (PARTITION BY category ORDER BY num DESC) as rank_num
+      |   FROM T)
+      |WHERE rank_num <= 2
+    """.stripMargin)
+
+{% endhighlight %}
+</div>
+</div>
+
+{% top %}
+
 ### Set Operations
 
 <div markdown="1">
@@ -638,19 +733,25 @@ WHERE product IN (
         <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span>
       </td>
       <td>
-<b>Note:</b> The result of streaming queries must be primarily sorted on an ascending <a href="streaming.html#time-attributes">time attribute</a>. Additional sorting attributes are supported.
+<b>Note:</b> The result of streaming queries can either be sorted on an ascending <a href="streaming.html#time-attributes">time attribute</a> with/without additional sorting attributes, or be sorted on a general attribute in ascending/descending order.
 
 {% highlight sql %}
+--- sort by time attribute ---
 SELECT *
 FROM Orders
 ORDER BY orderTime
+
+--- universal sort  ---
+SELECT *
+FROM Orders
+ORDER BY orderId DESC
 {% endhighlight %}
       </td>
     </tr>
 
     <tr>
       <td><strong>Limit</strong><br>
-        <span class="label label-primary">Batch</span>
+        <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span>
       </td>
       <td>
 {% highlight sql %}
@@ -785,15 +886,40 @@ The start and end timestamps of group windows as well as time attributes can be 
   </tbody>
 </table>
 
-*Note:* Auxiliary functions must be called with exactly same arguments as the group window function in the `GROUP BY` clause.
+**Note:** Auxiliary functions must be called with exactly same arguments as the group window function in the `GROUP BY` clause.
 
-The following examples show how to specify SQL queries with group windows on streaming tables.
+#### Emit Strategy
+The emit strategy (such as the allowed latency) of aggregation result varies in different streaming sql scenarios. For example, users may desire the functionality that they can get the newest result every minute before the end of 1 hour tumble window and wait for late data for 1 day after end of the window. This kind of demands are not support in conventional ANSI SQL, thus the Flink SQL grammar is extended to include Emit strategy.
+
+The purpose of Emit strategy is concluded as two aspects:
+1. Control the latency: Setting the firing frequency before the end of "big" windows to enable users get newest result in time.
+2. Data Accuracy: Waiting for late data in a specified time, and updating window results on arrival of late data.
+
+**Emit Grammar**
+{% highlight sql %}
+--- window query ---
+
+EMIT strategy [, strategy]*
+
+strategy ::= {WITH DELAY timeInterval | WITHOUT DELAY} 
+                [BEFORE WATERMARK | AFTER WATERMARK]
+
+timeInterval ::= 'string' timeUnit
+{% endhighlight %}
+
+**The Maxmium Allowed Lateness**
+
+It is necessary to specified how long the late data can be waited for by user configuration, when `AFTER` strategy is used. Flink SQL provided an parameter: `sql.exec.state.ttl.ms`, to indicate the maximum allowed lateness. For example, `blink.state.ttl.ms=3600000` means only data that arrives 1 hour late after the end of window will be discarded.
+
+The following examples show how to specify SQL queries with group windows and Emit strategy on streaming tables.
 
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
 {% highlight java %}
 StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
+// wait 1 hour for late elements.
+tableEnv.getConfig.withIdleStateRetentionTime(Time.milliseconds(3600000L));
 
 // ingest a DataStream from an external source
 DataStream<Tuple3<Long, String, Integer>> ds = env.addSource(...);
@@ -824,6 +950,31 @@ Table result4 = tableEnv.sqlQuery(
   "FROM Orders " +
   "GROUP BY SESSION(rowtime, INTERVAL '12' HOUR), user");
 
+// ==== the following examples show the usage of emit grammar to enable early-fire and late-fire of window. ====
+
+// emit window result every 1 minute before end of window.
+Table result5 = tableEnv.sqlQuery(
+  "SELECT user, " +
+  "  TUMBLE_START(rowtime, INTERVAL '1' DAY) as wStart,  " +
+  "  SUM(amount) FROM Orders " +
+  "GROUP BY TUMBLE(rowtime, INTERVAL '1' DAY), user" +
+  "WITH DELAY '1' MINUTE BEFORE WATERMARK");
+
+// emit window result without latency when elements arrive after end of window.
+Table result6 = tableEnv.sqlQuery(
+  "SELECT user, " +
+  "  TUMBLE_START(rowtime, INTERVAL '1' DAY) as wStart,  " +
+  "  SUM(amount) FROM Orders " +
+  "GROUP BY TUMBLE(rowtime, INTERVAL '1' DAY), user" +
+  "EMIT WITHOUT DELAY AFTER WATERMARK");
+
+// emit window result every 1 minute globally.
+Table result7 = tableEnv.sqlQuery(
+  "SELECT user, " +
+  "  TUMBLE_START(rowtime, INTERVAL '1' DAY) as wStart,  " +
+  "  SUM(amount) FROM Orders " +
+  "GROUP BY TUMBLE(rowtime, INTERVAL '1' DAY), user" +
+  "EMIT WITH DELAY '1' MINUTE");
 {% endhighlight %}
 </div>
 
@@ -867,6 +1018,48 @@ val result4 = tableEnv.sqlQuery(
       | FROM Orders
       | GROUP BY SESSION(rowtime(), INTERVAL '12' HOUR), user
     """.stripMargin)
+
+// ==== the following examples show the usage of emit grammar to enable early-fire and late-fire of window. ====
+
+// emit window result every 1 minute before end of window.
+val result5 = tableEnv.sqlQuery(
+    """
+      |SELECT
+      |  user,
+      |  SESSION_START(rowtime, INTERVAL '12' HOUR) AS sStart,
+      |  SESSION_END(rowtime, INTERVAL '12' HOUR) AS sEnd,
+      |  SUM(amount)
+      | FROM Orders
+      | GROUP BY SESSION(rowtime(), INTERVAL '12' HOUR), user
+      | WITH DELAY '1' MINUTE BEFORE WATERMARK
+    """.stripMargin)
+
+// emit window result without latency when elements arrive after end of window.
+val result6 = tableEnv.sqlQuery(
+    """
+      |SELECT
+      |  user,
+      |  SESSION_START(rowtime, INTERVAL '12' HOUR) AS sStart,
+      |  SESSION_END(rowtime, INTERVAL '12' HOUR) AS sEnd,
+      |  SUM(amount)
+      | FROM Orders
+      | GROUP BY SESSION(rowtime(), INTERVAL '12' HOUR), user
+      | EMIT WITHOUT DELAY AFTER WATERMARK
+    """.stripMargin)
+
+// emit window result every 1 minute globally.
+val result7 = tableEnv.sqlQuery(
+    """
+      |SELECT
+      |  user,
+      |  SESSION_START(rowtime, INTERVAL '12' HOUR) AS sStart,
+      |  SESSION_END(rowtime, INTERVAL '12' HOUR) AS sEnd,
+      |  SUM(amount)
+      | FROM Orders
+      | GROUP BY SESSION(rowtime(), INTERVAL '12' HOUR), user
+      | EMIT WITH DELAY '1' MINUTE
+    """.stripMargin)
+
 
 {% endhighlight %}
 </div>
