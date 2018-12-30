@@ -70,8 +70,35 @@ public class HiveDataTypeTest {
 			DataTypes.STRING,
 			DataTypes.BYTE_ARRAY,
 			DataTypes.DATE,
-			DataTypes.TIME,
-			DataTypes.TIMESTAMP
+			DataTypes.TIMESTAMP,
+			DataTypes.createDecimalType(5, 2)
+		};
+
+		String[] cols = new String[types.length];
+		for (int i = 0; i < types.length; i++) {
+			if (types[i].toString().toLowerCase().startsWith("decimal")) {
+				cols[i] = "decimal_col";
+			} else {
+				cols[i] = types[i].toString().toLowerCase() + "_col";
+			}
+		}
+
+		TableSchema schema = new TableSchema(cols, types);
+
+		ExternalCatalogTable table = CatalogTestUtil.createExternalCatalogTable("hive", schema,
+			new HashMap<>());
+		ObjectPath tablePath = new ObjectPath("default", "datatypes");
+		catalog.createTable(tablePath, table, true);
+		ExternalCatalogTable table1 = catalog.getTable(tablePath);
+
+		assertTrue(table.equals(table1));
+	}
+
+	@Test
+	public void testDataTypesForCharAndTime() {
+		InternalType[] types = new InternalType[] {
+			DataTypes.CHAR,
+			DataTypes.TIME
 		};
 
 		String[] cols = new String[types.length];
@@ -86,7 +113,10 @@ public class HiveDataTypeTest {
 		ObjectPath tablePath = new ObjectPath("default", "datatypes");
 		catalog.createTable(tablePath, table, true);
 		ExternalCatalogTable table1 = catalog.getTable(tablePath);
+		TableSchema tableSchema = table1.getTableSchema();
+		InternalType[] colTypes = tableSchema.getTypes();
 
-		assertTrue(table.equals(table1));
+		assertTrue(colTypes[0] == DataTypes.STRING);
+		assertTrue(colTypes[1] == DataTypes.DATE);
 	}
 }

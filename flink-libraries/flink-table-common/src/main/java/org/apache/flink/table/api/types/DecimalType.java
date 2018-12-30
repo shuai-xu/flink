@@ -70,6 +70,29 @@ public class DecimalType extends AtomicType {
 		return of(value.precision(), value.scale());
 	}
 
+	/**
+	 * Create a DecimalType instance from its qualified name in the form of "decimal(p,s)".
+	 * @param qualifiedName qualified decimal type name
+	 * @return a DecimalType instance
+	 */
+	public static DecimalType of(String qualifiedName) {
+		if (!qualifiedName.startsWith("decimal(")) {
+			throw new IllegalArgumentException("Illegal form of qualified decimal type " + qualifiedName);
+		}
+
+		int start = qualifiedName.indexOf('(');
+		int end = qualifiedName.indexOf(')');
+		String ps = qualifiedName.substring(start + 1, end);
+		String[] sArray = ps.split(",");
+		if (sArray.length != 2) {
+			throw new IllegalArgumentException("Illegal form of qualified decimal type " + qualifiedName);
+		}
+
+		int precision = Integer.parseInt(sArray[0]);
+		int scale = Integer.parseInt(sArray[1]);
+		return new DecimalType(precision, scale);
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -94,9 +117,6 @@ public class DecimalType extends AtomicType {
 
 	@Override
 	public String toString() {
-		return "DecimalType{" +
-				"precision=" + precision +
-				", scale=" + scale +
-				'}';
+		return "decimal(" + precision + "," + scale + ')';
 	}
 }

@@ -243,11 +243,18 @@ public class HiveMetadataUtil {
 	 */
 
 	public static InternalType convert(String hiveType) {
+		// First, handle types that have parameters such as CHAR(5), DECIMAL(6, 2), etc
+		if (hiveType.toLowerCase().startsWith(serdeConstants.CHAR_TYPE_NAME) ||
+			hiveType.toLowerCase().startsWith(serdeConstants.VARCHAR_TYPE_NAME)) {
+			// For CHAR(p) and VARCHAR(p) types, map them to String for now because Flink doesn't yet support them.
+			return StringType.INSTANCE;
+		} else if (hiveType.toLowerCase().startsWith(serdeConstants.DECIMAL_TYPE_NAME)) {
+			return DecimalType.of(hiveType);
+		}
+
 		switch (hiveType) {
 			case serdeConstants.STRING_TYPE_NAME:
 				return StringType.INSTANCE;
-			case serdeConstants.CHAR_TYPE_NAME:
-				return CharType.INSTANCE;
 			case serdeConstants.BOOLEAN_TYPE_NAME:
 				return BooleanType.INSTANCE;
 			case serdeConstants.TINYINT_TYPE_NAME:
@@ -268,8 +275,6 @@ public class HiveMetadataUtil {
 				return TimeType.INSTANCE;
 			case serdeConstants.TIMESTAMP_TYPE_NAME:
 				return TimestampType.TIMESTAMP;
-			case serdeConstants.DECIMAL_TYPE_NAME:
-				return DecimalType.SYSTEM_DEFAULT;
 			case serdeConstants.BINARY_TYPE_NAME:
 				return ByteArrayType.INSTANCE;
 			default:
@@ -299,15 +304,15 @@ public class HiveMetadataUtil {
 		} else if (internalType.equals(StringType.INSTANCE)) {
 			return serdeConstants.STRING_TYPE_NAME;
 		} else if (internalType.equals(CharType.INSTANCE)) {
-			return serdeConstants.CHAR_TYPE_NAME;
+			return serdeConstants.CHAR_TYPE_NAME + "(1)";
 		} else if (internalType.equals(DateType.DATE)) {
 			return serdeConstants.DATE_TYPE_NAME;
 		} else if (internalType.equals(TimeType.INSTANCE)) {
-			return serdeConstants.DATETIME_TYPE_NAME;
+			return serdeConstants.DATE_TYPE_NAME;
 		} else if (internalType instanceof TimestampType) {
 			return serdeConstants.TIMESTAMP_TYPE_NAME;
 		} else if (internalType instanceof DecimalType) {
-			return serdeConstants.DECIMAL_TYPE_NAME;
+			return internalType.toString();
 		} else if (internalType.equals(ByteArrayType.INSTANCE)) {
 			return serdeConstants.BINARY_TYPE_NAME;
 		} else {
