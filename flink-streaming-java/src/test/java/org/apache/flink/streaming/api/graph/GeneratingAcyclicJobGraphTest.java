@@ -541,6 +541,8 @@ public class GeneratingAcyclicJobGraphTest {
 
 	private static class NoOpSourceFunctionV2 implements ParallelSourceFunctionV2<String> {
 
+		private static final long serialVersionUID = 1L;
+
 		@Override
 		public boolean isFinished() {
 			return false;
@@ -559,9 +561,13 @@ public class GeneratingAcyclicJobGraphTest {
 
 	private static class NoOpSinkFunction implements SinkFunction<String> {
 
+		private static final long serialVersionUID = 1L;
+
 	}
 
 	private static class NoOpMapFunction implements MapFunction<String, String> {
+
+		private static final long serialVersionUID = 1L;
 
 		@Override
 		public String map(String value) throws Exception {
@@ -570,6 +576,8 @@ public class GeneratingAcyclicJobGraphTest {
 	}
 
 	private static class NoOpCoMapFunction implements CoMapFunction<String, String, String> {
+
+		private static final long serialVersionUID = 1L;
 
 		@Override
 		public String map1(String value) {
@@ -583,6 +591,8 @@ public class GeneratingAcyclicJobGraphTest {
 	}
 
 	private static class NoOpFilterFunction implements FilterFunction<String> {
+
+		private static final long serialVersionUID = 1L;
 
 		@Override
 		public boolean filter(String value) throws Exception {

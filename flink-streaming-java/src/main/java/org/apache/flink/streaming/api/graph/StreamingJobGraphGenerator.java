@@ -19,6 +19,7 @@ package org.apache.flink.streaming.api.graph;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.ExecutionConfig;
+import org.apache.flink.api.common.ExecutionMode;
 import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.api.common.functions.Function;
 import org.apache.flink.api.common.io.InputFormat;
@@ -447,7 +448,8 @@ public class StreamingJobGraphGenerator {
 						streamGraph.getStreamNode(edge.getSourceId()),
 						streamGraph.getStreamNode(edge.getTargetId()),
 						streamGraph.isMultiHeadChainMode(),
-						streamGraph.isChainEagerlyEnabled());
+						streamGraph.isChainEagerlyEnabled(),
+						streamGraph.getExecutionConfig().getExecutionMode());
 			}
 		}
 	}
@@ -458,13 +460,49 @@ public class StreamingJobGraphGenerator {
 		StreamGraph streamGraph) {
 
 		// infer the read priority of each edge from bottom to top of the topology
+		inferReadPriority(chainingNodeMap, sortedChainingNodes, streamGraph);
+
+		// break chain in which may occur deadlock
+		for (ChainingStreamNode chainingNode : sortedChainingNodes) {
+			Integer nodeId = chainingNode.getNodeId();
+			StreamNode node = streamGraph.getStreamNode(nodeId);
+
+			if (!chainingNode.isReadPriorityConflicting()) {
+				continue;
+			}
+
+			for (StreamEdge inEdge : node.getInEdges()) {
+				Integer sourceId = inEdge.getSourceId();
+				ReadPriority readPriority = chainingNode.getReadPriority(sourceId);
+				if (!ReadPriority.HIGHER.equals(readPriority)) {
+					if (needToBreakOffChain(inEdge, chainingNodeMap, streamGraph)) {
+						chainingNode.removeChainableToNode(sourceId);
+					}
+				}
+			}
+		}
+	}
+
+	static void inferReadPriority(
+			Map<Integer, ChainingStreamNode> chainingNodeMap,
+			List<ChainingStreamNode> sortedChainingNodes,
+			StreamGraph streamGraph) {
+
+		// infer the read priority of each edge from bottom to top of the topology
+
 		List<StreamEdge> lackPriorEdges = new ArrayList<>();
+		ExecutionMode executionMode = streamGraph.getExecutionConfig().getExecutionMode();
 		for (int i = sortedChainingNodes.size() - 1; i >= 0; i--) {
 			ChainingStreamNode chainingNode = sortedChainingNodes.get(i);
 			Integer nodeId = chainingNode.getNodeId();
 			StreamNode node = streamGraph.getStreamNode(nodeId);
 
 			for (StreamEdge inEdge : node.getInEdges()) {
+				if (getEdgeResultPartitionType(inEdge.getDataExchangeMode(), executionMode) == ResultPartitionType.BLOCKING) {
+					lackPriorEdges.add(inEdge);
+					continue;
+				}
+
 				Integer upstreamNodeId = inEdge.getSourceId();
 				ChainingStreamNode upstreamChainingNode = chainingNodeMap.get(upstreamNodeId);
 				ReadPriority readPriority = node.getReadPriorityHint(inEdge);
@@ -485,7 +523,7 @@ public class StreamingJobGraphGenerator {
 			}
 		}
 
-		for (int i = lackPriorEdges.size() - 1; i >= 0; i--) {
+		for (int i = 0; i < lackPriorEdges.size(); i++) {
 			StreamEdge edge = lackPriorEdges.get(i);
 
 			Integer nodeId = edge.getSourceId();
@@ -500,56 +538,20 @@ public class StreamingJobGraphGenerator {
 			downstreamChainingNode.setReadPriority(nodeId, readPriority);
 			chainingNode.setDownPriority(downstreamNodeId, readPriority);
 		}
-
-		// break chain in which may occur deadlock
-		for (ChainingStreamNode chainingNode : sortedChainingNodes) {
-			Integer nodeId = chainingNode.getNodeId();
-			StreamNode node = streamGraph.getStreamNode(nodeId);
-
-			if (!chainingNode.isReadPriorityConflicting()) {
-				continue;
-			}
-
-			List<StreamEdge> highPriorityEdges = new ArrayList<>();
-			List<StreamEdge> otherPriorityEdges = new ArrayList<>();
-			for (StreamEdge inEdge : node.getInEdges()) {
-				ReadPriority readPriority = chainingNode.getReadPriority(inEdge.getSourceId());
-				if (ReadPriority.HIGHER.equals(readPriority)) {
-					highPriorityEdges.add(inEdge);
-				} else {
-					otherPriorityEdges.add(inEdge);
-				}
-			}
-
-			Set<Integer> nonHighPriorPassedNodes = highPriorityEdges.size() > 0 ? new HashSet<>() : null;
-			for (List<StreamEdge> inEdges : new List[] {otherPriorityEdges, highPriorityEdges}) {
-				for (StreamEdge inEdge : inEdges) {
-					if (needToBreakOffChain(inEdge, chainingNodeMap, streamGraph, nonHighPriorPassedNodes)) {
-						chainingNode.removeChainableToNode(inEdge.getSourceId());
-					}
-				}
-			}
-		}
 	}
 
 	private static boolean needToBreakOffChain(
 			final StreamEdge origEdge,
 			final Map<Integer, ChainingStreamNode> chainingNodeMap,
-			final StreamGraph streamGraph,
-			@Nullable Set<Integer> nonHighPriorPassedNodes) {
-
-		boolean needToBreakOff = false;
+			final StreamGraph streamGraph) {
 
 		Integer origNodeId = origEdge.getTargetId();
-		ChainingStreamNode origChainingNode = chainingNodeMap.get(origNodeId);
 		Integer origUpstreamId = origEdge.getSourceId();
 		boolean isOrigEdgeBroken = !(chainingNodeMap.get(origNodeId).isChainTo(origUpstreamId));
-		boolean isOrigEdgeHighPrior = ReadPriority.HIGHER.equals(origChainingNode.getReadPriority(origUpstreamId));
 
 		boolean isInputBreakCondMet = false;
-		boolean isPriorityconflictCondMet = false;
+		boolean isPriorityConflictCondMet = false;
 		boolean isDamCondMet = false;
-		boolean isCommonPredNodeCondMet = false;
 
 		Deque<Pair<StreamEdge, Boolean>> edgeQueue = new ArrayDeque<>();
 		edgeQueue.addLast(new ImmutablePair<>(origEdge, isOrigEdgeBroken));
@@ -567,37 +569,8 @@ public class StreamingJobGraphGenerator {
 				currentBreakNum--;
 			}
 
-			if (isOrigEdgeHighPrior) {
-				if (isInputBreakCondMet && !isDamCondMet) {
-					break;
-				}
-				if (!isCommonPredNodeCondMet) {
-					checkState(nonHighPriorPassedNodes != null);
-					if (nonHighPriorPassedNodes.contains(upstreamNodeId)) {
-						if (!isDownBroken) {
-							needToBreakOff = true;
-						}
-
-						isCommonPredNodeCondMet = true;
-						break;
-					}
-				}
-			} else {
-				if (isInputBreakCondMet && !isDamCondMet && nonHighPriorPassedNodes == null) {
-					break;
-				}
-				if (!isPriorityconflictCondMet) {
-					if (chainingNodeMap.get(upstreamNodeId).isDownPriorityConflicting()) {
-						if (!isDownBroken && !needToBreakOff) {
-							needToBreakOff = true;
-						}
-
-						isPriorityconflictCondMet = true;
-						if (nonHighPriorPassedNodes == null) {
-							break;
-						}
-					}
-				}
+			if (isInputBreakCondMet && !isDamCondMet) {
+				break;
 			}
 
 			if (!isDamCondMet && !isDownBroken) {
@@ -606,8 +579,9 @@ public class StreamingJobGraphGenerator {
 				}
 			}
 
-			if (!isOrigEdgeHighPrior && nonHighPriorPassedNodes != null) {
-				nonHighPriorPassedNodes.add(upstreamNodeId);
+			if (isDamCondMet && chainingNodeMap.get(upstreamNodeId).isDownPriorityConflicting()) {
+				isPriorityConflictCondMet = true;
+				break;
 			}
 
 			StreamNode upstreamNode = streamGraph.getStreamNode(upstreamNodeId);
@@ -622,13 +596,7 @@ public class StreamingJobGraphGenerator {
 			}
 		}
 
-		if (!needToBreakOff) {
-			if (isDamCondMet) {
-				needToBreakOff = isOrigEdgeHighPrior ? isCommonPredNodeCondMet : isPriorityconflictCondMet;
-			}
-		}
-
-		return needToBreakOff;
+		return (isDamCondMet && isPriorityConflictCondMet);
 	}
 
 	static void breakOffChainForAcyclicJobGraph(Map<Integer, ChainingStreamNode> chainingNodeMap,
@@ -1159,17 +1127,16 @@ public class StreamingJobGraphGenerator {
 		return nameBuffer.toString();
 	}
 
-	private ResultPartitionType getEdgeResultPartitionType(DataExchangeMode dataExchangeMode) {
+	private static ResultPartitionType getEdgeResultPartitionType(DataExchangeMode dataExchangeMode, ExecutionMode executionMode) {
 		switch (dataExchangeMode) {
 			case AUTO:
-				switch (streamGraph.getExecutionConfig().getExecutionMode()) {
+				switch (executionMode) {
 					case PIPELINED:
 						return ResultPartitionType.PIPELINED;
 					case BATCH:
 						return ResultPartitionType.BLOCKING;
 					default:
-						throw new UnsupportedOperationException("Unknown execution mode " +
-							streamGraph.getExecutionConfig().getExecutionMode() + ".");
+						throw new UnsupportedOperationException("Unknown execution mode " +	executionMode + ".");
 				}
 			case PIPELINED:
 				return ResultPartitionType.PIPELINED;
@@ -1194,19 +1161,20 @@ public class StreamingJobGraphGenerator {
 
 			StreamPartitioner<?> partitioner = edge.getPartitioner();
 			IntermediateDataSetID dataSetID = new IntermediateDataSetID(edge.getEdgeID());
+			ExecutionMode executionMode = streamGraph.getExecutionConfig().getExecutionMode();
 			JobEdge jobEdge;
 			if (partitioner instanceof ForwardPartitioner || partitioner instanceof RescalePartitioner) {
 				jobEdge = downstreamVertex.connectDataSetAsInput(
 					upstreamVertex,
 					dataSetID,
 					DistributionPattern.POINTWISE,
-					getEdgeResultPartitionType(edge.getDataExchangeMode()));
+					getEdgeResultPartitionType(edge.getDataExchangeMode(), executionMode));
 			} else {
 				jobEdge = downstreamVertex.connectDataSetAsInput(
 					upstreamVertex,
 					dataSetID,
 					DistributionPattern.ALL_TO_ALL,
-					getEdgeResultPartitionType(edge.getDataExchangeMode()));
+					getEdgeResultPartitionType(edge.getDataExchangeMode(), executionMode));
 			}
 			// set strategy name so that web interface can show it.
 			jobEdge.setShipStrategyName(partitioner.toString());
@@ -1531,6 +1499,10 @@ public class StreamingJobGraphGenerator {
 					downPriorityMap.getOrDefault(ReadPriority.DYNAMIC, Collections.EMPTY_SET).size() > 1);
 		}
 
+		Set<Integer> getDownPriorityNodes(ReadPriority priority) {
+			return this.downPriorityMap.get(priority);
+		}
+
 		void setDownPriority(Integer downstreamNodeId, ReadPriority priority) {
 			checkState(priority != null);
 			downPriorityMap.computeIfAbsent(priority, k -> new HashSet<>())
@@ -1581,13 +1553,14 @@ public class StreamingJobGraphGenerator {
 			StreamNode sourceNode,
 			StreamNode targetNode,
 			boolean isMultiHeadChainMode,
-			boolean isEagerChainingEnabled) {
+			boolean isEagerChainingEnabled,
+			ExecutionMode executionMode) {
 
 			final boolean isChainable;
 			if (upstreamChainingNode.allowMultiHeadChaining && isMultiHeadChainMode) {
-				isChainable = isChainableOnMultiHeadMode(edge, sourceNode, targetNode, isEagerChainingEnabled);
+				isChainable = isChainableOnMultiHeadMode(edge, sourceNode, targetNode, isEagerChainingEnabled, executionMode);
 			} else {
-				isChainable = isChainable(edge, sourceNode, targetNode, isEagerChainingEnabled);
+				isChainable = isChainable(edge, sourceNode, targetNode, isEagerChainingEnabled, executionMode);
 			}
 
 			if (isChainable) {
@@ -1615,16 +1588,18 @@ public class StreamingJobGraphGenerator {
 		private boolean isChainable(StreamEdge edge,
 			StreamNode upstreamNode,
 			StreamNode downStreamNode,
-			boolean chainEagerlyEnabled) {
+			boolean chainEagerlyEnabled,
+			ExecutionMode executionMode) {
 
 			return downStreamNode.getInEdges().size() == 1
-				&& isChainableOnMultiHeadMode(edge, upstreamNode, downStreamNode, chainEagerlyEnabled);
+				&& isChainableOnMultiHeadMode(edge, upstreamNode, downStreamNode, chainEagerlyEnabled, executionMode);
 		}
 
 		private boolean isChainableOnMultiHeadMode(StreamEdge edge,
 			StreamNode upstreamNode,
 			StreamNode downStreamNode,
-			boolean chainEagerlyEnabled) {
+			boolean chainEagerlyEnabled,
+			ExecutionMode executionMode) {
 
 			StreamOperator<?> downstreamOperator = downStreamNode.getOperator();
 			StreamOperator<?> upstreamOperator = upstreamNode.getOperator();
@@ -1638,7 +1613,7 @@ public class StreamingJobGraphGenerator {
 				&& (edge.getPartitioner() instanceof ForwardPartitioner ||
 					(downStreamNode.getParallelism() == 1 && chainEagerlyEnabled))
 				&& downStreamNode.getParallelism() == upstreamNode.getParallelism()
-				&& edge.getDataExchangeMode() != DataExchangeMode.BATCH;
+				&& getEdgeResultPartitionType(edge.getDataExchangeMode(), executionMode) == ResultPartitionType.PIPELINED;
 		}
 	}
 

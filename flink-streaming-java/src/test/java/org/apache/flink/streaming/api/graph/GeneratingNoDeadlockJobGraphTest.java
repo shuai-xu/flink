@@ -17,16 +17,19 @@
 
 package org.apache.flink.streaming.api.graph;
 
+import org.apache.flink.api.common.ExecutionMode;
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.runtime.operators.DamBehavior;
 import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.runtime.state.filesystem.FsStateBackend;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.streaming.api.functions.co.CoMapFunction;
@@ -34,19 +37,25 @@ import org.apache.flink.streaming.api.functions.co.CoProcessFunction;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.streaming.api.functions.source.ParallelSourceFunctionV2;
 import org.apache.flink.streaming.api.functions.source.SourceRecord;
+import org.apache.flink.streaming.api.graph.StreamNode.ReadPriority;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
+import org.apache.flink.streaming.api.operators.Output;
 import org.apache.flink.streaming.api.operators.StreamOperator;
 import org.apache.flink.streaming.api.operators.StreamSource;
+import org.apache.flink.streaming.api.operators.TwoInputSelection;
+import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.api.transformations.OneInputTransformation;
 import org.apache.flink.streaming.api.transformations.TwoInputTransformation;
 import org.apache.flink.streaming.api.transformations.TwoInputTransformation.ReadOrder;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.tasks.StreamTask;
 import org.apache.flink.util.Collector;
 
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -61,6 +70,278 @@ import static org.junit.Assert.assertTrue;
  * Tests for generating no deadlock JobGraph.
  */
 public class GeneratingNoDeadlockJobGraphTest {
+
+	/**
+	 * Tests for inferring ReadPriority.
+	 */
+	public static class InferringReadPriorityTest {
+
+		@Test
+		public void testBlockingEdge() throws Exception {
+			// case
+			{
+				StreamExecutionEnvironment env = createEnv();
+
+				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+				DataStream<String> map1 = source1.map(new NoOpMapFunction()).name("map1");
+				DataStream<String> process1 = map1.process(new NoOpProcessFuntion()).name("process1");
+				DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
+				DataStream<String> process2 = process1.connect(filter1).process(new NoOpCoProcessFuntion()).name("process2");
+				((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
+				DataStreamSink<String> sink1 = process2.addSink(new NoOpSinkFunction()).name("sink1");
+
+				testBase(env,
+						Arrays.asList(
+								new TestEdge(map1.getId(), process1.getId()).setDataExchangeMode(DataExchangeMode.BATCH)),
+						Arrays.asList(
+								new TestEdge(process2.getId(), sink1.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(process1.getId(), process2.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(filter1.getId(), process2.getId()).setReadPriority(ReadPriority.LOWER),
+								new TestEdge(map1.getId(), process1.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(source1.getId(), map1.getId()).setReadPriority(ReadPriority.LOWER),
+								new TestEdge(source1.getId(), filter1.getId()).setReadPriority(ReadPriority.LOWER)
+						));
+			}
+
+			// case
+			{
+				StreamExecutionEnvironment env = createEnv();
+				env.getConfig().setExecutionMode(ExecutionMode.BATCH);
+
+				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+				DataStream<String> map1 = source1.map(new NoOpMapFunction()).name("map1");
+				DataStream<String> process1 = map1.process(new NoOpProcessFuntion()).name("process1");
+				DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
+				DataStream<String> process2 = process1.connect(filter1).process(new NoOpCoProcessFuntion()).name("process2");
+				((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
+				DataStreamSink<String> sink1 = process2.addSink(new NoOpSinkFunction()).name("sink1");
+
+				testBase(env,
+						Arrays.asList(
+								new TestEdge(process2.getId(), sink1.getId()).setDataExchangeMode(DataExchangeMode.PIPELINED),
+								new TestEdge(process1.getId(), process2.getId()).setDataExchangeMode(DataExchangeMode.PIPELINED),
+								new TestEdge(filter1.getId(), process2.getId()).setDataExchangeMode(DataExchangeMode.PIPELINED),
+								new TestEdge(map1.getId(), process1.getId()).setDataExchangeMode(DataExchangeMode.AUTO),
+								new TestEdge(source1.getId(), map1.getId()).setDataExchangeMode(DataExchangeMode.PIPELINED),
+								new TestEdge(source1.getId(), filter1.getId()).setDataExchangeMode(DataExchangeMode.PIPELINED)),
+						Arrays.asList(
+								new TestEdge(process2.getId(), sink1.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(process1.getId(), process2.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(filter1.getId(), process2.getId()).setReadPriority(ReadPriority.LOWER),
+								new TestEdge(map1.getId(), process1.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(source1.getId(), map1.getId()).setReadPriority(ReadPriority.LOWER),
+								new TestEdge(source1.getId(), filter1.getId()).setReadPriority(ReadPriority.LOWER)
+						));
+			}
+		}
+
+		@Test
+		public void testOthers() throws Exception {
+			// case
+			{
+				StreamExecutionEnvironment env = createEnv();
+
+				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+				DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
+
+				DataStream<String> process1 = source1.connect(source2).process(new NoOpCoProcessFuntion()).name("process1");
+				((TwoInputTransformation) process1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
+
+				DataStream<String> filter1 = process1.filter(new NoOpFilterFunction()).name("filter1");
+				DataStream<String> process2 = filter1.connect(process1).process(new NoOpCoProcessFuntion()).name("process2");
+				((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
+
+				DataStreamSink<String> sink1 = process1.addSink(new NoOpSinkFunction()).name("sink1");
+				DataStreamSink<String> sink2 = process2.addSink(new NoOpSinkFunction()).name("sink2");
+
+				testBase(env, null,
+						Arrays.asList(
+								new TestEdge(process2.getId(), sink2.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(filter1.getId(), process2.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(process1.getId(), process2.getId()).setReadPriority(ReadPriority.LOWER),
+								new TestEdge(process1.getId(), filter1.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(process1.getId(), sink1.getId()).setReadPriority(ReadPriority.DYNAMIC),
+								new TestEdge(source1.getId(), process1.getId()).setReadPriority(ReadPriority.DYNAMIC),
+								new TestEdge(source1.getId(), process1.getId()).setReadPriority(ReadPriority.DYNAMIC)
+						));
+			}
+
+			// case
+			{
+				StreamExecutionEnvironment env = createEnv();
+
+				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+				DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
+				DataStream<String> source3 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source3");
+
+				DataStream<String> map1 = source2.map(new NoOpMapFunction()).name("map1");
+				DataStream<String> process1 = source1.connect(map1).process(new NoOpCoProcessFuntion()).name("process1");
+				((TwoInputTransformation) process1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
+
+				DataStream<String> process2 = process1.connect(source3).process(new NoOpCoProcessFuntion()).name("process2");
+				((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
+				DataStreamSink<String> sink1 = process2.addSink(new NoOpSinkFunction()).name("sink1");
+
+				testBase(env, null,
+						Arrays.asList(
+								new TestEdge(process2.getId(), sink1.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(process1.getId(), process2.getId()).setReadPriority(ReadPriority.LOWER),
+								new TestEdge(source3.getId(), process2.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(source1.getId(), process1.getId()).setReadPriority(ReadPriority.LOWER),
+								new TestEdge(map1.getId(), process1.getId()).setReadPriority(ReadPriority.DYNAMIC),
+								new TestEdge(source2.getId(), map1.getId()).setReadPriority(ReadPriority.DYNAMIC)
+						));
+			}
+
+			// case
+			{
+				StreamExecutionEnvironment env = createEnv();
+
+				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+				DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
+				DataStream<String> source3 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source3");
+				DataStream<String> source4 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source4");
+
+				DataStream<String> process1 = source2.connect(source3).process(new NoOpCoProcessFuntion()).name("process1");
+				((TwoInputTransformation) process1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
+				DataStream<String> process2 = source1.connect(process1).process(new NoOpCoProcessFuntion()).name("process2");
+				((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
+
+				DataStream<String> process3 = process2.connect(source4).process(new NoOpCoProcessFuntion()).name("process3");
+				((TwoInputTransformation) process3.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
+				DataStreamSink<String> sink1 = process3.addSink(new NoOpSinkFunction()).name("sink1");
+
+				testBase(env, null,
+						Arrays.asList(
+								new TestEdge(process3.getId(), sink1.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(process2.getId(), process3.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(source4.getId(), process3.getId()).setReadPriority(ReadPriority.LOWER),
+								new TestEdge(source1.getId(), process2.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(process1.getId(), process2.getId()).setReadPriority(ReadPriority.DYNAMIC),
+								new TestEdge(source2.getId(), process1.getId()).setReadPriority(ReadPriority.DYNAMIC),
+								new TestEdge(source3.getId(), process1.getId()).setReadPriority(ReadPriority.DYNAMIC)
+						));
+			}
+
+			// case
+			{
+				StreamExecutionEnvironment env = createEnv();
+
+				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+				DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
+
+				DataStream<String> process1 = source1.rescale().transform(
+						"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
+				((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
+
+				DataStream<String> map1 = source1.map(new NoOpMapFunction()).name("map1");
+				DataStream<String> process2 = map1.connect(source2).process(new NoOpCoProcessFuntion()).name("process2");
+				((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
+
+				DataStream<String> process3 = process1.connect(process2).process(new NoOpCoProcessFuntion()).name("process3");
+				((TwoInputTransformation) process3.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
+
+				DataStreamSink<String> sink1 = process3.addSink(new NoOpSinkFunction()).name("sink1");
+
+				testBase(env, null,
+						Arrays.asList(
+								new TestEdge(process3.getId(), sink1.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(process1.getId(), process3.getId()).setReadPriority(ReadPriority.LOWER),
+								new TestEdge(process2.getId(), process3.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(map1.getId(), process2.getId()).setReadPriority(ReadPriority.DYNAMIC),
+								new TestEdge(source2.getId(), process2.getId()).setReadPriority(ReadPriority.HIGHER),
+								new TestEdge(source1.getId(), process1.getId()).setReadPriority(ReadPriority.LOWER),
+								new TestEdge(source1.getId(), map1.getId()).setReadPriority(ReadPriority.DYNAMIC)
+						));
+			}
+		}
+
+		public static void testBase(StreamExecutionEnvironment env,
+			List<TestEdge> dataExchangeModes,
+			List<TestEdge> expectedPriorities) throws Exception {
+
+			StreamGraph streamGraph = env.getStreamGraph();
+			for (Tuple2<Integer, StreamOperator<?>> pair : streamGraph.getOperators()) {
+				pair.f1.setChainingStrategy(ChainingStrategy.ALWAYS);
+			}
+
+			if (dataExchangeModes != null) {
+				for (TestEdge testEdge : dataExchangeModes) {
+					for (StreamEdge edge : streamGraph.getStreamEdges(testEdge.getSourceId(), testEdge.getTargetId())) {
+						edge.setDataExchangeMode(testEdge.getDataExchangeMode());
+					}
+				}
+			}
+
+			List<Integer> sortedSourceIDs = streamGraph.getSourceIDs().stream()
+					.sorted(
+							Comparator.comparing((Integer id) -> {
+								StreamOperator<?> operator = streamGraph.getStreamNode(id).getOperator();
+								return operator == null || operator instanceof StreamSource ? 0 : 1;
+							}).thenComparingInt(id -> id))
+					.collect(Collectors.toList());
+
+			List<StreamingJobGraphGenerator.ChainingStreamNode> sortedChainingNodes = StreamingJobGraphGenerator.sortTopologicalNodes(streamGraph, sortedSourceIDs);
+
+			Map<Integer, StreamingJobGraphGenerator.ChainingStreamNode> chainingNodeMap = sortedChainingNodes.stream()
+					.collect(Collectors.toMap(StreamingJobGraphGenerator.ChainingStreamNode::getNodeId, (o) -> o));
+
+			StreamingJobGraphGenerator.splitUpInitialChains(chainingNodeMap, sortedChainingNodes, streamGraph);
+			StreamingJobGraphGenerator.inferReadPriority(chainingNodeMap, sortedChainingNodes, streamGraph);
+
+			for (TestEdge testEdge : expectedPriorities) {
+				ReadPriority readPriority = testEdge.getReadPriority();
+				Integer sourceId = testEdge.getSourceId(), targetId = testEdge.getTargetId();
+
+				String message = String.format("[source: %s, target: %s]",
+						streamGraph.getStreamNode(sourceId).getOperatorName(),
+						streamGraph.getStreamNode(targetId).getOperatorName());
+
+				assertEquals(message, readPriority, chainingNodeMap.get(targetId).getReadPriority(sourceId));
+				assertTrue(message, chainingNodeMap.get(sourceId).getDownPriorityNodes(readPriority).contains(targetId));
+			}
+		}
+
+		private static class TestEdge {
+
+			private final Integer sourceId;
+			private final Integer targetId;
+
+			private DataExchangeMode dataExchangeMode;
+			private ReadPriority readPriority;
+
+			public TestEdge(Integer sourceId, Integer targetId) {
+				this.sourceId = sourceId;
+				this.targetId = targetId;
+			}
+
+			public Integer getSourceId() {
+				return sourceId;
+			}
+
+			public Integer getTargetId() {
+				return targetId;
+			}
+
+			public DataExchangeMode getDataExchangeMode() {
+				return dataExchangeMode;
+			}
+
+			public TestEdge setDataExchangeMode(DataExchangeMode dataExchangeMode) {
+				this.dataExchangeMode = dataExchangeMode;
+				return this;
+			}
+
+			public ReadPriority getReadPriority() {
+				return readPriority;
+			}
+
+			public TestEdge setReadPriority(ReadPriority readPriority) {
+				this.readPriority = readPriority;
+				return this;
+			}
+		}
+	}
 
 	@Test
 	public void testBasicGraph() throws Exception {
@@ -77,7 +358,8 @@ public class GeneratingNoDeadlockJobGraphTest {
 
 		// case:
 		{
-			for (int i = 0; i < 4; i++) {
+			for (ReadOrder readOrder : new ReadOrder[] {
+					ReadOrder.RANDOM_ORDER, ReadOrder.INPUT1_FIRST, ReadOrder.INPUT2_FIRST, ReadOrder.SPECIAL_ORDER}) {
 				StreamExecutionEnvironment env = createEnv();
 
 				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
@@ -86,26 +368,11 @@ public class GeneratingNoDeadlockJobGraphTest {
 				map1.addSink(new NoOpSinkFunction()).name("sink1");
 				map1.addSink(new NoOpSinkFunction()).name("sink2");
 
-				String msgPrefix = null;
-				switch (i) {
-					case 0:
-						msgPrefix = "RANDOM_ORDER";
-						break;
-					case 1:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						msgPrefix = "INPUT1_FIRST";
-						break;
-					case 2:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						msgPrefix = "INPUT2_FIRST";
-						break;
-					case 3:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
-						msgPrefix = "DYNAMIC_ORDER";
-						break;
+				if (readOrder != ReadOrder.RANDOM_ORDER) {
+					((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(readOrder);
 				}
 
-				testBase(env, msgPrefix, new Integer[][]{});
+				testBase(env, readOrder.name(), new Integer[][]{});
 			}
 		}
 	}
@@ -140,47 +407,36 @@ public class GeneratingNoDeadlockJobGraphTest {
 	}
 
 	@Test
-	public void testTriangleTopology() throws Exception {
-		for (int i = 0; i < 4; i++) {
+	public void testTriangleTopology1() throws Exception {
+		for (ReadOrder readOrder : new ReadOrder[] {
+				ReadOrder.RANDOM_ORDER, ReadOrder.INPUT2_FIRST, ReadOrder.SPECIAL_ORDER}) {
 			StreamExecutionEnvironment env = createEnv();
 
 			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
-			DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
-			DataStream<String> map1 = filter1.connect(source1).map(new NoOpCoMapFunction()).name("map1");
-			map1.addSink(new NoOpSinkFunction()).name("sink1");
+			DataStream<String> map1 = source1.map(new NoOpMapFunction()).name("map1");
+			DataStream<String> process1 = map1.transform(
+					"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
+			((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
 
-			String msgPrefix = null;
-			switch (i) {
-				case 0:
-					msgPrefix = "RANDOM_ORDER";
+			DataStream<String> process2 = process1.connect(source1).process(new NoOpCoProcessFuntion()).name("process2");
+			process2.addSink(new NoOpSinkFunction()).name("sink1");
 
-					testBase(env, new Integer[][]{});
+			if (readOrder != ReadOrder.RANDOM_ORDER) {
+				((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(readOrder);
+			}
+
+			switch (readOrder) {
+				case RANDOM_ORDER:
+					testBase(env, readOrder.name(), new Integer[][]{});
 					break;
-				case 1:
-					((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-					msgPrefix = "INPUT1_FIRST";
-
-					testBase(env, msgPrefix, new Integer[][]{
-							new Integer[]{filter1.getId(), map1.getId()},
-							new Integer[]{source1.getId(), map1.getId()}
+				case INPUT2_FIRST:
+					testBase(env, readOrder.name(), new Integer[][]{
+							new Integer[]{process1.getId(), process2.getId()}
 					});
 					break;
-				case 2:
-					((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-					msgPrefix = "INPUT2_FIRST";
-
-					testBase(env, msgPrefix, new Integer[][]{
-							new Integer[]{filter1.getId(), map1.getId()},
-							new Integer[]{source1.getId(), map1.getId()}
-					});
-					break;
-				case 3:
-					((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
-					msgPrefix = "DYNAMIC_ORDER";
-
-					testBase(env, msgPrefix, new Integer[][]{
-							new Integer[]{filter1.getId(), map1.getId()},
-							new Integer[]{source1.getId(), map1.getId()}
+				case SPECIAL_ORDER:
+					testBase(env, readOrder.name(), new Integer[][]{
+							new Integer[]{process1.getId(), process2.getId()}
 					});
 					break;
 			}
@@ -188,83 +444,330 @@ public class GeneratingNoDeadlockJobGraphTest {
 	}
 
 	@Test
-	public void testCrossTopology() throws Exception {
-		// case:
-		{
-			for (int i = 0; i < 3; i++) {
-				StreamExecutionEnvironment env = createEnv();
+	public void testTriangleTopology2() throws Exception {
+		for (ReadOrder readOrder : new ReadOrder[] {
+				ReadOrder.RANDOM_ORDER, ReadOrder.INPUT1_FIRST, ReadOrder.SPECIAL_ORDER}) {
+			StreamExecutionEnvironment env = createEnv();
 
-				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
-				DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
-				DataStream<String> map1 = source1.connect(source2).map(new NoOpCoMapFunction()).name("map1");
-				DataStream<String> map2 = source1.connect(source2).map(new NoOpCoMapFunction()).name("map2");
-				map1.addSink(new NoOpSinkFunction()).name("sink1");
-				map2.addSink(new NoOpSinkFunction()).name("sink2");
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+			DataStream<String> map1 = source1.map(new NoOpMapFunction()).name("map1");
+			DataStream<String> process1 = map1.rescale().transform(
+					"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
+			((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
 
-				String msgPrefix = null;
-				switch (i) {
-					case 0:
-						msgPrefix = "ALL_RANDOM_ORDER";
-						break;
-					case 1:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						msgPrefix = "ALL_INPUT1_FIRST";
-						break;
-					case 2:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						msgPrefix = "ALL_INPUT2_FIRST";
-						break;
-				}
+			DataStream<String> process2 = source1.connect(process1).process(new NoOpCoProcessFuntion()).name("process2");
+			process2.addSink(new NoOpSinkFunction()).name("sink1");
 
-				testBase(env, msgPrefix, new Integer[][]{});
+			if (readOrder != ReadOrder.RANDOM_ORDER) {
+				((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(readOrder);
+			}
+
+			switch (readOrder) {
+				case RANDOM_ORDER:
+					testBase(env, readOrder.name(), new Integer[][]{
+							new Integer[]{map1.getId(), process1.getId()}
+					});
+					break;
+				case INPUT2_FIRST:
+					testBase(env, readOrder.name(), new Integer[][]{
+							new Integer[]{map1.getId(), process1.getId()},
+							new Integer[]{process1.getId(), process2.getId()}
+					});
+					break;
+				case SPECIAL_ORDER:
+					testBase(env, readOrder.name(), new Integer[][]{
+							new Integer[]{map1.getId(), process1.getId()},
+							new Integer[]{process1.getId(), process2.getId()}
+					});
+					break;
 			}
 		}
+	}
 
-		// case:
-		{
-			for (int i = 0; i < 3; i++) {
-				StreamExecutionEnvironment env = createEnv();
+	@Test
+	public void testTriangleTopology3() throws Exception {
+		for (ReadOrder readOrder : new ReadOrder[] {
+				ReadOrder.RANDOM_ORDER, ReadOrder.INPUT2_FIRST, ReadOrder.SPECIAL_ORDER}) {
+			StreamExecutionEnvironment env = createEnv();
 
-				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
-				DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
-				DataStream<String> map1 = source1.connect(source2).map(new NoOpCoMapFunction()).name("map1");
-				DataStream<String> map2 = source1.connect(source2).map(new NoOpCoMapFunction()).name("map2");
-				map1.addSink(new NoOpSinkFunction()).name("sink1");
-				map2.addSink(new NoOpSinkFunction()).name("sink2");
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+			DataStream<String> map1 = source1.rescale().map(new NoOpMapFunction()).name("map1");
+			DataStream<String> map2 = source1.map(new NoOpMapFunction()).name("map2");
+			DataStream<String> process1 = map1.connect(map2).transform(
+					"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpTwoInputStreamOperator()).name("process1");
+			((TwoInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
 
-				switch (i) {
-					case 0:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
+			DataStream<String> process2 = process1.rescale().connect(source1).process(new NoOpCoProcessFuntion()).name("process2");
+			process2.addSink(new NoOpSinkFunction()).name("sink1");
 
-						testBase(env, "INPUT1_INPUT2_FIRST ", new Integer[][]{
-								new Integer[]{source2.getId(), map1.getId()},
-								new Integer[]{source1.getId(), map2.getId()}
-						});
-						break;
-					case 1:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
+			if (readOrder != ReadOrder.RANDOM_ORDER) {
+				((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(readOrder);
+			}
 
-						testBase(env, "INPUT2_INPUT1_FIRST", new Integer[][]{
-								new Integer[]{source1.getId(), map1.getId()},
-								new Integer[]{source2.getId(), map2.getId()}
-						});
-						break;
-					case 2:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
+			testBase(env, readOrder.name(), new Integer[][]{
+					new Integer[]{source1.getId(), map1.getId()},
+					new Integer[]{process1.getId(), process2.getId()}
+			});
+		}
+	}
 
-						testBase(env, "ALL_DYNAMIC_ORDER", new Integer[][]{
-								new Integer[]{source1.getId(), map1.getId()},
-								new Integer[]{source2.getId(), map1.getId()},
-								new Integer[]{source1.getId(), map2.getId()},
-								new Integer[]{source2.getId(), map2.getId()}
-						});
-						break;
-				}
+	@Test
+	public void testTriangleTopology4() throws Exception {
+		for (ReadOrder readOrder : new ReadOrder[] {
+				ReadOrder.RANDOM_ORDER, ReadOrder.INPUT2_FIRST, ReadOrder.SPECIAL_ORDER}) {
+			StreamExecutionEnvironment env = createEnv();
+
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+			DataStream<String> map1 = source1.map(new NoOpMapFunction()).name("map1");
+			DataStream<String> process1 = map1.transform(
+					"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
+			((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
+
+			DataStream<String> process2 = process1.rescale().connect(source1).process(new NoOpCoProcessFuntion()).name("process2");
+			process2.addSink(new NoOpSinkFunction()).name("sink1");
+
+			if (readOrder != ReadOrder.RANDOM_ORDER) {
+				((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(readOrder);
+			}
+
+			testBase(env, readOrder.name(), new Integer[][]{
+					new Integer[]{process1.getId(), process2.getId()}
+			});
+		}
+	}
+
+	@Test
+	public void testTriangleTopology5() throws Exception {
+		for (ReadOrder readOrder : new ReadOrder[] {
+				ReadOrder.RANDOM_ORDER, ReadOrder.INPUT1_FIRST, ReadOrder.SPECIAL_ORDER}) {
+			StreamExecutionEnvironment env = createEnv();
+
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+			DataStream<String> map1 = source1.map(new NoOpMapFunction()).name("map1");
+			DataStream<String> process1 = map1.transform(
+					"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
+			((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
+
+			DataStream<String> filter1 = process1.rescale().filter(new NoOpFilterFunction()).name("filter1");
+			DataStream<String> filter2 = process1.rescale().filter(new NoOpFilterFunction()).name("filter2");
+			DataStream<String> map2 = filter1.connect(filter2).process(new NoOpCoProcessFuntion()).name("map1");
+
+			DataStream<String> process2 = source1.connect(map2).process(new NoOpCoProcessFuntion()).name("process2");
+			process2.addSink(new NoOpSinkFunction()).name("sink1");
+
+			if (readOrder != ReadOrder.RANDOM_ORDER) {
+				((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(readOrder);
+			}
+
+			testBase(env, readOrder.name(), new Integer[][]{
+					new Integer[]{process1.getId(), filter1.getId()},
+					new Integer[]{process1.getId(), filter2.getId()}
+			});
+		}
+	}
+
+	@Test
+	public void testCrossTopology1() throws Exception {
+		for (ReadOrder readOrder : new ReadOrder[] {
+				ReadOrder.RANDOM_ORDER, ReadOrder.INPUT1_FIRST, ReadOrder.INPUT2_FIRST}) {
+			StreamExecutionEnvironment env = createEnv();
+
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+			DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
+			DataStream<String> process1 = source1.connect(source2).process(new NoOpCoProcessFuntion()).name("process1");
+			DataStream<String> process2 = source1.connect(source2).process(new NoOpCoProcessFuntion()).name("process2");
+			process1.addSink(new NoOpSinkFunction()).name("sink1");
+			process2.addSink(new NoOpSinkFunction()).name("sink2");
+
+			String msgPrefix = null;
+			switch (readOrder) {
+				case RANDOM_ORDER:
+					msgPrefix = "ALL_RANDOM_ORDER";
+					break;
+				case INPUT1_FIRST:
+					((TwoInputTransformation) process1.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
+					((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
+					msgPrefix = "ALL_INPUT1_FIRST";
+					break;
+				case INPUT2_FIRST:
+					((TwoInputTransformation) process1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
+					((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
+					msgPrefix = "ALL_INPUT2_FIRST";
+					break;
+			}
+
+			testBase(env, msgPrefix, new Integer[][]{});
+		}
+	}
+
+	@Test
+	public void testCrossTopology2() throws Exception {
+		for (ReadOrder readOrder : new ReadOrder[] {
+			ReadOrder.INPUT1_FIRST, ReadOrder.SPECIAL_ORDER}) {
+			StreamExecutionEnvironment env = createEnv();
+
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+			DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
+
+			DataStream<String> map1 = source1.map(new NoOpMapFunction()).name("map1");
+			DataStream<String> process1 = map1.transform(
+					"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
+			((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
+
+			DataStream<String> process2 = source1.connect(source2).process(new NoOpCoProcessFuntion()).name("process2");
+			DataStream<String> process3 = process1.connect(source2).process(new NoOpCoProcessFuntion()).name("process3");
+			process2.addSink(new NoOpSinkFunction()).name("sink1");
+			process3.addSink(new NoOpSinkFunction()).name("sink2");
+
+			switch (readOrder) {
+				case INPUT1_FIRST:
+					((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
+					((TwoInputTransformation) process3.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
+
+					testBase(env, "INPUT1_INPUT2_FIRST ", new Integer[][]{
+							new Integer[]{process1.getId(), process3.getId()}
+					});
+					break;
+				case SPECIAL_ORDER:
+					((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
+					((TwoInputTransformation) process3.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
+
+					testBase(env, "ALL_SPECIAL_ORDER ", new Integer[][]{
+							new Integer[]{process1.getId(), process3.getId()}
+					});
+					break;
+			}
+		}
+	}
+
+	@Test
+	public void testCrossTopology3() throws Exception {
+		for (ReadOrder readOrder : new ReadOrder[] {
+				ReadOrder.INPUT1_FIRST, ReadOrder.SPECIAL_ORDER}) {
+			StreamExecutionEnvironment env = createEnv();
+
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+			DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
+
+			DataStream<String> map1 = source1.map(new NoOpMapFunction()).name("map1");
+			DataStream<String> process1 = map1.rescale().transform(
+					"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
+			((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
+
+			DataStream<String> process2 = source1.connect(source2).process(new NoOpCoProcessFuntion()).name("process2");
+			DataStream<String> process3 = process1.connect(source2).process(new NoOpCoProcessFuntion()).name("process3");
+			process2.addSink(new NoOpSinkFunction()).name("sink1");
+			process3.addSink(new NoOpSinkFunction()).name("sink2");
+
+			switch (readOrder) {
+				case INPUT1_FIRST:
+					((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
+					((TwoInputTransformation) process3.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
+
+					testBase(env, "INPUT1_INPUT2_FIRST ", new Integer[][]{
+							new Integer[]{map1.getId(), process1.getId()},
+							new Integer[]{process1.getId(), process3.getId()}
+					});
+					break;
+				case SPECIAL_ORDER:
+					((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
+					((TwoInputTransformation) process3.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
+
+					testBase(env, "ALL_SPECIAL_ORDER ", new Integer[][]{
+							new Integer[]{map1.getId(), process1.getId()},
+							new Integer[]{process1.getId(), process3.getId()}
+					});
+					break;
+			}
+		}
+	}
+
+	@Test
+	public void testCrossTopology4() throws Exception {
+		for (ReadOrder readOrder : new ReadOrder[] {
+				ReadOrder.INPUT1_FIRST, ReadOrder.SPECIAL_ORDER}) {
+			StreamExecutionEnvironment env = createEnv();
+
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+			DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
+
+			DataStream<String> map1 = source1.map(new NoOpMapFunction()).name("map1");
+			DataStream<String> process1 = map1.transform(
+					"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
+			((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
+
+			DataStream<String> map2 = process1.rescale().map(new NoOpMapFunction()).name("map2");
+			DataStream<String> filter1 = process1.rescale().filter(new NoOpFilterFunction()).name("filter1");
+			DataStream<String> map3 = map2.connect(filter1).map(new NoOpCoMapFunction()).name("map3");
+
+			DataStream<String> process2 = source1.connect(source2).process(new NoOpCoProcessFuntion()).name("process2");
+			DataStream<String> process3 = map3.connect(source2).process(new NoOpCoProcessFuntion()).name("process3");
+			process2.addSink(new NoOpSinkFunction()).name("sink1");
+			process3.addSink(new NoOpSinkFunction()).name("sink2");
+
+			switch (readOrder) {
+				case INPUT1_FIRST:
+					((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
+					((TwoInputTransformation) process3.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
+
+					testBase(env, "INPUT1_INPUT2_FIRST ", new Integer[][]{
+							new Integer[]{process1.getId(), map2.getId()},
+							new Integer[]{process1.getId(), filter1.getId()}
+					});
+					break;
+				case SPECIAL_ORDER:
+					((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
+					((TwoInputTransformation) process3.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
+
+					testBase(env, "ALL_SPECIAL_ORDER ", new Integer[][]{
+							new Integer[]{process1.getId(), map2.getId()},
+							new Integer[]{process1.getId(), filter1.getId()}
+					});
+					break;
+			}
+		}
+	}
+
+	@Test
+	public void testCrossTopology5() throws Exception {
+		for (ReadOrder readOrder : new ReadOrder[] {
+				ReadOrder.INPUT2_FIRST, ReadOrder.SPECIAL_ORDER}) {
+			StreamExecutionEnvironment env = createEnv();
+
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+			DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
+			DataStream<String> process1 = source1.transform(
+					"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
+			((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
+
+			DataStream<String> process2 = source2.transform(
+					"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process2");
+			((OneInputTransformation) process2.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
+
+			DataStream<String> process3 = process1.connect(source2).process(new NoOpCoProcessFuntion()).name("process3");
+			DataStream<String> process4 = source1.connect(process2).process(new NoOpCoProcessFuntion()).name("process4");
+			process3.addSink(new NoOpSinkFunction()).name("sink1");
+			process4.addSink(new NoOpSinkFunction()).name("sink2");
+
+			switch (readOrder) {
+				case INPUT2_FIRST:
+					((TwoInputTransformation) process3.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
+					((TwoInputTransformation) process4.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
+
+					testBase(env, "INPUT2_INPUT1_FIRST ", new Integer[][]{
+							new Integer[]{process1.getId(), process3.getId()},
+							new Integer[]{process2.getId(), process4.getId()}
+					});
+					break;
+				case SPECIAL_ORDER:
+					((TwoInputTransformation) process3.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
+					((TwoInputTransformation) process4.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
+
+					testBase(env, "ALL_SPECIAL_ORDER ", new Integer[][]{
+							new Integer[]{process1.getId(), process3.getId()},
+							new Integer[]{process2.getId(), process4.getId()}
+					});
+					break;
 			}
 		}
 	}
@@ -287,7 +790,8 @@ public class GeneratingNoDeadlockJobGraphTest {
 
 		// case:
 		{
-			for (int i = 0; i < 4; i++) {
+			for (ReadOrder readOrder : new ReadOrder[] {
+					ReadOrder.RANDOM_ORDER, ReadOrder.INPUT1_FIRST, ReadOrder.INPUT2_FIRST, ReadOrder.SPECIAL_ORDER}) {
 				StreamExecutionEnvironment env = createEnv();
 
 				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
@@ -296,324 +800,137 @@ public class GeneratingNoDeadlockJobGraphTest {
 						"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
 				DataStream<String> process2 = source2.transform(
 						"operator2", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process2");
-				DataStream<String> map1 = process1.connect(process2).map(new NoOpCoMapFunction()).name("map1");
-				map1.addSink(new NoOpSinkFunction()).name("sink1");
-				map1.addSink(new NoOpSinkFunction()).name("sink2");
+				DataStream<String> process3 = process1.connect(process2).process(new NoOpCoProcessFuntion()).name("process3");
+				process3.addSink(new NoOpSinkFunction()).name("sink1");
+				process3.addSink(new NoOpSinkFunction()).name("sink2");
 
 				((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
 				((OneInputTransformation) process2.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
 
-				String msgPrefix = null;
-				switch (i) {
-					case 0:
-						msgPrefix = "RANDOM_ORDER";
-						break;
-					case 1:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						msgPrefix = "INPUT1_FIRST";
-						break;
-					case 2:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						msgPrefix = "INPUT2_FIRST";
-						break;
-					case 3:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
-						msgPrefix = "DYNAMIC_ORDER";
-						break;
+				if (readOrder != ReadOrder.RANDOM_ORDER) {
+					((TwoInputTransformation) process3.getTransformation()).setReadOrderHint(readOrder);
 				}
 
-				testBase(env, msgPrefix, new Integer[][]{});
+				testBase(env, readOrder.name(), new Integer[][]{});
 			}
 		}
 	}
 
 	@Test
 	public void testUnionAndTriangleTopology() throws Exception {
-		// case:
-		{
-			for (int i = 0; i < 4; i++) {
-				StreamExecutionEnvironment env = createEnv();
+		for (ReadOrder readOrder : new ReadOrder[] {
+				ReadOrder.INPUT2_FIRST, ReadOrder.SPECIAL_ORDER}) {
+			StreamExecutionEnvironment env = createEnv();
 
-				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
-				DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
-				DataStream<String> map1 = filter1.union(source1).map(new NoOpMapFunction()).name("map1");
-				DataStream<String> map2 = map1.connect(source1).map(new NoOpCoMapFunction()).name("map2");
-				map2.addSink(new NoOpSinkFunction()).name("sink1");
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+			DataStream<String> process1 = source1.transform(
+					"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
+			((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
 
-				String msgPrefix = null;
-				switch (i) {
-					case 0:
-						msgPrefix = "RANDOM_ORDER";
+			DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
+			DataStream<String> process2 = process1.connect(source1.union(filter1)).process(new NoOpCoProcessFuntion()).name("process2");
+			process2.addSink(new NoOpSinkFunction()).name("sink1");
 
-						testBase(env, msgPrefix, new Integer[][]{});
-						break;
-					case 1:
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						msgPrefix = "INPUT1_FIRST";
+			((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(readOrder);
 
-						testBase(env, msgPrefix, new Integer[][]{
-								new Integer[]{map1.getId(), map2.getId()},
-								new Integer[]{source1.getId(), map2.getId()}
-						});
-						break;
-					case 2:
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						msgPrefix = "INPUT2_FIRST";
-
-						testBase(env, msgPrefix, new Integer[][]{
-								new Integer[]{map1.getId(), map2.getId()},
-								new Integer[]{source1.getId(), map2.getId()}
-						});
-						break;
-					case 3:
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
-						msgPrefix = "DYNAMIC_ORDER";
-
-						testBase(env, msgPrefix, new Integer[][]{
-								new Integer[]{filter1.getId(), map1.getId()},
-								new Integer[]{source1.getId(), map1.getId()},
-								new Integer[]{source1.getId(), map2.getId()}
-						});
-						break;
-				}
-			}
-		}
-
-		// case:
-		{
-			for (int i = 0; i < 4; i++) {
-				StreamExecutionEnvironment env = createEnv();
-
-				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
-				DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
-				DataStream<String> filter2 = source1.filter(new NoOpFilterFunction()).name("filter2");
-				DataStream<String> map1 = filter1.connect(source1.union(filter2)).map(new NoOpCoMapFunction()).name("map1");
-				map1.addSink(new NoOpSinkFunction()).name("sink1");
-
-				String msgPrefix = null;
-				switch (i) {
-					case 0:
-						msgPrefix = "RANDOM_ORDER";
-
-						testBase(env, msgPrefix, new Integer[][]{});
-						break;
-					case 1:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						msgPrefix = "INPUT1_FIRST";
-
-						testBase(env, msgPrefix, new Integer[][]{
-								new Integer[]{filter1.getId(), map1.getId()},
-								new Integer[]{source1.getId(), map1.getId()},
-								new Integer[]{filter2.getId(), map1.getId()}
-						});
-						break;
-					case 2:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						msgPrefix = "INPUT2_FIRST";
-
-						testBase(env, msgPrefix, new Integer[][]{
-								new Integer[]{filter1.getId(), map1.getId()},
-								new Integer[]{source1.getId(), map1.getId()},
-								new Integer[]{filter2.getId(), map1.getId()}
-						});
-						break;
-					case 3:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
-						msgPrefix = "DYNAMIC_ORDER";
-
-						testBase(env, msgPrefix, new Integer[][]{
-								new Integer[]{filter1.getId(), map1.getId()},
-								new Integer[]{source1.getId(), map1.getId()},
-								new Integer[]{filter2.getId(), map1.getId()}
-						});
-						break;
-				}
-			}
+			testBase(env, readOrder.name(), new Integer[][]{
+					new Integer[]{process1.getId(), process2.getId()}
+			});
 		}
 	}
 
 	@Test
 	public void testUnionAndCrossTopology() throws Exception {
-		// case:
-		{
-			for (int i = 0; i < 2; i++) {
-				StreamExecutionEnvironment env = createEnv();
+		for (ReadOrder readOrder : new ReadOrder[] {
+				ReadOrder.INPUT2_FIRST, ReadOrder.SPECIAL_ORDER}) {
+			StreamExecutionEnvironment env = createEnv();
 
-				DataStream<String> source0 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source0");
-				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
-				DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
-				DataStream<String> map1 = source1.union(source0).connect(source2).map(new NoOpCoMapFunction()).name("map1");
-				DataStream<String> map2 = source1.union(source0).connect(source2).map(new NoOpCoMapFunction()).name("map2");
-				map1.addSink(new NoOpSinkFunction()).name("sink1");
-				map2.addSink(new NoOpSinkFunction()).name("sink2");
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+			DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
 
-				String msgPrefix = null;
-				switch (i) {
-					case 0:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						msgPrefix = "ALL_INPUT1_FIRST";
-						break;
-					case 1:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						msgPrefix = "ALL_INPUT2_FIRST";
-						break;
-				}
+			DataStream<String> map1 = source1.map(new NoOpMapFunction()).name("map1");
 
-				testBase(env, msgPrefix, new Integer[][]{});
-			}
-		}
+			DataStream<String> map2 = map1.rescale().map(new NoOpMapFunction()).name("map2");
+			DataStream<String> filter1 = map1.rescale().filter(new NoOpFilterFunction()).name("filter1");
+			DataStream<String> process1 = map2.union(filter1).transform(
+					"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
+			((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
 
-		// case:
-		{
-			for (int i = 0; i < 4; i++) {
-				StreamExecutionEnvironment env = createEnv();
+			DataStream<String> process2 = process1.connect(source2).process(new NoOpCoProcessFuntion()).name("process2");
+			DataStream<String> process3 = source1.connect(source2).process(new NoOpCoProcessFuntion()).name("process3");
+			process2.addSink(new NoOpSinkFunction()).name("sink1");
+			process3.addSink(new NoOpSinkFunction()).name("sink2");
 
-				DataStream<String> source0 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source0");
-				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
-				DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
-				DataStream<String> map1 = source1.union(source0).connect(source2).map(new NoOpCoMapFunction()).name("map1");
-				DataStream<String> map2 = source1.union(source0).connect(source2).map(new NoOpCoMapFunction()).name("map2");
-				map1.addSink(new NoOpSinkFunction()).name("sink1");
-				map2.addSink(new NoOpSinkFunction()).name("sink2");
+			switch (readOrder) {
+				case INPUT1_FIRST:
+					((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
+					((TwoInputTransformation) process3.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
 
-				switch (i) {
-					case 0:
-						testBase(env, "ALL_RANDOM_ORDER", new Integer[][]{});
-						break;
-					case 1:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
+					testBase(env, "INPUT2_INPUT1_FIRST ", new Integer[][]{
+							new Integer[]{map1.getId(), map2.getId()},
+							new Integer[]{map1.getId(), filter1.getId()},
+							new Integer[]{process1.getId(), process2.getId()}
+					});
+					break;
+				case SPECIAL_ORDER:
+					((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
+					((TwoInputTransformation) process3.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
 
-						testBase(env, "INPUT1_INPUT2_FIRST ", new Integer[][]{
-								new Integer[]{source2.getId(), map1.getId()},
-								new Integer[]{source0.getId(), map2.getId()},
-								new Integer[]{source1.getId(), map2.getId()}
-						});
-						break;
-					case 2:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-
-						testBase(env, "INPUT2_INPUT1_FIRST", new Integer[][]{
-								new Integer[]{source0.getId(), map1.getId()},
-								new Integer[]{source1.getId(), map1.getId()},
-								new Integer[]{source2.getId(), map2.getId()}
-						});
-						break;
-					case 3:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
-
-						testBase(env, "ALL_DYNAMIC_ORDER", new Integer[][]{
-								new Integer[]{source0.getId(), map1.getId()},
-								new Integer[]{source1.getId(), map1.getId()},
-								new Integer[]{source2.getId(), map1.getId()},
-								new Integer[]{source0.getId(), map2.getId()},
-								new Integer[]{source1.getId(), map2.getId()},
-								new Integer[]{source2.getId(), map2.getId()}
-						});
-						break;
-				}
+					testBase(env, "ALL_SPECIAL_ORDER ", new Integer[][]{
+							new Integer[]{map1.getId(), map2.getId()},
+							new Integer[]{map1.getId(), filter1.getId()},
+							new Integer[]{process1.getId(), process2.getId()}
+					});
+					break;
 			}
 		}
 	}
 
 	@Test
 	public void testTriangleAndCrossTopology() throws Exception {
-		// case:
-		{
-			for (int i = 0; i < 2; i++) {
-				StreamExecutionEnvironment env = createEnv();
+		for (ReadOrder readOrder : new ReadOrder[] {
+			ReadOrder.INPUT1_FIRST, ReadOrder.SPECIAL_ORDER}) {
+			StreamExecutionEnvironment env = createEnv();
 
-				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
-				DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
-				DataStream<String> map0 = filter1.connect(source1).map(new NoOpCoMapFunction()).name("map0");
-				((TwoInputTransformation) map0.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+			DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
 
-				DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
-				DataStream<String> map1 = map0.connect(source2).map(new NoOpCoMapFunction()).name("map1");
-				DataStream<String> map2 = map0.connect(source2).map(new NoOpCoMapFunction()).name("map2");
-				map1.addSink(new NoOpSinkFunction()).name("sink1");
-				map2.addSink(new NoOpSinkFunction()).name("sink2");
+			DataStream<String> process1 = source1.transform(
+					"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
+			((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
+			DataStream<String> process2 = process1.transform(
+					"operator2", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process2");
+			((OneInputTransformation) process2.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
 
-				String msgPrefix = null;
-				switch (i) {
-					case 0:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						msgPrefix = "ALL_INPUT1_FIRST";
-						break;
-					case 1:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						msgPrefix = "ALL_INPUT2_FIRST";
-						break;
-				}
+			DataStream<String> process3 = source1.connect(process1).process(new NoOpCoProcessFuntion()).name("process3");
+			DataStream<String> process4 = source2.connect(process2).process(new NoOpCoProcessFuntion()).name("process4");
+			DataStream<String> process5 = source2.connect(source1).process(new NoOpCoProcessFuntion()).name("process5");
 
-				testBase(env, msgPrefix, new Integer[][]{
-						new Integer[]{filter1.getId(), map0.getId()},
-						new Integer[]{source1.getId(), map0.getId()}
-				});
-			}
-		}
+			process3.addSink(new NoOpSinkFunction()).name("sink1");
+			process4.addSink(new NoOpSinkFunction()).name("sink2");
+			process5.addSink(new NoOpSinkFunction()).name("sink3");
 
-		// case:
-		{
-			for (int i = 0; i < 4; i++) {
-				StreamExecutionEnvironment env = createEnv();
+			switch (readOrder) {
+				case INPUT1_FIRST:
+					((TwoInputTransformation) process3.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
+					((TwoInputTransformation) process4.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
+					((TwoInputTransformation) process5.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
 
-				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
-				DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
-				DataStream<String> map0 = filter1.connect(source1).map(new NoOpCoMapFunction()).name("map0");
+					testBase(env, "INPUT1_FIRST ", new Integer[][]{
+							new Integer[]{process1.getId(), process3.getId()},
+							new Integer[]{process2.getId(), process4.getId()}
+					});
+					break;
+				case SPECIAL_ORDER:
+					((TwoInputTransformation) process3.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
+					((TwoInputTransformation) process4.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
+					((TwoInputTransformation) process5.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
 
-				DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
-				DataStream<String> map1 = map0.connect(source2).map(new NoOpCoMapFunction()).name("map1");
-				DataStream<String> map2 = map0.connect(source2).map(new NoOpCoMapFunction()).name("map2");
-				map1.addSink(new NoOpSinkFunction()).name("sink1");
-				map2.addSink(new NoOpSinkFunction()).name("sink2");
-
-				switch (i) {
-					case 0:
-						testBase(env, "ALL_RANDOM_ORDER", new Integer[][]{});
-						break;
-					case 1:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-
-						testBase(env, "INPUT1_INPUT2_FIRST ", new Integer[][]{
-								new Integer[]{filter1.getId(), map0.getId()},
-								new Integer[]{source1.getId(), map0.getId()},
-								new Integer[]{source2.getId(), map1.getId()},
-								new Integer[]{map0.getId(), map2.getId()}
-						});
-						break;
-					case 2:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-
-						testBase(env, "INPUT2_INPUT1_FIRST", new Integer[][]{
-								new Integer[]{filter1.getId(), map0.getId()},
-								new Integer[]{source1.getId(), map0.getId()},
-								new Integer[]{map0.getId(), map1.getId()},
-								new Integer[]{source2.getId(), map2.getId()}
-						});
-						break;
-					case 3:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
-
-						testBase(env, "ALL_DYNAMIC_ORDER", new Integer[][]{
-								new Integer[]{filter1.getId(), map0.getId()},
-								new Integer[]{source1.getId(), map0.getId()},
-								new Integer[]{map0.getId(), map1.getId()},
-								new Integer[]{source2.getId(), map1.getId()},
-								new Integer[]{map0.getId(), map2.getId()},
-								new Integer[]{source2.getId(), map2.getId()}
-						});
-						break;
-				}
+					testBase(env, "ALL_SPECIAL_ORDER ", new Integer[][]{
+							new Integer[]{process1.getId(), process3.getId()},
+							new Integer[]{process2.getId(), process4.getId()}
+					});
+					break;
 			}
 		}
 	}
@@ -654,252 +971,6 @@ public class GeneratingNoDeadlockJobGraphTest {
 			((OneInputTransformation) process2.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
 
 			testBase(env, new Integer[][]{});
-		}
-	}
-
-	@Test
-	public void testDamAndTriangleTopology() throws Exception {
-		// case: FULL_DAM
-		{
-			for (int i = 0; i < 4; i++) {
-				StreamExecutionEnvironment env = createEnv();
-
-				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
-				DataStream<String> process1 = source1.rescale().transform(
-						"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
-				DataStream<String> map1 = process1.connect(source1).map(new NoOpCoMapFunction()).name("map1");
-				map1.addSink(new NoOpSinkFunction()).name("sink1");
-
-				((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
-
-				String msgPrefix = null;
-				switch (i) {
-					case 0:
-						msgPrefix = "DYNAMIC_ORDER";
-
-						testBase(env, msgPrefix, new Integer[][]{
-								new Integer[]{source1.getId(), process1.getId()},
-						});
-						break;
-					case 1:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						msgPrefix = "INPUT1_FIRST";
-
-						testBase(env, msgPrefix, new Integer[][]{
-								new Integer[]{source1.getId(), process1.getId()},
-								new Integer[]{process1.getId(), map1.getId()},
-								new Integer[]{source1.getId(), map1.getId()}
-						});
-						break;
-					case 2:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						msgPrefix = "INPUT2_FIRST";
-
-						testBase(env, msgPrefix, new Integer[][]{
-								new Integer[]{source1.getId(), process1.getId()},
-								new Integer[]{process1.getId(), map1.getId()},
-								new Integer[]{source1.getId(), map1.getId()}
-						});
-						break;
-					case 3:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
-						msgPrefix = "DYNAMIC_ORDER";
-
-						testBase(env, msgPrefix, new Integer[][]{
-								new Integer[]{source1.getId(), process1.getId()},
-								new Integer[]{process1.getId(), map1.getId()},
-								new Integer[]{source1.getId(), map1.getId()}
-						});
-						break;
-				}
-
-			}
-		}
-
-		// case: MATERIALIZING
-		{
-			for (int i = 0; i < 4; i++) {
-				StreamExecutionEnvironment env = createEnv();
-
-				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
-				DataStream<String> process1 = source1.rescale().transform(
-						"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
-				DataStream<String> map1 = process1.connect(source1).map(new NoOpCoMapFunction()).name("map1");
-				map1.addSink(new NoOpSinkFunction()).name("sink1");
-
-				((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.MATERIALIZING);
-
-				String msgPrefix = null;
-				switch (i) {
-					case 0:
-						msgPrefix = "DYNAMIC_ORDER";
-
-						testBase(env, msgPrefix, new Integer[][]{
-								new Integer[]{source1.getId(), process1.getId()},
-						});
-						break;
-					case 1:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						msgPrefix = "INPUT1_FIRST";
-
-						testBase(env, msgPrefix, new Integer[][]{
-								new Integer[]{source1.getId(), process1.getId()},
-								new Integer[]{source1.getId(), map1.getId()}
-						});
-						break;
-					case 2:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						msgPrefix = "INPUT2_FIRST";
-
-						testBase(env, msgPrefix, new Integer[][]{
-								new Integer[]{source1.getId(), process1.getId()},
-								new Integer[]{source1.getId(), map1.getId()}
-						});
-						break;
-					case 3:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
-						msgPrefix = "DYNAMIC_ORDER";
-
-						testBase(env, msgPrefix, new Integer[][]{
-								new Integer[]{source1.getId(), process1.getId()},
-								new Integer[]{source1.getId(), map1.getId()}
-						});
-						break;
-				}
-
-			}
-		}
-
-		// case:
-		{
-			StreamExecutionEnvironment env = createEnv();
-
-			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
-			DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
-
-			DataStream<String> process1 = source1.rescale().process(new NoOpProcessFuntion()).name("process1");
-			((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
-			DataStream<String> map1 = source1.rescale().map(new NoOpMapFunction()).name("map1");
-
-			DataStream<String> filter1 = map1.connect(source2).process(new NoOpCoProcessFuntion()).name("filter1");
-			((TwoInputTransformation) filter1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-
-			DataStream<String> process2 = process1.connect(filter1.rescale()).process(new NoOpCoProcessFuntion()).name("process2");
-			((TwoInputTransformation) process2.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-
-			process2.addSink(new NoOpSinkFunction()).name("sink1");
-
-			testBase(env, new Integer[][]{
-					new Integer[]{source1.getId(), process1.getId()},
-					new Integer[]{source1.getId(), map1.getId()},
-					new Integer[]{process1.getId(), process2.getId()},
-					new Integer[]{filter1.getId(), process2.getId()}
-			});
-		}
-	}
-
-	@Test
-	public void testDamAndCrossTopology() throws Exception {
-		// case:
-		{
-			for (int i = 0; i < 2; i++) {
-				StreamExecutionEnvironment env = createEnv();
-
-				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
-				DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
-				DataStream<String> process1 = source1.transform(
-						"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
-				DataStream<String> process2 = source2.transform(
-						"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process2");
-				DataStream<String> map1 = process1.connect(source2).map(new NoOpCoMapFunction()).name("map1");
-				DataStream<String> map2 = source1.connect(process2).map(new NoOpCoMapFunction()).name("map2");
-				map1.addSink(new NoOpSinkFunction()).name("sink1");
-				map2.addSink(new NoOpSinkFunction()).name("sink2");
-
-				((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
-				((OneInputTransformation) process2.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
-
-				String msgPrefix = null;
-				switch (i) {
-					case 0:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						msgPrefix = "ALL_INPUT1_FIRST";
-						break;
-					case 1:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						msgPrefix = "ALL_INPUT2_FIRST";
-						break;
-				}
-
-				testBase(env, msgPrefix, new Integer[][]{});
-			}
-		}
-
-		// case:
-		{
-			for (int i = 0; i < 4; i++) {
-				StreamExecutionEnvironment env = createEnv();
-
-				DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
-				DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
-				DataStream<String> process1 = source1.rescale().transform(
-						"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process1");
-				DataStream<String> process2 = source2.rescale().transform(
-						"operator1", BasicTypeInfo.STRING_TYPE_INFO, new NoOpOneInputStreamOperator()).name("process2");
-				DataStream<String> map1 = process1.connect(source2).map(new NoOpCoMapFunction()).name("map1");
-				DataStream<String> map2 = source1.connect(process2).map(new NoOpCoMapFunction()).name("map2");
-				map1.addSink(new NoOpSinkFunction()).name("sink1");
-				map2.addSink(new NoOpSinkFunction()).name("sink2");
-
-				((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
-				((OneInputTransformation) process2.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
-
-				switch (i) {
-					case 0:
-						testBase(env, "ALL_DYNAMIC_ORDER", new Integer[][]{
-								new Integer[]{source1.getId(), process1.getId()},
-								new Integer[]{source2.getId(), process2.getId()},
-						});
-						break;
-					case 1:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-
-						testBase(env, "INPUT1_INPUT2_FIRST ", new Integer[][]{
-								new Integer[]{source1.getId(), process1.getId()},
-								new Integer[]{source2.getId(), process2.getId()},
-								new Integer[]{source2.getId(), map1.getId()},
-								new Integer[]{source1.getId(), map2.getId()}
-						});
-						break;
-					case 2:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.INPUT2_FIRST);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.INPUT1_FIRST);
-
-						testBase(env, "INPUT2_INPUT1_FIRST", new Integer[][]{
-								new Integer[]{source1.getId(), process1.getId()},
-								new Integer[]{source2.getId(), process2.getId()},
-								new Integer[]{process1.getId(), map1.getId()},
-								new Integer[]{process2.getId(), map2.getId()}
-						});
-						break;
-					case 3:
-						((TwoInputTransformation) map1.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
-						((TwoInputTransformation) map2.getTransformation()).setReadOrderHint(ReadOrder.SPECIAL_ORDER);
-
-						testBase(env, "ALL_DYNAMIC_ORDER", new Integer[][]{
-								new Integer[]{source1.getId(), process1.getId()},
-								new Integer[]{source2.getId(), process2.getId()},
-								new Integer[]{process1.getId(), map1.getId()},
-								new Integer[]{source2.getId(), map1.getId()},
-								new Integer[]{source1.getId(), map2.getId()},
-								new Integer[]{process2.getId(), map2.getId()}
-						});
-						break;
-				}
-			}
 		}
 	}
 
@@ -971,6 +1042,8 @@ public class GeneratingNoDeadlockJobGraphTest {
 
 	private static class NoOpSourceFunctionV2 implements ParallelSourceFunctionV2<String> {
 
+		private static final long serialVersionUID = 1L;
+
 		@Override
 		public boolean isFinished() {
 			return false;
@@ -989,9 +1062,13 @@ public class GeneratingNoDeadlockJobGraphTest {
 
 	private static class NoOpSinkFunction implements SinkFunction<String> {
 
+		private static final long serialVersionUID = 1L;
+
 	}
 
 	private static class NoOpMapFunction implements MapFunction<String, String> {
+
+		private static final long serialVersionUID = 1L;
 
 		@Override
 		public String map(String value) throws Exception {
@@ -1001,6 +1078,8 @@ public class GeneratingNoDeadlockJobGraphTest {
 
 	private static class NoOpProcessFuntion extends ProcessFunction<String, String> {
 
+		private static final long serialVersionUID = 1L;
+
 		@Override
 		public void processElement(String value, Context ctx, Collector<String> out) throws Exception {
 
@@ -1008,6 +1087,8 @@ public class GeneratingNoDeadlockJobGraphTest {
 	}
 
 	private static class NoOpCoMapFunction implements CoMapFunction<String, String, String> {
+
+		private static final long serialVersionUID = 1L;
 
 		@Override
 		public String map1(String value) {
@@ -1022,6 +1103,8 @@ public class GeneratingNoDeadlockJobGraphTest {
 
 	private static class NoOpFilterFunction implements FilterFunction<String> {
 
+		private static final long serialVersionUID = 1L;
+
 		@Override
 		public boolean filter(String value) throws Exception {
 			return true;
@@ -1029,6 +1112,8 @@ public class GeneratingNoDeadlockJobGraphTest {
 	}
 
 	private static class NoOpCoProcessFuntion extends CoProcessFunction<String, String, String> {
+
+		private static final long serialVersionUID = 1L;
 
 		@Override
 		public void processElement1(String value, Context ctx, Collector<String> out) {
@@ -1044,6 +1129,8 @@ public class GeneratingNoDeadlockJobGraphTest {
 	private static class NoOpOneInputStreamOperator extends AbstractStreamOperator<String>
 			implements OneInputStreamOperator<String, String> {
 
+		private static final long serialVersionUID = 1L;
+
 		@Override
 		public void processElement(StreamRecord<String> element) throws Exception {
 
@@ -1051,6 +1138,42 @@ public class GeneratingNoDeadlockJobGraphTest {
 
 		@Override
 		public void endInput() throws Exception {
+
+		}
+	}
+
+	private static class NoOpTwoInputStreamOperator extends AbstractStreamOperator<String>
+			implements TwoInputStreamOperator<String, String, String> {
+
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public TwoInputSelection firstInputSelection() {
+			return null;
+		}
+
+		@Override
+		public void endInput1() throws Exception {
+
+		}
+
+		@Override
+		public void endInput2() throws Exception {
+
+		}
+
+		@Override
+		public TwoInputSelection processElement2(StreamRecord<String> element) throws Exception {
+			return null;
+		}
+
+		@Override
+		public TwoInputSelection processElement1(StreamRecord<String> element) throws Exception {
+			return null;
+		}
+
+		@Override
+		public void setup(StreamTask<?, ?> containingTask, StreamConfig config, Output<StreamRecord<String>> output) {
 
 		}
 	}

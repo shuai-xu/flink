@@ -1110,11 +1110,13 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		}
 
 		for (Map.Entry<Integer, StreamConfig> entry: vertexConfig.getChainedNodeConfigs().entrySet()) {
-			assertTrue(expectedChainedNodes.contains(entry.getValue().getOperatorName()));
+			assertTrue(String.format("The chained node '%s' is not in the expected list.", entry.getValue().getOperatorName()),
+					expectedChainedNodes.contains(entry.getValue().getOperatorName()));
 		}
 
 		for (StreamConfig headNodeConfig : vertexConfig.getChainedHeadNodeConfigs()) {
-			assertTrue(expectedHeadNodes.contains(headNodeConfig.getOperatorName()));
+			assertTrue(String.format("The chained head node '%s' is not in the expected list.", headNodeConfig.getOperatorName()),
+					expectedHeadNodes.contains(headNodeConfig.getOperatorName()));
 		}
 	}
 
