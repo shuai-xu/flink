@@ -53,6 +53,7 @@ public class ConfigOptionsDocGenerator {
 	static final OptionsClassLocation[] LOCATIONS = new OptionsClassLocation[]{
 		new OptionsClassLocation("flink-core", "org.apache.flink.configuration"),
 		new OptionsClassLocation("flink-runtime", "org.apache.flink.runtime.io.network.netty"),
+		new OptionsClassLocation("flink-runtime", "org.apache.flink.runtime.io.network.partition.external"),
 		new OptionsClassLocation("flink-yarn", "org.apache.flink.yarn.configuration"),
 		new OptionsClassLocation("flink-mesos", "org.apache.flink.mesos.configuration"),
 		new OptionsClassLocation("flink-mesos", "org.apache.flink.mesos.runtime.clusterframework"),
@@ -226,7 +227,9 @@ public class ConfigOptionsDocGenerator {
 	private static String addWordBreakOpportunities(String value) {
 		return value
 			// allow breaking of semicolon separated lists
-			.replace(";", ";<wbr>");
+			.replace(";", ";<wbr>")
+			// allow breaking of dot separated items, but the decimal numbers are ignored
+			.replace("(?<![0-9])\\.(?![0-9])", ".<wbr>");
 	}
 
 	private static void sortOptions(List<OptionWithMetaInfo> configOptions) {

@@ -324,6 +324,80 @@ public class TaskManagerOptions {
 	//  External Shuffle Options
 	// ------------------------------------------------------------------------
 	/**
+	 * Currently we support two shuffle services for blocking result partition. The default
+	 * 'TM' refers to internal task manager shuffle service, and the value 'YARN' indicates
+	 * the external shuffle service deployed on the node manager of yarn.
+	 */
+	public static final ConfigOption<String> TASK_BLOCKING_SHUFFLE_TYPE =
+		key("task.blocking.shuffle.type")
+			.defaultValue("TM")
+			.withDescription("The type of shuffle service used for blocking edge. Currently it can be configured to TM or YARN.");
+
+	/**
+	 * The type of disks that can be used for external result partition on this task manager.
+	 */
+	public static final ConfigOption<String> TASK_MANAGER_OUTPUT_LOCAL_DISK_TYPE =
+		key("taskmanager.output.local-disk.type")
+			.defaultValue("")
+			.withDescription("The disk type preferred to write the shuffle data. If not specified, all the root " +
+				"directories are feasible. If specified, only directories with the configured type are feasible.");
+
+	/**
+	 * The list of dirs to be used for the external result partitions on this task manager.
+	 * This configuration should be computed from the hadoop configuration and should not be
+	 * configured by users manually.
+	 */
+	public static final ConfigOption<String> TASK_MANAGER_OUTPUT_LOCAL_OUTPUT_DIRS =
+		key("taskmanager.output.local-output-dirs")
+			.defaultValue("")
+			.withDescription("The available directories for the external shuffle service. It will be configured " +
+				"automatically and should not be configured manually.");
+
+	/**
+	 * The memory to be allocated from MemoryManager for each external result partition.
+	 */
+	public static final ConfigOption<Integer> TASK_MANAGER_OUTPUT_MEMORY_MB =
+		key("taskmanager.output.memory.mb")
+			.defaultValue(200)
+			.withDescription("The write buffer size for each output in a task.");
+
+	/**
+	 * The maximum number of subpartitions can hash file writer supported.
+	 */
+	public static final ConfigOption<Integer> TASK_MANAGER_OUTPUT_HASH_MAX_SUBPARTITIONS =
+		key("taskmanager.output.hash.max-subpartitions")
+			.defaultValue(200)
+			.withDescription("The maximum number of subpartitions supported by the hash writer.");
+
+	/**
+	 * The maximum of file handles that can be merged at one time. And if
+	 * taskmanager.output.merge.enable-async-merge is set to false, the number of
+	 * final merged files is less than this merge factor.
+	 */
+	public static final ConfigOption<Integer> TASK_MANAGER_OUTPUT_MERGE_FACTOR =
+		key("taskmanager.output.merge.factor")
+			.defaultValue(64)
+			.withDescription("The maximum number of files to merge at once when using the merge writer.");
+
+	/**
+	 * Whether merge to one file or not.
+	 */
+	public static final ConfigOption<Boolean> TASK_MANAGER_OUTPUT_MERGE_TO_ONE_FILE =
+		key("taskmanager.output.merge.merge-to-one-file")
+			.defaultValue(false)
+			.withDescription("Whether to merge to one file finally when using the merge writer. If not, the " +
+				"merge stops once the number of files are less than taskmanager.output.merge.factor.");
+
+	/**
+	 * Whether enable async merging or not, this option only takes effect when merge
+	 * writer is used.
+	 */
+	public static final ConfigOption<Boolean> TASK_MANAGER_OUTPUT_ENABLE_ASYNC_MERGE =
+		key("taskmanager.output.merge.enable-async-merge")
+			.defaultValue(false)
+			.withDescription("Whether to start merge while writing has not been finished.");
+
+	/**
 	 * The maximum number of external subpartitions that can be requested at the same time.
 	 * To support the input selection, there must be at least one input channel in each gate
 	 * that is requested, so this value should be larger than or equal to the number of
@@ -333,75 +407,32 @@ public class TaskManagerOptions {
 	 */
 	public static final ConfigOption<Integer> TASK_EXTERNAL_SHUFFLE_MAX_CONCURRENT_REQUESTS =
 		key("task.external.shuffle.max-concurrent-requests")
-			.defaultValue(10);
+			.defaultValue(10)
+			.withDescription("The maximum number of concurrent requests in the reduce-side tasks.");
 
 	/**
-	 * Currently we support two shuffle services for blocking result partition. The default
-	 * 'TM' refers to internal task manager shuffle service, and the value 'YARN' indicates
-	 * the external shuffle service deployed on the node manager of yarn.
+	 * Number of network buffers to use for each external input channel.
+	 *
+	 * <p>This value should be large for external channels to avoid random reads in the shuffle service
 	 */
-	public static final ConfigOption<String> TASK_BLOCKING_SHUFFLE_TYPE =
-		key("task.blocking.shuffle.type")
-			.defaultValue("TM");
+	public static final ConfigOption<Integer> NETWORK_BUFFERS_PER_EXTERNAL_BLOCKING_CHANNEL =
+		key("taskmanager.network.memory.buffers-per-external-blocking-channel")
+			.defaultValue(128)
+			.withDescription("The number of buffers available for each external blocking channel.");
 
 	/**
-	 * The type of disks that can be used for external result partition on this task manager.
+	 * Number of extra network buffers for to use for each ingoing external gate (input gate).
+	 * The non-positive value will be replaced with 2 * number of active input channel in the runtime.
 	 */
-	public static final ConfigOption<String> TASK_MANAGER_OUTPUT_LOCAL_DISK_TYPE =
-		key("taskmanager.output.local-disk.type")
-			.defaultValue("");
-
-	/**
-	 * The memory to be allocated from MemoryManager for each external result partition.
-	 */
-	public static final ConfigOption<Integer> TASK_MANAGER_OUTPUT_MEMORY_MB =
-		key("taskmanager.output.memory.mb")
-			.defaultValue(200);
-
-	/**
-	 * The maximum number of subpartitions can hash file writer supported.
-	 */
-	public static final ConfigOption<Integer> TASK_MANAGER_OUTPUT_HASH_MAX_SUBPARTITIONS =
-		key("taskmanager.output.hash.max-subpartitions")
-			.defaultValue(200);
-
-	/**
-	 * The maximum of file handles that can be merged at one time. And if
-	 * taskmanager.output.merge.enable-async-merge is set to false, the number of
-	 * final merged files is less than this merge factor.
-	 */
-	public static final ConfigOption<Integer> TASK_MANAGER_OUTPUT_MERGE_FACTOR =
-		key("taskmanager.output.merge.factor")
-			.defaultValue(64);
-
-	/**
-	 * Whether enable async merging or not, this option only takes effect when merge
-	 * writer is used.
-	 */
-	public static final ConfigOption<Boolean> TASK_MANAGER_OUTPUT_ENABLE_ASYNC_MERGE =
-		key("taskmanager.output.merge.enable-async-merge")
-			.defaultValue(false);
-
-	/**
-	 * Whether merge to one file or not.
-	 */
-	public static final ConfigOption<Boolean> TASK_MANAGER_OUTPUT_MERGE_TO_ONE_FILE =
-		key("taskmanager.output.merge.merge-to-one-file")
-			.defaultValue(false);
-
-	/**
-	 * The list of dirs to be used for the external result partitions on this task manager.
-	 * This configuration should be computed from the hadoop configuration and should not be
-	 * configured by users manually.
-	 */
-	public static final ConfigOption<String> TASK_MANAGER_OUTPUT_LOCAL_OUTPUT_DIRS =
-		key("taskmanager.output.local-output-dirs")
-			.defaultValue("");
+	public static final ConfigOption<Integer> NETWORK_EXTRA_BUFFERS_PER_EXTERNAL_BLOCKING_GATE =
+		key("taskmanager.network.memory.floating-buffers-per-external-blocking-gate")
+			.defaultValue(0)
+			.withDescription("taskmanager.network.memory.floating-buffers-per-external-blocking-gate");
 
 	public static final ConfigOption<Boolean> TASK_EXTERNAL_SHUFFLE_ENABLE_COMPRESSION =
 		key("task.external.shuffle.compression.enable")
 			.defaultValue(false)
-			.withDescription("Whether to enable compress shuffle data in external shuffle.");
+			.withDescription("Whether to enable compress shuffle data when using external shuffle.");
 
 	public static final ConfigOption<String> TASK_EXTERNAL_SHUFFLE_COMPRESSION_CODEC =
 		key("task.external.shuffle.compression.codec")
@@ -551,23 +582,6 @@ public class TaskManagerOptions {
 				" The floating buffers are distributed based on backlog (real-time output buffers in the subpartition) feedback, and can" +
 				" help relieve back-pressure caused by unbalanced data distribution among the subpartitions. This value should be" +
 				" increased in case of higher round trip times between nodes and/or larger number of machines in the cluster.");
-
-	/**
-	 * Number of network buffers to use for each external input channel.
-	 *
-	 * <p>This value should be large for external channels to avoid random reads in the shuffle service
-	 */
-	public static final ConfigOption<Integer> NETWORK_BUFFERS_PER_EXTERNAL_BLOCKING_CHANNEL =
-			key("taskmanager.network.memory.buffers-per-external-blocking-channel")
-			.defaultValue(128);
-
-	/**
-	 * Number of extra network buffers for to use for each ingoing external gate (input gate).
-	 * The non-positive value will be replaced with 2 * number of active input channel in the runtime.
-	 */
-	public static final ConfigOption<Integer> NETWORK_EXTRA_BUFFERS_PER_EXTERNAL_BLOCKING_GATE =
-			key("taskmanager.network.memory.floating-buffers-per-external-blocking-gate")
-			.defaultValue(0);
 
 	/**
 	 * Minimum backoff for partition requests of input channels.

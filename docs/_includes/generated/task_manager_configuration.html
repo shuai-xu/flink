@@ -25,7 +25,7 @@
         <tr>
             <td><h5>task.blocking.shuffle.type</h5></td>
             <td style="word-wrap: break-word;">"TM"</td>
-            <td></td>
+            <td>The type of shuffle service used for blocking edge. Currently it can be configured to TM or YARN.</td>
         </tr>
         <tr>
             <td><h5>task.cancellation.interval</h5></td>
@@ -60,12 +60,12 @@
         <tr>
             <td><h5>task.external.shuffle.compression.enable</h5></td>
             <td style="word-wrap: break-word;">false</td>
-            <td>Whether to enable compress shuffle data in external shuffle.</td>
+            <td>Whether to enable compress shuffle data when using external shuffle.</td>
         </tr>
         <tr>
             <td><h5>task.external.shuffle.max-concurrent-requests</h5></td>
             <td style="word-wrap: break-word;">10</td>
-            <td></td>
+            <td>The maximum number of concurrent requests in the reduce-side tasks.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.capacity.cpu.core</h5></td>
@@ -220,7 +220,7 @@
         <tr>
             <td><h5>taskmanager.network.memory.buffers-per-external-blocking-channel</h5></td>
             <td style="word-wrap: break-word;">128</td>
-            <td></td>
+            <td>The number of buffers available for each external blocking channel.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.network.memory.buffers-per-subpartition</h5></td>
@@ -230,7 +230,7 @@
         <tr>
             <td><h5>taskmanager.network.memory.floating-buffers-per-external-blocking-gate</h5></td>
             <td style="word-wrap: break-word;">0</td>
-            <td></td>
+            <td>taskmanager.network.memory.floating-buffers-per-external-blocking-gate</td>
         </tr>
         <tr>
             <td><h5>taskmanager.network.memory.floating-buffers-per-gate</h5></td>
@@ -270,37 +270,37 @@
         <tr>
             <td><h5>taskmanager.output.hash.max-subpartitions</h5></td>
             <td style="word-wrap: break-word;">200</td>
-            <td></td>
+            <td>The maximum number of subpartitions supported by the hash writer.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.output.local-disk.type</h5></td>
             <td style="word-wrap: break-word;">(none)</td>
-            <td></td>
+            <td>The disk type preferred to write the shuffle data. If not specified, all the root directories are feasible. If specified, only directories with the configured type are feasible.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.output.local-output-dirs</h5></td>
             <td style="word-wrap: break-word;">(none)</td>
-            <td></td>
+            <td>The available directories for the external shuffle service. It will be configured automatically and should not be configured manually.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.output.memory.mb</h5></td>
             <td style="word-wrap: break-word;">200</td>
-            <td></td>
+            <td>The write buffer size for each output in a task.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.output.merge.enable-async-merge</h5></td>
             <td style="word-wrap: break-word;">false</td>
-            <td></td>
+            <td>Whether to start merge while writing has not been finished.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.output.merge.factor</h5></td>
             <td style="word-wrap: break-word;">64</td>
-            <td></td>
+            <td>The maximum number of files to merge at once when using the merge writer.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.output.merge.merge-to-one-file</h5></td>
             <td style="word-wrap: break-word;">false</td>
-            <td></td>
+            <td>Whether to merge to one file finally when using the merge writer. If not, the merge stops once the number of files are less than taskmanager.output.merge.factor.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.process.heap.memory.mb</h5></td>

@@ -32,7 +32,8 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Integer> FLINK_SHUFFLE_SERVICE_PORT_KEY =
 		key("flink.shuffle-service.port")
-		.defaultValue(13572);
+		.defaultValue(13572)
+		.withDescription("The port of the shuffle service.");
 
 	/**
 	 * Direct memory limit for flink shuffle service, in MB.
@@ -40,7 +41,8 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Integer> FLINK_SHUFFLE_SERVICE_DIRECT_MEMORY_LIMIT_IN_MB =
 		key("flink.shuffle-service.direct-memory-limit-in-mb")
-			.defaultValue(960);
+			.defaultValue(960)
+			.withDescription("The direct memory consumed by the yarn shuffle service.");
 
 	/**
 	 * Heap memory limit for flink shuffle service, in MB.
@@ -67,7 +69,10 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<String> LOCAL_DIRS =
 		key("flink.shuffle-service.local-dirs")
-		.defaultValue("");
+		.defaultValue("")
+		.withDescription("The list of local directories separated by comma. Each directory can be " +
+			"configured with the disk type ([TYPE] directory,...) or without the disk type (directory, ...). " +
+			"If not configured, the NodeManager local directories will be used and each directory will be treated as on HDD.");
 
 	/**
 	 * IO thread number for each disk type suggested by LOCAL_DIRS.
@@ -83,14 +88,17 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<String> IO_THREAD_NUM_FOR_DISK_TYPE =
 		key("flink.shuffle-service.io-thread-number-for-disk-type")
-		.defaultValue("");
+		.defaultValue("")
+		.withDescription("The list of disk types and thread numbers. Each disk type and the " +
+			"corresponding thread number is configured by TYPE_1: THREAD_1, TYPE_2: THREAD_2, ...");
 
 	/**
 	 * Default IO thread number for a directory if its disk type is not specified.
 	 */
 	public static final ConfigOption<Integer> DEFAULT_IO_THREAD_NUM_PER_DISK =
 		key("flink.shuffle-service.default-io-thread-number-per-disk")
-		.defaultValue(4);
+		.defaultValue(4)
+		.withDescription("The thread number for the default HDD disk type.");
 
 	/**
 	 * Netty thread number for handling requests, used to set NettyConfig.NUM_THREADS_SERVER in netty.
@@ -98,21 +106,24 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Integer> SERVER_THREAD_NUM =
 		key("flink.shuffle-service.server-thread-number")
-		.defaultValue(0);
+		.defaultValue(0)
+		.withDescription("The number of netty IO threads.");
 
 	/**
 	 * The number of buffers for I/O in flink shuffle service.
 	 */
 	public static final ConfigOption<Integer> MIN_BUFFER_NUMBER =
 		key("flink.shuffle-service.min-buffer-num")
-		.defaultValue(1000);
+		.defaultValue(1000)
+		.withDescription("");
 
 	/**
 	 * The memory size of one buffer, in bytes.
 	 */
 	public static final ConfigOption<Integer> MEMORY_SIZE_PER_BUFFER_IN_BYTES =
 		key("flink.shuffle-service.memory-size-per-buffer-in-bytes")
-		.defaultValue(32768);
+		.defaultValue(32768)
+		.withDescription("");
 
 	/**
 	 * The duration to retain a partition's data after its last modified time
@@ -121,28 +132,25 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Long> WAIT_CREDIT_DELAY_IN_MS =
 		key("flink.shuffle-service.wait-credit-delay-in-ms")
-			.defaultValue(0L);
-
-	/**
-	 * The interval to do self check periodically, in milliseconds.
-	 */
-	public static final ConfigOption<Long> SELF_CHECK_INTERVAL_IN_MS =
-		key("flink.shuffle-service.self-check-interval-in-ms")
-		.defaultValue(15000L);
+			.defaultValue(0L)
+			.withDescription("");
 
 	/**
 	 * The interval to do disk scan periodically, in milliseconds.
 	 */
 	public static final ConfigOption<Long> DISK_SCAN_INTERVAL_IN_MS =
 		key("flink.shuffle-service.disk-scan-interval-in-ms")
-		.defaultValue(15000L);
+		.defaultValue(15000L)
+		.withDescription("");
 
 	/**
 	 * The duration to retain a partition's data after it has been fully consumed, in seconds.
 	 */
 	public static final ConfigOption<Integer> CONSUMED_PARTITION_TTL_IN_SECONDS =
 		key("flink.shuffle-service.consumed-partition-ttl-in-seconds")
-		.defaultValue(60 * 60);
+		.defaultValue(60 * 60)
+		.withDescription("The time interval to delete the shuffle data directories " +
+			"that have been consumed by all the reduce-side tasks since inactivated.");
 
 	/**
 	 * The duration to retain a partition's data after its last consumption if it hasn't been fully consumed,
@@ -150,7 +158,9 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Integer> PARTIAL_CONSUMED_PARTITION_TTL_IN_SECONDS =
 		key("flink.shuffle-service.partial-consumed-partition-ttl-in-seconds")
-		.defaultValue(60 * 60 * 12);
+		.defaultValue(60 * 60 * 12)
+		.withDescription("The time interval to delete the shuffle data directories " +
+			"that has been consumed by part of the reduce-side tasks since inactivated.");
 
 	/**
 	 * The duration to retain a partition's data after its last modified time
@@ -158,7 +168,9 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Integer> UNCONSUMED_PARTITION_TTL_IN_SECONDS =
 		key("flink.shuffle-service.unconsumed-partition-ttl-in-seconds")
-		.defaultValue(60 * 60 * 12);
+		.defaultValue(60 * 60 * 12)
+		.withDescription("TThe time interval to delete the shuffle data directories " +
+			"that has not been consumed by any reduce-side tasks yet since inactivated.");
 
 	/**
 	 * The duration to retain a partition's data after its last modified time
@@ -167,7 +179,9 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Integer> UNFINISHED_PARTITION_TTL_IN_SECONDS =
 		key("flink.shuffle-service.unfinished-partition-ttl-in-seconds")
-		.defaultValue(60 * 60);
+		.defaultValue(60 * 60)
+		.withDescription("The time interval to delete the shuffle data " +
+			"directories that has not finish writing since inactivated.");
 
 	/**
 	 * If this comparator is configured, disk IO thread will serve subpartition request based on
@@ -176,7 +190,8 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<String> SUBPARTITION_REQUEST_COMPARATOR_CLASS =
 		key("flink.shuffle-service.subpartition-request-comparator-class")
-		.defaultValue("org.apache.flink.runtime.io.network.partition.external.CreditBasedSubpartitionViewComparator");
+		.defaultValue("org.apache.flink.runtime.io.network.partition.external.CreditBasedSubpartitionViewComparator")
+		.withDescription("The comparator to decide the next subpartition to serve.");
 
 	// ------------------------- Configurations for internal use ------------------------
 	public static final ConfigOption<String> LOCAL_RESULT_PARTITION_RESOLVER_CLASS =

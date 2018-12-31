@@ -478,4 +478,41 @@ When starting a Flink application, users can supply the default number of slots 
 
 <img src="{{ site.baseurl }}/fig/slots_parallelism.svg" class="img-responsive" />
 
+### Configure the jobs using external shuffle services
+
+External shuffle services provide alternative mechanism to shuffle intermediate data for batch jobs. To declare batch jobs with the Table API, the following configuration need to be set:
+
+- `sql.exec.all.data-exchange-mode.batch`: When set to `true`, the job will be executed in batch mode (DEFAULT: `false`).
+
+By default batch jobs will use TaskManager to shuffle the intermediate data. To use the External shuffle service, add the following configuration:
+
+- `task.blocking.shuffle.type`: Currently only `TM` or `YARN` are supported (DEFAULT: `TM`).
+
+#### Configure the map-side tasks
+
+For the map-side tasks, the intermediate data can be write to the disks with either the hash writer or the merge writer. The hash writer writes the data to different reduce-side tasks to separate files. It is suitable when the number of reduce-side tasks is limited and there are enough write buffers to open all the files concurrently:
+
+- `taskmanager.output.hash.max-subpartitions`: The maximum number of subpartitions supported by the hash ​writer. 
+- `taskmanager.output.memory.mb`: The write buffer size for each output edge.​
+
+The merge writer writes the data to different reduce-side tasks to the same files and data to each reduce task is continuous in each file. These files will be merged if the number of files is larger than the threshold:
+
+- `taskmanager.output.merge.factor`: The maximum number of files to merge at once.
+- `taskmanager.output.merge.merge-to-one-file`: Whether to merge to one file finally. If not, the merge stops once the number of files are less than `taskmanager.output.merge.factor`.
+- `taskmanager.output.merge.enable-async-merge`: Whether to merge while writing has not been finished.
+
+#### Configure the reduce side tasks:
+
+For the reduce-side tasks, it is better to limit the number of concurrent request to assign more receive buffers to a single request. This is because the shuffle service stops serving a request once it has no receive buffers, a large receive buffer will reduce the number of switches and increase the overall throughput. For the reduce-side tasks:
+
+- `task.external.shuffle.max-concurrent-requests`: The maximum number of concurrent requests.
+- `taskmanager.network.memory.buffers-per-external-blocking-channel`: The number of buffers for each request. The size of buffers is configure by `taskmanager.memory.segment-size` (DEFAULT: `32768`).
+
+#### Compression
+
+Compression is supported to decrease the data written to disks and sent by network. 
+
+- `task.external.shuffle.compression.enable`: Whether to enable compression (DEFAULT: false).
+- `task.external.shuffle.compression.codec`: ​The compression algorithm to use. Currently supported codecs are `lz4`, `bzip2`,`gzip` (DEFAULT: `lz4`).
+
 {% top %}

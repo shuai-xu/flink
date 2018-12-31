@@ -387,3 +387,78 @@ The *JobManager* and AM are running in the same container. Once they successfull
 After that, the AM starts allocating the containers for Flink's TaskManagers, which will download the required jars and the modified configuration from the HDFS. In session mode, TaskManagers are allocated based on configuration which defines the resource and number of TaskManagers, once these steps are completed, Flink is set up and ready to accept Jobs. In per-job mode, TaskManagers are allocated based on the job graph retrieved from distributed cache, Flink ResourceManager can internally combine several tiny slots with the same resource profile in one container to enhance scheduling efficiency.
 
 {% top %}
+
+## YARN shuffle service
+### Run batch jobs with YARN shuffle service
+
+YARN shuffle service provides an external endpoint for serving the intermediate data between tasks. It serves as an alternative to the built-in endpoint embedded in the TaskManager. With YARN shuffle service the map-side TaskManagers do not need to wait till the reduce-side tasks finish reading to shutdown, therefore the maximum resources required can be reduced.
+
+YARN shuffle service acts as a plugin of the NodeManager and you first need to start it on each NodeManager in your YARN cluster:
+
+1. Locate the shuffle service jar. If you build Flink from source, the shuffle service jar is located at `$FLINK_SOURCE/build-target/opt/yarn-shuffle/flink-shuffle-service-<version>.jar`. If your are using pre-packaged distribution, The shuffle service jar is located at `$FLINK_DIST_HOME//opt/yarn-shuffle//flink-shuffle-service-<version>.jar`.
+2. Add this jar to the CLASSPATH of all the NodeManagers in your YARN cluster. 
+3. Add the following configuration in the `yarn-site.xml`:
+    ```$xslt
+    <property>
+      <name>yarn.nodemanager.aux-services</name>
+       <!-- Add yarn_shuffle_service_for_flink to the end of the list  -->
+      <value>..., yarn_shuffle_service_for_flink</value>
+    </property>
+    
+    <property>
+      <name>yarn.nodemanager.aux-services.flink_yarn_shuffle.class</name>
+      <value>org.apache.flink.network.yarn.YarnShuffleService</value>
+    </property>
+    ```
+4. By default shuffle service will use up to 300MB of direct memory and 64MB of heap memory. Increase the configured memory of the NodeManagers if needed.
+5. Restart all the NodeManagers in your YARN cluster.
+
+After the shuffle service has started, you can create batch jobs with the Table API to use the shuffle service. Batch jobs can be declared with the Table API by setting
+
+```$xslt
+sql.exec.all.data-exchange-mode.batch: true
+```
+
+By default, the intermediate data of the batch jobs are served by the embedded endpoint in the TaskManager. To change the endpoint to the YARN shuffle service, you need to set the following configuration:
+
+```$xslt
+task.blocking.shuffle.type: YARN
+```
+
+### Configure the YARN shuffle service
+
+<div class="alert alert-warning">
+  <strong>Note:</strong> The shuffle service acts as a plugin in in the YARN NodeManager, so all the following configurations should be set in the <code>yarn-site.xml</code>.
+</div>
+
+The basic architecture of the shuffle service is illustrated as follows. The map-side tasks first write data to disks, then the shuffle service reads  data out and sends them to the reduce-side tasks. 
+
+<img src="{{ site.baseurl }}/fig/yarn-shuffle-service.png" class="img-responsive" style="width: 80%">
+
+#### Configure the root directories
+YARN shuffle service supports using multiple directories to store the intermediate data on a single machine. The default root directories are the NodeManager local directories. You can change the default directories by configuring `flink.shuffle-service.local-dirs`, but it is not recommended since other directories cannot be cleared by YARN when the applications stop. 
+
+YARN shuffle service maintains a group of threads to read data from each directory. Suitable number of read threads may differ for directories with different disk types, therefore, YARN shuffle service allows user to specify the disk types of each directory and configure different thread number for each disk type.
+
+By default YARN shuffle service treats all the directories to be on HDD, and the default number of threads is configured by `flink.shuffle-service.default-io-thread-number-per-disk`. To change the default behavior, you can configure the directory disk types with `flink.shuffle-service.local-dirs` and configure the thread numbers for each disk type by `flink.shuffle-service.io-thread-number-for-disk-type`. For example, suppose the NodeManager local directories are `/disk/1/nm-local,/disk/2/nm-local` and `/disk/1` locates on SSD, `flink.shuffle-service.local-dirs` can be configured to `[SSD]/disk/1/nm-local,/disk/2/nm-local`. If you want to use 20 thread to read data from SSD, you can configure `flink.shuffle-service.io-thread-number-for-disk-type` to `SSD: 20`.
+
+#### Configure the  memory
+The total direct and heap memory consumed by the YARN shuffle service is configured by `flink.shuffle-service.direct-memory-limit-in-mb` and `flink.shuffle-service.heap-memory-limit-in-mb`. The direct and heap memory of the NodeManager should also be increased accordingly.
+
+#### TTL for cleaning data
+
+YARN shuffle service cleans the intermediate data in two ways:
+
+1. When one application finishes, YARN will clear its local directory and the intermediate data under the local directory will be cleared meanwhile.
+2. Every intermediate data directory also has a TTL, once the interval since the intermediate data directory get inactive exceeds the TTL, the intermediate data directory will be cleared. The TTL is useful for jobs running on a long live session whose corresponding application will not finish before the session stops.
+
+YARN shuffle service classify the intermediate data directories into four types and each type of directories can be configure separately:
+
+1. Consumed: All the reduce side tasks have read the intermediate data.
+2. Partial-consumed: Parts of the reduce side tasks have read the intermediate data.
+3. Unconsumed: None of the reduce side tasks have read the intermediate data.
+4. Unfinished: The intermediate data is still being written.
+
+
+#### Full references 
+{% include generated/external_block_shuffle_service_configuration.html %}
