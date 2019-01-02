@@ -90,8 +90,6 @@ public abstract class BaseArray implements TypeGetterSetters {
 
 	public abstract Object[] toObjectArray(InternalType elementType);
 
-	public abstract <T> T[] toClassArray(InternalType elementType, Class<T> clazz);
-
 	public void setPrimitive(int pos, Object value, InternalType type) {
 		if (type.equals(Types.BOOLEAN)) {
 			setBoolean(pos, (boolean) value);

@@ -29,7 +29,6 @@ import org.apache.flink.table.dataformat.util.MultiSegUtil;
 import org.apache.flink.util.InstantiationUtil;
 
 import java.io.IOException;
-import java.lang.reflect.Array;
 
 import static org.apache.flink.table.dataformat.BinaryRow.getBinaryStringFromSeg;
 import static org.apache.flink.table.dataformat.util.BinaryRowUtil.BOOLEAN_ARRAY_OFFSET;
@@ -505,18 +504,6 @@ public class BinaryArray extends BaseArray {
 				values[i] = null;
 			} else {
 				values[i] = get(i, elementType);
-			}
-		}
-		return values;
-	}
-
-	@Override
-	public <T> T[] toClassArray(InternalType elementType, Class<T> elementClass) {
-		int size = numElements();
-		T[] values = (T[]) Array.newInstance(elementClass, size);
-		for (int i = 0; i < size; i++) {
-			if (!isNullAt(i)) {
-				values[i] = (T) get(i, elementType);
 			}
 		}
 		return values;

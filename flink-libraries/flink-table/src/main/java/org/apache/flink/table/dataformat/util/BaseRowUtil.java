@@ -269,7 +269,7 @@ public final class BaseRowUtil {
 		} else if (type instanceof ArrayType) {
 			writeBaseArray(writer, pos, (BaseArray) o, (BaseArraySerializer) serializer);
 		} else if (type instanceof MapType) {
-			writeBaseMap(writer, pos, (BaseMap) o, (BaseMapSerializer) serializer);
+			writeBaseMap(writer, pos, (BinaryMap) o, (BaseMapSerializer) serializer);
 		} else if (type instanceof BaseRowType) {
 			writeBaseRow(writer, pos, (BaseRow) o, (BaseRowSerializer) serializer);
 		} else {

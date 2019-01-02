@@ -39,7 +39,7 @@ public interface BaseMap {
 	 * (also note that the internal type and the external type of primitive type data are the same,
 	 * so no need to use converters if the map contains primitive type data.)
 	 */
-	Map toJavaMap(InternalType keyType, InternalType valueType);
+	Map<Object, Object> toJavaMap(InternalType keyType, InternalType valueType);
 
 	// NOTE:
 	//

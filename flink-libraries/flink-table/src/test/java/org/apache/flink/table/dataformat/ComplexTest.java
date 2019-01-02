@@ -26,21 +26,15 @@ import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.table.api.Types;
 import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BinaryRowTest.MyObj;
 import org.apache.flink.table.dataformat.util.BaseRowUtil;
 import org.apache.flink.table.typeutils.BaseRowComparator;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
-import org.apache.flink.table.typeutils.TypeUtils;
 
 import org.junit.Test;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import static org.apache.flink.table.dataformat.BinaryString.fromString;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -130,31 +124,8 @@ public class ComplexTest {
 	}
 
 	@Test
-	public void testGenericArray() {
-		// 1. array test
-		Integer[] javaArray = {6, null, 666};
-		GenericArray array = new GenericArray(javaArray, 3, false);
-
-		assertEquals(array.getInt(0), 6);
-		assertTrue(array.isNullAt(1));
-		assertEquals(array.getInt(2), 666);
-
-		// 2. test write array to binary row.
-		BinaryRow row2 = new BinaryRow(1);
-		BinaryRowWriter writer2 = new BinaryRowWriter(row2);
-		InternalType at = DataTypes.createArrayType(DataTypes.INT);
-		BaseRowUtil.write(writer2, 0, array, at, TypeUtils.createSerializer(at));
-		writer2.complete();
-
-		BaseArray array2 = row2.getBaseArray(0);
-		assertEquals(6, array2.getInt(0));
-		assertTrue(array2.isNullAt(1));
-		assertEquals(666, array2.getInt(2));
-	}
-
-	@Test
-	public void testBinaryArray() {
-		// 1. array test
+	public void testArray() {
+		// 1.array test
 		BinaryArray array = new BinaryArray();
 		BinaryArrayWriter writer = new BinaryArrayWriter(
 				array, 3, BinaryArray.calculateElementSize(DataTypes.INT));
@@ -168,61 +139,35 @@ public class ComplexTest {
 		assertTrue(array.isNullAt(1));
 		assertEquals(array.getInt(2), 666);
 
-		// 2. test write array to binary row.
+		//2.test write to binary row.
 		BinaryRow row2 = new BinaryRow(1);
 		BinaryRowWriter writer2 = new BinaryRowWriter(row2);
 		writer2.writeBinaryArray(0, array);
 		writer2.complete();
 
 		BinaryArray array2 = (BinaryArray) row2.getBaseArray(0);
-		assertEquals(array, array2);
-		assertEquals(6, array2.getInt(0));
+		assertEquals(array2, array);
+		assertEquals(array2.getInt(0), 6);
 		assertTrue(array2.isNullAt(1));
-		assertEquals(666, array2.getInt(2));
+		assertEquals(array2.getInt(2), 666);
 	}
 
 	@Test
-	public void testGenericMap() {
-		Map<Integer, BinaryString> javaMap = new HashMap<>();
-		javaMap.put(6, fromString("6"));
-		javaMap.put(5, fromString("5"));
-		javaMap.put(666, fromString("666"));
-		javaMap.put(0, null);
-
-		GenericMap genericMap = new GenericMap(javaMap);
-
-		BinaryRow row = new BinaryRow(1);
-		BinaryRowWriter rowWriter = new BinaryRowWriter(row);
-		InternalType mt = DataTypes.createMapType(DataTypes.INT, DataTypes.STRING);
-		BaseRowUtil.write(rowWriter, 0, genericMap, mt, TypeUtils.createSerializer(mt));
-		rowWriter.complete();
-
-		Map map = row.getBaseMap(0).toJavaMap(DataTypes.INT, DataTypes.STRING);
-		assertEquals(fromString("6"), map.get(6));
-		assertEquals(fromString("5"), map.get(5));
-		assertEquals(fromString("666"), map.get(666));
-		assertTrue(map.containsKey(0));
-		assertNull(map.get(0));
-	}
-
-	@Test
-	public void testBinaryMap() {
+	public void testMap() {
 		BinaryArray array1 = new BinaryArray();
 		BinaryArrayWriter writer1 = new BinaryArrayWriter(
-				array1, 4, BinaryArray.calculateElementSize(DataTypes.INT));
+				array1, 3, BinaryArray.calculateElementSize(DataTypes.INT));
 		writer1.writeInt(0, 6);
 		writer1.writeInt(1, 5);
 		writer1.writeInt(2, 666);
-		writer1.writeInt(3, 0);
 		writer1.complete();
 
 		BinaryArray array2 = new BinaryArray();
 		BinaryArrayWriter writer2 = new BinaryArrayWriter(
-				array2, 4, BinaryArray.calculateElementSize(DataTypes.STRING));
+				array2, 3, BinaryArray.calculateElementSize(DataTypes.STRING));
 		writer2.writeBinaryString(0, fromString("6"));
 		writer2.writeBinaryString(1, fromString("5"));
 		writer2.writeBinaryString(2, fromString("666"));
-		writer2.setNullAt(3, DataTypes.STRING);
 		writer2.complete();
 
 		BinaryMap binaryMap = BinaryMap.valueOf(array1, array2);
@@ -240,10 +185,8 @@ public class ComplexTest {
 		assertEquals(array1, key);
 		assertEquals(array2, value);
 
-		assertEquals(5, key.getInt(1));
-		assertEquals(fromString("5"), value.getBinaryString(1));
-		assertEquals(0, key.getInt(3));
-		assertTrue(value.isNullAt(3));
+		assertEquals(key.getInt(1), 5);
+		assertEquals(value.getBinaryString(1), fromString("5"));
 	}
 
 	@Test

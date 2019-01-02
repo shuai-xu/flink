@@ -51,8 +51,7 @@ public class BaseMapSerializer extends TypeSerializer<BaseMap> {
 	private final TypeSerializer valueSerializer;
 	private final BinaryMapSerializer binarySerializer;
 
-	private BinaryArray reuseKeyArray;
-	private BinaryArray reuseValueArray;
+	private BinaryMap reuseBinaryMap;
 	private BinaryArrayWriter reuseKeyWriter;
 	private BinaryArrayWriter reuseValueWriter;
 
@@ -129,43 +128,33 @@ public class BaseMapSerializer extends TypeSerializer<BaseMap> {
 
 		Map<Object, Object> javaMap = from.toJavaMap(keyType, valueType);
 		int numElements = javaMap.size();
-		if (reuseKeyArray == null) {
-			reuseKeyArray = new BinaryArray();
+		if (reuseBinaryMap == null) {
+			reuseBinaryMap = new BinaryMap();
 		}
-		if (reuseValueArray == null) {
-			reuseValueArray = new BinaryArray();
-		}
+		BinaryArray keyArray = reuseBinaryMap.keyArray();
+		BinaryArray valueArray = reuseBinaryMap.valueArray();
 		if (reuseKeyWriter == null || reuseKeyWriter.getNumElements() != numElements) {
 			reuseKeyWriter = new BinaryArrayWriter(
-				reuseKeyArray, numElements, BinaryArray.calculateElementSize(keyType));
+				keyArray, numElements, BinaryArray.calculateElementSize(keyType));
 		} else {
 			reuseKeyWriter.reset();
 		}
 		if (reuseValueWriter == null || reuseValueWriter.getNumElements() != numElements) {
 			reuseValueWriter = new BinaryArrayWriter(
-				reuseValueArray, numElements, BinaryArray.calculateElementSize(valueType));
+				valueArray, numElements, BinaryArray.calculateElementSize(valueType));
 		} else {
 			reuseValueWriter.reset();
 		}
 
 		int i = 0;
 		for (Map.Entry<Object, Object> entry : javaMap.entrySet()) {
-			if (entry.getKey() == null) {
-				reuseKeyWriter.setNullAt(i, keyType);
-			} else {
-				BaseRowUtil.write(reuseKeyWriter, i, entry.getKey(), keyType, keySerializer);
-			}
-			if (entry.getValue() == null) {
-				reuseValueWriter.setNullAt(i, valueType);
-			} else {
-				BaseRowUtil.write(reuseValueWriter, i, entry.getValue(), valueType, valueSerializer);
-			}
-			i++;
+			BaseRowUtil.write(reuseKeyWriter, i, entry.getKey(), keyType, keySerializer);
+			BaseRowUtil.write(reuseValueWriter, i, entry.getValue(), valueType, valueSerializer);
 		}
 		reuseKeyWriter.complete();
 		reuseValueWriter.complete();
 
-		return BinaryMap.valueOf(reuseKeyArray, reuseValueArray);
+		return reuseBinaryMap;
 	}
 
 	@Override

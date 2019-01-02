@@ -29,11 +29,13 @@ import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.Types._
 import org.apache.flink.table.api.types._
-import org.apache.flink.table.dataformat._
+import org.apache.flink.table.dataformat.BaseRow
 
 import scala.collection.mutable
 
 object TypeUtils {
+
+  def getExternalClassForType(t: DataType): Class[_] = DataTypes.toTypeInfo(t).getTypeClass
 
   def isPrimitive(dataType: TypeInformation[_]): Boolean = {
     dataType match {
@@ -349,56 +351,4 @@ object TypeUtils {
       }
     case _ => false
   }
-
-  def getPrimitiveInternalClassForType(t: DataType): Class[_] = {
-    val internalType = DataTypes.internal(t)
-    internalType match {
-      case DataTypes.INT => classOf[Int]
-      case DataTypes.LONG => classOf[Long]
-      case DataTypes.SHORT => classOf[Short]
-      case DataTypes.BYTE => classOf[Byte]
-      case DataTypes.FLOAT => classOf[Float]
-      case DataTypes.DOUBLE => classOf[Double]
-      case DataTypes.BOOLEAN => classOf[Boolean]
-      case DataTypes.CHAR => classOf[Char]
-
-      case _: DateType => classOf[Int]
-      case DataTypes.TIME => classOf[Int]
-      case _: TimestampType => classOf[Long]
-
-      case DataTypes.INTERVAL_MONTHS => classOf[Int]
-      case DataTypes.INTERVAL_MILLIS => classOf[Long]
-
-      case _ => getBoxedInternalClassForType(t)
-    }
-  }
-
-  def getBoxedInternalClassForType(t: DataType): Class[_] = {
-    val internalType = DataTypes.internal(t)
-    internalType match {
-      case DataTypes.INT => classOf[java.lang.Integer]
-      case DataTypes.LONG => classOf[java.lang.Long]
-      case DataTypes.SHORT => classOf[java.lang.Short]
-      case DataTypes.BYTE => classOf[java.lang.Byte]
-      case DataTypes.FLOAT => classOf[java.lang.Float]
-      case DataTypes.DOUBLE => classOf[java.lang.Double]
-      case DataTypes.BOOLEAN => classOf[java.lang.Boolean]
-      case DataTypes.CHAR => classOf[java.lang.Character]
-
-      case _: DateType => classOf[java.lang.Integer]
-      case DataTypes.TIME => classOf[java.lang.Integer]
-      case _: TimestampType => classOf[java.lang.Long]
-
-      case DataTypes.STRING => classOf[BinaryString]
-      case DataTypes.BYTE_ARRAY => classOf[Array[Byte]]
-      case _: DecimalType => classOf[Decimal]
-      case _: ArrayType => classOf[BaseArray]
-      case _: MapType => classOf[BaseMap]
-      case _: BaseRowType => classOf[BaseRow]
-
-      case gt: GenericType[_] => gt.getTypeInfo.getTypeClass
-    }
-  }
-
-  def getExternalClassForType(t: DataType): Class[_] = DataTypes.toTypeInfo(t).getTypeClass
 }
