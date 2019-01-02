@@ -22,16 +22,170 @@ specific language governing permissions and limitations
 under the License.
 -->
 
+The SQL language includes Data Definition Language (DDL), Query and Data Manipulation Language (DML), Flink has a preliminary supports for DDL, Query and DML features.
+
+Before the existence of the SQL CLI, queries written in the Flink SQL can only be embedded in a table program written in Java or Scala. The tables accessed in the SQL query must be registered in the TableEnvironment first. It's impossible to use SQL only to complete the work.
+
+The SQL CLI is designed to provide an easy way to write, debug, and submit Table programs without writing a single line of Java or Scala code. For SQL CLI, DDL replaces the table definition and registration process in the table programs. By passing a SQL DDL description text to the SQL CLI, it will be parsed into table objects and registered to the tableEnvironment, then follow up SQL Queries can access these tables directly.
+
 SQL queries are specified with the `sqlQuery()` method of the `TableEnvironment`. The method returns the result of the SQL query as a `Table`. A `Table` can be used in [subsequent SQL and Table API queries](common.html#mixing-table-api-and-sql), be [converted into a DataSet or DataStream](common.html#integration-with-datastream-and-dataset-api), or [written to a TableSink](common.html#emit-a-table)). SQL and Table API queries can seamlessly mixed and are holistically optimized and translated into a single program.
 
 In order to access a table in a SQL query, it must be [registered in the TableEnvironment](common.html#register-tables-in-the-catalog). A table can be registered from a [TableSource](common.html#register-a-tablesource), [Table](common.html#register-a-table), [DataStream, or DataSet](common.html#register-a-datastream-or-dataset-as-table). Alternatively, users can also [register external catalogs in a TableEnvironment](common.html#register-an-external-catalog) to specify the location of the data sources.
 
 For convenience `Table.toString()` automatically registers the table under a unique name in its `TableEnvironment` and returns the name. Hence, `Table` objects can be directly inlined into SQL queries (by string concatenation) as shown in the examples below.
 
-**Note:** Flink's SQL support is not yet feature complete. Queries that include unsupported SQL features cause a `TableException`. The supported features of SQL on batch and streaming tables are listed in the following sections.
+**Note:** The current DDL is not persistent and can not be shared, only exists in a single SQL Query (along with the life cycle of a Query), so currently only CREATE operations are supported (ALTER/DROP is not introduced). Later versions will support persistence, the corresponding DDL objects will'be saved into persistent catalog and easier to use or modify(does not need to be declared every time, and can be shared).
+For example, user `A` produced a table `T1` in a query, then `T1` can be shared as a data source in another query of user `B`. Flink's SQL support is not yet feature complete. Queries that include unsupported SQL features cause a `TableException`. The supported features of SQL on batch and streaming tables are listed in the following sections.
 
 * This will be replaced by the TOC
 {:toc}
+
+Creating a Table
+----------------
+
+The following examples show how to create a Table via DDL.
+
+{% highlight sql %}
+
+-- Here create a Table named `Orders` which includes a primary key, and is stored as CSV file
+CREATE TABLE Orders (
+    orderId BIGINT NOT NULL,
+    customId VARCHAR NOT NULL,
+    itemId BIGINT NOT NULL,
+    totalPrice BIGINT NOT NULL,
+    orderTime TIMESTAMP NOT NULL,
+    description VARCHAR,
+    PRIMARY KEY(orderId)
+) WITH (
+    type='csv',
+    path='file://abc/csv_file1'
+)
+
+{% endhighlight %}
+
+Creating a View
+---------------
+
+The following examples show how to create a View via DDL.
+
+{% highlight sql %}
+
+-- The View `OrderItemStats_2018` stats all items' order count in the year 2018.
+CREATE VIEW BigOrders
+SELECT
+    itemId, count(*) as orderCount, sum(totalPrice) as totalSale
+FROM Orders
+WHERE orderTime BETWEEN '2018-01-01 00:00:00' AND '2018-12-31 23:59:59'
+GROUP BY itemId
+
+{% endhighlight %}
+
+Creating a Function
+-------------------
+
+The following examples show how to create a Function via DDL.
+
+{% highlight sql %}
+
+-- The function `myConcat` reference to the scalar function class `a.b.c.MyConcatScalarFunc` which written in Java code and it's jar file is included in the compilation class path.
+CREATE FUNCTION myConcat AS 'a.b.c.MyConcatScalarFunc'
+
+{% endhighlight %}
+
+Supported DDL Syntax
+------------------
+
+The following BNF-grammar describes the superset of supported DDL features in batch and streaming SQL.
+
+### CREATE TABLE
+{% highlight sql %}
+
+CREATE TABLE tableName
+(
+	columnDefinition [, columnDefinition]*
+	[ computedColumnDefinition [, computedColumnDefinition]* ]
+	[ tableConstraint [, tableConstraint]* ]
+	[ tableIndex [, tableIndex]* ]
+	[ WATERMARK watermarkName FOR rowtimeField AS withOffset(rowtimeField, offset) ]
+) [ WITH ( tableOption [ , tableOption]* ) ]
+
+columnDefinition :=
+	columnName dataType [ NOT NULL ]
+
+dataType  :=
+	{
+	  [ VARCHAR ]
+	  | [ BOOLEAN ]
+	  | [ TINYINT ]
+	  | [ SMALLINT ]
+	  | [ INT ]
+	  | [ BIGINT ]
+	  | [ FLOAT ]
+	  | [ DECIMAL [ ( precision, scale ) ] ]
+	  | [ DOUBLE ]
+	  | [ DATE ]
+	  | [ TIME ]
+	  | [ TIMESTAMP ]
+	  | [ VARBINARY ]
+	}
+
+computedColumnDefinition :=
+	columnName AS computedColumnExpression
+
+tableConstraint :=
+    { PRIMARY KEY | UNIQUE }
+        (columnName [, columnName]* )
+
+tableIndex :=
+	[ UNIQUE ] INDEX indexName
+         (columnName [, columnName]* )
+
+rowtimeField :=
+	columnName
+
+tableOption :=
+	property=value
+
+offset :=
+	positive integer (unit: ms)
+
+{% endhighlight %}
+
+DECIMAL type has a default max precision and scale: (38, 18) if not declared.
+
+VARBINARY represents an ARRAY type of byte, and other types of ARRAY are not supported yet. Also, the MULTISET type is not supported.
+
+Table constraint includes PRIMARY KEY and UNIQUE constraints, CHECK constraint is not supported yet.
+
+Table Index support declaring UNIQUE or NON-UNIQUE index column(s).
+
+Computed column is a virtual column that defines a calculation ( not persist in the table). The column value is calculated at runtime. A computed column can reference columns for calculation.
+
+### CREATE VIEW
+
+{% highlight sql %}
+
+CREATE VIEW viewName
+  [
+	( columnName [, columnName]* )
+  ]
+	AS queryStatement
+
+{% endhighlight %}
+
+View is not materialized, it is an alias of a query statement.
+
+### CREATE FUNCTION
+
+{% highlight sql %}
+
+CREATE FUNCTION functionName
+  AS 'className'
+
+className ::=
+    fully qualified name
+
+{% endhighlight %}
 
 Specifying a Query
 ------------------
@@ -108,32 +262,29 @@ tableEnv.sqlUpdate(
 
 {% top %}
 
-Supported Syntax
-----------------
+Supported Query Syntax
+----------------------
 
-Flink parses SQL using [Apache Calcite](https://calcite.apache.org/docs/reference.html), which supports standard ANSI SQL. DDL statements are not supported by Flink.
+Flink parses SQL using [Apache Calcite](https://calcite.apache.org/docs/reference.html), which supports standard ANSI SQL.
+
 
 The following BNF-grammar describes the superset of supported SQL features in batch and streaming queries. The [Operations](#operations) section shows examples for the supported features and indicates which features are only supported for batch or streaming queries.
 
+### Queries
+
 {% highlight sql %}
 
-insert:
-  INSERT INTO tableReference
-  query
-  
-query:
-  values
-  | {
-      select
-      | selectWithoutFrom
-      | query UNION [ ALL ] query
-      | query EXCEPT query
-      | query INTERSECT query
-    }
-    [ ORDER BY orderItem [, orderItem ]* ]
-    [ LIMIT { count | ALL } ]
-    [ OFFSET start { ROW | ROWS } ]
-    [ FETCH { FIRST | NEXT } [ count ] { ROW | ROWS } ONLY]
+{
+  select
+  | selectWithoutFrom
+  | query UNION [ ALL ] query
+  | query EXCEPT query
+  | query INTERSECT query
+}
+[ ORDER BY orderItem [, orderItem ]* ]
+[ LIMIT { count | ALL } ]
+[ OFFSET start { ROW | ROWS } ]
+[ FETCH { FIRST | NEXT } [ count ] { ROW | ROWS } ONLY]
 
 orderItem:
   expression [ ASC | DESC ]
@@ -141,7 +292,8 @@ orderItem:
 select:
   SELECT [ ALL | DISTINCT ]
   { * | projectItem [, projectItem ]* }
-  FROM tableExpression
+  FROM
+    { tableExpression | values }
   [ WHERE booleanExpression ]
   [ GROUP BY { groupItem [, groupItem ]* } ]
   [ HAVING booleanExpression ]
@@ -169,7 +321,7 @@ tableReference:
   [ [ AS ] alias [ '(' columnAlias [, columnAlias ]* ')' ] ]
 
 tablePrimary:
-  [ TABLE ] [ [ catalogName . ] schemaName . ] tableName
+  [ TABLE ] [ [ catalogName . ] schemaName . ] tableName [ WITH ( tableOption [, tableOption]* ) ]
   | LATERAL TABLE '(' functionName '(' expression [, expression ]* ')' ')'
   | UNNEST '(' expression ')'
 
@@ -240,6 +392,31 @@ patternQuantifier:
   |   '{' repeat '}'
 
 {% endhighlight %}
+
+Table options can be also specified in Query statement not only in DDL.
+
+Supported DML Syntax
+--------------------
+
+### DML (Insert Only)
+
+The following BNF-grammar describes the superset of supported SQL features in batch and streaming queries.  Only supported for batch or streaming queries.
+
+{% highlight sql %}
+
+insert:
+  INSERT INTO tableReference
+  query
+  [ EMIT strategy [, strategy]* ]
+
+  strategy := {WITH DELAY timeInterval | WITHOUT DELAY}
+      [BEFORE WATERMARK | AFTER WATERMARK]
+
+  timeInterval := 'string' timeUnit
+
+{% endhighlight %}
+
+**Note:** The EMIT clause is only valid for window query currently. See more about [EMIT Strategy](sql.html#emit-strategy) in window query.
 
 Flink SQL uses a lexical policy for identifier (table, attribute, function names) similar to Java:
 
@@ -935,18 +1112,6 @@ The emit strategy (such as the allowed latency) of aggregation result varies in 
 The purpose of Emit strategy is concluded as two aspects:
 1. Control the latency: Setting the firing frequency before the end of "big" windows to enable users get newest result in time.
 2. Data Accuracy: Waiting for late data in a specified time, and updating window results on arrival of late data.
-
-**Emit Grammar**
-{% highlight sql %}
---- window query ---
-
-EMIT strategy [, strategy]*
-
-strategy ::= {WITH DELAY timeInterval | WITHOUT DELAY} 
-                [BEFORE WATERMARK | AFTER WATERMARK]
-
-timeInterval ::= 'string' timeUnit
-{% endhighlight %}
 
 **The Maxmium Allowed Lateness**
 
