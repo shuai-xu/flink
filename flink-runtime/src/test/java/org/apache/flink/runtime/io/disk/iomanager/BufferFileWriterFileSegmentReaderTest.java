@@ -56,9 +56,11 @@ public class BufferFileWriterFileSegmentReaderTest {
 
 	private static final Random random = new Random();
 
+	private static final int NUM_READ_WRITE_THREADS = 10;
+
 	private final IOManager ioManager;
-	private static final IOManager staticIOManager = new IOManagerAsync();
-	private static final IOManager bufferedIOManager = new IOManagerAsync(1024 * 1024, 1024 * 1024);
+	private static final IOManager staticIOManager = new IOManagerAsync(NUM_READ_WRITE_THREADS);
+	private static final IOManager bufferedIOManager = new IOManagerAsync(1024 * 1024, 1024 * 1024, NUM_READ_WRITE_THREADS);
 
 	private BufferFileWriter writer;
 

@@ -59,7 +59,11 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 	 * Constructs a new asynchronous I/O manger, writing files to the system 's temp directory.
 	 */
 	public IOManagerAsync() {
-		this(EnvironmentInformation.getTemporaryFileDirectory());
+		this(1);
+	}
+
+	public IOManagerAsync(int numThreads) {
+		this(-1, -1, numThreads);
 	}
 
 	/**
@@ -67,16 +71,16 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 	 *
 	 * @param tempDir The directory to write temporary files to.
 	 */
-	public IOManagerAsync(String tempDir) {
-		this(new String[] {tempDir}, -1, -1, 1);
-	}
-
 	public IOManagerAsync(String[] tempDir) {
 		this(tempDir, -1, -1, 1);
 	}
 
 	public IOManagerAsync(int bufferedReadSize, int bufferedWriteSize) {
-		this(new String[] {EnvironmentInformation.getTemporaryFileDirectory()}, bufferedReadSize, bufferedWriteSize, 1);
+		this(bufferedReadSize, bufferedWriteSize, 1);
+	}
+
+	public IOManagerAsync(int bufferedReadSize, int bufferedWriteSize, int numThreads) {
+		this(new String[] {EnvironmentInformation.getTemporaryFileDirectory()}, bufferedReadSize, bufferedWriteSize, numThreads);
 	}
 
 	/**
@@ -87,7 +91,7 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 	public IOManagerAsync(String[] tempDirs, int bufferedReadSize, int bufferedWriteSize, int numThreads) {
 		super(tempDirs, numThreads);
 
-		// start a write worker thread for each directory
+		// start all worker threads for writer
 		this.writers = new WriterThread[numThreads];
 		this.bufferedReadSize = bufferedReadSize;
 		this.bufferedWriteSize = bufferedWriteSize;
@@ -100,8 +104,8 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 			t.start();
 		}
 
-		// start a reader worker thread for each directory
-		this.readers = new ReaderThread[tempDirs.length];
+		// start all worker threads for reader
+		this.readers = new ReaderThread[numThreads];
 		for (int i = 0; i < this.readers.length; i++) {
 			final ReaderThread t = new ReaderThread();
 			this.readers[i] = t;
@@ -305,6 +309,14 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 
 	RequestQueue<WriteRequest> getWriteRequestQueue(FileIOChannel.ID channelID) {
 		return this.writers[channelID.getThreadNum()].requestQueue;
+	}
+
+	int getNumReaders() {
+		return readers.length;
+	}
+
+	int getNumWriters() {
+		return writers.length;
 	}
 
 	// -------------------------------------------------------------------------
