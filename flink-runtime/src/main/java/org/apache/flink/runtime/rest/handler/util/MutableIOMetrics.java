@@ -150,11 +150,11 @@ public class MutableIOMetrics extends IOMetrics {
 					 * false.
 					 */
 					boolean findTps = false;
-					double tps = 0.0D;
 					for (Map.Entry<String, String> entry : metrics.getMetrics().entrySet()) {
 						if (entry.getKey().endsWith("." + MetricNames.IO_NUM_TPS) &&
 							StringUtils.isNotBlank(entry.getValue())) {
-							tps = Double.valueOf(entry.getValue());
+							double tps = Double.valueOf(entry.getValue());
+							this.tps += tps;
 							findTps = true;
 						} else if (entry.getKey().endsWith("." + MetricNames.IO_NUM_DELAY) &&
 							StringUtils.isNotBlank(entry.getValue())) {
@@ -212,9 +212,9 @@ public class MutableIOMetrics extends IOMetrics {
 					}
 
 					if (!findTps && metrics.getMetric(MetricNames.IO_NUM_RECORDS_IN_RATE) != null) {
-						tps = Double.valueOf(metrics.getMetric(MetricNames.IO_NUM_RECORDS_IN_RATE));
+						double tps = Double.valueOf(metrics.getMetric(MetricNames.IO_NUM_RECORDS_IN_RATE));
+						this.tps += tps;
 					}
-					this.tps += tps;
 				}
 				else {
 					this.numBytesInLocalComplete = false;
