@@ -53,8 +53,8 @@
     class="op-wrapper"
     [class.danger-node]="operatorsDetail.abnormal">
     <div class="attr-wrap">
-      <p class="attr"><span class="attr-name">RecordsIn</span>: {{operatorsDetail?.numRecordsIn}}</p>
-      <p class="attr"><span class="attr-name">RecordsOut</span>: {{operatorsDetail?.numRecordsOut}}</p>
+      <p class="attr"><span class="attr-name">Records Received</span>: {{operatorsDetail?.numRecordsIn}}</p>
+      <p class="attr"><span class="attr-name">Records Sent</span>: {{operatorsDetail?.numRecordsOut}}</p>
     </div>
     <div class="node-name">
       <p *ngIf="operatorsDetail.name && operatorsDetail.name.length > 512; else fullName"

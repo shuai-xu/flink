@@ -47,6 +47,7 @@ export interface ViewOperatorsDetail {
 export enum MetricsGetStrategy {
   MAX,
   MIN,
+  SUM,
   FIRST
 }
 
@@ -208,7 +209,7 @@ export class JobOverviewGraphService {
     let inQueue = null;
     let outQueue = null;
     if (vertices.name) {
-      displayName = `${vertices.name.substring(0, 125)}...`;
+      displayName = vertices.name.length > 125 ? `${vertices.name.substring(0, 125)}...` : vertices.name;
     } else {
       displayName = vertices.name;
     }
@@ -265,8 +266,8 @@ export class JobOverviewGraphService {
 
     const vertices = this.sourceData.verticesDetail.vertices.find(v => v.id === operator.vertex_id);
 
-    const numRecordsIn = this.getMetric(vertices.subtask_metrics, operator, 'numRecordsInOperator', MetricsGetStrategy.MAX);
-    const numRecordsOut = this.getMetric(vertices.subtask_metrics, operator, 'numRecordsOutOperator', MetricsGetStrategy.MAX);
+    const numRecordsIn = this.getMetric(vertices.subtask_metrics, operator, 'numRecordsInOperator', MetricsGetStrategy.SUM);
+    const numRecordsOut = this.getMetric(vertices.subtask_metrics, operator, 'numRecordsOutOperator', MetricsGetStrategy.SUM);
 
     const abnormal = !/^Sink:\s.+$/.test(operator.name)
       && Number.isFinite(numRecordsIn)
@@ -313,6 +314,8 @@ export class JobOverviewGraphService {
         return Math.min(
           ...metrics.map(m => this.parseFloat(m[ spliceKey ]))
         );
+      case MetricsGetStrategy.SUM:
+        return metrics.map(m => this.parseFloat(m[ spliceKey ])).reduce((a, b) => a + b, 0);
       case MetricsGetStrategy.FIRST:
         return this.parseFloat(metrics[ 0 ][ spliceKey ]);
       default:

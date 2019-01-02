@@ -25,7 +25,7 @@
   <thead>
     <tr>
       <th colspan="3">
-        <span *ngIf="node.detail.status === 'RUNNING'">
+        <span *ngIf="node?.detail?.status === 'RUNNING'">
            Measurement:
           <span *ngIf="backpressure['end-timestamp']">
             {{ (now - backpressure['end-timestamp']) | nzHumanizeDuration: 's'}} ago
@@ -39,10 +39,10 @@
           <nz-divider [nzType]="'vertical'"></nz-divider>
           Back Pressure Status:
           <span>
-            <nz-badge class="pressure-badge" [nzStatus]="labelState(backpressure['backpressure-level'])" [nzText]="backpressure['backpressure-level'] || '-'"></nz-badge>
+            <nz-badge [nzStatus]="labelState(backpressure['backpressure-level'])" [nzText]="backpressure['backpressure-level'] || '-'"></nz-badge>
           </span>
         </span>
-        <span *ngIf="node.detail.status !== 'RUNNING'">
+        <span *ngIf="node?.detail?.status !== 'RUNNING'">
           Operator is not running. Cannot sample back pressure.
         </span>
       </th>

@@ -56,6 +56,7 @@ export class JobService {
     { title: 'TaskManagers', pathOrParam: 'taskmanagers' },
     { title: 'Watermarks', pathOrParam: 'watermarks' },
     { title: 'Accumulators', pathOrParam: 'accumulators' },
+    { title: 'BackPressure', pathOrParam: 'backpressure' },
     { title: 'Metrics', pathOrParam: 'metrics' }
   ];
 

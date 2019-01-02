@@ -17,6 +17,7 @@
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
 import { JobOverviewDrawerAccumulatorsComponent } from './accumulators/job-overview-drawer-accumulators.component';
+import { JobOverviewDrawerBackpressureComponent } from './backpressure/job-overview-drawer-backpressure.component';
 import { JobOverviewDrawerChartComponent } from './chart/job-overview-drawer-chart.component';
 import { JobOverviewDrawerDetailComponent } from './detail/job-overview-drawer-detail.component';
 import { JobOverviewDrawerComponent } from './drawer/job-overview-drawer.component';
@@ -74,6 +75,13 @@ const routes: Routes = [
             component: JobOverviewDrawerChartComponent,
             data     : {
               path: 'metrics'
+            }
+          },
+          {
+            path     : 'backpressure',
+            component: JobOverviewDrawerBackpressureComponent,
+            data     : {
+              path: 'backpressure'
             }
           }
         ]

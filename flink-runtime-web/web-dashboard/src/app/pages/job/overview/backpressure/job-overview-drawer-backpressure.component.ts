@@ -16,7 +16,7 @@
 
 import { Component, OnInit, ChangeDetectionStrategy, Input, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Subject } from 'rxjs';
-import { flatMap, takeUntil } from 'rxjs/operators';
+import { flatMap, takeUntil, tap } from 'rxjs/operators';
 import { JobBackpressureInterface, NodesItemCorrectInterface } from 'flink-interfaces';
 import { JobService } from 'flink-services';
 
@@ -37,13 +37,13 @@ export class JobOverviewDrawerBackpressureComponent implements OnInit, OnDestroy
   labelState(state) {
     switch (state && state.toLowerCase()) {
       case 'in-progress':
-        return 'danger';
+        return 'processing';
       case 'ok':
         return 'success';
       case 'low':
         return 'warning';
       case 'high':
-        return 'danger';
+        return 'error';
       default:
         return 'default';
     }
@@ -55,6 +55,7 @@ export class JobOverviewDrawerBackpressureComponent implements OnInit, OnDestroy
   ngOnInit() {
     this.jobService.selectedVertexNode$.pipe(
       takeUntil(this.destroy$),
+      tap(data => this.node = data),
       flatMap((node) => this.jobService.loadOperatorBackPressure(this.jobService.jobDetail.jid, node.id))
     ).subscribe(data => {
       this.isLoading = false;
