@@ -66,11 +66,11 @@ public class BinaryMap implements BaseMap {
 	}
 
 	@Override
-	public Map<Object, Object> toJavaMap(InternalType keyType, InternalType valueType) {
+	public Map toJavaMap(InternalType keyType, InternalType valueType) {
 		Object[] keyArray = keys.toObjectArray(keyType);
 		Object[] valueArray = values.toObjectArray(valueType);
 
-		HashMap<Object, Object> map = new HashMap<>();
+		Map map = new HashMap<>();
 		for (int i = 0; i < keyArray.length; i++) {
 			map.put(keyArray[i], valueArray[i]);
 		}

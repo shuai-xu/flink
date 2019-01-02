@@ -841,47 +841,7 @@ object ScalarOperators {
 
     // Array -> String
     case (at: ArrayType, DataTypes.STRING) =>
-      generateReturnStringCallWithStmtIfArgsNotNull(ctx, Seq(operand)) {
-        terms =>
-          val builderCls = classOf[StringBuilder].getCanonicalName
-          val builderTerm = newName("builder")
-          ctx.addReusableMember(s"""$builderCls $builderTerm = new $builderCls();""")
-
-          val arrayTerm = terms.head
-
-          val indexTerm = newName("i")
-          val numTerm = newName("num")
-
-          val elementType = at.getElementType
-          val elementCls = primitiveTypeTermForType(elementType)
-          val elementTerm = newName("element")
-          val elementExpr = GeneratedExpression(
-            elementTerm, s"$arrayTerm.isNullAt($indexTerm)",
-            s"$elementCls $elementTerm = ($elementCls) ${baseRowFieldReadAccess(
-              ctx, indexTerm, arrayTerm, elementType)};", elementType)
-          val castExpr = generateCast(ctx, nullCheck, elementExpr, DataTypes.STRING)
-
-          val stmt =
-            s"""
-               |$builderTerm.setLength(0);
-               |$builderTerm.append("[");
-               |int $numTerm = $arrayTerm.numElements();
-               |for (int $indexTerm = 0; $indexTerm < $numTerm; $indexTerm++) {
-               |  if ($indexTerm != 0) {
-               |    $builderTerm.append(", ");
-               |  }
-               |
-               |  ${castExpr.code}
-               |  if (${castExpr.nullTerm}) {
-               |    $builderTerm.append("null");
-               |  } else {
-               |    $builderTerm.append(${castExpr.resultTerm});
-               |  }
-               |}
-               |$builderTerm.append("]");
-             """.stripMargin
-          (stmt, s"$builderTerm.toString()")
-      }
+      generateCastArrayToString(ctx, nullCheck, operand, at)
 
     // Byte array -> String UTF-8
     case (DataTypes.BYTE_ARRAY, DataTypes.STRING) =>
@@ -896,125 +856,11 @@ object ScalarOperators {
 
     // Map -> String
     case (mt: MapType, DataTypes.STRING) =>
-      generateReturnStringCallWithStmtIfArgsNotNull(ctx, Seq(operand)) {
-        terms =>
-          val resultTerm = newName("toStringResult")
-
-          val builderCls = classOf[StringBuilder].getCanonicalName
-          val builderTerm = newName("builder")
-          ctx.addReusableMember(s"$builderCls $builderTerm = new $builderCls();")
-
-          val mapTerm = terms.head
-          val genericMapCls = classOf[GenericMap].getCanonicalName
-          val genericMapTerm = newName("genericMap")
-          val binaryMapCls = classOf[BinaryMap].getCanonicalName
-          val binaryMapTerm = newName("binaryMap")
-          val arrayCls = classOf[BinaryArray].getCanonicalName
-          val keyArrayTerm = newName("keyArray")
-          val valueArrayTerm = newName("valueArray")
-
-          val indexTerm = newName("i")
-          val numTerm = newName("num")
-
-          val keyType = mt.getKeyType
-          val keyCls = primitiveTypeTermForType(keyType)
-          val keyTerm = newName("key")
-          val keyExpr = GeneratedExpression(
-            keyTerm, s"$keyArrayTerm.isNullAt($indexTerm)",
-            s"$keyCls $keyTerm = ($keyCls) ${baseRowFieldReadAccess(
-              ctx, indexTerm, keyArrayTerm, keyType)};", keyType)
-          val keyCastExpr = generateCast(ctx, nullCheck, keyExpr, DataTypes.STRING)
-
-          val valueType = mt.getValueType
-          val valueCls = primitiveTypeTermForType(valueType)
-          val valueTerm = newName("value")
-          val valueExpr = GeneratedExpression(
-            valueTerm, s"$valueArrayTerm.isNullAt($indexTerm)",
-            s"$valueCls $valueTerm = ($valueCls) ${baseRowFieldReadAccess(
-              ctx, indexTerm, valueArrayTerm, valueType)};", valueType)
-          val valueCastExpr = generateCast(ctx, nullCheck, valueExpr, DataTypes.STRING)
-
-          val stmt =
-            s"""
-               |String $resultTerm;
-               |if ($mapTerm instanceof $binaryMapCls) {
-               |  $binaryMapCls $binaryMapTerm = ($binaryMapCls) $mapTerm;
-               |
-               |  $arrayCls $keyArrayTerm = $binaryMapTerm.keyArray();
-               |  $arrayCls $valueArrayTerm = $binaryMapTerm.valueArray();
-               |
-               |  $builderTerm.setLength(0);
-               |  $builderTerm.append("{");
-               |
-               |  int $numTerm = $binaryMapTerm.numElements();
-               |  for (int $indexTerm = 0; $indexTerm < $numTerm; $indexTerm++) {
-               |    if ($indexTerm != 0) {
-               |      $builderTerm.append(", ");
-               |    }
-               |
-               |    ${keyCastExpr.code}
-               |    if (${keyCastExpr.nullTerm}) {
-               |      $builderTerm.append("null");
-               |    } else {
-               |      $builderTerm.append(${keyCastExpr.resultTerm});
-               |    }
-               |    $builderTerm.append("=");
-               |
-               |    ${valueCastExpr.code}
-               |    if (${valueCastExpr.nullTerm}) {
-               |      $builderTerm.append("null");
-               |    } else {
-               |      $builderTerm.append(${valueCastExpr.resultTerm});
-               |    }
-               |  }
-               |  $builderTerm.append("}");
-               |
-               |  $resultTerm = $builderTerm.toString();
-               |} else {
-               |  $genericMapCls $genericMapTerm = ($genericMapCls) $mapTerm;
-               |  $resultTerm = $genericMapTerm.toString();
-               |}
-             """.stripMargin
-          (stmt, resultTerm)
-      }
+      generateCastMapToString(ctx, nullCheck, operand, mt)
 
     // composite type -> String
     case (brt: BaseRowType, DataTypes.STRING) =>
-      generateReturnStringCallWithStmtIfArgsNotNull(ctx, Seq(operand)) {
-        terms =>
-          val builderCls = classOf[StringBuilder].getCanonicalName
-          val builderTerm = newName("builder")
-          ctx.addReusableMember(s"""$builderCls $builderTerm = new $builderCls();""")
-
-          val rowTerm = terms.head
-
-          val appendCode = brt.getFieldTypes.zipWithIndex.map {
-            case (elementType, idx) =>
-              val elementCls = primitiveTypeTermForType(elementType)
-              val elementTerm = newName("element")
-              val elementExpr = GeneratedExpression(
-                elementTerm, s"$rowTerm.isNullAt($idx)",
-                s"$elementCls $elementTerm = ($elementCls) ${baseRowFieldReadAccess(
-                  ctx, idx, rowTerm, elementType)};", elementType)
-              val castExpr = generateCast(ctx, nullCheck, elementExpr, DataTypes.STRING)
-              s"""
-                 |${if (idx != 0) s"""$builderTerm.append(",");""" else ""}
-                 |${castExpr.code}
-                 |if (${castExpr.nullTerm}) {
-                 |  $builderTerm.append("null");
-                 |} else {
-                 |  $builderTerm.append(${castExpr.resultTerm});
-                 |}
-               """.stripMargin
-          }.mkString("\n")
-
-          val stmt =
-            s"""
-               |$builderTerm.setLength(0);
-               |$appendCode
-             """.stripMargin
-          (stmt, s"$builderTerm.toString()")
-      }
+      generateBaseRowToString(ctx, nullCheck, operand, brt)
 
     // * (not Date/Time/Timestamp) -> String
     // TODO: GenericType with Date/Time/Timestamp -> String would call toString implicitly
@@ -1263,6 +1109,203 @@ object ScalarOperators {
     case (from, to) =>
       throw new CodeGenException(s"Unsupported cast from '$from' to '$to'.")
   }
+
+  def generateCastArrayToString(
+      ctx: CodeGeneratorContext,
+      nullCheck: Boolean,
+      operand: GeneratedExpression,
+      at: ArrayType): GeneratedExpression =
+    generateReturnStringCallWithStmtIfArgsNotNull(ctx, Seq(operand)) {
+      terms =>
+        val builderCls = classOf[StringBuilder].getCanonicalName
+        val builderTerm = newName("builder")
+        ctx.addReusableMember(s"""$builderCls $builderTerm = new $builderCls();""")
+
+        val arrayTerm = terms.head
+
+        val indexTerm = newName("i")
+        val numTerm = newName("num")
+
+        val elementType = at.getElementType
+        val elementCls = primitiveTypeTermForType(elementType)
+        val elementTerm = newName("element")
+        val elementNullTerm = newName("isNull")
+        val elementCode =
+          s"""
+             |$elementCls $elementTerm = ${primitiveDefaultValue(elementType)};
+             |boolean $elementNullTerm = $arrayTerm.isNullAt($indexTerm);
+             |if (!$elementNullTerm) {
+             |  $elementTerm = ($elementCls) ${
+            baseRowFieldReadAccess(ctx, indexTerm, arrayTerm, elementType)};
+             |}
+             """.stripMargin
+        val elementExpr = GeneratedExpression(
+          elementTerm, elementNullTerm, elementCode, elementType)
+        val castExpr = generateCast(ctx, nullCheck, elementExpr, DataTypes.STRING)
+
+        val stmt =
+          s"""
+             |$builderTerm.setLength(0);
+             |$builderTerm.append("[");
+             |int $numTerm = $arrayTerm.numElements();
+             |for (int $indexTerm = 0; $indexTerm < $numTerm; $indexTerm++) {
+             |  if ($indexTerm != 0) {
+             |    $builderTerm.append(", ");
+             |  }
+             |
+             |  ${castExpr.code}
+             |  if (${castExpr.nullTerm}) {
+             |    $builderTerm.append("null");
+             |  } else {
+             |    $builderTerm.append(${castExpr.resultTerm});
+             |  }
+             |}
+             |$builderTerm.append("]");
+             """.stripMargin
+        (stmt, s"$builderTerm.toString()")
+    }
+
+  def generateCastMapToString(
+      ctx: CodeGeneratorContext,
+      nullCheck: Boolean,
+      operand: GeneratedExpression,
+      mt: MapType): GeneratedExpression =
+    generateReturnStringCallWithStmtIfArgsNotNull(ctx, Seq(operand)) {
+      terms =>
+        val resultTerm = newName("toStringResult")
+
+        val builderCls = classOf[StringBuilder].getCanonicalName
+        val builderTerm = newName("builder")
+        ctx.addReusableMember(s"$builderCls $builderTerm = new $builderCls();")
+
+        val mapTerm = terms.head
+        val genericMapCls = classOf[GenericMap].getCanonicalName
+        val genericMapTerm = newName("genericMap")
+        val binaryMapCls = classOf[BinaryMap].getCanonicalName
+        val binaryMapTerm = newName("binaryMap")
+        val arrayCls = classOf[BinaryArray].getCanonicalName
+        val keyArrayTerm = newName("keyArray")
+        val valueArrayTerm = newName("valueArray")
+
+        val indexTerm = newName("i")
+        val numTerm = newName("num")
+
+        val keyType = mt.getKeyType
+        val keyCls = primitiveTypeTermForType(keyType)
+        val keyTerm = newName("key")
+        val keyNullTerm = newName("isNull")
+        val keyCode =
+          s"""
+             |$keyCls $keyTerm = ${primitiveDefaultValue(keyType)};
+             |boolean $keyNullTerm = $keyArrayTerm.isNullAt($indexTerm);
+             |if (!$keyNullTerm) {
+             |  $keyTerm = ($keyCls) ${
+            baseRowFieldReadAccess(ctx, indexTerm, keyArrayTerm, keyType)};
+             |}
+             """.stripMargin
+        val keyExpr = GeneratedExpression(keyTerm, keyNullTerm, keyCode, keyType)
+        val keyCastExpr = generateCast(ctx, nullCheck, keyExpr, DataTypes.STRING)
+
+        val valueType = mt.getValueType
+        val valueCls = primitiveTypeTermForType(valueType)
+        val valueTerm = newName("value")
+        val valueNullTerm = newName("isNull")
+        val valueCode =
+          s"""
+             |$valueCls $valueTerm = ${primitiveDefaultValue(valueType)};
+             |boolean $valueNullTerm = $valueArrayTerm.isNullAt($indexTerm);
+             |if (!$valueNullTerm) {
+             |  $valueTerm = ($valueCls) ${
+            baseRowFieldReadAccess(ctx, indexTerm, valueArrayTerm, valueType)};
+             |}
+             """.stripMargin
+        val valueExpr = GeneratedExpression(valueTerm, valueNullTerm, valueCode, valueType)
+        val valueCastExpr = generateCast(ctx, nullCheck, valueExpr, DataTypes.STRING)
+
+        val stmt =
+          s"""
+             |String $resultTerm;
+             |if ($mapTerm instanceof $binaryMapCls) {
+             |  $binaryMapCls $binaryMapTerm = ($binaryMapCls) $mapTerm;
+             |
+             |  $arrayCls $keyArrayTerm = $binaryMapTerm.keyArray();
+             |  $arrayCls $valueArrayTerm = $binaryMapTerm.valueArray();
+             |
+             |  $builderTerm.setLength(0);
+             |  $builderTerm.append("{");
+             |
+             |  int $numTerm = $binaryMapTerm.numElements();
+             |  for (int $indexTerm = 0; $indexTerm < $numTerm; $indexTerm++) {
+             |    if ($indexTerm != 0) {
+             |      $builderTerm.append(", ");
+             |    }
+             |
+             |    ${keyCastExpr.code}
+             |    if (${keyCastExpr.nullTerm}) {
+             |      $builderTerm.append("null");
+             |    } else {
+             |      $builderTerm.append(${keyCastExpr.resultTerm});
+             |    }
+             |    $builderTerm.append("=");
+             |
+             |    ${valueCastExpr.code}
+             |    if (${valueCastExpr.nullTerm}) {
+             |      $builderTerm.append("null");
+             |    } else {
+             |      $builderTerm.append(${valueCastExpr.resultTerm});
+             |    }
+             |  }
+             |  $builderTerm.append("}");
+             |
+             |  $resultTerm = $builderTerm.toString();
+             |} else {
+             |  $genericMapCls $genericMapTerm = ($genericMapCls) $mapTerm;
+             |  $resultTerm = $genericMapTerm.toString();
+             |}
+             """.stripMargin
+        (stmt, resultTerm)
+    }
+
+  def generateBaseRowToString(
+      ctx: CodeGeneratorContext,
+      nullCheck: Boolean,
+      operand: GeneratedExpression,
+      brt: BaseRowType): GeneratedExpression =
+    generateReturnStringCallWithStmtIfArgsNotNull(ctx, Seq(operand)) {
+      terms =>
+        val builderCls = classOf[StringBuilder].getCanonicalName
+        val builderTerm = newName("builder")
+        ctx.addReusableMember(s"""$builderCls $builderTerm = new $builderCls();""")
+
+        val rowTerm = terms.head
+
+        val appendCode = brt.getFieldTypes.zipWithIndex.map {
+          case (elementType, idx) =>
+            val elementCls = primitiveTypeTermForType(elementType)
+            val elementTerm = newName("element")
+            val elementExpr = GeneratedExpression(
+              elementTerm, s"$rowTerm.isNullAt($idx)",
+              s"$elementCls $elementTerm = ($elementCls) ${baseRowFieldReadAccess(
+                ctx, idx, rowTerm, elementType)};", elementType)
+            val castExpr = generateCast(ctx, nullCheck, elementExpr, DataTypes.STRING)
+            s"""
+               |${if (idx != 0) s"""$builderTerm.append(",");""" else ""}
+               |${castExpr.code}
+               |if (${castExpr.nullTerm}) {
+               |  $builderTerm.append("null");
+               |} else {
+               |  $builderTerm.append(${castExpr.resultTerm});
+               |}
+               """.stripMargin
+        }.mkString("\n")
+
+        val stmt =
+          s"""
+             |$builderTerm.setLength(0);
+             |$appendCode
+             """.stripMargin
+        (stmt, s"$builderTerm.toString()")
+    }
 
   def generateIfElse(
       ctx: CodeGeneratorContext,

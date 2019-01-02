@@ -22,14 +22,13 @@ import java.math.{BigDecimal => JBigDecimal}
 import java.sql.{Date, Time, Timestamp}
 import java.util
 import java.util.{Map => JavaMap}
+
 import javax.annotation.Nullable
 
 import scala.collection.convert.WrapAsJava
 import scala.collection.JavaConverters._
 import org.apache.commons.codec.binary.Base64
 import org.apache.flink.api.common.ExecutionConfig
-import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_PRIMITIVE_ARRAY_TYPE_INFO
-import org.apache.flink.api.common.typeinfo.{BasicArrayTypeInfo, PrimitiveArrayTypeInfo}
 import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.api.java.tuple.Tuple
 import org.apache.flink.api.java.typeutils._
@@ -47,6 +46,8 @@ import org.apache.flink.table.typeutils.TypeUtils._
 import org.apache.flink.table.typeutils._
 import org.apache.flink.types.Row
 import org.apache.flink.util.InstantiationUtil
+
+import scala.reflect.ClassTag
 
 /**
  * Functions to convert Scala types to internal types.
@@ -73,13 +74,22 @@ object InternalTypeConverters {
       case dt: DecimalType => DecimalConverter(dt)
       case DataTypes.BYTE_ARRAY => ByteArrayConverter
 
-      case at: ArrayType if at.isPrimitive => PrimitiveArrayConverter(at.getElementType)
-      case at: ArrayType => ObjectArrayConverter(
-        TypeUtils.getExternalClassForType(at),
-        at.getElementType)
-      case mt: MapType if isPrimitive(mt.getKeyType) && isPrimitive(mt.getValueType) =>
-        PrimitiveMapConverter(mt.getKeyType, mt.getValueType)
-      case mt: MapType => ObjectMapConverter(mt.getKeyType, mt.getValueType)
+      case at: ArrayType if at.getElementType == DataTypes.STRING =>
+        StringArrayConverter()
+      case at: ArrayType if at.isPrimitive =>
+        PrimitiveArrayConverter(at.getElementType)
+      case at: ArrayType if isIdentity(at.getElementType) =>
+        ClassArrayConverter(at.getElementType)
+      case at: ArrayType =>
+        ObjectArrayConverter(TypeUtils.getExternalClassForType(at), at.getElementType)
+
+      case mt: MapType if isIdentity(mt.getKeyType) && isIdentity(mt.getValueType) =>
+        IdentityMapConverter(mt.getKeyType, mt.getValueType)
+      case mt: MapType if (isIdentity(mt.getKeyType) && mt.getValueType == DataTypes.STRING)
+        || (isIdentity(mt.getValueType) && mt.getKeyType == DataTypes.STRING) =>
+        StringMapConverter(mt.getKeyType, mt.getValueType)
+      case mt: MapType =>
+        ObjectMapConverter(mt.getKeyType, mt.getValueType)
 
       case br: BaseRowType if br.getTypeClass == classOf[GenericRow] => GenericRowConverter(br)
       case br: BaseRowType => BaseRowConverter(br)
@@ -87,18 +97,6 @@ object InternalTypeConverters {
 
       case tw: TypeInfoWrappedType =>
         tw.getTypeInfo match {
-          case pa: PrimitiveArrayTypeInfo[_] if pa != BYTE_PRIMITIVE_ARRAY_TYPE_INFO =>
-            PrimitiveArrayConverter(DataTypes.of(pa.getComponentType))
-          case ba: BasicArrayTypeInfo[_, _] =>
-            ObjectArrayConverter(ba.getTypeClass, DataTypes.of(ba.getComponentInfo))
-          case oa: ObjectArrayTypeInfo[_, _] =>
-            ObjectArrayConverter(oa.getTypeClass, DataTypes.of(oa.getComponentInfo))
-          case mt: MapTypeInfo[_, _]
-            if isPrimitive(mt.getKeyTypeInfo) && isPrimitive(mt.getValueTypeInfo) =>
-            PrimitiveMapConverter(
-              DataTypes.of(mt.getKeyTypeInfo), DataTypes.of(mt.getValueTypeInfo))
-          case mt: MapTypeInfo[_, _] =>
-            ObjectMapConverter(DataTypes.of(mt.getKeyTypeInfo), DataTypes.of(mt.getValueTypeInfo))
           case rt: RowTypeInfo => RowConverter(rt)
           case pj: PojoTypeInfo[_] => PojoConverter(pj)
           case tt: TupleTypeInfo[_] => TupleConverter(tt)
@@ -314,21 +312,24 @@ object InternalTypeConverters {
     }
   }
 
-  case class PrimitiveArrayConverter(eleType: DataType)
+  abstract class IdentityArrayConverter(eleType: DataType, isPrimitive: Boolean)
       extends InternalTypeConverter[Any, Any, BaseArray] {
 
     val internalEleT: InternalType = DataTypes.internal(eleType)
+    // `isIdentity(eleType)` is true, so the internal type and external type are the same
+    val eleClass: Class[_] = TypeUtils.getExternalClassForType(eleType)
 
     override protected def toInternalImpl(scalaValue: Any): BaseArray =
       scalaValue match {
-        // no need to convert primitive element type to internal type (as they are the same)
-        case a: Array[_] => new GenericArray(a, a.length, true)
+        case a: Array[_] => new GenericArray(a, a.length, isPrimitive)
         case s: Seq[_] =>
           // FIXME: is there a more efficient way?
-          val array = new GenericArray(s.length, true, internalEleT)
-          s.zipWithIndex.foreach(e => array.setPrimitive(e._2, e._1, internalEleT))
-          array
+          new GenericArray(s.toArray(ClassTag(eleClass)), s.length, isPrimitive)
       }
+  }
+
+  case class PrimitiveArrayConverter(eleType: DataType)
+      extends IdentityArrayConverter(eleType, true) {
 
     override def toExternalImpl(internalValue: BaseArray): Any =
       internalValue.toPrimitiveArray(internalEleT)
@@ -337,8 +338,49 @@ object InternalTypeConverters {
       toExternalImpl(row.getBaseArray(column))
   }
 
+  case class ClassArrayConverter(eleType: DataType)
+    extends IdentityArrayConverter(eleType, false) {
+
+    override def toExternalImpl(internalValue: BaseArray): Any =
+      internalValue.toClassArray(internalEleT, eleClass)
+
+    override protected def toExternalImpl(row: BaseRow, column: Int): Any =
+      toExternalImpl(row.getBaseArray(column))
+  }
+
+  case class StringArrayConverter() extends InternalTypeConverter[Any, Any, BaseArray] {
+
+    override protected def toInternalImpl(scalaValue: Any): BaseArray = {
+      val len = scalaValue match {
+        case a: Array[_] => a.length
+        case s: Seq[_] => s.length
+      }
+      val array = new Array[BinaryString](len)
+
+      def setElement(o: Any, i: Int): Unit =
+        array(i) = BinaryString.fromString(o)
+
+      scalaValue match {
+        case a: Array[_] => a.zipWithIndex.foreach(e => setElement(e._1, e._2))
+        case s: Seq[_] => s.zipWithIndex.foreach(e => setElement(e._1, e._2))
+      }
+      new GenericArray(array, len, false)
+    }
+
+    override def toExternalImpl(internalValue: BaseArray): Any = {
+      val oa = internalValue.toObjectArray(DataTypes.STRING)
+      val array = new Array[String](internalValue.numElements())
+      oa.zipWithIndex.foreach(e => array(e._2) =
+        if (e._1 == null) null else e._1.toString)
+      array
+    }
+
+    override protected def toExternalImpl(row: BaseRow, column: Int): Any =
+      toExternalImpl(row.getBaseArray(column))
+  }
+
   case class ObjectArrayConverter(
-      typeClass: Class[_],
+      externalArrayClass: Class[_],
       eleType: DataType) extends InternalTypeConverter[Any, Any, BaseArray] {
 
     val internalEleT: InternalType = DataTypes.internal(eleType)
@@ -373,13 +415,13 @@ object InternalTypeConverters {
     override def toExternalImpl(internalValue: BaseArray): Any = {
       val array = internalValue.toObjectArray(internalEleT)
         .map(elementConverter.toExternal)
-      if (typeClass eq classOf[Array[AnyRef]]) {
+      if (externalArrayClass eq classOf[Array[AnyRef]]) {
         array
       } else {
         util.Arrays.copyOf(
           array.asInstanceOf[Array[AnyRef]],
           internalValue.numElements(),
-          typeClass.asInstanceOf[Class[Array[AnyRef]]])
+          externalArrayClass.asInstanceOf[Class[Array[AnyRef]]])
       }
     }
 
@@ -387,7 +429,7 @@ object InternalTypeConverters {
       toExternalImpl(row.getBaseArray(column))
   }
 
-  case class PrimitiveMapConverter(keyType: DataType, valueType: DataType)
+  case class IdentityMapConverter(keyType: DataType, valueType: DataType)
       extends InternalTypeConverter[Any, Any, BaseMap] {
 
     private val internalKeyT = DataTypes.internal(keyType)
@@ -395,14 +437,62 @@ object InternalTypeConverters {
 
     override protected def toInternalImpl(scalaValue: Any): BaseMap =
       scalaValue match {
-        case m: Map[AnyRef, AnyRef] => new GenericMap(WrapAsJava.mapAsJavaMap(m))
-        case m: JavaMap[AnyRef, AnyRef] => new GenericMap(m)
+        case m: Map[_, _] => new GenericMap(WrapAsJava.mapAsJavaMap(m))
+        case m: JavaMap[_, _] => new GenericMap(m)
       }
 
     override def toExternalImpl(internalValue: BaseMap): Any = {
       // note that the internal type and the external type for primitive type data are the same,
       // so we can use `toJavaMap` directly here.
       internalValue.toJavaMap(internalKeyT, internalValueT)
+    }
+
+    override protected def toExternalImpl(row: BaseRow, column: Int): Any =
+      toExternalImpl(row.getBaseMap(column))
+  }
+
+  case class StringMapConverter(keyType: DataType, valueType: DataType)
+      extends InternalTypeConverter[Any, Any, BaseMap] {
+
+    private val internalKeyT = DataTypes.internal(keyType)
+    private val internalValueT = DataTypes.internal(valueType)
+
+    override protected def toInternalImpl(scalaValue: Any): BaseMap = {
+      val map = new util.HashMap[Any, Any]()
+
+      def putMap(key: Any, value: Any): Unit = (internalKeyT, internalValueT) match {
+        case (DataTypes.STRING, _) =>
+          map.put(BinaryString.fromString(key), value)
+        case (_, DataTypes.STRING) =>
+          map.put(key, BinaryString.fromString(value))
+      }
+
+      scalaValue match {
+        case m: Map[_, _] => for (kv <- m) putMap(kv._1, kv._2)
+        case m: JavaMap[_, _] =>
+          val iterator = m.entrySet().iterator()
+          while (iterator.hasNext) {
+            val entry = iterator.next
+            putMap(entry.getKey, entry.getValue)
+          }
+      }
+      new GenericMap(map)
+    }
+
+    override def toExternalImpl(internalValue: BaseMap): Any = {
+      // avoid use scala toMap here, because this may change the order of map values
+      val map = new util.HashMap[Any, Any]()
+
+      val javaMap = internalValue.toJavaMap(internalKeyT, internalValueT)
+      for (kv <- javaMap.asScala) {
+        val (convertedKey, convertedValue) = (internalKeyT, internalValueT) match {
+          case (DataTypes.STRING, _) => (if (kv._1 == null) null else kv._1.toString, kv._2)
+          case (_, DataTypes.STRING) => (kv._1, if (kv._2 == null) null else kv._2.toString)
+        }
+        map.put(convertedKey, convertedValue)
+      }
+
+      map
     }
 
     override protected def toExternalImpl(row: BaseRow, column: Int): Any =
@@ -446,7 +536,6 @@ object InternalTypeConverters {
     }
 
     override def toInternalImpl(scalaValue: Any): BaseMap = {
-
       val (keys, values) = scalaValue match {
         case map: Map[_, _] =>
           val keys: Array[Any] = new Array[Any](map.size)

@@ -24,26 +24,28 @@ import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.Types;
 import org.apache.flink.util.Preconditions;
 
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 
 /**
  * A GenericArray is an array where all the elements have the same type.
  * It can be considered as a wrapper class of the normal java array.
  *
- * <p>Primitive type elements are stored in primitive type java arrays,
- * other type elements are stored in Object java arrays.</p>
- *
- * <p>Note that boxed type (Integer, Long, etc.) are not considered to be primitive types.</p>
+ * <p>Note that
+ *   1. Boxed type (Integer, Long, etc.) are not considered to be primitive types.
+ *   2. Primitive type elements can't be null.
+ * </p>
  */
 public class GenericArray extends BaseArray {
 
 	private final Object arr;
-	private final boolean[] isNull;
 
 	private final int numElements;
 	private final boolean isPrimitive;
 
-	public GenericArray(int numElements, boolean isPrimitive, InternalType elementType) {
+	public <T> GenericArray(
+			int numElements, boolean isPrimitive,
+			InternalType elementType, Class<T> eleClass) {
 		if (isPrimitive) {
 			if (elementType.equals(Types.BOOLEAN)) {
 				arr = new boolean[numElements];
@@ -64,10 +66,8 @@ public class GenericArray extends BaseArray {
 			} else {
 				throw new RuntimeException("Element type is not primitive");
 			}
-			isNull = null;
 		} else {
-			arr = new Object[numElements];
-			isNull = new boolean[numElements];
+			arr = Array.newInstance(eleClass, numElements);
 		}
 
 		this.numElements = numElements;
@@ -76,7 +76,6 @@ public class GenericArray extends BaseArray {
 
 	public GenericArray(Object arr, int numElements, boolean isPrimitive) {
 		this.arr = arr;
-		isNull = isPrimitive ? null : new boolean[numElements];
 
 		this.numElements = numElements;
 		this.isPrimitive = isPrimitive;
@@ -89,22 +88,18 @@ public class GenericArray extends BaseArray {
 
 	@Override
 	public boolean isNullAt(int pos) {
-		return !isPrimitive && isNull[pos];
+		return !isPrimitive && ((Object[]) arr)[pos] == null;
 	}
 
 	@Override
 	public void setNullAt(int pos) {
 		Preconditions.checkState(!isPrimitive, "Can't set null for primitive array");
-
-		isNull[pos] = true;
 		((Object[]) arr)[pos] = null;
 	}
 
 	@Override
 	public void setNotNullAt(int pos) {
-		if (!isPrimitive) {
-			isNull[pos] = false;
-		}
+		// do nothing, as an update will follow immediately
 	}
 
 	@Override
@@ -188,43 +183,48 @@ public class GenericArray extends BaseArray {
 	}
 
 	@Override
+	public <T> T[] toClassArray(InternalType elementType, Class<T> clazz) {
+		return (T[]) arr;
+	}
+
+	@Override
 	public boolean getBoolean(int pos) {
-		return ((boolean[]) arr)[pos];
+		return isPrimitive ? ((boolean[]) arr)[pos] : ((Boolean[]) arr)[pos];
 	}
 
 	@Override
 	public byte getByte(int pos) {
-		return ((byte[]) arr)[pos];
+		return isPrimitive ? ((byte[]) arr)[pos] : ((Byte[]) arr)[pos];
 	}
 
 	@Override
 	public short getShort(int pos) {
-		return ((short[]) arr)[pos];
+		return isPrimitive ? ((short[]) arr)[pos] : ((Short[]) arr)[pos];
 	}
 
 	@Override
 	public int getInt(int pos) {
-		return ((int[]) arr)[pos];
+		return isPrimitive ? ((int[]) arr)[pos] : ((Integer[]) arr)[pos];
 	}
 
 	@Override
 	public long getLong(int pos) {
-		return ((long[]) arr)[pos];
+		return isPrimitive ? ((long[]) arr)[pos] : ((Long[]) arr)[pos];
 	}
 
 	@Override
 	public float getFloat(int pos) {
-		return ((float[]) arr)[pos];
+		return isPrimitive ? ((float[]) arr)[pos] : ((Float[]) arr)[pos];
 	}
 
 	@Override
 	public double getDouble(int pos) {
-		return ((double[]) arr)[pos];
+		return isPrimitive ? ((double[]) arr)[pos] : ((Double[]) arr)[pos];
 	}
 
 	@Override
 	public char getChar(int pos) {
-		return ((char[]) arr)[pos];
+		return isPrimitive ? ((char[]) arr)[pos] : ((Character[]) arr)[pos];
 	}
 
 	@Override
