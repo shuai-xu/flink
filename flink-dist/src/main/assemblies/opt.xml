@@ -186,5 +186,13 @@
 			<destName>flink-streaming-python_${scala.binary.version}-${project.version}.jar</destName>
 			<fileMode>0644</fileMode>
 		</file>
+
+		<!-- Yarn Shuffle -->
+		<file>
+			<source>../flink-yarn-shuffle/target/flink-yarn-shuffle-${project.version}.jar</source>
+			<outputDirectory>opt/yarn-shuffle</outputDirectory>
+			<destName>flink-yarn-shuffle-${project.version}.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
 	</files>
 </assembly>
