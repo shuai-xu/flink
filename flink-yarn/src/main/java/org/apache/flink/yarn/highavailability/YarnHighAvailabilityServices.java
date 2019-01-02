@@ -327,6 +327,7 @@ public abstract class YarnHighAvailabilityServices implements HighAvailabilitySe
 			case NONE:
 				return new YarnIntraNonHaMasterServices(flinkConfig, hadoopConfig);
 
+			case FILESYSTEM:
 			case ZOOKEEPER:
 				throw  new UnsupportedOperationException("to be implemented");
 
@@ -361,6 +362,7 @@ public abstract class YarnHighAvailabilityServices implements HighAvailabilitySe
 					hadoopConfig,
 					HighAvailabilityServicesUtils.AddressResolution.TRY_ADDRESS_RESOLUTION);
 
+			case FILESYSTEM:
 			case ZOOKEEPER:
 				throw  new UnsupportedOperationException("to be implemented");
 

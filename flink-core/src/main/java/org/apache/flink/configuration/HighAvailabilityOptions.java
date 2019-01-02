@@ -40,14 +40,14 @@ public class HighAvailabilityOptions {
 	/**
 	 * Defines high-availability mode used for the cluster execution.
 	 * A value of "NONE" signals no highly available setup.
-	 * To enable high-availability, set this mode to "ZOOKEEPER".
+	 * To enable high-availability, set this mode to "FILESYSTEM" or "ZOOKEEPER".
 	 */
 	public static final ConfigOption<String> HA_MODE =
 			key("high-availability")
 			.defaultValue("NONE")
 			.withDeprecatedKeys("recovery.mode")
 			.withDescription("Defines high-availability mode used for the cluster execution." +
-				" To enable high-availability, set this mode to \"ZOOKEEPER\".");
+				" To enable high-availability, set this mode to \"FILESYSTEM\" or \"ZOOKEEPER\".");
 
 	/**
 	 * The ID of the Flink cluster, used to separate multiple Flink clusters
@@ -194,6 +194,13 @@ public class HighAvailabilityOptions {
 			.withDescription("Defines the ACL (open|creator) to be configured on ZK node. The configuration value can be" +
 				" set to “creator” if the ZooKeeper server configuration has the “authProvider” property mapped to use" +
 				" SASLAuthenticationProvider and the cluster is configured to run in secure mode (Kerberos).");
+
+	// --------------------------- FileSystem ----------------------------------
+
+	public static final ConfigOption<String> HA_FILESYSTEM_JOBGRAPHS_PATH =
+		key("high-availability.filesystem.path.jobgraphs")
+			.defaultValue("/tmp/jobgraphs")
+			.withDescription("FileSystem root path for job graphs.");
 
 	// ------------------------------------------------------------------------
 

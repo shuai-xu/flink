@@ -346,6 +346,10 @@ The configuration keys in this section are independent of the used resource mana
 
 {% include generated/high_availability_zookeeper_configuration.html %}
 
+#### FileSystem-based HA Mode
+
+{% include generated/high_availability_filesystem_configuration.html %}
+
 ### ZooKeeper Security
 
 {% include generated/zoo_keeper_configuration.html %}

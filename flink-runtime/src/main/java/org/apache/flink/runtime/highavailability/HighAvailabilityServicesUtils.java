@@ -20,12 +20,14 @@ package org.apache.flink.runtime.highavailability;
 
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.HighAvailabilityOptions;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.SecurityOptions;
 import org.apache.flink.runtime.blob.BlobStoreService;
 import org.apache.flink.runtime.blob.BlobUtils;
 import org.apache.flink.runtime.dispatcher.Dispatcher;
+import org.apache.flink.runtime.highavailability.filesystem.FileSystemHaServices;
 import org.apache.flink.runtime.highavailability.nonha.embedded.EmbeddedHaServices;
 import org.apache.flink.runtime.highavailability.nonha.standalone.StandaloneHaServices;
 import org.apache.flink.runtime.highavailability.zookeeper.ZooKeeperHaServices;
@@ -55,6 +57,9 @@ public class HighAvailabilityServicesUtils {
 			case NONE:
 				return new EmbeddedHaServices(executor);
 
+			case FILESYSTEM:
+				throw new UnsupportedOperationException("to be implemented");
+
 			case ZOOKEEPER:
 				BlobStoreService blobStoreService = BlobUtils.createBlobStoreFromConfig(config);
 
@@ -78,6 +83,7 @@ public class HighAvailabilityServicesUtils {
 
 		switch(highAvailabilityMode) {
 			case NONE:
+			case FILESYSTEM:
 				final Tuple2<String, Integer> hostnamePort = getJobManagerAddress(configuration);
 
 				final String jobManagerRpcUrl = AkkaRpcServiceUtils.getRpcUrl(
@@ -106,11 +112,26 @@ public class HighAvailabilityServicesUtils {
 				final boolean enableSSL = configuration.getBoolean(SecurityOptions.SSL_ENABLED);
 				final String protocol = enableSSL ? "https://" : "http://";
 
-				return new StandaloneHaServices(
-					resourceManagerRpcUrl,
-					dispatcherRpcUrl,
-					jobManagerRpcUrl,
-					String.format("%s%s:%s", protocol, address, port));
+				if (highAvailabilityMode == HighAvailabilityMode.NONE) {
+					return new StandaloneHaServices(
+						resourceManagerRpcUrl,
+						dispatcherRpcUrl,
+						jobManagerRpcUrl,
+						String.format("%s%s:%s", protocol, address, port));
+				} else {
+					final String jobGraphPath = configuration.getString(
+						HighAvailabilityOptions.HA_FILESYSTEM_JOBGRAPHS_PATH);
+
+					BlobStoreService blobStoreService = BlobUtils.createBlobStoreFromConfig(configuration);
+
+					return new FileSystemHaServices(
+						resourceManagerRpcUrl,
+						dispatcherRpcUrl,
+						jobManagerRpcUrl,
+						String.format("%s%s:%s", protocol, address, port),
+						jobGraphPath,
+						blobStoreService);
+				}
 			case ZOOKEEPER:
 				BlobStoreService blobStoreService = BlobUtils.createBlobStoreFromConfig(configuration);
 

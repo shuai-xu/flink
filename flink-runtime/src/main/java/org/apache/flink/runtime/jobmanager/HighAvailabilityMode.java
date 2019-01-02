@@ -26,6 +26,8 @@ import org.apache.flink.configuration.HighAvailabilityOptions;
  * High availability mode for Flink's cluster execution. Currently supported modes are:
  *
  * - NONE: No high availability.
+ * - FILESYSTEM: JobManager stores job graphs, checkpoints, etc to file system which can be
+ * accessed after JobManager failovers.
  * - ZooKeeper: JobManager high availability via ZooKeeper
  * ZooKeeper is used to select a leader among a group of JobManager. This JobManager
  * is responsible for the job execution. Upon failure of the leader a new leader is elected
@@ -33,6 +35,7 @@ import org.apache.flink.configuration.HighAvailabilityOptions;
  */
 public enum HighAvailabilityMode {
 	NONE,
+	FILESYSTEM,
 	ZOOKEEPER;
 
 	/**
@@ -66,6 +69,7 @@ public enum HighAvailabilityMode {
 		switch (mode) {
 			case NONE:
 				return false;
+			case FILESYSTEM:
 			case ZOOKEEPER:
 				return true;
 			default:

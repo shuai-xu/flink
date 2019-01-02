@@ -92,7 +92,8 @@ public class BlobUtils {
 
 		if (highAvailabilityMode == HighAvailabilityMode.NONE) {
 			return new VoidBlobStore();
-		} else if (highAvailabilityMode == HighAvailabilityMode.ZOOKEEPER) {
+		} else if (highAvailabilityMode == HighAvailabilityMode.FILESYSTEM ||
+				highAvailabilityMode == HighAvailabilityMode.ZOOKEEPER) {
 			return createFileSystemBlobStore(config);
 		} else {
 			throw new IllegalConfigurationException("Unexpected high availability mode '" + highAvailabilityMode + "'.");

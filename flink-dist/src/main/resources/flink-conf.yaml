@@ -68,7 +68,7 @@ parallelism.default: 1
 # High Availability
 #==============================================================================
 
-# The high-availability mode. Possible options are 'NONE' or 'zookeeper'.
+# The high-availability mode. Possible options are 'NONE', 'FILESYSTEM' or 'zookeeper'.
 #
 # high-availability: zookeeper
 
@@ -93,6 +93,9 @@ parallelism.default: 1
 # The default value is "open" and it can be changed to "creator" if ZK security is enabled
 #
 # high-availability.zookeeper.client.acl: open
+
+# high-availability: filesystem
+# high-availability.filesystem.path.jobgraphs: /tmp/jobgraphs
 
 #==============================================================================
 # Fault tolerance and checkpointing
