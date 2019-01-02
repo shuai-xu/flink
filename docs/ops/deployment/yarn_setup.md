@@ -28,7 +28,34 @@ under the License.
 
 ## Quickstart
 
-### Start a long-running Flink cluster on YARN
+Please refer to the hadoop document to install hadoop cluster. After the Hadoop cluster has installed, you need to configure the environment variables.
+
+{% highlight bash %}
+export HADOOP_CONF_DIR=/etc/hadoop/conf/
+{% endhighlight %}
+
+On Linux systems, you can add such line to .bashrc file under $HOME directory to make it permanently for all future bash sessions.
+
+### Run a Flink job on YARN (per-job mode)
+
+{% highlight bash %}
+# get the hadoop2 package from the Flink download page at
+# {{ site.download_url }}
+curl -O <flink_hadoop2_download_url>
+tar xvzf flink-{{ site.version }}-bin-hadoop2.tgz
+cd flink-{{ site.version }}/
+./bin/flink run -m yarn-cluster -yn 4 -yjm 1024 -ytm 4096 ./examples/batch/WordCount.jar
+{% endhighlight %}
+
+You can see the job you just submitted on Yarn's Resource Manager WebUI.
+
+<img src="{{ site.baseurl }}/fig/yarn_quickstart_perjob_rm.png" class="img-responsive">
+
+Click 'ApplicationMaster', and you can see flink's dashboard.
+
+<img src="{{ site.baseurl }}/fig/yarn_quickstart_perjob_flink_dashboard.png" class="img-responsive">
+
+### Start a long-running Flink cluster on YARN (session mode)
 
 Start a YARN session with 4 Task Managers (each with 4 GB of Heapspace):
 
@@ -43,17 +70,28 @@ cd flink-{{ site.version }}/
 
 Specify the `-s` flag for the number of processing slots per Task Manager. We recommend to set the number of slots to the number of processors per machine.
 
+You can see the session you just submitted on Yarn's Resource Manager WebUI.
+
+<img src="{{ site.baseurl }}/fig/yarn_quickstart_session_rm.png" class="img-responsive">
+
+Click 'ApplicationMaster', and you can see flink's dashboard without any job submited.
+
+<img src="{{ site.baseurl }}/fig/yarn_quickstart_session_flink_dashboard.png" class="img-responsive">
+
 Once the session has been started, you can submit jobs to the cluster using the `./bin/flink` tool.
 
-### Run a Flink job on YARN
+{% highlight bash %}
+./bin/flink run ./examples/streaming/WordCount.jar
+{% endhighlight %}
+
+Now you can see the flink job you just submited on the dashboard.
+
+<img src="{{ site.baseurl }}/fig/yarn_quickstart_session_flink_dashboard_wordcount.png" class="img-responsive">
+
+To stop the session, just use `yarn application -kill $applicationId`.
 
 {% highlight bash %}
-# get the hadoop2 package from the Flink download page at
-# {{ site.download_url }}
-curl -O <flink_hadoop2_download_url>
-tar xvzf flink-{{ site.version }}-bin-hadoop2.tgz
-cd flink-{{ site.version }}/
-./bin/flink run -m yarn-cluster -yn 4 -yjm 1024 -ytm 4096 ./examples/batch/WordCount.jar
+yarn application -kill application_1543205128210_0016
 {% endhighlight %}
 
 ## Flink YARN Session

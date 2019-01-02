@@ -298,6 +298,9 @@ ipsum : 4
 $ ./bin/stop-cluster.sh
 {% endhighlight %}
 
+## Run on Yarn
+The above example shows how to run a flink job on standalone cluster. If you want to run on yarn, please refer to the [Yarn Quickstart]({{ site.baseurl }}/ops/deployment/yarn_setup.html#quickstart).
+
 ## Next Steps
 
 Check out some more [examples]({{ site.baseurl }}/examples) to get a better feel for Flink's programming APIs. When you are done with that, go ahead and read the [streaming guide]({{ site.baseurl }}/dev/datastream_api.html).
