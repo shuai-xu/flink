@@ -74,7 +74,7 @@ import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TA
  */
 public class HiveMetadataUtil {
 	/**
-	 * Create a hive table from ExternalCatalogTable.
+	 * Create a Hive table from ExternalCatalogTable.
 	 */
 	public static Table createHiveTable(ObjectPath tablePath, ExternalCatalogTable table) {
 		Properties prop = new Properties();
@@ -132,7 +132,7 @@ public class HiveMetadataUtil {
 	}
 
 	/**
-	 * Create an ExternalCatalogTable from hive table.
+	 * Create an ExternalCatalogTable from Hive table.
 	 */
 	public static ExternalCatalogTable createExternalCatalogTable(Table hiveTable) {
 		return new ExternalCatalogTable(
@@ -193,7 +193,7 @@ public class HiveMetadataUtil {
 	}
 
 	/**
-	 * Create a hive database from CatalogDatabase.
+	 * Create a Hive database from CatalogDatabase.
 	 */
 	public static Database createHiveDatabase(String dbName, CatalogDatabase catalogDb) {
 		Map<String, String> prop = catalogDb.getProperties();
@@ -206,7 +206,7 @@ public class HiveMetadataUtil {
 	}
 
 	/**
-	 * Create a hive database from CatalogDatabase.
+	 * Create a Hive database from CatalogDatabase.
 	 */
 	public static CatalogDatabase createCatalogDatabase(Database hiveDb) {
 		Map<String, String> prop = new HashMap<>(hiveDb.getParameters());
@@ -218,6 +218,9 @@ public class HiveMetadataUtil {
 		return new CatalogDatabase(prop);
 	}
 
+	/**
+	 * Create a CatalogPartition from the given PartitionSpec and Hive partition.
+	 */
 	public static CatalogPartition createCatalogPartition(CatalogPartition.PartitionSpec spec, Partition partition) {
 		Map<String, String> prop = new HashMap<>(partition.getParameters());
 
@@ -236,6 +239,37 @@ public class HiveMetadataUtil {
 
 	public static CatalogPartition.PartitionSpec createPartitionSpec(String hivePartitionName) {
 		return CatalogPartition.fromStrings(Arrays.asList(hivePartitionName.split("/")));
+	}
+
+	/**
+	 * Create a Hive partition from the given Hive table and CatalogPartition.
+	 */
+	public static Partition createHivePartition(Table hiveTable, CatalogPartition cp) {
+		Partition partition = new Partition();
+
+		partition.setValues(cp.getPartitionSpec().getOrderedValues(getPartitionKeys(hiveTable)));
+		partition.setDbName(hiveTable.getDbName());
+		partition.setTableName(hiveTable.getTableName());
+		partition.setCreateTime((int) (System.currentTimeMillis() / 1000));
+		partition.setParameters(cp.getProperties());
+		partition.setSd(hiveTable.getSd().deepCopy());
+
+		String location = cp.getProperties().get(HIVE_TABLE_LOCATION);
+		partition.getSd().setLocation(location != null ? location : null);
+
+		return partition;
+	}
+
+	public static List<String> getPartitionKeys(Table hiveTable) {
+		List<FieldSchema> fieldSchemas = hiveTable.getPartitionKeys();
+
+		List<String> partitionKeys = new ArrayList<>(fieldSchemas.size());
+
+		for (FieldSchema fs : fieldSchemas) {
+			partitionKeys.add(fs.getName());
+		}
+
+		return partitionKeys;
 	}
 
 	/**

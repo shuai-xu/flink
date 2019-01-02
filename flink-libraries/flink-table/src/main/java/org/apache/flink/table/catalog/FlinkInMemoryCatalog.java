@@ -71,15 +71,15 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	public void createTable(ObjectPath tableName, ExternalCatalogTable table, boolean ignoreIfExists)
 		throws TableAlreadyExistException, DatabaseNotExistException {
 
+		if (!dbExists(tableName.getDbName())) {
+			throw new DatabaseNotExistException(catalogName, tableName.getDbName());
+		}
+
 		if (tableExists(tableName)) {
 			if (!ignoreIfExists) {
 				throw new TableAlreadyExistException(catalogName, tableName.getFullName());
 			}
 		} else {
-			if (!dbExists(tableName.getDbName())) {
-				throw new DatabaseNotExistException(catalogName, tableName.getDbName());
-			}
-
 			tables.put(tableName, table);
 
 			if (table.isPartitioned()) {
@@ -147,9 +147,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 
 	@Override
 	public boolean tableExists(ObjectPath path) {
-		return dbExists(path.getDbName()) && listTables(path.getDbName()).stream()
-			.map(op -> op.getObjectName())
-			.anyMatch(e -> e.equals(path.getObjectName()));
+		return dbExists(path.getDbName()) && tables.containsKey(path);
 	}
 
 	// ------ databases ------
@@ -216,19 +214,61 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	@Override
 	public void createParition(ObjectPath path, CatalogPartition partition, boolean ignoreIfExists)
 		throws TableNotExistException, TableNotPartitionedException, PartitionAlreadyExistException {
-		throw new UnsupportedOperationException();
+
+		if (!tableExists(path)) {
+			throw new TableNotExistException(catalogName, path.getFullName());
+		}
+
+		if (!isTablePartitioned(path)) {
+			throw new TableNotPartitionedException(catalogName, path);
+		}
+
+		if (partitionExists(path, partition.getPartitionSpec())) {
+			if (!ignoreIfExists) {
+				throw new PartitionAlreadyExistException(catalogName, path, partition.getPartitionSpec());
+			}
+		} else {
+			partitions.get(path).put(partition.getPartitionSpec(), partition);
+		}
 	}
 
 	@Override
-	public void dropParition(ObjectPath path, CatalogPartition.PartitionSpec partition, boolean ignoreIfNotExists)
-		throws TableNotExistException, TableNotPartitionedException, PartitionAlreadyExistException {
-		throw new UnsupportedOperationException();
+	public void dropParition(ObjectPath path, CatalogPartition.PartitionSpec partitionSpec, boolean ignoreIfNotExists)
+		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException {
+
+		if (!tableExists(path)) {
+			throw new TableNotExistException(catalogName, path.getFullName());
+		}
+
+		if (!isTablePartitioned(path)) {
+			throw new TableNotPartitionedException(catalogName, path);
+		}
+
+		if (partitionExists(path, partitionSpec)) {
+			partitions.get(path).remove(partitionSpec);
+		} else if (!ignoreIfNotExists) {
+			throw new PartitionNotExistException(catalogName, path, partitionSpec);
+		}
 	}
 
 	@Override
 	public void alterParition(ObjectPath path, CatalogPartition newPartition, boolean ignoreIfNotExists)
 		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException {
-		throw new UnsupportedOperationException();
+		if (!tableExists(path)) {
+			throw new TableNotExistException(catalogName, path.getFullName());
+		}
+
+		if (!isTablePartitioned(path)) {
+			throw new TableNotPartitionedException(catalogName, path);
+		}
+
+		CatalogPartition.PartitionSpec partitionSpec = newPartition.getPartitionSpec();
+
+		if (partitionExists(path, partitionSpec)) {
+			partitions.get(path).put(partitionSpec, newPartition);
+		} else if (!ignoreIfNotExists) {
+			throw new PartitionNotExistException(catalogName, path, partitionSpec);
+		}
 	}
 
 	@Override
@@ -260,5 +300,14 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 		} else {
 			throw new PartitionNotExistException(catalogName, path, partitionSpec);
 		}
+	}
+
+	@Override
+	public boolean partitionExists(ObjectPath tablePath, CatalogPartition.PartitionSpec partitionSpec) {
+		return tableExists(tablePath) && partitions.get(tablePath).containsKey(partitionSpec);
+	}
+
+	private boolean isTablePartitioned(ObjectPath tablePath) throws TableNotExistException {
+		return getTable(tablePath).isPartitioned();
 	}
 }

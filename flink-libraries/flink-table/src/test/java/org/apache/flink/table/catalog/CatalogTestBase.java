@@ -23,6 +23,7 @@ import org.apache.flink.table.api.DatabaseNotExistException;
 import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.table.api.exceptions.PartitionAlreadyExistException;
 import org.apache.flink.table.api.exceptions.PartitionNotExistException;
 import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
 import org.apache.flink.table.api.types.DataTypes;
@@ -30,6 +31,7 @@ import org.apache.flink.table.api.types.InternalType;
 
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -39,6 +41,7 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -286,6 +289,145 @@ public abstract class CatalogTestBase {
 
 	// ------ partitions ------
 
+	@Test
+	public void testCreatePartition() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createPartitionedTable(), false);
+
+		assertTrue(catalog.listPartitions(path1).isEmpty());
+
+		catalog.createParition(path1, createPartition(), false);
+
+		assertEquals(Arrays.asList(createPartitionSpec()), catalog.listPartitions(path1));
+		assertEquals(Arrays.asList(createPartitionSpec()), catalog.listPartitions(path1, createPartitionSpecSubset()));
+		assertEquals(createPartition(), catalog.getPartition(path1, createPartitionSpec()));
+
+		catalog.createParition(path1, createAnotherPartition(), false);
+
+		assertEquals(Arrays.asList(createPartitionSpec(), createAnotherPartitionSpec()), catalog.listPartitions(path1));
+		assertEquals(Arrays.asList(createPartitionSpec(), createAnotherPartitionSpec()), catalog.listPartitions(path1, createPartitionSpecSubset()));
+		assertEquals(createAnotherPartition(), catalog.getPartition(path1, createAnotherPartitionSpec()));
+	}
+
+	@Test (expected = TableNotExistException.class)
+	public void testCreateParition_TableNotExistException() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createParition(path1, createPartition(), false);
+	}
+
+	@Test (expected = TableNotPartitionedException.class)
+	public void testCreateParition_TableNotPartitionedException() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createTable(), false);
+		catalog.createParition(path1, createPartition(), false);
+	}
+
+	@Test (expected = PartitionAlreadyExistException.class)
+	public void testCreateParition_PartitionAlreadExistException() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createPartitionedTable(), false);
+		catalog.createParition(path1, createPartition(), false);
+		catalog.createParition(path1, createPartition(), false);
+	}
+
+	@Test
+	public void testCreateParition_PartitionAlreadExist_ignored() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createPartitionedTable(), false);
+		catalog.createParition(path1, createPartition(), false);
+		catalog.createParition(path1, createPartition(), true);
+	}
+
+	@Test
+	public void testDropPartition() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createPartitionedTable(), false);
+		catalog.createParition(path1, createPartition(), false);
+
+		assertEquals(Arrays.asList(createPartitionSpec()), catalog.listPartitions(path1));
+
+		catalog.dropParition(path1, createPartitionSpec(), false);
+
+		assertEquals(Arrays.asList(), catalog.listPartitions(path1));
+	}
+
+	@Test (expected = TableNotExistException.class)
+	public void testDropPartition_TableNotExistException() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.dropParition(path1, createPartitionSpec(), false);
+	}
+
+	@Test (expected = TableNotPartitionedException.class)
+	public void testDropPartition_TableNotPartitionedException() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createTable(), false);
+		catalog.dropParition(path1, createPartitionSpec(), false);
+	}
+
+	@Test (expected = PartitionNotExistException.class)
+	public void testDropPartition_PartitionNotExistException() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createPartitionedTable(), false);
+		catalog.dropParition(path1, createPartitionSpec(), false);
+	}
+
+	@Test
+	public void testDropPartition_PartitionNotExist_ignored() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createPartitionedTable(), false);
+		catalog.dropParition(path1, createPartitionSpec(), true);
+	}
+
+	@Test
+	public void testAlterPartition() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createPartitionedTable(), false);
+		catalog.createParition(path1, createPartition(), false);
+
+		assertEquals(Arrays.asList(createPartitionSpec()), catalog.listPartitions(path1));
+		CatalogPartition cp = catalog.getPartition(path1, createPartitionSpec());
+		assertEquals(createPartition(), cp);
+		assertNull(cp.getProperties().get("k"));
+
+		Map<String, String> partitionProperties = getTableProperties();
+		partitionProperties.put("k", "v");
+
+		CatalogPartition another = createPartition(cp.getPartitionSpec(), partitionProperties);
+		catalog.alterParition(path1, another, false);
+
+		assertEquals(Arrays.asList(createPartitionSpec()), catalog.listPartitions(path1));
+		cp = catalog.getPartition(path1, createPartitionSpec());
+		assertEquals(another, cp);
+		assertEquals("v", cp.getProperties().get("k"));
+	}
+
+	@Test (expected = TableNotExistException.class)
+	public void testAlterPartition_TableNotExistException() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.alterParition(path1, createPartition(), false);
+	}
+
+	@Test (expected = TableNotPartitionedException.class)
+	public void testAlterPartition_TableNotPartitionedException() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createTable(), false);
+		catalog.alterParition(path1, createPartition(), false);
+	}
+
+	@Test (expected = PartitionNotExistException.class)
+	public void testAlterPartition_PartitionNotExistException() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createPartitionedTable(), false);
+		catalog.alterParition(path1, createPartition(), false);
+	}
+
+	@Test
+	public void testAlterPartition_PartitionNotExist_ignored() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createPartitionedTable(), false);
+		catalog.alterParition(path1, createPartition(), true);
+	}
+
 	@Test (expected = TableNotExistException.class)
 	public void testGetPartition_TableNotExistException() {
 		catalog.getPartition(path1, createPartitionSpec());
@@ -305,9 +447,20 @@ public abstract class CatalogTestBase {
 		catalog.getPartition(path1, createPartitionSpec());
 	}
 
+	@Test
+	public void testPartitionExists() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createPartitionedTable(), false);
+		catalog.createParition(path1, createPartition(), false);
+
+		assertTrue(catalog.partitionExists(path1, createPartitionSpec()));
+		assertFalse(catalog.partitionExists(path2, createPartitionSpec()));
+		assertFalse(catalog.partitionExists(ObjectPath.fromString("non.exist"), createPartitionSpec()));
+	}
+
 	// ------ utilities ------
 
-	protected LinkedHashSet<String> createPartitionCols() {
+	private LinkedHashSet<String> createPartitionCols() {
 		return new LinkedHashSet<String>() {{
 			add("name");
 			add("year");
@@ -330,15 +483,26 @@ public abstract class CatalogTestBase {
 			}});
 	}
 
-	protected ExternalCatalogTable createPartitionedTable() {
-		return CatalogTestUtil.createExternalCatalogTable(
-			getTableType(),
-			createTableSchema(),
-			getTableProperties(),
-			createPartitionCols());
+	protected CatalogPartition.PartitionSpec createPartitionSpecSubset() {
+		return new CatalogPartition.PartitionSpec(
+			new HashMap<String, String>() {{
+				put("name", "bob");
+			}});
 	}
 
-	protected ExternalCatalogTable createAnotherPartition() {
+	protected CatalogPartition createPartition() {
+		return createPartition(createPartitionSpec(), getTableProperties());
+	}
+
+	protected CatalogPartition createAnotherPartition() {
+		return createPartition(createAnotherPartitionSpec(), getTableProperties());
+	}
+
+	protected CatalogPartition createPartition(CatalogPartition.PartitionSpec partitionSpec, Map<String, String> partitionProperties) {
+		return new CatalogPartition(partitionSpec, partitionProperties);
+	}
+
+	protected ExternalCatalogTable createPartitionedTable() {
 		return CatalogTestUtil.createExternalCatalogTable(
 			getTableType(),
 			createTableSchema(),

@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
@@ -42,6 +41,10 @@ public class CatalogPartition {
 
 	public Map<String, String> getProperties() {
 		return properties;
+	}
+
+	public PartitionSpec getPartitionSpec() {
+		return partitionSpec;
 	}
 
 	@Override
@@ -85,17 +88,13 @@ public class CatalogPartition {
 		}
 
 		/**
-		 * Check if the current PartitonSpec contains all the partition columns and values of another PartitionSpec.
+		 * Check if the current PartitionSpec contains all the partition columns and values of another PartitionSpec.
 		 *
 		 */
 		public boolean contains(PartitionSpec that) {
 			checkNotNull(that);
 
-			return partitionSpec.entrySet().containsAll(that.asMap().entrySet());
-		}
-
-		public Map<String, String> asMap() {
-			return partitionSpec;
+			return partitionSpec.entrySet().containsAll(that.partitionSpec.entrySet());
 		}
 
 		/**
@@ -103,11 +102,13 @@ public class CatalogPartition {
 		 */
 		public List<String> getOrderedValues(List<String> partitionKeys) {
 			checkNotNull(partitionKeys, "partitionKeys cannot be null");
-			checkArgument(partitionKeys.size() <= partitionSpec.size());
 
-			List<String> values = new ArrayList<>(partitionKeys.size());
+			int size = Math.min(partitionSpec.size(), partitionKeys.size());
+			List<String> values = new ArrayList<>(size);
 
-			for (String key : partitionKeys) {
+			for (int i = 0; i < size; i++) {
+				String key = partitionKeys.get(i);
+
 				if (!partitionSpec.containsKey(key)) {
 					throw new IllegalArgumentException(
 						String.format("PartitionSpec %s doesn't have key '%s' in the given partition key list %s",

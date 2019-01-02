@@ -132,13 +132,10 @@ public interface ReadableCatalog extends Closeable {
 		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException;
 
 	/**
-	 * Checks whether the table is partitioned.
+	 * Check if a partition exists or not.
 	 *
 	 * @param tablePath		Path of the table
-	 * @return boolean of whether the table is partitioned.
-	 * @throws TableNotExistException  thrown if the table does not exist in the catalog.
+	 * @param partitionSpec	Partition spec of the partition to check
 	 */
-	default boolean isTablePartitioned(ObjectPath tablePath) throws TableNotExistException {
-		return getTable(tablePath).isPartitioned();
-	}
+	boolean partitionExists(ObjectPath tablePath, CatalogPartition.PartitionSpec partitionSpec);
 }

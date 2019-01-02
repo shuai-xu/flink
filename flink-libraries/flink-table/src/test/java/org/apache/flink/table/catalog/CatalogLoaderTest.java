@@ -50,9 +50,9 @@ public class CatalogLoaderTest {
 	@Test
 	public void testDynamicLoadingCatalog() throws Exception {
 		ReadableCatalog catalog =
-			CatalogLoader.loadCatalogFromConfig(cl, "org.apache.flink.table.catalog.TestCatalogFactory", "test", new HashMap<>());
+			CatalogLoader.loadCatalogFromConfig(cl, "org.apache.flink.table.catalog.FlinkInMemoryCatalogFactory", "test", new HashMap<>());
 
-		assertTrue(catalog instanceof TestCatalog);
+		assertTrue(catalog instanceof FlinkInMemoryCatalog);
 	}
 }
 

@@ -169,7 +169,7 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 * @throws PartitionNotExistException
 	 */
 	void dropParition(ObjectPath tablePath, CatalogPartition.PartitionSpec partitionSpec, boolean ignoreIfNotExists)
-		throws TableNotExistException, TableNotPartitionedException, PartitionAlreadyExistException;
+		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException;
 
 	/**
 	 * Alters a partition.
