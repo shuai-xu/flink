@@ -24,7 +24,6 @@ import org.apache.flink.table.api.OperatorType.OperatorType
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.util.Preconditions
-
 import _root_.java.util.TimeZone
 
 /**

@@ -139,10 +139,42 @@ class Table(
     collectSink(new CollectTableSink(_ => t), Option(jobName))
 
   /**
-    * cache this table to builtin table service or the specified external service
-    * @return
+    * cache this table to builtin table service or the specified customized table service.
+    *
+    * This method provides a hint to Flink that the current table maybe reused later so a
+    * cache should be created to avoid regenerating this table.
+    *
+    * The following code snippet gives an example of how this method could be used.
+    *
+    * {{{
+    *   val t = tEnv.fromCollection(data).as('country, 'color, 'count)
+    *
+    *   val t1 = t.filter('count < 100)
+    *   t1.cache()
+    *   // t1 is cached after it is generated for the first time.
+    *   val x = t1.collect().size
+    *
+    *   // When t1 is used again to generate t2, it may not be regenerated.
+    *   val t2 = t1.groupBy('country).select('country, 'count.sum as 'sum)
+    *   val res2 = t2.collect()
+    *   res2.foreach(println)
+    *
+    *   // Similarly when t1 is used again to generate t2, it may not be regenerated.
+    *   val t3 = t1.groupBy('color).select('color, 'count.avg as 'avg)
+    *   val res3 = t3.collect()
+    *   res3.foreach(println)
+    *
+    * }}}
+    *
+    * @note Flink optimizer may decide to not use the cache if doing that will accelerate the
+    * processing, or if the cache is no longer available for reasons such as the table service
+    * has failed.
+    * @note The table cache is create lazily. That means the cache is only created at the first
+    * time when the cacehd table is computed.
     */
   def cache(): Unit = {
+    // Enable the subsection optimization.
+    tableEnv.getConfig.setSubsectionOptimization(true)
     // check if it has been already cached.
     (tableEnv.tableServiceManager.getToBeCachedTableName(logicalPlan) orElse
       tableEnv.tableServiceManager.getCachedTableName(logicalPlan)) match {

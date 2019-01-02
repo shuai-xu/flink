@@ -19,6 +19,9 @@ package org.apache.flink.streaming.api.environment;
 
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.JobExecutionResult;
+import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.JobSubmissionResult;
+import org.apache.flink.client.program.ClusterClient;
 import org.apache.flink.client.program.ContextEnvironment;
 import org.apache.flink.client.program.DetachedEnvironment;
 import org.apache.flink.streaming.api.graph.StreamGraph;
@@ -60,5 +63,24 @@ public class StreamContextEnvironment extends StreamExecutionEnvironment {
 				.run(streamGraph, ctx.getJars(), ctx.getClasspaths(), ctx.getLibjars(), ctx.getFiles(), ctx.getUserCodeClassLoader(), ctx.getSavepointRestoreSettings())
 				.getJobExecutionResult();
 		}
+	}
+
+	@Override
+	public JobSubmissionResult submitJob(StreamGraph streamGraph) throws Exception {
+		ClusterClient<?> clusterClient = ctx.getClient();
+		boolean originalIsDetached = clusterClient.isDetached();
+		try {
+			clusterClient.setDetached(true);
+			return clusterClient
+					.run(streamGraph, ctx.getJars(), ctx.getClasspaths(), ctx.getLibjars(), ctx.getFiles(),
+							ctx.getUserCodeClassLoader(), ctx.getSavepointRestoreSettings());
+		} finally {
+			clusterClient.setDetached(originalIsDetached);
+		}
+	}
+
+	@Override
+	public void stopJob(JobID jobID) throws Exception {
+		ctx.getClient().stop(jobID);
 	}
 }

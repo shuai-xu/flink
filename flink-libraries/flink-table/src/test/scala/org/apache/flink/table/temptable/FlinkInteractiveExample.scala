@@ -31,8 +31,6 @@ object FlinkInteractiveExample extends App {
 
   val env = StreamExecutionEnvironment.getExecutionEnvironment
   val tEnv = TableEnvironment.getBatchTableEnvironment(env)
-  tEnv.getConfig.setSubsectionOptimization(true)
-
 
   var model = Model(100, 100, 100)
   val trainingData = tEnv.fromCollection(Seq(

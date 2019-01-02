@@ -62,7 +62,7 @@ import _root_.java.lang.reflect.Modifier
 import _root_.java.util
 import _root_.java.util.concurrent.atomic.AtomicInteger
 
-import org.apache.flink.table.factories.TableFactoryUtil
+import org.apache.flink.table.factories.{TableFactory, TableFactoryUtil}
 import org.apache.flink.table.temptable.FlinkTableServiceManager
 import org.apache.flink.table.util.TableProperties
 
@@ -76,7 +76,7 @@ import _root_.scala.collection.mutable
   *
   * @param config The configuration of the TableEnvironment
   */
-abstract class TableEnvironment(val config: TableConfig) {
+abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
 
   protected val catalogManager: CatalogManager = new CatalogManager()
   private var currentSchema: SchemaPlus = catalogManager.getRootSchema
@@ -1331,6 +1331,14 @@ abstract class TableEnvironment(val config: TableConfig) {
 
     externalCatalog.asInstanceOf[CrudExternalCatalog].createFunction(
       functionName, className, ignoreIfExists)
+  }
+
+  /**
+    * Close the table environment. This method will clean up the internal state and background
+    * services. Users should invoke this method if possible to avoid resource leak.
+    */
+  def close(): Unit = {
+    tableServiceManager.close()
   }
 
   /** Returns a unique temporary attribute name. */

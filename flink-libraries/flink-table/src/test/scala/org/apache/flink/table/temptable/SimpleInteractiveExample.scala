@@ -27,35 +27,41 @@ object SimpleInteractiveExample extends App {
 
   val env = StreamExecutionEnvironment.getExecutionEnvironment
   val tEnv = TableEnvironment.getBatchTableEnvironment(env)
-  tEnv.getConfig.setSubsectionOptimization(true)
 
   val data = Seq(
     ("US", "Red", 10),
     ("UK", "Blue", 20),
     ("CN", "Yellow", 30),
-    ("US", "Blue",40),
-    ("UK","Red", 50),
-    ("CN", "Red",60),
+    ("US", "Blue", 40),
+    ("UK", "Red", 50),
+    ("CN", "Red", 60),
     ("US", "Yellow", 70),
     ("UK", "Yellow", 80),
     ("CN", "Blue", 90),
     ("US", "Blue", 100)
   )
 
-  val t = tEnv.fromCollection(data).as ('country, 'color, 'count)
+  try {
+    val t = tEnv.fromCollection(data).as('country, 'color, 'count)
 
-  val t1 = t.filter('count < 100)
-  t1.cache()
-  val x = t1.collect().size
+    val t1 = t.filter('count < 100)
+    t1.cache()
+    val x = t1.collect().size
 
 
-  val t2 = t1.groupBy('country).select('country, 'count.sum as 'sum)
-  val res2 = t2.collect()
-  res2.foreach(println)
+    val t2 = t1.groupBy('country).select('country, 'count.sum as 'sum)
+    val res2 = t2.collect()
+    res2.foreach(println)
 
-  val t3 = t1.groupBy('color).select('color, 'count.avg as 'avg)
-  val res3 = t3.collect()
-  res3.foreach(println)
-  tEnv.tableServiceManager.close()
-
+    val t3 = t1.groupBy('color).select('color, 'count.avg as 'avg)
+    val res3 = t3.collect()
+    res3.foreach(println)
+  } catch {
+    case e: Throwable =>
+      println(s"Caught unexpected exception: $e")
+      e.printStackTrace()
+  }  finally {
+    println("exiting...")
+    tEnv.close()
+  }
 }

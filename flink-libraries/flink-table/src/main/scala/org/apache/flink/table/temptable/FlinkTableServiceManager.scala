@@ -48,6 +48,9 @@ class FlinkTableServiceManager(tEnv: TableEnvironment) {
 
   def setTableService(tableFactory: TableFactory,
                       properties: TableProperties): Unit = {
+    if (tableServiceDescriptor.isDefined) {
+      throw new IllegalStateException("Table Service is already specified.")
+    }
     tableServiceFactoryDescriptor = Some(
       new FlinkTableServiceFactoryDescriptor(tableFactory, properties)
     )
@@ -109,7 +112,7 @@ class FlinkTableServiceManager(tEnv: TableEnvironment) {
         tableServiceDescriptor = Some(TableServiceUtil.getDefaultFlinkTableServiceDescriptor)
       }
       val descriptor = tableServiceDescriptor.get
-      TableServiceUtil.createTableServiceJob(executionEnv,descriptor)
+      TableServiceUtil.createTableServiceJob(executionEnv, descriptor)
       submitResult = executionEnv.submit("FlinkTableServiceJob")
       tableServiceEnv = executionEnv
       tableServiceStarted = true

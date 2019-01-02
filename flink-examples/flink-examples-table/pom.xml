@@ -162,8 +162,34 @@ under the License.
 							</includes>
 						</configuration>
 					</execution>
+
+					<execution>
+						<id>Interactive</id>
+						<phase>package</phase>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+						<configuration>
+							<classifier>Interactive</classifier>
+
+							<archive>
+								<manifestEntries>
+									<program-class>org.apache.flink.table.examples.scala.SimpleInteractiveExample
+									</program-class>
+								</manifestEntries>
+							</archive>
+
+							<includes>
+								<include>org/apache/flink/table/examples/scala/SimpleInteractiveExample.class</include>
+								<include>org/apache/flink/table/examples/scala/SimpleInteractiveExample$*.class</include>
+							</includes>
+						</configuration>
+					</execution>
+
 				</executions>
 			</plugin>
+
+
 
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -187,6 +213,9 @@ under the License.
 								<copy
 									file="${project.basedir}/target/flink-examples-table_${scala.binary.version}-${project.version}-WordCountSQL.jar"
 									tofile="${project.basedir}/target/WordCountSQL.jar"/>
+								<copy
+									file="${project.basedir}/target/flink-examples-table_${scala.binary.version}-${project.version}-Interactive.jar"
+									tofile="${project.basedir}/target/Interactive.jar"/>
 							</target>
 						</configuration>
 					</execution>
