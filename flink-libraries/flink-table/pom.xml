@@ -142,9 +142,9 @@ under the License.
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.flink</groupId>
 			<artifactId>flink-shaded-hive</artifactId>
-			<version>blink-0.0.1-SNAPSHOT</version>
+			<version>6.0-flink</version>
 		</dependency>
 
 		<dependency>
