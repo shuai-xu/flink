@@ -131,11 +131,10 @@ public class LocalStreamEnvironment extends StreamExecutionEnvironment {
 	private MiniCluster prepareMiniCluster(JobGraph jobGraph) throws Exception {
 		Configuration configuration = new Configuration();
 		configuration.addAll(jobGraph.getJobConfiguration());
-		configuration.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, -1L);
 		// Set the resource of miniCluster to infinite.
-		// TODO this should be removed when slotPool refactor has been done.
 		configuration.setInteger(TaskManagerOptions.TASK_MANAGER_HEAP_MEMORY, Integer.MAX_VALUE / 4);
 		configuration.setDouble(TaskManagerOptions.TASK_MANAGER_CORE, Integer.MAX_VALUE / 4);
+		configuration.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, (Integer.MAX_VALUE / 4) >> 10);
 
 		// add (and override) the settings with what the user defined
 		configuration.addAll(this.configuration);
