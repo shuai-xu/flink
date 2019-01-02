@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.operators.state;
 
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.state.ReducingState;
+import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.keyed.KeyedValueState;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.util.Preconditions;
@@ -40,8 +41,8 @@ public class ContextReducingState<T> implements ReducingState<T> {
 	/** The keyed state backing the state. */
 	private final KeyedValueState<Object, T> keyedState;
 
-	/** The descriptor of the state. */
-	private final ReduceFunction<T> reduceFunction;
+	/** The transformation for the state. */
+	private final ReduceTransformation transformation;
 
 	public ContextReducingState(
 		final AbstractStreamOperator<?> operator,
@@ -54,24 +55,35 @@ public class ContextReducingState<T> implements ReducingState<T> {
 
 		this.operator = operator;
 		this.keyedState = keyedState;
-		this.reduceFunction = reduceFunction;
+		this.transformation = new ReduceTransformation(reduceFunction);
 	}
 
 	@Override
-	public T get() throws Exception {
+	public T get() {
 		return keyedState.get(operator.getCurrentKey());
 	}
 
 	@Override
-	public void add(T value) throws Exception {
-		T oldValue = keyedState.get(operator.getCurrentKey());
-		T newValue = oldValue == null ? value :
-			reduceFunction.reduce(oldValue, value);
-		keyedState.put(operator.getCurrentKey(), newValue);
+	public void add(T value) {
+		keyedState.transform(operator.getCurrentKey(), value, transformation);
 	}
 
 	@Override
 	public void clear() {
 		keyedState.remove(operator.getCurrentKey());
+	}
+
+	private class ReduceTransformation implements StateTransformationFunction<T, T> {
+
+		private final ReduceFunction<T> reduceFunction;
+
+		public ReduceTransformation(ReduceFunction<T> reduceFunction) {
+			this.reduceFunction = Preconditions.checkNotNull(reduceFunction);
+		}
+
+		@Override
+		public T apply(T previousState, T value) throws Exception {
+			return previousState == null ? value : reduceFunction.reduce(previousState, value);
+		}
 	}
 }

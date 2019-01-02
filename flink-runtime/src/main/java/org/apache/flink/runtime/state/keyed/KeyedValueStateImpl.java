@@ -33,6 +33,7 @@ import org.apache.flink.runtime.state.StateAccessException;
 import org.apache.flink.runtime.state.StateIteratorUtil;
 import org.apache.flink.runtime.state.StateSerializerUtil;
 import org.apache.flink.runtime.state.StateStorage;
+import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.StorageInstance;
 import org.apache.flink.runtime.state.StorageIterator;
 import org.apache.flink.runtime.state.heap.HeapStateStorage;
@@ -480,6 +481,21 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 				}
 			}
 		};
+	}
+
+	@Override
+	public <T> void transform(K key, T value, StateTransformationFunction<V, T> transformation) {
+		try {
+			if (stateStorage.lazySerde()) {
+				((HeapStateStorage) stateStorage).transform(key, value, transformation);
+			} else {
+				V oldValue = get(key);
+				V newValue = transformation.apply(oldValue, value);
+				put(key, newValue);
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
 	}
 
 	@Override

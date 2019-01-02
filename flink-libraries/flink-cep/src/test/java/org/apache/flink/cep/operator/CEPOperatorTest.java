@@ -35,6 +35,7 @@ import org.apache.flink.cep.pattern.conditions.IterativeCondition;
 import org.apache.flink.cep.pattern.conditions.SimpleCondition;
 import org.apache.flink.contrib.streaming.state.RocksDBStateBackend;
 import org.apache.flink.runtime.checkpoint.OperatorSubtaskState;
+import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
 import org.apache.flink.runtime.state.keyed.KeyedValueState;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
@@ -1398,6 +1399,11 @@ public class CEPOperatorTest extends TestLogger {
 		@Override
 		public void putAll(Map pairs) {
 			keyedValueState.putAll(pairs);
+		}
+
+		@Override
+		public void transform(Object key, Object value, StateTransformationFunction transformationFunction) {
+			keyedValueState.transform(key, value, transformationFunction);
 		}
 	}
 }

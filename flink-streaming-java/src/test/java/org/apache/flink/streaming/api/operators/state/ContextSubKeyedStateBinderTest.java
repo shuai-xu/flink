@@ -100,6 +100,8 @@ public class ContextSubKeyedStateBinderTest {
 		assertNotSame(valueState2, valueState3);
 		assertEquals(valueStateDescriptor3.getName(), binder.getLastStateName());
 		assertSame(valueState3, binder.getLastState());
+
+		testHarness.close();
 	}
 
 	@Test

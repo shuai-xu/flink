@@ -21,6 +21,7 @@ package org.apache.flink.streaming.api.operators.state;
 import org.apache.flink.api.common.functions.FoldFunction;
 import org.apache.flink.api.common.state.FoldingState;
 import org.apache.flink.api.common.state.FoldingStateDescriptor;
+import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.keyed.ContextKeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedValueState;
@@ -46,6 +47,9 @@ public class ContextFoldingState<T, ACC> implements FoldingState<T, ACC>, Contex
 	/** The descriptor of the state. */
 	private final FoldingStateDescriptor<T, ACC> stateDescriptor;
 
+	/** The transformation for the state. */
+	private final FoldTransformation foldTransformation;
+
 	public ContextFoldingState(
 		final AbstractStreamOperator<?> operator,
 		final KeyedValueState<Object, ACC> keyedState,
@@ -58,22 +62,17 @@ public class ContextFoldingState<T, ACC> implements FoldingState<T, ACC>, Contex
 		this.operator = operator;
 		this.keyedState = keyedState;
 		this.stateDescriptor = stateDescriptor;
+		this.foldTransformation = new FoldTransformation(stateDescriptor.getFoldFunction());
 	}
 
 	@Override
-	public ACC get() throws Exception {
+	public ACC get() {
 		return keyedState.get(operator.getCurrentKey());
 	}
 
 	@Override
-	public void add(T value) throws Exception {
-		FoldFunction<T, ACC> foldFunction = stateDescriptor.getFoldFunction();
-
-		ACC oldValue = keyedState.get(operator.getCurrentKey());
-		ACC newValue = oldValue == null ?
-			foldFunction.fold(getInitialValue(), value) :
-			foldFunction.fold(oldValue, value);
-		keyedState.put(operator.getCurrentKey(), newValue);
+	public void add(T value) {
+		keyedState.transform(operator.getCurrentKey(), value, foldTransformation);
 	}
 
 	@Override
@@ -88,5 +87,19 @@ public class ContextFoldingState<T, ACC> implements FoldingState<T, ACC>, Contex
 	@Override
 	public KeyedState getKeyedState() {
 		return keyedState;
+	}
+
+	private final class FoldTransformation implements StateTransformationFunction<ACC, T> {
+
+		private final FoldFunction<T, ACC> foldFunction;
+
+		FoldTransformation(FoldFunction<T, ACC> foldFunction) {
+			this.foldFunction = Preconditions.checkNotNull(foldFunction);
+		}
+
+		@Override
+		public ACC apply(ACC previousState, T value) throws Exception {
+			return foldFunction.fold((previousState != null) ? previousState : getInitialValue(), value);
+		}
 	}
 }

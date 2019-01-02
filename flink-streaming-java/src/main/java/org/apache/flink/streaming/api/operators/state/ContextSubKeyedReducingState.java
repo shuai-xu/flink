@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.operators.state;
 
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.state.ReducingState;
+import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedValueState;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.util.Preconditions;
@@ -40,7 +41,7 @@ public class ContextSubKeyedReducingState<N, T>
 
 	private final SubKeyedValueState<Object, N, T> subKeyedValueState;
 
-	private final ReduceFunction<T> reduceFunction;
+	private final ReduceTransformation transformation;
 
 	public ContextSubKeyedReducingState(
 		AbstractStreamOperator<?> operator,
@@ -51,20 +52,17 @@ public class ContextSubKeyedReducingState<N, T>
 		Preconditions.checkNotNull(reduceFunction);
 		this.operator = operator;
 		this.subKeyedValueState = subKeyedValueState;
-		this.reduceFunction = reduceFunction;
+		this.transformation = new ReduceTransformation(reduceFunction);
 	}
 
 	@Override
-	public T get() throws Exception {
+	public T get() {
 		return subKeyedValueState.get(getCurrentKey(), getNamespace());
 	}
 
 	@Override
-	public void add(T value) throws Exception {
-		T oldValue = subKeyedValueState.get(operator.getCurrentKey(), getNamespace());
-		T newValue = oldValue == null ? value :
-			reduceFunction.reduce(oldValue, value);
-		subKeyedValueState.put(operator.getCurrentKey(), getNamespace(), newValue);
+	public void add(T value) {
+		subKeyedValueState.transform(operator.getCurrentKey(), getNamespace(), value, transformation);
 	}
 
 	@Override
@@ -91,6 +89,7 @@ public class ContextSubKeyedReducingState<N, T>
 	public void mergeNamespaces(N target, Collection<N> sources) throws Exception {
 		if (sources != null) {
 			T targetValue = subKeyedValueState.get(getCurrentKey(), target);
+			ReduceFunction<T> reduceFunction = transformation.reduceFunction;
 			for (N source : sources) {
 				T fromValue = subKeyedValueState.get(getCurrentKey(), source);
 				if (fromValue != null) {
@@ -105,6 +104,20 @@ public class ContextSubKeyedReducingState<N, T>
 			if (targetValue != null) {
 				subKeyedValueState.put(getCurrentKey(), target, targetValue);
 			}
+		}
+	}
+
+	private class ReduceTransformation implements StateTransformationFunction<T, T> {
+
+		private final ReduceFunction<T> reduceFunction;
+
+		public ReduceTransformation(ReduceFunction<T> reduceFunction) {
+			this.reduceFunction = Preconditions.checkNotNull(reduceFunction);
+		}
+
+		@Override
+		public T apply(T previousState, T value) throws Exception {
+			return previousState == null ? value : reduceFunction.reduce(previousState, value);
 		}
 	}
 }

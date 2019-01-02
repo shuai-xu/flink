@@ -29,6 +29,7 @@ import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.StateAccessException;
 import org.apache.flink.runtime.state.StateSerializerUtil;
 import org.apache.flink.runtime.state.StateStorage;
+import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.StorageIterator;
 import org.apache.flink.runtime.state.heap.HeapStateStorage;
 import org.apache.flink.types.Pair;
@@ -384,6 +385,23 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 						iterator.remove();
 					}
 				};
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
+	}
+
+	@Override
+	public <T> void transform(K key, N namespace, T value, StateTransformationFunction<V, T> transformation) {
+		try {
+			if (stateStorage.lazySerde()) {
+				HeapStateStorage heapStateStorage = (HeapStateStorage) stateStorage;
+				heapStateStorage.setCurrentNamespace(namespace);
+				heapStateStorage.transform(key, value, transformation);
+			} else {
+				V oldValue = get(key, namespace);
+				V newValue = transformation.apply(oldValue, value);
+				put(key, namespace, newValue);
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);

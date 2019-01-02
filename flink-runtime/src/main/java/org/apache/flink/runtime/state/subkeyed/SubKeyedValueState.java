@@ -18,6 +18,8 @@
 
 package org.apache.flink.runtime.state.subkeyed;
 
+import org.apache.flink.runtime.state.StateTransformationFunction;
+
 /**
  * The interface for {@link SubKeyedState} whose values are single-values.
  *
@@ -37,4 +39,16 @@ public interface SubKeyedValueState<K, N, V> extends SubKeyedState<K, N, V> {
 	 * @param value The value to be associated.
 	 */
 	void put(K key, N namespace, V value);
+
+	/**
+	 * Applies the given {@link StateTransformationFunction} to the state (1st input argument), using the given value as
+	 * second input argument. The result of {@link StateTransformationFunction#apply(Object, Object)} is then stored as
+	 * the new state. This function is basically an optimization for get-update-put pattern.
+	 *
+	 * @param key            the key.
+	 * @param value          the value to use in transforming the state.
+	 * @param namespace      the namespace.
+	 * @param transformation the transformation function.
+	 */
+	<T> void transform(K key, N namespace, T value, StateTransformationFunction<V, T> transformation);
 }

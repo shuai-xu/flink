@@ -18,6 +18,8 @@
 
 package org.apache.flink.runtime.state.keyed;
 
+import org.apache.flink.runtime.state.StateTransformationFunction;
+
 import java.util.Map;
 
 /**
@@ -46,4 +48,15 @@ public interface KeyedValueState<K, V> extends KeyedState<K, V> {
 	 * @param pairs The pairs to be added into the state.
 	 */
 	void putAll(Map<? extends K, ? extends V> pairs);
+
+	/**
+	 * Applies the given {@link StateTransformationFunction} to the state (1st input argument), using the given value as
+	 * second input argument. The result of {@link StateTransformationFunction#apply(Object, Object)} is then stored as
+	 * the new state. This function is basically an optimization for get-update-put pattern.
+	 *
+	 * @param key            the key.
+	 * @param value          the value to use in transforming the state.
+	 * @param transformation the transformation function.
+	 */
+	<T> void transform(K key, T value, StateTransformationFunction<V, T> transformation);
 }

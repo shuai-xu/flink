@@ -190,6 +190,8 @@ public class ContextStateBinderTest {
 			binder.createAggregatingState(aggregatingStateDescriptor1));
 		assertSame(aggregatingState2,
 			binder.createAggregatingState(aggregatingStateDescriptor2));
+
+		testHarness.close();
 	}
 
 	private static class IdleOperator<IN, OUT>

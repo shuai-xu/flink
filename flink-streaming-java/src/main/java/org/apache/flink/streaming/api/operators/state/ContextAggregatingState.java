@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.operators.state;
 
 import org.apache.flink.api.common.functions.AggregateFunction;
 import org.apache.flink.api.common.state.AggregatingState;
+import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.keyed.KeyedValueState;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.util.Preconditions;
@@ -34,7 +35,6 @@ import org.apache.flink.util.Preconditions;
  * @param <ACC> The type of the values stored in the state.
  * @param <OUT> The type of the values returned by the state.
  */
-
 public class ContextAggregatingState<IN, ACC, OUT> implements AggregatingState<IN, OUT> {
 
 	/** The operator to which the state belongs. */
@@ -43,8 +43,8 @@ public class ContextAggregatingState<IN, ACC, OUT> implements AggregatingState<I
 	/** The keyed state backing the state. */
 	private final KeyedValueState<Object, ACC> keyedState;
 
-	/** The descriptor of the state. */
-	private final AggregateFunction<IN, ACC, OUT> aggregateFunction;
+	/** The transformation for the state. */
+	private final AggregateTransformation transformation;
 
 	public ContextAggregatingState(
 		final AbstractStreamOperator<?> operator,
@@ -57,29 +57,39 @@ public class ContextAggregatingState<IN, ACC, OUT> implements AggregatingState<I
 
 		this.operator = operator;
 		this.keyedState = keyedState;
-		this.aggregateFunction = aggregateFunction;
+		this.transformation = new AggregateTransformation(aggregateFunction);
 	}
 
 	@Override
-	public OUT get() throws Exception {
+	public OUT get() {
 		ACC accumulator = keyedState.get(operator.getCurrentKey());
-		return accumulator == null ? null : aggregateFunction.getResult(accumulator);
+		return accumulator == null ? null : transformation.aggregateFunction.getResult(accumulator);
 	}
 
 	@Override
-	public void add(IN value) throws Exception {
-		ACC accumulator = keyedState.get(operator.getCurrentKey());
-		if (accumulator == null) {
-			accumulator = aggregateFunction.createAccumulator();
-		}
-
-		accumulator = aggregateFunction.add(value, accumulator);
-
-		keyedState.put(operator.getCurrentKey(), accumulator);
+	public void add(IN value) {
+		keyedState.transform(operator.getCurrentKey(), value, transformation);
 	}
 
 	@Override
 	public void clear() {
 		keyedState.remove(operator.getCurrentKey());
+	}
+
+	private class AggregateTransformation implements StateTransformationFunction<ACC, IN> {
+
+		private final AggregateFunction<IN, ACC, OUT> aggregateFunction;
+
+		public AggregateTransformation(AggregateFunction<IN, ACC, OUT> aggregateFunction) {
+			this.aggregateFunction = Preconditions.checkNotNull(aggregateFunction);
+		}
+
+		@Override
+		public ACC apply(ACC accumulator, IN value) {
+			if (accumulator == null) {
+				accumulator = aggregateFunction.createAccumulator();
+			}
+			return aggregateFunction.add(value, accumulator);
+		}
 	}
 }
