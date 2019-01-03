@@ -55,7 +55,8 @@ Click 'ApplicationMaster', and you can see flink's dashboard.
 
 <img src="{{ site.baseurl }}/fig/yarn_quickstart_perjob_flink_dashboard.png" class="img-responsive">
 
-### Start a long-running Flink cluster on YARN (session mode)
+### Run Flink jobs on YARN (session mode)
+#### Create yarn session
 
 Start a YARN session with 4 Task Managers (each with 4 GB of Heapspace):
 
@@ -70,6 +71,8 @@ cd flink-{{ site.version }}/
 
 Specify the `-s` flag for the number of processing slots per Task Manager. We recommend to set the number of slots to the number of processors per machine.
 
+If you do not want to keep the Flink YARN client running all the time, it’s also possible to start a detached YARN session. The parameter for that is called -d or --detached.
+
 You can see the session you just submitted on Yarn's Resource Manager WebUI.
 
 <img src="{{ site.baseurl }}/fig/yarn_quickstart_session_rm.png" class="img-responsive">
@@ -78,6 +81,7 @@ Click 'ApplicationMaster', and you can see flink's dashboard without any job sub
 
 <img src="{{ site.baseurl }}/fig/yarn_quickstart_session_flink_dashboard.png" class="img-responsive">
 
+#### Submit job to session
 Once the session has been started, you can submit jobs to the cluster using the `./bin/flink` tool.
 
 {% highlight bash %}
@@ -88,7 +92,16 @@ Now you can see the flink job you just submited on the dashboard.
 
 <img src="{{ site.baseurl }}/fig/yarn_quickstart_session_flink_dashboard_wordcount.png" class="img-responsive">
 
-To stop the session, just use `yarn application -kill $applicationId`.
+If the resources are sufficient, you can continue to submit jobs to this session.
+
+#### Stop session
+To stop the session, you can attach to it by entering 'stop' into the client.
+
+{% highlight bash %}
+./bin/yarn-session.sh -id application_1543205128210_0016
+{% endhighlight %}
+
+Or you can use `yarn application -kill $applicationId` to kill it.
 
 {% highlight bash %}
 yarn application -kill application_1543205128210_0016
