@@ -173,6 +173,8 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 
 	private LinkedHashSet<Class<?>> registeredPojoTypes = new LinkedHashSet<>();
 
+	private boolean tracingMetricsEnabled = false;
+
 	// --------------------------------------------------------------------------------------------
 
 	/**
@@ -950,6 +952,14 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 		return new ArchivedExecutionConfig(this);
 	}
 
+	public boolean isTracingMetricsEnabled() {
+		return tracingMetricsEnabled;
+	}
+
+	public ExecutionConfig setTracingMetricsEnabled(boolean tracingMetricsEnabled) {
+		this.tracingMetricsEnabled = tracingMetricsEnabled;
+		return this;
+	}
 
 	// ------------------------------ Utilities  ----------------------------------
 

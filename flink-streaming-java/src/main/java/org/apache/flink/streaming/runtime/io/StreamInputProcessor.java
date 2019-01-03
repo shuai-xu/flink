@@ -32,6 +32,8 @@ import org.apache.flink.runtime.io.network.api.serialization.SerializerManagerUt
 import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.partition.consumer.BufferOrEvent;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
+import org.apache.flink.runtime.metrics.MetricNames;
+import org.apache.flink.runtime.metrics.SumAndCount;
 import org.apache.flink.runtime.metrics.groups.OperatorMetricGroup;
 import org.apache.flink.runtime.metrics.groups.TaskIOMetricGroup;
 import org.apache.flink.runtime.plugable.DeserializationDelegate;
@@ -111,6 +113,11 @@ public class StreamInputProcessor<IN> {
 	private final WatermarkGauge watermarkGauge;
 	private Counter numRecordsIn;
 
+	private boolean enableTracingMetrics = false;
+	private SumAndCount taskLatency;
+	private SumAndCount waitInput;
+	private long lastProcessedTime = -1;
+
 	private boolean isFinished;
 
 	private IN reusedObject;
@@ -129,7 +136,8 @@ public class StreamInputProcessor<IN> {
 			OneInputStreamOperator<IN, ?> streamOperator,
 			TaskIOMetricGroup metrics,
 			WatermarkGauge watermarkGauge,
-			boolean objectReuse) throws IOException {
+			boolean objectReuse,
+			boolean enableTracingMetrics) throws IOException {
 
 		this.barrierHandler = InputProcessorUtil.createCheckpointBarrierHandler(
 			isCheckpointingEnabled, checkpointedTask, checkpointMode, ioManager, taskManagerConfig, inputGates);
@@ -162,6 +170,8 @@ public class StreamInputProcessor<IN> {
 
 		this.watermarkGauge = watermarkGauge;
 		metrics.gauge("checkpointAlignmentTime", barrierHandler::getAlignmentDurationNanos);
+
+		this.enableTracingMetrics = enableTracingMetrics;
 	}
 
 	public boolean processInput() throws Exception {
@@ -174,6 +184,14 @@ public class StreamInputProcessor<IN> {
 			} catch (Exception e) {
 				LOG.warn("An exception occurred during the metrics setup.", e);
 				numRecordsIn = new SimpleCounter();
+			}
+		}
+		if (enableTracingMetrics) {
+			if (taskLatency == null) {
+				taskLatency = new SumAndCount(MetricNames.TASK_LATENCY, streamOperator.getMetricGroup());
+			}
+			if (waitInput == null) {
+				waitInput = new SumAndCount(MetricNames.IO_WAIT_INPUT, streamOperator.getMetricGroup());
 			}
 		}
 
@@ -195,12 +213,27 @@ public class StreamInputProcessor<IN> {
 					if (recordOrMark.isRecord()) {
 						reusedObject = ((StreamRecord<IN>) recordOrMark).getValue();
 
-						// now we can do the actual processing
-						StreamRecord<IN> record = recordOrMark.asRecord();
-						synchronized (lock) {
-							numRecordsIn.inc();
-							streamOperator.setKeyContextElement1(record);
-							streamOperator.processElement(record);
+						// numRecordsIn counter is a SimpleCounter not a heavier SumCounter, so reuse it
+						if (enableTracingMetrics) {
+							long start = System.nanoTime();
+							waitInput.update(start - lastProcessedTime);
+							// now we can do the actual processing
+							StreamRecord<IN> record = recordOrMark.asRecord();
+							synchronized (lock) {
+								numRecordsIn.inc();
+								streamOperator.setKeyContextElement1(record);
+								streamOperator.processElement(record);
+								lastProcessedTime = System.nanoTime();
+								taskLatency.update(lastProcessedTime - start);
+							}
+						} else {
+							// now we can do the actual processing
+							StreamRecord<IN> record = recordOrMark.asRecord();
+							synchronized (lock) {
+								numRecordsIn.inc();
+								streamOperator.setKeyContextElement1(record);
+								streamOperator.processElement(record);
+							}
 						}
 
 						return true;

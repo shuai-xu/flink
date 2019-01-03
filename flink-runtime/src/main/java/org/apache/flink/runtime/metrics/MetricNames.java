@@ -63,4 +63,10 @@ public class MetricNames {
 	public static final String BUFFERS_IN_POOL_USAGE_NAME = BUFFERS + "." + BUFFERS_IN_POOL_USAGE;
 	public static final String BUFFERS_OUT_POOL_USAGE = "outPoolUsage";
 	public static final String BUFFERS_OUT_POOL_USAGE_NAME = BUFFERS + "." + BUFFERS_OUT_POOL_USAGE;
+
+	public static final String IO_NUM_LATENCY = "latency";
+	public static final String IO_WAIT_BUFFER_TIME = "waitOutput";
+	public static final String IO_WAIT_INPUT = "waitInput";
+	public static final String TASK_LATENCY = "taskLatency";
+	public static final String SOURCE_LATENCY = "sourceLatency";
 }

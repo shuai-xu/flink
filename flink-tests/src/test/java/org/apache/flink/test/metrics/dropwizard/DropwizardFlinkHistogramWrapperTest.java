@@ -16,11 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.flink.dropwizard.metrics;
+package org.apache.flink.test.metrics.dropwizard;
 
 import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.dropwizard.ScheduledDropwizardReporter;
+import org.apache.flink.dropwizard.metrics.DropwizardHistogramWrapper;
 import org.apache.flink.metrics.MetricConfig;
 import org.apache.flink.metrics.reporter.MetricReporter;
 import org.apache.flink.runtime.metrics.MetricRegistryConfiguration;

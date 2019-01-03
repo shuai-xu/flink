@@ -28,6 +28,7 @@ import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
+import org.apache.flink.metrics.Histogram;
 import org.apache.flink.metrics.Meter;
 import org.apache.flink.metrics.MeterView;
 import org.apache.flink.metrics.MetricGroup;
@@ -69,6 +70,7 @@ import org.apache.flink.runtime.jobmaster.GraphManager;
 import org.apache.flink.runtime.jobmaster.LogicalSlot;
 import org.apache.flink.runtime.jobmaster.SlotRequestId;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
+import org.apache.flink.runtime.metrics.SimpleHistogram;
 import org.apache.flink.runtime.query.KvStateLocationRegistry;
 import org.apache.flink.runtime.state.SharedStateRegistry;
 import org.apache.flink.runtime.state.StateBackend;
@@ -315,6 +317,8 @@ public class ExecutionGraph implements AccessExecutionGraph {
 
 	private Meter failOverMetrics;
 
+	private Histogram taskDeployMetrics;
+
 	// --------------------------------------------------------------------------------------------
 	//   Constructors
 	// --------------------------------------------------------------------------------------------
@@ -409,6 +413,7 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		this.schedulingFutures = new ConcurrentHashMap<>();
 
 		this.failOverMetrics = metricGroup.meter("task_failover", new MeterView(60));
+		this.taskDeployMetrics = metricGroup.histogram("task_deploy_cost", new SimpleHistogram());
 
 		this.jobManagerConfiguration = checkNotNull(jobManagerConfiguration);
 	}
@@ -1734,7 +1739,12 @@ public class ExecutionGraph implements AccessExecutionGraph {
 
 				switch (state.getExecutionState()) {
 					case RUNNING:
-						return attempt.switchToRunning();
+						boolean result = attempt.switchToRunning();
+						if(result) {
+							taskDeployMetrics.update(
+								attempt.getStateTimestamp(ExecutionState.RUNNING) - attempt.getStateTimestamp(ExecutionState.DEPLOYING));
+						}
+						return result;
 
 					case FINISHED:
 						// this deserialization is exception-free

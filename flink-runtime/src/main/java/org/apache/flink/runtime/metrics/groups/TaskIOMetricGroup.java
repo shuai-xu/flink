@@ -29,6 +29,7 @@ import org.apache.flink.runtime.io.network.buffer.BufferPool;
 import org.apache.flink.runtime.io.network.partition.InternalResultPartition;
 import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
 import org.apache.flink.runtime.metrics.MetricNames;
+import org.apache.flink.runtime.metrics.SumAndCount;
 import org.apache.flink.runtime.taskmanager.Task;
 
 import java.util.ArrayList;
@@ -46,6 +47,8 @@ public class TaskIOMetricGroup extends ProxyMetricGroup<TaskMetricGroup> {
 	private final Counter numBytesInRemote;
 	private final SumCounter numRecordsIn;
 	private final SumCounter numRecordsOut;
+
+	private final SumAndCount nsWaitBufferTime;
 
 	private final Meter numBytesInRateLocal;
 	private final Meter numBytesInRateRemote;
@@ -67,6 +70,7 @@ public class TaskIOMetricGroup extends ProxyMetricGroup<TaskMetricGroup> {
 		this.numRecordsOut = counter(MetricNames.IO_NUM_RECORDS_OUT, new SumCounter());
 		this.numRecordsInRate = meter(MetricNames.IO_NUM_RECORDS_IN_RATE, new MeterView(numRecordsIn, 60));
 		this.numRecordsOutRate = meter(MetricNames.IO_NUM_RECORDS_OUT_RATE, new MeterView(numRecordsOut, 60));
+		this.nsWaitBufferTime = new SumAndCount(MetricNames.IO_WAIT_BUFFER_TIME, parent);
 	}
 
 	public IOMetrics createSnapshot() {
@@ -249,6 +253,10 @@ public class TaskIOMetricGroup extends ProxyMetricGroup<TaskMetricGroup> {
 
 	public void reuseRecordsOutputCounter(Counter numRecordsOutCounter) {
 		this.numRecordsOut.addCounter(numRecordsOutCounter);
+	}
+
+	public SumAndCount getNsWaitBufferTime() {
+		return nsWaitBufferTime;
 	}
 
 	/**

@@ -32,6 +32,8 @@ import org.apache.flink.runtime.io.network.api.serialization.SerializerManagerUt
 import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.partition.consumer.BufferOrEvent;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
+import org.apache.flink.runtime.metrics.MetricNames;
+import org.apache.flink.runtime.metrics.SumAndCount;
 import org.apache.flink.runtime.metrics.groups.OperatorMetricGroup;
 import org.apache.flink.runtime.metrics.groups.TaskIOMetricGroup;
 import org.apache.flink.runtime.plugable.DeserializationDelegate;
@@ -134,6 +136,14 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 
 	private boolean isFinished;
 
+	private boolean enableTracingMetrics;
+
+	private SumAndCount taskLatency;
+
+	private SumAndCount waitInput;
+
+	private long lastProcessedTime = -1;
+
 	private IN1 reusedObject1;
 	private IN2 reusedObject2;
 
@@ -154,7 +164,8 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 			TaskIOMetricGroup metrics,
 			WatermarkGauge input1WatermarkGauge,
 			WatermarkGauge input2WatermarkGauge,
-			boolean objectReuse) throws IOException {
+			boolean objectReuse,
+			boolean enableTracingMetrics) throws IOException {
 
 		this.barrierHandler = InputProcessorUtil.createCheckpointBarrierHandler(
 			isCheckpointingEnabled, checkpointedTask, checkpointMode, ioManager, taskManagerConfig, inputGates1, inputGates2);
@@ -224,6 +235,8 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 
 		this.inputSelection = streamOperator.firstInputSelection();
 		this.isEndInputs = new boolean[]{false, false};
+
+		this.enableTracingMetrics = enableTracingMetrics;
 	}
 
 	public boolean processInput() throws Exception {
@@ -236,6 +249,14 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 			} catch (Exception e) {
 				LOG.warn("An exception occurred during the metrics setup.", e);
 				numRecordsIn = new SimpleCounter();
+			}
+		}
+		if (enableTracingMetrics) {
+			if (taskLatency == null) {
+				taskLatency = new SumAndCount(MetricNames.TASK_LATENCY, streamOperator.getMetricGroup());
+			}
+			if (waitInput == null) {
+				waitInput = new SumAndCount(MetricNames.IO_WAIT_INPUT, streamOperator.getMetricGroup());
 			}
 		}
 
@@ -298,19 +319,43 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 							reusedObject1 = ((StreamRecord<IN1>) recordOrWatermark).getValue();
 
 							StreamRecord<IN1> record = recordOrWatermark.asRecord();
-							synchronized (lock) {
-								numRecordsIn.inc();
-								streamOperator.setKeyContextElement1(record);
-								inputSelection = streamOperator.processElement1(record);
+							if (enableTracingMetrics) {
+								long start = System.nanoTime();
+								waitInput.update(start - lastProcessedTime);
+								synchronized (lock) {
+									numRecordsIn.inc();
+									streamOperator.setKeyContextElement1(record);
+									inputSelection = streamOperator.processElement1(record);
+									lastProcessedTime = System.nanoTime();
+									taskLatency.update(lastProcessedTime - start);
+								}
+							} else {
+								synchronized (lock) {
+									numRecordsIn.inc();
+									streamOperator.setKeyContextElement1(record);
+									inputSelection = streamOperator.processElement1(record);
+								}
 							}
 						} else {
 							reusedObject2 = ((StreamRecord<IN2>) recordOrWatermark).getValue();
 
 							StreamRecord<IN2> record = recordOrWatermark.asRecord();
-							synchronized (lock) {
-								numRecordsIn.inc();
-								streamOperator.setKeyContextElement2(record);
-								inputSelection = streamOperator.processElement2(record);
+							if (enableTracingMetrics) {
+								long start = System.nanoTime();
+								waitInput.update(start - lastProcessedTime);
+								synchronized (lock) {
+									numRecordsIn.inc();
+									streamOperator.setKeyContextElement2(record);
+									inputSelection = streamOperator.processElement2(record);
+									lastProcessedTime = System.nanoTime();
+									taskLatency.update(lastProcessedTime - start);
+								}
+							} else {
+								synchronized (lock) {
+									numRecordsIn.inc();
+									streamOperator.setKeyContextElement2(record);
+									inputSelection = streamOperator.processElement2(record);
+								}
 							}
 						}
 

@@ -18,7 +18,11 @@
 package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.metrics.Histogram;
 import org.apache.flink.runtime.jobgraph.OperatorID;
+import org.apache.flink.runtime.metrics.MetricNames;
+import org.apache.flink.runtime.metrics.SimpleHistogram;
+import org.apache.flink.runtime.metrics.SumAndCount;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.api.watermark.Watermark;
@@ -27,6 +31,7 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.streamstatus.StreamStatusMaintainer;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeCallback;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
+import org.apache.flink.util.OutputTag;
 
 import java.util.concurrent.ScheduledFuture;
 
@@ -46,6 +51,12 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 
 	private transient volatile boolean canceledOrStopped = false;
 
+	private transient  boolean enableTracingMetrics = false;
+
+	private transient SumAndCount taskLatency;
+
+	private transient Histogram sourceLatency;
+
 	public StreamSource(SRC sourceFunction) {
 		super(sourceFunction);
 
@@ -61,12 +72,82 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 			final Output<StreamRecord<OUT>> collector) throws Exception {
 
 		final TimeCharacteristic timeCharacteristic = getOperatorConfig().getTimeCharacteristic();
+		enableTracingMetrics = getRuntimeContext().getExecutionConfig().isTracingMetricsEnabled();
+		if (enableTracingMetrics) {
+			if (taskLatency == null) {
+				taskLatency = new SumAndCount(MetricNames.TASK_LATENCY, getRuntimeContext().getMetricGroup());
+			}
+			if (sourceLatency == null) {
+				sourceLatency = getRuntimeContext().getMetricGroup().histogram(MetricNames.SOURCE_LATENCY, new SimpleHistogram());
+			}
+		}
 
 		LatencyMarksEmitter latencyEmitter = null;
 		if (getExecutionConfig().isLatencyTrackingEnabled()) {
 			latencyEmitter = new LatencyMarksEmitter<>(
 				getProcessingTimeService(),
-				collector,
+				new Output<StreamRecord<OUT>>() {
+					private long lastEmitTime = 0;
+
+					@Override
+					public void emitWatermark(Watermark mark) {
+						collector.emitWatermark(mark);
+					}
+
+					@Override
+					public void emitLatencyMarker(LatencyMarker latencyMarker) {
+						collector.emitLatencyMarker(latencyMarker);
+					}
+
+					@Override
+					public void collect(StreamRecord<OUT> record) {
+						if (enableTracingMetrics) {
+							collectWithMetrics(record);
+						} else {
+							collector.collect(record);
+						}
+					}
+
+					public void collectWithMetrics(StreamRecord<OUT> record) {
+						long start = System.nanoTime();
+
+						if (lastEmitTime > 0) {
+							sourceLatency.update(start - lastEmitTime);
+						}
+
+						collector.collect(record);
+
+						lastEmitTime = System.nanoTime();
+						taskLatency.update(lastEmitTime - start);
+					}
+
+					@Override
+					public <X> void collect(OutputTag<X> outputTag, StreamRecord<X> record) {
+						if (enableTracingMetrics) {
+							collectWithMetrics(outputTag, record);
+						} else {
+							collector.collect(outputTag, record);
+						}
+					}
+
+					public <X> void collectWithMetrics(OutputTag<X> outputTag, StreamRecord<X> record) {
+						long start = System.nanoTime();
+
+						if (lastEmitTime > 0) {
+							sourceLatency.update(start - lastEmitTime);
+						}
+
+						collector.collect(outputTag, record);
+
+						lastEmitTime = System.nanoTime();
+						taskLatency.update(lastEmitTime - start);
+					}
+
+					@Override
+					public void close() {
+						collector.close();
+					}
+				},
 				getExecutionConfig().getLatencyTrackingInterval(),
 				this.getOperatorID(),
 				getRuntimeContext().getIndexOfThisSubtask());

@@ -277,6 +277,7 @@ public class AsyncIOExample {
 		else {
 			env.enableCheckpointing(1000L, CheckpointingMode.AT_LEAST_ONCE);
 		}
+		env.getConfig().setTracingMetricsEnabled(true);
 
 		// enable watermark or not
 		if (EVENT_TIME.equals(timeType)) {

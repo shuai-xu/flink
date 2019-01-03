@@ -101,7 +101,8 @@ public class StreamIterationTail<IN> extends OneInputStreamTask<IN, IN> {
 				headOperator,
 				getEnvironment().getMetricGroup().getIOMetricGroup(),
 				inputWatermarkGauge,
-				getExecutionConfig().isObjectReuseEnabled());
+				getExecutionConfig().isObjectReuseEnabled(),
+				getExecutionConfig().isTracingMetricsEnabled());
 		}
 		headOperator.getMetricGroup().gauge(MetricNames.IO_CURRENT_INPUT_WATERMARK, inputWatermarkGauge);
 		getEnvironment().getMetricGroup().gauge(MetricNames.IO_CURRENT_INPUT_WATERMARK, inputWatermarkGauge::getValue);
