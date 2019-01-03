@@ -78,11 +78,10 @@ class FlinkAggregateRemoveRuleITCase extends QueryTest {
       Seq(row(1, 2, 3))
     )
 
-    // FIXME reopen after https://aone.alibaba-inc.com/issue/18450878 land
-    // checkResult(
-    //   "SELECT * FROM MyTable WHERE EXISTS (SELECT SUM(a) FROM MyTable2 WHERE 1=2)",
-    //    Seq(row(1, 1, "Hi"), row(2, 2, "Hello"), row(3, 2, "Hello world"))
-    // )
+     checkResult(
+       "SELECT * FROM MyTable WHERE EXISTS (SELECT SUM(a) FROM MyTable2 WHERE 1=2)",
+        Seq(row(1, 1, "Hi"), row(2, 2, "Hello"), row(3, 2, "Hello world"))
+     )
 
     checkResult(
       """

@@ -24,8 +24,8 @@ import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.codegen.EqualiserCodeGenerator
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.sort.RecordEqualiser
 import org.apache.flink.table.runtime.functions.{ExecutionContext, ProcessFunction}
+import org.apache.flink.table.runtime.sort.RecordEqualiser
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
 import org.apache.flink.util.Collector
@@ -54,6 +54,7 @@ class LastRowFunction(
 
   override def open(ctx: ExecutionContext): Unit = {
     super.open(ctx)
+    initCleanupTimeState("LastRowFunctionCleanupTime")
     val rowStateDesc = new ValueStateDescriptor("rowState", rowTypeInfo)
     pkRow = ctx.getKeyedValueState(rowStateDesc)
 

@@ -43,12 +43,6 @@ class FlinkAggregateRemoveRuleITCase(
 
   @Test
   def testSimple(): Unit = {
-    if (aggMode == StreamingWithAggTestBase.LocalGlobalOff &&
-      minibatch == StreamingWithMiniBatchTestBase.MiniBatchOff) {
-      // FIXME https://aone.alibaba-inc.com/issue/18503314
-      return
-    }
-
     checkResult("SELECT a, b FROM T GROUP BY a, b",
       Seq(row(2, 1), row(3, 2), row(5, 2), row(6, 3)))
 
@@ -71,12 +65,6 @@ class FlinkAggregateRemoveRuleITCase(
 
   @Test
   def testWithGroupingSets(): Unit = {
-    if (aggMode == StreamingWithAggTestBase.LocalGlobalOff &&
-      minibatch == StreamingWithMiniBatchTestBase.MiniBatchOff) {
-      // FIXME https://aone.alibaba-inc.com/issue/18503314
-      return
-    }
-
     checkResult("SELECT a, b, c, COUNT(d) FROM T " +
       "GROUP BY GROUPING SETS ((a, b), (a, c))",
       Seq(row(2, 1, null, 0), row(2, null, "A", 0), row(3, 2, null, 1),
@@ -96,12 +84,6 @@ class FlinkAggregateRemoveRuleITCase(
 
   @Test
   def testWithRollup(): Unit = {
-    if (aggMode == StreamingWithAggTestBase.LocalGlobalOff &&
-      minibatch == StreamingWithMiniBatchTestBase.MiniBatchOff) {
-      // FIXME https://aone.alibaba-inc.com/issue/18503314
-      return
-    }
-
     checkResult("SELECT a, b, c, COUNT(d) FROM T GROUP BY ROLLUP (a, b, c)",
       Seq(row(2, 1, "A", 0), row(2, 1, null, 0), row(2, null, null, 0), row(3, 2, "A", 1),
         row(3, 2, null, 1), row(3, null, null, 1), row(5, 2, "B", 1), row(5, 2, null, 1),
@@ -111,12 +93,6 @@ class FlinkAggregateRemoveRuleITCase(
 
   @Test
   def testWithCube(): Unit = {
-    if (aggMode == StreamingWithAggTestBase.LocalGlobalOff &&
-      minibatch == StreamingWithMiniBatchTestBase.MiniBatchOff) {
-      // FIXME https://aone.alibaba-inc.com/issue/18503314
-      return
-    }
-
     checkResult("SELECT a, b, c, COUNT(d) FROM T GROUP BY CUBE (a, b, c)",
       Seq(row(2, 1, "A", 0), row(2, 1, null, 0), row(2, null, "A", 0), row(2, null, null, 0),
         row(3, 2, "A", 1), row(3, 2, null, 1), row(3, null, "A", 1), row(3, null, null, 1),
@@ -155,12 +131,6 @@ class FlinkAggregateRemoveRuleITCase(
 
   @Test
   def testSingleDistinctAgg(): Unit = {
-    if (aggMode == StreamingWithAggTestBase.LocalGlobalOff &&
-      minibatch == StreamingWithMiniBatchTestBase.MiniBatchOff) {
-      // FIXME https://aone.alibaba-inc.com/issue/18503314
-      return
-    }
-
     checkResult("SELECT a, COUNT(DISTINCT c) FROM T GROUP BY a",
       Seq(row(2, 1), row(3, 1), row(5, 1), row(6, 1)))
 
@@ -173,12 +143,6 @@ class FlinkAggregateRemoveRuleITCase(
 
   @Test
   def testSingleDistinctAgg_WithNonDistinctAgg(): Unit = {
-    if (aggMode == StreamingWithAggTestBase.LocalGlobalOff &&
-      minibatch == StreamingWithMiniBatchTestBase.MiniBatchOff) {
-      // FIXME https://aone.alibaba-inc.com/issue/18503314
-      return
-    }
-
     checkResult("SELECT a, COUNT(DISTINCT c), SUM(b) FROM T GROUP BY a",
       Seq(row(2, 1, 1), row(3, 1, 2), row(5, 1, 2), row(6, 1, 3)))
 
@@ -195,12 +159,6 @@ class FlinkAggregateRemoveRuleITCase(
 
   @Test
   def testMultiDistinctAggs(): Unit = {
-    if (aggMode == StreamingWithAggTestBase.LocalGlobalOff &&
-      minibatch == StreamingWithMiniBatchTestBase.MiniBatchOff) {
-      // FIXME https://aone.alibaba-inc.com/issue/18503314
-      return
-    }
-
     checkResult("SELECT a, COUNT(DISTINCT b), SUM(DISTINCT b) FROM T GROUP BY a", Seq(row(2,
       1, 1), row(3, 1, 2), row(5, 1, 2), row(6, 1, 3)))
 
