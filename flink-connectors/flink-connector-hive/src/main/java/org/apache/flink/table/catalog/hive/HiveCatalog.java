@@ -320,7 +320,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	// ------ partitions ------
 
 	@Override
-	public void createParition(ObjectPath path, CatalogPartition partition, boolean ignoreIfExists)
+	public void createPartition(ObjectPath path, CatalogPartition partition, boolean ignoreIfExists)
 		throws TableNotExistException, TableNotPartitionedException, PartitionAlreadyExistException {
 
 		Table hiveTable = getHiveTable(path);
@@ -343,7 +343,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void dropParition(ObjectPath path, CatalogPartition.PartitionSpec partitionSpec, boolean ignoreIfNotExists)
+	public void dropPartition(ObjectPath path, CatalogPartition.PartitionSpec partitionSpec, boolean ignoreIfNotExists)
 		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException {
 
 		Table hiveTable = getHiveTable(path);
@@ -365,7 +365,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void alterParition(ObjectPath path, CatalogPartition newPartition, boolean ignoreIfNotExists)
+	public void alterPartition(ObjectPath path, CatalogPartition newPartition, boolean ignoreIfNotExists)
 		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException {
 		Table hiveTable = getHiveTable(path);
 

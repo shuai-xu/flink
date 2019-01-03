@@ -153,7 +153,7 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 * @throws TableNotPartitionedException
 	 * @throws PartitionAlreadyExistException
 	 */
-	void createParition(ObjectPath tablePath, CatalogPartition partition, boolean ignoreIfExists)
+	void createPartition(ObjectPath tablePath, CatalogPartition partition, boolean ignoreIfExists)
 		throws TableNotExistException, TableNotPartitionedException, PartitionAlreadyExistException;
 
 	/**
@@ -168,7 +168,7 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 * @throws TableNotPartitionedException
 	 * @throws PartitionNotExistException
 	 */
-	void dropParition(ObjectPath tablePath, CatalogPartition.PartitionSpec partitionSpec, boolean ignoreIfNotExists)
+	void dropPartition(ObjectPath tablePath, CatalogPartition.PartitionSpec partitionSpec, boolean ignoreIfNotExists)
 		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException;
 
 	/**
@@ -183,6 +183,6 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 * @throws TableNotPartitionedException
 	 * @throws PartitionNotExistException
 	 */
-	void alterParition(ObjectPath tablePath, CatalogPartition newPartition, boolean ignoreIfNotExists)
+	void alterPartition(ObjectPath tablePath, CatalogPartition newPartition, boolean ignoreIfNotExists)
 		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException;
 }

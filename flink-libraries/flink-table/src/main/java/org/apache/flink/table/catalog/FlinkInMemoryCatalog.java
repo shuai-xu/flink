@@ -212,7 +212,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	// ------ partitions ------
 
 	@Override
-	public void createParition(ObjectPath path, CatalogPartition partition, boolean ignoreIfExists)
+	public void createPartition(ObjectPath path, CatalogPartition partition, boolean ignoreIfExists)
 		throws TableNotExistException, TableNotPartitionedException, PartitionAlreadyExistException {
 
 		if (!tableExists(path)) {
@@ -233,7 +233,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void dropParition(ObjectPath path, CatalogPartition.PartitionSpec partitionSpec, boolean ignoreIfNotExists)
+	public void dropPartition(ObjectPath path, CatalogPartition.PartitionSpec partitionSpec, boolean ignoreIfNotExists)
 		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException {
 
 		if (!tableExists(path)) {
@@ -252,7 +252,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void alterParition(ObjectPath path, CatalogPartition newPartition, boolean ignoreIfNotExists)
+	public void alterPartition(ObjectPath path, CatalogPartition newPartition, boolean ignoreIfNotExists)
 		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException {
 		if (!tableExists(path)) {
 			throw new TableNotExistException(catalogName, path.getFullName());
