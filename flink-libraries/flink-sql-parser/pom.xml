@@ -47,7 +47,7 @@ under the License.
 		</dependency>
 
 		<dependency>
-			<groupId>com.alibaba.blink.calcite</groupId>
+			<groupId>com.alibaba.calcite</groupId>
 			<artifactId>calcite-core</artifactId>
 			<version>${calcite.version}</version>
 			<scope>provided</scope>
@@ -96,7 +96,7 @@ under the License.
 						<configuration>
 							<artifactItems>
 								<artifactItem>
-									<groupId>com.alibaba.blink.calcite</groupId>
+									<groupId>com.alibaba.calcite</groupId>
 									<artifactId>calcite-core</artifactId>
 									<type>jar</type>
 									<overWrite>true</overWrite>

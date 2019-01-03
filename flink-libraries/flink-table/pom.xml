@@ -148,7 +148,7 @@ under the License.
 		</dependency>
 
 		<dependency>
-			<groupId>com.alibaba.blink.calcite</groupId>
+			<groupId>com.alibaba.calcite</groupId>
 			<artifactId>calcite-core</artifactId>
 			<version>${calcite.version}</version>
 			<exclusions>
@@ -456,7 +456,7 @@ under the License.
 							</filters>
 							<artifactSet>
 								<includes combine.children="append">
-									<include>com.alibaba.blink.calcite:*</include>
+									<include>com.alibaba.calcite:*</include>
 									<include>org.apache.calcite:*</include>
 									<include>org.apache.calcite.avatica:*</include>
 									<include>net.hydromatic:*</include>
