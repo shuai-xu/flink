@@ -26,7 +26,14 @@ StreamExecValues(tuples=[[]])
   <TestCase name="testLimitZeroWithExists">
     <Resource name="plan">
       <![CDATA[
-StreamExecValues(tuples=[[]])
+StreamExecJoin(where=[$f0], join=[a, b, c], joinType=[SemiJoin])
+:- StreamExecExchange(distribution=[single])
+:  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecExchange(distribution=[single])
+   +- StreamExecCalc(select=[IS NOT NULL(m) AS $f0])
+      +- StreamExecGroupAggregate(select=[MIN(i) AS m])
+         +- StreamExecExchange(distribution=[single])
+            +- StreamExecValues(tuples=[[]])
 ]]>
     </Resource>
   </TestCase>

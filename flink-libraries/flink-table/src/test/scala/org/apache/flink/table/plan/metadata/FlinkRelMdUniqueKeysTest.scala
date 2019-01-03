@@ -58,10 +58,11 @@ class FlinkRelMdUniqueKeysTest extends FlinkRelMdHandlerTestBase {
 
   @Test
   def testGetUniqueKeysOnExpand(): Unit = {
+    // column 0 is unique key
     val ts = relBuilder.scan("student").build()
     val expandOutputType = buildExpandRowType(
       ts.getCluster.getTypeFactory, ts.getRowType, Array.empty[Integer])
-    val expandProjects = createExpandProjects(
+    val expandProjects1 = createExpandProjects(
       ts.getCluster.getRexBuilder,
       ts.getRowType,
       expandOutputType,
@@ -72,11 +73,37 @@ class FlinkRelMdUniqueKeysTest extends FlinkRelMdHandlerTestBase {
         ImmutableBitSet.of(2),
         ImmutableBitSet.of(3)
       ), Array.empty[Integer])
-    val expand = new FlinkLogicalExpand(
-      ts.getCluster, ts.getTraitSet, ts, expandOutputType, expandProjects, 4)
-    val uniqueKeys = mq.getUniqueKeys(expand)
-    assertTrue(uniqueKeys.size() == 1)
-    assertEquals(uniqueKeys.head, ImmutableBitSet.of(0))
+    val expand1 = new FlinkLogicalExpand(
+      ts.getCluster, ts.getTraitSet, ts, expandOutputType, expandProjects1, 4)
+    assertNull(mq.getUniqueKeys(expand1))
+
+    val expandProjects2 = createExpandProjects(
+      ts.getCluster.getRexBuilder,
+      ts.getRowType,
+      expandOutputType,
+      ImmutableBitSet.of(0, 1, 2, 3),
+      ImmutableList.of(
+        ImmutableBitSet.of(0, 1),
+        ImmutableBitSet.of(0, 2),
+        ImmutableBitSet.of(0, 3)
+      ), Array.empty[Integer])
+    val expand2 = new FlinkLogicalExpand(
+      ts.getCluster, ts.getTraitSet, ts, expandOutputType, expandProjects2, 4)
+    assertEquals(ImmutableSet.of(ImmutableBitSet.of(0, 4)), mq.getUniqueKeys(expand2))
+
+    val expandProjects3 = createExpandProjects(
+      ts.getCluster.getRexBuilder,
+      ts.getRowType,
+      expandOutputType,
+      ImmutableBitSet.of(0, 1, 2, 3),
+      ImmutableList.of(
+        ImmutableBitSet.of(0, 1),
+        ImmutableBitSet.of(1, 2),
+        ImmutableBitSet.of(1, 3)
+      ), Array.empty[Integer])
+    val expand3 = new FlinkLogicalExpand(
+      ts.getCluster, ts.getTraitSet, ts, expandOutputType, expandProjects3, 4)
+    assertNull(mq.getUniqueKeys(expand3))
   }
 
   @Test

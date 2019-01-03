@@ -18,14 +18,14 @@
 
 package org.apache.flink.table.plan.nodes.calcite
 
-import java.util
-
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, SingleRel}
-import org.apache.calcite.rex.RexNode
+import org.apache.calcite.rex.{RexLiteral, RexNode}
 import org.apache.calcite.util.Litmus
+
+import java.util
 
 import scala.collection.JavaConversions._
 
@@ -33,13 +33,15 @@ import scala.collection.JavaConversions._
   * Relational expression that apply a number of projects to every input row,
   * hence we will get multiple output rows for an input row.
   *
+  * <p/> Values of expand_id should be unique.
+  *
   * @param cluster       cluster that this relational expression belongs to
   * @param traits        the traits of this rel
   * @param input         input relational expression
   * @param outputRowType output row type
   * @param projects      all projects, each project contains list of expressions for
   *                      the output columns
-  * @param expandIdIndex expand_id('$e') field index or -1
+  * @param expandIdIndex expand_id('$e') field index
   */
 abstract class Expand(
     cluster: RelOptCluster,
@@ -53,14 +55,25 @@ abstract class Expand(
   isValid(Litmus.THROW, null)
 
   override def isValid(litmus: Litmus, context: RelNode.Context): Boolean = {
-    if (projects.isEmpty) {
-      return litmus.fail("projects is empty.")
+    if (projects.size() <= 1) {
+      return litmus.fail("Expand should output more than one rows, otherwise use Project.")
     }
     if (projects.exists(_.size != outputRowType.getFieldCount)) {
       return litmus.fail("project filed count is not equal to output field count.")
     }
-    if (expandIdIndex != -1 && expandIdIndex >= outputRowType.getFieldCount) {
-      return litmus.fail("expand_id field index should be less than output field count.")
+    if (expandIdIndex < 0 || expandIdIndex >= outputRowType.getFieldCount) {
+      return litmus.fail(
+        "expand_id field index should be greater than 0 and less than output field count.")
+    }
+    val expandIdValues = new util.HashSet[Any]()
+    for (project <- projects) {
+      project.get(expandIdIndex) match {
+        case literal: RexLiteral => expandIdValues.add(literal.getValue)
+        case _ => return litmus.fail("expand_id value should not be null.")
+      }
+    }
+    if (expandIdValues.size() != projects.size()) {
+      return litmus.fail("values of expand_id should be unique.")
     }
     litmus.succeed()
   }

@@ -15,21 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.table.runtime.batch.sql
-
-import java.sql.Date
+package org.apache.flink.table.runtime.batch.sql.agg
 
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.DateTimeTestUtil.UTCTimestamp
+
 import org.junit.{Before, Test}
+
+import java.sql.Date
 
 import _root_.scala.collection.JavaConverters._
 import scala.collection.Seq
 
-class AggregateReduceGroupingITCase extends QueryTest {
+class AggregateReduceGroupingRuleITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
@@ -317,15 +319,87 @@ class AggregateReduceGroupingITCase extends QueryTest {
 
   @Test
   def testAggWithGroupingSets(): Unit = {
-    checkResult("SELECT a1, b1, c1, count(d1) FROM T1 " +
+    checkResult("SELECT a1, b1, c1, COUNT(d1) FROM T1 " +
       "GROUP BY GROUPING SETS ((a1, b1), (a1, c1))",
       Seq(row(2, 1, null, 0), row(2, null, "A", 0), row(3, 2, null, 1),
         row(3, null, "A", 1), row(5, 2, null, 1), row(5, null, "B", 1),
         row(6, 3, null, 1), row(6, null, "C", 1)))
+
+    checkResult("SELECT a1, c1, COUNT(d1) FROM T1 " +
+      "GROUP BY GROUPING SETS ((a1, c1), (a1), ())",
+      Seq(row(2, "A", 0), row(2, null, 0), row(3, "A", 1), row(3, null, 1), row(5, "B", 1),
+        row(5, null, 1), row(6, "C", 1), row(6, null, 1), row(null, null, 3)))
+
+    checkResult("SELECT a1, b1, c1, COUNT(d1) FROM T1 " +
+      "GROUP BY GROUPING SETS ((a1, b1, c1), (a1, b1, d1))",
+      Seq(row(2, 1, "A", 0), row(2, 1, null, 0), row(3, 2, "A", 1), row(3, 2, null, 1),
+        row(5, 2, "B", 1), row(5, 2, null, 1), row(6, 3, "C", 1), row(6, 3, null, 1)))
   }
 
   @Test
-  def testDistinctAgg(): Unit = {
+  def testAggWithRollup(): Unit = {
+    checkResult("SELECT a1, b1, c1, COUNT(d1) FROM T1 GROUP BY ROLLUP (a1, b1, c1)",
+      Seq(row(2, 1, "A", 0), row(2, 1, null, 0), row(2, null, null, 0), row(3, 2, "A", 1),
+        row(3, 2, null, 1), row(3, null, null, 1), row(5, 2, "B", 1), row(5, 2, null, 1),
+        row(5, null, null, 1), row(6, 3, "C", 1), row(6, 3, null, 1), row(6, null, null, 1),
+        row(null, null, null, 3)))
+  }
+
+  @Test
+  def testAggWithCube(): Unit = {
+    checkResult("SELECT a1, b1, c1, COUNT(d1) FROM T1 GROUP BY CUBE (a1, b1, c1)",
+      Seq(row(2, 1, "A", 0), row(2, 1, null, 0), row(2, null, "A", 0), row(2, null, null, 0),
+        row(3, 2, "A", 1), row(3, 2, null, 1), row(3, null, "A", 1), row(3, null, null, 1),
+        row(5, 2, "B", 1), row(5, 2, null, 1), row(5, null, "B", 1), row(5, null, null, 1),
+        row(6, 3, "C", 1), row(6, 3, null, 1), row(6, null, "C", 1), row(6, null, null, 1),
+        row(null, 1, "A", 0), row(null, 1, null, 0), row(null, 2, "A", 1), row(null, 2, "B", 1),
+        row(null, 2, null, 2), row(null, 3, "C", 1), row(null, 3, null, 1), row(null, null, "A", 1),
+        row(null, null, "B", 1), row(null, null, "C", 1), row(null, null, null, 3)))
+  }
+
+  @Test
+  def testSingleDistinctAgg(): Unit = {
+    checkResult("SELECT a1, COUNT(DISTINCT c1) FROM T1 GROUP BY a1",
+      Seq(row(2, 1), row(3, 1), row(5, 1), row(6, 1)))
+
+    checkResult("SELECT a1, b1, COUNT(DISTINCT c1) FROM T1 GROUP BY a1, b1",
+      Seq(row(2, 1, 1), row(3, 2, 1), row(5, 2, 1), row(6, 3, 1)))
+  }
+
+  @Test
+  def testSingleDistinctAgg_WithNonDistinctAgg(): Unit = {
+    checkResult("SELECT a1, COUNT(DISTINCT c1), SUM(b1) FROM T1 GROUP BY a1",
+      Seq(row(2, 1, 1), row(3, 1, 2), row(5, 1, 2), row(6, 1, 3)))
+
+    checkResult("SELECT a1, c1, COUNT(DISTINCT c1), SUM(b1) FROM T1 GROUP BY a1, c1",
+      Seq(row(2, "A", 1, 1), row(3, "A", 1, 2), row(5, "B", 1, 2), row(6, "C", 1, 3)))
+
+    checkResult("SELECT a1, COUNT(DISTINCT c1), SUM(b1) FROM T1 GROUP BY a1",
+      Seq(row(2, 1, 1), row(3, 1, 2), row(5, 1, 2), row(6, 1, 3)))
+
+    checkResult("SELECT a1, d1, COUNT(DISTINCT c1), SUM(b1) FROM T1 GROUP BY a1, d1",
+      Seq(row(2, null, 1, 1), row(3, "Hi", 1, 2),
+        row(5, "Hello", 1, 2), row(6, "Hello world", 1, 3)))
+  }
+
+  @Test
+  def testMultiDistinctAggs(): Unit = {
+    checkResult("SELECT a1, COUNT(DISTINCT b1), SUM(DISTINCT b1) FROM T1 GROUP BY a1", Seq(row(2,
+      1, 1), row(3, 1, 2), row(5, 1, 2), row(6, 1, 3)))
+
+    checkResult("SELECT a1, d1, COUNT(DISTINCT c1), SUM(DISTINCT b1) FROM T1 GROUP BY a1, d1",
+      Seq(row(2, null, 1, 1), row(3, "Hi", 1, 2),
+        row(5, "Hello", 1, 2), row(6, "Hello world", 1, 3)))
+
+    checkResult(
+      "SELECT a1, SUM(DISTINCT b1), MAX(DISTINCT b1), MIN(DISTINCT c1) FROM T1 GROUP BY a1",
+      Seq(row(2, 1, 1, "A"), row(3, 2, 2, "A"), row(5, 2, 2, "B"), row(6, 3, 3, "C")))
+
+    checkResult(
+      "SELECT a1, d1, COUNT(DISTINCT c1), MAX(DISTINCT b1), SUM(b1) FROM T1 GROUP BY a1, d1",
+      Seq(row(2, null, 1, 1, 1), row(3, "Hi", 1, 2, 2),
+        row(5, "Hello", 1, 2, 2), row(6, "Hello world", 1, 3, 3)))
+
     checkResult("SELECT a1, b1, COUNT(DISTINCT c1), COUNT(DISTINCT d1) FROM T1 GROUP BY a1, b1",
       Seq(row(2, 1, 1, 0), row(3, 2, 1, 1), row(5, 2, 1, 1), row(6, 3, 1, 1)))
   }

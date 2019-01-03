@@ -73,10 +73,11 @@ class FlinkRelMdColumnUniquenessTest extends FlinkRelMdHandlerTestBase {
 
   @Test
   def testAreColumnsUniqueOnExpand(): Unit = {
+    // column 0 is unique key
     val ts = relBuilder.scan("student").build()
     val expandOutputType = buildExpandRowType(
       ts.getCluster.getTypeFactory, ts.getRowType, Array.empty[Integer])
-    val expandProjects = createExpandProjects(
+    val expandProjects1 = createExpandProjects(
       ts.getCluster.getRexBuilder,
       ts.getRowType,
       expandOutputType,
@@ -87,14 +88,55 @@ class FlinkRelMdColumnUniquenessTest extends FlinkRelMdHandlerTestBase {
         ImmutableBitSet.of(2),
         ImmutableBitSet.of(3)
       ), Array.empty[Integer])
-    val expand = new FlinkLogicalExpand(
-      ts.getCluster, ts.getTraitSet, ts, expandOutputType, expandProjects, 4)
-    assertTrue(mq.areColumnsUnique(expand, ImmutableBitSet.of(0, 1)))
-    assertTrue(mq.areColumnsUnique(expand, ImmutableBitSet.of(0, 1, 4)))
-    assertTrue(mq.areColumnsUnique(expand, ImmutableBitSet.of(0)))
-    assertTrue(mq.areColumnsUnique(expand, ImmutableBitSet.of(0, 4)))
-    assertFalse(mq.areColumnsUnique(expand, ImmutableBitSet.of(1)))
-    assertFalse(mq.areColumnsUnique(expand, ImmutableBitSet.of(1, 4)))
+    val expand1 = new FlinkLogicalExpand(
+      ts.getCluster, ts.getTraitSet, ts, expandOutputType, expandProjects1, 4)
+    assertFalse(mq.areColumnsUnique(expand1, ImmutableBitSet.of(0, 1)))
+    assertFalse(mq.areColumnsUnique(expand1, ImmutableBitSet.of(0, 1, 4)))
+    assertFalse(mq.areColumnsUnique(expand1, ImmutableBitSet.of(0)))
+    assertFalse(mq.areColumnsUnique(expand1, ImmutableBitSet.of(0, 4)))
+    assertFalse(mq.areColumnsUnique(expand1, ImmutableBitSet.of(1)))
+    assertFalse(mq.areColumnsUnique(expand1, ImmutableBitSet.of(1, 4)))
+    assertFalse(mq.areColumnsUnique(expand1, ImmutableBitSet.of(4)))
+
+    val expandProjects2 = createExpandProjects(
+      ts.getCluster.getRexBuilder,
+      ts.getRowType,
+      expandOutputType,
+      ImmutableBitSet.of(0, 1, 2, 3),
+      ImmutableList.of(
+        ImmutableBitSet.of(0, 1),
+        ImmutableBitSet.of(0, 2),
+        ImmutableBitSet.of(0, 3)
+      ), Array.empty[Integer])
+    val expand2 = new FlinkLogicalExpand(
+      ts.getCluster, ts.getTraitSet, ts, expandOutputType, expandProjects2, 4)
+    assertFalse(mq.areColumnsUnique(expand2, ImmutableBitSet.of(0, 1)))
+    assertTrue(mq.areColumnsUnique(expand2, ImmutableBitSet.of(0, 1, 4)))
+    assertFalse(mq.areColumnsUnique(expand2, ImmutableBitSet.of(0)))
+    assertTrue(mq.areColumnsUnique(expand2, ImmutableBitSet.of(0, 4)))
+    assertFalse(mq.areColumnsUnique(expand2, ImmutableBitSet.of(1)))
+    assertFalse(mq.areColumnsUnique(expand2, ImmutableBitSet.of(1, 4)))
+    assertFalse(mq.areColumnsUnique(expand2, ImmutableBitSet.of(4)))
+
+    val expandProjects3 = createExpandProjects(
+      ts.getCluster.getRexBuilder,
+      ts.getRowType,
+      expandOutputType,
+      ImmutableBitSet.of(0, 1, 2, 3),
+      ImmutableList.of(
+        ImmutableBitSet.of(0, 1),
+        ImmutableBitSet.of(1, 2),
+        ImmutableBitSet.of(1, 3)
+      ), Array.empty[Integer])
+    val expand3 = new FlinkLogicalExpand(
+      ts.getCluster, ts.getTraitSet, ts, expandOutputType, expandProjects3, 4)
+    assertFalse(mq.areColumnsUnique(expand3, ImmutableBitSet.of(0, 1)))
+    assertFalse(mq.areColumnsUnique(expand3, ImmutableBitSet.of(0, 1, 4)))
+    assertFalse(mq.areColumnsUnique(expand3, ImmutableBitSet.of(0)))
+    assertFalse(mq.areColumnsUnique(expand3, ImmutableBitSet.of(0, 4)))
+    assertFalse(mq.areColumnsUnique(expand3, ImmutableBitSet.of(1)))
+    assertFalse(mq.areColumnsUnique(expand3, ImmutableBitSet.of(1, 4)))
+    assertFalse(mq.areColumnsUnique(expand3, ImmutableBitSet.of(4)))
   }
 
   @Test

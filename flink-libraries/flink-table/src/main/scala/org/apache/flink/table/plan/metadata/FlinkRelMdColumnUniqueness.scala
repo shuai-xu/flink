@@ -27,9 +27,9 @@ import org.apache.flink.table.plan.nodes.logical._
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCorrelate, BatchExecGroupAggregateBase, BatchExecOverAggregate, BatchExecWindowAggregateBase}
 import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
-import org.apache.flink.table.sources.{DimensionTableSource, TableSource}
 import org.apache.flink.table.plan.util.FlinkRelMdUtil
 import org.apache.flink.table.plan.util.FlinkRelMdUtil.splitColumnsIntoLeftAndRight
+import org.apache.flink.table.sources.{DimensionTableSource, TableSource}
 
 import org.apache.calcite.plan.RelOptTable
 import org.apache.calcite.plan.volcano.RelSubset
@@ -39,7 +39,7 @@ import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.logical.LogicalTemporalTableScan
 import org.apache.calcite.rel.metadata._
 import org.apache.calcite.rel.{RelNode, SingleRel}
-import org.apache.calcite.rex.{RexCall, RexInputRef, RexLiteral, RexNode}
+import org.apache.calcite.rex.{RexCall, RexInputRef, RexNode}
 import org.apache.calcite.sql.SemiJoinType._
 import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
@@ -137,11 +137,10 @@ class FlinkRelMdColumnUniqueness private extends MetadataHandler[BuiltInMetadata
   }
 
   def areColumnsUnique(
-    rel: FlinkLogicalLastRow,
-    mq: RelMetadataQuery,
-    columns: ImmutableBitSet,
-    ignoreNulls: Boolean): JBool = {
-
+      rel: FlinkLogicalLastRow,
+      mq: RelMetadataQuery,
+      columns: ImmutableBitSet,
+      ignoreNulls: Boolean): JBool = {
     columns != null && columns.toArray.sameElements(rel.getUniqueKeys)
   }
 
@@ -150,27 +149,30 @@ class FlinkRelMdColumnUniqueness private extends MetadataHandler[BuiltInMetadata
       mq: RelMetadataQuery,
       columns: ImmutableBitSet,
       ignoreNulls: Boolean): JBool = {
+    // values of expand_is are unique in rows expanded from a row,
+    // and a input unique key combined with expand_id are also unique
     val expandIdIndex = rel.expandIdIndex
+    if (!columns.get(expandIdIndex)) {
+      return false
+    }
     val columnsSkipExpandId = ImmutableBitSet.builder().addAll(columns).clear(expandIdIndex).build()
     if (columnsSkipExpandId.cardinality == 0) {
       return false
     }
-    val convertedColumnsBuilder = ImmutableBitSet.builder()
-    for (bit <- columnsSkipExpandId) {
-      for (projects <- rel.projects) {
-        projects.get(bit) match {
-          case inputRef: RexInputRef => convertedColumnsBuilder.set(inputRef.getIndex)
-          case _: RexLiteral => // ignore literal
-          case _ => throw new AssertionError
+    val inputRefColumns = columnsSkipExpandId.flatMap {
+      column =>
+        val inputRefs = FlinkRelMdUtil.getInputRefIndices(column, rel)
+        if (inputRefs.size() == 1 && inputRefs.head >= 0) {
+          Array(inputRefs.head)
+        } else {
+          Array.empty[Int]
         }
-      }
+    }.toSeq
+
+    if (inputRefColumns.isEmpty) {
+      return false
     }
-    val convertedColumns = convertedColumnsBuilder.build()
-    if (convertedColumns.cardinality == 0) {
-      false
-    } else {
-      mq.areColumnsUnique(rel.getInput, convertedColumns, ignoreNulls)
-    }
+    mq.areColumnsUnique(rel.getInput, ImmutableBitSet.of(inputRefColumns: _*), ignoreNulls)
   }
 
   /**
@@ -179,9 +181,9 @@ class FlinkRelMdColumnUniqueness private extends MetadataHandler[BuiltInMetadata
     * @param rel         the Calc relational expression
     * @param mq          metadata query instance
     * @param columns     column mask representing the subset of columns for which
-    *                    uniqueness will be determined
+    * uniqueness will be determined
     * @param ignoreNulls if true, ignore null values when determining column
-    *                    uniqueness
+    * uniqueness
     * @return whether the columns are unique, or
     *         null if not enough information is available to make that determination
     */
@@ -213,9 +215,9 @@ class FlinkRelMdColumnUniqueness private extends MetadataHandler[BuiltInMetadata
     * @param rel         the RelSubSet relational expression
     * @param mq          metadata query instance
     * @param columns     column mask representing the subset of columns for which
-    *                    uniqueness will be determined
+    * uniqueness will be determined
     * @param ignoreNulls if true, ignore null values when determining column
-    *                    uniqueness
+    * uniqueness
     * @return whether the columns are unique, or
     *         null if not enough information is available to make that determination
     */
@@ -368,7 +370,7 @@ class FlinkRelMdColumnUniqueness private extends MetadataHandler[BuiltInMetadata
       projExpr match {
         case inputRef: RexInputRef => childColumns.set(inputRef.getIndex)
         case a: RexCall if a.getKind.equals(SqlKind.AS) &&
-            a.getOperands.get(0).isInstanceOf[RexInputRef] =>
+          a.getOperands.get(0).isInstanceOf[RexInputRef] =>
           childColumns.set(a.getOperands.get(0).asInstanceOf[RexInputRef].getIndex)
         case call: RexCall if ignoreNulls =>
           // If the expression is a cast such that the types are the same
@@ -498,10 +500,10 @@ class FlinkRelMdColumnUniqueness private extends MetadataHandler[BuiltInMetadata
   }
 
   def areColumnsUnique(
-    rel: StreamExecLastRow,
-    mq: RelMetadataQuery,
-    columns: ImmutableBitSet,
-    ignoreNulls: Boolean): JBool = {
+      rel: StreamExecLastRow,
+      mq: RelMetadataQuery,
+      columns: ImmutableBitSet,
+      ignoreNulls: Boolean): JBool = {
 
     columns != null && columns.toArray.equals(rel.getUniqueKeys)
   }
@@ -762,9 +764,9 @@ class FlinkRelMdColumnUniqueness private extends MetadataHandler[BuiltInMetadata
     * @param rel         Relational expression
     * @param mq          Metadata query
     * @param columns     column mask representing the subset of columns for which
-    *                    uniqueness will be determined
+    * uniqueness will be determined
     * @param ignoreNulls if true, ignore null values when determining column
-    *                    uniqueness
+    * uniqueness
     * @return whether the columns are unique, or
     *         null if not enough information is available to make that determination
     * @see org.apache.calcite.rel.metadata.RelMetadataQuery#areColumnsUnique(

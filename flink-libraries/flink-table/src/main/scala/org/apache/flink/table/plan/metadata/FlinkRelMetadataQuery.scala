@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.metadata
 
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef, RelModifiedMonotonicity}
-import org.apache.flink.table.plan.metadata.FlinkMetadata.{ColumnInterval, ColumnNullCount, ColumnOriginNullCount, FilteredColumnInterval, FlinkDistribution, ModifiedMonotonicityMeta, SkewInfoMeta, UniqueColumns}
+import org.apache.flink.table.plan.metadata.FlinkMetadata.{ColumnInterval, ColumnNullCount, ColumnOriginNullCount, FilteredColumnInterval, FlinkDistribution, ModifiedMonotonicityMeta, SkewInfoMeta, UniqueGroups}
 import org.apache.flink.table.plan.stats.{SkewInfoInternal, ValueInterval}
 
 import org.apache.calcite.plan.RelTraitSet
@@ -50,7 +50,7 @@ class FlinkRelMetadataQuery private(
   private[this] var columnOriginNullCountHandler: ColumnOriginNullCount.Handler = _
   private[this] var skewInfoHandler: SkewInfoMeta.Handler = _
   private[this] var modifiedMonotonicityHandler: ModifiedMonotonicityMeta.Handler = _
-  private[this] var uniqueColumnsHandler: UniqueColumns.Handler = _
+  private[this] var uniqueGroupsHandler: UniqueGroups.Handler = _
 
   private def this() {
     this(RelMetadataQuery.THREAD_PROVIDERS.get, RelMetadataQuery.EMPTY)
@@ -64,7 +64,7 @@ class FlinkRelMetadataQuery private(
     this.skewInfoHandler = RelMetadataQuery.initialHandler(classOf[SkewInfoMeta.Handler])
     this.modifiedMonotonicityHandler =
       RelMetadataQuery.initialHandler(classOf[ModifiedMonotonicityMeta.Handler])
-    this.uniqueColumnsHandler = RelMetadataQuery.initialHandler(classOf[UniqueColumns.Handler])
+    this.uniqueGroupsHandler = RelMetadataQuery.initialHandler(classOf[UniqueGroups.Handler])
   }
 
   /**
@@ -189,7 +189,7 @@ class FlinkRelMetadataQuery private(
   }
 
   /**
-    * Returns the (minimum) unique columns of the given columns.
+    * Returns the (minimum) unique groups of the given columns.
     *
     * @param rel the relational expression
     * @param columns the given columns in a specified relational expression.
@@ -198,20 +198,20 @@ class FlinkRelMetadataQuery private(
     *         and should not be null or empty. If none unique columns can be found, return the
     *         given columns.
     */
-  def getUniqueColumns(rel: RelNode, columns: ImmutableBitSet): ImmutableBitSet = {
+  def getUniqueGroups(rel: RelNode, columns: ImmutableBitSet): ImmutableBitSet = {
     try {
       require(columns != null)
       if (columns.isEmpty) {
         return columns
       }
-      val uniqueColumns = uniqueColumnsHandler.getUniqueColumns(rel, this, columns)
-      require(uniqueColumns != null && !uniqueColumns.isEmpty)
-      require(columns.contains(uniqueColumns))
-      uniqueColumns
+      val uniqueGroups = uniqueGroupsHandler.getUniqueGroups(rel, this, columns)
+      require(uniqueGroups != null && !uniqueGroups.isEmpty)
+      require(columns.contains(uniqueGroups))
+      uniqueGroups
     } catch {
       case e: JaninoRelMetadataProvider.NoHandler =>
-        uniqueColumnsHandler = revise(e.relClass, FlinkMetadata.UniqueColumns.DEF)
-        getUniqueColumns(rel, columns)
+        uniqueGroupsHandler = revise(e.relClass, FlinkMetadata.UniqueGroups.DEF)
+        getUniqueGroups(rel, columns)
     }
   }
 }

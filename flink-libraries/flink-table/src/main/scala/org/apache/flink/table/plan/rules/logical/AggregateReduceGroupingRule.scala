@@ -53,7 +53,7 @@ class AggregateReduceGroupingRule(relBuilderFactory: RelBuilderFactory) extends 
     val inputRowType = input.getRowType
     val originalGrouping = agg.getGroupSet
     val fmq = FlinkRelMetadataQuery.reuseOrCreate(call.getMetadataQuery)
-    val newGrouping = fmq.getUniqueColumns(input, originalGrouping)
+    val newGrouping = fmq.getUniqueGroups(input, originalGrouping)
     val uselessGrouping = originalGrouping.except(newGrouping)
     if (uselessGrouping.isEmpty) {
       return

@@ -233,32 +233,32 @@ public abstract class FlinkMetadata {
 	}
 
 	/**
-	 * Metadata about the (minimum) unique columns of the given columns from a specified relational expression.
+	 * Metadata about the (minimum) unique groups of the given columns from a specified relational expression.
 	 */
-	public interface UniqueColumns extends Metadata {
+	public interface UniqueGroups extends Metadata {
 
-		Method METHOD = Types.lookupMethod(UniqueColumns.class, "getUniqueColumns", ImmutableBitSet.class);
+		Method METHOD = Types.lookupMethod(UniqueGroups.class, "getUniqueGroups", ImmutableBitSet.class);
 
-		MetadataDef<UniqueColumns> DEF = MetadataDef.of(
-				UniqueColumns.class,
-				UniqueColumns.Handler.class,
+		MetadataDef<UniqueGroups> DEF = MetadataDef.of(
+				UniqueGroups.class,
+				UniqueGroups.Handler.class,
 				METHOD);
 
 		/**
-		 * Returns the (minimum) unique columns of the given columns from a specified relational expression.
+		 * Returns the (minimum) unique groups of the given columns from a specified relational expression.
 		 *
 		 * @param columns the given columns in a specified relational expression.
 		 *                The given columns should not be null.
 		 * @return the (minimum) unique columns which should be a sub-collection of the given columns,
 		 *         and should not be null or empty. If none unique columns can be found, return the given columns.
 		 */
-		ImmutableBitSet getUniqueColumns(ImmutableBitSet columns);
+		ImmutableBitSet getUniqueGroups(ImmutableBitSet columns);
 
 		/**
 		 * Handler API.
 		 */
-		interface Handler extends MetadataHandler<UniqueColumns> {
-			ImmutableBitSet getUniqueColumns(RelNode r, RelMetadataQuery mq, ImmutableBitSet columns);
+		interface Handler extends MetadataHandler<UniqueGroups> {
+			ImmutableBitSet getUniqueGroups(RelNode r, RelMetadataQuery mq, ImmutableBitSet columns);
 		}
 	}
 }

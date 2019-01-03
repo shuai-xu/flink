@@ -20,14 +20,26 @@ package org.apache.flink.table.util
 
 import org.apache.flink.table.plan.metadata.FlinkRelMdHandlerTestBase
 import org.apache.flink.table.plan.nodes.calcite.LogicalWindowAggregate
-import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalRank, FlinkLogicalWindowAggregate}
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashWindowAggregate, BatchExecLocalHashWindowAggregate, BatchExecWindowAggregateBase}
+import org.apache.flink.table.plan.nodes.logical.{
+  FlinkLogicalExpand, FlinkLogicalRank,
+  FlinkLogicalWindowAggregate
+}
+import org.apache.flink.table.plan.nodes.physical.batch.{
+  BatchExecHashWindowAggregate,
+  BatchExecLocalHashWindowAggregate, BatchExecWindowAggregateBase
+}
+import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule.{
+  buildExpandRowType,
+  createExpandProjects
+}
 import org.apache.flink.table.plan.util.FlinkRelMdUtil
 
+import com.google.common.collect.{ImmutableList, ImmutableSet}
 import org.apache.calcite.rel.SingleRel
 import org.apache.calcite.rel.metadata.RelMdUtil
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.sql.fun.SqlStdOperatorTable.{AND, EQUALS, GREATER_THAN, LESS_THAN}
+import org.apache.calcite.util.ImmutableBitSet
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -128,7 +140,6 @@ class FlinkRelMdUtilTest {
   def testSplitPredicateOnRank(): Unit = {
     val wrapper = new RelMdHandlerTestWrapper()
     val relBuilder = wrapper.relBuilder
-    val rexBuilder = relBuilder.getRexBuilder
     val rank = wrapper.getFlinkLogicalRank
     relBuilder.push(rank)
 
@@ -146,8 +157,8 @@ class FlinkRelMdUtilTest {
 
     // age > 23 and rk < 2
     val pred3 = relBuilder.and(
-        relBuilder.call(GREATER_THAN, relBuilder.field(2), relBuilder.literal(23)),
-        relBuilder.call(LESS_THAN, relBuilder.field(4), relBuilder.literal(2)))
+      relBuilder.call(GREATER_THAN, relBuilder.field(2), relBuilder.literal(23)),
+      relBuilder.call(LESS_THAN, relBuilder.field(4), relBuilder.literal(2)))
     val (nonRankPred3, rankPred3) = FlinkRelMdUtil.splitPredicateOnRank(rank, pred3)
     assertEquals(
       relBuilder.call(GREATER_THAN, relBuilder.field(2), relBuilder.literal(23)).toString,
@@ -155,6 +166,51 @@ class FlinkRelMdUtilTest {
     assertEquals(
       relBuilder.call(LESS_THAN, relBuilder.field(4), relBuilder.literal(2)).toString,
       rankPred3.get.toString)
+  }
+
+  @Test
+  def testGetInputRefIndicesFromExpand(): Unit = {
+    val wrapper = new RelMdHandlerTestWrapper()
+    val relBuilder = wrapper.relBuilder
+    val ts = relBuilder.scan("student").build()
+    val expandOutputType = buildExpandRowType(
+      ts.getCluster.getTypeFactory, ts.getRowType, Array.empty[Integer])
+    val expandProjects1 = createExpandProjects(
+      ts.getCluster.getRexBuilder,
+      ts.getRowType,
+      expandOutputType,
+      ImmutableBitSet.of(0, 1, 2, 3),
+      ImmutableList.of(
+        ImmutableBitSet.of(0),
+        ImmutableBitSet.of(1),
+        ImmutableBitSet.of(2),
+        ImmutableBitSet.of(3)
+      ), Array.empty[Integer])
+    val expand1 = new FlinkLogicalExpand(
+      ts.getCluster, ts.getTraitSet, ts, expandOutputType, expandProjects1, 4)
+    assertEquals(ImmutableSet.of(0, -1), FlinkRelMdUtil.getInputRefIndices(0, expand1))
+    assertEquals(ImmutableSet.of(1, -1), FlinkRelMdUtil.getInputRefIndices(1, expand1))
+    assertEquals(ImmutableSet.of(2, -1), FlinkRelMdUtil.getInputRefIndices(2, expand1))
+    assertEquals(ImmutableSet.of(3, -1), FlinkRelMdUtil.getInputRefIndices(3, expand1))
+    assertEquals(ImmutableSet.of(-1), FlinkRelMdUtil.getInputRefIndices(4, expand1))
+
+    val expandProjects2 = createExpandProjects(
+      ts.getCluster.getRexBuilder,
+      ts.getRowType,
+      expandOutputType,
+      ImmutableBitSet.of(0, 1, 2, 3),
+      ImmutableList.of(
+        ImmutableBitSet.of(0, 1),
+        ImmutableBitSet.of(0, 1, 2),
+        ImmutableBitSet.of(0, 2, 3)
+      ), Array.empty[Integer])
+    val expand2 = new FlinkLogicalExpand(
+      ts.getCluster, ts.getTraitSet, ts, expandOutputType, expandProjects2, 4)
+    assertEquals(ImmutableSet.of(0), FlinkRelMdUtil.getInputRefIndices(0, expand2))
+    assertEquals(ImmutableSet.of(1, -1), FlinkRelMdUtil.getInputRefIndices(1, expand2))
+    assertEquals(ImmutableSet.of(2, -1), FlinkRelMdUtil.getInputRefIndices(2, expand2))
+    assertEquals(ImmutableSet.of(3, -1), FlinkRelMdUtil.getInputRefIndices(3, expand2))
+    assertEquals(ImmutableSet.of(-1), FlinkRelMdUtil.getInputRefIndices(4, expand2))
   }
 
   private class RelMdHandlerTestWrapper extends FlinkRelMdHandlerTestBase {

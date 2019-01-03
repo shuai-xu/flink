@@ -17,6 +17,8 @@
 
 package org.apache.flink.table.plan.rules.logical;
 
+import org.apache.flink.table.functions.sql.internal.SqlAuxiliaryGroupAggFunction$;
+
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.RelNode;
@@ -36,13 +38,14 @@ import java.util.List;
 /**
  * This rule is copied from Calcite's {@link org.apache.calcite.rel.rules.AggregateRemoveRule}.
  * Modification:
- * - supports SUM, MIN, MAX aggregate functions with no filterArgs
+ * - only matches aggregate with with SIMPLE group and non-empty group
+ * - supports SUM, MIN, MAX, AUXILIARY_GROUP aggregate functions with no filterArgs
  */
 
 /**
  * Planner rule that removes
  * a {@link org.apache.calcite.rel.core.Aggregate}
- * if its aggregate functions are SUM, MIN, MAX with no filterArgs,
+ * if its aggregate functions are SUM, MIN, MAX, AUXILIARY_GROUP with no filterArgs,
  * and the underlying relational expression is already distinct.
  */
 public class FlinkAggregateRemoveRule extends RelOptRule {
@@ -78,7 +81,8 @@ public class FlinkAggregateRemoveRule extends RelOptRule {
 	public boolean matches(RelOptRuleCall call) {
 		final Aggregate aggregate = call.rel(0);
 		final RelNode input = call.rel(1);
-		if (aggregate.indicator) {
+		if (aggregate.getGroupCount() == 0 || aggregate.indicator ||
+				aggregate.getGroupType() != Aggregate.Group.SIMPLE) {
 			return false;
 		}
 		for (AggregateCall aggCall : aggregate.getAggCallList()) {
@@ -86,7 +90,8 @@ public class FlinkAggregateRemoveRule extends RelOptRule {
 			// TODO supports more AggregateCalls
 			boolean isAllowAggCall = aggCallKind == SqlKind.SUM ||
 					aggCallKind == SqlKind.MIN ||
-					aggCallKind == SqlKind.MAX;
+					aggCallKind == SqlKind.MAX ||
+					aggCall.getAggregation() instanceof SqlAuxiliaryGroupAggFunction$;
 			if (!isAllowAggCall || aggCall.filterArg >= 0 || aggCall.getArgList().size() != 1) {
 				return false;
 			}

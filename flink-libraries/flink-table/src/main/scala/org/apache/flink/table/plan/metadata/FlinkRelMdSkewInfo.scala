@@ -211,7 +211,7 @@ class FlinkRelMdSkewInfo private extends MetadataHandler[SkewInfoMeta] {
   def getSkewInfo(rel: Expand, mq: RelMetadataQuery): SkewInfoInternal = {
     val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
     val skewInfoOfInput = fmq.getSkewInfo(rel.getInput)
-    val skewInfoOfInputByIndice = if (skewInfoOfInput != null) {
+    val skewInfoOfInputByIndex = if (skewInfoOfInput != null) {
       skewInfoOfInput.skewInfo
     } else {
       new mutable.HashMap[Int, Seq[AnyRef]]
@@ -226,7 +226,7 @@ class FlinkRelMdSkewInfo private extends MetadataHandler[SkewInfoMeta] {
               case literal: RexLiteral if literal.isNull => candidate.add(null)
               case inputRef: RexInputRef =>
                 val refIndex = inputRef.getIndex
-                skewInfoOfInputByIndice.get(refIndex) match {
+                skewInfoOfInputByIndex.get(refIndex) match {
                   case Some(skewValue) => candidate.addAll(skewValue)
                   case _ => // ignore
                 }

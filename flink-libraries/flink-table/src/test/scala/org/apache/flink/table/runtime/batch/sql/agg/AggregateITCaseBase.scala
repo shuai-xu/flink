@@ -27,13 +27,11 @@ import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.{binaryRow, row}
 import org.apache.flink.table.runtime.batch.sql.TestData._
-import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.types.Row
 
 import org.junit.{Before, Test}
 
-import scala.collection.JavaConverters._
 import scala.collection.Seq
 
 /**
@@ -169,7 +167,7 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
     checkResult(
       "SELECT sum(d), avg(d), count(g), min(e) FROM Table5",
       Seq(
-        row(55, 55.0/15, 15, 1L)
+        row(55, 55.0 / 15, 15, 1L)
       )
     )
   }
@@ -231,7 +229,7 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
 
   @Test
   def testUV(): Unit = {
-    val data = (0 until 100).map {i =>row("1", "1", s"${i%10}", "1")}.toList
+    val data = (0 until 100).map { i => row("1", "1", s"${i % 10}", "1") }.toList
     val type4 = new RowTypeInfo(
       Types.STRING,
       Types.STRING,
@@ -276,10 +274,10 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
   private var newTableId = 0
 
   def checkQuery[T <: Product : TypeInformation](
-    tableData: Seq[T],
-    sqlQuery: String,
-    expected: Seq[_ <: Product],
-    tableName: String = "t")
+      tableData: Seq[T],
+      sqlQuery: String,
+      expected: Seq[_ <: Product],
+      tableName: String = "t")
   : Unit = {
 
     val toRow = (p: Product) =>
@@ -304,11 +302,14 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
   }
 
   def big(i: Int): java.math.BigDecimal = new java.math.BigDecimal(i)
+
   def big(s: String): java.math.BigDecimal = new java.math.BigDecimal(s)
+
   val (b1, b2, b3) = (big(1), big(2), big(3))
 
   // with default scale for BigDecimal.class
   def bigX(i: Int): java.math.BigDecimal = big(i).setScale(DecimalType.MAX_SCALE)
+
   val (b1x, b2x, b3x) = (bigX(1), bigX(2), bigX(3))
 
   val bN = null: java.math.BigDecimal
@@ -570,7 +571,7 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
   @Test
   def testNullAverage(): Unit = {
     val testData3: Seq[(Integer, Integer)] =
-      Seq((1,null), (2, 2))
+      Seq((1, null), (2, 2))
 
     checkQuery(
       testData3,
@@ -580,18 +581,18 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
     checkQuery(
       testData3,
       "select avg(f1), count(distinct f1) from TableName",
-      Seq((2.0,1L))
+      Seq((2.0, 1L))
     )
     checkQuery(
       testData3,
       "select avg(f1), sum(distinct f1) from TableName",
-      Seq((2.0,2))
+      Seq((2.0, 2))
     )
   }
 
   @Test
   def testZeroAvg(): Unit = {
-    val emptyTable = Seq[(Int,Int)]()
+    val emptyTable = Seq[(Int, Int)]()
 
     checkQuery(
       emptyTable,
@@ -601,7 +602,7 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
     checkQuery(
       emptyTable,
       "select avg(f0), sum(distinct f0) from TableName",
-      Seq((null,null))
+      Seq((null, null))
     )
   }
 
@@ -617,7 +618,7 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
   @Test
   def testNullCount(): Unit = {
     val testData3: Seq[(Integer, Integer)] =
-      Seq((1,null), (2, 2))
+      Seq((1, null), (2, 2))
 
     checkQuery(
       testData3,
@@ -676,7 +677,7 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
 
   @Test
   def testZeroCount(): Unit = {
-    val emptyTable = Seq[(Int,Int)]()
+    val emptyTable = Seq[(Int, Int)]()
     checkQuery(
       emptyTable,
       "select count(f0), sum(distinct f0) from TableName",
@@ -720,7 +721,7 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
 
   @Test
   def testZeroStdDev(): Unit = {
-    val emptyTable = Seq[(Int,Int)]()
+    val emptyTable = Seq[(Int, Int)]()
     checkQuery(
       emptyTable,
       "select stddev_pop(f0), stddev_samp(f0) from TableName",
@@ -730,7 +731,7 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
 
   @Test
   def testZeroSum(): Unit = {
-    val emptyTable = Seq[(Int,Int)]()
+    val emptyTable = Seq[(Int, Int)]()
     checkQuery(
       emptyTable,
       "select sum(f0) from TableName",
@@ -740,7 +741,7 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
 
   @Test
   def testZeroSumDistinct(): Unit = {
-    val emptyTable = Seq[(Int,Int)]()
+    val emptyTable = Seq[(Int, Int)]()
     checkQuery(
       emptyTable,
       "select sum(distinct f0) from TableName",
@@ -840,36 +841,6 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
       "SELECT a FROM (SELECT b, MAX(a) AS a, COUNT(*), MAX(c) FROM SmallTable3 GROUP BY b) t",
       Seq(row(1), row(3))
     )
-  }
-
-  @Test
-  def testAggregateRemove(): Unit = {
-    tEnv.registerTableSource("MyTable",
-      CommonTestData.getSmall3Source(Array("a", "b", "c")), Set(Set("a").asJava).asJava)
-    checkResult(
-      "SELECT a, b + 1, c, s FROM (" +
-        "SELECT a, MIN(b) AS b, SUM(b) AS s, MAX(c) AS c FROM MyTable GROUP BY a)",
-      Seq(
-        row(1, 2L, "Hi", 1L),
-        row(2, 3L, "Hello", 2L),
-        row(3, 3L, "Hello world", 2L)
-      ))
-
-    checkResult("SELECT a, b FROM MyTable GROUP BY a, b",
-      Seq(row(1, 1L), row(2, 2L), row(3, 2L)))
-
-    checkResult(
-      "SELECT MAX(a), SUM(b), MIN(c) FROM (VALUES (1, 2, 3)) T(a, b, c)",
-      Seq(row(1, 2, 3))
-    )
-
-    checkQuery(
-      Seq[(Integer, Integer)]((null.asInstanceOf[Integer], null.asInstanceOf[Integer])),
-      "SELECT f0, SUM(f1), MAX(f1) FROM " +
-        "(SELECT f0, MAX(f1) AS f1 FROM TableName GROUP BY f0) t GROUP BY f0",
-      Seq((null, null, null))
-    )
-
   }
 
 }

@@ -46,7 +46,7 @@ object MetadataTestUtil {
       .configBuilder()
       .setLex(Lex.JAVA)
       .build()
-    val sqlOperatorTable = BuiltInFunctionCatalog.withBuiltIns.getSqlOperatorTable
+    val sqlOperatorTable = BuiltInFunctionCatalog.withBuiltIns().getSqlOperatorTable
     val config = new TableConfig
     Frameworks
       .newConfigBuilder
@@ -89,7 +89,7 @@ object MetadataTestUtil {
       override def getTableStats: TableStats = TableStats(100L, colStatsOfT1)
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = tableSchema
+      override def getTableSchema: TableSchema = tableSchema
     }
     rootSchema.add("t1", new TestTableSourceTable(ts1))
 
@@ -104,7 +104,7 @@ object MetadataTestUtil {
       override def getTableStats: TableStats = TableStats(512 * 512 * 512L, colStatsOfBigT1)
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = tableSchema
+      override def getTableSchema: TableSchema = tableSchema
     }
     rootSchema.add("bigT1", new TestTableSourceTable(tsBigT1))
 
@@ -119,7 +119,7 @@ object MetadataTestUtil {
       override def getTableStats: TableStats = TableStats(50L, colStatsOfT2)
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
+      override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
     }
     val uniqueKeysOfT2: util.Set[util.Set[String]] = ImmutableSet.of()
     rootSchema.add("t2",
@@ -132,7 +132,7 @@ object MetadataTestUtil {
       override def getTableStats: TableStats = TableStats(100L)
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
+      override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
     }
     val uniqueKeysOfT3 = ImmutableSet.of(ImmutableSet.of("id"))
     rootSchema.add("t3", new TestTableSourceTable(ts3, FlinkStatistic.of(uniqueKeysOfT3)))
@@ -144,7 +144,7 @@ object MetadataTestUtil {
       override def getTableStats: TableStats = TableStats(100L)
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = tableSchema
+      override def getTableSchema: TableSchema = tableSchema
     }
     rootSchema.add("t4", new TestTableSourceTable(ts4))
 
@@ -159,7 +159,7 @@ object MetadataTestUtil {
       override def getTableStats: TableStats = TableStats(100L, colStatsOfT5)
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = tableSchema
+      override def getTableSchema: TableSchema = tableSchema
     }
     rootSchema.add("t5", new TestTableSourceTable(ts5))
 
@@ -174,7 +174,7 @@ object MetadataTestUtil {
       override def getTableStats: TableStats = TableStats(80L, colStatsOfT6)
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = tableSchema
+      override def getTableSchema: TableSchema = tableSchema
     }
     rootSchema.add("t6", new TestTableSourceTable(ts6))
 
@@ -188,7 +188,7 @@ object MetadataTestUtil {
       override def getTableStats: TableStats = TableStats(100L)
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
+      override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
     }
     val uniqueKeysOfT7 = ImmutableSet.of(ImmutableSet.of("a", "b"), ImmutableSet.of("a"))
     rootSchema.add("t7", new TestTableSourceTable(ts7, FlinkStatistic.of(uniqueKeysOfT7)))
@@ -207,7 +207,7 @@ object MetadataTestUtil {
       override def getTableStats: TableStats = TableStats(80L, colStatsOfT8)
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
+      override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
     }
     rootSchema.add("t8", new TestTableSourceTable(ts8))
 
@@ -232,7 +232,7 @@ object MetadataTestUtil {
       override def getTableStats: TableStats = TableStats(50L, colStatsOfT3)
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = tableSchemaOfTStudent
+      override def getTableSchema: TableSchema = tableSchemaOfTStudent
     }
     val uniqueKeysOfTStudent = ImmutableSet.of(ImmutableSet.of("id"))
     rootSchema.add("student",
@@ -259,7 +259,7 @@ object MetadataTestUtil {
           "c" -> ColumnStats(48L, 0L, 8D, 8, 50, 0)))
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = timeTableSchema
+      override def getTableSchema: TableSchema = timeTableSchema
     }
     rootSchema.add("temporalTable", new TestTableSourceTable(timeSource))
 
@@ -285,7 +285,7 @@ object MetadataTestUtil {
           "c" -> ColumnStats(48L, 0L, 4D, 4, 50, 0)))
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = timeTableSchema1
+      override def getTableSchema: TableSchema = timeTableSchema1
     }
     rootSchema.add("temporalTable1",
       new TestTableSourceTable(timeSourceWithUniqueKeys, FlinkStatistic.of(uniqueKeysOfTimeSource)))
@@ -303,7 +303,7 @@ object MetadataTestUtil {
           "c" -> ColumnStats(48L, 0L, 8D, 8, 50, 0)))
 
       /** Returns the table schema of the table source */
-      override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
+      override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
     }
     rootSchema.add("bigTemporalTable", new TestTableSourceTable(bigTimeSource))
     rootSchema

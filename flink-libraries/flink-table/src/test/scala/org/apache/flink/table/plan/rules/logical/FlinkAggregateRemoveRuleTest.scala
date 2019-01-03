@@ -21,11 +21,14 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalAggregate, FlinkLogicalCalc, FlinkLogicalNativeTableScan, FlinkLogicalSink, FlinkLogicalTableSourceScan, FlinkLogicalValues}
+import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalAggregate, FlinkLogicalCalc, FlinkLogicalExpand, FlinkLogicalNativeTableScan, FlinkLogicalSemiJoin, FlinkLogicalSink, FlinkLogicalTableSourceScan, FlinkLogicalValues}
+import org.apache.flink.table.plan.optimize.FlinkBatchPrograms.SUBQUERY_REWRITE
 import org.apache.flink.table.plan.optimize._
+import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 import org.apache.flink.table.util.{NullableBatchExecTableTestUtil, TableTestBatchExecBase}
 
-import org.apache.calcite.rel.rules.{FilterCalcMergeRule, FilterToCalcRule, ProjectCalcMergeRule, ProjectToCalcRule}
+import org.apache.calcite.plan.hep.HepMatchOrder
+import org.apache.calcite.rel.rules.{FilterCalcMergeRule, FilterToCalcRule, ProjectCalcMergeRule, ProjectToCalcRule, ReduceExpressionsRule}
 import org.apache.calcite.tools.RuleSets
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -39,20 +42,37 @@ class FlinkAggregateRemoveRuleTest(fieldsNullable: Boolean) extends TableTestBat
   def setup(): Unit = {
     val programs = new FlinkChainedPrograms[BatchOptimizeContext]()
     programs.addLast(
+      // rewrite sub-queries to joins
+      SUBQUERY_REWRITE,
+      FlinkGroupProgramBuilder.newBuilder[BatchOptimizeContext]
+        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkBatchExecRuleSets.SEMI_JOIN_RULES)
+          .build(), "rewrite sub-queries to semi-join")
+        .build())
+
+    programs.addLast(
       "rules",
       // use volcano planner because
       // rel.getCluster.getPlanner is volcano planner used in FlinkAggregateRemoveRule
       FlinkVolcanoProgramBuilder.newBuilder
         .add(RuleSets.ofList(
+          ReduceExpressionsRule.FILTER_INSTANCE,
+          FlinkAggregateExpandDistinctAggregatesRule.INSTANCE,
           FilterCalcMergeRule.INSTANCE,
           ProjectCalcMergeRule.INSTANCE,
           FilterToCalcRule.INSTANCE,
           ProjectToCalcRule.INSTANCE,
           FlinkCalcMergeRule.INSTANCE,
           FlinkAggregateRemoveRule.INSTANCE,
+          DecomposeGroupingSetsRule.INSTANCE,
+          AggregateReduceGroupingRule.INSTANCE,
           FlinkLogicalAggregate.BATCH_CONVERTER,
           FlinkLogicalCalc.CONVERTER,
           FlinkLogicalValues.CONVERTER,
+          FlinkLogicalSemiJoin.CONVERTER,
+          FlinkLogicalExpand.CONVERTER,
           FlinkLogicalTableSourceScan.CONVERTER,
           FlinkLogicalNativeTableScan.CONVERTER,
           FlinkLogicalSink.CONVERTER))
@@ -64,6 +84,7 @@ class FlinkAggregateRemoveRuleTest(fieldsNullable: Boolean) extends TableTestBat
 
     util.addTable[(Int, Int, String)]("MyTable1", 'a, 'b, 'c)
     util.addTable[(Int, Int, String)]("MyTable2", Set(Set("a")), 'a, 'b, 'c)
+    util.addTable[(Int, Int, String, String)]("MyTable3", Set(Set("a")), 'a, 'b, 'c, 'd)
   }
 
   @Test
@@ -84,12 +105,6 @@ class FlinkAggregateRemoveRuleTest(fieldsNullable: Boolean) extends TableTestBat
   }
 
   @Test
-  def testAggRemove_WithDistinct(): Unit = {
-    util.verifyPlan(
-      "SELECT a, SUM(DISTINCT b), MAX(DISTINCT b), MIN(DISTINCT c) FROM MyTable2 GROUP BY a")
-  }
-
-  @Test
   def testAggRemove_WithoutGroupBy1(): Unit = {
     // can not remove agg
     util.verifyPlan("SELECT MAX(a), SUM(b), MIN(c) FROM MyTable2")
@@ -98,6 +113,18 @@ class FlinkAggregateRemoveRuleTest(fieldsNullable: Boolean) extends TableTestBat
   @Test
   def testAggRemove_WithoutGroupBy2(): Unit = {
     util.verifyPlan("SELECT MAX(a), SUM(b), MIN(c) FROM (VALUES (1, 2, 3)) T(a, b, c)")
+  }
+
+  @Test
+  def testAggRemove_WithoutGroupBy3(): Unit = {
+    // can not remove agg
+    util.verifyPlan("SELECT * FROM MyTable2 WHERE EXISTS (SELECT SUM(a) FROM MyTable1 WHERE 1=2)")
+  }
+
+  @Test
+  def testAggRemove_WithoutGroupBy4(): Unit = {
+    // can not remove agg
+    util.verifyPlan("SELECT SUM(a) FROM (SELECT a FROM MyTable2 WHERE 1=2)")
   }
 
   @Test
@@ -121,6 +148,81 @@ class FlinkAggregateRemoveRuleTest(fieldsNullable: Boolean) extends TableTestBat
   def testAggRemove_CountStar(): Unit = {
     // can not remove agg
     util.verifyPlan("SELECT a, COUNT(*) FROM MyTable2 GROUP BY a")
+  }
+
+  @Test
+  def testAggRemove_GroupSets1(): Unit = {
+    // a is unique
+    util.verifyPlan("SELECT a, SUM(b) AS s FROM MyTable3 GROUP BY GROUPING SETS((a, c), (a, d))")
+  }
+
+  @Test
+  def testAggRemove_GroupSets2(): Unit = {
+    // can not remove agg
+    util.verifyPlan("SELECT a, SUM(b) AS s FROM MyTable3 GROUP BY GROUPING SETS((a, c), (a), ())")
+  }
+
+  @Test
+  def testAggRemove_Rollup(): Unit = {
+    // can not remove agg
+    util.verifyPlan("SELECT a, SUM(b) AS s FROM MyTable3 GROUP BY ROLLUP(a, c, d)")
+  }
+
+  @Test
+  def testAggRemove_Cube(): Unit = {
+    // can not remove agg
+    util.verifyPlan("SELECT a, SUM(b) AS s FROM MyTable3 GROUP BY CUBE(a, c, d)")
+  }
+
+  @Test
+  def testAggRemove_SingleDistinctAgg1(): Unit = {
+    util.verifyPlan("SELECT a, COUNT(DISTINCT c) FROM MyTable2 GROUP BY a")
+  }
+
+  @Test
+  def testAggRemove_SingleDistinctAgg2(): Unit = {
+    util.verifyPlan("SELECT a, COUNT(DISTINCT c) FROM MyTable2 GROUP BY a, b")
+  }
+
+  @Test
+  def testAggRemove_SingleDistinctAgg_WithNonDistinctAgg1(): Unit = {
+    util.verifyPlan("SELECT a, COUNT(DISTINCT c), SUM(c) FROM MyTable2 GROUP BY a")
+  }
+
+  @Test
+  def testAggRemove_SingleDistinctAgg_WithNonDistinctAgg2(): Unit = {
+    util.verifyPlan("SELECT a, COUNT(DISTINCT c), SUM(c) FROM MyTable2 GROUP BY a, b")
+  }
+
+  @Test
+  def testAggRemove_SingleDistinctAgg_WithNonDistinctAgg3(): Unit = {
+    util.verifyPlan("SELECT a, COUNT(DISTINCT c), SUM(b) FROM MyTable3 GROUP BY a")
+  }
+
+  @Test
+  def testAggRemove_SingleDistinctAgg_WithNonDistinctAgg4(): Unit = {
+    util.verifyPlan("SELECT a, COUNT(DISTINCT c), SUM(b) FROM MyTable3 GROUP BY a, d")
+  }
+
+  @Test
+  def testAggRemove_MultiDistinctAggs1(): Unit = {
+    util.verifyPlan("SELECT a, COUNT(DISTINCT b), SUM(DISTINCT b) FROM MyTable2 GROUP BY a")
+  }
+
+  @Test
+  def testAggRemove_MultiDistinctAggs2(): Unit = {
+    util.verifyPlan("SELECT a, COUNT(DISTINCT c), SUM(DISTINCT b) FROM MyTable3 GROUP BY a, d")
+  }
+
+  @Test
+  def testAggRemove_MultiDistinctAggs3(): Unit = {
+    util.verifyPlan(
+      "SELECT a, SUM(DISTINCT b), MAX(DISTINCT b), MIN(DISTINCT c) FROM MyTable2 GROUP BY a")
+  }
+
+  @Test
+  def testAggRemove_MultiDistinctAggs_WithNonDistinctAgg1(): Unit = {
+    util.verifyPlan("SELECT a, COUNT(DISTINCT c), SUM(b) FROM MyTable3 GROUP BY a, d")
   }
 
 }

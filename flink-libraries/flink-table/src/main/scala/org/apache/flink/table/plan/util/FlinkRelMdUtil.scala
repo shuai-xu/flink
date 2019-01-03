@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.util
 
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
-import org.apache.flink.table.plan.nodes.calcite.{LogicalRank, LogicalWindowAggregate, Rank}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalRank, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalRank, FlinkLogicalWindowAggregate}
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRank
@@ -34,7 +34,6 @@ import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.util.{ImmutableBitSet, NumberUtil}
-
 import com.google.common.collect.ImmutableList
 
 import java.lang.Double
@@ -710,6 +709,21 @@ object FlinkRelMdUtil {
       selectivity: Double): Double = {
     val ndv = Math.min(distinctRowCount, rowCount)
     (1 - Math.pow(1 - selectivity, rowCount / ndv)) * ndv
+  }
+
+  /**
+    * Returns [[RexInputRef]] index set of projects corresponding to the given column index.
+    * The index will be set as -1 if the given column in project is not a [[RexInputRef]].
+    */
+  def getInputRefIndices(index: Int, expand: Expand): util.Set[Int] = {
+    val inputRefs = new util.HashSet[Int]()
+    for (project <- expand.projects) {
+      project.get(index) match {
+        case inputRef: RexInputRef => inputRefs.add(inputRef.getIndex)
+        case _ => inputRefs.add(-1)
+      }
+    }
+    inputRefs
   }
 
 }

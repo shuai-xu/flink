@@ -26,8 +26,8 @@ import org.apache.flink.table.plan.nodes.logical._
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCorrelate, BatchExecGroupAggregateBase, BatchExecOverAggregate, BatchExecWindowAggregateBase}
 import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
-import org.apache.flink.table.sources.{DimensionTableSource, IndexKey, TableSource}
 import org.apache.flink.table.plan.util.FlinkRelMdUtil
+import org.apache.flink.table.sources.{DimensionTableSource, IndexKey, TableSource}
 
 import com.google.common.collect.ImmutableSet
 import org.apache.calcite.plan.RelOptTable
@@ -93,7 +93,47 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
   def getUniqueKeys(
       rel: Expand,
       mq: RelMetadataQuery,
-      ignoreNulls: Boolean): util.Set[ImmutableBitSet] = mq.getUniqueKeys(rel.getInput, ignoreNulls)
+      ignoreNulls: Boolean): util.Set[ImmutableBitSet] = {
+    // mapping input column index to output index for non-null value columns
+    val mapInputToOutput = new util.HashMap[Int, Int]()
+    (0 until rel.getRowType.getFieldCount).filter(_ != rel.expandIdIndex).foreach { column =>
+      val inputRefs = FlinkRelMdUtil.getInputRefIndices(column, rel)
+      // expand columns corresponding to a given index should be same input ref.
+      if (inputRefs.size() == 1 && inputRefs.head >= 0) {
+        mapInputToOutput.put(inputRefs.head, column)
+      }
+    }
+    if (mapInputToOutput.isEmpty) {
+      return null
+    }
+
+    val inputUniqueKeys = mq.getUniqueKeys(rel.getInput, ignoreNulls)
+    if (inputUniqueKeys == null || inputUniqueKeys.isEmpty) {
+      return inputUniqueKeys
+    }
+
+    // values of expand_is are unique in rows expanded from a row,
+    // and a input unique key combined with expand_id are also unique
+    val outputUniqueKeys = new util.HashSet[ImmutableBitSet]()
+    inputUniqueKeys.foreach { uniqueKey =>
+      val outputUniqueKeyBuilder = ImmutableBitSet.builder()
+      // a input unique key can be output only its values are all in `mapInputToOutput`
+      val canOutput = uniqueKey.toList.forall { key =>
+        if (mapInputToOutput.contains(key)) {
+          outputUniqueKeyBuilder.set(mapInputToOutput.get(key))
+          true
+        } else {
+          false
+        }
+      }
+      if (canOutput) {
+        // unique key from input combined with expand id are unique
+        outputUniqueKeyBuilder.set(rel.expandIdIndex)
+        outputUniqueKeys.add(outputUniqueKeyBuilder.build())
+      }
+    }
+    if (outputUniqueKeys.isEmpty) null else outputUniqueKeys
+  }
 
   def getUniqueKeys(
       rel: Filter,
@@ -135,6 +175,7 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
     // Further more, the unique bitset coming from the child needs
     val projUniqueKeySet = mutable.HashSet[ImmutableBitSet]()
     val mapInToOutPos = mutable.HashMap[Int, mutable.ArrayBuffer[Int]]()
+
     def appendMapInToOutPos(inIndex: Int, outIndex: Int): Unit = {
       if (mapInToOutPos.contains(inIndex)) {
         mapInToOutPos(inIndex) += outIndex
@@ -163,7 +204,7 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
             }
           //rename
           case a: RexCall if a.getKind.equals(SqlKind.AS) &&
-              a.getOperands.get(0).isInstanceOf[RexInputRef] =>
+            a.getOperands.get(0).isInstanceOf[RexInputRef] =>
             appendMapInToOutPos(a.getOperands.get(0).asInstanceOf[RexInputRef].getIndex, i)
           case _ => // ignore
         }
@@ -268,17 +309,17 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
     // add the unique keys from left if the left hand side is not null
     // generating
     if (rightUnique != null
-        && rightUnique
-        && (leftUniqueKeys != null)
-        && !joinRelType.generatesNullsOnLeft) {
+      && rightUnique
+      && (leftUniqueKeys != null)
+      && !joinRelType.generatesNullsOnLeft) {
       retSet.addAll(leftUniqueKeys)
     }
 
     // same as above except left and right are reversed
     if (leftUnique != null
-        && leftUnique
-        && (rightSet != null)
-        && !joinRelType.generatesNullsOnRight) {
+      && leftUnique
+      && (rightSet != null)
+      && !joinRelType.generatesNullsOnRight) {
       retSet.addAll(rightSet)
     }
     retSet
@@ -359,7 +400,7 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
   def getUniqueKeys(
       rel: StreamExecLocalGroupAggregate,
       mq: RelMetadataQuery,
-      ignoreNulls: Boolean): util.Set[ImmutableBitSet] =  null
+      ignoreNulls: Boolean): util.Set[ImmutableBitSet] = null
 
   private def getGroupWindowUniqueKeys(
       fieldCount: Int,
@@ -472,9 +513,9 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
   }
 
   def getUniqueKeys(
-    rel: StreamExecLastRow,
-    mq: RelMetadataQuery,
-    ignoreNulls: Boolean): util.Set[ImmutableBitSet] = {
+      rel: StreamExecLastRow,
+      mq: RelMetadataQuery,
+      ignoreNulls: Boolean): util.Set[ImmutableBitSet] = {
     ImmutableSet.of(ImmutableBitSet.of(rel.getUniqueKeys.map(Integer.valueOf(_)).toIterable.asJava))
   }
 
