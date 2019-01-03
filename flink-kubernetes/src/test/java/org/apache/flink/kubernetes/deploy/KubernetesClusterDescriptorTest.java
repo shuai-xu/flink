@@ -64,7 +64,9 @@ public class KubernetesClusterDescriptorTest {
 	private static final String CONF_DIR_IN_IMAGE = "/flink/conf";
 	private static final String JM_CONTAINER_NAME = "flink-jm";
 	private static final String CLUSTER_ID = "flink-cluster-1";
+	private static final String SERVICE_ACCOUNT = "flink";
 	private KubernetesClient kubernetesClient;
+
 
 	@Rule
 	public KubernetesServer server = new KubernetesServer(true, true);
@@ -78,6 +80,7 @@ public class KubernetesClusterDescriptorTest {
 		flinkConf.setString(KubernetesConfigOptions.JOB_MANAGER_CONTAINER_NAME, JM_CONTAINER_NAME);
 		flinkConf.setString(CoreOptions.FLINK_JM_JVM_OPTIONS, JAVA_OPT);
 		flinkConf.setString(KubernetesConfigOptions.CONF_DIR, CONF_DIR_IN_IMAGE);
+		flinkConf.setString(KubernetesConfigOptions.JOB_MANAGER_SERVICE_ACCOUNT, SERVICE_ACCOUNT);
 
 		kubernetesClient = server.getClient();
 		kubernetesClusterDescriptor = new KubernetesClusterDescriptor(flinkConf, "", kubernetesClient);
@@ -130,6 +133,7 @@ public class KubernetesClusterDescriptorTest {
 		assertEquals(2, rc.getSpec().getSelector().size());
 		assertEquals(JM_CONTAINER_NAME, rc.getSpec().getTemplate().getSpec().getContainers().get(0).getName());
 		assertEquals(FLINK_CONF_VOLUME, rc.getSpec().getTemplate().getSpec().getVolumes().get(0).getName());
+		assertEquals(SERVICE_ACCOUNT, rc.getSpec().getTemplate().getSpec().getServiceAccountName());
 
 		// check service
 		Service service = kubernetesClient.services().withName(CLUSTER_ID + SERVICE_NAME_SUFFIX).get();

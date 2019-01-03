@@ -254,6 +254,7 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 			Map<String, String> labels, Container container, ConfigMap configMap) {
 		String jobManagerRcName = clusterId.toString() + JOBMANAGER_RC_NAME_SUFFIX;
 		String configMapName = clusterId.toString() + JOB_MANAGER_CONFIG_MAP_SUFFIX;
+		String serviceAccount = flinkConfiguration.getString(KubernetesConfigOptions.JOB_MANAGER_SERVICE_ACCOUNT);
 		List<KeyToPath> configMapItems = configMap.getData().keySet().stream()
 			.map(e -> new KeyToPath(e, null, e)).collect(Collectors.toList());
 		return new ReplicationControllerBuilder()
@@ -268,6 +269,7 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 						.withLabels(labels)
 						.endMetadata()
 					.editOrNewSpec()
+						.withServiceAccountName(serviceAccount)
 						.addToContainers(container)
 						.addNewVolume()
 							.withName(FLINK_CONF_VOLUME)

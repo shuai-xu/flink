@@ -62,7 +62,9 @@ Again, use `kubectl` to delete the cluster:
 
 ## Run Flink Natively On Kubernetes
 
-**Running Flink natively on kubernetes is an experimental feature. There may be behavioral changes of configuration and cli arguments.**
+<div class="alert alert-warning">
+Running Flink natively on kubernetes is an experimental feature. There may be behavioral changes of configuration and cli arguments.
+</div>
 
 ### Requirements
 
@@ -189,6 +191,33 @@ Users could use the following command to retrieve logs of Job Manager and Task M
 kubectl logs pod/<PodName>
 {% endhighlight %}
 
+### Kubernetes concepts
+
+#### NameSpaces
+
+[Namespaces in Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/) are a way to divide cluster resources between multiple users (via resource quota). It is similar to queue concept in Yarn cluster. Flink on Kubernetes can use namespaces to launch Flink clusters. The namespace could be specified by `-ns` argument when starting a Flink cluster.
+
+[ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) provides constraints that limit aggregate resource consumption per namespace. It can limit the quantity of objects that can be created in a namespace by type, as well as the total amount of compute resources that may be consumed by resources in that project.
+
+#### RBAC
+
+Role-based access control ([RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)) is a method of regulating access to compute or network resources based on the roles of individual users within an enterprise. So users can configure RBAC roles and service accounts used by Flink JobManager to access the Kubernetes API server within the Kubernetes cluster. 
+
+Every namespace will have a default service account. However, the `default` service account may not have the permission to create or delete pods within the Kubernetes cluster. So users may need to specify another service account that has the right role binded. The configuration option `kubernetes.jobmanager.service-account` could be used to set the service account.
+Use the following command to make the JobManager pod use the `flink` service account to create and delete TaskManager pods.
+
+{% highlight bash %}
+-D kubernetes.jobmanager.service-account=flink
+{% endhighlight %}
+
+If the `flink` service account does not exist, use the following command to create a new one and set the role binding.
+
+{% highlight bash %}
+kubectl create serviceaccount flink
+kubectl create clusterrolebinding flink-role-binding --clusterrole=edit --serviceaccount=default:flink --namespace=default
+{% endhighlight %}
+
+Navigate to [RBAC Authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) for more information.
 
 ## Advanced Cluster Deployment
 

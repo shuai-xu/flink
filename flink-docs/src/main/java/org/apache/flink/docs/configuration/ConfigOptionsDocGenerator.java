@@ -57,6 +57,7 @@ public class ConfigOptionsDocGenerator {
 		new OptionsClassLocation("flink-yarn", "org.apache.flink.yarn.configuration"),
 		new OptionsClassLocation("flink-mesos", "org.apache.flink.mesos.configuration"),
 		new OptionsClassLocation("flink-mesos", "org.apache.flink.mesos.runtime.clusterframework"),
+		new OptionsClassLocation("flink-kubernetes", "org.apache.flink.kubernetes.configuration")
 	};
 
 	private static final String CLASS_NAME_GROUP = "className";

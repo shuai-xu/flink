@@ -32,7 +32,8 @@ public class KubernetesConfigOptions {
 	public static final ConfigOption<String> CLUSTER_ID =
 		key("kubernetes.cluster-id")
 		.noDefaultValue()
-		.withDescription("The kubernetes cluster-id. It could be specified by -n or generate a random id.");
+		.withDescription("The custom name for the Flink cluster on Kubernetes. It could be specified by -nm argument. " +
+			"If it's not set, the client will generate a random UUID name");
 
 	public static final ConfigOption<String> CONF_DIR =
 		key("kubernetes.flink.conf.dir")
@@ -58,6 +59,12 @@ public class KubernetesConfigOptions {
 		key("kubernetes.service.external.address")
 			.defaultValue("localhost")
 			.withDescription("The exposed address of kubernetes service to submit job and view dashboard.");
+
+	public static final ConfigOption<String> JOB_MANAGER_SERVICE_ACCOUNT =
+		key("kubernetes.jobmanager.service-account")
+			.defaultValue("default")
+			.withDescription("Service account that is used by jobmanager within kubernetes cluster. " +
+				"The job manager uses this service account when requesting taskmanager pods from the API server.");
 
 	public static final ConfigOption<Double> JOB_MANAGER_CORE =
 		key("kubernetes.jobmanager.cpu")
