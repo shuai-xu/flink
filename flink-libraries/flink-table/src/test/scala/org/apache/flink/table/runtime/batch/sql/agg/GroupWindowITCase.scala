@@ -84,8 +84,6 @@ class GroupWindowITCase extends QueryTest {
       override def getTableSchema = TableSchemaUtil.fromDataType(getReturnType)
     }
     tEnv.registerTableSource("Table3WithTimestamp1", table)
-    tEnv.getConfig.getConf
-        .setDouble(TableConfigOptions.SQL_EXEC_AGG_GROUPS_NDV_RATIO, 0.8D)
     // time unit
     registerCollection("Table6", data6, type6, "a, b, c, d, e, f", nullablesOfData6)
   }

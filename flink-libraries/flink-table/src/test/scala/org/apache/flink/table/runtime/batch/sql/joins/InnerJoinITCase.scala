@@ -271,9 +271,6 @@ class InnerJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITC
       tEnv.alterTableStats("bigData2", Some(TableStats(10000L,
         Map[String, ColumnStats]("c" -> ColumnStats(10000L, 0L, 4D, 4, 10000, 1)).asJava)))
 
-      // let it choose local agg.
-      tEnv.getConfig.getConf.setDouble(TableConfigOptions.SQL_EXEC_AGG_GROUPS_NDV_RATIO, 2.0)
-
       checkResult(
         "SELECT count(*) FROM (SELECT a, b, cnt FROM bigData1, " +
             "(select c, count(*) as cnt from bigData2 group by c) as T2 WHERE a = c)",

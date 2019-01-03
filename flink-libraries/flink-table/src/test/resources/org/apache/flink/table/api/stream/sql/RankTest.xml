@@ -256,7 +256,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[$f3 DESC], r
                   +- StreamExecLocalGroupAggregate(groupBy=[a, b, $f3], select=[a, b, $f3, SUM(c) FILTER $g_1 AS sum$0, COUNT(distinct$0 c) FILTER $g_0 AS count$1, DISTINCT(c) AS distinct$0], retract=[true], accMode=[Acc])
                      +- StreamExecCalc(select=[a, b, c, $f3, =($e, 1) AS $g_1, =($e, 0) AS $g_0], retract=[true], accMode=[Acc])
                         +- StreamExecExpand(projects=[{a, b, c, $f3, 0 AS $e}, {a, b, c, null AS $f3, 1 AS $e}], retract=[true], accMode=[Acc])
-                           +- StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(c), 256) AS $f3], where=[>=(c, 0)], retract=[true], accMode=[Acc])
+                           +- StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(c), 1024) AS $f3], where=[>=(c, 0)], retract=[true], accMode=[Acc])
                               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>

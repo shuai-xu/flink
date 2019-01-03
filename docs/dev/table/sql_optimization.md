@@ -53,9 +53,9 @@ It is possible that the records on stream are skewed, thus some instances of agg
   <img src="{{ site.baseurl }}/fig/local_agg.png" width="70%" height="70%" />
 </div>
 
-#### Distinct-split
+#### Distinct-agg split
 
-Local-Global optimization is effective to eliminate data skew for normal aggregation, such as SUM, COUNT, MAX, MIN. But its performance is not satisfactory when dealing with distinct aggregation. Distinct-Split is thus proposed to solve this problem by splitting a distinct group aggregation into two layers of aggregation automatically(Agg1 and Agg2, the splitting results of built-in aggregate functions are shown in the following table). The records under a hot key are breaked up by adding a bucket number of the distinct
+Local-Global optimization is effective to eliminate data skew for normal aggregation, such as SUM, COUNT, MAX, MIN. But its performance is not satisfactory when dealing with distinct aggregation. Distinct-agg split is thus proposed to solve this problem by splitting a distinct group aggregation into two layers of aggregation automatically(Agg1 and Agg2, the splitting results of built-in aggregate functions are shown in the following table). The records under a hot key are breaked up by adding a bucket number of the distinct
 
 <table class="table table-bordered">
     <thead>
@@ -115,7 +115,7 @@ key as the new primary key together in the inner aggregation. The bucket number 
 --- original SQL ---
 select color, count(distinct id) from T group by color
 
---- Distinct-Split result is Equivalent to the following SQL  ---
+--- Distinct-agg split result is Equivalent to the following SQL  ---
 select color, sum(cnt)
 from (
     select color, count(distinct id) as cnt
@@ -125,14 +125,14 @@ from (
 group by color
 {% endhighlight %}
 
-The execution graph of the upper SQL with Local-Global or Distinct-Split enabled is shown as below. It can be seen that data under a hot key are evenly redistributed and accumulated among operator instances of AGG1, thus hotspot is eliminated effectively.
+The execution graph of the upper SQL with Local-Global or Distinct-agg split enabled is shown as below. It can be seen that data under a hot key are evenly redistributed and accumulated among operator instances of AGG1, thus hotspot is eliminated effectively.
 
 <div style="text-align: center">
   <img src="{{ site.baseurl }}/fig/distinct_split.png" width="70%" height="70%" />
 </div>
 
 #### Incremental Aggregation
-When both Local-Global and Distinct-Split are enabled, a distinct aggregation will be optimized into four aggregations, i.e., Local-Agg1, Global-Agg1, Local-Agg2 and Global-Agg2 (Agg1 and Agg2 are results of splitting a distinct Aggregation). As a result, additional resources and state overhead is introduced. Incremental optimization is proposed to merge Global-Agg1 and Local-Agg2 into a equivalent Incremental-Agg to solve this problem. 
+When both Local-Global and Distinct-agg split are enabled, a distinct aggregation will be optimized into four aggregations, i.e., Local-Agg1, Global-Agg1, Local-Agg2 and Global-Agg2 (Agg1 and Agg2 are results of splitting a distinct Aggregation). As a result, additional resources and state overhead is introduced. Incremental optimization is proposed to merge Global-Agg1 and Local-Agg2 into a equivalent Incremental-Agg to solve this problem. 
 
 Considering the following SQL:
 {% highlight sql %}
@@ -176,14 +176,14 @@ The execution graph with Incremental optimization enabled or disabled is shown a
             <td>Whether to enable Local-Global Aggregation. It is enabled by default with the prerequisite that MiniBatch is enabled firstly. </td>
         </tr>
         <tr>
-            <td><h5>sql.exec.distinct-split.enabled</h5></td>
+            <td><h5>sql.optimizer.data-skew.distinct-agg</h5></td>
             <td style="word-wrap: break-word;">false</td>
-            <td>Whether to enable Distinct-Split Aggregation.</td>
+            <td>Tell the optimizer whether there exists data skew in distinct aggregation.</td>
         </tr>
         <tr>
-            <td><h5>sql.exec.distinct-split.bucket</h5></td>
+            <td><h5>sql.optimizer.data-skew.distinct-agg.bucket</h5></td>
             <td style="word-wrap: break-word;">256</td>
-            <td>Configure the number of buckets in Distinct-Split mode.</td>
+            <td>Configure the number of buckets when splitting distinct aggregation.</td>
         </tr>
         <tr>
             <td><h5>sql.exec.incremental-agg.enabled</h5></td>

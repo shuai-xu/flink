@@ -24,7 +24,7 @@ StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0])
    +- StreamExecIncrementalGroupAggregate(shuffleKey=[$f1], groupKey=[], select=[COUNT(distinct$0 count$0) AS count$0])
       +- StreamExecExchange(distribution=[hash[$f1]])
          +- StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
-            +- StreamExecCalc(select=[c, MOD(HASH_CODE(c), 256) AS $f1])
+            +- StreamExecCalc(select=[c, MOD(HASH_CODE(c), 1024) AS $f1])
                +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
@@ -60,7 +60,7 @@ StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0])
    +- StreamExecIncrementalGroupAggregate(shuffleKey=[$f1], groupKey=[], select=[COUNT(distinct$0 count$0) AS count$0])
       +- StreamExecExchange(distribution=[hash[$f1]])
          +- StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
-            +- StreamExecCalc(select=[c, MOD(HASH_CODE(c), 256) AS $f1])
+            +- StreamExecCalc(select=[c, MOD(HASH_CODE(c), 1024) AS $f1])
                +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>

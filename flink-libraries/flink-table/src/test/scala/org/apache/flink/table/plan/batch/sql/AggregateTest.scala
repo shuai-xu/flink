@@ -67,9 +67,6 @@ class AggregateTest extends TableTestBatchExecBase {
     // sets the table memory size of hashAgg operator to 1MB
     util.getTableEnv.getConfig.getConf
       .setInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM, 1)
-    // sets the agg ratio to 0.8
-    util.getTableEnv.getConfig.getConf
-      .setDouble(TableConfigOptions.SQL_EXEC_AGG_GROUPS_NDV_RATIO, 0.8D)
   }
 
   @Test
