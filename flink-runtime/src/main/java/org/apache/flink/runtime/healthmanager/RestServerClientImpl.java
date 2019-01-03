@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.healthmanager;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.client.JobStatusMessage;
@@ -30,7 +31,6 @@ import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
 import org.apache.flink.runtime.rest.messages.JobsOverviewHeaders;
 
 import java.net.URI;
-import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -84,7 +84,7 @@ public class RestServerClientImpl implements RestServerClient {
 	}
 
 	@Override
-	public List<JobException> getFailover(Timestamp startTime, Timestamp endTime) {
+	public Map<JobVertexID, List<JobException>> getFailover(JobID jobID, long startTime, long endTime) {
 		return null;
 	}
 
@@ -95,7 +95,7 @@ public class RestServerClientImpl implements RestServerClient {
 	}
 
 	@Override
-	public void rescale(JobID jobId, JobVertexID vertexId, int parallelism) {
+	public void rescale(JobID jobId, JobVertexID vertexId, int parallelism, ResourceSpec resourceProfile) {
 
 	}
 }

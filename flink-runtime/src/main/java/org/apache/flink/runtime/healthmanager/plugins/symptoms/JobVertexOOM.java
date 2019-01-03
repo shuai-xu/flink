@@ -16,27 +16,30 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.healthmanager.plugins;
+package org.apache.flink.runtime.healthmanager.plugins.symptoms;
 
-import java.util.List;
+import org.apache.flink.api.common.JobID;
+import org.apache.flink.runtime.healthmanager.plugins.Symptom;
+import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 /**
- * Abnormal status diagnoser and resolver.
+ * Symptom indicating a job vertex oom.
  */
-public interface DiagnoserAndResolver {
+public class JobVertexOOM implements Symptom {
 
-	/**
-	 * Match from given symptoms, return true if diagnosed.
-	 * @param symptomList
-	 * @return
-	 */
-	boolean accept(List<Symptom>  symptomList);
+	private JobID jobID;
+	private JobVertexID jobVertexID;
 
-	/**
-	 * Generate resolving action from the symptoms.
-	 * @param symptomList
-	 * @return
-	 */
-	Action resolve(List<Symptom> symptomList);
+	public JobVertexOOM(JobID jobID, JobVertexID jobVertexID) {
+		this.jobID = jobID;
+		this.jobVertexID = jobVertexID;
+	}
 
+	public JobID getJobID() {
+		return jobID;
+	}
+
+	public JobVertexID getJobVertexID() {
+		return jobVertexID;
+	}
 }

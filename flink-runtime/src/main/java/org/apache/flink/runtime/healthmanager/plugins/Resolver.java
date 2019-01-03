@@ -18,32 +18,31 @@
 
 package org.apache.flink.runtime.healthmanager.plugins;
 
-import org.apache.flink.runtime.healthmanager.MetricProvider;
-import org.apache.flink.runtime.healthmanager.RestServerClient;
+import org.apache.flink.runtime.healthmanager.HealthMonitor;
+
+import java.util.List;
 
 /**
- * Action to resolve symptoms.
+ * Abnormal status resolver.
  */
-public interface Action {
+public interface Resolver {
 
 	/**
-	 * Execute the action.
-	 * @param restServerClient
+	 * Init the Detector, which may subscribe some metric from metric provider.
+	 * @param monitor the HeathMonitor which loads the detector.
 	 */
-	void execute(RestServerClient restServerClient) throws InterruptedException;
+	void open(HealthMonitor monitor);
 
 	/**
-	 * Validate the result of the execution of action.
-	 * @param provider
-	 * @param restServerClient
-	 * @return
+	 * Close the Detector.
 	 */
-	boolean validate(MetricProvider provider, RestServerClient restServerClient) throws InterruptedException;
+	void close();
 
 	/**
-	 * Rollback action of current action.
-	 *
-	 * @return
+	 * Generate resolving action from the symptoms.
+	 * @param symptomList symptoms detected.
+	 * @return  action to resolve some of the symptoms, null if symptoms not matched.
 	 */
-	Action rollback();
+	Action resolve(List<Symptom> symptomList);
+
 }

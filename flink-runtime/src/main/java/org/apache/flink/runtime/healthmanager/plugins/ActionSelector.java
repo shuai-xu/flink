@@ -18,12 +18,25 @@
 
 package org.apache.flink.runtime.healthmanager.plugins;
 
+import org.apache.flink.runtime.healthmanager.HealthMonitor;
+
 import java.util.List;
 
 /**
  * Action selector is responsible for action selecting and action history maintain.
  */
 public interface ActionSelector {
+
+	/**
+	 * Open an action selector.
+	 * @param monitor the health monitor which owns the selector.
+	 */
+	void open(HealthMonitor monitor);
+
+	/**
+	 * Stop an action selector.
+	 */
+	void stop();
 
 	/**
 	 * Select an action to execute from the candidates, return null if no candidate selected.

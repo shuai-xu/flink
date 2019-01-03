@@ -33,6 +33,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -62,6 +63,8 @@ public class HealthManager {
 	/** All job Running. */
 	private Map<JobID, HealthMonitor> jobMonitors = new HashMap<>();
 
+	private ScheduledFuture timedTaskHandler;
+
 	public HealthManager(Configuration config, String restServerAddress) throws Exception {
 
 		this.config = config;
@@ -77,11 +80,15 @@ public class HealthManager {
 	public void start() {
 		LOGGER.info("Starting health manager.");
 		long interval = config.getLong(JOB_CHECK_INTERNAL);
-		executorService.scheduleAtFixedRate(new RunningJobListChecker(), 0, interval, TimeUnit.MILLISECONDS);
+		timedTaskHandler = executorService.scheduleAtFixedRate(
+				new RunningJobListChecker(), 0, interval, TimeUnit.MILLISECONDS);
 	}
 
 	public void stop() {
 		LOGGER.info("Stopping health manager.");
+		if (timedTaskHandler != null) {
+			timedTaskHandler.cancel(true);
+		}
 		for (HealthMonitor monitor : jobMonitors.values()) {
 			monitor.stop();
 		}
@@ -115,7 +122,13 @@ public class HealthManager {
 					LOGGER.info("New job submitted, id:" + id);
 					HealthMonitor newMonitor = new HealthMonitor(
 							id, metricProvider, restServerClient, executorService, config);
-					newMonitor.start();
+					try {
+						newMonitor.start();
+					} catch (Exception e) {
+						LOGGER.info("Fail to start monitor for job:" + id);
+						continue;
+					}
+
 					jobMonitors.put(id, newMonitor);
 				}
 			}

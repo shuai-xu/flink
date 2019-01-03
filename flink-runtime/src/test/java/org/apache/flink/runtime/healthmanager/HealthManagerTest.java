@@ -36,7 +36,7 @@ import java.util.LinkedList;
  * Tests for Health Manager.
  */
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({HealthManager.class, RestServerClientImpl.class, RestServerMetricProvider.class})
+@PrepareForTest({HealthManager.class})
 public class HealthManagerTest {
 
 	@Test

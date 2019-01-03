@@ -18,9 +18,7 @@
 
 package org.apache.flink.runtime.healthmanager.plugins;
 
-import org.apache.flink.api.common.JobID;
-import org.apache.flink.runtime.healthmanager.MetricProvider;
-import org.apache.flink.runtime.healthmanager.RestServerClient;
+import org.apache.flink.runtime.healthmanager.HealthMonitor;
 
 /**
  * the Symptom Detector.
@@ -29,11 +27,14 @@ public interface Detector {
 
 	/**
 	 * Init the Detector, which may subscribe some metric from metric provider.
-	 * @param jobID
-	 * @param metricProvider
-	 * @param restServerClient
+	 * @param monitor the HeathMonitor which loads the detector.
 	 */
-	void init(JobID jobID, MetricProvider metricProvider, RestServerClient restServerClient);
+	void open(HealthMonitor monitor);
+
+	/**
+	 * Close the Detector.
+	 */
+	void close();
 
 	/**
 	 * Detect the symptom, return null if not abnormal symptom detected.
