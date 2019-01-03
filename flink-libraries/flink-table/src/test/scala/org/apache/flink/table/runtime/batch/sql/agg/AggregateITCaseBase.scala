@@ -835,12 +835,4 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
     // that doesn't make sense, and we do not support it.
   }
 
-  @Test
-  def testPruneUselessAggCall(): Unit = {
-    checkResult(
-      "SELECT a FROM (SELECT b, MAX(a) AS a, COUNT(*), MAX(c) FROM SmallTable3 GROUP BY b) t",
-      Seq(row(1), row(3))
-    )
-  }
-
 }

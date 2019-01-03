@@ -16,11 +16,165 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
+  <TestCase name="testEmptyGroupKey_WithMoreThanOneAggCalls1">
+    <Resource name="sql">
+      <![CDATA[SELECT 1 FROM (SELECT SUM(a1), COUNT(*) FROM T1) t]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(EXPR$0=[1])
++- LogicalAggregate(group=[{}], EXPR$0=[SUM($0)], EXPR$1=[COUNT()])
+   +- LogicalProject(a1=[$0])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalProject(EXPR$0=[1])
++- LogicalAggregate(group=[{}], EXPR$0=[SUM($0)])
+   +- LogicalProject(a1=[$0])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testEmptyGroupKey_WithMoreThanOneAggCalls2">
+    <Resource name="sql">
+      <![CDATA[SELECT * FROM T2 WHERE EXISTS (SELECT SUM(a1), COUNT(*) FROM T1)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a2=[$0], b2=[$1], c2=[$2], d2=[$3])
++- LogicalFilter(condition=[EXISTS({
+LogicalAggregate(group=[{}], EXPR$0=[SUM($0)], EXPR$1=[COUNT()])
+  LogicalProject(a1=[$0])
+    LogicalTableScan(table=[[default_catalog, default_db, T1]])
+})])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+SemiJoin(condition=[$4], joinType=[inner], isAnti=[false])
+:- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- LogicalProject($f0=[IS NOT NULL($0)])
+   +- LogicalAggregate(group=[{}], m=[MIN($0)])
+      +- LogicalProject(i=[true])
+         +- LogicalAggregate(group=[{}], EXPR$0=[SUM($0)])
+            +- LogicalProject(a1=[$0])
+               +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testEmptyGroupKey_WithMoreThanOneAggCalls3">
+    <Resource name="sql">
+      <![CDATA[SELECT * FROM T2 WHERE EXISTS (SELECT SUM(a1), COUNT(*) FROM T1 WHERE 1=2)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a2=[$0], b2=[$1], c2=[$2], d2=[$3])
++- LogicalFilter(condition=[EXISTS({
+LogicalAggregate(group=[{}], EXPR$0=[SUM($0)], EXPR$1=[COUNT()])
+  LogicalProject(a1=[$0])
+    LogicalFilter(condition=[=(1, 2)])
+      LogicalTableScan(table=[[default_catalog, default_db, T1]])
+})])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+SemiJoin(condition=[$4], joinType=[inner], isAnti=[false])
+:- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- LogicalProject($f0=[IS NOT NULL($0)])
+   +- LogicalAggregate(group=[{}], m=[MIN($0)])
+      +- LogicalProject(i=[true])
+         +- LogicalAggregate(group=[{}], EXPR$0=[SUM($0)])
+            +- LogicalValues(tuples=[[]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testEmptyGroupKey_WithOneAggCall1">
+    <Resource name="sql">
+      <![CDATA[SELECT 1 FROM (SELECT SUM(a1) FROM T1) t]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(EXPR$0=[1])
++- LogicalAggregate(group=[{}], EXPR$0=[SUM($0)])
+   +- LogicalProject(a1=[$0])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalProject(EXPR$0=[1])
++- LogicalAggregate(group=[{}], EXPR$0=[SUM($0)])
+   +- LogicalProject(a1=[$0])
+      +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testEmptyGroupKey_WithOneAggCall2">
+    <Resource name="sql">
+      <![CDATA[SELECT * FROM T2 WHERE EXISTS (SELECT COUNT(*) FROM T1)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a2=[$0], b2=[$1], c2=[$2], d2=[$3])
++- LogicalFilter(condition=[EXISTS({
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalTableScan(table=[[default_catalog, default_db, T1]])
+})])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+SemiJoin(condition=[$4], joinType=[inner], isAnti=[false])
+:- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- LogicalProject($f0=[IS NOT NULL($0)])
+   +- LogicalAggregate(group=[{}], m=[MIN($0)])
+      +- LogicalProject(i=[true])
+         +- LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+            +- LogicalProject($f0=[0])
+               +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testEmptyGroupKey_WithOneAggCall3">
+    <Resource name="sql">
+      <![CDATA[SELECT * FROM T2 WHERE EXISTS (SELECT COUNT(*) FROM T1 WHERE 1=2)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a2=[$0], b2=[$1], c2=[$2], d2=[$3])
++- LogicalFilter(condition=[EXISTS({
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[=(1, 2)])
+      LogicalTableScan(table=[[default_catalog, default_db, T1]])
+})])
+   +- LogicalTableScan(table=[[default_catalog, default_db, T2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+SemiJoin(condition=[$4], joinType=[inner], isAnti=[false])
+:- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- LogicalProject($f0=[IS NOT NULL($0)])
+   +- LogicalAggregate(group=[{}], m=[MIN($0)])
+      +- LogicalProject(i=[true])
+         +- LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+            +- LogicalValues(tuples=[[]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testPruneAuxGroupAggCall_WithFilter1">
     <Resource name="sql">
       <![CDATA[
 SELECT a1, c1 FROM
- (SELECT a1, b1, COUNT(c1) as c1, sum(d1) as d1 FROM T1 GROUP BY a1, b1) t
+ (SELECT a1, b1, COUNT(c1) as c1, SUM(d1) as d1 FROM T1 GROUP BY a1, b1) t
 WHERE c1 > 10
       ]]>
     </Resource>
@@ -46,7 +200,7 @@ LogicalFilter(condition=[>($1, 10)])
     <Resource name="sql">
       <![CDATA[
 SELECT c1, a1 FROM
- (SELECT a1, b1, COUNT(c1) as c1, sum(d1) as d1 FROM T1 GROUP BY a1, b1) t
+ (SELECT a1, b1, COUNT(c1) as c1, SUM(d1) as d1 FROM T1 GROUP BY a1, b1) t
 WHERE c1 > 10
       ]]>
     </Resource>
@@ -73,7 +227,7 @@ LogicalProject(c1=[$1], a1=[$0])
     <Resource name="sql">
       <![CDATA[
 SELECT a1, c1 FROM
- (SELECT a1, b1, COUNT(c1) as c1, sum(d1) as d1 FROM T1 GROUP BY a1, b1) t
+ (SELECT a1, b1, COUNT(c1) as c1, SUM(d1) as d1 FROM T1 GROUP BY a1, b1) t
       ]]>
     </Resource>
     <Resource name="planBefore">
@@ -96,7 +250,7 @@ LogicalAggregate(group=[{0}], c1=[COUNT($2)])
     <Resource name="sql">
       <![CDATA[
 SELECT c1, a1 FROM
- (SELECT a1, b1, COUNT(c1) as c1, sum(d1) as d1 FROM T1 GROUP BY a1, b1) t
+ (SELECT a1, b1, COUNT(c1) as c1, SUM(d1) as d1 FROM T1 GROUP BY a1, b1) t
       ]]>
     </Resource>
     <Resource name="planBefore">
@@ -120,7 +274,7 @@ LogicalProject(c1=[$1], a1=[$0])
     <Resource name="sql">
       <![CDATA[
 SELECT a2, b2, d2 FROM
- (SELECT a2, b2, COUNT(c2) as c2, sum(d2) as d2 FROM T2 GROUP BY a2, b2) t
+ (SELECT a2, b2, COUNT(c2) as c2, SUM(d2) as d2 FROM T2 GROUP BY a2, b2) t
 WHERE d2 > 0
       ]]>
     </Resource>
@@ -144,7 +298,7 @@ LogicalFilter(condition=[>($2, 0)])
     <Resource name="sql">
       <![CDATA[
 SELECT b2, a2, d2 FROM
- (SELECT a2, b2, COUNT(c2) as c2, sum(d2) as d2 FROM T2 GROUP BY a2, b2) t
+ (SELECT a2, b2, COUNT(c2) as c2, SUM(d2) as d2 FROM T2 GROUP BY a2, b2) t
 WHERE d2 > 0
       ]]>
     </Resource>
@@ -169,7 +323,7 @@ LogicalProject(b2=[$1], a2=[$0], d2=[$2])
     <Resource name="sql">
       <![CDATA[
 SELECT a2, b2, d2 FROM
- (SELECT a2, b2, COUNT(c2) as c2, sum(d2) as d2 FROM T2 GROUP BY a2, b2) t
+ (SELECT a2, b2, COUNT(c2) as c2, SUM(d2) as d2 FROM T2 GROUP BY a2, b2) t
       ]]>
     </Resource>
     <Resource name="planBefore">
@@ -190,7 +344,7 @@ LogicalAggregate(group=[{0, 1}], d2=[SUM($3)])
     <Resource name="sql">
       <![CDATA[
 SELECT b2, a2, d2 FROM
- (SELECT a2, b2, COUNT(c2) as c2, sum(d2) as d2 FROM T2 GROUP BY a2, b2) t
+ (SELECT a2, b2, COUNT(c2) as c2, SUM(d2) as d2 FROM T2 GROUP BY a2, b2) t
       ]]>
     </Resource>
     <Resource name="planBefore">
@@ -212,7 +366,7 @@ LogicalProject(b2=[$1], a2=[$0], d2=[$2])
     <Resource name="sql">
       <![CDATA[
 SELECT a2 as a, b2, d2 FROM
- (SELECT a2, b2, COUNT(c2) as c2, sum(d2) as d2 FROM T2 GROUP BY a2, b2) t
+ (SELECT a2, b2, COUNT(c2) as c2, SUM(d2) as d2 FROM T2 GROUP BY a2, b2) t
       ]]>
     </Resource>
     <Resource name="planBefore">

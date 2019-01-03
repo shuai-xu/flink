@@ -22,6 +22,7 @@ import com.google.common.collect.{ImmutableList, Maps}
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptUtil}
 import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.core.Aggregate.Group
 import org.apache.calcite.rel.core.{Aggregate, AggregateCall, Calc, Project, RelFactories}
 import org.apache.calcite.rex.{RexInputRef, RexNode, RexProgram, RexUtil}
 import org.apache.calcite.runtime.Utilities
@@ -38,13 +39,18 @@ import scala.collection.JavaConversions._
 abstract class PruneAggregateCallRule[T <: RelNode](topClass: Class[T]) extends RelOptRule(
   operand(topClass, operand(classOf[Aggregate], any)),
   RelFactories.LOGICAL_BUILDER,
-  s"PruneUselessAggCallRule_${topClass.getCanonicalName}") {
+  s"PruneAggregateCallRule_${topClass.getCanonicalName}") {
 
   protected def getInputRefs(relOnAgg: T): ImmutableBitSet
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val relOnAgg: T = call.rel(0)
     val agg: Aggregate = call.rel(1)
+    if (agg.indicator || agg.getGroupType != Group.SIMPLE || agg.getAggCallList.isEmpty ||
+      // at least output one column
+      (agg.getGroupCount == 0 && agg.getAggCallList.size() == 1)) {
+      return false
+    }
     val inputRefs = getInputRefs(relOnAgg)
     val unrefAggCallIndices = getUnrefAggCallIndices(inputRefs, agg)
     unrefAggCallIndices.nonEmpty
@@ -68,12 +74,18 @@ abstract class PruneAggregateCallRule[T <: RelNode](topClass: Class[T]) extends 
     val relOnAgg: T = call.rel(0)
     val agg: Aggregate = call.rel(1)
     val inputRefs = getInputRefs(relOnAgg)
-    val unrefAggCallIndices = getUnrefAggCallIndices(inputRefs, agg)
+    var unrefAggCallIndices = getUnrefAggCallIndices(inputRefs, agg)
     require(unrefAggCallIndices.nonEmpty)
 
     val newAggCalls: util.List[AggregateCall] = new util.ArrayList(agg.getAggCallList)
     // remove unreferenced AggCall from original aggCalls
     unrefAggCallIndices.sorted.reverse.foreach(i => newAggCalls.remove(i))
+
+    if (newAggCalls.isEmpty && agg.getGroupCount == 0) {
+      // at least output one column
+      newAggCalls.add(agg.getAggCallList.get(0))
+      unrefAggCallIndices = unrefAggCallIndices.slice(1, unrefAggCallIndices.length)
+    }
 
     val newAgg = agg.copy(
       agg.getTraitSet,

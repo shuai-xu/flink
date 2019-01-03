@@ -78,7 +78,7 @@ object StreamTestSink {
 abstract class AbstractExactlyOnceSink[T] extends RichSinkFunction[T] with CheckpointedFunction {
   protected var resultsState: ListState[String] = _
   protected var localResults: ArrayBuffer[String] = _
-  protected var idx: Int = StreamTestSink.getNewSinkId
+  protected val idx: Int = StreamTestSink.getNewSinkId
 
   protected var globalResults: mutable.Map[Int, ArrayBuffer[String]]= _
   protected var globalRetractResults: mutable.Map[Int, ArrayBuffer[String]] = _
