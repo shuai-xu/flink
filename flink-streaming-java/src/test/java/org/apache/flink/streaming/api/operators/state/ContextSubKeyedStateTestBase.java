@@ -131,26 +131,46 @@ public abstract class ContextSubKeyedStateTestBase {
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
 		state.setNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
+		state.setNamespace(namespace2);
+		assertNull(state.get());
+		state.setNamespace(namespace3);
+		assertNull(state.get());
 
 		testOperator.setCurrentKey("def");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
 		state.setNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
+		state.setNamespace(namespace2);
+		assertNull(state.get());
+		state.setNamespace(namespace3);
+		assertNull(state.get());
 
 		testOperator.setCurrentKey("ghi");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
 		state.setNamespace(namespace1);
+		assertNull(state.get());
+		state.setNamespace(namespace2);
+		assertNull(state.get());
+		state.setNamespace(namespace3);
 		assertNull(state.get());
 
 		testOperator.setCurrentKey("jkl");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
 		state.setNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
+		state.setNamespace(namespace2);
+		assertNull(state.get());
+		state.setNamespace(namespace3);
+		assertNull(state.get());
 
 		testOperator.setCurrentKey("mno");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
 		state.setNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
+		state.setNamespace(namespace2);
+		assertNull(state.get());
+		state.setNamespace(namespace3);
+		assertNull(state.get());
 	}
 
 	@Test
@@ -216,26 +236,46 @@ public abstract class ContextSubKeyedStateTestBase {
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
 		state.setNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
+		state.setNamespace(namespace2);
+		assertNull(state.get());
+		state.setNamespace(namespace3);
+		assertNull(state.get());
 
 		testOperator.setCurrentKey("def");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
 		state.setNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
+		state.setNamespace(namespace2);
+		assertNull(state.get());
+		state.setNamespace(namespace3);
+		assertNull(state.get());
 
 		testOperator.setCurrentKey("ghi");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
 		state.setNamespace(namespace1);
+		assertNull(state.get());
+		state.setNamespace(namespace2);
+		assertNull(state.get());
+		state.setNamespace(namespace3);
 		assertNull(state.get());
 
 		testOperator.setCurrentKey("jkl");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
 		state.setNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
+		state.setNamespace(namespace2);
+		assertNull(state.get());
+		state.setNamespace(namespace3);
+		assertNull(state.get());
 
 		testOperator.setCurrentKey("mno");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
 		state.setNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
+		state.setNamespace(namespace2);
+		assertNull(state.get());
+		state.setNamespace(namespace3);
+		assertNull(state.get());
 	}
 
 	@Test
@@ -302,26 +342,46 @@ public abstract class ContextSubKeyedStateTestBase {
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
 		state.setNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
+		state.setNamespace(namespace2);
+		assertNull(state.get());
+		state.setNamespace(namespace3);
+		assertNull(state.get());
 
 		testOperator.setCurrentKey("def");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
 		state.setNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
+		state.setNamespace(namespace2);
+		assertNull(state.get());
+		state.setNamespace(namespace3);
+		assertNull(state.get());
 
 		testOperator.setCurrentKey("ghi");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
 		state.setNamespace(namespace1);
+		assertNull(state.get());
+		state.setNamespace(namespace2);
+		assertNull(state.get());
+		state.setNamespace(namespace3);
 		assertNull(state.get());
 
 		testOperator.setCurrentKey("jkl");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
 		state.setNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
+		state.setNamespace(namespace2);
+		assertNull(state.get());
+		state.setNamespace(namespace3);
+		assertNull(state.get());
 
 		testOperator.setCurrentKey("mno");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
 		state.setNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
+		state.setNamespace(namespace2);
+		assertNull(state.get());
+		state.setNamespace(namespace3);
+		assertNull(state.get());
 	}
 
 	private static class IdleOperator<IN, OUT>

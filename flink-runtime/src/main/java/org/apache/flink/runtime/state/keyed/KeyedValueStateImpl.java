@@ -489,9 +489,23 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 			if (stateStorage.lazySerde()) {
 				((HeapStateStorage) stateStorage).transform(key, value, transformation);
 			} else {
-				V oldValue = get(key);
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					getKeyGroup(key),
+					stateNameForSerializer);
+				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
+
+				V oldValue = serializedValue == null ? null :
+					StateSerializerUtil.getDeserializeSingleValue(serializedValue, valueSerializer);
 				V newValue = transformation.apply(oldValue, value);
-				put(key, newValue);
+
+				outputStream.reset();
+				valueSerializer.serialize(newValue, outputView);
+				stateStorage.put(serializedKey, outputStream.toByteArray());
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);

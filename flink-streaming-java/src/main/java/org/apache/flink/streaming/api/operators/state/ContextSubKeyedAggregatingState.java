@@ -43,7 +43,9 @@ public class ContextSubKeyedAggregatingState<N, IN, ACC, OUT>
 
 	private final SubKeyedValueState<Object, N, ACC> subKeyedValueState;
 
-	private final AggregateTransformation transformation;
+	private final AggregateTransformation aggregateTransformation;
+
+	private final MergeTransformation mergeTransformation;
 
 	public ContextSubKeyedAggregatingState(
 		AbstractStreamOperator<?> operator,
@@ -54,18 +56,19 @@ public class ContextSubKeyedAggregatingState<N, IN, ACC, OUT>
 		Preconditions.checkNotNull(aggregateFunction);
 		this.operator = operator;
 		this.subKeyedValueState = subKeyedValueState;
-		this.transformation = new AggregateTransformation(aggregateFunction);
+		this.aggregateTransformation = new AggregateTransformation(aggregateFunction);
+		this.mergeTransformation = new MergeTransformation(aggregateFunction);
 	}
 
 	@Override
 	public OUT get() {
 		ACC accumulator = subKeyedValueState.get(getCurrentKey(), getNamespace());
-		return accumulator == null ? null : transformation.aggregateFunction.getResult(accumulator);
+		return accumulator == null ? null : aggregateTransformation.aggregateFunction.getResult(accumulator);
 	}
 
 	@Override
 	public void add(IN value) {
-		subKeyedValueState.transform(getCurrentKey(), getNamespace(), value, transformation);
+		subKeyedValueState.transform(getCurrentKey(), getNamespace(), value, aggregateTransformation);
 	}
 
 	@Override
@@ -90,31 +93,29 @@ public class ContextSubKeyedAggregatingState<N, IN, ACC, OUT>
 
 	@Override
 	public void mergeNamespaces(N target, Collection<N> sources) {
-		if (sources != null) {
-			AggregateFunction<IN, ACC, OUT> aggregateFunction = transformation.aggregateFunction;
-			Object currentKey = getCurrentKey();
+		if (sources == null || sources.isEmpty()) {
+			return; // nothing to do
+		}
 
-			ACC merged = null;
+		Object currentKey = getCurrentKey();
+		ACC merged = null;
 
-			// merge the sources
-			for (N source : sources) {
+		// merge the sources
+		for (N source : sources) {
 
-				// get and remove the next source per namespace/key
-				ACC sourceState = subKeyedValueState.get(currentKey, source);
-				subKeyedValueState.remove(currentKey, source);
+			// get and remove the next source per namespace/key
+			ACC sourceState = subKeyedValueState.getAndRemove(currentKey, source);
 
-				if (merged != null && sourceState != null) {
-					merged = aggregateFunction.merge(merged, sourceState);
-				} else if (merged == null) {
-					merged = sourceState;
-				}
+			if (merged != null && sourceState != null) {
+				merged = mergeTransformation.aggregateFunction.merge(merged, sourceState);
+			} else if (merged == null) {
+				merged = sourceState;
 			}
-			// merge into the target, if needed
-			if (merged != null) {
-				ACC targetState = subKeyedValueState.get(currentKey, target);
-				subKeyedValueState.put(currentKey, target,
-					targetState == null ? merged : aggregateFunction.merge(targetState, merged));
-			}
+		}
+
+		// merge into the target, if needed
+		if (merged != null) {
+			subKeyedValueState.transform(currentKey, target, merged, mergeTransformation);
 		}
 	}
 
@@ -132,6 +133,20 @@ public class ContextSubKeyedAggregatingState<N, IN, ACC, OUT>
 				accumulator = aggregateFunction.createAccumulator();
 			}
 			return aggregateFunction.add(value, accumulator);
+		}
+	}
+
+	private class MergeTransformation implements StateTransformationFunction<ACC, ACC> {
+
+		private final AggregateFunction<IN, ACC, OUT> aggregateFunction;
+
+		public MergeTransformation(AggregateFunction<IN, ACC, OUT> aggregateFunction) {
+			this.aggregateFunction = Preconditions.checkNotNull(aggregateFunction);
+		}
+
+		@Override
+		public ACC apply(ACC v1, ACC v2) {
+			return v1 == null ? v2 : aggregateFunction.merge(v1, v2);
 		}
 	}
 }

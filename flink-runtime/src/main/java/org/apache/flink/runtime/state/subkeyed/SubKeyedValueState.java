@@ -41,6 +41,15 @@ public interface SubKeyedValueState<K, N, V> extends SubKeyedState<K, N, V> {
 	void put(K key, N namespace, V value);
 
 	/**
+	 * Returns and removes the value under the given key and namespace in the state.
+	 *
+	 * @param key The key under which the value is to be retrieved.
+	 * @param namespace The namespace of the value to be retrieved.
+	 * @return The value under the given key and namespace in the state.
+	 */
+	V getAndRemove(K key, N namespace);
+
+	/**
 	 * Applies the given {@link StateTransformationFunction} to the state (1st input argument), using the given value as
 	 * second input argument. The result of {@link StateTransformationFunction#apply(Object, Object)} is then stored as
 	 * the new state. This function is basically an optimization for get-update-put pattern.

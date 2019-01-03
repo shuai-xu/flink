@@ -140,6 +140,10 @@ public class HeapStateStorage<K, N, S> implements StateStorage<K, S>{
 		throw new UnsupportedOperationException("HeapStateStorage does not have StorageInstance");
 	}
 
+	public S getAndRemove(K key) {
+		return stateTable.removeAndGetOld(key, currentNamespace);
+	}
+
 	/**
 	 * Gets all mappings for the key when this storage has namespace.
 	 *

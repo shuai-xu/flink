@@ -87,23 +87,29 @@ public class ContextSubKeyedReducingState<N, T>
 
 	@Override
 	public void mergeNamespaces(N target, Collection<N> sources) throws Exception {
-		if (sources != null) {
-			T targetValue = subKeyedValueState.get(getCurrentKey(), target);
-			ReduceFunction<T> reduceFunction = transformation.reduceFunction;
-			for (N source : sources) {
-				T fromValue = subKeyedValueState.get(getCurrentKey(), source);
-				if (fromValue != null) {
-					if (targetValue == null) {
-						targetValue = fromValue;
-					} else {
-						targetValue = reduceFunction.reduce(targetValue, fromValue);
-						subKeyedValueState.remove(getCurrentKey(), source);
-					}
-				}
+		if (sources == null || sources.isEmpty()) {
+			return; // nothing to do
+		}
+
+		Object currentKey = getCurrentKey();
+		T merged = null;
+
+		// merge the sources
+		for (N source : sources) {
+
+			// get and remove the next source per namespace/key
+			T sourceState = subKeyedValueState.getAndRemove(currentKey, source);
+
+			if (merged != null && sourceState != null) {
+				merged = transformation.reduceFunction.reduce(merged, sourceState);
+			} else if (merged == null) {
+				merged = sourceState;
 			}
-			if (targetValue != null) {
-				subKeyedValueState.put(getCurrentKey(), target, targetValue);
-			}
+		}
+
+		// merge into the target, if needed
+		if (merged != null) {
+			subKeyedValueState.transform(currentKey, target, merged, transformation);
 		}
 	}
 

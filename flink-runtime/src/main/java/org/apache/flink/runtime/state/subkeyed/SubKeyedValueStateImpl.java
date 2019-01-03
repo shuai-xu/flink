@@ -341,6 +341,39 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 	}
 
 	@Override
+	public V getAndRemove(K key, N namespace) {
+		if (key == null || namespace == null) {
+			return null;
+		}
+
+		try {
+			if (stateStorage.lazySerde()) {
+				HeapStateStorage<K, N, V> heapSateStorage = (HeapStateStorage) stateStorage;
+				heapSateStorage.setCurrentNamespace(namespace);
+				return heapSateStorage.getAndRemove(key);
+			} else {
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedValueState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					namespace,
+					namespaceSerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
+				stateStorage.remove(serializedKey);
+
+				return serializedValue == null ? null :
+					StateSerializerUtil.getDeserializeSingleValue(serializedValue, valueSerializer);
+			}
+		} catch (Exception e) {
+			throw new StateAccessException(e);
+		}
+	}
+
+	@Override
 	public Iterator<N> iterator(K key) {
 		Preconditions.checkNotNull(key);
 
@@ -399,9 +432,25 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 				heapStateStorage.setCurrentNamespace(namespace);
 				heapStateStorage.transform(key, value, transformation);
 			} else {
-				V oldValue = get(key, namespace);
+				outputStream.reset();
+				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedValueState(
+					outputStream,
+					outputView,
+					key,
+					keySerializer,
+					namespace,
+					namespaceSerializer,
+					getKeyGroup(key),
+					stateNameForSerialize);
+				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
+
+				V oldValue = serializedValue == null ? null :
+					StateSerializerUtil.getDeserializeSingleValue(serializedValue, valueSerializer);
 				V newValue = transformation.apply(oldValue, value);
-				put(key, namespace, newValue);
+
+				outputStream.reset();
+				valueSerializer.serialize(newValue, outputView);
+				stateStorage.put(serializedKey, outputStream.toByteArray());
 			}
 		} catch (Exception e) {
 			throw new StateAccessException(e);
