@@ -75,15 +75,16 @@ public class MetricDumpSerialization {
 	 */
 	public static class MetricSerializationResult implements Serializable {
 
-		private static final long serialVersionUID = 6928770855951536906L;
+		private static final long serialVersionUID = 6373384212891033966L;
 
 		public final byte[] serializedMetrics;
 		public final int numCounters;
 		public final int numGauges;
 		public final int numMeters;
 		public final int numHistograms;
+		public final long timestamp;
 
-		public MetricSerializationResult(byte[] serializedMetrics, int numCounters, int numGauges, int numMeters, int numHistograms) {
+		public MetricSerializationResult(byte[] serializedMetrics, int numCounters, int numGauges, int numMeters, int numHistograms, long timestamp) {
 			Preconditions.checkNotNull(serializedMetrics);
 			Preconditions.checkArgument(numCounters >= 0);
 			Preconditions.checkArgument(numGauges >= 0);
@@ -94,6 +95,7 @@ public class MetricDumpSerialization {
 			this.numGauges = numGauges;
 			this.numMeters = numMeters;
 			this.numHistograms = numHistograms;
+			this.timestamp = timestamp;
 		}
 	}
 
@@ -205,7 +207,7 @@ public class MetricDumpSerialization {
 				}
 			}
 
-			return new MetricSerializationResult(buffer.getCopyOfBuffer(), numCounters, numGauges, numMeters, numHistograms);
+			return new MetricSerializationResult(buffer.getCopyOfBuffer(), numCounters, numGauges, numMeters, numHistograms, System.currentTimeMillis());
 		}
 
 		public void close() {
