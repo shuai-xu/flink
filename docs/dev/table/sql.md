@@ -631,7 +631,7 @@ GROUP BY users
       </td>
       <td>
         <p>Currently, only equi-joins are supported, i.e., joins that have at least one conjunctive condition with an equality predicate. Arbitrary cross or theta joins are not supported.</p>
-        <p><b>Note:</b> The order of joins is not optimized. Tables are joined in the order in which they are specified in the FROM clause. Make sure to specify tables in an order that does not yield a cross join (Cartesian product) which are not supported and would cause a query to fail.</p>
+        <p><b>Note:</b> The order of joins is not optimized if join-reorder is disabled(`sql.cbo.joinReorder.enabled` is false). Tables are joined in the order in which they are specified in the FROM clause. Make sure to specify tables in an order that does not yield a cross join (Cartesian product) which are not supported and would cause a query to fail. If join-reorder is enabled(`sql.cbo.joinReorder.enabled` is true), the optimizer will try to find best join order based on cost.</p>
 {% highlight sql %}
 SELECT *
 FROM Orders INNER JOIN Product ON Orders.productId = Product.id
@@ -741,6 +741,44 @@ WHERE
   r_currency = o_currency
 {% endhighlight %}
         <p>For more information please check the more detailed <a href="streaming/temporal_tables.html">Temporal Tables concept description.</a></p>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Left Semi-Join</strong><br>
+        <span class="label label-primary">Batch</span>
+        <span class="label label-primary">Streaming</span>
+      </td>
+      <td>
+        <p>The left semi-join is a joining similar to the natural join, and only returns the rows of the left table where it can find a match in the right table. SubQuery using <b>IN</b> and <b>EXISTS</b> will be converted to left semi-join.</p>
+        <p><b>Note:</b>IN and EXISTS in conjunctive condition is supported.</p>
+{% highlight sql %}
+SELECT *
+FROM Orders WHERE Orders.productId IN 
+(SELECT Product.id FROM Product)
+
+SELECT *
+FROM Orders WHERE EXISTS 
+(SELECT * FROM Product WHERE Orders.productId = Product.id)
+{% endhighlight %}
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Left Anti-Join</strong><br>
+        <span class="label label-primary">Batch</span>
+        <span class="label label-primary">Streaming</span>
+      </td>
+      <td>
+        <p>The left anti-join is a joining similar to the left semi-join, and only returns the rows of the left table where it can <b>not</b> find a match in the right table. SubQuery using <b>NOT IN</b> and <b>NOT EXISTS</b> will be converted to left anti-join.</p>
+        <p><b>Note:</b>NOT IN and NOT EXISTS in conjunctive condition is supported.</p>
+{% highlight sql %}
+SELECT *
+FROM Orders WHERE Orders.productId NOT IN 
+(SELECT Product.id FROM Product)
+
+SELECT *
+FROM Orders WHERE NOT EXISTS 
+(SELECT * FROM Product WHERE Orders.productId = Product.id)
+{% endhighlight %}
       </td>
     </tr>
 
