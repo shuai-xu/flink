@@ -41,6 +41,11 @@ public class TableServiceMessage {
 	public static final byte WRITE = 3;
 
 	/**
+	 * Indicates this is a {@link TableService} initialize partition request.
+	 */
+	public static final byte INITIALIZE_PARTITION = 4;
+
+	/**
 	 * The bytes of GET_PARTITIONS.
 	 */
 	public static final byte[] GET_PARTITIONS_BYTES = new byte[] {1};
@@ -54,6 +59,11 @@ public class TableServiceMessage {
 	 * The bytes of WRITE.
 	 */
 	public static final byte[] WRITE_BYTES = new byte[] {3};
+
+	/**
+	 * The bytes of INITIALIZE_PARTITION.
+	 */
+	public static final byte[] INITIALIZE_PARTITION_BYTES = new byte[] {4};
 
 	/**
 	 * Indicates this is a successful request.

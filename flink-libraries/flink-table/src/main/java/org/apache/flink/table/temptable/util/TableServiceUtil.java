@@ -28,6 +28,7 @@ import org.apache.flink.table.temptable.FlinkTableService;
 import org.apache.flink.table.temptable.FlinkTableServiceFactory;
 import org.apache.flink.table.temptable.FlinkTableServiceFactoryDescriptor;
 import org.apache.flink.table.temptable.FlinkTableServiceFunction;
+import org.apache.flink.table.temptable.TableServiceException;
 import org.apache.flink.table.temptable.rpc.TableServiceClient;
 import org.apache.flink.table.util.TableProperties;
 
@@ -88,6 +89,6 @@ public final class TableServiceUtil {
 				Thread.sleep(retryGap);
 			} catch (InterruptedException e) {}
 		}
-		throw new RuntimeException("TableService is not ready");
+		throw new TableServiceException(new RuntimeException("TableService is not ready"));
 	}
 }

@@ -64,6 +64,9 @@ public class TableServiceServerHandler extends ChannelInboundHandlerAdapter {
 			case TableServiceMessage.WRITE:
 				write(ctx, request);
 				break;
+			case TableServiceMessage.INITIALIZE_PARTITION:
+				initializePartition(ctx, request);
+				break;
 			default:
 				LOG.error("Unsupported call: " + call);
 		}
@@ -103,6 +106,7 @@ public class TableServiceServerHandler extends ChannelInboundHandlerAdapter {
 			byte[] result = tableService.read(tableName, partitionId, readOffset, readCount);
 			sendReadResponse(ctx, result);
 		} catch (Exception e) {
+			System.out.println(e.getMessage());
 			LOG.error(e.getMessage(), e);
 			sendError(ctx, e.getMessage());
 		}
@@ -123,6 +127,23 @@ public class TableServiceServerHandler extends ChannelInboundHandlerAdapter {
 			LOG.info("tableName: " + tableName + ", partitionId: " + partitionId);
 			int writeSize = tableService.write(tableName, partitionId, content);
 			sendWriteResponse(ctx, writeSize);
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+			sendError(ctx, e.getMessage());
+		}
+	}
+
+	private void initializePartition(ChannelHandlerContext ctx, byte[] request) {
+		int offset = 1;
+		try {
+			int tableNameLength = BytesUtil.bytesToInt(request, offset);
+			offset += Integer.BYTES;
+			String tableName = new String(request, offset, tableNameLength, "UTF-8");
+			offset += tableNameLength;
+			int partitionId = BytesUtil.bytesToInt(request, offset);
+			offset += Integer.BYTES;
+			tableService.initializePartition(tableName, partitionId);
+			sendInitializePartitionResponse(ctx);
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 			sendError(ctx, e.getMessage());
@@ -188,6 +209,16 @@ public class TableServiceServerHandler extends ChannelInboundHandlerAdapter {
 			totalLengthBytes,
 			TableServiceMessage.SUCCESS_BYTES,
 			content
+		);
+		ctx.writeAndFlush(buffer);
+	}
+
+	private void sendInitializePartitionResponse(ChannelHandlerContext ctx) {
+		int totalLength = Integer.BYTES + Byte.BYTES;
+		byte[] totalLengthBytes = BytesUtil.intToBytes(totalLength);
+		ByteBuf buffer = Unpooled.wrappedBuffer(
+			totalLengthBytes,
+			TableServiceMessage.SUCCESS_BYTES
 		);
 		ctx.writeAndFlush(buffer);
 	}

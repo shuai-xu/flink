@@ -16,25 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.flink.service;
+package org.apache.flink.table.temptable;
 
-import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.execution.SuppressRestartsException;
 
 /**
- * The interface for a life cycle aware class.
- * The method defined in this interface will be invoked for object initialization or cleanup.
+ * TableServiceException describes an RuntimeException raised by {@link TableService}.
+ * This Exception indicates the cache is unavailable.
  */
-public interface LifeCycleAware {
+public class TableServiceException extends SuppressRestartsException {
 
-	/**
-	 * Invoked right after the object of this class is created.
-	 *
-	 * @param parameters The {@link Configuration} defined in the context.
-	 */
-	void open(Configuration parameters) throws Exception;
-
-	/**
-	 * Invoked when this object is no long used. The implementation should do the cleanup.
-	 */
-	void close() throws Exception;
+	public TableServiceException(Throwable cause) {
+		super(cause);
+	}
 }

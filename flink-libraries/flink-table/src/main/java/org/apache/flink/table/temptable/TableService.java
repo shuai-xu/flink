@@ -55,4 +55,12 @@ public interface TableService {
 	 */
 	byte[] read(String tableName, int partitionId, int offset, int readCount) throws Exception;
 
+	/**
+	 * initialize a table with specified partition, this request will delete the data if the given table name and partition id.
+	 * @param tableName the name of the table.
+	 * @param partitionId partition id of the table.
+	 * @throws Exception
+	 */
+	void initializePartition(String tableName, int partitionId) throws Exception;
+
 }

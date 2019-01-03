@@ -49,21 +49,26 @@ import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.{BatchTableSource, _}
 import org.apache.flink.table.util._
 import org.apache.flink.table.util.PlanUtil._
-import org.apache.flink.util.{AbstractID, Preconditions}
-
+import org.apache.flink.util.{AbstractID, ExceptionUtils, Preconditions}
 import org.apache.calcite.plan.{Context, ConventionTraitDef, RelOptPlanner}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.calcite.sql2rel.SqlToRelConverter.Config
-
 import _root_.java.util.{ArrayList => JArrayList, List => JList, Map => JMap, Set => JSet}
+
+import org.apache.flink.runtime.client.JobExecutionException
+import org.apache.flink.table.temptable.TableServiceException
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable
 import _root_.scala.collection.mutable.ArrayBuffer
+import _root_.scala.util.Failure
+import _root_.scala.util.Success
+import _root_.scala.util.Try
+
 
 /**
  *  A session to construct between [[Table]] and [[DataStream]], its main function is:
@@ -141,7 +146,20 @@ class BatchTableEnvironment(
           "A program needs at least one sink that consumes data. ")
     }
     tableServiceManager.startTableServiceJob()
-    val result = executeInternal(transformations, Option.apply(jobName))
+    val result = Try {
+      executeInternal(transformations, Option.apply(jobName))
+    } match {
+      case Success(value) => value
+      case Failure(ex) => ex match {
+        case je: JobExecutionException
+          if ExceptionUtils.findThrowable(je, classOf[TableServiceException]).isPresent =>
+            transformations.clear()
+            tableServiceManager.invalidateCachedTable()
+            compile()
+            executeInternal(transformations, Option.apply(jobName))
+        case _ => throw ex
+      }
+    }
     sinkNodes.clear()
     result
   }

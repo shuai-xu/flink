@@ -94,4 +94,10 @@ public class TableServiceImpl implements LifeCycleAware, TableService {
 			return result;
 		}
 	}
+
+	@Override
+	public void initializePartition(String tableName, int partitionId) throws Exception {
+		logger.debug("FlinkTableService receive acquire request");
+		tableStorage.initializePartition(tableName, partitionId);
+	}
 }

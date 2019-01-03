@@ -22,7 +22,7 @@ import java.io.IOException
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 
-import org.apache.calcite.rel.logical.{LogicalFilter, LogicalJoin, LogicalTableScan}
+import org.apache.calcite.rel.logical.{LogicalFilter, LogicalJoin, LogicalProject, LogicalTableScan}
 import org.apache.calcite.rel.{AbstractRelNode, BiRel, RelNode, SingleRel}
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.{Table, TableConfigOptions, TableEnvironment}
@@ -43,7 +43,7 @@ import org.apache.flink.test.util.TestBaseUtils
 import org.junit.Assert._
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import org.junit.{After, Before, Test}
+import org.junit.{After, Before, Ignore, Test}
 
 import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable
@@ -149,6 +149,7 @@ class CacheAwareRelNodePlanBuilderTest(
     Files.createDirectory(path)
   }
 
+  @Ignore
   @Test
   def testPersist(): Unit = {
     val ds1 = CollectionBatchExecTable.getSmall3TupleDataSet(tableEnv, "a, b, c")
@@ -176,6 +177,7 @@ class CacheAwareRelNodePlanBuilderTest(
     TestBaseUtils.compareResultAsText(results.asJava, expected)
   }
 
+  @Ignore
   @Test
   def testPersistWithBlockOptimization(): Unit = {
     val join = table1.where('Artist1 !== "The Doors")
@@ -205,6 +207,7 @@ class CacheAwareRelNodePlanBuilderTest(
     tableEnv.execute("write to sink 1/2")
   }
 
+  @Ignore
   @Test
   def testRedundantPersist(): Unit = {
     val join = table1.where('Artist1 !== "The Doors")
@@ -399,6 +402,58 @@ class CacheAwareRelNodePlanBuilderTest(
     verifyLogicalNodeTree(plan(0).outputNode, expectedPre, expectedMid)
   }
 
+  @Test
+  def testInvalidateCache(): Unit = {
+    val t1 = table1
+      .join(table2)
+      .where('Artist1 === 'Artist2)
+      .select('Artist1, 'Album2, 'Song1)
+    t1.cache()
+
+    writeToCollectSink(t1.where('Artist1 === "The Doors"))
+
+    mockExecute(tableEnv)
+
+    val t2 = t1
+      .join(table3)
+      .where('Album2 ==='Album3)
+
+    writeToCollectSink(t2.where('Artist1 === "The Doors"))
+    var plan = tableEnv.compile()
+
+    // only collect sink
+    assertTrue(plan.size == 1)
+
+    tableEnv.tableServiceManager.invalidateCachedTable()
+    plan = tableEnv.compile()
+
+    // collect sink and table service sink
+    assertTrue(plan.size == 2)
+
+    // plan without cache is expected to be used
+    val expectedPre = List(
+      classOf[LogicalSink],
+      classOf[LogicalProject],
+      classOf[LogicalFilter],
+      classOf[LogicalJoin],
+      classOf[LogicalTableScan],
+      classOf[LogicalTableScan]
+    )
+
+    val expectedMid = List(
+      classOf[LogicalTableScan],
+      classOf[LogicalJoin],
+      classOf[LogicalTableScan],
+      classOf[LogicalFilter],
+      classOf[LogicalProject],
+      classOf[LogicalSink]
+    )
+
+    // plan(1).outputNode refers to the branch of TableServiceSink
+    verifyLogicalNodeTree(plan(1).outputNode, expectedPre, expectedMid)
+
+  }
+
   private def verifyLogicalNodeTree(r: RelNode,
                                     expectedPreOrder: List[Class[_]],
                                     expectedMidOrder: List[Class[_]]) = {
@@ -449,7 +504,7 @@ class CacheAwareRelNodePlanBuilderTest(
 
 object CacheAwareRelNodePlanBuilderTest {
 
-  val tmpDir: String =
+  def tmpDir(): String =
     java.nio.file.Files.createTempDirectory("flink_cache_")
       .toAbsolutePath.toString + java.io.File.separatorChar
 

@@ -19,6 +19,7 @@
 package org.apache.flink.table.temptable
 
 import org.apache.flink.api.common.JobSubmissionResult
+import org.apache.flink.api.common.restartstrategy.RestartStrategies
 import org.apache.flink.service.ServiceDescriptor
 import org.apache.flink.table.plan.logical.LogicalNode
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
@@ -27,6 +28,8 @@ import org.apache.flink.table.plan.CacheAwareRelNodePlanBuilder
 import org.apache.flink.table.temptable.util.TableServiceUtil
 import org.apache.flink.table.util.TableProperties
 import org.apache.flink.table.api.{Table, TableEnvironment}
+
+import scala.collection.JavaConverters._
 
 /**
   * TableServiceManager is for maintain status of TableService and CachedTables.
@@ -81,15 +84,31 @@ class FlinkTableServiceManager(tEnv: TableEnvironment) {
     * Record the uuid of a table to be cached & adding Source/Sink LogicalNode
     * @param table The table to be cached.
     */
-  def cacheTable(table: Table): Unit = {
-    val tempTableUUID = table.toString + "-" + java.util.UUID.randomUUID()
-    toBeCachedTables.put(table.logicalPlan,tempTableUUID)
+  private def cacheTable(table: Table, tableUUID: String): Unit = {
+    toBeCachedTables.put(table.logicalPlan, tableUUID)
 
-    val cacheSink = cachePlanBuilder.createCacheTableSink(tempTableUUID, table.logicalPlan)
+    val cacheSink = cachePlanBuilder.createCacheTableSink(tableUUID, table.logicalPlan)
     tEnv.writeToSink(table, cacheSink)
 
-    val cacheSource = cachePlanBuilder.createCacheTableSource(tempTableUUID, table.logicalPlan)
-    tEnv.registerTableSource(tempTableUUID, cacheSource)
+    val cacheSource = cachePlanBuilder.createCacheTableSource(tableUUID, table.logicalPlan)
+    if (tEnv.getTable(tableUUID).isEmpty) {
+      tEnv.registerTableSource(tableUUID, cacheSource)
+    }
+  }
+
+  def cacheTable(table: Table): Unit = {
+    val name = java.util.UUID.randomUUID().toString
+    cacheTable(table, name)
+  }
+
+  /**
+    * invalidate all cached tables if TableService is failed.
+    */
+  def invalidateCachedTable(): Unit = {
+    cachedTables.asScala.foreach {
+      case (plan, name) => cacheTable(new Table(tEnv, plan), name)
+    }
+    cachedTables.clear()
   }
 
   private[flink] def markAllTablesCached(): Unit = {
@@ -108,6 +127,8 @@ class FlinkTableServiceManager(tEnv: TableEnvironment) {
   def startTableServiceJob(): Unit = {
     if(!tableServiceStarted && !toBeCachedTables.isEmpty){
       val executionEnv = StreamExecutionEnvironment.getExecutionEnvironment
+      executionEnv.setRestartStrategy(
+        RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE, 500L))
       if(tableServiceDescriptor.isEmpty) {
         tableServiceDescriptor = Some(TableServiceUtil.getDefaultFlinkTableServiceDescriptor)
       }

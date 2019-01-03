@@ -136,5 +136,8 @@ class FlinkTableServiceSourceFunction(
       startIndex += workerCount
     }
     tablePartionReadRange = result
+    if (tablePartionReadRange.isEmpty) {
+      throw new TableServiceException(new RuntimeException("Table Cache do not exists."))
+    }
   }
 }

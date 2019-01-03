@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.temptable.rpc;
 
+import org.apache.flink.table.temptable.TableServiceException;
 import org.apache.flink.table.temptable.util.BytesUtil;
 
 import org.apache.flink.shaded.netty4.io.netty.buffer.ByteBuf;
@@ -83,6 +84,9 @@ public class TableServiceClientHandler extends ChannelInboundHandlerAdapter {
 				case TableServiceMessage.WRITE:
 					handleWriteResult(responseBytes);
 					break;
+				case TableServiceMessage.INITIALIZE_PARTITION:
+					handleInitializePartitionResult(responseBytes);
+					break;
 				default:
 					LOG.error("Unsupported call: " + lastRequest);
 			}
@@ -124,6 +128,10 @@ public class TableServiceClientHandler extends ChannelInboundHandlerAdapter {
 		this.hasError = false;
 	}
 
+	private void handleInitializePartitionResult(byte[] response) {
+		this.hasError = false;
+	}
+
 	public synchronized List<Integer> getPartitions(String tableName) throws Exception {
 		ensureConnectionReady();
 		byte[] tableNameInBytes = tableName.getBytes("UTF-8");
@@ -139,7 +147,7 @@ public class TableServiceClientHandler extends ChannelInboundHandlerAdapter {
 		wait();
 		if (hasError) {
 			hasError = false;
-			throw new RuntimeException(errorMsg);
+			throw new TableServiceException(new RuntimeException(errorMsg));
 		}
 		return getPartitionsResult == null ? Collections.emptyList() : getPartitionsResult;
 	}
@@ -190,9 +198,31 @@ public class TableServiceClientHandler extends ChannelInboundHandlerAdapter {
 		wait();
 		if (hasError) {
 			hasError = false;
-			throw new RuntimeException(errorMsg);
+			throw new TableServiceException(new RuntimeException(errorMsg));
 		}
 		return readResult;
+	}
+
+	public synchronized void initializePartition(String tableName, int partitionId) throws Exception {
+		ensureConnectionReady();
+		byte[] tableNameInBytes = tableName.getBytes("UTF-8");
+		int totalLength = Integer.BYTES + Byte.BYTES + Integer.BYTES + tableNameInBytes.length + Integer.BYTES;
+
+		ByteBuf buffer = Unpooled.wrappedBuffer(
+			BytesUtil.intToBytes(totalLength),
+			TableServiceMessage.INITIALIZE_PARTITION_BYTES,
+			BytesUtil.intToBytes(tableNameInBytes.length),
+			tableNameInBytes,
+			BytesUtil.intToBytes(partitionId)
+		);
+
+		context.writeAndFlush(buffer);
+		lastRequest = TableServiceMessage.INITIALIZE_PARTITION;
+		wait();
+		if (hasError) {
+			hasError = false;
+			throw new RuntimeException(errorMsg);
+		}
 	}
 
 	private void handleError(byte[] response) {

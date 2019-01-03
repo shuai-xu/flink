@@ -249,7 +249,9 @@ object FlinkShell {
       cluster match {
         case Some(Left(Left(legacyMiniCluster))) => legacyMiniCluster.close()
         case Some(Left(Right(newMiniCluster))) => newMiniCluster.close()
-        case Some(Right(yarnCluster)) => yarnCluster.shutdown()
+        case Some(Right(yarnCluster)) =>
+          yarnCluster.shutDownCluster()
+          yarnCluster.shutdown()
         case _ =>
       }
     }

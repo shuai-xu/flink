@@ -47,7 +47,7 @@ public class FlinkTableService extends UserDefinedService {
 	private ServiceRegistry registry;
 
 	@Override
-	public void open(Configuration parameters) {
+	public void open(Configuration parameters) throws Exception {
 		registry = getServiceContext().getRegistry();
 		registry.open(parameters);
 		manager = new TableServiceImpl();
@@ -57,7 +57,7 @@ public class FlinkTableService extends UserDefinedService {
 	}
 
 	@Override
-	public void close() {
+	public void close() throws Exception {
 		if (server != null) {
 			server.stop();
 		}

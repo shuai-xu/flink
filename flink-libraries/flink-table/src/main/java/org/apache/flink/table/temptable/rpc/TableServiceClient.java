@@ -25,6 +25,7 @@ import org.apache.flink.service.ServiceRegistry;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.temptable.FlinkTableService;
+import org.apache.flink.table.temptable.TableServiceException;
 import org.apache.flink.table.temptable.util.BytesUtil;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
 
@@ -120,7 +121,7 @@ public class TableServiceClient implements LifeCycleAware {
 					}
 				} catch (Exception e) {
 					logger.error(e.getMessage(), e);
-					throw new RuntimeException(e);
+					throw new TableServiceException(new RuntimeException(e.getMessage(), e));
 				} finally {
 					if (channelFuture != null) {
 						try {
@@ -135,7 +136,7 @@ public class TableServiceClient implements LifeCycleAware {
 		return partitions;
 	}
 
-	public void write(String tableName, int partitionIndex, BaseRow row, BaseRowSerializer baseRowSerializer) {
+	public void write(String tableName, int partitionIndex, BaseRow row, BaseRowSerializer baseRowSerializer) throws Exception {
 		ensureConnected(tableName, partitionIndex);
 		if (writeBuffer == null) {
 			writeBuffer = new TableServiceBuffer(tableName, partitionIndex, 32000);
@@ -149,17 +150,12 @@ public class TableServiceClient implements LifeCycleAware {
 			byte[] writeBytes = new byte[remaining];
 			writeBuffer.getByteBuffer().get(writeBytes);
 			writeBuffer.getByteBuffer().clear();
-			try {
-				clientHandler.write(tableName, partitionIndex, writeBytes);
-				clientHandler.write(tableName, partitionIndex, serialized);
-			} catch (Exception e) {
-				logger.error(e.getMessage(), e);
-				throw new RuntimeException(e);
-			}
+			clientHandler.write(tableName, partitionIndex, writeBytes);
+			clientHandler.write(tableName, partitionIndex, serialized);
 		}
 	}
 
-	public BaseRow readNext(String tableName, int partitionIndex, BaseRowSerializer baseRowSerializer) {
+	public BaseRow readNext(String tableName, int partitionIndex, BaseRowSerializer baseRowSerializer) throws Exception {
 		ensureConnected(tableName, partitionIndex);
 		if (readBuffer == null) {
 			readBuffer = new TableServiceBuffer(tableName, partitionIndex, BUFFER_READ_SIZE);
@@ -182,8 +178,13 @@ public class TableServiceClient implements LifeCycleAware {
 		return BytesUtil.deSerialize(buffer, sizeInBytes, baseRowSerializer);
 	}
 
+	public void initializePartition(String tableName, int partitionIndex) throws Exception {
+		ensureConnected(tableName, partitionIndex);
+		clientHandler.initializePartition(tableName, partitionIndex);
+	}
+
 	@Override
-	public void open(Configuration parameters) {
+	public void open(Configuration parameters) throws Exception{
 
 		if (getRegistry() != null) {
 			getRegistry().open(parameters);
@@ -193,7 +194,7 @@ public class TableServiceClient implements LifeCycleAware {
 	}
 
 	@Override
-	public void close() {
+	public void close() throws Exception {
 
 		if (writeBuffer != null) {
 			writeBuffer.getByteBuffer().flip();
@@ -201,12 +202,7 @@ public class TableServiceClient implements LifeCycleAware {
 				ensureConnected(writeBuffer.getTableName(), writeBuffer.getPartitionIndex());
 				byte[] writeBytes = new byte[writeBuffer.getByteBuffer().remaining()];
 				writeBuffer.getByteBuffer().get(writeBytes);
-				try {
-					clientHandler.write(writeBuffer.getTableName(), writeBuffer.getPartitionIndex(), writeBytes);
-				} catch (Exception e) {
-					logger.error(e.getMessage(), e);
-					throw new RuntimeException(e);
-				}
+				clientHandler.write(writeBuffer.getTableName(), writeBuffer.getPartitionIndex(), writeBytes);
 				writeBuffer.getByteBuffer().clear();
 			}
 		}
@@ -226,7 +222,7 @@ public class TableServiceClient implements LifeCycleAware {
 		}
 	}
 
-	private void ensureConnected(String tableName, int partitionIndex) {
+	private void ensureConnected(String tableName, int partitionIndex) throws Exception {
 		if (tableName.equals(lastTableName) && partitionIndex == lastPartitionIndex) {
 			return;
 		}
@@ -248,7 +244,7 @@ public class TableServiceClient implements LifeCycleAware {
 
 		if (serviceInfoList == null || serviceInfoList.isEmpty()) {
 			logger.error("fetch serviceInfoList fail");
-			throw new RuntimeException("serviceInfoList is empty");
+			throw new TableServiceException(new RuntimeException("serviceInfoList is empty"));
 		}
 
 		Collections.sort(serviceInfoList, Comparator.comparing(ServiceInstance::getInstanceId));
@@ -288,7 +284,7 @@ public class TableServiceClient implements LifeCycleAware {
 			channelFuture = bootstrap.connect(pickedServiceInfo.getServiceIp(), pickedServiceInfo.getServicePort()).sync();
 		} catch (InterruptedException e) {
 			logger.error(e.getMessage(), e);
-			throw new RuntimeException("build connection fail", e);
+			throw new TableServiceException(e);
 		}
 
 		logger.info("build client end");
@@ -332,7 +328,7 @@ public class TableServiceClient implements LifeCycleAware {
 		return true;
 	}
 
-	private byte[] readFromBuffer(int readCount) {
+	private byte[] readFromBuffer(int readCount) throws Exception {
 
 		readBuffer.getByteBuffer().flip();
 		byte[] bytes;
@@ -362,14 +358,9 @@ public class TableServiceClient implements LifeCycleAware {
 		return bytes;
 	}
 
-	private boolean fillReadBufferFromClient() {
+	private boolean fillReadBufferFromClient() throws Exception {
 		byte[] buffer;
-		try {
-			buffer = clientHandler.read(lastTableName, lastPartitionIndex, lastTablePartionOffset, BUFFER_READ_SIZE);
-		} catch (Exception e) {
-			logger.error(e.getMessage(), e);
-			throw new RuntimeException(e);
-		}
+		buffer = clientHandler.read(lastTableName, lastPartitionIndex, lastTablePartionOffset, BUFFER_READ_SIZE);
 
 		if (buffer != null && buffer.length > 0) {
 			lastTablePartionOffset += buffer.length;

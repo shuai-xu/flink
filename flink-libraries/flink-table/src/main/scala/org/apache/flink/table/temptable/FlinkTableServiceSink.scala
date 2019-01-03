@@ -106,6 +106,8 @@ class FlinkTableServiceSinkFunction(
     val retryGap = parameters
       .getLong(TABLESERVICE_READY_RETRYGAP_MS, TABLESERVICE_DEFAULT_READY_GAP_MS_VALUE)
     TableServiceUtil.checkTableServiceReady(flinkTableServiceClient, maxRetry, retryGap)
+    // send initialize Partition request to delete existing data.
+    flinkTableServiceClient.initializePartition(tableName, partitionId)
   }
 
   override def close(): Unit = {

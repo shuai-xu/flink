@@ -152,7 +152,7 @@ public class TableStorage implements LifeCycleAware {
 		File file = new File(filePath);
 		if (!file.exists()) {
 			logger.error("file: " + filePath + " is not ready for read.");
-			return -1;
+			throw new RuntimeException("file: " + filePath + " is not ready for read.");
 		}
 
 		FileInputStream input = null;
@@ -184,5 +184,23 @@ public class TableStorage implements LifeCycleAware {
 		}
 
 		return nRead;
+	}
+
+	/**
+	 * initialize the file to write, replace with an empty file if exists.
+	 */
+	public void initializePartition(String tableName, int partitionId) throws IOException {
+		String dirPath = fileRootPath + File.separator
+			+ tableName;
+		String filePath = dirPath + File.separator + partitionId;
+		File file = new File(filePath);
+		if (file.exists()) {
+			file.delete();
+		}
+		File dir = new File(dirPath);
+		if (!dir.exists()) {
+			dir.mkdirs();
+		}
+		file.createNewFile();
 	}
 }
