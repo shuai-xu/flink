@@ -18,11 +18,11 @@
 
 package org.apache.flink.table.plan.optimize
 
-import java.util
+import org.apache.flink.table.util.Logging
 
 import org.apache.calcite.rel.RelNode
-import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
-import org.apache.flink.table.util.Logging
+
+import java.util
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -45,9 +45,7 @@ class FlinkChainedPrograms[OC <: OptimizeContext] extends Logging {
     * Calling each program's optimize method in sequence.
     */
   def optimize(root: RelNode, context: OC): RelNode = {
-    val blackList = getProgramNameBlackList(context)
-
-    programNames.filterNot(blackList.contains).foldLeft(root) {
+    programNames.foldLeft(root) {
       (input, name) =>
         val start = System.currentTimeMillis()
         val result = get(name)
@@ -57,18 +55,6 @@ class FlinkChainedPrograms[OC <: OptimizeContext] extends Logging {
         LOG.info("optimize " + name + " cost " + (end - start) + " ms.")
         result
     }
-  }
-
-  private def getProgramNameBlackList(context: OC): List[String] = {
-    val blackList = mutable.ListBuffer[String]()
-    if (context.getContext != null) {
-      val tableConfig = context.getContext.unwrap(classOf[TableConfig])
-      if (tableConfig != null &&
-          !tableConfig.getConf.getBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED)) {
-        blackList += "join_reorder"
-      }
-    }
-    blackList.toList
   }
 
   /**

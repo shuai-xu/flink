@@ -19,6 +19,7 @@
 package org.apache.flink.table.plan.optimize
 
 import org.apache.flink.configuration.Configuration
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 
@@ -84,12 +85,12 @@ object FlinkBatchPrograms {
     // default rewrite, includes: predicate simplification, expression reduction, window
     // properties rewrite, etc.
     programs.addLast(
-        DEFAULT_REWRITE,
-        FlinkHepRuleSetProgramBuilder.newBuilder
-      .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-      .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-      .add(FlinkBatchExecRuleSets.BATCH_EXEC_DEFAULT_REWRITE_RULES)
-      .build())
+      DEFAULT_REWRITE,
+      FlinkHepRuleSetProgramBuilder.newBuilder
+        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+        .add(FlinkBatchExecRuleSets.BATCH_EXEC_DEFAULT_REWRITE_RULES)
+        .build())
 
     // rule based optimization: push down predicate(s) include join predicate and/or where clause
     // so it only needs to read the required data
@@ -126,13 +127,15 @@ object FlinkBatchPrograms {
         .build())
 
     // join reorder
-    programs.addLast(
-      JOIN_REORDER,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkBatchExecRuleSets.BATCH_EXEC_JOIN_REORDER)
-        .build())
+    if (config.getBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED)) {
+      programs.addLast(
+        JOIN_REORDER,
+        FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkBatchExecRuleSets.BATCH_EXEC_JOIN_REORDER)
+          .build())
+    }
 
     // join rewrite
     programs.addLast(
@@ -179,19 +182,19 @@ object FlinkBatchPrograms {
 
     // optimize the logical plan
     programs.addLast(
-        LOGICAL,
-          FlinkVolcanoProgramBuilder.newBuilder
-      .add(FlinkBatchExecRuleSets.BATCH_EXEC_LOGICAL_OPT_RULES)
-      .setTargetTraits(Array(FlinkConventions.LOGICAL))
-      .build())
+      LOGICAL,
+      FlinkVolcanoProgramBuilder.newBuilder
+        .add(FlinkBatchExecRuleSets.BATCH_EXEC_LOGICAL_OPT_RULES)
+        .setTargetTraits(Array(FlinkConventions.LOGICAL))
+        .build())
 
     // optimize the physical plan
     programs.addLast(
-        PHYSICAL,
-          FlinkVolcanoProgramBuilder.newBuilder
-      .add(FlinkBatchExecRuleSets.BATCH_EXEC_OPT_RULES)
-      .setTargetTraits(Array(FlinkConventions.BATCHEXEC))
-      .build())
+      PHYSICAL,
+      FlinkVolcanoProgramBuilder.newBuilder
+        .add(FlinkBatchExecRuleSets.BATCH_EXEC_OPT_RULES)
+        .setTargetTraits(Array(FlinkConventions.BATCHEXEC))
+        .build())
 
     // physical rewrite
     programs.addLast(

@@ -19,6 +19,7 @@
 package org.apache.flink.table.plan.optimize
 
 import org.apache.flink.configuration.Configuration
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.rules.{FlinkBatchExecRuleSets, FlinkStreamExecRuleSets}
 
@@ -112,12 +113,12 @@ object FlinkStreamPrograms {
     // default rewrite, includes: predicate simplification, expression reduction, window
     // properties rewrite, etc.
     programs.addLast(
-        DEFAULT_REWRITE,
-          FlinkHepRuleSetProgramBuilder.newBuilder
-      .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-      .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-      .add(FlinkStreamExecRuleSets.STREAM_EXEC_DEFAULT_REWRITE_RULES)
-      .build())
+      DEFAULT_REWRITE,
+      FlinkHepRuleSetProgramBuilder.newBuilder
+        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+        .add(FlinkStreamExecRuleSets.STREAM_EXEC_DEFAULT_REWRITE_RULES)
+        .build())
 
     // rule based optimization: push down predicate(s) in where clause, so it only needs to read
     // the required data
@@ -139,13 +140,15 @@ object FlinkStreamPrograms {
         .build())
 
     // join reorder
-    programs.addLast(
-      JOIN_REORDER,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkStreamExecRuleSets.STREAM_EXEC_JOIN_REORDER)
-        .build())
+    if (config.getBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED)) {
+      programs.addLast(
+        JOIN_REORDER,
+        FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkStreamExecRuleSets.STREAM_EXEC_JOIN_REORDER)
+          .build())
+    }
 
     // window
     programs.addLast(
