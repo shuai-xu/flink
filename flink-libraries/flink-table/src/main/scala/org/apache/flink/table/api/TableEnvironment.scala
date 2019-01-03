@@ -352,46 +352,6 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
   // ------ APIs for old catalog architecture ------
 
   /**
-    * Registers an [[ExternalCatalog]] under a unique name in the TableEnvironment's schema.
-    * All tables registered in the [[ExternalCatalog]] can be accessed.
-    * Current implementation does not allow registering multiple external catalogs.
-    *
-    * @param name            The name under which the externalCatalog will be registered
-    * @param externalCatalog The externalCatalog to register
-    */
-  @deprecated
-  def registerExternalCatalog(name: String, externalCatalog: ExternalCatalog): Unit = ???
-
-  /**
-    * Registers an [[ExternalCatalog]] under a unique name in the TableEnvironment's schema.
-    * All tables registered in the [[ExternalCatalog]] can be accessed.
-    *
-    * @param name            The name under which the externalCatalog will be registered
-    * @param externalCatalog The externalCatalog to register
-    */
-  @deprecated
-  protected def registerExternalCatalogInternal(
-      name: String, externalCatalog: ExternalCatalog, isStreaming: Boolean): Unit = {
-    // Here we use the root schema instead of the current schema, for the ExternalCatalog can
-    // only be registered at the root schema.
-    if (catalogManager.getRootSchema.getSubSchema(name) != null) {
-      throw new ExternalCatalogAlreadyExistException(name)
-    }
-
-    if (!externalCatalogs.isEmpty) {
-      throw new UnsupportedOperationException(
-        "Unsupported registering multiple external catalogs")
-    }
-
-    this.externalCatalogs.put(name, externalCatalog)
-    // create an external catalog calcite schema, register it on the root schema
-    // Here we use the root schema instead of the current schema, for the ExternalCatalog can
-    // only be registered at the root schema.
-    ExternalCatalogSchema.registerCatalog(
-      catalogManager.getRootSchema, name, externalCatalog, isStreaming)
-  }
-
-  /**
     * Gets a registered [[ExternalCatalog]] by name.
     *
     * @param name The name to look up the [[ExternalCatalog]]

@@ -1362,10 +1362,6 @@ abstract class StreamTableEnvironment(
     }
   }
 
-  override def registerExternalCatalog(name: String, externalCatalog: ExternalCatalog): Unit = {
-    registerExternalCatalogInternal(name, externalCatalog, true)
-  }
-
   override def registerCatalog(name: String, catalog: ReadableCatalog): Unit = {
     registerCatalogInternal(name, catalog, true)
   }

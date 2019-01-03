@@ -932,10 +932,6 @@ class BatchTableEnvironment(
     }
   }
 
-  override def registerExternalCatalog(name: String, externalCatalog: ExternalCatalog): Unit = {
-    registerExternalCatalogInternal(name, externalCatalog, false)
-  }
-
   override def registerCatalog(name: String, catalog: ReadableCatalog): Unit = {
     registerCatalogInternal(name, catalog, false)
   }

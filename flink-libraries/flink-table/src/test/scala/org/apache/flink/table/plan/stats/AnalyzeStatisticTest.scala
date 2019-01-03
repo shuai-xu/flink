@@ -137,7 +137,7 @@ class AnalyzeStatisticTest extends QueryTest {
 
   @Test
   def testGenerateTableStats_NestTablePath(): Unit = {
-    tEnv.registerExternalCatalog("test", CommonTestData.getInMemoryTestCatalog)
+    tEnv.registerCatalog("test", CommonTestData.getTestFlinkInMemoryCatalog)
 
     val tableStats = AnalyzeStatistic.generateTableStats(
       tEnv, Array("test", "db1", "tb1"), Array.empty[String])
