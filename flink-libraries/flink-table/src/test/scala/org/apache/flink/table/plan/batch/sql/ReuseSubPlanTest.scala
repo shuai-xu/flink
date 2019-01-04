@@ -43,7 +43,6 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
   @Before
   def before(): Unit = {
     util = batchExecTestUtil()
-    // For #testReuseSubPlan_Limit
     val programs = FlinkBatchPrograms.buildPrograms(util.tableEnv.getConfig.getConf)
     programs.getFlinkRuleSetProgram(FlinkBatchPrograms.LOGICAL)
       .get.remove(RuleSets.ofList(PushLimitIntoTableSourceScanRule.INSTANCE))
@@ -51,8 +50,6 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
       .replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
-    // clear parameters
-    util.tableEnv.getConfig.getConf
     util.tableEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
     util.tableEnv.getConfig.getConf.setBoolean(
@@ -276,6 +273,7 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
 
   @Test
   def testBreakupDeadlock_HashJoin(): Unit = {
+
     util.tableEnv.getConfig.getConf.setString(
       TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin,SortMergeJoin")
     val sqlQuery =

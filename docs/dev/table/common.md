@@ -1106,9 +1106,74 @@ val table: Table = tableEnv.fromDataStream(stream, 'name as 'myName)
 Query Optimization
 ------------------
 
-Apache Flink leverages Apache Calcite to optimize and translate queries. The optimization currently performed include projection and filter push-down, subquery decorrelation, and other kinds of query rewriting. Flink does not yet optimize the order of joins, but executes them in the same order as defined in the query (order of Tables in the `FROM` clause and/or order of join predicates in the `WHERE` clause).
+Apache Flink leverages Apache Calcite to optimize and translate queries. The optimization currently performed include projection and filter push-down, subquery decorrelation, and other kinds of query rewriting. Flink optimizes the order of joins based on cost if join-reorder is enabled(`sql.cbo.joinReorder.enabled` is true), otherwise executes them in the same order as defined in the query (order of Tables in the `FROM` clause and/or order of join predicates in the `WHERE` clause).
 
-It is possible to tweak the set of optimization rules which are applied in different phases by providing a `CalciteConfig` object. This can be created via a builder by calling `CalciteConfig.createBuilder())` and is provided to the TableEnvironment by calling `tableEnv.getConfig.setCalciteConfig(calciteConfig)`. 
+It is possible to customize optimization programs referencing to `FlinkBatchPrograms`(default optimization programs for batch) or `FlinkStreamPrograms`(default optimization programs for stream), and replace the default optimization programs by providing a `CalciteConfig` object. This can be created via a builder by calling `CalciteConfig.createBuilder())` and is provided to the TableEnvironment by calling `tableEnv.getConfig.setCalciteConfig(calciteConfig)`. 
+
+### Reuse SubPlan
+Flink will try to find duplicate sub-plans by the digest of physical sub-plan and reuse them if Reuse sub-plan is enabled(`sql.exec.reuse.sub-plan.enabled` is true, default is false).
+**Note:** Reuse sub-plan on Batch is supported now. 
+
+The following code example show the physical plan when Reuse sub-plan is enabled.
+
+<div class="codetabs" markdown="1">
+<div data-lang="java" markdown="1">
+{% highlight java %}
+ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+// create a BatchTableEnvironment
+BatchTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
+
+// register Orders table
+
+// this part is reusable
+Table table = tEnv.scan("Orders")
+	.groupBy("cID, cName")
+	.select("cID, cName, revenue.sum as revSum, revenue.avg as revAvg");
+
+Table table1 = table.select("cID as cID1, cName as cName1, revSum as revSum1, revAvg as revAvg1");
+Table table2 = table.select("cID as cID2, cName as cName2, revSum as revSum2, revAvg as revAvg2");
+Table result = table1.join(table2, "revSum1 = revAvg2 && cID1 <> cID2");
+
+// show plan with reuse info
+String plan = tEnv.explain(result);
+System.out.println(plan);
+{% endhighlight %}
+</div>
+
+<div data-lang="scala" markdown="1">
+{% highlight scala %}
+val env = StreamExecutionEnvironment.getExecutionEnvironment
+// create a BatchTableEnvironment
+val tEnv = TableEnvironment.getTableEnvironment(env)
+
+val table = tEnv.scan("Orders")
+    .groupBy('cID, 'cName)
+    .select('cID, 'cName, 'revenue.sum as 'revSum, 'revenue.avg as 'revAvg)
+
+val table1 = table.select('cID as 'cID1, 'cName as 'cName1, 'revSum as 'revSum1, 'revAvg as 'revAvg1)
+val table2 = table.select('cID as 'cID2, 'cName as 'cName2, 'revSum as 'revSum2, 'revAvg as 'revAvg2)
+val result = table1.join(table2, "revSum1 = revAvg2 && cID1 <> cID2")
+
+// show plan with reuse info
+val plan = tEnv.explain(result)
+println(plan)
+{% endhighlight %}
+</div>
+</div>
+
+the `explain` result is  as follows: (only show physical plan here, sub-plan of `SortAggregate` is reused)
+{% highlight text %}
+SortMergeJoin(where=[AND(=(revSum, revAvg0), <>(cID, cID0))], join=[cID, cName, revSum, revAvg, cID0, cName0, revSum0, revAvg0], joinType=[InnerJoin])
+:- Exchange(distribution=[hash[revSum]])
+:  +- SortAggregate(isMerge=[false], groupBy=[cID, cName], select=[cID, cName, SUM(revenue) AS revSum, AVG(revenue) AS revAvg], reuse_id=[1])
+:     +- Sort(orderBy=[cID ASC, cName ASC])
+:        +- Exchange(distribution=[hash[cID, cName]])
+:           +- TableSourceScan(table=[[default_catalog, default_db, Orders, source: [selectedFields=[cID, cName, revenue]]]], fields=[cID, cName, revenue])
++- Exchange(distribution=[hash[revAvg]])
+   +- Reused(reference_id=[1])
+{% endhighlight %}
+
+{% top %}
 
 ### Explaining a Table
 
