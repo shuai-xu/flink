@@ -148,7 +148,7 @@ public class CatalogPartition {
 
 	/**
 	 * Create a PartitionSpec from a list of strings with format partition_col=partition_val.
-	 *
+	 * Example of input list - ["name=bob", "year=2019"]
 	 */
 	public static PartitionSpec fromStrings(List<String> partitionSpecStrings) {
 		Map<String, String> map = new HashMap<>(partitionSpecStrings.size());

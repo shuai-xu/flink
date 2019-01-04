@@ -51,17 +51,5 @@ public class HiveTableConfig {
 
 	public static final String HIVE_TABLE_PROPERTY_TRANSIENT_LASTDDLTIME = "transient_lastddltime";
 
-	public static final String HIVE_TABLE_PROPERTY_NUM_FILES = "numFiles";
-
-	public static final String HIVE_TABLE_PROPERTY_NUM_PARTITIONS = "numPartitions";
-
-	public static final String HIVE_TABLE_PROPERTY_TOTALSIZE = "totalsize";
-
-	public static final String HIVE_TABLE_PROPERTY_RAWDATASIZE = "rawdatasize";
-
-	public static final String HIVE_TABLE_PROPERTY_NUMROWS = "numrows";
-
-	public static final String HIVE_TABLE_PROPERTY_NUMFILES = "numfiles";
-
 	public static final String HIVE_TABLE_PROPERTY_LAST_MODIFIED_TIME = "last_modified_time";
 }

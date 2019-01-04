@@ -39,6 +39,7 @@ import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.TableSource;
 import org.apache.flink.table.util.TableProperties;
 
+import org.apache.hadoop.hive.common.StatsSetupConst;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.mapred.JobConf;
 import org.slf4j.Logger;
@@ -120,13 +121,15 @@ public class HiveTableFactory implements BatchTableSourceFactory<GenericRow>, Ta
 
 		// Hive table parameters
 		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_TRANSIENT_LASTDDLTIME);
-		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_NUM_FILES);
-		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_NUM_PARTITIONS);
-		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_TOTALSIZE);
-		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_RAWDATASIZE);
-		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_NUMROWS);
-		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_NUMFILES);
 		properties.add(HiveTableConfig.HIVE_TABLE_PROPERTY_LAST_MODIFIED_TIME);
+
+		// Hive table stats
+		properties.add(StatsSetupConst.NUM_FILES);
+		properties.add(StatsSetupConst.NUM_PARTITIONS);
+		properties.add(StatsSetupConst.TOTAL_SIZE);
+		properties.add(StatsSetupConst.RAW_DATA_SIZE);
+		properties.add(StatsSetupConst.ROW_COUNT);
+
 		return properties;
 	}
 

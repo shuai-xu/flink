@@ -53,6 +53,10 @@ under the License.
 					<artifactId>flink-shaded-hive</artifactId>
 				</exclusion>
 				<exclusion>
+					<groupId>com.alibaba.flink</groupId>
+					<artifactId>flink-shaded-hive</artifactId>
+				</exclusion>
+				<exclusion>
 					<artifactId>orc-core</artifactId>
 					<groupId>org.apache.orc</groupId>
 				</exclusion>

@@ -24,6 +24,7 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.types.Row;
 
@@ -39,18 +40,22 @@ import scala.Option;
  * Test util for catalogs.
  */
 public class CatalogTestUtil {
-	public static ExternalCatalogTable getTestExternalCatalogTable() {
+	public static List<Row> getTestData() {
 		List<Row> data = new ArrayList<>();
 		data.add(toRow(new Integer(1), new Integer(2)));
 		data.add(toRow(new Integer(1), new Integer(3)));
 
-		return getTestExternalCatalogTable(data);
+		return data;
 	}
 
-	public static ExternalCatalogTable getTestExternalCatalogTable(List<Row> data) {
+	public static ExternalCatalogTable createExternalCatalogTable() {
+		return createExternalCatalogTable(getTestData());
+	}
+
+	public static ExternalCatalogTable createExternalCatalogTable(List<Row> data) {
 		TableSchema tableSchema = TableSchemaUtil.fromDataType(DataTypes.of(getRowTypeInfo()), Option.empty());
 
-		RichTableSchema richTableSchema = new RichTableSchema(tableSchema.getColumnNames(), tableSchema.getTypes());
+		RichTableSchema richTableSchema = new RichTableSchema(tableSchema.getFieldNames(), tableSchema.getFieldTypes());
 		richTableSchema.setPrimaryKey("a");
 
 		CollectionTableFactory.initData(getRowTypeInfo(), data);
@@ -60,7 +65,7 @@ public class CatalogTestUtil {
 			tableSchema,
 			new HashMap<>(),
 			richTableSchema,
-			null,
+			new TableStats((long) data.size(), new HashMap<>()),
 			null,
 			new LinkedHashSet<>(),
 			false,
@@ -88,14 +93,17 @@ public class CatalogTestUtil {
 		return row;
 	}
 
-	public static ExternalCatalogTable createExternalCatalogTable(String tableType, TableSchema schema,
-																Map<String, String> tableProperties) {
+	public static ExternalCatalogTable createExternalCatalogTable(
+		String tableType,
+		TableSchema schema,
+		Map<String, String> tableProperties) {
+
 		return new ExternalCatalogTable(
 			tableType,
 			schema,
 			tableProperties,
-			null,
-			null,
+			new RichTableSchema(schema.getFieldNames(), schema.getFieldTypes()),
+			new TableStats(),
 			null,
 			new LinkedHashSet<>(),
 			false,
@@ -111,12 +119,13 @@ public class CatalogTestUtil {
 		TableSchema schema,
 		Map<String, String> tableProperties,
 		LinkedHashSet<String> partitionCols) {
+
 		return new ExternalCatalogTable(
 			tableType,
 			schema,
 			tableProperties,
-			null,
-			null,
+			new RichTableSchema(schema.getFieldNames(), schema.getFieldTypes()),
+			new TableStats(),
 			null,
 			partitionCols,
 			true,

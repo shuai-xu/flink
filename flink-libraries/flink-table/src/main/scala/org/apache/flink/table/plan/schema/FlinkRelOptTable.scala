@@ -198,7 +198,9 @@ class FlinkRelOptTable protected(
   override def getRowCount: Double =
     if (table.getStatistic != null) {
       table.getStatistic match {
-        case stats: FlinkStatistic if (stats.getTableStats != null) => stats.getRowCount
+        case stats: FlinkStatistic
+          if (stats.getTableStats != null
+            && stats.getTableStats.rowCount != null) => stats.getRowCount
         case stats: FlinkStatistic => DEFAULT_ROWCOUNT
         case _ => throw new AssertionError
       }

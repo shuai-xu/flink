@@ -42,7 +42,7 @@ public class ExternalCatalogTable {
 	// RichTableSchema of the table
 	private RichTableSchema richTableSchema;
 	// Statistics of the table
-	private TableStats tableStats;
+	private TableStats tableStats = new TableStats();
 	// Comment of the table
 	private String comment;
 	// Partitioned columns
@@ -180,5 +180,24 @@ public class ExternalCatalogTable {
 			tableStats,
 			isPartitioned,
 			partitionColumnNames);
+	}
+
+	@Override
+	public String toString() {
+		return "ExternalCatalogTable{" +
+			"tableType='" + tableType + '\'' +
+			", tableSchema=" + tableSchema +
+			", properties=" + properties +
+			", richTableSchema=" + richTableSchema +
+			", tableStats=" + tableStats +
+			", comment='" + comment + '\'' +
+			", partitionColumnNames=" + partitionColumnNames +
+			", isPartitioned=" + isPartitioned +
+			", computedColumns=" + computedColumns +
+			", rowTimeField='" + rowTimeField + '\'' +
+			", watermarkOffset=" + watermarkOffset +
+			", createTime=" + createTime +
+			", lastAccessTime=" + lastAccessTime +
+			'}';
 	}
 }

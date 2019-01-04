@@ -18,11 +18,11 @@
 
 package org.apache.flink.table.catalog.hive;
 
-import org.apache.flink.hive.shaded.org.apache.thrift.TException;
 import org.apache.flink.table.api.DatabaseAlreadyExistException;
 import org.apache.flink.table.api.DatabaseNotExistException;
 import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
+import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.exceptions.PartitionAlreadyExistException;
 import org.apache.flink.table.api.exceptions.PartitionNotExistException;
 import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
@@ -31,8 +31,10 @@ import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.ExternalCatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.ReadableWritableCatalog;
+import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.util.StringUtils;
 
+import org.apache.hadoop.hive.common.StatsSetupConst;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.IMetaStoreClient;
@@ -44,8 +46,10 @@ import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.api.UnknownDBException;
 import org.apache.parquet.Strings;
+import org.apache.thrift.TException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -71,13 +75,6 @@ public class HiveCatalog implements ReadableWritableCatalog {
 		this.catalogName = catalogName;
 
 		this.hiveConf = checkNotNull(hiveConf, "hiveConf cannot be null");
-	}
-
-	public HiveCatalog(String catalogName, IMetaStoreClient client) {
-		checkArgument(!StringUtils.isNullOrWhitespaceOnly(catalogName), "catalogName cannot be null or empty");
-		this.catalogName = catalogName;
-
-		this.client = checkNotNull(client, "client cannot be null");
 	}
 
 	private static HiveConf getHiveConf(String hiveMetastoreURI) {
@@ -120,7 +117,26 @@ public class HiveCatalog implements ReadableWritableCatalog {
 
 	@Override
 	public ExternalCatalogTable getTable(ObjectPath path) throws TableNotExistException {
-		return HiveMetadataUtil.createExternalCatalogTable(getHiveTable(path));
+		Table hiveTable = getHiveTable(path);
+
+		TableSchema tableSchema = HiveMetadataUtil.createTableSchema(hiveTable.getSd().getCols());
+
+		TableStats tableStats = null;
+		// Get the column statistics for a set of columns in a table. This only works for non-partitioned tables.
+		// For partitioned tables, get partition columns stats from HiveCatalog.getPartition()
+		if (hiveTable.getPartitionKeysSize() == 0) {
+			List<String> cols = Arrays.asList(tableSchema.getFieldNames());
+			try {
+				tableStats = HiveMetadataUtil.createTableStats(
+					getRowCount(hiveTable),
+					client.getTableColumnStatistics(path.getDbName(), path.getObjectName(), cols));
+			} catch (TException e) {
+				throw new FlinkHiveException(
+					String.format("Failed getting table column stats for columns %s of table %s", cols, path));
+			}
+		}
+
+		return HiveMetadataUtil.createExternalCatalogTable(hiveTable, tableSchema, tableStats);
 	}
 
 	private Table getHiveTable(ObjectPath path) {
@@ -132,6 +148,22 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			throw new FlinkHiveException(
 				String.format("Failed getting table %s", path.getFullName()), e);
 		}
+	}
+
+	private Long getRowCount(Table hiveTable) {
+		Long rowCount = null;
+		if (hiveTable.getParameters().get(StatsSetupConst.ROW_COUNT) != null) {
+			rowCount = Long.parseLong(hiveTable.getParameters().get(StatsSetupConst.ROW_COUNT));
+
+			// TODO: [BLINK-18554394] Flink planner cannot generate execution plan for table joins when
+			//  TableStats's rowCount is 0 or 1
+			// When BLINK-18554394 is fixed, rowCount should be set to 1 when it's less than 1
+			if (rowCount <= 1L) {
+				rowCount = null;
+			}
+		}
+
+		return rowCount;
 	}
 
 	@Override
@@ -384,7 +416,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 				);
 			} catch (TException e) {
 				throw new FlinkHiveException(
-					String.format("Failed altering existing partition with new partition %s of table %s", newPartition.getPartitionSpec(), path));
+					String.format("Failed altering existing partition with new partition %s of table %s", newPartition.getPartitionSpec(), path), e);
 			}
 		} else if (!ignoreIfNotExists) {
 			throw new PartitionNotExistException(catalogName, path, newPartition.getPartitionSpec());
@@ -471,6 +503,6 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	}
 
 	private List<String> getOrderedPartitionValues(Table hiveTable, CatalogPartition.PartitionSpec partitionSpec) {
-		return partitionSpec.getOrderedValues(HiveMetadataUtil.getPartitionKeys(hiveTable));
+		return partitionSpec.getOrderedValues(HiveMetadataUtil.getPartitionKeys(hiveTable.getPartitionKeys()));
 	}
 }

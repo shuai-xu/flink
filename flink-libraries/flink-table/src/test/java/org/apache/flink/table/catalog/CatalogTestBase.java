@@ -118,7 +118,7 @@ public abstract class CatalogTestBase {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createTable(path1, originTable, false);
 
-		assertEquals(catalog.getTable(path1), originTable);
+		assertEquals(originTable, catalog.getTable(path1));
 	}
 
 	@Test(expected = TableNotExistException.class)

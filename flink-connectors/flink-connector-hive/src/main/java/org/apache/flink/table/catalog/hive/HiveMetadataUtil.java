@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.catalog.hive;
 
-import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.table.api.Column;
+import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.BooleanType;
 import org.apache.flink.table.api.types.ByteArrayType;
@@ -41,17 +41,32 @@ import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.ExternalCatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.hive.config.HiveDbConfig;
+import org.apache.flink.table.plan.stats.ColumnStats;
+import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.util.PropertiesUtil;
 
+import org.apache.hadoop.hive.metastore.api.BinaryColumnStatsData;
+import org.apache.hadoop.hive.metastore.api.BooleanColumnStatsData;
+import org.apache.hadoop.hive.metastore.api.ColumnStatisticsData;
+import org.apache.hadoop.hive.metastore.api.ColumnStatisticsObj;
 import org.apache.hadoop.hive.metastore.api.Database;
+import org.apache.hadoop.hive.metastore.api.DateColumnStatsData;
+import org.apache.hadoop.hive.metastore.api.Decimal;
+import org.apache.hadoop.hive.metastore.api.DecimalColumnStatsData;
+import org.apache.hadoop.hive.metastore.api.DoubleColumnStatsData;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.LongColumnStatsData;
 import org.apache.hadoop.hive.metastore.api.Partition;
 import org.apache.hadoop.hive.metastore.api.SerDeInfo;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
+import org.apache.hadoop.hive.metastore.api.StringColumnStatsData;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -74,12 +89,21 @@ import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TA
  */
 public class HiveMetadataUtil {
 	/**
+	 * The number of milliseconds in a day.
+	 */
+	private static final long MILLIS_PER_DAY = 86400000; // = 24 * 60 * 60 * 1000
+
+	private HiveMetadataUtil() {
+	}
+
+	/**
 	 * Create a Hive table from ExternalCatalogTable.
 	 */
 	public static Table createHiveTable(ObjectPath tablePath, ExternalCatalogTable table) {
 		Properties prop = new Properties();
 		prop.putAll(table.getProperties());
 
+		// StorageDescriptor
 		StorageDescriptor sd = new StorageDescriptor();
 		sd.setInputFormat(prop.getProperty(HIVE_TABLE_INPUT_FORMAT));
 		sd.setOutputFormat(prop.getProperty(HIVE_TABLE_OUTPUT_FORMAT));
@@ -97,9 +121,6 @@ public class HiveMetadataUtil {
 		sd.setCols(createHiveColumns(table.getTableSchema()));
 		sd.setSortCols(new ArrayList<>());
 
-		Table hiveTable = new Table();
-		hiveTable.setSd(sd);
-
 		// Partitions
 		List<FieldSchema> partitionKeys = new ArrayList<>();
 		if (table.isPartitioned()) {
@@ -110,9 +131,10 @@ public class HiveMetadataUtil {
 				partitionKeys.add(fieldSchema);
 			}
 		}
-		hiveTable.setPartitionKeys(partitionKeys);
 
-		hiveTable.setParameters(new HashMap<>());
+		Table hiveTable = new Table();
+		hiveTable.setSd(sd);
+		hiveTable.setPartitionKeys(partitionKeys);
 		hiveTable.setTableType(prop.getProperty(HIVE_TABLE_TYPE));
 		hiveTable.setDbName(tablePath.getDbName());
 		hiveTable.setTableName(tablePath.getObjectName());
@@ -122,6 +144,9 @@ public class HiveMetadataUtil {
 		return hiveTable;
 	}
 
+	/**
+	 * Create Hive columns from Flink TableSchema.
+	 */
 	private static List<FieldSchema> createHiveColumns(TableSchema schema) {
 		List<FieldSchema> columns = new ArrayList<>();
 		for (Column column : schema.getColumns()) {
@@ -132,15 +157,34 @@ public class HiveMetadataUtil {
 	}
 
 	/**
+	 * Create Flink's TableSchema from Hive columns.
+	 */
+	public static TableSchema createTableSchema(List<FieldSchema> fieldSchemas) {
+		int colSize = fieldSchemas.size();
+
+		String[] colNames = new String[colSize];
+		InternalType[] colTypes = new InternalType[colSize];
+
+		for (int i = 0; i < colSize; i++) {
+			FieldSchema fs = fieldSchemas.get(i);
+
+			colNames[i] = fs.getName();
+			colTypes[i] = HiveMetadataUtil.convert(fs.getType());
+		}
+
+		return new TableSchema(colNames, colTypes);
+	}
+
+	/**
 	 * Create an ExternalCatalogTable from Hive table.
 	 */
-	public static ExternalCatalogTable createExternalCatalogTable(Table hiveTable) {
+	public static ExternalCatalogTable createExternalCatalogTable(Table hiveTable, TableSchema tableSchema, TableStats tableStats) {
 		return new ExternalCatalogTable(
 			"hive",
-			createTableSchema(hiveTable.getSd().getCols()),
+			tableSchema,
 			getPropertiesFromHiveTable(hiveTable),
-			null,
-			null,
+			new RichTableSchema(tableSchema.getFieldNames(), tableSchema.getFieldTypes()),
+			tableStats,
 			null,
 			getPartitionCols(hiveTable),
 			hiveTable.getPartitionKeysSize() != 0,
@@ -149,6 +193,99 @@ public class HiveMetadataUtil {
 			-1L,
 			(long) hiveTable.getCreateTime(),
 			(long) hiveTable.getLastAccessTime());
+	}
+
+	/**
+	 * Create Flink TableStats from the given Hive column stats.
+	 */
+	public static TableStats createTableStats(Long rowCount, List<ColumnStatisticsObj> hiveColStats) {
+		Map<String, ColumnStats> colStats = new HashMap<>();
+		if (colStats != null && !colStats.isEmpty()) {
+			for (ColumnStatisticsObj colStatsObj : hiveColStats) {
+				ColumnStats columnStats = createTableColumnStats(colStatsObj.getStatsData());
+
+				if (colStats != null) {
+					colStats.put(colStatsObj.getColName(), columnStats);
+				}
+			}
+		}
+
+		return new TableStats(rowCount, colStats);
+	}
+
+	/**
+	 * Create Flink ColumnStats from Hive ColumnStatisticsData.
+	 */
+	private static ColumnStats createTableColumnStats(ColumnStatisticsData statsData) {
+		if (statsData.isSetBinaryStats()) {
+			BinaryColumnStatsData binaryStats = statsData.getBinaryStats();
+			return new ColumnStats(
+				null,
+				binaryStats.getNumNulls(),
+				binaryStats.getAvgColLen(),
+				(int) binaryStats.getMaxColLen(),
+				null,
+				null);
+		} else if (statsData.isSetBooleanStats()) {
+			BooleanColumnStatsData booleanStats = statsData.getBooleanStats();
+			return new ColumnStats(
+				null,
+				booleanStats.getNumNulls(),
+				null,
+				null,
+				null,
+				null);
+		} else if (statsData.isSetDateStats()) {
+			DateColumnStatsData dateStats = statsData.getDateStats();
+			return new ColumnStats(
+				dateStats.getNumDVs(),
+				dateStats.getNumNulls(),
+				null,
+				null,
+				new Date(dateStats.getHighValue().getDaysSinceEpoch() * MILLIS_PER_DAY),
+				new Date(dateStats.getLowValue().getDaysSinceEpoch() * MILLIS_PER_DAY));
+		} else if (statsData.isSetDecimalStats()) {
+			DecimalColumnStatsData decimalStats = statsData.getDecimalStats();
+
+			Decimal highValue = decimalStats.getHighValue();
+			Decimal lowValue = decimalStats.getLowValue();
+
+			return new ColumnStats(
+				decimalStats.getNumDVs(),
+				decimalStats.getNumNulls(),
+				null,
+				null,
+				new BigDecimal(new BigInteger(highValue.getUnscaled()), highValue.getScale()),
+				new BigDecimal(new BigInteger(lowValue.getUnscaled()), lowValue.getScale()));
+		} else if (statsData.isSetDoubleStats()) {
+			DoubleColumnStatsData doubleStats = statsData.getDoubleStats();
+			return new ColumnStats(
+				doubleStats.getNumDVs(),
+				doubleStats.getNumNulls(),
+				null,
+				null,
+				doubleStats.getHighValue(),
+				doubleStats.getLowValue());
+		} else if (statsData.isSetLongStats()) {
+			LongColumnStatsData longStats = statsData.getLongStats();
+			return new ColumnStats(
+				longStats.getNumDVs(),
+				longStats.getNumNulls(),
+				null,
+				null,
+				longStats.getHighValue(),
+				longStats.getLowValue());
+		} else if (statsData.isSetStringStats()) {
+			StringColumnStatsData stringStats = statsData.getStringStats();
+			return new ColumnStats(
+				stringStats.getNumDVs(),
+				stringStats.getNumNulls(),
+				stringStats.getAvgColLen(),
+				(int) stringStats.getMaxColLen(),
+				null,
+				null);
+		}
+		return null;
 	}
 
 	private static LinkedHashSet<String> getPartitionCols(Table hiveTable) {
@@ -173,23 +310,6 @@ public class HiveMetadataUtil {
 		prop.putAll(table.getParameters());
 
 		return prop;
-	}
-
-	@VisibleForTesting
-	protected static TableSchema createTableSchema(List<FieldSchema> fieldSchemas) {
-		int colSize = fieldSchemas.size();
-
-		String[] colNames = new String[colSize];
-		InternalType[] colTypes = new InternalType[colSize];
-
-		for (int i = 0; i < colSize; i++) {
-			FieldSchema fs = fieldSchemas.get(i);
-
-			colNames[i] = fs.getName();
-			colTypes[i] = convert(fs.getType());
-		}
-
-		return new TableSchema(colNames, colTypes);
 	}
 
 	/**
@@ -237,6 +357,10 @@ public class HiveMetadataUtil {
 		return new CatalogPartition(spec, prop);
 	}
 
+	/**
+	 * Create Flink PartitionSpec from Hive partition name string.
+	 * Example of Hive partition name string - "name=bob/year=2019"
+	 */
 	public static CatalogPartition.PartitionSpec createPartitionSpec(String hivePartitionName) {
 		return CatalogPartition.fromStrings(Arrays.asList(hivePartitionName.split("/")));
 	}
@@ -247,7 +371,7 @@ public class HiveMetadataUtil {
 	public static Partition createHivePartition(Table hiveTable, CatalogPartition cp) {
 		Partition partition = new Partition();
 
-		partition.setValues(cp.getPartitionSpec().getOrderedValues(getPartitionKeys(hiveTable)));
+		partition.setValues(cp.getPartitionSpec().getOrderedValues(getPartitionKeys(hiveTable.getPartitionKeys())));
 		partition.setDbName(hiveTable.getDbName());
 		partition.setTableName(hiveTable.getTableName());
 		partition.setCreateTime((int) (System.currentTimeMillis() / 1000));
@@ -260,9 +384,10 @@ public class HiveMetadataUtil {
 		return partition;
 	}
 
-	public static List<String> getPartitionKeys(Table hiveTable) {
-		List<FieldSchema> fieldSchemas = hiveTable.getPartitionKeys();
-
+	/**
+	 * Get Hive table partition keys.
+	 */
+	public static List<String> getPartitionKeys(List<FieldSchema> fieldSchemas) {
 		List<String> partitionKeys = new ArrayList<>(fieldSchemas.size());
 
 		for (FieldSchema fs : fieldSchemas) {
