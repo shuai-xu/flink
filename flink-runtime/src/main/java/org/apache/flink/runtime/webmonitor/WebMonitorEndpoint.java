@@ -37,6 +37,7 @@ import org.apache.flink.runtime.rest.handler.cluster.ClusterOverviewHandler;
 import org.apache.flink.runtime.rest.handler.cluster.DashboardConfigHandler;
 import org.apache.flink.runtime.rest.handler.cluster.ShutdownHandler;
 import org.apache.flink.runtime.rest.handler.job.JobAccumulatorsHandler;
+import org.apache.flink.runtime.rest.handler.job.JobAllSubtaskCurrentAttemptsHandler;
 import org.apache.flink.runtime.rest.handler.job.JobConfigHandler;
 import org.apache.flink.runtime.rest.handler.job.JobDetailsHandler;
 import org.apache.flink.runtime.rest.handler.job.JobExceptionsHandler;
@@ -113,6 +114,7 @@ import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointStatisticDet
 import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointingStatisticsHeaders;
 import org.apache.flink.runtime.rest.messages.checkpoints.TaskCheckpointStatisticsHeaders;
 import org.apache.flink.runtime.rest.messages.cluster.ShutdownHeaders;
+import org.apache.flink.runtime.rest.messages.job.JobAllSubtaskCurrentAttemptsInfoHeaders;
 import org.apache.flink.runtime.rest.messages.job.JobDetailsHeaders;
 import org.apache.flink.runtime.rest.messages.job.JobVerticesHeaders;
 import org.apache.flink.runtime.rest.messages.job.SubtaskAllExecutionAttemptDetailsHeaders;
@@ -543,6 +545,16 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 			executionGraphCache,
 			executor);
 
+		final JobAllSubtaskCurrentAttemptsHandler jobAllSubtaskCurrentAttemptsHandler = new JobAllSubtaskCurrentAttemptsHandler(
+			restAddressFuture,
+			leaderRetriever,
+			timeout,
+			responseHeaders,
+			JobAllSubtaskCurrentAttemptsInfoHeaders.getInstance(),
+			executionGraphCache,
+			executor
+		);
+
 		final RescalingHandlers rescalingHandlers = new RescalingHandlers();
 
 		final RescalingHandlers.RescalingTriggerHandler rescalingTriggerHandler = rescalingHandlers.new RescalingTriggerHandler(
@@ -672,6 +684,7 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 		handlers.add(Tuple2.of(subtaskExecutionAttemptAccumulatorsHandler.getMessageHeaders(), subtaskExecutionAttemptAccumulatorsHandler));
 		handlers.add(Tuple2.of(subtaskCurrentAttemptDetailsHandler.getMessageHeaders(), subtaskCurrentAttemptDetailsHandler));
 		handlers.add(Tuple2.of(subtaskAllExecutionAttemptDetailsHandler.getMessageHeaders(), subtaskAllExecutionAttemptDetailsHandler));
+		handlers.add(Tuple2.of(jobAllSubtaskCurrentAttemptsHandler.getMessageHeaders(), jobAllSubtaskCurrentAttemptsHandler));
 		handlers.add(Tuple2.of(jobVertexTaskManagersHandler.getMessageHeaders(), jobVertexTaskManagersHandler));
 		handlers.add(Tuple2.of(jobVertexBackPressureHandler.getMessageHeaders(), jobVertexBackPressureHandler));
 		handlers.add(Tuple2.of(jobCancelTerminationHandler.getMessageHeaders(), jobCancelTerminationHandler));

@@ -87,7 +87,7 @@ public abstract class AbstractSubtaskHandler<R extends ResponseBody, M extends S
 			throw new RestHandlerException("Invalid subtask index for vertex " + jobVertex.getJobVertexId(), HttpResponseStatus.NOT_FOUND);
 		}
 
-		return handleRequest(request, executionVertices[subtaskIndex]);
+		return handleRequest(request, executionVertices[subtaskIndex], jobVertex.getJobVertexId().toString());
 	}
 
 	/**
@@ -99,5 +99,5 @@ public abstract class AbstractSubtaskHandler<R extends ResponseBody, M extends S
 	 * @return the response
 	 * @throws RestHandlerException the rest handler exception
 	 */
-	protected abstract R handleRequest(HandlerRequest<EmptyRequestBody, M> request, AccessExecutionVertex executionVertex) throws RestHandlerException;
+	protected abstract R handleRequest(HandlerRequest<EmptyRequestBody, M> request, AccessExecutionVertex executionVertex, String vertexId) throws RestHandlerException;
 }

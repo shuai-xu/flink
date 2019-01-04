@@ -58,20 +58,21 @@ public class SubtaskAllExecutionAttemptDetailsHandler extends AbstractSubtaskHan
 	@Override
 	protected SubtaskExecutionAllAttemptsInfo handleRequest(
 			HandlerRequest<EmptyRequestBody, SubtaskMessageParameters> request,
-			AccessExecutionVertex executionVertex) throws RestHandlerException {
+			AccessExecutionVertex executionVertex,
+			String vertexId) throws RestHandlerException {
 
 		final AccessExecution execution = executionVertex.getCurrentExecutionAttempt();
 
 		final int currentAttemptNum = execution.getAttemptNumber();
 
 		final List<SubtaskExecutionAttemptInfo> allAttempts = new ArrayList<>();
-		allAttempts.add(SubtaskExecutionAttemptInfo.create(execution));
+		allAttempts.add(SubtaskExecutionAttemptInfo.create(execution, vertexId));
 
 		if (currentAttemptNum > 0) {
 			for (int i = currentAttemptNum - 1; i >= 0; i--) {
 				final AccessExecution currentExecution = executionVertex.getPriorExecutionAttempt(i);
 				if (currentExecution != null) {
-					allAttempts.add(SubtaskExecutionAttemptInfo.create(currentExecution));
+					allAttempts.add(SubtaskExecutionAttemptInfo.create(currentExecution, vertexId));
 				}
 			}
 		}

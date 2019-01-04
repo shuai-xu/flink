@@ -18,12 +18,14 @@
 
 package org.apache.flink.runtime.rest.handler.job;
 
+import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.ArchivedExecution;
 import org.apache.flink.runtime.executiongraph.ArchivedExecutionVertex;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
+import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.rest.handler.RestHandlerException;
 import org.apache.flink.runtime.rest.handler.legacy.ExecutionGraphCache;
 import org.apache.flink.runtime.rest.messages.job.SubtaskAllExecutionAttemptDetailsHeaders;
@@ -50,6 +52,8 @@ public class SubtaskAllExecutionAttemptDetailsHandlerTest {
 	@Test
 	public void testHandleRequest() throws RestHandlerException {
 
+		final JobID jobID = new JobID();
+		final JobVertexID jobVertexID = new JobVertexID();
 		final int subtaskIndex = 2;
 
 		// Prepare current execution.
@@ -118,7 +122,8 @@ public class SubtaskAllExecutionAttemptDetailsHandlerTest {
 			new ExecutionGraphCache(Time.milliseconds(100), Time.milliseconds(100)),
 			TestingUtils.defaultExecutor());
 
-		final SubtaskExecutionAllAttemptsInfo attemptsInfo = handler.handleRequest(null, archivedExecutionVertex);
+		final SubtaskExecutionAllAttemptsInfo attemptsInfo = handler.handleRequest(null,
+			archivedExecutionVertex, jobVertexID.toString());
 
 		// Verify
 		assertEquals(2, attemptsInfo.getAttempts().size());

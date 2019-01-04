@@ -60,6 +60,10 @@ public class SubtaskExecutionAttemptInfo implements ResponseBody {
 
 	public static final String FIELD_NAME_RESOURCE_ID = "resource-id";
 
+	public static final String FIELD_NAME_SUBTASK_INDEX = "subtask-index";
+
+	public static final String FIELD_NAME_VERTERX_ID = "vertex-id";
+
 	@JsonProperty(FIELD_NAME_ID)
 	@JsonSerialize(using = ExecutionAttemptIDSerializer.class)
 	private final ExecutionAttemptID attemptID;
@@ -89,6 +93,12 @@ public class SubtaskExecutionAttemptInfo implements ResponseBody {
 	@JsonSerialize(using = ResourceIDSerializer.class)
 	private final ResourceID resourceID;
 
+	@JsonProperty(FIELD_NAME_SUBTASK_INDEX)
+	private final int subtaskIndex;
+
+	@JsonProperty(FIELD_NAME_VERTERX_ID)
+	private final String vertexId;
+
 	@JsonCreator
 	public SubtaskExecutionAttemptInfo(
 		@JsonDeserialize(using = ExecutionAttemptIDDeserializer.class)
@@ -101,7 +111,9 @@ public class SubtaskExecutionAttemptInfo implements ResponseBody {
 		@JsonProperty(FIELD_NAME_DURATION) long duration,
 		@JsonProperty(FIELD_NAME_FAILURE_CAUSE) String failureCause,
 		@JsonDeserialize(using = ResourceIDDeserializer.class)
-			@JsonProperty(FIELD_NAME_RESOURCE_ID) ResourceID resourceID) {
+			@JsonProperty(FIELD_NAME_RESOURCE_ID) ResourceID resourceID,
+		@JsonProperty(FIELD_NAME_SUBTASK_INDEX) int subtaskIndex,
+		@JsonProperty(FIELD_NAME_VERTERX_ID) String vertexId) {
 
 		this.attemptID = Preconditions.checkNotNull(attemptID);
 		this.status = Preconditions.checkNotNull(status);
@@ -112,6 +124,8 @@ public class SubtaskExecutionAttemptInfo implements ResponseBody {
 		this.duration = duration;
 		this.failureCause = Preconditions.checkNotNull(failureCause);
 		this.resourceID = Preconditions.checkNotNull(resourceID);
+		this.subtaskIndex = subtaskIndex;
+		this.vertexId = vertexId;
 	}
 
 	public ExecutionAttemptID getAttemptID() {
@@ -150,6 +164,14 @@ public class SubtaskExecutionAttemptInfo implements ResponseBody {
 		return resourceID;
 	}
 
+	public int getSubtaskIndex() {
+		return subtaskIndex;
+	}
+
+	public String getVertexId() {
+		return vertexId;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -169,18 +191,20 @@ public class SubtaskExecutionAttemptInfo implements ResponseBody {
 			endTime == that.endTime &&
 			duration == that.duration &&
 			Objects.equals(failureCause, that.failureCause) &&
-			Objects.equals(resourceID, that.resourceID);
+			Objects.equals(resourceID, that.resourceID) &&
+			subtaskIndex == that.subtaskIndex &&
+			Objects.equals(vertexId, that.vertexId);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(attemptID, status, attempt, host, startTime, endTime, duration, failureCause, resourceID);
+		return Objects.hash(attemptID, status, attempt, host, startTime,
+			endTime, duration, failureCause, resourceID, subtaskIndex, vertexId);
 	}
 
-	public static SubtaskExecutionAttemptInfo create(AccessExecution execution) {
+	public static SubtaskExecutionAttemptInfo create(AccessExecution execution, String vertexId) {
 		final ExecutionState status = execution.getState();
 		final long now = System.currentTimeMillis();
-
 		final TaskManagerLocation location = execution.getAssignedResourceLocation();
 		final String locationString = location == null ? "(unassigned)" : location.getHostname() + ":" + location.dataPort();
 		final ResourceID resourceID = location == null ? new ResourceID("(unassigned)") : location.getResourceID();
@@ -203,7 +227,9 @@ public class SubtaskExecutionAttemptInfo implements ResponseBody {
 			endTime,
 			duration,
 			failureCause,
-			resourceID
+			resourceID,
+			execution.getParallelSubtaskIndex(),
+			vertexId
 		);
 	}
 }

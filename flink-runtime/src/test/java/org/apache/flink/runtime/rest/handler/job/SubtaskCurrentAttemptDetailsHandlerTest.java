@@ -146,7 +146,7 @@ public class SubtaskCurrentAttemptDetailsHandlerTest extends TestLogger {
 			Collections.emptyMap());
 
 		// Handle request.
-		final SubtaskExecutionAttemptDetailsInfo detailsInfo = handler.handleRequest(request, executionVertex);
+		final SubtaskExecutionAttemptDetailsInfo detailsInfo = handler.handleRequest(request, executionVertex, jobVertexID.toString());
 
 		// Verify
 		final IOMetricsInfo ioMetricsInfo = new IOMetricsInfo(
