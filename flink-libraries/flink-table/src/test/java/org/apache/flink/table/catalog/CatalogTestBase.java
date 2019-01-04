@@ -82,21 +82,21 @@ public abstract class CatalogTestBase {
 	}
 
 	@Test(expected = DatabaseNotExistException.class)
-	public void testCreateTableWithNonexistentDb() {
+	public void testCreateTable_DatabaseNotExistException() {
 		assertFalse(catalog.dbExists(db1));
 
 		catalog.createTable(nonExistTablePath, createTable(), false);
 	}
 
 	@Test(expected = TableAlreadyExistException.class)
-	public void testCreateExistedTable() {
+	public void testCreateTable_TableAlreadyExistException() {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createTable(path1, createTable(), false);
 		catalog.createTable(path1, createTable(), false);
 	}
 
 	@Test
-	public void testCreateExistedTableIgnore() {
+	public void testCreateTable_TableAlreadyExist_ignored() {
 		catalog.createDatabase(db1, createDb(), false);
 
 		ExternalCatalogTable table = createTable();
@@ -122,14 +122,14 @@ public abstract class CatalogTestBase {
 	}
 
 	@Test(expected = TableNotExistException.class)
-	public void testGetNonexistentTable() {
+	public void testGetTable_TableNotExistException() {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.getTable(nonExistTablePath);
 	}
 
 	@Test(expected = TableNotExistException.class)
-	public void testGetNonexistentTableWithMissingDb() {
-		catalog.getTable(nonExistDbPath);
+	public void testGetTable_TableNotExistException_NoDb() {
+		catalog.getTable(nonExistTablePath);
 	}
 
 	@Test
@@ -145,12 +145,12 @@ public abstract class CatalogTestBase {
 	}
 
 	@Test(expected = TableNotExistException.class)
-	public void testDropNonexistentTable() {
+	public void testDropTable_TableNotExistException() {
 		catalog.dropTable(nonExistDbPath, false);
 	}
 
 	@Test
-	public void testDropNonexistentTableIgnore() {
+	public void testDropTable_TableNotExist_ignored() {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.dropTable(nonExistTablePath, true);
 	}
@@ -171,12 +171,12 @@ public abstract class CatalogTestBase {
 	}
 
 	@Test(expected = TableNotExistException.class)
-	public void testAlterNonexisttentTable() {
+	public void testAlterTable_TableNotExistException() {
 		catalog.alterTable(nonExistDbPath, createTable(), false);
 	}
 
 	@Test
-	public void testAlterNonexistentTableIgnore() {
+	public void testAlterTable_TableNotExist_ignored() {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.alterTable(nonExistTablePath, createTable(), true);
 
@@ -204,13 +204,13 @@ public abstract class CatalogTestBase {
 	}
 
 	@Test(expected = DatabaseAlreadyExistException.class)
-	public void testCreateExistentDb() {
+	public void testCreateDb_DatabaseAlreadyExistException() {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createDatabase(db1, createDb(), false);
 	}
 
 	@Test
-	public void testCreateExistentDbIgnore() {
+	public void testCreateDb_DatabaseAlreadyExist_ignored() {
 		CatalogDatabase cd1 = createDb();
 		catalog.createDatabase(db1, cd1, false);
 		List<String> dbs = catalog.listDatabases();
@@ -227,7 +227,7 @@ public abstract class CatalogTestBase {
 	}
 
 	@Test(expected = DatabaseNotExistException.class)
-	public void testGetNonexistentDb() {
+	public void testGetDb_DatabaseNotExistException() {
 		catalog.getDatabase("nonexistent");
 	}
 
@@ -243,12 +243,12 @@ public abstract class CatalogTestBase {
 	}
 
 	@Test (expected = DatabaseNotExistException.class)
-	public void testDropNonexistentDb() {
+	public void testDropDb_DatabaseNotExistException() {
 		catalog.dropDatabase(db1, false);
 	}
 
 	@Test
-	public void testDropNonexistentDbIgnore() {
+	public void testDropDb_DatabaseNotExist_Ignore() {
 		catalog.dropDatabase(db1, true);
 	}
 
@@ -267,12 +267,12 @@ public abstract class CatalogTestBase {
 	}
 
 	@Test(expected = DatabaseNotExistException.class)
-	public void testAlterNonexistentDb() {
+	public void testAlterDb_DatabaseNotExistException() {
 		catalog.alterDatabase("nonexistent", createDb(), false);
 	}
 
 	@Test
-	public void testAlterNonexistentDbIgnore() {
+	public void testAlterDb_DatabaseNotExist_ignored() {
 		catalog.alterDatabase("nonexistent", createDb(), true);
 
 		assertFalse(catalog.dbExists("nonexistent"));
