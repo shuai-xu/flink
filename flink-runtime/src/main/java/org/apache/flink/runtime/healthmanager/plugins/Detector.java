@@ -40,6 +40,6 @@ public interface Detector {
 	 * Detect the symptom, return null if not abnormal symptom detected.
 	 * @return
 	 */
-	Symptom detect();
+	Symptom detect() throws Exception;
 
 }

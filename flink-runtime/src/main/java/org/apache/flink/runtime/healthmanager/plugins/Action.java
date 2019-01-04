@@ -38,7 +38,7 @@ public interface Action {
 	 * @param restServerClient
 	 * @return
 	 */
-	boolean validate(MetricProvider provider, RestServerClient restServerClient) throws InterruptedException;
+	boolean validate(MetricProvider provider, RestServerClient restServerClient) throws Exception;
 
 	/**
 	 * Rollback action of current action.

@@ -55,7 +55,7 @@ public class OOMDetector implements Detector {
 	}
 
 	@Override
-	public Symptom detect() {
+	public Symptom detect() throws Exception {
 
 		long now = System.currentTimeMillis();
 

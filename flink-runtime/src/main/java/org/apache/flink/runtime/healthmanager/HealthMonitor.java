@@ -201,7 +201,12 @@ public class HealthMonitor {
 
 			// 1. check abnormal symptoms.
 			for (Detector detector: detectors) {
-				Symptom symptom = detector.detect();
+				Symptom symptom = null;
+				try {
+					symptom = detector.detect();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 				if (symptom != null) {
 					symptoms.add(symptom);
 				}

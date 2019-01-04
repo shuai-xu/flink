@@ -24,6 +24,8 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.client.JobStatusMessage;
+import org.apache.flink.runtime.execution.ExecutionState;
+import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.rest.RestClient;
 import org.apache.flink.runtime.rest.RestClientConfiguration;
@@ -37,10 +39,14 @@ import org.apache.flink.runtime.rest.messages.MessageHeaders;
 import org.apache.flink.runtime.rest.messages.MessageParameters;
 import org.apache.flink.runtime.rest.messages.RequestBody;
 import org.apache.flink.runtime.rest.messages.ResponseBody;
+import org.apache.flink.runtime.rest.messages.job.JobAllSubtaskCurrentAttemptsInfoHeaders;
+import org.apache.flink.runtime.rest.messages.job.JobSubtaskCurrentAttemptsInfo;
+import org.apache.flink.runtime.rest.messages.job.SubtaskExecutionAttemptInfo;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -98,9 +104,27 @@ public class RestServerClientImpl implements RestServerClient {
 		return null;
 	}
 
+	//JobAllSubtaskCurrentAttemptsHandler
 	@Override
-	public JobStatus getJobStatus(JobID jobId) {
-		return null;
+	public JobStatus getJobStatus(JobID jobId) throws Exception {
+		final JobAllSubtaskCurrentAttemptsInfoHeaders jobAllSubtaskCurrentAttemptsInfoHeaders =
+			JobAllSubtaskCurrentAttemptsInfoHeaders.getInstance();
+		final JobMessageParameters jobMessageParameters = jobAllSubtaskCurrentAttemptsInfoHeaders
+			.getUnresolvedMessageParameters();
+		jobMessageParameters.jobPathParameter.resolve(jobId);
+		return sendRequest(jobAllSubtaskCurrentAttemptsInfoHeaders, jobMessageParameters, EmptyRequestBody.getInstance()).thenApply(
+			(JobSubtaskCurrentAttemptsInfo subtasksInfo) -> {
+				Collection<SubtaskExecutionAttemptInfo> subtasks = subtasksInfo.getSubtaskInfos();
+				Map<ExecutionVertexID, ExecutionState> taskStatus = new HashMap<>();
+				for (SubtaskExecutionAttemptInfo subtask: subtasks) {
+					JobVertexID jobVertexID = JobVertexID.fromHexString(subtask.getVertexId());
+					ExecutionVertexID executionVertexID = new ExecutionVertexID(jobVertexID, subtask.getSubtaskIndex());
+					ExecutionState executionState = subtask.getStatus();
+					taskStatus.put(executionVertexID, executionState);
+				}
+				return new JobStatus(taskStatus);
+			}
+		).get();
 	}
 
 	//@ JobExceptionsHandler

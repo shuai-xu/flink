@@ -62,7 +62,7 @@ public class AdjustResourceProfile implements Action {
 	}
 
 	@Override
-	public boolean validate(MetricProvider provider, RestServerClient restServerClient) throws InterruptedException {
+	public boolean validate(MetricProvider provider, RestServerClient restServerClient) throws Exception {
 		long start = System.currentTimeMillis();
 		while (true) {
 			Thread.sleep(timeoutMs / 10);

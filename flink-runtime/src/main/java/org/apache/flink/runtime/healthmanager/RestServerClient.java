@@ -55,7 +55,7 @@ public interface RestServerClient {
 	 * @param jobId job id of the job.
 	 * @return
 	 */
-	JobStatus getJobStatus(JobID jobId);
+	JobStatus getJobStatus(JobID jobId) throws Exception;
 
 	/**
 	 * Get failover history in time range.
