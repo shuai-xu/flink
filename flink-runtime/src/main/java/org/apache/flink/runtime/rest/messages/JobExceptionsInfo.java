@@ -22,6 +22,7 @@ import org.apache.flink.runtime.rest.handler.job.JobExceptionsHandler;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
@@ -59,6 +60,11 @@ public class JobExceptionsInfo implements ResponseBody {
 		this.rootTimestamp = rootTimestamp;
 		this.allExceptions = Preconditions.checkNotNull(allExceptions);
 		this.truncated = truncated;
+	}
+
+	@JsonIgnore
+	public List<ExecutionExceptionInfo> getAllExceptions() {
+		return allExceptions;
 	}
 
 	@Override
@@ -136,6 +142,41 @@ public class JobExceptionsInfo implements ResponseBody {
 			this.vertexID = vertexID;
 			this.subtaskIndex = subtaskIndex;
 			this.attemptNum = attemptNum;
+		}
+
+		@JsonIgnore
+		public String getException() {
+			return exception;
+		}
+
+		@JsonIgnore
+		public String getTask() {
+			return task;
+		}
+
+		@JsonIgnore
+		public String getLocation() {
+			return location;
+		}
+
+		@JsonIgnore
+		public long getTimestamp() {
+			return timestamp;
+		}
+
+		@JsonIgnore
+		public String getVertexID() {
+			return vertexID;
+		}
+
+		@JsonIgnore
+		public int getSubtaskIndex() {
+			return subtaskIndex;
+		}
+
+		@JsonIgnore
+		public int getAttemptNum() {
+			return attemptNum;
 		}
 
 		@Override

@@ -29,12 +29,24 @@ import org.apache.flink.runtime.rest.RestClient;
 import org.apache.flink.runtime.rest.RestClientConfiguration;
 import org.apache.flink.runtime.rest.messages.EmptyMessageParameters;
 import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
+import org.apache.flink.runtime.rest.messages.JobExceptionsHeaders;
+import org.apache.flink.runtime.rest.messages.JobExceptionsInfo;
+import org.apache.flink.runtime.rest.messages.JobMessageParameters;
 import org.apache.flink.runtime.rest.messages.JobsOverviewHeaders;
+import org.apache.flink.runtime.rest.messages.MessageHeaders;
+import org.apache.flink.runtime.rest.messages.MessageParameters;
+import org.apache.flink.runtime.rest.messages.RequestBody;
+import org.apache.flink.runtime.rest.messages.ResponseBody;
 
+import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
@@ -55,11 +67,17 @@ public class RestServerClientImpl implements RestServerClient {
 		baseUri = new URI(baseUrl);
 	}
 
+	public <M extends MessageHeaders<R, P, U>, U extends MessageParameters, R extends RequestBody, P extends ResponseBody> CompletableFuture<P> sendRequest(
+		M messageHeaders,
+		U messageParameters,
+		R request) throws IOException {
+		return restClient.sendRequest(baseUri.getHost(), baseUri.getPort(), messageHeaders,
+			messageParameters, request, Collections.emptyList());
+	}
+
 	@Override
 	public List<JobStatusMessage> listJob() throws Exception {
-		return restClient.sendRequest(
-				baseUri.getHost(),
-				baseUri.getPort(),
+		return sendRequest(
 				JobsOverviewHeaders.getInstance(),
 				EmptyMessageParameters.getInstance(),
 				EmptyRequestBody.getInstance()).thenApply(
@@ -74,6 +92,7 @@ public class RestServerClientImpl implements RestServerClient {
 								.collect(Collectors.toList())).get();
 	}
 
+	//依赖 jobGraph， 可以先用伪接口实现
 	@Override
 	public JobConfig getJobConfig(JobID jobId) {
 		return null;
@@ -84,23 +103,53 @@ public class RestServerClientImpl implements RestServerClient {
 		return null;
 	}
 
+	//@ JobExceptionsHandler
+	// org.apache.flink.client.program.rest.RestClusterClient.rescaleJob
 	@Override
-	public Map<JobVertexID, List<JobException>> getFailover(JobID jobID, long startTime, long endTime) {
-		return null;
+	public Map<JobVertexID, List<JobException>> getFailover(JobID jobID, long startTime, long endTime) throws Exception {
+		final JobExceptionsHeaders jobExceptionsHeaders = JobExceptionsHeaders.getInstance();
+		final JobMessageParameters jobMessageParameters = jobExceptionsHeaders.getUnresolvedMessageParameters();
+		jobMessageParameters.jobPathParameter.resolve(jobID);
+		return sendRequest(jobExceptionsHeaders, jobMessageParameters, EmptyRequestBody.getInstance()).thenApply(
+			(JobExceptionsInfo exceptionsInfo) -> {
+				List<JobExceptionsInfo.ExecutionExceptionInfo> exceptions = exceptionsInfo.getAllExceptions();
+				Map<JobVertexID, List<JobException>> jobVertexId2exceptions = new HashMap<>();
+				for (JobExceptionsInfo.ExecutionExceptionInfo exception: exceptions) {
+					JobVertexID jobVertexID = JobVertexID.fromHexString(exception.getVertexID());
+					if (exception.getTimestamp() >= startTime && exception.getTimestamp() <= endTime) {
+						JobException vertexException = new JobException(exception.getException());
+						List<JobException> vertexExceptions;
+						if (jobVertexId2exceptions.containsKey(jobVertexID)) {
+							vertexExceptions = jobVertexId2exceptions.get(jobVertexID);
+						} else {
+							vertexExceptions = new ArrayList<>();
+						}
+						vertexExceptions.add(vertexException);
+						jobVertexId2exceptions.put(jobVertexID, vertexExceptions);
+					} else {
+						continue;
+					}
+				}
+				return jobVertexId2exceptions;
+			}
+		).get();
 	}
 
+	//需要获取 vertex 的所有 metrics
 	@Override
 	public Map<String, Map<Integer, Tuple2<Long, Double>>> getTaskMetrics(JobID jobID, JobVertexID jobVertexID,
 			Set<String> metricNames) {
 		return null;
 	}
 
+	//获取所有 tm 的 metrics
 	@Override
 	public Map<String, Map<String, Tuple2<Long, Double>>> getTaskManagerMetrics(Set<String> tmIds,
 			Set<String> metricNames) {
 		return null;
 	}
 
+	//获取
 	@Override
 	public Map<String, Map<String, Tuple2<Long, Double>>> getTaskManagerMetrics(JobID jobId,
 			Set<String> metricNames) {

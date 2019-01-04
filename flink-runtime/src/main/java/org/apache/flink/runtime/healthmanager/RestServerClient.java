@@ -64,7 +64,7 @@ public interface RestServerClient {
 	 * @param endTime   end time in millisecond of the range.
 	 * @return
 	 */
-	Map<JobVertexID, List<JobException>> getFailover(JobID jobID, long startTime, long endTime);
+	Map<JobVertexID, List<JobException>> getFailover(JobID jobID, long startTime, long endTime) throws Exception;
 
 	/**
 	 * Get Metrics of given job vertex.
