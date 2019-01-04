@@ -48,7 +48,7 @@ import static org.apache.flink.table.dataformat.util.BaseRowUtil.RETRACT_MSG;
 /**
  * MiniBatch anti semi operator.
  */
-public class AntiSemiBatchJoinStreamOperator extends BatchJoinStreamOperator {
+public class MiniBatchAntiSemiJoinStreamOperator extends MiniBatchJoinStreamOperator {
 
 	private static final long serialVersionUID = 1L;
 
@@ -64,7 +64,7 @@ public class AntiSemiBatchJoinStreamOperator extends BatchJoinStreamOperator {
 	protected final Boolean isSemi;
 	protected final Boolean isEqual;
 
-	public AntiSemiBatchJoinStreamOperator(
+	public MiniBatchAntiSemiJoinStreamOperator(
 			BaseRowTypeInfo<BaseRow> leftType,
 			BaseRowTypeInfo<BaseRow> rightType, GeneratedJoinConditionFunction condFuncCode,
 			KeySelector<BaseRow, BaseRow> leftKeySelector,
@@ -92,7 +92,7 @@ public class AntiSemiBatchJoinStreamOperator extends BatchJoinStreamOperator {
 		super.open();
 		this.leftSideNullRow = new GenericRow(leftType.getArity());
 		this.rightSideNullRow = new GenericRow(rightType.getArity());
-		LOG.info("Init AntiSemiBatchJoinStreamOperator.");
+		LOG.info("Init MiniBatchAntiSemiJoinStreamOperator.");
 		LOG.info("leftJoinStateType {}, rightJoinStateType {}, leftMatchStateType {}, rightMatchStateType {}",
 				leftJoinStateType, rightJoinStateType, leftMatchStateType, rightMatchStateType);
 		LOG.info("isSemi: " + isSemi + ", isEqualJoin: " + isEqual);

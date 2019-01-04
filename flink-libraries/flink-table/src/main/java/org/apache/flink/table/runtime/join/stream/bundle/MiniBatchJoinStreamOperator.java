@@ -74,7 +74,7 @@ import java.util.OptionalInt;
  * MiniBatch Join base operator.
  */
 @Internal
-public abstract class BatchJoinStreamOperator
+public abstract class MiniBatchJoinStreamOperator
 		extends KeyedCoBundleOperator
 		implements Triggerable<BaseRow, Byte> {
 
@@ -122,7 +122,7 @@ public abstract class BatchJoinStreamOperator
 	protected boolean[] filterNullKeys;
 	protected int[] nullFilterKeys;
 
-	public BatchJoinStreamOperator(
+	public MiniBatchJoinStreamOperator(
 			BaseRowTypeInfo<BaseRow> leftType,
 			BaseRowTypeInfo<BaseRow> rightType,
 			GeneratedJoinConditionFunction condFuncCode,
@@ -262,7 +262,7 @@ public abstract class BatchJoinStreamOperator
 						KeyedValueStateDescriptor(
 						name,
 						joinKeySer,
-						recordSer);
+						Types.LONG.createSerializer(new ExecutionConfig()));
 				state = new CountKeySizeStateHandler(getKeyedState(countKeySizeStateDescriptor), keySelector);
 				break;
 			default:
@@ -388,7 +388,9 @@ public abstract class BatchJoinStreamOperator
 
 	public List<Tuple2<BaseRow, Long>> reduceCurrentList(Iterable<BaseRow> currentList,
 			JoinStateHandler currentSideStateHandler, Boolean isAccRetract) {
-		if (isAccRetract || currentSideStateHandler instanceof WithoutPrimaryKeyStateHandler) {
+		if (isAccRetract ||
+			currentSideStateHandler instanceof WithoutPrimaryKeyStateHandler ||
+			currentSideStateHandler instanceof CountKeySizeStateHandler) {
 			return appendReduceCurrentList(currentList);
 		} else {
 			return upsertReduceCurrentList(currentList, currentSideStateHandler);

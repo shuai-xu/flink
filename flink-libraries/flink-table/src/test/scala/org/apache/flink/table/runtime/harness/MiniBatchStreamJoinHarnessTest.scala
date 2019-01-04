@@ -32,7 +32,7 @@ import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedJoinConditionFunction, ProjectionCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.util.StreamExecUtil
-import org.apache.flink.table.runtime.join.stream.bundle.{AntiSemiBatchJoinStreamOperator, RightOuterBatchJoinStreamOperator}
+import org.apache.flink.table.runtime.join.stream.bundle.{MiniBatchAntiSemiJoinStreamOperator, MiniBatchRightOuterJoinStreamOperator}
 import org.apache.flink.table.runtime.join.stream.state.JoinStateHandler
 import org.apache.flink.table.runtime.join.stream.state.`match`.JoinMatchStateHandler
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
@@ -82,7 +82,7 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       BasicTypeInfo.INT_TYPE_INFO,
       BasicTypeInfo.STRING_TYPE_INFO)
 
-    val operator = new AntiSemiBatchJoinStreamOperator(
+    val operator = new MiniBatchAntiSemiJoinStreamOperator(
       rowType,
       rowType,
       GeneratedJoinConditionFunction("TestJoinFunction", funcCode),
@@ -180,7 +180,7 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       false
     )
 
-    val operator = new RightOuterBatchJoinStreamOperator(
+    val operator = new MiniBatchRightOuterJoinStreamOperator(
       rowType,
       rowType,
       GeneratedJoinConditionFunction("TestJoinFunction", funcCode),
@@ -283,7 +283,7 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       false
     )
 
-    val operator = new RightOuterBatchJoinStreamOperator(
+    val operator = new MiniBatchRightOuterJoinStreamOperator(
       rowType,
       rowType,
       GeneratedJoinConditionFunction("TestJoinFunction", funcCode),

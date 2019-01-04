@@ -47,11 +47,11 @@ import static org.apache.flink.table.dataformat.util.BaseRowUtil.RETRACT_MSG;
  * Inner MiniBatch Join operator.
  */
 @Internal
-public class BatchInnerJoinStreamOperator extends BatchJoinStreamOperator {
+public class MiniBatchInnerJoinStreamOperator extends MiniBatchJoinStreamOperator {
 
 	private static final long serialVersionUID = 1L;
 
-	public BatchInnerJoinStreamOperator(
+	public MiniBatchInnerJoinStreamOperator(
 			BaseRowTypeInfo<BaseRow> leftType,
 			BaseRowTypeInfo<BaseRow> rightType, GeneratedJoinConditionFunction condFuncCode,
 			KeySelector<BaseRow, BaseRow> leftKeySelector,
@@ -70,7 +70,7 @@ public class BatchInnerJoinStreamOperator extends BatchJoinStreamOperator {
 	@Override
 	public void open() throws Exception {
 		super.open();
-		LOG.info("Init BatchInnerJoinStreamOperator");
+		LOG.info("Init MiniBatchInnerJoinStreamOperator");
 		LOG.info("leftJoinStateType {}, rightJoinStateType {}", leftJoinStateType, rightJoinStateType);
 	}
 

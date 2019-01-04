@@ -91,7 +91,9 @@ class StreamExecJoin(
   }
 
   def inferPrimaryKeyAndJoinStateType(
-      input: RelNode, joinKeys: Array[Int]): (Option[Array[Int]], JoinStateHandler.Type) = {
+    input: RelNode,
+    joinKeys: Array[Int],
+    isMiniBatchEnabled: Boolean): (Option[Array[Int]], JoinStateHandler.Type) = {
     val uniqueKeys = cluster.getMetadataQuery.getUniqueKeys(input)
     var (pk, stateType) = if (uniqueKeys != null && uniqueKeys.nonEmpty) {
       var primaryKey = uniqueKeys.head.toArray
@@ -111,9 +113,12 @@ class StreamExecJoin(
       (None, JoinStateHandler.Type.WITHOUT_PRIMARY_KEY)
     }
     // if join type is semi/anti and without non equal pred, set right state type to count type.
-    if (input.equals(rightNode) &&
+    if (input.equals(getRight) &&
         (joinType.equals(FlinkJoinRelType.ANTI) || joinType.equals(FlinkJoinRelType.SEMI)) &&
-      joinInfo.isEqui) {
+      joinInfo.isEqui &&
+      isMiniBatchEnabled
+    ) {
+      // COUNT_KEY_SIZE only used for miniBatch stream stream join
       stateType = JoinStateHandler.Type.COUNT_KEY_SIZE
     }
     (pk, stateType)
@@ -166,7 +171,9 @@ class StreamExecJoin(
 
   @VisibleForTesting
   def explainJoin: JList[Pair[String, AnyRef]] = {
-    val (lStateType, lMatchStateType, rStateType, rMatchStateType) = getJoinAllStateType
+    val (lStateType, lMatchStateType, rStateType, rMatchStateType) =
+      // set isMiniBatch enabled to false, since plan tests don't care whether it is miniBatch.
+      getJoinAllStateType(false)
     val values = new JArrayList[Pair[String, AnyRef]]
     values.add(Pair.of("where", joinConditionToString))
     values.add(Pair.of("join", joinSelectionToString))
@@ -214,7 +221,9 @@ class StreamExecJoin(
     val lPkProj = generatePrimaryKeyProjection(tableConfig, left, leftType, leftKeys.toArray)
     val rPkProj = generatePrimaryKeyProjection(tableConfig, right, rightType, rightKeys.toArray)
 
-    val (lStateType, lMatchStateType, rStateType, rMatchStateType) = getJoinAllStateType
+    val isMiniBatchEnabled = tableConfig.isMicroBatchEnabled || tableConfig.isMiniBatchEnabled
+    val (lStateType, lMatchStateType, rStateType, rMatchStateType) =
+      getJoinAllStateType(isMiniBatchEnabled)
     val condFunc = generateConditionFunction(tableConfig, leftType, rightType)
     val leftIsAccRetract = StreamExecRetractionRules.isAccRetract(left)
     val rightIsAccRetract = StreamExecRetractionRules.isAccRetract(right)
@@ -222,7 +231,7 @@ class StreamExecJoin(
     val operator = if (tableConfig.isMiniBatchJoinEnabled) {
       joinType match {
         case FlinkJoinRelType.INNER =>
-          new BatchInnerJoinStreamOperator(
+          new MiniBatchInnerJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
             rightType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
             condFunc,
@@ -241,7 +250,7 @@ class StreamExecJoin(
             tableConfig.getConf.getBoolean(
               TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.LEFT =>
-          new LeftOuterBatchJoinStreamOperator(
+          new MiniBatchLeftOuterJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
             rightType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
             condFunc,
@@ -262,7 +271,7 @@ class StreamExecJoin(
             tableConfig.getConf.getBoolean(
               TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.RIGHT =>
-          new RightOuterBatchJoinStreamOperator(
+          new MiniBatchRightOuterJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
             rightType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
             condFunc,
@@ -283,7 +292,7 @@ class StreamExecJoin(
             tableConfig.getConf.getBoolean(
               TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.FULL =>
-          new FullOuterBatchJoinStreamOperator(
+          new MiniBatchFullOuterJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
             rightType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
             condFunc,
@@ -304,7 +313,7 @@ class StreamExecJoin(
             tableConfig.getConf.getBoolean(
               TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.ANTI | FlinkJoinRelType.SEMI =>
-          new AntiSemiBatchJoinStreamOperator(
+          new MiniBatchAntiSemiJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
             rightType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
             condFunc,
@@ -453,7 +462,8 @@ class StreamExecJoin(
       input: RelNode,
       inputType: BaseRowTypeInfo[_], keys: Array[Int]): GeneratedProjection = {
 
-    val (pk, _) = inferPrimaryKeyAndJoinStateType(input, keys)
+    val isMiniBatchEnabled = config.isMiniBatchEnabled || config.isMicroBatchEnabled
+    val (pk, _) = inferPrimaryKeyAndJoinStateType(input, keys, isMiniBatchEnabled)
 
     if (pk.nonEmpty) {
       val pkType = {
@@ -500,13 +510,18 @@ class StreamExecJoin(
       body, config)
   }
 
-  private[flink] def getJoinAllStateType: (JoinStateHandler.Type, JoinMatchStateHandler.Type,
-      JoinStateHandler.Type, JoinMatchStateHandler.Type) = {
+  private[flink] def getJoinAllStateType(isMiniBatchEnabled: Boolean):
+  (JoinStateHandler.Type,
+    JoinMatchStateHandler.Type,
+    JoinStateHandler.Type,
+    JoinMatchStateHandler.Type) = {
     // get the equality keys
     val (leftKeys, rightKeys) =
       JoinUtil.checkAndGetKeys(keyPairs, getLeft, getRight, allowEmpty = true)
-    val (_, lStateType) = inferPrimaryKeyAndJoinStateType(getLeft, leftKeys.toArray)
-    val (_, rStateType) = inferPrimaryKeyAndJoinStateType(getRight, rightKeys.toArray)
+    val (_, lStateType) =
+      inferPrimaryKeyAndJoinStateType(getLeft, leftKeys.toArray, isMiniBatchEnabled)
+    val (_, rStateType) =
+      inferPrimaryKeyAndJoinStateType(getRight, rightKeys.toArray, isMiniBatchEnabled)
 
     val (lStateMatchType, rStateMatchType) = joinType match {
       case FlinkJoinRelType.INNER =>

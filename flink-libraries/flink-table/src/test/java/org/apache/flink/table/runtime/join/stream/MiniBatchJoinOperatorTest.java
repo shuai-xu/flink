@@ -27,7 +27,7 @@ import org.apache.flink.table.codegen.Projection;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.plan.util.StreamExecUtil;
-import org.apache.flink.table.runtime.join.stream.bundle.BatchInnerJoinStreamOperator;
+import org.apache.flink.table.runtime.join.stream.bundle.MiniBatchInnerJoinStreamOperator;
 import org.apache.flink.table.runtime.join.stream.state.JoinKeyContainPrimaryKeyStateHandler;
 import org.apache.flink.table.runtime.join.stream.state.JoinKeyNotContainPrimaryKeyStateHandler;
 import org.apache.flink.table.runtime.join.stream.state.JoinStateHandler;
@@ -59,7 +59,7 @@ public class MiniBatchJoinOperatorTest {
 
 	@Test
 	public void testReduceList() {
-		BatchInnerJoinStreamOperator innerjoin = new BatchInnerJoinStreamOperator(null, null,
+		MiniBatchInnerJoinStreamOperator innerjoin = new MiniBatchInnerJoinStreamOperator(null, null,
 				null, leftKeySelector, rightKeySelector, null, null, null, null, 0, 0, true, true,
 				new boolean[]{false}, combinedTrigger, true);
 
@@ -86,7 +86,7 @@ public class MiniBatchJoinOperatorTest {
 
 	@Test
 	public void testUpsertReduceListForKeyValue() {
-		BatchInnerJoinStreamOperator innerjoin = new BatchInnerJoinStreamOperator(null, null,
+		MiniBatchInnerJoinStreamOperator innerjoin = new MiniBatchInnerJoinStreamOperator(null, null,
 				null, leftKeySelector, rightKeySelector, null, null, null, null, 0, 0, false, false,
 				new boolean[]{false}, combinedTrigger, true);
 
@@ -111,7 +111,7 @@ public class MiniBatchJoinOperatorTest {
 
 	@Test
 	public void testUpsertReduceListForKeyMap() {
-		BatchInnerJoinStreamOperator innerjoin = new BatchInnerJoinStreamOperator(null, null,
+		MiniBatchInnerJoinStreamOperator innerjoin = new MiniBatchInnerJoinStreamOperator(null, null,
 				null, leftKeySelector, rightKeySelector, null, null, null, null, 0, 0, false, false,
 			new boolean[]{false}, combinedTrigger, true);
 

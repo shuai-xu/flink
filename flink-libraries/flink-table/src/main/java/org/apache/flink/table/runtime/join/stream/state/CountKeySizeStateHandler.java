@@ -214,7 +214,7 @@ public class CountKeySizeStateHandler implements JoinStateHandler {
 			if (count == 0) {
 				curentValue = keyedValueState.get(key);
 				if (curentValue != null) {
-					reuse.f0 = null;
+					reuse.f0 = key;
 					reuse.f1 = curentValue;
 					reuse.f2 = Long.MAX_VALUE;
 					count++;
@@ -261,7 +261,7 @@ public class CountKeySizeStateHandler implements JoinStateHandler {
 			if (count == 0) {
 				curentValue = keyedValueState.get(key);
 				if (curentValue != null) {
-					reuse.f0 = null;
+					reuse.f0 = key;
 					reuse.f1 = curentValue;
 					reuse.f2 = Long.MAX_VALUE;
 					count++;

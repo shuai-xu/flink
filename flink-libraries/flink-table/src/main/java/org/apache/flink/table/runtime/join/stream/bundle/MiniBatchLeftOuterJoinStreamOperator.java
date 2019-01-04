@@ -32,11 +32,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Left outer MiniBatch join operator.
+ * MiniBatch Left outer join operator.
  */
-public class LeftOuterBatchJoinStreamOperator extends OuterBatchJoinStreamOperator {
+public class MiniBatchLeftOuterJoinStreamOperator extends MiniBatchOuterJoinStreamOperator {
 
-	public LeftOuterBatchJoinStreamOperator(
+	public MiniBatchLeftOuterJoinStreamOperator(
 			BaseRowTypeInfo<BaseRow> leftType,
 			BaseRowTypeInfo<BaseRow> rightType,
 			GeneratedJoinConditionFunction condFuncCode,
@@ -78,7 +78,7 @@ public class LeftOuterBatchJoinStreamOperator extends OuterBatchJoinStreamOperat
 	@Override
 	public void open() throws Exception {
 		super.open();
-		LOG.info("Init LeftOuterBatchJoinStreamOperator.");
+		LOG.info("Init MiniBatchLeftOuterJoinStreamOperator.");
 	}
 
 	@Override

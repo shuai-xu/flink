@@ -44,12 +44,6 @@ class SemiAntiJoinStreamITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
     tEnv.registerTable("B", tableB)
   }
 
-  val data2 = List(
-    (1, 1L, "Hi"),
-    (2, 2L, "Hello"),
-    (3, 2L, "Hello world")
-  )
-
   val data = List(
     (1, 1L, 0, "Hallo", 1L),
     (2, 2L, 1, "Hallo Welt", 2L),
@@ -57,6 +51,12 @@ class SemiAntiJoinStreamITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
     (3, 4L, 3, "Hallo Welt wie gehts?", 2L),
     (3, 5L, 4, "ABC", 2L),
     (3, 6L, 5, "BCD", 3L)
+  )
+
+  val data2 = List(
+    (1, 1L, "Hi"),
+    (2, 2L, "Hello"),
+    (3, 2L, "Hello world")
   )
 
   val dataCannotBeJoin = List(

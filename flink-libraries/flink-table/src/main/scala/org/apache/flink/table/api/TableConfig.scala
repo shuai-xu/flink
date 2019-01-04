@@ -343,7 +343,8 @@ class TableConfig {
 
   def isMiniBatchJoinEnabled: Boolean = {
     // enable miniBatch Join by default if miniBatch is enabled.
-    isMiniBatchEnabled && this.conf.getBoolean(TableConfigOptions.BLINK_MINIBATCH_JOIN_ENABLED)
+    (isMiniBatchEnabled || isMicroBatchEnabled) &&
+      this.conf.getBoolean(TableConfigOptions.BLINK_MINIBATCH_JOIN_ENABLED)
   }
 
   def addQueryableState2AggFunctionMapping(queryableName: String, udagg: JTuple2[String,

@@ -183,19 +183,21 @@ class TestingRetractSink extends AbstractExactlyOnceSink[(Boolean, Row)] {
   }
 
   def invoke(v: (Boolean, Row)): Unit = {
-    val tupleString = v.toString()
-    localResults += tupleString
-    val rowString = v._2.toString
-    if (v._1) {
-      localRetractResults += rowString
-    } else {
-      val index = localRetractResults.indexOf(rowString)
-      if (index >= 0) {
-        localRetractResults.remove(index)
+    this.synchronized {
+      val tupleString = v.toString()
+      localResults += tupleString
+      val rowString = v._2.toString
+      if (v._1) {
+        localRetractResults += rowString
       } else {
-        throw new RuntimeException("Tried to retract a value that wasn't added first. " +
-          "This is probably an incorrectly implemented test. " +
-          "Try to set the parallelism of the sink to 1.")
+        val index = localRetractResults.indexOf(rowString)
+        if (index >= 0) {
+          localRetractResults.remove(index)
+        } else {
+          throw new RuntimeException("Tried to retract a value that wasn't added first. " +
+            "This is probably an incorrectly implemented test. " +
+            "Try to set the parallelism of the sink to 1.")
+        }
       }
     }
   }
