@@ -63,7 +63,7 @@ public class CatalogCalciteSchema implements Schema {
 
 	/**
 	 * Looks up a sub-schema by the given sub-schema dbName of the catalog.
-	 * Returns it wrapped in a {@link CalciteDatabaseSchema} with the given schema dbName.
+	 * Returns it wrapped in a {@link DatabaseCalciteSchema} with the given schema dbName.
 	 *
 	 * @param schemaName Name of sub-schema to look up.
 	 * @return Sub-schema with a given dbName, or null.
@@ -71,8 +71,7 @@ public class CatalogCalciteSchema implements Schema {
 	@Override
 	public Schema getSubSchema(String schemaName) {
 		try {
-			CatalogDatabase schema = catalog.getDatabase(schemaName);
-			return new CalciteDatabaseSchema(schemaName, catalog, isStreaming);
+			return new DatabaseCalciteSchema(schemaName, catalog, isStreaming);
 		} catch (DatabaseNotExistException e) {
 			LOGGER.warn(String.format("Schema %s does not exist in catalog %s", schemaName, catalogName));
 			return null;
@@ -161,13 +160,13 @@ public class CatalogCalciteSchema implements Schema {
 	 * A mapping between FlinK Catalog's database and Calcite's schema.
 	 * Tables are registered as tables in Calcite.
 	 */
-	private class CalciteDatabaseSchema implements Schema {
+	private class DatabaseCalciteSchema implements Schema {
 
 		private final String dbName;
 		private final ReadableCatalog catalog;
 		private final boolean isStreaming;
 
-		public CalciteDatabaseSchema(String dbName, ReadableCatalog catalog, boolean isStreaming) {
+		public DatabaseCalciteSchema(String dbName, ReadableCatalog catalog, boolean isStreaming) {
 			this.dbName = dbName;
 			this.catalog = catalog;
 			this.isStreaming = isStreaming;
