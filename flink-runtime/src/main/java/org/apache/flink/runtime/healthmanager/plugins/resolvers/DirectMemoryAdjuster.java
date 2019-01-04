@@ -27,9 +27,8 @@ import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.plugins.Action;
 import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
-import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobHeapMemory;
-import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFullGC;
-import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHeapOOM;
+import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobDirectMemory;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexDirectOOM;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import java.util.HashSet;
@@ -37,15 +36,15 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Heap Memory adjuster which can resolve vertex oom.
+ * Direct Memory adjuster which can resolve vertex oom.
  */
-public class HeapMemoryAdjuster implements Resolver {
+public class DirectMemoryAdjuster implements Resolver {
 
-	private static final ConfigOption<Double> HEAP_SCALE_OPTION =
-			ConfigOptions.key("heap.memory.scale.ratio").defaultValue(0.5);
+	private static final ConfigOption<Double> DIRECT_SCALE_OPTION =
+		ConfigOptions.key("direct.memory.scale.ratio").defaultValue(0.5);
 
-	private static final ConfigOption<Long> HEAP_SCALE_TIME_OUT_OPTION =
-			ConfigOptions.key("heap.memory.scale.timeout.ms").defaultValue(180000L);
+	private static final ConfigOption<Long> DIRECT_SCALE_TIME_OUT_OPTION =
+		ConfigOptions.key("direct.memory.scale.timeout.ms").defaultValue(180000L);
 
 	private JobID jobID;
 	private HealthMonitor monitor;
@@ -56,8 +55,8 @@ public class HeapMemoryAdjuster implements Resolver {
 	public void open(HealthMonitor monitor) {
 		this.monitor = monitor;
 		this.jobID = monitor.getJobID();
-		this.scaleRatio = monitor.getConfig().getDouble(HEAP_SCALE_OPTION);
-		this.timeout = monitor.getConfig().getLong(HEAP_SCALE_TIME_OUT_OPTION);
+		this.scaleRatio = monitor.getConfig().getDouble(DIRECT_SCALE_OPTION);
+		this.timeout = monitor.getConfig().getLong(DIRECT_SCALE_TIME_OUT_OPTION);
 	}
 
 	@Override
@@ -70,15 +69,9 @@ public class HeapMemoryAdjuster implements Resolver {
 
 		Set<JobVertexID> jobVertexIDs = new HashSet<>();
 		for (Symptom symptom : symptomList) {
-			if (symptom instanceof JobVertexHeapOOM) {
-				JobVertexHeapOOM jobVertexHeapOOM = (JobVertexHeapOOM) symptom;
-				jobVertexIDs.addAll(jobVertexHeapOOM.getJobVertexIDs());
-				continue;
-			}
-
-			if (symptom instanceof JobVertexFullGC) {
-				JobVertexFullGC jobVertexFullGC = (JobVertexFullGC) symptom;
-				jobVertexIDs.addAll(jobVertexFullGC.getJobVertexIDs());
+			if (symptom instanceof JobVertexDirectOOM) {
+				JobVertexDirectOOM jobVertexDirectOOM = (JobVertexDirectOOM) symptom;
+				jobVertexIDs.addAll(jobVertexDirectOOM.getJobVertexIDs());
 				continue;
 			}
 		}
@@ -87,21 +80,21 @@ public class HeapMemoryAdjuster implements Resolver {
 			return null;
 		}
 
-		AdjustJobHeapMemory adjustJobHeapMemory = new AdjustJobHeapMemory(jobID, timeout);
+		AdjustJobDirectMemory adjustJobDirectMemory = new AdjustJobDirectMemory(jobID, timeout);
 		for (JobVertexID jvId : jobVertexIDs) {
 			RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(jvId);
 			ResourceSpec currentResource = vertexConfig.getResourceSpec();
 			ResourceSpec targetResource =
 				new ResourceSpec.Builder()
-					.setHeapMemoryInMB((int) (currentResource.getHeapMemory() * scaleRatio))
+					.setDirectMemoryInMB((int) (currentResource.getDirectMemory() * scaleRatio))
 					.build()
 					.merge(currentResource);
 
-			adjustJobHeapMemory.addVertex(
+			adjustJobDirectMemory.addVertex(
 				jvId, vertexConfig.getParallelism(), vertexConfig.getParallelism(), currentResource, targetResource);
 		}
 
-		return adjustJobHeapMemory.isEmpty() ? null : adjustJobHeapMemory;
+		return adjustJobDirectMemory.isEmpty() ? null : adjustJobDirectMemory;
 	}
 }

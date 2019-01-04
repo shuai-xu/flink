@@ -22,24 +22,26 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import java.util.List;
+
 /**
- * Symptom indicating a job vertex oom.
+ * Symptom indicating job vertices direct oom.
  */
-public class JobVertexOOM implements Symptom {
+public class JobVertexFullGC implements Symptom {
 
 	private JobID jobID;
-	private JobVertexID jobVertexID;
+	private List<JobVertexID> jobVertexIDs;
 
-	public JobVertexOOM(JobID jobID, JobVertexID jobVertexID) {
+	public JobVertexFullGC(JobID jobID, List<JobVertexID> jobVertexIDs) {
 		this.jobID = jobID;
-		this.jobVertexID = jobVertexID;
+		this.jobVertexIDs = jobVertexIDs;
 	}
 
 	public JobID getJobID() {
 		return jobID;
 	}
 
-	public JobVertexID getJobVertexID() {
-		return jobVertexID;
+	public List<JobVertexID> getJobVertexIDs() {
+		return jobVertexIDs;
 	}
 }

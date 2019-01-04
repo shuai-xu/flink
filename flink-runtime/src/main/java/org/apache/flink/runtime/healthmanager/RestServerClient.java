@@ -58,6 +58,13 @@ public interface RestServerClient {
 	JobStatus getJobStatus(JobID jobId) throws Exception;
 
 	/**
+	 * Get task manager tasks.
+	 * @param tmId task manager id.
+	 * @return List of JobVertexIDs of all tasks running on the TM, including repetitions.
+	 */
+	List<JobVertexID> getTaskManagerTasks(String tmId);
+
+	/**
 	 * Get failover history in time range.
 	 * @param jobID     id of job.
 	 * @param startTime start time in millisecond of the range.
@@ -94,12 +101,10 @@ public interface RestServerClient {
 
 	/**
 	 * Rescale given job vertex.
-	 * @param jobId       job id of the job.
-	 * @param vertexId    job vertex id of the vertex.
-	 * @param parallelism new parallelism of the job.
-	 * @param resource    the resource spec of the vertex.
+	 * @param jobId job id of the job.
+	 * @param vertexParallelismResource new parallelism and resource spec of the job vertices.
 	 */
-	void rescale(JobID jobId, JobVertexID vertexId, int parallelism, ResourceSpec resource);
+	void rescale(JobID jobId, Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource);
 
 	/**
 	 * Configuration of a vertex.

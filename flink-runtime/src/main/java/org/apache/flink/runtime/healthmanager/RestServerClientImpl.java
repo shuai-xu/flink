@@ -138,7 +138,7 @@ public class RestServerClientImpl implements RestServerClient {
 			(JobExceptionsInfo exceptionsInfo) -> {
 				List<JobExceptionsInfo.ExecutionExceptionInfo> exceptions = exceptionsInfo.getAllExceptions();
 				Map<JobVertexID, List<JobException>> jobVertexId2exceptions = new HashMap<>();
-				for (JobExceptionsInfo.ExecutionExceptionInfo exception: exceptions) {
+				for (JobExceptionsInfo.ExecutionExceptionInfo exception : exceptions) {
 					JobVertexID jobVertexID = JobVertexID.fromHexString(exception.getVertexID());
 					if (exception.getTimestamp() >= startTime && exception.getTimestamp() <= endTime) {
 						JobException vertexException = new JobException(exception.getException());
@@ -157,6 +157,11 @@ public class RestServerClientImpl implements RestServerClient {
 				return jobVertexId2exceptions;
 			}
 		).get();
+	}
+
+	@Override
+	public List<JobVertexID> getTaskManagerTasks(String tmId) {
+		return null;
 	}
 
 	//需要获取 vertex 的所有 metrics
@@ -181,7 +186,7 @@ public class RestServerClientImpl implements RestServerClient {
 	}
 
 	@Override
-	public void rescale(JobID jobId, JobVertexID vertexId, int parallelism, ResourceSpec resourceSpec) {
+	public void rescale(JobID jobId, Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource) {
 
 	}
 }

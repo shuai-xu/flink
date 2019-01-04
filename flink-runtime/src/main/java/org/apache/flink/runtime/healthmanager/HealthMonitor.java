@@ -29,7 +29,10 @@ import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actionselectors.FirstValidActionSelector;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.OOMDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.DirectOOMDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.FullGCDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.HeapOOMDetector;
+import org.apache.flink.runtime.healthmanager.plugins.resolvers.DirectMemoryAdjuster;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.HeapMemoryAdjuster;
 
 import org.slf4j.Logger;
@@ -56,13 +59,16 @@ public class HealthMonitor {
 			ConfigOptions.key("healthmonitor.action.selector.class")
 					.defaultValue(FirstValidActionSelector.class.getCanonicalName());
 
-	private static final ConfigOption<String> DETECTOR_CLASSES =
+	public static final ConfigOption<String> DETECTOR_CLASSES =
 			ConfigOptions.key("healthmonitor.detector.classes")
-					.defaultValue(OOMDetector.class.getCanonicalName());
+					.defaultValue(HeapOOMDetector.class.getCanonicalName() + ","
+						+ DirectOOMDetector.class.getCanonicalName() + ","
+						+ FullGCDetector.class.getCanonicalName());
 
-	private static final ConfigOption<String> RESOLVER_CLASSES =
+	public static final ConfigOption<String> RESOLVER_CLASSES =
 			ConfigOptions.key("healthmonitor.resolver.classes")
-					.defaultValue(HeapMemoryAdjuster.class.getCanonicalName());
+					.defaultValue(HeapMemoryAdjuster.class.getCanonicalName() + ","
+						+ DirectMemoryAdjuster.class.getCanonicalName());
 
 	private JobID jobID;
 	private Configuration config;

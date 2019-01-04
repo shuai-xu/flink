@@ -24,16 +24,21 @@ import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
-import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexOOM;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHeapOOM;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import org.slf4j.LoggerFactory;
+
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 /**
- * OOMDetector detects oom failure of a job.
+ * HeapOOMDetector detects heap oom failure of a job.
  */
-public class OOMDetector implements Detector {
+public class HeapOOMDetector implements Detector {
+
+	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(HeapOOMDetector.class);
 
 	private JobID jobID;
 	private RestServerClient restServerClient;
@@ -59,18 +64,31 @@ public class OOMDetector implements Detector {
 
 		long now = System.currentTimeMillis();
 
-		Map<JobVertexID, List<JobException>> exceptions = restServerClient.getFailover(jobID, lastDetectTime, now);
+		Map<JobVertexID, List<JobException>> exceptions = null;
+		try {
+			exceptions = restServerClient.getFailover(jobID, lastDetectTime, now);
+		} catch (Exception e) {
+			LOGGER.error("Failed to get failover information from rest server client: {}", e.getMessage());
+			return null;
+		}
+
+		lastDetectTime = now;
 		if (exceptions == null) {
 			return null;
 		}
 
+		List<JobVertexID> jobVertexIDs = new LinkedList<>();
 		for (JobVertexID vertexID: exceptions.keySet()) {
 			for (JobException exception : exceptions.get(vertexID)) {
 				if (exception.getCause() instanceof OutOfMemoryError &&
 						exception.getMessage().contains("Java heap space")) {
-					return new JobVertexOOM(jobID, vertexID);
+					jobVertexIDs.add(vertexID);
+					break;
 				}
 			}
+		}
+		if (!jobVertexIDs.isEmpty()) {
+			return new JobVertexHeapOOM(jobID, jobVertexIDs);
 		}
 		return null;
 	}

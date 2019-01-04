@@ -20,45 +20,72 @@ package org.apache.flink.runtime.healthmanager.plugins.actions;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.plugins.Action;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
- * Adjust resource profile for given vertex.
+ * Adjust resource config for given vertex.
  */
-public class AdjustResourceProfile implements Action {
+public class AdjustJobConfig implements Action {
 
 	private JobID jobID;
-	private JobVertexID vertexID;
-	private int currentParallelism;
-	private int targetParallelism;
-	private ResourceSpec currentResource;
-	private ResourceSpec targetResource;
+	private Map<JobVertexID, Integer> currentParallelism;
+	private Map<JobVertexID, Integer> targetParallelism;
+	private Map<JobVertexID, ResourceSpec> currentResource;
+	private Map<JobVertexID, ResourceSpec> targetResource;
 	private long timeoutMs;
 
-	public AdjustResourceProfile(
-			JobID jobID,
-			JobVertexID vertexID,
-			int currentParallelism,
-			int targetParallelism,
-			ResourceSpec currentResource,
-			ResourceSpec targetResource,
-			long timeoutMs) {
+	public AdjustJobConfig(JobID jobID, long timeoutMs) {
+		this(jobID, timeoutMs, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>());
+	}
+
+	public AdjustJobConfig(
+		JobID jobID,
+		long timeoutMs,
+		Map<JobVertexID, Integer> currentParallelism,
+		Map<JobVertexID, Integer> targetParallelism,
+		Map<JobVertexID, ResourceSpec> currentResource,
+		Map<JobVertexID, ResourceSpec> targetResource) {
 		this.jobID = jobID;
-		this.vertexID = vertexID;
+		this.timeoutMs = timeoutMs;
 		this.currentParallelism = currentParallelism;
 		this.currentResource = currentResource;
 		this.targetParallelism = targetParallelism;
 		this.targetResource = targetResource;
-		this.timeoutMs = timeoutMs;
+	}
+
+	public void addVertex(
+		JobVertexID jobVertexId,
+		int currentParallelism,
+		int targetParallelism,
+		ResourceSpec currentResource,
+		ResourceSpec targetResource) {
+		this.currentParallelism.put(jobVertexId, currentParallelism);
+		this.targetParallelism.put(jobVertexId, targetParallelism);
+		this.currentResource.put(jobVertexId, currentResource);
+		this.targetResource.put(jobVertexId, targetResource);
+	}
+
+	public boolean isEmpty() {
+		return currentParallelism.isEmpty();
 	}
 
 	@Override
 	public void execute(RestServerClient restServerClient) throws InterruptedException {
-		restServerClient.rescale(jobID, vertexID, targetParallelism, targetResource);
+		Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource = new HashMap<>();
+		for (JobVertexID jvId : currentParallelism.keySet()) {
+			vertexParallelismResource.put(jvId, new Tuple2<>(targetParallelism.get(jvId), targetResource.get(jvId)));
+		}
+		if (!vertexParallelismResource.isEmpty()) {
+			restServerClient.rescale(jobID, vertexParallelismResource);
+		}
 	}
 
 	@Override
@@ -89,7 +116,7 @@ public class AdjustResourceProfile implements Action {
 
 	@Override
 	public Action rollback() {
-		return new AdjustResourceProfile(
-				jobID, vertexID, targetParallelism, currentParallelism, targetResource, currentResource, timeoutMs);
+		return new AdjustJobConfig(
+				jobID, timeoutMs, targetParallelism, currentParallelism, targetResource, currentResource);
 	}
 }
