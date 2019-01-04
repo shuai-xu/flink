@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Defines a table in a catalog.
+ * Represents a table in catalog.
  */
 public class ExternalCatalogTable {
 	// Table type, e.g csv, hbase, kafka

@@ -27,7 +27,7 @@ import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
 
 /**
- * Responsible for creating, dropping, altering, and renaming databases/tables/views/UDFs.
+ * An interface responsible for manipulating catalog metadata.
  */
 public interface ReadableWritableCatalog extends ReadableCatalog {
 
@@ -36,7 +36,7 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	/**
 	 * Adds a database to this catalog.
 	 *
-	 * @param dbName    The name of the database to add.
+	 * @param dbName    	The name of the database to add.
 	 * @param database        The database to add.
 	 * @param ignoreIfExists Flag to specify behavior if a database with the given name already
 	 *                       exists: if set to false, it throws a DatabaseAlreadyExistException,
@@ -90,7 +90,7 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	/**
 	 * Adds a table.
 	 *
-	 * @param tableName      The path of the table to add.
+	 * @param tableName      Path of the table to add.
 	 * @param table          The table to add.
 	 * @param ignoreIfExists Flag to specify behavior if a table with the given name already exists:
 	 *                       if set to false, it throws a TableAlreadyExistException,
@@ -102,9 +102,9 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 		throws TableAlreadyExistException, DatabaseNotExistException;
 
 	/**
-	 * Deletes table.
+	 * Deletes a table.
 	 *
-	 * @param tableName         Name of the table to delete.
+	 * @param tableName         Path of the table to delete.
 	 * @param ignoreIfNotExists Flag to specify behavior if the table does not exist:
 	 *                          if set to false, throw an exception,
 	 *                          if set to true, nothing happens.
@@ -115,12 +115,12 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	/**
 	 * Modifies an existing newTable.
 	 *
-	 * @param tableName         The name of the table to modify.
+	 * @param tableName         Path of the table to modify.
 	 * @param newTable             The new table which replaces the existing table.
 	 * @param ignoreIfNotExists Flag to specify behavior if the table does not exist:
 	 *                          if set to false, throw an exception,
 	 *                          if set to true, nothing happens.
-	 * @throws TableNotExistException   thrown if the newTable does not exist
+	 * @throws TableNotExistException   thrown if the new table does not exist
 	 */
 	void alterTable(ObjectPath tableName, ExternalCatalogTable newTable, boolean ignoreIfNotExists)
 		throws TableNotExistException;
@@ -128,16 +128,17 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	/**
 	 * Renames an existing table.
 	 *
-	 * @param tableName        Name of the table to modify.
+	 * @param tableName        Path of the table to modify.
 	 * @param newTableName     New name of the table.
-	 * @param ignoreIfNotExists Flag to specify behavior if the database does not exist:
+	 * @param ignoreIfNotExists Flag to specify behavior if the table does not exist:
 	 *                          if set to false, throw an exception,
 	 *                          if set to true, nothing happens.
 	 * @throws TableNotExistException thrown if the table does not exist
-	 * @throws DatabaseNotExistException thrown if the new database that this table belongs to doesn't exist
+	 * @throws DatabaseNotExistException thrown if the database that this table belongs to doesn't exist
 	 */
 	void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists)
 		throws TableNotExistException, DatabaseNotExistException;
+
 
 	// ------ partitions ------
 

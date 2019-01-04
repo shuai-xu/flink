@@ -57,7 +57,7 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * Catalog that connects to Hive MetaStore and read/write Hive tables.
+ * A catalog that connects to Hive MetaStore and reads/writes Hive tables.
  */
 public class HiveCatalog implements ReadableWritableCatalog {
 
@@ -331,8 +331,6 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			throw new FlinkHiveException(
 				String.format("Failed getting database %s from HiveCatalog %s", dbName, catalogName), e);
 		}
-
-		// TODO: Transform hiveDb to CatalogDatabase
 
 		return HiveMetadataUtil.createCatalogDatabase(hiveDb);
 	}

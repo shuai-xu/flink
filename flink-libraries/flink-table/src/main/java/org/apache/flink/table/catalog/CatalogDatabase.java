@@ -25,7 +25,7 @@ import java.util.Objects;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * Represents a database object.
+ * Represents a database object in catalog.
  */
 public class CatalogDatabase {
 	private final Map<String, String> properties;

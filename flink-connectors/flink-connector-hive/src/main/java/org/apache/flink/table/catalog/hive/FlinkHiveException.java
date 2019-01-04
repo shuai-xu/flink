@@ -19,7 +19,7 @@
 package org.apache.flink.table.catalog.hive;
 
 /**
- * Exception for Flink-Hive interaction.
+ * Hive-related Exceptions in Flink.
  */
 public class FlinkHiveException extends RuntimeException {
 	/**

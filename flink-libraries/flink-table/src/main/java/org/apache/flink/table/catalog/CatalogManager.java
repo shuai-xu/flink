@@ -40,7 +40,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * It also has a concept of default catalog, which will be selected when a catalog name isn’t given
  * in a meta-object reference.
  *
- * <p>CatalogManger also encapsulate Calcite’s schema framework such that no code outside CatalogManager
+ * <p>CatalogManger also encapsulates Calcite’s schema framework such that no code outside CatalogManager
  * needs to interact with Calcite’s schema except the parser which needs all catalogs. (All catalogs will
  * be added to Calcite schema so that all external tables and tables can be resolved by Calcite during
  * query parsing and analysis.)

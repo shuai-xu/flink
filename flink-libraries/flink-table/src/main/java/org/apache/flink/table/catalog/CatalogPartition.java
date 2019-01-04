@@ -28,7 +28,7 @@ import java.util.Objects;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * Represents a partition object.
+ * Represents a partition object in catalog.
  */
 public class CatalogPartition {
 	private final PartitionSpec partitionSpec;

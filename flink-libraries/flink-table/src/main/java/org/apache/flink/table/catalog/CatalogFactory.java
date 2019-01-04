@@ -21,10 +21,9 @@ package org.apache.flink.table.catalog;
 import java.util.Map;
 
 /**
- * A factory to create a specific catalog. The catalog creation gets a properties map
- * that can be used to read further config values.
+ * A factory that creates a specific catalog object by getting a properties map.
  *
- * @param <T> The type of the catalog created.
+ * @param <T> The type of the catalog to create.
  */
 public interface CatalogFactory<T extends ReadableCatalog> {
 

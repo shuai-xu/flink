@@ -23,7 +23,7 @@ import java.util.Objects;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * A database name and object (table/function) name combo in a catalog.
+ * A database name and object (table/view/function) name combo in a catalog.
  */
 public class ObjectPath {
 	private final String dbName;

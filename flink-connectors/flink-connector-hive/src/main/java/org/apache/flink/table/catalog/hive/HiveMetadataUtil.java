@@ -85,7 +85,7 @@ import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TA
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_TYPE;
 
 /**
- * Convert Hive data type to Blink data type.
+ * Utils for meta objects conversion between Flink and Hive.
  */
 public class HiveMetadataUtil {
 	/**

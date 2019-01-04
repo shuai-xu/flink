@@ -24,7 +24,7 @@ import org.apache.flink.table.plan.stats.TableStats;
 import java.util.Map;
 
 /**
- * Represents a table object.
+ * Represents a table object in catalog.
  */
 public class CatalogTable extends CommonTable {
 	private final String tableType;

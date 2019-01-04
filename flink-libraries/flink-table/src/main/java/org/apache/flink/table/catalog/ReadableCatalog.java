@@ -27,13 +27,13 @@ import java.io.Closeable;
 import java.util.List;
 
 /**
- * This class is responsible for read database/table/views/UDFs from a registered catalog. It is
- * the connector between a catalog and Flink's Table API.
+ * This interface is responsible for reading database/table/views/UDFs from a registered catalog.
+ * It connects a registered catalog and Flink's Table API.
  */
 public interface ReadableCatalog extends Closeable {
 
 	/**
-	 * Called when init a ReadableCatalog. Used for any required preparation in initialization.
+	 * Called when init a ReadableCatalog. Used for any required preparation in initialization phase.
 	 */
 	void open();
 
@@ -48,6 +48,7 @@ public interface ReadableCatalog extends Closeable {
 	/**
 	 * Gets a database from this catalog.
 	 *
+	 * @param dbName	Name of the database.
 	 * @return The requested database.
 	 * @throws DatabaseNotExistException thrown if the database does not exist in the catalog.
 	 */
@@ -63,14 +64,14 @@ public interface ReadableCatalog extends Closeable {
 	// ------ tables ------
 
 	/**
-	 * Gets the names of all tables registered in all databases of the catalog. An empty list is returned if non match.
+	 * Gets paths of all tables registered in all databases of the catalog. An empty list is returned if no table is registered.
 	 *
 	 * @return A list of the names of all registered tables in all databases in the catalog.
 	 */
 	List<ObjectPath> listAllTables();
 
 	/**
-	 * Gets the names of all tables registered in this database. An empty list is returned if non match.
+	 * Gets paths of all tables registered in this database. An empty list is returned if no table is registered.
 	 *
 	 * @return A list of the names of all registered tables in this database.
 	 * @throws DatabaseNotExistException thrown if the database does not exist in the catalog.
@@ -78,9 +79,9 @@ public interface ReadableCatalog extends Closeable {
 	List<ObjectPath> listTables(String dbName) throws DatabaseNotExistException;
 
 	/**
-	 * Gets a table located in this ObjectPath.
+	 * Gets a catalog table registered in this ObjectPath.
 	 *
-	 * @param tableName The name of the table.
+	 * @param tableName		Path of the table.
 	 * @throws TableNotExistException    thrown if the table does not exist in the catalog.
 	 * @return The requested table.
 	 */
@@ -132,7 +133,7 @@ public interface ReadableCatalog extends Closeable {
 		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException;
 
 	/**
-	 * Check if a partition exists or not.
+	 * Checks if a partition exists or not.
 	 *
 	 * @param tablePath		Path of the table
 	 * @param partitionSpec	Partition spec of the partition to check

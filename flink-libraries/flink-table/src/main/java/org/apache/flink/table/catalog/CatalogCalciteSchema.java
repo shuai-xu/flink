@@ -43,16 +43,15 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * A mapping between Flink's Catalog and Calcite's schema.
- * This enables to look-up and access tables in SQL queries without registering tables in advance.
- * Databases are registered as sub-schemas in Calcite.
+ * A mapping between Flink's catalog and Calcite's schema.
+ * This enables to look up and access tables in SQL queries without registering tables in advance.
+ * Databases are registered as sub-schemas in the schema.
  */
 public class CatalogCalciteSchema implements Schema {
 	private static final Logger LOGGER = LoggerFactory.getLogger(CatalogCalciteSchema.class);
 
 	private final String catalogName;
 	private final ReadableCatalog catalog;
-	// TODO: Currently Blink assumes isStreaming cannot vary from table to table within a catalog. Need to reconsider it
 	private final boolean isStreaming;
 
 	public CatalogCalciteSchema(String catalogName, ReadableCatalog catalog, boolean isStreaming) {
@@ -62,8 +61,7 @@ public class CatalogCalciteSchema implements Schema {
 	}
 
 	/**
-	 * Looks up a sub-schema by the given sub-schema dbName of the catalog.
-	 * Returns it wrapped in a {@link DatabaseCalciteSchema} with the given schema dbName.
+	 * Looks up a sub-schema (database) by the given sub-schema name.
 	 *
 	 * @param schemaName Name of sub-schema to look up.
 	 * @return Sub-schema with a given dbName, or null.
@@ -158,7 +156,7 @@ public class CatalogCalciteSchema implements Schema {
 
 	/**
 	 * A mapping between FlinK Catalog's database and Calcite's schema.
-	 * Tables are registered as tables in Calcite.
+	 * Tables are registered as tables in the schema.
 	 */
 	private class DatabaseCalciteSchema implements Schema {
 
