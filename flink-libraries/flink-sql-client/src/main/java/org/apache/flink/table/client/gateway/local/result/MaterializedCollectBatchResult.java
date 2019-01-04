@@ -59,7 +59,7 @@ public class MaterializedCollectBatchResult<C> extends BasicResult<C> implements
 
 		accumulatorName = new AbstractID().toString();
 		tableSink = new CollectBatchTableSink(accumulatorName,
-				DataTypes.toTypeInfo(outputType).createSerializer(config));
+			DataTypes.toTypeInfo(outputType).createSerializer(config));
 		resultLock = new Object();
 		retrievalThread = new ResultRetrievalThread();
 

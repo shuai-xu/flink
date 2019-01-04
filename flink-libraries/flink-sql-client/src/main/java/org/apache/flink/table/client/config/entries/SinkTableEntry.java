@@ -16,26 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.client.cli;
+package org.apache.flink.table.client.config.entries;
+
+import org.apache.flink.table.descriptors.DescriptorProperties;
 
 /**
- * Single job mode.
+ * Configuration of a table sink.
  */
-public enum SingleJobMode {
-	SINGLE("single-job"), MULTIPLE("multiple-jobs"), DEFAULT("default");
+public class SinkTableEntry extends TableEntry {
 
-	private String mode;
-
-	SingleJobMode(String mode) {
-		this.mode = mode;
+	SinkTableEntry(String name, DescriptorProperties properties) {
+		super(name, properties);
 	}
 
-	public static SingleJobMode fromString(String mode) {
-		for (SingleJobMode m : SingleJobMode.values()) {
-			if (m.mode.equalsIgnoreCase(mode)) {
-				return m;
-			}
-		}
-		return DEFAULT;
+	@Override
+	protected void validate(DescriptorProperties properties) {
+		// validation is performed by the discovered factory
 	}
 }

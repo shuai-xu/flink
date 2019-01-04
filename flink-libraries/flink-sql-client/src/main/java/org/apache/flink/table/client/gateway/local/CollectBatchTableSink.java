@@ -69,18 +69,18 @@ public class CollectBatchTableSink implements BatchTableSink<Row> {
 		return copy;
 	}
 
+	@Override
+	public DataStreamSink<?> emitBoundedStream(
+			DataStream<Row> boundedStream, TableConfig tableConfig, ExecutionConfig executionConfig) {
+		return boundedStream
+			.writeUsingOutputFormat(new Utils.CollectHelper<>(accumulatorName, serializer))
+			.name("SQL Client Batch Collect Sink");
+	}
+
 	/**
 	 * Returns the serializer for deserializing the collected result.
 	 */
 	public TypeSerializer<Row> getSerializer() {
 		return serializer;
-	}
-
-	@Override
-	public DataStreamSink<?> emitBoundedStream(DataStream<Row> boundedStream,
-			TableConfig tableConfig, ExecutionConfig executionConfig) {
-		return boundedStream.writeUsingOutputFormat(
-				new Utils.CollectHelper<>(accumulatorName, serializer))
-				.name("SQL Client Batch Collect Sink");
 	}
 }

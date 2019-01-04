@@ -18,18 +18,15 @@
 
 package org.apache.flink.table.client.cli;
 
-import org.apache.flink.sql.parser.util.SqlInfo;
-import org.apache.flink.sql.parser.util.SqlLists;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.client.SqlClientException;
 import org.apache.flink.table.client.cli.SqlCommandParser.SqlCommandCall;
-import org.apache.flink.table.client.gateway.CliMode;
+import org.apache.flink.table.client.config.entries.ViewEntry;
 import org.apache.flink.table.client.gateway.Executor;
 import org.apache.flink.table.client.gateway.ProgramTargetDescriptor;
 import org.apache.flink.table.client.gateway.ResultDescriptor;
 import org.apache.flink.table.client.gateway.SessionContext;
 import org.apache.flink.table.client.gateway.SqlExecutionException;
-import org.apache.flink.table.client.gateway.local.ExecutionContext;
 
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
@@ -47,8 +44,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOError;
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -103,10 +98,15 @@ public class CliClient {
 			.terminal(terminal)
 			.appName(CliStrings.CLI_NAME)
 			.parser(new SqlMultiLineParser())
+			.completer(new SqlCompleter(context, executor))
 			.build();
 		// this option is disabled for now for correct backslash escaping
 		// a "SELECT '\'" query should return a string with a backslash
 		lineReader.option(LineReader.Option.DISABLE_EVENT_EXPANSION, true);
+		// set strict "typo" distance between words when doing code completion
+		lineReader.setVariable(LineReader.ERRORS, 1);
+		// perform code completion case insensitive
+		lineReader.option(LineReader.Option.CASE_INSENSITIVE, true);
 
 		// create prompt
 		prompt = new AttributedStringBuilder()
@@ -194,63 +194,6 @@ public class CliClient {
 		}
 	}
 
-	public void submitSQLFile(URL sqlFile) {
-		isRunning = true;
-		// load file
-		final String statements;
-
-		try {
-			final Path path = Paths.get(sqlFile.toURI());
-			byte[] encoded = Files.readAllBytes(path);
-			statements = new String(encoded, Charset.defaultCharset());
-		} catch (IOException | URISyntaxException e) {
-			printException(e);
-			return;
-		}
-
-		List<SqlInfo> sqls = SqlLists.getSQLList(statements);
-		int jobCnt = 0;
-		ExecutionContext<?> executionContext = executor.getOrCreateExecutionContext(this.context);
-		// To ensure the line number matched with the original file.
-		for (SqlInfo sqlInfo : sqls) {
-			int startLine = sqlInfo.getLine();
-			StringBuilder sqlBuilder = new StringBuilder();
-			for (int i = 0; i < startLine - 1; i++) {
-				sqlBuilder.append('\n');
-			}
-			String sql = sqlBuilder.append(sqlInfo.getSqlContent()).toString();
-			sqlInfo.setSqlContent(sql);
-
-			final Optional<SqlCommandCall> cmdCall = parseCommand(sql);
-
-			// Count the jobs
-			if (cmdCall.isPresent()) {
-				if (executionContext.isNeedShareEnv()) {
-					// Environment is shared
-					if (cmdCall.get().command.isDML()) {
-						jobCnt++;
-					}
-				} else {
-					// Environment is not shared
-					if (cmdCall.get().command.isJob()) {
-						jobCnt++;
-					}
-				}
-			}
-
-			// If it is command or ddl, execution wil be done here.
-			cmdCall.ifPresent(this::callCommand);
-		}
-
-		if (executionContext.isNeedShareEnv() && jobCnt > 0) {
-			// If the Environment is shared, we will submit the job at the very last.
-			ProgramTargetDescriptor programTarget = executor.submitJob(executionContext);
-			terminal.writer().println(CliStrings.messageInfo(CliStrings.MESSAGE_SQL_FILE_SUBMITTED).toAnsi());
-			terminal.writer().println(programTarget.toString());
-			terminal.flush();
-		}
-	}
-
 	/**
 	 * Submits a SQL update statement and prints status information and/or errors on the terminal.
 	 *
@@ -269,8 +212,7 @@ public class CliClient {
 				case INSERT_INTO:
 					return callInsertInto(cmdCall);
 				default:
-					terminal.writer().println(CliStrings.messageError(CliStrings.MESSAGE_UNSUPPORTED_SQL).toAnsi());
-					terminal.flush();
+					printError(CliStrings.MESSAGE_UNSUPPORTED_SQL);
 					return false;
 			}
 		}).orElse(false);
@@ -281,8 +223,7 @@ public class CliClient {
 	private Optional<SqlCommandCall> parseCommand(String line) {
 		final Optional<SqlCommandCall> parsedLine = SqlCommandParser.parse(line);
 		if (!parsedLine.isPresent()) {
-			terminal.writer().println(CliStrings.messageError(CliStrings.MESSAGE_UNKNOWN_SQL).toAnsi());
-			terminal.flush();
+			printError(CliStrings.MESSAGE_UNKNOWN_SQL);
 		}
 		return parsedLine;
 	}
@@ -290,62 +231,47 @@ public class CliClient {
 	private void callCommand(SqlCommandCall cmdCall) {
 		switch (cmdCall.command) {
 			case QUIT:
-			case EXIT:
-				callQuit(cmdCall);
+				callQuit();
 				break;
 			case CLEAR:
-				callClear(cmdCall);
+				callClear();
 				break;
 			case RESET:
-				callReset(cmdCall);
+				callReset();
 				break;
 			case SET:
 				callSet(cmdCall);
 				break;
 			case HELP:
-				callHelp(cmdCall);
-				break;
-			case SHOW_CATALOGS:
-				callShowCatalogs(cmdCall);
-				break;
-			case SHOW_DATABASES:
-				callShowDatabases(cmdCall);
+				callHelp();
 				break;
 			case SHOW_TABLES:
-				callShowTables(cmdCall);
+				callShowTables();
 				break;
 			case SHOW_FUNCTIONS:
-				callShowFunctions(cmdCall);
-				break;
-			case USE:
-				callUseDatabase(cmdCall);
+				callShowFunctions();
 				break;
 			case DESCRIBE:
-				callDescribe(cmdCall);
-				break;
 			case DESC:
 				callDescribe(cmdCall);
 				break;
 			case EXPLAIN:
 				callExplain(cmdCall);
 				break;
-			case CREATE_FUNCTION:
-				callCreateFunction(cmdCall);
-				break;
-			case CREATE_TABLE:
-				callCreateTable(cmdCall);
-				break;
-			case CREATE_VIEW:
-				callCreateView();
-				break;
-			case ANALYZE:
-				callAnalyze(cmdCall);
-				break;
 			case SELECT:
 				callSelect(cmdCall);
 				break;
 			case INSERT_INTO:
 				callInsertInto(cmdCall);
+				break;
+			case CREATE_TABLE:
+				callCreateTable(cmdCall);
+				break;
+			case CREATE_VIEW:
+				callCreateView(cmdCall);
+				break;
+			case DROP_VIEW:
+				callDropView(cmdCall);
 				break;
 			case SOURCE:
 				callSource(cmdCall);
@@ -355,31 +281,18 @@ public class CliClient {
 		}
 	}
 
-	private void callAnalyze(SqlCommandCall cmdCall) {
-		executor.analyzeTable(context, cmdCall.operands[0]);
-	}
-
-	private void callCreateView() {
-		// TODO Also save it to meta
-	}
-
-	private boolean callCreateFunction(SqlCommandCall cmdCall) {
-		return executor.createFunction(context, cmdCall.operands[0]);
-	}
-
-	private void callQuit(SqlCommandCall cmdCall) {
-		terminal.writer().println(CliStrings.MESSAGE_QUIT);
-		terminal.flush();
+	private void callQuit() {
+		printInfo(CliStrings.MESSAGE_QUIT);
 		isRunning = false;
 	}
 
-	private void callClear(SqlCommandCall cmdCall) {
+	private void callClear() {
 		clearTerminal();
 	}
 
-	private void callReset(SqlCommandCall cmdCall) {
+	private void callReset() {
 		context.resetSessionProperties();
-		terminal.writer().println(CliStrings.messageInfo(CliStrings.MESSAGE_RESET).toAnsi());
+		printInfo(CliStrings.MESSAGE_RESET);
 	}
 
 	private void callSet(SqlCommandCall cmdCall) {
@@ -389,7 +302,7 @@ public class CliClient {
 			try {
 				properties = executor.getSessionProperties(context);
 			} catch (SqlExecutionException e) {
-				printException(e);
+				printExecutionException(e);
 				return;
 			}
 			if (properties.isEmpty()) {
@@ -411,49 +324,17 @@ public class CliClient {
 		terminal.flush();
 	}
 
-	private void callHelp(SqlCommandCall cmdCall) {
+	private void callHelp() {
 		terminal.writer().println(CliStrings.MESSAGE_HELP);
 		terminal.flush();
 	}
 
-	private void callShowCatalogs(SqlCommandCall cmdCall) {
-		final List<String> catalogs;
-		try {
-			catalogs = executor.listCatalogs(context);
-		} catch (SqlExecutionException e) {
-			printException(e);
-			return;
-		}
-		if (catalogs.isEmpty()) {
-			terminal.writer().println(CliStrings.messageInfo(CliStrings.MESSAGE_EMPTY).toAnsi());
-		} else {
-			catalogs.forEach((v) -> terminal.writer().println(v));
-		}
-		terminal.flush();
-	}
-
-	private void callShowDatabases(SqlCommandCall cmdCall) {
-		final List<String> dbs;
-		try {
-			dbs = executor.listDatabases(context);
-		} catch (SqlExecutionException e) {
-			printException(e);
-			return;
-		}
-		if (dbs.isEmpty()) {
-			terminal.writer().println(CliStrings.messageInfo(CliStrings.MESSAGE_EMPTY).toAnsi());
-		} else {
-			dbs.forEach((v) -> terminal.writer().println(v));
-		}
-		terminal.flush();
-	}
-
-	private void callShowTables(SqlCommandCall cmdCall) {
+	private void callShowTables() {
 		final List<String> tables;
 		try {
 			tables = executor.listTables(context);
 		} catch (SqlExecutionException e) {
-			printException(e);
+			printExecutionException(e);
 			return;
 		}
 		if (tables.isEmpty()) {
@@ -464,12 +345,12 @@ public class CliClient {
 		terminal.flush();
 	}
 
-	private void callShowFunctions(SqlCommandCall cmdCall) {
+	private void callShowFunctions() {
 		final List<String> functions;
 		try {
 			functions = executor.listUserDefinedFunctions(context);
 		} catch (SqlExecutionException e) {
-			printException(e);
+			printExecutionException(e);
 			return;
 		}
 		if (functions.isEmpty()) {
@@ -480,22 +361,12 @@ public class CliClient {
 		terminal.flush();
 	}
 
-	private void callUseDatabase(SqlCommandCall cmdCall) {
-		try {
-			executor.setDefaultDatabase(context, cmdCall.operands[0]);
-		} catch (SqlExecutionException e) {
-			printException(e);
-			return;
-		}
-		terminal.flush();
-	}
-
 	private void callDescribe(SqlCommandCall cmdCall) {
 		final TableSchema schema;
 		try {
 			schema = executor.getTableSchema(context, cmdCall.operands[0]);
 		} catch (SqlExecutionException e) {
-			printException(e);
+			printExecutionException(e);
 			return;
 		}
 		terminal.writer().println(schema.toString());
@@ -507,7 +378,7 @@ public class CliClient {
 		try {
 			explanation = executor.explainStatement(context, cmdCall.operands[0]);
 		} catch (SqlExecutionException e) {
-			printException(e);
+			printExecutionException(e);
 			return;
 		}
 		terminal.writer().println(explanation);
@@ -519,7 +390,7 @@ public class CliClient {
 		try {
 			resultDesc = executor.executeQuery(context, cmdCall.operands[0]);
 		} catch (SqlExecutionException e) {
-			printException(e);
+			printExecutionException(e);
 			return;
 		}
 		final CliResultView view;
@@ -534,47 +405,80 @@ public class CliClient {
 			view.open();
 
 			// view left
-			terminal.writer().println(CliStrings.messageInfo(CliStrings.MESSAGE_RESULT_QUIT).toAnsi());
-			terminal.flush();
+			printInfo(CliStrings.MESSAGE_RESULT_QUIT);
 		} catch (SqlExecutionException e) {
-			printException(e);
+			printExecutionException(e);
 		}
 	}
 
 	private boolean callInsertInto(SqlCommandCall cmdCall) {
-		terminal.writer().println(CliStrings.messageInfo(CliStrings.MESSAGE_SUBMITTING_STATEMENT).toAnsi());
-		terminal.flush();
+		printInfo(CliStrings.MESSAGE_SUBMITTING_STATEMENT);
 
 		try {
-			ProgramTargetDescriptor programTarget = executor.executeUpdate(context, cmdCall.operands[0]);
-			if (null == programTarget && context.getCliMode().equals(CliMode.INTERACTIVE)) {
-				// If it is an interactive mode
-				ExecutionContext<?> executionContext = executor.getOrCreateExecutionContext(this.context);
-				programTarget = executor.submitJob(executionContext);
-			}
-			if (null != programTarget) {
-				terminal.writer().println(CliStrings.messageInfo(CliStrings.MESSAGE_STATEMENT_SUBMITTED).toAnsi());
-				terminal.writer().println(programTarget.toString());
-				terminal.flush();
-			}
+			final ProgramTargetDescriptor programTarget = executor.executeUpdate(context, cmdCall.operands[0]);
+			terminal.writer().println(CliStrings.messageInfo(CliStrings.MESSAGE_STATEMENT_SUBMITTED).toAnsi());
+			terminal.writer().println(programTarget.toString());
+			terminal.flush();
 		} catch (SqlExecutionException e) {
-			printException(e);
+			printExecutionException(e);
 			return false;
 		}
 		return true;
 	}
 
-	private boolean callCreateTable(SqlCommandCall cmdCall) {
-		return executor.createTable(context, cmdCall.operands[0]);
+	private void callCreateTable(SqlCommandCall cmdCall) {
+		try {
+			executor.createTable(context, cmdCall.operands[0]);
+		} catch (SqlExecutionException e) {
+			printExecutionException(e);
+		}
+	}
+
+	private void callCreateView(SqlCommandCall cmdCall) {
+		final String name = cmdCall.operands[0];
+		final String query = cmdCall.operands[1];
+
+		final ViewEntry previousView = context.getViews().get(name);
+		if (previousView != null) {
+			printExecutionError(CliStrings.MESSAGE_VIEW_ALREADY_EXISTS);
+			return;
+		}
+
+		try {
+			// perform and validate change
+			context.addView(ViewEntry.create(name, query));
+			executor.validateSession(context);
+			printInfo(CliStrings.MESSAGE_VIEW_CREATED);
+		} catch (SqlExecutionException e) {
+			// rollback change
+			context.removeView(name);
+			printExecutionException(e);
+		}
+	}
+
+	private void callDropView(SqlCommandCall cmdCall) {
+		final String name = cmdCall.operands[0];
+		final ViewEntry view = context.getViews().get(name);
+
+		if (view == null) {
+			printExecutionError(CliStrings.MESSAGE_VIEW_NOT_FOUND);
+			return;
+		}
+
+		try {
+			// perform and validate change
+			context.removeView(name);
+			executor.validateSession(context);
+			printInfo(CliStrings.MESSAGE_VIEW_REMOVED);
+		} catch (SqlExecutionException e) {
+			// rollback change
+			context.addView(view);
+			printExecutionException(CliStrings.MESSAGE_VIEW_NOT_REMOVED, e);
+		}
 	}
 
 	private void callSource(SqlCommandCall cmdCall) {
 		final String pathString = cmdCall.operands[0];
-
-		if (pathString.isEmpty()) {
-			printError(CliStrings.MESSAGE_INVALID_PATH);
-			return;
-		}
 
 		// load file
 		final String stmt;
@@ -583,13 +487,13 @@ public class CliClient {
 			byte[] encoded = Files.readAllBytes(path);
 			stmt = new String(encoded, Charset.defaultCharset());
 		} catch (IOException e) {
-			printException(e);
+			printExecutionException(e);
 			return;
 		}
 
 		// limit the output a bit
 		if (stmt.length() > SOURCE_MAX_SIZE) {
-			printError(CliStrings.MESSAGE_MAX_SIZE_EXCEEDED);
+			printExecutionError(CliStrings.MESSAGE_MAX_SIZE_EXCEEDED);
 			return;
 		}
 
@@ -604,14 +508,38 @@ public class CliClient {
 
 	// --------------------------------------------------------------------------------------------
 
-	private void printException(Throwable t) {
-		LOG.warn(CliStrings.MESSAGE_SQL_EXECUTION_ERROR, t);
-		terminal.writer().println(CliStrings.messageError(CliStrings.MESSAGE_SQL_EXECUTION_ERROR, t).toAnsi());
+	private void printExecutionException(Throwable t) {
+		printExecutionException(null, t);
+	}
+
+	private void printExecutionException(String message, Throwable t) {
+		final String finalMessage;
+		if (message == null) {
+			finalMessage = CliStrings.MESSAGE_SQL_EXECUTION_ERROR;
+		} else {
+			finalMessage = CliStrings.MESSAGE_SQL_EXECUTION_ERROR + ' ' + message;
+		}
+		printException(finalMessage, t);
+	}
+
+	private void printExecutionError(String message) {
+		terminal.writer().println(CliStrings.messageError(CliStrings.MESSAGE_SQL_EXECUTION_ERROR, message).toAnsi());
 		terminal.flush();
 	}
 
-	private void printError(String e) {
-		terminal.writer().println(CliStrings.messageError(CliStrings.MESSAGE_SQL_EXECUTION_ERROR, e).toAnsi());
+	private void printException(String message, Throwable t) {
+		LOG.warn(message, t);
+		terminal.writer().println(CliStrings.messageError(message, t).toAnsi());
+		terminal.flush();
+	}
+
+	private void printError(String message) {
+		terminal.writer().println(CliStrings.messageError(message).toAnsi());
+		terminal.flush();
+	}
+
+	private void printInfo(String message) {
+		terminal.writer().println(CliStrings.messageInfo(message).toAnsi());
 		terminal.flush();
 	}
 }

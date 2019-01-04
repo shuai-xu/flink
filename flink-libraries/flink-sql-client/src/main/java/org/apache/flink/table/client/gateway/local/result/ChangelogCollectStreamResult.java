@@ -38,8 +38,8 @@ public class ChangelogCollectStreamResult<C> extends CollectStreamResult<C> impl
 	private List<Tuple2<Boolean, Row>> changeRecordBuffer;
 	private static final int CHANGE_RECORD_BUFFER_SIZE = 5_000;
 
-	public ChangelogCollectStreamResult(DataType outputType, ExecutionConfig config,
-			InetAddress gatewayAddress, int gatewayPort) {
+	public ChangelogCollectStreamResult(
+			DataType outputType, ExecutionConfig config, InetAddress gatewayAddress, int gatewayPort) {
 		super(outputType, config, gatewayAddress, gatewayPort);
 
 		// prepare for changelog

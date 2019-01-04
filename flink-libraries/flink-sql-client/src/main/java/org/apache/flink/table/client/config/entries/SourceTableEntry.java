@@ -16,11 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.client.config;
+package org.apache.flink.table.client.config.entries;
+
+import org.apache.flink.table.descriptors.DescriptorProperties;
 
 /**
- * Catalog types support in SQL Client.
+ * Configuration of a table source.
  */
-public enum CatalogType {
-	hive, flink_in_memory, flink_hms
+public class SourceTableEntry extends TableEntry {
+
+	SourceTableEntry(String name, DescriptorProperties properties) {
+		super(name, properties);
+	}
+
+	@Override
+	protected void validate(DescriptorProperties properties) {
+		// validation is performed by the discovered factory
+	}
 }

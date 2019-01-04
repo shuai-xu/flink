@@ -21,6 +21,8 @@ package org.apache.flink.table.client.gateway.local.result;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.DataStreamUtils;
 import org.apache.flink.streaming.experimental.SocketStreamIterator;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
@@ -36,7 +38,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 
 /**
- * A result that works similarly to DataStreamUtils#collect(DataStream).
+ * A result that works similarly to {@link DataStreamUtils#collect(DataStream)}.
  *
  * @param <C> cluster id to which this result belongs to
  */
@@ -61,7 +63,7 @@ public abstract class CollectStreamResult<C> extends BasicResult<C> implements D
 		// create socket stream iterator
 		final DataType socketType = DataTypes.createTupleType(DataTypes.BOOLEAN, outputType);
 		final TypeSerializer<Tuple2<Boolean, Row>> serializer =
-				DataTypes.toTypeInfo(socketType).createSerializer(config);
+			DataTypes.toTypeInfo(socketType).createSerializer(config);
 		try {
 			// pass gateway port and address such that iterator knows where to bind to
 			iterator = new SocketStreamIterator<>(gatewayPort, gatewayAddress, serializer);

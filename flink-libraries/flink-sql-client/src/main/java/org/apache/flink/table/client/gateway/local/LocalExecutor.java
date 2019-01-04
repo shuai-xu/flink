@@ -39,7 +39,6 @@ import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.client.SqlClientException;
-import org.apache.flink.table.client.cli.SingleJobMode;
 import org.apache.flink.table.client.config.Environment;
 import org.apache.flink.table.client.gateway.Executor;
 import org.apache.flink.table.client.gateway.ProgramTargetDescriptor;
@@ -92,7 +91,6 @@ public class LocalExecutor implements Executor {
 	// result maintenance
 
 	private final ResultStore resultStore;
-	private final SingleJobMode singleJobMode;
 
 	/**
 	 * Cached execution context for unmodified sessions. Do not access this variable directly
@@ -103,11 +101,7 @@ public class LocalExecutor implements Executor {
 	/**
 	 * Creates a local executor for submitting table programs and retrieving results.
 	 */
-	public LocalExecutor(
-			URL defaultEnv,
-			List<URL> jars,
-			List<URL> libraries,
-			SingleJobMode singleJobMode) {
+	public LocalExecutor(URL defaultEnv, List<URL> jars, List<URL> libraries) {
 		// discover configuration
 		final String flinkConfigDir;
 		try {
@@ -164,8 +158,7 @@ public class LocalExecutor implements Executor {
 		}
 
 		// discover dependencies
-		this.dependencies = discoverDependencies(jars, libraries);
-		this.singleJobMode = singleJobMode;
+		dependencies = discoverDependencies(jars, libraries);
 
 		// prepare result store
 		resultStore = new ResultStore(flinkConfig);
@@ -174,19 +167,12 @@ public class LocalExecutor implements Executor {
 	/**
 	 * Constructor for testing purposes.
 	 */
-	public LocalExecutor(
-			Environment defaultEnvironment,
-			List<URL> dependencies,
-			Configuration flinkConfig,
-			CustomCommandLine<?> commandLine,
-			SingleJobMode singleJobMode) {
-
+	public LocalExecutor(Environment defaultEnvironment, List<URL> dependencies, Configuration flinkConfig, CustomCommandLine<?> commandLine) {
 		this.defaultEnvironment = defaultEnvironment;
 		this.dependencies = dependencies;
 		this.flinkConfig = flinkConfig;
 		this.commandLines = Collections.singletonList(commandLine);
 		this.commandLineOptions = collectCommandLineOptions(commandLines);
-		this.singleJobMode = singleJobMode;
 
 		// prepare result store
 		resultStore = new ResultStore(flinkConfig);
@@ -202,25 +188,9 @@ public class LocalExecutor implements Executor {
 		final Environment env = getOrCreateExecutionContext(session)
 			.getMergedEnvironment();
 		final Map<String, String> properties = new HashMap<>();
-		properties.putAll(env.getExecution().toProperties());
-		properties.putAll(env.getDeployment().toProperties());
+		properties.putAll(env.getExecution().asTopLevelMap());
+		properties.putAll(env.getDeployment().asTopLevelMap());
 		return properties;
-	}
-
-	@Override
-	public List<String> listCatalogs(SessionContext session) throws SqlExecutionException {
-		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
-			.createEnvironmentInstance()
-			.getTableEnvironment();
-		return Arrays.asList(tableEnv.listCatalogs());
-	}
-
-	@Override
-	public List<String> listDatabases(SessionContext session) throws SqlExecutionException {
-		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
-			.createEnvironmentInstance()
-			.getTableEnvironment();
-		return Arrays.asList(tableEnv.listDatabases());
 	}
 
 	@Override
@@ -240,20 +210,6 @@ public class LocalExecutor implements Executor {
 	}
 
 	@Override
-	public void setDefaultDatabase(SessionContext session, String namePath) throws SqlExecutionException {
-		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
-			.createEnvironmentInstance()
-			.getTableEnvironment();
-
-		try {
-			tableEnv.setDefaultDatabase(namePath.split("\\."));
-		} catch (Throwable t) {
-			// catch everything such that the query does not crash the executor
-			throw new SqlExecutionException("No catalog and database with this name could be found.", t);
-		}
-	}
-
-	@Override
 	public TableSchema getTableSchema(SessionContext session, String name) throws SqlExecutionException {
 		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
 			.createEnvironmentInstance()
@@ -268,17 +224,38 @@ public class LocalExecutor implements Executor {
 
 	@Override
 	public String explainStatement(SessionContext session, String statement) throws SqlExecutionException {
-		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
+		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
+		final TableEnvironment tableEnv = context
 			.createEnvironmentInstance()
 			.getTableEnvironment();
 
 		// translate
 		try {
 			final Table table = createTable(tableEnv, statement);
-			return tableEnv.explain(table);
+			// explanation requires an optimization step that might reference UDFs during code compilation
+			return context.wrapClassLoader(() -> tableEnv.explain(table));
 		} catch (Throwable t) {
 			// catch everything such that the query does not crash the executor
 			throw new SqlExecutionException("Invalid SQL statement.", t);
+		}
+	}
+
+	@Override
+	public List<String> completeStatement(SessionContext session, String statement, int position) {
+		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
+				.createEnvironmentInstance()
+				.getTableEnvironment();
+
+		try {
+			// TODO: FLINK-8865
+			//return Arrays.asList(tableEnv.getCompletionHints(statement, position));
+			return Collections.emptyList();
+		} catch (Throwable t) {
+			// catch everything such that the query does not crash the executor
+			if (LOG.isDebugEnabled()) {
+				LOG.debug("Could not complete statement at " + position + ":" + statement, t);
+			}
+			return Collections.emptyList();
 		}
 	}
 
@@ -291,7 +268,7 @@ public class LocalExecutor implements Executor {
 	@Override
 	public TypedResult<List<Tuple2<Boolean, Row>>> retrieveResultChanges(SessionContext session,
 			String resultId) throws SqlExecutionException {
-		final DynamicResult result = resultStore.getResult(resultId);
+		final DynamicResult<?> result = resultStore.getResult(resultId);
 		if (result == null) {
 			throw new SqlExecutionException("Could not find a result with result identifier '" + resultId + "'.");
 		}
@@ -303,7 +280,7 @@ public class LocalExecutor implements Executor {
 
 	@Override
 	public TypedResult<Integer> snapshotResult(SessionContext session, String resultId, int pageSize) throws SqlExecutionException {
-		final DynamicResult result = resultStore.getResult(resultId);
+		final DynamicResult<?> result = resultStore.getResult(resultId);
 		if (result == null) {
 			throw new SqlExecutionException("Could not find a result with result identifier '" + resultId + "'.");
 		}
@@ -315,7 +292,7 @@ public class LocalExecutor implements Executor {
 
 	@Override
 	public List<Row> retrieveResultPage(String resultId, int page) throws SqlExecutionException {
-		final DynamicResult result = resultStore.getResult(resultId);
+		final DynamicResult<?> result = resultStore.getResult(resultId);
 		if (result == null) {
 			throw new SqlExecutionException("Could not find a result with result identifier '" + resultId + "'.");
 		}
@@ -332,28 +309,32 @@ public class LocalExecutor implements Executor {
 	}
 
 	@Override
-	public boolean createTable(SessionContext session, String ddl) throws SqlExecutionException {
-		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
-		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
-		TableEnvironment tableEnv = envInst.getTableEnvironment();
-
-		try {
-			List<SqlNodeInfo> sqlNodeList = SqlJobUtil.parseSqlContext(ddl);
-			for (SqlNodeInfo sqlNodeInfo : sqlNodeList) {
-				if (sqlNodeInfo.getSqlNode() instanceof SqlCreateTable) {
-					SqlJobUtil.registerExternalTable(tableEnv, sqlNodeInfo);
-				}
-			}
-		} catch (SqlParseException e) {
-			throw new SqlExecutionException(e.getMessage(), e);
-		}
-		return true;
-	}
-
-	@Override
 	public ProgramTargetDescriptor executeUpdate(SessionContext session, String statement) throws SqlExecutionException {
 		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
 		return executeUpdateInternal(context, statement);
+	}
+
+	@Override
+	public void validateSession(SessionContext session) throws SqlExecutionException {
+		// throws exceptions if an environment cannot be created with the given session context
+		getOrCreateExecutionContext(session).createEnvironmentInstance();
+	}
+
+	@Override
+	public void createTable(SessionContext session, String ddl) throws SqlExecutionException {
+		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
+		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
+		TableEnvironment tEnv = envInst.getTableEnvironment();
+
+		try {
+			List<SqlNodeInfo> sqlNodeList = SqlJobUtil.parseSqlContext(ddl);
+			sqlNodeList
+				.stream()
+				.filter((node) -> node.getSqlNode() instanceof SqlCreateTable)
+				.forEach((node) -> SqlJobUtil.registerExternalTable(tEnv, node));
+		} catch (SqlParseException e) {
+			throw new SqlExecutionException(e.getMessage(), e);
+		}
 	}
 
 	@Override
@@ -412,26 +393,10 @@ public class LocalExecutor implements Executor {
 	private <C> ProgramTargetDescriptor executeUpdateInternal(ExecutionContext<C> context, String statement) {
 		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
 
-		applyUpdate(envInst.getTableEnvironment(), envInst.getQueryConfig(), statement);
+		applyUpdate(context, envInst.getTableEnvironment(), envInst.getQueryConfig(), statement);
 
-		if (context.isNeedShareEnv()) {
-			return null;
-		}
-
-		return this.submitJobInternal(context, envInst);
-	}
-
-	@Override
-	public <C> ProgramTargetDescriptor submitJob(ExecutionContext<C> context) {
-		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
-		return this.submitJobInternal(context, envInst);
-	}
-
-	private <C> ProgramTargetDescriptor submitJobInternal(
-			ExecutionContext<C> context,
-			ExecutionContext.EnvironmentInstance envInst) {
 		// create job graph with dependencies
-		final String jobName = context.getSessionContext().getName() + ": " + "sql";
+		final String jobName = context.getSessionContext().getName() + ": " + statement;
 		final JobGraph jobGraph;
 		try {
 			jobGraph = envInst.createJobGraph(jobName);
@@ -442,9 +407,9 @@ public class LocalExecutor implements Executor {
 
 		// create execution
 		final BasicResult<C> result = new BasicResult<>();
-
 		final ProgramDeployer<C> deployer = new ProgramDeployer<>(
-			context, jobName, jobGraph, result, context.isNeedAttach());
+			context, jobName, jobGraph, result, false);
+
 		// blocking deployment
 		deployer.run();
 
@@ -452,17 +417,10 @@ public class LocalExecutor implements Executor {
 			result.getClusterId(),
 			jobGraph.getJobID(),
 			result.getWebInterfaceUrl());
-
 	}
 
 	private <C> ResultDescriptor executeQueryInternal(ExecutionContext<C> context, String query) {
 		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
-
-		// Check the result
-		if (context.isNeedShareEnv()) {
-			throw new SqlExecutionException("No query results can be printed when the Shared "
-				+ "Environment are enabled.");
-		}
 
 		// create table
 		final Table table = createTable(envInst.getTableEnvironment(), query);
@@ -470,14 +428,18 @@ public class LocalExecutor implements Executor {
 		// initialize result
 		final DynamicResult<C> result = resultStore.createResult(
 			context.getMergedEnvironment(),
-			TableSchemaUtil.withoutTimeAttributes(table.getSchema()),
+			removeTimeAttributes(table.getSchema()),
 			envInst.getExecutionConfig());
 
 		// create job graph with dependencies
 		final String jobName = context.getSessionContext().getName() + ": " + query;
 		final JobGraph jobGraph;
 		try {
-			table.writeToSink(result.getTableSink(), envInst.getQueryConfig());
+			// writing to a sink requires an optimization step that might reference UDFs during code compilation
+			context.wrapClassLoader(() -> {
+				table.writeToSink(result.getTableSink(), envInst.getQueryConfig());
+				return null;
+			});
 			jobGraph = envInst.createJobGraph(jobName);
 		} catch (Throwable t) {
 			// the result needs to be closed as long as
@@ -492,8 +454,6 @@ public class LocalExecutor implements Executor {
 		resultStore.storeResult(resultId, result);
 
 		// create execution
-		// Here we intentionally make variable awaitJobResult = true. If we pass a SQL query
-		// without sink, we intentionally wait for the result.
 		final ProgramDeployer<C> deployer = new ProgramDeployer<>(
 			context, jobName, jobGraph, result, true);
 
@@ -502,7 +462,7 @@ public class LocalExecutor implements Executor {
 
 		return new ResultDescriptor(
 			resultId,
-			table.getSchema(),
+			removeTimeAttributes(table.getSchema()),
 			result.isMaterialized());
 	}
 
@@ -522,10 +482,14 @@ public class LocalExecutor implements Executor {
 	/**
 	 * Applies the given update statement to the given table environment with query configuration.
 	 */
-	private void applyUpdate(TableEnvironment tableEnv, QueryConfig queryConfig, String updateStatement) {
+	private <C> void applyUpdate(ExecutionContext<C> context, TableEnvironment tableEnv, QueryConfig queryConfig, String updateStatement) {
 		// parse and validate statement
 		try {
-			tableEnv.sqlUpdate(updateStatement, queryConfig);
+			// update statement requires an optimization step that might reference UDFs during code compilation
+			context.wrapClassLoader(() -> {
+				tableEnv.sqlUpdate(updateStatement, queryConfig);
+				return null;
+			});
 		} catch (Throwable t) {
 			// catch everything such that the statement does not crash the executor
 			throw new SqlExecutionException("Invalid SQL update statement.", t);
@@ -535,44 +499,17 @@ public class LocalExecutor implements Executor {
 	/**
 	 * Creates or reuses the execution context.
 	 */
-	@Override
-	public synchronized ExecutionContext<?> getOrCreateExecutionContext(SessionContext session) throws SqlExecutionException {
+	private synchronized ExecutionContext<?> getOrCreateExecutionContext(SessionContext session) throws SqlExecutionException {
 		if (executionContext == null || !executionContext.getSessionContext().equals(session)) {
 			try {
 				executionContext = new ExecutionContext<>(defaultEnvironment, session, dependencies,
-					flinkConfig, commandLineOptions, commandLines, singleJobMode);
+					flinkConfig, commandLineOptions, commandLines);
 			} catch (Throwable t) {
 				// catch everything such that a configuration does not crash the executor
 				throw new SqlExecutionException("Could not create execution context.", t);
 			}
 		}
 		return executionContext;
-	}
-
-	@Override
-	public boolean createFunction(SessionContext session, String ddl) {
-		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
-		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
-		TableEnvironment tableEnv = envInst.getTableEnvironment();
-		try {
-			List<SqlNodeInfo> sqlNodeList = SqlJobUtil.parseSqlContext(ddl);
-			return SqlJobUtil.registerFunctions(tableEnv, sqlNodeList, null);
-		} catch (Exception e) {
-			throw new SqlExecutionException(e.getMessage(), e);
-		}
-	}
-
-	@Override
-	public void analyzeTable(SessionContext session, String ddl) {
-		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
-		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
-		TableEnvironment tableEnv = envInst.getTableEnvironment();
-		try {
-			List<SqlNodeInfo> sqlNodeList = SqlJobUtil.parseSqlContext(ddl);
-			SqlJobUtil.analyzeTableStats(tableEnv, sqlNodeList);
-		} catch (Exception e) {
-			throw new SqlExecutionException(e.getMessage(), e);
-		}
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -621,11 +558,14 @@ public class LocalExecutor implements Executor {
 	private static Options collectCommandLineOptions(List<CustomCommandLine<?>> commandLines) {
 		final Options customOptions = new Options();
 		for (CustomCommandLine<?> customCommandLine : commandLines) {
-			customCommandLine.addGeneralOptions(customOptions);
 			customCommandLine.addRunOptions(customOptions);
 		}
 		return CliFrontendParser.mergeOptions(
 			CliFrontendParser.getRunCommandOptions(),
 			customOptions);
+	}
+
+	private static TableSchema removeTimeAttributes(TableSchema schema) {
+		return TableSchemaUtil.withoutTimeAttributes(schema);
 	}
 }

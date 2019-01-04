@@ -92,10 +92,6 @@ public class ProgramDeployer<C> implements Runnable {
 			try {
 				// new cluster
 				if (context.getClusterId() == null) {
-					if (this.awaitJobResult) {
-						throw new UnsupportedOperationException("Can't deploy a attach job to per-job cluster.");
-					}
-
 					deployJobOnNewCluster(clusterDescriptor, jobGraph, result, context.getClassLoader());
 				}
 				// reuse existing cluster
@@ -120,9 +116,7 @@ public class ProgramDeployer<C> implements Runnable {
 		ClusterClient<T> clusterClient = null;
 		try {
 			// deploy job cluster with job attached
-			clusterClient = clusterDescriptor.deployJobCluster(
-				context.getClusterSpec(), jobGraph, true);
-
+			clusterClient = clusterDescriptor.deployJobCluster(context.getClusterSpec(), jobGraph, false);
 			// save information about the new cluster
 			result.setClusterInformation(clusterClient.getClusterId(), clusterClient.getWebInterfaceURL());
 			// get result
@@ -131,7 +125,7 @@ public class ProgramDeployer<C> implements Runnable {
 				final JobExecutionResult jobResult = ((RestClusterClient<T>) clusterClient)
 						.requestJobResult(jobGraph.getJobID())
 						.get()
-						.toJobExecutionResult(classLoader); // throws exception if job fails
+						.toJobExecutionResult(context.getClassLoader()); // throws exception if job fails
 				executionResultBucket.add(jobResult);
 			}
 		} finally {
@@ -141,15 +135,6 @@ public class ProgramDeployer<C> implements Runnable {
 				}
 			} catch (Exception e) {
 				// ignore
-				LOG.warn("Could not properly shut down the cluster client.", e);
-			}
-
-			try {
-				if (clusterDescriptor != null) {
-					clusterDescriptor.close();
-				}
-			} catch (Exception e) {
-				LOG.warn("Could not properly close the cluster descriptor.", e);
 			}
 		}
 	}

@@ -16,16 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.client.gateway;
+package org.apache.flink.table.client.config.entries;
+
+import org.apache.flink.table.descriptors.DescriptorProperties;
 
 /**
- * The CLI Mode which the client runs.
+ * Configuration of a table source and sink.
  */
-public enum CliMode {
-	// Running from a file
-	NON_INTERACTIVE,
-	// Running from an interactive console
-	INTERACTIVE,
-	// Running from the command line arguments
-	SINGLE_STATEMENT
+public class SourceSinkTableEntry extends TableEntry {
+
+	SourceSinkTableEntry(String name, DescriptorProperties properties) {
+		super(name, properties);
+	}
+
+	@Override
+	protected void validate(DescriptorProperties properties) {
+		// validation is performed by the discovered factory
+	}
 }

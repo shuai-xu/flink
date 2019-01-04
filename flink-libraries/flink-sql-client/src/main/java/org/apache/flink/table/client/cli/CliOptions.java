@@ -34,8 +34,6 @@ public class CliOptions {
 	private final List<URL> jars;
 	private final List<URL> libraryDirs;
 	private final String updateStatement;
-	private final URL sqlFile;
-	private final SingleJobMode singleJobMode;
 
 	public CliOptions(
 			boolean isPrintHelp,
@@ -44,9 +42,7 @@ public class CliOptions {
 			URL defaults,
 			List<URL> jars,
 			List<URL> libraryDirs,
-			String updateStatement,
-			URL sqlFile,
-			String singleJobMode) {
+			String updateStatement) {
 		this.isPrintHelp = isPrintHelp;
 		this.sessionId = sessionId;
 		this.environment = environment;
@@ -54,8 +50,6 @@ public class CliOptions {
 		this.jars = jars;
 		this.libraryDirs = libraryDirs;
 		this.updateStatement = updateStatement;
-		this.sqlFile = sqlFile;
-		this.singleJobMode = SingleJobMode.fromString(singleJobMode);
 	}
 
 	public boolean isPrintHelp() {
@@ -84,13 +78,5 @@ public class CliOptions {
 
 	public String getUpdateStatement() {
 		return updateStatement;
-	}
-
-	public URL getSqlFile() {
-		return sqlFile;
-	}
-
-	public SingleJobMode getSingleJobMode() {
-		return singleJobMode;
 	}
 }

@@ -16,23 +16,37 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.client.catalog;
+package org.apache.flink.table.client.config.entries;
 
-import org.apache.flink.table.catalog.hive.config.HiveCatalogConfig;
+import org.apache.flink.table.descriptors.DescriptorProperties;
 
 /**
- * Configs for Catalog.
+ * Configuration of a table view.
  */
-public class CatalogConfigs {
-	public static final String CATALOG_CONNECTOR_PREFIX = "catalog.connector";
+public class ViewEntry extends TableEntry {
 
-	public static final String CATALOG_TYPE = "catalog.type";
-	public static final String CATALOG_IS_DEFAULT = "catalog.is-default";
-	public static final String CATALOG_DEFAULT_DB = "catalog.default-db";
+	private static final String TABLES_QUERY = "query";
 
-	// Hive-specific
-	public static final String CATALOG_CONNECTOR_HIVE_METASTORE_URIS =
-		CATALOG_CONNECTOR_PREFIX + "." + HiveCatalogConfig.HIVE_METASTORE_URIS;
-	public static final String CATALOG_CONNECTOR_HIVE_METASTORE_USERNAME =
-		CATALOG_CONNECTOR_PREFIX + "." + HiveCatalogConfig.HIVE_METASTORE_USERNAME;
+	private final String query;
+
+	ViewEntry(String name, DescriptorProperties properties) {
+		super(name, properties);
+
+		query = properties.getString(TABLES_QUERY);
+	}
+
+	public String getQuery() {
+		return query;
+	}
+
+	@Override
+	protected void validate(DescriptorProperties properties) {
+		properties.validateString(TABLES_QUERY, false, 1);
+	}
+
+	public static ViewEntry create(String name, String query) {
+		final DescriptorProperties properties = new DescriptorProperties(true);
+		properties.putString(TABLES_QUERY, query);
+		return new ViewEntry(name, properties);
+	}
 }

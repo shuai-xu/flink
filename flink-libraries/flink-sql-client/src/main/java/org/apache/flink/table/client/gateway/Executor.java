@@ -20,7 +20,6 @@ package org.apache.flink.table.client.gateway;
 
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.client.gateway.local.ExecutionContext;
 import org.apache.flink.types.Row;
 
 import java.util.List;
@@ -42,16 +41,6 @@ public interface Executor {
 	Map<String, String> getSessionProperties(SessionContext session) throws SqlExecutionException;
 
 	/**
-	 * Lists all registered catalogs.
-	 */
-	List<String> listCatalogs(SessionContext session) throws SqlExecutionException;
-
-	/**
-	 * Lists all databases in the default catalog.
-	 */
-	List<String> listDatabases(SessionContext session) throws SqlExecutionException;
-
-	/**
 	 * Lists all tables in the default database.
 	 */
 	List<String> listTables(SessionContext session) throws SqlExecutionException;
@@ -62,16 +51,8 @@ public interface Executor {
 	List<String> listUserDefinedFunctions(SessionContext session) throws SqlExecutionException;
 
 	/**
-	 * Parse the namePath, and set the default  database.
-	 * If a catalog is not specified, the database is resolved relative to the current catalog.
-	 * Note! This method does not support setting default catalog only.
-	 */
-	void setDefaultDatabase(SessionContext session, String namePath) throws SqlExecutionException;
-
-	/**
-	 * Parse the table path, and returns the schema of a table.
-	 * Throws an exception if the table could not be found.
-	 * The schema might contain time attribute types for helping the user during debugging a query.
+	 * Returns the schema of a table. Throws an exception if the table could not be found. The
+	 * schema might contain time attribute types for helping the user during debugging a query.
 	 */
 	TableSchema getTableSchema(SessionContext session, String name) throws SqlExecutionException;
 
@@ -79,6 +60,11 @@ public interface Executor {
 	 * Returns a string-based explanation about AST and execution plan of the given statement.
 	 */
 	String explainStatement(SessionContext session, String statement) throws SqlExecutionException;
+
+	/**
+	 * Returns a list of completion hints for the given statement at the given position.
+	 */
+	List<String> completeStatement(SessionContext session, String statement, int position);
 
 	/**
 	 * Submits a Flink SQL query job (detached) and returns the result descriptor.
@@ -107,12 +93,6 @@ public interface Executor {
 	 */
 	void cancelQuery(SessionContext session, String resultId) throws SqlExecutionException;
 
-
-	/**
-	 * Create a table with a DDL.
-	 */
-	boolean createTable(SessionContext session, String ddl) throws SqlExecutionException;
-
 	/**
 	 * Submits a Flink SQL update statement such as INSERT INTO.
 	 *
@@ -123,25 +103,17 @@ public interface Executor {
 	ProgramTargetDescriptor executeUpdate(SessionContext session, String statement) throws SqlExecutionException;
 
 	/**
+	 * Validates the current session. For example, it checks whether all views are still valid.
+	 */
+	void validateSession(SessionContext session) throws SqlExecutionException;
+
+	/**
+	 * Create a table with a DDL.
+	 */
+	void createTable(SessionContext session, String ddl) throws SqlExecutionException;
+
+	/**
 	 * Stops the executor.
 	 */
 	void stop(SessionContext session);
-
-	/**
-	 * Submit a job.
-	 */
-	<C> ProgramTargetDescriptor submitJob(ExecutionContext<C> context);
-
-	/**
-	 * Creates or reuses the execution context.
-	 */
-	ExecutionContext<?> getOrCreateExecutionContext(SessionContext session) throws SqlExecutionException;
-
-	/**
-	 * Create a function with a DDL.
-	 * @return Whether succeed or not
-	 */
-	boolean createFunction(SessionContext context, String operand);
-
-	void analyzeTable(SessionContext context, String operand);
 }

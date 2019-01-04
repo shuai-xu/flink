@@ -30,11 +30,11 @@ import java.util.Objects;
 /**
  * Utilities for reading an environment file.
  */
-public final class EnvironmentUtil {
+public final class EnvironmentFileUtil {
 
 	private static final String DEFAULTS_ENVIRONMENT_FILE = "test-sql-client-defaults.yaml";
 
-	private EnvironmentUtil() {
+	private EnvironmentFileUtil() {
 		// private
 	}
 
@@ -43,13 +43,13 @@ public final class EnvironmentUtil {
 	}
 
 	public static Environment parseUnmodified(String fileName) throws IOException {
-		final URL url = EnvironmentUtil.class.getClassLoader().getResource(fileName);
+		final URL url = EnvironmentFileUtil.class.getClassLoader().getResource(fileName);
 		Objects.requireNonNull(url);
 		return Environment.parse(url);
 	}
 
 	public static Environment parseModified(String fileName, Map<String, String> replaceVars) throws IOException {
-		final URL url = EnvironmentUtil.class.getClassLoader().getResource(fileName);
+		final URL url = EnvironmentFileUtil.class.getClassLoader().getResource(fileName);
 		Objects.requireNonNull(url);
 		String schema = FileUtils.readFileUtf8(new File(url.getFile()));
 

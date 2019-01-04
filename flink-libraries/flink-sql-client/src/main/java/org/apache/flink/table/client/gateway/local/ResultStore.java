@@ -26,8 +26,8 @@ import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.client.SqlClientException;
-import org.apache.flink.table.client.config.Deployment;
 import org.apache.flink.table.client.config.Environment;
+import org.apache.flink.table.client.config.entries.DeploymentEntry;
 import org.apache.flink.table.client.gateway.SqlExecutionException;
 import org.apache.flink.table.client.gateway.local.result.ChangelogCollectStreamResult;
 import org.apache.flink.table.client.gateway.local.result.DynamicResult;
@@ -60,7 +60,7 @@ public class ResultStore {
 	 */
 	public <T> DynamicResult<T> createResult(Environment env, TableSchema schema, ExecutionConfig config) {
 
-		final DataType outputType = DataTypes.createRowType(schema.getTypes(), schema.getColumnNames());
+		final DataType outputType = DataTypes.createRowType(schema.getFieldTypes(), schema.getFieldNames());
 
 		if (env.getExecution().isStreamingExecution()) {
 			// determine gateway address (and port if possible)
@@ -70,7 +70,12 @@ public class ResultStore {
 			if (env.getExecution().isChangelogMode()) {
 				return new ChangelogCollectStreamResult<>(outputType, config, gatewayAddress, gatewayPort);
 			} else {
-				return new MaterializedCollectStreamResult<>(outputType, config, gatewayAddress, gatewayPort);
+				return new MaterializedCollectStreamResult<>(
+					outputType,
+					config,
+					gatewayAddress,
+					gatewayPort,
+					env.getExecution().getMaxTableResultRows());
 			}
 
 		} else {
@@ -101,12 +106,12 @@ public class ResultStore {
 
 	// --------------------------------------------------------------------------------------------
 
-	private int getGatewayPort(Deployment deploy) {
+	private int getGatewayPort(DeploymentEntry deploy) {
 		// try to get address from deployment configuration
 		return deploy.getGatewayPort();
 	}
 
-	private InetAddress getGatewayAddress(Deployment deploy) {
+	private InetAddress getGatewayAddress(DeploymentEntry deploy) {
 		// try to get address from deployment configuration
 		final String address = deploy.getGatewayAddress();
 

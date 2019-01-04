@@ -31,14 +31,15 @@ import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.client.cli.SingleJobMode;
 import org.apache.flink.table.client.config.Environment;
+import org.apache.flink.table.client.config.entries.ViewEntry;
 import org.apache.flink.table.client.gateway.Executor;
 import org.apache.flink.table.client.gateway.ProgramTargetDescriptor;
 import org.apache.flink.table.client.gateway.ResultDescriptor;
 import org.apache.flink.table.client.gateway.SessionContext;
+import org.apache.flink.table.client.gateway.SqlExecutionException;
 import org.apache.flink.table.client.gateway.TypedResult;
-import org.apache.flink.table.client.gateway.utils.EnvironmentUtil;
+import org.apache.flink.table.client.gateway.utils.EnvironmentFileUtil;
 import org.apache.flink.test.util.MiniClusterResource;
 import org.apache.flink.test.util.TestBaseUtils;
 import org.apache.flink.types.Row;
@@ -58,9 +59,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
@@ -71,7 +75,6 @@ import static org.junit.Assert.fail;
 /**
  * Contains basic tests for the {@link LocalExecutor}.
  */
-@Ignore
 public class LocalExecutorITCase extends TestLogger {
 
 	private static final String DEFAULTS_ENVIRONMENT_FILE = "test-sql-client-defaults.yaml";
@@ -87,8 +90,8 @@ public class LocalExecutorITCase extends TestLogger {
 		new MiniClusterResource.MiniClusterResourceConfiguration(
 			getConfig(),
 			NUM_TMS,
-			NUM_SLOTS_PER_TM
-		), true);
+			NUM_SLOTS_PER_TM),
+		true);
 
 	private static ClusterClient<?> clusterClient;
 
@@ -106,40 +109,82 @@ public class LocalExecutorITCase extends TestLogger {
 		return config;
 	}
 
-	@Ignore
+	@Test
+	public void testValidateSession() throws Exception {
+		final Executor executor = createDefaultExecutor(clusterClient);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		executor.validateSession(session);
+
+		session.addView(ViewEntry.create("AdditionalView1", "SELECT 1"));
+		session.addView(ViewEntry.create("AdditionalView2", "SELECT * FROM AdditionalView1"));
+		executor.validateSession(session);
+
+		List<String> actualTables =
+			executor.listTables(session).stream().sorted().collect(Collectors.toList());
+		List<String> expectedTables = Arrays.asList(
+			"AdditionalView1",
+			"AdditionalView2",
+			"TableNumber1",
+			"TableNumber2",
+			"TableSourceSink",
+			"TestView1",
+			"TestView2").stream().sorted().collect(Collectors.toList());
+		assertEquals(expectedTables, actualTables);
+
+		session.removeView("AdditionalView1");
+		try {
+			executor.validateSession(session);
+			fail();
+		} catch (SqlExecutionException e) {
+			// AdditionalView2 needs AdditionalView1
+		}
+
+		session.removeView("AdditionalView2");
+		executor.validateSession(session);
+
+		actualTables =
+			executor.listTables(session).stream().sorted().collect(Collectors.toList());
+		expectedTables = Arrays.asList(
+			"TableNumber1",
+			"TableNumber2",
+			"TableSourceSink",
+			"TestView1",
+			"TestView2").stream().sorted().collect(Collectors.toList());
+		assertEquals(expectedTables, actualTables);
+	}
+
 	@Test
 	public void testListTables() throws Exception {
+		final Executor executor = createDefaultExecutor(clusterClient);
 		final SessionContext session = new SessionContext("test-session", new Environment());
-		final Executor executor = createDefaultExecutor(clusterClient, session);
 
-		final List<String> actualTables = executor.listTables(session);
+		final List<String> actualTables =
+			executor.listTables(session).stream().sorted().collect(Collectors.toList());
 
 		final List<String> expectedTables = Arrays.asList(
 			"TableNumber1",
 			"TableNumber2",
 			"TableSourceSink",
 			"TestView1",
-			"TestView2");
+			"TestView2").stream().sorted().collect(Collectors.toList());
 		assertEquals(expectedTables, actualTables);
 	}
 
-	@Ignore
 	@Test
 	public void testListUserDefinedFunctions() throws Exception {
+		final Executor executor = createDefaultExecutor(clusterClient);
 		final SessionContext session = new SessionContext("test-session", new Environment());
-		final Executor executor = createDefaultExecutor(clusterClient, session);
 
-		final List<String> actualTables = executor.listUserDefinedFunctions(session);
-
-		final List<String> expectedTables = Arrays.asList("aggregateUDF", "tableUDF", "scalarUDF");
-		assertEquals(expectedTables, actualTables);
+		final Set<String> actualUDXs = new HashSet<>(executor.listUserDefinedFunctions(session));
+		final List<String> expectedUDXs = Arrays.asList("aggregateUDF", "tableUDF", "scalarUDF");
+		expectedUDXs.stream().forEach(udf -> actualUDXs.contains(udf));
 	}
 
-	@Ignore
 	@Test
 	public void testGetSessionProperties() throws Exception {
+		final Executor executor = createDefaultExecutor(clusterClient);
 		final SessionContext session = new SessionContext("test-session", new Environment());
-		final Executor executor = createDefaultExecutor(clusterClient, session);
 
 		session.setSessionProperty("execution.result-mode", "changelog");
 
@@ -169,53 +214,73 @@ public class LocalExecutorITCase extends TestLogger {
 		assertEquals(expectedProperties, actualProperties);
 	}
 
-	@Ignore
 	@Test
 	public void testTableSchema() throws Exception {
+		final Executor executor = createDefaultExecutor(clusterClient);
 		final SessionContext session = new SessionContext("test-session", new Environment());
-		final Executor executor = createDefaultExecutor(clusterClient, session);
 
 		final TableSchema actualTableSchema = executor.getTableSchema(session, "TableNumber2");
 
 		final TableSchema expectedTableSchema = new TableSchema(
 			new String[] {"IntegerField2", "StringField2"},
-			new InternalType[] {DataTypes.INT, DataTypes.STRING});
+			new InternalType[]{DataTypes.INT, DataTypes.STRING});
 
 		assertEquals(expectedTableSchema, actualTableSchema);
 	}
 
+	// TODO: Code Complete is not picked.
+	@Test
 	@Ignore
+	public void testCompleteStatement() throws Exception {
+		final Executor executor = createDefaultExecutor(clusterClient);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		final List<String> expectedTableHints = Arrays.asList(
+			"TABLE",
+			"TableNumber1",
+			"TableNumber2",
+			"TableSourceSink");
+		assertEquals(expectedTableHints, executor.completeStatement(session, "SELECT * FROM Ta", 16));
+
+		final List<String> expectedClause = Collections.singletonList("WHERE");
+		assertEquals(expectedClause, executor.completeStatement(session, "SELECT * FROM TableNumber2 WH", 29));
+
+		final List<String> expectedField = Arrays.asList("INTERVAL", "IntegerField1");
+		assertEquals(expectedField, executor.completeStatement(session, "SELECT * FROM TableNumber1 WHERE Inte", 37));
+	}
+
 	@Test(timeout = 30_000L)
 	public void testStreamQueryExecutionChangelog() throws Exception {
 		final URL url = getClass().getClassLoader().getResource("test-data.csv");
 		Objects.requireNonNull(url);
 		final Map<String, String> replaceVars = new HashMap<>();
-		replaceVars.put("$VAR_0", url.getPath());
-		replaceVars.put("$VAR_1", "/");
-		replaceVars.put("$VAR_2", "streaming");
-		replaceVars.put("$VAR_3", "changelog");
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "streaming");
+		replaceVars.put("$VAR_RESULT_MODE", "changelog");
 		replaceVars.put("$VAR_UPDATE_MODE", "update-mode: append");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
 
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
 		final SessionContext session = new SessionContext("test-session", new Environment());
-		final Executor executor = createModifiedExecutor(clusterClient, session, replaceVars);
 
 		try {
 			// start job and retrieval
 			final ResultDescriptor desc = executor.executeQuery(
 				session,
-				"SELECT scalarUDF(IntegerField1), StringField1 FROM hive.TableNumber1");
+				"SELECT scalarUDF(IntegerField1), StringField1 FROM TableNumber1");
+
 			assertFalse(desc.isMaterialized());
 
 			final List<String> actualResults =
 					retrieveChangelogResult(executor, session, desc.getResultId());
 
 			final List<String> expectedResults = new ArrayList<>();
-			expectedResults.add("(true,42,Hello World)");
-			expectedResults.add("(true,22,Hello World)");
-			expectedResults.add("(true,32,Hello World)");
-			expectedResults.add("(true,32,Hello World)");
-			expectedResults.add("(true,42,Hello World)");
-			expectedResults.add("(true,52,Hello World!!!!)");
+			expectedResults.add("(true,47,Hello World)");
+			expectedResults.add("(true,27,Hello World)");
+			expectedResults.add("(true,37,Hello World)");
+			expectedResults.add("(true,37,Hello World)");
+			expectedResults.add("(true,47,Hello World)");
+			expectedResults.add("(true,57,Hello World!!!!)");
 
 			TestBaseUtils.compareResultCollections(expectedResults, actualResults, Comparator.naturalOrder());
 		} finally {
@@ -223,17 +288,15 @@ public class LocalExecutorITCase extends TestLogger {
 		}
 	}
 
-	@Ignore
 	@Test(timeout = 30_000L)
 	public void testStreamQueryExecutionTable() throws Exception {
 		final URL url = getClass().getClassLoader().getResource("test-data.csv");
 		Objects.requireNonNull(url);
 
 		final Map<String, String> replaceVars = new HashMap<>();
-		replaceVars.put("$VAR_0", url.getPath());
-		replaceVars.put("$VAR_1", "/");
-		replaceVars.put("$VAR_2", "streaming");
-		replaceVars.put("$VAR_3", "table");
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "streaming");
+		replaceVars.put("$VAR_RESULT_MODE", "table");
 		replaceVars.put("$VAR_UPDATE_MODE", "update-mode: append");
 		replaceVars.put("$VAR_MAX_ROWS", "100");
 
@@ -256,51 +319,48 @@ public class LocalExecutorITCase extends TestLogger {
 		Objects.requireNonNull(url);
 
 		final Map<String, String> replaceVars = new HashMap<>();
-		replaceVars.put("$VAR_0", url.getPath());
-		replaceVars.put("$VAR_1", "/");
-		replaceVars.put("$VAR_2", "streaming");
-		replaceVars.put("$VAR_3", "table");
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "streaming");
+		replaceVars.put("$VAR_RESULT_MODE", "table");
 		replaceVars.put("$VAR_UPDATE_MODE", "update-mode: append");
 		replaceVars.put("$VAR_MAX_ROWS", "1");
 
-		final String query = "SELECT COUNT(*), StringField1 FROM hive.TableNumber1 GROUP BY StringField1";
+		final String query = "SELECT COUNT(*), StringField1 FROM TableNumber1 GROUP BY StringField1";
 
 		final List<String> expectedResults = new ArrayList<>();
-		expectedResults.add("5,Hello World");
 		expectedResults.add("1,Hello World!!!!");
 
 		executeStreamQueryTable(replaceVars, query, expectedResults);
 	}
 
-	@Ignore
 	@Test(timeout = 30_000L)
 	public void testBatchQueryExecution() throws Exception {
 		final URL url = getClass().getClassLoader().getResource("test-data.csv");
 		Objects.requireNonNull(url);
 		final Map<String, String> replaceVars = new HashMap<>();
-		replaceVars.put("$VAR_0", url.getPath());
-		replaceVars.put("$VAR_1", "/");
-		replaceVars.put("$VAR_2", "batch");
-		replaceVars.put("$VAR_3", "table");
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "batch");
+		replaceVars.put("$VAR_RESULT_MODE", "table");
 		replaceVars.put("$VAR_UPDATE_MODE", "");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
 
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
 		final SessionContext session = new SessionContext("test-session", new Environment());
-		final Executor executor = createModifiedExecutor(clusterClient, session, replaceVars);
 
 		try {
-			final ResultDescriptor desc = executor.executeQuery(session, "SELECT * FROM hive.TableNumber1");
+			final ResultDescriptor desc = executor.executeQuery(session, "SELECT * FROM TestView1");
 
 			assertTrue(desc.isMaterialized());
 
 			final List<String> actualResults = retrieveTableResult(executor, session, desc.getResultId());
 
 			final List<String> expectedResults = new ArrayList<>();
-			expectedResults.add("22,Hello World");
-			expectedResults.add("32,Hello World");
-			expectedResults.add("32,Hello World");
-			expectedResults.add("42,Hello World");
-			expectedResults.add("42,Hello World");
-			expectedResults.add("52,Hello World!!!!");
+			expectedResults.add("47");
+			expectedResults.add("27");
+			expectedResults.add("37");
+			expectedResults.add("37");
+			expectedResults.add("47");
+			expectedResults.add("57");
 
 			TestBaseUtils.compareResultCollections(expectedResults, actualResults, Comparator.naturalOrder());
 		} finally {
@@ -308,79 +368,26 @@ public class LocalExecutorITCase extends TestLogger {
 		}
 	}
 
-	@Ignore
-	@Test(timeout = 30_000L)
+	@Test(timeout = 300_000L)
 	public void testStreamQueryExecutionSink() throws Exception {
 		final String csvOutputPath = new File(tempFolder.newFolder().getAbsolutePath(), "test-out.csv").toURI().toString();
 		final URL url = getClass().getClassLoader().getResource("test-data.csv");
 		Objects.requireNonNull(url);
 		final Map<String, String> replaceVars = new HashMap<>();
-		replaceVars.put("$VAR_0", url.getPath());
-		replaceVars.put("$VAR_2", "streaming");
-		replaceVars.put("$VAR_4", csvOutputPath);
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "streaming");
+		replaceVars.put("$VAR_SOURCE_SINK_PATH", csvOutputPath);
 		replaceVars.put("$VAR_UPDATE_MODE", "update-mode: append");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
 
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
 		final SessionContext session = new SessionContext("test-session", new Environment());
-		final Executor executor = createModifiedExecutor(clusterClient, session, replaceVars);
 
 		try {
 			// start job
-			ProgramTargetDescriptor targetDescriptor = executor.executeUpdate(
+			final ProgramTargetDescriptor targetDescriptor = executor.executeUpdate(
 				session,
-				"INSERT INTO hive.TableSourceSink SELECT IntegerField1 = 42, StringField1 FROM hive.TableNumber1");
-
-			ExecutionContext<?> executionContext = executor.getOrCreateExecutionContext(session);
-			if (executionContext.isNeedShareEnv()) {
-				targetDescriptor = executor.submitJob(executionContext);
-			}
-
-			// wait for job completion and verify result
-			boolean isRunning = true;
-			while (isRunning) {
-				Thread.sleep(50); // slow the processing down
-				final JobStatus jobStatus = clusterClient.getJobStatus(JobID.fromHexString(targetDescriptor.getJobId())).get();
-				switch (jobStatus) {
-					case CREATED:
-					case RUNNING:
-						continue;
-					case FINISHED:
-						isRunning = false;
-						verifySinkResult(csvOutputPath);
-						break;
-					default:
-						fail("Unexpected job status.");
-				}
-			}
-		} finally {
-			executor.stop(session);
-		}
-	}
-
-	@Ignore
-	@Test(timeout = 30_000L)
-	public void testBatchQueryExecutionSink() throws Exception {
-		final String csvOutputPath = new File(tempFolder.newFolder().getAbsolutePath(), "test-out.csv").toURI().toString();
-		final URL url = getClass().getClassLoader().getResource("test-data.csv");
-		Objects.requireNonNull(url);
-		final Map<String, String> replaceVars = new HashMap<>();
-		replaceVars.put("$VAR_0", url.getPath());
-		replaceVars.put("$VAR_2", "batch");
-		replaceVars.put("$VAR_4", csvOutputPath);
-		replaceVars.put("$VAR_UPDATE_MODE", "");
-
-		final SessionContext session = new SessionContext("test-session", new Environment());
-		final Executor executor = createModifiedExecutor(clusterClient, session, replaceVars);
-
-		try {
-			// start job
-			ProgramTargetDescriptor targetDescriptor = executor.executeUpdate(
-				session,
-				"INSERT INTO hive.TableSourceSink SELECT IntegerField1 = 42, StringField1 FROM hive.TableNumber1");
-
-			ExecutionContext<?> executionContext = executor.getOrCreateExecutionContext(session);
-			if (executionContext.isNeedShareEnv()) {
-				targetDescriptor = executor.submitJob(executionContext);
-			}
+				"INSERT INTO TableSourceSink SELECT IntegerField1 = 42, StringField1 FROM TableNumber1");
 
 			// wait for job completion and verify result
 			boolean isRunning = true;
@@ -409,8 +416,8 @@ public class LocalExecutorITCase extends TestLogger {
 			String query,
 			List<String> expectedResults) throws Exception {
 
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
 		final SessionContext session = new SessionContext("test-session", new Environment());
-		final Executor executor = createModifiedExecutor(clusterClient, session, replaceVars);
 
 		try {
 			// start job and retrieval
@@ -439,52 +446,24 @@ public class LocalExecutorITCase extends TestLogger {
 		TestBaseUtils.compareResultCollections(expectedResults, actualResults, Comparator.naturalOrder());
 	}
 
-	private <T> LocalExecutor createDefaultExecutor(ClusterClient<T> clusterClient, SessionContext session) throws Exception {
+	private <T> LocalExecutor createDefaultExecutor(ClusterClient<T> clusterClient) throws Exception {
 		final Map<String, String> replaceVars = new HashMap<>();
-		replaceVars.put("$VAR_2", "batch");
+		replaceVars.put("$VAR_EXECUTION_TYPE", "batch");
 		replaceVars.put("$VAR_UPDATE_MODE", "");
 		replaceVars.put("$VAR_MAX_ROWS", "100");
-
-		return createModifiedExecutor(clusterClient, session, replaceVars);
-	}
-
-	private <T> LocalExecutor createModifiedExecutor(ClusterClient<T> clusterClient, SessionContext session, Map<String, String> replaceVars) throws Exception {
-		LocalExecutor executor =  new LocalExecutor(
-			EnvironmentUtil.parseModified(DEFAULTS_ENVIRONMENT_FILE, replaceVars),
+		return new LocalExecutor(
+			EnvironmentFileUtil.parseModified(DEFAULTS_ENVIRONMENT_FILE, replaceVars),
 			Collections.emptyList(),
 			clusterClient.getFlinkConfiguration(),
-			new DummyCustomCommandLine<T>(clusterClient),
-			SingleJobMode.MULTIPLE);
+			new DummyCustomCommandLine<T>(clusterClient));
+	}
 
-		// prepare tables
-		final URL url = getClass().getClassLoader().getResource("test-data.csv");
-		String ddlTableNumber1 = "CREATE TABLE TableNumber1 (" +
-								"  IntegerField1 INT, " +
-								"  StringField1 VARCHAR" +
-								") WITH (" +
-								"  path = '" + url.getPath() + "', " +
-								"  type = 'csv', " +
-								"  fieldDelim = ',', " +
-								"  rowDelim = '\n', " +
-								"  ignoreComments = '#'" +
-								");";
-		executor.createTable(session, ddlTableNumber1);
-
-		final String csvOutputPath = replaceVars.get("$VAR_4");
-		String ddlTableSourceSink = "CREATE TABLE TableSourceSink (" +
-								" BooleanField BOOLEAN, " +
-								" StringField VARCHAR" +
-								") WITH (" +
-								" path = '" + csvOutputPath + "', " +
-								" type = 'csv', " +
-								" fieldDelim = ',', " +
-								" rowDelim = '\n'" +
-								");";
-		executor.createTable(session, ddlTableSourceSink);
-
-		String ddlScalarUDF = "CREATE FUNCTION scalarUDF AS 'org.apache.flink.table.client.gateway.utils.UserDefinedFunctions$ScalarUDF';";
-		executor.createFunction(session, ddlScalarUDF);
-		return executor;
+	private <T> LocalExecutor createModifiedExecutor(ClusterClient<T> clusterClient, Map<String, String> replaceVars) throws Exception {
+		return new LocalExecutor(
+			EnvironmentFileUtil.parseModified(DEFAULTS_ENVIRONMENT_FILE, replaceVars),
+			Collections.emptyList(),
+			clusterClient.getFlinkConfiguration(),
+			new DummyCustomCommandLine<T>(clusterClient));
 	}
 
 	private List<String> retrieveTableResult(
