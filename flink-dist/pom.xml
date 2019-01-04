@@ -34,7 +34,7 @@ under the License.
 	<packaging>jar</packaging>
 
 	<properties>
-		<install.folder.name>blink-3.0</install.folder.name>
+		<install.folder.name>flink-${project.version}</install.folder.name>
 	</properties>
 
 	<dependencies>
