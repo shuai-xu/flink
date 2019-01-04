@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,11 +16,9 @@
  * limitations under the License.
  */
 
+
 package org.apache.flink.runtime.util;
 
-import org.apache.flink.runtime.util.jartestprogram.FilterWithIndirection;
-import org.apache.flink.runtime.util.jartestprogram.FilterWithLambda;
-import org.apache.flink.runtime.util.jartestprogram.FilterWithMethodReference;
 import org.apache.flink.runtime.util.jartestprogram.WordCountWithAnonymousClass;
 import org.apache.flink.runtime.util.jartestprogram.WordCountWithExternalClass;
 import org.apache.flink.runtime.util.jartestprogram.WordCountWithExternalClass2;
@@ -30,7 +28,6 @@ import org.apache.flink.runtime.util.jartestprogram.AnonymousInNonStaticMethod;
 import org.apache.flink.runtime.util.jartestprogram.AnonymousInNonStaticMethod2;
 import org.apache.flink.runtime.util.jartestprogram.NestedAnonymousInnerClass;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import java.io.File;
 import java.io.FileInputStream;
@@ -39,6 +36,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.jar.JarInputStream;
 import java.util.zip.ZipEntry;
+
 
 public class JarFileCreatorTest {
 
@@ -50,14 +48,14 @@ public class JarFileCreatorTest {
 		jfc.addClass(AnonymousInStaticMethod.class)
 			.createJarFile();
 
-		Set<String> ans = new HashSet<>();
+		Set<String> ans = new HashSet<String>();
 		ans.add("org/apache/flink/runtime/util/jartestprogram/AnonymousInStaticMethod$1.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/AnonymousInStaticMethod$A.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/AnonymousInStaticMethod.class");
 
 		Assert.assertTrue("Jar file for Anonymous Inner Class is not correct", validate(ans, out));
 
-		Assert.assertTrue(out.delete());
+		out.delete();
 	}
 
 	//anonymous inner class in non static method accessing a local variable in its closure.
@@ -68,14 +66,14 @@ public class JarFileCreatorTest {
 		jfc.addClass(AnonymousInNonStaticMethod.class)
 			.createJarFile();
 
-		Set<String> ans = new HashSet<>();
+		Set<String> ans = new HashSet<String>();
 		ans.add("org/apache/flink/runtime/util/jartestprogram/AnonymousInNonStaticMethod$1.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/AnonymousInNonStaticMethod$A.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/AnonymousInNonStaticMethod.class");
 
 		Assert.assertTrue("Jar file for Anonymous Inner Class is not correct", validate(ans, out));
 
-		Assert.assertTrue(out.delete());
+		out.delete();
 	}
 
 	//anonymous inner class in non static method accessing a field of its enclosing class.
@@ -86,14 +84,14 @@ public class JarFileCreatorTest {
 		jfc.addClass(AnonymousInNonStaticMethod2.class)
 			.createJarFile();
 
-		Set<String> ans = new HashSet<>();
+		Set<String> ans = new HashSet<String>();
 		ans.add("org/apache/flink/runtime/util/jartestprogram/AnonymousInNonStaticMethod2$1.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/AnonymousInNonStaticMethod2$A.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/AnonymousInNonStaticMethod2.class");
 
 		Assert.assertTrue("Jar file for Anonymous Inner Class is not correct", validate(ans, out));
 
-		Assert.assertTrue(out.delete());
+		out.delete();
 	}
 
 	//anonymous inner class in an anonymous inner class accessing a field of the outermost enclosing class.
@@ -104,7 +102,7 @@ public class JarFileCreatorTest {
 		jfc.addClass(NestedAnonymousInnerClass.class)
 			.createJarFile();
 
-		Set<String> ans = new HashSet<>();
+		Set<String> ans = new HashSet<String>();
 		ans.add("org/apache/flink/runtime/util/jartestprogram/NestedAnonymousInnerClass.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/NestedAnonymousInnerClass$1$1.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/NestedAnonymousInnerClass$1.class");
@@ -112,54 +110,7 @@ public class JarFileCreatorTest {
 
 		Assert.assertTrue("Jar file for Anonymous Inner Class is not correct", validate(ans, out));
 
-		Assert.assertTrue(out.delete());
-	}
-
-	@Ignore // this is currently not supported (see FLINK-9520)
-	@Test
-	public void testFilterWithMethodReference() throws Exception {
-		File out = new File(System.getProperty("java.io.tmpdir"), "jarcreatortest.jar");
-		JarFileCreator jfc = new JarFileCreator(out);
-		jfc.addClass(FilterWithMethodReference.class)
-			.createJarFile();
-
-		Set<String> ans = new HashSet<>();
-		ans.add("org/apache/flink/runtime/util/jartestprogram/FilterWithMethodReference.class");
-		ans.add("org/apache/flink/runtime/util/jartestprogram/WordFilter.class");
-
-		Assert.assertTrue("Jar file for Java 8 method reference is not correct", validate(ans, out));
-		Assert.assertTrue(out.delete());
-	}
-
-	@Test
-	public void testFilterWithLambda() throws Exception{
-		File out = new File(System.getProperty("java.io.tmpdir"), "jarcreatortest.jar");
-		JarFileCreator jfc = new JarFileCreator(out);
-		jfc.addClass(FilterWithLambda.class)
-			.createJarFile();
-
-		Set<String> ans = new HashSet<>();
-		ans.add("org/apache/flink/runtime/util/jartestprogram/FilterWithLambda.class");
-		ans.add("org/apache/flink/runtime/util/jartestprogram/WordFilter.class");
-
-		Assert.assertTrue("Jar file for Java 8 lambda is not correct", validate(ans, out));
-		Assert.assertTrue(out.delete());
-	}
-
-	@Test
-	public void testFilterWithIndirection() throws Exception {
-		File out = new File(System.getProperty("java.io.tmpdir"), "jarcreatortest.jar");
-		JarFileCreator jfc = new JarFileCreator(out);
-		jfc.addClass(FilterWithIndirection.class)
-			.createJarFile();
-
-		Set<String> ans = new HashSet<>();
-		ans.add("org/apache/flink/runtime/util/jartestprogram/FilterWithIndirection.class");
-		ans.add("org/apache/flink/runtime/util/jartestprogram/WordFilter.class");
-		ans.add("org/apache/flink/runtime/util/jartestprogram/UtilFunctionWrapper$UtilFunction.class");
-
-		Assert.assertTrue("Jar file for java 8 lambda is not correct", validate(ans, out));
-		Assert.assertTrue(out.delete());
+		out.delete();
 	}
 
 	//----------------------------------------------------------------------------------------------
@@ -172,14 +123,14 @@ public class JarFileCreatorTest {
 		jfc.addClass(WordCountWithExternalClass.class)
 			.createJarFile();
 
-		Set<String> ans = new HashSet<>();
+		Set<String> ans = new HashSet<String>();
 		ans.add("org/apache/flink/runtime/util/jartestprogram/StaticData.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/WordCountWithExternalClass.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/ExternalTokenizer.class");
 
 		Assert.assertTrue("Jar file for External Class is not correct", validate(ans, out));
 
-		Assert.assertTrue(out.delete());
+		out.delete();
 	}
 
 	@Test
@@ -189,14 +140,14 @@ public class JarFileCreatorTest {
 		jfc.addClass(WordCountWithInnerClass.class)
 			.createJarFile();
 
-		Set<String> ans = new HashSet<>();
+		Set<String> ans = new HashSet<String>();
 		ans.add("org/apache/flink/runtime/util/jartestprogram/StaticData.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/WordCountWithInnerClass.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/WordCountWithInnerClass$Tokenizer.class");
 
 		Assert.assertTrue("Jar file for Inner Class is not correct", validate(ans, out));
 
-		Assert.assertTrue(out.delete());
+		out.delete();
 	}
 
 	@Test
@@ -206,14 +157,14 @@ public class JarFileCreatorTest {
 		jfc.addClass(WordCountWithAnonymousClass.class)
 			.createJarFile();
 
-		Set<String> ans = new HashSet<>();
+		Set<String> ans = new HashSet<String>();
 		ans.add("org/apache/flink/runtime/util/jartestprogram/StaticData.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/WordCountWithAnonymousClass.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/WordCountWithAnonymousClass$1.class");
 
 		Assert.assertTrue("Jar file for Anonymous Class is not correct", validate(ans, out));
 
-		Assert.assertTrue(out.delete());
+		out.delete();
 	}
 
 	@Test
@@ -223,7 +174,7 @@ public class JarFileCreatorTest {
 		jfc.addClass(WordCountWithExternalClass2.class)
 			.createJarFile();
 
-		Set<String> ans = new HashSet<>();
+		Set<String> ans = new HashSet<String>();
 		ans.add("org/apache/flink/runtime/util/jartestprogram/StaticData.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/WordCountWithExternalClass2.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/ExternalTokenizer2.class");
@@ -231,7 +182,7 @@ public class JarFileCreatorTest {
 
 		Assert.assertTrue("Jar file for Extend Identifier is not correct", validate(ans, out));
 
-		Assert.assertTrue(out.delete());
+		out.delete();
 	}
 
 	@Test
@@ -242,7 +193,7 @@ public class JarFileCreatorTest {
 			.addPackage("org.apache.flink.util")
 			.createJarFile();
 
-		Set<String> ans = new HashSet<>();
+		Set<String> ans = new HashSet<String>();
 		ans.add("org/apache/flink/runtime/util/jartestprogram/StaticData.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/WordCountWithInnerClass.class");
 		ans.add("org/apache/flink/runtime/util/jartestprogram/WordCountWithInnerClass$Tokenizer.class");
@@ -250,7 +201,7 @@ public class JarFileCreatorTest {
 
 		Assert.assertTrue("Jar file for UDF package is not correct", validate(ans, out));
 
-		Assert.assertTrue(out.delete());
+		out.delete();
 	}
 
 	private boolean validate(Set<String> expected, File out) throws IOException {

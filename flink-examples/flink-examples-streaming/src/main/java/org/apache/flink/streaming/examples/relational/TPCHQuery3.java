@@ -796,6 +796,8 @@ public class TPCHQuery3 {
 			1,
 			2,
 			TypeExtractor.NO_INDEX,
+			TypeExtractor.NO_INDEX,
+			TypeExtractor.NO_INDEX,
 			connectedStreams.getType1(),
 			connectedStreams.getType2(),
 			Utils.getCallLocationName(),

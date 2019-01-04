@@ -20,7 +20,6 @@ package org.apache.flink.streaming.api.datastream;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.Public;
 import org.apache.flink.annotation.PublicEvolving;
-import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.CoGroupFunction;
 import org.apache.flink.api.common.functions.MapFunction;
@@ -41,11 +40,9 @@ import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.streaming.api.functions.windowing.WindowFunction;
 import org.apache.flink.streaming.api.windowing.assigners.WindowAssigner;
 import org.apache.flink.streaming.api.windowing.evictors.Evictor;
-import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.triggers.Trigger;
 import org.apache.flink.streaming.api.windowing.windows.Window;
 import org.apache.flink.util.Collector;
-import org.apache.flink.util.Preconditions;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -98,24 +95,9 @@ public class CoGroupedStreams<T1, T2> {
 
 	/**
 	 * Specifies a {@link KeySelector} for elements from the first input.
-	 *
-	 * @param keySelector The KeySelector to be used for extracting the first input's key for partitioning.
 	 */
 	public <KEY> Where<KEY> where(KeySelector<T1, KEY> keySelector)  {
-		Preconditions.checkNotNull(keySelector);
-		final TypeInformation<KEY> keyType = TypeExtractor.getKeySelectorTypes(keySelector, input1.getType());
-		return where(keySelector, keyType);
-	}
-
-	/**
-	 * Specifies a {@link KeySelector} for elements from the first input with explicit type information.
-	 *
-	 * @param keySelector The KeySelector to be used for extracting the first input's key for partitioning.
-	 * @param keyType The type information describing the key type.
-	 */
-	public <KEY> Where<KEY> where(KeySelector<T1, KEY> keySelector, TypeInformation<KEY> keyType)  {
-		Preconditions.checkNotNull(keySelector);
-		Preconditions.checkNotNull(keyType);
+		TypeInformation<KEY> keyType = TypeExtractor.getKeySelectorTypes(keySelector, input1.getType());
 		return new Where<>(input1.clean(keySelector), keyType);
 	}
 
@@ -139,28 +121,12 @@ public class CoGroupedStreams<T1, T2> {
 
 		/**
 		 * Specifies a {@link KeySelector} for elements from the second input.
-		 *
-		 * @param keySelector The KeySelector to be used for extracting the second input's key for partitioning.
 		 */
 		public EqualTo equalTo(KeySelector<T2, KEY> keySelector)  {
-			Preconditions.checkNotNull(keySelector);
-			final TypeInformation<KEY> otherKey = TypeExtractor.getKeySelectorTypes(keySelector, input2.getType());
-			return equalTo(keySelector, otherKey);
-		}
-
-		/**
-		 * Specifies a {@link KeySelector} for elements from the second input with explicit type information for the key type.
-		 *
-		 * @param keySelector The KeySelector to be used for extracting the key for partitioning.
-		 * @param keyType The type information describing the key type.
-		 */
-		public EqualTo equalTo(KeySelector<T2, KEY> keySelector, TypeInformation<KEY> keyType)  {
-			Preconditions.checkNotNull(keySelector);
-			Preconditions.checkNotNull(keyType);
-
-			if (!keyType.equals(this.keyType)) {
+			TypeInformation<KEY> otherKey = TypeExtractor.getKeySelectorTypes(keySelector, input2.getType());
+			if (!otherKey.equals(this.keyType)) {
 				throw new IllegalArgumentException("The keys for the two inputs are not equal: " +
-						"first key = " + this.keyType + " , second key = " + keyType);
+						"first key = " + this.keyType + " , second key = " + otherKey);
 			}
 
 			return new EqualTo(input2.clean(keySelector));
@@ -185,7 +151,7 @@ public class CoGroupedStreams<T1, T2> {
 			 */
 			@PublicEvolving
 			public <W extends Window> WithWindow<T1, T2, KEY, W> window(WindowAssigner<? super TaggedUnion<T1, T2>, W> assigner) {
-				return new WithWindow<>(input1, input2, keySelector1, keySelector2, keyType, assigner, null, null, null);
+				return new WithWindow<>(input1, input2, keySelector1, keySelector2, keyType, assigner, null, null);
 			}
 		}
 	}
@@ -217,10 +183,6 @@ public class CoGroupedStreams<T1, T2> {
 
 		private final Evictor<? super TaggedUnion<T1, T2>, ? super W> evictor;
 
-		private final Time allowedLateness;
-
-		private WindowedStream<TaggedUnion<T1, T2>, KEY, W> windowedStream;
-
 		protected WithWindow(DataStream<T1> input1,
 				DataStream<T2> input2,
 				KeySelector<T1, KEY> keySelector1,
@@ -228,8 +190,7 @@ public class CoGroupedStreams<T1, T2> {
 				TypeInformation<KEY> keyType,
 				WindowAssigner<? super TaggedUnion<T1, T2>, W> windowAssigner,
 				Trigger<? super TaggedUnion<T1, T2>, ? super W> trigger,
-				Evictor<? super TaggedUnion<T1, T2>, ? super W> evictor,
-				Time allowedLateness) {
+				Evictor<? super TaggedUnion<T1, T2>, ? super W> evictor) {
 			this.input1 = input1;
 			this.input2 = input2;
 
@@ -240,8 +201,6 @@ public class CoGroupedStreams<T1, T2> {
 			this.windowAssigner = windowAssigner;
 			this.trigger = trigger;
 			this.evictor = evictor;
-
-			this.allowedLateness = allowedLateness;
 		}
 
 		/**
@@ -250,7 +209,7 @@ public class CoGroupedStreams<T1, T2> {
 		@PublicEvolving
 		public WithWindow<T1, T2, KEY, W> trigger(Trigger<? super TaggedUnion<T1, T2>, ? super W> newTrigger) {
 			return new WithWindow<>(input1, input2, keySelector1, keySelector2, keyType,
-					windowAssigner, newTrigger, evictor, allowedLateness);
+					windowAssigner, newTrigger, evictor);
 		}
 
 		/**
@@ -263,17 +222,7 @@ public class CoGroupedStreams<T1, T2> {
 		@PublicEvolving
 		public WithWindow<T1, T2, KEY, W> evictor(Evictor<? super TaggedUnion<T1, T2>, ? super W> newEvictor) {
 			return new WithWindow<>(input1, input2, keySelector1, keySelector2, keyType,
-					windowAssigner, trigger, newEvictor, allowedLateness);
-		}
-
-		/**
-		 * Sets the time by which elements are allowed to be late.
-		 * @see WindowedStream#allowedLateness(Time)
-		 */
-		@PublicEvolving
-		public WithWindow<T1, T2, KEY, W> allowedLateness(Time newLateness) {
-			return new WithWindow<>(input1, input2, keySelector1, keySelector2, keyType,
-					windowAssigner, trigger, evictor, newLateness);
+					windowAssigner, trigger, newEvictor);
 		}
 
 		/**
@@ -340,21 +289,18 @@ public class CoGroupedStreams<T1, T2> {
 			DataStream<TaggedUnion<T1, T2>> unionStream = taggedInput1.union(taggedInput2);
 
 			// we explicitly create the keyed stream to manually pass the key type information in
-			windowedStream =
+			WindowedStream<TaggedUnion<T1, T2>, KEY, W> windowOp =
 					new KeyedStream<TaggedUnion<T1, T2>, KEY>(unionStream, unionKeySelector, keyType)
 					.window(windowAssigner);
 
 			if (trigger != null) {
-				windowedStream.trigger(trigger);
+				windowOp.trigger(trigger);
 			}
 			if (evictor != null) {
-				windowedStream.evictor(evictor);
-			}
-			if (allowedLateness != null) {
-				windowedStream.allowedLateness(allowedLateness);
+				windowOp.evictor(evictor);
 			}
 
-			return windowedStream.apply(new CoGroupWindowFunction<T1, T2, T, KEY, W>(function), resultType);
+			return windowOp.apply(new CoGroupWindowFunction<T1, T2, T, KEY, W>(function), resultType);
 		}
 
 		/**
@@ -372,16 +318,6 @@ public class CoGroupedStreams<T1, T2> {
 		@Deprecated
 		public <T> SingleOutputStreamOperator<T> with(CoGroupFunction<T1, T2, T> function, TypeInformation<T> resultType) {
 			return (SingleOutputStreamOperator<T>) apply(function, resultType);
-		}
-
-		@VisibleForTesting
-		Time getAllowedLateness() {
-			return allowedLateness;
-		}
-
-		@VisibleForTesting
-		WindowedStream<TaggedUnion<T1, T2>, KEY, W> getWindowedStream() {
-			return windowedStream;
 		}
 	}
 
