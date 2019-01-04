@@ -529,7 +529,7 @@ public class KubernetesResourceManager extends ResourceManager<KubernetesWorkerN
 			additionalEnvs.put(Constants.ENV_TM_PROCESS_NETTY_MEMORY,
 				String.valueOf(taskManagerResource.getTaskManagerNettyMemorySizeMB()));
 
-			long networkBufBytes = taskManagerResource.getNetworkMemorySize() << 20;
+			long networkBufBytes = ((long) taskManagerResource.getNetworkMemorySize()) << 20;
 			additionalEnvs.put(Constants.ENV_TM_NETWORK_BUFFERS_MEMORY_MIN, String.valueOf(networkBufBytes));
 			additionalEnvs.put(Constants.ENV_TM_NETWORK_BUFFERS_MEMORY_MAX, String.valueOf(networkBufBytes));
 			log.debug("Task manager environments: " + additionalEnvs);

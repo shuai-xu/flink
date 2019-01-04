@@ -577,7 +577,7 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 
 		taskManagerConfig.setFloat(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_FRACTION,
 			flinkConfig.getFloat(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_FRACTION));
-		long networkBufBytes = taskManagerResource.getNetworkMemorySize() << 20;
+		long networkBufBytes = ((long) taskManagerResource.getNetworkMemorySize()) << 20;
 		taskManagerConfig.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN, networkBufBytes);
 		taskManagerConfig.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX, networkBufBytes);
 
