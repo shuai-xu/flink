@@ -88,7 +88,7 @@ class BatchExecCorrelate(
     super.explainTerms(pw)
       .item("invocation", scan.getCall)
       .item("correlate", CorrelateUtil.correlateToString(
-        inputNode.getRowType, rexCall, sqlFunction, getExpressionString))
+        input.getRowType, rexCall, sqlFunction, getExpressionString))
       .item("select", CorrelateUtil.selectToString(relRowType))
       .item("rowType", relRowType)
       .item("joinType", joinType)
@@ -181,7 +181,7 @@ class BatchExecCorrelate(
       tableEnv,
       operatorCtx,
       inputTransformation,
-      inputNode.getRowType,
+      input.getRowType,
       projectProgram,
       scan,
       condition,

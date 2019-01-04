@@ -57,8 +57,8 @@ import scala.collection.JavaConverters._
 class StreamExecJoin(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
-    val leftNode: RelNode,
-    val rightNode: RelNode,
+    leftNode: RelNode,
+    rightNode: RelNode,
     rowRelDataType: RelDataType,
     val joinCondition: RexNode,
     joinRowType: RelDataType,

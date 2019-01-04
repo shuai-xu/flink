@@ -472,7 +472,7 @@ class FlinkRelMdColumnUniqueness private extends MetadataHandler[BuiltInMetadata
       mq: RelMetadataQuery,
       columns: ImmutableBitSet,
       ignoreNulls: Boolean): JBool = {
-    val joinInfo = JoinInfo.of(rel.leftNode, rel.rightNode, rel.joinCondition)
+    val joinInfo = JoinInfo.of(rel.getLeft, rel.getRight, rel.joinCondition)
     areJoinColumnsUnique(
       joinInfo, rel.joinType, rel.getLeft.getRowType,
       (leftSet: ImmutableBitSet) => mq.areColumnsUnique(rel.getLeft, leftSet, ignoreNulls),
@@ -490,7 +490,7 @@ class FlinkRelMdColumnUniqueness private extends MetadataHandler[BuiltInMetadata
       case FlinkJoinRelType.ANTI | FlinkJoinRelType.SEMI =>
         mq.areColumnsUnique(rel.getLeft, columns, ignoreNulls)
       case _ =>
-        val joinInfo = JoinInfo.of(rel.leftNode, rel.rightNode, rel.joinCondition)
+        val joinInfo = JoinInfo.of(rel.getLeft, rel.getRight, rel.joinCondition)
         areJoinColumnsUnique(
           joinInfo, FlinkJoinRelType.toJoinRelType(rel.joinType), rel.getLeft.getRowType,
           (leftSet: ImmutableBitSet) => mq.areColumnsUnique(rel.getLeft, leftSet, ignoreNulls),

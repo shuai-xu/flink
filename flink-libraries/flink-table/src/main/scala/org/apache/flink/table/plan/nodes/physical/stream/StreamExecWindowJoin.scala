@@ -51,8 +51,8 @@ import scala.collection.JavaConversions._
 class StreamExecWindowJoin(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
-    val leftNode: RelNode,
-    val rightNode: RelNode,
+    leftNode: RelNode,
+    rightNode: RelNode,
     val joinCondition: RexNode,
     val joinType: JoinRelType,
     leftRowSchema: BaseRowSchema,
@@ -132,7 +132,7 @@ class StreamExecWindowJoin(
     val rightDataStream = right.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
 
     // get the equi-keys and other conditions
-    val joinInfo = JoinInfo.of(leftNode, rightNode, joinCondition)
+    val joinInfo = JoinInfo.of(left, right, joinCondition)
     val leftKeys = joinInfo.leftKeys.toIntArray
     val rightKeys = joinInfo.rightKeys.toIntArray
     val relativeWindowSize = leftUpperBound - leftLowerBound

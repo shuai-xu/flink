@@ -547,8 +547,8 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
       rel: StreamExecWindowJoin,
       mq: RelMetadataQuery,
       ignoreNulls: Boolean): util.Set[ImmutableBitSet] = {
-    val joinInfo = JoinInfo.of(rel.leftNode, rel.rightNode, rel.joinCondition)
-    getJoinUniqueKeys(joinInfo, rel.joinType, rel.leftNode, rel.rightNode, mq, ignoreNulls)
+    val joinInfo = JoinInfo.of(rel.getLeft, rel.getRight, rel.joinCondition)
+    getJoinUniqueKeys(joinInfo, rel.joinType, rel.getLeft, rel.getRight, mq, ignoreNulls)
   }
 
   def getUniqueKeys(
@@ -559,7 +559,7 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
       case FlinkJoinRelType.ANTI | FlinkJoinRelType.SEMI =>
         mq.getUniqueKeys(rel.getLeft, ignoreNulls)
       case _ =>
-        val joinInfo = JoinInfo.of(rel.leftNode, rel.rightNode, rel.joinCondition)
+        val joinInfo = JoinInfo.of(rel.getLeft, rel.getRight, rel.joinCondition)
         getJoinUniqueKeys(
           joinInfo, FlinkJoinRelType.toJoinRelType(rel.joinType), rel.getLeft, rel.getRight, mq,
           ignoreNulls)
