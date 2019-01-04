@@ -53,16 +53,14 @@ class TableServiceExceptionTest {
 
     val cachedName = tEnv.tableServiceManager.getCachedTableName(filteredTable.logicalPlan).get
 
-    val cacheFileDir =
-      new File(
-        TableServiceImpl.TABLESERVICE_DEFAULT_STORAGE_PATH_VALUE
-          + File.separator
-          + cachedName)
+    val baseDir =
+      new File(System.getProperty("user.dir") + File.separator + "table_service")
+
+    val currentTableServiceDir = searchDir(baseDir, cachedName)
 
     // delete exist cache
-    cacheFileDir.listFiles().foreach(_.delete())
-    cacheFileDir.delete()
-    Assert.assertTrue(!cacheFileDir.exists())
+    deleteAll(currentTableServiceDir)
+    Assert.assertTrue(!currentTableServiceDir.exists())
 
     val result = filteredTable.select('a + 1 as 'a)
 
@@ -70,10 +68,25 @@ class TableServiceExceptionTest {
     val res = result.collect()
 
     // cache has been re-computed by original plan.
-    Assert.assertTrue(cacheFileDir.exists())
+    Assert.assertTrue(currentTableServiceDir.exists())
     Assert.assertEquals(List(2, 3, 4, 5).mkString("\n"), res.map(_.toString).mkString("\n"))
 
     tEnv.close()
+  }
+
+  private def deleteAll(dir: File): Unit = {
+    if (dir.isFile) {
+      dir.delete()
+    } else {
+      dir.listFiles().foreach(deleteAll(_))
+      dir.delete()
+    }
+  }
+
+  private def searchDir(base: File, tableName: String): File = {
+    base.listFiles.find(
+      subDir => subDir.listFiles().exists(f => f.isDirectory && f.getName == tableName)
+    ).get
   }
 
 }

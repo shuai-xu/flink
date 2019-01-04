@@ -20,10 +20,13 @@ package org.apache.flink.table.temptable;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.service.LifeCycleAware;
+import org.apache.flink.service.ServiceContext;
+import org.apache.flink.util.StringUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.util.List;
 
 /**
@@ -35,18 +38,28 @@ public class TableServiceImpl implements LifeCycleAware, TableService {
 
 	private String rootPath;
 
-	public static final String TABLESERVICE_STORAGE_PATH = "flink.service.tableservice.storage.rootpath";
-
-	public static final String TABLESERVICE_DEFAULT_STORAGE_PATH_VALUE = "/tmp/table_service";
-
 	private static final Logger logger = LoggerFactory.getLogger(TableServiceImpl.class);
+
+	private ServiceContext serviceContext;
+
+	private TableServiceMetrics tableServiceMetrics;
+
+	public TableServiceImpl(ServiceContext serviceContext) {
+		this.serviceContext = serviceContext;
+	}
 
 	@Override
 	public void open(Configuration parameters) {
 		logger.info("FlinkTableService begin open.");
-		rootPath = parameters.getString(TABLESERVICE_STORAGE_PATH, TABLESERVICE_DEFAULT_STORAGE_PATH_VALUE);
+		String tableServiceId = parameters.getString(FlinkTableServiceFactory.TABLE_SERVICE_ID(), "");
+		if (StringUtils.isNullOrWhitespaceOnly(tableServiceId)) {
+			throw new IllegalArgumentException("table service id is empty");
+		}
+		String parentDir = System.getProperty("user.dir");
+		rootPath = parentDir + File.separator + "table_service" + File.separator + tableServiceId;
 		tableStorage = new TableStorage(rootPath);
 		tableStorage.open(parameters);
+		tableServiceMetrics = new TableServiceMetrics(serviceContext.getMetricGroup());
 		logger.info("FlinkTableService end open.");
 	}
 
@@ -72,7 +85,9 @@ public class TableServiceImpl implements LifeCycleAware, TableService {
 			if (content != null) {
 				tableStorage.write(tableName, partitionId, content);
 			}
-			return content == null ? 0 : content.length;
+			int writeLength =  content == null ? 0 : content.length;
+			tableServiceMetrics.getWriteTotalBytesMetrics().inc(writeLength);
+			return writeLength;
 		} catch (Exception e) {
 			logger.debug("FlinkTableService receive write request, but error occurs: " + e);
 			throw new RuntimeException(e);
@@ -85,10 +100,10 @@ public class TableServiceImpl implements LifeCycleAware, TableService {
 		byte [] buffer = new byte[readCount];
 
 		int nRead = tableStorage.read(tableName, partitionId, offset, readCount, buffer);
-
 		if (nRead <= 0) {
 			return new byte[0];
 		} else {
+			tableServiceMetrics.getReadTotalBytesMetrics().inc(nRead);
 			byte[] result = new byte[nRead];
 			System.arraycopy(buffer, 0, result, 0, nRead);
 			return result;

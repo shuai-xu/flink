@@ -50,7 +50,7 @@ public class FlinkTableService extends UserDefinedService {
 	public void open(Configuration parameters) throws Exception {
 		registry = getServiceContext().getRegistry();
 		registry.open(parameters);
-		manager = new TableServiceImpl();
+		manager = new TableServiceImpl(getServiceContext());
 		manager.open(parameters);
 		setUpServer();
 		addInstance();

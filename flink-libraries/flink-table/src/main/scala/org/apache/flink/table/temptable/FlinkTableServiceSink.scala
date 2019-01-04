@@ -27,7 +27,7 @@ import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.types.{BaseRowType, DataType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks.{AppendStreamTableSink, BatchTableSink, TableSinkBase}
-import org.apache.flink.table.temptable.FlinkTableServiceFactory.{TABLESERVICE_DEFAULT_READY_GAP_MS_VALUE, TABLESERVICE_DEFAULT_READY_RETRYTIMES_VALUE, TABLESERVICE_READY_RETRYGAP_MS, TABLESERVICE_READY_RETRYTIMES}
+import org.apache.flink.table.temptable.FlinkTableServiceFactory.{TABLE_SERVICE_DEFAULT_READY_GAP_MS_VALUE, TABLE_SERVICE_DEFAULT_READY_RETRYTIMES_VALUE, TABLE_SERVICE_READY_RETRY_BACKOFF_MS, TABLE_SERVICE_READY_RETRY_TIMES}
 import org.apache.flink.table.temptable.rpc.TableServiceClient
 import org.apache.flink.table.temptable.util.TableServiceUtil
 import org.apache.flink.table.typeutils.BaseRowSerializer
@@ -102,9 +102,9 @@ class FlinkTableServiceSinkFunction(
     baseRowSerializer =
       TypeUtils.createSerializer(resultType).asInstanceOf[BaseRowSerializer[BaseRow]]
     val maxRetry = parameters
-      .getInteger(TABLESERVICE_READY_RETRYTIMES, TABLESERVICE_DEFAULT_READY_RETRYTIMES_VALUE)
+      .getInteger(TABLE_SERVICE_READY_RETRY_TIMES, TABLE_SERVICE_DEFAULT_READY_RETRYTIMES_VALUE)
     val retryGap = parameters
-      .getLong(TABLESERVICE_READY_RETRYGAP_MS, TABLESERVICE_DEFAULT_READY_GAP_MS_VALUE)
+      .getLong(TABLE_SERVICE_READY_RETRY_BACKOFF_MS, TABLE_SERVICE_DEFAULT_READY_GAP_MS_VALUE)
     TableServiceUtil.checkTableServiceReady(flinkTableServiceClient, maxRetry, retryGap)
     // send initialize Partition request to delete existing data.
     flinkTableServiceClient.initializePartition(tableName, partitionId)

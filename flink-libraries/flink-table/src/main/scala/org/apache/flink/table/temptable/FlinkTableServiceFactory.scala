@@ -70,8 +70,9 @@ class FlinkTableServiceFactory extends BatchTableSinkFactory[BaseRow]
 
 object FlinkTableServiceFactory {
   val CLIENT_NAME = classOf[TableServiceClient].getCanonicalName
-  val TABLESERVICE_READY_RETRYTIMES: String = "flink.service.tableservice.ready.retrytimes"
-  val TABLESERVICE_READY_RETRYGAP_MS: String = "flink.service.tableservice.ready.retrygap.ms"
-  val TABLESERVICE_DEFAULT_READY_RETRYTIMES_VALUE: Int = 3
-  val TABLESERVICE_DEFAULT_READY_GAP_MS_VALUE: Long = 10000L
+  val TABLE_SERVICE_READY_RETRY_TIMES: String = "flink.service.tableservice.ready.retry.times"
+  val TABLE_SERVICE_READY_RETRY_BACKOFF_MS: String = "flink.service.tableservice.ready.backoff.ms"
+  val TABLE_SERVICE_ID: String = "flink.service.tableservice.id"
+  val TABLE_SERVICE_DEFAULT_READY_RETRYTIMES_VALUE: Int = 3
+  val TABLE_SERVICE_DEFAULT_READY_GAP_MS_VALUE: Long = 10000L
 }
