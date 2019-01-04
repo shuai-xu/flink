@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.healthmanager.metrics;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.Configuration;
@@ -26,6 +27,7 @@ import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -48,9 +50,13 @@ public class RestServerMetricProvider implements MetricProvider {
 
 	private ScheduledFuture fetchTaskHandler;
 
-	private Map<String, List<TaskMetricSubscription>> taskMetrics = new HashMap<>();
-	private Map<String, List<TaskManagerMetricSubscription>> taskManagerMetrics = new HashMap<>();
-	private Map<String, List<JobTMMetricSubscription>> allTMMetrics = new HashMap<>();
+	/** all task metric subscription, format: [job id, [vertex id, [metric name, subscription]]]. */
+	private Map<JobID, Map<JobVertexID, Map<String, List<TaskMetricSubscription>>>> taskMetricSubscriptions =
+			new HashMap<>();
+	/** all job tm metric subscription, format: [job id, [metric name, subscription]]. */
+	private Map<JobID, Map<String, List<JobTMMetricSubscription>>> jobTMMetricSubscriptions = new HashMap<>();
+	/** all tm metric subscription, format: [tm id, [metric name, subscription]]. */
+	private Map<String, Map<String, List<TaskManagerMetricSubscription>>> tmMetricSubscriptions = new HashMap<>();
 
 	public RestServerMetricProvider(
 			Configuration config,
@@ -78,59 +84,88 @@ public class RestServerMetricProvider implements MetricProvider {
 	}
 
 	@Override
-	public JobTMMetricSubscription subscribeAllTMMetric(JobID jobID, String metricName, long timeInterval,
-			TimelineAggType timeAggType) {
+	public synchronized JobTMMetricSubscription subscribeAllTMMetric(
+			JobID jobID, String metricName, long timeInterval, TimelineAggType timeAggType) {
 		JobTMMetricSubscription metricSubscription = new JobTMMetricSubscription(
 				jobID, metricName, timeAggType, timeInterval);
-		allTMMetrics.putIfAbsent(metricName, new LinkedList<>()).add(metricSubscription);
+		jobTMMetricSubscriptions
+				.computeIfAbsent(jobID, k -> new HashMap<>())
+				.computeIfAbsent(metricName, k-> new LinkedList<>()).add(metricSubscription);
 		return metricSubscription;
 	}
 
 	@Override
-	public TaskManagerMetricSubscription subscribeTaskManagerMetric(String tmId, String metricName,
-			long timeInterval, TimelineAggType timeAggType) {
+	public synchronized TaskManagerMetricSubscription subscribeTaskManagerMetric(
+			String tmId, String metricName, long timeInterval, TimelineAggType timeAggType) {
 		TaskManagerMetricSubscription metricSubscription = new TaskManagerMetricSubscription(
 				tmId, metricName, timeAggType, timeInterval);
-		taskManagerMetrics.putIfAbsent(metricName, new LinkedList<>()).add(metricSubscription);
+		tmMetricSubscriptions.computeIfAbsent(tmId, k -> new HashMap<>())
+				.computeIfAbsent(metricName, k -> new LinkedList<>()).add(metricSubscription);
 		return metricSubscription;
 	}
 
 	@Override
-	public TaskMetricSubscription subscribeTaskMetric(JobID jobId, JobVertexID vertexId,
-			String metricName, MetricAggType subtaskAggType, long timeInterval,
-			TimelineAggType timeAggType) {
+	public synchronized TaskMetricSubscription subscribeTaskMetric(
+			JobID jobId, JobVertexID vertexId, String metricName, MetricAggType subtaskAggType,
+			long timeInterval, TimelineAggType timeAggType) {
 		TaskMetricSubscription metricSubscription = new TaskMetricSubscription(
 				jobId, vertexId, subtaskAggType, metricName, timeAggType, timeInterval);
-		taskMetrics.putIfAbsent(metricName, new LinkedList<>()).add(metricSubscription);
+		taskMetricSubscriptions.computeIfAbsent(jobId, k -> new HashMap<>())
+				.computeIfAbsent(vertexId, k -> new HashMap<>())
+				.computeIfAbsent(metricName, k -> new LinkedList<>()).add(metricSubscription);
 		return metricSubscription;
 	}
 
 	@Override
-	public void unsubscribe(MetricSubscription subscription) {
+	public synchronized void unsubscribe(MetricSubscription subscription) {
 
-		if (allTMMetrics.containsKey(subscription.getMetricName())) {
-			boolean removed = allTMMetrics.get(subscription.getMetricName()).remove(subscription);
-			if (removed) {
-				if (allTMMetrics.get(subscription.getMetricName()).size() == 0) {
-					allTMMetrics.remove(subscription.getMetricName());
+		if (subscription instanceof TaskMetricSubscription) {
+			TaskMetricSubscription taskMetricSubscription = (TaskMetricSubscription) subscription;
+			Map<JobVertexID, Map<String, List<TaskMetricSubscription>>> subscriptionByJobVertex =
+					taskMetricSubscriptions.get(taskMetricSubscription.getJobID());
+			Map<String, List<TaskMetricSubscription>> subscriptionByMetricName =
+					subscriptionByJobVertex.get(taskMetricSubscription.getJobVertexID());
+
+			List<TaskMetricSubscription> subscriptionsOfOneMetric =
+					subscriptionByMetricName.get(taskMetricSubscription.getMetricName());
+			subscriptionsOfOneMetric.remove(taskMetricSubscription);
+			if (subscriptionsOfOneMetric.isEmpty()) {
+				subscriptionByMetricName.remove(taskMetricSubscription.getMetricName());
+				if (subscriptionByMetricName.isEmpty()) {
+					subscriptionByJobVertex.remove(taskMetricSubscription.getJobVertexID());
+					if (subscriptionByJobVertex.isEmpty()) {
+						taskMetricSubscriptions.remove(taskMetricSubscription.getJobID());
+					}
 				}
 			}
 		}
 
-		if (taskManagerMetrics.containsKey(subscription.getMetricName())) {
-			boolean removed = taskManagerMetrics.get(subscription.getMetricName()).remove(subscription);
-			if (removed) {
-				if (taskManagerMetrics.get(subscription.getMetricName()).size() == 0) {
-					taskManagerMetrics.remove(subscription.getMetricName());
+		if (subscription instanceof TaskManagerMetricSubscription) {
+			TaskManagerMetricSubscription taskManagerMetricSubscription = (TaskManagerMetricSubscription) subscription;
+			Map<String, List<TaskManagerMetricSubscription>> subscriptionByMetricName =
+					tmMetricSubscriptions.get(taskManagerMetricSubscription.getTmId());
+			List<TaskManagerMetricSubscription> subscriptionsOfOneMetric =
+					subscriptionByMetricName.get(taskManagerMetricSubscription.getMetricName());
+			subscriptionsOfOneMetric.remove(taskManagerMetricSubscription);
+			if (subscriptionsOfOneMetric.isEmpty()) {
+				subscriptionByMetricName.remove(taskManagerMetricSubscription.getMetricName());
+				if (subscriptionByMetricName.isEmpty()) {
+					tmMetricSubscriptions.remove(taskManagerMetricSubscription.getTmId());
 				}
 			}
 		}
 
-		if (taskMetrics.containsKey(subscription.getMetricName())) {
-			boolean removed = taskMetrics.get(subscription.getMetricName()).remove(subscription);
-			if (removed) {
-				if (taskMetrics.get(subscription.getMetricName()).size() == 0) {
-					taskMetrics.remove(subscription.getMetricName());
+		if (subscription instanceof JobTMMetricSubscription) {
+			JobTMMetricSubscription jobTMMetricSubscription = (JobTMMetricSubscription) subscription;
+			Map<String, List<JobTMMetricSubscription>> subscriptionByMetricName =
+					jobTMMetricSubscriptions.get(jobTMMetricSubscription.getJobID());
+			List<JobTMMetricSubscription> subscriptionOfOneMetric =
+					subscriptionByMetricName.get(jobTMMetricSubscription.getMetricName());
+			subscriptionOfOneMetric.remove(jobTMMetricSubscription);
+			if (subscriptionOfOneMetric.isEmpty()) {
+				subscriptionByMetricName.remove(jobTMMetricSubscription.getMetricName());
+				if (subscriptionByMetricName.isEmpty()) {
+					jobTMMetricSubscriptions.remove(jobTMMetricSubscription.getJobID());
 				}
 			}
 		}
@@ -140,7 +175,39 @@ public class RestServerMetricProvider implements MetricProvider {
 
 		@Override
 		public void run() {
+			synchronized (RestServerMetricProvider.this) {
+				for (Map.Entry<JobID, Map<JobVertexID, Map<String, List<TaskMetricSubscription>>>> jobEntry : taskMetricSubscriptions.entrySet()) {
+					for (Map.Entry<JobVertexID, Map<String, List<TaskMetricSubscription>>> vertexEntry : jobEntry.getValue().entrySet()) {
+						Map<String, Map<Integer, Tuple2<Long, Double>>> values =
+								restServerClient.getTaskMetrics(jobEntry.getKey(), vertexEntry.getKey(), vertexEntry.getValue().keySet());
+						for (Map.Entry<String, List<TaskMetricSubscription>> metricEntry : vertexEntry.getValue().entrySet()) {
+							for (TaskMetricSubscription subscription : metricEntry.getValue()) {
+								subscription.addValue(values.get(metricEntry.getKey()));
+							}
+						}
+					}
+				}
 
+				for (Map.Entry<JobID, Map<String, List<JobTMMetricSubscription>>> jobEntry : jobTMMetricSubscriptions.entrySet()) {
+					Map<String, Map<String, Tuple2<Long, Double>>> values =
+							restServerClient.getTaskManagerMetrics(jobEntry.getKey(), jobEntry.getValue().keySet());
+					for (Map.Entry<String, List<JobTMMetricSubscription>> metricEntry : jobEntry.getValue().entrySet()) {
+						for (JobTMMetricSubscription subscription : metricEntry.getValue()) {
+							subscription.addValue(values.get(metricEntry.getKey()));
+						}
+					}
+				}
+
+				for (Map.Entry<String, Map<String, List<TaskManagerMetricSubscription>>> tmEntry : tmMetricSubscriptions.entrySet()) {
+					Map<String, Map<String, Tuple2<Long, Double>>> values =
+							restServerClient.getTaskManagerMetrics(Collections.singleton(tmEntry.getKey()), tmEntry.getValue().keySet());
+					for (Map.Entry<String, List<TaskManagerMetricSubscription>> metricEntry : tmEntry.getValue().entrySet()) {
+						for (TaskManagerMetricSubscription subscription : metricEntry.getValue()) {
+							subscription.addValue(values.get(metricEntry.getKey()).get(tmEntry.getKey()));
+						}
+					}
+				}
+			}
 		}
 	}
 }

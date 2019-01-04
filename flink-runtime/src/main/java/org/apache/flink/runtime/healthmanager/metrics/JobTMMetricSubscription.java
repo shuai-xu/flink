@@ -30,6 +30,7 @@ import java.util.Map;
 
 /**
  * Subscribe metric from all TM running tasks of the given job.
+ * The value return is a map : [tm-id, [timestamp, value]].
  */
 public class JobTMMetricSubscription extends MetricSubscription<Map<String, Tuple2<Long, Double>>> {
 
