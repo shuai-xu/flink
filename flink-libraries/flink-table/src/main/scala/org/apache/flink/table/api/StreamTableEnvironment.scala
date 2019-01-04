@@ -440,7 +440,7 @@ abstract class StreamTableEnvironment(
     } else {
       val table = new Table(this, sinkNode)
       val optimizedPlan = optimize(table.getRelNode)
-      translateSink(optimizedPlan)
+      translate(optimizedPlan)
     }
   }
 
@@ -465,21 +465,20 @@ abstract class StreamTableEnvironment(
   }
 
   /**
-    * Registers a [[DataStream]] with [[BaseRow]] type as a table under a given name with field
+    * Registers a [[DataStream]] type as a table under a given name with field
     * names as specified by field expressions in the [[TableEnvironment]]'s catalog.
     *
     * @param name The name under which the table is registered in the catalog.
     * @param isAccRetract True if input data contain retraction messages.
-    * @param dataStream The [[DataStream]] with [[BaseRow]] type to register as table
-    *                   in the catalog.
+    * @param dataStream The [[DataStream]] to register as table in the catalog.
     * @param fields The field expressions to define the field names of the table.
     * @param monotonicity the monotonicity of each field.
     */
-  private def registerBaseRowDataStreamInternal(
+  private def registerDataStreamInternal(
       name: String,
       producesUpdates: Boolean,
       isAccRetract: Boolean,
-      dataStream: DataStream[BaseRow],
+      dataStream: DataStream[_],
       rowType: RelDataType,
       fields: Array[Expression],
       uniqueKeys: util.Set[_ <: util.Set[String]],
@@ -870,7 +869,7 @@ abstract class StreamTableEnvironment(
     * @tparam A The type of the resulting [[DataStream]].
     * @return The [[DataStream]] that corresponds to the translated [[Table]].
     */
-  protected def translate[A](
+  protected def translateToDataStream[A](
       table: Table,
       updatesAsRetraction: Boolean,
       withChangeFlag: Boolean,
@@ -881,35 +880,20 @@ abstract class StreamTableEnvironment(
     val sinkName = createUniqueTableName()
     val sinkNode = LogicalSink.create(table.getRelNode, sink, sinkName)
     val optimizedPlan = optimize(sinkNode)
-    val transformation = translateSink(optimizedPlan)
+    val transformation = translate(optimizedPlan)
     new DataStream(execEnv, transformation).asInstanceOf[DataStream[A]]
   }
 
-  /**
-    * Translates a physical streamExecSink.
-    */
-  private def translateSink(sinkNode: RelNode): StreamTransformation[_] = {
-    sinkNode match {
-      case streamExecSink: StreamExecSink[_] => streamExecSink.translateToPlan(this)
-      case _ =>
-        throw new TableException(
-          s"Cannot generate DataStream due to an invalid logical plan. " +
-            "This is a bug and should not happen. Please file an issue.")
-    }
-  }
-
     /**
-      * Translates a physical [[RelNode]] plan into a [[StreamTransformation]] of type [[BaseRow]].
+      * Translates a physical [[RelNode]] plan into a [[StreamTransformation]].
       *
-      * @param logicalPlan The logical plan to translate.
+      * @param node The logical plan to translate.
       * @return The [[StreamTransformation]] of type [[BaseRow]].
       */
-    protected def translateToBaseRow(
-        logicalPlan: RelNode): StreamTransformation[BaseRow] = {
+    private def translate(node: RelNode): StreamTransformation[_] = {
 
-      logicalPlan match {
-        case node: RowStreamExecRel =>
-          node.translateToPlan(this)
+      node match {
+        case node: StreamExecRel[_] => node.translateToPlan(this)
         case _ =>
           throw new TableException("Cannot generate DataStream due to an invalid logical plan. " +
             "This is a bug and should not happen. Please file an issue.")
@@ -925,7 +909,7 @@ abstract class StreamTableEnvironment(
   def explain(table: Table): String = {
     val ast = table.getRelNode
     val optimizedPlan = optimize(ast)
-    val transformStream = translateToBaseRow(optimizedPlan)
+    val transformStream = translate(optimizedPlan)
 
     val streamGraph = StreamGraphGenerator.generate(
       StreamGraphGenerator.Context.buildStreamProperties(execEnv), ArrayBuffer(transformStream))
@@ -1133,13 +1117,14 @@ abstract class StreamTableEnvironment(
   }
 
   /**
-    * Translates recursively a logical [[RelNode]] in a [[RelNodeBlock]] into a [[DataStream]].
+    * Translates recursively a logical [[RelNode]] in a [[RelNodeBlock]] into a
+    * [[StreamTransformation]].
     * Converts to target type if the block contains sink node.
     *
     * @param block The [[RelNodeBlock]] instance.
-    * @return The [[DataStream]] that corresponds to logical plan of current block.
+    * @return The [[StreamTransformation]] that corresponds to logical plan of current block.
     */
-  private def translateRelNodeBlock(block: RelNodeBlock): DataStream[_] = {
+  private def translateRelNodeBlock(block: RelNodeBlock): StreamTransformation[_] = {
 
     block.children.foreach {
       child => if (child.getNewOutputNode.isEmpty) {
@@ -1147,27 +1132,21 @@ abstract class StreamTableEnvironment(
       }
     }
 
-    val blockLogicalPlan = block.getPlan
-    blockLogicalPlan match {
+    val originTree = block.getPlan
+    originTree match {
       case n: Sink =>
-        try {
-          val optimizedTree = optimize(n)
-          block.setOptimizedPlan(optimizedTree)
-          val translateStream = translateSink(optimizedTree)
-          new DataStream(execEnv, translateStream)
-        } catch {
-          case t: TableException =>
-            throw new TableException(s"Error happens when translating plan for sink '${n.sink}'", t)
-        }
+        val optimizedTree = optimize(n)
+        block.setOptimizedPlan(optimizedTree)
+        translate(optimizedTree)
 
       case o =>
         val optimizedPlan = optimize(
           o,
           updatesAsRetraction = block.isUpdateAsRetraction,
           isSinkBlock = false)
-        val translateStream = translateToBaseRow(optimizedPlan)
+        val transformation = translate(optimizedPlan)
 
-        val dataStream = new DataStream(execEnv, translateStream)
+        val dataStream = new DataStream(execEnv, transformation)
 
         val isAccRetract = optimizedPlan.getTraitSet
           .getTrait(AccModeTraitDef.INSTANCE).getAccMode == AccMode.AccRetract
@@ -1181,7 +1160,7 @@ abstract class StreamTableEnvironment(
           .reuseOrCreate(relBuilder.getCluster.getMetadataQuery)
           .getRelModifiedMonotonicity(optimizedPlan)
 
-        registerBaseRowDataStreamInternal(
+        registerDataStreamInternal(
           name, producesUpdates, isAccRetract, dataStream, rowType,
           fieldExpressions, uniqueKeys, monotonicity)
         val newTable = scan(name)
@@ -1189,7 +1168,7 @@ abstract class StreamTableEnvironment(
         block.setOutputTableName(name)
 
         block.setOptimizedPlan(optimizedPlan)
-        dataStream
+        transformation
     }
   }
 

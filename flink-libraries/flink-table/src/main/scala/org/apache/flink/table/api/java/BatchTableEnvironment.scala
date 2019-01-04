@@ -271,7 +271,7 @@ class BatchTableEnvironment(
     *         [[Table]] into a [[TableSink]].
     */
   def toBoundedStream[T](table: Table, sink: TableSink[T]): DataStream[_] = {
-    translate(table, sink)
+    translateToDataStream(table, sink)
   }
 
   /**

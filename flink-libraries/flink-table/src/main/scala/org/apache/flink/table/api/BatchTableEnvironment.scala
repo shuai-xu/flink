@@ -273,8 +273,8 @@ class BatchTableEnvironment(
     if (config.getSubsectionOptimization) {
       sinkNodes += sinkNode
     } else {
-      val stream = translate(table, sink, sinkName)
-      transformations.add(stream.getTransformation)
+      val transformation = translate(table, sink, sinkName)
+      transformations.add(transformation)
     }
   }
 
@@ -292,10 +292,10 @@ class BatchTableEnvironment(
       // translates recursively RelNodeBlock into BoundedStream
       blockPlan.foreach {
         sinkBlock =>
-          val boundedStream: DataStream[_] = translateRelNodeBlock(sinkBlock)
+          val transformation: StreamTransformation[_] = translateRelNodeBlock(sinkBlock)
           sinkBlock.outputNode match {
             case _: Sink =>
-              transformations.add(boundedStream.getTransformation)
+              transformations.add(transformation)
             case _ => throw new TableException("SinkNode required here")
           }
       }
@@ -305,7 +305,7 @@ class BatchTableEnvironment(
     }
   }
 
-  private def translateRelNodeBlock(block: RelNodeBlock): DataStream[_] = {
+  private def translateRelNodeBlock[T](block: RelNodeBlock): StreamTransformation[_] = {
     block.children.foreach {
       child =>
         if (child.getNewOutputNode.isEmpty) {
@@ -317,14 +317,15 @@ class BatchTableEnvironment(
     val optimizedTree = optimize(originTree)
     addQueryPlan(originTree, optimizedTree)
 
-    val boundedStream: DataStream[_] = optimizedTree match {
+    val transformation: StreamTransformation[_] = optimizedTree match {
       case n: BatchExecSink[_] =>
         val outputType = n.sink.getOutputType
         translate(n, outputType)
-      case _ =>
+      case r: BatchExecRel[T] =>
         val outputType = FlinkTypeFactory.toDataType(originTree.getRowType)
-        val stream = translate(optimizedTree, outputType)
+        val streamTransform = translate[T](r, outputType)
         val name = createUniqueTableName()
+        val dataStream = new DataStream(streamEnv, streamTransform)
         registerIntermediateBoundedStreamInternal(
           // It is not a SinkNode, so it will be referenced by other RelNodeBlock.
           // When registering a data collection, we should send a correct type.
@@ -332,15 +333,15 @@ class BatchTableEnvironment(
           // while STRING_TYPE_INFO will lose the length of varchar.
           originTree.getRowType,
           name,
-          stream)
+          dataStream)
         val newTable = scan(name)
         block.setNewOutputNode(newTable.getRelNode)
         block.setOutputTableName(name)
-        stream
+        streamTransform
     }
 
     block.setOptimizedPlan(optimizedTree)
-    boundedStream
+    transformation
   }
 
   /**
@@ -461,16 +462,17 @@ class BatchTableEnvironment(
     * @return The generated [[DataStream]] operators after emit the [[DataStream]] translated by
     *         [[Table]] into a [[TableSink]].
     */
-  protected def translate[A](table: Table, sink: TableSink[A]): DataStream[_] = {
+  protected def translateToDataStream[A](table: Table, sink: TableSink[A]): DataStream[_] = {
     val sinkName = createUniqueTableName()
-    translate(table, sink, sinkName)
+    val transformation = translate(table, sink, sinkName)
+    new DataStream(streamEnv, transformation)
   }
 
   private def translate[A](
       table: Table,
       sink: TableSink[A],
       sinkName: String)
-    : DataStream[_] = {
+    : StreamTransformation[_] = {
     val sinkNode = SinkNode(table.logicalPlan, sink, sinkName)
     val sinkTable = new Table(this, sinkNode)
     val originTree = sinkTable.getRelNode
@@ -488,24 +490,24 @@ class BatchTableEnvironment(
   }
 
   /**
-   * Translates a logical [[RelNode]] into a [[DataStream]].
+   * Translates a logical [[RelNode]] into a [[StreamTransformation]].
    * Converts to target type if necessary.
    *
    * @param logicalPlan The root node of the relational expression tree.
-   * @param resultType  The [[DataType]] of the resulting [[DataStream]].
-   * @return The [[DataStream]] that corresponds to the translated [[Table]].
+   * @param resultType  The [[DataType]] of the elements that result from resulting
+   *                    [[StreamTransformation]].
+   * @return The [[StreamTransformation]] that corresponds to the translated [[Table]].
    */
-  protected def translate[OUT](
+  private def translate[OUT](
       logicalPlan: RelNode,
-      resultType: DataType): DataStream[OUT] = {
+      resultType: DataType): StreamTransformation[OUT] = {
     TableEnvironment.validateType(resultType)
 
     logicalPlan match {
       case node: BatchExecRel[OUT] =>
         ruKeeper.buildRUs(node)
         ruKeeper.calculateRelResource(node)
-        val plan = node.translateToPlan(this)
-        new DataStream(streamEnv, plan)
+        node.translateToPlan(this)
       case _ =>
         throw new TableException("Cannot generate BoundedStream due to an invalid logical plan. " +
             "This is a bug and should not happen. Please file an issue.")
@@ -827,12 +829,12 @@ class BatchTableEnvironment(
     val optimizedPlan = optimize(ast)
     val fieldTypes = ast.getRowType.getFieldList.asScala
       .map(field => FlinkTypeFactory.toInternalType(field.getType))
-    val boundedStream = translate(
+    val transformation = translate(
       optimizedPlan,
       new BaseRowType(classOf[BinaryRow], fieldTypes: _*))
     val streamGraph = StreamGraphGenerator.generate(
       StreamGraphGenerator.Context.buildBatchProperties(streamEnv),
-      ArrayBuffer(boundedStream.getTransformation))
+      ArrayBuffer(transformation))
 
     val sqlPlan = PlanUtil.explainPlan(streamGraph)
 

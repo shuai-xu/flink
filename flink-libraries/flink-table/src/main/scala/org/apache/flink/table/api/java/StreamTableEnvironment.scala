@@ -153,7 +153,7 @@ class StreamTableEnvironment(
   def toAppendStream[T](table: Table, clazz: Class[T]): DataStream[T] = {
     val t = DataTypes.extractType(clazz)
     TableEnvironment.validateType(t)
-    translate[T](table, updatesAsRetraction = false, withChangeFlag = false, t)
+    translateToDataStream[T](table, updatesAsRetraction = false, withChangeFlag = false, t)
   }
 
   /**
@@ -175,7 +175,7 @@ class StreamTableEnvironment(
   def toAppendStream[T](table: Table, typeInfo: TypeInformation[T]): DataStream[T] = {
     val t = DataTypes.of(typeInfo)
     TableEnvironment.validateType(t)
-    translate[T](table, updatesAsRetraction = false, withChangeFlag = false, t)
+    translateToDataStream[T](table, updatesAsRetraction = false, withChangeFlag = false, t)
   }
 
   /**
@@ -250,7 +250,7 @@ class StreamTableEnvironment(
     val typeInfo = TypeExtractor.createTypeInfo(clazz)
     TableEnvironment.validateType(DataTypes.of(typeInfo))
     val resultType = new TupleTypeInfo[JTuple2[JBool, T]](Types.BOOLEAN, typeInfo)
-    translate[JTuple2[JBool, T]](
+    translateToDataStream[JTuple2[JBool, T]](
       table,
       updatesAsRetraction = true,
       withChangeFlag = true,
@@ -282,7 +282,7 @@ class StreamTableEnvironment(
       Types.BOOLEAN,
       typeInfo
     )
-    translate[JTuple2[JBool, T]](
+    translateToDataStream[JTuple2[JBool, T]](
       table,
       updatesAsRetraction = true,
       withChangeFlag = true,

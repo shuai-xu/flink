@@ -194,7 +194,7 @@ class StreamTableEnvironment(
     */
   def toAppendStream[T: TypeInformation](table: Table): DataStream[T] = {
     val returnType = createTypeInformation[T]
-    asScalaStream(translate[T](
+    asScalaStream(translateToDataStream[T](
       table,
       updatesAsRetraction = false,
       withChangeFlag = false,
@@ -237,7 +237,7 @@ class StreamTableEnvironment(
     */
   def toRetractStream[T: TypeInformation](table: Table): DataStream[(Boolean, T)] = {
     val returnType = createTypeInformation[(Boolean, T)]
-    asScalaStream(translate[(Boolean, T)](
+    asScalaStream(translateToDataStream[(Boolean, T)](
       table,
       updatesAsRetraction = true,
       withChangeFlag = true,
