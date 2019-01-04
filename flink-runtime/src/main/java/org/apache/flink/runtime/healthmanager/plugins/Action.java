@@ -18,8 +18,8 @@
 
 package org.apache.flink.runtime.healthmanager.plugins;
 
-import org.apache.flink.runtime.healthmanager.MetricProvider;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
+import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 
 /**
  * Action to resolve symptoms.

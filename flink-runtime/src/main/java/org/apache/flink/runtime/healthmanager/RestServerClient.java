@@ -20,6 +20,7 @@ package org.apache.flink.runtime.healthmanager;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.client.JobStatusMessage;
@@ -70,9 +71,26 @@ public interface RestServerClient {
 	 * @param jobID        job id of the job.
 	 * @param jobVertexID  job vertex id of the vertex.
 	 * @param metricNames  metric names to retrieve.
-	 * @return metric values.
+	 * @return metric values in a map: [metric name, [subtask index, [fetch timestamp, metric value]]]
 	 */
-	Map<String, Map<Integer, Double>> getMetrics(JobID jobID, JobVertexID jobVertexID, Set<String> metricNames);
+	Map<String, Map<Integer, Tuple2<Long, Double>>> getTaskMetrics(
+			JobID jobID, JobVertexID jobVertexID, Set<String> metricNames);
+
+	/**
+	 * Get Metrics from task managers.
+	 * @param tmIds       ids of tm to query.
+	 * @param metricNames names of metrics to query.
+	 * @return metric values in a map: [metric name, [task manager id, [fetch timestamp, metric value]]]
+	 */
+	Map<String, Map<String, Tuple2<Long, Double>>> getTaskManagerMetrics(Set<String> tmIds, Set<String> metricNames);
+
+	/**
+	 * Get Metrics from task managers which has tasks belonging to given job.
+	 * @param jobId ids of tm to query.
+	 * @param metricNames names of metrics to query.
+	 * @return metric values in a map: [metric name, [task manager id, [fetch timestamp, metric value]]]
+	 */
+	Map<String, Map<String, Tuple2<Long, Double>>> getTaskManagerMetrics(JobID jobId, Set<String> metricNames);
 
 	/**
 	 * Rescale given job vertex.

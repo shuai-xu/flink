@@ -16,45 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.healthmanager.plugins;
-
-import org.apache.flink.runtime.healthmanager.HealthMonitor;
-
-import java.util.List;
+package org.apache.flink.runtime.healthmanager.metrics;
 
 /**
- * Action selector is responsible for action selecting and action history maintain.
+ * Agg type of metric.
  */
-public interface ActionSelector {
-
-	/**
-	 * Open an action selector.
-	 * @param monitor the health monitor which owns the selector.
-	 */
-	void open(HealthMonitor monitor);
-
-	/**
-	 * Close an action selector.
-	 */
-	void close();
-
-	/**
-	 * Select an action to execute from the candidates, return null if no candidate selected.
-	 *
-	 * @param action
-	 * @return
-	 */
-	Action accept(List<Action> action);
-
-	/**
-	 * Notify an action failure.
-	 * @param action
-	 */
-	void actionFailed(Action action);
-
-	/**
-	 * Notify an action succeed.
-	 * @param action
-	 */
-	void actionSucceed(Action action);
+public enum MetricAggType {
+	SUM,
+	MIN,
+	MAX,
+	AVG
 }

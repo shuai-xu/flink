@@ -16,50 +16,53 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.healthmanager;
+package org.apache.flink.runtime.healthmanager.metrics;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 /**
- * Metric provider 负责订阅metric，进行metric的数据的聚合.
+ * Metric provider will accept subscription request from plugins and fetch metric subscribed periodically.
  */
 public interface MetricProvider {
 
 	/**
-	 * Agg type of metric.
-	 */
-	enum MetricAGG {
-		SUM,
-		MIN,
-		MAX,
-		AVG
-	}
-
-	/**
 	 * Start service of the metric provider.
 	 */
-	void start();
+	void open();
 
 	/**
 	 * Stop service of the metric provider.
 	 */
-	void stop();
+	void close();
 
 	/**
-	 * Subscribe task manager metric.
-	 * @param tmId
-	 * @param metricName
-	 * @param timeInterval
-	 * @param timeAggType
-	 * @param alias
+	 * Subscribe metric of all task manager belong a job.
+	 * @param metricName   metric name to subscribe
+	 * @param timeInterval timeline interval for agg
+	 * @param timeAggType  agg type of timeline
+	 *
+	 * @return  a JobTMMetricSubscription containing the all agg result.
 	 */
-	void subsribeTaskManagerMetric(
+	JobTMMetricSubscription subscribeAllTMMetric(
+			JobID jobID,
+			String metricName,
+			long timeInterval,
+			TimelineAggType timeAggType);
+
+	/**
+	 * Subscribe metric of the given task manager.
+	 * @param tmId           id of the task manager
+	 * @param metricName     metric name to subscribe
+	 * @param timeInterval   timeline interval for agg
+	 * @param timeAggType    agg type of timeline
+	 */
+	TaskManagerMetricSubscription subscribeTaskManagerMetric(
 			String tmId,
 			String metricName,
 			long timeInterval,
-			MetricAGG timeAggType,
-			String alias);
+			TimelineAggType timeAggType);
 
 	/**
 	 * Subscribe task metric.
@@ -69,27 +72,19 @@ public interface MetricProvider {
 	 * @param subtaskAggType
 	 * @param timeInterval
 	 * @param timeAggType
-	 * @param alias
 	 */
-	void subscribeTaskMetric(
+	TaskMetricSubscription subscribeTaskMetric(
 			JobID jobId,
 			JobVertexID vertexId,
 			String metricName,
-			MetricAGG subtaskAggType,
+			MetricAggType subtaskAggType,
 			long timeInterval,
-			MetricAGG timeAggType,
-			String alias);
+			TimelineAggType timeAggType);
 
 	/**
-	 * Get metric aggregated which should be subscribed ahead.
-	 * @param jobId
-	 * @param vertexID
-	 * @param alias
-	 * @return
+	 * Unsubscribe a metric.
+	 * @param subscription
 	 */
-	double getMetric(
-			JobID jobId,
-			JobVertexID vertexID,
-			String alias);
+	void unsubscribe(MetricSubscription subscription);
 
 }

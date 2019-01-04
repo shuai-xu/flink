@@ -22,6 +22,7 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.plugins.Action;
 import org.apache.flink.runtime.healthmanager.plugins.ActionSelector;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
@@ -77,6 +78,8 @@ public class HealthMonitor {
 	private List<Resolver> resolvers;
 	private ActionSelector actionSelector;
 
+	private volatile long lastExecution = 0;
+
 	public HealthMonitor(
 			JobID jobID,
 			MetricProvider metricProvider,
@@ -111,7 +114,7 @@ public class HealthMonitor {
 		}
 
 		if (this.actionSelector != null) {
-			this.actionSelector.stop();
+			this.actionSelector.close();
 		}
 
 		for (Detector detector : detectors) {
@@ -181,6 +184,10 @@ public class HealthMonitor {
 		return jobConfig;
 	}
 
+	public long getLastExecution() {
+		return lastExecution;
+	}
+
 	/**
 	 * Health check for a job, which detects abnormal symptoms of job which detectors and tries to
 	 * resolve abnormal status with registered Resolver.
@@ -246,6 +253,8 @@ public class HealthMonitor {
 				} catch (Throwable e) {
 					actionSelector.actionFailed(action);
 				}
+
+				lastExecution = System.currentTimeMillis();
 			}
 
 		}

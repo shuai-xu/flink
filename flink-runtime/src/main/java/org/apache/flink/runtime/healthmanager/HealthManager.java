@@ -22,6 +22,8 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
+import org.apache.flink.runtime.healthmanager.metrics.RestServerMetricProvider;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.util.ExecutorThreadFactory;
 

@@ -16,45 +16,33 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.healthmanager.plugins;
+package org.apache.flink.runtime.healthmanager.metrics.timeline;
 
-import org.apache.flink.runtime.healthmanager.HealthMonitor;
-
-import java.util.List;
+import org.apache.flink.api.java.tuple.Tuple2;
 
 /**
- * Action selector is responsible for action selecting and action history maintain.
+ * Calculate min value of the metric in given interval.
  */
-public interface ActionSelector {
+public class MinTimelineAggregator extends TimelineAggregator {
 
-	/**
-	 * Open an action selector.
-	 * @param monitor the health monitor which owns the selector.
-	 */
-	void open(HealthMonitor monitor);
+	private long nextIntervalKey = -1;
+	private double min = Double.MIN_VALUE;
 
-	/**
-	 * Close an action selector.
-	 */
-	void close();
+	public MinTimelineAggregator(long interval) {
+		super(interval);
+	}
 
-	/**
-	 * Select an action to execute from the candidates, return null if no candidate selected.
-	 *
-	 * @param action
-	 * @return
-	 */
-	Action accept(List<Action> action);
-
-	/**
-	 * Notify an action failure.
-	 * @param action
-	 */
-	void actionFailed(Action action);
-
-	/**
-	 * Notify an action succeed.
-	 * @param action
-	 */
-	void actionSucceed(Action action);
+	@Override
+	public void addValue(Tuple2<Long, Double> value) {
+		if (nextIntervalKey == value.f0 / interval && min > value.f1) {
+			min = value.f1;
+		} else if (nextIntervalKey < value.f0 / interval) {
+			if (min != Double.MIN_VALUE) {
+				currentTimestamp = nextIntervalKey * interval;
+				currentValue = min;
+			}
+			nextIntervalKey = value.f0 / interval;
+			min = value.f1;
+		}
+	}
 }

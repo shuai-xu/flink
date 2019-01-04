@@ -45,7 +45,7 @@ public class FirstValidActionSelector implements ActionSelector {
 	}
 
 	@Override
-	public void stop() {
+	public void close() {
 
 	}
 

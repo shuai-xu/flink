@@ -21,6 +21,7 @@ package org.apache.flink.runtime.healthmanager;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.client.JobStatusMessage;
+import org.apache.flink.runtime.healthmanager.metrics.RestServerMetricProvider;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 
 import org.junit.Test;

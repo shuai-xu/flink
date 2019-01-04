@@ -21,8 +21,8 @@ package org.apache.flink.runtime.healthmanager.plugins.actions;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.runtime.execution.ExecutionState;
-import org.apache.flink.runtime.healthmanager.MetricProvider;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
+import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.plugins.Action;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 

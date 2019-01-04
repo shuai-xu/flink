@@ -20,6 +20,7 @@ package org.apache.flink.runtime.healthmanager;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.client.JobStatusMessage;
@@ -89,13 +90,25 @@ public class RestServerClientImpl implements RestServerClient {
 	}
 
 	@Override
-	public Map<String, Map<Integer, Double>> getMetrics(JobID jobID, JobVertexID jobVertexID,
+	public Map<String, Map<Integer, Tuple2<Long, Double>>> getTaskMetrics(JobID jobID, JobVertexID jobVertexID,
 			Set<String> metricNames) {
 		return null;
 	}
 
 	@Override
-	public void rescale(JobID jobId, JobVertexID vertexId, int parallelism, ResourceSpec resourceProfile) {
+	public Map<String, Map<String, Tuple2<Long, Double>>> getTaskManagerMetrics(Set<String> tmIds,
+			Set<String> metricNames) {
+		return null;
+	}
+
+	@Override
+	public Map<String, Map<String, Tuple2<Long, Double>>> getTaskManagerMetrics(JobID jobId,
+			Set<String> metricNames) {
+		return null;
+	}
+
+	@Override
+	public void rescale(JobID jobId, JobVertexID vertexId, int parallelism, ResourceSpec resourceSpec) {
 
 	}
 }
