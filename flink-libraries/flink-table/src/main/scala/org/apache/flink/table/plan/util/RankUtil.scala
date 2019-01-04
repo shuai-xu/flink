@@ -458,7 +458,8 @@ object RankUtil {
             // we can utilize unary rank function to speed up processing
             UnaryUpdateRank(uniqueKeys.iterator().next().toArray)
           } else {
-            if (tableConfig.getConf.getBoolean(TableConfigOptions.BLINK_TOPN_APPROXIMATE_ENABLED)) {
+            if (tableConfig.getConf.getBoolean(
+              TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_ENABLED)) {
               // if enabled in config, we can use approximate rank function in this scenario.
               // It is accurate in most situations, and faster than retract rank
               ApproxUpdateRank(uniqueKeys.iterator().next().toArray)

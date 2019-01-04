@@ -22,7 +22,6 @@ import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.api.common.operators.base.JoinOperatorBase.JoinHint
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
-import org.apache.flink.streaming.api.bundle.{CoBundleTrigger, CombinedCoBundleTrigger, CountCoBundleTrigger, TimeCoBundleTrigger}
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableConfigOptions}
@@ -221,14 +220,16 @@ class StreamExecJoin(
     val lPkProj = generatePrimaryKeyProjection(tableConfig, left, leftType, leftKeys.toArray)
     val rPkProj = generatePrimaryKeyProjection(tableConfig, right, rightType, rightKeys.toArray)
 
-    val isMiniBatchEnabled = tableConfig.isMicroBatchEnabled || tableConfig.isMiniBatchEnabled
+    val isMiniBatchEnabled = tableConfig.getConf.contains(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
     val (lStateType, lMatchStateType, rStateType, rMatchStateType) =
       getJoinAllStateType(isMiniBatchEnabled)
     val condFunc = generateConditionFunction(tableConfig, leftType, rightType)
     val leftIsAccRetract = StreamExecRetractionRules.isAccRetract(left)
     val rightIsAccRetract = StreamExecRetractionRules.isAccRetract(right)
 
-    val operator = if (tableConfig.isMiniBatchJoinEnabled) {
+    val operator = if (isMiniBatchEnabled && tableConfig.getConf.getBoolean(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED)) {
       joinType match {
         case FlinkJoinRelType.INNER =>
           new MiniBatchInnerJoinStreamOperator(
@@ -246,9 +247,9 @@ class StreamExecJoin(
             leftIsAccRetract,
             rightIsAccRetract,
             filterNulls,
-            getMiniBatchTrigger(tableConfig),
+            JoinUtil.getMiniBatchTrigger(tableConfig),
             tableConfig.getConf.getBoolean(
-              TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+              TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.LEFT =>
           new MiniBatchLeftOuterJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -267,9 +268,9 @@ class StreamExecJoin(
             leftIsAccRetract,
             rightIsAccRetract,
             filterNulls,
-            getMiniBatchTrigger(tableConfig),
+            JoinUtil.getMiniBatchTrigger(tableConfig),
             tableConfig.getConf.getBoolean(
-              TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+              TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.RIGHT =>
           new MiniBatchRightOuterJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -288,9 +289,9 @@ class StreamExecJoin(
             leftIsAccRetract,
             rightIsAccRetract,
             filterNulls,
-            getMiniBatchTrigger(tableConfig),
+            JoinUtil.getMiniBatchTrigger(tableConfig),
             tableConfig.getConf.getBoolean(
-              TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+              TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.FULL =>
           new MiniBatchFullOuterJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -309,9 +310,9 @@ class StreamExecJoin(
             leftIsAccRetract,
             rightIsAccRetract,
             filterNulls,
-            getMiniBatchTrigger(tableConfig),
+            JoinUtil.getMiniBatchTrigger(tableConfig),
             tableConfig.getConf.getBoolean(
-              TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+              TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.ANTI | FlinkJoinRelType.SEMI =>
           new MiniBatchAntiSemiJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -332,9 +333,9 @@ class StreamExecJoin(
             joinType.equals(FlinkJoinRelType.SEMI),
             joinInfo.isEqui,
             filterNulls,
-            getMiniBatchTrigger(tableConfig),
+            JoinUtil.getMiniBatchTrigger(tableConfig),
             tableConfig.getConf.getBoolean(
-              TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+              TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
       }
     } else {
       joinType match {
@@ -462,7 +463,8 @@ class StreamExecJoin(
       input: RelNode,
       inputType: BaseRowTypeInfo[_], keys: Array[Int]): GeneratedProjection = {
 
-    val isMiniBatchEnabled = config.isMiniBatchEnabled || config.isMicroBatchEnabled
+    val isMiniBatchEnabled = config.getConf.contains(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
     val (pk, _) = inferPrimaryKeyAndJoinStateType(input, keys, isMiniBatchEnabled)
 
     if (pk.nonEmpty) {
@@ -574,26 +576,6 @@ class StreamExecJoin(
           JoinMatchStateHandler.Type.WITHOUT_PRIMARY_KEY_MATCH
       }
     }
-  }
-
-  private def getMiniBatchTrigger(tableConfig: TableConfig) = {
-    val timeTrigger: Option[CoBundleTrigger[BaseRow, BaseRow]] =
-      if (tableConfig.isMicroBatchEnabled) {
-        None
-      } else {
-        Some(new TimeCoBundleTrigger[BaseRow, BaseRow](tableConfig.getMiniBatchTriggerTime))
-      }
-    val sizeTrigger: Option[CoBundleTrigger[BaseRow, BaseRow]] =
-      if (tableConfig.getMiniBatchTriggerSize == Long.MinValue) {
-        None
-      } else {
-        Some(new CountCoBundleTrigger[BaseRow, BaseRow](tableConfig.getMiniBatchTriggerSize))
-      }
-    new CombinedCoBundleTrigger[BaseRow, BaseRow](
-      Array(timeTrigger, sizeTrigger)
-        .filter(_.isDefined)
-        .map(_.get)
-    )
   }
 }
 

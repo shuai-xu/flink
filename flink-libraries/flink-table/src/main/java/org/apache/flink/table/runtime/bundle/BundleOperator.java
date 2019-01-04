@@ -153,8 +153,8 @@ public class BundleOperator<K, V, IN, OUT>
 			}
 		}
 
-		bundleTrigger.registerBundleTriggerCallback(this,
-			() -> BundleOperator.super.getProcessingTimeService());
+		bundleTrigger.registerBundleTriggerCallback(this);
+
 		// reset trigger
 		bundleTrigger.reset();
 

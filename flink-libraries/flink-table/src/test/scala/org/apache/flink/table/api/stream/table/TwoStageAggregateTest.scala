@@ -34,9 +34,10 @@ class TwoStageAggregateTest extends TableTestBase {
     util = streamTestUtil()
     util.tableEnv.getConfig
       .withIdleStateRetentionTime(Time.hours(1), Time.hours(2))
-    util.tableEnv.getConfig.enableMiniBatch
-      .withMiniBatchTriggerTime(1000L)
-      .withMiniBatchTriggerSize(3)
+    util.tableEnv.getConfig.getConf
+      .setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
+    util.tableEnv.getConfig.getConf
+      .setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_SIZE, 3)
     util.tableEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
   }

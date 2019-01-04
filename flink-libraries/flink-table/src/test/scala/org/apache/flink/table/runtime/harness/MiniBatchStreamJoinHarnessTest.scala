@@ -17,29 +17,30 @@
  */
 package org.apache.flink.table.runtime.harness
 
-import java.lang.{Integer => JInt, Long => JLong}
-import java.util.concurrent.ConcurrentLinkedQueue
-
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
-import org.apache.flink.streaming.api.bundle.{CoBundleTrigger, CombinedCoBundleTrigger, CountCoBundleTrigger, TimeCoBundleTrigger}
+import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.KeyedTwoInputStreamOperatorTestHarness
-import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedJoinConditionFunction, ProjectionCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
-import org.apache.flink.table.plan.util.StreamExecUtil
+import org.apache.flink.table.plan.util.{JoinUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.join.stream.bundle.{MiniBatchAntiSemiJoinStreamOperator, MiniBatchRightOuterJoinStreamOperator}
 import org.apache.flink.table.runtime.join.stream.state.JoinStateHandler
 import org.apache.flink.table.runtime.join.stream.state.`match`.JoinMatchStateHandler
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+
+import java.lang.{Integer => JInt, Long => JLong}
+import java.util.concurrent.ConcurrentLinkedQueue
 
 @RunWith(classOf[Parameterized])
 class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
@@ -47,10 +48,9 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
   private val tableConfig =
     new TableConfig().withIdleStateRetentionTime(Time.milliseconds(200), Time.milliseconds
     (400))
-  tableConfig.enableMiniBatch
-  tableConfig.withMiniBatchTriggerTime(5)
-  tableConfig.withMiniBatchTriggerSize(1000)
-  tableConfig.getConf.setBoolean(TableConfigOptions.BLINK_MINIBATCH_JOIN_ENABLED, true)
+  tableConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
+  tableConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_SIZE, 5L)
+  tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, true)
   private val baseRow = classOf[BaseRow].getCanonicalName
 
   private val rowType = new BaseRowTypeInfo(
@@ -101,9 +101,9 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       true,
       true,
       Array[Boolean](false),
-      getMiniBatchTrigger(tableConfig),
+      JoinUtil.getMiniBatchTrigger(tableConfig),
       tableConfig.getConf.getBoolean(
-        TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+        TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     val testHarness =
       new KeyedTwoInputStreamOperatorTestHarness(
@@ -116,17 +116,25 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
     operator.setupTypeSerializer(typeSerializer1, typeSerializer1)
     testHarness.open()
 
-    testHarness.setProcessingTime(1)
+    testHarness.processWatermark1(new Watermark(0))
+    testHarness.processWatermark2(new Watermark(0))
+
     testHarness.processElement2(new StreamRecord(hOf(0, 1: JInt, "aaa")))
     testHarness.processElement1(new StreamRecord(hOf(0, 1: JInt, "aaa")))
+
+    testHarness.processWatermark1(new Watermark(1))
+    testHarness.processWatermark2(new Watermark(1))
     // trigger miniBatch
-    testHarness.setProcessingTime(10)
     testHarness.processElement1(new StreamRecord(hOf(0, 1: JInt, "aaa")))
     testHarness.processElement1(new StreamRecord(hOf(1, 1: JInt, "aaa")))
     // trigger miniBatch
-    testHarness.setProcessingTime(20)
+    testHarness.processWatermark1(new Watermark(2))
+    testHarness.processWatermark2(new Watermark(2))
+
     testHarness.processElement2(new StreamRecord(hOf(1, 1: JInt, "aaa")))
-    testHarness.setProcessingTime(30)
+    // trigger miniBatch
+    testHarness.processWatermark1(new Watermark(3))
+    testHarness.processWatermark2(new Watermark(3))
     val outputList = convertStreamRecordToGenericRow(testHarness.getOutput, joinReturnType)
 
     val expectedOutput = new ConcurrentLinkedQueue[Object]()
@@ -197,9 +205,9 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       true,
       true,
       Array[Boolean](false),
-      getMiniBatchTrigger(tableConfig),
+      JoinUtil.getMiniBatchTrigger(tableConfig),
       tableConfig.getConf.getBoolean(
-        TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+        TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     val testHarness =
       new KeyedTwoInputStreamOperatorTestHarness(
@@ -212,28 +220,35 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
     operator.setupTypeSerializer(typeSerializer1, typeSerializer1)
     testHarness.open()
 
-    testHarness.setProcessingTime(1)
+    testHarness.processWatermark1(new Watermark(0))
+    testHarness.processWatermark2(new Watermark(0))
     testHarness.processElement2(new StreamRecord(hOf(0, 17L: JLong, 5: JInt)))
     // trigger miniBatch
-    testHarness.setProcessingTime(10)
+    testHarness.processWatermark1(new Watermark(1))
+    testHarness.processWatermark2(new Watermark(1))
     testHarness.processElement2(new StreamRecord(hOf(1, 17L: JLong, 5: JInt)))
     // trigger miniBatch
-    testHarness.setProcessingTime(20)
+    testHarness.processWatermark1(new Watermark(2))
+    testHarness.processWatermark2(new Watermark(2))
     testHarness.processElement2(new StreamRecord(hOf(0, 41L: JLong, 5: JInt)))
     testHarness.processElement1(new StreamRecord(hOf(0, 42L: JLong, 5: JInt)))
-    testHarness.setProcessingTime(30)
+    // trigger miniBatch
+    testHarness.processWatermark1(new Watermark(3))
+    testHarness.processWatermark2(new Watermark(3))
     testHarness.processElement1(new StreamRecord(hOf(1, 42L: JLong, 5: JInt)))
-    testHarness.setProcessingTime(40)
+    // trigger miniBatch
+    testHarness.processWatermark1(new Watermark(4))
+    testHarness.processWatermark2(new Watermark(4))
     val outputList = convertStreamRecordToGenericRow(testHarness.getOutput, joinReturnType)
 
     val expectedOutput = new ConcurrentLinkedQueue[Object]()
-    // time 1
+    // watermark 1
     expectedOutput.add(hOf(0, null: JLong, null: JInt, 17L: JLong, 5: JInt))
-    // time 10
+    // watermark 2
     expectedOutput.add(hOf(1, null: JLong, null: JInt, 17L: JLong, 5: JInt))
-    // time 20
+    // watermark 3
     expectedOutput.add(hOf(0, 42L: JLong, 5: JInt, 41L: JLong, 5: JInt))
-    // time 30
+    // watermark 4
     expectedOutput.add(hOf(1, 42L: JLong, 5: JInt, 41L: JLong, 5: JInt))
     expectedOutput.add(hOf(0, null: JLong, null: JInt, 41L: JLong, 5: JInt))
 
@@ -300,9 +315,9 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       true,
       true,
       Array[Boolean](false),
-      getMiniBatchTrigger(tableConfig),
+      JoinUtil.getMiniBatchTrigger(tableConfig),
       tableConfig.getConf.getBoolean(
-        TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+        TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     val testHarness =
       new KeyedTwoInputStreamOperatorTestHarness(
@@ -315,50 +330,44 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
     operator.setupTypeSerializer(typeSerializer1, typeSerializer1)
     testHarness.open()
 
-    testHarness.setProcessingTime(1)
+    testHarness.processWatermark1(new Watermark(0))
+    testHarness.processWatermark2(new Watermark(0))
+
     testHarness.processElement1(new StreamRecord(hOf(0, 3L: JLong, 2: JInt)))
     testHarness.processElement2(new StreamRecord(hOf(0, 3L: JLong, 2: JInt)))
-    testHarness.setProcessingTime(20)
+    // trigger miniBatch
+    testHarness.processWatermark1(new Watermark(1))
+    testHarness.processWatermark2(new Watermark(1))
 
     testHarness.processElement2(new StreamRecord(hOf(0, 2L: JLong, 1: JInt)))
-    testHarness.setProcessingTime(30)
+    // trigger miniBatch
+    testHarness.processWatermark1(new Watermark(2))
+    testHarness.processWatermark2(new Watermark(2))
 
     testHarness.processElement2(new StreamRecord(hOf(1, 2L: JLong, 1: JInt)))
-    testHarness.setProcessingTime(40)
+    // trigger miniBatch
+    testHarness.processWatermark1(new Watermark(3))
+    testHarness.processWatermark2(new Watermark(3))
 
     testHarness.processElement1(new StreamRecord(hOf(1, 3L: JLong, 2: JInt)))
     // trigger miniBatch
-    testHarness.setProcessingTime(50)
+    testHarness.processWatermark1(new Watermark(4))
+    testHarness.processWatermark2(new Watermark(4))
+
     val outputList = convertStreamRecordToGenericRow(testHarness.getOutput, joinReturnType)
 
     val expectedOutput = new ConcurrentLinkedQueue[Object]()
-    // time 20
+    // watermark 1
     expectedOutput.add(hOf(0, 3L: JLong, 2: JInt, 3L: JLong, 2: JInt))
-    // time 30
+    // watermark 2
     expectedOutput.add(hOf(0, null: JLong, null: JInt, 2L: JLong, 1: JInt))
-    // time 40
+    // watermark 3
     expectedOutput.add(hOf(1, null: JLong, null: JInt, 2L: JLong, 1: JInt))
-    // time 50
+    // watermark 4
     expectedOutput.add(hOf(1, 3L: JLong, 2: JInt, 3L: JLong, 2: JInt))
     expectedOutput.add(hOf(0, null: JLong, null: JInt, 3L: JLong, 2: JInt))
 
     verify(expectedOutput, outputList)
     testHarness.close()
-  }
-
-  private def getMiniBatchTrigger(tableConfig: TableConfig) = {
-    val timeTrigger: Option[CoBundleTrigger[BaseRow, BaseRow]] =
-      Some(new TimeCoBundleTrigger[BaseRow, BaseRow](tableConfig.getMiniBatchTriggerTime))
-    val sizeTrigger: Option[CoBundleTrigger[BaseRow, BaseRow]] =
-      if (tableConfig.getMiniBatchTriggerSize == Long.MinValue) {
-        None
-      } else {
-        Some(new CountCoBundleTrigger[BaseRow, BaseRow](tableConfig.getMiniBatchTriggerSize))
-      }
-    new CombinedCoBundleTrigger[BaseRow, BaseRow](
-      Array(timeTrigger, sizeTrigger)
-        .filter(_.isDefined)
-        .map(_.get)
-    )
   }
 }

@@ -42,9 +42,9 @@ import scala.collection.mutable
 @RunWith(classOf[Parameterized])
 class AggregateITCase(
     aggMode: AggMode,
-    minibatch: MiniBatchMode,
+    miniBatch: MiniBatchMode,
     backend: StateBackendMode)
-  extends StreamingWithAggTestBase(aggMode, minibatch, backend) {
+  extends StreamingWithAggTestBase(aggMode, miniBatch, backend) {
 
   @Test
   def testDistinctUDAGG(): Unit = {

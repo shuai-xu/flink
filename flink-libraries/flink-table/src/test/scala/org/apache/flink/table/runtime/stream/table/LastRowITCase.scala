@@ -49,8 +49,8 @@ import java.lang.{Integer => JInt, Long => JLong}
 import scala.collection.mutable
 
 @RunWith(classOf[Parameterized])
-class LastRowITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
-  extends StreamingWithMiniBatchTestBase(minibatch, mode) {
+class LastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
+  extends StreamingWithMiniBatchTestBase(miniBatch, mode) {
 
   override def before(): Unit = {
     FailingCollectionSource.failedBefore = true

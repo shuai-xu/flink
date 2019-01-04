@@ -18,7 +18,9 @@
 
 package org.apache.flink.table.plan.util
 
-import org.apache.flink.table.api.TableException
+import org.apache.flink.streaming.api.bundle.CountCoBundleTrigger
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.plan.FlinkJoinRelType
 
@@ -119,5 +121,10 @@ object JoinUtil {
       })
       (leftKeys, rightKeys)
     }
+  }
+
+  def getMiniBatchTrigger(tableConfig: TableConfig): CountCoBundleTrigger[BaseRow, BaseRow] = {
+    new CountCoBundleTrigger[BaseRow, BaseRow](
+      tableConfig.getConf.getLong(TableConfigOptions.SQL_EXEC_MINIBATCH_SIZE))
   }
 }

@@ -137,9 +137,8 @@ class ModifiedMonotonicityTest extends TableTestBase {
   @Test
   def testOneAggWithLocalGlobal(): Unit = {
     val util = streamTestUtil()
-    util.tableEnv.getConfig.withMiniBatchTriggerTime(1000)
-    util.tableEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
-    util.tableEnv.getConfig.enableMiniBatch
+    util.tableEnv.getConfig.getConf.setLong(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
 
     val table = util.addTable[(Long, Int, String)]('a, 'b, 'c)
 
@@ -166,9 +165,8 @@ class ModifiedMonotonicityTest extends TableTestBase {
   @Test
   def testTwoAggWithLocalGlobal(): Unit = {
     val util = streamTestUtil()
-    util.tableEnv.getConfig.withMiniBatchTriggerTime(1000)
-    util.tableEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
-    util.tableEnv.getConfig.enableMiniBatch
+    util.tableEnv.getConfig.getConf
+      .setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
 
     val table = util.addTable[(Long, Int, String)]('a, 'b, 'c)
 

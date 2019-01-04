@@ -169,10 +169,10 @@ class StreamExecIncrementalGroupAggregate(
     val valueTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], partialAccTypes: _*)
     val operator = new KeyedBundleOperator(
       aggFunction,
-      AggregateUtil.getMiniBatchTrigger(tableEnv.getConfig, useLocalAgg = true),
+      AggregateUtil.getMiniBatchTrigger(tableEnv.getConfig),
       valueTypeInfo,
       tableEnv.getConfig.getConf.getBoolean(
-        TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+        TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     // partitioned aggregation
     val ret = new OneInputTransformation(

@@ -36,8 +36,8 @@ import org.junit.Test
 
 
 @RunWith(classOf[Parameterized])
-class JoinITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
-  extends StreamingWithMiniBatchTestBase(minibatch, mode) {
+class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
+  extends StreamingWithMiniBatchTestBase(miniBatch, mode) {
 
   val data2 = List(
     (1, 1L, "Hi"),

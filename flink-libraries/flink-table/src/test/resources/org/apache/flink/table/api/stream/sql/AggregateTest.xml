@@ -16,17 +16,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
-  <TestCase name="testAggAfterUnionWithMicroBatch">
+  <TestCase name="testAggAfterUnionWithMiniBatch">
     <Resource name="plan">
       <![CDATA[
 StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, SUM(sum$0) AS EXPR$1, COUNT(distinct$0 count$1) AS EXPR$2])
 +- StreamExecExchange(distribution=[hash[a]])
    +- StreamExecUnion(all=[true], union=[a, sum$0, count$1, distinct$0])
       :- StreamExecLocalGroupAggregate(groupBy=[a], select=[a, SUM(b) AS sum$0, COUNT(distinct$0 c) AS count$1, DISTINCT(c) AS distinct$0])
-      :  +- StreamExecMicroBatchAssigner(interval=[1000ms])
+      :  +- StreamExecMiniBatchAssigner(interval=[1000ms])
       :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
       +- StreamExecLocalGroupAggregate(groupBy=[a], select=[a, SUM(b) AS sum$0, COUNT(distinct$0 c) AS count$1, DISTINCT(c) AS distinct$0])
-         +- StreamExecMicroBatchAssigner(interval=[1000ms])
+         +- StreamExecMiniBatchAssigner(interval=[1000ms])
             +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
 ]]>
     </Resource>
@@ -48,18 +48,19 @@ StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, SUM(sum$0) AS EXPR$1, COU
 +- StreamExecExchange(distribution=[hash[a]])
    +- StreamExecLocalGroupAggregate(groupBy=[a], select=[a, SUM(b) FILTER $f2 AS sum$0, COUNT(distinct$0 c) FILTER $f4 AS count$1, COUNT(distinct$0 c) FILTER $f5 AS count$2, MAX(b) AS max$3, DISTINCT(c) AS distinct$0])
       +- StreamExecCalc(select=[a, b, IS TRUE(=(c, 'A')) AS $f2, c, IS TRUE(d) AS $f4, IS TRUE(=(b, 1)) AS $f5])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
+         +- StreamExecMiniBatchAssigner(interval=[1000ms])
+            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testAggWithMicroBatch">
+  <TestCase name="testAggWithMiniBatch">
     <Resource name="plan">
       <![CDATA[
 StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, COUNT(distinct$0 count$0) AS EXPR$1, MAX(max$1) AS EXPR$2, SUM(sum$2) AS EXPR$3])
 +- StreamExecExchange(distribution=[hash[b]])
    +- StreamExecLocalGroupAggregate(groupBy=[b], select=[b, COUNT(distinct$0 a) AS count$0, MAX(b) AS max$1, SUM(c) AS sum$2, DISTINCT(a) AS distinct$0])
       +- StreamExecCalc(select=[b, a, c])
-         +- StreamExecMicroBatchAssigner(interval=[1000ms])
+         +- StreamExecMiniBatchAssigner(interval=[1000ms])
             +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
@@ -93,10 +94,12 @@ StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, SUM(sum$0) AS EXPR$1, COU
    +- StreamExecUnion(all=[true], union=[a, sum$0, count$1, distinct$0])
       :- StreamExecLocalGroupAggregate(groupBy=[a], select=[a, SUM(c) AS sum$0, COUNT(distinct$0 b) AS count$1, DISTINCT(b) AS distinct$0])
       :  +- StreamExecCalc(select=[a, c, b])
-      :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
+      :     +- StreamExecMiniBatchAssigner(interval=[1000ms])
+      :        +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
       +- StreamExecLocalGroupAggregate(groupBy=[a], select=[a, SUM(c) AS sum$0, COUNT(distinct$0 b) AS count$1, DISTINCT(b) AS distinct$0])
          +- StreamExecCalc(select=[a, c, b])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
+            +- StreamExecMiniBatchAssigner(interval=[1000ms])
+               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
 ]]>
     </Resource>
   </TestCase>

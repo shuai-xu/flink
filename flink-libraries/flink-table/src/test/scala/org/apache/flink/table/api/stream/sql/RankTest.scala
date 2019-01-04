@@ -372,8 +372,9 @@ class RankTest extends TableTestBase {
       """.stripMargin
 
       streamUtil.tableEnv.getConfig.getConf.setBoolean(
-        TableConfigOptions.BLINK_TOPN_APPROXIMATE_ENABLED, true)
-    streamUtil.tableEnv.getConfig.withTopNApproxBufferMinSize(20)
+        TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_ENABLED, true)
+    streamUtil.tableEnv.getConfig.getConf.setLong(
+      TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_MINSIZE, 20L)
 
     streamUtil.verifyPlanAndTrait(sql)
   }
@@ -490,9 +491,8 @@ class RankTest extends TableTestBase {
   @Test
   def testTopNWithPartialFinalAgg(): Unit = {
     // BLINK-17146809: fix monotonicity derivation not works when partial final optimization
-    streamUtil.tableEnv.getConfig.enableMiniBatch
-    streamUtil.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
+    streamUtil.tableEnv.getConfig.getConf.setLong(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
     streamUtil.tableEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_EXEC_AGG_PARTIAL_ENABLED, true)
     streamUtil.tableEnv.getConfig.getConf.setBoolean(

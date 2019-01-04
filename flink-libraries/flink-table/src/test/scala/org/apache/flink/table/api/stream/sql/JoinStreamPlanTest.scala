@@ -18,6 +18,8 @@
 package org.apache.flink.table.api.stream.sql
 
 import org.apache.flink.configuration.Configuration
+import org.apache.flink.table.api.TableConfigOptions
+
 import org.junit.{Before, Test}
 
 class JoinStreamPlanTest extends StreamPlanTestBase {
@@ -34,8 +36,9 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
   }
 
   @Test
-  def testInnerJoinWithMicroBatch(): Unit = {
-    streamUtil.tableEnv.getConfig.enableMicroBatch.withMicroBatchTriggerTime(1000L)
+  def testInnerJoinWithMiniBatch(): Unit = {
+    streamUtil.tableEnv.getConfig.getConf
+      .setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
     val query = "SELECT a1, b1 FROM A JOIN B ON a1 = b1"
     verifyPlanAndTrait(query)
   }

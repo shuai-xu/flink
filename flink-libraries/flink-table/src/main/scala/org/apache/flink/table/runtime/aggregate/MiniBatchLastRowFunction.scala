@@ -32,7 +32,7 @@ import org.apache.flink.table.util.Logging
 import org.apache.flink.util.Collector
 
 /**
-  * This function is used to get the last row for every key partition in minibatch mode.
+  * This function is used to get the last row for every key partition in miniBatch mode.
   *
   * @param rowTypeInfo        the type info of the input row.
   * @param generateRetraction the flag whether to generate retractions in this operator.

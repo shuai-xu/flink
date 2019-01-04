@@ -31,7 +31,7 @@ import org.apache.flink.table.util.Logging
 import org.apache.flink.util.Collector
 
 /**
-  * Class of Aggregate Function used for the groupby (without window) aggregate in minibatch mode.
+  * Class of Aggregate Function used for the groupby (without window) aggregate in miniBatch mode.
   *
   * @param genAggsHandler  the generated aggregate handler
   * @param accTypes        the accumulator types

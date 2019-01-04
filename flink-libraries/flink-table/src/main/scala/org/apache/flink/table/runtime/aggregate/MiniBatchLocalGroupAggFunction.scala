@@ -27,7 +27,7 @@ import org.apache.flink.util.Collector
 
 /**
   * Class of Aggregate Function used for the local groupby (without window) aggregate in
-  * minibatch mode.
+  * miniBatch mode.
   *
   * @param genAggsHandler  the generated aggregate handler
   */

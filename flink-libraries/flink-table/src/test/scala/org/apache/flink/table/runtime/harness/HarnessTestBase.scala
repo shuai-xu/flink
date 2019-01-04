@@ -181,8 +181,11 @@ class HarnessTestBase(mode: StateBackendMode) extends StreamingTestBase {
     val iter = output.iterator()
     val typeSerializers = joinTypes.getFieldTypes.map(TypeUtils.createSerializer)
     while (iter.hasNext) {
-      val row = iter.next().asInstanceOf[StreamRecord[BaseRow]].getValue
-      outputList.add(BaseRowUtil.toGenericRow(row, joinTypes.getFieldTypes, typeSerializers))
+      val element = iter.next()
+      if (element.isInstanceOf[StreamRecord[BaseRow]]) {
+        val row = element.asInstanceOf[StreamRecord[BaseRow]].getValue
+        outputList.add(BaseRowUtil.toGenericRow(row, joinTypes.getFieldTypes, typeSerializers))
+      }
     }
     outputList
   }

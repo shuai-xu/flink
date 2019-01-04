@@ -18,8 +18,6 @@
 
 package org.apache.flink.streaming.api.bundle;
 
-import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
-
 import java.io.Serializable;
 
 /**
@@ -29,20 +27,13 @@ import java.io.Serializable;
  */
 public interface CoBundleTrigger<L, R> extends Serializable {
 
-	void registerBundleTriggerCallback(BundleTriggerCallback callback, BundleTriggerContext context);
+	void registerBundleTriggerCallback(BundleTriggerCallback callback);
 
 	void onLeftElement(L element) throws Exception;
 
 	void onRightElement(R element) throws Exception;
 
 	void reset();
-
-	/**
-	 * BundleTriggerContext for MiniBatch.
-	 */
-	interface BundleTriggerContext {
-		ProcessingTimeService getProcessingTimeRegistry();
-	}
 
 	String explain();
 }

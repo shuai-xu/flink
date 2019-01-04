@@ -50,9 +50,9 @@ import scala.util.Random
 @RunWith(classOf[Parameterized])
 class AggregateITCase(
     aggMode: AggMode,
-    minibatch: MiniBatchMode,
+    miniBatch: MiniBatchMode,
     backend: StateBackendMode)
-  extends StreamingWithAggTestBase(aggMode, minibatch, backend) {
+  extends StreamingWithAggTestBase(aggMode, miniBatch, backend) {
 
   val data = List(
     (1000L, 1, "Hello"),
@@ -175,6 +175,7 @@ class AggregateITCase(
       "4,102,1,4",
       "5,195,1,5",
       "6,333,1,6")
+
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 

@@ -37,24 +37,17 @@ class QueryConfigConfigurationModeTest() extends TableTestBase {
   }
 
   @Test
-  def testEnableMicroBatch(): Unit = {
-    streamUtil.tableEnv.getConfig
-      .enableMicroBatch
-      .withMicroBatchTriggerTime(1000L)
-    val sqlQuery = "SELECT COUNT(DISTINCT c) FROM MyTable"
-    streamUtil.verifyPlan(sqlQuery)
-  }
-
-  @Test
   def testEnableMiniBatch(): Unit = {
-    streamUtil.tableEnv.getConfig.enableMiniBatch
+    streamUtil.tableEnv.getConfig.getConf.setLong(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
     val sqlQuery = "SELECT COUNT(DISTINCT c) FROM MyTable"
     streamUtil.verifyPlan(sqlQuery)
   }
 
   @Test
   def testEnablePartialAgg(): Unit = {
-    streamUtil.tableEnv.getConfig.enableMiniBatch
+    streamUtil.tableEnv.getConfig.getConf.setLong(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
     streamUtil.tableEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_EXEC_AGG_PARTIAL_ENABLED, true)
     val sqlQuery = "SELECT COUNT(DISTINCT c) FROM MyTable"
@@ -64,9 +57,9 @@ class QueryConfigConfigurationModeTest() extends TableTestBase {
   @Test
   def testEnableByParameters(): Unit = {
     streamUtil.tableEnv.getConfig.getConf.setLong(
-      TableConfigOptions.BLINK_MINIBATCH_ALLOW_LATENCY, 6000L)
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 6000L)
     streamUtil.tableEnv.getConfig.getConf.setLong(
-      TableConfigOptions.BLINK_MINIBATCH_SIZE, 200)
+      TableConfigOptions.SQL_EXEC_MINIBATCH_SIZE, 200)
     streamUtil.tableEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_EXEC_AGG_PARTIAL_ENABLED, true)
     val sqlQuery = "SELECT COUNT(DISTINCT c) FROM MyTable"

@@ -183,7 +183,7 @@ public class TableConfigOptions {
 			key("sql.exec.sort.async-merge.enabled")
 			.defaultValue(true);
 
-	public static final ConfigOption<Boolean> BLINK_NON_TEMPORAL_SORT_ENABLED =
+	public static final ConfigOption<Boolean> SQL_EXEC_NON_TEMPORAL_SORT_ENABLED =
 			key("sql.exec.sort.non-temporal.enabled")
 			.defaultValue(false)
 			.withDescription("Switch on/off stream sort without temporal or limit." +
@@ -235,24 +235,24 @@ public class TableConfigOptions {
 	//  topN Options
 	// ------------------------------------------------------------------------
 
-	public static final ConfigOption<Boolean> BLINK_TOPN_APPROXIMATE_ENABLED =
+	public static final ConfigOption<Boolean> SQL_EXEC_TOPN_APPROXIMATE_ENABLED =
 			key("sql.exec.topn.approximate.enabled")
 			.defaultValue(false)
 			.withDescription("Switch on/off topn approximate update rank operator.");
 
-	public static final ConfigOption<Long> BLINK_TOPN_CACHE_SIZE =
+	public static final ConfigOption<Long> SQL_EXEC_TOPN_CACHE_SIZE =
 			key("sql.exec.topn.cache.size")
 			.defaultValue(10000L)
 			.withDescription("Cache size of every topn task.");
 
-	public static final ConfigOption<Long> BLINK_TOPN_APPROXIMATE_BUFFER_MULTIPLIER =
+	public static final ConfigOption<Long> SQL_EXEC_TOPN_APPROXIMATE_BUFFER_MULTIPLIER =
 			key("sql.exec.topn.approximate.buffer.multiplier")
 			.defaultValue(2L)
 			.withDescription("In-memory sort map size multiplier (x2, for example) for topn update" +
 				" rank. When approximation is enabled, default is 2. NOTE, We should make sure " +
-				"sort map size limit * sql.exec.topn.approximate.buffer.multiplier < " + BLINK_TOPN_CACHE_SIZE);
+				"sort map size limit * sql.exec.topn.approximate.buffer.multiplier < " + SQL_EXEC_TOPN_CACHE_SIZE);
 
-	public static final ConfigOption<Long> BLINK_TOPN_APPROXIMATE_BUFFER_MINSIZE =
+	public static final ConfigOption<Long> SQL_EXEC_TOPN_APPROXIMATE_BUFFER_MINSIZE =
 			key("sql.exec.topn.approximate.buffer.size.min")
 			.defaultValue(400L)
 			.withDescription("In-memory sort map size low minimal size. default is 400, " +
@@ -313,34 +313,25 @@ public class TableConfigOptions {
 				"PushDownNdv / ndv <= maxRatio && pushDownRowCount / rowCount <= maxRatio.");
 
 	// ------------------------------------------------------------------------
-	//  MicroBatch Options
-	// ------------------------------------------------------------------------
-
-	public static final ConfigOption<Long> BLINK_MICROBATCH_ALLOW_LATENCY =
-			key("sql.exec.micro-batch.allowLatency.ms")
-			.defaultValue(Long.MIN_VALUE)
-			.withDescription("MicroBatch allow latency (ms).");
-
-	// ------------------------------------------------------------------------
 	//  MiniBatch Options
 	// ------------------------------------------------------------------------
 
-	public static final ConfigOption<Long> BLINK_MINIBATCH_ALLOW_LATENCY =
+	public static final ConfigOption<Long> SQL_EXEC_MINIBATCH_ALLOW_LATENCY =
 			key("sql.exec.mini-batch.allowLatency.ms")
 			.defaultValue(Long.MIN_VALUE)
 			.withDescription("MiniBatch allow latency(ms).");
 
-	public static final ConfigOption<Long> BLINK_MINIBATCH_SIZE =
+	public static final ConfigOption<Long> SQL_EXEC_MINIBATCH_SIZE =
 			key("sql.exec.mini-batch.size")
 			.defaultValue(Long.MIN_VALUE)
 			.withDescription("MiniBatch size.");
 
-	public static final ConfigOption<Boolean> BLINK_MINIBATCH_JOIN_ENABLED =
+	public static final ConfigOption<Boolean> SQL_EXEC_MINIBATCH_JOIN_ENABLED =
 			key("sql.exec.mini-batch.join.enabled")
 			.defaultValue(true)
 			.withDescription("Whether to enable miniBatch join.");
 
-	public static final ConfigOption<Boolean> BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT =
+	public static final ConfigOption<Boolean> SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT =
 			key("sql.exec.mini-batch.flush-before-snapshot")
 			.defaultValue(true)
 			.withDescription("Whether to enable flushing buffered data before snapshot.");
@@ -349,7 +340,7 @@ public class TableConfigOptions {
 	//  Source Options
 	// ------------------------------------------------------------------------
 
-	public static final ConfigOption<Boolean> BLINK_VALUES_SOURCE_INPUT_ENABLED =
+	public static final ConfigOption<Boolean> SQL_EXEC_VALUES_SOURCE_INPUT_ENABLED =
 			key("sql.exec.source.values-input.enabled")
 			.defaultValue(false)
 			.withDescription("Whether support values source input. The reason for disabling this " +
@@ -359,13 +350,13 @@ public class TableConfigOptions {
 	//  State Options
 	// ------------------------------------------------------------------------
 
-	public static final ConfigOption<Long> BLINK_STATE_TTL_MS =
+	public static final ConfigOption<Long> SQL_EXEC_STATE_TTL_MS =
 			key("sql.exec.state.ttl.ms")
 			.defaultValue(Long.MIN_VALUE)
 			.withDescription("The minimum time until state that was not updated will be retained. State" +
 				" might be cleared and removed if it was not updated for the defined period of time.");
 
-	public static final ConfigOption<Long> BLINK_STATE_TTL_MAX_MS =
+	public static final ConfigOption<Long> SQL_EXEC_STATE_TTL_MAX_MS =
 			key("sql.exec.state.ttl.max.ms")
 			.defaultValue(Long.MIN_VALUE)
 			.withDescription("The maximum time until state which was not updated will be retained." +

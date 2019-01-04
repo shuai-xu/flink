@@ -21,8 +21,7 @@ package org.apache.flink.table.runtime.join.stream;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.streaming.api.bundle.CoBundleTrigger;
-import org.apache.flink.streaming.api.bundle.CombinedCoBundleTrigger;
+import org.apache.flink.streaming.api.bundle.CountCoBundleTrigger;
 import org.apache.flink.table.codegen.Projection;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
@@ -53,15 +52,13 @@ public class MiniBatchJoinOperatorTest {
 	private KeySelector<BaseRow, BaseRow> rightKeySelector =
 			StreamExecUtil.getKeySelector(new int[]{0}, rowType);
 
-	CoBundleTrigger<BaseRow, BaseRow>[] triggers = new CoBundleTrigger[2];
-	private CombinedCoBundleTrigger<BaseRow, BaseRow> combinedTrigger = new
-			CombinedCoBundleTrigger(triggers);
+	private CountCoBundleTrigger<BaseRow, BaseRow> coBundleTrigger = new CountCoBundleTrigger<>(5);
 
 	@Test
 	public void testReduceList() {
 		MiniBatchInnerJoinStreamOperator innerjoin = new MiniBatchInnerJoinStreamOperator(null, null,
 				null, leftKeySelector, rightKeySelector, null, null, null, null, 0, 0, true, true,
-				new boolean[]{false}, combinedTrigger, true);
+				new boolean[]{false}, coBundleTrigger, true);
 
 		List<Tuple2<BaseRow, Long>> reducedList = new LinkedList<>();
 		List<BaseRow> list = new LinkedList<>();
@@ -88,7 +85,7 @@ public class MiniBatchJoinOperatorTest {
 	public void testUpsertReduceListForKeyValue() {
 		MiniBatchInnerJoinStreamOperator innerjoin = new MiniBatchInnerJoinStreamOperator(null, null,
 				null, leftKeySelector, rightKeySelector, null, null, null, null, 0, 0, false, false,
-				new boolean[]{false}, combinedTrigger, true);
+				new boolean[]{false}, coBundleTrigger, true);
 
 		List<Tuple2<BaseRow, Long>> reducedList = new LinkedList<>();
 		List<BaseRow> list = new LinkedList<>();
@@ -113,7 +110,7 @@ public class MiniBatchJoinOperatorTest {
 	public void testUpsertReduceListForKeyMap() {
 		MiniBatchInnerJoinStreamOperator innerjoin = new MiniBatchInnerJoinStreamOperator(null, null,
 				null, leftKeySelector, rightKeySelector, null, null, null, null, 0, 0, false, false,
-			new boolean[]{false}, combinedTrigger, true);
+			new boolean[]{false}, coBundleTrigger, true);
 
 		List<Tuple2<BaseRow, Long>> reducedList = new LinkedList<>();
 		List<BaseRow> list = new LinkedList<>();

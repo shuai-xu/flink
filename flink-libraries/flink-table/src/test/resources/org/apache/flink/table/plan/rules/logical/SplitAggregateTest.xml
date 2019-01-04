@@ -26,7 +26,8 @@ StreamExecGroupAggregate(groupBy=[a], select=[a, $SUM0_RETRACT($f2) AS $f1, SUM_
          +- StreamExecCalc(select=[a, b, $f2, $f3, $f4, AND(=($e, 0), $f2) AS $g_0, AND(=($e, 1), $f3) AS $g_1, AND(=($e, 1), $f2) AS $g_10])
             +- StreamExecExpand(projects=[{a, b, $f2, $f3, $f4, 0 AS $e}, {a, b, $f2, $f3, null AS $f4, 1 AS $e}])
                +- StreamExecCalc(select=[a, b, IS FALSE(=(b, 2)) AS $f2, IS FALSE(=(b, 5)) AS $f3, MOD(HASH_CODE(b), 1024) AS $f4])
-                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                  +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -41,7 +42,8 @@ StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, $SUM0(count$0) AS $f1, SU
             +- StreamExecCalc(select=[a, b, $f2, $f3, $f4, AND(=($e, 0), $f2) AS $g_0, AND(=($e, 1), $f3) AS $g_1, AND(=($e, 1), $f2) AS $g_10])
                +- StreamExecExpand(projects=[{a, b, $f2, $f3, $f4, 0 AS $e}, {a, b, $f2, $f3, null AS $f4, 1 AS $e}])
                   +- StreamExecCalc(select=[a, b, IS FALSE(=(b, 2)) AS $f2, IS FALSE(=(b, 5)) AS $f3, MOD(HASH_CODE(b), 1024) AS $f4])
-                     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                     +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                        +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -66,9 +68,11 @@ StreamExecCalc(select=[c, b, d, a, a0, b0, c0])
    :                                      +- StreamExecCalc(select=[a, b, $f2, =($e, 0) AS $g_0, =($e, 1) AS $g_1])
    :                                         +- StreamExecExpand(projects=[{a, b, $f2, 0 AS $e}, {a, b, null AS $f2, 1 AS $e}])
    :                                            +- StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 1024) AS $f2])
-   :                                               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   :                                               +- StreamExecMiniBatchAssigner(interval=[1000ms])
+   :                                                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
    +- StreamExecExchange(distribution=[hash[a]])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      +- StreamExecMiniBatchAssigner(interval=[1000ms])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -95,9 +99,11 @@ StreamExecCalc(select=[c, b, d, a, a0, b0, c0])
    :                                            +- StreamExecCalc(select=[a, b, $f2, =($e, 0) AS $g_0, =($e, 1) AS $g_1])
    :                                               +- StreamExecExpand(projects=[{a, b, $f2, 0 AS $e}, {a, b, null AS $f2, 1 AS $e}])
    :                                                  +- StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 1024) AS $f2])
-   :                                                     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   :                                                     +- StreamExecMiniBatchAssigner(interval=[1000ms])
+   :                                                        +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
    +- StreamExecExchange(distribution=[hash[a]])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      +- StreamExecMiniBatchAssigner(interval=[1000ms])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -109,7 +115,8 @@ StreamExecGroupAggregate(select=[$SUM0_RETRACT($f1_0) AS $f0])
    +- StreamExecGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(DISTINCT c) AS $f1_0])
       +- StreamExecExchange(distribution=[hash[$f1]])
          +- StreamExecCalc(select=[c, MOD(HASH_CODE(c), 100) AS $f1])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+            +- StreamExecMiniBatchAssigner(interval=[1000ms])
+               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -122,7 +129,8 @@ StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0])
       +- StreamExecExchange(distribution=[hash[$f1]])
          +- StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
             +- StreamExecCalc(select=[c, MOD(HASH_CODE(c), 100) AS $f1])
-               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+               +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -139,7 +147,8 @@ StreamExecGroupAggregate(groupBy=[b], select=[b, FIRST_VALUE_RETRACT($f2_0) AS $
                   +- StreamExecGroupAggregate(groupBy=[a, $f2], select=[a, $f2, COUNT(DISTINCT b) AS $f2_0, MAX(b) AS $f3])
                      +- StreamExecExchange(distribution=[hash[a, $f2]])
                         +- StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 1024) AS $f2])
-                           +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                           +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                              +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -157,7 +166,8 @@ StreamExecGroupAggregate(groupBy=[b], select=[b, FIRST_VALUE_RETRACT($f2_0) AS $
                      +- StreamExecExchange(distribution=[hash[a, $f2]])
                         +- StreamExecLocalGroupAggregate(groupBy=[a, $f2], select=[a, $f2, COUNT(distinct$0 b) AS count$0, MAX(b) AS max$1, DISTINCT(b) AS distinct$0])
                            +- StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 1024) AS $f2])
-                              +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                              +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                                 +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -174,7 +184,8 @@ StreamExecGroupAggregate(groupBy=[c], select=[c, MIN_RETRACT($f3_0) AS $f1, MAX_
                   +- StreamExecGroupAggregate(groupBy=[a], select=[a, AVG($f1) AS b, MAX(c) AS c])
                      +- StreamExecExchange(distribution=[hash[a]])
                         +- StreamExecCalc(select=[a, CAST(c) AS $f1, c])
-                           +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                           +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                              +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -193,7 +204,8 @@ StreamExecGlobalGroupAggregate(groupBy=[c], select=[c, MIN_RETRACT(min$0) AS $f1
                         +- StreamExecExchange(distribution=[hash[a]])
                            +- StreamExecLocalGroupAggregate(groupBy=[a], select=[a, AVG($f1) AS (sum$0, count$1), MAX(c) AS max$2])
                               +- StreamExecCalc(select=[a, CAST(c) AS $f1, c])
-                                 +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                                 +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                                    +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -207,7 +219,8 @@ StreamExecGroupAggregate(select=[$SUM0_RETRACT($f2_0) AS $f0, SUM_RETRACT($f3_0)
          +- StreamExecCalc(select=[a, b, $f2, $f3, =($e, 1) AS $g_1, =($e, 2) AS $g_2])
             +- StreamExecExpand(projects=[{a, b, $f2, null AS $f3, 1 AS $e}, {a, b, null AS $f2, $f3, 2 AS $e}])
                +- StreamExecCalc(select=[a, b, MOD(HASH_CODE(a), 1024) AS $f2, MOD(HASH_CODE(b), 1024) AS $f3])
-                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                  +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -222,7 +235,8 @@ StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0, SUM(sum$1) AS $f1]
             +- StreamExecCalc(select=[a, b, $f2, $f3, =($e, 1) AS $g_1, =($e, 2) AS $g_2])
                +- StreamExecExpand(projects=[{a, b, $f2, null AS $f3, 1 AS $e}, {a, b, null AS $f2, $f3, 2 AS $e}])
                   +- StreamExecCalc(select=[a, b, MOD(HASH_CODE(a), 1024) AS $f2, MOD(HASH_CODE(b), 1024) AS $f3])
-                     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                     +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                        +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -234,7 +248,8 @@ StreamExecGroupAggregate(select=[$SUM0_RETRACT($f1_0) AS $f0])
    +- StreamExecGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(DISTINCT c) AS $f1_0])
       +- StreamExecExchange(distribution=[hash[$f1]])
          +- StreamExecCalc(select=[c, MOD(HASH_CODE(c), 1024) AS $f1])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+            +- StreamExecMiniBatchAssigner(interval=[1000ms])
+               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -247,7 +262,8 @@ StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0])
       +- StreamExecExchange(distribution=[hash[$f1]])
          +- StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
             +- StreamExecCalc(select=[c, MOD(HASH_CODE(c), 1024) AS $f1])
-               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+               +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -262,7 +278,8 @@ StreamExecCalc(select=[a, EXPR$1, CASE(=($f3, 0), null, EXPR$2) AS EXPR$2, CAST(
             +- StreamExecCalc(select=[a, b, c, $f3, $f4, =($e, 2) AS $g_2, =($e, 3) AS $g_3, =($e, 1) AS $g_1])
                +- StreamExecExpand(projects=[{a, b, c, $f3, null AS $f4, 1 AS $e}, {a, b, c, null AS $f3, $f4, 2 AS $e}, {a, b, c, null AS $f3, null AS $f4, 3 AS $e}])
                   +- StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(b), 1024) AS $f3, MOD(HASH_CODE(c), 1024) AS $f4])
-                     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                     +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                        +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -278,7 +295,8 @@ StreamExecCalc(select=[a, EXPR$1, CASE(=($f3, 0), null, EXPR$2) AS EXPR$2, CAST(
                +- StreamExecCalc(select=[a, b, c, $f3, $f4, =($e, 2) AS $g_2, =($e, 3) AS $g_3, =($e, 1) AS $g_1])
                   +- StreamExecExpand(projects=[{a, b, c, $f3, null AS $f4, 1 AS $e}, {a, b, c, null AS $f3, $f4, 2 AS $e}, {a, b, c, null AS $f3, null AS $f4, 3 AS $e}])
                      +- StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(b), 1024) AS $f3, MOD(HASH_CODE(c), 1024) AS $f4])
-                        +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                        +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                           +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -293,7 +311,8 @@ StreamExecCalc(select=[a, $f1, $f2, CAST(/($f3, $f4)) AS $f3])
             +- StreamExecCalc(select=[a, b, $f2, =($e, 0) AS $g_0, =($e, 1) AS $g_1])
                +- StreamExecExpand(projects=[{a, b, $f2, 0 AS $e}, {a, b, null AS $f2, 1 AS $e}])
                   +- StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 1024) AS $f2])
-                     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                     +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                        +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -309,7 +328,8 @@ StreamExecCalc(select=[a, $f1, $f2, CAST(/($f3, $f4)) AS $f3])
                +- StreamExecCalc(select=[a, b, $f2, =($e, 0) AS $g_0, =($e, 1) AS $g_1])
                   +- StreamExecExpand(projects=[{a, b, $f2, 0 AS $e}, {a, b, null AS $f2, 1 AS $e}])
                      +- StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 1024) AS $f2])
-                        +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                        +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                           +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -321,7 +341,8 @@ StreamExecGroupAggregate(groupBy=[a], select=[a, $SUM0_RETRACT($f2_0) AS $f1])
    +- StreamExecGroupAggregate(groupBy=[a, $f2], select=[a, $f2, COUNT(DISTINCT c) AS $f2_0])
       +- StreamExecExchange(distribution=[hash[a, $f2]])
          +- StreamExecCalc(select=[a, c, MOD(HASH_CODE(c), 1024) AS $f2])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+            +- StreamExecMiniBatchAssigner(interval=[1000ms])
+               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -334,7 +355,8 @@ StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, $SUM0(count$0) AS $f1])
       +- StreamExecExchange(distribution=[hash[a, $f2]])
          +- StreamExecLocalGroupAggregate(groupBy=[a, $f2], select=[a, $f2, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
             +- StreamExecCalc(select=[a, c, MOD(HASH_CODE(c), 1024) AS $f2])
-               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+               +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -350,7 +372,8 @@ StreamExecGroupAggregate(groupBy=[a], select=[a, $SUM0_RETRACT($f2) AS $f1, $SUM
                +- StreamExecCalc(select=[a, b, 1 AS $f2, MOD(HASH_CODE(b), 1024) AS $f3])
                   +- StreamExecGroupAggregate(groupBy=[c], select=[c, AVG(a) AS a, AVG(b) AS b])
                      +- StreamExecExchange(distribution=[hash[c]])
-                        +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                        +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                           +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -368,7 +391,8 @@ StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, $SUM0_RETRACT(count$0) AS
                      +- StreamExecGlobalGroupAggregate(groupBy=[c], select=[c, AVG((sum$0, count$1)) AS a, AVG((sum$2, count$3)) AS b])
                         +- StreamExecExchange(distribution=[hash[c]])
                            +- StreamExecLocalGroupAggregate(groupBy=[c], select=[c, AVG(a) AS (sum$0, count$1), AVG(b) AS (sum$2, count$3)])
-                              +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                              +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                                 +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -379,7 +403,8 @@ StreamExecCalc(select=[EXPR$0])
 +- StreamExecGroupAggregate(groupBy=[a], select=[a, FIRST_VALUE(c) AS EXPR$0])
    +- StreamExecExchange(distribution=[hash[a]])
       +- StreamExecCalc(select=[a, c])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+         +- StreamExecMiniBatchAssigner(interval=[1000ms])
+            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -390,7 +415,8 @@ StreamExecCalc(select=[EXPR$0])
 +- StreamExecGroupAggregate(groupBy=[a], select=[a, FIRST_VALUE(c) AS EXPR$0])
    +- StreamExecExchange(distribution=[hash[a]])
       +- StreamExecCalc(select=[a, c])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+         +- StreamExecMiniBatchAssigner(interval=[1000ms])
+            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -404,7 +430,8 @@ StreamExecGroupAggregate(groupBy=[a], select=[a, FIRST_VALUE_RETRACT($f3_0) AS $
          +- StreamExecCalc(select=[a, b, c, $f3, $f4, =($e, 2) AS $g_2, =($e, 1) AS $g_1])
             +- StreamExecExpand(projects=[{a, b, c, $f3, null AS $f4, 1 AS $e}, {a, b, c, null AS $f3, $f4, 2 AS $e}])
                +- StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(b), 1024) AS $f3, MOD(HASH_CODE(c), 1024) AS $f4])
-                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                  +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -418,7 +445,8 @@ StreamExecGroupAggregate(groupBy=[a], select=[a, FIRST_VALUE_RETRACT($f3_0) AS $
          +- StreamExecCalc(select=[a, b, c, $f3, $f4, =($e, 2) AS $g_2, =($e, 1) AS $g_1])
             +- StreamExecExpand(projects=[{a, b, c, $f3, null AS $f4, 1 AS $e}, {a, b, c, null AS $f3, $f4, 2 AS $e}])
                +- StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(b), 1024) AS $f3, MOD(HASH_CODE(c), 1024) AS $f4])
-                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                  +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -428,7 +456,8 @@ StreamExecGroupAggregate(groupBy=[a], select=[a, FIRST_VALUE_RETRACT($f3_0) AS $
 StreamExecGroupAggregate(select=[MIN(c) AS EXPR$0])
 +- StreamExecExchange(distribution=[single])
    +- StreamExecCalc(select=[c])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      +- StreamExecMiniBatchAssigner(interval=[1000ms])
+         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -442,7 +471,8 @@ StreamExecGroupAggregate(groupBy=[a], select=[a, $SUM0_RETRACT($f3_0) AS $f1, MA
          +- StreamExecCalc(select=[a, b, c, $f3, $f4, =($e, 1) AS $g_1, =($e, 2) AS $g_2])
             +- StreamExecExpand(projects=[{a, b, c, $f3, null AS $f4, 1 AS $e}, {a, b, c, null AS $f3, $f4, 2 AS $e}])
                +- StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(b), 1024) AS $f3, MOD(HASH_CODE(c), 1024) AS $f4])
-                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                  +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -457,7 +487,8 @@ StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, $SUM0(count$0) AS $f1, MA
             +- StreamExecCalc(select=[a, b, c, $f3, $f4, =($e, 1) AS $g_1, =($e, 2) AS $g_2])
                +- StreamExecExpand(projects=[{a, b, c, $f3, null AS $f4, 1 AS $e}, {a, b, c, null AS $f3, $f4, 2 AS $e}])
                   +- StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(b), 1024) AS $f3, MOD(HASH_CODE(c), 1024) AS $f4])
-                     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+                     +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                        +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -469,7 +500,8 @@ StreamExecGroupAggregate(groupBy=[a], select=[a, $SUM0_RETRACT($f1) AS $f1, $SUM
    +- StreamExecGroupAggregate(groupBy=[a], select=[a, COUNT(DISTINCT a) AS $f1, COUNT(b) AS $f2])
       +- StreamExecExchange(distribution=[hash[a]])
          +- StreamExecCalc(select=[a, b])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+            +- StreamExecMiniBatchAssigner(interval=[1000ms])
+               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -480,7 +512,8 @@ StreamExecGlobalGroupAggregate(select=[MIN(min$0) AS EXPR$0])
 +- StreamExecExchange(distribution=[single])
    +- StreamExecLocalGroupAggregate(select=[MIN(c) AS min$0])
       +- StreamExecCalc(select=[c])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+         +- StreamExecMiniBatchAssigner(interval=[1000ms])
+            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -493,7 +526,8 @@ StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, $SUM0(count$0) AS $f1, $S
       +- StreamExecExchange(distribution=[hash[a]])
          +- StreamExecLocalGroupAggregate(groupBy=[a], select=[a, COUNT(distinct$0 a) AS count$0, COUNT(b) AS count$1, DISTINCT(a) AS distinct$0])
             +- StreamExecCalc(select=[a, b])
-               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+               +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

@@ -29,10 +29,10 @@ import org.apache.flink.streaming.runtime.tasks.ProcessingTimeCallback;
 import org.apache.flink.table.dataformat.BaseRow;
 
 /**
- * A stream operator that emit microbatch marker in a given period.
- * NOTE: the microbatch marker uses watermark instead
+ * A stream operator that emit minibatch marker in a given period.
+ * NOTE: the minibatch marker uses watermark instead
  */
-public class MicroBatchAssignerOperator extends AbstractStreamOperator<BaseRow>
+public class MiniBatchAssignerOperator extends AbstractStreamOperator<BaseRow>
 	implements OneInputStreamOperator<BaseRow, BaseRow>, ProcessingTimeCallback {
 
 	private static final long serialVersionUID = 1L;
@@ -41,7 +41,7 @@ public class MicroBatchAssignerOperator extends AbstractStreamOperator<BaseRow>
 
 	private transient long currentWatermark;
 
-	public MicroBatchAssignerOperator(long intervalMs) {
+	public MiniBatchAssignerOperator(long intervalMs) {
 		this.intervalMs = intervalMs;
 		this.chainingStrategy = ChainingStrategy.ALWAYS;
 	}

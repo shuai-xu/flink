@@ -26,7 +26,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.stream.sql.SplitAggregateITCase.PartialAggMode
 import org.apache.flink.table.runtime.utils.{StreamingWithAggTestBase, TestingRetractSink}
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.{AggMode, LocalGlobalOff, LocalGlobalOn}
-import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MicroBatchOn
+import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchOn
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
@@ -42,7 +42,7 @@ class SplitAggregateITCase(
     partialAggMode: PartialAggMode,
     aggMode: AggMode,
     backend: StateBackendMode)
-  extends StreamingWithAggTestBase(aggMode, MicroBatchOn, backend) {
+  extends StreamingWithAggTestBase(aggMode, MiniBatchOn, backend) {
 
   @Before
   override def before(): Unit = {

@@ -53,8 +53,7 @@ class TpcHStreamExecPlanTest(caseName: String, twoStageAgg: Boolean) {
     val tableConfig = new TableConfig
     tableConfig.getConf.setBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
     if (twoStageAgg) {
-      tableConfig.enableMiniBatch
-      tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
+      tableConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
     }
     tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
     for ((tableName, schema) <- TpcHSchemaProvider.schemaMap) {

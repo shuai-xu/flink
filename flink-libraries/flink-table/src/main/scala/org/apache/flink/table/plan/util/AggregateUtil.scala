@@ -17,11 +17,11 @@
  */
 package org.apache.flink.table.plan.util
 
-import org.apache.flink.streaming.api.bundle.{BundleTrigger, CombinedBundleTrigger, CountBundleTrigger, TimeBundleTrigger}
+import org.apache.flink.streaming.api.bundle.CountBundleTrigger
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
 import org.apache.flink.table.api.types.DataTypes._
 import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, DecimalType}
-import org.apache.flink.table.api.{TableConfig, TableException, Types}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException, Types}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.dataformat.BaseRow
@@ -535,29 +535,9 @@ object AggregateUtil extends Enumeration {
     timeField.toRexNode(relBuilder.values(inputType)).asInstanceOf[RexInputRef].getIndex
   }
 
-  def getMiniBatchTrigger(
-      tableConfig: TableConfig,
-      useLocalAgg: Boolean): CombinedBundleTrigger[BaseRow] = {
-    val triggerTime = if (useLocalAgg) {
-      tableConfig.getMiniBatchTriggerTime / 2
-    } else {
-      tableConfig.getMiniBatchTriggerTime
-    }
-    val timeTrigger: Option[BundleTrigger[BaseRow]] =
-      if (tableConfig.isMicroBatchEnabled) {
-        None
-      } else {
-        Some(new TimeBundleTrigger[BaseRow](triggerTime))
-      }
-    val sizeTrigger: Option[BundleTrigger[BaseRow]] =
-      if (tableConfig.getMiniBatchTriggerSize == Long.MinValue) {
-        None
-      } else {
-        Some(new CountBundleTrigger[BaseRow](tableConfig.getMiniBatchTriggerSize))
-      }
-    new CombinedBundleTrigger[BaseRow](
-      Array(timeTrigger, sizeTrigger).filter(_.isDefined).map(_.get): _*
-    )
+  def getMiniBatchTrigger(tableConfig: TableConfig): CountBundleTrigger[BaseRow] = {
+      new CountBundleTrigger[BaseRow](
+        tableConfig.getConf.getLong(TableConfigOptions.SQL_EXEC_MINIBATCH_SIZE))
   }
 }
 

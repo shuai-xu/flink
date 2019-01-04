@@ -36,7 +36,7 @@ public class CountBundleTrigger<T> implements BundleTrigger<T> {
 	}
 
 	@Override
-	public void registerBundleTriggerCallback(BundleTriggerCallback callback, BundleTriggerContext context) {
+	public void registerBundleTriggerCallback(BundleTriggerCallback callback) {
 		this.callback = Preconditions.checkNotNull(callback, "callback is null");
 	}
 

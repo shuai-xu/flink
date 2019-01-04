@@ -51,7 +51,7 @@ public class CountKeySizeStateHandler implements JoinStateHandler {
 
 	private transient BaseRow joinKey;
 
-	// memState is used for minibatch join, we can batch get different join key's value and put
+	// memState is used for miniBatch join, we can batch get different join key's value and put
 	// in memState which can be used later
 	private Map<BaseRow, Long> memState;
 

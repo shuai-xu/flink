@@ -39,7 +39,7 @@ class EmitStrategyTest {
     thrown.expect(classOf[TableException])
     thrown.expectMessage(
       "'AFTER WATERMARK' emit strategy requires " +
-        "'blink.state.ttl.ms' config in job config")
+        "'sql.exec.state.ttl.ms' config in job config")
     emit.checkValidation()
   }
 

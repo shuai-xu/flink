@@ -21,13 +21,14 @@ package org.apache.flink.table.api.stream.sql
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
-import org.apache.flink.table.api.{TableConfigOptions, TableException, Types}
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes, TypeInfoWrappedType}
+import org.apache.flink.table.api.{TableConfigOptions, TableException, Types}
 import org.apache.flink.table.expressions.AggFunctionCall
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 import org.apache.flink.types.Row
+
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -46,19 +47,17 @@ class AggregateTest extends TableTestBase {
   }
 
   @Test
-  def testAggWithMicroBatch(): Unit = {
-    streamUtil.tableEnv.getConfig
-      .enableMicroBatch
-      .withMicroBatchTriggerTime(1000L)
+  def testAggWithMiniBatch(): Unit = {
+    streamUtil.tableEnv.getConfig.getConf
+      .setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
     val sql = "SELECT b, COUNT(DISTINCT a), MAX(b), SUM(c)  FROM MyTable GROUP BY b"
     streamUtil.verifyPlan(sql)
   }
 
   @Test
-  def testAggAfterUnionWithMicroBatch(): Unit = {
-    streamUtil.tableEnv.getConfig
-      .enableMicroBatch
-      .withMicroBatchTriggerTime(1000L)
+  def testAggAfterUnionWithMiniBatch(): Unit = {
+    streamUtil.tableEnv.getConfig.getConf
+      .setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
 
     streamUtil.addTable[(Long, Int, String)]("T1", 'a, 'b, 'c)
     streamUtil.addTable[(Long, Int, String)]("T2", 'a, 'b, 'c)
@@ -85,12 +84,8 @@ class AggregateTest extends TableTestBase {
   @Test
   def testLocalGlobalAggAfterUnion(): Unit = {
     // enable local global optimize
-    streamUtil.tableEnv.getConfig
-      .enableMiniBatch
-      .withMiniBatchTriggerTime(1000L)
-      .withMiniBatchTriggerSize(3)
-    streamUtil.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
+    streamUtil.tableEnv.getConfig.getConf
+      .setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
 
     streamUtil.addTable[(Int, String, Long)]("T1", 'a, 'b, 'c)
     streamUtil.addTable[(Int, String, Long)]("T2", 'a, 'b, 'c)
@@ -128,10 +123,8 @@ class AggregateTest extends TableTestBase {
   @Test
   def testAggWithFilterClauseWithLocalGlobal(): Unit = {
     streamUtil.addTable[(Int, Long, String, Boolean)]("T", 'a, 'b, 'c, 'd)
-    streamUtil.tableEnv.getConfig
-      .enableMiniBatch
-    streamUtil.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
+    streamUtil.tableEnv.getConfig.getConf
+      .setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
 
     val sql =
       """

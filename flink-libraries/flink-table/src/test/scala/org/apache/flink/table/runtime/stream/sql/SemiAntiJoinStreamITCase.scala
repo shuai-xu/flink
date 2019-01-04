@@ -31,8 +31,8 @@ import org.junit.runners.Parameterized
 import scala.collection.Seq
 
 @RunWith(classOf[Parameterized])
-class SemiAntiJoinStreamITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
-  extends StreamingWithMiniBatchTestBase(minibatch, mode) {
+class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
+  extends StreamingWithMiniBatchTestBase(miniBatch, mode) {
 
   override def before(): Unit = {
     super.before()

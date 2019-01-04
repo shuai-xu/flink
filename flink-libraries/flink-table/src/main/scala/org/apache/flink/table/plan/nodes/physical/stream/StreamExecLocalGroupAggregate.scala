@@ -173,12 +173,12 @@ class StreamExecLocalGroupAggregate(
 
     val operator = new BundleOperator(
       aggFunction,
-      AggregateUtil.getMiniBatchTrigger(tableEnv.getConfig, useLocalAgg = true),
+      AggregateUtil.getMiniBatchTrigger(tableEnv.getConfig),
       selector.getProducedType,
       valueTypeInfo,
       selector,
       tableEnv.getConfig.getConf.getBoolean(
-        TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+        TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     new OneInputTransformation(
       inputTransformation,

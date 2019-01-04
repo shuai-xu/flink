@@ -21,34 +21,26 @@ import java.util
 
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
-import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.{MicroBatchOn, MiniBatchMode, MiniBatchOff, MiniBatchOn}
+import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.{MiniBatchMode, MiniBatchOff, MiniBatchOn}
 import org.junit.runners.Parameterized
 
 import scala.collection.JavaConversions._
 
-abstract class StreamingWithMiniBatchTestBase(minibatch: MiniBatchMode, state: StateBackendMode)
+abstract class StreamingWithMiniBatchTestBase(miniBatch: MiniBatchMode, state: StateBackendMode)
   extends StreamingWithStateTestBase(state) {
 
   override def before(): Unit = {
     super.before()
     // set mini batch
     val tableConfig = tEnv.getConfig
-    minibatch match {
+    miniBatch match {
       case MiniBatchOn =>
-        tableConfig.getConf.setBoolean(TableConfigOptions.BLINK_MINIBATCH_JOIN_ENABLED, true)
-        tableConfig
-        .enableMiniBatch
-        .withMiniBatchTriggerTime(1000L)
-        .withMiniBatchTriggerSize(3)
-      case MicroBatchOn =>
-        tableConfig.getConf.setBoolean(TableConfigOptions.BLINK_MINIBATCH_JOIN_ENABLED, true)
-        tableConfig
-        .enableMicroBatch
-        .withMicroBatchTriggerTime(1000L)
-        .withMiniBatchTriggerSize(3)
+        tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, true)
+        tableConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
+        tableConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_SIZE, 3L)
       case MiniBatchOff =>
-        tableConfig.getConf.setBoolean(TableConfigOptions.BLINK_MINIBATCH_JOIN_ENABLED, false)
-        tableConfig.disableMiniBatch
+        tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
+        tableConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
     }
   }
 
@@ -56,28 +48,25 @@ abstract class StreamingWithMiniBatchTestBase(minibatch: MiniBatchMode, state: S
 
 object StreamingWithMiniBatchTestBase {
 
-  case class MiniBatchMode(on: Boolean, microbatch: Boolean) {
+  case class MiniBatchMode(on: Boolean) {
     override def toString: String = {
-      if (microbatch) {
-        if (on) "MicroBatch=ON" else "MicroBatch=OFF"
-      } else {
-        if (on) "MiniBatch=ON" else "MiniBatch=OFF"
-      }
+        if (on){
+          "MiniBatch=ON"
+        } else {
+          "MiniBatch=OFF"
+        }
     }
   }
 
-  val MiniBatchOn = MiniBatchMode(true, false)
-  val MiniBatchOff = MiniBatchMode(false, false)
-  val MicroBatchOn = MiniBatchMode(true, true)
+  val MiniBatchOff = MiniBatchMode(false)
+  val MiniBatchOn = MiniBatchMode(true)
 
   @Parameterized.Parameters(name = "{0}, StateBackend={1}")
   def parameters(): util.Collection[Array[java.lang.Object]] = {
     Seq[Array[AnyRef]](
       Array(MiniBatchOff, HEAP_BACKEND),
-      Array(MiniBatchOn, HEAP_BACKEND),
       Array(MiniBatchOff, ROCKSDB_BACKEND),
-      Array(MiniBatchOn, ROCKSDB_BACKEND),
-      Array(MicroBatchOn, HEAP_BACKEND),
-      Array(MicroBatchOn, ROCKSDB_BACKEND))
+      Array(MiniBatchOn, HEAP_BACKEND),
+      Array(MiniBatchOn, ROCKSDB_BACKEND))
   }
 }

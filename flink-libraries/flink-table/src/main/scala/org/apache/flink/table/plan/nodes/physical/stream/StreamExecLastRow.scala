@@ -18,14 +18,13 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import org.apache.flink.streaming.api.bundle.{BundleTrigger, CombinedBundleTrigger, CountBundleTrigger, TimeBundleTrigger}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableConfigOptions}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.plan.util.StreamExecUtil
+import org.apache.flink.table.plan.util.{AggregateUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.KeyedProcessOperator
 import org.apache.flink.table.runtime.aggregate.{LastRowFunction, MiniBatchLastRowFunction}
 import org.apache.flink.table.runtime.bundle.KeyedBundleOperator
@@ -112,7 +111,8 @@ class StreamExecLastRow(
       rowTimeFieldIndex.head
     }
 
-    val operator = if (tableConfig.isMiniBatchEnabled || tableConfig.isMicroBatchEnabled) {
+    val operator = if (tableConfig.getConf.contains(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)) {
       val processFunction = new MiniBatchLastRowFunction(
         rowTypeInfo,
         generateRetraction,
@@ -121,10 +121,10 @@ class StreamExecLastRow(
 
       new KeyedBundleOperator(
         processFunction,
-        getMiniBatchTrigger(tableConfig),
+        AggregateUtil.getMiniBatchTrigger(tableConfig),
         rowTypeInfo,
         tableConfig.getConf.getBoolean(
-          TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+          TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
     } else {
       val processFunction = new LastRowFunction(
         rowTypeInfo,
@@ -149,25 +149,5 @@ class StreamExecLastRow(
     ret.setStateKeySelector(selector)
     ret.setStateKeyType(selector.getProducedType)
     ret
-  }
-
-  private[flink] def getMiniBatchTrigger(tableConfig: TableConfig)
-  : CombinedBundleTrigger[BaseRow] = {
-    val triggerTime = tableConfig.getMiniBatchTriggerTime
-    val timeTrigger: Option[BundleTrigger[BaseRow]] =
-      if (tableConfig.isMicroBatchEnabled) {
-        None
-      } else {
-        Some(new TimeBundleTrigger[BaseRow](triggerTime))
-      }
-    val sizeTrigger: Option[BundleTrigger[BaseRow]] =
-      if (tableConfig.getMiniBatchTriggerSize == Long.MinValue) {
-        None
-      } else {
-        Some(new CountBundleTrigger[BaseRow](tableConfig.getMiniBatchTriggerSize))
-      }
-    new CombinedBundleTrigger[BaseRow](
-      Array(timeTrigger, sizeTrigger).filter(_.isDefined).map(_.get): _*
-    )
   }
 }

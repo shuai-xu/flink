@@ -238,9 +238,7 @@ public abstract class KeyedCoBundleOperator
 			this.rightBufferState = getKeyedState(rightBufferStateDesc);
 		}
 
-		coBundleTrigger.registerBundleTriggerCallback(
-			this,
-			() -> KeyedCoBundleOperator.super.getProcessingTimeService());
+		coBundleTrigger.registerBundleTriggerCallback(this);
 		coBundleTrigger.reset();
 
 		LOG.info("KeyedCoBundleOperator's trigger info: " + coBundleTrigger.explain());

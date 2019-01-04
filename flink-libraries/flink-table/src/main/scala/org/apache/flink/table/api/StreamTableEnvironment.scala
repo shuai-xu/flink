@@ -43,7 +43,7 @@ import org.apache.flink.table.plan.optimize.{FlinkStreamPrograms, StreamOptimize
 import org.apache.flink.table.plan.schema.{TableSourceSinkTable, _}
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.plan.util.{FlinkRelOptUtil, UpdatingPlanChecker}
-import org.apache.flink.table.plan.{MiniBatchHelper, RelNodeBlock, RelNodeBlockPlanBuilder}
+import org.apache.flink.table.plan.{RelNodeBlock, RelNodeBlockPlanBuilder}
 import org.apache.flink.table.sinks.{DataStreamTableSink, _}
 import org.apache.flink.table.sources._
 import org.apache.flink.table.typeutils.TypeCheckUtils
@@ -178,14 +178,8 @@ abstract class StreamTableEnvironment(
     } else {
       Seq.empty
     }
-    if (getConfig.isMiniBatchEnabled) {
-      if (config.getConf.getLong(TableConfigOptions.BLINK_MINIBATCH_ALLOW_LATENCY) <= 0L) {
-        throw new RuntimeException(TableErrors.INST.sqlCompileMiniBatchTriggerTimeError())
-      }
-      MiniBatchHelper.assignTriggerTimeEqually(execEnv,
-        config.getConf.getLong(TableConfigOptions.BLINK_MINIBATCH_ALLOW_LATENCY))
-    }
-     result
+
+    result
   }
 
   /**

@@ -224,7 +224,7 @@ object FlinkStreamPrograms {
             .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
             .add(FlinkStreamExecRuleSets.STREAM_EXEC_DECORATE_RULES)
             .build(), "decorate")
-        .addProgram(new FlinkMicroBatchAnalyseProgram, "micro batch")
+        .addProgram(new FlinkMiniBatchAnalyseProgram, "micro batch")
         .addProgram(
           FlinkDecorateProgramBuilder.newBuilder
             .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)

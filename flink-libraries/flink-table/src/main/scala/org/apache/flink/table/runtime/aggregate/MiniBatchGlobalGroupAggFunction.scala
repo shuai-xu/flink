@@ -32,7 +32,7 @@ import org.apache.flink.util.Collector
 
 /**
   * Class of Aggregate Function used for the global groupby (without window) aggregate
-  * in minibatch mode.
+  * in miniBatch mode.
   *
   * @param accTypes        the accumulator types
   * @param aggValueTypes   the aggregate value types

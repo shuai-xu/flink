@@ -19,7 +19,6 @@
 package org.apache.flink.streaming.api.bundle;
 
 import org.apache.flink.annotation.PublicEvolving;
-import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 
 import java.io.Serializable;
 
@@ -31,18 +30,11 @@ import java.io.Serializable;
 @PublicEvolving
 public interface BundleTrigger<T> extends Serializable {
 
-	void registerBundleTriggerCallback(BundleTriggerCallback callback, BundleTriggerContext context);
+	void registerBundleTriggerCallback(BundleTriggerCallback callback);
 
 	void onElement(final T element) throws Exception;
 
 	void reset();
-
-	/**
-	 * access to time service.
-	 */
-	interface BundleTriggerContext {
-		ProcessingTimeService getProcessingTimeService();
-	}
 
 	String explain();
 }

@@ -161,11 +161,6 @@ class TableConfig {
     */
   private var lateFireInterval = DEFAULT_FIRE_INTERVAL
 
-  private var microBatchEnabled: Boolean = false
-
-  private var miniBatchEnabled: Boolean = false
-
-
   /**
     * Stores managed table name to aggregate state writer mapping.
     * The key is managed table name, value is aggregate function identifier and function itself.
@@ -218,8 +213,8 @@ class TableConfig {
     if (maxTime.toMilliseconds < minTime.toMilliseconds) {
       throw new IllegalArgumentException("maxTime may not be smaller than minTime.")
     }
-    this.conf.setLong(TableConfigOptions.BLINK_STATE_TTL_MS, minTime.toMilliseconds)
-    this.conf.setLong(TableConfigOptions.BLINK_STATE_TTL_MAX_MS, maxTime.toMilliseconds)
+    this.conf.setLong(TableConfigOptions.SQL_EXEC_STATE_TTL_MS, minTime.toMilliseconds)
+    this.conf.setLong(TableConfigOptions.SQL_EXEC_STATE_TTL_MAX_MS, maxTime.toMilliseconds)
     this
   }
 
@@ -254,98 +249,22 @@ class TableConfig {
   }
 
   def getMinIdleStateRetentionTime: Long = {
-    this.conf.getLong(TableConfigOptions.BLINK_STATE_TTL_MS)
+    this.conf.getLong(TableConfigOptions.SQL_EXEC_STATE_TTL_MS)
   }
 
   def getMaxIdleStateRetentionTime: Long = {
     // only min idle ttl provided.
-    if (this.conf.contains(TableConfigOptions.BLINK_STATE_TTL_MS)
-        && !this.conf.contains(TableConfigOptions.BLINK_STATE_TTL_MAX_MS)) {
-      this.conf.setLong(TableConfigOptions.BLINK_STATE_TTL_MAX_MS, getMinIdleStateRetentionTime * 2)
+    if (this.conf.contains(TableConfigOptions.SQL_EXEC_STATE_TTL_MS)
+        && !this.conf.contains(TableConfigOptions.SQL_EXEC_STATE_TTL_MAX_MS)) {
+      this.conf.setLong(TableConfigOptions.SQL_EXEC_STATE_TTL_MAX_MS,
+        getMinIdleStateRetentionTime * 2)
     }
-    this.conf.getLong(TableConfigOptions.BLINK_STATE_TTL_MAX_MS)
+    this.conf.getLong(TableConfigOptions.SQL_EXEC_STATE_TTL_MAX_MS)
   }
 
   def getEarlyFireInterval: Long = earlyFireInterval
 
   def getLateFireInterval: Long = lateFireInterval
-
-  def isMiniBatchEnabled: Boolean = {
-    if (this.conf.contains(TableConfigOptions.BLINK_MINIBATCH_ALLOW_LATENCY)) {
-      miniBatchEnabled = true
-    }
-    miniBatchEnabled
-  }
-
-  def enableMiniBatch: TableConfig = {
-    miniBatchEnabled = true
-    this
-  }
-
-  def disableMiniBatch: TableConfig = {
-    miniBatchEnabled = false
-    this
-  }
-
-  def isMicroBatchEnabled: Boolean = {
-    if (this.conf.contains(TableConfigOptions.BLINK_MICROBATCH_ALLOW_LATENCY)) {
-      microBatchEnabled = true
-    }
-    microBatchEnabled
-  }
-
-  def enableMicroBatch: TableConfig = {
-    microBatchEnabled = true
-    this
-  }
-
-  def disableMicroBatch: TableConfig = {
-    microBatchEnabled = false
-    this
-  }
-
-  def withMicroBatchTriggerTime(triggerTime: Long): TableConfig = {
-    if (triggerTime <= 0L) {
-      throw new RuntimeException("triggerTime must be positive")
-    }
-    this.conf.setLong(TableConfigOptions.BLINK_MICROBATCH_ALLOW_LATENCY, triggerTime)
-    this
-  }
-
-  def getMicroBatchTriggerTime: Long = {
-    this.conf.getLong(TableConfigOptions.BLINK_MICROBATCH_ALLOW_LATENCY)
-  }
-
-
-  def withMiniBatchTriggerTime(triggerTime: Long): TableConfig = {
-    if (triggerTime <= 0L) {
-      throw new RuntimeException("triggerTime must be positive")
-    }
-    this.conf.setLong(TableConfigOptions.BLINK_MINIBATCH_ALLOW_LATENCY, triggerTime)
-    this
-  }
-
-  def withMiniBatchTriggerSize(triggerSize: Long): TableConfig = {
-    if (triggerSize <= 0L) {
-      throw new RuntimeException("triggerSize must be positive")
-    }
-    this.conf.setLong(TableConfigOptions.BLINK_MINIBATCH_SIZE, triggerSize)
-    this
-  }
-
-  def getMiniBatchTriggerSize: Long = {
-    this.conf.getLong(TableConfigOptions.BLINK_MINIBATCH_SIZE)
-  }
-
-  def getMiniBatchTriggerTime: Long = {
-    this.conf.getLong(TableConfigOptions.BLINK_MINIBATCH_ALLOW_LATENCY)
-  }
-
-  def isMiniBatchJoinEnabled: Boolean = {
-    // enable miniBatch Join by default if miniBatch is enabled.
-    (isMiniBatchEnabled || isMicroBatchEnabled) &&
-      this.conf.getBoolean(TableConfigOptions.BLINK_MINIBATCH_JOIN_ENABLED)
-  }
 
   def addQueryableState2AggFunctionMapping(queryableName: String, udagg: JTuple2[String,
       AggregateFunction[_, _]]): TableConfig = {
@@ -355,50 +274,6 @@ class TableConfig {
 
   def getAggFunctionByQueryableStateName(queryableName: String): JTuple2[String,
       AggregateFunction[_, _]] = queryableState2AggFunctionMap.get(queryableName).orNull
-
-  def withTopNCacheSize(cacheSize: Long): TableConfig = {
-    if (cacheSize <= 0L) {
-      throw new IllegalArgumentException("cacheSize must be positive")
-    }
-    this.conf.setLong(TableConfigOptions.BLINK_TOPN_CACHE_SIZE, cacheSize)
-    this
-  }
-
-  def withTopNApproxBufferMultiplier(topnApproxBufferMultiplier: Long): TableConfig = {
-    if (topnApproxBufferMultiplier <= 0L) {
-      throw new IllegalArgumentException("topnApproxBufferMultiplier must be positive")
-    }
-    this.conf.setLong(TableConfigOptions.BLINK_TOPN_APPROXIMATE_BUFFER_MULTIPLIER,
-      topnApproxBufferMultiplier)
-    this
-  }
-
-  def getTopNApproxBufferMultiplier: Long = {
-    this.conf.getLong(TableConfigOptions.BLINK_TOPN_APPROXIMATE_BUFFER_MULTIPLIER)
-  }
-
-  def withTopNApproxBufferMinSize(topnApproxBufferMinSize: Long): TableConfig = {
-    if (topnApproxBufferMinSize < 0L) {
-      throw new IllegalArgumentException("topnApproxBufferMinSize must be positive")
-    }
-    this.conf.setLong(TableConfigOptions.BLINK_TOPN_APPROXIMATE_BUFFER_MINSIZE,
-      topnApproxBufferMinSize)
-    this
-  }
-
-  def withPartialBucketNum(buckets: Integer): TableConfig = {
-    this.conf.setInteger(TableConfigOptions.SQL_EXEC_AGG_PARTIAL_BUCKET_NUM, buckets)
-    this
-  }
-
-  def getPartialBucketNum: Integer = {
-    val bucketNum = this.conf.getInteger(TableConfigOptions.SQL_EXEC_AGG_PARTIAL_BUCKET_NUM)
-    if (bucketNum <= 0) {
-      throw new RuntimeException("Bucket number in Partial Agg must be positive!")
-    }
-    bucketNum
-  }
-
 }
 
 object OperatorType extends Enumeration {
@@ -413,6 +288,4 @@ object AggPhaseEnforcer extends Enumeration {
 
 object TableConfig {
   def DEFAULT = new TableConfig()
-
-
 }

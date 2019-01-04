@@ -179,7 +179,7 @@ class SubQueryITCase(mode: StateBackendMode)
     tEnv.registerTable("MyTable", env.fromCollection(data).toTable(tEnv).as('a, 'b))
     val sink = new TestingRetractSink
     tEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.BLINK_VALUES_SOURCE_INPUT_ENABLED, true) // enable values source input
+      TableConfigOptions.SQL_EXEC_VALUES_SOURCE_INPUT_ENABLED, true) // enable values source input
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
     results.addSink(sink)
     env.execute()

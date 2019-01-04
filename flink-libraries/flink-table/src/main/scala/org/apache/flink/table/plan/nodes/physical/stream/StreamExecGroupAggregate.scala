@@ -197,7 +197,8 @@ class StreamExecGroupAggregate(
     val aggValueTypes = aggInfoList.getActualValueTypes.map(DataTypes.internal)
     val inputCountIndex = aggInfoList.getCount1AccIndex
 
-    val operator = if (tableConfig.isMiniBatchEnabled || tableConfig.isMicroBatchEnabled) {
+    val operator = if (tableConfig.getConf.contains(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)) {
       val aggFunction = new MiniBatchGroupAggFunction(
         inputRowType.toInternalType,
         aggsHandler,
@@ -210,15 +211,15 @@ class StreamExecGroupAggregate(
       // input element are all binary row as they are came from network
       val inputType = new BaseRowTypeInfo(classOf[BaseRow], inputRowType.getFieldTypes: _*)
         .asInstanceOf[BaseRowTypeInfo[BaseRow]]
-      // minibatch group agg stores list of input as bundle buffer value
+      // miniBatch group agg stores list of input as bundle buffer value
       val valueType = new ListTypeInfo[BaseRow](inputType)
 
       new KeyedBundleOperator(
         aggFunction,
-        AggregateUtil.getMiniBatchTrigger(tableConfig, useLocalAgg = false),
+        AggregateUtil.getMiniBatchTrigger(tableConfig),
         valueType,
         tableConfig.getConf.getBoolean(
-          TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+          TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
     } else {
       val aggFunction = new GroupAggFunction(
         aggsHandler,

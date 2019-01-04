@@ -22,7 +22,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.calcite.{CalciteConfig, CalciteConfigBuilder, FlinkChainContext}
+import org.apache.flink.table.calcite.{CalciteConfig, FlinkChainContext}
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.optimize.FlinkStreamPrograms
@@ -70,11 +70,8 @@ class ModifiedMonotonicityTest extends TableTestBase {
 
   @Test
   def testMaxWithRetractOptimizeWithLocalGlobal(): Unit = {
-    streamUtil.tableEnv.getConfig
-      .enableMiniBatch
-      .withMiniBatchTriggerTime(100)
-    streamUtil.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
+    streamUtil.tableEnv.getConfig.getConf
+      .setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 100L)
     val query = "SELECT a1, max(a3) from (SELECT a1, a2, max(a3) as a3 FROM A GROUP BY a1, a2) " +
       "group by a1"
     streamUtil.verifyPlanAndTrait(query)
@@ -82,22 +79,16 @@ class ModifiedMonotonicityTest extends TableTestBase {
 
   @Test
   def testMinWithRetractOptimizeWithLocalGlobal(): Unit = {
-    streamUtil.tableEnv.getConfig
-      .enableMiniBatch
-      .withMiniBatchTriggerTime(100)
-    streamUtil.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
+    streamUtil.tableEnv.getConfig.getConf
+      .setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 100L)
     val query = "SELECT min(a3) from (SELECT a1, a2, min(a3) as a3 FROM A GROUP BY a1, a2)"
     streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testMinCanNotOptimizeWithLocalGlobal(): Unit = {
-    streamUtil.tableEnv.getConfig
-      .enableMiniBatch
-      .withMiniBatchTriggerTime(100)
-    streamUtil.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
+    streamUtil.tableEnv.getConfig.getConf
+      .setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 100L)
     val query = "SELECT a1, min(a3) from (SELECT a1, a2, max(a3) as a3 FROM A GROUP BY a1, a2) " +
       "group by a1"
     streamUtil.verifyPlanAndTrait(query)

@@ -40,7 +40,7 @@ class EmitStrategy(
     }
     if (isEventTime && lateFireInterval >= 0L && allowLateness <= 0L) {
       throw new TableException("The 'AFTER WATERMARK' emit strategy requires " +
-        "'blink.state.ttl.ms' config in job config.")
+        "'sql.exec.state.ttl.ms' config in job config.")
     }
   }
 

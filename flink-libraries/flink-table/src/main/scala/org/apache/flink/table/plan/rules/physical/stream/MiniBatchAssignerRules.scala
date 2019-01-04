@@ -19,36 +19,35 @@ package org.apache.flink.table.plan.rules.physical.stream
 
 import java.util
 import java.util.Collections
-
 import org.apache.calcite.plan.RelOptRule.{any, none, operand}
 import org.apache.calcite.plan.hep.HepRelVertex
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.core.{TableScan, Union}
 import org.apache.calcite.rel.{BiRel, RelNode, SingleRel}
-import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecMicroBatchAssigner, StreamExecDataStreamScan, StreamExecTableSourceScan}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
+import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecDataStreamScan, StreamExecMiniBatchAssigner, StreamExecTableSourceScan}
 import org.apache.flink.table.plan.schema.IntermediateDataStreamTable
 
 import scala.collection.JavaConversions._
 
 /**
-  * A MicroBatchAssignerRule is used to add a MicroBatchAssigner node to generate batch marker.
+  * A MiniBatchAssignerRule is used to add a MiniBatchAssigner node to generate batch marker.
   */
-object MicroBatchAssignerRules {
+object MiniBatchAssignerRules {
 
-  val UNARY = new MicroBatchAssignerRuleForUnary
-  val BINARY = new MicroBatchAssignerRuleForBinary
-  val UNION = new MicroBatchAssignerRuleForUnion
+  val UNARY = new MiniBatchAssignerRuleForUnary
+  val BINARY = new MiniBatchAssignerRuleForBinary
+  val UNION = new MiniBatchAssignerRuleForUnion
 
-  class MicroBatchAssignerRuleForUnary
+  class MiniBatchAssignerRuleForUnary
     extends RelOptRule(
       operand(classOf[SingleRel], operand(classOf[TableScan], none())),
-      "MicroBatchAssignerRuleForUnary") {
+      "MiniBatchAssignerRuleForUnary") {
 
     override def matches(call: RelOptRuleCall): Boolean = {
       val parent = call.rel[SingleRel](0)
       val scan = call.rel[TableScan](1)
-      if (parent.isInstanceOf[StreamExecMicroBatchAssigner]) {
+      if (parent.isInstanceOf[StreamExecMiniBatchAssigner]) {
         return false
       }
       isScan(scan)
@@ -58,22 +57,22 @@ object MicroBatchAssignerRules {
       val parent = call.rel[SingleRel](0)
       val scan = call.rel[TableScan](1)
       val config = scan.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
-      val microBatchNode = new StreamExecMicroBatchAssigner(
+      val miniBatchNode = new StreamExecMiniBatchAssigner(
         scan.getCluster,
         scan.getTraitSet,
         scan,
-        config.getMicroBatchTriggerTime)
-      val newParent = parent.copy(parent.getTraitSet, Collections.singletonList(microBatchNode))
+        config.getConf.getLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY))
+      val newParent = parent.copy(parent.getTraitSet, Collections.singletonList(miniBatchNode))
       call.transformTo(newParent)
     }
   }
 
-  class MicroBatchAssignerRuleForBinary
+  class MiniBatchAssignerRuleForBinary
     extends RelOptRule(
       operand(classOf[BiRel],
               operand(classOf[RelNode], any()),
               operand(classOf[RelNode], any())),
-      "MicroBatchAssignerRuleForBinary") {
+      "MiniBatchAssignerRuleForBinary") {
 
     override def matches(call: RelOptRuleCall): Boolean = {
       val node1 = call.rel[RelNode](1)
@@ -87,21 +86,21 @@ object MicroBatchAssignerRules {
       val node2 = call.rel[RelNode](2)
       val config = biRel.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
       val newNode1 = if (isScan(node1)) {
-        new StreamExecMicroBatchAssigner(
+        new StreamExecMiniBatchAssigner(
           node1.getCluster,
           node1.getTraitSet,
           node1,
-          config.getMicroBatchTriggerTime)
+          config.getConf.getLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY))
       } else {
         node1
       }
 
       val newNode2 = if (isScan(node2)) {
-        new StreamExecMicroBatchAssigner(
+        new StreamExecMiniBatchAssigner(
           node2.getCluster,
           node2.getTraitSet,
           node2,
-          config.getMicroBatchTriggerTime)
+          config.getConf.getLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY))
       } else {
         node2
       }
@@ -112,12 +111,12 @@ object MicroBatchAssignerRules {
   }
 
   /**
-    * NOTE: MicroBatchAssignerRuleForUnion only support HepPlanner currently
+    * NOTE: MiniBatchAssignerRuleForUnion only support HepPlanner currently
     */
-  class MicroBatchAssignerRuleForUnion
+  class MiniBatchAssignerRuleForUnion
     extends RelOptRule(
       operand(classOf[Union], any()),
-      "MicroBatchAssignerRuleForUnion") {
+      "MiniBatchAssignerRuleForUnion") {
 
     override def matches(call: RelOptRuleCall): Boolean = {
       val union = call.rel[Union](0)
@@ -136,11 +135,11 @@ object MicroBatchAssignerRules {
         case vertex: HepRelVertex =>
           val curNode = vertex.getCurrentRel
           if (isScan(curNode)) {
-            new StreamExecMicroBatchAssigner(
+            new StreamExecMiniBatchAssigner(
               curNode.getCluster,
               curNode.getTraitSet,
               curNode,
-              config.getMicroBatchTriggerTime)
+              config.getConf.getLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY))
           } else {
             curNode
           }

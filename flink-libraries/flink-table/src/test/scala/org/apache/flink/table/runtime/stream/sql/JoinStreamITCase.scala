@@ -39,8 +39,8 @@ import org.junit.runners.Parameterized
 import scala.collection.{Seq, mutable}
 
 @RunWith(classOf[Parameterized])
-class JoinStreamITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
-  extends StreamingWithMiniBatchTestBase(minibatch, mode) {
+class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
+  extends StreamingWithMiniBatchTestBase(miniBatch, mode) {
 
   val data2 = List(
     (1, 1L, "Hi"),

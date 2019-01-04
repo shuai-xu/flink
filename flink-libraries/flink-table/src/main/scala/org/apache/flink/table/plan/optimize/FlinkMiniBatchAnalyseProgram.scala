@@ -20,35 +20,36 @@ package org.apache.flink.table.plan.optimize
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.rel.{RelNode, RelVisitor}
 import org.apache.calcite.tools.RuleSets
-import org.apache.flink.table.api.{TableConfig, TableException}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.expressions.ExpressionUtils.{isRowtimeAttribute, isTimeIntervalLiteral}
 import org.apache.flink.table.plan.logical.{SessionGroupWindow, SlidingGroupWindow, TumblingGroupWindow}
 import org.apache.flink.table.plan.nodes.physical.stream._
-import org.apache.flink.table.plan.rules.physical.stream.MicroBatchAssignerRules
+import org.apache.flink.table.plan.rules.physical.stream.MiniBatchAssignerRules
 
 import scala.collection.JavaConverters._
 
 /**
-  * A FlinkMicroBatchAnalyseProgram analyses MicroBatch configs through the entire rel tree, to
-  * determine whether the to enable MicroBatch and the size of MicroBatch.
+  * A FlinkMiniBatchAnalyseProgram analyses MiniBatch configs through the entire rel tree, to
+  * determine whether the to enable MiniBatch and the size of MiniBatch.
   */
-class FlinkMicroBatchAnalyseProgram[OC <: OptimizeContext] extends FlinkOptimizeProgram[OC] {
+class FlinkMiniBatchAnalyseProgram[OC <: OptimizeContext] extends FlinkOptimizeProgram[OC] {
 
   override def optimize(input: RelNode, context: OC): RelNode = {
     val config = context.getContext.unwrap(classOf[TableConfig])
-    if (config.isMicroBatchEnabled && config.getMicroBatchTriggerTime > 0) {
+    if (config.getConf.contains(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY) &&
+      config.getConf.getLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY) > 0) {
       // step1: validation
-      val validation = new MicroBatchValidation
+      val validation = new MiniBatchValidation
       validation.go(input)
 
-      // step2: add microbatch assigner node
+      // step2: add minibatch assigner node
       val hepProgram = FlinkHepRuleSetProgramBuilder
         .newBuilder[OC]
         .add(RuleSets.ofList(
-          MicroBatchAssignerRules.UNARY,
-          MicroBatchAssignerRules.BINARY,
-          MicroBatchAssignerRules.UNION))
+          MiniBatchAssignerRules.UNARY,
+          MiniBatchAssignerRules.BINARY,
+          MiniBatchAssignerRules.UNION))
         .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
         .setHepMatchOrder(HepMatchOrder.TOP_DOWN)
         .build()
@@ -59,14 +60,14 @@ class FlinkMicroBatchAnalyseProgram[OC <: OptimizeContext] extends FlinkOptimize
     }
   }
 
-  /** The MicroBatchValidation will check whether Event-Time Node is in the query, otherwise
+  /** The MiniBatchValidation will check whether Event-Time Node is in the query, otherwise
     * throw an unsupported exception.
-    * In the future, we will support MicroBatch for EventTime Node */
-  class MicroBatchValidation extends RelVisitor {
+    * In the future, we will support MiniBatch for EventTime Node */
+  class MiniBatchValidation extends RelVisitor {
     override def visit(node: RelNode, ordinal: Int, parent: RelNode): Unit = {
       node match {
         case _: StreamExecWatermarkAssigner =>
-          throw new TableException("MicroBatch is not supported when watermark is defined.")
+          throw new TableException("MiniBatch is not supported when watermark is defined.")
 
         case w: StreamExecGroupWindowAggregate =>
           val isEventTime = w.window match {
@@ -79,7 +80,7 @@ class FlinkMicroBatchAnalyseProgram[OC <: OptimizeContext] extends FlinkOptimize
             case _ => false
           }
           if (isEventTime) {
-            throw new TableException("MicroBatch is not supported when Window Aggregate is used.")
+            throw new TableException("MiniBatch is not supported when Window Aggregate is used.")
           }
 
         case m: StreamExecMatch =>
@@ -88,13 +89,13 @@ class FlinkMicroBatchAnalyseProgram[OC <: OptimizeContext] extends FlinkOptimize
             .filter(f => FlinkTypeFactory.isRowtimeIndicatorType(f.getType))
           // when the event-time field is set, the CEP node is event-time-mode
           if (rowtimeFields.nonEmpty) {
-            throw new TableException("MicroBatch is not supported when Event-Time CEP is used.")
+            throw new TableException("MiniBatch is not supported when Event-Time CEP is used.")
           }
 
         case wj: StreamExecWindowJoin =>
           if (wj.isRowTime) {
             throw new TableException(
-              "MicroBatch is not supported when Event-Time WindowedJoin is used.")
+              "MiniBatch is not supported when Event-Time WindowedJoin is used.")
           }
 
         case _ =>

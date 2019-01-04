@@ -37,7 +37,7 @@ public class CountCoBundleTrigger<L, R> implements CoBundleTrigger<L, R> {
 	}
 
 	@Override
-	public void registerBundleTriggerCallback(BundleTriggerCallback callback, BundleTriggerContext context) {
+	public void registerBundleTriggerCallback(BundleTriggerCallback callback) {
 		this.callback = Preconditions.checkNotNull(callback, "callback is null");
 	}
 

@@ -26,7 +26,8 @@ StreamExecGlobalGroupAggregate(groupBy=[a1], select=[a1, MAX(max$0) AS EXPR$1], 
          +- StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(max$0) AS a3], retract=[true], accMode=[AccRetract])
             +- StreamExecExchange(distribution=[hash[a1, a2]], retract=[true], accMode=[Acc])
                +- StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS max$0], retract=[true], accMode=[Acc])
-                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+                  +- StreamExecMiniBatchAssigner(interval=[100ms], retract=[true], accMode=[Acc])
+                     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -64,7 +65,8 @@ StreamExecGlobalGroupAggregate(groupBy=[a1], select=[a1, MIN_RETRACT(min$0) AS E
          +- StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(max$0) AS a3], retract=[true], accMode=[AccRetract])
             +- StreamExecExchange(distribution=[hash[a1, a2]], retract=[true], accMode=[Acc])
                +- StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS max$0], retract=[true], accMode=[Acc])
-                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+                  +- StreamExecMiniBatchAssigner(interval=[100ms], retract=[true], accMode=[Acc])
+                     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -78,7 +80,8 @@ StreamExecGlobalGroupAggregate(select=[MIN(min$0) AS EXPR$0], retract=[false], a
          +- StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MIN(min$0) AS a3], retract=[true], accMode=[AccRetract])
             +- StreamExecExchange(distribution=[hash[a1, a2]], retract=[true], accMode=[Acc])
                +- StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MIN(a3) AS min$0], retract=[true], accMode=[Acc])
-                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+                  +- StreamExecMiniBatchAssigner(interval=[100ms], retract=[true], accMode=[Acc])
+                     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>

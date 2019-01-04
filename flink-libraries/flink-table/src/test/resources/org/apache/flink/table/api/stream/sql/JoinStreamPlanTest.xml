@@ -182,17 +182,17 @@ StreamExecJoin(where=[=(a1, b1)], join=[a1, b1], joinType=[InnerJoin], leftState
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testInnerJoinWithMicroBatch">
+  <TestCase name="testInnerJoinWithMiniBatch">
     <Resource name="plan">
       <![CDATA[
 StreamExecJoin(where=[=(a1, b1)], join=[a1, b1], joinType=[InnerJoin], leftStateType=[WITHOUT_PRIMARY_KEY], leftMatchStateType=[EMPTY_MATCH], rightStateType=[WITHOUT_PRIMARY_KEY], rightMatchStateType=[EMPTY_MATCH])
   StreamExecExchange(distribution=[hash[a1]])
     StreamExecCalc(select=[a1])
-      StreamExecMicroBatchAssigner(interval=[1000ms])
+      StreamExecMiniBatchAssigner(interval=[1000ms])
         StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
   StreamExecExchange(distribution=[hash[b1]])
     StreamExecCalc(select=[b1])
-      StreamExecMicroBatchAssigner(interval=[1000ms])
+      StreamExecMiniBatchAssigner(interval=[1000ms])
         StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>

@@ -155,7 +155,7 @@ class StreamExecRank(
     val (sortKeyType, sorter) = createSortKeyTypeAndSorter(inputSchema, fieldCollation)
 
     val generateRetraction = StreamExecRetractionRules.isAccRetract(this)
-    val cacheSize = tableConfig.getConf.getLong(TableConfigOptions.BLINK_TOPN_CACHE_SIZE)
+    val cacheSize = tableConfig.getConf.getLong(TableConfigOptions.SQL_EXEC_TOPN_CACHE_SIZE)
 
     val processFunction = getStrategy(Some(tableConfig), forceRecompute = true) match {
       case AppendFastRank =>
@@ -188,9 +188,10 @@ class StreamExecRank(
           tableConfig)
 
       case ApproxUpdateRank(primaryKeys) =>
-        val approxBufferMultiplier = tableConfig.getTopNApproxBufferMultiplier
+        val approxBufferMultiplier = tableConfig.getConf.getLong(
+          TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_MULTIPLIER)
         val approxBufferMinSize = tableConfig.getConf.getLong(
-          TableConfigOptions.BLINK_TOPN_APPROXIMATE_BUFFER_MINSIZE)
+          TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_MINSIZE)
         val rowKeyType = createRowKeyType(primaryKeys, inputSchema)
         val rowKeySelector = createKeySelector(primaryKeys, inputSchema)
         new ApproxUpdateRankFunction(

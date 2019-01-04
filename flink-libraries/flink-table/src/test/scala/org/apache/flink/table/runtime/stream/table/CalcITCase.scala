@@ -129,7 +129,7 @@ class CalcITCase extends StreamingTestBase {
 
     val filterDs = ds.filter( Literal(false) )
     tEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.BLINK_VALUES_SOURCE_INPUT_ENABLED, true) // enable values source input
+      TableConfigOptions.SQL_EXEC_VALUES_SOURCE_INPUT_ENABLED, true) // enable values source input
     val results = filterDs.toAppendStream[Row]
     val sink = new TestingAppendSink
 

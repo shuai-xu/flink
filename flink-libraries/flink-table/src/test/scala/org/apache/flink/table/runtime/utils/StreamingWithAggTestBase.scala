@@ -23,7 +23,7 @@ import org.apache.flink.api.common.time.Time
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase._
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
-import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.{MicroBatchOn, MiniBatchMode, MiniBatchOff, MiniBatchOn}
+import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.{MiniBatchMode, MiniBatchOff, MiniBatchOn}
 import org.junit.Before
 import org.junit.runners.Parameterized
 
@@ -31,8 +31,8 @@ import scala.collection.JavaConversions._
 
 class StreamingWithAggTestBase(
     aggMode: AggMode,
-    minibatch: MiniBatchMode,
-    backend: StateBackendMode) extends StreamingWithMiniBatchTestBase(minibatch, backend) {
+    miniBatch: MiniBatchMode,
+    backend: StateBackendMode) extends StreamingWithMiniBatchTestBase(miniBatch, backend) {
 
   @Before
   override def before(): Unit = {
@@ -61,12 +61,8 @@ object StreamingWithAggTestBase {
       Array(LocalGlobalOff, MiniBatchOff, HEAP_BACKEND),
       Array(LocalGlobalOff, MiniBatchOn, HEAP_BACKEND),
       Array(LocalGlobalOn, MiniBatchOn, HEAP_BACKEND),
-      Array(LocalGlobalOff, MicroBatchOn, HEAP_BACKEND),
-      Array(LocalGlobalOn, MicroBatchOn, HEAP_BACKEND),
       Array(LocalGlobalOff, MiniBatchOff, ROCKSDB_BACKEND),
       Array(LocalGlobalOff, MiniBatchOn, ROCKSDB_BACKEND),
-      Array(LocalGlobalOn, MiniBatchOn, ROCKSDB_BACKEND),
-      Array(LocalGlobalOff, MicroBatchOn, ROCKSDB_BACKEND),
-      Array(LocalGlobalOn, MicroBatchOn, ROCKSDB_BACKEND))
+      Array(LocalGlobalOn, MiniBatchOn, ROCKSDB_BACKEND))
   }
 }

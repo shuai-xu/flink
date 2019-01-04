@@ -132,9 +132,8 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 		// recovering number
 		numOfElements = buffer.size();
 
-		bundleTrigger.registerBundleTriggerCallback(
-			this, () -> KeyedBundleOperator.super.getProcessingTimeService());
-		// reset trigger
+		bundleTrigger.registerBundleTriggerCallback(this);
+		 //reset trigger
 		bundleTrigger.reset();
 		LOG.info("KeyedBundleOperator's trigger info: " + bundleTrigger.explain());
 

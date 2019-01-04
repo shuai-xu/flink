@@ -257,7 +257,8 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[$f3 DESC], r
                      +- StreamExecCalc(select=[a, b, c, $f3, =($e, 1) AS $g_1, =($e, 0) AS $g_0], retract=[true], accMode=[Acc])
                         +- StreamExecExpand(projects=[{a, b, c, $f3, 0 AS $e}, {a, b, c, null AS $f3, 1 AS $e}], retract=[true], accMode=[Acc])
                            +- StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(c), 1024) AS $f3], where=[>=(c, 0)], retract=[true], accMode=[Acc])
-                              +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+                              +- StreamExecMiniBatchAssigner(interval=[1000ms], retract=[true], accMode=[Acc])
+                                 +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>

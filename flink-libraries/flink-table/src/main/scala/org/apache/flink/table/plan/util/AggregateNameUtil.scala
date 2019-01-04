@@ -18,15 +18,11 @@
 
 package org.apache.flink.table.plan.util
 
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.AggregateCall
-import org.apache.flink.streaming.api.bundle.{BundleTrigger, CombinedBundleTrigger, CountBundleTrigger, TimeBundleTrigger}
-import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
-import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.util.{AggregateInfo, AggregateInfoList, DistinctInfo}
-import org.apache.flink.table.plan.util.AggregateUtil._
+
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.AggregateCall
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable

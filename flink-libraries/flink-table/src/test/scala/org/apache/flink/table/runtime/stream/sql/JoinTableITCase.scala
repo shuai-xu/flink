@@ -22,7 +22,6 @@ import java.util
 import java.util.Collections
 import java.util.concurrent.{CompletableFuture, ExecutorService, Executors}
 import java.util.function.{Consumer, Supplier}
-
 import org.apache.flink.api.common.functions.RichFlatMapFunction
 import org.apache.flink.api.common.restartstrategy.RestartStrategies
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
@@ -34,7 +33,7 @@ import org.apache.flink.streaming.api.scala.DataStream
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TableSchema, Types}
+import org.apache.flink.table.api.{TableConfigOptions, TableSchema, Types}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.{StreamingTestBase, StreamingWithStateTestBase, TestingAppendSink, TestingRetractSink}
@@ -43,6 +42,7 @@ import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.TableSchemaUtil
 import org.apache.flink.types.Row
 import org.apache.flink.util.{Collector, ExceptionUtils}
+
 import org.junit.Assert.{assertEquals, assertTrue, fail}
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -617,12 +617,11 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
   }
 
   @Test
-  def testMinibatchAggAndAsyncLeftJoinTemporalTable(): Unit = {
+  def testMiniBatchAggAndAsyncLeftJoinTemporalTable(): Unit = {
     val stream: DataStream[(Int, Int, String)] = failingDataSource(data)
     val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
-    tEnv.getConfig.enableMiniBatch
-    .withMiniBatchTriggerSize(1)
-    .withMiniBatchTriggerTime(2)
+    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 2L)
+    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_SIZE, 1L)
     tEnv.registerTable("T", streamTable)
 
     val asyncConfig = new AsyncConfig

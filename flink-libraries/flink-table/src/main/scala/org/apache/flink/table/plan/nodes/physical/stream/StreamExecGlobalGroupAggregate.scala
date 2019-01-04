@@ -193,7 +193,8 @@ class StreamExecGlobalGroupAggregate(
     val globalAggValueTypes = globalAggInfoList.getActualValueTypes.map(DataTypes.internal)
     val inputCountIndex = globalAggInfoList.getCount1AccIndex
 
-    val operator = if (tableConfig.isMiniBatchEnabled || tableConfig.isMicroBatchEnabled) {
+    val operator = if (tableConfig.getConf.contains(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)) {
       val aggFunction = new MiniBatchGlobalGroupAggFunction(
         localAggsHandler,
         globalAggsHandler,
@@ -208,12 +209,12 @@ class StreamExecGlobalGroupAggregate(
       val valueTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], localAccTypes: _*)
       new KeyedBundleOperator(
         aggFunction,
-        AggregateUtil.getMiniBatchTrigger(tableConfig, useLocalAgg = true),
+        AggregateUtil.getMiniBatchTrigger(tableConfig),
         valueTypeInfo,
         tableConfig.getConf.getBoolean(
-          TableConfigOptions.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+          TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
     } else {
-      throw new TableException("Local-Global optimization is only worked in minibatch mode")
+      throw new TableException("Local-Global optimization is only worked in miniBatch mode")
     }
 
     val inputTypeInfo = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[BaseRow]]

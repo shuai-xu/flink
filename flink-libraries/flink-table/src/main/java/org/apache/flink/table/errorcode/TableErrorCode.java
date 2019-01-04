@@ -167,15 +167,6 @@ public interface TableErrorCode {
 
 	@ErrCode(
 		codeId = "SQL-00000003",
-		cause = "MiniBatch triggerTime must be positive",
-		details = "",
-		action = "Please double-check the job's MiniBatch configuration.\n" +
-			"If MiniBatch is not configured, contact customer support."
-	)
-	String sqlCompileMiniBatchTriggerTimeError();
-
-	@ErrCode(
-		codeId = "SQL-00000004",
 		cause = "There are both Distinct AggCall and Approximate Distinct AggCall \n" +
 			"in one sql statement, it is not supported yet.",
 		details = "",

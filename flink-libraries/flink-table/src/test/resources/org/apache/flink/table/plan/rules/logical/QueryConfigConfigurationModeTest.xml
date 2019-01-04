@@ -25,19 +25,8 @@ StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0])
       +- StreamExecExchange(distribution=[hash[$f1]])
          +- StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
             +- StreamExecCalc(select=[c, MOD(HASH_CODE(c), 1024) AS $f1])
-               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testEnableMicroBatch">
-    <Resource name="plan">
-      <![CDATA[
-StreamExecGlobalGroupAggregate(select=[COUNT(distinct$0 count$0) AS EXPR$0])
-+- StreamExecExchange(distribution=[single])
-   +- StreamExecLocalGroupAggregate(select=[COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
-      +- StreamExecCalc(select=[c])
-         +- StreamExecMicroBatchAssigner(interval=[1000ms])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+               +- StreamExecMiniBatchAssigner(interval=[6000ms])
+                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -48,7 +37,8 @@ StreamExecGlobalGroupAggregate(select=[COUNT(distinct$0 count$0) AS EXPR$0])
 +- StreamExecExchange(distribution=[single])
    +- StreamExecLocalGroupAggregate(select=[COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
       +- StreamExecCalc(select=[c])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+         +- StreamExecMiniBatchAssigner(interval=[1000ms])
+            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -61,7 +51,8 @@ StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0])
       +- StreamExecExchange(distribution=[hash[$f1]])
          +- StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
             +- StreamExecCalc(select=[c, MOD(HASH_CODE(c), 1024) AS $f1])
-               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+               +- StreamExecMiniBatchAssigner(interval=[1000ms])
+                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

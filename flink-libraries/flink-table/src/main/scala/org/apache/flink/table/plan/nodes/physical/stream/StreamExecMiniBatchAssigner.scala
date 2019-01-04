@@ -18,17 +18,17 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.StreamTableEnvironment
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.bundle.MicroBatchAssignerOperator
+import org.apache.flink.table.runtime.bundle.MiniBatchAssignerOperator
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 
 import java.util
 
-class StreamExecMicroBatchAssigner(
+class StreamExecMiniBatchAssigner(
     cluster: RelOptCluster,
     traits: RelTraitSet,
     inputNode: RelNode,
@@ -37,7 +37,7 @@ class StreamExecMicroBatchAssigner(
   with RowStreamExecRel {
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
-    new StreamExecMicroBatchAssigner(cluster, traitSet, inputs.get(0), intervalMs)
+    new StreamExecMiniBatchAssigner(cluster, traitSet, inputs.get(0), intervalMs)
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
@@ -50,12 +50,13 @@ class StreamExecMicroBatchAssigner(
 
     val in = input.asInstanceOf[RowStreamExecRel]
     val inputTransformation = in.translateToPlan(tableEnv)
-    val intervalMs = tableEnv.getConfig.getMicroBatchTriggerTime
+    val intervalMs = tableEnv.getConfig.getConf.getLong(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
 
     new OneInputTransformation[BaseRow, BaseRow](
       inputTransformation,
-      s"MicroBatchAssigner(intervalMs: $intervalMs)",
-      new MicroBatchAssignerOperator(intervalMs),
+      s"MiniBatchAssigner(intervalMs: $intervalMs)",
+      new MiniBatchAssignerOperator(intervalMs),
       FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BaseRow]),
       inputTransformation.getParallelism)
   }
