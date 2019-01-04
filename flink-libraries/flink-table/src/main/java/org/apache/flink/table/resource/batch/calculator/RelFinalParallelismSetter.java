@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.resource.batch.calculator;
 
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
@@ -82,7 +81,7 @@ public class RelFinalParallelismSetter {
 		StreamTransformation transformation = boundedStreamScan.getSourceTransformation(tEnv.streamEnv());
 		int parallelism = transformation.getParallelism();
 		if (parallelism <= 0) {
-			parallelism = StreamExecutionEnvironment.getDefaultLocalParallelism();
+			parallelism = tEnv.streamEnv().getParallelism();
 		}
 		boundedStreamScan.setResultPartitionCount(parallelism);
 	}

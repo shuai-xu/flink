@@ -19,7 +19,6 @@
 package org.apache.flink.table.resource.batch
 
 import java.util.{Arrays => JArrays, Collection => JCollection}
-
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableSchema}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
@@ -27,9 +26,11 @@ import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.tpc.{STATS_MODE, TpcHSchemaProvider, TpchTableStatsProvider}
 import org.apache.flink.table.util.{ExecResourceUtil, TableTestBatchExecBase}
+
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Before, Test}
+import org.mockito.Mockito.when
 
 import _root_.scala.collection.JavaConversions._
 
@@ -176,6 +177,45 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBatchExecBase {
       true, colStatsOfLineitem.get)
 
     val sqlQuery = "select * from lineitem limit 1"
+    util.verifyResource(sqlQuery)
+  }
+
+  @Test
+  def testEnvParallelism(): Unit ={
+    util.getTableEnv.getConfig.getConf.setInteger(
+      TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM,
+      -1)
+    when(util.getTableEnv.streamEnv.getParallelism).thenReturn(73)
+    val customerSchema = TpcHSchemaProvider.getSchema("customer")
+    val colStatsOfCustomer =
+      TpchTableStatsProvider.getTableStatsMap(1000, STATS_MODE.FULL).get("customer")
+    util.addTableSource("customer",
+      new TableSchema(customerSchema.getFieldNames,
+        customerSchema.getFieldTypes),
+      false, colStatsOfCustomer.get)
+
+    val ordersSchema = TpcHSchemaProvider.getSchema("orders")
+    val colStastOfOrders =
+      TpchTableStatsProvider.getTableStatsMap(1000, STATS_MODE.FULL).get("orders")
+    util.addTableSource("orders",
+      new TableSchema(ordersSchema.getFieldNames,
+        ordersSchema.getFieldTypes),
+      false, colStastOfOrders.get)
+    val lineitemSchema = TpcHSchemaProvider.getSchema("lineitem")
+    val colStatsOfLineitem =
+      TpchTableStatsProvider.getTableStatsMap(1000, STATS_MODE.FULL).get("lineitem")
+    util.addTableSource("lineitem",
+      new TableSchema(lineitemSchema.getFieldNames,
+        lineitemSchema.getFieldTypes),
+      false, colStatsOfLineitem.get)
+
+    val sqlQuery = "select c.c_name, sum(l.l_quantity)" +
+        " from customer c, orders o, lineitem l" +
+        " where o.o_orderkey in ( " +
+        " select l_orderkey from lineitem group by l_orderkey having" +
+        " sum(l_quantity) > 300)" +
+        " and c.c_custkey = o.o_custkey and o.o_orderkey = l.l_orderkey" +
+        " group by c.c_name"
     util.verifyResource(sqlQuery)
   }
 

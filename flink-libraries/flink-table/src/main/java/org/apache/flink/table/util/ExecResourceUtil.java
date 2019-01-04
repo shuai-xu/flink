@@ -22,7 +22,6 @@ import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.TableConfigOptions;
 
 import static org.apache.flink.configuration.ConfigOptions.key;
@@ -82,11 +81,11 @@ public class ExecResourceUtil {
 	 * @param tableConf Configuration.
 	 * @return default parallelism of operator.
 	 */
-	public static int getOperatorDefaultParallelism(Configuration tableConf) {
+	public static int getOperatorDefaultParallelism(Configuration tableConf, int envParallelism) {
 		int parallelism = tableConf.getInteger(
 				TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM);
 		if (parallelism <= 0) {
-			parallelism = StreamExecutionEnvironment.getDefaultLocalParallelism();
+			parallelism = envParallelism;
 		}
 		return parallelism;
 	}
@@ -188,11 +187,11 @@ public class ExecResourceUtil {
 	 * @param tableConf Configuration.
 	 * @return the config parallelism for source.
 	 */
-	public static int getSourceParallelism(Configuration tableConf) {
+	public static int getSourceParallelism(Configuration tableConf, int envParallelism) {
 		int parallelism = tableConf.getInteger(
 				TableConfigOptions.SQL_EXEC_SOURCE_PARALLELISM);
 		if (parallelism <= 0) {
-			parallelism = getOperatorDefaultParallelism(tableConf);
+			parallelism = getOperatorDefaultParallelism(tableConf, envParallelism);
 		}
 		return parallelism;
 	}

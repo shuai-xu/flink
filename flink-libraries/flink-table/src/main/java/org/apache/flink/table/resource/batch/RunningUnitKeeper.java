@@ -156,10 +156,11 @@ public class RunningUnitKeeper {
 			RelMetadataQuery mq,
 			Configuration tableConf,
 			InferMode inferMode) {
+		int envParallelism = tableEnv.streamEnv().getParallelism();
 		if (inferMode.equals(InferMode.ALL)) {
-			return new ParallelismCalculatorOnStatistics(mq, tableConf);
+			return new ParallelismCalculatorOnStatistics(mq, tableConf, envParallelism);
 		} else {
-			return new BatchParallelismCalculator(mq, tableConf);
+			return new BatchParallelismCalculator(mq, tableConf, envParallelism);
 		}
 	}
 

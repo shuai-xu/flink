@@ -46,10 +46,12 @@ import org.slf4j.LoggerFactory;
 public class BatchResultPartitionCalculator extends ResourceCalculator<BatchExecRel<?>> {
 	private static final Logger LOG = LoggerFactory.getLogger(BatchResultPartitionCalculator.class);
 	private final RelMetadataQuery mq;
+	private final int envParallelism;
 
 	private BatchResultPartitionCalculator(BatchTableEnvironment tEnv, RelMetadataQuery mq) {
 		super(tEnv);
 		this.mq = mq;
+		this.envParallelism = tEnv.streamEnv().getParallelism();
 	}
 
 	public static void calculate(BatchTableEnvironment tEnv, RelMetadataQuery mq, BatchExecRel<?> rootExecRel) {
@@ -115,7 +117,7 @@ public class BatchResultPartitionCalculator extends ResourceCalculator<BatchExec
 								1)));
 			} else {
 				tableSourceScan.setResultPartitionCount(ExecResourceUtil
-						.getSourceParallelism(tableConf));
+						.getSourceParallelism(tableConf, envParallelism));
 			}
 
 		}
@@ -124,7 +126,7 @@ public class BatchResultPartitionCalculator extends ResourceCalculator<BatchExec
 	private void calculateUnion(BatchExecUnion unionBatchExec) {
 		calculateInputs(unionBatchExec);
 		unionBatchExec.setResultPartitionCount(ExecResourceUtil.
-				getOperatorDefaultParallelism(tableConf));
+				getOperatorDefaultParallelism(tableConf, envParallelism));
 	}
 
 	private void calculateExchange(BatchExecExchange exchangeBatchExec) {
@@ -132,7 +134,7 @@ public class BatchResultPartitionCalculator extends ResourceCalculator<BatchExec
 		if (exchangeBatchExec.getDistribution().getType() == RelDistribution.Type.SINGLETON) {
 			exchangeBatchExec.setResultPartitionCount(1);
 		} else {
-			exchangeBatchExec.setResultPartitionCount(ExecResourceUtil.getOperatorDefaultParallelism(tableConf));
+			exchangeBatchExec.setResultPartitionCount(ExecResourceUtil.getOperatorDefaultParallelism(tableConf, envParallelism));
 		}
 	}
 

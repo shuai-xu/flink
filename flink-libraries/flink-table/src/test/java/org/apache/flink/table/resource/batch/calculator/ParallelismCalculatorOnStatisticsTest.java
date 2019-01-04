@@ -55,6 +55,7 @@ public class ParallelismCalculatorOnStatisticsTest {
 	private BatchExecScan scanParallelism1 = mock(BatchExecScan.class);
 	private BatchExecScan scanParallelism42 = mock(BatchExecScan.class);
 	private BatchExecScan scanParallelismMax = mock(BatchExecScan.class);
+	private int envParallelism = 5;
 
 	@Before
 	public void setUp() {
@@ -81,22 +82,22 @@ public class ParallelismCalculatorOnStatisticsTest {
 	public void testOnlySource() {
 		ShuffleStage shuffleStage0 = mock(ShuffleStage.class);
 		when(shuffleStage0.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(scanParallelism30)));
-		new ParallelismCalculatorOnStatistics(mq, tableConf).calculate(shuffleStage0);
+		new ParallelismCalculatorOnStatistics(mq, tableConf, envParallelism).calculate(shuffleStage0);
 		verify(shuffleStage0).setResultParallelism(30, false);
 
 		ShuffleStage shuffleStage1 = mock(ShuffleStage.class);
 		when(shuffleStage1.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(scanParallelism1)));
-		new ParallelismCalculatorOnStatistics(mq, tableConf).calculate(shuffleStage1);
+		new ParallelismCalculatorOnStatistics(mq, tableConf, envParallelism).calculate(shuffleStage1);
 		verify(shuffleStage1).setResultParallelism(1, false);
 
 		ShuffleStage shuffleStage2 = mock(ShuffleStage.class);
 		when(shuffleStage2.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(scanParallelism42)));
-		new ParallelismCalculatorOnStatistics(mq, tableConf).calculate(shuffleStage2);
+		new ParallelismCalculatorOnStatistics(mq, tableConf, envParallelism).calculate(shuffleStage2);
 		verify(shuffleStage2).setResultParallelism(42, false);
 
 		ShuffleStage shuffleStage3 = mock(ShuffleStage.class);
 		when(shuffleStage3.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(scanParallelismMax)));
-		new ParallelismCalculatorOnStatistics(mq, tableConf).calculate(shuffleStage3);
+		new ParallelismCalculatorOnStatistics(mq, tableConf, envParallelism).calculate(shuffleStage3);
 		verify(shuffleStage3).setResultParallelism(100, false);
 	}
 
@@ -106,7 +107,7 @@ public class ParallelismCalculatorOnStatisticsTest {
 		BatchExecRel<?> singleRel = mockSingleWithInputStatics(4000);
 		BatchExecRel<?> biRel = mockBiWithInputStatics(2000d, 1500d);
 		when(shuffleStage0.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(scanParallelism30, singleRel, biRel)));
-		new ParallelismCalculatorOnStatistics(mq, tableConf).calculate(shuffleStage0);
+		new ParallelismCalculatorOnStatistics(mq, tableConf, envParallelism).calculate(shuffleStage0);
 		verify(shuffleStage0).setResultParallelism(30, false);
 		verify(shuffleStage0).setResultParallelism(40, false);
 		verify(shuffleStage0).setResultParallelism(20, false);
@@ -119,7 +120,7 @@ public class ParallelismCalculatorOnStatisticsTest {
 		BatchExecRel<?> singleRel = mockSingleWithInputStatics(4000);
 		BatchExecRel<?> biRel = mockBiWithInputStatics(2000d, 1500d);
 		when(shuffleStage0.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(scanParallelism30, singleRel, biRel)));
-		new ParallelismCalculatorOnStatistics(mq, tableConf).calculate(shuffleStage0);
+		new ParallelismCalculatorOnStatistics(mq, tableConf, envParallelism).calculate(shuffleStage0);
 		verify(shuffleStage0, never()).setResultParallelism(anyInt(), anyBoolean());
 	}
 

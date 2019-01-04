@@ -33,8 +33,8 @@ import java.util.Set;
  */
 public class BatchParallelismCalculator extends ShuffleStageParallelismCalculator {
 
-	public BatchParallelismCalculator(RelMetadataQuery mq, Configuration tableConf) {
-		super(mq, tableConf);
+	public BatchParallelismCalculator(RelMetadataQuery mq, Configuration tableConf, int envParallelism) {
+		super(mq, tableConf, envParallelism);
 	}
 
 	@Override
@@ -55,7 +55,7 @@ public class BatchParallelismCalculator extends ShuffleStageParallelismCalculato
 		if (maxSourceParallelism > 0) {
 			shuffleStage.setResultParallelism(maxSourceParallelism, false);
 		} else {
-			shuffleStage.setResultParallelism(ExecResourceUtil.getOperatorDefaultParallelism(getTableConf()), false);
+			shuffleStage.setResultParallelism(ExecResourceUtil.getOperatorDefaultParallelism(getTableConf(), envParallelism), false);
 		}
 	}
 }

@@ -51,6 +51,7 @@ public class RelFinalParallelismSetterTest extends MockRelTestBase {
 	@Before
 	public void setUp() {
 		tEnv = TableEnvironment.getBatchTableEnvironment(sEnv);
+		sEnv.setParallelism(21);
 	}
 
 	@Test
@@ -76,7 +77,7 @@ public class RelFinalParallelismSetterTest extends MockRelTestBase {
 		verify(relList.get(2)).setResultPartitionCount(1);
 		verify(relList.get(1), never()).setResultPartitionCount(anyInt());
 		verify(relList.get(4)).setResultPartitionCount(7);
-		verify(relList.get(5)).setResultPartitionCount(StreamExecutionEnvironment.getDefaultLocalParallelism());
+		verify(relList.get(5)).setResultPartitionCount(21);
 	}
 
 	@Test

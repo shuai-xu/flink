@@ -42,8 +42,9 @@ public class ParallelismCalculatorOnStatistics extends ShuffleStageParallelismCa
 
 	public ParallelismCalculatorOnStatistics(
 			RelMetadataQuery mq,
-			Configuration tableConf) {
-		super(mq, tableConf);
+			Configuration tableConf,
+			int envParallelism) {
+		super(mq, tableConf, envParallelism);
 		this.mq = mq;
 	}
 

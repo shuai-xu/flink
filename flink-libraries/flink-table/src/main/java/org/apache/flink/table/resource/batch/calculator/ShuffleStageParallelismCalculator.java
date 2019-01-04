@@ -38,10 +38,12 @@ public abstract class ShuffleStageParallelismCalculator {
 	private static final Logger LOG = LoggerFactory.getLogger(ShuffleStageParallelismCalculator.class);
 	private final RelMetadataQuery mq;
 	private final Configuration tableConf;
+	protected final int envParallelism;
 
-	public ShuffleStageParallelismCalculator(RelMetadataQuery mq, Configuration tableConf) {
+	public ShuffleStageParallelismCalculator(RelMetadataQuery mq, Configuration tableConf, int envParallelism) {
 		this.mq = mq;
 		this.tableConf = tableConf;
+		this.envParallelism = envParallelism;
 	}
 
 	public void calculate(Collection<ShuffleStage> shuffleStages) {
@@ -69,7 +71,7 @@ public abstract class ShuffleStageParallelismCalculator {
 									rowCount / rowsPerPartition),
 							1));
 		} else {
-			return ExecResourceUtil.getSourceParallelism(tableConf);
+			return ExecResourceUtil.getSourceParallelism(tableConf, envParallelism);
 		}
 	}
 
