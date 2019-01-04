@@ -108,7 +108,8 @@ public class TwoInputStreamTask<IN1, IN2, OUT> extends StreamTask<OUT, TwoInputS
 				input1WatermarkGauge,
 				input2WatermarkGauge,
 				getExecutionConfig().isObjectReuseEnabled(),
-				getExecutionConfig().isTracingMetricsEnabled());
+				getExecutionConfig().isTracingMetricsEnabled(),
+				getExecutionConfig().getTracingMetricsInterval());
 
 		headOperator.getMetricGroup().gauge(MetricNames.IO_CURRENT_INPUT_WATERMARK, minInputWatermarkGauge);
 		headOperator.getMetricGroup().gauge(MetricNames.IO_CURRENT_INPUT_1_WATERMARK, input1WatermarkGauge);

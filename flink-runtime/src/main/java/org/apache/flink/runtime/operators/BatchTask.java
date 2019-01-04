@@ -1273,7 +1273,10 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 			final RecordWriter<T> recordWriter =
 					new RecordWriter<T>(task.getEnvironment().getWriter(outputOffset + i), oe);
 
-			recordWriter.setMetricGroup(task.getEnvironment().getMetricGroup().getIOMetricGroup());
+			recordWriter.setMetricGroup(
+				task.getEnvironment().getMetricGroup().getIOMetricGroup(),
+				task.getExecutionConfig().isTracingMetricsEnabled(),
+				task.getExecutionConfig().getTracingMetricsInterval());
 
 			writers.add(recordWriter);
 		}

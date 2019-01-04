@@ -113,7 +113,8 @@ public class StreamInputProcessor<IN> {
 	private final WatermarkGauge watermarkGauge;
 	private Counter numRecordsIn;
 
-	private boolean enableTracingMetrics = false;
+	private boolean enableTracingMetrics;
+	private int tracingMetricsInterval;
 	private SumAndCount taskLatency;
 	private SumAndCount waitInput;
 	private long lastProcessedTime = -1;
@@ -137,7 +138,8 @@ public class StreamInputProcessor<IN> {
 			TaskIOMetricGroup metrics,
 			WatermarkGauge watermarkGauge,
 			boolean objectReuse,
-			boolean enableTracingMetrics) throws IOException {
+			boolean enableTracingMetrics,
+			int tracingMetricsInterval) throws IOException {
 
 		this.barrierHandler = InputProcessorUtil.createCheckpointBarrierHandler(
 			isCheckpointingEnabled, checkpointedTask, checkpointMode, ioManager, taskManagerConfig, inputGates);
@@ -172,6 +174,7 @@ public class StreamInputProcessor<IN> {
 		metrics.gauge("checkpointAlignmentTime", barrierHandler::getAlignmentDurationNanos);
 
 		this.enableTracingMetrics = enableTracingMetrics;
+		this.tracingMetricsInterval = tracingMetricsInterval;
 	}
 
 	public boolean processInput() throws Exception {
@@ -214,7 +217,7 @@ public class StreamInputProcessor<IN> {
 						reusedObject = ((StreamRecord<IN>) recordOrMark).getValue();
 
 						// numRecordsIn counter is a SimpleCounter not a heavier SumCounter, so reuse it
-						if (enableTracingMetrics) {
+						if (enableTracingMetrics && numRecordsIn.getCount() % tracingMetricsInterval == 0) {
 							long start = System.nanoTime();
 							waitInput.update(start - lastProcessedTime);
 							// now we can do the actual processing

@@ -137,6 +137,7 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 	private boolean isFinished;
 
 	private boolean enableTracingMetrics;
+	private int tracingMetricsInterval;
 
 	private SumAndCount taskLatency;
 
@@ -165,7 +166,8 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 			WatermarkGauge input1WatermarkGauge,
 			WatermarkGauge input2WatermarkGauge,
 			boolean objectReuse,
-			boolean enableTracingMetrics) throws IOException {
+			boolean enableTracingMetrics,
+			int tracingMetricsInterval) throws IOException {
 
 		this.barrierHandler = InputProcessorUtil.createCheckpointBarrierHandler(
 			isCheckpointingEnabled, checkpointedTask, checkpointMode, ioManager, taskManagerConfig, inputGates1, inputGates2);
@@ -237,6 +239,7 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 		this.isEndInputs = new boolean[]{false, false};
 
 		this.enableTracingMetrics = enableTracingMetrics;
+		this.tracingMetricsInterval = tracingMetricsInterval;
 	}
 
 	public boolean processInput() throws Exception {
@@ -319,7 +322,8 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 							reusedObject1 = ((StreamRecord<IN1>) recordOrWatermark).getValue();
 
 							StreamRecord<IN1> record = recordOrWatermark.asRecord();
-							if (enableTracingMetrics) {
+							// numRecordsIn counter is a SimpleCounter not a heavier SumCounter, so reuse it
+							if (enableTracingMetrics && numRecordsIn.getCount() % tracingMetricsInterval == 0) {
 								long start = System.nanoTime();
 								waitInput.update(start - lastProcessedTime);
 								synchronized (lock) {
@@ -340,7 +344,8 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 							reusedObject2 = ((StreamRecord<IN2>) recordOrWatermark).getValue();
 
 							StreamRecord<IN2> record = recordOrWatermark.asRecord();
-							if (enableTracingMetrics) {
+							// numRecordsIn counter is a SimpleCounter not a heavier SumCounter, so reuse it
+							if (enableTracingMetrics && numRecordsIn.getCount() % tracingMetricsInterval == 0) {
 								long start = System.nanoTime();
 								waitInput.update(start - lastProcessedTime);
 								synchronized (lock) {

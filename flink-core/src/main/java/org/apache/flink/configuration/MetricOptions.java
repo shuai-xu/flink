@@ -110,6 +110,11 @@ public class MetricOptions {
 			.defaultValue(128)
 			.withDescription("Defines the number of measured latencies to maintain at each operator.");
 
+	/** The sampling rate of tracing metric based on records count. */
+	public static final ConfigOption<Integer> TRACING_SAMPLE_COUNT_INTERVAL =
+		key("metrics.tracing.sample.count-interval")
+			.defaultValue(100);
+
 	private MetricOptions() {
 	}
 }

@@ -31,6 +31,8 @@ import org.apache.flink.runtime.io.network.buffer.BufferConsumer;
 import org.apache.flink.runtime.io.network.buffer.BufferPool;
 import org.apache.flink.runtime.io.network.buffer.BufferPoolOwner;
 import org.apache.flink.runtime.io.network.buffer.BufferProvider;
+import org.apache.flink.runtime.metrics.SumAndCount;
+import org.apache.flink.runtime.metrics.groups.TaskIOMetricGroup;
 import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.runtime.taskmanager.TaskActions;
 import org.apache.flink.runtime.taskmanager.TaskManager;
@@ -81,6 +83,16 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 	private BufferPool bufferPool;
 
 	private boolean hasNotifiedPipelinedConsumers;
+
+	/** enable tracing metrics */
+	private boolean enableTracingMetrics;
+
+	private int tracingMetricsInterval;
+
+	private long resultCounter = 0L;
+
+	/** wait buffer metrics */
+	private SumAndCount nsWaitBufferTime;
 
 	public InternalResultPartition(
 		String owningTaskName,
@@ -423,7 +435,15 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 	private BufferBuilder requestNewBufferBuilder(int targetChannel, boolean isBroadcast) throws IOException, InterruptedException {
 		checkState(!bufferBuilders[targetChannel].isPresent() || bufferBuilders[targetChannel].get().isFinished());
 
-		BufferBuilder bufferBuilder = getBufferProvider().requestBufferBuilderBlocking();
+		final BufferBuilder bufferBuilder;
+		if (enableTracingMetrics && (resultCounter++ % tracingMetricsInterval == 0)) {
+			final long start = System.nanoTime();
+			bufferBuilder = getBufferProvider().requestBufferBuilderBlocking();
+			nsWaitBufferTime.update(System.nanoTime() - start);
+		} else {
+			bufferBuilder = getBufferProvider().requestBufferBuilderBlocking();
+		}
+
 		if (isBroadcast) {
 			BufferConsumer bufferConsumer = bufferBuilder.createBufferConsumer();
 			addBufferConsumer(bufferConsumer, 0);
@@ -534,5 +554,17 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 	public void setTypeSerializer(TypeSerializer typeSerializer) {
 		super.setTypeSerializer(typeSerializer);
 		serializationDelegate = new SerializationDelegate<>(typeSerializer);
+	}
+
+	@Override
+	public void setMetricGroup(TaskIOMetricGroup metrics, boolean enableTracingMetrics, int tracingMetricsInterval) {
+		super.setMetricGroup(metrics, enableTracingMetrics, tracingMetricsInterval);
+
+		this.enableTracingMetrics = enableTracingMetrics;
+		this.tracingMetricsInterval = tracingMetricsInterval;
+
+		if (enableTracingMetrics) {
+			this.nsWaitBufferTime = metrics.getNsWaitBufferTime();
+		}
 	}
 }

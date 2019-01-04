@@ -23,6 +23,7 @@ import org.apache.flink.annotation.Public;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.configuration.TaskManagerOptions;
+import org.apache.flink.util.Preconditions;
 
 import com.esotericsoftware.kryo.Serializer;
 
@@ -84,6 +85,11 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 	 * unchanged.
 	 */
 	public static final int PARALLELISM_UNKNOWN = -2;
+
+	/**
+	 * The default sampling rate of tracing metric based on records count.
+	 */
+	public static final int DEFAULT_TRACING_METRICS_SAMPLE_INTERVAL = 100;
 
 	private static final long DEFAULT_RESTART_DELAY = 10000L;
 
@@ -174,6 +180,8 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 	private LinkedHashSet<Class<?>> registeredPojoTypes = new LinkedHashSet<>();
 
 	private boolean tracingMetricsEnabled = false;
+
+	private int tracingMetricsInterval = DEFAULT_TRACING_METRICS_SAMPLE_INTERVAL;
 
 	// --------------------------------------------------------------------------------------------
 
@@ -961,7 +969,16 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 		return this;
 	}
 
-	// ------------------------------ Utilities  ----------------------------------
+	public int getTracingMetricsInterval() {
+		return tracingMetricsInterval;
+	}
+
+	public ExecutionConfig setTracingMetricsInterval(int tracingMetricsInterval) {
+		Preconditions.checkArgument(tracingMetricsInterval > 0);
+		this.tracingMetricsInterval = tracingMetricsInterval;
+		return this;
+	}
+// ------------------------------ Utilities  ----------------------------------
 
 	public static class SerializableSerializer<T extends Serializer<?> & Serializable> implements Serializable {
 		private static final long serialVersionUID = 4687893502781067189L;

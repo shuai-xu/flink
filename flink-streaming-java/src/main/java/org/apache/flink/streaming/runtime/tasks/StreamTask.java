@@ -1233,7 +1233,10 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
 		StreamRecordWriter<StreamRecord<?>> output =
 			new StreamRecordWriter(bufferWriter, outputPartitioner, bufferTimeout, taskName);
-		output.setMetricGroup(environment.getMetricGroup().getIOMetricGroup());
+		output.setMetricGroup(
+			environment.getMetricGroup().getIOMetricGroup(),
+			environment.getExecutionConfig().isTracingMetricsEnabled(),
+			environment.getExecutionConfig().getTracingMetricsInterval());
 		return output;
 	}
 }

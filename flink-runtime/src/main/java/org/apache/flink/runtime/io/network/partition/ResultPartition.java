@@ -188,7 +188,7 @@ public abstract class ResultPartition<T> implements ResultPartitionWriter<T> {
 	}
 
 	@Override
-	public void setMetricGroup(TaskIOMetricGroup metrics) {
+	public void setMetricGroup(TaskIOMetricGroup metrics, boolean enableTracingMetrics, int tracingMetricsInterval) {
 		numBytesOut = metrics.getNumBytesOutCounter();
 		numBuffersOut = metrics.getNumBuffersOutCounter();
 	}

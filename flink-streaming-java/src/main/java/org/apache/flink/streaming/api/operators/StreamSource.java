@@ -18,6 +18,7 @@
 package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.metrics.Histogram;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.metrics.MetricNames;
@@ -51,7 +52,9 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 
 	private transient volatile boolean canceledOrStopped = false;
 
-	private transient  boolean enableTracingMetrics = false;
+	private transient boolean enableTracingMetrics = false;
+
+	private transient int tracingMetricsInterval;
 
 	private transient SumAndCount taskLatency;
 
@@ -80,74 +83,14 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 			if (sourceLatency == null) {
 				sourceLatency = getRuntimeContext().getMetricGroup().histogram(MetricNames.SOURCE_LATENCY, new SimpleHistogram());
 			}
+			tracingMetricsInterval = getRuntimeContext().getExecutionConfig().getTracingMetricsInterval();
 		}
 
 		LatencyMarksEmitter latencyEmitter = null;
 		if (getExecutionConfig().isLatencyTrackingEnabled()) {
 			latencyEmitter = new LatencyMarksEmitter<>(
 				getProcessingTimeService(),
-				new Output<StreamRecord<OUT>>() {
-					private long lastEmitTime = 0;
-
-					@Override
-					public void emitWatermark(Watermark mark) {
-						collector.emitWatermark(mark);
-					}
-
-					@Override
-					public void emitLatencyMarker(LatencyMarker latencyMarker) {
-						collector.emitLatencyMarker(latencyMarker);
-					}
-
-					@Override
-					public void collect(StreamRecord<OUT> record) {
-						if (enableTracingMetrics) {
-							collectWithMetrics(record);
-						} else {
-							collector.collect(record);
-						}
-					}
-
-					public void collectWithMetrics(StreamRecord<OUT> record) {
-						long start = System.nanoTime();
-
-						if (lastEmitTime > 0) {
-							sourceLatency.update(start - lastEmitTime);
-						}
-
-						collector.collect(record);
-
-						lastEmitTime = System.nanoTime();
-						taskLatency.update(lastEmitTime - start);
-					}
-
-					@Override
-					public <X> void collect(OutputTag<X> outputTag, StreamRecord<X> record) {
-						if (enableTracingMetrics) {
-							collectWithMetrics(outputTag, record);
-						} else {
-							collector.collect(outputTag, record);
-						}
-					}
-
-					public <X> void collectWithMetrics(OutputTag<X> outputTag, StreamRecord<X> record) {
-						long start = System.nanoTime();
-
-						if (lastEmitTime > 0) {
-							sourceLatency.update(start - lastEmitTime);
-						}
-
-						collector.collect(outputTag, record);
-
-						lastEmitTime = System.nanoTime();
-						taskLatency.update(lastEmitTime - start);
-					}
-
-					@Override
-					public void close() {
-						collector.close();
-					}
-				},
+				collector,
 				getExecutionConfig().getLatencyTrackingInterval(),
 				this.getOperatorID(),
 				getRuntimeContext().getIndexOfThisSubtask());
@@ -155,14 +98,13 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 
 		final long watermarkInterval = getRuntimeContext().getExecutionConfig().getAutoWatermarkInterval();
 
-		this.ctx = StreamSourceContexts.getSourceContext(
+		this.ctx = getSourceContext(
 			timeCharacteristic,
 			getProcessingTimeService(),
 			lockingObject,
 			streamStatusMaintainer,
 			collector,
-			watermarkInterval,
-			-1);
+			watermarkInterval);
 
 		try {
 			userFunction.run(ctx);
@@ -180,6 +122,117 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 				latencyEmitter.close();
 			}
 		}
+	}
+
+	@VisibleForTesting
+	protected SourceFunction.SourceContext<OUT> getSourceContext(
+		TimeCharacteristic timeCharacteristic,
+		ProcessingTimeService processingTimeService,
+		Object lockingObject,
+		StreamStatusMaintainer streamStatusMaintainer,
+		Output<StreamRecord<OUT>> collector,
+		boolean enableTracingMetrics,
+		int tracingMetricsInterval,
+		SumAndCount taskLatency,
+		Histogram sourceLatency,
+		long watermarkInterval) {
+
+		return getSourceContext(
+			timeCharacteristic,
+			processingTimeService,
+			lockingObject,
+			streamStatusMaintainer,
+			getOutputWithTaskLatency(collector, enableTracingMetrics, tracingMetricsInterval, taskLatency, sourceLatency),
+			watermarkInterval);
+	}
+
+	private SourceFunction.SourceContext<OUT> getSourceContext(
+			TimeCharacteristic timeCharacteristic,
+			ProcessingTimeService processingTimeService,
+			Object lockingObject,
+			StreamStatusMaintainer streamStatusMaintainer,
+			Output<StreamRecord<OUT>> collector,
+			long watermarkInterval) {
+
+		return StreamSourceContexts.getSourceContext(
+			timeCharacteristic,
+			processingTimeService,
+			lockingObject,
+			streamStatusMaintainer,
+			getOutputWithTaskLatency(collector, enableTracingMetrics, tracingMetricsInterval, taskLatency, sourceLatency),
+			watermarkInterval,
+			-1);
+	}
+
+	private Output<StreamRecord<OUT>> getOutputWithTaskLatency(
+			Output<StreamRecord<OUT>> collector,
+			boolean enableTracingMetrics,
+			int tracingMetricsInterval,
+			SumAndCount taskLatency,
+			Histogram sourceLatency) {
+		return new Output<StreamRecord<OUT>>() {
+			private long lastEmitTime = 0;
+			private long emitCounter = 0;
+
+			@Override
+			public void emitWatermark(Watermark mark) {
+				collector.emitWatermark(mark);
+			}
+
+			@Override
+			public void emitLatencyMarker(LatencyMarker latencyMarker) {
+				collector.emitLatencyMarker(latencyMarker);
+			}
+
+			@Override
+			public void collect(StreamRecord<OUT> record) {
+				if (enableTracingMetrics && (emitCounter++ % tracingMetricsInterval == 0)) {
+					collectWithMetrics(record);
+				} else {
+					collector.collect(record);
+				}
+			}
+
+			public void collectWithMetrics(StreamRecord<OUT> record) {
+				long start = System.nanoTime();
+
+				if (lastEmitTime > 0) {
+					sourceLatency.update(start - lastEmitTime);
+				}
+
+				collector.collect(record);
+
+				lastEmitTime = System.nanoTime();
+				taskLatency.update(lastEmitTime - start);
+			}
+
+			@Override
+			public <X> void collect(OutputTag<X> outputTag, StreamRecord<X> record) {
+				if (enableTracingMetrics && (emitCounter++ % tracingMetricsInterval == 0)) {
+					collectWithMetrics(outputTag, record);
+				} else {
+					collector.collect(outputTag, record);
+				}
+			}
+
+			public <X> void collectWithMetrics(OutputTag<X> outputTag, StreamRecord<X> record) {
+				long start = System.nanoTime();
+
+				if (lastEmitTime > 0) {
+					sourceLatency.update(start - lastEmitTime);
+				}
+
+				collector.collect(outputTag, record);
+
+				lastEmitTime = System.nanoTime();
+				taskLatency.update(lastEmitTime - start);
+			}
+
+			@Override
+			public void close() {
+				collector.close();
+			}
+		};
 	}
 
 	public void cancel() {

@@ -73,7 +73,7 @@ public interface ResultPartitionWriter<T> {
 	/**
 	 * Sets the metric group for this ResultPartitionWriter.
 	 */
-	void setMetricGroup(TaskIOMetricGroup metrics);
+	void setMetricGroup(TaskIOMetricGroup metrics, boolean enableTracingMetrics, int tracingMetricsInterval);
 
 	/**
 	 * Manually trigger consumption from enqueued {@link BufferConsumer BufferConsumers} in all subpartitions.

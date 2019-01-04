@@ -115,7 +115,7 @@ public class RecordWriter<T> {
 	/**
 	 * Sets the metric group for this RecordWriter.
      */
-	public void setMetricGroup(TaskIOMetricGroup metrics) {
-		targetPartition.setMetricGroup(metrics);
+	public void setMetricGroup(TaskIOMetricGroup metrics, boolean enableTracingMetrics, int tracingMetricsInterval) {
+		targetPartition.setMetricGroup(metrics, enableTracingMetrics, tracingMetricsInterval);
 	}
 }
