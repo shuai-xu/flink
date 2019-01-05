@@ -370,7 +370,14 @@ public class YarnShuffleServiceITCaseBase extends TestLogger {
 
 			try {
 				for (int i = 0; i < numRecords; ++i) {
-					writer.broadcastEmit(new TestRecord(i, recordLength));
+					TestRecord record = new TestRecord(i, recordLength);
+					if (i % 2 == 0) {
+						writer.broadcastEmit(new TestRecord(i, recordLength));
+					} else {
+						for (int j = 0; j < rpw.getNumberOfSubpartitions(); ++j) {
+							writer.emit(record);
+						}
+					}
 				}
 			} finally {
 				writer.flushAll();

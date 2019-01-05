@@ -39,7 +39,6 @@ import java.util.Arrays;
  */
 public class BinaryHashPartitioner extends StreamPartitioner<BaseRow> {
 
-	private final int[] returnArray = new int[1];
 	private GeneratedHashFunc genHashFunc;
 	private final String[] hashFieldNames;
 
@@ -62,11 +61,9 @@ public class BinaryHashPartitioner extends StreamPartitioner<BaseRow> {
 	}
 
 	@Override
-	public int[] selectChannels(StreamRecord<BaseRow> record,
-			int numChannels) {
-		returnArray[0] = MathUtils.murmurHash(
+	public int selectChannel(StreamRecord<BaseRow> record, int numChannels) {
+		return MathUtils.murmurHash(
 				getHashFunc().apply(record.getValue())) % numChannels;
-		return returnArray;
 	}
 
 	private HashFunc getHashFunc() {

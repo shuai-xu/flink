@@ -45,6 +45,6 @@ public class ShufflePartitionerTest extends StreamPartitionerTest {
 	}
 
 	private int selectChannel(int numberOfChannels) {
-		return streamPartitioner.selectChannels(streamRecord, numberOfChannels)[0];
+		return streamPartitioner.selectChannel(streamRecord, numberOfChannels);
 	}
 }

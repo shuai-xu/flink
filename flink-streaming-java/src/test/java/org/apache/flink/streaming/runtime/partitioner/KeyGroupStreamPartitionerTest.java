@@ -25,7 +25,6 @@ import org.apache.flink.util.TestLogger;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -52,19 +51,12 @@ public class KeyGroupStreamPartitionerTest extends TestLogger {
 	}
 
 	@Test
-	public void testSelectChannelsLength() {
-		assertEquals(1, keyGroupPartitioner.selectChannels(streamRecord1, 1).length);
-		assertEquals(1, keyGroupPartitioner.selectChannels(streamRecord1, 2).length);
-		assertEquals(1, keyGroupPartitioner.selectChannels(streamRecord1, 1024).length);
-	}
-
-	@Test
 	public void testSelectChannelsGrouping() {
-		assertArrayEquals(keyGroupPartitioner.selectChannels(streamRecord1, 1),
-				keyGroupPartitioner.selectChannels(streamRecord2, 1));
-		assertArrayEquals(keyGroupPartitioner.selectChannels(streamRecord1, 2),
-				keyGroupPartitioner.selectChannels(streamRecord2, 2));
-		assertArrayEquals(keyGroupPartitioner.selectChannels(streamRecord1, 1024),
-				keyGroupPartitioner.selectChannels(streamRecord2, 1024));
+		assertEquals(keyGroupPartitioner.selectChannel(streamRecord1, 1),
+				keyGroupPartitioner.selectChannel(streamRecord2, 1));
+		assertEquals(keyGroupPartitioner.selectChannel(streamRecord1, 2),
+				keyGroupPartitioner.selectChannel(streamRecord2, 2));
+		assertEquals(keyGroupPartitioner.selectChannel(streamRecord1, 1024),
+				keyGroupPartitioner.selectChannel(streamRecord2, 1024));
 	}
 }

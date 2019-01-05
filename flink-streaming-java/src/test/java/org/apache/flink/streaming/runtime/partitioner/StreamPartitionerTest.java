@@ -21,8 +21,6 @@ import org.apache.flink.api.java.tuple.Tuple;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.util.TestLogger;
 
-import org.junit.Test;
-
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -35,16 +33,8 @@ public abstract class StreamPartitionerTest extends TestLogger {
 
 	abstract StreamPartitioner<Tuple> createPartitioner();
 
-	@Test
-	public void testSelectChannelsLength() {
-		assertEquals(1, streamPartitioner.selectChannels(streamRecord, 1).length);
-		assertEquals(1, streamPartitioner.selectChannels(streamRecord, 2).length);
-		assertEquals(1, streamPartitioner.selectChannels(streamRecord, 1024).length);
-	}
-
 	protected void assertSelectedChannel(int expectedChannel, int numberOfChannels) {
-		int[] actualResult = streamPartitioner.selectChannels(streamRecord, numberOfChannels);
-		assertEquals(1, actualResult.length);
-		assertEquals(expectedChannel, actualResult[0]);
+		int actualResult = streamPartitioner.selectChannel(streamRecord, numberOfChannels);
+		assertEquals(expectedChannel, actualResult);
 	}
 }

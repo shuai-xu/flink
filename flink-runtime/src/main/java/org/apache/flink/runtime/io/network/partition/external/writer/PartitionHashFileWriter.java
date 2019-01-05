@@ -125,6 +125,13 @@ public class PartitionHashFileWriter<T> implements PersistentFileWriter<T> {
 	}
 
 	@Override
+	public void add(T record, int targetPartition) throws IOException, InterruptedException {
+		serializationDelegate.setInstance(record);
+		recordSerializer.serializeRecord(serializationDelegate);
+		copyToTargetFile(targetPartition);
+	}
+
+	@Override
 	public void add(T record, int[] targetPartitions) throws IOException, InterruptedException {
 		serializationDelegate.setInstance(record);
 

@@ -87,52 +87,46 @@ public abstract class PersistentFileWriterTestBase {
 
 	@Test
 	public void testNormal() throws Exception {
-		test(4, 100, new ChannelSelector<Integer>() {
+		test(4, 100, false, new ChannelSelector<Integer>() {
 			private int nextIndex = 0;
 
 			@Override
-			public int[] selectChannels(Integer record, int numChannels) {
-				return new int[]{(nextIndex++) % numChannels};
+			public int selectChannel(Integer record, int numChannels) {
+				return (nextIndex++) % numChannels;
 			}
 		});
 	}
 
 	@Test
 	public void testMoreRecords() throws Exception {
-		test(4, 100000, new ChannelSelector<Integer>() {
+		test(4, 100000, false, new ChannelSelector<Integer>() {
 			private int nextIndex = 0;
 
 			@Override
-			public int[] selectChannels(Integer record, int numChannels) {
-				return new int[]{(nextIndex++) % numChannels};
+			public int selectChannel(Integer record, int numChannels) {
+				return (nextIndex++) % numChannels;
 			}
 		});
 	}
 
 	@Test
 	public void testMorePartitions() throws Exception {
-		test(40, 100000, new ChannelSelector<Integer>() {
+		test(40, 100000, false, new ChannelSelector<Integer>() {
 			private int nextIndex = 0;
 
 			@Override
-			public int[] selectChannels(Integer record, int numChannels) {
-				return new int[]{(nextIndex++) % numChannels};
+			public int selectChannel(Integer record, int numChannels) {
+				return (nextIndex++) % numChannels;
 			}
 		});
 	}
 
 	@Test
 	public void testBroadcast() throws Exception {
-		test(40, 100000, new ChannelSelector<Integer>() {
-
-			@Override
-			public int[] selectChannels(Integer record, int numChannels) {
-				return new int[]{0, 1, 2, 3};
-			}
-		});
+		test(40, 100000, true, null);
 	}
 
-	protected void test(int numberPartitions, int numberOfRecords, ChannelSelector<Integer> channelSelector)
+	protected void test(int numberPartitions, int numberOfRecords, boolean isBroadcast, ChannelSelector<Integer> channelSelector)
 		throws Exception {
 		String partitionRootPath = temporaryFolder.newFolder().getAbsolutePath() + "/";
 
@@ -142,8 +136,21 @@ public abstract class PersistentFileWriterTestBase {
 		for (int i = 0; i < numberPartitions; ++i) {
 			expectedResult.add(new HashSet<>());
 		}
+
+		int[] allChannels = new int[numberPartitions];
+		for(int i = 0; i < numberPartitions; ++i) {
+			allChannels[i] = i;
+		}
+
 		for (int i = 0; i < numberOfRecords; ++i) {
-			int[] channels = channelSelector.selectChannels(i, numberPartitions);
+			int[] channels;
+
+			if (isBroadcast) {
+				channels = allChannels;
+			} else {
+				channels = new int[]{channelSelector.selectChannel(i, numberPartitions)};
+			}
+
 			shuffleWriter.add(i, channels);
 
 			for (int channel : channels) {

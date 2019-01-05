@@ -187,10 +187,11 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 	}
 
 	@Override
-	public void emitRecord(T record,
-						   int[] targetChannels,
-						   boolean isBroadcast,
-						   boolean flushAlways) throws IOException, InterruptedException {
+	public void emitRecord(
+			T record,
+			int[] targetChannels,
+			boolean isBroadcast,
+			boolean flushAlways) throws IOException, InterruptedException {
 		if (!initialized) {
 			initialize();
 		}
@@ -205,8 +206,22 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 	}
 
 	@Override
-	public void emitRecord(T record, int targetChannel, boolean isBroadcast, boolean flushAlways) throws IOException {
-		throw new UnsupportedOperationException("Random emit is not supported in external result partition.");
+	public void emitRecord(
+			T record,
+			int targetChannel,
+			boolean isBroadcast,
+			boolean flushAlways) throws IOException, InterruptedException {
+		if (!initialized) {
+			initialize();
+		}
+
+		try {
+			checkInProduceState();
+			fileWriter.add(record, targetChannel);
+		} catch (Throwable e) {
+			deletePartitionDirOnFailure();
+			throw e;
+		}
 	}
 
 	@Override

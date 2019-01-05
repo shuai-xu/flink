@@ -52,23 +52,25 @@ public class RecordWriter<T> {
 
 	private final boolean flushAlways;
 
-	private final boolean isBroadcast;
+	private final boolean isBroadcastSelector;
 
 	public RecordWriter(ResultPartitionWriter writer) {
-		this(writer, new RoundRobinChannelSelector<T>());
+		this(writer, new RoundRobinChannelSelector<T>(), false);
 	}
 
-	@SuppressWarnings("unchecked")
-	public RecordWriter(ResultPartitionWriter writer, ChannelSelector<T> channelSelector) {
-		this(writer, channelSelector, false);
+	public RecordWriter(
+			ResultPartitionWriter writer,
+			ChannelSelector<T> channelSelector,
+			boolean isBroadcastSelector) {
+		this(writer, channelSelector, isBroadcastSelector, false);
 	}
 
-	public RecordWriter(ResultPartitionWriter writer, ChannelSelector<T> channelSelector, boolean flushAlways) {
-		this(writer, channelSelector, false, flushAlways);
-	}
-
-	public RecordWriter(ResultPartitionWriter writer, ChannelSelector<T> channelSelector, boolean isBroadcast, boolean flushAlways) {
-		this.isBroadcast = isBroadcast;
+	public RecordWriter(
+			ResultPartitionWriter writer,
+			ChannelSelector<T> channelSelector,
+			boolean isBroadcastSelector,
+			boolean flushAlways) {
+		this.isBroadcastSelector = isBroadcastSelector;
 		this.flushAlways = flushAlways;
 		this.targetPartition = writer;
 		this.channelSelector = channelSelector;
@@ -80,8 +82,12 @@ public class RecordWriter<T> {
 	}
 
 	public void emit(T record) throws IOException, InterruptedException {
-		int[] targetChannels = channelSelector.selectChannels(record, numChannels);
-		targetPartition.emitRecord(record, targetChannels, isBroadcast, flushAlways);
+		if (isBroadcastSelector) {
+			targetPartition.emitRecord(record, allChannels, isBroadcastSelector, flushAlways);
+		} else {
+			int targetChannel = channelSelector.selectChannel(record, numChannels);
+			targetPartition.emitRecord(record, targetChannel, isBroadcastSelector, flushAlways);
+		}
 	}
 
 	/**
@@ -89,7 +95,7 @@ public class RecordWriter<T> {
 	 * the {@link ChannelSelector}.
 	 */
 	public void broadcastEmit(T record) throws IOException, InterruptedException {
-		targetPartition.emitRecord(record, allChannels, isBroadcast, flushAlways);
+		targetPartition.emitRecord(record, allChannels, isBroadcastSelector, flushAlways);
 	}
 
 	/**
@@ -97,7 +103,7 @@ public class RecordWriter<T> {
 	 */
 	public void randomEmit(T record) throws IOException, InterruptedException {
 		int targetChannel = rng.nextInt(numChannels);
-		targetPartition.emitRecord(record, targetChannel, isBroadcast, flushAlways);
+		targetPartition.emitRecord(record, targetChannel, isBroadcastSelector, flushAlways);
 	}
 
 	public void broadcastEvent(AbstractEvent event) throws IOException {

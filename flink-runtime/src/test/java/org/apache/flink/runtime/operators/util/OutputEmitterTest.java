@@ -65,10 +65,8 @@ public class OutputEmitterTest {
 			IntValue k = new IntValue(i);
 			Record rec = new Record(k);
 
-			int[] chans = oe1.selectChannels(rec, hit.length);
-			for (int chan : chans) {
-				hit[chan]++;
-			}
+			int chan = oe1.selectChannel(rec, hit.length);
+			hit[chan]++;
 		}
 
 		int cnt = 0;
@@ -92,10 +90,8 @@ public class OutputEmitterTest {
 			StringValue k = new StringValue(i + "");
 			Record rec = new Record(k);
 
-			int[] chans = oe2.selectChannels(rec, hit.length);
-			for (int chan : chans) {
-				hit[chan]++;
-			}
+			int chan = oe2.selectChannel(rec, hit.length);
+			hit[chan]++;
 		}
 
 		cnt = 0;
@@ -112,29 +108,24 @@ public class OutputEmitterTest {
 		numChans = 100;
 
 		// MinVal hash
-		int[] chans = oe3.selectChannels(Integer.MIN_VALUE, numChans);
-		assertTrue(chans.length == 1);
-		assertTrue(chans[0] >= 0 && chans[0] <= numChans-1);
+		int chans = oe3.selectChannel(Integer.MIN_VALUE, numChans);
+		assertTrue(chans >= 0 && chans <= numChans-1);
 
 		// -1 hash
-		chans = oe3.selectChannels(-1, hit.length);
-		assertTrue(chans.length == 1);
-		assertTrue(chans[0] >= 0 && chans[0] <= numChans-1);
+		chans = oe3.selectChannel(-1, hit.length);
+		assertTrue(chans >= 0 && chans <= numChans-1);
 
 		// 0 hash
-		chans = oe3.selectChannels(0, hit.length);
-		assertTrue(chans.length == 1);
-		assertTrue(chans[0] >= 0 && chans[0] <= numChans-1);
+		chans = oe3.selectChannel(0, hit.length);
+		assertTrue(chans >= 0 && chans <= numChans-1);
 
 		// 1 hash
-		chans = oe3.selectChannels(1, hit.length);
-		assertTrue(chans.length == 1);
-		assertTrue(chans[0] >= 0 && chans[0] <= numChans-1);
+		chans = oe3.selectChannel(1, hit.length);
+		assertTrue(chans >= 0 && chans <= numChans-1);
 
 		// MaxVal hash
-		chans = oe3.selectChannels(Integer.MAX_VALUE, hit.length);
-		assertTrue(chans.length == 1);
-		assertTrue(chans[0] >= 0 && chans[0] <= numChans-1);
+		chans = oe3.selectChannel(Integer.MAX_VALUE, hit.length);
+		assertTrue(chans >= 0 && chans <= numChans-1);
 	}
 
 	@Test
@@ -153,10 +144,8 @@ public class OutputEmitterTest {
 			IntValue k = new IntValue(i);
 			Record rec = new Record(k);
 
-			int[] chans = oe1.selectChannels(rec, hit.length);
-			for (int chan : chans) {
-				hit[chan]++;
-			}
+			int chan = oe1.selectChannel(rec, hit.length);
+			hit[chan]++;
 		}
 
 		assertTrue(hit[0] == numRecords);
@@ -178,10 +167,8 @@ public class OutputEmitterTest {
 			StringValue k = new StringValue(i + "");
 			Record rec = new Record(k);
 
-			int[] chans = oe2.selectChannels(rec, hit.length);
-			for (int chan : chans) {
-				hit[chan]++;
-			}
+			int chan = oe2.selectChannel(rec, hit.length);
+			hit[chan]++;
 		}
 
 		assertTrue(hit[0] == numRecords);
@@ -207,10 +194,8 @@ public class OutputEmitterTest {
 			IntValue k = new IntValue(i);
 			Record rec = new Record(k);
 
-			int[] chans = oe1.selectChannels(rec, hit.length);
-			for (int chan : chans) {
-				hit[chan]++;
-			}
+			int chan = oe1.selectChannel(rec, hit.length);
+			hit[chan]++;
 		}
 
 		int cnt = 0;
@@ -239,10 +224,8 @@ public class OutputEmitterTest {
 			StringValue k = new StringValue(i + "");
 			Record rec = new Record(k);
 
-			int[] chans = oe2.selectChannels(rec, hit.length);
-			for (int chan : chans) {
-				hit[chan]++;
-			}
+			int chan = oe2.selectChannel(rec, hit.length);
+			hit[chan]++;
 		}
 
 		cnt = 0;
@@ -259,53 +242,55 @@ public class OutputEmitterTest {
 
 	@Test
 	public void testBroadcast() {
-		// Test for IntValue
-		@SuppressWarnings({"unchecked", "rawtypes"})
-		final TypeComparator<Record> intComp = new RecordComparatorFactory(new int[] {0}, new Class[] {IntValue.class}).createComparator();
-		final ChannelSelector<Record> oe1 = new OutputEmitter<>(ShipStrategyType.BROADCAST, intComp);
+		try {
+			// Test for IntValue
+			@SuppressWarnings({"unchecked", "rawtypes"})
+			final TypeComparator<Record> intComp = new RecordComparatorFactory(new int[]{0}, new Class[]{IntValue.class}).createComparator();
+			final ChannelSelector<Record> oe1 = new OutputEmitter<>(ShipStrategyType.BROADCAST, intComp);
 
-		int numChannels = 100;
-		int numRecords = 50000;
+			int numChannels = 100;
+			int numRecords = 50000;
 
-		int[] hit = new int[numChannels];
+			int[] hit = new int[numChannels];
 
-		for (int i = 0; i < numRecords; i++) {
-			IntValue k = new IntValue(i);
-			Record rec = new Record(k);
+			for (int i = 0; i < numRecords; i++) {
+				IntValue k = new IntValue(i);
+				Record rec = new Record(k);
 
-			int[] chans = oe1.selectChannels(rec, hit.length);
-			for (int chan : chans) {
+				int chan = oe1.selectChannel(rec, hit.length);
 				hit[chan]++;
 			}
-		}
 
-		for (int aHit : hit) {
-			assertTrue(aHit + "", aHit == numRecords);
-		}
+			for (int aHit : hit) {
+				assertTrue(aHit + "", aHit == numRecords);
+			}
 
-		// Test for StringValue
-		@SuppressWarnings({"unchecked", "rawtypes"})
-		final TypeComparator<Record> stringComp = new RecordComparatorFactory(new int[] {0}, new Class[] {StringValue.class}).createComparator();
-		final ChannelSelector<Record> oe2 = new OutputEmitter<>(ShipStrategyType.BROADCAST, stringComp);
+			// Test for StringValue
+			@SuppressWarnings({"unchecked", "rawtypes"})
+			final TypeComparator<Record> stringComp = new RecordComparatorFactory(new int[]{0}, new Class[]{StringValue.class}).createComparator();
+			final ChannelSelector<Record> oe2 = new OutputEmitter<>(ShipStrategyType.BROADCAST, stringComp);
 
-		numChannels = 100;
-		numRecords = 5000;
+			numChannels = 100;
+			numRecords = 5000;
 
-		hit = new int[numChannels];
+			hit = new int[numChannels];
 
-		for (int i = 0; i < numRecords; i++) {
-			StringValue k = new StringValue(i + "");
-			Record rec = new Record(k);
+			for (int i = 0; i < numRecords; i++) {
+				StringValue k = new StringValue(i + "");
+				Record rec = new Record(k);
 
-			int[] chans = oe2.selectChannels(rec, hit.length);
-			for (int chan : chans) {
+				int chan = oe2.selectChannel(rec, hit.length);
 				hit[chan]++;
 			}
+
+			for (int aHit : hit) {
+				assertTrue(aHit + "", aHit == numRecords);
+			}
+		} catch (UnsupportedOperationException ex) {
+			return;
 		}
 
-		for (int aHit : hit) {
-			assertTrue(aHit + "", aHit == numRecords);
-		}
+		fail("Broadcast selector does not support select channels.");
 	}
 
 	@Test
@@ -325,10 +310,8 @@ public class OutputEmitterTest {
 			rec.setField(1, new StringValue("AB"+i+"CD"+i));
 			rec.setField(3, new DoubleValue(i*3.141d));
 
-			int[] chans = oe1.selectChannels(rec, hit.length);
-			for (int chan : chans) {
-				hit[chan]++;
-			}
+			int chan = oe1.selectChannel(rec, hit.length);
+			hit[chan]++;
 		}
 
 		int cnt = 0;
@@ -351,7 +334,7 @@ public class OutputEmitterTest {
 		rec.setField(0, new IntValue(1));
 
 		try {
-			oe1.selectChannels(rec, 100);
+			oe1.selectChannel(rec, 100);
 		} catch (KeyFieldOutOfBoundsException re) {
 			Assert.assertEquals(1, re.getFieldNumber());
 			return;
@@ -370,7 +353,7 @@ public class OutputEmitterTest {
 		rec.setField(1, new IntValue(1));
 
 		try {
-			oe1.selectChannels(rec, 100);
+			oe1.selectChannel(rec, 100);
 		} catch (NullKeyFieldException re) {
 			Assert.assertEquals(0, re.getFieldNumber());
 			return;
@@ -405,7 +388,7 @@ public class OutputEmitterTest {
 		}
 
 		try {
-			oe1.selectChannels(rec, 100);
+			oe1.selectChannel(rec, 100);
 		} catch (DeserializationException re) {
 			return;
 		}

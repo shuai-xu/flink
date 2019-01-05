@@ -35,7 +35,7 @@ public class RebalancePartitionerTest extends StreamPartitionerTest {
 
 	@Test
 	public void testSelectChannelsInterval() {
-		int initialChannel = streamPartitioner.selectChannels(streamRecord, 3)[0];
+		int initialChannel = streamPartitioner.selectChannel(streamRecord, 3);
 		assertTrue(0 <= initialChannel);
 		assertTrue(3 > initialChannel);
 

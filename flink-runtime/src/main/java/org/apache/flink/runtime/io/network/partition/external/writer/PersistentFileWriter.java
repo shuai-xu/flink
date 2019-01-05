@@ -32,6 +32,11 @@ public interface PersistentFileWriter<T> {
 	/**
 	 * Adds a record in the given partition.
 	 */
+	void add(T record, int targetPartition) throws IOException, InterruptedException;
+
+	/**
+	 * Adds a record in the given partitions.
+	 */
 	void add(T record, int[] targetPartitions) throws IOException, InterruptedException;
 
 	/**

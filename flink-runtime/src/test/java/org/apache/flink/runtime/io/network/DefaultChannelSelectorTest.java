@@ -40,12 +40,10 @@ public class DefaultChannelSelectorTest {
 		final RoundRobinChannelSelector<StringValue> selector = new RoundRobinChannelSelector<StringValue>();
 		// Test with two channels
 		final int numberOfOutputChannels = 2;
-		int[] selectedChannels = selector.selectChannels(dummyRecord, numberOfOutputChannels);
-		assertEquals(1, selectedChannels.length);
-		assertEquals(1, selectedChannels[0]);
-		selectedChannels = selector.selectChannels(dummyRecord, numberOfOutputChannels);
-		assertEquals(1, selectedChannels.length);
-		assertEquals(0, selectedChannels[0]);
+		int selectedChannels = selector.selectChannel(dummyRecord, numberOfOutputChannels);
+		assertEquals(1, selectedChannels);
+		selectedChannels = selector.selectChannel(dummyRecord, numberOfOutputChannels);
+		assertEquals(0, selectedChannels);
 	}
 
 }

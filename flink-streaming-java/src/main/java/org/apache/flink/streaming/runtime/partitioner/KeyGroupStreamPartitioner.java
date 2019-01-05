@@ -32,8 +32,6 @@ import org.apache.flink.util.Preconditions;
 public class KeyGroupStreamPartitioner<T, K> extends StreamPartitioner<T> implements ConfigurableStreamPartitioner {
 	private static final long serialVersionUID = 1L;
 
-	private final int[] returnArray = new int[1];
-
 	private final KeySelector<T, K> keySelector;
 
 	private int maxParallelism;
@@ -49,7 +47,7 @@ public class KeyGroupStreamPartitioner<T, K> extends StreamPartitioner<T> implem
 	}
 
 	@Override
-	public int[] selectChannels(
+	public int selectChannel(
 		StreamRecord<T> record,
 		int numberOfOutputChannels) {
 
@@ -59,8 +57,7 @@ public class KeyGroupStreamPartitioner<T, K> extends StreamPartitioner<T> implem
 		} catch (Exception e) {
 			throw new RuntimeException("Could not extract key from " + record.getValue(), e);
 		}
-		returnArray[0] = KeyGroupRangeAssignment.assignKeyToParallelOperator(key, maxParallelism, numberOfOutputChannels);
-		return returnArray;
+		return KeyGroupRangeAssignment.assignKeyToParallelOperator(key, maxParallelism, numberOfOutputChannels);
 	}
 
 	@Override

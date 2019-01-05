@@ -138,6 +138,13 @@ public class PartitionMergeFileWriter<T> implements PersistentFileWriter<T> {
 	}
 
 	@Override
+	public void add(T record, int targetPartition) throws IOException {
+		reuse.f1 = record;
+		reuse.f0 = targetPartition;
+		sortMerger.add(reuse);
+	}
+
+	@Override
 	public void add(T record, int[] targetPartitions) throws IOException {
 		reuse.f1 = record;
 		for (int partition : targetPartitions) {
