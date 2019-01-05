@@ -25,7 +25,6 @@ import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.api.exceptions.PartitionAlreadyExistException;
 import org.apache.flink.table.api.exceptions.PartitionNotExistException;
 import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
-import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.StringUtils;
 
