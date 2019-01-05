@@ -52,7 +52,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Test for CatalogCalciteSchema, mostly translated from ExternalCatalogSchema.
+ * Test for CatalogCalciteSchema.
  */
 public class CatalogCalciteSchemaTest {
 	private final String metadataSchema = "metadata";
