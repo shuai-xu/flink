@@ -85,6 +85,42 @@ Note, that in the Streaming case, the print operation does not trigger execution
 
 The Flink Shell comes with command history and auto-completion.
 
+### Table API
+
+Scala shell also support Table API. Users can execute a streaming Table program with `stenv` and 
+a batch Table program with `btenv`. 
+
+The `Table` API supports interactive programming, which allows users to cache an intermediate 
+table for later usage. For example, in the following scala shell command sequence, table `t1` 
+is cached and the result may be reused in later code.
+
+{% highlight scala %}
+scala> val data = Seq(
+    ("US", "Red", 10),
+    ("UK", "Blue", 20),
+    ("CN", "Yellow", 30),
+    ("US", "Blue",40),
+    ("UK","Red", 50),
+    ("CN", "Red",60),
+    ("US", "Yellow", 70),
+    ("UK", "Yellow", 80),
+    ("CN", "Blue", 90),
+    ("US", "Blue", 100)
+  )
+
+scala> val t = btenv.fromCollection(data).as ('country, 'color, 'amount)
+scala> val t1 = t.filter('amount < 100)
+scala> t1.cache
+scala> val x = t1.print
+
+scala> val t2 = t1.groupBy('country).select('country, 'amount.sum as 'sum)
+scala> val res2 = t2.print
+
+scala> val t3 = t1.groupBy('color).select('color, 'amount.avg as 'avg)
+scala> val res3 = t3.print
+{% endhighlight %}
+
+Note: The cached tables will be cleaned up when the scala shell exit.
 
 ## Adding external dependencies
 

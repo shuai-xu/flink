@@ -4712,3 +4712,100 @@ The following operations are not supported yet:
 - Aggregate functions like REGR_xxx
 
 {% top %}
+
+Cached Table and Interactive Programming
+----------------------------------------
+Users may often find that their program consists of multiple jobs. The logic of the later jobs may
+depend on the result of the previous jobs. This is especially a common case in case of batch jobs.
+Flink Table API supports such use cases efficiently by providing a `cache()` method. 
+
+### Cache a Table
+Users may invoke `cache()` method on a Flink Table to hint Flink to cache that table for later 
+usage. This will avoid unnecessary computations when the cached table is involved into a later job.
+The following code snippet gives an example.
+
+ 
+<div class="codetabs" markdown="1">
+<div data-lang="java" markdown="1">
+
+{% highlight java %}
+// environment configuration
+ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+BatchTableEnvironment tEnv = TableEnvironment.getTableEnvironment(env);
+
+// register Orders table in table environment
+// ...
+
+// specify table program
+Table orders = tEnv.scan("Orders"); // schema (a, b, c, rowtime)
+
+Table counts = orders
+        .groupBy("a")
+        .select("a, b.count as cnt");
+
+// cache the counts
+counts.cache()
+
+// print the high sales; counts is computed for the first time and is cached hereafter
+counts.filter("cnt > 10000").print()
+
+// print the low sales; counts does not need to be recomputed.
+counts.filter("cnt < 10").print()
+
+{% endhighlight %}
+
+</div>
+
+<div data-lang="scala" markdown="1">
+
+{% highlight scala %}
+import org.apache.flink.api.scala._
+import org.apache.flink.table.api.scala._
+
+// environment configuration
+val env = ExecutionEnvironment.getExecutionEnvironment
+val tEnv = TableEnvironment.getTableEnvironment(env)
+
+// register Orders table in table environment
+// ...
+
+// specify table program
+val orders = tEnv.scan("Orders") // schema (a, b, c, rowtime)
+
+val counts = orders
+               .groupBy('a)
+               .select('a, 'b.count as 'cnt)
+
+// cache the counts
+counts.cache()
+
+// print the high sales; counts is computed for the first time and is cached hereafter
+counts.filter("cnt > 10000").print()
+
+// print the low sales; counts does not need to be recomputed.
+counts.filter("cnt < 10").print()          
+{% endhighlight %}
+
+</div>
+</div>
+
+In the above example, after `counts` table is generated, it could be reused without being
+regenerated. `SimpleInteractiveExample` gives an example of using the cache() method. Users may 
+run the example using [command line tool](/ops/cli.html) (assuming a 
+[standalone cluster](/ops/deployment/cluster_setup.html) has already started):
+
+        ./bin/flink run -m myHost:8081 examples/table/Interactive.jar
+
+**Note**
+* The caches are created lazily. More specifically, they are created when the table to be cached 
+is generated for the very first time.
+* Even when a table is cached, Flink may still decide to ignore the cache if doing that results 
+in a faster execution.
+* In some cases, it is possible that a cache created earlier is no longer available when it is 
+used later in the code. When that happens, Flink will regenerate the table to be cached from its 
+original DAG and cache the table again.
+
+#### Lifecycle of Table Caches
+Table caches are available throughout the lifecycle of the `TableEnvironment`. *Users should close
+the Table environment to avoid leaking remote resources*. It is recommended to always invoke
+`TableEnvironment.close()` in a finally block.
