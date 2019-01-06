@@ -92,6 +92,10 @@ Having multiple slots means more subtasks share the same JVM.
 Tasks in the same JVM share TCP connections (via multiplexing) and heartbeat messages.
 They may also share data sets and data structures, thus reducing the per-task overhead.
 
+In perjob mode, the TaskManagers are started on demand, and resources of both TaskManagers and slots are dynamically calculated on starting.
+In session mode, the TaskManagers are started with configured resources at the very beginning, while the resources of slots remain *unknown* until allocated.
+More details of resource management could be found in [TaskManager Resource](../internals/taskmanager_resource.html).
+
 Note that while the quantitative resource management helps balancing workloads over TaskManagers, there is no resource isolation between tasks running on the same TaskManager.
 
 <img src="../fig/tasks_slots.svg" alt="A TaskManager with Task Slots and Tasks" class="offset" width="100%" />
@@ -108,6 +112,9 @@ job. Allowing this *slot sharing* has two main benefits:
     *source/map()* subtasks would block as many resources as the resource intensive *window* subtasks.
     With slot sharing, increasing the base parallelism in our example from two to six yields full utilization of the
     slotted resources, while making sure that the heavy subtasks are fairly distributed among the TaskManagers.
+
+Note: Sharing of slots with quantitative resource profiles are not yet fully supported.
+Thus, in this version we do not encourage users to enable both features at the same time.
 
 <img src="../fig/slot_sharing.svg" alt="TaskManagers with shared Task Slots" class="offset" width="80%" />
 
