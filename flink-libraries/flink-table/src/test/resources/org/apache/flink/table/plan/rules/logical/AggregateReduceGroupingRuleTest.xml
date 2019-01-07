@@ -1333,9 +1333,9 @@ LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT(DISTINCT $2)], EXPR$3=[SUM(DISTIN
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-HashAggregate(isMerge=[false], groupBy=[a1], auxGrouping=[d1], select=[a1, d1, COUNT(c1) FILTER $g_1 AS EXPR$2, SUM(b1) FILTER $g_2 AS EXPR$3])
+HashAggregate(isMerge=[false], groupBy=[a1], auxGrouping=[d1], select=[a1, d1, COUNT(c1) FILTER $g_4 AS EXPR$2, SUM(b1) FILTER $g_2 AS EXPR$3])
 +- Exchange(distribution=[hash[a1]])
-   +- Calc(select=[a1, d1, c1, b1, =(CASE(=($e, 2), 2, 1), 1) AS $g_1, =(CASE(=($e, 2), 2, 1), 2) AS $g_2])
+   +- Calc(select=[a1, b1, c1, d1, =(CASE(=($e, 2), 2, 4), 2) AS $g_2, =(CASE(=($e, 2), 2, 4), 4) AS $g_4])
       +- Expand(projects=[{a1, b1, null AS c1, d1, 2 AS $e}, {a1, null AS b1, c1, d1, 4 AS $e}])
          +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
@@ -1354,8 +1354,8 @@ LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT(DISTINCT $2)], EXPR$3=[SUM(DISTIN
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-FlinkLogicalAggregate(group=[{0}], d1=[AUXILIARY_GROUP($1)], EXPR$2=[COUNT($2) FILTER $4], EXPR$3=[SUM($3) FILTER $5])
-+- FlinkLogicalCalc(select=[a1, d1, c1, b1, =(CASE(=($e, 2), 2, 1), 1) AS $g_1, =(CASE(=($e, 2), 2, 1), 2) AS $g_2])
+FlinkLogicalAggregate(group=[{0}], d1=[AUXILIARY_GROUP($3)], EXPR$2=[COUNT($2) FILTER $5], EXPR$3=[SUM($1) FILTER $4])
++- FlinkLogicalCalc(select=[a1, b1, c1, d1, =(CASE(=($e, 2), 2, 4), 2) AS $g_2, =(CASE(=($e, 2), 2, 4), 4) AS $g_4])
    +- FlinkLogicalExpand(projects=[{a1=[$0], b1=[$1], c1=[null], d1=[$3], $e=[2]}, {a1=[$0], b1=[null], c1=[$2], d1=[$3], $e=[4]}])
       +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
@@ -1416,14 +1416,15 @@ LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT(DISTINCT $2)], EXPR$3=[MAX(DISTIN
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-HashAggregate(isMerge=[false], groupBy=[a1], auxGrouping=[d1], select=[a1, d1, COUNT(c1) FILTER $g_1 AS EXPR$2, MAX(b1) FILTER $g_2 AS EXPR$3, MIN(EXPR$4) FILTER $g_3 AS EXPR$4])
-+- Exchange(distribution=[hash[a1]])
-   +- Calc(select=[a1, d1, c1, b1, EXPR$4, =(CASE(=($e, 2), 2, =($e, 4), 1, 3), 1) AS $g_1, =(CASE(=($e, 2), 2, =($e, 4), 1, 3), 2) AS $g_2, =(CASE(=($e, 2), 2, =($e, 4), 1, 3), 3) AS $g_3])
-      +- HashAggregate(isMerge=[true], groupBy=[a1, b1, c1, $e], auxGrouping=[d1], select=[a1, b1, c1, $e, d1, Final_SUM(sum$0) AS EXPR$4])
-         +- Exchange(distribution=[hash[a1, b1, c1, $e]])
-            +- LocalHashAggregate(groupBy=[a1, b1, c1, $e], auxGrouping=[d1], select=[a1, b1, c1, $e, d1, Partial_SUM(b1_0) AS sum$0])
-               +- Expand(projects=[{a1, b1, null AS c1, d1, 2 AS $e, b1 AS b1_0}, {a1, null AS b1, c1, d1, 4 AS $e, b1 AS b1_0}, {a1, null AS b1, null AS c1, d1, 6 AS $e, b1 AS b1_0}])
-                  +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
+SortAggregate(isMerge=[false], groupBy=[a1], select=[a1, MIN(d1) FILTER $g_3 AS d1, COUNT(c1) FILTER $g_2 AS EXPR$2, MAX(b1) FILTER $g_1 AS EXPR$3, MIN(EXPR$4) FILTER $g_3 AS EXPR$4])
++- Sort(orderBy=[a1 ASC])
+   +- Exchange(distribution=[hash[a1]])
+      +- Calc(select=[a1, b1, c1, d1, EXPR$4, =(CASE(=($e, 1), 1, =($e, 2), 2, 3), 1) AS $g_1, =(CASE(=($e, 1), 1, =($e, 2), 2, 3), 2) AS $g_2, =(CASE(=($e, 1), 1, =($e, 2), 2, 3), 3) AS $g_3])
+         +- HashAggregate(isMerge=[true], groupBy=[a1, b1, c1, $e], auxGrouping=[d1], select=[a1, b1, c1, $e, d1, Final_SUM(sum$0) AS EXPR$4])
+            +- Exchange(distribution=[hash[a1, b1, c1, $e]])
+               +- LocalHashAggregate(groupBy=[a1, b1, c1, $e], auxGrouping=[d1], select=[a1, b1, c1, $e, d1, Partial_SUM(b1_0) AS sum$0])
+                  +- Expand(projects=[{a1, b1, null AS c1, d1, 1 AS $e, b1 AS b1_0}, {a1, null AS b1, c1, d1, 2 AS $e, b1 AS b1_0}, {a1, null AS b1, null AS c1, d1, 3 AS $e, b1 AS b1_0}])
+                     +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>
@@ -1440,10 +1441,10 @@ LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT(DISTINCT $2)], EXPR$3=[MAX(DISTIN
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-FlinkLogicalAggregate(group=[{0}], d1=[AUXILIARY_GROUP($1)], EXPR$2=[COUNT($2) FILTER $5], EXPR$3=[MAX($3) FILTER $6], EXPR$4=[MIN($4) FILTER $7])
-+- FlinkLogicalCalc(select=[a1, d1, c1, b1, EXPR$4, =(CASE(=($e, 2), 2, =($e, 4), 1, 3), 1) AS $g_1, =(CASE(=($e, 2), 2, =($e, 4), 1, 3), 2) AS $g_2, =(CASE(=($e, 2), 2, =($e, 4), 1, 3), 3) AS $g_3])
+FlinkLogicalAggregate(group=[{0}], d1=[MIN($3) FILTER $7], EXPR$2=[COUNT($2) FILTER $6], EXPR$3=[MAX($1) FILTER $5], EXPR$4=[MIN($4) FILTER $7])
++- FlinkLogicalCalc(select=[a1, b1, c1, d1, EXPR$4, =(CASE(=($e, 1), 1, =($e, 2), 2, 3), 1) AS $g_1, =(CASE(=($e, 1), 1, =($e, 2), 2, 3), 2) AS $g_2, =(CASE(=($e, 1), 1, =($e, 2), 2, 3), 3) AS $g_3])
    +- FlinkLogicalAggregate(group=[{0, 1, 2, 4}], d1=[AUXILIARY_GROUP($3)], EXPR$4=[SUM($5)])
-      +- FlinkLogicalExpand(projects=[{a1=[$0], b1=[$1], c1=[null], d1=[$3], $e=[2], b1_0=[$1]}, {a1=[$0], b1=[null], c1=[$2], d1=[$3], $e=[4], b1_0=[$1]}, {a1=[$0], b1=[null], c1=[null], d1=[$3], $e=[6], b1_0=[$1]}])
+      +- FlinkLogicalExpand(projects=[{a1=[$0], b1=[$1], c1=[null], d1=[$3], $e=[1], b1_0=[$1]}, {a1=[$0], b1=[null], c1=[$2], d1=[$3], $e=[2], b1_0=[$1]}, {a1=[$0], b1=[null], c1=[null], d1=[$3], $e=[3], b1_0=[$1]}])
          +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
@@ -1885,10 +1886,10 @@ LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT(DISTINCT $2)], EXPR$3=[SUM($3)])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-FlinkLogicalAggregate(group=[{0}], d1=[AUXILIARY_GROUP($1)], EXPR$2=[COUNT($2) FILTER $4], EXPR$3=[MIN($3) FILTER $5])
-+- FlinkLogicalCalc(select=[a1, d1, c1, EXPR$3, =(CASE(=($e, 0), 0, 1), 0) AS $g_0, =(CASE(=($e, 0), 0, 1), 1) AS $g_1])
+FlinkLogicalAggregate(group=[{0}], d1=[MIN($2) FILTER $5], EXPR$2=[COUNT($1) FILTER $4], EXPR$3=[MIN($3) FILTER $5])
++- FlinkLogicalCalc(select=[a1, c1, d1, EXPR$3, =(CASE(=($e, 0), 0, 1), 0) AS $g_0, =(CASE(=($e, 0), 0, 1), 1) AS $g_1])
    +- FlinkLogicalAggregate(group=[{0, 2, 4}], d1=[AUXILIARY_GROUP($3)], EXPR$3=[SUM($1)])
-      +- FlinkLogicalExpand(projects=[{a1=[$0], b1=[$1], c1=[$2], d1=[$3], $e=[0]}, {a1=[$0], b1=[$1], c1=[null], d1=[$3], $e=[2]}])
+      +- FlinkLogicalExpand(projects=[{a1=[$0], b1=[$1], c1=[$2], d1=[$3], $e=[0]}, {a1=[$0], b1=[$1], c1=[null], d1=[$3], $e=[1]}])
          +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
@@ -1906,14 +1907,15 @@ LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT(DISTINCT $2)], EXPR$3=[SUM($3)])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-HashAggregate(isMerge=[false], groupBy=[a1], auxGrouping=[d1], select=[a1, d1, COUNT(c1) FILTER $g_0 AS EXPR$2, MIN(EXPR$3) FILTER $g_1 AS EXPR$3])
-+- Exchange(distribution=[hash[a1]])
-   +- Calc(select=[a1, d1, c1, EXPR$3, =(CASE(=($e, 0), 0, 1), 0) AS $g_0, =(CASE(=($e, 0), 0, 1), 1) AS $g_1])
-      +- HashAggregate(isMerge=[true], groupBy=[a1, c1, $e], auxGrouping=[d1], select=[a1, c1, $e, d1, Final_SUM(sum$0) AS EXPR$3])
-         +- Exchange(distribution=[hash[a1, c1, $e]])
-            +- LocalHashAggregate(groupBy=[a1, c1, $e], auxGrouping=[d1], select=[a1, c1, $e, d1, Partial_SUM(b1) AS sum$0])
-               +- Expand(projects=[{a1, b1, c1, d1, 0 AS $e}, {a1, b1, null AS c1, d1, 2 AS $e}])
-                  +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
+SortAggregate(isMerge=[false], groupBy=[a1], select=[a1, MIN(d1) FILTER $g_1 AS d1, COUNT(c1) FILTER $g_0 AS EXPR$2, MIN(EXPR$3) FILTER $g_1 AS EXPR$3])
++- Sort(orderBy=[a1 ASC])
+   +- Exchange(distribution=[hash[a1]])
+      +- Calc(select=[a1, c1, d1, EXPR$3, =(CASE(=($e, 0), 0, 1), 0) AS $g_0, =(CASE(=($e, 0), 0, 1), 1) AS $g_1])
+         +- HashAggregate(isMerge=[true], groupBy=[a1, c1, $e], auxGrouping=[d1], select=[a1, c1, $e, d1, Final_SUM(sum$0) AS EXPR$3])
+            +- Exchange(distribution=[hash[a1, c1, $e]])
+               +- LocalHashAggregate(groupBy=[a1, c1, $e], auxGrouping=[d1], select=[a1, c1, $e, d1, Partial_SUM(b1) AS sum$0])
+                  +- Expand(projects=[{a1, b1, c1, d1, 0 AS $e}, {a1, b1, null AS c1, d1, 1 AS $e}])
+                     +- TableSourceScan(table=[[default_catalog, default_db, T1]], fields=[a1, b1, c1, d1])
 ]]>
     </Resource>
   </TestCase>

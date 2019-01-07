@@ -21,17 +21,20 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.types.DecimalType
+import org.apache.flink.table.api.types.{DataTypes, DecimalType}
 import org.apache.flink.table.api.{TableConfigOptions, TableException, Types}
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.{binaryRow, row}
 import org.apache.flink.table.runtime.batch.sql.TestData._
+import org.apache.flink.table.runtime.utils.CommonTestData
+import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.types.Row
 
 import org.junit.{Before, Test}
 
+import scala.collection.JavaConverters._
 import scala.collection.Seq
 
 /**
@@ -835,4 +838,37 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
     // that doesn't make sense, and we do not support it.
   }
 
+  @Test
+  def testMultiGroupBys(): Unit = {
+    val csvPath = CommonTestData.writeToTempFile(
+      "7369,SMITH,CLERK,7902,1980-12-17,800.00,,20$" +
+        "7499,ALLEN,SALESMAN,7698,1981-02-20,1600.00,300.00,30$" +
+        "7521,WARD,SALESMAN,7698,1981-02-22,1250.00,500.00,30",
+      "csv-test", "tmp")
+    tEnv.registerTableSource("emp",
+      CsvTableSource.builder()
+        .path(csvPath)
+        .fields(Array("empno", "ename", "job", "mgr", "hiredate", "sal", "comm", "deptno"),
+          Array(DataTypes.INT, DataTypes.STRING, DataTypes.STRING, DataTypes.INT, DataTypes.DATE,
+            DataTypes.DOUBLE, DataTypes.DOUBLE, DataTypes.INT))
+        .enableEmptyColumnAsNull()
+        .fieldDelimiter(",")
+        .lineDelimiter("$")
+        .build(),
+      Set(Set("empno").asJava).asJava
+    )
+
+    checkResult(
+      """
+        |SELECT empno, ename, hiredate, MIN(sal), MAX(comm)
+        |FROM (SELECT empno, ename, hiredate, AVG(sal) AS sal, MIN(comm) AS comm
+        |FROM emp
+        |GROUP BY ename, empno, hiredate)
+        |GROUP BY empno, ename, hiredate
+        |FETCH NEXT 10 ROWS ONLY
+      """.stripMargin,
+      Seq(row(7369, "SMITH", "1980-12-17", 800.0, null),
+        row(7499, "ALLEN", "1981-02-20", 1600.0, 300.0),
+        row(7521, "WARD", "1981-02-22", 1250.0, 500.0)))
+  }
 }
