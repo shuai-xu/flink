@@ -17,13 +17,11 @@
 
 package org.apache.flink.table.dataformat;
 
-import org.apache.flink.table.api.types.DataType;
-
 /**
  * A GenericRow can have arbitrary number of fields and contain a set of fields, which may all be
  * different types. The fields in GenericRow can be null.
  *
- * <p>The fields in the Row can be accessed by position (zero-based) {@link #get(int, DataType)}.
+ * <p>The fields in the Row can be accessed by position (zero-based) {@link #getInt}.
  * And can update fields by {@link #update(int, Object)}.
  *
  * <p>GenericRow is in principle serializable. However, it may contain non-serializable fields,

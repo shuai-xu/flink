@@ -49,6 +49,8 @@ import static org.apache.flink.util.Preconditions.checkArgument;
  *
  * <p>Used for internal table-level implementation. The built-in operator will use it for comparison,
  * search, and so on.
+ *
+ * <p>{@code BinaryString} are influenced by Apache Spark UTF8String.
  */
 @TypeInfo(BinaryStringTypeFactory.class)
 public final class BinaryString implements Comparable<BinaryString>, Cloneable, KryoSerializable {

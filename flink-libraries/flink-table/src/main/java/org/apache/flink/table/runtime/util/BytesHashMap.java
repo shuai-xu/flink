@@ -59,6 +59,8 @@ import static org.apache.flink.util.Preconditions.checkArgument;
  * Bytes 4 to 4 + len(k): key data
  * Bytes 4 + len(k) to 8 + len(k): len(v)
  * Bytes 8 + len(k) to 8 + len(k) + len(v): value data
+ *
+ * <p>{@code BytesHashMap} are influenced by Apache Spark BytesToBytesMap.
  */
 public class BytesHashMap {
 

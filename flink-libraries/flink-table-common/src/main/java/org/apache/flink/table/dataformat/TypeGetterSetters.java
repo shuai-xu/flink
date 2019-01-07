@@ -131,6 +131,9 @@ public interface TypeGetterSetters {
 	 */
 	BaseMap getBaseMap(int ordinal);
 
+	/**
+	 * TODO default method is slow... modify it.
+	 */
 	default Object get(int ordinal, InternalType type) {
 		if (type.equals(Types.BOOLEAN)) {
 			return getBoolean(ordinal);

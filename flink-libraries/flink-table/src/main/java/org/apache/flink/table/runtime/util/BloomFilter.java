@@ -29,6 +29,9 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**
  * BloomFilter based on a long array of Java heap, and serialization and merge based on Unsafe.
+ *
+ * <p>Part of this class refers to the implementation from Apache Hive project
+ * https://github.com/apache/hive/blob/master/common/src/java/org/apache/hive/common/util/BloomFilter.java.
  */
 public class BloomFilter {
 

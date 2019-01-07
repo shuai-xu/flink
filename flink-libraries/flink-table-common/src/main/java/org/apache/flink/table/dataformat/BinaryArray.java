@@ -45,6 +45,8 @@ import static org.apache.flink.table.dataformat.util.BinaryRowUtil.UNSAFE;
  * value directly in the field, just like the original java array.
  *
  * <p>[numElements(int)] + [null bits(4-byte word boundaries)] + [values or offset&length] + [variable length part].
+ *
+ * <p>{@code BinaryArray} are influenced by Apache Spark UnsafeArrayData.
  */
 public class BinaryArray extends BaseArray {
 

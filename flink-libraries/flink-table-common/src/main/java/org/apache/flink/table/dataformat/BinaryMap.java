@@ -32,6 +32,8 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 /**
  * [4 byte(keyArray size in bytes)] + [Key BinaryArray] + [Value BinaryArray].
  * TODO Optimize query performance.
+ *
+ * <p>{@code BinaryMap} are influenced by Apache Spark UnsafeMapData.
  */
 public class BinaryMap implements BaseMap {
 

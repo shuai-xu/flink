@@ -26,6 +26,8 @@ package org.apache.flink.table.dataformat;
  * Splicing two Rows using the {@link JoinedRow} format.
  * Column storage uses {@link ColumnarRow} format.
  * Avoiding unboxing and boxing using the {@link BoxedWrapperRow} format.
+ *
+ * <p>{@code BaseRow}s are influenced by Apache Spark InternalRows.
  */
 public interface BaseRow extends TypeGetterSetters {
 
@@ -38,7 +40,7 @@ public interface BaseRow extends TypeGetterSetters {
 
 	/**
 	 * The header represents the type of this Row. Now just used in streaming.
-	 * See {@link BaseRowUtil#ACCUMULATE_MSG} and {@link BaseRowUtil#RETRACT_MSG}.
+	 * Now there are two message: ACCUMULATE_MSG and RETRACT_MSG.
 	 */
 	byte getHeader();
 

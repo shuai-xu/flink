@@ -53,6 +53,10 @@ import static org.apache.flink.util.Preconditions.checkArgument;
  * which will speed up the read and write of field.
  *
  * <p>Variable-length part may fall into multiple MemorySegments.
+ *
+ * <p>{@code BinaryRow} are influenced by Apache Spark UnsafeRow in project tungsten.
+ * The difference is that BinaryRow is placed on a discontinuous memory, and the variable length type can
+ * also be placed on a fixed length area (If it's short enough).
  */
 public final class BinaryRow implements BaseRow {
 

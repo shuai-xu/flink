@@ -24,6 +24,9 @@ import java.util.Arrays;
 
 /**
  * String utf-8 utils.
+ *
+ * <p>{@code StringUtf8Utils} refers to the implementation from SerializeWriter and IOUtils of Alibaba fastjson.
+ * The difference is that StringUtf8Utils need to handle the wrong code, just like StringCoding.decode.
  */
 public class StringUtf8Utils {
 
