@@ -19,39 +19,42 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions, TableException}
-import org.apache.flink.table.codegen.ValuesCodeGenerator
+import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.schema.BaseRowSchema
+import org.apache.flink.table.plan.schema.IntermediateRelNodeTable
+import org.apache.flink.table.plan.util.UpdatingPlanChecker
 
-import com.google.common.collect.ImmutableList
-import org.apache.calcite.plan._
+import org.apache.calcite.plan.{RelOptCluster, RelOptTable, RelTraitSet}
+import org.apache.calcite.rel.core.TableScan
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.Values
-import org.apache.calcite.rex.RexLiteral
 
-/**
-  * DataStream RelNode for LogicalValues.
-  */
-class StreamExecValues(
+class StreamExecIntermediateTableScan(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
-    outputSchema: BaseRowSchema,
-    tuples: ImmutableList[ImmutableList[RexLiteral]],
-    description: String)
-  extends Values(cluster, outputSchema.relDataType, tuples, traitSet)
-  with RowStreamExecRel {
+    table: RelOptTable,
+    relDataType: RelDataType)
+  extends TableScan(cluster, traitSet, table)
+  with StreamExecScan {
 
-  override def deriveRowType(): RelDataType = outputSchema.relDataType
+  val intermediateTable:IntermediateRelNodeTable =
+    getTable.unwrap(classOf[IntermediateRelNodeTable])
+
+  override def deriveRowType(): RelDataType = relDataType
+
+  def isAccRetract: Boolean = intermediateTable.isAccRetract
+
+  override def producesUpdates: Boolean =
+    !UpdatingPlanChecker.isAppendOnly(intermediateTable.relNode)
+
+  override def producesRetractions: Boolean = producesUpdates && isAccRetract
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    new StreamExecValues(
+    new StreamExecIntermediateTableScan(
       cluster,
       traitSet,
-      outputSchema,
-      getTuples,
-      description
+      getTable,
+      relDataType
     )
   }
 
@@ -59,18 +62,14 @@ class StreamExecValues(
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
-    if (tableEnv.getConfig.getConf.getBoolean(
-      TableConfigOptions.SQL_EXEC_VALUES_SOURCE_INPUT_ENABLED)) {
-      val inputFormat = ValuesCodeGenerator.generatorInputFormat(
-        tableEnv,
-        getRowType,
-        tuples,
-        description)
-      tableEnv.execEnv.createInput(inputFormat, inputFormat.getProducedType).getTransformation
-    } else {
-      // enable this feature when runtime support do checkpoint when source finished
-      throw new TableException("Values source input is not supported currently. Probably " +
-        "there is a where condition which always returns false in your query.")
-    }
+    throw new TableException(
+      "translateToPlan is not supported in StreamExecIntermediateTableScan.")
   }
+
+  override def needInternalConversion: Boolean = {
+    throw new TableException(
+      "needInternalConversion is not supported in StreamExecIntermediateTableScan.")
+  }
+
 }
+

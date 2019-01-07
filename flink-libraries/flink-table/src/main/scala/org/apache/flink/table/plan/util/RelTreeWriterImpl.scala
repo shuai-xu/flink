@@ -136,6 +136,7 @@ class RelTreeWriterImpl(
               Pair.of("retract", traitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE)))
             printValues.add(
               Pair.of("accMode", traitSet.getTrait(AccModeTraitDef.INSTANCE)))
+          case _ => // ignore
         }
       }
     }

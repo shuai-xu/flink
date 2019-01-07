@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.plan
+package org.apache.flink.table.plan.subplan
 
 import org.apache.flink.table.api.{TableConfigOptions, TableEnvironment, TableException}
 import org.apache.flink.table.plan.nodes.calcite.Sink
@@ -123,16 +123,6 @@ class RelNodeBlock(val outputNode: RelNode, tEnv: TableEnvironment) {
   }
 
   def isUpdateAsRetraction: Boolean = updateAsRetract
-
-  /** propagate need-retraction to all input blocks */
-  def propagateUpdateAsRetraction(): Unit = {
-    if (updateAsRetract) {
-      children.foreach { child =>
-        child.setUpdateAsRetraction(true)
-        child.propagateUpdateAsRetraction()
-      }
-    }
-  }
 
   def isChildBlockOutputRelNode(node: RelNode): Option[RelNodeBlock] = {
     val find = children.filter(_.outputNode.equals(node))

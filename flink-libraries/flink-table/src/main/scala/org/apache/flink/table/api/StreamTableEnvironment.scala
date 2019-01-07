@@ -22,45 +22,43 @@ import org.apache.flink.annotation.{InterfaceStability, VisibleForTesting}
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
-import org.apache.flink.table.calcite.{FlinkChainContext, FlinkRelBuilder, FlinkTypeFactory}
-import org.apache.flink.table.catalog.{ExternalCatalog, ReadableCatalog}
+import org.apache.flink.table.calcite.{FlinkChainContext, FlinkRelBuilder}
+import org.apache.flink.table.catalog.ReadableCatalog
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescriptor}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions._
+import org.apache.flink.table.factories.{TableFactoryService, TableFactoryUtil, TableSourceParserFactory}
 import org.apache.flink.table.plan.`trait`._
 import org.apache.flink.table.plan.cost.{FlinkCostFactory, FlinkStreamCost}
 import org.apache.flink.table.plan.logical.{LogicalRelNode, SinkNode}
-import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.calcite._
-import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecRel, _}
+import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.optimize.{FlinkStreamPrograms, StreamOptimizeContext}
 import org.apache.flink.table.plan.schema.{TableSourceSinkTable, _}
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.plan.util.{FlinkRelOptUtil, UpdatingPlanChecker}
-import org.apache.flink.table.plan.{RelNodeBlock, RelNodeBlockPlanBuilder}
+import org.apache.flink.table.plan.subplan.StreamDAGOptimizer
+import org.apache.flink.table.plan.util.{FlinkRelOptUtil, SameRelObjectShuttle}
 import org.apache.flink.table.sinks.{DataStreamTableSink, _}
 import org.apache.flink.table.sources._
 import org.apache.flink.table.typeutils.TypeCheckUtils
 import org.apache.flink.table.util._
 import org.apache.flink.util.Preconditions
+
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexBuilder
 import org.apache.calcite.sql2rel.SqlToRelConverter
-import _root_.java.util
 
-import org.apache.flink.table.factories.{TableFactoryService, TableFactoryUtil, TableSourceParserFactory}
+import _root_.java.util
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
-import _root_.scala.collection.mutable
 import _root_.scala.collection.mutable.ArrayBuffer
 
 
@@ -136,50 +134,27 @@ abstract class StreamTableEnvironment(
     execEnv.execute(jobName)
   }
 
-  private[flink] override def compile(): Seq[RelNodeBlock] = {
+  private[flink] override def compile(): Unit = {
 
     mergeParameters()
 
-    val result = if (config.getSubsectionOptimization) {
+    if (config.getSubsectionOptimization) {
       if (sinkNodes.isEmpty) {
         throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
       }
-
-      // build RelNodeBlock plan
-      val blockPlan = RelNodeBlockPlanBuilder.buildRelNodeBlockPlan(sinkNodes, this)
-
-      // infer updateAsRetraction property for each block
-      blockPlan.foreach {
-        sinkBlock =>
-          val retractionFromSink = sinkBlock.outputNode match {
-            case n: Sink => n.sink.isInstanceOf[BaseRetractStreamTableSink[_]]
-            case _ => false
-          }
-          sinkBlock.setUpdateAsRetraction(retractionFromSink)
-          inferUpdateAsRetraction(sinkBlock, retractionFromSink)
-      }
-
-      // propagate updateAsRetraction property to all input blocks
-      blockPlan.foreach(propagateUpdateAsRetraction)
-      // clear the intermediate result
-      blockPlan.foreach(resetIntermediateResult)
-
-      // translates recursively RelNodeBlock into DataStream
-      blockPlan.foreach {
-        sinkBlock =>
-          translateRelNodeBlock(sinkBlock)
-          sinkBlock.outputNode match {
-            case _: Sink => // ignore
-            case _ => throw new TableException(TableErrors.INST.sqlCompileSinkNodeRequired())
-          }
-      }
-      blockPlan
-
-    } else {
-      Seq.empty
+      val dagOptimizer = new StreamDAGOptimizer(sinkNodes, this)
+      // optimize dag
+      val sinks = dagOptimizer.getOptimizedDag()
+      translateRelNodeDag(sinks)
     }
+  }
 
-    result
+  private def translateRelNodeDag(sinks: Seq[RelNode]): Unit = {
+    // translates sinks RelNodeBlock into transformations
+    sinks.foreach {
+      case sink: Sink => translate(sink)
+      case _ => throw new TableException(TableErrors.INST.sqlCompileSinkNodeRequired())
+    }
   }
 
   /**
@@ -465,115 +440,6 @@ abstract class StreamTableEnvironment(
   }
 
   /**
-    * Registers a [[DataStream]] type as a table under a given name with field
-    * names as specified by field expressions in the [[TableEnvironment]]'s catalog.
-    *
-    * @param name The name under which the table is registered in the catalog.
-    * @param isAccRetract True if input data contain retraction messages.
-    * @param dataStream The [[DataStream]] to register as table in the catalog.
-    * @param fields The field expressions to define the field names of the table.
-    * @param monotonicity the monotonicity of each field.
-    */
-  private def registerDataStreamInternal(
-      name: String,
-      producesUpdates: Boolean,
-      isAccRetract: Boolean,
-      dataStream: DataStream[_],
-      rowType: RelDataType,
-      fields: Array[Expression],
-      uniqueKeys: util.Set[_ <: util.Set[String]],
-      monotonicity: RelModifiedMonotonicity): Unit = {
-
-    val streamType = DataTypes.of(dataStream.getType)
-
-    if (fields.exists(_.isInstanceOf[RowtimeAttribute])
-        && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
-      throw new TableException(
-        s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
-          s"But is: ${execEnv.getStreamTimeCharacteristic}")
-    }
-
-
-    val (fieldNames, fieldIndexes) = getFieldInfo(streamType, fields)
-
-    // validate and extract time attributes
-    val (rowtime, proctime) = validateAndExtractTimeAttributes(streamType, fields)
-
-    // check if event-time is enabled
-    if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
-      throw new TableException(
-        s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
-          s"But is: ${execEnv.getStreamTimeCharacteristic}")
-    }
-
-    // adjust field indexes and field names
-    val indexesWithIndicatorFields = adjustFieldIndexes(fieldIndexes, rowtime, proctime)
-    val namesWithIndicatorFields = adjustFieldNames(fieldNames, rowtime, proctime)
-
-    val statistic = FlinkStatistic.of(uniqueKeys, monotonicity)
-
-    val dataStreamTable = new IntermediateDataStreamTable(
-      rowType,
-      dataStream,
-      producesUpdates,
-      isAccRetract,
-      indexesWithIndicatorFields,
-      namesWithIndicatorFields,
-      statistic)
-    registerTableInternal(name, dataStreamTable)
-  }
-
-
-  /**
-    * Registers a dummy [[DataStream]] with row type as a table under a given name with field names
-    * as specified by field expressions in the [[TableEnvironment]]'s catalog.
-    *
-    * @param name The name under which the table is registered in the catalog.
-    * @param isAccRetract True if input data contain retraction messages.
-    * @param fields The field expressions to define the field names of the table.
-    */
-  private def registerDummyDataStreamTableInternal(
-      name: String,
-      produceUpdates: Boolean,
-      isAccRetract: Boolean,
-      rowType: RelDataType,
-      fields: Array[Expression],
-      uniqueKeys: util.Set[_ <: util.Set[String]],
-      monotonicity: RelModifiedMonotonicity): Unit = {
-
-    val inputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(rowType, classOf[BaseRow])
-
-    // validate and extract time attributes
-    val (rowtime, proctime) = validateAndExtractTimeAttributes(DataTypes.of(inputType), fields)
-    if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
-      throw new TableException(
-        s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
-          s"But is: ${execEnv.getStreamTimeCharacteristic}")
-    }
-
-
-    val (fieldNames, fieldIndexes) = getFieldInfo(DataTypes.of(inputType), fields)
-    // adjust field indexes and field names
-    val indexesWithIndicatorFields = adjustFieldIndexes(fieldIndexes, rowtime, proctime)
-    val namesWithIndicatorFields = adjustFieldNames(fieldNames, rowtime, proctime)
-
-    // a dummy source with baseRow type
-    val dummySource = new DataStreamSource[BaseRow](execEnv, inputType, null, false, "")
-
-    val statistic = FlinkStatistic.of(uniqueKeys, monotonicity)
-
-    val dataStreamTable = new IntermediateDataStreamTable(
-      rowType,
-      dummySource,
-      produceUpdates,
-      isAccRetract,
-      indexesWithIndicatorFields,
-      namesWithIndicatorFields,
-      statistic)
-    registerTableInternal(name, dataStreamTable)
-  }
-
-  /**
     * Registers a [[DataStream]] as a table under a given name with field names as specified by
     * field expressions in the [[TableEnvironment]]'s catalog.
     *
@@ -632,7 +498,7 @@ abstract class StreamTableEnvironment(
     *
     * @return rowtime attribute and proctime attribute
     */
-  private def validateAndExtractTimeAttributes(
+  private[flink] def validateAndExtractTimeAttributes(
     streamType: DataType,
     exprs: Array[Expression])
   : (Option[(Int, String)], Option[(Int, String)]) = {
@@ -770,7 +636,7 @@ abstract class StreamTableEnvironment(
    * @param proctime An optional proctime indicator
    * @return An adjusted array of field indexes.
    */
-  private def adjustFieldIndexes(
+  private[flink] def adjustFieldIndexes(
       fieldIndexes: Array[Int],
       rowtime: Option[(Int, String)],
       proctime: Option[(Int, String)]): Array[Int] = {
@@ -803,7 +669,7 @@ abstract class StreamTableEnvironment(
    * @param proctime An optional proctime indicator
    * @return An adjusted array of field names.
    */
-  private def adjustFieldNames(
+  private[flink] def adjustFieldNames(
       fieldNames: Array[String],
       rowtime: Option[(Int, String)],
       proctime: Option[(Int, String)]): Array[String] = {
@@ -852,8 +718,10 @@ abstract class StreamTableEnvironment(
 
       override def isSinkNode: Boolean = isSinkBlock
     })
-
-    optimizeNode
+    // FIXME refactor
+    // Rewrite same rel object to different rel objects.
+    val diffObjPlan = optimizeNode.accept(new SameRelObjectShuttle())
+    diffObjPlan
   }
 
   /**
@@ -958,7 +826,10 @@ abstract class StreamTableEnvironment(
       throw new TableException("Can not explain due to subsection optimization is not supported, " +
                                  "please check your TableConfig.")
     }
-    val blockPlan = compile()
+
+    if (sinkNodes.isEmpty) {
+      throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
+    }
 
     val sb = new StringBuilder
     sb.append("== Abstract Syntax Tree ==")
@@ -972,204 +843,18 @@ abstract class StreamTableEnvironment(
 
     sb.append("== Optimized Logical Plan ==")
     sb.append(System.lineSeparator)
-    val visitedBlocks = mutable.Set[RelNodeBlock]()
-    def visitBlock(block: RelNodeBlock, isSinkBlock: Boolean): Unit = {
-      if (!visitedBlocks.contains(block)) {
-        block.children.foreach(visitBlock(_, isSinkBlock = false))
-        if (isSinkBlock) {
-          sb.append("[[Sink]]")
-        } else {
-          sb.append(s"[[IntermediateTable=${block.getOutputTableName}]]")
-        }
-        sb.append(System.lineSeparator)
-        sb.append(FlinkRelOptUtil.toString(block.getOptimizedPlan, withRetractTraits = true))
-        sb.append(System.lineSeparator)
-        visitedBlocks += block
-      }
-    }
-    blockPlan.foreach(visitBlock(_, isSinkBlock = true))
+    val dagOptimizer = new StreamDAGOptimizer(sinkNodes, this)
+    // optimize dag
+    val sinks = dagOptimizer.getOptimizedDag()
+    sb.append(dagOptimizer.explain())
 
+    // translate relNodes to StreamTransformations
+    translateRelNodeDag(sinks)
     val sqlPlan = PlanUtil.explainPlan(execEnv.getStreamGraph)
     sb.append("== Physical Execution Plan ==")
     sb.append(System.lineSeparator)
     sb.append(sqlPlan)
     sb.toString()
-  }
-
-  /**
-    * Mark Expression to RowtimeAttribute or ProctimeAttribute for time indicators
-    */
-  private def getExprsWithTimeAttribute(
-    preRowType: RelDataType,
-    postRowType: RelDataType): Array[Expression] = {
-
-    preRowType.getFieldNames.zipWithIndex.map {
-      case (name, index) =>
-        val field = postRowType.getFieldList.get(index)
-        val relType = field.getValue
-        val relName = field.getName
-        val expression = UnresolvedFieldReference(relName)
-
-        relType match {
-          case _ if FlinkTypeFactory.isProctimeIndicatorType(relType) =>
-            new ProctimeAttribute(expression)
-          case _ if FlinkTypeFactory.isRowtimeIndicatorType(relType) =>
-            new RowtimeAttribute(expression)
-          case _ if !relName.equals(name) => Alias(expression, name)
-          case _ => expression
-        }
-    }.toArray[Expression]
-  }
-
-  /**
-    * Infer UpdateAsRetraction property for each block.
-    *
-    * @param block              The [[RelNodeBlock]] instance.
-    * @param retractionFromSink Whether the sink need update as retraction messages.
-    */
-  private def inferUpdateAsRetraction(
-      block: RelNodeBlock,
-      retractionFromSink: Boolean): Unit = {
-
-    block.children.foreach {
-      child =>
-        if (child.getNewOutputNode.isEmpty) {
-          inferUpdateAsRetraction(child, retractionFromSink = false)
-        }
-    }
-
-    block.getPlan match {
-      case n: Sink =>
-        val optimizedPlan = optimize(n, retractionFromSink)
-        block.setOptimizedPlan(optimizedPlan)
-
-      case o =>
-        val optimizedPlan = optimize(o, retractionFromSink)
-        val produceUpdates = !UpdatingPlanChecker.isAppendOnly(optimizedPlan)
-
-        val name = createUniqueTableName()
-        val rowType = optimizedPlan.getRowType
-        val fieldExpressions = getExprsWithTimeAttribute(o.getRowType, rowType)
-
-        val uniqueKeys = getUniqueKeys(optimizedPlan)
-        val monotonicity = FlinkRelMetadataQuery
-          .reuseOrCreate(relBuilder.getCluster.getMetadataQuery)
-          .getRelModifiedMonotonicity(optimizedPlan)
-
-        registerDummyDataStreamTableInternal(
-          name, produceUpdates, isAccRetract = false, rowType,
-          fieldExpressions, uniqueKeys, monotonicity)
-        val newTable = scan(name)
-        block.setNewOutputNode(newTable.getRelNode)
-        block.setOutputTableName(name)
-        block.setOptimizedPlan(optimizedPlan)
-    }
-  }
-
-  /**
-    * Reset the intermediate result including newOutputNode and outputTableName
-    *
-    * @param block the [[RelNodeBlock]] instance.
-    */
-  private def resetIntermediateResult(block: RelNodeBlock): Unit = {
-    block.setNewOutputNode(null)
-    block.setOutputTableName(null)
-
-    block.children.foreach {
-      child => if (child.getNewOutputNode.nonEmpty) {
-        resetIntermediateResult(child)
-      }
-    }
-  }
-
-  /**
-    * Propagate updateAsRetraction property to all input blocks
-    *
-    * @param block The [[RelNodeBlock]] instance.
-    */
-  private def propagateUpdateAsRetraction(block: RelNodeBlock): Unit = {
-
-    // process current block
-    def shipUpdateAsRetraction(rel: RelNode, updateAsRetraction: Boolean): Unit = {
-      rel match {
-        case scan: StreamExecDataStreamScan =>
-          val retractionTrait = scan.getTraitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE)
-          if (retractionTrait.sendsUpdatesAsRetractions || updateAsRetraction) {
-            val tableName = scan.getTable.getQualifiedName.asScala.last
-            val retractionBlocks = block.children.filter(_.getOutputTableName eq tableName)
-            Preconditions.checkArgument(retractionBlocks.size <= 1)
-            if (retractionBlocks.size == 1) {
-              retractionBlocks.head.setUpdateAsRetraction(true)
-            }
-          }
-        case ser: StreamExecRel[_] => ser.getInputs.asScala.foreach(e => {
-          if (ser.needsUpdatesAsRetraction(e) || (updateAsRetraction && !ser.consumesRetractions)) {
-            shipUpdateAsRetraction(e, updateAsRetraction = true)
-          } else {
-            shipUpdateAsRetraction(e, updateAsRetraction = false)
-          }
-        })
-      }
-    }
-
-    shipUpdateAsRetraction(block.getOptimizedPlan, block.isUpdateAsRetraction)
-    block.children.foreach(propagateUpdateAsRetraction)
-  }
-
-  /**
-    * Translates recursively a logical [[RelNode]] in a [[RelNodeBlock]] into a
-    * [[StreamTransformation]].
-    * Converts to target type if the block contains sink node.
-    *
-    * @param block The [[RelNodeBlock]] instance.
-    * @return The [[StreamTransformation]] that corresponds to logical plan of current block.
-    */
-  private def translateRelNodeBlock(block: RelNodeBlock): StreamTransformation[_] = {
-
-    block.children.foreach {
-      child => if (child.getNewOutputNode.isEmpty) {
-        translateRelNodeBlock(child)
-      }
-    }
-
-    val originTree = block.getPlan
-    originTree match {
-      case n: Sink =>
-        val optimizedTree = optimize(n)
-        block.setOptimizedPlan(optimizedTree)
-        translate(optimizedTree)
-
-      case o =>
-        val optimizedPlan = optimize(
-          o,
-          updatesAsRetraction = block.isUpdateAsRetraction,
-          isSinkBlock = false)
-        val transformation = translate(optimizedPlan)
-
-        val dataStream = new DataStream(execEnv, transformation)
-
-        val isAccRetract = optimizedPlan.getTraitSet
-          .getTrait(AccModeTraitDef.INSTANCE).getAccMode == AccMode.AccRetract
-        val producesUpdates = !UpdatingPlanChecker.isAppendOnly(optimizedPlan)
-        val name = createUniqueTableName()
-        val rowType = optimizedPlan.getRowType
-        val fieldExpressions = getExprsWithTimeAttribute(o.getRowType, rowType)
-
-        val uniqueKeys = getUniqueKeys(optimizedPlan)
-        val monotonicity = FlinkRelMetadataQuery
-          .reuseOrCreate(relBuilder.getCluster.getMetadataQuery)
-          .getRelModifiedMonotonicity(optimizedPlan)
-
-        registerDataStreamInternal(
-          name, producesUpdates, isAccRetract, dataStream, rowType,
-          fieldExpressions, uniqueKeys, monotonicity)
-        val newTable = scan(name)
-        block.setNewOutputNode(newTable.getRelNode)
-        block.setOutputTableName(name)
-
-        block.setOptimizedPlan(optimizedPlan)
-        transformation
-    }
   }
 
   /**
@@ -1225,24 +910,6 @@ abstract class StreamTableEnvironment(
         source,
         primaryKeys
       ))))
-  }
-
-  private def getUniqueKeys(relNode: RelNode): util.Set[_ <: util.Set[String]] = {
-    val rowType = relNode.getRowType
-    val uniqueKeys = FlinkRelMetadataQuery
-      .reuseOrCreate(relBuilder.getCluster.getMetadataQuery)
-      .getUniqueKeys(relNode)
-    if (uniqueKeys != null) {
-      uniqueKeys.map { uniqueKey =>
-        val keys = new util.HashSet[String]()
-        uniqueKey.asList().asScala.foreach { idx =>
-          keys.add(rowType.getFieldNames.get(idx))
-        }
-        keys
-      }
-    } else {
-      null
-    }
   }
 
   override def registerTableSourceFromTableMetas(name: String, tableMeta: TableMeta): Unit = {

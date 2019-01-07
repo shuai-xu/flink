@@ -73,7 +73,8 @@ class StreamExecSink[T](
     * @param tableEnv The [[StreamTableEnvironment]] of the translated Table.
     * @return StreamTransformation
     */
-  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[Any] = {
+  override def translateToPlanInternal(
+      tableEnv: StreamTableEnvironment): StreamTransformation[Any] = {
     val convertTransformation = sink match {
 
       case _: BaseRetractStreamTableSink[T] =>

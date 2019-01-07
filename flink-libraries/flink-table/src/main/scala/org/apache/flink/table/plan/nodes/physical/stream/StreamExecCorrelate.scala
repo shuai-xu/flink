@@ -91,7 +91,8 @@ class StreamExecCorrelate(
 
   override def isDeterministic: Boolean = CorrelateUtil.isDeterministic(scan, condition)
 
-  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+  override def translateToPlanInternal(
+      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     val inputTransformation = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
     val operatorCtx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)

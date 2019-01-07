@@ -16,12 +16,12 @@ StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0
 StreamExecSink(fields=[a, b, c, rank_num], retract=[false], accMode=[AccRetract])
 +- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum], retract=[true], accMode=[AccRetract])
    +- StreamExecExchange(distribution=[hash[b]], retract=[false], accMode=[Acc])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], retract=[false], accMode=[Acc])
+      +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_2]], retract=[false], accMode=[Acc])
 
 [[Sink]]
 StreamExecSink(fields=[a, b], retract=[false], accMode=[Acc])
 +- StreamExecCalc(select=[a, b], where=[<(a, 6)], retract=[false], accMode=[Acc])
-   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], retract=[false], accMode=[Acc])
+   +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_2]], retract=[false], accMode=[Acc])
 
 == Physical Execution Plan ==
  : Data Source

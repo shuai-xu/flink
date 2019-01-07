@@ -238,6 +238,7 @@ object FlinkBatchExecRuleSets {
     FlinkLogicalTableSourceScan.CONVERTER,
     FlinkLogicalTableFunctionScan.CONVERTER,
     FlinkLogicalNativeTableScan.CONVERTER,
+    FlinkLogicalIntermediateTableScan.CONVERTER,
     FlinkLogicalMatch.CONVERTER,
     FlinkLogicalExpand.CONVERTER,
     FlinkLogicalRank.CONVERTER,
@@ -330,6 +331,7 @@ object FlinkBatchExecRuleSets {
     FlinkExpandConversionRule.BATCH_INSTANCE,
 
     BatchExecScanTableRule.INSTANCE,
+    BatchExecIntermediateTableScanRule.INSTANCE,
     BatchExecScanTableSourceRule.INSTANCE,
     BatchExecCalcRule.INSTANCE,
     BatchExecCorrelateRule.INSTANCE,

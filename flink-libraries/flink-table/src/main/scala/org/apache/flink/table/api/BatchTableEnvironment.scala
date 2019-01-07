@@ -23,47 +23,45 @@ import org.apache.flink.api.common.{ExecutionMode, JobExecutionResult}
 import org.apache.flink.api.common.accumulators.SerializedListAccumulator
 import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.configuration.Configuration
+import org.apache.flink.runtime.client.JobExecutionException
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.{StreamGraph, StreamGraphGenerator}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
-import org.apache.flink.table.catalog.{ExternalCatalog, ReadableCatalog}
+import org.apache.flink.table.catalog.ReadableCatalog
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescriptor}
 import org.apache.flink.table.expressions.{Expression, TimeAttribute}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
 import org.apache.flink.table.plan.cost.{FlinkBatchCost, FlinkCostFactory}
 import org.apache.flink.table.plan.logical.SinkNode
-import org.apache.flink.table.plan.nodes.calcite.Sink
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExecSink}
 import org.apache.flink.table.plan.optimize.{BatchOptimizeContext, FlinkBatchPrograms}
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
+import org.apache.flink.table.plan.subplan.BatchDAGOptimizer
 import org.apache.flink.table.plan.util.{DeadlockBreakupProcessor, FlinkRelOptUtil, SameRelObjectShuttle, SubplanReuseContext, SubplanReuseShuttle}
-import org.apache.flink.table.plan.{RelNodeBlock, RelNodeBlockPlanBuilder}
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.{BatchTableSource, _}
+import org.apache.flink.table.temptable.TableServiceException
 import org.apache.flink.table.util._
 import org.apache.flink.table.util.PlanUtil._
 import org.apache.flink.util.{AbstractID, ExceptionUtils, Preconditions}
+
 import org.apache.calcite.plan.{Context, ConventionTraitDef, RelOptPlanner}
-import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.calcite.sql2rel.SqlToRelConverter.Config
-import _root_.java.util.{ArrayList => JArrayList, List => JList, Map => JMap, Set => JSet}
 
-import org.apache.flink.runtime.client.JobExecutionException
-import org.apache.flink.table.temptable.TableServiceException
+import _root_.java.util.{ArrayList => JArrayList, List => JList, Map => JMap, Set => JSet}
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
-import _root_.scala.collection.mutable
 import _root_.scala.collection.mutable.ArrayBuffer
 import _root_.scala.util.Failure
 import _root_.scala.util.Success
@@ -278,7 +276,7 @@ class BatchTableEnvironment(
     }
   }
 
-  private[flink] override def compile(): Seq[RelNodeBlock] = {
+  private[flink] override def compile(): Unit = {
     if (config.getSubsectionOptimization) {
       if (sinkNodes.isEmpty) {
         throw new TableException("No table sinks have been created yet. " +
@@ -286,62 +284,21 @@ class BatchTableEnvironment(
       }
 
       val optSinkNodes = tableServiceManager.cachePlanBuilder.buildPlanIfNeeded(sinkNodes)
-      // build RelNodeBlock plan
-      val blockPlan = RelNodeBlockPlanBuilder.buildRelNodeBlockPlan(optSinkNodes, this)
-
-      // translates recursively RelNodeBlock into BoundedStream
-      blockPlan.foreach {
-        sinkBlock =>
-          val transformation: StreamTransformation[_] = translateRelNodeBlock(sinkBlock)
-          sinkBlock.outputNode match {
-            case _: Sink =>
-              transformations.add(transformation)
-            case _ => throw new TableException("SinkNode required here")
-          }
-      }
-      blockPlan
-    } else {
-      Seq.empty
+      val dagOptimizer = new BatchDAGOptimizer(optSinkNodes, this)
+      // optimize dag
+      val sinks = dagOptimizer.getOptimizedDag()
+      val sinkTransformations = translateRelNodeDag(sinks)
+      transformations.addAll(sinkTransformations)
     }
   }
 
-  private def translateRelNodeBlock[T](block: RelNodeBlock): StreamTransformation[_] = {
-    block.children.foreach {
-      child =>
-        if (child.getNewOutputNode.isEmpty) {
-          translateRelNodeBlock(child)
-        }
-    }
-
-    val originTree = block.getPlan
-    val optimizedTree = optimize(originTree)
-    addQueryPlan(originTree, optimizedTree)
-
-    val transformation: StreamTransformation[_] = optimizedTree match {
+  private def translateRelNodeDag(sinks: Seq[RelNode]): Seq[StreamTransformation[_]] = {
+    sinks.map {
       case n: BatchExecSink[_] =>
         val outputType = n.sink.getOutputType
         translate(n, outputType)
-      case r: BatchExecRel[T] =>
-        val outputType = FlinkTypeFactory.toDataType(originTree.getRowType)
-        val streamTransform = translate[T](r, outputType)
-        val name = createUniqueTableName()
-        val dataStream = new DataStream(streamEnv, streamTransform)
-        registerIntermediateBoundedStreamInternal(
-          // It is not a SinkNode, so it will be referenced by other RelNodeBlock.
-          // When registering a data collection, we should send a correct type.
-          // If no this correct type, it will be converted from Flink's fieldTypes,
-          // while STRING_TYPE_INFO will lose the length of varchar.
-          originTree.getRowType,
-          name,
-          dataStream)
-        val newTable = scan(name)
-        block.setNewOutputNode(newTable.getRelNode)
-        block.setOutputTableName(name)
-        streamTransform
+      case _ => throw new TableException("SinkNode required here")
     }
-
-    block.setOptimizedPlan(optimizedTree)
-    transformation
   }
 
   /**
@@ -436,19 +393,6 @@ class BatchTableEnvironment(
     registerTableInternal(name, boundedStreamTable)
   }
 
-  private def registerIntermediateBoundedStreamInternal[T](
-      rowType: RelDataType,
-      name: String,
-      boundedStream: DataStream[T]): Unit = {
-
-    val boundedStreamTable = new IntermediateBoundedStreamTable[T](
-      rowType,
-      boundedStream,
-      rowType.getFieldList.map(_.getIndex).toArray[Int],
-      rowType.getFieldList.map(_.getName).toArray[String])
-    registerTableInternal(name, boundedStreamTable)
-  }
-
   /**
     * Translates a [[Table]] into a [[DataStream]], emit the [[DataStream]] into a [[TableSink]]
     * of a specified type and generated a new [[DataStream]].
@@ -517,7 +461,7 @@ class BatchTableEnvironment(
   /**
     * Adds original relNode plan and optimized relNode plan to `queryPlans`.
     */
-  private def addQueryPlan(originalNode: RelNode, optimizedNode: RelNode): Unit = {
+  private[flink] def addQueryPlan(originalNode: RelNode, optimizedNode: RelNode): Unit = {
     val queryPlan =
       s"""
          |== Abstract Syntax Tree ==
@@ -859,7 +803,10 @@ class BatchTableEnvironment(
           "please check your TableConfig.")
     }
 
-    val blockPlan = compile()
+    if (sinkNodes.isEmpty) {
+      throw new TableException("No table sinks have been created yet. " +
+                                 "A program needs at least one sink that consumes data. ")
+    }
 
     val sb = new StringBuilder
     sb.append("== Abstract Syntax Tree ==")
@@ -873,28 +820,15 @@ class BatchTableEnvironment(
 
     sb.append("== Optimized Logical Plan ==")
     sb.append(System.lineSeparator)
-    val visitedBlocks = mutable.Set[RelNodeBlock]()
+    val optSinkNodes = tableServiceManager.cachePlanBuilder.buildPlanIfNeeded(sinkNodes)
+    val dagOptimizer = new BatchDAGOptimizer(optSinkNodes, this)
+    // optimize dag
+    val sinkRelNodes = dagOptimizer.getOptimizedDag()
+    sb.append(dagOptimizer.explain())
 
-    def visitBlock(block: RelNodeBlock, isSinkBlock: Boolean): Unit = {
-      if (!visitedBlocks.contains(block)) {
-        block.children.foreach(visitBlock(_, isSinkBlock = false))
-        if (isSinkBlock) {
-          sb.append("[[Sink]]")
-        } else {
-          sb.append(s"[[IntermediateTable=${block.getOutputTableName}]]")
-        }
-        sb.append(System.lineSeparator)
-        sb.append(FlinkRelOptUtil.toString(block.getOptimizedPlan))
-        sb.append(System.lineSeparator)
-        visitedBlocks += block
-      }
-    }
-
-    blockPlan.foreach(visitBlock(_, isSinkBlock = true))
-
+    val sinkTransformations = translateRelNodeDag(sinkRelNodes)
     val streamGraph = StreamGraphGenerator.generate(
-      StreamGraphGenerator.Context.buildBatchProperties(streamEnv), transformations)
-    transformations.clear()
+      StreamGraphGenerator.Context.buildBatchProperties(streamEnv), sinkTransformations)
     val sqlPlan = PlanUtil.explainPlan(streamGraph)
     sb.append("== Physical Execution Plan ==")
     sb.append(System.lineSeparator)

@@ -111,8 +111,10 @@ object StreamExecRetractionRules {
       val traitsWithAccMode =
         if (
           AccModeTrait.DEFAULT == traits.getTrait(AccModeTraitDef.INSTANCE) &&
-            rel.isInstanceOf[StreamExecDataStreamScan] &&
-            rel.asInstanceOf[StreamExecDataStreamScan].isAccRetract) {
+            ((rel.isInstanceOf[StreamExecDataStreamScan] &&
+              rel.asInstanceOf[StreamExecDataStreamScan].isAccRetract) ||
+              (rel.isInstanceOf[StreamExecIntermediateTableScan] &&
+                rel.asInstanceOf[StreamExecIntermediateTableScan].isAccRetract))) {
           // if source is AccRetract
           traits.plus(new AccModeTrait(AccMode.AccRetract))
         } else {
@@ -161,9 +163,9 @@ object StreamExecRetractionRules {
       * A child needs to produce retraction messages, if
       *
       * 1. its parent requires retraction messages by itself because it is a certain type
-      *    of operator, such as a [[StreamExecGroupAggregate]] or [[StreamExecOverAggregate]], or
+      * of operator, such as a [[StreamExecGroupAggregate]] or [[StreamExecOverAggregate]], or
       * 2. its parent requires retraction because its own parent requires retraction
-      *    (transitive requirement).
+      * (transitive requirement).
       *
       */
     override def onMatch(call: RelOptRuleCall): Unit = {
@@ -225,7 +227,7 @@ object StreamExecRetractionRules {
 
       // check if the AccMode of the parent needs to be updated
       if (!isAccRetract(parent) &&
-          (producesRetractions(parent) || forwardsRetractions(parent, children))) {
+        (producesRetractions(parent) || forwardsRetractions(parent, children))) {
         call.transformTo(setAccRetract(parent))
       }
     }

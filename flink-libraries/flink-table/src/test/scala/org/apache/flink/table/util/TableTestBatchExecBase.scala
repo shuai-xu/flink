@@ -33,16 +33,22 @@ import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.{Table, TableException, _}
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.expressions.Expression
-import org.apache.flink.table.plan.RelNodeBlock
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExecSink}
+import org.apache.flink.table.plan.subplan.BatchDAGOptimizer
 import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSource}
 import org.apache.flink.types.Row
 
 import org.apache.calcite.sql.SqlExplainLevel
+
 import org.apache.commons.lang3.SystemUtils
+
+import _root_.scala.collection.mutable
+import _root_.scala.collection.JavaConversions._
+import _root_.scala.collection.JavaConverters._
+
 import org.junit.Assert._
 import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}
@@ -50,10 +56,6 @@ import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-
-import _root_.scala.collection.JavaConversions._
-import _root_.scala.collection.JavaConverters._
-import _root_.scala.collection.mutable
 
 /**
   * Test batch exec base for testing Table API / SQL plans.
@@ -370,8 +372,11 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
       throw new TableException(
         "subsection optimization is false, please use other method to verify result.")
     }
-    val blockPlan = tableEnv.compile()
 
+    if (tableEnv.sinkNodes.isEmpty) {
+      throw new TableException("No table sinks have been created yet. " +
+                                 "A program needs at least one sink that consumes data. ")
+    }
     if (printPlanBefore) {
       val planBefore = new StringBuilder
       tableEnv.sinkNodes.foreach { sink =>
@@ -383,33 +388,40 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
       }
       assertEqualsOrExpand("planBefore", planBefore.toString())
     }
+
+    val optSinkNodes = tableEnv.tableServiceManager.cachePlanBuilder.
+                       buildPlanIfNeeded(tableEnv.sinkNodes)
+
+
+    val dagOptimizer = new BatchDAGOptimizer(optSinkNodes, tableEnv)
+    // optimize dag
+    val sinks = dagOptimizer.getOptimizedDag()
     tableEnv.sinkNodes.clear()
 
-    val actual = new StringBuilder()
-    actual.append(System.lineSeparator)
-    val visitedBlocks = mutable.Set[RelNodeBlock]()
-
-    def visitBlock(block: RelNodeBlock, isSinkBlock: Boolean): Unit = {
-      if (!visitedBlocks.contains(block)) {
-        block.children.foreach(visitBlock(_, isSinkBlock = false))
-        if (isSinkBlock) {
-          actual.append("[[Sink]]")
-        } else {
-          actual.append(s"[[IntermediateTable=${block.getOutputTableName}]]")
-        }
-        actual.append(System.lineSeparator)
-        actual.append(FlinkRelOptUtil.toString(
-          block.getOptimizedPlan,
-          detailLevel = explainLevel,
-          withResource = printResultPartitionCount))
-        actual.append(System.lineSeparator)
-        visitedBlocks += block
+    // set resource
+    val planAfter = if (printResultPartitionCount) {
+      val planWithResource = new StringBuilder()
+      val ruKeeper = new RunningUnitKeeper(tableEnv)
+      sinks.map {
+        case node: BatchExecSink[_] =>
+          ruKeeper.buildRUs(node)
+          ruKeeper.calculateRelResource(node)
+          planWithResource.append(System.lineSeparator)
+          planWithResource.append("[[Sink]]")
+          planWithResource.append(System.lineSeparator)
+          planWithResource.append(FlinkRelOptUtil.toString(
+            node,
+            detailLevel = explainLevel,
+            printResultPartitionCount))
+          planWithResource.append(System.lineSeparator)
+        case _ => // ignore
       }
+      planWithResource.deleteCharAt(planWithResource.length - 1)
+      planWithResource.toString
+    } else {
+      dagOptimizer.explain()
     }
-
-    blockPlan.foreach(visitBlock(_, isSinkBlock = true))
-    actual.deleteCharAt(actual.length - 1)
-    assertEqualsOrExpand("planAfter", actual.toString(), expand = false)
+    assertEqualsOrExpand("planAfter", planAfter, expand = false)
   }
 
   private def assertEqualsOrExpand(tag: String, actual: String, expand: Boolean = true): Unit = {

@@ -89,7 +89,8 @@ class StreamExecLastRow(
     s"LastRow: (key: ($keyNames), select: ($outputNames))"
   }
 
-  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+  override def translateToPlanInternal(
+      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     val tableConfig = tableEnv.getConfig
 

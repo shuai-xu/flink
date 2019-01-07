@@ -21,11 +21,11 @@ StreamExecSink(fields=[a, b, c, a_sum], retract=[false], accMode=[Acc])
    :- StreamExecCalc(select=[a, b, c, TMP_0 AS a_sum], retract=[false], accMode=[Acc])
    :  +- StreamExecGroupAggregate(groupBy=[a, b, c], select=[a, b, c, SUM(a) AS TMP_0], retract=[false], accMode=[Acc])
    :     +- StreamExecExchange(distribution=[hash[a, b, c]], retract=[true], accMode=[Acc])
-   :        +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
+   :        +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
    +- StreamExecCalc(select=[CAST(1) AS a, b, c, TMP_1 AS a_sum], retract=[false], accMode=[Acc])
       +- StreamExecGroupAggregate(groupBy=[b, c], select=[b, c, SUM(a) AS TMP_1], retract=[false], accMode=[Acc])
          +- StreamExecExchange(distribution=[hash[b, c]], retract=[true], accMode=[Acc])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
+            +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
 
 == Physical Execution Plan ==
  : Data Source

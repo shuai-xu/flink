@@ -37,7 +37,6 @@ import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.{Alias, Expression, TimeAttribute, UnresolvedFieldReference}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.plan.{RelNodeBlock, RelNodeBlockPlanBuilder}
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.logical.{CatalogNode, LogicalNode, LogicalRelNode}
 import org.apache.flink.table.plan.schema._
@@ -79,7 +78,7 @@ import _root_.scala.collection.mutable
 abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
 
   protected val catalogManager: CatalogManager = new CatalogManager()
-  private var currentSchema: SchemaPlus = catalogManager.getRootSchema
+  private val currentSchema: SchemaPlus = catalogManager.getRootSchema
 
   private val typeFactory: FlinkTypeFactory = new FlinkTypeFactory(new FlinkTypeSystem)
 
@@ -150,12 +149,10 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
   }
 
   /**
-    * Compile the sink [[org.apache.flink.table.plan.logical.LogicalNode]] to [[RelNodeBlock]],
-    * see [[RelNodeBlockPlanBuilder]] for details.
-    *
-    * @return A sequence of RelNodeBlock
+    * Compile the sink [[org.apache.flink.table.plan.logical.LogicalNode]] to
+    * [[org.apache.flink.streaming.api.transformations.StreamTransformation]]。
     */
-  private[flink] def compile(): Seq[RelNodeBlock] = ???
+  private[flink] def compile(): Unit = ???
 
   /**
     * Returns the operator table for this environment including a custom Calcite configuration.
@@ -319,10 +316,10 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     * @return The table registered either internally or externally, None otherwise.
     */
   def getTable(paths: Array[String]): Option[org.apache.calcite.schema.Table] = {
-    var names = catalogManager.resolveTableName(paths : _*)
-    var catalogName = names(0)
-    var dbName = names(1)
-    var tableName = names(2)
+    val names = catalogManager.resolveTableName(paths : _*)
+    val catalogName = names(0)
+    val dbName = names(1)
+    val tableName = names(2)
 
     val catalogSchema = catalogManager.getRootSchema.getSubSchema(catalogName)
 
@@ -507,7 +504,7 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     * @throws TableAlreadyExistException if another table is registered under the provided name.
     */
   @throws[TableAlreadyExistException]
-  protected def registerTableInternal(name: String, table: AbstractTable): Unit = {
+  private[flink] def registerTableInternal(name: String, table: AbstractTable): Unit = {
     catalogManager.getCatalog(catalogManager.getDefaultCatalogName)
       .asInstanceOf[ReadableWritableCatalog]
       .createTable(
@@ -536,7 +533,7 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
   }
 
   private def createFlinkTempTable(table: AbstractTable): FlinkTempTable = {
-    var currentMillis = System.currentTimeMillis()
+    val currentMillis = System.currentTimeMillis()
 
     return new FlinkTempTable(
       table,

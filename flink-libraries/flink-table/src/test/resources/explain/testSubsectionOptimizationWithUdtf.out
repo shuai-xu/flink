@@ -1,5 +1,5 @@
 == Abstract Syntax Tree ==
-LogicalCorrelate(correlation=[$cor2], joinType=[inner], requiredColumns=[{}])
+LogicalCorrelate(correlation=[$cor1], joinType=[inner], requiredColumns=[{}])
 :- LogicalFilter(condition=[=($0, $6)])
 :  +- LogicalJoin(condition=[true], joinType=[inner])
 :     :- LogicalFilter(condition=[=($1, $4)])

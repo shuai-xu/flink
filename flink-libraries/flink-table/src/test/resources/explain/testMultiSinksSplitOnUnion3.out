@@ -44,14 +44,14 @@ StreamExecSink(fields=[total_sum], retract=[false], accMode=[Acc])
 +- StreamExecCalc(select=[TMP_0 AS total_sum], retract=[false], accMode=[Acc])
    +- StreamExecGroupAggregate(select=[SUM(a) AS TMP_0], retract=[false], accMode=[Acc])
       +- StreamExecExchange(distribution=[single], retract=[true], accMode=[Acc])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_5]], retract=[true], accMode=[Acc])
+         +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_5]], retract=[true], accMode=[Acc])
 
 [[Sink]]
 StreamExecSink(fields=[total_min], retract=[false], accMode=[AccRetract])
 +- StreamExecCalc(select=[TMP_1 AS total_min], retract=[true], accMode=[AccRetract])
    +- StreamExecGroupAggregate(select=[MIN(a) AS TMP_1], retract=[true], accMode=[AccRetract])
       +- StreamExecExchange(distribution=[single], retract=[true], accMode=[Acc])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_5]], retract=[true], accMode=[Acc])
+         +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_5]], retract=[true], accMode=[Acc])
 
 [[Sink]]
 StreamExecSink(fields=[a], retract=[false], accMode=[Acc])

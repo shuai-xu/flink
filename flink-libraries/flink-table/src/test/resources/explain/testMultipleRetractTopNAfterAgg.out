@@ -21,14 +21,14 @@ StreamExecSink(fields=[category, shopId, sum_num, max_num, rank_num], retract=[f
 +- StreamExecCalc(select=[category, shopId, sum_num, max_num, w0$o0], retract=[true], accMode=[AccRetract])
    +- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[sum_num DESC, max_num ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[RetractRank], select=[*, rowNum], retract=[true], accMode=[AccRetract])
       +- StreamExecExchange(distribution=[hash[category]], retract=[true], accMode=[AccRetract])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], retract=[true], accMode=[AccRetract])
+         +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_2]], retract=[true], accMode=[AccRetract])
 
 [[Sink]]
 StreamExecSink(fields=[category, shopId, avg_num, cnt_num, rank_num], retract=[false], accMode=[AccRetract])
 +- StreamExecCalc(select=[category, shopId, avg_num, cnt_num, w0$o0], retract=[true], accMode=[AccRetract])
    +- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[avg_num DESC, cnt_num ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[RetractRank], select=[*, rowNum], retract=[true], accMode=[AccRetract])
       +- StreamExecExchange(distribution=[hash[category]], retract=[true], accMode=[AccRetract])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], retract=[true], accMode=[AccRetract])
+         +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_2]], retract=[true], accMode=[AccRetract])
 
 == Physical Execution Plan ==
  : Data Source

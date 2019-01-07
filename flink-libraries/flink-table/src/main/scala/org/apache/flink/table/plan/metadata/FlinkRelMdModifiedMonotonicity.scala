@@ -27,7 +27,7 @@ import org.apache.flink.table.plan.metadata.FlinkMetadata.ModifiedMonotonicityMe
 import org.apache.flink.table.plan.nodes.logical._
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecGroupAggregateBase
 import org.apache.flink.table.plan.nodes.physical.stream._
-import org.apache.flink.table.plan.schema.DataStreamTable
+import org.apache.flink.table.plan.schema.{DataStreamTable, IntermediateRelNodeTable}
 import org.apache.flink.table.plan.stats.WithLower
 
 import org.apache.calcite.plan.hep.HepRelVertex
@@ -108,7 +108,9 @@ class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMon
       case _: FlinkLogicalNativeTableScan | _: StreamExecDataStreamScan =>
         val table = rel.getTable.unwrap(classOf[DataStreamTable[Any]])
         table.statistic.getRelModifiedMonotonicity
-
+      case _: FlinkLogicalIntermediateTableScan | _: StreamExecIntermediateTableScan =>
+        val table = rel.getTable.unwrap(classOf[IntermediateRelNodeTable])
+        table.statistic.getRelModifiedMonotonicity
       case _ => null
     }
 

@@ -29,12 +29,12 @@ StreamExecSink(fields=[cnt, frequency], retract=[false], accMode=[Acc])
    +- StreamExecGroupAggregate(groupBy=[cnt], select=[cnt, COUNT_RETRACT(num) AS TMP_1], retract=[false], accMode=[Acc])
       +- StreamExecExchange(distribution=[hash[cnt]], retract=[true], accMode=[AccRetract])
          +- StreamExecCalc(select=[num, cnt], where=[<(num, 4)], retract=[true], accMode=[AccRetract])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], retract=[true], accMode=[AccRetract])
+            +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_2]], retract=[true], accMode=[AccRetract])
 
 [[Sink]]
 StreamExecSink(fields=[num, cnt], retract=[false], accMode=[AccRetract])
 +- StreamExecCalc(select=[num, cnt], where=[AND(>=(num, 4), <(num, 6))], retract=[false], accMode=[AccRetract])
-   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]], retract=[false], accMode=[AccRetract])
+   +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_2]], retract=[false], accMode=[AccRetract])
 
 == Physical Execution Plan ==
  : Data Source

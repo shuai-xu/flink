@@ -163,7 +163,8 @@ class StreamExecGroupAggregate(
         groupings)}))"
   }
 
-  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+  override def translateToPlanInternal(
+      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val tableConfig = tableEnv.getConfig
 
     if (groupings.length > 0 && tableConfig.getMinIdleStateRetentionTime < 0) {

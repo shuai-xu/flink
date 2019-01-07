@@ -25,10 +25,10 @@ StreamExecCalc(select=[id, num, text], where=[LIKE(text, '%hello%')], retract=[t
 
 [[Sink]]
 StreamExecSink(fields=[id, num, text], retract=[false], accMode=[Acc])
-+- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_6]], retract=[false], accMode=[Acc])
++- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_6]], retract=[false], accMode=[Acc])
 
 [[IntermediateTable=_DataStreamTable_7]]
-StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_6]], retract=[true], accMode=[Acc])
+StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_6]], retract=[true], accMode=[Acc])
 
 [[IntermediateTable=_DataStreamTable_8]]
 StreamExecCalc(select=[id, num, text], where=[LIKE(text, '%world%')], retract=[true], accMode=[Acc])
@@ -38,28 +38,28 @@ StreamExecCalc(select=[id, num, text], where=[LIKE(text, '%world%')], retract=[t
 StreamExecSink(fields=[id, num, text], retract=[false], accMode=[Acc])
 +- StreamExecUnion(all=[true], union=[id, num, text], retract=[true], accMode=[Acc])
    :- StreamExecCalc(select=[id, num, text], where=[>=(num, 5)], retract=[true], accMode=[Acc])
-   :  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_7]], retract=[true], accMode=[Acc])
+   :  +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_7]], retract=[true], accMode=[Acc])
    +- StreamExecCalc(select=[id, num, text], where=[>=(num, 5)], retract=[true], accMode=[Acc])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_8]], retract=[true], accMode=[Acc])
+      +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_8]], retract=[true], accMode=[Acc])
 
 [[IntermediateTable=_DataStreamTable_9]]
 StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS cnt], retract=[true], accMode=[AccRetract])
 +- StreamExecExchange(distribution=[hash[num]], retract=[true], accMode=[Acc])
    +- StreamExecUnion(all=[true], union=[num, id], retract=[true], accMode=[Acc])
       :- StreamExecCalc(select=[num, id], retract=[true], accMode=[Acc])
-      :  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_7]], retract=[true], accMode=[Acc])
+      :  +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_7]], retract=[true], accMode=[Acc])
       +- StreamExecCalc(select=[num, id], retract=[true], accMode=[Acc])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_8]], retract=[true], accMode=[Acc])
+         +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_8]], retract=[true], accMode=[Acc])
 
 [[Sink]]
 StreamExecSink(fields=[num, cnt], retract=[false], accMode=[AccRetract])
 +- StreamExecCalc(select=[num, cnt], where=[<(num, 4)], retract=[true], accMode=[AccRetract])
-   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_9]], retract=[true], accMode=[AccRetract])
+   +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_9]], retract=[true], accMode=[AccRetract])
 
 [[Sink]]
 StreamExecSink(fields=[num, cnt], retract=[false], accMode=[AccRetract])
 +- StreamExecCalc(select=[num, cnt], where=[AND(>=(num, 4), <(num, 6))], retract=[false], accMode=[AccRetract])
-   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_9]], retract=[false], accMode=[AccRetract])
+   +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_9]], retract=[false], accMode=[AccRetract])
 
 == Physical Execution Plan ==
  : Data Source
@@ -78,15 +78,15 @@ StreamExecSink(fields=[num, cnt], retract=[false], accMode=[AccRetract])
 				ship_strategy : FORWARD
 
 				 : Operator
-					content : SourceConversion(table:[default_catalog, default_db, T], fields:(id, num, text))
+					content : Calc(where: (num >= 5), select: (id, num, text))
 					ship_strategy : FORWARD
 
 					 : Operator
-						content : Calc(where: (text LIKE '%world%'), select: (id, num, text))
+						content : SourceConversion(table:[default_catalog, default_db, T], fields:(id, num, text))
 						ship_strategy : FORWARD
 
 						 : Operator
-							content : Calc(where: (num >= 5), select: (id, num, text))
+							content : Calc(where: (text LIKE '%world%'), select: (id, num, text))
 							ship_strategy : FORWARD
 
 							 : Operator

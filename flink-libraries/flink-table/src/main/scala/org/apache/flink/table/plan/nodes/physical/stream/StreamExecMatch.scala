@@ -126,7 +126,8 @@ class StreamExecMatch(
     (cepPattern, patternVisitor.names.toSeq)
   }
 
-  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+  override def translateToPlanInternal(
+      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     val inputIsAccRetract = StreamExecRetractionRules.isAccRetract(getInput)
 

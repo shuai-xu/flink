@@ -48,7 +48,8 @@ class StreamExecWatermarkAssigner (
 
   override def isDeterministic: Boolean = true
 
-  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+  override def translateToPlanInternal(
+      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val in = input.asInstanceOf[RowStreamExecRel]
     val inputTransformation = in.translateToPlan(tableEnv)
 
