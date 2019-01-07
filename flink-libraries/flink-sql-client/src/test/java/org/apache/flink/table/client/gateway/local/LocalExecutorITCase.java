@@ -441,6 +441,110 @@ public class LocalExecutorITCase extends TestLogger {
 		assertEquals(expectedSchema, schema.toString());
 	}
 
+	@Test(timeout = 30_000L)
+	public void testStreamQueryExecutionFromDDLTable() throws Exception {
+		final URL url = getClass().getClassLoader().getResource("test-data.csv");
+		Objects.requireNonNull(url);
+
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "streaming");
+		replaceVars.put("$VAR_RESULT_MODE", "table");
+		replaceVars.put("$VAR_UPDATE_MODE", "update-mode: append");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
+
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		// Create a table with DDL, which has the same schema of TableNumber1
+		executor.createTable(
+			session,
+			"CREATE TABLE TableFromDDL(IntegerField1 INT, StringField1 VARCHAR)" +
+					" WITH (" +
+					"  type = 'CSV'" +
+					", path = '" + url.getPath() + "'" +
+					", commentsPrefix = '#')");
+
+		final String query = "SELECT scalarUDF(IntegerField1), StringField1 FROM TableFromDDL";
+		final List<String> expectedResults = new ArrayList<>();
+		expectedResults.add("47,Hello World");
+		expectedResults.add("27,Hello World");
+		expectedResults.add("37,Hello World");
+		expectedResults.add("37,Hello World");
+		expectedResults.add("47,Hello World");
+		expectedResults.add("57,Hello World!!!!");
+
+		try {
+			// start job and retrieval
+			final ResultDescriptor desc = executor.executeQuery(session, query);
+
+			assertTrue(desc.isMaterialized());
+
+			final List<String> actualResults = retrieveTableResult(executor, session, desc.getResultId());
+
+			TestBaseUtils.compareResultCollections(expectedResults, actualResults, Comparator.naturalOrder());
+		} finally {
+			executor.stop(session);
+		}
+	}
+
+	@Test(timeout = 30_000L)
+	public void testStreamQueryExecutionSinkToDDLTable() throws Exception {
+		final String csvOutputPath = new File(tempFolder.newFolder().getAbsolutePath(), "test-out.csv").toURI().toString();
+		final URL url = getClass().getClassLoader().getResource("test-data.csv");
+		Objects.requireNonNull(url);
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "streaming");
+		replaceVars.put("$VAR_SOURCE_SINK_PATH", csvOutputPath);
+		replaceVars.put("$VAR_UPDATE_MODE", "update-mode: append");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
+
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		executor.createTable(
+			session,
+			"CREATE TABLE SourceTableFromDDL(IntegerField1 INT, StringField1 VARCHAR)" +
+				" WITH (" +
+				"  type = 'CSV'" +
+				", path = '" + url.getPath() + "'" +
+				", commentsPrefix = '#')");
+
+		executor.createTable(
+			session,
+			"CREATE TABLE SinkTableFromDDL(BooleanField BOOLEAN, StringField VARCHAR)" +
+				" WITH (" +
+				"  type = 'CSV'" +
+				", path = '" + csvOutputPath + "')");
+
+		try {
+			final ProgramTargetDescriptor targetDescriptor = executor.executeUpdate(
+				session,
+				"INSERT INTO SinkTableFromDDL SELECT IntegerField1 = 42, StringField1 FROM SourceTableFromDDL");
+
+			// wait for job completion and verify result
+			boolean isRunning = true;
+			while (isRunning) {
+				Thread.sleep(50); // slow the processing down
+				final JobStatus jobStatus = clusterClient.getJobStatus(JobID.fromHexString(targetDescriptor.getJobId())).get();
+				switch (jobStatus) {
+					case CREATED:
+					case RUNNING:
+						continue;
+					case FINISHED:
+						isRunning = false;
+						verifySinkResult(csvOutputPath);
+						break;
+					default:
+						fail("Unexpected job status.");
+				}
+			}
+		} finally {
+			executor.stop(session);
+		}
+	}
+
 	private void executeStreamQueryTable(
 			Map<String, String> replaceVars,
 			String query,
