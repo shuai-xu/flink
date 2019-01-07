@@ -20,16 +20,14 @@ package org.apache.flink.table.catalog
 
 import java.util
 
-import org.apache.flink.table.api.{RichTableSchema, TableSchema, TableSourceParser}
+import org.apache.flink.table.api._
 import org.apache.flink.table.descriptors.ConnectorDescriptor
-import org.apache.flink.table.factories.{BatchTableSinkFactory, BatchTableSourceFactory,
-  DimensionTableSourceFactory, StreamTableSinkFactory, StreamTableSourceFactory,
-  TableFactoryService, TableSourceParserFactory}
+import org.apache.flink.table.factories._
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.util.{Logging, TableProperties}
 
-import scala.collection.JavaConversions._
+import _root_.scala.collection.JavaConversions._
 
 /**
   * The utility class is used to convert ExternalCatalogTable to TableSinkTable.
@@ -62,15 +60,16 @@ object ExternalTableUtil extends Logging {
    */
   def toParser(
       name: String, table: ExternalCatalogTable, isStreaming: Boolean): TableSourceParser = {
-    ExternalTableSourceUtil.toTableSource(table) match {
-      case Some(_: TableSource) =>
-        null
-      case None =>
-        val tableProperties = generateTableProperties(name, table, isStreaming)
-        val tableFactory = TableFactoryService.find(classOf[TableSourceParserFactory],
-          getToolDescriptor(getStorageType(name, tableProperties), tableProperties))
-        tableFactory.createParser(
-          name, table.getRichTableSchema, tableProperties)
+
+    val tableProperties = generateTableProperties(name, table, isStreaming)
+    try {
+      val tableFactory = TableFactoryService.find(classOf[TableSourceParserFactory],
+        getToolDescriptor(getStorageType(name, tableProperties), tableProperties))
+      tableFactory.createParser(
+        name, table.getRichTableSchema, tableProperties)
+    } catch {
+      // No TableSourceParserFactory found
+      case e@ (_: AmbiguousTableFactoryException | _: NoMatchingTableFactoryException) => null
     }
   }
 
@@ -88,26 +87,22 @@ object ExternalTableUtil extends Logging {
       externalCatalogTable: ExternalCatalogTable,
       isStreaming: Boolean,
       isDim: Boolean): TableSource = {
-    ExternalTableSourceUtil.toTableSource(externalCatalogTable) match {
-      case Some(tableSource: TableSource) =>
-        tableSource
-      case None =>
-        val tableProperties = generateTableProperties(name, externalCatalogTable, isStreaming)
-        isDim match {
-          case true =>
-            val tableFactory = TableFactoryService.find(classOf[DimensionTableSourceFactory[_]],
-              getToolDescriptor(getStorageType(name, tableProperties), tableProperties))
-            tableFactory.createDimensionTableSource(tableProperties.toKeyLowerCase.toMap)
-          case false =>
-            if (isStreaming) {
-              val tableFactory = TableFactoryService.find(classOf[StreamTableSourceFactory[_]],
-                getToolDescriptor(getStorageType(name, tableProperties), tableProperties))
-              tableFactory.createStreamTableSource(tableProperties.toKeyLowerCase.toMap)
-            } else {
-              val tableFactory = TableFactoryService.find(classOf[BatchTableSourceFactory[_]],
-                getToolDescriptor(getStorageType(name, tableProperties), tableProperties))
-              tableFactory.createBatchTableSource(tableProperties.toKeyLowerCase.toMap)
-            }
+
+    val tableProperties = generateTableProperties(name, externalCatalogTable, isStreaming)
+    isDim match {
+      case true =>
+        val tableFactory = TableFactoryService.find(classOf[DimensionTableSourceFactory[_]],
+          getToolDescriptor(getStorageType(name, tableProperties), tableProperties))
+        tableFactory.createDimensionTableSource(tableProperties.toKeyLowerCase.toMap)
+      case false =>
+        if (isStreaming) {
+          val tableFactory = TableFactoryService.find(classOf[StreamTableSourceFactory[_]],
+            getToolDescriptor(getStorageType(name, tableProperties), tableProperties))
+          tableFactory.createStreamTableSource(tableProperties.toKeyLowerCase.toMap)
+        } else {
+          val tableFactory = TableFactoryService.find(classOf[BatchTableSourceFactory[_]],
+            getToolDescriptor(getStorageType(name, tableProperties), tableProperties))
+          tableFactory.createBatchTableSource(tableProperties.toKeyLowerCase.toMap)
         }
     }
   }

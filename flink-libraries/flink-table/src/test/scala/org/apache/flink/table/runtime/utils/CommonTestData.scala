@@ -24,14 +24,13 @@ import java.sql.Timestamp
 import java.{lang, util}
 
 import org.apache.calcite.avatica.util.DateTimeUtils
-import org.apache.calcite.schema.SchemaPlus
 import org.apache.flink.api.java.io.CsvInputFormat
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType, TypeInfoWrappedType}
+import org.apache.flink.table.api.{RichTableSchema, TableSchema}
 import org.apache.flink.table.catalog._
-import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.dataformat.Decimal
+import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.types.Row
 
@@ -283,7 +282,22 @@ object CommonTestData {
           DataTypes.INT,
           DataTypes.LONG,
           DataTypes.STRING)),
-      properties1
+      properties1,
+      new RichTableSchema(
+        Array("a", "b", "c"),
+        Array(
+          DataTypes.INT,
+          DataTypes.LONG,
+          DataTypes.STRING)),
+      null,
+      "",
+      null,
+      false,
+      null,
+      null,
+      -1,
+      System.currentTimeMillis(),
+      System.currentTimeMillis()
     )
 
     val csvRecord2 = Seq(
@@ -319,7 +333,25 @@ object CommonTestData {
           DataTypes.STRING,
           DataTypes.LONG)
       ),
-      properties2
+      properties2,
+      new RichTableSchema(
+        Array("d", "e", "f", "g", "h"),
+        Array(
+          DataTypes.INT,
+          DataTypes.LONG,
+          DataTypes.INT,
+          DataTypes.STRING,
+          DataTypes.LONG)
+      ),
+      null,
+      "",
+      null,
+      false,
+      null,
+      null,
+      -1,
+      System.currentTimeMillis(),
+      System.currentTimeMillis()
     )
     val catalog = new FlinkInMemoryCatalog("test")
     val db1 = new CatalogDatabase()

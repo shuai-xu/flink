@@ -19,7 +19,6 @@
 package org.apache.flink.table.api
 
 import com.google.common.base.Joiner
-import org.apache.flink.table.catalog.TableSourceConverter
 import org.apache.flink.table.catalog.ExternalCatalogTypes.PartitionSpec
 import org.apache.flink.table.descriptors.DescriptorProperties
 import org.apache.flink.table.factories.{TableFactory => JTableFactory}
@@ -310,36 +309,6 @@ case class AmbiguousTableFactoryException(
     properties: Map[String, String]) = {
     this(matchingFactories, factoryClass, factories, properties, null)
   }
-}
-
-/**
-  * Exception for not finding a [[TableSourceConverter]] for a given table type.
-  *
-  * @param tableType table type
-  * @param cause the cause
-  */
-case class NoMatchedTableSourceConverterException(
-    tableType: String,
-    cause: Throwable)
-    extends RuntimeException(s"Could not find a TableSourceConverter for table type $tableType.",
-      cause) {
-
-  def this(tableType: String) = this(tableType, null)
-}
-
-/**
-  * Exception for finding more than one [[TableSourceConverter]] for a given table type.
-  *
-  * @param tableType table type
-  * @param cause the cause
-  */
-case class AmbiguousTableSourceConverterException(
-    tableType: String,
-    cause: Throwable)
-    extends RuntimeException(s"More than one TableSourceConverter for table type $tableType.",
-      cause) {
-
-  def this(tableType: String) = this(tableType, null)
 }
 
 /**

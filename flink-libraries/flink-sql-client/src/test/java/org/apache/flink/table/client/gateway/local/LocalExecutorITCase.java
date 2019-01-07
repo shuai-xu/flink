@@ -368,7 +368,7 @@ public class LocalExecutorITCase extends TestLogger {
 		}
 	}
 
-	@Test(timeout = 300_000L)
+	@Test(timeout = 30_000L)
 	public void testStreamQueryExecutionSink() throws Exception {
 		final String csvOutputPath = new File(tempFolder.newFolder().getAbsolutePath(), "test-out.csv").toURI().toString();
 		final URL url = getClass().getClassLoader().getResource("test-data.csv");
@@ -409,6 +409,36 @@ public class LocalExecutorITCase extends TestLogger {
 		} finally {
 			executor.stop(session);
 		}
+	}
+
+	@Test(timeout = 30_000L)
+	public void testCreateTable() throws Exception {
+		final Executor executor = createDefaultExecutor(clusterClient);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		executor.createTable(session, "CREATE TABLE TableFromDDL(field1 INT, field2 VARCHAR) WITH (type = 'type', attributeKey1 = 'value1', attributeKey2 = 'value2')");
+
+		final List<String> actualTables =
+			executor.listTables(session).stream().sorted().collect(Collectors.toList());
+		final List<String> expectedTables = Arrays.asList(
+			"TableFromDDL",
+			"TableNumber1",
+			"TableNumber2",
+			"TableSourceSink",
+			"TestView1",
+			"TestView2").stream().sorted().collect(Collectors.toList());
+		assertEquals(expectedTables, actualTables);
+
+		final TableSchema schema = executor.getTableSchema(session, "TableFromDDL");
+		final String expectedSchema =
+			"root\n" +
+			" |-- name: field1\n" +
+			" |-- type: IntType\n" +
+			" |-- isNullable: true\n" +
+			" |-- name: field2\n" +
+			" |-- type: StringType\n" +
+			" |-- isNullable: true\n";
+		assertEquals(expectedSchema, schema.toString());
 	}
 
 	private void executeStreamQueryTable(
