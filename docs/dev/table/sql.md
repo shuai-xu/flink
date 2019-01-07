@@ -1910,6 +1910,7 @@ LOG2(numeric)
 
     <tr>
       <td>
+        {% highlight text %}
 EXP(numeric)
 {% endhighlight %}
       </td>
