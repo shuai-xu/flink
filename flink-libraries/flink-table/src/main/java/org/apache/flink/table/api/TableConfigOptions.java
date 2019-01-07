@@ -94,11 +94,16 @@ public class TableConfigOptions {
 
 	public static final ConfigOption<Long> SQL_EXEC_NULL_COUNT_ADD_FILTER_MIN =
 			key("sql.optimizer.join.null.filter.threshold")
-			.defaultValue(2000000L);
+			.defaultValue(2000000L)
+			.withDescription("If the source of InnerJoin has nullCount more than this value, " +
+					"it will add a null filter (possibly be pushDowned) before the join, filter" +
+					" null values to avoid the impact of null values on the single join node.");
 
 	public static final ConfigOption<Double> SQL_EXEC_SEMI_BUILD_DISTINCT_NDV_RATIO =
 			key("sql.optimizer.semi-join.build-distinct.ndv-ratio")
-			.defaultValue(0.8);
+			.defaultValue(0.8)
+			.withDescription("When the semi-side of semiJoin can distinct a lot of data in advance," +
+					" we will add distinct node before semiJoin.");
 
 	public static final ConfigOption<Boolean> SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED =
 			key("sql.optimizer.subsection-optimization.unionall-as-breakpoint.disabled")
@@ -181,7 +186,8 @@ public class TableConfigOptions {
 
 	public static final ConfigOption<Boolean> SQL_EXEC_SORT_ASYNC_MERGE_ENABLE =
 			key("sql.exec.sort.async-merge.enabled")
-			.defaultValue(true);
+			.defaultValue(true)
+			.withDescription("Whether to asynchronously merge sort spill files.");
 
 	public static final ConfigOption<Boolean> SQL_EXEC_NON_TEMPORAL_SORT_ENABLED =
 			key("sql.exec.sort.non-temporal.enabled")
@@ -196,15 +202,19 @@ public class TableConfigOptions {
 
 	public static final ConfigOption<Boolean> SQL_EXEC_SPILL_COMPRESSION_ENABLE =
 			key("sql.exec.spill.compression.enabled")
-			.defaultValue(true);
+			.defaultValue(true)
+			.withDescription("Whether to compress spilled data. (Now include sort and hash agg and hash join)");
 
 	public static final ConfigOption<String> SQL_EXEC_SPILL_COMPRESSION_CODEC =
 			key("sql.exec.spill.compression.codec")
-			.defaultValue("lz4");
+			.defaultValue("lz4")
+			.withDescription("Use that compression codec to compress spilled file. Now we support lz4, gzip, bzip2.");
 
 	public static final ConfigOption<Integer> SQL_EXEC_SPILL_COMPRESSION_BLOCK_SIZE =
 			key("sql.exec.spill.compression.block-size")
-			.defaultValue(64 * 1024);
+			.defaultValue(64 * 1024)
+			.withDescription("The buffer is to compress. The larger the buffer," +
+					" the better the compression ratio, but the more memory consumption.");
 
 	// ------------------------------------------------------------------------
 	//  Join Options
@@ -266,11 +276,13 @@ public class TableConfigOptions {
 	public static final ConfigOption<Boolean> SQL_RUNTIME_FILTER_ENABLE =
 			key("sql.exec.runtime-filter.enabled")
 			.defaultValue(false)
-			.withDescription("Runtime filter for hash join.");
+			.withDescription("Runtime filter for hash join. The Build side of HashJoin will " +
+					"build a bloomFilter in advance to filter the data on the probe side.");
 
 	public static final ConfigOption<Boolean> SQL_RUNTIME_FILTER_WAIT =
 			key("sql.exec.runtime-filter.wait")
-			.defaultValue(false);
+			.defaultValue(false)
+			.withDescription("Weather to let probe side to wait bloom filter.");
 
 	public static final ConfigOption<Integer> SQL_RUNTIME_FILTER_SIZE_MAX_MB =
 			key("sql.exec.runtime-filter.size.max.mb")
