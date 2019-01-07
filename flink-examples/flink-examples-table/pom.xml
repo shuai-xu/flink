@@ -139,6 +139,30 @@ under the License.
 						</configuration>
 					</execution>
 
+					<!-- StreamJoinSQL Example -->
+					<execution>
+						<id>StreamJoinSQLExample</id>
+						<phase>package</phase>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+						<configuration>
+							<classifier>StreamJoinSQLExample</classifier>
+
+							<archive>
+								<manifestEntries>
+									<program-class>org.apache.flink.table.examples.scala.StreamJoinSQLExample
+									</program-class>
+								</manifestEntries>
+							</archive>
+
+							<includes>
+								<include>org/apache/flink/table/examples/scala/StreamJoinSQLExample.class</include>
+								<include>org/apache/flink/table/examples/scala/StreamJoinSQLExample*.class</include>
+							</includes>
+						</configuration>
+					</execution>
+
 					<!-- WordCountSQL Example -->
 					<execution>
 						<id>WordCountSQL</id>
@@ -213,6 +237,9 @@ under the License.
 								<copy
 									file="${project.basedir}/target/flink-examples-table_${scala.binary.version}-${project.version}-WordCountSQL.jar"
 									tofile="${project.basedir}/target/WordCountSQL.jar"/>
+								<copy
+									file="${project.basedir}/target/flink-examples-table_${scala.binary.version}-${project.version}-StreamJoinSQLExample.jar"
+									tofile="${project.basedir}/target/StreamJoinSQLExample.jar"/>
 								<copy
 									file="${project.basedir}/target/flink-examples-table_${scala.binary.version}-${project.version}-Interactive.jar"
 									tofile="${project.basedir}/target/Interactive.jar"/>

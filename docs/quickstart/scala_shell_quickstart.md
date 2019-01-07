@@ -1,6 +1,6 @@
 ---
-title: "Scala REPL examples"
-nav-title: Scala REPL
+title: "Scala REPL Examples"
+nav-title: Scala REPL Examples
 nav-parent_id: examples
 nav-pos: 30
 ---

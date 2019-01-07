@@ -31,7 +31,6 @@ import java.util.TimeZone;
 
 /**
  * Simple example that shows the use of SQL Join on Stream Tables.
- *
  */
 public class StreamJoinSQLExample {
 
@@ -81,7 +80,7 @@ public class StreamJoinSQLExample {
 	/**
 	 * Order(createTime, unit, orderId, productId).
 	 */
-	public static class Order{
+	public static class Order {
 		public Timestamp createTime;
 		public int unit;
 		public long orderId;
