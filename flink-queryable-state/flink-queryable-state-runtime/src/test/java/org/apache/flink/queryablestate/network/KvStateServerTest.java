@@ -31,7 +31,7 @@ import org.apache.flink.queryablestate.server.KvStateServerImpl;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.operators.testutils.DummyEnvironment;
 import org.apache.flink.runtime.query.KvStateRegistry;
-import org.apache.flink.runtime.state.GroupRange;
+import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.TestLocalRecoveryConfig;
 import org.apache.flink.runtime.state.heap.HeapInternalStateBackend;
 import org.apache.flink.runtime.state.keyed.KeyedValueState;
@@ -107,7 +107,7 @@ public class KvStateServerTest {
 			final JobID jobId = new JobID();
 			HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
 																	1,
-																	GroupRange.of(0, 1),
+																	KeyGroupRange.of(0, 0),
 																	Thread.currentThread().getContextClassLoader(),
 																	TestLocalRecoveryConfig.disabled(),
 																	registry.createTaskRegistry(dummyEnv.getJobID(), new JobVertexID()));

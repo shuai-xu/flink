@@ -98,6 +98,7 @@ public class MiniBatchAntiSemiJoinStreamOperator extends MiniBatchJoinStreamOper
 		LOG.info("isSemi: " + isSemi + ", isEqualJoin: " + isEqual);
 	}
 
+	@Override
 	protected void initAllStates() throws Exception {
 		super.initAllStates();
 

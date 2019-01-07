@@ -81,6 +81,7 @@ abstract class OuterJoinStreamOperator extends JoinStreamOperator {
 				leftJoinStateType, rightJoinStateType, leftMatchStateType, rightMatchStateType);
 	}
 
+	@Override
 	protected void initAllStates() throws Exception {
 		super.initAllStates();
 

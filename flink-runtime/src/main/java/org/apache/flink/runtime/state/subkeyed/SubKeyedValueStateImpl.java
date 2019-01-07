@@ -425,6 +425,11 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 	}
 
 	@Override
+	public StateStorage<K, V> getStateStorage() {
+		return stateStorage;
+	}
+
+	@Override
 	public <T> void transform(K key, N namespace, T value, StateTransformationFunction<V, T> transformation) {
 		try {
 			if (stateStorage.lazySerde()) {

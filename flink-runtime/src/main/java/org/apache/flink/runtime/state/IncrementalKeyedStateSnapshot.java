@@ -31,9 +31,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * An implementation of {@link StatePartitionSnapshot} which will be used in incremental snapshot/restore.
+ * An implementation of {@link KeyedStateHandle} which will be used in incremental snapshot/restore.
  */
-public class IncrementalStatePartitionSnapshot implements StatePartitionSnapshot {
+public class IncrementalKeyedStateSnapshot implements KeyedStateHandle {
 
 	private static final Logger LOG = LoggerFactory.getLogger(IncrementalKeyedStateHandle.class);
 
@@ -55,9 +55,9 @@ public class IncrementalStatePartitionSnapshot implements StatePartitionSnapshot
 	private final Map<StateHandleID, StreamStateHandle> privateState;
 
 	/**
-	 * The groups in the snapshot.
+	 * The key-group range covered by this state handle.
 	 */
-	private final GroupSet groups;
+	private final KeyGroupRange keyGroupRange;
 
 	/**
 	 * Primary meta data state of the incremental checkpoint.
@@ -75,14 +75,14 @@ public class IncrementalStatePartitionSnapshot implements StatePartitionSnapshot
 	 */
 	private transient SharedStateRegistry sharedStateRegistry;
 
-	public IncrementalStatePartitionSnapshot(
-		GroupSet groups,
+	public IncrementalKeyedStateSnapshot(
+		KeyGroupRange keyGroupRange,
 		long checkpointId,
 		Map<StateHandleID, Tuple2<String, StreamStateHandle>> sharedState,
 		Map<StateHandleID, StreamStateHandle> privateState,
 		StreamStateHandle metaStateHandle) {
 
-		this.groups = groups;
+		this.keyGroupRange = keyGroupRange;
 		this.checkpointId = checkpointId;
 		this.sharedState = sharedState;
 		this.privateState = privateState;
@@ -103,13 +103,17 @@ public class IncrementalStatePartitionSnapshot implements StatePartitionSnapshot
 	}
 
 	@Override
-	public StatePartitionSnapshot getIntersection(GroupSet otherGroups) {
+	public KeyGroupRange getKeyGroupRange() {
+		return keyGroupRange;
+	}
 
-		if (!groups.intersect(otherGroups).isEmpty()) {
+	@Override
+	public KeyedStateHandle getIntersection(KeyGroupRange otherKeyGroupRange) {
+		if (keyGroupRange.getIntersection(otherKeyGroupRange).getNumberOfKeyGroups() > 0) {
 			return this;
 		} else {
-			return new IncrementalStatePartitionSnapshot(
-				GroupRange.EMPTY,
+			return new IncrementalKeyedStateSnapshot(
+				KeyGroupRange.EMPTY_KEY_GROUP_RANGE,
 				this.checkpointId,
 				this.sharedState,
 				this.privateState,
@@ -131,7 +135,7 @@ public class IncrementalStatePartitionSnapshot implements StatePartitionSnapshot
 
 		sharedStateRegistry = Preconditions.checkNotNull(stateRegistry);
 
-		LOG.trace("Registering IncrementalStatePartitionSnapshot for checkpoint {} from backend.", checkpointId);
+		LOG.trace("Registering IncrementalKeyedStateSnapshot for checkpoint {} from backend.", checkpointId);
 
 		for (Map.Entry<StateHandleID, Tuple2<String, StreamStateHandle>> sharedStateHandle : sharedState.entrySet()) {
 			String uniqueId = sharedStateHandle.getValue().f0;
@@ -162,7 +166,7 @@ public class IncrementalStatePartitionSnapshot implements StatePartitionSnapshot
 		SharedStateRegistry registry = this.sharedStateRegistry;
 		final boolean isRegistered = (registry != null);
 
-		LOG.trace("Discarding IncrementalStatePartitionSnapshot (registered = {}) for checkpoint {} from backend.",
+		LOG.trace("Discarding IncrementalKeyedStateSnapshot (registered = {}) for checkpoint {} from backend.",
 			isRegistered,
 			checkpointId);
 
@@ -213,11 +217,6 @@ public class IncrementalStatePartitionSnapshot implements StatePartitionSnapshot
 		return size;
 	}
 
-	@Override
-	public GroupSet getGroups() {
-		return groups;
-	}
-
 	@Nonnull
 	public StreamStateHandle getMetaStateHandle() {
 		return metaStateHandle;
@@ -240,12 +239,12 @@ public class IncrementalStatePartitionSnapshot implements StatePartitionSnapshot
 			return false;
 		}
 
-		IncrementalStatePartitionSnapshot that = (IncrementalStatePartitionSnapshot) o;
+		IncrementalKeyedStateSnapshot that = (IncrementalKeyedStateSnapshot) o;
 
 		if (getCheckpointId() != that.getCheckpointId()) {
 			return false;
 		}
-		if (!groups.equals(that.getGroups())) {
+		if (!keyGroupRange.equals(that.getKeyGroupRange())) {
 			return false;
 		}
 		if (!getSharedState().equals(that.getSharedState())) {
@@ -255,5 +254,15 @@ public class IncrementalStatePartitionSnapshot implements StatePartitionSnapshot
 			return false;
 		}
 		return getMetaStateHandle().equals(that.getMetaStateHandle());
+	}
+
+	@Override
+	public int hashCode() {
+		int result = getKeyGroupRange().hashCode();
+		result = 31 * result + (int) (getCheckpointId() ^ (getCheckpointId() >>> 32));
+		result = 31 * result + getSharedState().hashCode();
+		result = 31 * result + getPrivateState().hashCode();
+		result = 31 * result + getMetaStateHandle().hashCode();
+		return result;
 	}
 }

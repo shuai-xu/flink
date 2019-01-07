@@ -20,7 +20,7 @@ package org.apache.flink.contrib.streaming.state.subkeyed;
 
 import org.apache.flink.contrib.streaming.state.RocksDBInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
-import org.apache.flink.runtime.state.GroupSet;
+import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedSortedMapStateTestBase;
 
@@ -33,13 +33,14 @@ import org.rocksdb.DBOptions;
  * Test for SubKeyedSortedMapState which use RocksDB as state backend.
  */
 public class RocksDBSubKeyedSortedMapStateTest extends SubKeyedSortedMapStateTestBase {
+
 	@ClassRule
 	public static TemporaryFolder temporaryFolder = new TemporaryFolder();
 
 	@Override
 	protected AbstractInternalStateBackend createStateBackend(
 		int numberOfGroups,
-		GroupSet groups,
+		KeyGroupRange keyGroupRange,
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig
 	) throws Exception {
@@ -49,11 +50,10 @@ public class RocksDBSubKeyedSortedMapStateTest extends SubKeyedSortedMapStateTes
 			new DBOptions().setCreateIfMissing(true),
 			new ColumnFamilyOptions(),
 			numberOfGroups,
-			groups,
+			keyGroupRange,
 			true,
 			localRecoveryConfig,
-			null
-		);
+			null);
 	}
 
 }

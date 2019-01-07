@@ -26,11 +26,11 @@ import javax.annotation.Nonnull;
 import java.util.Map;
 
 /**
- * State handle for local copies of {@link IncrementalStatePartitionSnapshot}. Consists of a {@link DirectoryStateHandle} that
- * represents the directory of the native RocksDB snapshot, the key groups, and a stream state handle for Flink's state
+ * State handle for local copies of {@link IncrementalKeyedStateSnapshot}. Consists of a {@link DirectoryStateHandle} that
+ * represents the directory of the native RocksDB snapshot, the key keyGroupRange, and a stream state handle for Flink's state
  * meta data file.
  */
-public class IncrementalLocalStatePartitionSnapshot implements StatePartitionSnapshot {
+public class IncrementalLocalKeyedStateSnapshot extends DirectoryKeyedStateHandle {
 
 	private static final long serialVersionUID = 1L;
 
@@ -38,33 +38,25 @@ public class IncrementalLocalStatePartitionSnapshot implements StatePartitionSna
 	@Nonnegative
 	private final long checkpointId;
 
-	/** The groups in the snapshot. */
-	@Nonnull
-	private final GroupSet groups;
-
 	/** Handle to Flink's state meta data. */
 	@Nonnull
 	private final StreamStateHandle metaStateHandle;
-
-	/** The directory state handle. */
-	@Nonnull
-	private final DirectoryStateHandle directoryStateHandle;
 
 	/** Map with the local state handle ID and unique gobal id of all shared state handles created by the checkpoint. */
 	@Nonnull
 	private final Map<StateHandleID, String> sharedStateHandleIDs;
 
-	public IncrementalLocalStatePartitionSnapshot(
-		@Nonnull GroupSet groups,
+	public IncrementalLocalKeyedStateSnapshot(
+		@Nonnull KeyGroupRange keyGroupRange,
 		@Nonnegative long checkpointId,
 		@Nonnull StreamStateHandle metaStateHandle,
 		@Nonnull DirectoryStateHandle directoryStateHandle,
 		@Nonnull Map<StateHandleID, String> sharedStateHandleIDs
 	) {
-		this.groups = groups;
+		super(directoryStateHandle, keyGroupRange);
+
 		this.checkpointId = checkpointId;
 		this.metaStateHandle = metaStateHandle;
-		this.directoryStateHandle = directoryStateHandle;
 		this.sharedStateHandleIDs = sharedStateHandleIDs;
 	}
 
@@ -78,23 +70,8 @@ public class IncrementalLocalStatePartitionSnapshot implements StatePartitionSna
 	}
 
 	@Nonnull
-	public DirectoryStateHandle getDirectoryStateHandle() {
-		return directoryStateHandle;
-	}
-
-	@Nonnull
 	public Map<StateHandleID, String> getSharedStateHandleIDs() {
 		return sharedStateHandleIDs;
-	}
-
-	@Override
-	public GroupSet getGroups() {
-		return groups;
-	}
-
-	@Override
-	public StatePartitionSnapshot getIntersection(GroupSet groups) {
-		return this.groups.intersect(groups).isEmpty() ? null : this;
 	}
 
 	@Override
@@ -116,9 +93,6 @@ public class IncrementalLocalStatePartitionSnapshot implements StatePartitionSna
 
 		IncrementalLocalKeyedStateHandle that = (IncrementalLocalKeyedStateHandle) o;
 
-		if (!getDirectoryStateHandle().equals(that.getDirectoryStateHandle())) {
-			return false;
-		}
 		if (!getSharedStateHandleIDs().equals(that.getSharedStateHandleIDs())) {
 			return false;
 		}
@@ -131,7 +105,7 @@ public class IncrementalLocalStatePartitionSnapshot implements StatePartitionSna
 		Exception collectedEx = null;
 
 		try {
-			directoryStateHandle.discardState();
+			super.discardState();
 		} catch (Exception e) {
 			collectedEx = e;
 		}
@@ -149,22 +123,23 @@ public class IncrementalLocalStatePartitionSnapshot implements StatePartitionSna
 
 	@Override
 	public long getStateSize() {
-		return directoryStateHandle.getStateSize() + metaStateHandle.getStateSize();
+		return super.getStateSize() + metaStateHandle.getStateSize();
 	}
 
 	@Override
 	public int hashCode() {
 		int result = super.hashCode();
 		result = 31 * result + getMetaStateHandle().hashCode();
-		result = 31 * result + getDirectoryStateHandle().hashCode();
 		result = 31 * result + getSharedStateHandleIDs().hashCode();
 		return result;
 	}
 
 	@Override
 	public String toString() {
-		return "IncrementalStatePartitionSnapshot{" +
+		return "IncrementalLocalKeyedStateSnapshot{" +
 			"metaStateHandle=" + metaStateHandle +
+			"keyGroupRange=" + getKeyGroupRange() +
 			"} " + super.toString();
 	}
+
 }

@@ -18,6 +18,8 @@
 
 package org.apache.flink.runtime.state.subkeyed;
 
+import org.apache.flink.runtime.state.StateStorage;
+
 import java.util.Iterator;
 import java.util.Map;
 
@@ -103,4 +105,11 @@ public interface SubKeyedState<K, N, V> {
 	 * @return An iterator over the namespace under the given key.
 	 */
 	Iterator<N> iterator(K key);
+
+	/**
+	 * Returns the state storage within this keyed state.
+	 *
+	 * @return The state storage within this keyed state.
+	 */
+	StateStorage<K, V> getStateStorage();
 }

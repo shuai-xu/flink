@@ -19,24 +19,30 @@
 package org.apache.flink.runtime.state;
 
 /**
- * The interface for the snapshot of the states in an operator partition.
+ * An enumeration of the types of supported internal states.
  */
-public interface StatePartitionSnapshot extends CompositeStateHandle {
+public enum InternalStateType {
 
-	/**
-	 * Returns the groups(global&local) whose states are included in the snapshot.
-	 *
-	 * @return The groups(global&local) whose states are included in the snapshot.
-	 */
-	GroupSet getGroups();
+	KEYED_VALUE(true, StateType.VALUE),
+	KEYED_LIST(true, StateType.LIST),
+	KEYED_MAP(true, StateType.MAP),
+	KEYED_SORTEDMAP(true, StateType.SORTEDMAP),
+	SUBKEYED_VALUE(false, StateType.VALUE),
+	SUBKEYED_LIST(false, StateType.LIST),
+	SUBKEYED_MAP(false, StateType.MAP),
+	SUBKEYED_SORTEDMAP(false, StateType.SORTEDMAP);
 
-	/**
-	 * Returns the snapshot of the states in those groups that are the
-	 * intersection of the given groups and the groups in the snapshot.
-	 *
-	 * @param groups The groups to be included in the returned snapshot.
-	 * @return The snapshot of those groups that are in the intersection of the
-	 *         given groups and the groups in the snapshot.
-	 */
-	StatePartitionSnapshot getIntersection(GroupSet groups);
+	private InternalStateType(boolean isKeyedState, StateType stateType){
+		this.isKeyedState = isKeyedState;
+		this.stateType = stateType;
+	}
+
+	public boolean isKeyedState() {
+		return isKeyedState;
+	}
+
+	private enum StateType {VALUE, LIST, MAP, SORTEDMAP}
+
+	private final boolean isKeyedState;
+	private final StateType stateType;
 }

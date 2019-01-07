@@ -18,11 +18,6 @@
 
 package org.apache.flink.runtime.state;
 
-import org.apache.flink.annotation.VisibleForTesting;
-import org.apache.flink.runtime.state.GroupSet;
-import org.apache.flink.runtime.state.SnapshotResult;
-import org.apache.flink.runtime.state.Snapshotable;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
@@ -37,7 +32,7 @@ import java.util.Map;
  * execution instance of an operator will deploy a backend to manage its
  * state storage.
  */
-public interface InternalStateBackend extends Snapshotable<SnapshotResult<StatePartitionSnapshot>, Collection<StatePartitionSnapshot>>, Disposable {
+public interface InternalStateBackend extends Snapshotable<SnapshotResult<KeyedStateHandle>, Collection<KeyedStateHandle>>, Disposable {
 
 	/**
 	 * Dispose the backend. This method is called when the task completes its
@@ -54,11 +49,9 @@ public interface InternalStateBackend extends Snapshotable<SnapshotResult<StateP
 	int getNumGroups();
 
 	/**
-	 * Returns the groups of the given scope in the backend.
-	 *
-	 * @return The groups of the given scope in the backend.
+	 * Returns the key groups for this backend.
 	 */
-	GroupSet getGroups();
+	KeyGroupRange getKeyGroupRange();
 
 	/**
 	 * Returns the class loader for the user code in this operator.
@@ -68,19 +61,10 @@ public interface InternalStateBackend extends Snapshotable<SnapshotResult<StateP
 	ClassLoader getUserClassLoader();
 
 	/**
-	 * Returns all state storages in this backend.
-	 *
-	 * @return AllMap state storages in this backend.
-	 */
-	@VisibleForTesting
-	Map<String, StateStorage> getStateStorages();
-
-	/**
 	 * Returns all keyed states in this backend.
 	 *
 	 * @return All keyed states in this backend.
 	 */
-	@VisibleForTesting
 	Map<String, KeyedState> getKeyedStates();
 
 	/**
@@ -88,8 +72,14 @@ public interface InternalStateBackend extends Snapshotable<SnapshotResult<StateP
 	 *
 	 * @return All sub-keyed states in this backend.
 	 */
-	@VisibleForTesting
 	Map<String, SubKeyedState> getSubKeyedStates();
+
+	/**
+	 * Returns all state storages in this backend.
+	 *
+	 * @return All state storages in this backend.
+	 */
+	Map<String, StateStorage> getStateStorages();
 
 	/**
 	 * Returns the keyed state with the given descriptor. The state will be
@@ -102,7 +92,7 @@ public interface InternalStateBackend extends Snapshotable<SnapshotResult<StateP
 	 */
 	<K, V, S extends KeyedState<K, V>> S getKeyedState(
 		KeyedStateDescriptor<K, V, S> stateDescriptor
-	);
+	) throws Exception ;
 
 	/**
 	 * Returns the subkeyed state with the given descriptor. The state will be
@@ -115,6 +105,6 @@ public interface InternalStateBackend extends Snapshotable<SnapshotResult<StateP
 	 */
 	<K, N, V, S extends SubKeyedState<K, N, V>> S getSubKeyedState(
 		SubKeyedStateDescriptor<K, N, V, S> stateDescriptor
-	);
+	) throws Exception ;
 
 }

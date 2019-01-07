@@ -41,19 +41,15 @@ import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.CheckpointStreamFactory.CheckpointStateOutputStream;
 import org.apache.flink.runtime.state.CheckpointedStateScope;
-import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.InternalStateBackend;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateBackend;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.TestLocalRecoveryConfig;
 import org.apache.flink.runtime.state.TestTaskStateManager;
-import org.apache.flink.runtime.state.VoidNamespace;
-import org.apache.flink.runtime.state.VoidNamespaceSerializer;
 import org.apache.flink.runtime.state.keyed.KeyedValueStateDescriptor;
 import org.apache.flink.runtime.state.memory.MemCheckpointStreamFactory;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
@@ -440,13 +436,12 @@ public class RocksDBAsyncSnapshotTest extends TestLogger {
 
 		KeyGroupRange keyGroupRange = KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(
 			maxParallelism, env.getTaskInfo().getNumberOfParallelSubtasks(), env.getTaskInfo().getIndexOfThisSubtask());
-		GroupRange groups = GroupRange.of(keyGroupRange.getStartKeyGroup(), keyGroupRange.getEndKeyGroup() + 1);
 
 		InternalStateBackend internalBackend = backend.createInternalStateBackend(
 			env,
 			"test operator",
 			maxParallelism,
-			groups);
+			keyGroupRange);
 
 		try {
 			internalBackend.restore(null);
@@ -460,7 +455,7 @@ public class RocksDBAsyncSnapshotTest extends TestLogger {
 				)
 			);
 
-			RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshotFuture = internalBackend.snapshot(checkpointId,
+			RunnableFuture<SnapshotResult<KeyedStateHandle>> snapshotFuture = internalBackend.snapshot(checkpointId,
 				timestamp,
 				new TestCheckpointStreamFactory(() -> outputStream),
 				CheckpointOptions.forCheckpointWithDefaultLocation());
@@ -512,21 +507,16 @@ public class RocksDBAsyncSnapshotTest extends TestLogger {
 
 			// also get the state in open, this way we are sure that it was created before
 			// we trigger the test checkpoint
-			ValueState<String> state = getPartitionedState(
-					VoidNamespace.INSTANCE,
-					VoidNamespaceSerializer.INSTANCE,
-					new ValueStateDescriptor<>("count", StringSerializer.INSTANCE));
-
+			ValueState<String> state =
+				getState(new ValueStateDescriptor<>("count", StringSerializer.INSTANCE));
 		}
 
 		@Override
 		public void processElement(StreamRecord<String> element) throws Exception {
 			// we also don't care
 
-			ValueState<String> state = getPartitionedState(
-					VoidNamespace.INSTANCE,
-					VoidNamespaceSerializer.INSTANCE,
-					new ValueStateDescriptor<>("count", StringSerializer.INSTANCE));
+			ValueState<String> state =
+				getState(new ValueStateDescriptor<>("count", StringSerializer.INSTANCE));
 
 			state.update(element.getValue());
 		}

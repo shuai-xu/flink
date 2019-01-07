@@ -20,7 +20,7 @@ package org.apache.flink.contrib.streaming.state.keyed;
 
 import org.apache.flink.contrib.streaming.state.RocksDBInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
-import org.apache.flink.runtime.state.GroupSet;
+import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.keyed.KeyedMapStateTestBase;
 
@@ -39,7 +39,7 @@ public class RocksDBKeyedMapStateTest extends KeyedMapStateTestBase {
 	@Override
 	protected AbstractInternalStateBackend createStateBackend(
 		int numberOfGroups,
-		GroupSet groups,
+		KeyGroupRange keyGroupRange,
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig
 	) throws Exception {
@@ -49,7 +49,7 @@ public class RocksDBKeyedMapStateTest extends KeyedMapStateTestBase {
 			new DBOptions().setCreateIfMissing(true),
 			new ColumnFamilyOptions(),
 			numberOfGroups,
-			groups,
+			keyGroupRange,
 			true,
 			localRecoveryConfig,
 			null

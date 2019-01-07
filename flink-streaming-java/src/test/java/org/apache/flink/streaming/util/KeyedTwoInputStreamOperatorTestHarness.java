@@ -21,14 +21,10 @@ package org.apache.flink.streaming.util;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.ClosureCleaner;
 import org.apache.flink.api.java.functions.KeySelector;
-import org.apache.flink.runtime.state.KeyedStateBackend;
-import org.apache.flink.runtime.state.heap.HeapKeyedStateBackend;
-import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 
 /**
- * Extension of {@link TwoInputStreamOperatorTestHarness} that allows the operator to get
- * a {@link KeyedStateBackend}.
+ * Extension of {@link TwoInputStreamOperatorTestHarness}.
  */
 public class KeyedTwoInputStreamOperatorTestHarness<K, IN1, IN2, OUT>
 		extends TwoInputStreamOperatorTestHarness<IN1, IN2, OUT> {
@@ -57,15 +53,4 @@ public class KeyedTwoInputStreamOperatorTestHarness<K, IN1, IN2, OUT>
 			TypeInformation<K> keyType) throws Exception {
 		this(operator, keySelector1, keySelector2, keyType, 1, 1, 0);
 	}
-
-	public int numKeyedStateEntries() {
-		AbstractStreamOperator<?> abstractStreamOperator = (AbstractStreamOperator<?>) operator;
-		KeyedStateBackend<Object> keyedStateBackend = abstractStreamOperator.getKeyedStateBackend();
-		if (keyedStateBackend instanceof HeapKeyedStateBackend) {
-			return ((HeapKeyedStateBackend) keyedStateBackend).numStateEntries();
-		} else {
-			throw new UnsupportedOperationException();
-		}
-	}
-
 }

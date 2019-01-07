@@ -41,9 +41,7 @@ import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.operators.testutils.MockEnvironment;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
-import org.apache.flink.runtime.state.DefaultKeyedStateStore;
-import org.apache.flink.runtime.state.GroupRange;
-import org.apache.flink.runtime.state.KeyedStateBackend;
+import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.keyed.KeyedListState;
 import org.apache.flink.runtime.state.keyed.KeyedListStateDescriptor;
 import org.apache.flink.runtime.state.keyed.KeyedMapState;
@@ -328,10 +326,6 @@ public class StreamingRuntimeContextTest {
 		AbstractStreamOperator<?> operatorMock = mock(AbstractStreamOperator.class);
 		ExecutionConfig config = new ExecutionConfig();
 
-		KeyedStateBackend keyedStateBackend = mock(KeyedStateBackend.class);
-
-		DefaultKeyedStateStore keyedStateStore = new DefaultKeyedStateStore(keyedStateBackend, config);
-
 		when(operatorMock.getExecutionConfig()).thenReturn(config);
 
 		doAnswer(new Answer<ListState<String>>() {
@@ -343,14 +337,14 @@ public class StreamingRuntimeContextTest {
 
 				descr.initializeSerializerUnlessSet(operatorMock.getExecutionConfig());
 				KeyedListStateDescriptor<Integer, String> keyedDescr = new KeyedListStateDescriptor<>(descr.getName(), IntSerializer.INSTANCE, descr.getElementSerializer());
-				AbstractInternalStateBackend backend = new MemoryStateBackend().createInternalStateBackend(createMockEnvironment(), "test", 1, GroupRange.of(0, 1));
+				AbstractInternalStateBackend backend = new MemoryStateBackend()
+					.createInternalStateBackend(createMockEnvironment(), "test", 1, new KeyGroupRange(0, 0));
 				KeyedListState <Integer, String> state = backend.createKeyedListState(keyedDescr);
 
 				return new ContextListState(operatorMock, state);
 			}
 		}).when(operatorMock).getState(any(ListStateDescriptor.class));
 
-		when(operatorMock.getKeyedStateStore()).thenReturn(keyedStateStore);
 		when(operatorMock.getOperatorID()).thenReturn(new OperatorID());
 		when(operatorMock.getCurrentKey()).thenReturn(0);
 		return operatorMock;
@@ -361,10 +355,6 @@ public class StreamingRuntimeContextTest {
 
 		AbstractStreamOperator<?> operatorMock = mock(AbstractStreamOperator.class);
 		ExecutionConfig config = new ExecutionConfig();
-
-		KeyedStateBackend keyedStateBackend = mock(KeyedStateBackend.class);
-
-		DefaultKeyedStateStore keyedStateStore = new DefaultKeyedStateStore(keyedStateBackend, config);
 
 		when(operatorMock.getExecutionConfig()).thenReturn(config);
 
@@ -381,14 +371,14 @@ public class StreamingRuntimeContextTest {
 						descr.getName(), IntSerializer.INSTANCE, descr.getKeySerializer(), descr.getValueSerializer());
 
 				descr.initializeSerializerUnlessSet(operatorMock.getExecutionConfig());
-				AbstractInternalStateBackend backend = new MemoryStateBackend().createInternalStateBackend(createMockEnvironment(), "test", 1, GroupRange.of(0, 1));
+				AbstractInternalStateBackend backend = new MemoryStateBackend()
+					.createInternalStateBackend(createMockEnvironment(), "test", 1, new KeyGroupRange(0, 0));
 				KeyedMapState<Integer, Integer, String> state = backend.createKeyedMapState(stateDescriptor);
 
 				return new ContextMapState(operatorMock, state);
 			}
 		}).when(operatorMock).getState(any(MapStateDescriptor.class));
 
-		when(operatorMock.getKeyedStateStore()).thenReturn(keyedStateStore);
 		when(operatorMock.getOperatorID()).thenReturn(new OperatorID());
 		when(operatorMock.getCurrentKey()).thenReturn(0);
 		return operatorMock;

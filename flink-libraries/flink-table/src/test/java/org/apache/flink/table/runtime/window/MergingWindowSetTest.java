@@ -24,8 +24,8 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.runtime.operators.testutils.DummyEnvironment;
 import org.apache.flink.runtime.state.AbstractStateBackend;
-import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.InternalStateBackend;
+import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.keyed.KeyedMapState;
 import org.apache.flink.runtime.state.keyed.KeyedMapStateDescriptor;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
@@ -79,7 +79,7 @@ public class MergingWindowSetTest {
 			new DummyEnvironment(),
 			"WINDOW_TEST",
 			10,
-			GroupRange.of(0, 10));
+			KeyGroupRange.of(0, 9));
 	}
 
 	@After

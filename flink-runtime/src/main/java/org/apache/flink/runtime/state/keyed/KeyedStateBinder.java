@@ -32,7 +32,7 @@ public interface KeyedStateBinder {
 	 * @param <V> The type of the values in the state.
 	 */
 	<K, V> KeyedValueState<K, V> createKeyedValueState(
-		KeyedValueStateDescriptor<K, V> stateDescriptor);
+		KeyedValueStateDescriptor<K, V> stateDescriptor) throws Exception;
 
 	/**
 	 * Creates and returns a new {@link KeyedListState}.
@@ -43,7 +43,7 @@ public interface KeyedStateBinder {
 	 * @param <E> The type of the list elements in the state.
 	 */
 	<K, E> KeyedListState<K, E> createKeyedListState(
-		KeyedListStateDescriptor<K, E> stateDescriptor);
+		KeyedListStateDescriptor<K, E> stateDescriptor) throws Exception;
 
 	/**
 	 * Creates and returns a new {@link KeyedMapState}.
@@ -55,7 +55,7 @@ public interface KeyedStateBinder {
 	 * @param <MV> The type of the map values in the state.
 	 */
 	<K, MK, MV> KeyedMapState<K, MK, MV> createKeyedMapState(
-		KeyedMapStateDescriptor<K, MK, MV> stateDescriptor);
+		KeyedMapStateDescriptor<K, MK, MV> stateDescriptor) throws Exception;
 
 	/**
 	 * Creates and returns a new {@link KeyedSortedMapState}.
@@ -67,6 +67,6 @@ public interface KeyedStateBinder {
 	 * @param <MV> The type of the map values in the state.
 	 */
 	<K, MK, MV> KeyedSortedMapState<K, MK, MV> createKeyedSortedMapState(
-		KeyedSortedMapStateDescriptor<K, MK, MV> stateDescriptor);
+		KeyedSortedMapStateDescriptor<K, MK, MV> stateDescriptor) throws Exception;
 }
 

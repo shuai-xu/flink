@@ -35,6 +35,7 @@ import org.apache.flink.cep.pattern.conditions.IterativeCondition;
 import org.apache.flink.cep.pattern.conditions.SimpleCondition;
 import org.apache.flink.contrib.streaming.state.RocksDBStateBackend;
 import org.apache.flink.runtime.checkpoint.OperatorSubtaskState;
+import org.apache.flink.runtime.state.StateStorage;
 import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
 import org.apache.flink.runtime.state.keyed.KeyedValueState;
@@ -1389,6 +1390,11 @@ public class CEPOperatorTest extends TestLogger {
 		@Override
 		public byte[] getSerializedValue(byte[] serializedKey) throws Exception {
 			return keyedValueState.getSerializedValue(serializedKey);
+		}
+
+		@Override
+		public StateStorage getStateStorage() {
+			return keyedValueState.getStateStorage();
 		}
 
 		@Override

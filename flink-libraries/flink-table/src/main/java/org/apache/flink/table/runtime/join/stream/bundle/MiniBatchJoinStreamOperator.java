@@ -341,7 +341,7 @@ public abstract class MiniBatchJoinStreamOperator
 		return collector;
 	}
 
-	protected KeyedValueState<BaseRow, Long> createCleanupTimeState(String timeStateName) {
+	protected KeyedValueState<BaseRow, Long> createCleanupTimeState(String timeStateName) throws Exception {
 		TypeSerializer<BaseRow> joinKeySer = (TypeSerializer<BaseRow>) TypeUtils.createSerializer(
 				leftKeyType);
 		TypeSerializer<Long> timeSer = LongSerializer.INSTANCE;

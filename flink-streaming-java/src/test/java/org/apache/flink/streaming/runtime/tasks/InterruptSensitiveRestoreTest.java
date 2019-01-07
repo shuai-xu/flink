@@ -60,6 +60,7 @@ import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeOffsets;
 import org.apache.flink.runtime.state.KeyGroupsStateHandle;
+import org.apache.flink.runtime.state.KeyGroupsStateSnapshot;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.OperatorStreamStateHandle;
@@ -205,6 +206,9 @@ public class InterruptSensitiveRestoreTest {
 		List<KeyedStateHandle> keyedStateHandles =
 			Collections.singletonList(new KeyGroupsStateHandle(keyGroupRangeOffsets, state));
 
+		List<KeyedStateHandle> internalStateHandles =
+			Collections.singletonList(new KeyGroupsStateSnapshot(KeyGroupRange.of(0, 0), Collections.emptyMap(), state));
+
 		switch (mode) {
 			case OPERATOR_MANAGED:
 				operatorStateBackend = operatorStateHandles;
@@ -213,7 +217,7 @@ public class InterruptSensitiveRestoreTest {
 				operatorStateStream = operatorStateHandles;
 				break;
 			case KEYED_MANAGED:
-				keyedStateFromBackend = keyedStateHandles;
+				keyedStateFromBackend = internalStateHandles;
 				break;
 			case KEYED_RAW:
 				keyedStateFromStream = keyedStateHandles;
@@ -226,8 +230,7 @@ public class InterruptSensitiveRestoreTest {
 			new StateObjectCollection<>(operatorStateBackend),
 			new StateObjectCollection<>(operatorStateStream),
 			new StateObjectCollection<>(keyedStateFromBackend),
-			new StateObjectCollection<>(keyedStateFromStream),
-			new StateObjectCollection<>());
+			new StateObjectCollection<>(keyedStateFromStream));
 
 		JobVertexID jobVertexID = new JobVertexID();
 		OperatorID operatorID = OperatorID.fromJobVertexID(jobVertexID);

@@ -37,6 +37,7 @@ import java.io.IOException;
  * @param <ACC> The type of the value stored in the state (the accumulator type).
  * @param <OUT> The type of the value returned from the state.
  */
+@Deprecated
 public class HeapAggregatingState<K, N, IN, ACC, OUT>
 		extends AbstractHeapMergingState<K, N, IN, ACC, OUT, AggregatingState<IN, OUT>>
 		implements InternalAggregatingState<K, N, IN, ACC, OUT> {

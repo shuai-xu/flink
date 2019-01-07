@@ -43,7 +43,6 @@ import org.apache.flink.runtime.query.KvStateRegistry;
 import org.apache.flink.runtime.query.KvStateRegistryListener;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.AbstractStateBackend;
-import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyedStateBackend;
 import org.apache.flink.runtime.state.TestLocalRecoveryConfig;
@@ -129,7 +128,7 @@ public class KvStateServerHandlerTest extends TestLogger {
 		dummyEnv.setKvStateRegistry(registry);
 		HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
 			1,
-			GroupRange.of(0, 1),
+			KeyGroupRange.of(0, 0),
 			Thread.currentThread().getContextClassLoader(),
 			TestLocalRecoveryConfig.disabled(),
 			registry.createTaskRegistry(dummyEnv.getJobID(), new JobVertexID()));
@@ -246,11 +245,11 @@ public class KvStateServerHandlerTest extends TestLogger {
 		registry.registerListener(dummyEnv.getJobID(), registryListener);
 
 		HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
-															1,
-															GroupRange.of(0, 1),
-															Thread.currentThread().getContextClassLoader(),
-															TestLocalRecoveryConfig.disabled(),
-															registry.createTaskRegistry(dummyEnv.getJobID(), new JobVertexID()));
+			1,
+			KeyGroupRange.of(0, 0),
+			Thread.currentThread().getContextClassLoader(),
+			TestLocalRecoveryConfig.disabled(),
+			registry.createTaskRegistry(dummyEnv.getJobID(), new JobVertexID()));
 
 		// Register state
 		KeyedValueStateDescriptor<Integer, Integer> desc = new KeyedValueStateDescriptor("any", IntSerializer.INSTANCE, IntSerializer.INSTANCE);
@@ -387,11 +386,11 @@ public class KvStateServerHandlerTest extends TestLogger {
 		DummyEnvironment dummyEnv = new DummyEnvironment("test", 1, 0);
 		dummyEnv.setKvStateRegistry(registry);
 		HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
-															1,
-															GroupRange.of(0, 1),
-															Thread.currentThread().getContextClassLoader(),
-															TestLocalRecoveryConfig.disabled(),
-															registry.createTaskRegistry(dummyEnv.getJobID(), new JobVertexID()));
+			1,
+			KeyGroupRange.of(0, 0),
+			Thread.currentThread().getContextClassLoader(),
+			TestLocalRecoveryConfig.disabled(),
+			registry.createTaskRegistry(dummyEnv.getJobID(), new JobVertexID()));
 
 		final TestRegistryListener registryListener = new TestRegistryListener();
 		registry.registerListener(dummyEnv.getJobID(), registryListener);
@@ -525,11 +524,11 @@ public class KvStateServerHandlerTest extends TestLogger {
 		DummyEnvironment dummyEnv = new DummyEnvironment("test", 1, 0);
 		dummyEnv.setKvStateRegistry(registry);
 		HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
-															1,
-															GroupRange.of(0, 1),
-															Thread.currentThread().getContextClassLoader(),
-															TestLocalRecoveryConfig.disabled(),
-															registry.createTaskRegistry(dummyEnv.getJobID(), new JobVertexID()));
+			1,
+			KeyGroupRange.of(0, 0),
+			Thread.currentThread().getContextClassLoader(),
+			TestLocalRecoveryConfig.disabled(),
+			registry.createTaskRegistry(dummyEnv.getJobID(), new JobVertexID()));
 
 		final TestRegistryListener registryListener = new TestRegistryListener();
 		registry.registerListener(dummyEnv.getJobID(), registryListener);
@@ -585,11 +584,11 @@ public class KvStateServerHandlerTest extends TestLogger {
 		DummyEnvironment dummyEnv = new DummyEnvironment("test", 1, 0);
 		dummyEnv.setKvStateRegistry(registry);
 		HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
-																1,
-																GroupRange.of(0, 1),
-																Thread.currentThread().getContextClassLoader(),
-																TestLocalRecoveryConfig.disabled(),
-																registry.createTaskRegistry(dummyEnv.getJobID(), new JobVertexID()));
+			1,
+			KeyGroupRange.of(0, 0),
+			Thread.currentThread().getContextClassLoader(),
+			TestLocalRecoveryConfig.disabled(),
+			registry.createTaskRegistry(dummyEnv.getJobID(), new JobVertexID()));
 
 		final TestRegistryListener registryListener = new TestRegistryListener();
 		registry.registerListener(dummyEnv.getJobID(), registryListener);

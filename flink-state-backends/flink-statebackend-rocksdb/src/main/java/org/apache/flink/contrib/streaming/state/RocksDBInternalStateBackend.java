@@ -28,16 +28,15 @@ import org.apache.flink.runtime.io.async.AbstractAsyncCallableWithResources;
 import org.apache.flink.runtime.io.async.AsyncStoppableTaskWithCallback;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
-import org.apache.flink.runtime.state.CheckpointListener;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.CheckpointStreamWithResultProvider;
 import org.apache.flink.runtime.state.CheckpointedStateScope;
-import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
 import org.apache.flink.runtime.state.DoneFuture;
-import org.apache.flink.runtime.state.GroupRange;
-import org.apache.flink.runtime.state.GroupSet;
-import org.apache.flink.runtime.state.IncrementalLocalStatePartitionSnapshot;
-import org.apache.flink.runtime.state.IncrementalStatePartitionSnapshot;
+import org.apache.flink.runtime.state.IncrementalKeyedStateSnapshot;
+import org.apache.flink.runtime.state.IncrementalLocalKeyedStateSnapshot;
+import org.apache.flink.runtime.state.KeyGroupRange;
+import org.apache.flink.runtime.state.KeyGroupsStateSnapshot;
+import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.LocalRecoveryDirectoryProvider;
 import org.apache.flink.runtime.state.SnapshotDirectory;
@@ -45,10 +44,12 @@ import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.SnapshotStrategy;
 import org.apache.flink.runtime.state.StateAccessException;
 import org.apache.flink.runtime.state.StateHandleID;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StateStorage;
+import org.apache.flink.runtime.state.StorageIterator;
 import org.apache.flink.runtime.state.StreamStateHandle;
+import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.IOUtils;
@@ -82,6 +83,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.RunnableFuture;
+import java.util.stream.Collectors;
 
 /**
  * A State Backend that stores its state in {@code RocksDB}. This state backend can
@@ -92,7 +94,7 @@ import java.util.concurrent.RunnableFuture;
  * rocksDB database, and persist that snapshot in a file system (by default) or
  * another configurable state backend.
  */
-public class RocksDBInternalStateBackend extends AbstractInternalStateBackend implements CheckpointListener {
+public class RocksDBInternalStateBackend extends AbstractInternalStateBackend {
 
 	private static final Logger LOG = LoggerFactory.getLogger(RocksDBInternalStateBackend.class);
 
@@ -131,14 +133,9 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 	private WriteOptions writeOptions;
 
 	/**
-	 * Opened ColumnFamily Handles of current state backend.
+	 * Opened ColumnFamily handles and its descriptors of current state backend.
 	 */
-	private final Map<String, ColumnFamilyHandle> columnFamilyHandles;
-
-	/**
-	 * All registered column family descriptors of current state backend.
-	 */
-	private final Map<String, ColumnFamilyDescriptor> columnFamilyDescriptors;
+	private final Map<String, Tuple2<ColumnFamilyHandle, ColumnFamilyDescriptor>> columnFamilyHandles;
 
 	/** Path where this configured instance stores its data directory. */
 	private File instanceBasePath;
@@ -166,7 +163,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 	final LocalRecoveryConfig localRecoveryConfig;
 
 	/** The snapshot strategy, e.g., if we use full or incremental checkpoints, local state, and so on. */
-	private final SnapshotStrategy<SnapshotResult<StatePartitionSnapshot>> snapshotStrategy;
+	private final SnapshotStrategy<SnapshotResult<KeyedStateHandle>> snapshotStrategy;
 
 	public RocksDBInternalStateBackend(
 		ClassLoader userClassLoader,
@@ -174,12 +171,12 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 		DBOptions dbOptions,
 		ColumnFamilyOptions columnOptions,
 		int numberOfGroups,
-		GroupSet groups,
+		KeyGroupRange keyGroupRange,
 		boolean enableIncrementalCheckpointing,
 		LocalRecoveryConfig localRecoveryConfig,
 		TaskKvStateRegistry kvStateRegistry) throws IOException {
 
-		super(numberOfGroups, groups, userClassLoader, kvStateRegistry);
+		super(numberOfGroups, keyGroupRange, userClassLoader, kvStateRegistry);
 
 		this.dbOptions = Preconditions.checkNotNull(dbOptions);
 		// ensure that we use the right merge operator, because other code relies on this
@@ -200,7 +197,6 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 
 		this.rocksDBResourceGuard = new ResourceGuard();
 
-		this.columnFamilyDescriptors = new HashMap<>();
 		this.columnFamilyHandles = new HashMap<>();
 		this.writeOptions = new WriteOptions().setDisableWAL(true);
 
@@ -224,8 +220,8 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 		// working on the disposed object results in SEGFAULTS.
 		if (db != null) {
 			IOUtils.closeQuietly(defaultColumnFamilyHandle);
-			for (StateStorage storage : stateStorages.values()) {
-				((RocksDBStorageInstance) storage.getStorageInstance()).close();
+			for (StateStorage stateStorage : getStateStorages().values()) {
+				((RocksDBStorageInstance) stateStorage.getStorageInstance()).close();
 			}
 			IOUtils.closeQuietly(db);
 			IOUtils.closeQuietly(writeOptions);
@@ -238,43 +234,45 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 	}
 
 	@Override
-	protected StateStorage createStateStorageForKeyedState(KeyedStateDescriptor descriptor) {
-		try {
-			return new RocksDBStateStorage(new RocksDBStorageInstance(
-												db,
-												getOrCreateColumnfamily(descriptor.getName()),
-												writeOptions));
-		} catch (IOException e) {
-			throw new StateAccessException(e);
+	protected StateStorage getOrCreateStateStorageForKeyedState(KeyedStateDescriptor descriptor) {
+		StateStorage stateStorage = stateStorages.get(descriptor.getName());
+
+		if (stateStorage == null) {
+			try {
+				stateStorage = new RocksDBStateStorage(new RocksDBStorageInstance(
+					db,
+					getOrCreateColumnFamily(descriptor.getName()),
+					writeOptions));
+				stateStorages.put(descriptor.getName(), stateStorage);
+			} catch (IOException e) {
+				throw new StateAccessException(e);
+			}
 		}
+
+		return stateStorage;
 	}
 
-	ColumnFamilyHandle getOrCreateColumnfamily(String handleName) throws IOException {
+	ColumnFamilyHandle getOrCreateColumnFamily(String handleName) throws IOException {
 		if (columnFamilyHandles.containsKey(handleName)) {
-			return columnFamilyHandles.get(handleName);
+			return columnFamilyHandles.get(handleName).f0;
 		}
 
 		try {
-			ColumnFamilyHandle handle = db.createColumnFamily(getAndRegistColumnFamilyDescriptor(handleName));
-			columnFamilyHandles.put(handleName, handle);
+			ColumnFamilyDescriptor descriptor = createColumnFamilyDescriptor(handleName);
+			ColumnFamilyHandle handle = db.createColumnFamily(descriptor);
+			columnFamilyHandles.put(handleName, Tuple2.of(handle, descriptor));
 			return handle;
 		} catch (RocksDBException e) {
 			throw new IOException("Error creating ColumnFamilyHandle.", e);
 		}
 	}
 
-	ColumnFamilyDescriptor getAndRegistColumnFamilyDescriptor(String cfName) {
-		if (columnFamilyDescriptors.containsKey(cfName)) {
-			return columnFamilyDescriptors.get(cfName);
-		}
-
+	ColumnFamilyDescriptor createColumnFamilyDescriptor(String cfName) {
 		byte[] nameBytes = cfName.getBytes(ConfigConstants.DEFAULT_CHARSET);
 		Preconditions.checkState(!Arrays.equals(RocksDB.DEFAULT_COLUMN_FAMILY, nameBytes),
 			"The chosen state name 'default' collides with the name of the default column family!");
 
-		ColumnFamilyDescriptor columnDescriptor = new ColumnFamilyDescriptor(nameBytes, columnOptions);
-		columnFamilyDescriptors.put(cfName, columnDescriptor);
-		return columnDescriptor;
+		return new ColumnFamilyDescriptor(nameBytes, columnOptions);
 	}
 
 	public WriteOptions getWriteOptions() {
@@ -282,16 +280,23 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 	}
 
 	@Override
-	protected StateStorage createStateStorageForSubKeyedState(SubKeyedStateDescriptor descriptor) {
-		try {
-			return new RocksDBStateStorage(
-				new RocksDBStorageInstance(
-					db,
-					getOrCreateColumnfamily(descriptor.getName()),
-					writeOptions));
-		} catch (IOException e) {
-			throw new StateAccessException(e);
+	protected StateStorage getOrCreateStateStorageForSubKeyedState(SubKeyedStateDescriptor descriptor) {
+		StateStorage stateStorage = stateStorages.get(descriptor.getName());
+
+		if (stateStorage == null) {
+			try {
+				stateStorage = new RocksDBStateStorage(
+					new RocksDBStorageInstance(
+						db,
+						getOrCreateColumnFamily(descriptor.getName()),
+						writeOptions));
+			} catch (IOException e) {
+				throw new StateAccessException(e);
+			}
+			stateStorages.put(descriptor.getName(), stateStorage);
 		}
+
+		return stateStorage;
 	}
 
 	@Override
@@ -310,6 +315,26 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 
 			lastCompletedCheckpointId = completedCheckpointId;
 		}
+	}
+
+	@Override
+	public int numStateEntries() {
+		int count = 0;
+		List<StateStorage> stateStorages = getKeyedStates().values().stream().map(KeyedState::getStateStorage).collect(Collectors.toList());
+		stateStorages.addAll(getSubKeyedStates().values().stream().map(SubKeyedState::getStateStorage).collect(Collectors.toList()));
+
+		for (StateStorage stateStorage : stateStorages) {
+			try (StorageIterator iterator = stateStorage.iterator()){
+
+				while (iterator.hasNext()) {
+					count++;
+					iterator.next();
+				}
+			} catch (Exception e) {
+				throw new StateAccessException(e);
+			}
+		}
+		return count;
 	}
 
 	private void cleanInstanceBasePath() {
@@ -335,7 +360,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 	 * @throws Exception indicating a problem in the synchronous part of the checkpoint.
 	 */
 	@Override
-	public RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshot(
+	public RunnableFuture<SnapshotResult<KeyedStateHandle>> snapshot(
 		long checkpointId,
 		long timestamp,
 		CheckpointStreamFactory streamFactory,
@@ -345,12 +370,14 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 	}
 
 	@Override
-	public void restore(Collection<StatePartitionSnapshot> restoredSnapshots) throws Exception {
+	public void restore(Collection<KeyedStateHandle> restoredSnapshots) throws Exception {
 		LOG.info("Initializing RocksDB internal state backend.");
 
 		if (LOG.isDebugEnabled()) {
 			LOG.debug("Restoring snapshot from state handles: {}.", restoredSnapshots);
 		}
+
+		restoredKvStateMetaInfos.clear();
 
 		try {
 			if (restoredSnapshots == null || restoredSnapshots.isEmpty()) {
@@ -361,15 +388,15 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 
 				long startMillis = System.currentTimeMillis();
 
-				StatePartitionSnapshot stateSnapshot = restoredSnapshots.iterator().next();
-				if (stateSnapshot instanceof DefaultStatePartitionSnapshot) {
+				KeyedStateHandle stateSnapshot = restoredSnapshots.iterator().next();
+				if (stateSnapshot instanceof KeyGroupsStateSnapshot) {
 					RocksDBFullRestoreOperation restoreOperation = new RocksDBFullRestoreOperation(this);
 					restoreOperation.restore(restoredSnapshots);
-				} else if (stateSnapshot instanceof IncrementalStatePartitionSnapshot || stateSnapshot instanceof IncrementalLocalStatePartitionSnapshot) {
+				} else if (stateSnapshot instanceof IncrementalKeyedStateSnapshot || stateSnapshot instanceof IncrementalLocalKeyedStateSnapshot) {
 					RocksDBIncrementalRestoreOperation restoreOperation = new RocksDBIncrementalRestoreOperation(this);
 					restoreOperation.restore(restoredSnapshots);
 				} else {
-					throw new UnsupportedOperationException("Unknown statePartitionSnapshot for RocksDB internal state-backend to restore.");
+					throw new UnsupportedOperationException("Unknown keyedStateHandle for RocksDB internal state-backend to restore.");
 				}
 
 				long endMillis = System.currentTimeMillis();
@@ -398,12 +425,12 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 		return instanceRocksDBPath;
 	}
 
-	Path getLocalRestorePath(GroupRange groupRange) {
+	Path getLocalRestorePath(KeyGroupRange groupRange) {
 		Preconditions.checkNotNull(instanceBasePath);
 		String dirName = String.format("%s-%d-%d",
 			"restore",
-			groupRange.getStartGroup(),
-			groupRange.getEndGroup());
+			groupRange.getStartKeyGroup(),
+			groupRange.getEndKeyGroup());
 		return new Path(instanceBasePath.getAbsolutePath(), dirName);
 	}
 
@@ -424,16 +451,16 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 		}
 	}
 
-	private class IncrementalSnapshotStrategy implements SnapshotStrategy<SnapshotResult<StatePartitionSnapshot>> {
+	private class IncrementalSnapshotStrategy implements SnapshotStrategy<SnapshotResult<KeyedStateHandle>> {
 
-		private final SnapshotStrategy<SnapshotResult<StatePartitionSnapshot>> savepointDelegate;
+		private final SnapshotStrategy<SnapshotResult<KeyedStateHandle>> savepointDelegate;
 
 		public IncrementalSnapshotStrategy() {
 			this.savepointDelegate = new RocksDBInternalStateBackend.FullSnapshotStrategy();
 		}
 
 		@Override
-		public RunnableFuture<SnapshotResult<StatePartitionSnapshot>> performSnapshot(
+		public RunnableFuture<SnapshotResult<KeyedStateHandle>> performSnapshot(
 			long checkpointId,
 			long checkpointTimestamp,
 			CheckpointStreamFactory checkpointStreamFactory,
@@ -501,7 +528,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 				throw e;
 			}
 
-			return new FutureTask<SnapshotResult<StatePartitionSnapshot>>(
+			return new FutureTask<SnapshotResult<KeyedStateHandle>>(
 				snapshotOperation::runSnapshot
 			) {
 				@Override
@@ -518,17 +545,17 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 		}
 	}
 
-	private class FullSnapshotStrategy implements SnapshotStrategy<SnapshotResult<StatePartitionSnapshot>> {
+	private class FullSnapshotStrategy implements SnapshotStrategy<SnapshotResult<KeyedStateHandle>> {
 
 		@Override
-		public RunnableFuture<SnapshotResult<StatePartitionSnapshot>> performSnapshot(
+		public RunnableFuture<SnapshotResult<KeyedStateHandle>> performSnapshot(
 			long checkpointId,
 			long timestamp,
 			CheckpointStreamFactory primaryStreamFactory,
 			CheckpointOptions checkpointOptions) throws Exception {
 
 			long startTime = System.currentTimeMillis();
-			if (getKeyedStates().isEmpty() && getSubKeyedStates().isEmpty()) {
+			if (registeredStateMetaInfos.isEmpty()) {
 				if (LOG.isDebugEnabled()) {
 					LOG.debug("Asynchronous RocksDB snapshot performed on empty keyed state at {}. Returning empty snapshot.", timestamp);
 				}
@@ -564,8 +591,8 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 			snapshotOperation.takeDBSnapShot();
 
 			// implementation of the async IO operation, based on FutureTask
-			AbstractAsyncCallableWithResources<SnapshotResult<StatePartitionSnapshot>> ioCallable =
-				new AbstractAsyncCallableWithResources<SnapshotResult<StatePartitionSnapshot>>() {
+			AbstractAsyncCallableWithResources<SnapshotResult<KeyedStateHandle>> ioCallable =
+				new AbstractAsyncCallableWithResources<SnapshotResult<KeyedStateHandle>>() {
 
 					@Override
 					protected void acquireResources() throws Exception {
@@ -601,7 +628,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 
 					@Nonnull
 					@Override
-					public SnapshotResult<StatePartitionSnapshot> performOperation() throws Exception {
+					public SnapshotResult<KeyedStateHandle> performOperation() throws Exception {
 						long startTime = System.currentTimeMillis();
 
 						if (isStopped()) {
@@ -613,7 +640,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 						LOG.info("Asynchronous RocksDB snapshot ({}, asynchronous part) in thread {} took {} ms.",
 							primaryStreamFactory, Thread.currentThread(), (System.currentTimeMillis() - startTime));
 
-						return snapshotOperation.getStatePartitionSnapshot();
+						return snapshotOperation.getKeyGroupStateSnapshot();
 					}
 				};
 
@@ -675,10 +702,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 			List<ColumnFamilyHandle> handles = new ArrayList<>(size);
 			db = RocksDB.open(dbOptions, instanceRocksDBPath.getAbsolutePath(), descriptors, handles);
 			for (int i = 1; i < size; ++i) {
-				columnFamilyDescriptors.put(descriptorName.get(i), descriptors.get(i));
-			}
-			for (int i = 1; i < size; ++i) {
-				columnFamilyHandles.put(descriptorName.get(i), handles.get(i));
+				columnFamilyHandles.put(descriptorName.get(i), Tuple2.of(handles.get(i), descriptors.get(i)));
 			}
 			defaultColumnFamilyHandle = handles.remove(0);
 		} catch (RocksDBException e) {
@@ -686,22 +710,18 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 		}
 	}
 
-	Map<String, ColumnFamilyDescriptor> getColumnFamilyDescriptors() {
-		return columnFamilyDescriptors;
-	}
-
-	Map<String, ColumnFamilyHandle> getColumnFamilyHandles() {
+	Map<String, Tuple2<ColumnFamilyHandle, ColumnFamilyDescriptor>> getColumnFamilyHandles() {
 		return columnFamilyHandles;
 	}
 
-	void registAllStates(
+	void registerAllStates(
 		List<KeyedStateDescriptor> keyedStateDescriptors,
 		List<SubKeyedStateDescriptor> subKeyedStateDescriptors) {
 		for (KeyedStateDescriptor descriptor : keyedStateDescriptors) {
-			getKeyedState(descriptor);
+			getOrCreateStateStorageForKeyedState(descriptor);
 		}
 		for (SubKeyedStateDescriptor descriptor : subKeyedStateDescriptors) {
-			getSubKeyedState(descriptor);
+			getOrCreateStateStorageForSubKeyedState(descriptor);
 		}
 	}
 

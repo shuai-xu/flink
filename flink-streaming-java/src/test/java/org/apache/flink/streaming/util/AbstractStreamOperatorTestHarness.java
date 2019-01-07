@@ -44,7 +44,6 @@ import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.StateBackend;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.TestTaskStateManager;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.streaming.api.TimeCharacteristic;
@@ -396,10 +395,6 @@ public class AbstractStreamOperatorTestHarness<OUT> implements AutoCloseable {
 				jmOperatorStateHandles.getRawKeyedState(),
 				localKeyGroupRange);
 
-			List<StatePartitionSnapshot> localManagedInternalState = StateAssignmentOperation.getInternalStatePartitionSnapshot(
-				jmOperatorStateHandles.getManagedInternalState(),
-				localKeyGroupRange);
-
 			List<OperatorStateHandle> managedOperatorState = new ArrayList<>();
 
 			managedOperatorState.addAll(jmOperatorStateHandles.getManagedOperatorState());
@@ -420,8 +415,7 @@ public class AbstractStreamOperatorTestHarness<OUT> implements AutoCloseable {
 				new StateObjectCollection<>(nullToEmptyCollection(localManagedOperatorState)),
 				new StateObjectCollection<>(nullToEmptyCollection(localRawOperatorState)),
 				new StateObjectCollection<>(nullToEmptyCollection(localManagedKeyGroupState)),
-				new StateObjectCollection<>(nullToEmptyCollection(localRawKeyGroupState)),
-				new StateObjectCollection<>(nullToEmptyCollection(localManagedInternalState)));
+				new StateObjectCollection<>(nullToEmptyCollection(localRawKeyGroupState)));
 
 			TaskStateSnapshot jmTaskStateSnapshot = new TaskStateSnapshot();
 			jmTaskStateSnapshot.putSubtaskStateByOperatorID(operator.getOperatorID(), processedJmOpSubtaskState);
@@ -479,29 +473,24 @@ public class AbstractStreamOperatorTestHarness<OUT> implements AutoCloseable {
 		List<KeyedStateHandle> mergedManagedKeyedState = new ArrayList<>(handles.length);
 		List<KeyedStateHandle> mergedRawKeyedState = new ArrayList<>(handles.length);
 
-		List<StatePartitionSnapshot> mergedManagedInternalState = new ArrayList<>(handles.length);
-
 		for (OperatorSubtaskState handle : handles) {
 
 			Collection<OperatorStateHandle> managedOperatorState = handle.getManagedOperatorState();
 			Collection<OperatorStateHandle> rawOperatorState = handle.getRawOperatorState();
 			Collection<KeyedStateHandle> managedKeyedState = handle.getManagedKeyedState();
 			Collection<KeyedStateHandle> rawKeyedState = handle.getRawKeyedState();
-			Collection<StatePartitionSnapshot> managedInternalState = handle.getManagedInternalState();
 
 			mergedManagedOperatorState.addAll(managedOperatorState);
 			mergedRawOperatorState.addAll(rawOperatorState);
 			mergedManagedKeyedState.addAll(managedKeyedState);
 			mergedRawKeyedState.addAll(rawKeyedState);
-			mergedManagedInternalState.addAll(managedInternalState);
 		}
 
 		return new OperatorSubtaskState(
 			new StateObjectCollection<>(mergedManagedOperatorState),
 			new StateObjectCollection<>(mergedRawOperatorState),
 			new StateObjectCollection<>(mergedManagedKeyedState),
-			new StateObjectCollection<>(mergedRawKeyedState),
-			new StateObjectCollection<>(mergedManagedInternalState));
+			new StateObjectCollection<>(mergedRawKeyedState));
 	}
 
 	/**

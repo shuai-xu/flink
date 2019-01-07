@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.state.heap.internal;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
@@ -25,6 +26,7 @@ import org.apache.flink.util.Preconditions;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * Base class for state tables.
@@ -98,11 +100,19 @@ public abstract class StateTable<K, N, S> {
 	 * Returns the state for the composite of active key and given namespace.
 	 *
 	 * @param key       the key. Not null.
-	 * @param namespace the namespace. Not null.
+	 * @param namespace the namespace.
 	 * @return the state of the mapping with the specified key/namespace composite key, or {@code null}
 	 * if no mapping for the specified key is found.
 	 */
 	public abstract S get(K key, N namespace);
+
+	/**
+	 * Returns the stream of all keys for the given namespace.
+	 *
+	 * @param namespace the namespace. Not null.
+	 * @return the stream of all keys for the given namespace.
+	 */
+	public abstract Stream<K> getKeys(N namespace);
 
 	/**
 	 * Maps the composite of active key and given namespace to the specified state. This method should be preferred
@@ -182,7 +192,7 @@ public abstract class StateTable<K, N, S> {
 	 *
 	 * @return An iterator over all mappings.
 	 */
-	public abstract Iterator<Map.Entry<K, S>> iterator();
+	public abstract Iterator<Map.Entry<K, S>> entryIterator();
 
 	/**
 	 * Returns an iterator over all namespaces for the key.
@@ -233,4 +243,9 @@ public abstract class StateTable<K, N, S> {
 	// Snapshot / Restore -------------------------------------------------------------------------
 
 	public abstract StateTableSnapshot createSnapshot();
+
+	// For testing --------------------------------------------------------------------------------
+
+	@VisibleForTesting
+	public abstract int sizeOfNamespace(Object namespace);
 }

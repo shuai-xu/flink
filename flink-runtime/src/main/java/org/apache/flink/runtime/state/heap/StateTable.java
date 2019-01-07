@@ -34,6 +34,7 @@ import java.util.stream.Stream;
  * @param <N> type of namespace
  * @param <S> type of state
  */
+@Deprecated
 public abstract class StateTable<K, N, S> {
 
 	/**

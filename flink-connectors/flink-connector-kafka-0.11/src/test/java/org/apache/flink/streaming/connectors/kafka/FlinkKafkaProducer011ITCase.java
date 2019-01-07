@@ -492,7 +492,6 @@ public class FlinkKafkaProducer011ITCase extends KafkaTestBase {
 				new StateObjectCollection<>(inputStates),
 				StateObjectCollection.empty(),
 				StateObjectCollection.empty(),
-				StateObjectCollection.empty(),
 				StateObjectCollection.empty()));
 			testHarness.open();
 

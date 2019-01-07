@@ -18,6 +18,8 @@
 
 package org.apache.flink.runtime.state.keyed;
 
+import org.apache.flink.runtime.state.StateStorage;
+
 import java.util.Collection;
 import java.util.Map;
 
@@ -117,5 +119,12 @@ public interface KeyedState<K, V> {
 	 * @throws Exception Exceptions during serialization are forwarded
 	 */
 	byte[] getSerializedValue(byte[] serializedKey) throws Exception;
+
+	/**
+	 * Returns the state storage within this keyed state.
+	 *
+	 * @return The state storage within this keyed state.
+	 */
+	StateStorage<K, V> getStateStorage();
 
 }

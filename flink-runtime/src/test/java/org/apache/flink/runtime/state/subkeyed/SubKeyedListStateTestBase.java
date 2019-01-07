@@ -23,8 +23,6 @@ import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.runtime.state.GroupRange;
-import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
@@ -68,7 +66,7 @@ public abstract class SubKeyedListStateTestBase {
 	 */
 	protected abstract AbstractInternalStateBackend createStateBackend(
 		int numberOfGroups,
-		GroupSet groups,
+		KeyGroupRange keyGroupRange,
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig) throws Exception;
 
@@ -92,7 +90,7 @@ public abstract class SubKeyedListStateTestBase {
 	}
 
 	@Test
-	public void testKeyAndNamespaceAccess() {
+	public void testKeyAndNamespaceAccess() throws Exception {
 
 		SubKeyedListStateDescriptor<Integer, String, Float> descriptor =
 			new SubKeyedListStateDescriptor<>("test",
@@ -277,7 +275,7 @@ public abstract class SubKeyedListStateTestBase {
 	}
 
 	@Test
-	public void testElementAccess() {
+	public void testElementAccess() throws Exception {
 		SubKeyedListStateDescriptor<Integer, String, Float> descriptor =
 			new SubKeyedListStateDescriptor<>("test",
 				IntSerializer.INSTANCE, StringSerializer.INSTANCE,
@@ -392,7 +390,7 @@ public abstract class SubKeyedListStateTestBase {
 	}
 
 	@Test
-	public void testIterator() {
+	public void testIterator() throws Exception {
 		SubKeyedListStateDescriptor<Integer, String, Float> descriptor =
 			new SubKeyedListStateDescriptor<>("test",
 				IntSerializer.INSTANCE, StringSerializer.INSTANCE,
@@ -495,7 +493,7 @@ public abstract class SubKeyedListStateTestBase {
 	}
 
 	@Test
-	public void testPeekPoll() {
+	public void testPeekPoll() throws Exception {
 		SubKeyedListStateDescriptor<Integer, String, Float> descriptor =
 			new SubKeyedListStateDescriptor<>("test",
 				IntSerializer.INSTANCE, StringSerializer.INSTANCE,
@@ -537,7 +535,7 @@ public abstract class SubKeyedListStateTestBase {
 	}
 
 	@Test
-	public void testPutPutAll() {
+	public void testPutPutAll() throws Exception {
 		SubKeyedListStateDescriptor<Integer, String, Long> descriptor =
 			new SubKeyedListStateDescriptor<>("test",
 				IntSerializer.INSTANCE, StringSerializer.INSTANCE,
@@ -567,7 +565,7 @@ public abstract class SubKeyedListStateTestBase {
 	}
 
 	@Test
-	public void testMulitStateAccessParallism() throws InterruptedException {
+	public void testMulitStateAccessParallism() throws Exception {
 		SubKeyedListStateDescriptor<Integer, Integer, Long> descriptor1 =
 			new SubKeyedListStateDescriptor<>("test1",
 				IntSerializer.INSTANCE, IntSerializer.INSTANCE,
@@ -648,9 +646,8 @@ public abstract class SubKeyedListStateTestBase {
 		}
 	}
 
-	private GroupSet getGroupsForSubtask(int maxParallelism, int parallelism, int subtaskIndex) {
-		KeyGroupRange keyGroupRange = KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(maxParallelism, parallelism, subtaskIndex);
-		return GroupRange.of(keyGroupRange.getStartKeyGroup(), keyGroupRange.getEndKeyGroup() + 1);
+	private KeyGroupRange getGroupsForSubtask(int maxParallelism, int parallelism, int subtaskIndex) {
+		return KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(maxParallelism, parallelism, subtaskIndex);
 	}
 }
 

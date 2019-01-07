@@ -58,6 +58,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
  * @param <N> The type of the namespace
  * @param <V> The type of values kept internally in state
  */
+@Deprecated
 public interface InternalKvState<K, N, V> extends State {
 
 	/**

@@ -18,9 +18,9 @@
 
 package org.apache.flink.runtime.state.heap.keyed;
 
-import org.apache.flink.runtime.state.GroupSet;
-import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
+import org.apache.flink.runtime.state.KeyGroupRange;
+import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.heap.HeapInternalStateBackend;
 import org.apache.flink.runtime.state.keyed.KeyedSortedMapState;
 import org.apache.flink.runtime.state.keyed.KeyedSortedMapStateTestBase;
@@ -48,17 +48,16 @@ public class HeapKeyedSortedMapStateTest extends KeyedSortedMapStateTestBase {
 	@Override
 	protected AbstractInternalStateBackend createStateBackend(
 		int numberOfGroups,
-		GroupSet groups,
+		KeyGroupRange keyGroupRange,
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig
 	) throws Exception {
 		return new HeapInternalStateBackend(
 			numberOfGroups,
-			groups,
+			keyGroupRange,
 			userClassLoader,
 			localRecoveryConfig,
 			null,
-			asyncSnapshot
-		);
+			asyncSnapshot);
 	}
 }

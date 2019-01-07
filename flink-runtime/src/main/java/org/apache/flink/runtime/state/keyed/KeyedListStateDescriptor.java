@@ -20,6 +20,7 @@ package org.apache.flink.runtime.state.keyed;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.ListSerializer;
+import org.apache.flink.runtime.state.InternalStateType;
 import org.apache.flink.util.Preconditions;
 
 import java.util.List;
@@ -47,7 +48,7 @@ public final class KeyedListStateDescriptor<K, E> extends KeyedStateDescriptor<K
 		final TypeSerializer<K> keySerializer,
 		final TypeSerializer<E> elementSerializer
 	) {
-		super(name, keySerializer, new ListSerializer<>(elementSerializer));
+		this(name, keySerializer, new ListSerializer<>(elementSerializer));
 	}
 
 	/**
@@ -63,7 +64,7 @@ public final class KeyedListStateDescriptor<K, E> extends KeyedStateDescriptor<K
 		final TypeSerializer<K> keySerializer,
 		final ListSerializer<E> listSerializer
 	) {
-		super(name, keySerializer, listSerializer);
+		super(name, InternalStateType.KEYED_LIST, keySerializer, listSerializer);
 	}
 
 	@Override
@@ -83,7 +84,7 @@ public final class KeyedListStateDescriptor<K, E> extends KeyedStateDescriptor<K
 	}
 
 	@Override
-	public KeyedListState<K, E> bind(KeyedStateBinder stateBinder) {
+	public KeyedListState<K, E> bind(KeyedStateBinder stateBinder) throws Exception {
 		return stateBinder.createKeyedListState(this);
 	}
 }

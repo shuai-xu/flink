@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.state.subkeyed;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.runtime.state.InternalStateType;
 import org.apache.flink.util.Preconditions;
 
 import java.io.Serializable;
@@ -27,10 +28,10 @@ import java.util.Objects;
 /**
  * The descriptor for {@link SubKeyedState}.
  *
- * @param <K> The type of the keys in the state.
- * @param <N> The type of the namespaces in the state.
- * @param <V> The type of the values in the state.
- * @param <S> The type of the state described by the descriptor
+ * @param <K> The stateType of the keys in the state.
+ * @param <N> The stateType of the namespaces in the state.
+ * @param <V> The stateType of the values in the state.
+ * @param <S> The stateType of the state described by the descriptor
  */
 public abstract class SubKeyedStateDescriptor<K, N, V, S extends SubKeyedState<K, N, V>> implements Serializable {
 
@@ -57,6 +58,11 @@ public abstract class SubKeyedStateDescriptor<K, N, V, S extends SubKeyedState<K
 	private final TypeSerializer<V> valueSerializer;
 
 	/**
+	 * The stateType of the values in the state.
+	 */
+	private final InternalStateType stateType;
+
+	/**
 	 * Constructor for global states with given name and the serializers for
 	 * the keys, the namespaces and the values in the state.
 	 *
@@ -66,17 +72,20 @@ public abstract class SubKeyedStateDescriptor<K, N, V, S extends SubKeyedState<K
 	 * @param valueSerializer The serializer for the values in the state.
 	 */
 	public SubKeyedStateDescriptor(
-		String name,
-		TypeSerializer<K> keySerializer,
-		TypeSerializer<N> namespaceSerializer,
-		TypeSerializer<V> valueSerializer
+		final String name,
+		final InternalStateType stateType,
+		final TypeSerializer<K> keySerializer,
+		final TypeSerializer<N> namespaceSerializer,
+		final TypeSerializer<V> valueSerializer
 	) {
 		Preconditions.checkNotNull(name);
+		Preconditions.checkNotNull(stateType);
 		Preconditions.checkNotNull(keySerializer);
 		Preconditions.checkNotNull(namespaceSerializer);
 		Preconditions.checkNotNull(valueSerializer);
 
 		this.name = name;
+		this.stateType = stateType;
 		this.keySerializer = keySerializer;
 		this.namespaceSerializer = namespaceSerializer;
 		this.valueSerializer = valueSerializer;
@@ -88,7 +97,7 @@ public abstract class SubKeyedStateDescriptor<K, N, V, S extends SubKeyedState<K
 	 * @param stateBinder The binder with which to create the state.
 	 * @return The state described by the descriptor.
 	 */
-	public abstract S bind(SubKeyedStateBinder stateBinder);
+	public abstract S bind(SubKeyedStateBinder stateBinder) throws Exception ;
 
 	//--------------------------------------------------------------------------
 
@@ -99,6 +108,15 @@ public abstract class SubKeyedStateDescriptor<K, N, V, S extends SubKeyedState<K
 	 */
 	public String getName() {
 		return name;
+	}
+
+	/**
+	 * Returns the state descriptor stateType.
+	 *
+	 * @return The state descriptor stateType.
+	 */
+	public InternalStateType getStateType() {
+		return stateType;
 	}
 
 	/**

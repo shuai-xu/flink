@@ -20,6 +20,7 @@ package org.apache.flink.runtime.state.subkeyed;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.MapSerializer;
+import org.apache.flink.runtime.state.InternalStateType;
 import org.apache.flink.util.Preconditions;
 
 import java.util.Map;
@@ -53,8 +54,26 @@ public class SubKeyedMapStateDescriptor<K, N, MK, MV> extends SubKeyedStateDescr
 		TypeSerializer<MK> mapKeySerializer,
 		TypeSerializer<MV> mapValueSerializer
 	) {
-		super(name, keySerializer, namespaceSerializer,
+		this(name, keySerializer, namespaceSerializer,
 			new MapSerializer<>(mapKeySerializer, mapValueSerializer));
+	}
+
+	/**
+	 * Constructor for global states with given name and the serializers for the
+	 * keys, the namespaces, the map keys and the map values in the state.
+	 *
+	 * @param name The name of the state.
+	 * @param keySerializer The serializer for the keys in the state.
+	 * @param namespaceSerializer The serializer for the namespaces in the state.
+	 * @param mapSerializer The serializer for the maps in the state.
+	 */
+	public SubKeyedMapStateDescriptor(
+		String name,
+		TypeSerializer<K> keySerializer,
+		TypeSerializer<N> namespaceSerializer,
+		MapSerializer<MK, MV> mapSerializer
+	) {
+		super(name, InternalStateType.SUBKEYED_MAP, keySerializer, namespaceSerializer, mapSerializer);
 	}
 
 	@Override
@@ -83,7 +102,7 @@ public class SubKeyedMapStateDescriptor<K, N, MK, MV> extends SubKeyedStateDescr
 	}
 
 	@Override
-	public SubKeyedMapState<K, N, MK, MV> bind(SubKeyedStateBinder stateBinder) {
+	public SubKeyedMapState<K, N, MK, MV> bind(SubKeyedStateBinder stateBinder) throws Exception {
 		return stateBinder.createSubKeyedMapState(this);
 	}
 }

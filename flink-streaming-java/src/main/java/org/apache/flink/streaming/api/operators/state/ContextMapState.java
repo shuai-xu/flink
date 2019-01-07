@@ -102,6 +102,11 @@ public class ContextMapState<K, V> implements MapState<K, V>, ContextKeyedState 
 			public K next() {
 				return entryIterator.next().getKey();
 			}
+
+			@Override
+			public void remove() {
+				entryIterator.remove();
+			}
 		};
 
 		return () -> keyIterator;

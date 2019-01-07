@@ -70,7 +70,7 @@ public interface StateStorage<K, V> {
 	 *
 	 * @throws Exception Thrown if the system cannot access the state.
 	 */
-	StorageIterator iterator() throws Exception;
+	StorageIterator<K, V> iterator() throws Exception;
 
 	/**
 	 * Returns an iterator over all the key-values whose key with the prefix {@code prefixKey} in the storage.
@@ -80,7 +80,7 @@ public interface StateStorage<K, V> {
 	 *
 	 * @throws Exception Thrown if the system cannot access the state.
 	 */
-	StorageIterator prefixIterator(K prefixKey) throws Exception;
+	StorageIterator<K, V> prefixIterator(K prefixKey) throws Exception;
 
 	/**
 	 * Returns an iterator over all the key-values whose key locates in the range of {@code prefixKeyStart} and {@code prefixKeyEnd}.
@@ -93,7 +93,7 @@ public interface StateStorage<K, V> {
 	 * @throws UnsupportedOperationException if the storage is not sorted.
 	 * @throws Exception Thrown if the system cannot access the state.
 	 */
-	StorageIterator subIterator(K prefixKeyStart, K prefixKeyEnd) throws Exception;
+	StorageIterator<K, V> subIterator(K prefixKeyStart, K prefixKeyEnd) throws Exception;
 
 	/**
 	 * Returns the first entry in the storage whose key is large than specified key.

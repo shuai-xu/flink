@@ -34,6 +34,7 @@ import java.io.IOException;
  * @param <N> The type of the namespace.
  * @param <V> The type of the value.
  */
+@Deprecated
 public class HeapReducingState<K, N, V>
 		extends AbstractHeapMergingState<K, N, V, V, V, ReducingState<V>>
 		implements InternalReducingState<K, N, V> {

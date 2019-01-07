@@ -52,17 +52,17 @@ public class RocksDBStateStorage implements StateStorage<byte[], byte[]> {
 	}
 
 	@Override
-	public StorageIterator iterator() {
+	public StorageIterator<byte[], byte[]> iterator() {
 		return new RocksDBStoragePrefixIterator(storageInstance, null);
 	}
 
 	@Override
-	public StorageIterator prefixIterator(byte[] prefixKey) {
+	public StorageIterator<byte[], byte[]> prefixIterator(byte[] prefixKey) {
 		return new RocksDBStoragePrefixIterator(storageInstance, prefixKey);
 	}
 
 	@Override
-	public StorageIterator subIterator(byte[] prefixKeyStart, byte[] prefixKeyEnd) {
+	public StorageIterator<byte[], byte[]> subIterator(byte[] prefixKeyStart, byte[] prefixKeyEnd) {
 		return new RocksDBStorageRangeIterator(storageInstance, prefixKeyStart, prefixKeyEnd);
 	}
 

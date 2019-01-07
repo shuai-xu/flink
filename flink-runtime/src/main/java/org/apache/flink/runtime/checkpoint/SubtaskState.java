@@ -20,11 +20,10 @@ package org.apache.flink.runtime.checkpoint;
 
 import org.apache.flink.runtime.state.ChainedStateHandle;
 import org.apache.flink.runtime.state.CompositeStateHandle;
-import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.KeyedStateHandle;
+import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.SharedStateRegistry;
 import org.apache.flink.runtime.state.StateObject;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StateUtil;
 
 import org.slf4j.Logger;
@@ -53,7 +52,7 @@ public class SubtaskState implements CompositeStateHandle {
 	private final ChainedStateHandle<OperatorStateHandle> rawOperatorState;
 
 	/**
-	 * Snapshot from {@link org.apache.flink.runtime.state.KeyedStateBackend}.
+	 * Snapshot from {@link org.apache.flink.runtime.state.InternalStateBackend}.
 	 */
 	private final KeyedStateHandle managedKeyedState;
 
@@ -61,8 +60,6 @@ public class SubtaskState implements CompositeStateHandle {
 	 * Snapshot written using {@link org.apache.flink.runtime.state.KeyedStateCheckpointOutputStream}.
 	 */
 	private final KeyedStateHandle rawKeyedState;
-
-	private final StatePartitionSnapshot managedInternalState;
 
 	/**
 	 * The state size. This is also part of the deserialized state handle.
@@ -75,21 +72,18 @@ public class SubtaskState implements CompositeStateHandle {
 			ChainedStateHandle<OperatorStateHandle> managedOperatorState,
 			ChainedStateHandle<OperatorStateHandle> rawOperatorState,
 			KeyedStateHandle managedKeyedState,
-			KeyedStateHandle rawKeyedState,
-			StatePartitionSnapshot managedInternalState) {
+			KeyedStateHandle rawKeyedState) {
 
 		this.managedOperatorState = managedOperatorState;
 		this.rawOperatorState = rawOperatorState;
 		this.managedKeyedState = managedKeyedState;
 		this.rawKeyedState = rawKeyedState;
-		this.managedInternalState = managedInternalState;
 
 		try {
 			long calculateStateSize = getSizeNullSafe(managedOperatorState);
 			calculateStateSize += getSizeNullSafe(rawOperatorState);
 			calculateStateSize += getSizeNullSafe(managedKeyedState);
 			calculateStateSize += getSizeNullSafe(rawKeyedState);
-			calculateStateSize += getSizeNullSafe(managedInternalState);
 			stateSize = calculateStateSize;
 		} catch (Exception e) {
 			throw new RuntimeException("Failed to get state size.", e);
@@ -116,10 +110,6 @@ public class SubtaskState implements CompositeStateHandle {
 
 	public KeyedStateHandle getRawKeyedState() {
 		return rawKeyedState;
-	}
-
-	public StatePartitionSnapshot getManagedInternalState() {
-		return managedInternalState;
 	}
 
 	@Override

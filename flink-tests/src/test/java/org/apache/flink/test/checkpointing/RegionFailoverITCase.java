@@ -123,7 +123,7 @@ public class RegionFailoverITCase extends TestLogger {
 	@Test
 	public void testRegionFailoverWithParallelismChanged() throws IOException {
 		long numElements = failBase * 3;
-		Duration timeout = Duration.ofMinutes(1);
+		Duration timeout = Duration.ofSeconds(30);
 
 		String checkpointPathFolder = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
 		String externalizedCheckpointPath = "file://" + checkpointPathFolder;

@@ -154,14 +154,14 @@ public abstract class InternalWindowProcessFunction<K, W extends Window> impleme
 		 * @param descriptor the state description
 		 * @return a subkeyed state
 		 */
-		<V, S extends SubKeyedState<K, W, V>> S getSubKeyedState(SubKeyedStateDescriptor<K, W, V, S> descriptor);
+		<V, S extends SubKeyedState<K, W, V>> S getSubKeyedState(SubKeyedStateDescriptor<K, W, V, S> descriptor) throws Exception;
 
 		/**
 		 * Creates/Gets a keyed state.
 		 * @param descriptor the state description
 		 * @return a keyed state
 		 */
-		<V, S extends KeyedState<K, V>> S getKeyedState(KeyedStateDescriptor<K, V, S> descriptor);
+		<V, S extends KeyedState<K, V>> S getKeyedState(KeyedStateDescriptor<K, V, S> descriptor) throws Exception;
 
 		/**
 		 * @return current key of current processed element.

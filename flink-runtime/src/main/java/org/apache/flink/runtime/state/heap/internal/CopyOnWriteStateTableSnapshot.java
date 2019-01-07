@@ -21,7 +21,7 @@ package org.apache.flink.runtime.state.heap.internal;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataOutputView;
-import org.apache.flink.runtime.state.GroupRange;
+import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 
 import java.io.IOException;
@@ -131,10 +131,10 @@ public class CopyOnWriteStateTableSnapshot<K, N, S>
 			return;
 		}
 
-		final GroupRange keyGroupRange = (GroupRange) owningStateTable.getStateBackend().getGroups();
+		final KeyGroupRange keyGroupRange = owningStateTable.getStateBackend().getKeyGroupRange();
 		final int totalKeyGroups = owningStateTable.getStateBackend().getNumGroups();
-		final int baseKgIdx = keyGroupRange.getStartGroup();
-		final int[] histogram = new int[keyGroupRange.getNumGroups() + 1];
+		final int baseKgIdx = keyGroupRange.getStartKeyGroup();
+		final int[] histogram = new int[keyGroupRange.getNumberOfKeyGroups() + 1];
 
 		CopyOnWriteStateTable.StateTableEntry<K, N, S>[] unfold = new CopyOnWriteStateTable.StateTableEntry[stateTableSize];
 
@@ -180,8 +180,8 @@ public class CopyOnWriteStateTableSnapshot<K, N, S>
 
 		final CopyOnWriteStateTable.StateTableEntry<K, N, S>[] groupedOut = snapshotData;
 
-		GroupRange keyGroupRange = (GroupRange) owningStateTable.getStateBackend().getGroups();
-		int keyGroupOffsetIdx = keyGroupId - keyGroupRange.getStartGroup() - 1;
+		KeyGroupRange keyGroupRange = owningStateTable.getStateBackend().getKeyGroupRange();
+		int keyGroupOffsetIdx = keyGroupId - keyGroupRange.getStartKeyGroup() - 1;
 		int startOffset = keyGroupOffsetIdx < 0 ? 0 : keyGroupOffsets[keyGroupOffsetIdx];
 		int endOffset = keyGroupOffsets[keyGroupOffsetIdx + 1];
 

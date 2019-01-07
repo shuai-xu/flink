@@ -167,7 +167,6 @@ public class RestoreStreamTaskTest extends TestLogger {
 			Collections.emptyMap(),
 			Collections.emptyMap(),
 			Collections.emptyMap(),
-			Collections.emptyMap(),
 			Collections.emptyMap());
 
 		stateHandles.putSubtaskStateByOperatorID(headOperatorID, emptyHeadOperatorState);

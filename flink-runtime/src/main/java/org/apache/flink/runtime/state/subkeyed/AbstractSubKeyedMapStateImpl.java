@@ -869,6 +869,11 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 		}
 	}
 
+	@Override
+	public StateStorage<K, M> getStateStorage() {
+		return stateStorage;
+	}
+
 	protected  <K> int getKeyGroup(K key) {
 		return partitioner.partition(key, internalStateBackend.getNumGroups());
 	}

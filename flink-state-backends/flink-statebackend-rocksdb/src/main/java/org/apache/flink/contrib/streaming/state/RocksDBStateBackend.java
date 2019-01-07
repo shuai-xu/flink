@@ -34,7 +34,6 @@ import org.apache.flink.runtime.state.CheckpointStorage;
 import org.apache.flink.runtime.state.CompletedCheckpointStorageLocation;
 import org.apache.flink.runtime.state.ConfigurableStateBackend;
 import org.apache.flink.runtime.state.DefaultOperatorStateBackend;
-import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.OperatorStateBackend;
@@ -453,7 +452,7 @@ public class RocksDBStateBackend extends AbstractStateBackend implements Configu
 		Environment env,
 		String operatorIdentifier,
 		int numberOfGroups,
-		GroupSet groups) throws IOException {
+		KeyGroupRange keyGroupRange) throws IOException {
 		// first, make sure that the RocksDB JNI library is loaded
 		// we do this explicitly here to have better error handling
 		String tempDir = env.getTaskManagerInfo().getTmpDirectories()[0];
@@ -477,7 +476,7 @@ public class RocksDBStateBackend extends AbstractStateBackend implements Configu
 			getDbOptions(),
 			getColumnOptions(),
 			numberOfGroups,
-			groups,
+			keyGroupRange,
 			isIncrementalCheckpointsEnabled(),
 			localRecoveryConfig,
 			env.getTaskKvStateRegistry());

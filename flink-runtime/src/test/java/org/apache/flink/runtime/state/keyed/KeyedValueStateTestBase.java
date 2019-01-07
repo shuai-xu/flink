@@ -21,8 +21,6 @@ package org.apache.flink.runtime.state.keyed;
 import org.apache.flink.api.common.typeutils.base.FloatSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.common.typeutils.base.LongSerializer;
-import org.apache.flink.runtime.state.GroupRange;
-import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
@@ -62,7 +60,7 @@ public abstract class KeyedValueStateTestBase {
 	 */
 	protected abstract AbstractInternalStateBackend createStateBackend(
 		int numberOfGroups,
-		GroupSet groups,
+		KeyGroupRange keyGroupRange,
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig) throws Exception;
 
@@ -86,7 +84,7 @@ public abstract class KeyedValueStateTestBase {
 	}
 
 	@Test
-	public void testKeyAccess() {
+	public void testKeyAccess() throws Exception {
 
 		KeyedValueStateDescriptor<Integer, Float> descriptor =
 			new KeyedValueStateDescriptor<>("test", IntSerializer.INSTANCE,
@@ -233,7 +231,7 @@ public abstract class KeyedValueStateTestBase {
 	}
 
 	@Test
-	public void testGetAllRemoveAll() {
+	public void testGetAllRemoveAll() throws Exception {
 		KeyedValueStateDescriptor<Integer, Float> descriptor =
 			new KeyedValueStateDescriptor<>("test", IntSerializer.INSTANCE,
 				FloatSerializer.INSTANCE);
@@ -257,7 +255,7 @@ public abstract class KeyedValueStateTestBase {
 	}
 
 	@Test
-	public void testKeys() {
+	public void testKeys() throws Exception {
 		KeyedValueStateDescriptor<Integer, Float> descriptor =
 			new KeyedValueStateDescriptor<>("test", IntSerializer.INSTANCE,
 				FloatSerializer.INSTANCE);
@@ -299,7 +297,7 @@ public abstract class KeyedValueStateTestBase {
 	}
 
 	@Test
-	public void testMulitStateAccessParallism() throws InterruptedException {
+	public void testMulitStateAccessParallism() throws Exception {
 		KeyedValueStateDescriptor<Integer, Long> descriptor1 =
 			new KeyedValueStateDescriptor<>("test1", IntSerializer.INSTANCE,
 				LongSerializer.INSTANCE);
@@ -345,8 +343,7 @@ public abstract class KeyedValueStateTestBase {
 		}
 	}
 
-	private GroupSet getGroupsForSubtask(int maxParallelism, int parallelism, int subtaskIndex) {
-		KeyGroupRange keyGroupRange = KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(maxParallelism, parallelism, subtaskIndex);
-		return GroupRange.of(keyGroupRange.getStartKeyGroup(), keyGroupRange.getEndKeyGroup() + 1);
+	private KeyGroupRange getGroupsForSubtask(int maxParallelism, int parallelism, int subtaskIndex) {
+		return KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(maxParallelism, parallelism, subtaskIndex);
 	}
 }

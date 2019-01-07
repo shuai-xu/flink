@@ -28,17 +28,16 @@ import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.CheckpointStreamWithResultProvider;
-import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
-import org.apache.flink.runtime.state.GroupSet;
+import org.apache.flink.runtime.state.InternalBackendSerializationProxy;
+import org.apache.flink.runtime.state.KeyGroupRange;
+import org.apache.flink.runtime.state.KeyGroupsStateSnapshot;
+import org.apache.flink.runtime.state.KeyedStateHandle;
+import org.apache.flink.runtime.state.RegisteredStateMetaInfo;
 import org.apache.flink.runtime.state.SnapshotDirectory;
 import org.apache.flink.runtime.state.SnapshotResult;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
+import org.apache.flink.runtime.state.StateMetaInfoSnapshot;
 import org.apache.flink.runtime.state.StateSerializerUtil;
 import org.apache.flink.runtime.state.StreamStateHandle;
-import org.apache.flink.runtime.state.keyed.KeyedState;
-import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
-import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
-import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.types.Pair;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.InstantiationUtil;
@@ -94,17 +93,10 @@ public class RocksDBFullSnapshotOperation {
 
 	private DataOutputView outputView;
 
-	/**
-	 * All keyed states will be snapshot.
-	 */
-	private final Map<String, KeyedState> keyedStates;
+	private List<StateMetaInfoSnapshot> keyedStateMetaInfos;
 
-	/**
-	 * All subkeyed states will be snapshot.
-	 */
-	private final Map<String, SubKeyedState> subKeyedStates;
+	private List<StateMetaInfoSnapshot> subKeyedStateMetaInfos;
 
-	private Map<String, ColumnFamilyDescriptor> allColumnFamilyDescriptors;
 	private List<ColumnFamilyDescriptor> descriptors;
 	private List<ColumnFamilyHandle> columnFamilyHandles;
 	private Map<Integer, Tuple2<Long, Integer>> metaInfo;
@@ -127,10 +119,9 @@ public class RocksDBFullSnapshotOperation {
 		this.checkpointStreamSupplier = checkpointStreamSupplier;
 		this.snapshotCloseableRegistry = registry;
 		this.dbLease = stateBackend.rocksDBResourceGuard.acquireResource();
-		this.keyedStates = new HashMap<>();
-		this.subKeyedStates = new HashMap<>();
 		this.stateName2Id = new HashMap<>();
-		this.allColumnFamilyDescriptors = new HashMap<>();
+		this.keyedStateMetaInfos = new ArrayList<>();
+		this.subKeyedStateMetaInfos = new ArrayList<>();
 	}
 
 	/**
@@ -139,21 +130,32 @@ public class RocksDBFullSnapshotOperation {
 	void takeDBSnapShot() throws IOException, RocksDBException {
 		Preconditions.checkArgument(snapshotDirectory == null, "Only one ongoing snapshot allowed!");
 
-		keyedStates.putAll(stateBackend.getKeyedStates());
-		subKeyedStates.putAll(stateBackend.getSubKeyedStates());
-		allColumnFamilyDescriptors.putAll(stateBackend.getColumnFamilyDescriptors());
-		descriptors = new ArrayList<>(allColumnFamilyDescriptors.size() + 1);
+		for (Map.Entry<String, RegisteredStateMetaInfo> stateMetaInfoEntry : stateBackend.getRegisteredStateMetaInfos().entrySet()) {
+			String stateName = stateMetaInfoEntry.getKey();
+			RegisteredStateMetaInfo registeredStateMetaInfo = stateBackend.getRegisteredStateMetaInfos().get(stateName);
+			if (registeredStateMetaInfo.getStateType().isKeyedState()) {
+				keyedStateMetaInfos.add(registeredStateMetaInfo.snapshot());
+			} else {
+				subKeyedStateMetaInfos.add(registeredStateMetaInfo.snapshot());
+			}
+		}
+
+		Map<String, Tuple2<ColumnFamilyHandle, ColumnFamilyDescriptor>> columnFamilyHandles = stateBackend.getColumnFamilyHandles();
+		descriptors = new ArrayList<>(columnFamilyHandles.size() + 1);
 		descriptors.add(stateBackend.getDefaultColumnFamilyDescriptor());
 
-		columnFamilyHandles = new ArrayList<>(allColumnFamilyDescriptors.size() + 1);
+		this.columnFamilyHandles = new ArrayList<>(columnFamilyHandles.size() + 1);
 		int id = 1;
-		for (String stateName : keyedStates.keySet()) {
+		for (StateMetaInfoSnapshot keyedStateMetaInfo : keyedStateMetaInfos) {
+			String stateName = keyedStateMetaInfo.getName();
 			stateName2Id.put(stateName, id++);
-			descriptors.add(allColumnFamilyDescriptors.get(stateName));
+			descriptors.add(columnFamilyHandles.get(stateName).f1);
 		}
-		for (String stateName : subKeyedStates.keySet()) {
+
+		for (StateMetaInfoSnapshot subKeyedStateMetaInfo : subKeyedStateMetaInfos) {
+			String stateName = subKeyedStateMetaInfo.getName();
 			stateName2Id.put(stateName, id++);
-			descriptors.add(allColumnFamilyDescriptors.get(stateName));
+			descriptors.add(columnFamilyHandles.get(stateName).f1);
 		}
 
 		// create a "temporary" snapshot directory because local recovery is inactive.
@@ -200,7 +202,7 @@ public class RocksDBFullSnapshotOperation {
 	 * @return state partition snapshot for the completed snapshot.
 	 */
 	@Nonnull
-	SnapshotResult<StatePartitionSnapshot> getStatePartitionSnapshot() throws IOException {
+	SnapshotResult<KeyedStateHandle> getKeyGroupStateSnapshot() throws IOException {
 
 		Preconditions.checkNotNull(metaInfo);
 
@@ -210,15 +212,15 @@ public class RocksDBFullSnapshotOperation {
 		LOG.info("Successfully complete the snapshot of the states");
 
 		StreamStateHandle snapshotHandle = snapshotResult.getJobManagerOwnedSnapshot();
-		StatePartitionSnapshot snapshot =
-			new DefaultStatePartitionSnapshot(
-				stateBackend.getGroups(), metaInfo, snapshotHandle);
+		KeyedStateHandle snapshot =
+			new KeyGroupsStateSnapshot(
+				stateBackend.getKeyGroupRange(), metaInfo, snapshotHandle);
 
 		StreamStateHandle localSnapshotHandle = snapshotResult.getTaskLocalSnapshot();
 		if (localSnapshotHandle != null) {
-			StatePartitionSnapshot localSnapshot =
-				new DefaultStatePartitionSnapshot(
-					stateBackend.getGroups(), metaInfo, localSnapshotHandle);
+			KeyedStateHandle localSnapshot =
+				new KeyGroupsStateSnapshot(
+					stateBackend.getKeyGroupRange(), metaInfo, localSnapshotHandle);
 
 			return SnapshotResult.withLocalState(snapshot, localSnapshot);
 		} else {
@@ -243,17 +245,12 @@ public class RocksDBFullSnapshotOperation {
 	}
 
 	private void materializeMetaData() throws Exception {
-		// Writes state descriptors
-		outputView.writeInt(keyedStates.size());
-		for (KeyedState state : keyedStates.values()) {
-			KeyedStateDescriptor stateDescriptor = state.getDescriptor();
-			InstantiationUtil.serializeObject(checkpointStreamWithResultProvider.getCheckpointOutputStream(), stateDescriptor);
-		}
-		outputView.writeInt(subKeyedStates.size());
-		for (SubKeyedState state : subKeyedStates.values()) {
-			SubKeyedStateDescriptor stateDescriptor = state.getDescriptor();
-			InstantiationUtil.serializeObject(checkpointStreamWithResultProvider.getCheckpointOutputStream(), stateDescriptor);
-		}
+		InternalBackendSerializationProxy backendSerializationProxy = new InternalBackendSerializationProxy(
+			keyedStateMetaInfos,
+			subKeyedStateMetaInfos);
+
+		backendSerializationProxy.write(outputView);
+
 		outputView.writeInt(stateName2Id.size());
 		for (Map.Entry<String, Integer> entry : stateName2Id.entrySet()) {
 			InstantiationUtil.serializeObject(checkpointStreamWithResultProvider.getCheckpointOutputStream(), entry.getKey());
@@ -270,7 +267,7 @@ public class RocksDBFullSnapshotOperation {
 		RocksDB db = RocksDB.open(snapshotDirectory.getDirectory().getPath(), descriptors, columnFamilyHandles);
 		WriteOptions writeOptions = new WriteOptions().setDisableWAL(true);
 
-		GroupSet groups = stateBackend.getGroups();
+		KeyGroupRange groups = stateBackend.getKeyGroupRange();
 		try {
 			for (int group : groups) {
 				long offset = outputStream.getPos();

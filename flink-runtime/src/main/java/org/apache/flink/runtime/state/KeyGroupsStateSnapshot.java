@@ -19,26 +19,29 @@
 package org.apache.flink.runtime.state;
 
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.core.fs.FSDataInputStream;
 import org.apache.flink.util.Preconditions;
 
 import javax.annotation.Nullable;
+
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
 /**
- * A default implementation of {@link StatePartitionSnapshot} which contains the
+ * A default implementation of {@link KeyedStateHandle} which contains the
  * complete data in the state groups.
  */
-public final class DefaultStatePartitionSnapshot implements StatePartitionSnapshot {
+public final class KeyGroupsStateSnapshot implements StreamStateHandle, KeyedStateHandle {
 
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * The groups in the snapshot.
+	 * The key-group range covered by this state handle.
 	 */
-	private final GroupSet groups;
+	private final KeyGroupRange keyGroupRange;
 
 	/**
 	 * The offsets and the number of entries of the groups in the snapshot.
@@ -55,21 +58,21 @@ public final class DefaultStatePartitionSnapshot implements StatePartitionSnapsh
 	 * Constructor with the groups of the states, and the meta info of these
 	 * groups in this snapshot.
 	 *
-	 * @param groups The global groups in the snapshot.
+	 * @param keyGroupRange The key groups in the snapshot.
 	 * @param metaInfos The offsets and the number of entries of the
 	 *                        groups in the snapshot.
 	 * @param snapshotHandle The data of the snapshot.
 	 */
-	public DefaultStatePartitionSnapshot(
-		final GroupSet groups,
+	public KeyGroupsStateSnapshot(
+		final KeyGroupRange keyGroupRange,
 		final Map<Integer, Tuple2<Long, Integer>> metaInfos,
 		final StreamStateHandle snapshotHandle
 	) {
-		Preconditions.checkNotNull(groups);
+		Preconditions.checkNotNull(keyGroupRange);
 		Preconditions.checkNotNull(metaInfos);
 		Preconditions.checkNotNull(snapshotHandle);
 
-		this.groups = groups;
+		this.keyGroupRange = keyGroupRange;
 		this.metaInfos = metaInfos;
 		this.snapshotHandle = snapshotHandle;
 	}
@@ -77,12 +80,12 @@ public final class DefaultStatePartitionSnapshot implements StatePartitionSnapsh
 	/**
 	 * Constructor for empty state groups.
 	 */
-	public DefaultStatePartitionSnapshot(
-		final GroupSet groups
+	public KeyGroupsStateSnapshot(
+		final KeyGroupRange keyGroupRange
 	) {
-		Preconditions.checkNotNull(groups);
+		Preconditions.checkNotNull(keyGroupRange);
 
-		this.groups = groups;
+		this.keyGroupRange = keyGroupRange;
 		this.metaInfos = Collections.emptyMap();
 		this.snapshotHandle = null;
 	}
@@ -106,20 +109,18 @@ public final class DefaultStatePartitionSnapshot implements StatePartitionSnapsh
 	}
 
 	@Override
-	public GroupSet getGroups() {
-		return groups;
+	public KeyGroupRange getKeyGroupRange() {
+		return keyGroupRange;
 	}
 
 	@Override
-	public StatePartitionSnapshot getIntersection(
-		final GroupSet otherGroups
-	) {
-		Preconditions.checkNotNull(otherGroups);
+	public KeyedStateHandle getIntersection(KeyGroupRange otherKeyGroupRange) {
+		Preconditions.checkNotNull(otherKeyGroupRange);
 
-		GroupSet intersectGroups = groups.intersect(otherGroups);
+		KeyGroupRange intersectGroups = keyGroupRange.getIntersection(otherKeyGroupRange);
 
 		if (snapshotHandle == null) {
-			return new DefaultStatePartitionSnapshot(intersectGroups);
+			return new KeyGroupsStateSnapshot(intersectGroups);
 		}
 
 		Map<Integer, Tuple2<Long, Integer>> intersectMetaInfos = new HashMap<>();
@@ -130,8 +131,8 @@ public final class DefaultStatePartitionSnapshot implements StatePartitionSnapsh
 			}
 		}
 
-		return new DefaultStatePartitionSnapshot(
-			groups,
+		return new KeyGroupsStateSnapshot(
+			intersectGroups,
 			intersectMetaInfos,
 			snapshotHandle
 		);
@@ -154,6 +155,18 @@ public final class DefaultStatePartitionSnapshot implements StatePartitionSnapsh
 		// No shared states
 	}
 
+	/**
+	 *
+	 * @param keyGroupId the id of a key-group. the id must be contained in the range of this handle.
+	 * @return offset to the position of data for the provided key-group in the stream referenced by this state handle
+	 */
+	public long getOffsetForKeyGroup(int keyGroupId) {
+		if (!metaInfos.containsKey(keyGroupId)) {
+			System.out.println();
+		}
+		return metaInfos.get(keyGroupId).f0;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -164,16 +177,16 @@ public final class DefaultStatePartitionSnapshot implements StatePartitionSnapsh
 			return false;
 		}
 
-		DefaultStatePartitionSnapshot that = (DefaultStatePartitionSnapshot) o;
+		KeyGroupsStateSnapshot that = (KeyGroupsStateSnapshot) o;
 
-		return Objects.equals(groups, that.groups) &&
+		return Objects.equals(keyGroupRange, that.keyGroupRange) &&
 			Objects.equals(metaInfos, that.metaInfos) &&
 			Objects.equals(snapshotHandle, that.snapshotHandle);
 	}
 
 	@Override
 	public int hashCode() {
-		int result = Objects.hashCode(groups);
+		int result = Objects.hashCode(keyGroupRange);
 		result = 31 * result + Objects.hashCode(metaInfos);
 		result = 31 * result + Objects.hashCode(snapshotHandle);
 		return result;
@@ -181,10 +194,16 @@ public final class DefaultStatePartitionSnapshot implements StatePartitionSnapsh
 
 	@Override
 	public String toString() {
-		return "DefaultStatePartitionSnapshot{" +
-			"groups=" + groups +
+		return "KeyGroupsStateSnapshot{" +
+			"keyGroupRange=" + keyGroupRange +
 			", metaInfos=" + metaInfos +
 			", snapshotHandle=" + snapshotHandle +
 			"}";
+	}
+
+	@Override
+	public FSDataInputStream openInputStream() throws IOException {
+		Preconditions.checkNotNull(snapshotHandle, "snapshotHandle is null");
+		return snapshotHandle.openInputStream();
 	}
 }

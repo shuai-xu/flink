@@ -29,26 +29,24 @@ import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.CheckpointStreamWithResultProvider;
 import org.apache.flink.runtime.state.CheckpointedStateScope;
 import org.apache.flink.runtime.state.DirectoryStateHandle;
-import org.apache.flink.runtime.state.IncrementalLocalStatePartitionSnapshot;
-import org.apache.flink.runtime.state.IncrementalStatePartitionSnapshot;
+import org.apache.flink.runtime.state.IncrementalKeyedStateSnapshot;
+import org.apache.flink.runtime.state.IncrementalLocalKeyedStateSnapshot;
+import org.apache.flink.runtime.state.InternalBackendSerializationProxy;
+import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.PlaceholderStreamStateHandle;
+import org.apache.flink.runtime.state.RegisteredStateMetaInfo;
 import org.apache.flink.runtime.state.SnapshotDirectory;
 import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateHandleID;
+import org.apache.flink.runtime.state.StateMetaInfoSnapshot;
 import org.apache.flink.runtime.state.StateObject;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StateUtil;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.filesystem.FileStateHandle;
-import org.apache.flink.runtime.state.keyed.KeyedState;
-import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
 import org.apache.flink.runtime.state.memory.ByteStreamStateHandle;
-import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
-import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.IOUtils;
-import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.ResourceGuard;
 
@@ -61,6 +59,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -97,9 +96,9 @@ public class RocksDBIncrementalSnapshotOperation {
 
 	private final ResourceGuard.Lease dbLease;
 
-	private final Map<String, KeyedState> keyedStates;
+	private List<StateMetaInfoSnapshot> keyedStateMetaInfos;
 
-	private final Map<String, SubKeyedState> subKeyedStates;
+	private List<StateMetaInfoSnapshot> subKeyedStateMetaInfos;
 
 	private SnapshotResult<StreamStateHandle> metaStateHandle = null;
 
@@ -114,13 +113,20 @@ public class RocksDBIncrementalSnapshotOperation {
 		this.checkpointId = checkpointId;
 		this.dbLease = this.stateBackend.rocksDBResourceGuard.acquireResource();
 		this.localBackupDirectory = localBackupDirectory;
-		this.keyedStates = new HashMap<>();
-		this.subKeyedStates = new HashMap<>();
+		this.keyedStateMetaInfos = new ArrayList<>();
+		this.subKeyedStateMetaInfos = new ArrayList<>();
 	}
 
 	void takeSnapshot() throws Exception {
-		keyedStates.putAll(stateBackend.getKeyedStates());
-		subKeyedStates.putAll(stateBackend.getSubKeyedStates());
+		for (Map.Entry<String, RegisteredStateMetaInfo> stateMetaInfoEntry : stateBackend.getRegisteredStateMetaInfos().entrySet()) {
+			String stateName = stateMetaInfoEntry.getKey();
+			RegisteredStateMetaInfo registeredStateMetaInfo = stateBackend.getRegisteredStateMetaInfos().get(stateName);
+			if (registeredStateMetaInfo.getStateType().isKeyedState()) {
+				keyedStateMetaInfos.add(registeredStateMetaInfo.snapshot());
+			} else {
+				subKeyedStateMetaInfos.add(registeredStateMetaInfo.snapshot());
+			}
+		}
 
 		final long lastCompletedCheckpoint;
 
@@ -144,7 +150,7 @@ public class RocksDBIncrementalSnapshotOperation {
 	}
 
 	@Nonnull
-	SnapshotResult<StatePartitionSnapshot> runSnapshot() throws Exception {
+	SnapshotResult<KeyedStateHandle> runSnapshot() throws Exception {
 
 		stateBackend.getCancelStreamRegistry().registerCloseable(closeableRegistry);
 
@@ -202,9 +208,9 @@ public class RocksDBIncrementalSnapshotOperation {
 			stateBackend.materializedSstFiles.put(checkpointId, sstFiles);
 		}
 
-		StatePartitionSnapshot stateSnapshot =
-			new IncrementalStatePartitionSnapshot(
-				stateBackend.getGroups(),
+		KeyedStateHandle stateSnapshot =
+			new IncrementalKeyedStateSnapshot(
+				stateBackend.getKeyGroupRange(),
 				checkpointId,
 				sstFiles,
 				miscFiles,
@@ -234,9 +240,9 @@ public class RocksDBIncrementalSnapshotOperation {
 				for (Map.Entry<StateHandleID, Tuple2<String, StreamStateHandle>> entry : sstFiles.entrySet()) {
 					sharedStateHandleIDs.put(entry.getKey(), entry.getValue().f0);
 				}
-				StatePartitionSnapshot localStateSnapshot =
-					new IncrementalLocalStatePartitionSnapshot(
-						stateBackend.getGroups(),
+				KeyedStateHandle localStateSnapshot =
+					new IncrementalLocalKeyedStateSnapshot(
+						stateBackend.getKeyGroupRange(),
 						checkpointId,
 						taskLocalSnapshotMetaDataStateHandle,
 						directoryStateHandle,
@@ -377,17 +383,11 @@ public class RocksDBIncrementalSnapshotOperation {
 			DataOutputViewStreamWrapper outputView =
 				new DataOutputViewStreamWrapper(outputStream);
 
-			// Writes state descriptors
-			outputView.writeInt(keyedStates.size());
-			for (KeyedState state : keyedStates.values()) {
-				KeyedStateDescriptor stateDescriptor = state.getDescriptor();
-				InstantiationUtil.serializeObject(outputStream, stateDescriptor);
-			}
-			outputView.writeInt(subKeyedStates.size());
-			for (SubKeyedState state : subKeyedStates.values()) {
-				SubKeyedStateDescriptor stateDescriptor = state.getDescriptor();
-				InstantiationUtil.serializeObject(outputStream, stateDescriptor);
-			}
+			InternalBackendSerializationProxy backendSerializationProxy = new InternalBackendSerializationProxy(
+				keyedStateMetaInfos,
+				subKeyedStateMetaInfos);
+
+			backendSerializationProxy.write(outputView);
 
 			if (closeableRegistry.unregisterCloseable(streamWithResultProvider)) {
 				SnapshotResult<StreamStateHandle> resultStateHandle = streamWithResultProvider.closeAndFinalizeCheckpointStreamResult();

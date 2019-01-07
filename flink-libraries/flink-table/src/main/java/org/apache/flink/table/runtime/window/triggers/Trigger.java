@@ -132,7 +132,7 @@ public abstract class Trigger<W extends Window> implements Serializable {
 		 * fault-tolerant state that is scoped to the window and key of the current
 		 * trigger invocation.
 		 */
-		<T> ValueState<T> getValueState(ValueStateDescriptor<T> stateDescriptor);
+		<T> ValueState<T> getValueState(ValueStateDescriptor<T> stateDescriptor) throws Exception;
 
 		/**
 		 * Returns the current processing time.

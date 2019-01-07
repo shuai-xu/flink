@@ -23,7 +23,6 @@ import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.OperatorStreamStateHandle;
 import org.apache.flink.runtime.state.StateObject;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.flink.util.TestLogger;
@@ -38,11 +37,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
 
-import static org.apache.flink.runtime.checkpoint.StateHandleDummyUtil.createNewInternalStateHandle;
 import static org.apache.flink.runtime.checkpoint.StateHandleDummyUtil.createNewKeyedStateHandle;
 import static org.apache.flink.runtime.checkpoint.StateHandleDummyUtil.createNewOperatorStateHandle;
 import static org.apache.flink.runtime.checkpoint.StateHandleDummyUtil.deepDummyCopy;
-import static org.apache.flink.runtime.checkpoint.StateHandleDummyUtil.deepDummyStataPartitionSnapshotCopy;
 
 public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 
@@ -113,12 +110,6 @@ public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 					PrioritizedOperatorSubtaskState::getPrioritizedRawKeyedState,
 					prioritizedOperatorSubtaskState,
 					primaryAndFallback.getRawKeyedState().size() == 1 ? validAlternatives : onlyPrimary));
-
-				Assert.assertTrue(checkResultAsExpected(
-					OperatorSubtaskState::getManagedInternalState,
-					PrioritizedOperatorSubtaskState::getPrioritizedManagedInternalState,
-					prioritizedOperatorSubtaskState,
-					primaryAndFallback.getManagedInternalState().size() == 1 ? validAlternatives : onlyPrimary));
 			}
 		}
 	}
@@ -191,19 +182,7 @@ public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 							createNewKeyedStateHandle(keyGroupRange1),
 							createNewKeyedStateHandle(keyGroupRange2)));
 
-		div *= numModes;
-		mode = (conf / div) % numModes;
-		StateObjectCollection<StatePartitionSnapshot> s5 =
-			mode == 0?
-				StateObjectCollection.empty() :
-				mode == 1?
-					new StateObjectCollection<>(
-						Collections.singleton(createNewInternalStateHandle(keyGroupRange))) :
-					new StateObjectCollection<>(
-						Arrays.asList(
-							createNewInternalStateHandle(keyGroupRange1),
-							createNewInternalStateHandle(keyGroupRange2)));
-		return new OperatorSubtaskState(s1, s2, s3, s4, s5);
+		return new OperatorSubtaskState(s1, s2, s3, s4);
 	}
 
 	/**
@@ -220,8 +199,7 @@ public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 					deepCopyFirstElement(primaryOriginal.getManagedOperatorState()),
 					deepCopyFirstElement(primaryOriginal.getRawOperatorState()),
 					deepCopyFirstElement(primaryOriginal.getManagedKeyedState()),
-					deepCopyFirstElement(primaryOriginal.getRawKeyedState()),
-					deepCopyFirstElement(primaryOriginal.getManagedInternalState()));
+					deepCopyFirstElement(primaryOriginal.getRawKeyedState()));
 			case 1:
 				return new OperatorSubtaskState();
 			case 2:
@@ -232,8 +210,7 @@ public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 					createNewOperatorStateHandle(numNamedStates, random),
 					createNewOperatorStateHandle(numNamedStates, random),
 					createNewKeyedStateHandle(otherRange),
-					createNewKeyedStateHandle(otherRange),
-					createNewInternalStateHandle(otherRange));
+					createNewKeyedStateHandle(otherRange));
 			default:
 				throw new IllegalArgumentException("Mode: " + mode);
 		}
@@ -309,8 +286,6 @@ public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 			result = deepDummyCopy((OperatorStateHandle) stateObject);
 		} else if (stateObject instanceof KeyedStateHandle) {
 			result = deepDummyCopy((KeyedStateHandle) stateObject);
-		} else if (stateObject instanceof StatePartitionSnapshot) {
-			result = deepDummyStataPartitionSnapshotCopy((StatePartitionSnapshot) stateObject);
 		} else {
 			throw new IllegalStateException();
 		}

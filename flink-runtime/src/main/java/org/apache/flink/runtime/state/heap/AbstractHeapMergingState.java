@@ -36,6 +36,7 @@ import java.util.Collection;
  * @param <OUT> The type of the output elements.
  * @param <S> The type of State
  */
+@Deprecated
 public abstract class AbstractHeapMergingState<K, N, IN, SV, OUT, S extends State>
 		extends AbstractHeapState<K, N, SV, S>
 		implements InternalMergingState<K, N, IN, SV, OUT> {

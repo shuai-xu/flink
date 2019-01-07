@@ -36,6 +36,9 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.TreeSet;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
 
 /**
  * Implementation of Flink's in-memory state tables with copy-on-write support. This map does not support null values
@@ -95,7 +98,7 @@ import java.util.TreeSet;
  * @param <N> type of namespace.
  * @param <S> type of value.
  */
-public class CopyOnWriteStateTable<K, N, S> extends StateTable<K, N, S> {
+public class CopyOnWriteStateTable<K, N, S> extends StateTable<K, N, S> implements Iterable<StateEntry<K, N, S>> {
 
 	private static final Logger LOG = LoggerFactory.getLogger(CopyOnWriteStateTable.class);
 
@@ -292,6 +295,13 @@ public class CopyOnWriteStateTable<K, N, S> extends StateTable<K, N, S> {
 		}
 
 		return null;
+	}
+
+	@Override
+	public Stream<K> getKeys(N namespace) {
+		return StreamSupport.stream(spliterator(), false)
+			.filter(entry -> entry.getNamespace().equals(namespace))
+			.map(StateEntry::getKey);
 	}
 
 	@Override
@@ -508,7 +518,7 @@ public class CopyOnWriteStateTable<K, N, S> extends StateTable<K, N, S> {
 	// Iteration  ------------------------------------------------------------------------------------------------------
 
 	@Override
-	public Iterator<Map.Entry<K, S>> iterator() {
+	public Iterator<Map.Entry<K, S>> entryIterator() {
 		return new Iterator<Map.Entry<K, S>>() {
 
 			private final StateEntryIterator iterator = new StateEntryIterator();
@@ -881,6 +891,20 @@ public class CopyOnWriteStateTable<K, N, S> extends StateTable<K, N, S> {
 		return new CopyOnWriteStateTableSnapshot<>(this);
 	}
 
+	@Override
+	public int sizeOfNamespace(Object namespace) {
+		Preconditions.checkState(isUsingNamespace());
+		Preconditions.checkNotNull(namespace);
+
+		int count = 0;
+		for (StateEntry<K, N, S> entry : this) {
+			if (null != entry && Objects.equals(namespace, entry.getNamespace())) {
+				++count;
+			}
+		}
+		return count;
+	}
+
 	/**
 	 * Releases a snapshot for this {@link CopyOnWriteStateTable}. This method should be called once a snapshot is no more needed,
 	 * so that the {@link CopyOnWriteStateTable} can stop considering this snapshot for copy-on-write, thus avoiding unnecessary
@@ -894,6 +918,11 @@ public class CopyOnWriteStateTable<K, N, S> extends StateTable<K, N, S> {
 			"Cannot release snapshot which is owned by a different state table.");
 
 		releaseSnapshot(snapshotToRelease.getSnapshotVersion());
+	}
+
+	@Override
+	public Iterator<StateEntry<K, N, S>> iterator() {
+		return new StateEntryIterator();
 	}
 
 	// StateTableEntry -------------------------------------------------------------------------------------------------
@@ -1025,7 +1054,7 @@ public class CopyOnWriteStateTable<K, N, S> extends StateTable<K, N, S> {
 		private StateTableEntry<K, N, S>[] activeTable;
 		private int nextTablePosition;
 		private StateTableEntry<K, N, S> nextEntry;
-		private int expectedModCount = modCount;
+		private int expectedModCount;
 
 		StateEntryIterator() {
 			this.activeTable = primaryTable;

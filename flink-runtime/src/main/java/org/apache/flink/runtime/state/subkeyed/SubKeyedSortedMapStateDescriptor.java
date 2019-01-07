@@ -21,6 +21,7 @@ package org.apache.flink.runtime.state.subkeyed;
 import org.apache.flink.api.common.functions.Comparator;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.SortedMapSerializer;
+import org.apache.flink.runtime.state.InternalStateType;
 import org.apache.flink.util.Preconditions;
 
 import java.util.SortedMap;
@@ -58,8 +59,27 @@ public final class SubKeyedSortedMapStateDescriptor<K, N, MK, MV>
 		TypeSerializer<MK> mapKeySerializer,
 		TypeSerializer<MV> mapValueSerializer
 	) {
-		super(name, keySerializer, namespaceSerializer,
+		this(name, keySerializer, namespaceSerializer,
 			new SortedMapSerializer<>(mapKeyComparator, mapKeySerializer, mapValueSerializer));
+	}
+
+	/**
+	 * Constructor for global states with given name, the comparator for the
+	 * maps and the serializers for the keys, the namespaces, the map keys and the map values
+	 * in the state.
+	 *
+	 * @param name The name of the state.
+	 * @param keySerializer The serializer for the keys in the state.
+	 * @param namespaceSerializer The serializer for the namespaces in the state.
+	 * @param sortedMapSerializer The serializer for the sorted maps in the state.
+	 */
+	public SubKeyedSortedMapStateDescriptor(
+		String name,
+		TypeSerializer<K> keySerializer,
+		TypeSerializer<N> namespaceSerializer,
+		SortedMapSerializer<MK, MV> sortedMapSerializer
+	) {
+		super(name, InternalStateType.SUBKEYED_SORTEDMAP, keySerializer, namespaceSerializer, sortedMapSerializer);
 	}
 
 	@Override
@@ -99,7 +119,7 @@ public final class SubKeyedSortedMapStateDescriptor<K, N, MK, MV>
 	}
 
 	@Override
-	public SubKeyedSortedMapState<K, N, MK, MV> bind(SubKeyedStateBinder stateBinder) {
+	public SubKeyedSortedMapState<K, N, MK, MV> bind(SubKeyedStateBinder stateBinder) throws Exception {
 		return stateBinder.createSubKeyedSortedMapState(this);
 	}
 }

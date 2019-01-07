@@ -35,7 +35,6 @@ import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.CheckpointStorage;
 import org.apache.flink.runtime.state.CompletedCheckpointStorageLocation;
-import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupStatePartitionStreamProvider;
 import org.apache.flink.runtime.state.OperatorStateBackend;
@@ -95,14 +94,14 @@ public class StreamTaskStateInitializerImplTest {
 			closeableRegistry);
 
 		OperatorStateBackend operatorStateBackend = stateContext.operatorStateBackend();
-		AbstractKeyedStateBackend<?> keyedStateBackend = stateContext.keyedStateBackend();
+		AbstractInternalStateBackend internalStateBackend = stateContext.internalStateBackend();
 		InternalTimeServiceManager<?, ?> timeServiceManager = stateContext.internalTimerServiceManager();
 		CloseableIterable<KeyGroupStatePartitionStreamProvider> keyedStateInputs = stateContext.rawKeyedStateInputs();
 		CloseableIterable<StatePartitionStreamProvider> operatorStateInputs = stateContext.rawOperatorStateInputs();
 
 		Assert.assertEquals(false, stateContext.isRestored());
 		Assert.assertNotNull(operatorStateBackend);
-		Assert.assertNotNull(keyedStateBackend);
+		Assert.assertNotNull(internalStateBackend);
 		Assert.assertNotNull(timeServiceManager);
 		Assert.assertNotNull(keyedStateInputs);
 		Assert.assertNotNull(operatorStateInputs);
@@ -110,7 +109,7 @@ public class StreamTaskStateInitializerImplTest {
 		checkCloseablesRegistered(
 			closeableRegistry,
 			operatorStateBackend,
-			keyedStateBackend,
+			internalStateBackend,
 			keyedStateInputs,
 			operatorStateInputs);
 
@@ -155,7 +154,7 @@ public class StreamTaskStateInitializerImplTest {
 				Environment env,
 				String operatorIdentifier,
 				int numberOfGroups,
-				GroupSet groups) throws Exception {
+				KeyGroupRange keyGroupRange) throws Exception {
 				return mock(AbstractInternalStateBackend.class);
 			}
 		});
@@ -181,8 +180,7 @@ public class StreamTaskStateInitializerImplTest {
 						OperatorStateHandle.Mode.SPLIT_DISTRIBUTE)),
 				CheckpointTestUtils.createDummyStreamStateHandle(random)),
 			CheckpointTestUtils.createDummyKeyGroupStateHandle(random),
-			CheckpointTestUtils.createDummyKeyGroupStateHandle(random),
-			null);
+			CheckpointTestUtils.createDummyKeyGroupStateHandle(random));
 
 		taskStateSnapshot.putSubtaskStateByOperatorID(operatorID, operatorSubtaskState);
 
@@ -205,7 +203,7 @@ public class StreamTaskStateInitializerImplTest {
 			closeableRegistry);
 
 		OperatorStateBackend operatorStateBackend = stateContext.operatorStateBackend();
-		AbstractKeyedStateBackend<?> keyedStateBackend = stateContext.keyedStateBackend();
+		AbstractInternalStateBackend internalStateBackend = stateContext.internalStateBackend();
 		InternalTimeServiceManager<?, ?> timeServiceManager = stateContext.internalTimerServiceManager();
 		CloseableIterable<KeyGroupStatePartitionStreamProvider> keyedStateInputs = stateContext.rawKeyedStateInputs();
 		CloseableIterable<StatePartitionStreamProvider> operatorStateInputs = stateContext.rawOperatorStateInputs();
@@ -213,7 +211,7 @@ public class StreamTaskStateInitializerImplTest {
 		Assert.assertEquals(true, stateContext.isRestored());
 
 		Assert.assertNotNull(operatorStateBackend);
-		Assert.assertNotNull(keyedStateBackend);
+		Assert.assertNotNull(internalStateBackend);
 		// this is deactivated on purpose so that it does not attempt to consume the raw keyed state.
 		Assert.assertNull(timeServiceManager);
 		Assert.assertNotNull(keyedStateInputs);
@@ -221,7 +219,7 @@ public class StreamTaskStateInitializerImplTest {
 
 		// check that the expected job manager state was restored
 		verify(operatorStateBackend).restore(eq(operatorSubtaskState.getManagedOperatorState()));
-		verify(keyedStateBackend).restore(eq(operatorSubtaskState.getManagedKeyedState()));
+		verify(internalStateBackend).restore(eq(operatorSubtaskState.getManagedKeyedState()));
 
 		int count = 0;
 		for (KeyGroupStatePartitionStreamProvider keyedStateInput : keyedStateInputs) {
@@ -238,7 +236,7 @@ public class StreamTaskStateInitializerImplTest {
 		checkCloseablesRegistered(
 			closeableRegistry,
 			operatorStateBackend,
-			keyedStateBackend,
+			internalStateBackend,
 			keyedStateInputs,
 			operatorStateInputs);
 	}
@@ -284,9 +282,7 @@ public class StreamTaskStateInitializerImplTest {
 				processingTimeService) {
 				@Override
 				protected <K> InternalTimeServiceManager<?, K> internalTimeServiceManager(
-					AbstractKeyedStateBackend<K> keyedStatedBackend,
-					KeyContext keyContext,
-					Iterable<KeyGroupStatePartitionStreamProvider> rawKeyedStates) throws Exception {
+					KeyContextImpl<K> keyContextImpl, KeyContext keyContext, Iterable<KeyGroupStatePartitionStreamProvider> rawKeyedStates) throws Exception {
 					return null;
 				}
 			};

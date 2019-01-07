@@ -22,7 +22,6 @@ import org.apache.flink.runtime.checkpoint.OperatorSubtaskState;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.SnapshotResult;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.util.FutureUtil;
 
 import javax.annotation.Nonnull;
@@ -56,24 +55,18 @@ public class OperatorSnapshotFinalizer {
 		SnapshotResult<OperatorStateHandle> operatorRaw =
 			FutureUtil.runIfNotDoneAndGet(snapshotFutures.getOperatorStateRawFuture());
 
-		snapshotFutures.getInternalStateManagedFuture().run();
-		SnapshotResult<StatePartitionSnapshot> internalManaged =
-			FutureUtil.runIfNotDoneAndGet(snapshotFutures.getInternalStateManagedFuture());
-
 		jobManagerOwnedState = new OperatorSubtaskState(
 			operatorManaged.getJobManagerOwnedSnapshot(),
 			operatorRaw.getJobManagerOwnedSnapshot(),
 			keyedManaged.getJobManagerOwnedSnapshot(),
-			keyedRaw.getJobManagerOwnedSnapshot(),
-			internalManaged.getJobManagerOwnedSnapshot()
+			keyedRaw.getJobManagerOwnedSnapshot()
 		);
 
 		taskLocalState = new OperatorSubtaskState(
 			operatorManaged.getTaskLocalSnapshot(),
 			operatorRaw.getTaskLocalSnapshot(),
 			keyedManaged.getTaskLocalSnapshot(),
-			keyedRaw.getTaskLocalSnapshot(),
-			internalManaged.getTaskLocalSnapshot()
+			keyedRaw.getTaskLocalSnapshot()
 		);
 	}
 

@@ -27,7 +27,6 @@ import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.AbstractStateBackend;
 import org.apache.flink.runtime.state.CheckpointStorage;
 import org.apache.flink.runtime.state.CompletedCheckpointStorageLocation;
-import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.OperatorStateBackend;
 import org.apache.flink.util.Preconditions;
@@ -77,12 +76,12 @@ public class TestSpyWrapperStateBackend extends AbstractStateBackend {
 		Environment env,
 		String operatorIdentifier,
 		int numberOfGroups,
-		GroupSet groups) throws Exception {
+		KeyGroupRange keyGroupRange) throws Exception {
 		return spy(delegate.createInternalStateBackend(
 			env,
 			operatorIdentifier,
 			numberOfGroups,
-			groups));
+			keyGroupRange));
 	}
 
 	@Override

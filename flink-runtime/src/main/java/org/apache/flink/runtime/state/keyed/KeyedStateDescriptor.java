@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.state.keyed;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.runtime.state.InternalStateType;
 import org.apache.flink.util.Preconditions;
 
 import javax.annotation.Nullable;
@@ -29,9 +30,9 @@ import java.util.Objects;
 /**
  * The descriptor for both local and global {@link KeyedState}.
  *
- * @param <K> The type of the keys in the state3.
- * @param <V> The type of the values in the state.
- * @param <S> The type of the state described by the descriptor
+ * @param <K> The stateType of the keys in the state3.
+ * @param <V> The stateType of the values in the state.
+ * @param <S> The stateType of the state described by the descriptor
  */
 public abstract class KeyedStateDescriptor<K, V, S extends KeyedState<K, V>> implements Serializable {
 
@@ -52,6 +53,11 @@ public abstract class KeyedStateDescriptor<K, V, S extends KeyedState<K, V>> imp
 	 */
 	private final TypeSerializer<V> valueSerializer;
 
+	/**
+	 * The stateType of the values in the state.
+	 */
+	private final InternalStateType stateType;
+
 	/** Name for queries against state created from this StateDescriptor. */
 	@Nullable
 	private String queryableStateName;
@@ -66,14 +72,17 @@ public abstract class KeyedStateDescriptor<K, V, S extends KeyedState<K, V>> imp
 	 */
 	KeyedStateDescriptor(
 		final String name,
+		final InternalStateType stateType,
 		final TypeSerializer<K> keySerializer,
 		final TypeSerializer<V> valueSerializer
 	) {
 		Preconditions.checkNotNull(name);
+		Preconditions.checkNotNull(stateType);
 		Preconditions.checkNotNull(keySerializer);
 		Preconditions.checkNotNull(valueSerializer);
 
 		this.name = name;
+		this.stateType = stateType;
 		this.keySerializer = keySerializer;
 		this.valueSerializer = valueSerializer;
 	}
@@ -84,7 +93,7 @@ public abstract class KeyedStateDescriptor<K, V, S extends KeyedState<K, V>> imp
 	 * @param stateBinder The binder with which to create the state.
 	 * @return The state described by the descriptor.
 	 */
-	public abstract S bind(KeyedStateBinder stateBinder);
+	public abstract S bind(KeyedStateBinder stateBinder) throws Exception;
 
 	//--------------------------------------------------------------------------
 
@@ -95,6 +104,15 @@ public abstract class KeyedStateDescriptor<K, V, S extends KeyedState<K, V>> imp
 	 */
 	public String getName() {
 		return name;
+	}
+
+	/**
+	 * Returns the state descriptor stateType.
+	 *
+	 * @return The state descriptor stateType.
+	 */
+	public InternalStateType getStateType() {
+		return stateType;
 	}
 
 	/**

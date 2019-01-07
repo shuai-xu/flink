@@ -65,6 +65,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  *
  * @param <K> Type of the key by which state is keyed.
  */
+@Deprecated
 public abstract class AbstractKeyedStateBackend<K> implements
 	KeyedStateBackend<K>,
 	Snapshotable<SnapshotResult<KeyedStateHandle>, Collection<KeyedStateHandle>>,

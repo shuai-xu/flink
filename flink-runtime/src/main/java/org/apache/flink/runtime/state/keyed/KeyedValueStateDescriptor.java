@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.state.keyed;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.runtime.state.InternalStateType;
 
 /**
  * Descriptor for global {@link KeyedValueState}.
@@ -43,11 +44,11 @@ public final class KeyedValueStateDescriptor<K, V> extends KeyedStateDescriptor<
 		final TypeSerializer<K> keySerializer,
 		final TypeSerializer<V> valueSerializer
 	) {
-		super(name, keySerializer, valueSerializer);
+		super(name, InternalStateType.KEYED_VALUE, keySerializer, valueSerializer);
 	}
 
 	@Override
-	public KeyedValueState<K, V> bind(KeyedStateBinder stateBinder) {
+	public KeyedValueState<K, V> bind(KeyedStateBinder stateBinder) throws Exception {
 		return stateBinder.createKeyedValueState(this);
 	}
 }

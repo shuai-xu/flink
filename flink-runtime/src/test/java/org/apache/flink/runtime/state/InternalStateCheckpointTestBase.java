@@ -22,12 +22,11 @@ import org.apache.flink.api.common.typeutils.base.FloatSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.CheckpointType;
-import org.apache.flink.runtime.state.memory.MemCheckpointStreamFactory;
 import org.apache.flink.runtime.state.keyed.KeyedMapState;
 import org.apache.flink.runtime.state.keyed.KeyedMapStateDescriptor;
-import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedValueState;
 import org.apache.flink.runtime.state.keyed.KeyedValueStateDescriptor;
+import org.apache.flink.runtime.state.memory.MemCheckpointStreamFactory;
 import org.apache.flink.util.FutureUtil;
 import org.apache.flink.util.TestLogger;
 
@@ -39,7 +38,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.nio.charset.Charset;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -84,7 +82,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 	 */
 	protected abstract InternalStateBackend createStateBackend(
 		int numberOfGroups,
-		GroupSet groups,
+		KeyGroupRange keyGroupRange,
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig) throws Exception;
 
@@ -122,11 +120,11 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 	@Test
 	public void testCheckpointWithEmptyStateBackend() throws Exception {
 
-		RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshotFuture =
+		RunnableFuture<SnapshotResult<KeyedStateHandle>> snapshotFuture =
 			stateBackend.snapshot(0, 0, checkpointStreamFactory, checkpointOptions);
 		assertNotNull(snapshotFuture);
 
-		StatePartitionSnapshot snapshot = runSnapshot(snapshotFuture);
+		KeyedStateHandle snapshot = runSnapshot(snapshotFuture);
 		assertNull(snapshot);
 		stateBackend.dispose();
 
@@ -137,8 +135,9 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			localRecoveryConfig);
 		stateBackend.restore(null);
 
-		Map<String, StateStorage> states = stateBackend.getStateStorages();
-		assertTrue(states.isEmpty());
+		assertTrue(stateBackend.getKeyedStates().isEmpty());
+
+		assertTrue(stateBackend.getSubKeyedStates().isEmpty());
 	}
 
 	@Test
@@ -152,11 +151,13 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			);
 		stateBackend.getKeyedState(descriptor);
 
-		RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshotFuture =
+		assertEquals(1, stateBackend.getKeyedStates().size());
+
+		RunnableFuture<SnapshotResult<KeyedStateHandle>> snapshotFuture =
 			stateBackend.snapshot(0, 0, checkpointStreamFactory, checkpointOptions);
 		assertNotNull(snapshotFuture);
 
-		StatePartitionSnapshot snapshot = runSnapshot(snapshotFuture);
+		KeyedStateHandle snapshot = runSnapshot(snapshotFuture);
 		assertNotNull(snapshot);
 		stateBackend.dispose();
 
@@ -167,12 +168,11 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			localRecoveryConfig);
 		stateBackend.restore(Collections.singleton(snapshot));
 
-		Collection<KeyedState> states = stateBackend.getKeyedStates().values();
-		assertEquals(1, states.size());
+		assertEquals(1, stateBackend.getStateStorages().size());
+		assertEquals(0, stateBackend.getKeyedStates().size());
 
-		KeyedState state = states.iterator().next();
-		assertEquals(descriptor, state.getDescriptor());
-		assertFalse(state.keys().iterator().hasNext());
+		KeyedValueState<Integer, Float> keyedState = stateBackend.getKeyedState(descriptor);
+		assertFalse(keyedState.keys().iterator().hasNext());
 	}
 
 	@Test
@@ -223,7 +223,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		KeyedValueState<Integer, Float> emptyState = stateBackend.getKeyedState(descriptor3);
 
 		// Takes a snapshot of the states
-		StatePartitionSnapshot snapshot1 =
+		KeyedStateHandle snapshot1 =
 			runSnapshot(stateBackend, 0, 0, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
 
 		// Does some updates to the states
@@ -280,7 +280,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		}
 
 		// Takes a snapshot of the states
-		StatePartitionSnapshot snapshot2 =
+		KeyedStateHandle snapshot2 =
 			runSnapshot(stateBackend, 1, 1, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
 
 		index = 0;
@@ -376,7 +376,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		KeyedValueState<Integer, Float> emptyState = stateBackend.getKeyedState(descriptor3);
 
 		// Takes a snapshot of the states
-		StatePartitionSnapshot snapshot1 =
+		KeyedStateHandle snapshot1 =
 			runSnapshot(stateBackend, 0, 0, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
 
 		// Does some updates to the states
@@ -392,8 +392,8 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		stateBackend.dispose();
 
 		// Restores the stateBackend from a subset of the snapshot
-		GroupRange firstGroups1 = (GroupRange) getGroupsForSubtask(maxParallelism, 3, 0);
-		StatePartitionSnapshot firstSnapshot1 = snapshot1.getIntersection(firstGroups1);
+		KeyGroupRange firstGroups1 = getGroupsForSubtask(maxParallelism, 3, 0);
+		KeyedStateHandle firstSnapshot1 = snapshot1.getIntersection(firstGroups1);
 
 		// Restores the stateBackend from the snapshot
 		stateBackend = createStateBackend(maxParallelism, firstGroups1, classLoader, localRecoveryConfig);
@@ -446,14 +446,14 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		}
 
 		// Takes a snapshot of the stateBackend
-		StatePartitionSnapshot firstSnapshot2 =
+		KeyedStateHandle firstSnapshot2 =
 			runSnapshot(stateBackend, 1, 1, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
 
 		stateBackend.dispose();
 
 		// Restores the stateBackend from a subset of the snapshot
-		GroupRange secondGroups1 = (GroupRange) getGroupsForSubtask(maxParallelism, 3, 1);
-		StatePartitionSnapshot secondSnapshot1 = snapshot1.getIntersection(secondGroups1);
+		KeyGroupRange secondGroups1 = getGroupsForSubtask(maxParallelism, 3, 1);
+		KeyedStateHandle secondSnapshot1 = snapshot1.getIntersection(secondGroups1);
 
 		// Restores the stateBackend from the snapshot
 		stateBackend = createStateBackend(maxParallelism, secondGroups1, classLoader, localRecoveryConfig);
@@ -506,14 +506,14 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		}
 
 		// Takes a snapshot of the stateBackend
-		StatePartitionSnapshot secondSnapshot2 =
+		KeyedStateHandle secondSnapshot2 =
 			runSnapshot(stateBackend, 1, 1, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
 
 		stateBackend.dispose();
 
 		// Restores the stateBackend from a subset of the snapshot
-		GroupRange thirdGroups1 = (GroupRange) getGroupsForSubtask(maxParallelism, 3, 2);
-		StatePartitionSnapshot thirdSnapshot1 = snapshot1.getIntersection(thirdGroups1);
+		KeyGroupRange thirdGroups1 = getGroupsForSubtask(maxParallelism, 3, 2);
+		KeyedStateHandle thirdSnapshot1 = snapshot1.getIntersection(thirdGroups1);
 
 		// Restores the stateBackend from the snapshot
 		stateBackend = createStateBackend(maxParallelism, thirdGroups1, classLoader, localRecoveryConfig);
@@ -566,22 +566,22 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		}
 
 		// Takes a snapshot of the stateBackend
-		StatePartitionSnapshot thirdSnapshot2 =
+		KeyedStateHandle thirdSnapshot2 =
 			runSnapshot(stateBackend, 1, 1, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
 
 		stateBackend.dispose();
 
 		// Merge the local states
-		GroupSet leftGroups3 = getGroupsForSubtask(maxParallelism, 2, 0);
-		GroupSet rightGroups3 = getGroupsForSubtask(maxParallelism, 2, 1);
+		KeyGroupRange leftGroups3 = getGroupsForSubtask(maxParallelism, 2, 0);
+		KeyGroupRange rightGroups3 = getGroupsForSubtask(maxParallelism, 2, 1);
 		InternalStateBackend newLeftBackend = createStateBackend(maxParallelism, leftGroups3, classLoader, localRecoveryConfig);
 		InternalStateBackend newRightBackend = createStateBackend(maxParallelism, rightGroups3, classLoader, localRecoveryConfig);
 
 		try {
-			StatePartitionSnapshot firstSnapshot3 = firstSnapshot2.getIntersection(leftGroups3);
-			StatePartitionSnapshot secondSnapshot3ForLeft = secondSnapshot2.getIntersection(leftGroups3);
-			StatePartitionSnapshot secondSnapshot3ForRight = secondSnapshot2.getIntersection(rightGroups3);
-			StatePartitionSnapshot thirdSnapshot3 = thirdSnapshot2.getIntersection(rightGroups3);
+			KeyedStateHandle firstSnapshot3 = firstSnapshot2.getIntersection(leftGroups3);
+			KeyedStateHandle secondSnapshot3ForLeft = secondSnapshot2.getIntersection(leftGroups3);
+			KeyedStateHandle secondSnapshot3ForRight = secondSnapshot2.getIntersection(rightGroups3);
+			KeyedStateHandle thirdSnapshot3 = thirdSnapshot2.getIntersection(rightGroups3);
 
 			newLeftBackend.restore(Arrays.asList(firstSnapshot3, secondSnapshot3ForLeft));
 			newRightBackend.restore(Arrays.asList(secondSnapshot3ForRight, thirdSnapshot3));
@@ -629,7 +629,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 
 	//--------------------------------------------------------------------------
 
-	private boolean isGroupContainsKey(GroupSet groups, int key) {
+	private boolean isGroupContainsKey(KeyGroupRange groups, int key) {
 		return groups.contains(KeyGroupRangeAssignment.assignToKeyGroup(key, maxParallelism));
 	}
 
@@ -637,9 +637,8 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		return KeyGroupRangeAssignment.assignToKeyGroup(key, maxParallelism);
 	}
 
-	private GroupSet getGroupsForSubtask(int maxParallelism, int parallelism, int subtaskIndex) {
-		KeyGroupRange keyGroupRange = KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(maxParallelism, parallelism, subtaskIndex);
-		return GroupRange.of(keyGroupRange.getStartKeyGroup(), keyGroupRange.getEndKeyGroup() + 1);
+	private KeyGroupRange getGroupsForSubtask(int maxParallelism, int parallelism, int subtaskIndex) {
+		return KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(maxParallelism, parallelism, subtaskIndex);
 	}
 
 	private static void validateValueStateData(Map<Integer, Float> expectedData, KeyedValueState<Integer, Float> valueState) {
@@ -682,10 +681,10 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 
 	private static<K, V> void getDataWithGroupSet(
 		Map<Integer, Map<K, V>> groupMaps,
-		GroupSet groups,
+		KeyGroupRange keyGroupRange,
 		Map<K, V> returnedMap
 	) {
-		for (Integer group : groups) {
+		for (Integer group : keyGroupRange) {
 			Map<K, V> data = groupMaps.get(group);
 			if (data != null) {
 				returnedMap.putAll(data);
@@ -693,7 +692,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		}
 	}
 
-	private static StatePartitionSnapshot runSnapshot(
+	private static KeyedStateHandle runSnapshot(
 		InternalStateBackend stateBackend,
 		long checkpointId,
 		long checkpointTimestamp,
@@ -702,22 +701,22 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		SharedStateRegistry sharedStateRegistry
 	) throws Exception {
 
-		RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshotFuture =
+		RunnableFuture<SnapshotResult<KeyedStateHandle>> snapshotFuture =
 			stateBackend.snapshot(checkpointId, checkpointTimestamp, checkpointStreamFactory, checkpointOptions);
 
-		StatePartitionSnapshot statePartitionSnapshot = runSnapshot(snapshotFuture);
+		KeyedStateHandle keyedStateHandle = runSnapshot(snapshotFuture);
 
 		// Register the snapshot at the registry to replace the place holders with actual handles.
 		if (checkpointOptions.getCheckpointType().equals(CheckpointType.CHECKPOINT)) {
-			statePartitionSnapshot.registerSharedStates(sharedStateRegistry);
+			keyedStateHandle.registerSharedStates(sharedStateRegistry);
 		}
 
-		return statePartitionSnapshot;
+		return keyedStateHandle;
 	}
 
-	private static StatePartitionSnapshot runSnapshot(
-		RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshotRunnableFuture) throws Exception {
-		SnapshotResult<StatePartitionSnapshot> snapshotResult =
+	private static KeyedStateHandle runSnapshot(
+		RunnableFuture<SnapshotResult<KeyedStateHandle>> snapshotRunnableFuture) throws Exception {
+		SnapshotResult<KeyedStateHandle> snapshotResult =
 			FutureUtil.runIfNotDoneAndGet(snapshotRunnableFuture);
 		return snapshotResult == null ? null : snapshotResult.getJobManagerOwnedSnapshot();
 	}

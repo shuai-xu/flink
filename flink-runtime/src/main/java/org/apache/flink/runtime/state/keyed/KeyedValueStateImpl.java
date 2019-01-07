@@ -358,7 +358,7 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 				}
 			} else {
 				if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
-					for (Integer group : internalStateBackend.getGroups()) {
+					for (Integer group : internalStateBackend.getKeyGroupRange()) {
 						outputStream.reset();
 						StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
 						byte[] groupPrefix = outputStream.toByteArray();
@@ -403,7 +403,7 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 		} else {
 			try {
 				if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
-					for (Integer group : internalStateBackend.getGroups()) {
+					for (Integer group : internalStateBackend.getKeyGroupRange()) {
 						outputStream.reset();
 						StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
 						byte[] groupPrefix = outputStream.toByteArray();
@@ -458,7 +458,7 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 					} else {
 						if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
 							Collection<Iterator<Pair<byte[], byte[]>>> groupIterators = new ArrayList<>();
-							for (Integer group : internalStateBackend.getGroups()) {
+							for (Integer group : internalStateBackend.getKeyGroupRange()) {
 								outputStream.reset();
 								StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
 								byte[] groupPrefix = outputStream.toByteArray();
@@ -522,6 +522,11 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 		}
 
 		return KvStateSerializer.serializeValue(value, descriptor.getValueSerializer());
+	}
+
+	@Override
+	public StateStorage<K, V> getStateStorage() {
+		return stateStorage;
 	}
 
 	private <K> int getKeyGroup(K key) {

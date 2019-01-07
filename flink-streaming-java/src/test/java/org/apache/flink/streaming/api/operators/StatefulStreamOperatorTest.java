@@ -26,30 +26,19 @@ import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.OperatorSubtaskState;
 import org.apache.flink.runtime.checkpoint.StateObjectCollection;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.operators.testutils.MockEnvironment;
 import org.apache.flink.runtime.operators.testutils.MockInputSplitProvider;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
-import org.apache.flink.runtime.state.CheckpointStreamFactory;
-import org.apache.flink.runtime.state.GroupRange;
-import org.apache.flink.runtime.state.InternalStateBackend;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
-import org.apache.flink.runtime.state.SnapshotResult;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
-import org.apache.flink.runtime.state.StateStorage;
 import org.apache.flink.runtime.state.TestTaskStateManager;
-import org.apache.flink.runtime.state.keyed.KeyedState;
-import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
 import org.apache.flink.runtime.state.keyed.KeyedValueState;
 import org.apache.flink.runtime.state.keyed.KeyedValueStateDescriptor;
-import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
-import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedValueState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedValueStateDescriptor;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
@@ -60,12 +49,10 @@ import org.powermock.reflect.Whitebox;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.RunnableFuture;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -82,9 +69,6 @@ public class StatefulStreamOperatorTest {
 	 */
 	@Test
 	public void testStateBackendCreation() throws Exception {
-		Configuration configuration = new Configuration();
-		//TODO: How to setup the stateBackend type???
-//		configuration.setString(CoreOptions.STATE_BACKEND_CLASSNAME, TestInternalStateBackend.class.getName());
 
 		MockEnvironment mockEnvironment = new MockEnvironment(
 			new JobID(),
@@ -105,7 +89,6 @@ public class StatefulStreamOperatorTest {
 		KeyedOneInputStreamOperatorTestHarness<String, Tuple2<String, String>, String> testHarness =
 			new KeyedOneInputStreamOperatorTestHarness(operator, new Selector<String>(), BasicTypeInfo.STRING_TYPE_INFO, mockEnvironment);
 
-//		testHarness.setConfiguration(configuration);
 		testHarness.setup();
 		testHarness.initializeState(null);
 
@@ -247,11 +230,9 @@ public class StatefulStreamOperatorTest {
 		testHarness.open();
 
 		KeyGroupRange leftKeyGroupRange = KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(10, 3, 0);
-		GroupRange leftGroups = GroupRange.of(leftKeyGroupRange.getStartKeyGroup(), leftKeyGroupRange.getEndKeyGroup() + 1);
 		Map<String, String> leftPairs = new HashMap<>();
 
 		KeyGroupRange rightKeyGroupRange = KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(10, 3, 2);
-		GroupRange rightGroups = GroupRange.of(rightKeyGroupRange.getStartKeyGroup(), rightKeyGroupRange.getEndKeyGroup() + 1);
 		Map<String, String> rightPairs = new HashMap<>();
 
 		Random random = new Random();
@@ -260,9 +241,9 @@ public class StatefulStreamOperatorTest {
 			String value = "V" + Integer.toString(random.nextInt(1000));
 
 			int group = HashPartitioner.INSTANCE.partition(key, 10);
-			if (leftGroups.contains(group)) {
+			if (leftKeyGroupRange.contains(group)) {
 				leftPairs.put(key, value);
-			} else if (rightGroups.contains(group)) {
+			} else if (rightKeyGroupRange.contains(group)) {
 				rightPairs.put(key, value);
 			}
 
@@ -276,7 +257,7 @@ public class StatefulStreamOperatorTest {
 		// Verify that the operator instances can correctly restore their states
 		// when the degree of parallelism increases.
 
-		OperatorSubtaskState leftStateSnapshot = getSplitSnapshot(operatorSnapshot, leftGroups);
+		OperatorSubtaskState leftStateSnapshot = getSplitSnapshot(operatorSnapshot, leftKeyGroupRange);
 		InternalStateAccessOperator leftOperator = new InternalStateAccessOperator();
 		KeyedOneInputStreamOperatorTestHarness<String, Tuple2<String, String>, String> leftTestHarness =
 			new KeyedOneInputStreamOperatorTestHarness(leftOperator, new Selector<String>(), BasicTypeInfo.STRING_TYPE_INFO, 10, 3, 0);
@@ -292,7 +273,7 @@ public class StatefulStreamOperatorTest {
 		List<String> leftActualResults = leftTestHarness.extractOutputValues();
 		assertEquals(leftExpectedResults, leftActualResults);
 
-		OperatorSubtaskState rightStateSnapshot = getSplitSnapshot(operatorSnapshot, rightGroups);
+		OperatorSubtaskState rightStateSnapshot = getSplitSnapshot(operatorSnapshot, rightKeyGroupRange);
 		InternalStateAccessOperator rightOperator = new InternalStateAccessOperator();
 		KeyedOneInputStreamOperatorTestHarness<String, Tuple2<String, String>, String> rightTestHarness =
 			new KeyedOneInputStreamOperatorTestHarness(rightOperator, new Selector<String>(), BasicTypeInfo.STRING_TYPE_INFO, 10, 3, 2);
@@ -319,10 +300,10 @@ public class StatefulStreamOperatorTest {
 			String value = "V" + Integer.toString(random.nextInt(1000));
 
 			int group = HashPartitioner.INSTANCE.partition(key, 10);
-			if (leftGroups.contains(group)) {
+			if (leftKeyGroupRange.contains(group)) {
 				leftTestHarness.processElement(new StreamRecord<>(new Tuple2<>("ADD", key + ":" + value)));
 				pairs.put(key, value);
-			} else if (rightGroups.contains(group)) {
+			} else if (rightKeyGroupRange.contains(group)) {
 				rightTestHarness.processElement(new StreamRecord<>(new Tuple2<>("ADD", key + ":" + value)));
 				pairs.put(key, value);
 			}
@@ -356,59 +337,6 @@ public class StatefulStreamOperatorTest {
 
 	//--------------------------------------------------------------------------
 
-	/**
-	 * An implementation of {@link InternalStateBackend} for testing.
-	 */
-	public static class TestInternalStateBackend extends AbstractInternalStateBackend {
-
-		public TestInternalStateBackend() {
-			super(10, GroupRange.of(0, 10), Thread.currentThread().getContextClassLoader(), null);
-		}
-
-		private static final long serialVersionUID = 1661814222618778988L;
-
-		@Override
-		protected StateStorage createStateStorageForKeyedState(KeyedStateDescriptor descriptor) {
-			return null;
-		}
-
-		@Override
-		protected StateStorage createStateStorageForSubKeyedState(SubKeyedStateDescriptor descriptor) {
-			return null;
-		}
-
-		@Override
-		public <K, V, S extends KeyedState<K, V>> S getKeyedState(
-			KeyedStateDescriptor<K, V, S> stateDescriptor
-		) {
-			return null;
-		}
-
-		@Override
-		public <K, N, V, S extends SubKeyedState<K, N, V>> S getSubKeyedState(
-			SubKeyedStateDescriptor<K, N, V, S> stateDescriptor
-		) {
-			return null;
-		}
-
-		@Override
-		protected void closeImpl() {
-
-		}
-
-		@Override
-		public RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshot(long checkpointId, long timestamp, CheckpointStreamFactory streamFactory, CheckpointOptions checkpointOptions) throws Exception {
-			return null;
-		}
-
-		@Override
-		public void restore(Collection<StatePartitionSnapshot> state) throws Exception {
-
-		}
-	}
-
-	//--------------------------------------------------------------------------
-
 	private static class InternalStateAccessOperator
 		extends AbstractStreamOperator<String>
 		implements OneInputStreamOperator<Tuple2<String, String>, String> {
@@ -418,7 +346,7 @@ public class StatefulStreamOperatorTest {
 		private transient KeyedValueState<String, String> state;
 
 		@Override
-		public void open() {
+		public void open() throws Exception {
 			KeyedValueStateDescriptor<String, String> stateDescriptor =
 				new KeyedValueStateDescriptor<>(
 					"test-state",
@@ -465,7 +393,7 @@ public class StatefulStreamOperatorTest {
 		private transient KeyedValueState<String, String> state;
 
 		@Override
-		public void open() {
+		public void open() throws Exception {
 			KeyedValueStateDescriptor<String, String> stateDescriptor =
 				new KeyedValueStateDescriptor<>(
 					"test-state",
@@ -511,7 +439,7 @@ public class StatefulStreamOperatorTest {
 		private transient SubKeyedValueState<String, String, String> state;
 
 		@Override
-		public void open() {
+		public void open() throws Exception {
 			SubKeyedValueStateDescriptor<String, String, String> stateDescriptor =
 				new SubKeyedValueStateDescriptor<>(
 					"test-state",
@@ -549,41 +477,32 @@ public class StatefulStreamOperatorTest {
 		}
 	}
 
-	private OperatorSubtaskState getSplitSnapshot(OperatorSubtaskState original, GroupRange range) {
+	private OperatorSubtaskState getSplitSnapshot(OperatorSubtaskState original, KeyGroupRange keyGroupRange) {
 
 		// managed keyed state
 		StateObjectCollection<KeyedStateHandle> managedKeyedState = original.getManagedKeyedState();
 		List<KeyedStateHandle> newManagedKeyedList = new ArrayList<>();
 		for (KeyedStateHandle stateHandle : managedKeyedState) {
-			newManagedKeyedList.add(stateHandle.getIntersection(new KeyGroupRange(range.getStartGroup(), range.getEndGroup() - 1)));
+			newManagedKeyedList.add(stateHandle.getIntersection(keyGroupRange));
 		}
 		StateObjectCollection<KeyedStateHandle> newManagedKeyedState = new StateObjectCollection<>();
-		newManagedKeyedList.addAll(newManagedKeyedList);
+		newManagedKeyedState.addAll(newManagedKeyedList);
 
 		// raw keyed state
 		StateObjectCollection<KeyedStateHandle> rawKeyedState = original.getRawKeyedState();
 		List<KeyedStateHandle> newRawKeyedList = new ArrayList<>();
 		for (KeyedStateHandle stateHandle : rawKeyedState) {
-			newRawKeyedList.add(stateHandle.getIntersection(new KeyGroupRange(range.getStartGroup(), range.getEndGroup() - 1)));
+			newRawKeyedList.add(stateHandle.getIntersection(keyGroupRange));
 		}
 		StateObjectCollection<KeyedStateHandle> newRawKeyedState = new StateObjectCollection<>();
 		newRawKeyedState.addAll(newRawKeyedList);
-
-		// managed internal state
-		StateObjectCollection<StatePartitionSnapshot> managedInternalState = original.getManagedInternalState();
-		List<StatePartitionSnapshot> newInternalList = new ArrayList<>();
-		for (StatePartitionSnapshot snapshot : managedInternalState) {
-			newInternalList.add(snapshot.getIntersection(range));
-		}
-		StateObjectCollection<StatePartitionSnapshot> newManagedInternalState = new StateObjectCollection<>();
-		newManagedInternalState.addAll(newInternalList);
 
 		// managed operator state
 		StateObjectCollection<OperatorStateHandle> managedOperatorState = original.getManagedOperatorState();
 		List<OperatorStateHandle> newManagedOperatorList = new ArrayList<>();
 		int idx = 0;
 		for (OperatorStateHandle operatorStateHandle : managedOperatorState) {
-			if (idx >= range.getStartGroup() && idx < range.getEndGroup()) {
+			if (idx >= keyGroupRange.getStartKeyGroup() && idx <= keyGroupRange.getEndKeyGroup()) {
 				newManagedOperatorList.add(operatorStateHandle);
 			}
 		}
@@ -595,7 +514,7 @@ public class StatefulStreamOperatorTest {
 		List<OperatorStateHandle> newRawOperatorList = new ArrayList<>();
 		idx = 0;
 		for (OperatorStateHandle operatorStateHandle : rawOperatorState) {
-			if (idx >= range.getStartGroup() && idx < range.getEndGroup()) {
+			if (idx >= keyGroupRange.getStartKeyGroup() && idx <= keyGroupRange.getEndKeyGroup()) {
 				newManagedOperatorList.add(operatorStateHandle);
 			}
 		}
@@ -606,8 +525,7 @@ public class StatefulStreamOperatorTest {
 			newManagedOperatorState,
 			newRawOperatorState,
 			newManagedKeyedState,
-			newRawKeyedState,
-			newManagedInternalState);
+			newRawKeyedState);
 	}
 
 	private OperatorSubtaskState mergeSnapshot(OperatorSubtaskState left, OperatorSubtaskState right) {
@@ -622,7 +540,7 @@ public class StatefulStreamOperatorTest {
 			newManagedKeyedList.add(stateHandle);
 		}
 		StateObjectCollection<KeyedStateHandle> newManagedKeyedState = new StateObjectCollection<>();
-		newManagedKeyedList.addAll(newManagedKeyedList);
+		newManagedKeyedState.addAll(newManagedKeyedList);
 
 		// raw keyed state
 		StateObjectCollection<KeyedStateHandle> leftrawKeyedState = left.getRawKeyedState();
@@ -636,19 +554,6 @@ public class StatefulStreamOperatorTest {
 		}
 		StateObjectCollection<KeyedStateHandle> newRawKeyedState = new StateObjectCollection<>();
 		newRawKeyedState.addAll(newRawKeyedList);
-
-		// managed internal state
-		StateObjectCollection<StatePartitionSnapshot> leftmanagedInternalState = left.getManagedInternalState();
-		StateObjectCollection<StatePartitionSnapshot> rightmanagedInternalState = right.getManagedInternalState();
-		List<StatePartitionSnapshot> newInternalList = new ArrayList<>();
-		for (StatePartitionSnapshot snapshot : leftmanagedInternalState) {
-			newInternalList.add(snapshot);
-		}
-		for (StatePartitionSnapshot snapshot : rightmanagedInternalState) {
-			newInternalList.add(snapshot);
-		}
-		StateObjectCollection<StatePartitionSnapshot> newManagedInternalState = new StateObjectCollection<>();
-		newManagedInternalState.addAll(newInternalList);
 
 		// managed operator state
 		List<OperatorStateHandle> managedOperatorList = new ArrayList<>();
@@ -676,8 +581,7 @@ public class StatefulStreamOperatorTest {
 			newManagedOperatorState,
 			newRawOperatorState,
 			newManagedKeyedState,
-			newRawKeyedState,
-			newManagedInternalState);
+			newRawKeyedState);
 	}
 
 	private static class Selector<T> implements KeySelector<Tuple2<T, String>, T> {

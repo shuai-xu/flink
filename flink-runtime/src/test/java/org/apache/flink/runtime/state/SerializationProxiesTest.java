@@ -35,6 +35,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -77,6 +78,43 @@ public class SerializationProxiesTest {
 		Assert.assertEquals(keySerializer, serializationProxy.getKeySerializer());
 		Assert.assertEquals(keySerializer.snapshotConfiguration(), serializationProxy.getKeySerializerConfigSnapshot());
 		Assert.assertEquals(stateMetaInfoList, serializationProxy.getStateMetaInfoSnapshots());
+	}
+
+	@Test
+	public void testInternalBackendSerializationProxyRoundtrip() throws Exception {
+
+		TypeSerializer<?> keySerializer = IntSerializer.INSTANCE;
+		TypeSerializer<?> namespaceSerializer = LongSerializer.INSTANCE;
+		TypeSerializer<?> stateSerializer = DoubleSerializer.INSTANCE;
+
+		List<StateMetaInfoSnapshot> keyedStateMetaSnapshots = Arrays.asList(
+			RegisteredStateMetaInfo.createKeyedStateMetaInfo(InternalStateType.KEYED_VALUE, "a", keySerializer, stateSerializer).snapshot(),
+			RegisteredStateMetaInfo.createKeyedStateMetaInfo(InternalStateType.KEYED_VALUE, "b", keySerializer, stateSerializer).snapshot()
+		);
+
+		List<StateMetaInfoSnapshot> subKeyedStateMetaSnapshots = Arrays.asList(
+			RegisteredStateMetaInfo.createSubKeyedStateMetaInfo(InternalStateType.SUBKEYED_VALUE, "c", keySerializer, stateSerializer, namespaceSerializer).snapshot(),
+			RegisteredStateMetaInfo.createSubKeyedStateMetaInfo(InternalStateType.SUBKEYED_VALUE, "d", keySerializer, stateSerializer, namespaceSerializer).snapshot()
+		);
+
+		InternalBackendSerializationProxy serializationProxy =
+			new InternalBackendSerializationProxy(keyedStateMetaSnapshots, subKeyedStateMetaSnapshots);
+
+		byte[] serialized;
+		try (ByteArrayOutputStreamWithPos out = new ByteArrayOutputStreamWithPos()) {
+			serializationProxy.write(new DataOutputViewStreamWrapper(out));
+			serialized = out.toByteArray();
+		}
+
+		serializationProxy =
+			new InternalBackendSerializationProxy(Thread.currentThread().getContextClassLoader(), true);
+
+		try (ByteArrayInputStreamWithPos in = new ByteArrayInputStreamWithPos(serialized)) {
+			serializationProxy.read(new DataInputViewStreamWrapper(in));
+		}
+
+		Assert.assertEquals(keyedStateMetaSnapshots, serializationProxy.getKeyedStateMetaSnapshots());
+		Assert.assertEquals(subKeyedStateMetaSnapshots, serializationProxy.getSubKeyedStateMetaSnapshots());
 	}
 
 	@Test
@@ -131,6 +169,67 @@ public class SerializationProxiesTest {
 			Assert.assertTrue(meta.getStateSerializer() instanceof UnloadableDummyTypeSerializer);
 			Assert.assertEquals(namespaceSerializer.snapshotConfiguration(), meta.getNamespaceSerializerConfigSnapshot());
 			Assert.assertEquals(stateSerializer.snapshotConfiguration(), meta.getStateSerializerConfigSnapshot());
+		}
+	}
+
+	@Test
+	public void testInternalBackendSerializationProxyRoundtripWithSerializerSerializationFailures() throws Exception {
+
+		TypeSerializer<?> keySerializer = IntSerializer.INSTANCE;
+		TypeSerializer<?> namespaceSerializer = LongSerializer.INSTANCE;
+		TypeSerializer<?> stateSerializer = DoubleSerializer.INSTANCE;
+
+		List<StateMetaInfoSnapshot> keyedStateMetaSnapshots = Arrays.asList(
+			RegisteredStateMetaInfo.createKeyedStateMetaInfo(InternalStateType.KEYED_VALUE, "a", keySerializer, stateSerializer).snapshot(),
+			RegisteredStateMetaInfo.createKeyedStateMetaInfo(InternalStateType.KEYED_VALUE, "b", keySerializer, stateSerializer).snapshot()
+		);
+
+		List<StateMetaInfoSnapshot> subKeyedStateMetaSnapshots = Arrays.asList(
+			RegisteredStateMetaInfo.createSubKeyedStateMetaInfo(InternalStateType.SUBKEYED_VALUE, "c", keySerializer, stateSerializer, namespaceSerializer).snapshot(),
+			RegisteredStateMetaInfo.createSubKeyedStateMetaInfo(InternalStateType.SUBKEYED_VALUE, "d", keySerializer, stateSerializer, namespaceSerializer).snapshot()
+		);
+
+		InternalBackendSerializationProxy serializationProxy =
+			new InternalBackendSerializationProxy(keyedStateMetaSnapshots, subKeyedStateMetaSnapshots);
+
+		byte[] serialized;
+		try (ByteArrayOutputStreamWithPos out = new ByteArrayOutputStreamWithPos()) {
+			serializationProxy.write(new DataOutputViewStreamWrapper(out));
+			serialized = out.toByteArray();
+		}
+
+		Set<String> cnfThrowingSerializerClasses = new HashSet<>();
+		cnfThrowingSerializerClasses.add(IntSerializer.class.getName());
+		cnfThrowingSerializerClasses.add(LongSerializer.class.getName());
+		cnfThrowingSerializerClasses.add(DoubleSerializer.class.getName());
+
+		// we want to verify restore resilience when serializer presence is not required;
+		// set isSerializerPresenceRequired to false
+		serializationProxy =
+			new InternalBackendSerializationProxy(new ArtificialCNFExceptionThrowingClassLoader(
+				Thread.currentThread().getContextClassLoader(),
+				cnfThrowingSerializerClasses),
+				false);
+
+		try (ByteArrayInputStreamWithPos in = new ByteArrayInputStreamWithPos(serialized)) {
+			serializationProxy.read(new DataInputViewStreamWrapper(in));
+		}
+
+		for (StateMetaInfoSnapshot meta : serializationProxy.getKeyedStateMetaSnapshots()) {
+			Assert.assertTrue(meta.getKeySerializer() instanceof UnloadableDummyTypeSerializer);
+			Assert.assertTrue(meta.getValueSerializer() instanceof UnloadableDummyTypeSerializer);
+			Assert.assertEquals(keySerializer.snapshotConfiguration(), meta.getKeySerializerConfigSnapshot());
+			Assert.assertEquals(stateSerializer.snapshotConfiguration(), meta.getValueSerializerConfigSnapshot());
+			Assert.assertNull(meta.getNamespaceSerializer());
+		}
+
+		for (StateMetaInfoSnapshot meta : serializationProxy.getSubKeyedStateMetaSnapshots()) {
+			Assert.assertTrue(meta.getKeySerializer() instanceof UnloadableDummyTypeSerializer);
+			Assert.assertTrue(meta.getValueSerializer() instanceof UnloadableDummyTypeSerializer);
+			Assert.assertTrue(meta.getNamespaceSerializer() instanceof UnloadableDummyTypeSerializer);
+			Assert.assertEquals(keySerializer.snapshotConfiguration(), meta.getKeySerializerConfigSnapshot());
+			Assert.assertEquals(stateSerializer.snapshotConfiguration(), meta.getValueSerializerConfigSnapshot());
+			Assert.assertEquals(namespaceSerializer.snapshotConfiguration(), meta.getNamespaceSerializerConfigSnapshot());
 		}
 	}
 

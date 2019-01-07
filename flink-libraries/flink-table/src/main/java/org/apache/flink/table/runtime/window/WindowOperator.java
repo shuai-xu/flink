@@ -545,12 +545,12 @@ public class WindowOperator<K, W extends Window>
 		}
 
 		@Override
-		public <V, S extends SubKeyedState<K, W, V>> S getSubKeyedState(SubKeyedStateDescriptor<K, W, V, S> descriptor) {
+		public <V, S extends SubKeyedState<K, W, V>> S getSubKeyedState(SubKeyedStateDescriptor<K, W, V, S> descriptor) throws Exception {
 			return WindowOperator.this.getSubKeyedState(descriptor);
 		}
 
 		@Override
-		public <V, S extends KeyedState<K, V>> S getKeyedState(KeyedStateDescriptor<K, V, S> descriptor) {
+		public <V, S extends KeyedState<K, V>> S getKeyedState(KeyedStateDescriptor<K, V, S> descriptor) throws Exception {
 			return WindowOperator.this.getKeyedState(descriptor);
 		}
 
@@ -651,7 +651,7 @@ public class WindowOperator<K, W extends Window>
 		}
 
 		@Override
-		public <T> ValueState<T> getValueState(ValueStateDescriptor<T> stateDescriptor) {
+		public <T> ValueState<T> getValueState(ValueStateDescriptor<T> stateDescriptor) throws Exception {
 			stateDescriptor.initializeSerializerUnlessSet(new ExecutionConfig());
 			SubKeyedValueStateDescriptor<K, W, T> descriptor = new SubKeyedValueStateDescriptor<>(
 				stateDescriptor.getName(),

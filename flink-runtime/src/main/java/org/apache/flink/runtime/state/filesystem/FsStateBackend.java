@@ -32,13 +32,12 @@ import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.CheckpointStorage;
 import org.apache.flink.runtime.state.ConfigurableStateBackend;
 import org.apache.flink.runtime.state.DefaultOperatorStateBackend;
-import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.OperatorStateBackend;
 import org.apache.flink.runtime.state.TaskStateManager;
-import org.apache.flink.runtime.state.heap.HeapKeyedStateBackend;
 import org.apache.flink.runtime.state.heap.HeapInternalStateBackend;
+import org.apache.flink.runtime.state.heap.HeapKeyedStateBackend;
 import org.apache.flink.util.TernaryBoolean;
 
 import org.slf4j.LoggerFactory;
@@ -502,11 +501,11 @@ public class FsStateBackend extends AbstractFileStateBackend implements Configur
 		Environment env,
 		String operatorIdentifier,
 		int numberOfGroups,
-		GroupSet groups) {
+		KeyGroupRange keyGroupRange) {
 
 		return new HeapInternalStateBackend(
 				numberOfGroups,
-				groups,
+				keyGroupRange,
 				env.getUserClassLoader(),
 				env.getTaskStateManager().createLocalRecoveryConfig(),
 				env.getTaskKvStateRegistry(),

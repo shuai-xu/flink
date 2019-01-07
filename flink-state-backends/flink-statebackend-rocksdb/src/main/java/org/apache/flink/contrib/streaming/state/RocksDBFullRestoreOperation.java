@@ -24,10 +24,12 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.FSDataInputStream;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
-import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
-import org.apache.flink.runtime.state.GroupSet;
+import org.apache.flink.runtime.state.InternalBackendSerializationProxy;
+import org.apache.flink.runtime.state.KeyGroupsStateSnapshot;
+import org.apache.flink.runtime.state.KeyedStateHandle;
+import org.apache.flink.runtime.state.RegisteredStateMetaInfo;
 import org.apache.flink.runtime.state.StateAccessException;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
+import org.apache.flink.runtime.state.StateMetaInfoSnapshot;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
@@ -63,7 +65,7 @@ public class RocksDBFullRestoreOperation {
 	}
 
 	public void restore(
-		Collection<StatePartitionSnapshot> restoredSnapshots
+		Collection<KeyedStateHandle> restoredSnapshots
 	) throws Exception {
 		if (restoredSnapshots == null || restoredSnapshots.isEmpty()) {
 			return;
@@ -72,10 +74,10 @@ public class RocksDBFullRestoreOperation {
 		long startMills = System.currentTimeMillis();
 
 		stateBackend.createDB();
-		for (StatePartitionSnapshot rawSnapshot : restoredSnapshots) {
-			Preconditions.checkState(rawSnapshot instanceof DefaultStatePartitionSnapshot);
-			DefaultStatePartitionSnapshot snapshot =
-				(DefaultStatePartitionSnapshot) rawSnapshot;
+		for (KeyedStateHandle rawSnapshot : restoredSnapshots) {
+			Preconditions.checkState(rawSnapshot instanceof KeyGroupsStateSnapshot);
+			KeyGroupsStateSnapshot snapshot =
+				(KeyGroupsStateSnapshot) rawSnapshot;
 
 			StreamStateHandle snapshotHandle = snapshot.getSnapshotHandle();
 			if (snapshotHandle == null) {
@@ -87,24 +89,36 @@ public class RocksDBFullRestoreOperation {
 				DataInputViewStreamWrapper inputView =
 					new DataInputViewStreamWrapper(inputStream);
 
-				int numRestoredKeyedStates = inputView.readInt();
-				List<KeyedStateDescriptor> keyedStateDescriptors = new ArrayList<>(numRestoredKeyedStates);
-				for (int i = 0; i < numRestoredKeyedStates; ++i) {
-					KeyedStateDescriptor restoredStateDescriptor =
-						InstantiationUtil.deserializeObject(
-							inputStream, stateBackend.getUserClassLoader());
-					keyedStateDescriptors.add(restoredStateDescriptor);
+				// isSerializerPresenceRequired flag is set to false, since for the RocksDB state backend,
+				// deserialization of state happens lazily during runtime; we depend on the fact
+				// that the new serializer for states could be compatible, and therefore the restore can continue
+				// without old serializers required to be present.
+				InternalBackendSerializationProxy serializationProxy =
+					new InternalBackendSerializationProxy(stateBackend.getUserClassLoader(), false);
+				serializationProxy.read(inputView);
+
+				List<StateMetaInfoSnapshot> keyedStateMetaInfos = serializationProxy.getKeyedStateMetaSnapshots();
+				List<KeyedStateDescriptor> keyedStateDescriptors = new ArrayList<>(keyedStateMetaInfos.size());
+				for (StateMetaInfoSnapshot keyedStateMetaSnapshot : keyedStateMetaInfos) {
+					String stateName = keyedStateMetaSnapshot.getName();
+					stateBackend.getRestoredKvStateMetaInfos().put(stateName, keyedStateMetaSnapshot);
+					keyedStateDescriptors.add(keyedStateMetaSnapshot.createKeyedStateDescriptor());
+
+					RegisteredStateMetaInfo keyedStateMetaInfo = RegisteredStateMetaInfo.createKeyedStateMetaInfo(keyedStateMetaSnapshot);
+					stateBackend.getRegisteredStateMetaInfos().put(stateName, keyedStateMetaInfo);
 				}
 
-				int numRestoredSubKeyedStates = inputView.readInt();
-				List<SubKeyedStateDescriptor> subKeyedStateDescriptors = new ArrayList<>(numRestoredSubKeyedStates);
-				for (int i = 0; i < numRestoredSubKeyedStates; ++i) {
-					SubKeyedStateDescriptor restoredStateDescriptor =
-						InstantiationUtil.deserializeObject(
-							inputStream, stateBackend.getUserClassLoader());
+				List<StateMetaInfoSnapshot> subKeyedStateMetaInfos = serializationProxy.getSubKeyedStateMetaSnapshots();
+				List<SubKeyedStateDescriptor> subKeyedStateDescriptors = new ArrayList<>(subKeyedStateMetaInfos.size());
+				for (StateMetaInfoSnapshot subKeyedStateMetaSnapshot : subKeyedStateMetaInfos) {
+					String stateName = subKeyedStateMetaSnapshot.getName();
+					stateBackend.getRestoredKvStateMetaInfos().put(stateName, subKeyedStateMetaSnapshot);
+					subKeyedStateDescriptors.add(subKeyedStateMetaSnapshot.createSubKeyedStateDescriptor());
 
-					subKeyedStateDescriptors.add(restoredStateDescriptor);
+					RegisteredStateMetaInfo subKeyedStateMetaInfo = RegisteredStateMetaInfo.createSubKeyedStateMetaInfo(subKeyedStateMetaSnapshot);
+					stateBackend.getRegisteredStateMetaInfos().put(stateName, subKeyedStateMetaInfo);
 				}
+
 				int numStates = inputView.readInt();
 				for (int i = 0; i < numStates; ++i) {
 					String stateName = InstantiationUtil.deserializeObject(
@@ -114,7 +128,7 @@ public class RocksDBFullRestoreOperation {
 					id2StateName.put(id, stateName);
 				}
 
-				stateBackend.registAllStates(keyedStateDescriptors, subKeyedStateDescriptors);
+				stateBackend.registerAllStates(keyedStateDescriptors, subKeyedStateDescriptors);
 				Map<Integer, Tuple2<Long, Integer>> metaInfos = snapshot.getMetaInfos();
 				restoreData(metaInfos, inputStream, inputView);
 			} finally {
@@ -148,8 +162,7 @@ public class RocksDBFullRestoreOperation {
 		Map<Integer, Tuple2<Long, Integer>> metaInfos,
 		FSDataInputStream inputStream,
 		DataInputView inputView) throws IOException {
-		GroupSet groups = stateBackend.getGroups();
-		for (int group : groups) {
+		for (int group : stateBackend.getKeyGroupRange()) {
 			Tuple2<Long, Integer> metaInfo = metaInfos.get(group);
 			if (metaInfo == null) {
 				continue;
@@ -163,7 +176,7 @@ public class RocksDBFullRestoreOperation {
 			for (int i = 0; i < numEntries; ++i) {
 				Integer id = IntSerializer.INSTANCE.deserialize(inputView);
 				String cfNameStr = id2StateName.get(id);
-				ColumnFamilyHandle columnFamilyHandle = stateBackend.getOrCreateColumnfamily(cfNameStr);
+				ColumnFamilyHandle columnFamilyHandle = stateBackend.getOrCreateColumnFamily(cfNameStr);
 				byte[] key = BytePrimitiveArraySerializer.INSTANCE.deserialize(inputView);
 				byte[] value = BytePrimitiveArraySerializer.INSTANCE.deserialize(inputView);
 				try {

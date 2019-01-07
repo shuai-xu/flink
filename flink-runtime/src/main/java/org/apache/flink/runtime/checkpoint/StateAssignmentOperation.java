@@ -18,7 +18,6 @@
 
 package org.apache.flink.runtime.checkpoint;
 
-import org.apache.commons.collections.map.HashedMap;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.executiongraph.Execution;
 import org.apache.flink.runtime.executiongraph.ExecutionJobVertex;
@@ -26,13 +25,11 @@ import org.apache.flink.runtime.executiongraph.ExecutionVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.OperatorInstanceID;
-import org.apache.flink.runtime.state.GroupRange;
-import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.KeyGroupsStateHandle;
 import org.apache.flink.runtime.state.KeyedStateHandle;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
+import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.util.Preconditions;
 
 import org.slf4j.Logger;
@@ -222,19 +219,6 @@ public class StateAssignmentOperation {
 			newManagedKeyedState,
 			newRawKeyedState);
 
-		Map<OperatorInstanceID, List<StatePartitionSnapshot>> newManagedInternalState = new HashedMap();
-
-		List<GroupRange> groupRanges = new ArrayList<>();
-		for (KeyGroupRange keyGroupRange : keyGroupPartitions) {
-			groupRanges.add(GroupRange.of(keyGroupRange.getStartKeyGroup(), keyGroupRange.getEndKeyGroup() + 1));
-		}
-		reDistributeInternalStates(
-			operatorStates,
-			newParallelism,
-			operatorIDs,
-			groupRanges,
-			newManagedInternalState
-		);
 		/**
 		 *  An executionJobVertex's all state handles needed to restore are something like a matrix
 		 *
@@ -252,7 +236,6 @@ public class StateAssignmentOperation {
 			newRawOperatorStates,
 			newManagedKeyedState,
 			newRawKeyedState,
-			newManagedInternalState,
 			newParallelism);
 	}
 
@@ -263,7 +246,6 @@ public class StateAssignmentOperation {
 			Map<OperatorInstanceID, List<OperatorStateHandle>> subRawOperatorState,
 			Map<OperatorInstanceID, List<KeyedStateHandle>> subManagedKeyedState,
 			Map<OperatorInstanceID, List<KeyedStateHandle>> subRawKeyedState,
-			Map<OperatorInstanceID, List<StatePartitionSnapshot>> subManagedInternalState,
 			int newParallelism) {
 
 		List<OperatorID> operatorIDs = executionJobVertex.getOperatorIDs();
@@ -285,8 +267,7 @@ public class StateAssignmentOperation {
 					subManagedOperatorState,
 					subRawOperatorState,
 					subManagedKeyedState,
-					subRawKeyedState,
-					subManagedInternalState);
+					subRawKeyedState);
 
 					if (operatorSubtaskState.hasState()) {
 						statelessTask = false;
@@ -307,13 +288,11 @@ public class StateAssignmentOperation {
 		Map<OperatorInstanceID, List<OperatorStateHandle>> subManagedOperatorState,
 		Map<OperatorInstanceID, List<OperatorStateHandle>> subRawOperatorState,
 		Map<OperatorInstanceID, List<KeyedStateHandle>> subManagedKeyedState,
-		Map<OperatorInstanceID, List<KeyedStateHandle>> subRawKeyedState,
-		Map<OperatorInstanceID, List<StatePartitionSnapshot>> subManagedInternalState) {
+		Map<OperatorInstanceID, List<KeyedStateHandle>> subRawKeyedState) {
 
 		if (!subManagedOperatorState.containsKey(instanceID) &&
 			!subRawOperatorState.containsKey(instanceID) &&
 			!subManagedKeyedState.containsKey(instanceID) &&
-			!subManagedInternalState.containsKey(instanceID) &&
 			!subRawKeyedState.containsKey(instanceID)) {
 
 			return new OperatorSubtaskState();
@@ -325,8 +304,7 @@ public class StateAssignmentOperation {
 			new StateObjectCollection<>(subManagedOperatorState.getOrDefault(instanceID, Collections.emptyList())),
 			new StateObjectCollection<>(subRawOperatorState.getOrDefault(instanceID, Collections.emptyList())),
 			new StateObjectCollection<>(subManagedKeyedState.getOrDefault(instanceID, Collections.emptyList())),
-			new StateObjectCollection<>(subRawKeyedState.getOrDefault(instanceID, Collections.emptyList())),
-			new StateObjectCollection<>(subManagedInternalState.getOrDefault(instanceID, Collections.emptyList())));
+			new StateObjectCollection<>(subRawKeyedState.getOrDefault(instanceID, Collections.emptyList())));
 	}
 
 	private static boolean isHeadOperator(int opIdx, List<OperatorID> operatorIDs) {
@@ -371,50 +349,6 @@ public class StateAssignmentOperation {
 						.addAll(subKeyedStates.f1);
 				}
 			}
-		}
-	}
-
-	private void reDistributeInternalStates(
-		List<OperatorState> oldOperatorStates,
-		int newParallelism,
-		List<OperatorID> newOperatorIDs,
-		List<GroupRange> newGroupPartitions,
-		Map<OperatorInstanceID, List<StatePartitionSnapshot>> newManagedInternalState
-	) {
-		checkState(newOperatorIDs.size() == oldOperatorStates.size(),
-			"This method still depends on the order of the new and old operators");
-
-		for (int operatorIndex = 0; operatorIndex < newOperatorIDs.size(); ++operatorIndex) {
-			OperatorState operatorState = oldOperatorStates.get(operatorIndex);
-			int oldParallelism = operatorState.getParallelism();
-
-			for (int subTaskIndex = 0; subTaskIndex < newParallelism; ++subTaskIndex) {
-				if (isHeadOperator(operatorIndex, newOperatorIDs)) {
-					OperatorInstanceID instanceID = OperatorInstanceID.of(subTaskIndex, newOperatorIDs.get(operatorIndex));
-					List<StatePartitionSnapshot> newSnapshots = new ArrayList<>();
-					if (newParallelism == oldParallelism) {
-						if (operatorState.getState(subTaskIndex) != null) {
-							newSnapshots.addAll(operatorState.getState(subTaskIndex).getManagedInternalState());
-						}
-					} else {
-						GroupRange range = newGroupPartitions.get(subTaskIndex);
-
-						for (int i = 0; i < operatorState.getParallelism(); ++i) {
-							OperatorSubtaskState state = operatorState.getState(i);
-
-							if (state != null) {
-								StateObjectCollection<StatePartitionSnapshot> oldSnapshots = state.getManagedInternalState();
-								for (StatePartitionSnapshot snapshot : oldSnapshots) {
-									newSnapshots.add(snapshot.getIntersection(range));
-								}
-							}
-						}
-
-					}
-					newManagedInternalState.computeIfAbsent(instanceID, key -> new ArrayList<>()).addAll(newSnapshots);
-				}
-			}
-
 		}
 	}
 
@@ -781,26 +715,5 @@ public class StateAssignmentOperation {
 		}
 
 		return subtaskKeyedStateHandles;
-	}
-
-	/**
-	 *
-	 */
-	public static List<StatePartitionSnapshot> getInternalStatePartitionSnapshot(
-		Collection<? extends StatePartitionSnapshot> internalStatePartitionSnapshot,
-		KeyGroupRange subtaskKeyGroupRange
-	) {
-		List<StatePartitionSnapshot> subtaskStatePartitionSnapshot = new ArrayList<>();
-
-		for (StatePartitionSnapshot snapshot : internalStatePartitionSnapshot) {
-			StatePartitionSnapshot intersectedStatePartitionSnapshot = snapshot.getIntersection(
-				GroupRange.of(subtaskKeyGroupRange.getStartKeyGroup(), subtaskKeyGroupRange.getEndKeyGroup() + 1));
-
-			if (!intersectedStatePartitionSnapshot.getGroups().isEmpty()) {
-				subtaskStatePartitionSnapshot.add(intersectedStatePartitionSnapshot);
-			}
-		}
-
-		return subtaskStatePartitionSnapshot;
 	}
 }

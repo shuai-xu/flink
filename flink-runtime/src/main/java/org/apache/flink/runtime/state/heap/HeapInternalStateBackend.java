@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.state.heap;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.FSDataInputStream;
@@ -31,12 +32,15 @@ import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.CheckpointStreamWithResultProvider;
 import org.apache.flink.runtime.state.CheckpointedStateScope;
-import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
+import org.apache.flink.runtime.state.InternalBackendSerializationProxy;
+import org.apache.flink.runtime.state.KeyGroupsStateSnapshot;
 import org.apache.flink.runtime.state.DoneFuture;
-import org.apache.flink.runtime.state.GroupSet;
+import org.apache.flink.runtime.state.KeyGroupRange;
+import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
+import org.apache.flink.runtime.state.RegisteredStateMetaInfo;
 import org.apache.flink.runtime.state.SnapshotResult;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
+import org.apache.flink.runtime.state.StateMetaInfoSnapshot;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
@@ -49,7 +53,6 @@ import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.util.IOUtils;
-import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.function.SupplierWithException;
 
@@ -65,6 +68,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.RunnableFuture;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of {@link AbstractInternalStateBackend} which stores the key-value
@@ -86,23 +90,23 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 
 	public HeapInternalStateBackend(
 		int numberOfGroups,
-		GroupSet groups,
+		KeyGroupRange keyGroupRange,
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig,
 		TaskKvStateRegistry kvStateRegistry
 	) {
-		this(numberOfGroups, groups, userClassLoader, localRecoveryConfig, kvStateRegistry, true);
+		this(numberOfGroups, keyGroupRange, userClassLoader, localRecoveryConfig, kvStateRegistry, true);
 	}
 
 	public HeapInternalStateBackend(
 		int numberOfGroups,
-		GroupSet groups,
+		KeyGroupRange keyGroupRange,
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig,
 		TaskKvStateRegistry kvStateRegistry,
 		boolean asynchronousSnapshot
 	) {
-		super(numberOfGroups, groups, userClassLoader, kvStateRegistry);
+		super(numberOfGroups, keyGroupRange, userClassLoader, kvStateRegistry);
 
 		this.localRecoveryConfig = Preconditions.checkNotNull(localRecoveryConfig);
 		this.asynchronousSnapshot = asynchronousSnapshot;
@@ -117,9 +121,8 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	protected StateStorage createStateStorageForKeyedState(KeyedStateDescriptor descriptor) {
-		String stateName = descriptor.getName();
-		StateStorage stateStorage = stateStorages.get(stateName);
+	protected StateStorage getOrCreateStateStorageForKeyedState(KeyedStateDescriptor descriptor) {
+		StateStorage stateStorage = stateStorages.get(descriptor.getName());
 
 		if (stateStorage == null) {
 			stateStorage = new HeapStateStorage<>(
@@ -131,7 +134,7 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 				false,
 				asynchronousSnapshot
 			);
-			stateStorages.put(stateName, stateStorage);
+			stateStorages.put(descriptor.getName(), stateStorage);
 		}
 
 		return stateStorage;
@@ -139,9 +142,8 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	protected StateStorage createStateStorageForSubKeyedState(SubKeyedStateDescriptor descriptor) {
-		String stateName = descriptor.getName();
-		StateStorage stateStorage = stateStorages.get(stateName);
+	protected StateStorage getOrCreateStateStorageForSubKeyedState(SubKeyedStateDescriptor descriptor) {
+		StateStorage stateStorage = stateStorages.get(descriptor.getName());
 
 		if (stateStorage == null) {
 			stateStorage = new HeapStateStorage<>(
@@ -153,57 +155,73 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 				true,
 				asynchronousSnapshot
 			);
-			stateStorages.put(stateName, stateStorage);
+			stateStorages.put(descriptor.getName(), stateStorage);
 		}
 
 		return stateStorage;
 	}
 
 	@Override
-	public RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshot(
+	public int numStateEntries() {
+		int count = 0;
+		List<Object> stateStorages = getKeyedStates().values().stream().map(KeyedState::getStateStorage).collect(Collectors.toList());
+		stateStorages.addAll(getSubKeyedStates().values().stream().map(SubKeyedState::getStateStorage).collect(Collectors.toList()));
+		for (Object stateStorage : stateStorages) {
+			count += ((HeapStateStorage) stateStorage).getStateTable().size();
+		}
+		return count;
+	}
+
+	/**
+	 * Returns the total number of state entries across all keys for the given namespace.
+	 */
+	@VisibleForTesting
+	public int numStateEntries(Object namespace) {
+		int count = 0;
+		for (SubKeyedState subKeyedState : getSubKeyedStates().values()) {
+			count += ((HeapStateStorage) subKeyedState.getStateStorage()).getStateTable().sizeOfNamespace(namespace);
+		}
+		return count;
+	}
+
+	@Override
+	public RunnableFuture<SnapshotResult<KeyedStateHandle>> snapshot(
 		long checkpointId,
 		long timestamp,
 		CheckpointStreamFactory primaryStreamFactory,
 		CheckpointOptions checkpointOptions
-	) throws Exception {
+	) {
 
-		if (stateStorages.isEmpty()) {
+		if (registeredStateMetaInfos.isEmpty()) {
 			return DoneFuture.of(SnapshotResult.empty());
 		}
 
 		long syncStartTime = System.currentTimeMillis();
 
-		final List<KeyedStateDescriptor> keyedStateDescriptors = new ArrayList<>(keyedStates.size());
-		final List<SubKeyedStateDescriptor> subKeyedStateDescriptors = new ArrayList<>(subKeyedStates.size());
+		List<StateMetaInfoSnapshot> keyedStateMetaSnapshots = new ArrayList<>();
 
-		final Map<String, Integer> keyedStateToId = new HashMap<>(keyedStates.size());
-		final Map<String, Integer> subKeyedStateToId = new HashMap<>(subKeyedStates.size());
+		List<StateMetaInfoSnapshot> subKeyedStateMetaSnapshots = new ArrayList<>();
 
-		final Map<String, org.apache.flink.runtime.state.heap.internal.StateTableSnapshot> keyedStateStableSnapshots = new HashMap<>(keyedStates.size());
-		final Map<String, org.apache.flink.runtime.state.heap.internal.StateTableSnapshot> subKeyedStateStableSnapshots = new HashMap<>(subKeyedStates.size());
+		final Map<String, Integer> keyedStateToId = new HashMap<>();
+		final Map<String, Integer> subKeyedStateToId = new HashMap<>();
 
-		for (Map.Entry<String, KeyedState> entry : keyedStates.entrySet()) {
-			String stateName = entry.getKey();
-			KeyedState keyedState = entry.getValue();
-			StateStorage stateStorage = stateStorages.get(stateName);
+		final Map<String, org.apache.flink.runtime.state.heap.internal.StateTableSnapshot> keyedStateStableSnapshots = new HashMap<>(this.keyedStates.size());
+		final Map<String, org.apache.flink.runtime.state.heap.internal.StateTableSnapshot> subKeyedStateStableSnapshots = new HashMap<>(this.subKeyedStates.size());
 
-			keyedStateToId.put(stateName, keyedStateToId.size());
-			keyedStateDescriptors.add(keyedState.getDescriptor());
+		for (Map.Entry<String, RegisteredStateMetaInfo> registeredStateMetaInfoEntry : registeredStateMetaInfos.entrySet()) {
+			String stateName = registeredStateMetaInfoEntry.getKey();
+			StateTable stateTable = ((HeapStateStorage) stateStorages.get(stateName)).getStateTable();
+			RegisteredStateMetaInfo stateMetaInfo = registeredStateMetaInfoEntry.getValue();
+			if (stateMetaInfo.getStateType().isKeyedState()) {
+				keyedStateMetaSnapshots.add(stateMetaInfo.snapshot());
+				keyedStateToId.put(stateName, keyedStateToId.size());
+				keyedStateStableSnapshots.put(stateName, stateTable.createSnapshot());
+			} else {
+				subKeyedStateMetaSnapshots.add(stateMetaInfo.snapshot());
+				subKeyedStateToId.put(stateName, subKeyedStateToId.size());
+				subKeyedStateStableSnapshots.put(stateName, stateTable.createSnapshot());
+			}
 
-			org.apache.flink.runtime.state.heap.internal.StateTable stateTable = ((HeapStateStorage) stateStorage).getStateTable();
-			keyedStateStableSnapshots.put(stateName, stateTable.createSnapshot());
-		}
-
-		for (Map.Entry<String, SubKeyedState> entry : subKeyedStates.entrySet()) {
-			String stateName = entry.getKey();
-			SubKeyedState subKeyedState = entry.getValue();
-			StateStorage stateStorage = stateStorages.get(stateName);
-
-			subKeyedStateToId.put(stateName, subKeyedStateToId.size());
-			subKeyedStateDescriptors.add(subKeyedState.getDescriptor());
-
-			StateTable stateTable = ((HeapStateStorage) stateStorage).getStateTable();
-			subKeyedStateStableSnapshots.put(stateName, stateTable.createSnapshot());
 		}
 
 		final SupplierWithException<CheckpointStreamWithResultProvider, Exception> checkpointStreamSupplier =
@@ -221,8 +239,8 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 					primaryStreamFactory);
 
 		// implementation of the async IO operation, based on FutureTask
-		final AbstractAsyncCallableWithResources<SnapshotResult<StatePartitionSnapshot>> ioCallable =
-			new AbstractAsyncCallableWithResources<SnapshotResult<StatePartitionSnapshot>>() {
+		final AbstractAsyncCallableWithResources<SnapshotResult<KeyedStateHandle>> ioCallable =
+			new AbstractAsyncCallableWithResources<SnapshotResult<KeyedStateHandle>>() {
 
 				CheckpointStreamWithResultProvider streamAndResultExtractor = null;
 
@@ -260,7 +278,7 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 
 				@Nonnull
 				@Override
-				protected SnapshotResult<StatePartitionSnapshot> performOperation() throws Exception {
+				protected SnapshotResult<KeyedStateHandle> performOperation() throws Exception {
 
 					long asyncStartTime = System.currentTimeMillis();
 
@@ -269,21 +287,15 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 
 					DataOutputViewStreamWrapper outView = new DataOutputViewStreamWrapper(localStream);
 
-					// writes keyed state descriptor
-					outView.writeInt(keyedStateDescriptors.size());
-					for (KeyedStateDescriptor descriptor : keyedStateDescriptors) {
-						InstantiationUtil.serializeObject(outView, descriptor);
-					}
-
-					// writes sub-keyed state descriptor
-					outView.writeInt(subKeyedStateDescriptors.size());
-					for (SubKeyedStateDescriptor descriptor : subKeyedStateDescriptors) {
-						InstantiationUtil.serializeObject(outView, descriptor);
-					}
+					final InternalBackendSerializationProxy serializationProxy =
+						new InternalBackendSerializationProxy(
+							keyedStateMetaSnapshots,
+							subKeyedStateMetaSnapshots);
+					serializationProxy.write(outView);
 
 					Map<Integer, Tuple2<Long, Integer>> metaInfos = new HashMap<>();
 
-					GroupSet groups = getGroups();
+					KeyGroupRange groups = getKeyGroupRange();
 
 					for (int group : groups) {
 
@@ -317,8 +329,8 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 						streamAndResultExtractor = null;
 
 						StreamStateHandle streamStateHandle = streamSnapshotResult.getJobManagerOwnedSnapshot();
-						StatePartitionSnapshot snapshot =
-							new DefaultStatePartitionSnapshot(
+						KeyedStateHandle snapshot =
+							new KeyGroupsStateSnapshot(
 								groups, metaInfos, streamStateHandle);
 
 						LOG.info("Heap backend snapshot (" + primaryStreamFactory + ", asynchronous part) in thread " +
@@ -326,8 +338,8 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 
 						StreamStateHandle localStreamStateHandle = streamSnapshotResult.getTaskLocalSnapshot();
 						if (localStreamStateHandle != null) {
-							StatePartitionSnapshot localSnapshot =
-								new DefaultStatePartitionSnapshot(
+							KeyedStateHandle localSnapshot =
+								new KeyGroupsStateSnapshot(
 									groups, metaInfos, localStreamStateHandle);
 
 							return SnapshotResult.withLocalState(snapshot, localSnapshot);
@@ -340,7 +352,7 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 				}
 			};
 
-		AsyncStoppableTaskWithCallback<SnapshotResult<StatePartitionSnapshot>> task =
+		AsyncStoppableTaskWithCallback<SnapshotResult<KeyedStateHandle>> task =
 			AsyncStoppableTaskWithCallback.from(ioCallable);
 
 		if (!asynchronousSnapshot) {
@@ -355,7 +367,7 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 
 	@Override
 	public void restore(
-		Collection<StatePartitionSnapshot> restoredSnapshots
+		Collection<KeyedStateHandle> restoredSnapshots
 	) throws Exception {
 		if (restoredSnapshots == null || restoredSnapshots.isEmpty()) {
 			return;
@@ -363,10 +375,10 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 
 		LOG.info("Initializing heap internal state backend from snapshot.");
 
-		for (StatePartitionSnapshot rawSnapshot : restoredSnapshots) {
-			Preconditions.checkState(rawSnapshot instanceof DefaultStatePartitionSnapshot);
-			DefaultStatePartitionSnapshot snapshot =
-				(DefaultStatePartitionSnapshot) rawSnapshot;
+		for (KeyedStateHandle rawSnapshot : restoredSnapshots) {
+			Preconditions.checkState(rawSnapshot instanceof KeyGroupsStateSnapshot);
+			KeyGroupsStateSnapshot snapshot =
+				(KeyGroupsStateSnapshot) rawSnapshot;
 
 			StreamStateHandle snapshotHandle = snapshot.getSnapshotHandle();
 			if (snapshotHandle == null) {
@@ -380,29 +392,46 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 				DataInputViewStreamWrapper inputView =
 					new DataInputViewStreamWrapper(inputStream);
 
-				int numRestoredKeyedStates = inputView.readInt();
-				Map<Integer, KeyedState> keyedStatesById = new HashMap<>();
-				for (int i = 0; i < numRestoredKeyedStates; i++) {
-					KeyedStateDescriptor descriptor = InstantiationUtil.deserializeObject(
-						inputStream, getUserClassLoader());
-					KeyedState state = descriptor.bind(this);
+				// isSerializerPresenceRequired flag is set to true, since for the heap state backend,
+				// deserialization of state happens eagerly at restore time
+				InternalBackendSerializationProxy serializationProxy =
+					new InternalBackendSerializationProxy(getUserClassLoader(), true);
+				serializationProxy.read(inputView);
 
-					keyedStatesById.put(i, state);
+				Map<Integer, KeyedStateDescriptor> keyedStatesById = new HashMap<>();
+				List<StateMetaInfoSnapshot> keyedStateMetaInfos = serializationProxy.getKeyedStateMetaSnapshots();
+				for (int i = 0; i < keyedStateMetaInfos.size(); i++) {
+					StateMetaInfoSnapshot keyedStateMetaSnapshot = keyedStateMetaInfos.get(i);
+					String stateName = keyedStateMetaSnapshot.getName();
+
+					restoredKvStateMetaInfos.put(stateName, keyedStateMetaSnapshot);
+
+					RegisteredStateMetaInfo keyedStateMetaInfo = RegisteredStateMetaInfo.createKeyedStateMetaInfo(keyedStateMetaSnapshot);
+					registeredStateMetaInfos.put(stateName, keyedStateMetaInfo);
+					KeyedStateDescriptor keyedStateDescriptor = keyedStateMetaSnapshot.createKeyedStateDescriptor();
+					StateStorage stateStorage = getOrCreateStateStorageForKeyedState(keyedStateDescriptor);
+					stateStorages.put(stateName, stateStorage);
+					keyedStatesById.put(i, keyedStateDescriptor);
 				}
 
-				int numRestoredSubKeyedStates = inputView.readInt();
-				Map<Integer, SubKeyedState> subKeyedStatesById = new HashMap<>();
-				for (int i = 0; i < numRestoredSubKeyedStates; ++i) {
-					SubKeyedStateDescriptor descriptor = InstantiationUtil.deserializeObject(
-						inputStream, getUserClassLoader());
-					SubKeyedState state = descriptor.bind(this);
-					subKeyedStatesById.put(i, state);
+				Map<Integer, SubKeyedStateDescriptor> subKeyedStatesById = new HashMap<>();
+				List<StateMetaInfoSnapshot> subKeyedStateMetaSnapshots = serializationProxy.getSubKeyedStateMetaSnapshots();
+				for (int i = 0; i < subKeyedStateMetaSnapshots.size(); i++) {
+					StateMetaInfoSnapshot subKeyedStateMetaSnapshot = subKeyedStateMetaSnapshots.get(i);
+					String stateName = subKeyedStateMetaSnapshot.getName();
+
+					RegisteredStateMetaInfo subKeyedStateMetaInfo = RegisteredStateMetaInfo.createSubKeyedStateMetaInfo(subKeyedStateMetaSnapshot);
+					registeredStateMetaInfos.put(stateName, subKeyedStateMetaInfo);
+					restoredKvStateMetaInfos.put(stateName, subKeyedStateMetaSnapshot);
+					SubKeyedStateDescriptor subKeyedStateDescriptor = subKeyedStateMetaSnapshot.createSubKeyedStateDescriptor();
+					StateStorage stateStorage = getOrCreateStateStorageForSubKeyedState(subKeyedStateDescriptor);
+					stateStorages.put(stateName, stateStorage);
+					subKeyedStatesById.put(i, subKeyedStateDescriptor);
 				}
 
 				Map<Integer, Tuple2<Long, Integer>> metaInfos = snapshot.getMetaInfos();
-				GroupSet groups = getGroups();
 
-				for (int group : groups) {
+				for (int group : getKeyGroupRange()) {
 					Tuple2<Long, Integer> tuple = metaInfos.get(group);
 
 					if (tuple == null) {
@@ -420,17 +449,17 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 					int numEntries = 0;
 
 					// restore keyed states
-					for (int i = 0; i < numRestoredKeyedStates; i++) {
+					for (int i = 0; i < keyedStateMetaInfos.size(); i++) {
 						int stateId = inputView.readInt();
-						KeyedStateDescriptor descriptor = keyedStatesById.get(stateId).getDescriptor();
+						KeyedStateDescriptor descriptor = keyedStatesById.get(stateId);
 						HeapStateStorage stateStorage = (HeapStateStorage) stateStorages.get(descriptor.getName());
 						numEntries += readMappingsInKeyGroupForKeyedState(inputView, descriptor, stateStorage);
 					}
 
 					// restore sub-keyed states
-					for (int i = 0; i < numRestoredSubKeyedStates; i++) {
+					for (int i = 0; i < subKeyedStateMetaSnapshots.size(); i++) {
 						int stateId = inputView.readInt();
-						SubKeyedStateDescriptor descriptor = subKeyedStatesById.get(stateId).getDescriptor();
+						SubKeyedStateDescriptor descriptor = subKeyedStatesById.get(stateId);
 						HeapStateStorage stateStorage = (HeapStateStorage) stateStorages.get(descriptor.getName());
 						numEntries += readMappingsInKeyGroupForSubKeyedState(inputView, descriptor, stateStorage);
 					}

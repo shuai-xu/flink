@@ -23,7 +23,6 @@ import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.OperatorStreamStateHandle;
 import org.apache.flink.runtime.state.SnapshotResult;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.util.TestLogger;
 
 import org.junit.Test;
@@ -73,17 +72,11 @@ public class OperatorSnapshotFuturesTest extends TestLogger {
 		RunnableFuture<SnapshotResult<OperatorStateHandle>> operatorStateRawFuture =
 			spy(DoneFuture.of(operatorStateRawResult));
 
-		StatePartitionSnapshot internalManagedStateHandle = mock(StatePartitionSnapshot.class);
-		SnapshotResult<StatePartitionSnapshot> internalStateManagedResult =
-			SnapshotResult.of(internalManagedStateHandle);
-		RunnableFuture<SnapshotResult<StatePartitionSnapshot>> internalStateManagedFuture =
-			spy(DoneFuture.of(internalStateManagedResult));
-
 		operatorSnapshotResult = new OperatorSnapshotFutures(
 			keyedStateManagedFuture,
 			keyedStateRawFuture,
 			operatorStateManagedFuture,
-			operatorStateRawFuture, internalStateManagedFuture
+			operatorStateRawFuture
 		);
 
 		operatorSnapshotResult.cancel();
@@ -92,12 +85,10 @@ public class OperatorSnapshotFuturesTest extends TestLogger {
 		verify(keyedStateRawFuture).cancel(true);
 		verify(operatorStateManagedFuture).cancel(true);
 		verify(operatorStateRawFuture).cancel(true);
-		verify(internalStateManagedFuture).cancel(true);
 
 		verify(keyedManagedStateHandle).discardState();
 		verify(keyedRawStateHandle).discardState();
 		verify(operatorManagedStateHandle).discardState();
 		verify(operatorRawStateHandle).discardState();
-		verify(internalManagedStateHandle).discardState();
 	}
 }

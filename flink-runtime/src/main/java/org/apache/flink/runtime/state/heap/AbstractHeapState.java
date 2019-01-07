@@ -35,6 +35,7 @@ import org.apache.flink.util.Preconditions;
  * @param <SV> The type of the values in the state.
  * @param <S> The type of State
  */
+@Deprecated
 public abstract class AbstractHeapState<K, N, SV, S extends State> implements InternalKvState<K, N, SV> {
 
 	/** Map containing the actual key/value pairs. */

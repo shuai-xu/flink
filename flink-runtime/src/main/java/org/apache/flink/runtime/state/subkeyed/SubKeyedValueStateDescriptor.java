@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.state.subkeyed;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.runtime.state.InternalStateType;
 
 /**
  * Descriptor for {@link SubKeyedValueState}.
@@ -46,11 +47,11 @@ public final class SubKeyedValueStateDescriptor<K, N, V> extends SubKeyedStateDe
 		TypeSerializer<N> namespaceSerializer,
 		TypeSerializer<V> valueSerializer
 	) {
-		super(name, keySerializer, namespaceSerializer, valueSerializer);
+		super(name, InternalStateType.SUBKEYED_VALUE, keySerializer, namespaceSerializer, valueSerializer);
 	}
 
 	@Override
-	public SubKeyedValueState<K, N, V> bind(SubKeyedStateBinder stateBinder) {
+	public SubKeyedValueState<K, N, V> bind(SubKeyedStateBinder stateBinder) throws Exception {
 		return stateBinder.createSubKeyedValueState(this);
 	}
 }

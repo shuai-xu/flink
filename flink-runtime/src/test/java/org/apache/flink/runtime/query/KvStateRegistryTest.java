@@ -29,7 +29,6 @@ import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.queryablestate.KvStateID;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
-import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.TestLocalRecoveryConfig;
 import org.apache.flink.runtime.state.VoidNamespace;
@@ -60,7 +59,7 @@ public class KvStateRegistryTest extends TestLogger {
 	 * are destined for them.
 	 */
 	@Test
-	public void testKvStateRegistryListenerNotification() {
+	public void testKvStateRegistryListenerNotification() throws Exception {
 		final JobID jobId1 = new JobID();
 		final JobID jobId2 = new JobID();
 
@@ -85,11 +84,11 @@ public class KvStateRegistryTest extends TestLogger {
 		final KeyGroupRange keyGroupRange = new KeyGroupRange(0, 1);
 		final String registrationName = "foobar";
 		HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
-															1,
-															GroupRange.of(0, 1),
-															Thread.currentThread().getContextClassLoader(),
-															TestLocalRecoveryConfig.disabled(),
-															kvStateRegistry.createTaskRegistry(new JobID(), new JobVertexID()));
+			2,
+			keyGroupRange,
+			Thread.currentThread().getContextClassLoader(),
+			TestLocalRecoveryConfig.disabled(),
+			kvStateRegistry.createTaskRegistry(new JobID(), new JobVertexID()));
 		KeyedValueStateDescriptor<Integer, String> desc = new KeyedValueStateDescriptor<>("any", IntSerializer.INSTANCE, StringSerializer.INSTANCE);
 		desc.setQueryable("foobar");
 		KeyedValueState<Integer, String> state = heapBackend.getKeyedState(desc);
@@ -143,7 +142,7 @@ public class KvStateRegistryTest extends TestLogger {
 	 * will be used for all notifications.
 	 */
 	@Test
-	public void testLegacyCodePathPreference() {
+	public void testLegacyCodePathPreference() throws Exception {
 		final KvStateRegistry kvStateRegistry = new KvStateRegistry();
 		final ArrayDeque<JobID> stateRegistrationNotifications = new ArrayDeque<>(2);
 		final ArrayDeque<JobID> stateDeregistrationNotifications = new ArrayDeque<>(2);
@@ -167,11 +166,11 @@ public class KvStateRegistryTest extends TestLogger {
 		final String registrationName = "registrationName";
 
 		HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
-																1,
-																GroupRange.of(0, 1),
-																Thread.currentThread().getContextClassLoader(),
-																TestLocalRecoveryConfig.disabled(),
-																kvStateRegistry.createTaskRegistry(jobId, new JobVertexID()));
+			2,
+			keyGroupRange,
+			Thread.currentThread().getContextClassLoader(),
+			TestLocalRecoveryConfig.disabled(),
+			kvStateRegistry.createTaskRegistry(jobId, new JobVertexID()));
 
 		KeyedValueStateDescriptor<Integer, String> desc = new KeyedValueStateDescriptor<>("any", IntSerializer.INSTANCE, StringSerializer.INSTANCE);
 		desc.setQueryable(registrationName);

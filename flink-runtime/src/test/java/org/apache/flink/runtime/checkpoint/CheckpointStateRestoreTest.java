@@ -81,7 +81,7 @@ public class CheckpointStateRestoreTest {
 
 			KeyGroupRange keyGroupRange = KeyGroupRange.of(0,0);
 			List<SerializableObject> testStates = Collections.singletonList(new SerializableObject());
-			final KeyedStateHandle serializedKeyGroupStates = CheckpointCoordinatorTest.generateKeyGroupState(keyGroupRange, testStates);
+			final KeyedStateHandle serializedKeyGroupStates = CheckpointCoordinatorTest.generateStateSnapshot(keyGroupRange, testStates);
 
 			final JobID jid = new JobID();
 			final JobVertexID statefulId = new JobVertexID();
@@ -135,7 +135,6 @@ public class CheckpointStateRestoreTest {
 					StateObjectCollection.empty(),
 					StateObjectCollection.empty(),
 					StateObjectCollection.singleton(serializedKeyGroupStates),
-					StateObjectCollection.empty(),
 					StateObjectCollection.empty()));
 
 			coord.receiveAcknowledgeMessage(new AcknowledgeCheckpoint(jid, statefulExec1.getAttemptId(), checkpointId, new CheckpointMetrics(), subtaskStates));

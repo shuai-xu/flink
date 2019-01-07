@@ -89,16 +89,16 @@ public class HeapStateStorage<K, N, S> implements StateStorage<K, S>{
 
 	@Override
 	public StorageIterator<K, S> iterator() {
-		return new HeapStorageIterator<>(stateTable.iterator());
+		return new HeapStorageIterator<>(stateTable.entryIterator());
 	}
 
 	@Override
-	public StorageIterator prefixIterator(K prefixKey) {
+	public StorageIterator<K, S> prefixIterator(K prefixKey) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public StorageIterator subIterator(K prefixKeyStart, K prefixKeyEnd) {
+	public StorageIterator<K, S> subIterator(K prefixKeyStart, K prefixKeyEnd) {
 		throw new UnsupportedOperationException();
 	}
 

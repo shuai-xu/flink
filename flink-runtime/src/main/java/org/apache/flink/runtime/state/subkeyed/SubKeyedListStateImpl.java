@@ -625,6 +625,11 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 	}
 
 	@Override
+	public StateStorage<K, List<E>> getStateStorage() {
+		return stateStorage;
+	}
+
+	@Override
 	public E poll(K key, N namespace) {
 		try {
 			if (stateStorage.lazySerde()) {

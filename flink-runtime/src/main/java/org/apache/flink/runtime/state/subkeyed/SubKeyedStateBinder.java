@@ -34,7 +34,7 @@ public interface SubKeyedStateBinder {
 	 */
 	<K, N, V> SubKeyedValueState<K, N, V> createSubKeyedValueState(
 		SubKeyedValueStateDescriptor<K, N, V> stateDescriptor
-	);
+	) throws Exception;
 
 	/**
 	 * Creates and returns a new {@link SubKeyedListState}.
@@ -47,7 +47,7 @@ public interface SubKeyedStateBinder {
 	 */
 	<K, N, E> SubKeyedListState<K, N, E> createSubKeyedListState(
 		SubKeyedListStateDescriptor<K, N, E> stateDescriptor
-	);
+	) throws Exception;
 
 	/**
 	 * Creates and returns a new {@link SubKeyedMapState}.
@@ -61,7 +61,7 @@ public interface SubKeyedStateBinder {
 	 */
 	<K, N, MK, MV> SubKeyedMapState<K, N, MK, MV> createSubKeyedMapState(
 		SubKeyedMapStateDescriptor<K, N, MK, MV> stateDescriptor
-	);
+	) throws Exception;
 
 	/**
 	 * Creates and returns a new {@link SubKeyedSortedMapState}.
@@ -75,5 +75,5 @@ public interface SubKeyedStateBinder {
 	 */
 	<K, N, MK, MV> SubKeyedSortedMapState<K, N, MK, MV> createSubKeyedSortedMapState(
 		SubKeyedSortedMapStateDescriptor<K, N, MK, MV> stateDescriptor
-	);
+	) throws Exception;
 }

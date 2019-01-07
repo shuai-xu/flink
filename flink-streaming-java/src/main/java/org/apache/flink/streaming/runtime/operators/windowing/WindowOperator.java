@@ -35,6 +35,7 @@ import org.apache.flink.api.common.state.MergingState;
 import org.apache.flink.api.common.state.ReducingState;
 import org.apache.flink.api.common.state.ReducingStateDescriptor;
 import org.apache.flink.api.common.state.State;
+import org.apache.flink.api.common.state.StateBinder;
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
@@ -47,7 +48,6 @@ import org.apache.flink.api.java.typeutils.runtime.TupleSerializer;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.runtime.state.DefaultKeyedStateStore;
-import org.apache.flink.runtime.state.KeyedStateBackend;
 import org.apache.flink.streaming.api.operators.AbstractUdfStreamOperator;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.InternalTimer;
@@ -294,7 +294,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 		//if element is handled by none of assigned elementWindows
 		boolean isSkippedElement = true;
 
-		final K key = this.<K>getKeyedStateBackend().getCurrentKey();
+		final K key = this.<K>getKeyContext().getCurrentKey();
 
 		if (windowAssigner instanceof MergingWindowAssigner) {
 			MergingWindowSet<W> mergingWindows = getMergingWindowSet();
@@ -664,8 +664,8 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 		// we can always set it and ignore what actual implementation we have
 		protected W window;
 
-		public AbstractPerWindowStateStore(KeyedStateBackend<?> keyedStateBackend, ExecutionConfig executionConfig) {
-			super(keyedStateBackend, executionConfig);
+		public AbstractPerWindowStateStore(StateBinder contextStateBinder, ExecutionConfig executionConfig) {
+			super(contextStateBinder, executionConfig);
 		}
 	}
 
@@ -674,8 +674,8 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 	 */
 	public class MergingWindowStateStore extends AbstractPerWindowStateStore {
 
-		public MergingWindowStateStore(KeyedStateBackend<?> keyedStateBackend, ExecutionConfig executionConfig) {
-			super(keyedStateBackend, executionConfig);
+		public MergingWindowStateStore(StateBinder contextStateBinder, ExecutionConfig executionConfig) {
+			super(contextStateBinder, executionConfig);
 		}
 
 		@Override
@@ -715,8 +715,8 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 	 */
 	public class PerWindowStateStore extends AbstractPerWindowStateStore {
 
-		public PerWindowStateStore(KeyedStateBackend<?> keyedStateBackend, ExecutionConfig executionConfig) {
-			super(keyedStateBackend, executionConfig);
+		public PerWindowStateStore(StateBinder contextStateBinder, ExecutionConfig executionConfig) {
+			super(contextStateBinder, executionConfig);
 		}
 
 		@Override
@@ -740,8 +740,8 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 		public WindowContext(W window) {
 			this.window = window;
 			this.windowState = windowAssigner instanceof MergingWindowAssigner ?
-				new MergingWindowStateStore(getKeyedStateBackend(), getExecutionConfig()) :
-				new PerWindowStateStore(getKeyedStateBackend(), getExecutionConfig());
+				new MergingWindowStateStore(getContextStateBinder(), getExecutionConfig()) :
+				new PerWindowStateStore(getContextStateBinder(), getExecutionConfig());
 		}
 
 		@Override
@@ -804,6 +804,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 			return WindowOperator.this.getMetricGroup();
 		}
 
+		@Override
 		public long getCurrentWatermark() {
 			return internalTimerService.currentWatermark();
 		}
@@ -839,6 +840,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 			return getPartitionedState(stateDesc);
 		}
 
+		@Override
 		@SuppressWarnings("unchecked")
 		public <S extends State> S getPartitionedState(StateDescriptor<S, ?> stateDescriptor) {
 			try {

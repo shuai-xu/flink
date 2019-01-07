@@ -78,8 +78,8 @@ public class ContextSubKeyedStateBinder {
 				stateDesc.getSerializer()
 			);
 
-		SubKeyedValueState subKeyedValueState = operator.getSubKeyedState(subKeyedValueStateDescriptor);
-		ContextSubKeyedValueState state =  new ContextSubKeyedValueState<T, N>(this.operator, subKeyedValueState, stateDesc.getDefaultValue());
+		SubKeyedValueState<Object, N, T> subKeyedValueState = operator.getSubKeyedState(subKeyedValueStateDescriptor);
+		ContextSubKeyedValueState<T, N> state =  new ContextSubKeyedValueState<>(this.operator, subKeyedValueState, stateDesc.getDefaultValue());
 		state.setNamespace(namespace);
 		return (S) state;
 	}
@@ -99,8 +99,8 @@ public class ContextSubKeyedStateBinder {
 				stateDesc.getElementSerializer()
 			);
 
-		SubKeyedListState subKeyedListState = operator.getSubKeyedState(subKeyedListStateDescriptor);
-		ContextSubKeyedListState<N, T> state = new ContextSubKeyedListState<N, T>(
+		SubKeyedListState<Object, N, T> subKeyedListState = operator.getSubKeyedState(subKeyedListStateDescriptor);
+		ContextSubKeyedListState<N, T> state = new ContextSubKeyedListState<>(
 			this.operator,
 			subKeyedListState
 		);
@@ -124,8 +124,8 @@ public class ContextSubKeyedStateBinder {
 				stateDesc.getSerializer()
 			);
 
-		SubKeyedValueState subKeyedValueState = operator.getSubKeyedState(subKeyedValueStateDescriptor);
-		ContextSubKeyedReducingState<N, T> state = new ContextSubKeyedReducingState<N, T>(
+		SubKeyedValueState<Object, N, T> subKeyedValueState = operator.getSubKeyedState(subKeyedValueStateDescriptor);
+		ContextSubKeyedReducingState<N, T> state = new ContextSubKeyedReducingState<>(
 			this.operator,
 			subKeyedValueState,
 			stateDesc.getReduceFunction()
@@ -149,7 +149,7 @@ public class ContextSubKeyedStateBinder {
 				namespaceSerializer,
 				stateDesc.getSerializer()
 			);
-		SubKeyedValueState subKeyedValueState = operator.getSubKeyedState(subKeyedValueStateDescriptor);
+		SubKeyedValueState<Object, N, ACC> subKeyedValueState = operator.getSubKeyedState(subKeyedValueStateDescriptor);
 		ContextSubKeyedAggregatingState<N, IN, ACC, OUT> state =
 			new ContextSubKeyedAggregatingState<>(
 				operator,
@@ -177,7 +177,7 @@ public class ContextSubKeyedStateBinder {
 				stateDesc.getSerializer()
 			);
 
-		SubKeyedValueState subKeyedValueState = operator.getSubKeyedState(subKeyedValueStateDescriptor);
+		SubKeyedValueState<Object, N, ACC> subKeyedValueState = operator.getSubKeyedState(subKeyedValueStateDescriptor);
 
 		ContextSubKeyedFoldingState<N, IN, ACC> state = new ContextSubKeyedFoldingState<>(
 			operator,
@@ -275,7 +275,7 @@ public class ContextSubKeyedStateBinder {
 	public <N, IN, ACC, OUT> ContextSubKeyedAppendingState<N, IN, OUT> getContextSubKeyedAppendingState(
 		StateDescriptor<? extends AppendingState<?, ?>, ?> stateDescriptor,
 		TypeSerializer<N> namespaceSerializer
-	) {
+	) throws Exception {
 		String stateName = stateDescriptor.getName();
 
 		if (lastStateName != null && lastStateName.equals(stateName)) {

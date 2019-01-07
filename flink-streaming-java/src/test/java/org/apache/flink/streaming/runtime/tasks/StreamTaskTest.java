@@ -66,7 +66,6 @@ import org.apache.flink.runtime.operators.testutils.MockInputSplitProvider;
 import org.apache.flink.runtime.preaggregatedaccumulators.AccumulatorAggregationManager;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
-import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.AbstractStateBackend;
 import org.apache.flink.runtime.state.CheckpointStorage;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
@@ -79,7 +78,6 @@ import org.apache.flink.runtime.state.OperatorStreamStateHandle;
 import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateBackendFactory;
 import org.apache.flink.runtime.state.StateInitializationContext;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StatePartitionStreamProvider;
 import org.apache.flink.runtime.state.TaskLocalStateStoreImpl;
 import org.apache.flink.runtime.state.TaskStateManager;
@@ -100,6 +98,7 @@ import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.InternalTimeServiceManager;
+import org.apache.flink.streaming.api.operators.KeyContextImpl;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.operators.OperatorSnapshotFinalizer;
 import org.apache.flink.streaming.api.operators.OperatorSnapshotFutures;
@@ -250,12 +249,12 @@ public class StreamTaskTest extends TestLogger {
 
 		// ensure that the state backends and stream iterables are closed ...
 		verify(TestStreamSource.operatorStateBackend).close();
-		verify(TestStreamSource.keyedStateBackend).close();
 		verify(TestStreamSource.rawOperatorStateInputs).close();
 		verify(TestStreamSource.rawKeyedStateInputs).close();
+		verify(TestStreamSource.internalStateBackend).close();
 		// ... and disposed
 		verify(TestStreamSource.operatorStateBackend).dispose();
-		verify(TestStreamSource.keyedStateBackend).dispose();
+		verify(TestStreamSource.internalStateBackend).dispose();
 
 		assertEquals(ExecutionState.FINISHED, task.getExecutionState());
 	}
@@ -282,13 +281,11 @@ public class StreamTaskTest extends TestLogger {
 
 		// ensure that the state backends and stream iterables are closed ...
 		verify(TestStreamSource.operatorStateBackend).close();
-		verify(TestStreamSource.keyedStateBackend).close();
 		verify(TestStreamSource.rawOperatorStateInputs).close();
 		verify(TestStreamSource.rawKeyedStateInputs).close();
 		verify(TestStreamSource.internalStateBackend).close();
 		// ... and disposed
 		verify(TestStreamSource.operatorStateBackend).dispose();
-		verify(TestStreamSource.keyedStateBackend).dispose();
 		verify(TestStreamSource.internalStateBackend).dispose();
 
 		assertEquals(ExecutionState.FAILED, task.getExecutionState());
@@ -538,14 +535,12 @@ public class StreamTaskTest extends TestLogger {
 		KeyedStateHandle rawKeyedStateHandle = mock(KeyedStateHandle.class);
 		OperatorStateHandle managedOperatorStateHandle = mock(OperatorStreamStateHandle.class);
 		OperatorStateHandle rawOperatorStateHandle = mock(OperatorStreamStateHandle.class);
-		StatePartitionSnapshot managedInternalState = mock(StatePartitionSnapshot.class);
 
 		OperatorSnapshotFutures operatorSnapshotResult = new OperatorSnapshotFutures(
 			DoneFuture.of(SnapshotResult.of(managedKeyedStateHandle)),
 			DoneFuture.of(SnapshotResult.of(rawKeyedStateHandle)),
 			DoneFuture.of(SnapshotResult.of(managedOperatorStateHandle)),
-			DoneFuture.of(SnapshotResult.of(rawOperatorStateHandle)),
-			DoneFuture.of(SnapshotResult.of(managedInternalState)));
+			DoneFuture.of(SnapshotResult.of(rawOperatorStateHandle)));
 
 		when(streamOperator.snapshotState(anyLong(), anyLong(), any(CheckpointOptions.class), any(CheckpointStreamFactory.class))).thenReturn(operatorSnapshotResult);
 
@@ -646,14 +641,12 @@ public class StreamTaskTest extends TestLogger {
 		KeyedStateHandle rawKeyedStateHandle = mock(KeyedStateHandle.class);
 		OperatorStateHandle managedOperatorStateHandle = mock(OperatorStreamStateHandle.class);
 		OperatorStateHandle rawOperatorStateHandle = mock(OperatorStreamStateHandle.class);
-		StatePartitionSnapshot statePartitionSnapshot = mock(StatePartitionSnapshot.class);
 
 		OperatorSnapshotFutures operatorSnapshotResult = new OperatorSnapshotFutures(
 			DoneFuture.of(SnapshotResult.of(managedKeyedStateHandle)),
 			DoneFuture.of(SnapshotResult.of(rawKeyedStateHandle)),
 			DoneFuture.of(SnapshotResult.of(managedOperatorStateHandle)),
-			DoneFuture.of(SnapshotResult.of(rawOperatorStateHandle)),
-			DoneFuture.of(SnapshotResult.of(statePartitionSnapshot)));
+			DoneFuture.of(SnapshotResult.of(rawOperatorStateHandle)));
 
 		when(streamOperator.snapshotState(anyLong(), anyLong(), any(CheckpointOptions.class), any(CheckpointStreamFactory.class))).thenReturn(operatorSnapshotResult);
 
@@ -1156,8 +1149,8 @@ public class StreamTaskTest extends TestLogger {
 					}
 
 					@Override
-					public AbstractKeyedStateBackend<?> keyedStateBackend() {
-						return context.keyedStateBackend();
+					public KeyContextImpl<?> keyContext() {
+						return context.keyContext();
 					}
 
 					@Override
@@ -1343,7 +1336,6 @@ public class StreamTaskTest extends TestLogger {
 
 	static class TestStreamSource<OUT, SRC extends SourceFunction<OUT>> extends StreamSource<OUT, SRC> {
 
-		static AbstractKeyedStateBackend<?> keyedStateBackend;
 		static OperatorStateBackend operatorStateBackend;
 		static AbstractInternalStateBackend internalStateBackend;
 		static CloseableIterable<StatePartitionStreamProvider> rawOperatorStateInputs;
@@ -1355,7 +1347,6 @@ public class StreamTaskTest extends TestLogger {
 
 		@Override
 		public void initializeState(StateInitializationContext context) throws Exception {
-			keyedStateBackend = (AbstractKeyedStateBackend<?>) getKeyedStateBackend();
 			operatorStateBackend = getOperatorStateBackend();
 			internalStateBackend = getInternalStateBackend();
 			rawOperatorStateInputs =

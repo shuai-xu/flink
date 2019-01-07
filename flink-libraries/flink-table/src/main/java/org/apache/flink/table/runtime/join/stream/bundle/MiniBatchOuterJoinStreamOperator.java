@@ -91,6 +91,7 @@ abstract class MiniBatchOuterJoinStreamOperator extends MiniBatchJoinStreamOpera
 				leftJoinStateType, rightJoinStateType, leftMatchStateType, rightMatchStateType);
 	}
 
+	@Override
 	protected void initAllStates() throws Exception {
 		super.initAllStates();
 

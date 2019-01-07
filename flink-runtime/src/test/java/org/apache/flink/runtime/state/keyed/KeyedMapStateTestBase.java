@@ -21,8 +21,6 @@ package org.apache.flink.runtime.state.keyed;
 import org.apache.flink.api.common.typeutils.base.FloatSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.runtime.state.GroupRange;
-import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
@@ -64,7 +62,7 @@ public abstract class KeyedMapStateTestBase {
 	 */
 	protected abstract AbstractInternalStateBackend createStateBackend(
 		int numberOfGroups,
-		GroupSet groups,
+		KeyGroupRange keyGroupRange,
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig) throws Exception;
 
@@ -88,7 +86,7 @@ public abstract class KeyedMapStateTestBase {
 	}
 
 	@Test
-	public void testKeyAccess() {
+	public void testKeyAccess() throws Exception {
 		KeyedMapStateDescriptor<Integer, Integer, Float> descriptor =
 			new KeyedMapStateDescriptor<>("test", IntSerializer.INSTANCE,
 				IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
@@ -314,7 +312,7 @@ public abstract class KeyedMapStateTestBase {
 	}
 
 	@Test
-	public void testMapKeyAccess() {
+	public void testMapKeyAccess() throws Exception {
 		KeyedMapStateDescriptor<Integer, Integer, Float> descriptor =
 			new KeyedMapStateDescriptor<>("test", IntSerializer.INSTANCE,
 				IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
@@ -621,7 +619,7 @@ public abstract class KeyedMapStateTestBase {
 	}
 
 	@Test
-	public void testkeyMapIndependentIterator() {
+	public void testkeyMapIndependentIterator() throws Exception {
 		KeyedMapStateDescriptor<Integer, Integer, Float> descriptor =
 			new KeyedMapStateDescriptor<>("test", IntSerializer.INSTANCE,
 				IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
@@ -731,7 +729,7 @@ public abstract class KeyedMapStateTestBase {
 	}
 
 	@Test
-	public void testGetAllRemoveAll() {
+	public void testGetAllRemoveAll() throws Exception {
 		KeyedMapStateDescriptor<Integer, Integer, Float> descriptor =
 			new KeyedMapStateDescriptor<>("test", IntSerializer.INSTANCE,
 				IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
@@ -751,7 +749,7 @@ public abstract class KeyedMapStateTestBase {
 	}
 
 	@Test
-	public void testKeys() {
+	public void testKeys() throws Exception {
 		KeyedMapStateDescriptor<Integer, Integer, Float> descriptor =
 			new KeyedMapStateDescriptor<>("test", IntSerializer.INSTANCE,
 				IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
@@ -788,7 +786,7 @@ public abstract class KeyedMapStateTestBase {
 	}
 
 	@Test
-	public void testMulitStateAccessParallism() throws InterruptedException {
+	public void testMulitStateAccessParallism() throws Exception {
 		KeyedMapStateDescriptor<Integer, Integer, Float> descriptor1 =
 			new KeyedMapStateDescriptor<>("test1", IntSerializer.INSTANCE,
 				IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
@@ -858,9 +856,8 @@ public abstract class KeyedMapStateTestBase {
 		}
 	}
 
-	private GroupSet getGroupsForSubtask(int maxParallelism, int parallelism, int subtaskIndex) {
-		KeyGroupRange keyGroupRange = KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(maxParallelism, parallelism, subtaskIndex);
-		return GroupRange.of(keyGroupRange.getStartKeyGroup(), keyGroupRange.getEndKeyGroup() + 1);
+	private KeyGroupRange getGroupsForSubtask(int maxParallelism, int parallelism, int subtaskIndex) {
+		return KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(maxParallelism, parallelism, subtaskIndex);
 	}
 }
 

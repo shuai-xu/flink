@@ -29,7 +29,7 @@ import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.state.ArrayListSerializer;
-import org.apache.flink.runtime.state.GroupRange;
+import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.util.TestLogger;
@@ -403,7 +403,7 @@ public class CopyOnWriteStateTableTest extends TestLogger {
 
 		AbstractInternalStateBackend stateBackend = mock(AbstractInternalStateBackend.class);
 		when(stateBackend.getNumGroups()).thenReturn(1);
-		when(stateBackend.getGroups()).thenReturn(new GroupRange(0, 1));
+		when(stateBackend.getKeyGroupRange()).thenReturn(new KeyGroupRange(0, 0));
 
 		final CopyOnWriteStateTable<Integer, Integer, Integer> table =
 			new CopyOnWriteStateTable<>(

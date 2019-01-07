@@ -61,7 +61,7 @@ public interface ExecutionContext {
 	 * @return The state described by the given descriptor.
 	 */
 	<K, V, S extends KeyedState<K, V>> S getKeyedState(
-		final KeyedStateDescriptor<K, V, S> descriptor);
+		final KeyedStateDescriptor<K, V, S> descriptor) throws Exception;
 
 	/**
 	 * Creates a subkeyed state described by the given descriptor.
@@ -74,7 +74,7 @@ public interface ExecutionContext {
 	 * @return The state described by the given descriptor.
 	 */
 	<K, N, V, S extends SubKeyedState<K, N, V>> S getSubKeyedState(
-		final SubKeyedStateDescriptor<K, N, V, S> descriptor);
+		final SubKeyedStateDescriptor<K, N, V, S> descriptor) throws Exception;
 
 	/**
 	 * Creates a keyed value state.
@@ -84,7 +84,7 @@ public interface ExecutionContext {
 	 * @return a keyed value state
 	 */
 	<K, V> KeyedValueState<K, V> getKeyedValueState(
-		final ValueStateDescriptor<V> descriptor);
+		final ValueStateDescriptor<V> descriptor) throws Exception;
 
 	/**
 	 * Creates a keyed list state.
@@ -94,7 +94,7 @@ public interface ExecutionContext {
 	 * @return a keyed list state
 	 */
 	<K, V> KeyedListState<K, V> getKeyedListState(
-		final ListStateDescriptor<V> descriptor);
+		final ListStateDescriptor<V> descriptor) throws Exception;
 
 	/**
 	 * Creates a keyed map state.
@@ -105,7 +105,7 @@ public interface ExecutionContext {
 	 * @return a keyed map state
 	 */
 	<K, UK, UV> KeyedMapState<K, UK, UV> getKeyedMapState(
-		final MapStateDescriptor<UK, UV> descriptor);
+		final MapStateDescriptor<UK, UV> descriptor) throws Exception;
 
 	/**
 	 * Creates a keyed sorted map state.
@@ -116,7 +116,7 @@ public interface ExecutionContext {
 	 * @return a keyed sorted map state
 	 */
 	<K, UK, UV> KeyedSortedMapState<K, UK, UV> getKeyedSortedMapState(
-		final SortedMapStateDescriptor<UK, UV> descriptor);
+		final SortedMapStateDescriptor<UK, UV> descriptor) throws Exception;
 
 	/**
 	 * Creates a subkeyed value state.
@@ -127,7 +127,7 @@ public interface ExecutionContext {
 	 * @return a subkeyed value state
 	 */
 	<K, N, V> SubKeyedValueState<K, N, V> getSubKeyedValueState(
-		final ValueStateDescriptor<V> descriptor);
+		final ValueStateDescriptor<V> descriptor) throws Exception;
 
 	/**
 	 * Creates a subkeyed list state.
@@ -138,7 +138,7 @@ public interface ExecutionContext {
 	 * @return a subkeyed list state
 	 */
 	<K, N, V> SubKeyedListState<K, N, V> getSubKeyedListState(
-		final ListStateDescriptor<V> descriptor);
+		final ListStateDescriptor<V> descriptor) throws Exception;
 
 	/**
 	 * Creates a subkeyed map state.
@@ -150,7 +150,7 @@ public interface ExecutionContext {
 	 * @return a subkeyed map state
 	 */
 	<K, N, UK, UV> SubKeyedMapState<K, N, UK, UV> getSubKeyedMapState(
-		final MapStateDescriptor<UK, UV> descriptor);
+		final MapStateDescriptor<UK, UV> descriptor) throws Exception;
 
 	/**
 	 * Creates a subkeyed sorted map state.
@@ -162,7 +162,7 @@ public interface ExecutionContext {
 	 * @return a subkeyed sorted map state
 	 */
 	<K, N, UK, UV> SubKeyedSortedMapState<K, N, UK, UV> getSubKeyedSortedMapState(
-		final SortedMapStateDescriptor<UK, UV> descriptor);
+		final SortedMapStateDescriptor<UK, UV> descriptor) throws Exception;
 
 	/**
 	 * Creates a state map view.
@@ -175,7 +175,7 @@ public interface ExecutionContext {
 	 * @return a keyed map state
 	 */
 	<K, UK, UV> StateMapView<K, UK, UV> getStateMapView(
-		String stateName, MapViewTypeInfo<UK, UV> mapViewTypeInfo, boolean hasNamespace);
+		String stateName, MapViewTypeInfo<UK, UV> mapViewTypeInfo, boolean hasNamespace) throws Exception;
 
 	/**
 	 * Creates a state map view.
@@ -187,7 +187,7 @@ public interface ExecutionContext {
 	 * @return a keyed map state
 	 */
 	<K, UK, UV> StateSortedMapView<K, UK, UV> getStateSortedMapView(
-		String stateName, SortedMapViewTypeInfo<UK, UV> sortedMapViewTypeInfo, boolean hasNamespace);
+		String stateName, SortedMapViewTypeInfo<UK, UV> sortedMapViewTypeInfo, boolean hasNamespace) throws Exception;
 
 	/**
 	 * Creates a state list view.
@@ -199,7 +199,7 @@ public interface ExecutionContext {
 	 * @return a keyed list state
 	 */
 	<K, V> StateListView<K, V> getStateListView(
-		String stateName, ListViewTypeInfo<V> listViewTypeInfo, boolean hasNamespace);
+		String stateName, ListViewTypeInfo<V> listViewTypeInfo, boolean hasNamespace) throws Exception;
 
 	/**
 	 * Registers stateDataView to the context. {@link #setCurrentKey(BaseRow)} will set the

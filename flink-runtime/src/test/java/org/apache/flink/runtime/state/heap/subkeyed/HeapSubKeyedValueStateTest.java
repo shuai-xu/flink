@@ -18,9 +18,9 @@
 
 package org.apache.flink.runtime.state.heap.subkeyed;
 
-import org.apache.flink.runtime.state.GroupSet;
-import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
+import org.apache.flink.runtime.state.KeyGroupRange;
+import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.heap.HeapInternalStateBackend;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedValueState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedValueStateTestBase;
@@ -48,17 +48,16 @@ public class HeapSubKeyedValueStateTest extends SubKeyedValueStateTestBase {
 	@Override
 	protected AbstractInternalStateBackend createStateBackend(
 		int numberOfGroups,
-		GroupSet groups,
+		KeyGroupRange keyGroupRange,
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig
 	) throws Exception {
 		return new HeapInternalStateBackend(
 			numberOfGroups,
-			groups,
+			keyGroupRange,
 			userClassLoader,
 			localRecoveryConfig,
 			null,
-			asyncSnapshot
-		);
+			asyncSnapshot);
 	}
 }

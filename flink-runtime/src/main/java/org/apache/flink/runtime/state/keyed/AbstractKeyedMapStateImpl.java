@@ -724,8 +724,9 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 				}
 
 			} else {
-				if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
-					for (Integer group : internalStateBackend.getGroups()) {
+				if (!stateStorage.supportMultiColumnFamilies()
+					&& internalStateBackend.getStateStorages().size() > 1) {
+					for (Integer group : internalStateBackend.getKeyGroupRange()) {
 						outputStream.reset();
 						StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
 						byte[] groupPrefix = outputStream.toByteArray();
@@ -753,8 +754,9 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			((HeapStateStorage) stateStorage).removeAll();
 		} else {
 			try {
-				if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
-					for (Integer group : internalStateBackend.getGroups()) {
+				if (!stateStorage.supportMultiColumnFamilies()
+					&& internalStateBackend.getStateStorages().size() > 1) {
+					for (Integer group : internalStateBackend.getKeyGroupRange()) {
 						outputStream.reset();
 						StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
 						byte[] groupPrefix = outputStream.toByteArray();
@@ -807,9 +809,10 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 						};
 
 					} else {
-						if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
+						if (!stateStorage.supportMultiColumnFamilies()
+							&& internalStateBackend.getStateStorages().size() > 1) {
 							Collection<Iterator<Pair<byte[], byte[]>>> groupIterators = new ArrayList<>();
-							for (Integer group : internalStateBackend.getGroups()) {
+							for (Integer group : internalStateBackend.getKeyGroupRange()) {
 								outputStream.reset();
 								StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
 								byte[] groupPrefix = outputStream.toByteArray();
@@ -832,6 +835,11 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 				}
 			}
 		};
+	}
+
+	@Override
+	public StateStorage<K, M> getStateStorage() {
+		return stateStorage;
 	}
 
 	protected  <K> int getKeyGroup(K key) {

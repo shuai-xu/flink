@@ -23,7 +23,6 @@ import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.SharedStateRegistry;
 import org.apache.flink.runtime.state.StateObject;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StateUtil;
 import org.apache.flink.util.Preconditions;
 
@@ -82,13 +81,6 @@ public class OperatorSubtaskState implements CompositeStateHandle {
 	private final StateObjectCollection<KeyedStateHandle> rawKeyedState;
 
 	/**
-	 * Snapshot from {@link org.apache.flink.runtime.state.AbstractInternalStateBackend}.
-	 */
-	// Store StatePartitionSnapshot or StreamHandler???
-	@Nonnull
-	private final StateObjectCollection<StatePartitionSnapshot> managedInternalState;
-
-	/**
 	 * The state size. This is also part of the deserialized state handle.
 	 * We store it here in order to not deserialize the state handle when
 	 * gathering stats.
@@ -103,7 +95,6 @@ public class OperatorSubtaskState implements CompositeStateHandle {
 			StateObjectCollection.empty(),
 			StateObjectCollection.empty(),
 			StateObjectCollection.empty(),
-			StateObjectCollection.empty(),
 			StateObjectCollection.empty());
 	}
 
@@ -111,20 +102,17 @@ public class OperatorSubtaskState implements CompositeStateHandle {
 		@Nonnull StateObjectCollection<OperatorStateHandle> managedOperatorState,
 		@Nonnull StateObjectCollection<OperatorStateHandle> rawOperatorState,
 		@Nonnull StateObjectCollection<KeyedStateHandle> managedKeyedState,
-		@Nonnull StateObjectCollection<KeyedStateHandle> rawKeyedState,
-		@Nonnull StateObjectCollection<StatePartitionSnapshot> managedInternalState) {
+		@Nonnull StateObjectCollection<KeyedStateHandle> rawKeyedState) {
 
 		this.managedOperatorState = Preconditions.checkNotNull(managedOperatorState);
 		this.rawOperatorState = Preconditions.checkNotNull(rawOperatorState);
 		this.managedKeyedState = Preconditions.checkNotNull(managedKeyedState);
 		this.rawKeyedState = Preconditions.checkNotNull(rawKeyedState);
-		this.managedInternalState = Preconditions.checkNotNull(managedInternalState);
 
 		long calculateStateSize = managedOperatorState.getStateSize();
 		calculateStateSize += rawOperatorState.getStateSize();
 		calculateStateSize += managedKeyedState.getStateSize();
 		calculateStateSize += rawKeyedState.getStateSize();
-		calculateStateSize += managedInternalState.getStateSize();
 		stateSize = calculateStateSize;
 	}
 
@@ -136,15 +124,13 @@ public class OperatorSubtaskState implements CompositeStateHandle {
 		@Nullable OperatorStateHandle managedOperatorState,
 		@Nullable OperatorStateHandle rawOperatorState,
 		@Nullable KeyedStateHandle managedKeyedState,
-		@Nullable KeyedStateHandle rawKeyedState,
-		@Nullable StatePartitionSnapshot managedInternalState) {
+		@Nullable KeyedStateHandle rawKeyedState) {
 
 		this(
 			singletonOrEmptyOnNull(managedOperatorState),
 			singletonOrEmptyOnNull(rawOperatorState),
 			singletonOrEmptyOnNull(managedKeyedState),
-			singletonOrEmptyOnNull(rawKeyedState),
-			singletonOrEmptyOnNull(managedInternalState));
+			singletonOrEmptyOnNull(rawKeyedState));
 	}
 
 	private static <T extends StateObject> StateObjectCollection<T> singletonOrEmptyOnNull(T element) {
@@ -185,10 +171,6 @@ public class OperatorSubtaskState implements CompositeStateHandle {
 		return rawKeyedState;
 	}
 
-	public StateObjectCollection<StatePartitionSnapshot> getManagedInternalState() {
-		return managedInternalState;
-	}
-
 	@Override
 	public void discardState() {
 		try {
@@ -202,7 +184,6 @@ public class OperatorSubtaskState implements CompositeStateHandle {
 			toDispose.addAll(rawOperatorState);
 			toDispose.addAll(managedKeyedState);
 			toDispose.addAll(rawKeyedState);
-			toDispose.addAll(managedInternalState);
 			StateUtil.bestEffortDiscardAllStateObjects(toDispose);
 		} catch (Exception e) {
 			LOG.warn("Error while discarding operator states.", e);
@@ -213,23 +194,12 @@ public class OperatorSubtaskState implements CompositeStateHandle {
 	public void registerSharedStates(SharedStateRegistry sharedStateRegistry) {
 		registerSharedState(sharedStateRegistry, managedKeyedState);
 		registerSharedState(sharedStateRegistry, rawKeyedState);
-		registerSharedInternalState(sharedStateRegistry, managedInternalState);
 	}
 
 	private static void registerSharedState(
 		SharedStateRegistry sharedStateRegistry,
 		Iterable<KeyedStateHandle> stateHandles) {
 		for (KeyedStateHandle stateHandle : stateHandles) {
-			if (stateHandle != null) {
-				stateHandle.registerSharedStates(sharedStateRegistry);
-			}
-		}
-	}
-
-	private static void registerSharedInternalState(
-		SharedStateRegistry sharedStateRegistry,
-		Iterable<StatePartitionSnapshot> stateHandles) {
-		for (StatePartitionSnapshot stateHandle : stateHandles) {
 			if (stateHandle != null) {
 				stateHandle.registerSharedStates(sharedStateRegistry);
 			}
@@ -266,9 +236,6 @@ public class OperatorSubtaskState implements CompositeStateHandle {
 		if (!getManagedKeyedState().equals(that.getManagedKeyedState())) {
 			return false;
 		}
-		if (!getManagedInternalState().equals(that.getManagedInternalState())) {
-			return false;
-		}
 		return getRawKeyedState().equals(that.getRawKeyedState());
 	}
 
@@ -278,7 +245,6 @@ public class OperatorSubtaskState implements CompositeStateHandle {
 		result = 31 * result + getRawOperatorState().hashCode();
 		result = 31 * result + getManagedKeyedState().hashCode();
 		result = 31 * result + getRawKeyedState().hashCode();
-		result = 31 * result + getManagedInternalState().hashCode();
 		result = 31 * result + (int) (getStateSize() ^ (getStateSize() >>> 32));
 		return result;
 	}
@@ -290,7 +256,6 @@ public class OperatorSubtaskState implements CompositeStateHandle {
 			", operatorStateFromStream=" + rawOperatorState +
 			", keyedStateFromBackend=" + managedKeyedState +
 			", keyedStateFromStream=" + rawKeyedState +
-			", internalStateFromBackend=" + managedInternalState +
 			", stateSize=" + stateSize +
 			'}';
 	}
@@ -299,7 +264,6 @@ public class OperatorSubtaskState implements CompositeStateHandle {
 		return managedOperatorState.hasState()
 			|| rawOperatorState.hasState()
 			|| managedKeyedState.hasState()
-			|| rawKeyedState.hasState()
-			|| managedInternalState.hasState();
+			|| rawKeyedState.hasState();
 	}
 }

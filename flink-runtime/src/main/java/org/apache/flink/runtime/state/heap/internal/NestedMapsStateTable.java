@@ -22,7 +22,7 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataOutputView;
-import org.apache.flink.runtime.state.GroupRange;
+import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
@@ -32,11 +32,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 /**
  * This implementation of {@link StateTable} uses nested {@link HashMap} objects. It is also maintaining a partitioning
@@ -85,10 +88,10 @@ public class NestedMapsStateTable<K, N, S> extends StateTable<K, N, S> {
 	) {
 		super(internalStateBackend, keySerializer, namespaceSerializer, stateSerializer, usingNamespace);
 
-		GroupRange groups = (GroupRange) internalStateBackend.getGroups();
-		this.keyGroupOffset = groups.getStartGroup();
+		KeyGroupRange groups = internalStateBackend.getKeyGroupRange();
+		this.keyGroupOffset = groups.getStartKeyGroup();
 		this.maxParallelism = internalStateBackend.getNumGroups();
-		int numberOfKeyGroups = groups.getNumGroups();
+		int numberOfKeyGroups = groups.getNumberOfKeyGroups();
 
 		@SuppressWarnings("unchecked")
 		Map[] state = new Map[numberOfKeyGroups];
@@ -355,7 +358,21 @@ public class NestedMapsStateTable<K, N, S> extends StateTable<K, N, S> {
 	// Iteration  ------------------------------------------------------------------------------------------------------
 
 	@Override
-	public Iterator<Map.Entry<K, S>> iterator() {
+	public Stream<K> getKeys(N namespace) {
+		if (usingNamespace) {
+			return Arrays.stream(state)
+				.filter(Objects::nonNull)
+				.map(namespaces -> (Map) namespaces.getOrDefault(namespace, Collections.emptyMap()))
+				.flatMap(namespaceSate -> namespaceSate.keySet().stream());
+		} else {
+			return Arrays.stream(state)
+				.filter(Objects::nonNull)
+				.flatMap(namespaceSate -> namespaceSate.keySet().stream());
+		}
+	}
+
+	@Override
+	public Iterator<Map.Entry<K, S>> entryIterator() {
 		if (usingNamespace) {
 			throw new UnsupportedOperationException("This method should be called with no namespace");
 		}
@@ -396,6 +413,22 @@ public class NestedMapsStateTable<K, N, S> extends StateTable<K, N, S> {
 
 	private static int countMappingsInKeyGroup(final Map keyGroupMap) {
 		return keyGroupMap.size();
+	}
+
+	@Override
+	public int sizeOfNamespace(Object namespace) {
+		Preconditions.checkState(isUsingNamespace());
+		Preconditions.checkNotNull(namespace);
+
+		int count = 0;
+		for (Map<N, Map<K, S>> namespaceMap : state) {
+			if (null != namespaceMap) {
+				Map<K, S> keyMap = namespaceMap.get(namespace);
+				count += keyMap != null ? keyMap.size() : 0;
+			}
+		}
+
+		return count;
 	}
 
 	@Override

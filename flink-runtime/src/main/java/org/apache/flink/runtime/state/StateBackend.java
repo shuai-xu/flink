@@ -121,12 +121,15 @@ public interface StateBackend extends java.io.Serializable {
 	 *
 	 * <p><i>Keyed State</i> is state where each value is bound to a key.
 	 *
+	 * @deprecated Use {@link #createInternalStateBackend(Environment, String, int, KeyGroupRange)} to store states.
+	 *
 	 * @param <K> The type of the keys by which the state is organized.
 	 *
 	 * @return The Keyed State Backend for the given job, operator, and key group range.
 	 *
 	 * @throws Exception This method may forward all exceptions that occur while instantiating the backend.
 	 */
+	@Deprecated
 	<K> AbstractKeyedStateBackend<K> createKeyedStateBackend(
 			Environment env,
 			JobID jobID,
@@ -157,7 +160,7 @@ public interface StateBackend extends java.io.Serializable {
 	 * @param env The runtime environment of the executing task.
 	 * @param operatorIdentifier The identifier of the operator whose state should be stored.
 	 * @param numberOfGroups The total number of groups for all subtasks.
-	 * @param groups The groups of the given scope in the backend.
+	 * @param keyGroupRange The groups of the given scope in the backend.
 	 *
 	 * @return The AbstractInternalStateBackend for operator identified by the job and operator identifier.
 	 *
@@ -167,5 +170,5 @@ public interface StateBackend extends java.io.Serializable {
 		Environment env,
 		String operatorIdentifier,
 		int numberOfGroups,
-		GroupSet groups) throws Exception;
+		KeyGroupRange keyGroupRange) throws Exception;
 }

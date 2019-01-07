@@ -32,6 +32,7 @@ import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.ReducingState;
 import org.apache.flink.api.common.state.ReducingStateDescriptor;
 import org.apache.flink.api.common.state.State;
+import org.apache.flink.api.common.state.StateBinder;
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
@@ -44,11 +45,12 @@ import static java.util.Objects.requireNonNull;
  */
 public class DefaultKeyedStateStore implements KeyedStateStore {
 
-	protected final KeyedStateBackend<?> keyedStateBackend;
+	private transient StateBinder contextStateBinder;
+
 	protected final ExecutionConfig executionConfig;
 
-	public DefaultKeyedStateStore(KeyedStateBackend<?> keyedStateBackend, ExecutionConfig executionConfig) {
-		this.keyedStateBackend = Preconditions.checkNotNull(keyedStateBackend);
+	public DefaultKeyedStateStore(StateBinder contextStateBinder, ExecutionConfig executionConfig) {
+		this.contextStateBinder = Preconditions.checkNotNull(contextStateBinder);
 		this.executionConfig = Preconditions.checkNotNull(executionConfig);
 	}
 
@@ -121,9 +123,6 @@ public class DefaultKeyedStateStore implements KeyedStateStore {
 	}
 
 	protected  <S extends State> S getPartitionedState(StateDescriptor<S, ?> stateDescriptor) throws Exception {
-		return keyedStateBackend.getPartitionedState(
-				VoidNamespace.INSTANCE,
-				VoidNamespaceSerializer.INSTANCE,
-				stateDescriptor);
+		return stateDescriptor.bind(contextStateBinder);
 	}
 }

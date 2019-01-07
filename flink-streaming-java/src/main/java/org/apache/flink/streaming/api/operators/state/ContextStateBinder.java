@@ -156,7 +156,7 @@ public class ContextStateBinder implements StateBinder {
 	}
 
 	@Override
-	public <MK, MV> SortedMapState<MK, MV> createSortedMapState(SortedMapStateDescriptor<MK, MV> stateDesc) {
+	public <MK, MV> SortedMapState<MK, MV> createSortedMapState(SortedMapStateDescriptor<MK, MV> stateDesc) throws Exception {
 		Preconditions.checkNotNull(stateDesc);
 
 		String stateName = stateDesc.getName();

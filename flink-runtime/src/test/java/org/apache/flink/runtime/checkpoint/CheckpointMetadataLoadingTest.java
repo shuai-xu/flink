@@ -74,7 +74,6 @@ public class CheckpointMetadataLoadingTest {
 				new ByteStreamStateHandle("testHandler", new byte[0])),
 				null,
 				null,
-				null,
 			null);
 
 		OperatorState state = new OperatorState(operatorID, parallelism, parallelism);

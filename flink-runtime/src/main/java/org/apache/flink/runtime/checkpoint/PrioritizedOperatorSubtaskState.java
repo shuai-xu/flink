@@ -22,7 +22,6 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.StateObject;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
 
 import javax.annotation.Nonnull;
 
@@ -59,8 +58,6 @@ public class PrioritizedOperatorSubtaskState {
 	/** List of prioritized snapshot alternatives for raw keyed state. */
 	private final List<StateObjectCollection<KeyedStateHandle>> prioritizedRawKeyedState;
 
-	private final List<StateObjectCollection<StatePartitionSnapshot>> prioritizedManagedInternalState;
-
 	/** Signal flag if this represents state for a restored operator. */
 	private final boolean restored;
 
@@ -69,14 +66,12 @@ public class PrioritizedOperatorSubtaskState {
 		@Nonnull List<StateObjectCollection<KeyedStateHandle>> prioritizedRawKeyedState,
 		@Nonnull List<StateObjectCollection<OperatorStateHandle>> prioritizedManagedOperatorState,
 		@Nonnull List<StateObjectCollection<OperatorStateHandle>> prioritizedRawOperatorState,
-		@Nonnull List<StateObjectCollection<StatePartitionSnapshot>> prioritizedManagedInternalState,
 		boolean restored) {
 
 		this.prioritizedManagedOperatorState = prioritizedManagedOperatorState;
 		this.prioritizedRawOperatorState = prioritizedRawOperatorState;
 		this.prioritizedManagedKeyedState = prioritizedManagedKeyedState;
 		this.prioritizedRawKeyedState = prioritizedRawKeyedState;
-		this.prioritizedManagedInternalState = prioritizedManagedInternalState;
 		this.restored = restored;
 	}
 
@@ -107,15 +102,6 @@ public class PrioritizedOperatorSubtaskState {
 	@Nonnull
 	public List<StateObjectCollection<KeyedStateHandle>> getPrioritizedManagedKeyedState() {
 		return prioritizedManagedKeyedState;
-	}
-
-	/**
-	 * Returns an immutable list with all alternative snapshots to restore the managed internal state, in the order in
-	 * which we should attempt to restore.
-	 */
-	@Nonnull
-	public List<StateObjectCollection<StatePartitionSnapshot>> getPrioritizedManagedInternalState() {
-		return prioritizedManagedInternalState;
 	}
 
 	/**
@@ -221,7 +207,6 @@ public class PrioritizedOperatorSubtaskState {
 			int size = alternativesByPriority.size();
 			List<StateObjectCollection<OperatorStateHandle>> managedOperatorAlternatives = new ArrayList<>(size);
 			List<StateObjectCollection<KeyedStateHandle>> managedKeyedAlternatives = new ArrayList<>(size);
-			List<StateObjectCollection<StatePartitionSnapshot>> managedInternalAlternatives = new ArrayList<>(size);
 			List<StateObjectCollection<OperatorStateHandle>> rawOperatorAlternatives = new ArrayList<>(size);
 			List<StateObjectCollection<KeyedStateHandle>> rawKeyedAlternatives = new ArrayList<>(size);
 
@@ -232,16 +217,12 @@ public class PrioritizedOperatorSubtaskState {
 					rawKeyedAlternatives.add(subtaskState.getRawKeyedState());
 					managedOperatorAlternatives.add(subtaskState.getManagedOperatorState());
 					rawOperatorAlternatives.add(subtaskState.getRawOperatorState());
-					managedInternalAlternatives.add(subtaskState.getManagedInternalState());
 				}
 			}
 
 			// Key-groups should match.
 			BiFunction<KeyedStateHandle, KeyedStateHandle, Boolean> keyedStateApprover =
 				(ref, alt) -> ref.getKeyGroupRange().equals(alt.getKeyGroupRange());
-
-			BiFunction<StatePartitionSnapshot, StatePartitionSnapshot, Boolean> internalStateApprover =
-				(ref, alt) -> ref.getGroups().equals(alt.getGroups());
 
 			// State meta data should match.
 			BiFunction<OperatorStateHandle, OperatorStateHandle, Boolean> operatorStateApprover =
@@ -264,10 +245,6 @@ public class PrioritizedOperatorSubtaskState {
 					jobManagerState.getRawOperatorState(),
 					rawOperatorAlternatives,
 					operatorStateApprover),
-				resolvePrioritizedAlternatives(
-					jobManagerState.getManagedInternalState(),
-					managedInternalAlternatives,
-					internalStateApprover),
 				restored);
 		}
 

@@ -39,7 +39,6 @@ import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.CheckpointStorage;
 import org.apache.flink.runtime.state.CompletedCheckpointStorageLocation;
-import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.OperatorStateBackend;
 import org.apache.flink.runtime.state.StateBackend;
@@ -185,7 +184,7 @@ public class CheckpointSettingsSerializableTest extends TestLogger {
 			Environment env,
 			String operatorIdentifier,
 			int numberOfGroups,
-			GroupSet groups) throws Exception {
+			KeyGroupRange keyGroupRange) throws Exception {
 			throw new UnsupportedOperationException();
 		}
 	}

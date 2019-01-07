@@ -100,7 +100,7 @@ public class CopyOnWriteStateTable<K, N, S> extends StateTable<K, N, S> implemen
 	/**
 	 * The logger.
 	 */
-	private static final Logger LOG = LoggerFactory.getLogger(HeapKeyedStateBackend.class);
+	private static final Logger LOG = LoggerFactory.getLogger(CopyOnWriteStateTable.class);
 
 	/**
 	 * Min capacity (other than zero) for a {@link CopyOnWriteStateTable}. Must be a power of two

@@ -551,7 +551,6 @@ public class JobManagerHARecoveryTest extends TestLogger {
 					StateObjectCollection.singleton(operatorStateHandle),
 					StateObjectCollection.empty(),
 					StateObjectCollection.empty(),
-					StateObjectCollection.empty(),
 					StateObjectCollection.empty()));
 
 			getEnvironment().acknowledgeCheckpoint(

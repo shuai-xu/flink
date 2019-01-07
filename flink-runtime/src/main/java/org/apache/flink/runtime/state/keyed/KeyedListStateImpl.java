@@ -132,6 +132,11 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 		return descriptor;
 	}
 
+	@Override
+	public StateStorage<K, List<E>> getStateStorage() {
+		return stateStorage;
+	}
+
 	//--------------------------------------------------------------------------
 
 	@Override
@@ -520,8 +525,9 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 					result.put(pair.getKey(), pair.getValue());
 				}
 			} else {
-				if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
-					for (Integer group : internalStateBackend.getGroups()) {
+				if (!stateStorage.supportMultiColumnFamilies()
+					&& internalStateBackend.getStateStorages().size() > 1) {
+					for (Integer group : internalStateBackend.getKeyGroupRange()) {
 						outputStream.reset();
 						StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
 						byte[] groupPrefix = outputStream.toByteArray();
@@ -566,8 +572,9 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 			((HeapStateStorage) stateStorage).removeAll();
 		} else {
 			try {
-				if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
-					for (Integer group : internalStateBackend.getGroups()) {
+				if (!stateStorage.supportMultiColumnFamilies()
+					&& internalStateBackend.getStateStorages().size() > 1) {
+					for (Integer group : internalStateBackend.getKeyGroupRange()) {
 						outputStream.reset();
 
 						StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
@@ -621,9 +628,10 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 							}
 						};
 					} else {
-						if (!stateStorage.supportMultiColumnFamilies() && internalStateBackend.getStateStorages().size() > 1) {
+						if (!stateStorage.supportMultiColumnFamilies()
+							&& internalStateBackend.getStateStorages().size() > 1) {
 							Collection<Iterator<Pair<byte[], byte[]>>> groupIterators = new ArrayList<>();
-							for (Integer group : internalStateBackend.getGroups()) {
+							for (Integer group : internalStateBackend.getKeyGroupRange()) {
 								outputStream.reset();
 								StateSerializerUtil.serializeGroupPrefix(outputStream, group, stateNameByte);
 								byte[] groupPrefix = outputStream.toByteArray();

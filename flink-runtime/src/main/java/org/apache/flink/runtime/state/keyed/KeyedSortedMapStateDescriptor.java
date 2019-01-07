@@ -21,6 +21,7 @@ package org.apache.flink.runtime.state.keyed;
 import org.apache.flink.api.common.functions.Comparator;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.SortedMapSerializer;
+import org.apache.flink.runtime.state.InternalStateType;
 import org.apache.flink.util.Preconditions;
 
 import java.util.SortedMap;
@@ -55,8 +56,7 @@ public final class KeyedSortedMapStateDescriptor<K, MK, MV>
 		final TypeSerializer<MK> mapKeySerializer,
 		final TypeSerializer<MV> mapValueSerializer
 	) {
-		super(name, keySerializer,
-			new SortedMapSerializer<>(mapComparator, mapKeySerializer, mapValueSerializer));
+		this(name, keySerializer, new SortedMapSerializer<>(mapComparator, mapKeySerializer, mapValueSerializer));
 	}
 
 	/**
@@ -72,7 +72,7 @@ public final class KeyedSortedMapStateDescriptor<K, MK, MV>
 		final TypeSerializer<K> keySerializer,
 		final SortedMapSerializer<MK, MV> sortedMapSerializer
 	) {
-		super(name, keySerializer, sortedMapSerializer);
+		super(name, InternalStateType.KEYED_SORTEDMAP, keySerializer, sortedMapSerializer);
 	}
 
 	@Override
@@ -112,7 +112,7 @@ public final class KeyedSortedMapStateDescriptor<K, MK, MV>
 	}
 
 	@Override
-	public KeyedSortedMapState<K, MK, MV> bind(KeyedStateBinder stateBinder) {
+	public KeyedSortedMapState<K, MK, MV> bind(KeyedStateBinder stateBinder) throws Exception {
 		return stateBinder.createKeyedSortedMapState(this);
 	}
 }

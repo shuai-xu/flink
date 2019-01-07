@@ -20,6 +20,7 @@ package org.apache.flink.runtime.state.subkeyed;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.ListSerializer;
+import org.apache.flink.runtime.state.InternalStateType;
 import org.apache.flink.util.Preconditions;
 
 import java.util.List;
@@ -50,7 +51,7 @@ public final class SubKeyedListStateDescriptor<K, N, E> extends SubKeyedStateDes
 		TypeSerializer<N> namespaceSerializer,
 		TypeSerializer<E> elementSerializer
 	) {
-		super(name, keySerializer, namespaceSerializer,
+		super(name, InternalStateType.SUBKEYED_LIST, keySerializer, namespaceSerializer,
 			new ListSerializer<>(elementSerializer));
 	}
 
@@ -71,7 +72,7 @@ public final class SubKeyedListStateDescriptor<K, N, E> extends SubKeyedStateDes
 	}
 
 	@Override
-	public SubKeyedListState<K, N, E> bind(SubKeyedStateBinder stateBinder) {
+	public SubKeyedListState<K, N, E> bind(SubKeyedStateBinder stateBinder) throws Exception  {
 		return stateBinder.createSubKeyedListState(this);
 	}
 }

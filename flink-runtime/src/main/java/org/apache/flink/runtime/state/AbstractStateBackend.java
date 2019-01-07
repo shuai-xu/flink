@@ -60,5 +60,5 @@ public abstract class AbstractStateBackend implements StateBackend, java.io.Seri
 		Environment env,
 		String operatorIdentifier,
 		int numberOfGroups,
-		GroupSet groups) throws Exception;
+		KeyGroupRange keyGroupRange) throws Exception;
 }

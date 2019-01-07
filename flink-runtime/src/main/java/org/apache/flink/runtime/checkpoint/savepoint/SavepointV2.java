@@ -27,9 +27,8 @@ import org.apache.flink.runtime.executiongraph.ExecutionJobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.state.ChainedStateHandle;
-import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.KeyedStateHandle;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
+import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.util.Preconditions;
 
 import java.util.Collection;
@@ -229,13 +228,11 @@ public class SavepointV2 implements Savepoint {
 
 						KeyedStateHandle managedKeyedState = null;
 						KeyedStateHandle rawKeyedState = null;
-						StatePartitionSnapshot managedInternalState = null;
 
 						// only the head operator retains the keyed state
 						if (operatorIndex == operatorIDs.size() - 1) {
 							managedKeyedState = subtaskState.getManagedKeyedState();
 							rawKeyedState = subtaskState.getRawKeyedState();
-							managedInternalState = subtaskState.getManagedInternalState();
 						}
 
 
@@ -244,8 +241,7 @@ public class SavepointV2 implements Savepoint {
 							partitioneableState != null ? partitioneableState.get(operatorIndex) : null,
 							rawOperatorState != null ? rawOperatorState.get(operatorIndex) : null,
 							managedKeyedState,
-							rawKeyedState,
-							managedInternalState);
+							rawKeyedState);
 
 						operatorState.putState(subtaskIndex, operatorSubtaskState);
 					}

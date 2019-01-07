@@ -31,6 +31,7 @@ import java.util.stream.Stream;
  *
  * @param <K> The key by which state is keyed.
  */
+@Deprecated
 public interface KeyedStateBackend<K> extends InternalKeyContext<K>, Disposable {
 
 	/**

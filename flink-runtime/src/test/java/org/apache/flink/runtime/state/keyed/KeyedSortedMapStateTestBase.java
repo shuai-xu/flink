@@ -23,8 +23,6 @@ import org.apache.flink.api.common.typeutils.BytewiseComparator;
 import org.apache.flink.api.common.typeutils.base.FloatSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.runtime.state.GroupRange;
-import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
@@ -68,7 +66,7 @@ public abstract class KeyedSortedMapStateTestBase {
 	 */
 	protected abstract AbstractInternalStateBackend createStateBackend(
 		int numberOfGroups,
-		GroupSet groups,
+		KeyGroupRange keyGroupRange,
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig) throws Exception;
 
@@ -92,7 +90,7 @@ public abstract class KeyedSortedMapStateTestBase {
 	}
 
 	@Test
-	public void testKeyAccess() {
+	public void testKeyAccess() throws Exception {
 		KeyedSortedMapStateDescriptor<Integer, Integer, Float> descriptor =
 			new KeyedSortedMapStateDescriptor<>("keyAccess", IntSerializer.INSTANCE,
 				new NaturalComparator<>(), IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
@@ -261,7 +259,7 @@ public abstract class KeyedSortedMapStateTestBase {
 	}
 
 	@Test
-	public void testMapKeyAccess() {
+	public void testMapKeyAccess() throws Exception {
 		KeyedSortedMapStateDescriptor<Integer, Integer, Float> descriptor =
 			new KeyedSortedMapStateDescriptor<>("mapKeyAccess", IntSerializer.INSTANCE,
 				new NaturalComparator<>(), IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
@@ -526,7 +524,7 @@ public abstract class KeyedSortedMapStateTestBase {
 	}
 
 	@Test
-	public void testBoundAccess() {
+	public void testBoundAccess() throws Exception {
 		KeyedSortedMapStateDescriptor<Integer, Integer, Float> descriptor =
 			new KeyedSortedMapStateDescriptor<>("boundaccess", IntSerializer.INSTANCE,
 				BytewiseComparator.INT_INSTANCE, IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
@@ -574,7 +572,7 @@ public abstract class KeyedSortedMapStateTestBase {
 	}
 
 	@Test
-	public void testIterator() {
+	public void testIterator() throws Exception {
 		KeyedSortedMapStateDescriptor<Integer, Integer, Float> descriptor =
 			new KeyedSortedMapStateDescriptor<>("iteratortest", IntSerializer.INSTANCE,
 				BytewiseComparator.INT_INSTANCE, IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
@@ -628,7 +626,7 @@ public abstract class KeyedSortedMapStateTestBase {
 	}
 
 	@Test
-	public void testMulitStateAccessParallism() throws InterruptedException {
+	public void testMulitStateAccessParallism() throws Exception {
 		KeyedSortedMapStateDescriptor<Integer, Integer, Float> descriptor1 =
 			new KeyedSortedMapStateDescriptor<>("iteratortest1", IntSerializer.INSTANCE,
 				BytewiseComparator.INT_INSTANCE, IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
@@ -703,9 +701,8 @@ public abstract class KeyedSortedMapStateTestBase {
 		assertEquals(expectedIterator.hasNext(), actualIterator.hasNext());
 	}
 
-	private GroupSet getGroupsForSubtask(int maxParallelism, int parallelism, int subtaskIndex) {
-		KeyGroupRange keyGroupRange = KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(maxParallelism, parallelism, subtaskIndex);
-		return GroupRange.of(keyGroupRange.getStartKeyGroup(), keyGroupRange.getEndKeyGroup() + 1);
+	private KeyGroupRange getGroupsForSubtask(int maxParallelism, int parallelism, int subtaskIndex) {
+		return KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(maxParallelism, parallelism, subtaskIndex);
 	}
 }
 

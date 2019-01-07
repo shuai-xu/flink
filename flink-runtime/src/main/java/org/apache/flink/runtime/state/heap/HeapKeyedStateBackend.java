@@ -92,6 +92,7 @@ import java.util.stream.Stream;
  *
  * @param <K> The key by which state is keyed.
  */
+@Deprecated
 public class HeapKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 
 	private static final Logger LOG = LoggerFactory.getLogger(HeapKeyedStateBackend.class);

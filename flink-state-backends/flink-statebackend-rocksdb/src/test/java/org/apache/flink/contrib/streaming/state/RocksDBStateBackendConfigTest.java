@@ -32,7 +32,6 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.query.KvStateRegistry;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
-import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.InternalStateBackend;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.StateBackend;
@@ -268,7 +267,7 @@ public class RocksDBStateBackendConfigTest {
 		RocksDBInternalStateBackend internalStateBackend = (RocksDBInternalStateBackend) rocksDbBackend.createInternalStateBackend(env,
 			"foobar",
 			1,
-			new GroupRange(0, 1));
+			new KeyGroupRange(0, 0));
 
 		try {
 			File instanceBasePath = internalStateBackend.getInstanceBasePath();
@@ -321,7 +320,7 @@ public class RocksDBStateBackendConfigTest {
 					env,
 					"foobar",
 					1,
-					new GroupRange(0, 1));
+					new KeyGroupRange(0, 0));
 			}
 			catch (Exception e) {
 				assertTrue(e.getMessage().contains("No local storage directories available"));
@@ -378,7 +377,7 @@ public class RocksDBStateBackendConfigTest {
 					env,
 					"foobar",
 					1,
-					new GroupRange(0, 1));
+					new KeyGroupRange(0, 0));
 
 				internalStateBackend.dispose();
 			}
@@ -558,11 +557,8 @@ public class RocksDBStateBackendConfigTest {
 	static RocksDBInternalStateBackend createInternalStateBackend(RocksDBStateBackend rocksDBStateBackend) throws IOException {
 		final Environment env = getMockEnvironment();
 
-		RocksDBInternalStateBackend rocksDBInternalStateBackend =
-			(RocksDBInternalStateBackend) rocksDBStateBackend.createInternalStateBackend(env, "test_op", 1, new GroupRange(0, 1));
-
-		return rocksDBInternalStateBackend;
-
+		return (RocksDBInternalStateBackend) rocksDBStateBackend
+			.createInternalStateBackend(env, "test_op", 1, new KeyGroupRange(0, 0));
 	}
 
 	static Environment getMockEnvironment() {

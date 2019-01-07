@@ -99,18 +99,18 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	}
 
 	@Override
-	public <K, V, S extends KeyedState<K, V>> S getKeyedState(KeyedStateDescriptor<K, V, S> descriptor) {
+	public <K, V, S extends KeyedState<K, V>> S getKeyedState(KeyedStateDescriptor<K, V, S> descriptor) throws Exception {
 		return operator.getKeyedState(descriptor);
 	}
 
 	@Override
-	public <K, N, V, S extends SubKeyedState<K, N, V>> S getSubKeyedState(SubKeyedStateDescriptor<K, N, V, S> descriptor) {
+	public <K, N, V, S extends SubKeyedState<K, N, V>> S getSubKeyedState(SubKeyedStateDescriptor<K, N, V, S> descriptor) throws Exception {
 		return operator.getSubKeyedState(descriptor);
 	}
 
 	@Override
 	public <K, V> KeyedValueState<K, V> getKeyedValueState(
-		ValueStateDescriptor<V> descriptor) {
+		ValueStateDescriptor<V> descriptor) throws Exception {
 		descriptor.initializeSerializerUnlessSet(operator.getExecutionConfig());
 		return operator.getKeyedState(
 			new KeyedValueStateDescriptor<>(
@@ -124,7 +124,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	@Override
 	public <K, V> KeyedListState<K, V> getKeyedListState(
 		ListStateDescriptor<V> descriptor
-	) {
+	) throws Exception {
 		descriptor.initializeSerializerUnlessSet(operator.getExecutionConfig());
 		return operator.getKeyedState(
 			new KeyedListStateDescriptor<>(
@@ -138,7 +138,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	@Override
 	public <K, UK, UV> KeyedMapState<K, UK, UV> getKeyedMapState(
 		MapStateDescriptor<UK, UV> descriptor
-	) {
+	) throws Exception {
 		descriptor.initializeSerializerUnlessSet(operator.getExecutionConfig());
 		return operator.getKeyedState(
 			new KeyedMapStateDescriptor<>(
@@ -152,7 +152,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	@Override
 	public <K, UK, UV> KeyedSortedMapState<K, UK, UV> getKeyedSortedMapState(
 		SortedMapStateDescriptor<UK, UV> descriptor
-	) {
+	) throws Exception {
 		descriptor.initializeSerializerUnlessSet(operator.getExecutionConfig());
 		return operator.getKeyedState(
 			new KeyedSortedMapStateDescriptor<>(
@@ -166,7 +166,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	@Override
 	public <K, N, V> SubKeyedValueState<K, N, V> getSubKeyedValueState(
 		ValueStateDescriptor<V> descriptor
-	) {
+	) throws Exception {
 		if (namespaceSerializer == null) {
 			throw new RuntimeException("The namespace serializer has not been initialized.");
 		}
@@ -185,7 +185,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	@Override
 	public <K, N, V> SubKeyedListState<K, N, V> getSubKeyedListState(
 		ListStateDescriptor<V> descriptor
-	) {
+	) throws Exception {
 		if (namespaceSerializer == null) {
 			throw new RuntimeException("The namespace serializer has not been initialized.");
 		}
@@ -201,7 +201,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	@Override
 	public <K, N, UK, UV> SubKeyedMapState<K, N, UK, UV> getSubKeyedMapState(
 		MapStateDescriptor<UK, UV> descriptor
-	) {
+	) throws Exception {
 		if (namespaceSerializer == null) {
 			throw new RuntimeException("The namespace serializer has not been initialized.");
 		}
@@ -219,7 +219,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	@Override
 	public <K, N, UK, UV> SubKeyedSortedMapState<K, N, UK, UV> getSubKeyedSortedMapState(
 		SortedMapStateDescriptor<UK, UV> descriptor
-	) {
+	) throws Exception {
 		if (namespaceSerializer == null) {
 			throw new RuntimeException("The namespace serializer has not been initialized.");
 		}
@@ -238,7 +238,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	public <K, UK, UV> StateMapView<K, UK, UV> getStateMapView(
 		String stateName,
 		MapViewTypeInfo<UK, UV> mapViewTypeInfo,
-		boolean hasNamespace) {
+		boolean hasNamespace) throws Exception {
 
 		MapStateDescriptor<UK, UV> mapStateDescriptor = new MapStateDescriptor<>(
 			stateName,
@@ -272,7 +272,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	public <K, UK, UV> StateSortedMapView<K, UK, UV> getStateSortedMapView(
 		String stateName,
 		SortedMapViewTypeInfo<UK, UV> sortedMapViewTypeInfo,
-		boolean hasNamespace) {
+		boolean hasNamespace) throws Exception {
 
 		SortedMapStateDescriptor<UK, UV> sortedMapStateDesc = new SortedMapStateDescriptor<>(
 			stateName,
@@ -292,7 +292,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	public <K, V> StateListView<K, V> getStateListView(
 		String stateName,
 		ListViewTypeInfo<V> listViewTypeInfo,
-		boolean hasNamespace) {
+		boolean hasNamespace) throws Exception {
 
 		ListStateDescriptor<V> listStateDesc = new ListStateDescriptor<>(
 			stateName,

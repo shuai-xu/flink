@@ -38,6 +38,7 @@ import java.util.List;
  * @param <N> The type of the namespace.
  * @param <V> The type of the value.
  */
+@Deprecated
 public class HeapListState<K, N, V>
 		extends AbstractHeapMergingState<K, N, V, List<V>, Iterable<V>, ListState<V>>
 		implements InternalListState<K, N, V> {

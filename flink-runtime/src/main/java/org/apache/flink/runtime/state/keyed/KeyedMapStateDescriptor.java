@@ -20,6 +20,7 @@ package org.apache.flink.runtime.state.keyed;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.MapSerializer;
+import org.apache.flink.runtime.state.InternalStateType;
 import org.apache.flink.util.Preconditions;
 
 import java.util.Map;
@@ -51,8 +52,7 @@ public class KeyedMapStateDescriptor<K, MK, MV>
 		final TypeSerializer<MK> mapKeySerializer,
 		final TypeSerializer<MV> mapValueSerializer
 	) {
-		super(name, keySerializer,
-			new MapSerializer<>(mapKeySerializer, mapValueSerializer));
+		this(name, keySerializer, new MapSerializer<>(mapKeySerializer, mapValueSerializer));
 	}
 
 	/**
@@ -68,7 +68,7 @@ public class KeyedMapStateDescriptor<K, MK, MV>
 		final TypeSerializer<K> keySerializer,
 		final MapSerializer<MK, MV> mapSerializer
 	) {
-		super(name, keySerializer, mapSerializer);
+		super(name, InternalStateType.KEYED_MAP, keySerializer, mapSerializer);
 	}
 
 	@Override
@@ -97,7 +97,7 @@ public class KeyedMapStateDescriptor<K, MK, MV>
 	}
 
 	@Override
-	public KeyedMapState<K, MK, MV> bind(KeyedStateBinder stateBinder) {
+	public KeyedMapState<K, MK, MV> bind(KeyedStateBinder stateBinder) throws Exception {
 		return stateBinder.createKeyedMapState(this);
 	}
 }

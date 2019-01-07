@@ -209,8 +209,7 @@ public class SavepointV1Serializer implements SavepointSerializer<SavepointV2> {
 			operatorStateBackendChain,
 			operatorStateStreamChain,
 			keyedStateBackend,
-			keyedStateStream,
-			null);
+			keyedStateStream);
 	}
 
 	@VisibleForTesting
