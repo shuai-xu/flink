@@ -22,6 +22,9 @@ specific language governing permissions and limitations
 under the License.
 -->
 
+* This will be replaced by the TOC
+{:toc}
+
 Flink comes with an integrated interactive Scala Shell.
 It can be used in a local setup as well as in a cluster setup.
 
