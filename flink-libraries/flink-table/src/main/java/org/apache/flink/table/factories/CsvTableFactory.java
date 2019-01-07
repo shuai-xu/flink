@@ -48,7 +48,7 @@ import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CO
 
 
 /**
- * A CSV table factory from Alibaba's Blink.
+ * A CSV table factory.
  */
 public class CsvTableFactory implements
 		StreamTableSourceFactory<BaseRow>,

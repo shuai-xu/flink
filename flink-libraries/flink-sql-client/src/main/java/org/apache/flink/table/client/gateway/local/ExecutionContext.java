@@ -315,6 +315,9 @@ public class ExecutionContext<T> {
 			tableEnv.getConfig().getConf().setInteger(
 				TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM,
 				mergedEnv.getExecution().getParallelism());
+
+			// always enable subsection optimization
+			tableEnv.getConfig().setSubsectionOptimization(true);
 		}
 
 		public QueryConfig getQueryConfig() {
@@ -334,6 +337,9 @@ public class ExecutionContext<T> {
 		}
 
 		public JobGraph createJobGraph(String name) {
+			// compile
+			tableEnv.compile();
+
 			final FlinkPlan plan = createPlan(name, flinkConfig);
 			return ClusterClient.getJobGraph(
 				flinkConfig,
@@ -344,7 +350,14 @@ public class ExecutionContext<T> {
 		}
 
 		private FlinkPlan createPlan(String name, Configuration flinkConfig) {
-			final StreamGraph graph = streamExecEnv.getStreamGraph();
+			StreamGraph graph = null;
+			if (mergedEnv.getExecution().isStreamingExecution()) {
+				graph = streamExecEnv.getStreamGraph();
+			} else if (mergedEnv.getExecution().isBatchExecution()) {
+				graph = ((BatchTableEnvironment) tableEnv).generateStreamGraph();
+			} else {
+				throw new SqlExecutionException("Unsupported execution type specified.");
+			}
 			graph.setJobName(name);
 			return graph;
 		}

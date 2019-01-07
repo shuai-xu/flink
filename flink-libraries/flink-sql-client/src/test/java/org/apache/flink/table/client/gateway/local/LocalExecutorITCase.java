@@ -545,6 +545,120 @@ public class LocalExecutorITCase extends TestLogger {
 		}
 	}
 
+	@Test(timeout = 30_000L)
+	public void testStreamQueryExecutionUpsertSink() throws Exception {
+		final String csvOutputPath = new File(tempFolder.newFolder().getAbsolutePath(), "test-out.csv").toURI().toString();
+		final URL url = getClass().getClassLoader().getResource("test-data.csv");
+		Objects.requireNonNull(url);
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "streaming");
+		replaceVars.put("$VAR_SOURCE_SINK_PATH", csvOutputPath);
+		replaceVars.put("$VAR_UPDATE_MODE", "update-mode: append");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
+
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		executor.createTable(
+			session,
+			"CREATE TABLE SourceTableFromDDL(IntegerField1 INT, StringField1 VARCHAR)" +
+				" WITH (" +
+				"  type = 'CSV'" +
+				", path = '" + url.getPath() + "'" +
+				", commentsPrefix = '#')");
+
+		executor.createTable(
+			session,
+			"CREATE TABLE SinkTableFromDDL(IntegerField INT, StringField VARCHAR)" +
+				" WITH (" +
+				"  type = 'UPSERTCSV'" +
+				", path = '" + csvOutputPath + "')");
+
+		try {
+			final ProgramTargetDescriptor targetDescriptor = executor.executeUpdate(
+				session,
+				"INSERT INTO SinkTableFromDDL SELECT SUM(IntegerField1), StringField1 FROM SourceTableFromDDL GROUP BY StringField1");
+
+			// wait for job completion and verify result
+			boolean isRunning = true;
+			while (isRunning) {
+				Thread.sleep(50); // slow the processing down
+				final JobStatus jobStatus = clusterClient.getJobStatus(JobID.fromHexString(targetDescriptor.getJobId())).get();
+				switch (jobStatus) {
+					case CREATED:
+					case RUNNING:
+						continue;
+					case FINISHED:
+						isRunning = false;
+						verifyUpsertSinkResult(csvOutputPath);
+						break;
+					default:
+						fail("Unexpected job status.");
+				}
+			}
+		} finally {
+			executor.stop(session);
+		}
+	}
+
+	@Test(timeout = 30_000L)
+	public void testStreamQueryExecutionRetractSink() throws Exception {
+		final String csvOutputPath = new File(tempFolder.newFolder().getAbsolutePath(), "test-out.csv").toURI().toString();
+		final URL url = getClass().getClassLoader().getResource("test-data.csv");
+		Objects.requireNonNull(url);
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "streaming");
+		replaceVars.put("$VAR_SOURCE_SINK_PATH", csvOutputPath);
+		replaceVars.put("$VAR_UPDATE_MODE", "update-mode: append");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
+
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		executor.createTable(
+			session,
+			"CREATE TABLE SourceTableFromDDL(IntegerField1 INT, StringField1 VARCHAR)" +
+				" WITH (" +
+				"  type = 'CSV'" +
+				", path = '" + url.getPath() + "'" +
+				", commentsPrefix = '#')");
+
+		executor.createTable(
+			session,
+			"CREATE TABLE SinkTableFromDDL(IntegerField INT, StringField VARCHAR)" +
+				" WITH (" +
+				"  type = 'RETRACTCSV'" +
+				", path = '" + csvOutputPath + "')");
+
+		try {
+			final ProgramTargetDescriptor targetDescriptor = executor.executeUpdate(
+				session,
+				"INSERT INTO SinkTableFromDDL SELECT SUM(IntegerField1), StringField1 FROM SourceTableFromDDL GROUP BY StringField1");
+
+			// wait for job completion and verify result
+			boolean isRunning = true;
+			while (isRunning) {
+				Thread.sleep(50); // slow the processing down
+				final JobStatus jobStatus = clusterClient.getJobStatus(JobID.fromHexString(targetDescriptor.getJobId())).get();
+				switch (jobStatus) {
+					case CREATED:
+					case RUNNING:
+						continue;
+					case FINISHED:
+						isRunning = false;
+						verifyRetractSinkResult(csvOutputPath);
+						break;
+					default:
+						fail("Unexpected job status.");
+				}
+			}
+		} finally {
+			executor.stop(session);
+		}
+	}
+
 	private void executeStreamQueryTable(
 			Map<String, String> replaceVars,
 			String query,
@@ -565,6 +679,36 @@ public class LocalExecutorITCase extends TestLogger {
 		} finally {
 			executor.stop(session);
 		}
+	}
+
+	private void verifyUpsertSinkResult(String path) throws IOException {
+		final List<String> actualResults = new ArrayList<>();
+		TestBaseUtils.readAllResultLines(actualResults, path);
+		final List<String> expectedResults = new ArrayList<>();
+		expectedResults.add("Add,42,Hello World");
+		expectedResults.add("Add,64,Hello World");
+		expectedResults.add("Add,96,Hello World");
+		expectedResults.add("Add,128,Hello World");
+		expectedResults.add("Add,170,Hello World");
+		expectedResults.add("Add,52,Hello World!!!!");
+		TestBaseUtils.compareResultCollections(expectedResults, actualResults, Comparator.naturalOrder());
+	}
+
+	private void verifyRetractSinkResult(String path) throws IOException {
+		final List<String> actualResults = new ArrayList<>();
+		TestBaseUtils.readAllResultLines(actualResults, path);
+		final List<String> expectedResults = new ArrayList<>();
+		expectedResults.add("True,42,Hello World");
+		expectedResults.add("False,42,Hello World");
+		expectedResults.add("True,64,Hello World");
+		expectedResults.add("False,64,Hello World");
+		expectedResults.add("True,96,Hello World");
+		expectedResults.add("False,96,Hello World");
+		expectedResults.add("True,128,Hello World");
+		expectedResults.add("False,128,Hello World");
+		expectedResults.add("True,170,Hello World");
+		expectedResults.add("True,52,Hello World!!!!");
+		TestBaseUtils.compareResultCollections(expectedResults, actualResults, Comparator.naturalOrder());
 	}
 
 	private void verifySinkResult(String path) throws IOException {
