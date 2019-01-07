@@ -235,7 +235,7 @@ public class CustomTypeSplit extends TableFunction<Row> {
 
     @Override
     public DataType getResultType() {
-        return DataTypes.createRowType(DataTypes.STRING(), DataTypes.INT());
+        return DataTypes.createRowType(DataTypes.STRING, DataTypes.INT);
     }
 }
 {% endhighlight %}

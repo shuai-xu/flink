@@ -70,9 +70,9 @@ KafkaTableSource source = Kafka010JsonTableSource.builder()
   .withKafkaProperties(kafkaProps)
   // set Table schema
   .withSchema(TableSchema.builder()
-    .field("sensorId", DataTypes.LONG())  
-    .field("temp", DataTypes.DOUBLE())
-    .field("time", DataTypes.TIMESTAMP()).build())
+    .field("sensorId", DataTypes.LONG)  
+    .field("temp", DataTypes.DOUBLE)
+    .field("time", DataTypes.TIMESTAMP).build())
   .build();
 {% endhighlight %}
 </div>
@@ -112,12 +112,12 @@ KafkaTableSource source = Kafka010JsonTableSource.builder()
   // ...
   // set Table schema
   .withSchema(TableSchema.builder()
-    .field("sensorId", DataTypes.LONG())
-    .field("temperature", DataTypes.DOUBLE()).build())
+    .field("sensorId", DataTypes.LONG
+    .field("temperature", DataTypes.DOUBLE).build())
   // set JSON parsing schema
   .forJsonSchema(TableSchema.builder()
-    .field("id", DataTypes.LONG())
-    .field("temp", DataTypes.DOUBLE()).build())
+    .field("id", DataTypes.LONG)
+    .field("temp", DataTypes.DOUBLE).build())
   // set mapping from table fields to JSON fields
   .withTableToJsonMapping(mapping)
   .build();
@@ -212,9 +212,9 @@ KafkaTableSource source = Kafka010AvroTableSource.builder()
   .withKafkaProperties(kafkaProps)
   // set Table schema
   .withSchema(TableSchema.builder()
-    .field("sensorId", DataTypes.LONG())
-    .field("temp", DataTypes.DOUBLE())
-    .field("time", DataTypes.TIMESTAMP()).build())
+    .field("sensorId", DataTypes.LONG)
+    .field("temp", DataTypes.DOUBLE)
+    .field("time", DataTypes.TIMESTAMP).build())
   // set class of Avro record
   .forAvroRecordClass(SensorReading.class)
   .build();
@@ -260,8 +260,8 @@ KafkaTableSource source = Kafka010AvroTableSource.builder()
   // ...
   // set Table schema
   .withSchema(TableSchema.builder()
-    .field("sensorId", DataTypes.LONG())
-    .field("temperature", DataTypes.DOUBLE()).build())
+    .field("sensorId", DataTypes.LONG)
+    .field("temperature", DataTypes.DOUBLE).build())
   // set class of Avro record with fields [id, temp]
   .forAvroRecordClass(SensorReading.class)
   // set mapping from table fields to Avro fields
@@ -329,10 +329,10 @@ A table schema field of type `PROCTIME_INDICATOR` can be declared as a processin
 KafkaTableSource source = Kafka010JsonTableSource.builder()
   // ... 
   .withSchema(TableSchema.builder()
-    .field("sensorId", DataTypes.LONG())  
-    .field("temp", DataTypes.DOUBLE())
+    .field("sensorId", DataTypes.LONG)  
+    .field("temp", DataTypes.DOUBLE)
     // field "ptime" is of type TIMESTAMP
-    .field("ptime", DataTypes.PROCTIME_INDICATOR()).build())
+    .field("ptime", DataTypes.PROCTIME_INDICATOR).build())
   // declare "ptime" as processing time attribute
   .withProctimeAttribute("ptime")
   .build();
@@ -375,10 +375,10 @@ The following example shows how to configure a rowtime attribute.
 KafkaTableSource source = Kafka010JsonTableSource.builder()
   // ...
   .withSchema(TableSchema.builder()
-    .field("sensorId", DataTypes.LONG())
-    .field("temp", DataTypes.DOUBLE())
+    .field("sensorId", DataTypes.LONG)
+    .field("temp", DataTypes.DOUBLE)
     // field "rtime" is of type ROWTIME_INDICATOR
-    .field("rtime", DataTypes.ROWTIME_INDICATOR()).build())
+    .field("rtime", DataTypes.ROWTIME_INDICATOR).build())
   .withRowtimeAttribute(
     // "rtime" is rowtime attribute
     "rtime",
@@ -421,10 +421,10 @@ Since Kafka 0.10, Kafka messages have a timestamp as metadata that specifies whe
 KafkaTableSource source = Kafka010JsonTableSource.builder()
   // ...
   .withSchema(TableSchema.builder()
-    .field("sensorId", DataTypes.LONG())
-    .field("temp", DataTypes.DOUBLE())
+    .field("sensorId", DataTypes.LONG)
+    .field("temp", DataTypes.DOUBLE)
     // field "rtime" is of type ROWTIME_INDICATOR
-    .field("rtime", DataTypes.ROWTIME_INDICATOR()).build())
+    .field("rtime", DataTypes.ROWTIME_INDICATOR).build())
   // use Kafka timestamp as rowtime attribute
   .withKafkaTimestampAsRowtimeAttribute()(
     // "rtime" is rowtime attribute
@@ -500,10 +500,10 @@ You can create the source as follows:
 CsvTableSource csvTableSource = CsvTableSource
     .builder()
     .path("/path/to/your/file.csv")
-    .field("name", DataTypes.STRING())
-    .field("id", DataTypes.INT())
-    .field("score", DataTypes.DOUBLE())
-    .field("comments", DataTypes.STRING())
+    .field("name", DataTypes.STRING)
+    .field("id", DataTypes.INT)
+    .field("score", DataTypes.DOUBLE)
+    .field("comments", DataTypes.STRING)
     .fieldDelimiter("#")
     .lineDelimiter("$")
     .ignoreFirstLine()
