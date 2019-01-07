@@ -1370,8 +1370,12 @@ public class ExecutionGraph implements AccessExecutionGraph {
 			evIds.add(ev.getExecutionVertexID());
 		}
 		// if we have checkpointed state, reload it into the executions
+		// we restart scheduler to ensure EXACTLY_ONCE mechanism and
+		// to trigger new checkpoint without having to wait for old checkpoint expired
 		if (checkpointCoordinator != null) {
+			checkpointCoordinator.stopCheckpointScheduler();
 			checkpointCoordinator.restoreLatestCheckpointedState(executionVertices, false, true);
+			checkpointCoordinator.startCheckpointScheduler();
 		}
 
 		graphManager.notifyExecutionVertexFailover(evIds);

@@ -118,7 +118,10 @@ public class FailoverRegionTest extends TestLogger {
 		for (ExecutionVertex evs : eg.getAllExecutionVertices()) {
 			evs.getCurrentExecutionAttempt().cancelingComplete();
 		}
+		// #startCheckpointScheduler would trigger stop again
+		verify(spyCheckpointCoordinator, times(2)).stopCheckpointScheduler();
 		verify(spyCheckpointCoordinator, times(1)).restoreLatestCheckpointedState(any(List.class), any(Boolean.class), any(Boolean.class));
+		verify(spyCheckpointCoordinator, times(1)).startCheckpointScheduler();
 		assertEquals(JobStatus.RUNNING, strategy.getFailoverRegion(ev).getState());
 	}
 
@@ -223,7 +226,9 @@ public class FailoverRegionTest extends TestLogger {
 		assertEquals(JobStatus.RUNNING, strategy.getFailoverRegion(ev22).getState());
 		assertEquals(JobStatus.RUNNING, strategy.getFailoverRegion(ev31).getState());
 
+		verify(spyCheckpointCoordinator, times(2)).stopCheckpointScheduler();
 		verify(spyCheckpointCoordinator, times(1)).restoreLatestCheckpointedState(eq(region1Vertices), any(Boolean.class), any(Boolean.class));
+		verify(spyCheckpointCoordinator, times(1)).startCheckpointScheduler();
 		verify(spyCheckpointCoordinator, never()).restoreLatestCheckpointedState(eq(region2Vertices), any(Boolean.class), any(Boolean.class));
 		verify(spyCheckpointCoordinator, never()).restoreLatestCheckpointedState(eq(region3Vertices), any(Boolean.class), any(Boolean.class));
 
@@ -251,9 +256,11 @@ public class FailoverRegionTest extends TestLogger {
 		assertEquals(JobStatus.RUNNING, strategy.getFailoverRegion(ev4).getState());
 
 		// triggered before
+		verify(spyCheckpointCoordinator, times(4)).stopCheckpointScheduler();
 		verify(spyCheckpointCoordinator, times(1)).restoreLatestCheckpointedState(eq(region1Vertices), any(Boolean.class), any(Boolean.class));
 		verify(spyCheckpointCoordinator, never()).restoreLatestCheckpointedState(eq(region2Vertices), any(Boolean.class), any(Boolean.class));
 		verify(spyCheckpointCoordinator, times(1)).restoreLatestCheckpointedState(eq(region3Vertices), any(Boolean.class), any(Boolean.class));
+		verify(spyCheckpointCoordinator, times(2)).startCheckpointScheduler();
 
 	}
 
@@ -421,6 +428,8 @@ public class FailoverRegionTest extends TestLogger {
 
 		ev1.getCurrentExecutionAttempt().fail(new Exception("new fail"));
 		assertEquals(JobStatus.CANCELLING, strategy.getFailoverRegion(ev1).getState());
+		verify(spyCheckpointCoordinator, never()).stopCheckpointScheduler();
+		verify(spyCheckpointCoordinator, never()).startCheckpointScheduler();
 		verify(spyCheckpointCoordinator, never()).restoreLatestCheckpointedState(any(List.class), any(Boolean.class), any(Boolean.class));
 
 		ExecutionVertex ev2 = iter.next();
@@ -430,7 +439,9 @@ public class FailoverRegionTest extends TestLogger {
 		for (ExecutionVertex evs : eg.getAllExecutionVertices()) {
 			evs.getCurrentExecutionAttempt().cancelingComplete();
 		}
+		verify(spyCheckpointCoordinator, times(2)).stopCheckpointScheduler();
 		verify(spyCheckpointCoordinator, times(1)).restoreLatestCheckpointedState(any(List.class), any(Boolean.class), any(Boolean.class));
+		verify(spyCheckpointCoordinator, times(1)).startCheckpointScheduler();
 	}
 
 	/**
@@ -459,7 +470,9 @@ public class FailoverRegionTest extends TestLogger {
 
 		ev1.getCurrentExecutionAttempt().fail(new Exception("new fail"));
 		assertEquals(JobStatus.CANCELLING, strategy.getFailoverRegion(ev1).getState());
+		verify(spyCheckpointCoordinator, times(2)).stopCheckpointScheduler();
 		verify(spyCheckpointCoordinator, times(1)).restoreLatestCheckpointedState(any(List.class), any(Boolean.class), any(Boolean.class));
+		verify(spyCheckpointCoordinator, times(1)).startCheckpointScheduler();
 
 		ExecutionVertex ev2 = iter.next();
 		ev2.getCurrentExecutionAttempt().fail(new Exception("new fail"));
@@ -468,7 +481,9 @@ public class FailoverRegionTest extends TestLogger {
 		for (ExecutionVertex evs : eg.getAllExecutionVertices()) {
 			evs.getCurrentExecutionAttempt().cancelingComplete();
 		}
+		verify(spyCheckpointCoordinator, times(4)).stopCheckpointScheduler();
 		verify(spyCheckpointCoordinator, times(2)).restoreLatestCheckpointedState(any(List.class), any(Boolean.class), any(Boolean.class));
+		verify(spyCheckpointCoordinator, times(2)).startCheckpointScheduler();
 	}
 
 	@Test
