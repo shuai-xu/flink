@@ -27,8 +27,6 @@ import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexDirectOOM;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
-import org.slf4j.LoggerFactory;
-
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -37,8 +35,6 @@ import java.util.Map;
  * DirectOOMDetector detects direct oom failure of a job.
  */
 public class DirectOOMDetector implements Detector {
-
-	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(DirectOOMDetector.class);
 
 	private JobID jobID;
 	private RestServerClient restServerClient;
@@ -60,17 +56,11 @@ public class DirectOOMDetector implements Detector {
 	}
 
 	@Override
-	public Symptom detect() {
+	public Symptom detect() throws Exception {
 
 		long now = System.currentTimeMillis();
 
-		Map<JobVertexID, List<JobException>> exceptions = null;
-		try {
-			exceptions = restServerClient.getFailover(jobID, lastDetectTime, now);
-		} catch (Exception e) {
-			LOGGER.error("Failed to get failover information from rest server client: {}", e.getMessage());
-			return null;
-		}
+		Map<JobVertexID, List<JobException>> exceptions = restServerClient.getFailover(jobID, lastDetectTime, now);
 
 		lastDetectTime = now;
 		if (exceptions == null) {

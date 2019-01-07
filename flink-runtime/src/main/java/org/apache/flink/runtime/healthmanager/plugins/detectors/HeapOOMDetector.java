@@ -27,8 +27,6 @@ import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHeapOOM;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
-import org.slf4j.LoggerFactory;
-
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -37,8 +35,6 @@ import java.util.Map;
  * HeapOOMDetector detects heap oom failure of a job.
  */
 public class HeapOOMDetector implements Detector {
-
-	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(HeapOOMDetector.class);
 
 	private JobID jobID;
 	private RestServerClient restServerClient;
@@ -64,13 +60,7 @@ public class HeapOOMDetector implements Detector {
 
 		long now = System.currentTimeMillis();
 
-		Map<JobVertexID, List<JobException>> exceptions = null;
-		try {
-			exceptions = restServerClient.getFailover(jobID, lastDetectTime, now);
-		} catch (Exception e) {
-			LOGGER.error("Failed to get failover information from rest server client: {}", e.getMessage());
-			return null;
-		}
+		Map<JobVertexID, List<JobException>> exceptions = restServerClient.getFailover(jobID, lastDetectTime, now);
 
 		lastDetectTime = now;
 		if (exceptions == null) {

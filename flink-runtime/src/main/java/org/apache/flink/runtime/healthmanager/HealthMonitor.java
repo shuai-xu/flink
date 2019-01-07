@@ -32,8 +32,10 @@ import org.apache.flink.runtime.healthmanager.plugins.actionselectors.FirstValid
 import org.apache.flink.runtime.healthmanager.plugins.detectors.DirectOOMDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.FullGCDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.HeapOOMDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.MemoryOveruseDetector;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.DirectMemoryAdjuster;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.HeapMemoryAdjuster;
+import org.apache.flink.runtime.healthmanager.plugins.resolvers.NativeMemoryAdjuster;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,12 +65,14 @@ public class HealthMonitor {
 			ConfigOptions.key("healthmonitor.detector.classes")
 					.defaultValue(HeapOOMDetector.class.getCanonicalName() + ","
 						+ DirectOOMDetector.class.getCanonicalName() + ","
-						+ FullGCDetector.class.getCanonicalName());
+						+ FullGCDetector.class.getCanonicalName() + ","
+						+ MemoryOveruseDetector.class.getCanonicalName());
 
 	public static final ConfigOption<String> RESOLVER_CLASSES =
 			ConfigOptions.key("healthmonitor.resolver.classes")
 					.defaultValue(HeapMemoryAdjuster.class.getCanonicalName() + ","
-						+ DirectMemoryAdjuster.class.getCanonicalName());
+						+ DirectMemoryAdjuster.class.getCanonicalName() + ","
+						+ NativeMemoryAdjuster.class.getCanonicalName());
 
 	private JobID jobID;
 	private Configuration config;

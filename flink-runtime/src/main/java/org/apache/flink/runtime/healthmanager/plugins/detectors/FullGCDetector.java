@@ -42,6 +42,7 @@ import java.util.Set;
  * FullGCDetector detects full GCs a job.
  */
 public class FullGCDetector implements Detector {
+
 	private static final String FULL_GC_COUNT_METRIC = "Status.JVM.GarbageCollector.ConcurrentMarkSweep.Count";
 
 	private static final ConfigOption<Integer> FULL_GC_COUNT_THRESHOLD =
@@ -75,7 +76,15 @@ public class FullGCDetector implements Detector {
 
 	@Override
 	public void close() {
+		if (metricProvider != null && gcMetricMinSubscription != null) {
+			metricProvider.unsubscribe(gcMetricMinSubscription);
+			gcMetricMinSubscription = null;
+		}
 
+		if (metricProvider != null && gcMetricMaxSubscription != null) {
+			metricProvider.unsubscribe(gcMetricMaxSubscription);
+			gcMetricMaxSubscription = null;
+		}
 	}
 
 	@Override

@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Direct Memory adjuster which can resolve vertex oom.
+ * Direct Memory adjuster which can resolve vertex direct oom.
  */
 public class DirectMemoryAdjuster implements Resolver {
 
@@ -72,7 +72,6 @@ public class DirectMemoryAdjuster implements Resolver {
 			if (symptom instanceof JobVertexDirectOOM) {
 				JobVertexDirectOOM jobVertexDirectOOM = (JobVertexDirectOOM) symptom;
 				jobVertexIDs.addAll(jobVertexDirectOOM.getJobVertexIDs());
-				continue;
 			}
 		}
 
@@ -81,8 +80,8 @@ public class DirectMemoryAdjuster implements Resolver {
 		}
 
 		AdjustJobDirectMemory adjustJobDirectMemory = new AdjustJobDirectMemory(jobID, timeout);
+		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 		for (JobVertexID jvId : jobVertexIDs) {
-			RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(jvId);
 			ResourceSpec currentResource = vertexConfig.getResourceSpec();
 			ResourceSpec targetResource =
