@@ -232,6 +232,7 @@ object BuiltInFunctionCatalog {
     "exp" -> classOf[Exp],
     "floor" -> classOf[Floor],
     "log10" -> classOf[Log10],
+    "log2" -> classOf[Log2],
     "ln" -> classOf[Ln],
     "log" -> classOf[Log],
     "power" -> classOf[Power],

@@ -1900,6 +1900,16 @@ LOG10(numeric)
     <tr>
       <td>
         {% highlight text %}
+LOG2(numeric)
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Returns the base 2 logarithm of <i>numeric</i>.</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td>
 EXP(numeric)
 {% endhighlight %}
       </td>

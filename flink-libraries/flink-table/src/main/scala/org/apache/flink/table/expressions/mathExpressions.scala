@@ -107,6 +107,21 @@ case class Log10(child: Expression) extends UnaryExpression with InputTypeSpec {
     logicalExprVisitor.visit(this)
 }
 
+case class Log2(child: Expression) extends UnaryExpression with InputTypeSpec {
+  override private[flink] def expectedTypes: Seq[InternalType] = DataTypes.DOUBLE :: Nil
+
+  override private[flink] def resultType: InternalType = DataTypes.DOUBLE
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder) = {
+    relBuilder.call(ScalarSqlFunctions.LOG2, child.toRexNode)
+  }
+
+  override def toString: String = s"log2($child)"
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
+
 case class Log(base: Expression, antilogarithm: Expression) extends Expression with InputTypeSpec {
   def this(antilogarithm: Expression) = this(null, antilogarithm)
 
