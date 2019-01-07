@@ -76,7 +76,7 @@ public class KubernetesSessionResourceManagerTest extends TestLogger {
 
 	protected static final String APP_ID = "k8s-cluster-1234";
 
-	protected static final String CONTAINER_IMAGE = "reg.docker.alibaba-inc.com/boyuan/flink-test:latest";
+	protected static final String CONTAINER_IMAGE = "flink-k8s:latest";
 
 	protected static final String MASTER_URL = "http://127.0.0.1:49359";
 
