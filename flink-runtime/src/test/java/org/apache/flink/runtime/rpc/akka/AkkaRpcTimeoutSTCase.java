@@ -52,14 +52,12 @@ import static org.apache.flink.runtime.stabilitytest.Constants.LOG_PREFIX_FAULT_
  * via the given probability.
  *
  * <p>A stability test case class what be called ST-class must implements the static method
- * void initialize(Object arg0, Object arg1), and the initialize method will be called by
- * {@link com.alibaba.blink.stabilitytest.STCaseHelper}.
+ * void initialize(Object arg0, Object arg1).
  *
- * <p>A stability test case what be called ST-case is one static method or the assemble of more static methods
- * in a ST-class. The first parameter of every ST-case method what will be called
- * directly by {@link com.alibaba.blink.stabilitytest.STCaseHelper} must be Boolean[], it is a
- * array contained one element and tell {@link com.alibaba.blink.stabilitytest.STCaseHelper} clearly
- * whether step over all behind codes of the injectable target method after invoke the ST-case method.
+ * <p>A stability test case what be called ST-case is one static method or the assemble of more
+ * static methods in a ST-class. The first parameter of every ST-case method must be Boolean[],
+ * it is a array contained one element and tell the caller whether step over all behind codes of
+ * the injectable target method after invoke the ST-case method.
  */
 public final class AkkaRpcTimeoutSTCase {
 	private static final Logger LOG = LoggerFactory.getLogger(AkkaRpcTimeoutSTCase.class);
