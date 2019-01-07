@@ -45,15 +45,15 @@ Use "benv" and "senv" to access the Batch and Streaming environment respectively
 The following example will execute the wordcount program in the Scala shell:
 
 {% highlight scala %}
-Scala-Flink> val text = benv.fromElements(
+Scala> val text = benv.fromElements(
   "To be, or not to be,--that is the question:--",
   "Whether 'tis nobler in the mind to suffer",
   "The slings and arrows of outrageous fortune",
   "Or to take arms against a sea of troubles,")
-Scala-Flink> val counts = text
+Scala> val counts = text
     .flatMap { _.toLowerCase.split("\\W+") }
     .map { (_, 1) }.groupBy(0).sum(1)
-Scala-Flink> counts.print()
+Scala> counts.print()
 {% endhighlight %}
 
 The print() command will automatically send the specified tasks to the JobManager for execution and will show the result of the computation in the terminal.
@@ -61,7 +61,7 @@ The print() command will automatically send the specified tasks to the JobManage
 It is possible to write results to a file. However, in this case you need to call `execute`, to run your program:
 
 {% highlight scala %}
-Scala-Flink> benv.execute("MyProgram")
+Scala> benv.execute("MyProgram")
 {% endhighlight %}
 
 ### DataStream API
@@ -69,21 +69,19 @@ Scala-Flink> benv.execute("MyProgram")
 Similar to the batch program above, we can execute a streaming program through the DataStream API:
 
 {% highlight scala %}
-Scala-Flink> val textStreaming = senv.fromElements(
+Scala> val textStreaming = senv.fromElements(
   "To be, or not to be,--that is the question:--",
   "Whether 'tis nobler in the mind to suffer",
   "The slings and arrows of outrageous fortune",
   "Or to take arms against a sea of troubles,")
-Scala-Flink> val countsStreaming = textStreaming
+Scala> val countsStreaming = textStreaming
     .flatMap { _.toLowerCase.split("\\W+") }
     .map { (_, 1) }.keyBy(0).sum(1)
-Scala-Flink> countsStreaming.print()
-Scala-Flink> senv.execute("Streaming Wordcount")
+Scala> countsStreaming.print()
+Scala> senv.execute("Streaming Wordcount")
 {% endhighlight %}
 
 Note, that in the Streaming case, the print operation does not trigger execution directly.
-
-The Flink Shell comes with command history and auto-completion.
 
 ### Table API
 
@@ -95,7 +93,7 @@ table for later usage. For example, in the following scala shell command sequenc
 is cached and the result may be reused in later code.
 
 {% highlight scala %}
-scala> val data = Seq(
+Scala> val data = Seq(
     ("US", "Red", 10),
     ("UK", "Blue", 20),
     ("CN", "Yellow", 30),
@@ -108,19 +106,40 @@ scala> val data = Seq(
     ("US", "Blue", 100)
   )
 
-scala> val t = btenv.fromCollection(data).as ('country, 'color, 'amount)
-scala> val t1 = t.filter('amount < 100)
-scala> t1.cache
-scala> val x = t1.print
+Scala> val t = btenv.fromCollection(data).as ('country, 'color, 'amount)
+Scala> val t1 = t.filter('amount < 100)
+Scala> t1.cache
+Scala> val x = t1.print
 
-scala> val t2 = t1.groupBy('country).select('country, 'amount.sum as 'sum)
-scala> val res2 = t2.print
+Scala> val t2 = t1.groupBy('country).select('country, 'amount.sum as 'sum)
+Scala> val res2 = t2.print
 
-scala> val t3 = t1.groupBy('color).select('color, 'amount.avg as 'avg)
-scala> val res3 = t3.print
+Scala> val t3 = t1.groupBy('color).select('color, 'amount.avg as 'avg)
+Scala> val res3 = t3.print
 {% endhighlight %}
 
 Note: The cached tables will be cleaned up when the scala shell exit.
+
+### SQL Query
+In Scala Shell, users can also execute SQL queries calling sqlQuery() as following code shows:
+
+{% highlight scala %}
+Scala> val data = Seq(
+    ("US", "Red", 10),
+    ("UK", "Blue", 20),
+    ("CN", "Yellow", 30),
+    ("US", "Blue",40),
+    ("UK","Red", 50),
+    ("CN", "Red",60),
+    ("US", "Yellow", 70),
+    ("UK", "Yellow", 80),
+    ("CN", "Blue", 90),
+    ("US", "Blue", 100)
+  )
+Scala> val batchTable = btenv.fromCollection(data,'country,'color,'cnt)
+Scala> btenv.registerTable("MyTable",batchTable)
+Scala> val result = btenv.sqlQuery("SELECT * FROM MyTable WHERE cnt < 50").collect
+{% endhighlight %}
 
 ## Adding external dependencies
 
@@ -159,6 +178,13 @@ and supply the host and port of the JobManager with:
 bin/start-scala-shell.sh remote <hostname> <portnumber>
 {% endhighlight %}
 
+Such as:
+
+{% highlight bash %}
+bin/start-scala-shell.sh remote localhost 6123
+{% endhighlight %}
+In this way, the scala shell will be started in local standalone cluster.
+
 ### Yarn Scala Shell cluster
 
 The shell can deploy a Flink cluster to YARN, which is used exclusively by the
@@ -167,12 +193,14 @@ The shell deploys a new Flink cluster on YARN and connects the
 cluster. You can also specify options for YARN cluster such as memory for
 JobManager, name of YARN application, etc.
 
-For example, to start a Yarn cluster for the Scala Shell with two TaskManagers
-use the following:
-
+For example, the following command will start a Yarn cluster named as "flink-yarn" for Scala Shell with 1 JobManager
+and 2 TaskManagers. Each TaskManager starts with 1024MB memory and provides 2 slots.
 {% highlight bash %}
- bin/start-scala-shell.sh yarn -n 2
+ ./bin/start-scala-shell.sh yarn -n 2 -jm 1024 -s 2 -tm 1024 -nm flink-yarn
 {% endhighlight %}
+
+Note: Please make sure the environment variables HADOOP_HOME=/path/to/hadoop and
+YARN_CONF_DIR=${HADOOP_HOME}/etc/hadoop have been correctly set.
 
 For all other options, see the full reference at the bottom.
 
