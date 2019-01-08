@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.healthmanager;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -125,10 +126,26 @@ public interface RestServerClient {
 		 */
 		private ResourceSpec resourceSpec;
 
-		public VertexConfig(int parallelism, int maxParallelism, ResourceSpec resourceSpec) {
+		/**
+		 * transformation id of operator in the vertex.
+		 */
+		private int[] operatorIds;
+
+		@VisibleForTesting
+		public VertexConfig(
+				int parallelism, int maxParallelism, ResourceSpec resourceSpec) {
 			this.parallelism = parallelism;
 			this.maxParallelism = maxParallelism;
 			this.resourceSpec = resourceSpec;
+			this.operatorIds = null;
+		}
+
+		public VertexConfig(
+				int parallelism, int maxParallelism, ResourceSpec resourceSpec, int[] operatorIds) {
+			this.parallelism = parallelism;
+			this.maxParallelism = maxParallelism;
+			this.resourceSpec = resourceSpec;
+			this.operatorIds = operatorIds;
 		}
 
 		public int getParallelism() {
@@ -141,6 +158,10 @@ public interface RestServerClient {
 
 		public ResourceSpec getResourceSpec() {
 			return resourceSpec;
+		}
+
+		public int[] getOperatorIds() {
+			return operatorIds;
 		}
 	}
 
