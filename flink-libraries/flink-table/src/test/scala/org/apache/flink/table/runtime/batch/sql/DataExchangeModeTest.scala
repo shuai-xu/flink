@@ -84,7 +84,6 @@ class DataExchangeModeTest extends QueryTest {
 
   private def verifySql(sql: String, containsBatch: Boolean): Unit = {
     tEnv.sqlQuery(sql).writeToSink(new CsvTableSink("/tmp"))
-    tEnv.compile()
     val streamGraph = tEnv.generateStreamGraph()
     val edgeSet = new util.HashSet[StreamEdge]()
     streamGraph.getSinkIDs.asScala.foreach(id => {

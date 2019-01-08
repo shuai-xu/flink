@@ -133,7 +133,6 @@ class SortITCase extends AbstractTestBase {
     val id = new AbstractID().toString
     tableSink.init(typeSerializer, id)
     tEnv.sqlQuery(sqlQuery).writeToSink(tableSink)
-    tEnv.compile()
 
     val result = getOrderedRows(tEnv, typeSerializer, id)
     TestBaseUtils.compareOrderedResultAsText(result.asJava, expected)

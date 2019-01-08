@@ -101,7 +101,7 @@ class BatchExecExpand(
       substituteStreamOperator,
       outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
       resultPartitionCount)
-    tableEnv.getRUKeeper().addTransformation(this, transformation)
+    tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
   }

@@ -24,7 +24,9 @@ import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils._
 import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JavaStreamExecEnv}
+import org.apache.flink.streaming.api.graph.StreamGraph
 import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => ScalaStreamExecEnv}
+import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnvironment, StreamTableEnvironment => JavaStreamTableEnv}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnvironment, StreamTableEnvironment => ScalaStreamTableEnv}
@@ -45,6 +47,7 @@ import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, FunctionCatalog}
+
 import org.apache.calcite.config.Lex
 import org.apache.calcite.plan.{Contexts, RelOptPlanner}
 import org.apache.calcite.rel.logical.LogicalTableModify
@@ -57,6 +60,7 @@ import org.apache.calcite.sql.{SqlIdentifier, SqlInsert, SqlOperatorTable, _}
 import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.calcite.tools._
 import org.apache.commons.lang3.StringUtils
+
 import _root_.java.lang.reflect.Modifier
 import _root_.java.util
 import _root_.java.util.concurrent.atomic.AtomicInteger
@@ -69,6 +73,7 @@ import _root_.scala.annotation.varargs
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable
+import _root_.scala.collection.mutable.ArrayBuffer
 
 /**
   * The abstract base class for batch and stream TableEnvironments.
@@ -76,6 +81,8 @@ import _root_.scala.collection.mutable
   * @param config The configuration of the TableEnvironment
   */
 abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
+
+  protected val DEFAULT_JOB_NAME = "Flink Exec Table Job"
 
   protected val catalogManager: CatalogManager = new CatalogManager()
   private val currentSchema: SchemaPlus = catalogManager.getRootSchema
@@ -112,6 +119,8 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
   // sink nodes collection
   private[flink] val sinkNodes = new mutable.MutableList[LogicalNode]
 
+  private[flink] val transformations = new ArrayBuffer[StreamTransformation[_]]
+
   protected val tableMetas = new mutable.HashMap[String, TableMeta]
   protected var userClassloader: ClassLoader = null
 
@@ -141,7 +150,40 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     * Compile the sink [[org.apache.flink.table.plan.logical.LogicalNode]] to
     * [[org.apache.flink.streaming.api.transformations.StreamTransformation]]。
     */
-  private[flink] def compile(): Unit = ???
+  protected def compile(): Unit = ???
+
+  /**
+    * Generate a [[StreamGraph]] from this table environment, this will also
+    * clear [[LogicalNode]]s.
+    * @return A [[StreamGraph]] describing the whole job.
+    */
+  def generateStreamGraph(): StreamGraph = generateStreamGraph(DEFAULT_JOB_NAME)
+
+  /**
+    * Generate a [[StreamGraph]] from this table environment, this will also
+    * clear [[LogicalNode]]s.
+    * @return A [[StreamGraph]] describing the whole job.
+    */
+  def generateStreamGraph(jobName: String): StreamGraph = {
+    if (config.getSubsectionOptimization) {
+      compile()
+    }
+    if (transformations.isEmpty) {
+      throw new TableException("No table sinks have been created yet. " +
+          "A program needs at least one sink that consumes data. ")
+    }
+    val streamGraph = translateStreamGraph(transformations, Option.apply(jobName))
+    sinkNodes.clear()
+    streamGraph
+  }
+
+  /**
+    * Translate a [[StreamGraph]] from Given streamingTransformations.
+    * @return A [[StreamGraph]] describing the given job.
+    */
+  protected def translateStreamGraph(
+      streamingTransformations: ArrayBuffer[StreamTransformation[_]],
+      jobName: Option[String]): StreamGraph = ???
 
   /**
     * Returns the operator table for this environment including a custom Calcite configuration.
@@ -1099,7 +1141,7 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
   /**
     * Triggers the program execution.
     */
-  def execute(): JobExecutionResult
+  def execute(): JobExecutionResult = execute(DEFAULT_JOB_NAME)
 
   /**
     * Triggers the program execution with jobName.

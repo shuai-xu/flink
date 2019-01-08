@@ -119,7 +119,7 @@ class BatchExecSort(
       operator.asInstanceOf[OneInputStreamOperator[BaseRow, BaseRow]],
       binaryType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
       resultPartitionCount)
-    tableEnv.getRUKeeper().addTransformation(this, transformation)
+    tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setDamBehavior(DamBehavior.FULL_DAM)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation

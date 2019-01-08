@@ -305,7 +305,7 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       operator,
       getOutputType,
       resultPartitionCount)
-    tableEnv.getRUKeeper().addTransformation(this, transformation)
+    tableEnv.getRUKeeper.addTransformation(this, transformation)
     if (!leftSorted && !rightSorted) {
       transformation.setDamBehavior(DamBehavior.FULL_DAM)
     }

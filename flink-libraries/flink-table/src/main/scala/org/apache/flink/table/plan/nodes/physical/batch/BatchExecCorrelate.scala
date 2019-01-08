@@ -191,7 +191,7 @@ class BatchExecCorrelate(
       retainHeader = false,
       getExpressionString,
       ruleDescription)
-    tableEnv.getRUKeeper().addTransformation(this, transformation)
+    tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
   }

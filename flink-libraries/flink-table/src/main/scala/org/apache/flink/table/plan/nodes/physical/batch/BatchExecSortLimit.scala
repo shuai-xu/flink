@@ -174,7 +174,7 @@ class BatchExecSortLimit(
       operator,
       inputType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
       resultPartitionCount)
-    tableEnv.getRUKeeper().addTransformation(this, transformation)
+    tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setDamBehavior(DamBehavior.FULL_DAM)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation

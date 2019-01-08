@@ -176,7 +176,7 @@ class BatchExecSortAggregate(
       operator,
       DataTypes.toTypeInfo(outputRowType).asInstanceOf[BaseRowTypeInfo[BaseRow]],
       resultPartitionCount)
-    tableEnv.getRUKeeper().addTransformation(this, transformation)
+    tableEnv.getRUKeeper.addTransformation(this, transformation)
     if (grouping.length == 0) {
       transformation.setDamBehavior(DamBehavior.FULL_DAM)
     }

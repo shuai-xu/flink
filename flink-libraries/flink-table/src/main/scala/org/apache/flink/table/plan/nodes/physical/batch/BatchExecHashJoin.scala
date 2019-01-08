@@ -232,7 +232,7 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
       operator,
       getOutputType,
       resultPartitionCount)
-    tableEnv.getRUKeeper().addTransformation(this, transformation)
+    tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setDamBehavior(
       if (hashJoinType.buildLeftSemiOrAnti()) DamBehavior.FULL_DAM else DamBehavior.MATERIALIZING)
     transformation.setReadOrderHint(ReadOrder.INPUT1_FIRST)

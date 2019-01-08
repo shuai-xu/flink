@@ -244,7 +244,7 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
       getOutputType,
       resultPartitionCount
     )
-    tableEnv.getRUKeeper().addTransformation(this, transformation)
+    tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setReadOrderHint(
       if (leftIsBuild) ReadOrder.INPUT1_FIRST else ReadOrder.INPUT2_FIRST)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)

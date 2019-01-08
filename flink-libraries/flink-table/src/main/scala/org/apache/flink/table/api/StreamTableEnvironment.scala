@@ -24,7 +24,7 @@ import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.streaming.api.graph.StreamGraphGenerator
+import org.apache.flink.streaming.api.graph.{StreamGraph, StreamGraphGenerator}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.calcite.{FlinkChainContext, FlinkRelBuilder}
@@ -33,7 +33,6 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescriptor}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.factories.{TableFactoryService, TableFactoryUtil, TableSourceParserFactory}
 import org.apache.flink.table.plan.`trait`._
 import org.apache.flink.table.plan.cost.{FlinkCostFactory, FlinkStreamCost}
 import org.apache.flink.table.plan.logical.{LogicalRelNode, SinkNode}
@@ -56,6 +55,7 @@ import org.apache.calcite.rex.RexBuilder
 import org.apache.calcite.sql2rel.SqlToRelConverter
 
 import _root_.java.util
+import org.apache.flink.table.factories.{TableFactoryService, TableFactoryUtil, TableSourceParserFactory}
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
@@ -86,8 +86,6 @@ abstract class StreamTableEnvironment(
   // prefix  for unique table names.
   override private[flink] val tableNamePrefix = "_DataStreamTable_"
 
-  private val DEFAULT_JOB_NAME = "Flink Streaming Job"
-
   private var isConfigMerged: Boolean = false
 
   // the builder for Calcite RelNodes, Calcite's representation of a relational expression tree.
@@ -116,25 +114,31 @@ abstract class StreamTableEnvironment(
       .build()
 
   /**
-    * Triggers the program execution.
-    */
-  override def execute(): JobExecutionResult = {
-    execute(DEFAULT_JOB_NAME)
-  }
-
-  /**
     * Triggers the program execution with jobName.
     * @param jobName The job name.
     */
   override def execute(jobName: String): JobExecutionResult = {
-    mergeParameters()
-    if (config.getSubsectionOptimization) {
-      compile()
-    }
-    execEnv.execute(jobName)
+    val streamGraph = generateStreamGraph(jobName)
+    execEnv.execute(streamGraph)
   }
 
-  private[flink] override def compile(): Unit = {
+  protected override def translateStreamGraph(
+      streamingTransformations: ArrayBuffer[StreamTransformation[_]],
+      jobName: Option[String]): StreamGraph = {
+    mergeParameters()
+    val context = StreamGraphGenerator.Context.buildStreamProperties(execEnv)
+
+    jobName match {
+      case Some(jn) => context.setJobName(jn)
+      case None => context.setJobName(DEFAULT_JOB_NAME)
+    }
+    val streamGraph = StreamGraphGenerator.generate(context, streamingTransformations)
+
+    streamingTransformations.clear()
+    streamGraph
+  }
+
+  protected override def compile(): Unit = {
 
     mergeParameters()
 
@@ -145,13 +149,14 @@ abstract class StreamTableEnvironment(
       val dagOptimizer = new StreamDAGOptimizer(sinkNodes, this)
       // optimize dag
       val sinks = dagOptimizer.getOptimizedDag()
-      translateRelNodeDag(sinks)
+      val sinkTransformations = translateRelNodeDag(sinks)
+      transformations.addAll(sinkTransformations)
     }
   }
 
-  private def translateRelNodeDag(sinks: Seq[RelNode]): Unit = {
+  private def translateRelNodeDag(sinks: Seq[RelNode]): Seq[StreamTransformation[_]] = {
     // translates sinks RelNodeBlock into transformations
-    sinks.foreach {
+    sinks.map {
       case sink: Sink => translate(sink)
       case _ => throw new TableException(TableErrors.INST.sqlCompileSinkNodeRequired())
     }
@@ -415,7 +420,7 @@ abstract class StreamTableEnvironment(
     } else {
       val table = new Table(this, sinkNode)
       val optimizedPlan = optimize(table.getRelNode)
-      translate(optimizedPlan)
+      transformations.add(translate(optimizedPlan))
     }
   }
 
@@ -779,8 +784,7 @@ abstract class StreamTableEnvironment(
     val optimizedPlan = optimize(ast)
     val transformStream = translate(optimizedPlan)
 
-    val streamGraph = StreamGraphGenerator.generate(
-      StreamGraphGenerator.Context.buildStreamProperties(execEnv), ArrayBuffer(transformStream))
+    val streamGraph = translateStreamGraph(ArrayBuffer(transformStream), None)
 
     val sqlPlan = PlanUtil.explainPlan(streamGraph)
 
@@ -849,8 +853,9 @@ abstract class StreamTableEnvironment(
     sb.append(dagOptimizer.explain())
 
     // translate relNodes to StreamTransformations
-    translateRelNodeDag(sinks)
-    val sqlPlan = PlanUtil.explainPlan(execEnv.getStreamGraph)
+    val sinkTransformations = translateRelNodeDag(sinks)
+    val sqlPlan = PlanUtil.explainPlan(StreamGraphGenerator.generate(
+      StreamGraphGenerator.Context.buildBatchProperties(execEnv), sinkTransformations))
     sb.append("== Physical Execution Plan ==")
     sb.append(System.lineSeparator)
     sb.append(sqlPlan)

@@ -673,10 +673,8 @@ class TimeAttributesITCase extends StreamingTestBase {
           "select name, TUMBLE_START(rtime, INTERVAL '2' MINUTE), sum(amount) " +
           "from MyTable2 group by TUMBLE(rtime, INTERVAL '2' MINUTE), name")
 
-    tEnv.compile()
-
     // check the node size of the generated stream graph.
-    assertEquals(11, env.getStreamGraph.getStreamNodes.size())
+    assertEquals(11, tEnv.generateStreamGraph().getStreamNodes.size())
 
     val sink = new TestingAppendSink
     tEnv.scan("MyTable2")

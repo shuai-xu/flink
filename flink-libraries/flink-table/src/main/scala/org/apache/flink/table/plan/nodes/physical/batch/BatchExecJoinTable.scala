@@ -111,7 +111,7 @@ class BatchExecJoinTable(
       getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv),
       tableEnv.streamEnv,
       tableEnv.getConfig)
-    tableEnv.getRUKeeper().addTransformation(this, transformation)
+    tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation
   }
 

@@ -337,8 +337,6 @@ public class ExecutionContext<T> {
 		}
 
 		public JobGraph createJobGraph(String name) {
-			// compile
-			tableEnv.compile();
 
 			final FlinkPlan plan = createPlan(name, flinkConfig);
 			return ClusterClient.getJobGraph(
@@ -350,14 +348,7 @@ public class ExecutionContext<T> {
 		}
 
 		private FlinkPlan createPlan(String name, Configuration flinkConfig) {
-			StreamGraph graph = null;
-			if (mergedEnv.getExecution().isStreamingExecution()) {
-				graph = streamExecEnv.getStreamGraph();
-			} else if (mergedEnv.getExecution().isBatchExecution()) {
-				graph = ((BatchTableEnvironment) tableEnv).generateStreamGraph();
-			} else {
-				throw new SqlExecutionException("Unsupported execution type specified.");
-			}
+			StreamGraph graph = tableEnv.generateStreamGraph();
 			graph.setJobName(name);
 			return graph;
 		}

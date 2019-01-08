@@ -311,7 +311,7 @@ class BatchExecOverAggregate(
       val operator = new OverWindowOperator(aggHandlers, needResets, generatorSort)
       val transformation = new OneInputTransformation(input, "OverAggregate", operator,
         outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]], resultPartitionCount)
-      tableEnv.getRUKeeper().addTransformation(this, transformation)
+      tableEnv.getRUKeeper.addTransformation(this, transformation)
       transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
       transformation
     } else {
@@ -322,7 +322,7 @@ class BatchExecOverAggregate(
         generatorSort)
       val transformation = new OneInputTransformation(input, "OverAggregate", operator,
         outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]], resultPartitionCount)
-      tableEnv.getRUKeeper().addTransformation(this, transformation)
+      tableEnv.getRUKeeper.addTransformation(this, transformation)
       transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
       transformation
     }

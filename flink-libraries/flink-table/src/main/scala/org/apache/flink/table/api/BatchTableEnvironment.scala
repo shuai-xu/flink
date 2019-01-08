@@ -36,7 +36,7 @@ import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescri
 import org.apache.flink.table.expressions.{Expression, TimeAttribute}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
 import org.apache.flink.table.plan.cost.{FlinkBatchCost, FlinkCostFactory}
-import org.apache.flink.table.plan.logical.SinkNode
+import org.apache.flink.table.plan.logical.{LogicalNode, SinkNode}
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExecSink}
 import org.apache.flink.table.plan.optimize.{BatchOptimizeContext, FlinkBatchPrograms}
 import org.apache.flink.table.plan.schema._
@@ -62,6 +62,7 @@ import _root_.java.util.{ArrayList => JArrayList, List => JList, Map => JMap, Se
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
+import _root_.scala.collection.mutable
 import _root_.scala.collection.mutable.ArrayBuffer
 import _root_.scala.util.Failure
 import _root_.scala.util.Success
@@ -82,11 +83,10 @@ class BatchTableEnvironment(
     config: TableConfig)
     extends TableEnvironment(config) {
 
-  private val DEFAULT_JOB_NAME = "Flink Exec Job"
   private val ruKeeper = new RunningUnitKeeper(this)
 
   /** Fetch [[RunningUnitKeeper]] bond with this table env. */
-  private [table] def getRUKeeper(): RunningUnitKeeper = ruKeeper
+  private[table] def getRUKeeper: RunningUnitKeeper = ruKeeper
 
   // the builder for Calcite RelNodes, Calcite's representation of a relational expression tree.
   override protected def createRelBuilder: FlinkRelBuilder = FlinkRelBuilder.create(
@@ -102,8 +102,6 @@ class BatchTableEnvironment(
 
   // prefix for unique table names.
   override private[flink] val tableNamePrefix = "_DataStreamTable_"
-
-  private val transformations = new ArrayBuffer[StreamTransformation[_]]
 
   private val queryPlans = new ArrayBuffer[String]()
 
@@ -124,42 +122,30 @@ class BatchTableEnvironment(
   override protected def getFlinkCostFactory: FlinkCostFactory = FlinkBatchCost.FACTORY
 
   /**
-   * Triggers the program execution.
-   */
-  override def execute(): JobExecutionResult = {
-    execute(DEFAULT_JOB_NAME)
-  }
-
-  /**
     * Triggers the program execution with specific job name.
     * @param jobName name for the job
     */
   override def execute(jobName: String): JobExecutionResult = {
-    if (config.getSubsectionOptimization) {
-      compile()
-    }
-
-    if (transformations.isEmpty) {
-      throw new TableException("No table sinks have been created yet. " +
-          "A program needs at least one sink that consumes data. ")
-    }
     tableServiceManager.startTableServiceJob()
-    val result = Try {
-      executeInternal(transformations, Option.apply(jobName))
+    val sinkNodesBak = new mutable.MutableList[LogicalNode]
+    sinkNodesBak ++= sinkNodes
+    Try {
+      val streamGraph = generateStreamGraph(jobName)
+      val res = executeStreamGraph(streamGraph)
+      tableServiceManager.markAllTablesCached()
+      res
     } match {
       case Success(value) => value
       case Failure(ex) => ex match {
         case je: JobExecutionException
           if ExceptionUtils.findThrowable(je, classOf[TableServiceException]).isPresent =>
-            transformations.clear()
-            tableServiceManager.invalidateCachedTable()
-            compile()
-            executeInternal(transformations, Option.apply(jobName))
+          sinkNodes ++= sinkNodesBak
+          tableServiceManager.invalidateCachedTable()
+          val streamGraph = generateStreamGraph(jobName)
+          executeStreamGraph(streamGraph)
         case _ => throw ex
       }
     }
-    sinkNodes.clear()
-    result
   }
 
   private[flink] override def collect[T](
@@ -177,19 +163,15 @@ class BatchTableEnvironment(
     SerializedListAccumulator.deserializeList(accResult, typeSerializer).asScala
   }
 
-  /**
-    * Generate a [[StreamGraph]] from this table environment, this will also clear the internal
-    * info of [[RunningUnitKeeper]], sink LogicalNodes and [[StreamTransformation]]s.
-    * @return A [[StreamGraph]] describing the whole job.
-    */
-  def generateStreamGraph(): StreamGraph = {
-    val streamGraph = generateStreamGraph(transformations, None)
-    sinkNodes.clear()
+  override def generateStreamGraph (jobName: String): StreamGraph = {
+    val streamGraph = super.generateStreamGraph(jobName)
+    setQueryPlan()
     streamGraph
   }
 
-  private def generateStreamGraph(streamingTransformations: ArrayBuffer[StreamTransformation[_]],
-    jobName: Option[String]): StreamGraph = {
+  protected override def translateStreamGraph(
+      streamingTransformations: ArrayBuffer[StreamTransformation[_]],
+      jobName: Option[String]): StreamGraph = {
     mergeParameters()
     val context = StreamGraphGenerator.Context.buildBatchProperties(streamEnv)
     if (getConfig.getConf.getBoolean(TableConfigOptions.SQL_EXEC_ALL_DATA_EXCHANGE_MODE_BATCH)) {
@@ -204,7 +186,6 @@ class BatchTableEnvironment(
       case None => context.setJobName(DEFAULT_JOB_NAME)
     }
     val streamGraph = StreamGraphGenerator.generate(context, streamingTransformations)
-    setQueryPlan()
 
     setupOperatorMetricCollect()
     ruKeeper.clear()
@@ -213,14 +194,9 @@ class BatchTableEnvironment(
     streamGraph
   }
 
-  private def executeInternal(streamingTransformations: ArrayBuffer[StreamTransformation[_]],
-      jobName: Option[String]): JobExecutionResult = {
-    val streamGraph = generateStreamGraph(streamingTransformations, jobName)
-
+  private def executeStreamGraph(streamGraph: StreamGraph): JobExecutionResult = {
     val result = streamEnv.execute(streamGraph)
     dumpPlanWithMetricsIfNeed(streamGraph, result)
-    ruKeeper.clear()
-    tableServiceManager.markAllTablesCached()
     result
   }
 
@@ -276,7 +252,7 @@ class BatchTableEnvironment(
     }
   }
 
-  private[flink] override def compile(): Unit = {
+  protected override def compile(): Unit = {
     if (config.getSubsectionOptimization) {
       if (sinkNodes.isEmpty) {
         throw new TableException("No table sinks have been created yet. " +
@@ -776,9 +752,7 @@ class BatchTableEnvironment(
     val transformation = translate(
       optimizedPlan,
       new BaseRowType(classOf[BinaryRow], fieldTypes: _*))
-    val streamGraph = StreamGraphGenerator.generate(
-      StreamGraphGenerator.Context.buildBatchProperties(streamEnv),
-      ArrayBuffer(transformation))
+    val streamGraph = translateStreamGraph(ArrayBuffer(transformation), None)
 
     val sqlPlan = PlanUtil.explainPlan(streamGraph)
 

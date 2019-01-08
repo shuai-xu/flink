@@ -58,7 +58,7 @@ trait BatchExecScan extends CommonScan[BinaryRow] with RowBatchExecRel with Logg
 
     input.setParallelism(resultPartitionCount)
     input.setResources(sourceResSpec, sourceResSpec)
-    tableEnv.getRUKeeper().addTransformation(this, input)
+    tableEnv.getRUKeeper.addTransformation(this, input)
   }
 
   def convertToInternalRow(
@@ -74,7 +74,7 @@ trait BatchExecScan extends CommonScan[BinaryRow] with RowBatchExecRel with Logg
       val convertTransform = convertToInternalRow(
         ctx, input, fieldIdxs, dataType, outRowType, getTable.getQualifiedName, config, rowtimeExpr)
       convertTransform.setResources(conversionResSpec, conversionResSpec)
-      tableEnv.getRUKeeper().addTransformation(this, convertTransform)
+      tableEnv.getRUKeeper.addTransformation(this, convertTransform)
       convertTransform
     } else {
       input.asInstanceOf[StreamTransformation[BaseRow]]
