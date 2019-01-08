@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.temptable;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.service.LifeCycleAware;
 
@@ -34,6 +35,10 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 /**
  * A local file system based storage.
@@ -42,19 +47,32 @@ public class TableStorage implements LifeCycleAware {
 
 	private static final Logger logger = LoggerFactory.getLogger(TableStorage.class);
 
+	public static final int DEFAULT_MAX_SEGMENT_LENGTH = 128 * 1024 * 1024;
+
+	private final int maxSegmentLength;
+
 	private final String fileRootPath;
 
+	private Map<String, NavigableMap<Long, File>> partitionSegmentTracker;
+
 	public TableStorage(String fileRootPath) {
+		this(fileRootPath, DEFAULT_MAX_SEGMENT_LENGTH);
+	}
+
+	public TableStorage(String fileRootPath, int maxSegmentLength) {
 		this.fileRootPath = fileRootPath;
+		this.maxSegmentLength = maxSegmentLength;
 	}
 
 	@Override
 	public void open(Configuration parameters) {
 		deleteAll(fileRootPath);
+		partitionSegmentTracker = new ConcurrentHashMap<>();
 	}
 
 	@Override
 	public void close() {
+		partitionSegmentTracker.clear();
 		deleteAll(fileRootPath);
 	}
 
@@ -78,7 +96,6 @@ public class TableStorage implements LifeCycleAware {
 	}
 
 	public List<Integer> getTablePartitions(String tableName) {
-
 		String path = fileRootPath + File.separator + tableName;
 		File file = new File(path);
 		if (!file.exists()) {
@@ -105,23 +122,46 @@ public class TableStorage implements LifeCycleAware {
 	 * create the file if not exists.
 	 */
 	public void write(String tableName, int partitionId, byte[] content) {
+		String baseDirPath = getPartitionDirPath(tableName, partitionId);
+		File baseDir = new File(baseDirPath);
 
-		String dirPath = fileRootPath + File.separator
-			+ tableName;
-		File dir = new File(dirPath);
-		if (!dir.exists()) {
-			dir.mkdirs();
+		if (!baseDir.exists()) {
+			baseDir.mkdirs();
 		}
 
-		String filePath = dirPath + File.separator + partitionId;
-		File file = new File(filePath);
+		int offset = 0;
+
+		File lastFile;
+		long lastFileOffset;
+		NavigableMap<Long, File> offsetMap = partitionSegmentTracker.computeIfAbsent(baseDirPath, d -> new ConcurrentSkipListMap<>());
+		Map.Entry<Long, File> lastEntry = offsetMap.lastEntry();
+		if (lastEntry == null) {
+			lastFile = new File(baseDirPath + File.separator + 0);
+			lastFileOffset = 0L;
+			offsetMap.put(0L, lastFile);
+		} else {
+			lastFile = lastEntry.getValue();
+			lastFileOffset = lastEntry.getKey();
+		}
+		while (offset < content.length) {
+			int writeBytes = (int) Math.min(maxSegmentLength - lastFile.length(), content.length - offset);
+			writeFile(lastFile, content, offset, writeBytes);
+			offset += writeBytes;
+			if (offset < content.length) {
+				lastFileOffset += maxSegmentLength;
+				lastFile = new File(baseDirPath + File.separator + lastFileOffset);
+				offsetMap.put(lastFileOffset, lastFile);
+			}
+		}
+	}
+
+	private void writeFile(File file, byte[] content, int offset, int len) {
 		OutputStream output = null;
 		BufferedOutputStream bufferedOutput = null;
-
 		try {
 			output = new FileOutputStream(file, true);
 			bufferedOutput = new BufferedOutputStream(output);
-			bufferedOutput.write(content);
+			bufferedOutput.write(content, offset, len);
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			throw new RuntimeException("write file error", e);
@@ -138,23 +178,36 @@ public class TableStorage implements LifeCycleAware {
 				} catch (Exception e) {}
 			}
 		}
-
 	}
 
 	/**
 	 * todo rework on mmap.
 	 */
 	public int read(String tableName, int partitionId, int offset, int readCount, byte[] buffer) {
-
-		String dirPath = fileRootPath + File.separator
-			+ tableName;
-		String filePath = dirPath + File.separator + partitionId;
-		File file = new File(filePath);
-		if (!file.exists()) {
-			logger.error("file: " + filePath + " is not ready for read.");
-			throw new RuntimeException("file: " + filePath + " is not ready for read.");
+		String baseDirPath = getPartitionDirPath(tableName, partitionId);
+		if (!partitionSegmentTracker.containsKey(baseDirPath)) {
+			logger.error("file: " + baseDirPath + " is not ready for read.");
+			throw new RuntimeException("file: " + baseDirPath + " is not ready for read.");
 		}
 
+		int totalRead = 0;
+		NavigableMap<Long, File> offsetMap = partitionSegmentTracker.get(baseDirPath);
+		Map.Entry<Long, File> segmentEntry = offsetMap.floorEntry(Long.valueOf(offset));
+		while (segmentEntry != null && totalRead < readCount) {
+			Long segmentFileOffset = segmentEntry.getKey();
+			File segmentFile = segmentEntry.getValue();
+			long readLimit = segmentFileOffset + maxSegmentLength - offset;
+			long readBytes = readLimit >= readCount - totalRead ? readCount - totalRead : readLimit;
+			int nRead = readFile(segmentFile, offset - segmentFileOffset, readBytes, buffer, totalRead);
+			totalRead += nRead;
+			offset += nRead;
+			segmentEntry = offsetMap.higherEntry(segmentFileOffset);
+		}
+
+		return totalRead;
+	}
+
+	private int readFile(File file, long fileOffset, long readCount, byte[] buffer, int bufferOffset) {
 		FileInputStream input = null;
 		BufferedInputStream bufferedInput = null;
 
@@ -163,8 +216,8 @@ public class TableStorage implements LifeCycleAware {
 		try {
 			input = new FileInputStream(file);
 			bufferedInput = new BufferedInputStream(input);
-			bufferedInput.skip(offset);
-			nRead = bufferedInput.read(buffer, 0, readCount);
+			bufferedInput.skip(fileOffset);
+			nRead = bufferedInput.read(buffer, bufferOffset, (int) readCount);
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			throw new RuntimeException("read file error", e);
@@ -182,25 +235,27 @@ public class TableStorage implements LifeCycleAware {
 				}
 			}
 		}
-
 		return nRead;
 	}
 
 	/**
 	 * initialize the file to write, replace with an empty file if exists.
 	 */
-	public void initializePartition(String tableName, int partitionId) throws IOException {
-		String dirPath = fileRootPath + File.separator
-			+ tableName;
-		String filePath = dirPath + File.separator + partitionId;
-		File file = new File(filePath);
-		if (file.exists()) {
-			file.delete();
-		}
-		File dir = new File(dirPath);
-		if (!dir.exists()) {
-			dir.mkdirs();
-		}
-		file.createNewFile();
+	public void initializePartition(String tableName, int partitionId) {
+		String partitionPath = getPartitionDirPath(tableName, partitionId);
+		partitionSegmentTracker.remove(partitionPath);
+		deleteAll(partitionPath);
+		File partition = new File(partitionPath);
+		partition.mkdirs();
+	}
+
+	@VisibleForTesting
+	Map<String, NavigableMap<Long, File>> getPartitionSegmentTracker() {
+		return partitionSegmentTracker;
+	}
+
+	@VisibleForTesting
+	String getPartitionDirPath(String tableName, int partitionId) {
+		return fileRootPath + File.separator + tableName + File.separator + partitionId;
 	}
 }

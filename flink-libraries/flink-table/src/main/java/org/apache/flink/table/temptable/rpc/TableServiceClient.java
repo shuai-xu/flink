@@ -63,7 +63,7 @@ public class TableServiceClient implements LifeCycleAware {
 
 	private int lastPartitionIndex = -1;
 
-	private int lastTablePartionOffset = 0;
+	private int lastTablePartitionOffset = 0;
 
 	private Bootstrap bootstrap;
 
@@ -240,6 +240,7 @@ public class TableServiceClient implements LifeCycleAware {
 
 		lastTableName = tableName;
 		lastPartitionIndex = partitionIndex;
+		lastTablePartitionOffset = 0;
 		serviceInfoList = getRegistry().getAllInstances(FlinkTableService.class.getSimpleName());
 
 		if (serviceInfoList == null || serviceInfoList.isEmpty()) {
@@ -360,10 +361,10 @@ public class TableServiceClient implements LifeCycleAware {
 
 	private boolean fillReadBufferFromClient() throws Exception {
 		byte[] buffer;
-		buffer = clientHandler.read(lastTableName, lastPartitionIndex, lastTablePartionOffset, BUFFER_READ_SIZE);
+		buffer = clientHandler.read(lastTableName, lastPartitionIndex, lastTablePartitionOffset, BUFFER_READ_SIZE);
 
 		if (buffer != null && buffer.length > 0) {
-			lastTablePartionOffset += buffer.length;
+			lastTablePartitionOffset += buffer.length;
 			readBuffer.getByteBuffer().clear();
 			readBuffer.getByteBuffer().put(buffer);
 			return true;
