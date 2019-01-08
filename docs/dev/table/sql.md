@@ -432,7 +432,54 @@ String literals must be enclosed in single quotes (e.g., `SELECT 'Hello World'`)
 {% top %}
 
 Operations
---------------------
+----------
+
+### Show, and Use
+
+<div markdown="1">
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th class="text-left" style="width: 20%">Operation</th>
+      <th class="text-center">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+  	<tr>
+  		<td>
+        <strong>Show</strong><br>
+        <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span>
+      </td>
+  		<td>
+  		<p>Show all catalogs</p>
+		{% highlight sql %}
+		SHOW CATALOGS;
+		{% endhighlight %}
+		<p>Show all dbs in the default catalog</p>
+		{% highlight sql %}
+		SHOW DATABASES;
+		{% endhighlight %}
+		<p>Show all tables in the default db in default catalog</p>
+		{% highlight sql %}
+		SHOW TABLES;
+		{% endhighlight %}
+      </td>
+  	</tr>
+    <tr>
+      <td>
+        <strong>Use</strong><br>
+        <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span>
+      </td>
+      <td>
+			<p>Set the default catalog and default database</p>
+			{% highlight sql %}
+			Use mycatalog.mydb
+			{% endhighlight %}
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
 
 ### Scan, Projection, and Filter
 

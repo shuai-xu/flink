@@ -576,9 +576,9 @@ Make sure to download the [JSON SQL JAR](sqlClient.html#dependencies) file and p
 Catalogs
 --------------------
 
-Currently Flink supports two types of catalog - FlinkInMemoryCatalog and HiveCatalog.
+Currently Flink supports two types of catalog - `FlinkInMemoryCatalog` and `HiveCatalog`.
 
-Users need to specify corresponding keys for each kind of catalog.
+For more information about integration with Hive metastore, see [Hive Compatibility]({{ site.baseurl }}/dev/batch/hive_compatibility.html)
 
 Limitations & Future
 --------------------

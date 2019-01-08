@@ -23,57 +23,117 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-Because Apache Hive is a de facto standard in SQL batch processing, it’s beneficial for Flink SQL to integrate with Hive as closely as possible. The goal here is not to replace or even replicate Hive. Rather, we leverage Hive as much as we can, and offer an alternative to Hive from Flink
-community and expose a similar to but probably more performing SQL tool than Hive to Flink
-users. Via Flink SQL, user can enjoy Hive’s rich SQL functionality and flexibility.
+With its wide adoption in streaming processing, Flink has also shown its potentials in batch processing. Improving Flink’s batch processing, especially in terms of SQL, would offer user a complete set of solutions for both their streaming and batch processing needs.
 
-Now Flink's Alibaba branch is able to access Hive MetaStore metadata and read hive table.
+On the other hand, Hive has established its focal point in big data technology and its complete ecosystem. For most of big data users, Hive is not only a SQL engine for big data analytics and ETL, but also a data management platform, on which data are discovered, defined, and evolved. In another words, Hive is a de facto standard for big data on Hadoop.
 
-You can:
+Therefore, it’s imperative for Flink to integrate with Hive ecosystem to further its reach to batch and SQL users. In doing that, integration with Hive metadata and data is necessary. 
 
-- Access Hive table meta data after registering external hive catalog in tableEnvironment.(eg. execute ` show tables` or `describe table xxx ` in SQL Cli when you have config specific hive catalog )
-- Regard a external hive table as a normal flink table and query it
-- Other features such as store flink meta object info into hive catalog and write data back into hive table are in progress.
+The goal here is neither to replace nor to replicate Hive. Rather, we leverage Hive as much as we can. Flink is an alternative batch engine to Hive's batch engine, and Flink SQL Cli offers a Hive-syntax-compatible SQL client. With Flink and Flink SQL, both Hive and Flink users can enjoy Hive’s rich SQL functionality and ecosystem as well as Flink's outstanding batch processing performance.
 
 
-This document shows how to connect an existing Hive service with Flink. Please refer to the
-[Connecting to other systems]({{ site.baseurl }}/dev/batch/connectors.html) guide for more detailed info.
+Supported Hive version
+----------------------
+
+The target version is Hive 2.3.4, which is the latest stable version.
+
+Other versioned Hive may also be used with Flink, but there's no guarantee on compatibility.
+
 
 * This will be replaced by the TOC
 {:toc}
 
-### Project Configuration
 
-Support for accessing hive metastore and data is part of the `flink-table`  that is always required when writing Flink table api or sql jobs. The code is located in `org.apache.flink.table.catalog` package.
+Hive Metastore Integration
+--------------------------
 
-Support for accessing hive metastore and data is contained in the `flink-connector-hive_${scala.binary.version}` Maven module.
-This code resides in the `org.apache.flink.table.catalog.hive`
-package and `org.apache.flink.streaming.connectors.hive`.
+There are two aspects of Hive metastore integration:
 
-Add the following dependency to your `pom.xml` if you want to use this fucntion.
+1. Make Hive’s meta-objects such as tables and views available to Flink and Flink is also able to create such meta-objects for and in Hive. This is achieved through `HiveCatalog`.
 
-{% highlight xml %}
-<dependency>
-	<groupId>org.apache.flink</groupId>
-	<artifactId>flink-connector-hive{{ site.scala_version_suffix }}</artifactId>
-	<version>{{site.version}}</version>
-</dependency>
-{% endhighlight %}
+2. Persist Flink’s meta-objects (tables, views, and UDFs) using Hive metastore as an persistent storage. This is achieved through `GenericHiveMetastoreCatalog`, which is under active development.
+
+For how to use `HiveCatalog` and `GenericHiveMetastoreCatalog` in Flink, see [Catalogs]({{ site.baseurl }}/dev/table/catalog.html)
 
 
-### Accessing hive metaStore and table data
+Hive Data Integration
+---------------------
 
-Environment :    
+Please refer to [Connecting to other systems]({{ site.baseurl }}/dev/batch/connectors.html) for how to connect an existing Hive service with Flink. 
 
-  Assume all physical machines mentioned can be accessed in your work environment
- * Hadoop Cluster (ipA,ipB,ipC)
- * Hive Home Path: ipD  /home/admin/apache-hive-2.3.4
- * Flink SQL Client Path: ipE /home/admin/flink_sql_client
 
-I first prepared two tables in hive, order_details and  products.
+Quick Example
+-------------
+
+Here we present a quick example of querying Hive metadata and data in Flink.
+
+Environment :
+
+Assume all physical machines mentioned can be accessed in the work environment, and the following components have been successfully setup:
+
+- Hadoop Cluster (HDFS + YARN)
+- Hive 2.3.4
+- Flink cluster
+
+## Setup Flink
+
+### Setup Flink cluster in yarn-session mode
+
+Start a yarn session
+
+```
+$ ./bin/yarn-session.sh -n 4 -qu root.default -s 4 -tm 2048 -nm test_session_001`
+```
+
+### Setup Flink cluster in local mode
+
+Simply run
+
+```
+$ ./bin/start-cluster.sh
+```
+
+### Setup Flink SQL Cli
+
+Let's set the SQL Cli yaml config file
+
+```yaml
+execution:
+    type: batch
+    time-characteristic: event-time
+    periodic-watermarks-interval: 200
+    result-mode: table
+    parallelism: 1
+    max-parallelism: 12
+    min-idle-state-retention: 0
+    max-idle-state-retention: 0
+
+deployment:
+  response-timeout: 5000
+  gateway-address: ""
+  gateway-port: 0
+  # (Optional) For users who use yarn-session mode
+  yid: application_1543205128210_0045
+
+catalogs:
+   - name: myHive
+     catalog:
+      type: hive
+      connector:
+        # Hive metastore thrift uri
+        Hive.metastore.uris: thrift://<ip1>:<port1>,thrift://<ip2>:<port2>
+```
+
+Note that, if users are using Flink yarn-session mode, you'll get the sessionId as `\${appId}`. Set it in `yid: ${appId}` of `deployment` section in the `conf/sql-client-defaults.yaml` file
+
+If users are using Flink local mode, no other config is required.
+
+### Check Hive
+
+We have prepared two tables in Hive, order_details and products, which can be described in Hive SQL Cli:
 
 ```shell
-hive> describe order_details;
+Hive> describe order_details;
 OK
 orderid               bigint
 productid             bigint
@@ -81,7 +141,7 @@ unitprice             double
 quantity              int
 discount              double
 
-hive> describe products;
+Hive> describe products;
 OK
 productid             bigint
 productname           string
@@ -94,93 +154,40 @@ unitsonorder          bigint
 reorderlevel          int
 discontinued          int
 );
-
-
 ```
 
-Before running Flink SQl Client, we should first start the yarn session mode(on the flink sql client home path): 
-1. `bin/yarn-session.sh -n 4 -qu root.default -s 4 -tm 2048 -nm test_session_001`
-2. Assume from step1 we get the sessionId is \${appId}, then modify the conf/sql-client-defaults.yaml 的 deployment:下配置：yid: ${appId}
-3. Our conf/sql-client-defaults.yaml config are as follows which has set hive catalog as the default catalogs.
+### Access Hive metadata and data in Flink SQL Cli
 
-```yaml
-  execution:
-  # 'batch' or 'streaming' execution
-    type: batch
-  # allow 'event-time' or only 'processing-time' in sources
-    time-characteristic: event-time
-  # interval in ms for emitting periodic watermarks
-    periodic-watermarks-interval: 200
-  # 'changelog' or 'table' presentation of results
-    result-mode: table
-  # parallelism of the program
-    parallelism: 1
-  # maximum parallelism
-    max-parallelism: 12
-  # minimum idle state retention in ms
-    min-idle-state-retention: 0
-  # maximum idle state retention in ms
-    max-idle-state-retention: 0
+Let's get Flink SQL Cli running by execute command
 
-deployment:
-  # general cluster communication timeout in ms
-  response-timeout: 5000
-  # (optional) address from cluster to gateway
-  gateway-address: ""
-  # (optional) port from cluster to gateway
-  gateway-port: 0
-
-  # (optional) yarn cluster per-job mode
-  # jobmanager: yarn-cluster
-
-  # (optional) yarn session mode
-  yid: application_1543205128210_0045
-
-
-catalogs:
-   - name: myhive
-     catalog:
-      type: hive
-      connector:
-        hive.metastore.uris: thrift://ipE:ipE port
-        hive.metastore.username: flink
-      is-default: true
-      default-db: default
-   - name: myinmemory
-     catalog:
-      type: flink_in_memory
+```
+$ ./bin/sql-client.sh embedded
 ```
 
+We can run a few SQL query to get Hive data
 
-##### Accessing hive data type and data in sql cli stpes
+```sql
 
-1. Running Flink SQL Client by execute command `bin/sql-client.sh embedded` 
-2. `show catalogs;`  // show all catalogs
-3. `show databases;`  // show all dbs in the default catalog
-4. `show tables;`  // show all tables in the default db in default catalog
-5. `use myhive.default;`   // set the default catalog and db
-6. `describe products;`  // describe table schema
-7. `describe order_details;`  // describe table schema
-8. `select * from products;`
-9. `select count(*) from order_details;`  // count
-10. `select productid, count(1) as sale_number from order_details group by productid;` // group by count prodcut  sale number
-11. join then group by to calc single product sales
+Flink SQL> select * from products;
 
-```sql 
-select 
+Flink SQL> select count(*) from order_details;
+
+Flink SQL> select
    t.productid,
    t.productname,
    sum(t.price) as sale
-from 
-  (select 
+from
+  (select
       A.productid,
-      A.productname as productname, 
+      A.productname as productname,
         B.unitprice * discount as price
      from
-      products as A, order_details as B 
+      products as A, order_details as B
      where A.productid = B.productid) as t
   group by t.productid, t.productname;
-  
-``` 
 
+```
 
+## Limitations & Future
+
+Integrations of both Hive metadata and data are still in progress.
