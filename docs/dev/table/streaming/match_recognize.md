@@ -91,7 +91,7 @@ Every `MATCH_RECOGNIZE` query consists of the following clauses:
 * [PARTITION BY](#partitioning) - defines the logical partitioning of the table; similar to a `GROUP BY` operation.
 * [ORDER BY](#order-of-events) - specifies how the incoming rows should be ordered; this is essential as patterns depend on an order.
 * [MEASURES](#define--measures) - defines output of the clause; similar to a `SELECT` clause.
-* [ONE ROW PER MATCH|ALL ROWS PER MATCH|ONE ROW PER MATCH WITH TIMEOUT ROWS|ALL ROWS PER MATCH WITH TIMEOUT ROWS](#output-mode) - output mode which defines how many rows per match should be produced.
+* [ONE ROW \| ALL ROWS PER MATCH](#output-mode) - output mode which defines how many rows per match should be produced.
 * [AFTER MATCH SKIP](#after-match-strategy) - specifies where the next match should start; this is also a way to control how many distinct matches a single event can belong to.
 * [PATTERN](#defining-a-pattern) - allows constructing patterns that will be searched for using a _regular expression_-like syntax.
 * [DEFINE](#define--measures) - this section defines the conditions that the pattern variables must satisfy.
@@ -451,6 +451,7 @@ Besides, Flink SQL also supports the following two modes (non-standard SQL, used
 <span class="label label-danger">Attention</span> However, the `ALL ROWS PER MATCH WITH TIMEOUT ROWS` and `ONE ROW PER MATCH WITH TIMEOUT ROWS` clauses are not part of the SQL standard. The recommended way of dealing with timed out partial match events might change in the future.
 
 For `ALL ROWS PER MATCH` and `ALL ROWS PER MATCH WITH TIMEOUT ROWS`, the schema of the output row will be a concatenation of `[partitioning columns] + [ordering columns] + [remaining columns of the input row] + [measures columns]` in that particular order.
+
 For `ONE ROW PER MATCH` and `ONE ROW PER MATCH WITH TIMEOUT ROWS`, the schema of the output row will be a concatenation of `[partitioning columns] + [measures columns]` in that particular order.
 
 #### Example
