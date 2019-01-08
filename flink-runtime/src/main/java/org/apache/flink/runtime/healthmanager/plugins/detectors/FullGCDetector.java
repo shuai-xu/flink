@@ -30,6 +30,7 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFullGC;
+import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * FullGCDetector detects full GCs a job.
@@ -106,9 +108,9 @@ public class FullGCDetector implements Detector {
 			double deltaGCCount = maxGC.get(tmId).f1 - minGC.get(tmId).f1;
 
 			if (deltaGCCount > gcCountThreshold) {
-				List<JobVertexID> jvIds = restServerClient.getTaskManagerTasks(tmId);
-				if (jvIds != null) {
-					jobVertexIDs.addAll(jvIds);
+				List<ExecutionVertexID> jobExecutionVertexIds = restServerClient.getTaskManagerTasks(tmId);
+				if (jobExecutionVertexIds != null) {
+					jobVertexIDs.addAll(jobExecutionVertexIds.stream().map(ExecutionVertexID::getJobVertexID).collect(Collectors.toList()));
 				}
 			}
 		}

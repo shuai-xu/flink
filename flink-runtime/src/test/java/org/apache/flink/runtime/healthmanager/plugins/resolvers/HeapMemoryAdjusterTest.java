@@ -173,6 +173,7 @@ public class HeapMemoryAdjusterTest {
 		JobID jobID = new JobID();
 		JobVertexID vertex1 = new JobVertexID();
 		JobVertexID vertex2 = new JobVertexID();
+		ExecutionVertexID executionVertexID1 = new ExecutionVertexID(vertex1, 0);
 
 		// job level configuration.
 		Configuration config = new Configuration();
@@ -227,7 +228,7 @@ public class HeapMemoryAdjusterTest {
 			.thenReturn(maxGcSub);
 
 		Mockito.when(restServerClient.getTaskManagerTasks(Mockito.eq("tmId")))
-			.thenReturn(Arrays.asList(vertex1));
+			.thenReturn(Arrays.asList(executionVertexID1));
 
 		Map<ExecutionVertexID, ExecutionState> allTaskStats = new HashMap<>();
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0), ExecutionState.RUNNING);

@@ -68,9 +68,12 @@ import org.apache.flink.runtime.rest.handler.job.metrics.AggregatingSubtasksMetr
 import org.apache.flink.runtime.rest.handler.job.metrics.AggregatingTaskManagersMetricsHandler;
 import org.apache.flink.runtime.rest.handler.job.metrics.JobManagerMetricsHandler;
 import org.apache.flink.runtime.rest.handler.job.metrics.JobMetricsHandler;
+import org.apache.flink.runtime.rest.handler.job.metrics.JobTaskManagersComponentMetricsHandler;
 import org.apache.flink.runtime.rest.handler.job.metrics.JobVertexMetricsHandler;
+import org.apache.flink.runtime.rest.handler.job.metrics.JobVertexSubtasksComponentMetricsHandler;
 import org.apache.flink.runtime.rest.handler.job.metrics.SubtaskMetricsHandler;
 import org.apache.flink.runtime.rest.handler.job.metrics.TaskManagerMetricsHandler;
+import org.apache.flink.runtime.rest.handler.job.metrics.TaskManagersComponentMetricsHandler;
 import org.apache.flink.runtime.rest.handler.job.rescaling.RescalingHandlers;
 import org.apache.flink.runtime.rest.handler.job.savepoints.SavepointDisposalHandlers;
 import org.apache.flink.runtime.rest.handler.job.savepoints.SavepointHandlers;
@@ -475,6 +478,32 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 			metricFetcher
 		);
 
+		final JobVertexSubtasksComponentMetricsHandler jobVertexSubtasksComponentMetricsHandler = new JobVertexSubtasksComponentMetricsHandler(
+			restAddressFuture,
+			leaderRetriever,
+			timeout,
+			responseHeaders,
+			executionGraphCache,
+			metricFetcher
+		);
+
+		final JobTaskManagersComponentMetricsHandler jobTaskManagersComponentMetricsHandler = new JobTaskManagersComponentMetricsHandler(
+			restAddressFuture,
+			leaderRetriever,
+			timeout,
+			responseHeaders,
+			executionGraphCache,
+			metricFetcher
+		);
+
+		final TaskManagersComponentMetricsHandler taskManagersComponentMetricsHandler = new TaskManagersComponentMetricsHandler(
+			restAddressFuture,
+			leaderRetriever,
+			timeout,
+			responseHeaders,
+			metricFetcher
+		);
+
 		final JobVertexTaskManagersHandler jobVertexTaskManagersHandler = new JobVertexTaskManagersHandler(
 			restAddressFuture,
 			leaderRetriever,
@@ -677,6 +706,9 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 		handlers.add(Tuple2.of(aggregatingTaskManagersMetricsHandler.getMessageHeaders(), aggregatingTaskManagersMetricsHandler));
 		handlers.add(Tuple2.of(aggregatingJobsMetricsHandler.getMessageHeaders(), aggregatingJobsMetricsHandler));
 		handlers.add(Tuple2.of(aggregatingSubtasksMetricsHandler.getMessageHeaders(), aggregatingSubtasksMetricsHandler));
+		handlers.add(Tuple2.of(jobVertexSubtasksComponentMetricsHandler.getMessageHeaders(), jobVertexSubtasksComponentMetricsHandler));
+		handlers.add(Tuple2.of(jobTaskManagersComponentMetricsHandler.getMessageHeaders(), jobTaskManagersComponentMetricsHandler));
+		handlers.add(Tuple2.of(taskManagersComponentMetricsHandler.getMessageHeaders(), taskManagersComponentMetricsHandler));
 		handlers.add(Tuple2.of(jobExecutionResultHandler.getMessageHeaders(), jobExecutionResultHandler));
 		handlers.add(Tuple2.of(savepointTriggerHandler.getMessageHeaders(), savepointTriggerHandler));
 		handlers.add(Tuple2.of(savepointStatusHandler.getMessageHeaders(), savepointStatusHandler));

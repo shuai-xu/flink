@@ -30,6 +30,7 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexNativeMemOveruse;
+import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import java.util.HashMap;
@@ -105,10 +106,11 @@ public class MemoryOveruseDetector implements Detector {
 			}
 
 			double overuse = totalUsage - capacity;
-			List<JobVertexID> jvIds = restServerClient.getTaskManagerTasks(tmId);
-			if (jvIds != null && !jvIds.isEmpty()) {
-				overuse /= jvIds.size();
-				for (JobVertexID jvId : jvIds) {
+			List<ExecutionVertexID> jobExecutionVertexIds = restServerClient.getTaskManagerTasks(tmId);
+			if (jobExecutionVertexIds != null && !jobExecutionVertexIds.isEmpty()) {
+				overuse /= jobExecutionVertexIds.size();
+				for (ExecutionVertexID jobExecutionVertexId : jobExecutionVertexIds) {
+					JobVertexID jvId = jobExecutionVertexId.getJobVertexID();
 					if (!vertexMaxOveruse.containsKey(jvId) || vertexMaxOveruse.get(jvId) < overuse) {
 						vertexMaxOveruse.put(jvId, overuse);
 					}

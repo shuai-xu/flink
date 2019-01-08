@@ -62,7 +62,7 @@ public interface RestServerClient {
 	 * @param tmId task manager id.
 	 * @return List of JobVertexIDs of all tasks running on the TM, including repetitions.
 	 */
-	List<JobVertexID> getTaskManagerTasks(String tmId);
+	List<ExecutionVertexID> getTaskManagerTasks(String tmId);
 
 	/**
 	 * Get failover history in time range.

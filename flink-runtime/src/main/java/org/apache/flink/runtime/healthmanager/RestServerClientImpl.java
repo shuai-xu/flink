@@ -42,6 +42,15 @@ import org.apache.flink.runtime.rest.messages.ResponseBody;
 import org.apache.flink.runtime.rest.messages.job.JobAllSubtaskCurrentAttemptsInfoHeaders;
 import org.apache.flink.runtime.rest.messages.job.JobSubtaskCurrentAttemptsInfo;
 import org.apache.flink.runtime.rest.messages.job.SubtaskExecutionAttemptInfo;
+import org.apache.flink.runtime.rest.messages.job.metrics.ComponentMetric;
+import org.apache.flink.runtime.rest.messages.job.metrics.ComponentsMetricCollectionResponseBody;
+import org.apache.flink.runtime.rest.messages.job.metrics.JobTaskManagersComponentMetricsHeaders;
+import org.apache.flink.runtime.rest.messages.job.metrics.JobTaskManagersComponentMetricsMessageParameters;
+import org.apache.flink.runtime.rest.messages.job.metrics.JobVertexSubtasksComponentMetricsHeaders;
+import org.apache.flink.runtime.rest.messages.job.metrics.JobVertexSubtasksComponentMetricsMessageParameters;
+import org.apache.flink.runtime.rest.messages.job.metrics.Metric;
+import org.apache.flink.runtime.rest.messages.job.metrics.TaskManagersComponentMetricsHeaders;
+import org.apache.flink.runtime.rest.messages.job.metrics.TaskManagersComponentMetricsMessageParameters;
 
 import java.io.IOException;
 import java.net.URI;
@@ -160,33 +169,115 @@ public class RestServerClientImpl implements RestServerClient {
 	}
 
 	@Override
-	public List<JobVertexID> getTaskManagerTasks(String tmId) {
+	public List<ExecutionVertexID> getTaskManagerTasks(String tmId) {
 		return null;
 	}
 
 	//需要获取 vertex 的所有 metrics
+	//@return metric values in a map: [metric name, [subtask index, [fetch timestamp, metric value]]]
+	//todo: how to handle exception
 	@Override
 	public Map<String, Map<Integer, Tuple2<Long, Double>>> getTaskMetrics(JobID jobID, JobVertexID jobVertexID,
-			Set<String> metricNames) {
-		return null;
+																		Set<String> metricNames) {
+		final JobVertexSubtasksComponentMetricsHeaders header = JobVertexSubtasksComponentMetricsHeaders.getInstance();
+		final JobVertexSubtasksComponentMetricsMessageParameters parameters = header.getUnresolvedMessageParameters();
+		parameters.jobPathParameter.resolve(jobID);
+		parameters.jobVertexIdPathParameter.resolve(jobVertexID);
+		List<String> metricNameList = new ArrayList<>();
+		metricNameList.addAll(metricNames);
+		parameters.metricsFilterParameter.resolve(metricNameList);
+		Map<String, Map<Integer, Tuple2<Long, Double>>> result = new HashMap<>();
+		try {
+			return sendRequest(header, parameters, EmptyRequestBody.getInstance()).thenApply(
+				(ComponentsMetricCollectionResponseBody cmc) -> {
+					Collection<ComponentMetric> componentMetrics = cmc.getComponentMetrics();
+					for (ComponentMetric componentMetric: componentMetrics) {
+						Integer componentId = Integer.valueOf(componentMetric.getComponentId());
+						Long timestamp = componentMetric.getTimestamp();
+						for (Metric metric: componentMetric.getMetrics()) {
+							String metricName = metric.getId();
+							Double metricValue = Double.valueOf(metric.getValue());
+							Map<Integer, Tuple2<Long, Double>> metricMap = result.get(metric.getId());
+							if (metricMap == null) {
+								metricMap = new HashMap<>(componentMetrics.size());
+							}
+							metricMap.put(componentId, Tuple2.of(timestamp, metricValue));
+							result.put(metricName, metricMap);
+						}
+					}
+					return result;
+				}
+			).get();
+		} catch (Exception ignore) {
+		}
+		return result;
 	}
 
 	//获取所有 tm 的 metrics
 	@Override
 	public Map<String, Map<String, Tuple2<Long, Double>>> getTaskManagerMetrics(Set<String> tmIds,
 			Set<String> metricNames) {
-		return null;
+		final TaskManagersComponentMetricsHeaders header = TaskManagersComponentMetricsHeaders.getInstance();
+		final TaskManagersComponentMetricsMessageParameters parameters = header.getUnresolvedMessageParameters();
+		List<String> metricNameList = new ArrayList<>();
+		metricNameList.addAll(metricNames);
+		parameters.metricsFilterParameter.resolve(metricNameList);
+		Map<String, Map<String, Tuple2<Long, Double>>> result = new HashMap<>();
+		try {
+			return sendRequest(header, parameters, EmptyRequestBody.getInstance()).thenApply(
+				(ComponentsMetricCollectionResponseBody cmc) -> {
+					return updateMetricFromComponentsMetricCollection(cmc, result);
+				}
+			).get();
+		} catch (Exception ignore) {
+		}
+		return result;
 	}
 
 	//获取
 	@Override
 	public Map<String, Map<String, Tuple2<Long, Double>>> getTaskManagerMetrics(JobID jobId,
 			Set<String> metricNames) {
-		return null;
+		final JobTaskManagersComponentMetricsHeaders header = JobTaskManagersComponentMetricsHeaders.getInstance();
+		final JobTaskManagersComponentMetricsMessageParameters parameters = header.getUnresolvedMessageParameters();
+		parameters.jobPathParameter.resolve(jobId);
+		List<String> metricNameList = new ArrayList<>();
+		metricNameList.addAll(metricNames);
+		parameters.metricsFilterParameter.resolve(metricNameList);
+		Map<String, Map<String, Tuple2<Long, Double>>> result = new HashMap<>();
+		try {
+			return sendRequest(header, parameters, EmptyRequestBody.getInstance()).thenApply(
+				(ComponentsMetricCollectionResponseBody cmc) -> {
+					return updateMetricFromComponentsMetricCollection(cmc, result);
+				}
+			).get();
+		} catch (Exception ignore) {
+		}
+		return result;
 	}
 
 	@Override
 	public void rescale(JobID jobId, Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource) {
 
+	}
+
+	private Map<String, Map<String, Tuple2<Long, Double>>> updateMetricFromComponentsMetricCollection(ComponentsMetricCollectionResponseBody cmc,
+																									Map<String, Map<String, Tuple2<Long, Double>>> result){
+		Collection<ComponentMetric> componentMetrics = cmc.getComponentMetrics();
+		for (ComponentMetric componentMetric: componentMetrics) {
+			String componentId = componentMetric.getComponentId();
+			Long timestamp = componentMetric.getTimestamp();
+			for (Metric metric: componentMetric.getMetrics()) {
+				String metricName = metric.getId();
+				Double metricValue = Double.valueOf(metric.getValue());
+				Map<String, Tuple2<Long, Double>> metricMap = result.get(metric.getId());
+				if (metricMap == null) {
+					metricMap = new HashMap<>(componentMetrics.size());
+				}
+				metricMap.put(componentId, Tuple2.of(timestamp, metricValue));
+				result.put(metricName, metricMap);
+			}
+		}
+		return result;
 	}
 }
