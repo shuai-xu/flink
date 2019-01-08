@@ -2033,6 +2033,17 @@ ATAN(numeric)
     <tr>
       <td>
         {% highlight text %}
+TANH(numeric)
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Calculates the hyperbolic tangent of a given number.</p> 
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        {% highlight text %}
 DEGREES(numeric)
 {% endhighlight %}
       </td>

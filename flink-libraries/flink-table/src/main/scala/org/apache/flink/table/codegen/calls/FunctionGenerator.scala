@@ -584,6 +584,18 @@ object FunctionGenerator {
     BuiltInMethods.COSH_DEC)
 
   addSqlFunctionMethod(
+    TANH,
+    Seq(DataTypes.DOUBLE),
+    DataTypes.DOUBLE,
+    BuiltInMethods.TANH)
+
+  addSqlFunctionMethod(
+    TANH,
+    Seq(DecimalType.SYSTEM_DEFAULT),
+    DataTypes.DOUBLE,
+    BuiltInMethods.TANH_DEC)
+
+  addSqlFunctionMethod(
     ScalarSqlFunctions.BITAND,
     Seq(DataTypes.BYTE, DataTypes.BYTE),
     DataTypes.BYTE,

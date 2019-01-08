@@ -265,6 +265,14 @@ object ScalarSqlFunctions {
     OperandTypes.NUMERIC,
     SqlFunctionCategory.NUMERIC)
 
+  val TANH = new SqlFunction(
+    "TANH",
+    SqlKind.OTHER_FUNCTION,
+    ReturnTypes.DOUBLE_NULLABLE,
+    null,
+    OperandTypes.NUMERIC,
+    SqlFunctionCategory.NUMERIC)
+
   val CHR = new SqlFunction(
     "CHR",
     SqlKind.OTHER_FUNCTION,

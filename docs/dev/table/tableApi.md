@@ -2250,6 +2250,17 @@ NUMERIC.sinh()
     <tr>
       <td>
         {% highlight java %}
+NUMERIC.tanh()
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Calculates the hyperbolic tangent of a given number.</p> 
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        {% highlight java %}
 NUMERIC.degrees()
 {% endhighlight %}
       </td>
@@ -3792,6 +3803,17 @@ NUMERIC.atan()
       </td>
       <td>
         <p>Calculates the tangent of a given number.</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        {% highlight scala %}
+NUMERIC.tanh()
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Calculates the hyperbolic tangent of a given number.</p> 
       </td>
     </tr>
 

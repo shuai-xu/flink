@@ -258,6 +258,23 @@ case class Tan(child: Expression) extends UnaryExpression {
     logicalExprVisitor.visit(this)
 }
 
+case class Tanh(child: Expression) extends UnaryExpression {
+
+  override private[flink] def resultType: InternalType = DataTypes.DOUBLE
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder) = {
+    relBuilder.call(ScalarSqlFunctions.TANH, child.toRexNode)
+  }
+
+  override private[flink] def validateInput(): ValidationResult =
+    TypeCheckUtils.assertNumericExpr(child.resultType, "Tanh")
+
+  override def toString = s"tanh($child)"
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
+
 case class Cot(child: Expression) extends UnaryExpression {
   override private[flink] def resultType: InternalType = DataTypes.DOUBLE
 
