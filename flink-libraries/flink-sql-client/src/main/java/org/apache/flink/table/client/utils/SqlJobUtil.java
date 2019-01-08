@@ -212,9 +212,11 @@ public class SqlJobUtil {
 				}
 
 				// Register in catalog
-				// TODO ignoreIfExists should not be fixed
-				tableEnv.registerExternalFunction(
-					null, functionName, sqlCreateFunction.getClassName(), false);
+				// TODO: [BLINK-18570607] re-enable register external functions in SqlJobUtil
+//				tableEnv.registerExternalFunction(
+//					null, functionName, sqlCreateFunction.getClassName(), false);
+				throw new UnsupportedOperationException(
+					"catalogs haven't support registering functions yet");
 			}
 		}
 

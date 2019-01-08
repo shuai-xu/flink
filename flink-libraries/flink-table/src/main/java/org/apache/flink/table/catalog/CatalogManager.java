@@ -165,27 +165,37 @@ public class CatalogManager {
 	 * @return An array of complete table path
 	 */
 	public String[] resolveTableName(String... paths) {
+		return resolveTableName(Arrays.asList(paths));
+	}
+
+	/**
+	 * Returns the full name of the given table name.
+	 *
+	 * @param paths Table paths whose format can be among "catalog.db.table", "db.table", or "table"
+	 * @return An array of complete table path
+	 */
+	public String[] resolveTableName(List<String> paths) {
 		checkNotNull(paths, "paths cannot be null");
-		checkArgument(paths.length >= 1 && paths.length <= 3, "paths length has to be between 1 and 3");
-		checkArgument(!Arrays.stream(paths).anyMatch(p -> StringUtils.isNullOrWhitespaceOnly(p)),
+		checkArgument(paths.size() >= 1 && paths.size() <= 3, "paths length has to be between 1 and 3");
+		checkArgument(!paths.stream().anyMatch(p -> StringUtils.isNullOrWhitespaceOnly(p)),
 			"Paths contains null or while-space-only string");
 
-		if (paths.length == 3) {
-			return paths;
+		if (paths.size() == 3) {
+			return new String[] {paths.get(0), paths.get(1), paths.get(2)};
 		}
 
 		String catalogName;
 		String dbName;
 		String tableName;
 
-		if (paths.length == 1) {
+		if (paths.size() == 1) {
 			catalogName = getDefaultCatalogName();
 			dbName = getDefaultDatabaseName();
-			tableName = paths[0];
+			tableName = paths.get(0);
 		} else {
 			catalogName = getDefaultCatalogName();
-			dbName = paths[0];
-			tableName = paths[1];
+			dbName = paths.get(0);
+			tableName = paths.get(1);
 		}
 
 		return new String[]{catalogName, dbName, tableName};

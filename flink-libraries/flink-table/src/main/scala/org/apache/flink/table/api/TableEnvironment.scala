@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.api
 
-import org.apache.flink.annotation.Internal
+import org.apache.flink.annotation.{Experimental, Internal}
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.common.typeinfo.TypeInformation
@@ -44,7 +44,7 @@ import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, ExternalFunctionCatalog, FunctionCatalog}
+import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, FunctionCatalog}
 import org.apache.calcite.config.Lex
 import org.apache.calcite.plan.{Contexts, RelOptPlanner}
 import org.apache.calcite.rel.logical.LogicalTableModify
@@ -61,7 +61,7 @@ import _root_.java.lang.reflect.Modifier
 import _root_.java.util
 import _root_.java.util.concurrent.atomic.AtomicInteger
 
-import org.apache.flink.table.factories.{TableFactory, TableFactoryUtil}
+import org.apache.flink.table.factories.TableFactoryUtil
 import org.apache.flink.table.temptable.FlinkTableServiceManager
 import org.apache.flink.table.util.TableProperties
 
@@ -82,23 +82,12 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
 
   private val typeFactory: FlinkTypeFactory = new FlinkTypeFactory(new FlinkTypeSystem)
 
-  // registered external catalog names -> catalog
-  private lazy val externalCatalogs = new mutable.LinkedHashMap[String, ExternalCatalog]
-
   // Table API/SQL function catalog (built in, does not contain external functions)
   private val functionCatalog: FunctionCatalog = BuiltInFunctionCatalog.withBuiltIns
 
-  // Table API/SQL external function catalogs
-  private lazy val externalFunctionCatalogs: Seq[FunctionCatalog] =
-    externalCatalogs.values.map(new ExternalFunctionCatalog(_, typeFactory)).toSeq
-
-  // Table API/SQL function catalog which chained external function catalogs
-  // and built in function catalog.
-  // The chained order:
-  //    external function catalogs precede built-in function catalog.
-  //    when multiple external function catalogs, the order same as insertion order.
+  // Table API/SQL function catalog built in function catalog.
   private[flink] lazy val chainedFunctionCatalog: FunctionCatalog =
-    new ChainedFunctionCatalog(externalFunctionCatalogs :+ functionCatalog)
+    new ChainedFunctionCatalog(Seq(functionCatalog))
 
   // the configuration to create a Calcite planner
   protected var frameworkConfig: FrameworkConfig = createFrameworkConfig
@@ -202,8 +191,6 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
       .withTrimUnusedFields(false)
       .withConvertTableAccess(false)
       .build()
-
-  // ------ APIs for new catalog architecture ------
 
   def getCatalogManager(): CatalogManager = {
     catalogManager
@@ -344,22 +331,6 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
       }
     }
     return result
-  }
-
-  // ------ APIs for old catalog architecture ------
-
-  /**
-    * Gets a registered [[ExternalCatalog]] by name.
-    *
-    * @param name The name to look up the [[ExternalCatalog]]
-    * @return The [[ExternalCatalog]]
-    */
-  @deprecated
-  def getRegisteredExternalCatalog(name: String): ExternalCatalog = {
-    this.externalCatalogs.get(name) match {
-      case Some(catalog) => catalog
-      case None => throw new ExternalCatalogNotExistException(name)
-    }
   }
 
   /**
@@ -584,7 +555,9 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     * @param tableName The table name under which the table is registered in [[TableEnvironment]].
     *                  tableName must be a single name(e.g. "MyTable") associated with a table.
     * @return Statistics of a table if the statistics is available, else return null.
+    * @Experimental
     */
+  @Experimental
   def getTableStats(tableName: String): TableStats = {
     require(tableName != null && tableName.nonEmpty, "tableName must not be null or empty.")
     getTableStats(Array(tableName))
@@ -600,7 +573,9 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     *                  table , or can be a nest names (e.g. Array("MyCatalog", "MyDb", "MyTable"))
     *                  associated with a table registered as member of an [[ExternalCatalog]].
     * @return Statistics of a table if the statistics is available, else return null.
+    * @Experimental
     */
+  @Experimental
   def getTableStats(tablePath: Array[String]): TableStats = {
     val tableOpt = getTable(tablePath)
     if (tableOpt.isEmpty) {
@@ -629,12 +604,11 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
         case _ => None
       }
     } else {
-      // table in external catalog
-      val rootCatalog = getRegisteredExternalCatalog(tablePath.head)
-      val leafCatalog = tablePath.slice(1, tablePath.length - 1).foldLeft(rootCatalog) {
-        case (parentCatalog, name) => parentCatalog.getSubCatalog(name)
-      }
-      Option(leafCatalog.getTable(tableName).getTableStats)
+      // table in catalogs
+      val path = catalogManager.resolveTableName(tablePath.toList)
+      val catalog = getCatalog(path(0))
+
+      Option(catalog.getTable(new ObjectPath(path(1), path(2))).getTableStats)
     }
     stats.orNull
   }
@@ -658,7 +632,9 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     * @param tableName The table name under which the table is registered in [[TableEnvironment]].
     *                  tableName must be a single name(e.g. "MyTable") associated with a table.
     * @param tableStats The [[TableStats]] to update.
+    * @Experimental
     */
+  @Experimental
   def alterTableStats(tableName: String, tableStats: Option[TableStats]): Unit = {
     require(tableName != null && tableName.nonEmpty, "tableName must not be null or empty.")
     alterTableStats(Array(tableName), tableStats)
@@ -672,7 +648,9 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     *                  table , or can be a nest names (e.g. Array("MyCatalog", "MyDb", "MyTable"))
     *                  associated with a table registered as member of an [[ExternalCatalog]].
     * @param tableStats The [[TableStats]] to update.
+    * @Experimental
     */
+  @Experimental
   def alterTableStats(tablePath: Array[String], tableStats: Option[TableStats]): Unit = {
     val tableOpt = getTable(tablePath)
     if (tableOpt.isEmpty) {
@@ -697,20 +675,23 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
         (statistic.getUniqueKeys, statistic.getSkewInfo)
       }
       val newTable = table.asInstanceOf[FlinkTable]
-          .copy(FlinkStatistic.of(tableStats.orNull, uniqueKeys, skewInfo))
+        .copy(FlinkStatistic.of(tableStats.orNull, uniqueKeys, skewInfo))
       replaceRegisteredTable(tableName, newTable)
     } else {
-      // table in external catalog
-      val rootCatalog = getRegisteredExternalCatalog(tablePath.head)
-      val leafCatalog = tablePath.slice(1, tablePath.length - 1).foldLeft(rootCatalog) {
-        case (parentCatalog, name) => parentCatalog.getSubCatalog(name)
-      }
-      leafCatalog match {
-        case c: CrudExternalCatalog =>
-          c.alterTableStats(tableName, tableStats, ignoreIfNotExists = false)
-        case _ => throw new TableException(
-          s"alterTableStats operation is not supported for ${leafCatalog.getClass}.")
-      }
+      // table in catalogs
+      val path = catalogManager.resolveTableName(tablePath.toList)
+      val catalog = getCatalog(path(0))
+
+      // TODO: [BLINK-18570617] re-enable alter catalog table stats in TableEnvironment
+//      catalog match {
+//        case c: ReadableWritableCatalog =>
+//          c.alterTableStats(tableName, tableStats, ignoreIfNotExists = false)
+//        case _ => throw new TableException(
+//          s"alterTableStats operation is not supported for ${catalog.getClass}.")
+//      }
+
+      throw new TableException(
+        s"catalogs haven't supportted alterTableStats operation yet.")
     }
   }
 
@@ -1230,65 +1211,6 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     * @param name The table name to check.
     */
   protected def checkValidTableName(name: String): Unit = {}
-
-  /**
-    * Get the [[ExternalCatalog]] from this env. If the passed catalogPaths is null or empty,
-    * a default schema ''hive'' would be used.
-    */
-  def getExternalCatalog(catalogPaths: Array[String]): ExternalCatalog = {
-    val externalCatalog = if (null == catalogPaths || catalogPaths.length == 0) {
-      getRegisteredExternalCatalog(TableEnvironment.DEFAULT_SCHEMA)
-    } else {
-      val rootCatalog = getRegisteredExternalCatalog(catalogPaths.head)
-      val leafCatalog = catalogPaths.slice(1, catalogPaths.length).foldLeft(rootCatalog) {
-        case (parentCatalog, name) => parentCatalog.getSubCatalog(name)
-      }
-      leafCatalog
-    }
-    externalCatalog
-  }
-
-  /**
-    * Register a [[ExternalCatalogTable]] to this table.
-    *
-    * TODO: this API should be removed from TableEnvironment. Registering tables should be
-    * delegated to catalog.
-    *
-    * @param catalogPaths
-    * @param tableName
-    * @param externalTable
-    * @param ignoreIfExists
-    */
-  @deprecated
-  def registerExternalTable(
-      catalogPaths: Array[String],
-      tableName: String,
-      externalTable: ExternalCatalogTable,
-      ignoreIfExists: Boolean): Unit = {
-
-    val externalCatalog = getExternalCatalog(catalogPaths)
-    require(
-      externalCatalog.isInstanceOf[CrudExternalCatalog],
-      "Catalog is not allowed to create table")
-
-    externalCatalog.asInstanceOf[CrudExternalCatalog].createTable(
-      tableName, externalTable, ignoreIfExists)
-  }
-
-  def registerExternalFunction(
-      catalogPaths: Array[String],
-      functionName: String,
-      className: String,
-      ignoreIfExists: Boolean): Unit = {
-
-    val externalCatalog = getExternalCatalog(catalogPaths)
-    require(
-      externalCatalog.isInstanceOf[CrudExternalCatalog],
-      "Catalog is not allowed to create table")
-
-    externalCatalog.asInstanceOf[CrudExternalCatalog].createFunction(
-      functionName, className, ignoreIfExists)
-  }
 
   /**
     * Close the table environment. This method will clean up the internal state and background
