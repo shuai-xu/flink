@@ -119,7 +119,8 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	public ExternalCatalogTable getTable(ObjectPath path) throws TableNotExistException {
 		Table hiveTable = getHiveTable(path);
 
-		TableSchema tableSchema = HiveMetadataUtil.createTableSchema(hiveTable.getSd().getCols());
+		TableSchema tableSchema = HiveMetadataUtil.createTableSchema(hiveTable.getSd().getCols(),
+																	hiveTable.getPartitionKeys());
 
 		TableStats tableStats = null;
 		// Get the column statistics for a set of columns in a table. This only works for non-partitioned tables.
@@ -136,7 +137,10 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			}
 		}
 
-		return HiveMetadataUtil.createExternalCatalogTable(hiveTable, tableSchema, tableStats);
+		ExternalCatalogTable externalCatalogTable =  HiveMetadataUtil.createExternalCatalogTable(hiveTable, tableSchema, tableStats);
+		externalCatalogTable.getProperties().put(HiveConf.ConfVars.METASTOREURIS.varname,
+												hiveConf.get(HiveConf.ConfVars.METASTOREURIS.varname));
+		return externalCatalogTable;
 	}
 
 	private Table getHiveTable(ObjectPath path) {

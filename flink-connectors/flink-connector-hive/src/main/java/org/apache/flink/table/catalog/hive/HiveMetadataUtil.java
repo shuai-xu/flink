@@ -45,6 +45,7 @@ import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.util.PropertiesUtil;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hive.metastore.api.BinaryColumnStatsData;
 import org.apache.hadoop.hive.metastore.api.BooleanColumnStatsData;
 import org.apache.hadoop.hive.metastore.api.ColumnStatisticsData;
@@ -77,11 +78,17 @@ import java.util.Properties;
 import java.util.stream.Collectors;
 
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_COMPRESSED;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_DB_NAME;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_FIELD_NAMES;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_FIELD_TYPES;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_INPUT_FORMAT;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_LOCATION;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_NUM_BUCKETS;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_OUTPUT_FORMAT;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_PARTITION_FIELDS;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_SERDE_LIBRARY;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT;
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_TABLE_NAME;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_TYPE;
 
 /**
@@ -159,17 +166,23 @@ public class HiveMetadataUtil {
 	/**
 	 * Create Flink's TableSchema from Hive columns.
 	 */
-	public static TableSchema createTableSchema(List<FieldSchema> fieldSchemas) {
-		int colSize = fieldSchemas.size();
+	public static TableSchema createTableSchema(List<FieldSchema> fieldSchemas, List<FieldSchema> partitionFields) {
+		int colSize = fieldSchemas.size() + partitionFields.size();
 
 		String[] colNames = new String[colSize];
 		InternalType[] colTypes = new InternalType[colSize];
 
-		for (int i = 0; i < colSize; i++) {
+		for (int i = 0; i < fieldSchemas.size(); i++) {
 			FieldSchema fs = fieldSchemas.get(i);
 
 			colNames[i] = fs.getName();
 			colTypes[i] = HiveMetadataUtil.convert(fs.getType());
+		}
+		for (int i = 0; i < colSize - fieldSchemas.size(); i++){
+			FieldSchema fs = partitionFields.get(i);
+
+			colNames[i + fieldSchemas.size()] = fs.getName();
+			colTypes[i + fieldSchemas.size()] = HiveMetadataUtil.convert(fs.getType());
 		}
 
 		return new TableSchema(colNames, colTypes);
@@ -306,8 +319,29 @@ public class HiveMetadataUtil {
 		prop.put(HIVE_TABLE_OUTPUT_FORMAT, sd.getOutputFormat());
 		prop.put(HIVE_TABLE_COMPRESSED, String.valueOf(sd.isCompressed()));
 		prop.put(HIVE_TABLE_NUM_BUCKETS, String.valueOf(sd.getNumBuckets()));
+		prop.put(HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT,
+				String.valueOf(sd.getSerdeInfo().getParameters().get(serdeConstants.SERIALIZATION_FORMAT)));
 
 		prop.putAll(table.getParameters());
+
+		List<FieldSchema> fieldSchemas = new ArrayList<>(sd.getCols());
+		fieldSchemas.addAll(table.getPartitionKeys());
+		String[] colNames = new String[fieldSchemas.size()];
+		String[] hiveTypes = new String[fieldSchemas.size()];
+		for (int i = 0; i < fieldSchemas.size(); i++) {
+			colNames[i] = fieldSchemas.get(i).getName();
+			hiveTypes[i] = fieldSchemas.get(i).getType();
+		}
+		prop.put(HIVE_TABLE_FIELD_NAMES, StringUtils.join(colNames, ","));
+		prop.put(HIVE_TABLE_FIELD_TYPES, StringUtils.join(hiveTypes, ","));
+		prop.put(HIVE_TABLE_DB_NAME, table.getDbName());
+		prop.put(HIVE_TABLE_TABLE_NAME, table.getTableName());
+		prop.put(HIVE_TABLE_PARTITION_FIELDS, String.valueOf(
+				StringUtils.join(
+						table.getPartitionKeys()
+							.stream()
+							.map(key -> key.getName().toLowerCase())
+							.collect(Collectors.toList()), ",")));
 
 		return prop;
 	}

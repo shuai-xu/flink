@@ -20,19 +20,12 @@ package org.apache.flink.streaming.connectors.hive;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableConfigOptions;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.java.BatchTableEnvironment;
-import org.apache.flink.table.api.types.DoubleType;
-import org.apache.flink.table.api.types.IntType;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.StringType;
 import org.apache.flink.table.catalog.hive.HiveCatalog;
-import org.apache.flink.table.sources.TableSource;
-import org.apache.flink.table.util.TableProperties;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -45,80 +38,6 @@ import org.junit.Test;
 public class HiveTableSourceTest {
 
 	@Test
-	public void testProgram() throws Exception {
-		Configuration config = new Configuration();
-		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(1, config);
-		env.setParallelism(1);
-		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SINK_PARALLELISM, 1);
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1);
-
-		HiveTableFactory hiveTableFactory = new HiveTableFactory();
-		RichTableSchema richTableSchema = new RichTableSchema(
-				new String[]{"name", "value"}, new InternalType[]{StringType.INSTANCE, DoubleType.INSTANCE});
-		TableProperties tableProperties = new TableProperties();
-		tableProperties.setString("hive.metastore.uris", "thrift://localhost:9083");
-		tableProperties.setString("tableName".toLowerCase(), "default.test");
-		TableSource tableSource = hiveTableFactory.createTableSource("hive_test_source", richTableSchema,
-																	tableProperties);
-		tEnv.registerTableSource("s", tableSource);
-		Table result = tEnv.sqlQuery("select * from s");
-		result.print();
-//		List<Row> results = scala.collection.JavaConversions.seqAsJavaList(result.collect());
-
-	}
-
-	@Test
-	public void testProgram1() throws Exception {
-		Configuration config = new Configuration();
-		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(1, config);
-		env.setParallelism(1);
-		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SINK_PARALLELISM, 1);
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1);
-
-		HiveTableFactory hiveTableFactory = new HiveTableFactory();
-		RichTableSchema richTableSchema = new RichTableSchema(
-				new String[]{"name", "value", "age"}, new InternalType[]{StringType.INSTANCE, DoubleType.INSTANCE,
-				IntType.INSTANCE});
-		TableProperties tableProperties = new TableProperties();
-		tableProperties.setString("hive.metastore.uris", "thrift://localhost:9083");
-		tableProperties.setString("tableName".toLowerCase(), "default.test1");
-		TableSource tableSource = hiveTableFactory.createTableSource("hive_test_source", richTableSchema,
-																	tableProperties);
-		tEnv.registerTableSource("s", tableSource);
-		Table result = tEnv.sqlQuery("select * from s");
-		result.print();
-//		List<Row> results = scala.collection.JavaConversions.seqAsJavaList(result.collect());
-
-	}
-
-	@Test
-	public void testProgram2() throws Exception {
-		Configuration config = new Configuration();
-		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(1, config);
-		env.setParallelism(1);
-		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SINK_PARALLELISM, 1);
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1);
-
-		HiveTableFactory hiveTableFactory = new HiveTableFactory();
-		RichTableSchema richTableSchema = new RichTableSchema(
-				new String[]{"name", "value", "age"}, new InternalType[]{StringType.INSTANCE, DoubleType.INSTANCE,
-				IntType.INSTANCE});
-		TableProperties tableProperties = new TableProperties();
-		tableProperties.setString("hive.metastore.uris", "thrift://localhost:9083");
-		tableProperties.setString("tableName".toLowerCase(), "default.test1_orc");
-		TableSource tableSource = hiveTableFactory.createTableSource("hive_test_source", richTableSchema,
-																	tableProperties);
-		tEnv.registerTableSource("s", tableSource);
-		Table result = tEnv.sqlQuery("select * from s");
-		result.print();
-//		List<Row> results = scala.collection.JavaConversions.seqAsJavaList(result.collect());
-
-	}
-
-	@Test
 	public void testScanWithHcataLog() throws Exception {
 		Configuration config = new Configuration();
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(1, config);
@@ -126,11 +45,37 @@ public class HiveTableSourceTest {
 		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
 		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SINK_PARALLELISM, 1);
 		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1);
-		tEnv.registerCatalog("myHive", new HiveCatalog("myHive", "thrift://localhost:9083"));
+		tEnv.registerCatalog("myHive", new HiveCatalog("myHive", "thrift://10.101.72.41:9083"));
 		tEnv.setDefaultDatabase("myHive", "default");
-//		Table table = tEnv.scan("myHive", "default", "test");
-//		table.printSchema();
-//		table.print();
 		tEnv.sqlQuery("select * from products").print();
+	}
+
+	@Test
+	public void testScanPartitionTable() throws Exception {
+		Configuration config = new Configuration();
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(1, config);
+		env.setParallelism(1);
+		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SINK_PARALLELISM, 1);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1);
+		tEnv.registerCatalog("myHive", new HiveCatalog("myHive", "thrift://10.101.72.41:9083"));
+		tEnv.setDefaultDatabase("myHive", "default");
+//		tEnv.sqlQuery("select * from products").print();
+//		tEnv.sqlQuery("select * from pt_area_products where ds = '20181225'").print();
+		tEnv.sqlQuery("select * from pt_area_products").print();
+	}
+
+	@Test
+	public void testScanPartitionTableWithPartitionPrune() throws Exception {
+		Configuration config = new Configuration();
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(1, config);
+		env.setParallelism(1);
+		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SINK_PARALLELISM, 1);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1);
+		tEnv.registerCatalog("myHive", new HiveCatalog("myHive", "thrift://10.101.72.41:9083"));
+		tEnv.setDefaultDatabase("myHive", "default");
+		Table table = tEnv.sqlQuery("select * from pt_area_products where ds = '2018-12-25'");
+		table.print();
 	}
 }

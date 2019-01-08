@@ -45,6 +45,12 @@ public class HiveTableConfig {
 
 	public static final String HIVE_TABLE_FIELD_TYPES = "hive.table.field.types";
 
+	public static final String HIVE_TABLE_DB_NAME = "hive.table.db.name";
+
+	public static final String HIVE_TABLE_TABLE_NAME = "hive.table.table.name";
+
+	public static final String HIVE_TABLE_PARTITION_FIELDS = "hive.table.partition.fields";
+
 	// -------------------
 	// Hive table parameters
 	// -------------------
