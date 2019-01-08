@@ -19,7 +19,9 @@
 package org.apache.flink.streaming.api.graph;
 
 import org.apache.flink.api.common.ExecutionConfig;
+import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.functions.FilterFunction;
+import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.functions.KeySelector;
@@ -35,6 +37,7 @@ import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.datastream.SplitStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironmentFactory;
 import org.apache.flink.streaming.api.functions.co.CoMapFunction;
 import org.apache.flink.streaming.api.functions.sink.DiscardingSink;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
@@ -47,6 +50,7 @@ import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.api.transformations.OneInputTransformation;
 import org.apache.flink.streaming.api.transformations.SideOutputTransformation;
+import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.streaming.api.transformations.TwoInputTransformation;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.partitioner.BroadcastPartitioner;
@@ -69,6 +73,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.apache.flink.streaming.api.graph.StreamNode.ReadPriority;
@@ -674,6 +679,241 @@ public class StreamGraphGeneratorTest {
 		assertNull(sink1Node.getReadPriorityHint(graph.getStreamEdges(map5.getId(), sink1.getId()).get(0)));
 	}
 
+	@Test
+	public void testDefaultResourcesForUnboundedDataStream() {
+		// case
+		{
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+			DataStream<Integer> map1 = source1.map(new NoOpIntMap());
+			DataStreamSink<Integer> sink1 = map1.addSink(new NoOpSinkFunction());
+
+			StreamGraph graph = env.getStreamGraph();
+			assertEquals(ResourceSpec.DEFAULT, graph.getStreamNode(source1.getId()).getMinResources());
+			assertEquals(ResourceSpec.DEFAULT, graph.getStreamNode(map1.getId()).getMinResources());
+			assertEquals(ResourceSpec.DEFAULT, graph.getStreamNode(sink1.getId()).getMinResources());
+			for (StreamNode node : graph.getStreamNodes()) {
+				assertEquals(node.getMinResources(), node.getPreferredResources());
+			}
+		}
+
+		// case
+		{
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+			ResourceSpec defaultResources = new ResourceSpec.Builder().setCpuCores(12345).build();
+			env.setDefaultResources(defaultResources);
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+			DataStream<Integer> map1 = source1.map(new NoOpIntMap());
+			DataStreamSink<Integer> sink1 = map1.addSink(new NoOpSinkFunction());
+
+			StreamGraph graph = env.getStreamGraph();
+			assertEquals(defaultResources, graph.getStreamNode(source1.getId()).getMinResources());
+			assertEquals(defaultResources, graph.getStreamNode(map1.getId()).getMinResources());
+			assertEquals(defaultResources, graph.getStreamNode(sink1.getId()).getMinResources());
+			for (StreamNode node : graph.getStreamNodes()) {
+				assertEquals(node.getMinResources(), node.getPreferredResources());
+			}
+		}
+
+		// case
+		{
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+			Configuration globalConf = GlobalConfiguration.loadConfiguration();
+			ResourceSpec globalDefaultResources = new ResourceSpec.Builder()
+					.setCpuCores(globalConf.getDouble(CoreOptions.DEFAULT_RESOURCE_CPU_CORES))
+					.setHeapMemoryInMB(globalConf.getInteger(CoreOptions.DEFAULT_RESOURCE_HEAP_MEMORY))
+					.build();
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+			DataStream<Integer> map1 = source1.map(new NoOpIntMap());
+			DataStreamSink<Integer> sink1 = map1.addSink(new NoOpSinkFunction());
+
+			ResourceSpec map1Resources = new ResourceSpec.Builder().setCpuCores(9876).build();
+			((SingleOutputStreamOperator<Integer>) map1).setResources(map1Resources);
+
+			StreamGraph graph = env.getStreamGraph();
+			assertEquals(globalDefaultResources, graph.getStreamNode(source1.getId()).getMinResources());
+			assertEquals(map1Resources, graph.getStreamNode(map1.getId()).getMinResources());
+			assertEquals(globalDefaultResources, graph.getStreamNode(sink1.getId()).getMinResources());
+			for (StreamNode node : graph.getStreamNodes()) {
+				assertEquals(node.getMinResources(), node.getPreferredResources());
+			}
+		}
+
+		// case
+		{
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+			ResourceSpec defaultResources = new ResourceSpec.Builder().setCpuCores(12345).build();
+			env.setDefaultResources(defaultResources);
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+			DataStream<Integer> map1 = source1.map(new NoOpIntMap());
+			DataStreamSink<Integer> sink1 = map1.addSink(new NoOpSinkFunction());
+
+			ResourceSpec map1Resources = new ResourceSpec.Builder().setCpuCores(9876).build();
+			((SingleOutputStreamOperator<Integer>) map1).setResources(map1Resources);
+
+			StreamGraph graph = env.getStreamGraph();
+			assertEquals(defaultResources, graph.getStreamNode(source1.getId()).getMinResources());
+			assertEquals(map1Resources, graph.getStreamNode(map1.getId()).getMinResources());
+			assertEquals(defaultResources, graph.getStreamNode(sink1.getId()).getMinResources());
+			for (StreamNode node : graph.getStreamNodes()) {
+				assertEquals(node.getMinResources(), node.getPreferredResources());
+			}
+		}
+
+		// case
+		{
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+			env.setDefaultResources(ResourceSpec.DEFAULT);
+
+			Configuration globalConf = GlobalConfiguration.loadConfiguration();
+			ResourceSpec globalDefaultResources = new ResourceSpec.Builder()
+					.setCpuCores(globalConf.getDouble(CoreOptions.DEFAULT_RESOURCE_CPU_CORES))
+					.setHeapMemoryInMB(globalConf.getInteger(CoreOptions.DEFAULT_RESOURCE_HEAP_MEMORY))
+					.build();
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+			DataStream<Integer> map1 = source1.map(new NoOpIntMap());
+			DataStreamSink<Integer> sink1 = map1.addSink(new NoOpSinkFunction());
+
+			ResourceSpec map1Resources = new ResourceSpec.Builder().setCpuCores(9876).build();
+			((SingleOutputStreamOperator<Integer>) map1).setResources(map1Resources);
+
+			StreamGraph graph = env.getStreamGraph();
+			assertEquals(globalDefaultResources, graph.getStreamNode(source1.getId()).getMinResources());
+			assertEquals(map1Resources, graph.getStreamNode(map1.getId()).getMinResources());
+			assertEquals(globalDefaultResources, graph.getStreamNode(sink1.getId()).getMinResources());
+			for (StreamNode node : graph.getStreamNodes()) {
+				assertEquals(node.getMinResources(), node.getPreferredResources());
+			}
+		}
+	}
+
+	@Test
+	public void testDefaultResourcesForBoundedStream() {
+		TestStreamEnvironment.setAsContext();
+
+		// case
+		{
+			TestStreamEnvironment env = (TestStreamEnvironment) StreamExecutionEnvironment.getExecutionEnvironment();
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+			DataStream<Integer> map1 = source1.map(new NoOpIntMap());
+			DataStreamSink<Integer> sink1 = map1.addSink(new NoOpSinkFunction());
+
+			StreamGraph graph = StreamGraphGenerator.generate(StreamGraphGenerator.Context.buildBatchProperties(env),
+					env.getTransformations());
+			assertEquals(ResourceSpec.DEFAULT, graph.getStreamNode(source1.getId()).getMinResources());
+			assertEquals(ResourceSpec.DEFAULT, graph.getStreamNode(map1.getId()).getMinResources());
+			assertEquals(ResourceSpec.DEFAULT, graph.getStreamNode(sink1.getId()).getMinResources());
+			for (StreamNode node : graph.getStreamNodes()) {
+				assertEquals(node.getMinResources(), node.getPreferredResources());
+			}
+		}
+
+		// case
+		{
+			TestStreamEnvironment env = (TestStreamEnvironment) StreamExecutionEnvironment.getExecutionEnvironment();
+			ResourceSpec defaultResources = new ResourceSpec.Builder().setCpuCores(12345).build();
+			env.setDefaultResources(defaultResources);
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+			DataStream<Integer> map1 = source1.map(new NoOpIntMap());
+			DataStreamSink<Integer> sink1 = map1.addSink(new NoOpSinkFunction());
+
+			StreamGraph graph = StreamGraphGenerator.generate(StreamGraphGenerator.Context.buildBatchProperties(env),
+					env.getTransformations());
+			assertEquals(defaultResources, graph.getStreamNode(source1.getId()).getMinResources());
+			assertEquals(defaultResources, graph.getStreamNode(map1.getId()).getMinResources());
+			assertEquals(defaultResources, graph.getStreamNode(sink1.getId()).getMinResources());
+			for (StreamNode node : graph.getStreamNodes()) {
+				assertEquals(node.getMinResources(), node.getPreferredResources());
+			}
+		}
+
+		// case
+		{
+			TestStreamEnvironment env = (TestStreamEnvironment) StreamExecutionEnvironment.getExecutionEnvironment();
+
+			Configuration globalConf = GlobalConfiguration.loadConfiguration();
+			ResourceSpec globalDefaultResources = new ResourceSpec.Builder()
+					.setCpuCores(globalConf.getDouble(CoreOptions.DEFAULT_RESOURCE_CPU_CORES))
+					.setHeapMemoryInMB(globalConf.getInteger(CoreOptions.DEFAULT_RESOURCE_HEAP_MEMORY))
+					.build();
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+			DataStream<Integer> map1 = source1.map(new NoOpIntMap());
+			DataStreamSink<Integer> sink1 = map1.addSink(new NoOpSinkFunction());
+
+			ResourceSpec map1Resources = new ResourceSpec.Builder().setCpuCores(9876).build();
+			((SingleOutputStreamOperator<Integer>) map1).setResources(map1Resources);
+
+			StreamGraph graph = StreamGraphGenerator.generate(StreamGraphGenerator.Context.buildBatchProperties(env),
+					env.getTransformations());
+			assertEquals(globalDefaultResources, graph.getStreamNode(source1.getId()).getMinResources());
+			assertEquals(map1Resources, graph.getStreamNode(map1.getId()).getMinResources());
+			assertEquals(globalDefaultResources, graph.getStreamNode(sink1.getId()).getMinResources());
+			for (StreamNode node : graph.getStreamNodes()) {
+				assertEquals(node.getMinResources(), node.getPreferredResources());
+			}
+		}
+
+		// case
+		{
+			TestStreamEnvironment env = (TestStreamEnvironment) StreamExecutionEnvironment.getExecutionEnvironment();
+			ResourceSpec defaultResources = new ResourceSpec.Builder().setCpuCores(12345).build();
+			env.setDefaultResources(defaultResources);
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+			DataStream<Integer> map1 = source1.map(new NoOpIntMap());
+			DataStreamSink<Integer> sink1 = map1.addSink(new NoOpSinkFunction());
+
+			ResourceSpec map1Resources = new ResourceSpec.Builder().setCpuCores(9876).build();
+			((SingleOutputStreamOperator<Integer>) map1).setResources(map1Resources);
+
+			StreamGraph graph = StreamGraphGenerator.generate(StreamGraphGenerator.Context.buildBatchProperties(env),
+					env.getTransformations());
+			assertEquals(defaultResources, graph.getStreamNode(source1.getId()).getMinResources());
+			assertEquals(map1Resources, graph.getStreamNode(map1.getId()).getMinResources());
+			assertEquals(defaultResources, graph.getStreamNode(sink1.getId()).getMinResources());
+			for (StreamNode node : graph.getStreamNodes()) {
+				assertEquals(node.getMinResources(), node.getPreferredResources());
+			}
+		}
+
+		// case
+		{
+			TestStreamEnvironment env = (TestStreamEnvironment) StreamExecutionEnvironment.getExecutionEnvironment();
+			env.setDefaultResources(ResourceSpec.DEFAULT);
+
+			Configuration globalConf = GlobalConfiguration.loadConfiguration();
+			ResourceSpec globalDefaultResources = new ResourceSpec.Builder()
+					.setCpuCores(globalConf.getDouble(CoreOptions.DEFAULT_RESOURCE_CPU_CORES))
+					.setHeapMemoryInMB(globalConf.getInteger(CoreOptions.DEFAULT_RESOURCE_HEAP_MEMORY))
+					.build();
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+			DataStream<Integer> map1 = source1.map(new NoOpIntMap());
+			DataStreamSink<Integer> sink1 = map1.addSink(new NoOpSinkFunction());
+
+			ResourceSpec map1Resources = new ResourceSpec.Builder().setCpuCores(9876).build();
+			((SingleOutputStreamOperator<Integer>) map1).setResources(map1Resources);
+
+			StreamGraph graph = StreamGraphGenerator.generate(StreamGraphGenerator.Context.buildBatchProperties(env),
+					env.getTransformations());
+			assertEquals(globalDefaultResources, graph.getStreamNode(source1.getId()).getMinResources());
+			assertEquals(map1Resources, graph.getStreamNode(map1.getId()).getMinResources());
+			assertEquals(globalDefaultResources, graph.getStreamNode(sink1.getId()).getMinResources());
+			for (StreamNode node : graph.getStreamNodes()) {
+				assertEquals(node.getMinResources(), node.getPreferredResources());
+			}
+		}
+	}
+
 	private static class OutputTypeConfigurableOperationWithTwoInputs
 			extends AbstractStreamOperator<Integer>
 			implements TwoInputStreamOperator<Integer, Integer, Integer>, OutputTypeConfigurable<Integer> {
@@ -790,6 +1030,38 @@ public class StreamGraphGeneratorTest {
 		@Override
 		public boolean filter(Integer value) throws Exception {
 			return false;
+		}
+	}
+
+	static class NoOpSinkFunction implements SinkFunction<Integer> {
+
+	}
+
+	static class TestStreamEnvironment extends StreamExecutionEnvironment {
+
+		private TestStreamEnvironment() {
+
+		}
+
+		public List<StreamTransformation<?>> getTransformations() {
+			return this.transformations;
+		}
+
+		public static void setAsContext() {
+
+			StreamExecutionEnvironmentFactory factory = new StreamExecutionEnvironmentFactory() {
+				@Override
+				public StreamExecutionEnvironment createExecutionEnvironment() {
+					return new TestStreamEnvironment();
+				}
+			};
+
+			initializeContextEnvironment(factory);
+		}
+
+		@Override
+		public JobExecutionResult execute(StreamGraph streamGraph) throws Exception {
+			return null;
 		}
 	}
 }

@@ -31,6 +31,7 @@ import org.apache.flink.api.common.functions.StoppableFunction;
 import org.apache.flink.api.common.io.FileInputFormat;
 import org.apache.flink.api.common.io.FilePathFilter;
 import org.apache.flink.api.common.io.InputFormat;
+import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
@@ -148,6 +149,8 @@ public abstract class StreamExecutionEnvironment {
 	protected boolean isChainingEnabled = true;
 
 	protected boolean isMultiHeadChainMode = false;
+
+	private ResourceSpec defaultResources = null;
 
 	/** The state backend used for storing k/v state and state snapshots. */
 	private StateBackend defaultStateBackend;
@@ -312,6 +315,33 @@ public abstract class StreamExecutionEnvironment {
 	 */
 	public boolean isMultiHeadChainMode() {
 		return isMultiHeadChainMode;
+	}
+
+	/**
+	 * Gets the default resource factors of operator.
+	 *
+	 * @return the default resource factors.
+	 */
+	@PublicEvolving
+	public ResourceSpec getDefaultResources() {
+		return defaultResources;
+	}
+
+	/**
+	 * Sets the default resource factors for operators. If {@code defaultResourceSpec} is not
+	 * equal to {@link ResourceSpec#DEFAULT}, all operators that are not explicitly set {@link ResourceSpec}
+	 * will use this value as their resource settings.
+	 *
+	 * @param resources
+	 *      The {@link ResourceSpec} object to be set. If it just is or equals
+	 *      {@link ResourceSpec#DEFAULT}, that means resetting to the initial value.
+	 *
+	 * @return
+	 */
+	@PublicEvolving
+	public StreamExecutionEnvironment setDefaultResources(ResourceSpec resources) {
+		this.defaultResources = Preconditions.checkNotNull(resources);
+		return this;
 	}
 
 	// ------------------------------------------------------------------------

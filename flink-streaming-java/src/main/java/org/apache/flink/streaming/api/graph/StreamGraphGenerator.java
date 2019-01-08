@@ -21,6 +21,7 @@ package org.apache.flink.streaming.api.graph;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.cache.DistributedCache;
+import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
@@ -162,6 +163,35 @@ public class StreamGraphGenerator {
 		for (StreamTransformation<?> transformation: transformations) {
 			transform(transformation);
 		}
+
+		// set default resources for operators
+		boolean needToSetDefaultResources = false;
+		if (context.getDefaultResources() == null || ResourceSpec.DEFAULT.equals(context.getDefaultResources())) {
+			for (StreamNode node : streamGraph.getStreamNodes()) {
+				ResourceSpec resources = node.getMinResources();
+				if (resources != null && !ResourceSpec.DEFAULT.equals(resources)) {
+					needToSetDefaultResources = true;
+					break;
+				}
+			}
+		} else {
+			needToSetDefaultResources = true;
+		}
+
+		if (needToSetDefaultResources) {
+			ResourceSpec defaultResource = context.getDefaultResources();
+			if (defaultResource == null || ResourceSpec.DEFAULT.equals(defaultResource)) {
+				defaultResource = context.getGlobalDefaultResources();
+			}
+
+			for (StreamNode node : streamGraph.getStreamNodes()) {
+				ResourceSpec resources = node.getMinResources();
+				if (resources == null || ResourceSpec.DEFAULT.equals(resources)) {
+					node.setResources(defaultResource, defaultResource);
+				}
+			}
+		}
+
 		return streamGraph;
 	}
 
@@ -742,6 +772,8 @@ public class StreamGraphGenerator {
 
 		private int defaultParallelism;
 		private String defaultPartitioner;
+		private ResourceSpec defaultResources;
+		private ResourceSpec globalDefaultResources;
 
 		public static Context buildStreamProperties(StreamExecutionEnvironment env) {
 			Context context = new Context();
@@ -768,6 +800,12 @@ public class StreamGraphGenerator {
 			} else {
 				context.setChainEagerlyEnabled(false);
 			}
+
+			context.setDefaultResources(env.getDefaultResources());
+			context.setGlobalDefaultResources(new ResourceSpec.Builder()
+					.setCpuCores(globalConf.getDouble(CoreOptions.DEFAULT_RESOURCE_CPU_CORES))
+					.setHeapMemoryInMB(globalConf.getInteger(CoreOptions.DEFAULT_RESOURCE_HEAP_MEMORY))
+					.build());
 
 			return context;
 		}
@@ -800,6 +838,12 @@ public class StreamGraphGenerator {
 				} else {
 					context.setChainEagerlyEnabled(false);
 				}
+
+				context.setDefaultResources(env.getDefaultResources());
+				context.setGlobalDefaultResources(new ResourceSpec.Builder()
+						.setCpuCores(globalConf.getDouble(CoreOptions.DEFAULT_RESOURCE_CPU_CORES))
+						.setHeapMemoryInMB(globalConf.getInteger(CoreOptions.DEFAULT_RESOURCE_HEAP_MEMORY))
+						.build());
 
 				return context;
 			} catch (IOException | ClassNotFoundException e) {
@@ -925,6 +969,22 @@ public class StreamGraphGenerator {
 
 		public void setChainEagerlyEnabled(boolean chainEagerlyEnabled) {
 			this.chainEagerlyEnabled = chainEagerlyEnabled;
+		}
+
+		public ResourceSpec getDefaultResources() {
+			return defaultResources;
+		}
+
+		public void setDefaultResources(ResourceSpec resources) {
+			this.defaultResources = resources;
+		}
+
+		public ResourceSpec getGlobalDefaultResources() {
+			return globalDefaultResources;
+		}
+
+		public void setGlobalDefaultResources(ResourceSpec resources) {
+			this.globalDefaultResources = resources;
 		}
 	}
 }

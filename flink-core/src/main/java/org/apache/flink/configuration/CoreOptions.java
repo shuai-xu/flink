@@ -210,6 +210,24 @@ public class CoreOptions {
 		.defaultValue(false)
 		.withDescription("Whether operators are chained more eagerly when the parallelism is one");
 
+	/**
+	 * The default cpu cores, used when the default resources of operators need to be set but without
+	 * the default resource settings for the job.
+	 */
+	public static final ConfigOption<Double> DEFAULT_RESOURCE_CPU_CORES = ConfigOptions
+			.key("resource.cpu.cores.default")
+			.defaultValue(0.01)
+			.withDescription("CPU cores for operators, use double so we can specify cpu like 0.1.");
+
+	/**
+	 * The default heap size, used when the default resources of operators need to be set but without
+	 * the default resource settings for the job.
+	 */
+	public static final ConfigOption<Integer> DEFAULT_RESOURCE_HEAP_MEMORY = ConfigOptions
+			.key("resource.heap.mb.default")
+			.defaultValue(32)
+			.withDescription("Java heap size (in megabytes) for operators.");
+
 	// ------------------------------------------------------------------------
 	//  file systems
 	// ------------------------------------------------------------------------

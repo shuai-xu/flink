@@ -22,6 +22,7 @@ import org.apache.flink.annotation.Public;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.StreamSink;
@@ -151,6 +152,11 @@ public class DataStreamSink<T> {
 
 	/**
 	 * Sets the resources for this sink, the minimum and preferred resources are the same by default.
+	 *
+	 * <p>Note: If the resources of the operator is explicitly set, the default resource settings will be used
+	 * by other operators in the same job that are not explicitly set required resources. Please see
+	 * {@link StreamExecutionEnvironment#setDefaultResources(ResourceSpec)}, {@link CoreOptions#DEFAULT_RESOURCE_CPU_CORES}
+	 * and {@link CoreOptions#DEFAULT_RESOURCE_HEAP_MEMORY} to set the default resources.
 	 *
 	 * @param resources The resources for this sink.
 	 * @return The sink with set minimum and preferred resources.

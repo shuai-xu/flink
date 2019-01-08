@@ -25,6 +25,7 @@ import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.TypeInfoParser;
 import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.streaming.api.collector.selector.OutputSelector;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
@@ -196,6 +197,11 @@ public class SingleOutputStreamOperator<T> extends DataStream<T> {
 
 	/**
 	 * Sets the resources for this operator, the minimum and preferred resources are the same by default.
+	 *
+	 * <p>Note: If the resources of the operator is explicitly set, the default resource settings will be used
+	 * by other operators in the same job that are not explicitly set required resources. Please see
+	 * {@link StreamExecutionEnvironment#setDefaultResources(ResourceSpec)}, {@link CoreOptions#DEFAULT_RESOURCE_CPU_CORES}
+	 * and {@link CoreOptions#DEFAULT_RESOURCE_HEAP_MEMORY} to set the default resources.
 	 *
 	 * @param resources The resources for this operator.
 	 * @return The operator with set minimum and preferred resources.
