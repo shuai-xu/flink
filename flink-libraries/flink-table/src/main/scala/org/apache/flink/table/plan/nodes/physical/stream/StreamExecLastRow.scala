@@ -42,13 +42,13 @@ import scala.collection.JavaConversions._
   * Flink RelNode which matches along with LogicalLastRow.
   */
 class StreamExecLastRow(
-   cluster: RelOptCluster,
-   traitSet: RelTraitSet,
-   input: RelNode,
-   inputSchema: BaseRowSchema,
-   outputSchema: BaseRowSchema,
-   uniqueKeys: Array[Int],
-   ruleDescription: String)
+    cluster: RelOptCluster,
+    traitSet: RelTraitSet,
+    input: RelNode,
+    inputSchema: BaseRowSchema,
+    outputSchema: BaseRowSchema,
+    uniqueKeys: Array[Int],
+    ruleDescription: String)
   extends SingleRel(cluster, traitSet, input)
   with RowStreamExecRel {
 
@@ -74,6 +74,7 @@ class StreamExecLastRow(
   override def consumesRetractions: Boolean = true
 
   override def needsUpdatesAsRetraction(input: RelNode): Boolean = true
+
   override def explainTerms(pw: RelWriter): RelWriter = {
     val inputNames = inputSchema.relDataType.getFieldNames
     val outputNames = outputSchema.relDataType.getFieldNames
@@ -82,12 +83,7 @@ class StreamExecLastRow(
       .item("select", outputNames.mkString(", "))
   }
 
-  private def getOperatorName: String = {
-    val inputNames = inputSchema.relDataType.getFieldNames
-    val keyNames = uniqueKeys.map(inputNames.get(_)).mkString(", ")
-    val outputNames = outputSchema.relDataType.getFieldNames.mkString(", ")
-    s"LastRow: (key: ($keyNames), select: ($outputNames))"
-  }
+  //~ ExecNode methods -----------------------------------------------------------
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
@@ -150,5 +146,12 @@ class StreamExecLastRow(
     ret.setStateKeySelector(selector)
     ret.setStateKeyType(selector.getProducedType)
     ret
+  }
+
+  private def getOperatorName: String = {
+    val inputNames = inputSchema.relDataType.getFieldNames
+    val keyNames = uniqueKeys.map(inputNames.get(_)).mkString(", ")
+    val outputNames = outputSchema.relDataType.getFieldNames.mkString(", ")
+    s"LastRow: (key: ($keyNames), select: ($outputNames))"
   }
 }

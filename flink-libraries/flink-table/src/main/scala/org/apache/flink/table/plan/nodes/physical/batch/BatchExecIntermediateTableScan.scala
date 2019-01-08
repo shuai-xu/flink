@@ -18,18 +18,18 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.schema.IntermediateRelNodeTable
 import org.apache.flink.table.util.BatchExecRelVisitor
 
 import org.apache.calcite.plan._
+import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.TableScan
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, RelWriter}
-import org.apache.calcite.rel.`type`.RelDataType
 
 import scala.collection.JavaConversions._
 
@@ -49,8 +49,6 @@ class BatchExecIntermediateTableScan(
     .item("fields", getRowType.getFieldNames.mkString(", "))
   }
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   override def deriveRowType(): RelDataType = rowRelDataType
 
   override def computeSelfCost(planner: RelOptPlanner, metadata: RelMetadataQuery): RelOptCost = {
@@ -63,6 +61,10 @@ class BatchExecIntermediateTableScan(
   }
 
   override def isDeterministic: Boolean = true
+
+  //~ ExecNode methods -----------------------------------------------------------
+
+  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   /**
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.

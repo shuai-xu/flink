@@ -191,8 +191,10 @@ class StreamExecJoin(
     planner.getCostFactory.makeCost(elementRate, elementRate, 0)
   }
 
+  //~ ExecNode methods -----------------------------------------------------------
+
   /**
-   * Translates the FlinkRelNode into a Flink operator.
+   * Translates the StreamExecNode into a Flink operator.
    *
    * @param tableEnv The [[StreamTableEnvironment]] of the translated Table.
    * @return DataStream of type expectedType or RowTypeInfo

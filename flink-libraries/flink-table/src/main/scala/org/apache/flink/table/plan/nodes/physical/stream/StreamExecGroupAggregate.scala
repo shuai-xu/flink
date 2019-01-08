@@ -148,20 +148,7 @@ class StreamExecGroupAggregate(
 
   override def isDeterministic: Boolean = AggregateUtil.isDeterministic(aggCalls)
 
-  private def getOperatorName: String = {
-    s"GroupAggregate(${
-      if (groupings.nonEmpty) {
-        s"groupBy: (${AggregateNameUtil.groupingToString(inputRelDataType, groupings)}), "
-      } else {
-        ""
-      }
-    }select: (${
-      AggregateNameUtil.streamAggregationToString(
-        inputRelDataType,
-        getRowType,
-        aggInfoList,
-        groupings)}))"
-  }
+  //~ ExecNode methods -----------------------------------------------------------
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
@@ -255,6 +242,21 @@ class StreamExecGroupAggregate(
     ret.setStateKeySelector(selector)
     ret.setStateKeyType(selector.getProducedType)
     ret
+  }
+
+  private def getOperatorName: String = {
+    s"GroupAggregate(${
+      if (groupings.nonEmpty) {
+        s"groupBy: (${AggregateNameUtil.groupingToString(inputRelDataType, groupings)}), "
+      } else {
+        ""
+      }
+    }select: (${
+      AggregateNameUtil.streamAggregationToString(
+        inputRelDataType,
+        getRowType,
+        aggInfoList,
+        groupings)}))"
   }
 }
 

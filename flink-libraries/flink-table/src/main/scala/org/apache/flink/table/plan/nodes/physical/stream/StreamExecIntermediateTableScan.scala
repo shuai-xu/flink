@@ -60,6 +60,8 @@ class StreamExecIntermediateTableScan(
 
   override def isDeterministic: Boolean = true
 
+  //~ ExecNode methods -----------------------------------------------------------
+
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     throw new TableException(

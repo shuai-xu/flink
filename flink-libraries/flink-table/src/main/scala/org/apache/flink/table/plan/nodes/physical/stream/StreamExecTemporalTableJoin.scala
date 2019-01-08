@@ -96,6 +96,8 @@ class StreamExecTemporalTableJoin(
 
   override def isDeterministic: Boolean = FlinkRexUtil.isDeterministicOperator(joinCondition)
 
+  //~ ExecNode methods -----------------------------------------------------------
+
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 

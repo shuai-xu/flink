@@ -17,6 +17,7 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
@@ -28,12 +29,12 @@ import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.sort.SortLimitOperator
 import org.apache.flink.table.typeutils._
 import org.apache.flink.table.util.BatchExecRelVisitor
+
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
 import org.apache.calcite.rel.core.Sort
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelCollation, RelNode, RelWriter}
 import org.apache.calcite.rex.{RexLiteral, RexNode}
-import org.apache.flink.runtime.operators.DamBehavior
 
 import _root_.scala.collection.JavaConverters._
 
@@ -78,10 +79,6 @@ class BatchExecSortLimit(
       isGlobal,
       ruleDescription)
   }
-
-  override def isBarrierNode: Boolean = true
-
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)
@@ -135,8 +132,15 @@ class BatchExecSortLimit(
     costFactory.makeCost(mq.getRowCount(this), cpuCost, 0, 0, memCost)
   }
 
+  //~ ExecNode methods -----------------------------------------------------------
+
+  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
+
+  override def isBarrierNode: Boolean = true
+
   /**
-    * Translates the [[BatchExecRel]] node into a Batch operator.
+    * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
+    * into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
     */

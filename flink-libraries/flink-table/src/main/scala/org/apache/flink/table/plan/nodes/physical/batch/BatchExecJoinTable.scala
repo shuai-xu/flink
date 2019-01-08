@@ -91,16 +91,13 @@ class BatchExecJoinTable(
       ruleDescription)
   }
 
-  /**
-   * Accepts a visit from a [[BatchExecRelVisitor]].
-   *
-   * @param visitor BatchExecRelVisitor
-   * @tparam R Return type
-   */
+  //~ ExecNode methods -----------------------------------------------------------
+
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   /**
-    * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
+    * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
+    * into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
     */

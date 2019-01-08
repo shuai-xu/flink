@@ -67,6 +67,8 @@ class StreamExecSink[T](
 
   private val isDataStreamTableSink: Boolean = sink.isInstanceOf[DataStreamTableSink[T]]
 
+  //~ ExecNode methods -----------------------------------------------------------
+
   /**
     * Translates the FlinkRelNode into a Flink operator.
     *

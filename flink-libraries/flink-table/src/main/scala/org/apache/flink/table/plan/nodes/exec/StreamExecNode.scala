@@ -15,14 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.flink.table.plan.nodes.exec
 
-package org.apache.flink.table.plan.nodes.physical
+import org.apache.flink.table.api.StreamTableEnvironment
 
-import org.apache.flink.table.plan.nodes.FlinkRelNode
-
-/**
-  * Base class for flink physical node.
-  */
-trait FlinkPhysicalRel extends FlinkRelNode {
+trait StreamExecNode[T] extends ExecNode[StreamTableEnvironment, T] {
 
 }

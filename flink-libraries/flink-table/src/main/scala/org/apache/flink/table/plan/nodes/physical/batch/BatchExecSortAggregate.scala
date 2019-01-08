@@ -17,10 +17,11 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.api.functions.UserDefinedFunction
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
@@ -29,6 +30,7 @@ import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.BatchExecRelVisitor
+
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
 import org.apache.calcite.rel.RelDistribution.Type._
 import org.apache.calcite.rel._
@@ -36,7 +38,6 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.util.{ImmutableIntList, Util}
-import org.apache.flink.runtime.operators.DamBehavior
 
 import scala.collection.JavaConversions._
 
@@ -77,8 +78,6 @@ class BatchExecSortAggregate(
       auxGrouping,
       isMerge)
   }
-
-  override def isBarrierNode: Boolean = true
 
   override def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = {
     val requiredDistribution = requiredTraitSet.getTrait(FlinkRelDistributionTraitDef.INSTANCE)
@@ -129,8 +128,6 @@ class BatchExecSortAggregate(
     copy(newProvidedTraitSet, Seq(newInput))
   }
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .item("isMerge", isMerge)
@@ -149,8 +146,15 @@ class BatchExecSortAggregate(
         isGlobal = true))
   }
 
+  //~ ExecNode methods -----------------------------------------------------------
+
+  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
+
+  override def isBarrierNode: Boolean = true
+
   /**
-    * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
+    * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
+    * into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
     */

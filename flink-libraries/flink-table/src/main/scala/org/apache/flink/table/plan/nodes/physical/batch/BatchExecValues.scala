@@ -55,18 +55,22 @@ class BatchExecValues(
     )
   }
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   override def deriveRowType(): RelDataType = rowRelDataType
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    super.explainTerms(pw).item("values", valuesFieldsToString)
+    super.explainTerms(pw)
+      .item("values", getRowType.getFieldNames.toList.mkString(", "))
   }
 
   override def isDeterministic: Boolean = true
 
+  //~ ExecNode methods -----------------------------------------------------------
+
+  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
+
   /**
-    * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
+    * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
+    * into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
     */
@@ -83,10 +87,6 @@ class BatchExecValues(
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
-  }
-
-  private def valuesFieldsToString: String = {
-    getRowType.getFieldNames.toList.mkString(", ")
   }
 
 }

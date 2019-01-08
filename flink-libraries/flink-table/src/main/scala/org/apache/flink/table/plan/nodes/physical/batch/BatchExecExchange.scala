@@ -130,20 +130,6 @@ class BatchExecExchange(
     exchange
   }
 
-  override def isBarrierNode: Boolean = {
-    val tableConfig = FlinkRelOptUtil.getTableConfig(this)
-    val exchangeMode = getDataExchangeModeForDeadlockBreakup(tableConfig.getConf)
-    if (exchangeMode eq DataExchangeMode.BATCH) {
-      return true
-    }
-    distribution.getType match {
-      case RelDistribution.Type.RANGE_DISTRIBUTED => true
-      case _ => false
-    }
-  }
-
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   override def explainTerms(pw: RelWriter): RelWriter =
     super.explainTerms(pw)
       .itemIf("exchange_mode", requiredExchangeMode.orNull,
@@ -169,6 +155,22 @@ class BatchExecExchange(
       DataExchangeMode.BATCH
     } else {
       DataExchangeMode.AUTO
+    }
+  }
+
+  //~ ExecNode methods -----------------------------------------------------------
+
+  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
+
+  override def isBarrierNode: Boolean = {
+    val tableConfig = FlinkRelOptUtil.getTableConfig(this)
+    val exchangeMode = getDataExchangeModeForDeadlockBreakup(tableConfig.getConf)
+    if (exchangeMode eq DataExchangeMode.BATCH) {
+      return true
+    }
+    distribution.getType match {
+      case RelDistribution.Type.RANGE_DISTRIBUTED => true
+      case _ => false
     }
   }
 

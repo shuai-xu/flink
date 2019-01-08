@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import org.apache.flink.streaming.api.transformations.TwoInputTransformation.ReadOrder
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
@@ -35,16 +36,15 @@ import org.apache.flink.table.runtime.TwoInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.util.ResettableExternalBuffer
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
+
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.ImmutableIntList
-import java.util
 
-import org.apache.flink.runtime.operators.DamBehavior
-import org.apache.flink.streaming.api.transformations.TwoInputTransformation.ReadOrder
+import java.util
 
 import scala.collection.JavaConversions._
 
@@ -64,18 +64,6 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
       (input2Term, rightArity, input1Term, leftArity, FIRST)
     }
   }
-
-  lazy val joinOperatorName: String = {
-    val joinExpressionStr = if (getCondition != null) {
-      val inFields = inputDataType.getFieldNames.toList
-      s"where: ${getExpressionString(getCondition, inFields, None, ExpressionFormat.Infix)}, "
-    } else {
-      ""
-    }
-    s"NestedLoopJoin($joinExpressionStr${if (leftIsBuild) "buildLeft" else "buildRight"})"
-  }
-
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
@@ -115,8 +103,13 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
     }
   }
 
+  //~ ExecNode methods -----------------------------------------------------------
+
+  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
+
   /**
-    * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
+    * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
+    * into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
     */
@@ -239,7 +232,7 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
     val transformation = new TwoInputTransformation[BaseRow, BaseRow, BaseRow](
       leftInput,
       rightInput,
-      joinOperatorName,
+      getOperatorName,
       substituteStreamOperator,
       getOutputType,
       resultPartitionCount
@@ -249,6 +242,16 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
       if (leftIsBuild) ReadOrder.INPUT1_FIRST else ReadOrder.INPUT2_FIRST)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
+  }
+
+  private def getOperatorName: String = {
+    val joinExpressionStr = if (getCondition != null) {
+      val inFields = inputDataType.getFieldNames.toList
+      s"where: ${getExpressionString(getCondition, inFields, None, ExpressionFormat.Infix)}, "
+    } else {
+      ""
+    }
+    s"NestedLoopJoin($joinExpressionStr${if (leftIsBuild) "buildLeft" else "buildRight"})"
   }
 
   def newIter(iter: String, buffer: String): String = {

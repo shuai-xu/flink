@@ -57,6 +57,8 @@ class StreamExecExchange(
 
   override def isDeterministic: Boolean = true
 
+  //~ ExecNode methods -----------------------------------------------------------
+
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val input = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)

@@ -42,11 +42,12 @@ class StreamExecWatermarkAssigner (
   override def copy(
     traitSet: RelTraitSet,
     inputs: util.List[RelNode]): RelNode = {
-    new StreamExecWatermarkAssigner(
-      cluster, traitSet, inputs.get(0), rowtimeField, watermarkOffset)
+    new StreamExecWatermarkAssigner(cluster, traitSet, inputs.get(0), rowtimeField, watermarkOffset)
   }
 
   override def isDeterministic: Boolean = true
+
+  //~ ExecNode methods -----------------------------------------------------------
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

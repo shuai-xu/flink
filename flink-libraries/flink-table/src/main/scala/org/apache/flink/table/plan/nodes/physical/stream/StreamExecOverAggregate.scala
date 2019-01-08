@@ -110,7 +110,17 @@ class StreamExecOverAggregate(
           namedAggregates))
   }
 
+  private def generateNamedAggregates: Seq[CalcitePair[AggregateCall, String]] = {
+    val overWindow: Group = logicWindow.groups.get(0)
+
+    val aggregateCalls = overWindow.getAggregateCalls(logicWindow)
+    for (i <- 0 until aggregateCalls.size())
+      yield new CalcitePair[AggregateCall, String](aggregateCalls.get(i), "w0$o" + i)
+  }
+
   override def isDeterministic: Boolean = OverAggregateUtil.isDeterministic(logicWindow.groups)
+
+  //~ ExecNode methods -----------------------------------------------------------
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
@@ -248,7 +258,7 @@ class StreamExecOverAggregate(
     operator.setRequireState(true)
     val ret = new OneInputTransformation(
       inputDS,
-      aggOpName,
+      getOperatorName,
       operator,
       returnTypeInfo,
       tableEnv.execEnv.getParallelism)
@@ -422,15 +432,7 @@ class StreamExecOverAggregate(
     }
   }
 
-  private def generateNamedAggregates: Seq[CalcitePair[AggregateCall, String]] = {
-    val overWindow: Group = logicWindow.groups.get(0)
-
-    val aggregateCalls = overWindow.getAggregateCalls(logicWindow)
-    for (i <- 0 until aggregateCalls.size())
-      yield new CalcitePair[AggregateCall, String](aggregateCalls.get(i), "w0$o" + i)
-  }
-
-  private def aggOpName = {
+  private def getOperatorName = {
     val overWindow: Group = logicWindow.groups.get(0)
     val constants: Seq[RexLiteral] = logicWindow.constants.asScala
     val partitionKeys: Array[Int] = overWindow.keys.toArray

@@ -112,19 +112,7 @@ class StreamExecIncrementalGroupAggregate(
       .forall(c => FlinkRexUtil.isDeterministicOperator(c.getAggregation))
   }
 
-  private def getOperatorName: String = {
-    val shuffleKeyToStr =
-      s"shuffleKey: (${AggregateNameUtil.groupingToString(inputNode.getRowType, shuffleKey)})"
-    val groupKeyToStr =
-      s"groupKey: (${AggregateNameUtil.groupingToString(inputNode.getRowType, groupKey)})"
-    val selectToStr = s"select: (${AggregateNameUtil.streamAggregationToString(
-      inputNode.getRowType,
-      getRowType,
-      finalAggInfoList,
-      groupKey,
-      shuffleKey = Some(shuffleKey))})"
-    s"IncrementalGroupAggregate($shuffleKeyToStr, $groupKeyToStr, $selectToStr)"
-  }
+  //~ ExecNode methods -----------------------------------------------------------
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
@@ -215,6 +203,20 @@ class StreamExecIncrementalGroupAggregate(
     generator
     .withMerging(mergedAccOffset, mergedAccOnHeap = true, mergedAccExternalTypes)
     .generateAggsHandler(name, aggInfoList)
+  }
+
+  private def getOperatorName: String = {
+    val shuffleKeyToStr =
+      s"shuffleKey: (${AggregateNameUtil.groupingToString(inputNode.getRowType, shuffleKey)})"
+    val groupKeyToStr =
+      s"groupKey: (${AggregateNameUtil.groupingToString(inputNode.getRowType, groupKey)})"
+    val selectToStr = s"select: (${AggregateNameUtil.streamAggregationToString(
+      inputNode.getRowType,
+      getRowType,
+      finalAggInfoList,
+      groupKey,
+      shuffleKey = Some(shuffleKey))})"
+    s"IncrementalGroupAggregate($shuffleKeyToStr, $groupKeyToStr, $selectToStr)"
   }
 }
 

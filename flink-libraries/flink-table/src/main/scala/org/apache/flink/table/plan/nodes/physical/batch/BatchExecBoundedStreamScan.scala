@@ -18,17 +18,18 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.schema.DataStreamTable
 import org.apache.flink.table.util.BatchExecRelVisitor
+
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.TableScan
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, RelWriter}
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 
 import scala.collection.JavaConverters._
 
@@ -52,8 +53,6 @@ class BatchExecBoundedStreamScan(
       .item("fields", getRowType.getFieldNames.asScala.mkString(", "))
   }
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   override def deriveRowType(): RelDataType = rowRelDataType
 
   override def computeSelfCost(planner: RelOptPlanner, metadata: RelMetadataQuery): RelOptCost = {
@@ -67,8 +66,13 @@ class BatchExecBoundedStreamScan(
 
   override def isDeterministic: Boolean = true
 
+  //~ ExecNode methods -----------------------------------------------------------
+
+  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
+
   /**
-    * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
+    * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
+    * into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
     */

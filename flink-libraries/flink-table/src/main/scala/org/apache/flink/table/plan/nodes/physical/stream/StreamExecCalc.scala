@@ -73,6 +73,8 @@ class StreamExecCalc(
     FlinkLogicalCalc.computeCost(calcProgram, planner, metadata, this)
   }
 
+  //~ ExecNode methods -----------------------------------------------------------
+
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val config = tableEnv.getConfig

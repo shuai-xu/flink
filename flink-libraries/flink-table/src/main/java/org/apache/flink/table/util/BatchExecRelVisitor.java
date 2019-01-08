@@ -49,6 +49,8 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
 /**
  * Visitor pattern for traversing a tree of {@link BatchExecRel} objects.
  *
+ * <p>TODO rename to BatchExecNodeVisitor and remove return type
+ *
  * @param <R> Return type
  */
 public interface BatchExecRelVisitor<R> {
@@ -106,5 +108,6 @@ public interface BatchExecRelVisitor<R> {
 
 	R visit(BatchExecSink<?> sink);
 
+	// TODO change `BatchExecRel` to `BatchExecNode`
 	R visit(BatchExecRel<?> batchExec);
 }

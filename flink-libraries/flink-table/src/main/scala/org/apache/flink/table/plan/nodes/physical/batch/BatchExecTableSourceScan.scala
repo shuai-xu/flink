@@ -54,8 +54,6 @@ class BatchExecTableSourceScan(
     planner.getCostFactory.makeCost(rowCnt, cpu, size)
   }
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
     new BatchExecTableSourceScan(cluster, traitSet, relOptTable)
   }
@@ -68,8 +66,13 @@ class BatchExecTableSourceScan(
 
   override def isDeterministic: Boolean = true
 
+  //~ ExecNode methods -----------------------------------------------------------
+
+  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
+
   /**
-    * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
+    * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
+    * into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
     */

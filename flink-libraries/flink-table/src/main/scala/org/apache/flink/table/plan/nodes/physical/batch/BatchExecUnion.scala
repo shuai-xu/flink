@@ -69,9 +69,9 @@ class BatchExecUnion(
       case RANGE_DISTRIBUTED => null
       // Singleton cannot push down. Singleton exchange limit the parallelism of later RelNode to 1.
       // Push down Singleton into input of union will destroy the limitation.
-      case SINGLETON  => null
+      case SINGLETON => null
       // there is no need to push down Any distribution
-      case  ANY => null
+      case ANY => null
     }
     if (pushDownDistribution == null) {
       null
@@ -81,21 +81,20 @@ class BatchExecUnion(
     }
   }
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-      .item("union", unionSelectionToString)
-  }
-
-  private def unionSelectionToString: String = {
-    rowRelDataType.getFieldNames.mkString(", ")
+      .item("union", rowRelDataType.getFieldNames.mkString(", "))
   }
 
   override def isDeterministic: Boolean = true
 
+  //~ ExecNode methods -----------------------------------------------------------
+
+  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
+
   /**
-    * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
+    * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
+    * into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
     */

@@ -17,6 +17,7 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
@@ -33,15 +34,15 @@ import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.join.batch.{MergeJoinOperator, OneSideSortMergeJoinOperator, SortMergeJoinOperator}
 import org.apache.flink.table.runtime.sort.BinaryExternalSorter
 import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
 import org.apache.flink.table.util.ExecResourceUtil.InferMode
+import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
+
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelCollationTraitDef, RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.ImmutableIntList
-import org.apache.flink.runtime.operators.DamBehavior
 
 import scala.collection.JavaConversions._
 
@@ -72,19 +73,7 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     }
   }
 
-  lazy val joinOperatorName: String = if (getCondition != null) {
-    val inFields = inputDataType.getFieldNames.toList
-    s"SortMergeJoin(where: ${
-      getExpressionString(getCondition, inFields, None, ExpressionFormat.Infix)})"
-  } else {
-    "SortMergeJoin"
-  }
-
   lazy val (leftAllKey, rightAllKey) = JoinUtil.checkAndGetKeys(keyPairs, getLeft, getRight)
-
-  override def isBarrierNode: Boolean = !leftSorted && !rightSorted
-
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   override def explainTerms(pw: RelWriter): RelWriter =
     super.explainTerms(pw)
@@ -174,26 +163,15 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     costFactory.makeCost(mq.getRowCount(this), cpuCost, 0, 0, sortMemCost)
   }
 
-  private def inferLeftRowCountRatio: Double = {
-    val mq = FlinkRelMetadataQuery.reuseOrCreate(getCluster.getMetadataQuery)
-    val leftRowCnt = mq.getRowCount(getLeft)
-    val rightRowCnt = mq.getRowCount(getRight)
-    if (leftRowCnt == null || rightRowCnt == null) {
-      0.5d
-    } else {
-      leftRowCnt / (rightRowCnt + leftRowCnt)
-    }
-  }
+  //~ ExecNode methods -----------------------------------------------------------
 
-  private def calcSortMemory(ratio: Double, totalSortMemory: Long): Long = {
-    val minGuaranteedMemory = BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM
-    val maxGuaranteedMemory = totalSortMemory - BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM
-    val inferLeftSortMemory = (totalSortMemory * ratio).toLong
-    Math.max(Math.min(inferLeftSortMemory, maxGuaranteedMemory), minGuaranteedMemory)
-  }
+  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
+
+  override def isBarrierNode: Boolean = !leftSorted && !rightSorted
 
   /**
-    * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
+    * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
+    * into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
     */
@@ -301,7 +279,7 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     val transformation = new TwoInputTransformation[BaseRow, BaseRow, BaseRow](
       leftInput,
       rightInput,
-      joinOperatorName,
+      getOperatorName,
       operator,
       getOutputType,
       resultPartitionCount)
@@ -311,6 +289,24 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     }
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
+  }
+
+  private def inferLeftRowCountRatio: Double = {
+    val mq = FlinkRelMetadataQuery.reuseOrCreate(getCluster.getMetadataQuery)
+    val leftRowCnt = mq.getRowCount(getLeft)
+    val rightRowCnt = mq.getRowCount(getRight)
+    if (leftRowCnt == null || rightRowCnt == null) {
+      0.5d
+    } else {
+      leftRowCnt / (rightRowCnt + leftRowCnt)
+    }
+  }
+
+  private def calcSortMemory(ratio: Double, totalSortMemory: Long): Long = {
+    val minGuaranteedMemory = BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM
+    val maxGuaranteedMemory = totalSortMemory - BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM
+    val inferLeftSortMemory = (totalSortMemory * ratio).toLong
+    Math.max(Math.min(inferLeftSortMemory, maxGuaranteedMemory), minGuaranteedMemory)
   }
 
   private[flink] def getExternalBufferNum: Int = {
@@ -347,6 +343,13 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     mq.getAverageRowSize(relNode) * mq.getRowCount(relNode)
   }
 
+  private def getOperatorName: String = if (getCondition != null) {
+    val inFields = inputDataType.getFieldNames.toList
+    s"SortMergeJoin(where: ${
+      getExpressionString(getCondition, inFields, None, ExpressionFormat.Infix)})"
+  } else {
+    "SortMergeJoin"
+  }
 }
 
 object SortMergeJoinType extends Enumeration{

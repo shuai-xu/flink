@@ -56,6 +56,8 @@ import java.util.List;
  * {@link BatchExecRel#accept(BatchExecRelVisitor)} on each child, and
  * {@link RelNode#copy(org.apache.calcite.plan.RelTraitSet, java.util.List)} if
  * any children change.
+ *
+ * <p>TODO remove this class
  */
 public class BatchExecRelShuttleImpl implements BatchExecRelVisitor<BatchExecRel<?>> {
 

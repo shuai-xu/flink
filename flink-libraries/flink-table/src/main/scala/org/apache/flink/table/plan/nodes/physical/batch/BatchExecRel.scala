@@ -18,15 +18,14 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions}
+import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.SortCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.cost.FlinkBatchCost
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
-import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.flink.table.runtime.sort.BinaryIndexedSortable
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.{BatchExecRelVisitor, Logging}
@@ -35,52 +34,11 @@ import org.apache.calcite.plan.RelTraitSet
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 
+import java.util
+
 import scala.collection.JavaConversions._
 
-trait BatchExecRel[T] extends FlinkPhysicalRel with Logging {
-
-  private var reusedTransformation: Option[StreamTransformation[T]] = None
-
-  /**
-    * Returns true if this node is a barrier node, else false.
-    */
-  def isBarrierNode: Boolean = false
-
-  /**
-    * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
-    *
-    * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    */
-  protected def translateToPlanInternal(tableEnv: BatchTableEnvironment): StreamTransformation[T]
-
-  /**
-    * Translates the [[BatchExecRel]] node into a Batch operator.
-    *
-    * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    */
-  def translateToPlan(tableEnv: BatchTableEnvironment): StreamTransformation[T] = {
-    reusedTransformation match {
-      case Some(transformation) => transformation
-      case _ =>
-        val transformation = translateToPlanInternal(tableEnv)
-        reusedTransformation = Some(transformation)
-        val config = FlinkRelOptUtil.getTableConfig(this)
-        if (config.getConf.getBoolean(
-          TableConfigOptions.SQL_EXEC_OPERATOR_METRIC_DUMP_ENABLED)) {
-          val nameWithId = s"${transformation.getName}, __id__=[$getId]"
-          transformation.setName(nameWithId)
-        }
-        transformation
-    }
-  }
-
-  /**
-    * Accepts a visit from a [[BatchExecRelVisitor]].
-    *
-    * @param visitor BatchExecRelVisitor
-    * @tparam R Return type
-    */
-  def accept[R](visitor: BatchExecRelVisitor[R]): R
+trait BatchExecRel[T] extends FlinkPhysicalRel with BatchExecNode[T] with Logging {
 
   /**
     * Try to satisfy required traits by descendant of current node. If descendant can satisfy
@@ -92,6 +50,29 @@ trait BatchExecRel[T] extends FlinkPhysicalRel with Logging {
     *         Returns null if required traits cannot be pushed down into inputs.
     */
   def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = null
+
+  //~ ExecNode methods -----------------------------------------------------------
+
+  /**
+    * Accepts a visit from a [[BatchExecRelVisitor]].
+    *
+    * TODO move this method to [[BatchExecNode]]
+    *
+    * @param visitor BatchExecRelVisitor
+    * @tparam R Return type
+    */
+  def accept[R](visitor: BatchExecRelVisitor[R]): R
+
+  override def getInputNodes: util.List[ExecNode[BatchTableEnvironment, _]] = {
+    getInputs.map(_.asInstanceOf[BatchExecRel[T]])
+  }
+
+  override def replaceInputNode(
+      ordinalInParent: Int,
+      newInputNode: ExecNode[BatchTableEnvironment, _]): Unit = {
+    require(ordinalInParent >= 0 && ordinalInParent < getInputs.size())
+    replaceInput(ordinalInParent, newInputNode.asInstanceOf[BatchExecRel[T]])
+  }
 }
 
 trait RowBatchExecRel extends BatchExecRel[BaseRow]

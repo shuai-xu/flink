@@ -15,14 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.flink.table.plan.nodes.exec
 
-package org.apache.flink.table.plan.nodes.physical
+import org.apache.flink.table.api.BatchTableEnvironment
 
-import org.apache.flink.table.plan.nodes.FlinkRelNode
+trait BatchExecNode[T] extends ExecNode[BatchTableEnvironment, T] {
 
-/**
-  * Base class for flink physical node.
-  */
-trait FlinkPhysicalRel extends FlinkRelNode {
-
+  /**
+    * Returns true if this node is a barrier node, else false.
+    * TODO remove default value
+    */
+  def isBarrierNode: Boolean = false
 }

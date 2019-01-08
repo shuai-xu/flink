@@ -59,10 +59,6 @@ class BatchExecSort(
       fetch: RexNode): Sort =
     new BatchExecSort(cluster, traitSet, newInput, newCollation, ruleDescription)
 
-  override def isBarrierNode: Boolean = true
-
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)
       .item("orderBy", SortUtil.sortFieldsToString(collations, getRowType))
@@ -84,8 +80,15 @@ class BatchExecSort(
 
   override def isDeterministic: Boolean = true
 
+  //~ ExecNode methods -----------------------------------------------------------
+
+  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
+
+  override def isBarrierNode: Boolean = true
+
   /**
-    * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
+    * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
+    * into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
     */

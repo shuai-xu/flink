@@ -134,20 +134,7 @@ class StreamExecGlobalGroupAggregate(
       .forall(c => FlinkRexUtil.isDeterministicOperator(c.getAggregation))
   }
 
-  private def getOperatorName: String = {
-    s"GlobalGroupAggregate(${
-      if (!groupings.isEmpty) {
-        s"groupBy: (${AggregateNameUtil.groupingToString(inputNode.getRowType, groupings)}), "
-      } else {
-        ""
-      }
-    }select:(${AggregateNameUtil.streamAggregationToString(
-      inputNode.getRowType,
-      getRowType,
-      globalAggInfoList,
-      groupings,
-      isGlobal = true)}))"
-  }
+  //~ ExecNode methods -----------------------------------------------------------
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
@@ -261,6 +248,21 @@ class StreamExecGlobalGroupAggregate(
     generator
       .withMerging(mergedAccOffset, mergedAccOnHeap, mergedAccExternalTypes)
       .generateAggsHandler(name, aggInfoList)
+  }
+
+  private def getOperatorName: String = {
+    s"GlobalGroupAggregate(${
+      if (!groupings.isEmpty) {
+        s"groupBy: (${AggregateNameUtil.groupingToString(inputNode.getRowType, groupings)}), "
+      } else {
+        ""
+      }
+    }select:(${AggregateNameUtil.streamAggregationToString(
+      inputNode.getRowType,
+      getRowType,
+      globalAggInfoList,
+      groupings,
+      isGlobal = true)}))"
   }
 }
 

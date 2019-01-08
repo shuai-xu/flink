@@ -124,16 +124,7 @@ class StreamExecRank(
 
   override def isDeterministic: Boolean = FlinkRexUtil.isDeterministicOperator(rankFunction)
 
-  private def getOperatorName: String = {
-    var result =
-      s"${getStrategy()}(orderBy: (${Rank.sortFieldsToString(sortCollation, schema.relDataType)})"
-    if (partitionKey.nonEmpty) {
-      result += s", partitionBy: (${partitionFieldsToString(partitionKey, schema.relDataType)})"
-    }
-    result += s", $selectToString"
-    result += s", ${rankRange.toString(inputSchema.fieldNames)})"
-    result
-  }
+  //~ ExecNode methods -----------------------------------------------------------
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
@@ -267,5 +258,16 @@ class StreamExecRank(
     ret.setStateKeySelector(selector)
     ret.setStateKeyType(selector.getProducedType)
     ret
+  }
+
+  private def getOperatorName: String = {
+    var result =
+      s"${getStrategy()}(orderBy: (${Rank.sortFieldsToString(sortCollation, schema.relDataType)})"
+    if (partitionKey.nonEmpty) {
+      result += s", partitionBy: (${partitionFieldsToString(partitionKey, schema.relDataType)})"
+    }
+    result += s", $selectToString"
+    result += s", ${rankRange.toString(inputSchema.fieldNames)})"
+    result
   }
 }

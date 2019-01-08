@@ -18,9 +18,10 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import java.util
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
+
+import java.util
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.codegen.CodeGeneratorContext
@@ -52,18 +53,15 @@ class BatchExecSink[T](
     new BatchExecSink(cluster, traitSet, inputs.get(0), sink, sinkName)
   }
 
-  /**
-    * Accepts a visit from a [[BatchExecRelVisitor]].
-    *
-    * @param visitor BatchExecRelVisitor
-    * @tparam R Return type
-    */
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   override def isDeterministic: Boolean = true
 
+  //~ ExecNode methods -----------------------------------------------------------
+
+  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
+
   /**
-    * Translates the FlinkRelNode into a Flink operator.
+    * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
+    * into a Batch operator.
     *
     * @param tableEnv    The [[StreamTableEnvironment]] of the translated Table.
     * @return StreamTransformation

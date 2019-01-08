@@ -60,8 +60,6 @@ class BatchExecExpand(
     )
   }
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .item("projects", ExpandUtil.projectsToString(projects, input.getRowType, getRowType))
@@ -69,12 +67,13 @@ class BatchExecExpand(
 
   override def isDeterministic: Boolean = ExpandUtil.isDeterministic(projects)
 
-  private def getOperatorName: String = {
-    s"BatchExecExpand: ${getRowType.getFieldList.map(_.getName).mkString(", ")}"
-  }
+  //~ ExecNode methods -----------------------------------------------------------
+
+  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   /**
-    * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
+    * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
+    * into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
     */
@@ -104,5 +103,9 @@ class BatchExecExpand(
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
+  }
+
+  private def getOperatorName: String = {
+    s"BatchExecExpand: ${getRowType.getFieldList.map(_.getName).mkString(", ")}"
   }
 }

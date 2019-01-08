@@ -91,6 +91,8 @@ class StreamExecCorrelate(
 
   override def isDeterministic: Boolean = CorrelateUtil.isDeterministic(scan, condition)
 
+  //~ ExecNode methods -----------------------------------------------------------
+
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 

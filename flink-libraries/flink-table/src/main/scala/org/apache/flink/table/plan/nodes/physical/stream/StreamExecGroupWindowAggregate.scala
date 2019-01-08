@@ -107,6 +107,8 @@ class StreamExecGroupWindowAggregate(
 
   override def isDeterministic: Boolean = AggregateUtil.isDeterministic(aggCalls)
 
+  //~ ExecNode methods -----------------------------------------------------------
+
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 

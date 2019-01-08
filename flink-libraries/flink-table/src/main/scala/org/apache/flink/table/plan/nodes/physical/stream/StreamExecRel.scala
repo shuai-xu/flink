@@ -18,41 +18,19 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.FlinkRelNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNode, StreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 
 import org.apache.calcite.rel.RelNode
 
-trait StreamExecRel[T] extends FlinkPhysicalRel {
+import java.util
 
-  private var reusedTransformation: Option[StreamTransformation[T]] = None
+import scala.collection.JavaConversions._
 
-  /**
-    * Translates the FlinkRelNode into a Flink operator.
-    *
-    * @param tableEnv    The [[StreamTableEnvironment]] of the translated Table.
-    * @return StreamTransformation
-    */
-  def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[T] = {
-    reusedTransformation match {
-      case Some(transformation) => transformation
-      case _ =>
-        val transformation = translateToPlanInternal(tableEnv)
-        reusedTransformation = Some(transformation)
-        transformation
-    }
-  }
-
-  /**
-    * Internal method, Translates the FlinkRelNode into a Flink operator.
-    *
-    * @param tableEnv    The [[StreamTableEnvironment]] of the translated Table.
-    * @return StreamTransformation
-    */
-  protected def translateToPlanInternal(tableEnv: StreamTableEnvironment): StreamTransformation[T]
+trait StreamExecRel[T] extends FlinkPhysicalRel with StreamExecNode[T] {
 
   /**
     * Whether the [[FlinkRelNode]] produces update and delete changes.
@@ -74,6 +52,19 @@ trait StreamExecRel[T] extends FlinkPhysicalRel {
     * Whether the [[FlinkRelNode]] produces retraction messages.
     */
   def producesRetractions: Boolean = false
+
+  //~ ExecNode methods -----------------------------------------------------------
+
+  override def getInputNodes: util.List[ExecNode[StreamTableEnvironment, _]] = {
+    getInputs.map(_.asInstanceOf[StreamExecRel[T]])
+  }
+
+  override def replaceInputNode(
+      ordinalInParent: Int,
+      newInputNode: ExecNode[StreamTableEnvironment, _]): Unit = {
+    require(ordinalInParent >= 0 && ordinalInParent < getInputs.size())
+    replaceInput(ordinalInParent, newInputNode.asInstanceOf[StreamExecRel[T]])
+  }
 }
 
 trait RowStreamExecRel extends StreamExecRel[BaseRow]

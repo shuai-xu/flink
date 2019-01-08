@@ -73,15 +73,6 @@ class StreamExecJoinTable(
     ruleDescription)
   with RowStreamExecRel {
 
-  override def translateToPlanInternal(
-      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
-
-    translateToPlanInternal(
-      getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv),
-      tableEnv.execEnv,
-      tableEnv.getConfig)
-  }
-
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
     new StreamExecJoinTable(
       cluster,
@@ -101,4 +92,16 @@ class StreamExecJoinTable(
       joinType,
       ruleDescription)
   }
+
+  //~ ExecNode methods -----------------------------------------------------------
+
+  override def translateToPlanInternal(
+      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+
+    translateToPlanInternal(
+      getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv),
+      tableEnv.execEnv,
+      tableEnv.getConfig)
+  }
+
 }

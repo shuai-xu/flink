@@ -17,6 +17,8 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import org.apache.flink.runtime.operators.DamBehavior
+import org.apache.flink.streaming.api.transformations.TwoInputTransformation.ReadOrder
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
@@ -33,14 +35,13 @@ import org.apache.flink.table.runtime.join.batch.hashtable.BinaryHashBucketArea
 import org.apache.flink.table.runtime.join.batch.{HashJoinOperator, HashJoinType}
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
+
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.{ImmutableIntList, Util}
-import org.apache.flink.runtime.operators.DamBehavior
-import org.apache.flink.streaming.api.transformations.TwoInputTransformation.ReadOrder
 
 import scala.collection.JavaConversions._
 
@@ -61,21 +62,9 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
 
   val hashJoinType: HashJoinType = HashJoinType.of(flinkJoinType, leftIsBuild)
 
-  lazy val joinOperatorName: String = {
-    val inFields = inputDataType.getFieldNames.toList
-    val joinExpressionStr = if (getCondition != null) {
-      s"where: ${getExpressionString(getCondition, inFields, None, ExpressionFormat.Infix)}, "
-    } else {
-      ""
-    }
-    s"HashJoin($joinExpressionStr${if (leftIsBuild) "buildLeft" else "buildRight"})"
-  }
-
   def insertRuntimeFilter(): Unit = {
     haveInsertRf = true
   }
-
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
@@ -144,8 +133,13 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
     }
   }
 
+  //~ ExecNode methods -----------------------------------------------------------
+
+  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
+
   /**
-    * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
+    * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
+    * into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
     */
@@ -228,7 +222,7 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
     val transformation = new TwoInputTransformation[BaseRow, BaseRow, BaseRow](
       build,
       probe,
-      joinOperatorName,
+      getOperatorName,
       operator,
       getOutputType,
       resultPartitionCount)
@@ -238,6 +232,16 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
     transformation.setReadOrderHint(ReadOrder.INPUT1_FIRST)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
+  }
+
+  private def getOperatorName: String = {
+    val inFields = inputDataType.getFieldNames.toList
+    val joinExpressionStr = if (getCondition != null) {
+      s"where: ${getExpressionString(getCondition, inFields, None, ExpressionFormat.Infix)}, "
+    } else {
+      ""
+    }
+    s"HashJoin($joinExpressionStr${if (leftIsBuild) "buildLeft" else "buildRight"})"
   }
 }
 

@@ -87,10 +87,6 @@ class StreamExecMatch(
       inputSchema)
   }
 
-  override def toString: String = {
-    matchToString(logicalMatch, inputSchema.fieldNames.toList, getExpressionString)
-  }
-
   override def explainTerms(pw: RelWriter): RelWriter = {
     explainMatch(
       super.explainTerms(pw), logicalMatch, inputSchema.fieldNames.toList, getExpressionString)
@@ -125,6 +121,8 @@ class StreamExecMatch(
     }
     (cepPattern, patternVisitor.names.toSeq)
   }
+
+  //~ ExecNode methods -----------------------------------------------------------
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

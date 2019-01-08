@@ -117,6 +117,8 @@ class StreamExecWindowJoin(
     FlinkRexUtil.isDeterministicOperator(joinCondition)
   }
 
+  //~ ExecNode methods -----------------------------------------------------------
+
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 

@@ -66,9 +66,7 @@ class StreamExecExpand(
 
   override def isDeterministic: Boolean = ExpandUtil.isDeterministic(projects)
 
-  private def getOperatorName: String = {
-    s"StreamExecExpand: ${rowType.getFieldList.map(_.getName).mkString(", ")}"
-  }
+  //~ ExecNode methods -----------------------------------------------------------
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
@@ -94,5 +92,9 @@ class StreamExecExpand(
       outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
       inputTransformation.getParallelism)
     transformation
+  }
+
+  private def getOperatorName: String = {
+    s"StreamExecExpand: ${rowType.getFieldList.map(_.getName).mkString(", ")}"
   }
 }

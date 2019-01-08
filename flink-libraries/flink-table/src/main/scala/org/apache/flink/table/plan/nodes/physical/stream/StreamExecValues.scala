@@ -57,6 +57,8 @@ class StreamExecValues(
 
   override def isDeterministic: Boolean = true
 
+  //~ ExecNode methods -----------------------------------------------------------
+
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     if (tableEnv.getConfig.getConf.getBoolean(
