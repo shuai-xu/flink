@@ -22,6 +22,7 @@ import org.apache.flink.client.cli.CliFrontend;
 import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.GlobalConfiguration;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.clusterframework.BootstrapTools;
 import org.apache.flink.test.util.TestBaseUtils;
 import org.apache.flink.util.Preconditions;
@@ -542,6 +543,8 @@ public abstract class YarnTestBase extends TestLogger {
 
 			final String confDirPath = flinkConfDirPath.getParentFile().getAbsolutePath();
 			globalConfiguration = GlobalConfiguration.loadConfiguration(confDirPath);
+
+			globalConfiguration.setInteger(TaskManagerOptions.NUM_TASK_SLOTS, 1);
 
 			// copy conf dir to test temporary workspace location
 			tempConfPathForSecureRun = tmp.newFolder("conf");
