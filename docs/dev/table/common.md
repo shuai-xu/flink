@@ -1106,15 +1106,16 @@ val table: Table = tableEnv.fromDataStream(stream, 'name as 'myName)
 Query Optimization
 ------------------
 
-Apache Flink leverages Apache Calcite to optimize and translate queries. The optimization currently performed include projection and filter push-down, subquery decorrelation, and other kinds of query rewriting. Flink optimizes the order of joins based on cost if join-reorder is enabled(`sql.cbo.joinReorder.enabled` is true), otherwise executes them in the same order as defined in the query (order of Tables in the `FROM` clause and/or order of join predicates in the `WHERE` clause).
+Apache Flink leverages Apache Calcite to optimize and translate queries. The optimization currently performed include projection and filter push-down, subquery decorrelation, and other kinds of query rewriting. Flink optimizes the order of joins based on cost if join-reorder is enabled (`sql.optimizer.join-reorder.enabled` is true), otherwise executes them in the same order as defined in the query (order of Tables in the `FROM` clause and/or order of join predicates in the `WHERE` clause).
 
 It is possible to customize optimization programs referencing to `FlinkBatchPrograms`(default optimization programs for batch) or `FlinkStreamPrograms`(default optimization programs for stream), and replace the default optimization programs by providing a `CalciteConfig` object. This can be created via a builder by calling `CalciteConfig.createBuilder())` and is provided to the TableEnvironment by calling `tableEnv.getConfig.setCalciteConfig(calciteConfig)`. 
 
 ### Reuse SubPlan
-Flink will try to find duplicate sub-plans by the digest of physical sub-plan and reuse them if Reuse sub-plan is enabled(`sql.exec.reuse.sub-plan.enabled` is true, default is false).
+Flink will try to find duplicate sub-plans by the digest of physical sub-plan and reuse them if Reuse sub-plan is enabled (`sql.optimizer.reuse.sub-plan.enabled` is true, default is false).
+
 **Note:** Reuse sub-plan on Batch is supported now. 
 
-The following code example show the physical plan when Reuse sub-plan is enabled.
+The following code example shows the physical plan when reuse sub-plan is enabled.
 
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">

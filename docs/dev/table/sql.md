@@ -750,15 +750,15 @@ WHERE
       </td>
       <td>
         <p>The left semi-join is a joining similar to the natural join, and only returns the rows of the left table where it can find a match in the right table. SubQuery using <b>IN</b> and <b>EXISTS</b> will be converted to left semi-join.</p>
-        <p><b>Note:</b>IN and EXISTS in conjunctive condition is supported.</p>
+        <p><b>Note:</b> IN and EXISTS in conjunctive condition is supported.</p>
 {% highlight sql %}
 SELECT *
 FROM Orders WHERE Orders.productId IN 
-(SELECT Product.id FROM Product)
+(SELECT Product.id FROM Product) AND Orders.ordertime IS NOT NULL
 
 SELECT *
 FROM Orders WHERE EXISTS 
-(SELECT * FROM Product WHERE Orders.productId = Product.id)
+(SELECT * FROM Product WHERE Orders.productId = Product.id) AND Orders.ordertime IS NOT NULL
 {% endhighlight %}
       </td>
     </tr>
@@ -769,15 +769,15 @@ FROM Orders WHERE EXISTS
       </td>
       <td>
         <p>The left anti-join is a joining similar to the left semi-join, and only returns the rows of the left table where it can <b>not</b> find a match in the right table. SubQuery using <b>NOT IN</b> and <b>NOT EXISTS</b> will be converted to left anti-join.</p>
-        <p><b>Note:</b>NOT IN and NOT EXISTS in conjunctive condition is supported.</p>
+        <p><b>Note:</b> NOT IN and NOT EXISTS in conjunctive condition is supported.</p>
 {% highlight sql %}
 SELECT *
 FROM Orders WHERE Orders.productId NOT IN 
-(SELECT Product.id FROM Product)
+(SELECT Product.id FROM Product) AND Orders.ordertime IS NOT NULL
 
 SELECT *
 FROM Orders WHERE NOT EXISTS 
-(SELECT * FROM Product WHERE Orders.productId = Product.id)
+(SELECT * FROM Product WHERE Orders.productId = Product.id) AND Orders.ordertime IS NOT NULL
 {% endhighlight %}
       </td>
     </tr>
