@@ -289,6 +289,7 @@ One may use the following operators:
 
 * _Concatenation_ - a pattern like `(A B)` means that the contiguity is strict between `A` and `B`. Therefore, there can be no rows that were not mapped to `A` or `B` in between.
 * _Follow by_ - a pattern like `(A -> B)` means that the contiguity is not strict between `A` and `B`. Therefore, there can be rows that were not mapped to `A` or `B` in between.
+However, this is not part of the SQL standard. The recommended way of dealing with not strict contiguity might change in the future.
 * _Quantifiers_ - modify the number of rows that can be mapped to the pattern variable.
   * `*` — _0_ or more rows
   * `+` — _1_ or more rows
