@@ -2235,6 +2235,17 @@ NUMERIC.atan()
         <p>Calculates the arc tangent of a given number.</p>
       </td>
     </tr>
+    
+    <tr>
+      <td>
+        {% highlight java %}
+NUMERIC.sinh()
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Calculates the hyperbolic sine of a given number.</p> 
+      </td>
+    </tr>
 
     <tr>
       <td>
@@ -3726,6 +3737,17 @@ NUMERIC.tan()
       </td>
       <td>
         <p>Calculates the cotangent of a given number.</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        {% highlight scala %}
+NUMERIC.sinh()
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Calculates the hyperbolic sine of a given number.</p> 
       </td>
     </tr>
 

@@ -2011,6 +2011,17 @@ ACOS(numeric)
     <tr>
       <td>
         {% highlight text %}
+SINH(numeric)
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Calculates the hyperbolic sine of a given number.</p> 
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        {% highlight text %}
 ATAN(numeric)
 {% endhighlight %}
       </td>

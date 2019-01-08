@@ -560,6 +560,18 @@ object FunctionGenerator {
     BuiltInMethods.LOG2_DEC)
 
   addSqlFunctionMethod(
+    SINH,
+    Seq(DataTypes.DOUBLE),
+    DataTypes.DOUBLE,
+    BuiltInMethods.SINH)
+
+  addSqlFunctionMethod(
+    SINH,
+    Seq(DecimalType.SYSTEM_DEFAULT),
+    DataTypes.DOUBLE,
+    BuiltInMethods.SINH_DEC)
+
+  addSqlFunctionMethod(
     COSH,
     Seq(DataTypes.DOUBLE),
     DataTypes.DOUBLE,

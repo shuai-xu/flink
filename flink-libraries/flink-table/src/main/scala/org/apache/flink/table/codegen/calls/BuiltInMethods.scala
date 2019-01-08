@@ -99,6 +99,9 @@ object BuiltInMethods {
   val ATAN = Types.lookupMethod(classOf[Math], "atan", classOf[Double])
   val ATAN_DEC = Types.lookupMethod(classOf[ScalarFunctions], "atan", classOf[Decimal])
 
+  val SINH = Types.lookupMethod(classOf[Math], "sinh", classOf[Double])
+  val SINH_DEC = Types.lookupMethod(classOf[ScalarFunctions], "sinh", classOf[Decimal])
+
   val COSH = Types.lookupMethod(classOf[Math], "cosh", classOf[Double])
   val COSH_DEC = Types.lookupMethod(classOf[ScalarFunctions], "cosh", classOf[Decimal])
 

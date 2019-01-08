@@ -177,6 +177,23 @@ case class Power(left: Expression, right: Expression) extends BinaryExpression w
     logicalExprVisitor.visit(this)
 }
 
+case class Sinh(child: Expression) extends UnaryExpression {
+
+  override private[flink] def resultType: InternalType = DataTypes.DOUBLE
+
+  override private[flink] def validateInput(): ValidationResult =
+    TypeCheckUtils.assertNumericExpr(child.resultType, "Sinh")
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder) = {
+    relBuilder.call(ScalarSqlFunctions.SINH, child.toRexNode)
+  }
+
+  override def toString = s"sinh($child)"
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
+
 case class Sqrt(child: Expression) extends UnaryExpression with InputTypeSpec {
   override private[flink] def resultType: InternalType = DataTypes.DOUBLE
 

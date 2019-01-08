@@ -289,6 +289,13 @@ object ScalarFunctions {
   }
 
   /**
+    * Returns the hyperbolic sine of a big decimal value.
+    */
+  def sinh(x: Decimal): Double = {
+    Math.sinh(x.doubleValue())
+  }
+
+  /**
     * Repeat target string n times.
     * If accept any null arguments, return null.
     *
