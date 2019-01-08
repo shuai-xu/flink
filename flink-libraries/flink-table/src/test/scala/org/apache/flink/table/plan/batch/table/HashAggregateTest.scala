@@ -33,7 +33,7 @@ class HashAggregateTest extends TableTestBatchExecBase {
   @Before
   def before(): Unit = {
     util.tableEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
+      TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "SortAgg")
   }
 
   @Test

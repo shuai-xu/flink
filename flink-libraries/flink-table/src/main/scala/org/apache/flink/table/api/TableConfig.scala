@@ -125,7 +125,7 @@ class TableConfig {
   }
 
   def enabledGivenOpType(operator: OperatorType): Boolean = {
-    val disableOperators = conf.getString(TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED)
+    val disableOperators = conf.getString(TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS)
         .split(",")
         .map(_.trim)
     if (disableOperators.contains("HashJoin") &&

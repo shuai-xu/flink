@@ -41,8 +41,9 @@ class DataExchangeModeTest extends QueryTest {
   @Test
   def testReuseBatch(): Unit = {
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED, true)
     val data = (1 until 100).map(row(_))
     tEnv.registerTableSource("t", createCsvTableSource(data, Array("a"), Array(DataTypes.LONG)))
     verifySql(
@@ -56,9 +57,10 @@ class DataExchangeModeTest extends QueryTest {
   def testAllDataExchangeModeBatch(): Unit = {
     tEnv.getConfig.setSubsectionOptimization(true)
     tEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_ALL_DATA_EXCHANGE_MODE_BATCH, true)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, true)
+      TableConfigOptions.SQL_EXEC_DATA_EXCHANGE_MODE_ALL_BATCH, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED, true)
     val data = (1 until 100).map(row(_))
     tEnv.registerTableSource("t", createCsvTableSource(data, Array("a"), Array(DataTypes.LONG)))
     verifySql(
@@ -71,8 +73,9 @@ class DataExchangeModeTest extends QueryTest {
   @Test
   def testNotContainsBatch(): Unit = {
     tEnv.getConfig.setSubsectionOptimization(true)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED, true)
     val data = (1 until 100).map(row(_))
     tEnv.registerTableSource("t1", createCsvTableSource(data, Array("a"), Array(DataTypes.LONG)))
     tEnv.registerTableSource("t2", createCsvTableSource(data, Array("b"), Array(DataTypes.LONG)))

@@ -62,9 +62,9 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		 *          \      /
 		 *           2, Union
 		 */
-		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE, ExecResourceUtil.InferMode.NONE.toString());
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SOURCE_PARALLELISM, 10);
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 50);
+		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, ExecResourceUtil.InferMode.NONE.toString());
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_SOURCE_PARALLELISM, 10);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 50);
 		createRelList(3);
 		updateRel(0, mock(BatchExecTableSourceScan.class));
 		updateRel(1, mock(BatchExecTableSourceScan.class));
@@ -83,8 +83,8 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		 *       |
 		 *    1, Exchange
 		 */
-		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE, ExecResourceUtil.InferMode.NONE.toString());
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 50);
+		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, ExecResourceUtil.InferMode.NONE.toString());
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 50);
 		createRelList(2);
 		updateRel(0, mock(BatchExecTableSourceScan.class));
 		updateRel(1, mock(BatchExecExchange.class, RETURNS_DEEP_STUBS));
@@ -102,8 +102,8 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		 *       |      /             /
 		 *    1, Exchange
 		 */
-		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE, ExecResourceUtil.InferMode.NONE.toString());
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 50);
+		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, ExecResourceUtil.InferMode.NONE.toString());
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 50);
 		createRelList(4);
 		updateRel(0, mock(BatchExecTableSourceScan.class));
 		updateRel(2, mock(BatchExecBoundedStreamScan.class));
@@ -129,10 +129,10 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		 *       |
 		 *    1, Exchange
 		 */
-		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE, ExecResourceUtil.InferMode.ONLY_SOURCE.toString());
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 50);
-		tEnv.getConfig().getConf().setLong(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION, 100);
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION, 1000);
+		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, ExecResourceUtil.InferMode.ONLY_SOURCE.toString());
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 50);
+		tEnv.getConfig().getConf().setLong(TableConfigOptions.SQL_RESOURCE_INFER_ROWS_PER_PARTITION, 100);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_MB_PER_PARTITION, 1000);
 		createRelList(2);
 		BatchExecTableSourceScan scan = mock(BatchExecTableSourceScan.class, RETURNS_DEEP_STUBS);
 		when(mq.getRowCount(scan)).thenReturn(50d);
@@ -154,11 +154,11 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		 *       |
 		 *    1, Exchange
 		 */
-		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE, ExecResourceUtil.InferMode.ONLY_SOURCE.toString());
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 50);
-		tEnv.getConfig().getConf().setLong(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION, 100);
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION, 1000);
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM, 100);
+		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, ExecResourceUtil.InferMode.ONLY_SOURCE.toString());
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 50);
+		tEnv.getConfig().getConf().setLong(TableConfigOptions.SQL_RESOURCE_INFER_ROWS_PER_PARTITION, 100);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_MB_PER_PARTITION, 1000);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_PARALLELISM_MAX, 100);
 		createRelList(2);
 
 		BatchExecTableSourceScan scan = PowerMockito.mock(BatchExecTableSourceScan.class);
@@ -181,11 +181,11 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		 *       |
 		 *    1, Exchange
 		 */
-		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE, ExecResourceUtil.InferMode.ONLY_SOURCE.toString());
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 50);
-		tEnv.getConfig().getConf().setLong(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION, 100);
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION, 1000);
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM, 100);
+		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, ExecResourceUtil.InferMode.ONLY_SOURCE.toString());
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 50);
+		tEnv.getConfig().getConf().setLong(TableConfigOptions.SQL_RESOURCE_INFER_ROWS_PER_PARTITION, 100);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_MB_PER_PARTITION, 1000);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_PARALLELISM_MAX, 100);
 		createRelList(2);
 		BatchExecTableSourceScan scan = mock(BatchExecTableSourceScan.class, RETURNS_DEEP_STUBS);
 		when(mq.getRowCount(scan)).thenReturn(5000d);
@@ -207,8 +207,8 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		 *       |
 		 *    1, Exchange
 		 */
-		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE, ExecResourceUtil.InferMode.NONE.toString());
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 50);
+		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, ExecResourceUtil.InferMode.NONE.toString());
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 50);
 		createRelList(2);
 		updateRel(0, mock(BatchExecTableSourceScan.class));
 		updateRel(1, mock(BatchExecExchange.class, RETURNS_DEEP_STUBS));
@@ -226,8 +226,8 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		 *       |
 		 *    1, Exchange
 		 */
-		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE, ExecResourceUtil.InferMode.NONE.toString());
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 50);
+		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, ExecResourceUtil.InferMode.NONE.toString());
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 50);
 		createRelList(2);
 		updateRel(0, mock(BatchExecValues.class));
 		updateRel(1, mock(BatchExecExchange.class, RETURNS_DEEP_STUBS));

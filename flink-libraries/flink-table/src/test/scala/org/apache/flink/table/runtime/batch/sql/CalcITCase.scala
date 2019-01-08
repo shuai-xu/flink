@@ -49,7 +49,7 @@ class CalcITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
     InternalTypeConverters.createToExternalConverter(DataTypes.createRowType())
     registerCollection("Table3", data3, type3, nullablesOfData3, 'a, 'b, 'c)
     registerCollection("SmallTable3", smallData3, type3, nullablesOfData3, 'a, 'b, 'c)
@@ -706,7 +706,7 @@ class CalcITCase extends QueryTest {
 
   @Test
   def testSplitCodeWithMultiFilter(): Unit = {
-    conf.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH, 1)
+    conf.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX, 1)
     tEnv.registerFunction("func", StringFunction)
     checkResult(
       s"""
@@ -723,8 +723,8 @@ class CalcITCase extends QueryTest {
         row(3, 2, "3e25960a79dbc69b674cd4ec67a72c62")
       ))
     conf.getConf.setInteger(
-      TableConfigOptions.SQL_CODEGEN_MAX_LENGTH,
-      TableConfigOptions.SQL_CODEGEN_MAX_LENGTH.defaultValue())
+      TableConfigOptions.SQL_CODEGEN_LENGTH_MAX,
+      TableConfigOptions.SQL_CODEGEN_LENGTH_MAX.defaultValue())
   }
 }
 

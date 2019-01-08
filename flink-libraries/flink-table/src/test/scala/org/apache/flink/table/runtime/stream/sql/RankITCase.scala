@@ -262,7 +262,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       """.stripMargin
 
       tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_ENABLED, true)
-    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_MINSIZE, 20)
+    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_SIZE_MIN, 20)
 
     val sink = new TestingUpsertTableSink(Array(0, 3))
     tEnv.sqlQuery(sql).writeToSink(sink)
@@ -594,7 +594,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       """.stripMargin
 
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_ENABLED, true)
-    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_MINSIZE, 20)
+    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_SIZE_MIN, 20)
 
     val tableSink = new TestingUpsertTableSink(Array(0, 4))
     tEnv.sqlQuery(sql).writeToSink(tableSink)
@@ -685,7 +685,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       """.stripMargin
 
      tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_ENABLED, true)
-    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_MINSIZE, 20)
+    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_SIZE_MIN, 20)
 
     val tableSink = new TestingUpsertTableSink(Array(0, 4))
     tEnv.sqlQuery(sql).writeToSink(tableSink)
@@ -1022,7 +1022,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       """.stripMargin
 
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_ENABLED, true)
-    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_MINSIZE, 0)
+    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_SIZE_MIN, 0)
 
     val tableSink = new TestingUpsertTableSink(Array(0, 4))
     tEnv.sqlQuery(sql).writeToSink(tableSink)
@@ -1186,7 +1186,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
 
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_ENABLED, true)
-    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_MINSIZE, 0)
+    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_SIZE_MIN, 0)
     tEnv.sqlQuery(sql).writeToSink(tableSink)
     env.execute()
 

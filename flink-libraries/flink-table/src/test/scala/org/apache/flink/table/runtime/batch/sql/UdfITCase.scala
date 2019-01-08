@@ -32,7 +32,7 @@ class UdfITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
     registerCollection("Table3", data3, type3, nullablesOfData3, 'a, 'b, 'c)
     tEnv.registerFunction("rand_udf", RandUDF)
   }

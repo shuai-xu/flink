@@ -51,7 +51,7 @@ class TpcHStreamExecPlanTest(caseName: String, twoStageAgg: Boolean) {
   @Before
   def prepare(): Unit = {
     val tableConfig = new TableConfig
-    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
+    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED, true)
     if (twoStageAgg) {
       tableConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
     }

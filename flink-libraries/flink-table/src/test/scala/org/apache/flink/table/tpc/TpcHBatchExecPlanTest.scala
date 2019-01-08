@@ -66,8 +66,8 @@ abstract class TpcHBatchExecPlanTest(
     }
     TpcUtils.disableParquetFilterPushDown(tEnv)
     tEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, joinReorderEnabled)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_RUNTIME_FILTER_ENABLE, true)
+      TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED, joinReorderEnabled)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_ENABLED, true)
   }
 
   // create a new ParquetTableSource to override `createTableSource` and `getTableStats` methods

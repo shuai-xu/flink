@@ -100,7 +100,7 @@ class BatchExecHashAggregate(
         } else {
           val tableConfig = FlinkRelOptUtil.getTableConfig(this)
           if (tableConfig.getConf.getBoolean(
-            TableConfigOptions.SQL_CBO_AGG_SHUFFLE_BY_PARTIALKEY_ENABLED) &&
+            TableConfigOptions.SQL_OPTIMIZER_SHUFFLE_PARTIAL_KEY_ENABLED) &&
               groupKeysList.containsAll(shuffleKeys)) {
             // If partialKey is enabled, push down partialKey requirement into input.
            FlinkRelDistribution.hash(

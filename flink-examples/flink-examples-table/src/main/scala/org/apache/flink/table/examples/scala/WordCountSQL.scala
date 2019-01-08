@@ -42,7 +42,7 @@ object WordCountSQL {
     // set up execution environment
     val execEnv = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getBatchTableEnvironment(execEnv)
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
     val input = execEnv.fromCollection(List(WC("hello", 1), WC("hello", 1), WC("ciao", 1)))
 
     // register the BoundedStream as table "WordCount"

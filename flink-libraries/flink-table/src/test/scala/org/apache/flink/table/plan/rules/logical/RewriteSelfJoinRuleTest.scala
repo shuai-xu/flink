@@ -87,7 +87,7 @@ class RewriteSelfJoinRuleTest extends TableTestBatchExecBase with PropertyChecks
       .replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED, true)
     util.addTable[(Int, Int, String, Int, String)]("person",
       Set(Set("name")), 'id, 'age, 'name, 'height, 'sex)
 

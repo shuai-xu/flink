@@ -73,7 +73,7 @@ class ScalaSubqueryITCase extends QueryTest {
         emptyColumnAsNull = true)
       tEnv.registerTableSource(tableName, tableSource)
     }
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
   }
 
   @Test

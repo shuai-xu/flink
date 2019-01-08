@@ -53,10 +53,10 @@ class BatchTableSinksITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
     tEnv.registerCollection("sTable", data, dataType, 'a, 'b, 'c)
     tEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+      TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "HashAgg")
   }
 
   @Test

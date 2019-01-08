@@ -124,7 +124,7 @@ trait CommonScan[T] {
 
         codeSplit = CodeGenUtils.generateSplitFunctionCalls(
           conversion.codeBuffer,
-          config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
+          config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX),
           "SourceConversionApply",
           "private final void",
           ctx.reuseFieldCode().length,

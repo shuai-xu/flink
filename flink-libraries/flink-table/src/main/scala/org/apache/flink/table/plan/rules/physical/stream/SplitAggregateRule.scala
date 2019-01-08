@@ -113,7 +113,7 @@ class SplitAggregateRule extends RelOptRule(
     val agg: FlinkLogicalAggregate = call.rel(0)
 
     tableConfig.getConf.contains(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY) &&
-      tableConfig.getConf.getBoolean(TableConfigOptions.SQL_EXEC_AGG_PARTIAL_ENABLED) &&
+      tableConfig.getConf.getBoolean(TableConfigOptions.SQL_OPTIMIZER_DATA_SKEW_DISTINCT_AGG) &&
       agg.partialFinal == PartialFinalType.NORMAL &&
       containsDistinctAgg(agg.getAggCallList) &&
       doAllAggSupportSplit(agg.getAggCallList)
@@ -140,7 +140,7 @@ class SplitAggregateRule extends RelOptRule(
 
     val hashFieldsMap: mutable.Map[Int, Int] = mutable.Map()
     val buckets = tableConfig.getConf.getInteger(
-      TableConfigOptions.SQL_EXEC_AGG_PARTIAL_BUCKET_NUM)
+      TableConfigOptions.SQL_OPTIMIZER_DATA_SKEW_DISTINCT_AGG_BUCKET)
 
     if (hashFieldIndexes.nonEmpty) {
       val projects = new util.ArrayList[RexNode](relBuilder.fields)

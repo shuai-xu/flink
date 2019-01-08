@@ -27,7 +27,7 @@ import org.junit.{Before, Test}
 class JoinConditionTypeCoerceRuleITCase extends QueryTest {
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
     registerCollection(
       "t1",
       numericData,
@@ -42,7 +42,7 @@ class JoinConditionTypeCoerceRuleITCase extends QueryTest {
       nullablesOfNumericData)
     // Disable NestedLoopJoin.
     tEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED,
+      TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS,
       "NestedLoopJoin")
   }
 

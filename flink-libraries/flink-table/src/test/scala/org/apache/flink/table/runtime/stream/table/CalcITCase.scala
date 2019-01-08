@@ -129,7 +129,7 @@ class CalcITCase extends StreamingTestBase {
 
     val filterDs = ds.filter( Literal(false) )
     tEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_VALUES_SOURCE_INPUT_ENABLED, true) // enable values source input
+      TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED, true) // enable values source input
     val results = filterDs.toAppendStream[Row]
     val sink = new TestingAppendSink
 
@@ -258,7 +258,7 @@ class CalcITCase extends StreamingTestBase {
   @Test
   def testFunctionSplitWhenCodegenOverLengthLimit(): Unit = {
     // test function split
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH, 10)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX, 10)
 
     val udfLen = TestUDFLength
     tEnv.registerFunction("RichFunc1", new RichFunc1)

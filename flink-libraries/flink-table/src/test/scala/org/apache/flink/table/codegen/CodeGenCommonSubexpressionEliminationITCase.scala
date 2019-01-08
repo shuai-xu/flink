@@ -55,7 +55,7 @@ class CodeGenCommonSubexpressionEliminationITCase {
   def testIf(): Unit = {
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val configs = Array(new TableConfig, new TableConfig)
-    configs(0).getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH,1)
+    configs(0).getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX,1)
 
     configs.foreach { config =>
 
@@ -96,7 +96,7 @@ class CodeGenCommonSubexpressionEliminationITCase {
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val configs = Array(new TableConfig(), new TableConfig)
 
-    configs(0).getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH,1)
+    configs(0).getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX,1)
 
     configs.foreach(tableConfig => {
       val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env, tableConfig)
@@ -288,7 +288,7 @@ class CodeGenCommonSubexpressionEliminationITCase {
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val configs = Array(new TableConfig(), new TableConfig)
 
-    configs(0).getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH,1)
+    configs(0).getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX,1)
 
     configs.foreach( tableConfig => {
       val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env, tableConfig)
@@ -325,7 +325,7 @@ class CodeGenCommonSubexpressionEliminationITCase {
   @Test
   def testMapArray(): Unit = {
     val config = new TableConfig()
-    config.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH,1)
+    config.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX,1)
 
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env, config)

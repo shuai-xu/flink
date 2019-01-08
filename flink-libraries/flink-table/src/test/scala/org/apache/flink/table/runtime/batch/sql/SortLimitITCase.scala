@@ -27,7 +27,7 @@ class SortLimitITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
     registerCollection("Table3", data3, type3, "a, b, c")
   }
 
@@ -106,7 +106,7 @@ class SortLimitITCase extends QueryTest {
 
   @Test
   def testOrderBehindField(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
     val expected = data3.sortBy((x : Row) => x.getField(2).asInstanceOf[String])
 
     checkResult(

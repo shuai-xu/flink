@@ -31,7 +31,7 @@ class ComplexTypeITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
     registerCollection(
       "T",
       nullData3.map((r) => row(r.getField(0), r.getField(1), r.getField(2).toString.getBytes)),
@@ -50,8 +50,8 @@ class ComplexTypeITCase extends QueryTest {
 
   @Test
   def testOrderByBinary(): Unit = {
-    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1)
-    conf.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, true)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
+    conf.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED, true)
     checkResult(
       "select * from T order by c",
       nullData3.sortBy((x : Row) =>

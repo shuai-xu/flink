@@ -66,7 +66,7 @@ trait BatchExecRel[T] extends FlinkPhysicalRel with Logging {
         reusedTransformation = Some(transformation)
         val config = FlinkRelOptUtil.getTableConfig(this)
         if (config.getConf.getBoolean(
-          TableConfigOptions.SQL_EXEC_COLLECT_OPERATOR_METRIC_ENABLED)) {
+          TableConfigOptions.SQL_EXEC_OPERATOR_METRIC_DUMP_ENABLED)) {
           val nameWithId = s"${transformation.getName}, __id__=[$getId]"
           transformation.setName(nameWithId)
         }

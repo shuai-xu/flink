@@ -165,7 +165,7 @@ class BatchExecExchange(
   }
 
   private def getDataExchangeModeForExternalShuffle(tableConf: Configuration): DataExchangeMode = {
-    if (tableConf.getBoolean(TableConfigOptions.SQL_EXEC_ALL_DATA_EXCHANGE_MODE_BATCH)) {
+    if (tableConf.getBoolean(TableConfigOptions.SQL_EXEC_DATA_EXCHANGE_MODE_ALL_BATCH)) {
       DataExchangeMode.BATCH
     } else {
       DataExchangeMode.AUTO

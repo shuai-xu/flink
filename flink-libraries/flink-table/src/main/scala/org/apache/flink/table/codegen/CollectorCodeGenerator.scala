@@ -59,7 +59,7 @@ object CollectorCodeGenerator {
 
     val unboxingCodeSplit = generateSplitFunctionCalls(
       ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
+      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX),
       "inputUnbox",
       "private final void",
       ctx.reuseFieldCode().length,
@@ -167,7 +167,7 @@ object CollectorCodeGenerator {
 
     val unboxingCodeSplit = generateSplitFunctionCalls(
       ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
+      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX),
       "inputUnbox",
       "private final void",
       ctx.reuseFieldCode().length,

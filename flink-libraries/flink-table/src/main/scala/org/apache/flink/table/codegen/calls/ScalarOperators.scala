@@ -1986,7 +1986,8 @@ object ScalarOperators {
     val bfField = classOf[BloomFilter].getCanonicalName
     val bf = newName("bf")
     val rfResult = newName("rfResult")
-    val waitRf = ctx.getTableConfig.getConf.getBoolean(TableConfigOptions.SQL_RUNTIME_FILTER_WAIT)
+    val waitRf = ctx.getTableConfig.getConf.getBoolean(
+      TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_WAIT)
     val (hashCode, hash) = runtimeFilterHash(operands.head)
     var verify =
       s"""

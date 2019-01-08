@@ -45,8 +45,8 @@ class ScanBatchExecTest extends TableTestBatchExecBase  {
       Mockito.mock(classOf[RelDataType]));
     exec.resultPartitionCount = 2
     val defaultResource = newResource(
-      TableConfigOptions.SQL_EXEC_DEFAULT_CPU.defaultValue(),
-      TableConfigOptions.SQL_EXEC_SOURCE_MEM.defaultValue())
+      TableConfigOptions.SQL_RESOURCE_DEFAULT_CPU.defaultValue(),
+      TableConfigOptions.SQL_RESOURCE_SOURCE_DEFAULT_MEM.defaultValue())
     exec.sourceResSpec = defaultResource
     val transformation = new SourceTransformation[Integer](
       "test",
@@ -67,8 +67,8 @@ class ScanBatchExecTest extends TableTestBatchExecBase  {
 
   def newResource(cpu: Double, memory: Int): ResourceSpec = {
     val builder = ResourceSpec.newBuilder()
-    builder.setCpuCores(TableConfigOptions.SQL_EXEC_DEFAULT_CPU.defaultValue())
-    builder.setHeapMemoryInMB(TableConfigOptions.SQL_EXEC_SOURCE_MEM.defaultValue())
+    builder.setCpuCores(TableConfigOptions.SQL_RESOURCE_DEFAULT_CPU.defaultValue())
+    builder.setHeapMemoryInMB(TableConfigOptions.SQL_RESOURCE_SOURCE_DEFAULT_MEM.defaultValue())
     builder.build()
   }
 }

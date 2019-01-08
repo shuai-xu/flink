@@ -116,7 +116,7 @@ class AggregateReduceGroupingRuleITCase extends QueryTest {
 
   @Test
   def testSingleAggOnTable_SortAgg(): Unit = {
-    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "HashAgg")
     testSingleAggOnTable()
     checkResult("SELECT a6, b6, max(c6), count(d6), sum(e6) FROM T6 GROUP BY a6, b6",
       (0 until 50000).map(i => row(i, 1L, if (i % 500 == 0) null else s"Hello$i", 1L, 10))
@@ -125,17 +125,19 @@ class AggregateReduceGroupingRuleITCase extends QueryTest {
 
   @Test
   def testSingleAggOnTable_HashAgg_WithLocalAgg(): Unit = {
-    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
-    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_CBO_AGG_PHASE_ENFORCER, "TWO_PHASE")
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM, 2) // 1M
+    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "SortAgg")
+    tEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_OPTIMIZER_AGG_PHASE_ENFORCER, "TWO_PHASE")
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_HASH_AGG_TABLE_MEM, 2) // 1M
     testSingleAggOnTable()
   }
 
   @Test
   def testSingleAggOnTable_HashAgg_WithoutLocalAgg(): Unit = {
-    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
-    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_CBO_AGG_PHASE_ENFORCER, "ONE_PHASE")
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM, 2) // 1M
+    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "SortAgg")
+    tEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_OPTIMIZER_AGG_PHASE_ENFORCER, "ONE_PHASE")
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_HASH_AGG_TABLE_MEM, 2) // 1M
     testSingleAggOnTable()
   }
 

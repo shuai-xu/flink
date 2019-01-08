@@ -66,7 +66,7 @@ class AggregateTest extends TableTestBatchExecBase {
     util.addTable("t1", table)
     // sets the table memory size of hashAgg operator to 1MB
     util.getTableEnv.getConfig.getConf
-      .setInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM, 1)
+      .setInteger(TableConfigOptions.SQL_RESOURCE_HASH_AGG_TABLE_MEM, 1)
   }
 
   @Test

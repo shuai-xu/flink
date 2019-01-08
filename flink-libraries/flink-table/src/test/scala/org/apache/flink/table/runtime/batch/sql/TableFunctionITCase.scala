@@ -44,7 +44,7 @@ class TableFunctionITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
     registerCollection("inputT", TableFunctionITCase.testData, type3, 'a, 'b, 'c)
     registerCollection("inputTWithNull", TableFunctionITCase.testDataWithNull, type3, 'a, 'b, 'c)
     registerCollection("SmallTable3", smallData3, type3, 'a, 'b, 'c)

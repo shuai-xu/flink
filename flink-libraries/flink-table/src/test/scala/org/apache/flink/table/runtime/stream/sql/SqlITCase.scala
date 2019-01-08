@@ -179,7 +179,7 @@ class SqlITCase extends StreamingTestBase {
   /** test union of multiple inputs **/
   @Test
   def testUnionOfMultiInputs(): Unit = {
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_VALUES_SOURCE_INPUT_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED, true)
 
     val sqlQuery = "select max(v) as x, min(v) as n from \n" +
       "(values cast(-100 as double), cast(2 as double), cast(-86.4 as double)) as t(v)"

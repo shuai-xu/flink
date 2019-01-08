@@ -38,7 +38,7 @@ class JoinTest extends TableTestBatchExecBase {
   @Before
   def before(): Unit = {
     util.getTableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED, true)
     util.addTable[(Int, Long)]("x", 'a, 'b)
     util.addTable[(Int, Long)]("y", 'c, 'd)
 

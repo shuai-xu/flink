@@ -33,7 +33,7 @@ class SubQueryITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
     InternalTypeConverters.createToExternalConverter(DataTypes.createRowType())
     registerCollection("t1", Seq(row(1, 2, 3)),
       new RowTypeInfo(INT_TYPE_INFO, INT_TYPE_INFO, INT_TYPE_INFO), "t1a, t1b, t1c")

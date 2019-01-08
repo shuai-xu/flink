@@ -31,10 +31,10 @@ class SortMergeJoinTest extends TableTestBatchExecBase {
   @Before
   def before(): Unit = {
     util.getTableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED, true)
     util.disableBroadcastHashJoin()
     util.tableEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin, NestedLoopJoin")
+      TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "HashJoin, NestedLoopJoin")
     util.addTable[(Int, Long, String)]("Table3", 'a, 'b, 'c)
     util.addTable[(Int, Long, Int, String, Long)]("Table5", 'd, 'e, 'f, 'g, 'h)
   }

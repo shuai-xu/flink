@@ -99,7 +99,7 @@ class RelDigestWriterImpl(sw: StringWriter, tableConfig: TableConfig)
     // if the given rel contains non-deterministic `SqlOperator`,
     // add a unique id to distinguish each other
     if (!tableConfig.getConf.getBoolean(
-      TableConfigOptions.SQL_EXEC_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED) &&
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED) &&
         !isDeterministicOperator(rel)) {
       s.append(",nonDeterministicId=[")
         .append(RelDigestWriterImpl.nonDeterministicIdCounter.incrementAndGet()).append("]")

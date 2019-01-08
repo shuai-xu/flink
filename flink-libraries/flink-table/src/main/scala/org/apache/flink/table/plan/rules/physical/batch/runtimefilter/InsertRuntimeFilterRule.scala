@@ -50,7 +50,8 @@ class InsertRuntimeFilterRule
 
     val conf = FlinkRelOptUtil.getTableConfig(join)
 
-    val enableRuntimeFilter = conf.getConf.getBoolean(TableConfigOptions.SQL_RUNTIME_FILTER_ENABLE)
+    val enableRuntimeFilter = conf.getConf.getBoolean(
+      TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_ENABLED)
 
     enableRuntimeFilter &&
         !join.isBroadcast && // now not support broadcast join.

@@ -30,9 +30,9 @@ class HashAggITCase
   override def prepareAggOp(): Unit = {
     // for hash agg fallback test
     val configuration = new Configuration()
-    configuration.setInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM, 4)
+    configuration.setInteger(TableConfigOptions.SQL_RESOURCE_HASH_AGG_TABLE_MEM, 4)
     tEnv.getConfig.getConf.addAll(configuration)
     tEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
+      TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "SortAgg")
   }
 }

@@ -100,7 +100,7 @@ class CacheAwareRelNodePlanBuilderTest(
   @Before
   def init(): Unit = {
     conf.setSubsectionOptimization(true)
-    conf.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
+    conf.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, true)
 
     tableEnv = TableEnvironment.getBatchTableEnvironment(env, conf)
     tableEnv.tableServiceManager.setTableService(factory, properties)

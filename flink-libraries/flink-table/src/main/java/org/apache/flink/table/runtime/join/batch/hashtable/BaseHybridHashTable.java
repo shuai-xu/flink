@@ -181,7 +181,7 @@ public abstract class BaseHybridHashTable implements MemorySegmentPool {
 			long buildRowCount,
 			boolean tryDistinctBuildRow) {
 
-		this.compressionEnable = conf.getBoolean(TableConfigOptions.SQL_EXEC_SPILL_COMPRESSION_ENABLE);
+		this.compressionEnable = conf.getBoolean(TableConfigOptions.SQL_EXEC_SPILL_COMPRESSION_ENABLED);
 		this.compressionCodecFactory = this.compressionEnable
 				? BlockCompressionFactoryLoader.createBlockCompressionFactory(conf.getString(
 				TableConfigOptions.SQL_EXEC_SPILL_COMPRESSION_CODEC), conf)

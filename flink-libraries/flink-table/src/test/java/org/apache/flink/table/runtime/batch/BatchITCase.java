@@ -65,7 +65,7 @@ public class BatchITCase extends AbstractTestBase {
 	public void setUp() {
 		env = StreamExecutionEnvironment.getExecutionEnvironment();
 		tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
-		tableEnv.getConfig().getConf().setString(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE,
+		tableEnv.getConfig().getConf().setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE,
 				ExecResourceUtil.InferMode.ONLY_SOURCE.toString());
 		deleteFiles();
 	}
@@ -106,9 +106,9 @@ public class BatchITCase extends AbstractTestBase {
 	public void testInSubQueryThreshold() throws Exception {
 		CsvTableSource csvTable = CommonTestData.getCsvTableSource();
 
-		tableEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1);
-		tableEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM, 32);
-		tableEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SORT_BUFFER_MEM, 32);
+		tableEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1);
+		tableEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_HASH_AGG_TABLE_MEM, 32);
+		tableEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM, 32);
 		tableEnv.registerTableSource("persons", csvTable);
 
 		// default InSubQueryThreshold value is 20
@@ -194,7 +194,7 @@ public class BatchITCase extends AbstractTestBase {
 
 	@Test
 	public void testSinkParallelism() throws IOException {
-		tableEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SINK_PARALLELISM, 5);
+		tableEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_SINK_PARALLELISM, 5);
 		BatchTableSource csvTable = CommonTestData.getCsvTableSource();
 
 		tableEnv.registerTableSource("persons", csvTable);

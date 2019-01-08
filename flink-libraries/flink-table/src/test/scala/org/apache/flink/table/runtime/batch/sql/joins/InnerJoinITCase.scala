@@ -88,7 +88,7 @@ class InnerJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITC
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
     registerCollection("myUpperCaseData", myUpperCaseData, INT_STRING, "N, L", Seq(true, false))
     registerCollection("myLowerCaseData", myLowerCaseData, INT_STRING, "n, l", Seq(true, false))
     registerCollection("myTestData1", myTestData1, INT_INT, "a, b", Seq(false, false))
@@ -164,10 +164,10 @@ class InnerJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITC
   @Test
   def testBigForSpill(): Unit = {
 
-    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_BUFFER_MEM, 1)
-    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_HASH_JOIN_TABLE_MEM, 2)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM, 1)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_HASH_JOIN_TABLE_MEM, 2)
     tEnv.getConfig.getConf.setInteger(ExecResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 2)
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
 
     val bigData = Random.shuffle(
       bigIntStringData.union(bigIntStringData).union(bigIntStringData).union(bigIntStringData))
@@ -182,9 +182,9 @@ class InnerJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITC
   @Test
   def testSortMergeJoinOutputOrder(): Unit = {
     if (expectedJoinType == SortMergeJoin) {
-      tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1)
+      tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
 
-      conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_BUFFER_MEM, 1)
+      conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM, 1)
 
       val bigData = Random.shuffle(
         bigIntStringData.union(bigIntStringData).union(bigIntStringData).union(bigIntStringData))
@@ -214,18 +214,18 @@ class InnerJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITC
 
   private def testSpillForRuntimeFilterInner(waitRf: Boolean = false): Unit = {
 
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_RUNTIME_FILTER_ENABLE, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_ENABLED, true)
     if (waitRf) {
-      tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_RUNTIME_FILTER_WAIT, true)
+      tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_WAIT, true)
     }
 
-    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_BUFFER_MEM, 1)
-    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_HASH_JOIN_TABLE_MEM, 2)
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM, 1)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_HASH_JOIN_TABLE_MEM, 2)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
 
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 10)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 10)
     tEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE, InferMode.NONE.toString)
+      TableConfigOptions.SQL_RESOURCE_INFER_MODE, InferMode.NONE.toString)
 
     val bigData = Random.shuffle(
       bigIntStringData.union(bigIntStringData).union(bigIntStringData).union(bigIntStringData))
@@ -246,20 +246,20 @@ class InnerJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITC
   def testRuntimeFilterPushDownToAgg(): Unit = {
     if (expectedJoinType == HashJoin) {
 
-      tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_RUNTIME_FILTER_ENABLE, true)
-      tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_RUNTIME_FILTER_WAIT, true)
+      tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_ENABLED, true)
+      tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_WAIT, true)
       InsertRuntimeFilterRule.resetBroadcastIdCounter()
       tEnv.getConfig.getConf.setLong(
-        TableConfigOptions.SQL_RUNTIME_FILTER_PROBE_ROW_COUNT_MIN, 5)
+        TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_PROBE_ROW_COUNT_MIN, 5)
       tEnv.getConfig.getConf.setInteger(
-        TableConfigOptions.SQL_RUNTIME_FILTER_ROW_COUNT_NUM_BITS_RATIO, 1)
+        TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_ROW_COUNT_NUM_BITS_RATIO, 1)
 
-      conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_BUFFER_MEM, 1)
-      conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_HASH_JOIN_TABLE_MEM, 2)
+      conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM, 1)
+      conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_HASH_JOIN_TABLE_MEM, 2)
 
-      tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 10)
+      tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 10)
       tEnv.getConfig.getConf.setString(
-        TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE, InferMode.NONE.toString)
+        TableConfigOptions.SQL_RESOURCE_INFER_MODE, InferMode.NONE.toString)
 
       val bigData = Random.shuffle(
         bigIntStringData.union(bigIntStringData).union(bigIntStringData).union(bigIntStringData))

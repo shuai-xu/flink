@@ -28,7 +28,7 @@ class LimitITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
     registerCollection("Table3", data3, type3, "a, b, c", nullablesOfData3)
 
     val rowType = new RowTypeInfo(type3.getFieldTypes, Array("a", "b", "c"))

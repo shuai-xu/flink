@@ -66,11 +66,12 @@ abstract class TpcDsBatchExecPlanTest(
     }
     TpcUtils.disableParquetFilterPushDown(tEnv)
     tEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, joinReorderEnabled)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, false)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_RUNTIME_FILTER_ENABLE, true)
-    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_HASH_JOIN_BROADCAST_THRESHOLD,
+      TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED, joinReorderEnabled)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED, false)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_ENABLED, true)
+    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_HASH_JOIN_BROADCAST_THRESHOLD,
                                             10 * 1024 * 1024)
   }
 

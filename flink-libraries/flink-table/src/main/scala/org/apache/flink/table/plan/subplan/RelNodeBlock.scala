@@ -177,7 +177,7 @@ class RelNodeBlockPlanBuilder private (tEnv: TableEnvironment) {
   private val node2Block = new IdentityHashMap[RelNode, RelNodeBlock]()
 
   private val isUnionAllAsBreakPointDisabled = tEnv.config.getConf.getBoolean(
-    TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED)
+    TableConfigOptions.SQL_OPTIMIZER_SUBSECTION_UNIONALL_AS_BREAKPOINT_DISABLED)
 
 
   /**

@@ -216,7 +216,7 @@ class MatchCodeGenerator(
         val contextType = classOf[IterativeCondition.Context[_]].getCanonicalName
         val unboxingCodeSplit = generateSplitFunctionCalls(
           ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-          config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
+          config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX),
           "inputUnbox",
           "private final void",
           ctx.reuseFieldCode().length,
@@ -233,7 +233,7 @@ class MatchCodeGenerator(
         val baseClass = classOf[RichPatternSelectFunction[_, _]]
         val unboxingCodeSplit = generateSplitFunctionCalls(
           ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-          config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
+          config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX),
           "inputUnbox",
           "private final void",
           ctx.reuseFieldCode().length,
@@ -249,7 +249,7 @@ class MatchCodeGenerator(
         val baseClass = classOf[RichPatternFlatSelectFunction[_, _]]
         val unboxingCodeSplit = generateSplitFunctionCalls(
           ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-          config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
+          config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX),
           "inputUnbox",
           "private final void",
           ctx.reuseFieldCode().length,
@@ -267,7 +267,7 @@ class MatchCodeGenerator(
         val baseClass = classOf[RichPatternTimeoutFunction[_, _]]
         val unboxingCodeSplit = generateSplitFunctionCalls(
           ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-          config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
+          config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX),
           "inputUnbox",
           "private final void",
           ctx.reuseFieldCode().length,
@@ -285,7 +285,7 @@ class MatchCodeGenerator(
         val baseClass = classOf[RichPatternFlatTimeoutFunction[_, _]]
         val unboxingCodeSplit = generateSplitFunctionCalls(
           ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-          config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
+          config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX),
           "inputUnbox",
           "private final void",
           ctx.reuseFieldCode().length,

@@ -51,11 +51,11 @@ class TpcHBatchExecWithOrcSourceITCase(caseName: String) extends QueryTest with 
       )
       tEnv.registerTableSource(tableName, tableSource)
     }
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_DEFAULT_LIMIT, -1)
     TpcUtils.disableBroadcastHashJoin(tEnv)
     TpcUtils.disableRangeSort(tEnv)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED, true)
   }
 
   def execute(caseName: String): Unit = {

@@ -35,8 +35,8 @@ class CodeSplitBatchITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH, 1)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX, 1)
     registerCollection("Table3", nullData3, type3, nullablesOfData3, 'a, 'b, 'c)
     registerCollection("Table5", data5, type5, nullablesOfData5, 'd, 'e, 'f, 'g, 'h)
     registerCollection("Table4", data3, type3, nullablesOfData3, 'a, 'b, 'c)

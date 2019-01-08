@@ -59,7 +59,7 @@ class ParquetTableSinkITCase(configMode: TableConfigMode)
     env = StreamExecutionEnvironment.getExecutionEnvironment
     tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig)
     tEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE,
+      TableConfigOptions.SQL_RESOURCE_INFER_MODE,
       ExecResourceUtil.InferMode.ONLY_SOURCE.toString)
   }
 

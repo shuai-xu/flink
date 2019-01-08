@@ -31,7 +31,7 @@ import scala.collection.Seq
 class FlinkRewriteCoalesceRuleITCase extends QueryTest {
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
 
     lazy val numericData = Seq(
       row(null, 1L, 1.0f, 1.0d, JBigDecimal.valueOf(1)),

@@ -60,7 +60,7 @@ class StreamExecValues(
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     if (tableEnv.getConfig.getConf.getBoolean(
-      TableConfigOptions.SQL_EXEC_VALUES_SOURCE_INPUT_ENABLED)) {
+      TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED)) {
       val inputFormat = ValuesCodeGenerator.generatorInputFormat(
         tableEnv,
         getRowType,

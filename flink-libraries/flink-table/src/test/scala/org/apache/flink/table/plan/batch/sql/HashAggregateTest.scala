@@ -48,9 +48,9 @@ class HashAggregateTest(
   @Before
   def before(): Unit = {
     util.tableEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, OperatorType.SortAgg.toString)
+      TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, OperatorType.SortAgg.toString)
     util.tableEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_CBO_AGG_PHASE_ENFORCER, aggStrategy.toString)
+      TableConfigOptions.SQL_OPTIMIZER_AGG_PHASE_ENFORCER, aggStrategy.toString)
     util.addTable("MyTable", CommonTestData.get3Source(Array("a", "b", "c")))
     val tableStats = if (withNdv) {
       TableStats(100000000L, Map[String, ColumnStats](

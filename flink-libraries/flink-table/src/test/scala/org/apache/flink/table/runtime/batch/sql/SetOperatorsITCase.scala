@@ -39,7 +39,7 @@ class SetOperatorsITCase(joinType: JoinType) extends QueryTest with JoinITCaseBa
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
     registerCollection("AllNullTable3", allNullData3, type3, allNullablesOfNullData3, 'a, 'b, 'c)
     registerCollection("SmallTable3", smallData3, type3, nullablesOfSmallData3, 'a, 'b, 'c)
     registerCollection("Table3", data3, type3, nullablesOfData3, 'a, 'b, 'c)

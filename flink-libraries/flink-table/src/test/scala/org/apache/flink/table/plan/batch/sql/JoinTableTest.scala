@@ -243,7 +243,7 @@ class JoinTableTest extends TableTestBatchExecBase {
   @Test
   def testReusing(): Unit = {
     testUtil.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, true)
     val sql1 =
       """
         |SELECT b, a, sum(c) c, sum(d) d

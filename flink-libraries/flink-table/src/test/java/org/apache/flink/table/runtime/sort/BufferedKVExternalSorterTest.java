@@ -71,7 +71,7 @@ public class BufferedKVExternalSorterTest {
 		ioManager = useBufferedIO ? new IOManagerAsync(1024 * 1024, 1024 * 1024) : new IOManagerAsync();
 		conf = new Configuration();
 		if (!spillCompress) {
-			conf.setBoolean(TableConfigOptions.SQL_EXEC_SPILL_COMPRESSION_ENABLE, false);
+			conf.setBoolean(TableConfigOptions.SQL_EXEC_SPILL_COMPRESSION_ENABLED, false);
 		}
 		this.spillNumber = spillNumber;
 		this.recordNumberPerFile = recordNumberPerFile;

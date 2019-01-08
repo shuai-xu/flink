@@ -162,7 +162,7 @@ class BatchExecOverAggregate(
           if (isAllFieldsFromInput) {
             val tableConfig = FlinkRelOptUtil.getTableConfig(this)
             if (tableConfig.getConf.getBoolean(
-              TableConfigOptions.SQL_CBO_AGG_SHUFFLE_BY_PARTIALKEY_ENABLED)) {
+              TableConfigOptions.SQL_OPTIMIZER_SHUFFLE_PARTIAL_KEY_ENABLED)) {
               ImmutableIntList.of(grouping: _*).containsAll(requiredDistribution.getKeys)
             } else {
               requiredDistribution.getKeys == ImmutableIntList.of(grouping: _*)

@@ -51,7 +51,7 @@ class ScalarQueryITCase extends QueryTest with JoinITCaseBase {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
     registerCollection("l", l, INT_DOUBLE, "a, b", Seq(true, true))
     registerCollection("r", r, INT_DOUBLE, "c, d", Seq(true, true))
   }

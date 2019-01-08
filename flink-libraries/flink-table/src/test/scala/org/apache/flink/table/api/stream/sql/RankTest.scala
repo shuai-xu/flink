@@ -374,7 +374,7 @@ class RankTest extends TableTestBase {
       streamUtil.tableEnv.getConfig.getConf.setBoolean(
         TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_ENABLED, true)
     streamUtil.tableEnv.getConfig.getConf.setLong(
-      TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_MINSIZE, 20L)
+      TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_SIZE_MIN, 20L)
 
     streamUtil.verifyPlanAndTrait(sql)
   }
@@ -494,9 +494,9 @@ class RankTest extends TableTestBase {
     streamUtil.tableEnv.getConfig.getConf.setLong(
       TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
     streamUtil.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_AGG_PARTIAL_ENABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_DATA_SKEW_DISTINCT_AGG, true)
     streamUtil.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_AGG_INCREMENTAL_ENABLED, false)
+      TableConfigOptions.SQL_EXEC_INCREMENTAL_AGG_ENABLED, false)
 
     val subquery =
       """

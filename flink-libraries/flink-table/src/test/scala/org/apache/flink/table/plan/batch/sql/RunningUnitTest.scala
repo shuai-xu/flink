@@ -52,7 +52,7 @@ class RunningUnitTest extends TableTestBatchExecBase {
   @Test
   def testSortMergeJoin(): Unit = {
     util.tableEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin, HashJoin")
+      TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "NestedLoopJoin, HashJoin")
     val sqlQuery = "SELECT sum(b)  FROM x, y WHERE a = d"
     util.verifyPlanWithRunningUnit(sqlQuery)
   }
@@ -61,7 +61,7 @@ class RunningUnitTest extends TableTestBatchExecBase {
   def testLeftSemi(): Unit = {
     util.disableBroadcastHashJoin()
     util.tableEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin")
+      TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "NestedLoopJoin")
     util.tableEnv.alterTableStats("x", Some(TableStats(2L)))
     util.tableEnv.alterTableStats("y", Some(TableStats(200000L)))
     val sqlQuery = "SELECT * FROM x WHERE a IN (SELECT d FROM y)"
@@ -71,11 +71,11 @@ class RunningUnitTest extends TableTestBatchExecBase {
   @Test
   def testReusedNodeIsBarrierNode(): Unit = {
     util.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, true)
     util.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, false)
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED, false)
     util.tableEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,SortMergeJoin")
+      TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "HashJoin,SortMergeJoin")
     val sqlQuery =
       """
         |WITH r AS (SELECT c, SUM(a) a, SUM(b) b FROM x GROUP BY c)
@@ -87,9 +87,9 @@ class RunningUnitTest extends TableTestBatchExecBase {
   @Test
   def testReuseSubPlan_SetExchangeAsBatch(): Unit = {
     util.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, true)
     util.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED, true)
     val sqlQuery =
       """
         |WITH t AS (SELECT x.a AS a, x.b AS b, y.d AS d, y.e AS e FROM x, y WHERE x.a = y.d)
@@ -112,7 +112,7 @@ class RunningUnitTest extends TableTestBatchExecBase {
   @Test
   def testUnionAllWithExternalShuffle(): Unit = {
     util.tableEnv.config.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_ALL_DATA_EXCHANGE_MODE_BATCH, true)
+      TableConfigOptions.SQL_EXEC_DATA_EXCHANGE_MODE_ALL_BATCH, true)
     util.addTable("z", CommonTestData.get3Source(Array("a", "b", "c")))
     val sqlQuery = "SELECT sum(a) FROM (" +
         "SELECT a, c FROM x UNION ALL (SELECT a, c FROM z))" +

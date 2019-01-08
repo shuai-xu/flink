@@ -53,7 +53,7 @@ class SortITCase(mode: StateBackendMode)
     tEnv.registerTable("a", da)
 
     val sink = new TestingRetractSink
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_NON_TEMPORAL_SORT_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_NON_TEMPORAL_ENABLED, true)
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
     results.addSink(sink).setParallelism(1)
     env.execute()
@@ -83,7 +83,7 @@ class SortITCase(mode: StateBackendMode)
     tEnv.registerTable("a", da)
 
     val sink = new TestingRetractSink
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_NON_TEMPORAL_SORT_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_NON_TEMPORAL_ENABLED, true)
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
     results.addSink(sink).setParallelism(1)
     env.execute()
@@ -113,7 +113,7 @@ class SortITCase(mode: StateBackendMode)
     tEnv.registerTable("a", da)
 
     val sink = new TestingRetractSink
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_NON_TEMPORAL_SORT_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_NON_TEMPORAL_ENABLED, true)
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
     results.addSink(sink).setParallelism(1)
     env.execute()
@@ -143,7 +143,7 @@ class SortITCase(mode: StateBackendMode)
     tEnv.registerTable("a", da)
 
     val sink = new TestingRetractSink
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_NON_TEMPORAL_SORT_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_NON_TEMPORAL_ENABLED, true)
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
     results.addSink(sink).setParallelism(1)
     env.execute()
@@ -179,7 +179,7 @@ class SortITCase(mode: StateBackendMode)
     tEnv.registerTable("a", da)
 
     val sink = new TestingRetractSink
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_NON_TEMPORAL_SORT_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_NON_TEMPORAL_ENABLED, true)
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
     results.addSink(sink).setParallelism(1)
     env.execute()
@@ -209,7 +209,7 @@ class SortITCase(mode: StateBackendMode)
     tEnv.registerTable("a", da)
 
     val sink = new TestingRetractSink
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_NON_TEMPORAL_SORT_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_NON_TEMPORAL_ENABLED, true)
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
     results.addSink(sink).setParallelism(1)
     env.execute()

@@ -61,12 +61,12 @@ public class ParallelismCalculatorOnStatisticsTest {
 	public void setUp() {
 		tableConf = new Configuration();
 		mq = mock(RelMetadataQuery.class);
-		tableConf.setLong(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION, 100);
-		tableConf.setInteger(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION, 100);
-		tableConf.setInteger(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM, 50);
-		tableConf.setInteger(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM, 100);
+		tableConf.setLong(TableConfigOptions.SQL_RESOURCE_INFER_ROWS_PER_PARTITION, 100);
+		tableConf.setInteger(TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_MB_PER_PARTITION, 100);
+		tableConf.setInteger(TableConfigOptions.SQL_RESOURCE_INFER_OPERATOR_PARALLELISM_MAX, 50);
+		tableConf.setInteger(TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_PARALLELISM_MAX, 100);
 		tableConf.setInteger(ExecResourceUtil.SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM, 5);
-		tableConf.setString(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE, ExecResourceUtil.InferMode.ALL.toString());
+		tableConf.setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, ExecResourceUtil.InferMode.ALL.toString());
 
 		when(mq.getRowCount(scanParallelism30)).thenReturn(3000d);
 		when(mq.getAverageRowSize(scanParallelism30)).thenReturn(4d);

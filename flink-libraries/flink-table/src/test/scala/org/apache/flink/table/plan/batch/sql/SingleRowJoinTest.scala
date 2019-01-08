@@ -31,7 +31,7 @@ class SingleRowJoinTest extends TableTestBatchExecBase {
   @Before
   def before(): Unit = {
     util.getTableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED, true)
     util.addTable[(Int, Long)]("A", 'a1, 'a2)
     util.addTable[(Int, Long)]("B", 'b1, 'b2)
   }

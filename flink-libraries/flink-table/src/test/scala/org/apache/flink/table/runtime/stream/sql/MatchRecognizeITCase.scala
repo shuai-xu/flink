@@ -144,7 +144,7 @@ class MatchRecognizeITCase(backend: StateBackendMode) extends StreamingWithState
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
     val tableConfig = new TableConfig
-    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH, 1)
+    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX, 1)
     val tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
 
     val data = new mutable.MutableList[(Int, String, String, String)]
@@ -483,7 +483,7 @@ class MatchRecognizeITCase(backend: StateBackendMode) extends StreamingWithState
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
     val tableConfig = new TableConfig
-    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH, 1)
+    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX, 1)
     val tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
 
     val data = new mutable.MutableList[(Int, String, Long, Double, Int)]
@@ -546,7 +546,7 @@ class MatchRecognizeITCase(backend: StateBackendMode) extends StreamingWithState
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
     val tableConfig = new TableConfig
-    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH, 1)
+    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX, 1)
     val tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
 
     val data = new mutable.MutableList[Row]
@@ -683,7 +683,7 @@ class MatchRecognizeITCase(backend: StateBackendMode) extends StreamingWithState
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
     val tableConfig = new TableConfig
-    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH, 1)
+    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX, 1)
     val tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
 
     val data = new mutable.MutableList[(Int, String, Long)]
@@ -739,7 +739,7 @@ class MatchRecognizeITCase(backend: StateBackendMode) extends StreamingWithState
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
     val tableConfig = new TableConfig
-    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH, 1)
+    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX, 1)
     val tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
 
     val data = new mutable.MutableList[(Int, String, Int)]
@@ -802,7 +802,7 @@ class MatchRecognizeITCase(backend: StateBackendMode) extends StreamingWithState
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
     val tableConfig = new TableConfig
-    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH, 1)
+    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX, 1)
     val tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
 
     val data = new mutable.MutableList[(String, Long, Int, Int)]
@@ -854,7 +854,7 @@ class MatchRecognizeITCase(backend: StateBackendMode) extends StreamingWithState
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
     val tableConfig = new TableConfig
-    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH, 1)
+    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX, 1)
     val tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
 
     val data = new mutable.MutableList[(String, Long, Int)]
@@ -906,7 +906,7 @@ class MatchRecognizeITCase(backend: StateBackendMode) extends StreamingWithState
     env.setParallelism(1)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tableConfig = new TableConfig
-    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH, 1)
+    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX, 1)
     val tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
 
     val data = new mutable.MutableList[Either[(Long, (String, Int, Int)), Long]]
@@ -962,7 +962,7 @@ class MatchRecognizeITCase(backend: StateBackendMode) extends StreamingWithState
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
     val tableConfig = new TableConfig
-    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH, 1)
+    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX, 1)
     val tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
 
     val data = new mutable.MutableList[(Int, String)]
@@ -1012,7 +1012,7 @@ class MatchRecognizeITCase(backend: StateBackendMode) extends StreamingWithState
     env.setParallelism(1)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tableConfig = new TableConfig
-    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH, 1)
+    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX, 1)
     val tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
 
     val data = new mutable.MutableList[Either[(Long, (String, Int, Int)), Long]]
@@ -1073,7 +1073,7 @@ class MatchRecognizeITCase(backend: StateBackendMode) extends StreamingWithState
     env.setParallelism(1)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tableConfig = new TableConfig
-    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH, 1)
+    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX, 1)
     val tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
 
     val data = new mutable.MutableList[Either[(Long, (String, Int, Int)), Long]]
@@ -1137,7 +1137,7 @@ class MatchRecognizeITCase(backend: StateBackendMode) extends StreamingWithState
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
     val tableConfig = new TableConfig
-    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH, 1)
+    tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX, 1)
     val tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
 
     val data = new mutable.MutableList[(Int, String)]

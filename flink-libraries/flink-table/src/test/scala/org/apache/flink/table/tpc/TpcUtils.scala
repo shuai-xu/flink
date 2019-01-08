@@ -64,22 +64,22 @@ object TpcUtils {
   def disableBroadcastHashJoin(tEnv: BatchTableEnvironment): Unit = {
     val config = new Configuration()
     config.addAll(tEnv.getConfig.getConf)
-    config.setLong(TableConfigOptions.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
+    config.setLong(TableConfigOptions.SQL_EXEC_HASH_JOIN_BROADCAST_THRESHOLD, -1)
     tEnv.getConfig.setConf(config)
   }
 
   def disableRangeSort(tEnv: BatchTableEnvironment): Unit = {
     val config = new Configuration()
     config.addAll(tEnv.getConfig.getConf)
-    config.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, false)
+    config.setBoolean(TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED, false)
     tEnv.getConfig.setConf(config)
   }
 
   def disableParquetFilterPushDown(tEnv: BatchTableEnvironment): Unit = {
     val config = new Configuration()
     config.addAll(tEnv.getConfig.getConf)
-    config.setBoolean(TableConfigOptions.SQL_EXEC_SOURCE_PARQUET_ENABLE_PREDICATE_PUSHDOWN, false)
-    config.getBoolean(TableConfigOptions.SQL_EXEC_SOURCE_ORC_ENABLE_PREDICATE_PUSHDOWN, false)
+    config.setBoolean(TableConfigOptions.SQL_PARQUET_PREDICATE_PUSHDOWN_ENABLED, false)
+    config.getBoolean(TableConfigOptions.SQL_ORC_PREDICATE_PUSHDOWN_ENABLED, false)
     tEnv.getConfig.setConf(config)
   }
 

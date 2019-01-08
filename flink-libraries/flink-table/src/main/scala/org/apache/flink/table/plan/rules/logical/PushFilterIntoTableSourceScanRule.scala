@@ -54,11 +54,11 @@ class PushFilterIntoTableSourceScanRule extends RelOptRule(
             //FIXME This is not a very elegant solution.
             val tableConfig = scan.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
             tableConfig.getConf.getBoolean(
-              TableConfigOptions.SQL_EXEC_SOURCE_PARQUET_ENABLE_PREDICATE_PUSHDOWN)
+              TableConfigOptions.SQL_PARQUET_PREDICATE_PUSHDOWN_ENABLED)
           case source: OrcTableSource[_] if !source.isFilterPushedDown =>
             val tableConfig = scan.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
             tableConfig.getConf.getBoolean(
-              TableConfigOptions.SQL_EXEC_SOURCE_ORC_ENABLE_PREDICATE_PUSHDOWN)
+              TableConfigOptions.SQL_ORC_PREDICATE_PUSHDOWN_ENABLED)
           case source: FilterableTableSource if !source.isFilterPushedDown => true
           case _ => false
         }

@@ -73,7 +73,7 @@ public class ExecResourceUtil {
 
 	public static double getDefaultCpu(Configuration tableConf) {
 		return tableConf.getDouble(
-				TableConfigOptions.SQL_EXEC_DEFAULT_CPU);
+				TableConfigOptions.SQL_RESOURCE_DEFAULT_CPU);
 	}
 
 	/**
@@ -83,7 +83,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getOperatorDefaultParallelism(Configuration tableConf, int envParallelism) {
 		int parallelism = tableConf.getInteger(
-				TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM);
+				TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM);
 		if (parallelism <= 0) {
 			parallelism = envParallelism;
 		}
@@ -120,7 +120,7 @@ public class ExecResourceUtil {
 
 	public static int getDefaultHeapMem(Configuration tableConf) {
 		return tableConf.getInteger(
-				TableConfigOptions.SQL_EXEC_DEFAULT_MEM);
+				TableConfigOptions.SQL_RESOURCE_DEFAULT_MEM);
 	}
 
 	/**
@@ -130,7 +130,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getSortBufferManagedMemory(Configuration tableConf) {
 		return tableConf.getInteger(
-				TableConfigOptions.SQL_EXEC_SORT_BUFFER_MEM);
+				TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM);
 	}
 
 	/**
@@ -140,7 +140,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getSortBufferManagedPreferredMemory(Configuration tableConf) {
 		return tableConf.getInteger(
-				TableConfigOptions.SQL_EXEC_SORT_PREFER_BUFFER_MEM);
+				TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM_PREFER);
 	}
 
 	/**
@@ -150,7 +150,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getSortBufferManagedMaxMemory(Configuration tableConf) {
 		return tableConf.getInteger(
-				TableConfigOptions.SQL_EXEC_SORT_MAX_BUFFER_MEM);
+				TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM_MAX);
 	}
 
 	/**
@@ -160,7 +160,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getExternalBufferManagedMemory(Configuration tableConf) {
 		return tableConf.getInteger(
-				TableConfigOptions.SQL_EXEC_EXTERNAL_BUFFER_MEM);
+				TableConfigOptions.SQL_RESOURCE_EXTERNAL_BUFFER_MEM);
 	}
 
 	/**
@@ -169,7 +169,7 @@ public class ExecResourceUtil {
 	 * @return the config managedMemory for hashJoin table.
 	 */
 	public static int getHashJoinTableManagedMemory(Configuration tableConf) {
-		return tableConf.getInteger(TableConfigOptions.SQL_EXEC_HASH_JOIN_TABLE_MEM);
+		return tableConf.getInteger(TableConfigOptions.SQL_RESOURCE_HASH_JOIN_TABLE_MEM);
 	}
 
 	/**
@@ -179,7 +179,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getSourceMem(Configuration tableConf) {
 		return tableConf.getInteger(
-				TableConfigOptions.SQL_EXEC_SOURCE_MEM);
+				TableConfigOptions.SQL_RESOURCE_SOURCE_DEFAULT_MEM);
 	}
 
 	/**
@@ -189,7 +189,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getSourceParallelism(Configuration tableConf, int envParallelism) {
 		int parallelism = tableConf.getInteger(
-				TableConfigOptions.SQL_EXEC_SOURCE_PARALLELISM);
+				TableConfigOptions.SQL_RESOURCE_SOURCE_PARALLELISM);
 		if (parallelism <= 0) {
 			parallelism = getOperatorDefaultParallelism(tableConf, envParallelism);
 		}
@@ -202,7 +202,7 @@ public class ExecResourceUtil {
 	 * @return the config parallelism for sink.
 	 */
 	public static int getSinkParallelism(Configuration tableConf) {
-		return tableConf.getInteger(TableConfigOptions.SQL_EXEC_SINK_PARALLELISM);
+		return tableConf.getInteger(TableConfigOptions.SQL_RESOURCE_SINK_PARALLELISM);
 	}
 
 	/**
@@ -212,7 +212,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getSinkMem(Configuration tableConf) {
 		return tableConf.getInteger(
-				TableConfigOptions.SQL_EXEC_SINK_MEM);
+				TableConfigOptions.SQL_RESOURCE_SINK_DEFAULT_MEM);
 	}
 
 	/**
@@ -222,7 +222,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getHashAggManagedMemory(Configuration tableConf) {
 		return tableConf.getInteger(
-				TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM);
+				TableConfigOptions.SQL_RESOURCE_HASH_AGG_TABLE_MEM);
 	}
 
 	/**
@@ -232,7 +232,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getWindowAggBufferLimitSize(Configuration tableConf) {
 		return tableConf.getInteger(
-				TableConfigOptions.SQL_EXEC_WINDOW_AGG_BUFFER_LIMIT_SIZE);
+				TableConfigOptions.SQL_EXEC_WINDOW_AGG_BUFFER_SIZE_LIMIT);
 	}
 
 	/**
@@ -242,7 +242,7 @@ public class ExecResourceUtil {
 	 */
 	public static long getRelCountPerPartition(Configuration tableConf) {
 		return tableConf.getLong(
-				TableConfigOptions.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION);
+				TableConfigOptions.SQL_RESOURCE_INFER_ROWS_PER_PARTITION);
 	}
 
 	/**
@@ -252,7 +252,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getSourceSizePerPartition(Configuration tableConf) {
 		return tableConf.getInteger(
-				TableConfigOptions.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION);
+				TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_MB_PER_PARTITION);
 	}
 
 	/**
@@ -262,7 +262,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getSourceMaxParallelism(Configuration tableConf) {
 		return tableConf.getInteger(
-				TableConfigOptions.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM);
+				TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_PARALLELISM_MAX);
 	}
 
 	/**
@@ -272,7 +272,7 @@ public class ExecResourceUtil {
 	 */
 	public static int getOperatorMaxParallelism(Configuration tableConf) {
 		return tableConf.getInteger(
-				TableConfigOptions.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM);
+				TableConfigOptions.SQL_RESOURCE_INFER_OPERATOR_PARALLELISM_MAX);
 	}
 
 	/**
@@ -346,7 +346,7 @@ public class ExecResourceUtil {
 		}
 
 		int maxMem = tableConf.getInteger(
-				TableConfigOptions.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB);
+				TableConfigOptions.SQL_RESOURCE_INFER_OPERATOR_MEM_MAX);
 
 		int minMem = getOperatorMinManagedMem(tableConf);
 
@@ -368,7 +368,7 @@ public class ExecResourceUtil {
 	 * Whether to enable schedule with runningUnit.
 	 */
 	public static boolean enableRunningUnitSchedule(Configuration tableConf) {
-		return tableConf.getBoolean(TableConfigOptions.SQL_SCHEDULE_RUNNING_UNIT_ENABLE);
+		return tableConf.getBoolean(TableConfigOptions.SQL_SCHEDULE_RUNNING_UNIT_ENABLED);
 	}
 
 	/**
@@ -380,7 +380,7 @@ public class ExecResourceUtil {
 
 	public static InferMode getInferMode(Configuration tableConf) {
 		String config = tableConf.getString(
-				TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE);
+				TableConfigOptions.SQL_RESOURCE_INFER_MODE);
 		try {
 			return InferMode.valueOf(config);
 		} catch (IllegalArgumentException ex) {

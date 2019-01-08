@@ -34,7 +34,7 @@ class SortDistinctAggITCase
     extends DistinctAggregateITCaseBase("SortAggregate") {
   override def prepareAggOp(): Unit = {
     tEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+      TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "HashAgg")
 
     registerFunction("countFun", new CountAggFunction())
     registerFunction("intSumFun", new IntSumAggFunction())

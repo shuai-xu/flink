@@ -98,7 +98,7 @@ class FlinkILoop(
     val scalaBenv = new ExecutionEnvironment(remoteBenv)
     val scalaSenv = new StreamExecutionEnvironment(remoteSenv)
     val scalaBTEnv = TableEnvironment.getBatchTableEnvironment(scalaSenv)
-    scalaBTEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM,1)
+    scalaBTEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM,1)
     val scalaSTEnv = TableEnvironment.getTableEnvironment(scalaSenv)
     (scalaBenv,scalaSenv,scalaBTEnv,scalaSTEnv)
   }

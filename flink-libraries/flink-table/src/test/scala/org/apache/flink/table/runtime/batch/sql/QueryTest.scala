@@ -459,14 +459,14 @@ object QueryTest {
   }
 
   def initConfigForTest(conf: TableConfig): TableConfig = {
-    conf.getConf.setString(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE,
+    conf.getConf.setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE,
       InferMode.ONLY_SOURCE.toString)
-    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
-    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_BUFFER_MEM, 5)
-    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_HASH_JOIN_TABLE_MEM, 5)
-    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM, 5)
-    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_MEM, 1)
-    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_EXTERNAL_BUFFER_MEM, 2)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM, 5)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_HASH_JOIN_TABLE_MEM, 5)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_HASH_AGG_TABLE_MEM, 5)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_MEM, 1)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_EXTERNAL_BUFFER_MEM, 2)
     //dynamic allocate memory.
     conf.getConf.setInteger(ExecResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 1)
     conf

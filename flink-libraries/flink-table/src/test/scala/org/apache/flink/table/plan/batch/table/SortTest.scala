@@ -31,7 +31,7 @@ class SortTest extends TableTestBatchExecBase {
 
   @Before
   def setup(): Unit = {
-    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, true)
+    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED, true)
   }
 
   @Test

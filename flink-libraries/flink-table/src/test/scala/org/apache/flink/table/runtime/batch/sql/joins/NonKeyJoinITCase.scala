@@ -30,7 +30,7 @@ class NonKeyJoinITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
     registerCollection("testData", intStringData, INT_STRING, "a, b", nullablesOfIntStringData)
     registerCollection("testData2", intIntData2, INT_INT, "c, d", nullablesOfIntIntData2)
     registerCollection("testData3", intIntData3, INT_INT, "e, f", nullablesOfIntIntData3)

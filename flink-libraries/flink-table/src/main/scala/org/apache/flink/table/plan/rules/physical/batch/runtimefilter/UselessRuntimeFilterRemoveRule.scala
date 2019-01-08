@@ -55,10 +55,10 @@ class UselessRuntimeFilterRemoveRule extends RelOptRule(
     val conf = FlinkRelOptUtil.getTableConfig(calc)
 
     val minProbeRowCount = conf.getConf.getLong(
-      TableConfigOptions.SQL_RUNTIME_FILTER_PROBE_ROW_COUNT_MIN)
+      TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_PROBE_ROW_COUNT_MIN)
 
     val maxRowCountRatio = conf.getConf.getDouble(
-      TableConfigOptions.SQL_RUNTIME_FILTER_BUILD_PROBE_ROW_COUNT_RATIO_MAX)
+      TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_BUILD_PROBE_ROW_COUNT_RATIO_MAX)
 
     val rfs = findRuntimeFilters(calc.getProgram)
         .map(_.getOperator.asInstanceOf[SqlRuntimeFilterFunction])
@@ -94,7 +94,7 @@ object UselessRuntimeFilterRemoveRule {
       probeNdv: lang.Double) = {
 
     val minProbeFilter = conf.getConf.getDouble(
-      TableConfigOptions.SQL_RUNTIME_FILTER_PROBE_FILTER_DEGREE_MIN)
+      TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_PROBE_FILTER_DEGREE_MIN)
 
     val minFpp = getMinSuitableFpp(conf, probeRowCount, buildNdv)
 
@@ -110,10 +110,10 @@ object UselessRuntimeFilterRemoveRule {
       buildNdv: lang.Double): Double = {
 
     val ratioOfRowAndBits = conf.getConf.getInteger(
-      TableConfigOptions.SQL_RUNTIME_FILTER_ROW_COUNT_NUM_BITS_RATIO)
+      TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_ROW_COUNT_NUM_BITS_RATIO)
 
     val confMaxNumOfBits = conf.getConf.getInteger(
-      TableConfigOptions.SQL_RUNTIME_FILTER_SIZE_MAX_MB) * 1024L * 1024L * 8L
+      TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_SIZE_MAX) * 1024L * 1024L * 8L
 
     val maxNumOfBits = Math.min(probeRowCount / ratioOfRowAndBits, confMaxNumOfBits)
 

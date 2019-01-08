@@ -285,7 +285,7 @@ class ExplainTest extends TableTestBase {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
     conf.getConf.setBoolean(
-      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_SUBSECTION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env, conf)
 
@@ -328,7 +328,7 @@ class ExplainTest extends TableTestBase {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
     conf.getConf.setBoolean(
-      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_SUBSECTION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env, conf)
 
@@ -403,7 +403,7 @@ class ExplainTest extends TableTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
     tEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_SUBSECTION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
@@ -428,7 +428,7 @@ class ExplainTest extends TableTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
     tEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_SUBSECTION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
@@ -455,7 +455,7 @@ class ExplainTest extends TableTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
     tEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_SUBSECTION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
     tEnv.registerDataStream("t3", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
@@ -483,7 +483,7 @@ class ExplainTest extends TableTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
     tEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_SUBSECTION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
@@ -512,7 +512,7 @@ class ExplainTest extends TableTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
     tEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_SUBSECTION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
@@ -538,7 +538,7 @@ class ExplainTest extends TableTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
     tEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_SUBSECTION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
@@ -561,7 +561,7 @@ class ExplainTest extends TableTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
     tEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_SUBSECTION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
 
     tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
     tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)

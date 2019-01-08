@@ -35,10 +35,10 @@ class RemoveRedundantLocalHashAggRuleTest extends TableTestBatchExecBase {
   @Test
   def testRemoveRedundantLocalHashAgg(): Unit = {
     util.tableEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortMergeJoin,NestedLoopJoin,SortAgg")
+      TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "SortMergeJoin,NestedLoopJoin,SortAgg")
     // disable BroadcastHashJoin
     util.tableEnv.getConfig.getConf.setLong(
-      TableConfigOptions.SQL_HASH_JOIN_BROADCAST_THRESHOLD, -1)
+      TableConfigOptions.SQL_EXEC_HASH_JOIN_BROADCAST_THRESHOLD, -1)
     val sqlQuery =
       """
         |WITH r AS (SELECT * FROM x, y WHERE a = d AND c LIKE 'He%')
@@ -50,9 +50,9 @@ class RemoveRedundantLocalHashAggRuleTest extends TableTestBatchExecBase {
   @Test
   def testRemoveRedundantLocalHashAgg1(): Unit = {
     util.tableEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
+      TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "SortAgg")
     util.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_CBO_RANK_SHUFFLE_BY_PARTIALKEY_ENABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_SHUFFLE_PARTIAL_KEY_ENABLED, true)
     val sqlQuery =
       """
         |SELECT a, SUM(b) FROM (

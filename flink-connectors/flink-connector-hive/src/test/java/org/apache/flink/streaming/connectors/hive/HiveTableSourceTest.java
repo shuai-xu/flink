@@ -43,8 +43,8 @@ public class HiveTableSourceTest {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(1, config);
 		env.setParallelism(1);
 		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SINK_PARALLELISM, 1);
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_SINK_PARALLELISM, 1);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1);
 		tEnv.registerCatalog("myHive", new HiveCatalog("myHive", "thrift://10.101.72.41:9083"));
 		tEnv.setDefaultDatabase("myHive", "default");
 		tEnv.sqlQuery("select * from products").print();
@@ -56,8 +56,8 @@ public class HiveTableSourceTest {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(1, config);
 		env.setParallelism(1);
 		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SINK_PARALLELISM, 1);
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_SINK_PARALLELISM, 1);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1);
 		tEnv.registerCatalog("myHive", new HiveCatalog("myHive", "thrift://10.101.72.41:9083"));
 		tEnv.setDefaultDatabase("myHive", "default");
 //		tEnv.sqlQuery("select * from products").print();
@@ -71,8 +71,8 @@ public class HiveTableSourceTest {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(1, config);
 		env.setParallelism(1);
 		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SINK_PARALLELISM, 1);
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_SINK_PARALLELISM, 1);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1);
 		tEnv.registerCatalog("myHive", new HiveCatalog("myHive", "thrift://10.101.72.41:9083"));
 		tEnv.setDefaultDatabase("myHive", "default");
 		Table table = tEnv.sqlQuery("select * from pt_area_products where ds = '2018-12-25'");

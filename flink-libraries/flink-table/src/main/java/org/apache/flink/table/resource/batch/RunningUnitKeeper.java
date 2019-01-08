@@ -90,7 +90,7 @@ public class RunningUnitKeeper {
 		}
 		// not support subsectionOptimization or external shuffle temporarily
 		if (tableEnv.getConfig().getSubsectionOptimization()
-				|| getTableConf().getBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE)) {
+				|| getTableConf().getBoolean(TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED)) {
 			supportRunningUnit = false;
 			return;
 		}
@@ -108,7 +108,7 @@ public class RunningUnitKeeper {
 	public void setScheduleConfig(StreamGraphGenerator.Context context) {
 		if (supportRunningUnit &&
 				ExecResourceUtil.enableRunningUnitSchedule(getTableConf()) &&
-				!getTableConf().getBoolean(TableConfigOptions.SQL_EXEC_ALL_DATA_EXCHANGE_MODE_BATCH)) {
+				!getTableConf().getBoolean(TableConfigOptions.SQL_EXEC_DATA_EXCHANGE_MODE_ALL_BATCH)) {
 			context.getConfiguration().setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, RunningUnitGraphManagerPlugin.class.getName());
 			try {
 				InstantiationUtil.writeObjectToConfig(runningUnits, context.getConfiguration(), RUNNING_UNIT_CONF_KEY);
@@ -140,7 +140,7 @@ public class RunningUnitKeeper {
 		RelFinalParallelismSetter.calculate(tableEnv, rootNode);
 		Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap = ShuffleStageGenerator.generate(rootNode);
 		getShuffleStageParallelismCalculator(mq, getTableConf(), inferMode).calculate(relShuffleStageMap.values());
-		Double cpuLimit = getTableConf().getDouble(TableConfigOptions.SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU);
+		Double cpuLimit = getTableConf().getDouble(TableConfigOptions.SQL_RESOURCE_RUNNING_UNIT_CPU_TOTAL);
 		if (cpuLimit > 0) {
 			RelParallelismAdjuster.adjustParallelism(cpuLimit, relResourceMap, relRunningUnitMap, relShuffleStageMap);
 		}

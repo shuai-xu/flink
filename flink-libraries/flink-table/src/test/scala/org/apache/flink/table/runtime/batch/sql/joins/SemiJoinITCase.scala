@@ -40,7 +40,7 @@ class SemiJoinITCase(
 
   @Before
   def before(): Unit = {
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 3)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
     registerCollection(
       "leftT", SemiJoinITCase.leftT, INT_DOUBLE, "a, b", SemiJoinITCase.nullablesOfLeftT)
     registerCollection(
@@ -67,7 +67,7 @@ class SemiJoinITCase(
   @Test
   def testSemiWithDistinct(): Unit = {
     tEnv.getConfig.getConf.setDouble(
-      TableConfigOptions.SQL_EXEC_SEMI_BUILD_DISTINCT_NDV_RATIO, 0.8D)
+      TableConfigOptions.SQL_OPTIMIZER_SEMI_JOIN_BUILD_DISTINCT_NDV_RATIO, 0.8D)
     val stats = TableStats(7L, Map[String, ColumnStats](
       "c" -> ColumnStats(4L, 0L, 4.0D, 4, 99, 0),
       "c" -> ColumnStats(3L, 0L, 4.0D, 4, 99, 0)))

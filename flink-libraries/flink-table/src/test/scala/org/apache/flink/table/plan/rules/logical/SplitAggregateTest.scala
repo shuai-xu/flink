@@ -43,7 +43,7 @@ class SplitAggregateTest(aggMode: AggMode) extends TableTestBase {
       "MyTable", 'a, 'b, 'c)
     val tableConfig = streamUtil.tableEnv.getConfig
     tableConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
-    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_AGG_PARTIAL_ENABLED, true)
+    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_DATA_SKEW_DISTINCT_AGG, true)
 
     aggMode match {
       case LocalGlobalOn => tableConfig.getConf.setBoolean(
@@ -207,7 +207,7 @@ class SplitAggregateTest(aggMode: AggMode) extends TableTestBase {
   @Test
   def testBucketsConfiguration(): Unit = {
     streamUtil.tableEnv.getConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_AGG_PARTIAL_BUCKET_NUM, 100)
+      TableConfigOptions.SQL_OPTIMIZER_DATA_SKEW_DISTINCT_AGG_BUCKET, 100)
     val sqlQuery = "SELECT COUNT(DISTINCT c) FROM MyTable"
     streamUtil.verifyPlan(sqlQuery)
   }

@@ -54,7 +54,7 @@ class FlinkLimitRemoveRuleITCase {
       """.stripMargin
 
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_VALUES_SOURCE_INPUT_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED, true)
     tEnv.sqlQuery(sql).writeToSink(tableSink)
     env.execute()
 
@@ -78,7 +78,7 @@ class FlinkLimitRemoveRuleITCase {
       """.stripMargin
 
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_VALUES_SOURCE_INPUT_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED, true)
     tEnv.sqlQuery(sql).writeToSink(tableSink)
     env.execute()
 
@@ -101,7 +101,7 @@ class FlinkLimitRemoveRuleITCase {
       """.stripMargin
 
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_VALUES_SOURCE_INPUT_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED, true)
     tEnv.sqlQuery(sql).writeToSink(tableSink)
     env.execute()
 
@@ -125,7 +125,7 @@ class FlinkLimitRemoveRuleITCase {
       """.stripMargin
 
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_VALUES_SOURCE_INPUT_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED, true)
     tEnv.sqlQuery(sql).writeToSink(tableSink)
     env.execute()
 
@@ -149,7 +149,7 @@ class FlinkLimitRemoveRuleITCase {
       """.stripMargin
 
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_VALUES_SOURCE_INPUT_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED, true)
     tEnv.sqlQuery(sql).writeToSink(tableSink)
     env.execute()
 
@@ -180,7 +180,7 @@ class FlinkLimitRemoveRuleITCase {
       """.stripMargin
 
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_VALUES_SOURCE_INPUT_ENABLED, true)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED, true)
     tEnv.sqlQuery(sql).writeToSink(tableSink)
     env.execute()
 

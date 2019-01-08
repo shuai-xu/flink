@@ -58,17 +58,17 @@ class TpchBenchmark extends QueryTest {
       tEnv.alterTableStats(tableName, Some(tableStats))
     }
     TpcUtils.disableParquetFilterPushDown(tEnv)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
-    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE,
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED, true)
+    tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE,
       InferMode.NONE.toString)
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_DEFAULT_LIMIT, -1)
 
-    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_BUFFER_MEM, 10)
-    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_HASH_JOIN_TABLE_MEM, 80)
-    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM, 80)
-    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_MEM, 10)
-    conf.getConf.setInteger(TableConfigOptions.SQL_EXEC_EXTERNAL_BUFFER_MEM, 10)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM, 10)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_HASH_JOIN_TABLE_MEM, 80)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_HASH_AGG_TABLE_MEM, 80)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_MEM, 10)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_EXTERNAL_BUFFER_MEM, 10)
   }
 
   @org.junit.Test

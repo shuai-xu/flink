@@ -36,7 +36,7 @@ class SemiJoinTransposeTest extends TableTestBatchExecBase {
     util.tableEnv.alterTableStats("T2", Some(TableStats(20000L)))
     util.tableEnv.alterTableStats("T3", Some(TableStats(30000L)))
     util.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED, true)
   }
 
   @Test

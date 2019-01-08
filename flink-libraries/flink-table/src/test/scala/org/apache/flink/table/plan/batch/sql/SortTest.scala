@@ -31,7 +31,7 @@ class SortTest extends TableTestBatchExecBase {
 
   @Before
   def setup(): Unit = {
-    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, true)
+    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED, true)
     util.addTable[(Int, Long, Long)]("MyTable", 'a, 'b, 'c)
   }
 
@@ -43,7 +43,7 @@ class SortTest extends TableTestBatchExecBase {
 
   @Test
   def testSortWithForcedSinglePartition(): Unit = {
-    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, false)
+    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED, false)
     tableConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_DEFAULT_LIMIT, -1)
 
     val sqlQuery = "SELECT a, c FROM MyTable ORDER BY a DESC"
@@ -53,15 +53,15 @@ class SortTest extends TableTestBatchExecBase {
   @Test
   def testSortWithForcedSinglePartitionAndLimit(): Unit = {
     val oldSortEnable = tableConfig.getConf.getBoolean(
-      TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE)
+      TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED)
     val oldLimitValue = tableConfig.getConf.getInteger(
       TableConfigOptions.SQL_EXEC_SORT_DEFAULT_LIMIT)
-    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, false)
+    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED, false)
     tableConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_DEFAULT_LIMIT, 200)
 
     val sqlQuery = "SELECT a, c FROM MyTable ORDER BY a DESC"
     util.verifyPlan(sqlQuery)
-    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE, oldSortEnable)
+    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED, oldSortEnable)
     tableConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_DEFAULT_LIMIT, oldLimitValue)
   }
 

@@ -50,7 +50,7 @@ class CodeSplitStreamITCase {
 
   val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
   val tableConfig = new TableConfig
-  tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH,1)
+  tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX,1)
   val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env, tableConfig)
 
   val data = new mutable.MutableList[(Int, Long, String)]

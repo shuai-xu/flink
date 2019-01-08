@@ -47,7 +47,7 @@ class IncrementalAggregateRule
 
     // whether incremental aggregate is enabled
     val incrAggEnabled = config.getConf.getBoolean(
-      TableConfigOptions.SQL_EXEC_AGG_INCREMENTAL_ENABLED)
+      TableConfigOptions.SQL_EXEC_INCREMENTAL_AGG_ENABLED)
 
     partialAgg.partialFinal == PartialFinalType.PARTIAL &&
       finalLocalAgg.partialFinal == PartialFinalType.FINAL &&

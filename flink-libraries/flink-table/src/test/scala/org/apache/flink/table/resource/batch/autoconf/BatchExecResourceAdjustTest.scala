@@ -34,7 +34,7 @@ class BatchExecResourceAdjustTest extends TableTestBatchExecBase {
     util = batchExecTestUtil()
     util.getTableEnv.getConfig.setSubsectionOptimization(false)
     util.getTableEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE,
+      TableConfigOptions.SQL_RESOURCE_INFER_MODE,
       ExecResourceUtil.InferMode.ALL.toString
     )
     BatchExecResourceTest.setResourceConfig(util.getTableEnv.getConfig)
@@ -90,7 +90,7 @@ class BatchExecResourceAdjustTest extends TableTestBatchExecBase {
       util: BatchExecTableTestUtil,
       cpu: Double): Unit = {
     util.getTableEnv.getConfig.getConf.setDouble(
-      TableConfigOptions.SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU,
+      TableConfigOptions.SQL_RESOURCE_RUNNING_UNIT_CPU_TOTAL,
       cpu
     )
   }

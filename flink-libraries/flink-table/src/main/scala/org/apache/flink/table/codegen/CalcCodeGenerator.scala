@@ -168,7 +168,7 @@ object CalcCodeGenerator {
 
       splitFunc = CodeGenUtils.generateSplitFunctionCalls(
         projectionExpression.codeBuffer,
-        config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
+        config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX),
         "calcProjectApply",
         "private final void",
         ctx.reuseFieldCode().length,

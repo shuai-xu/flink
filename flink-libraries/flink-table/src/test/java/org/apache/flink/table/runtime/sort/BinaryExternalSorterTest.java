@@ -70,10 +70,10 @@ public class BinaryExternalSorterTest {
 		ioManager = useBufferedIO ? new IOManagerAsync(1024 * 1024, 1024 * 1024) : new IOManagerAsync();
 		conf = new Configuration();
 		if (!spillCompress) {
-			conf.setBoolean(TableConfigOptions.SQL_EXEC_SPILL_COMPRESSION_ENABLE, false);
+			conf.setBoolean(TableConfigOptions.SQL_EXEC_SPILL_COMPRESSION_ENABLED, false);
 		}
 		if (asyncMerge) {
-			conf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ASYNC_MERGE_ENABLE, true);
+			conf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_ASYNC_MERGE_ENABLED, true);
 		}
 	}
 
@@ -104,7 +104,7 @@ public class BinaryExternalSorterTest {
 		this.memoryManager = new MemoryManager(MEMORY_SIZE, 1);
 		TypeInformation[] types = new TypeInformation[]{Types.INT, Types.STRING};
 		this.serializer = new BinaryRowSerializer(types);
-		this.conf.setInteger(TableConfigOptions.SQL_EXEC_SORT_MAX_NUM_FILE_HANDLES, 128);
+		this.conf.setInteger(TableConfigOptions.SQL_EXEC_SORT_FILE_HANDLES_MAX_NUM, 128);
 	}
 
 	@After
@@ -280,7 +280,7 @@ public class BinaryExternalSorterTest {
 
 		Tuple2<NormalizedKeyComputer, RecordComparator> tuple2 = getIntSortBase(0, true, "testSpilling");
 		long minMemorySize = memoryManager.computeNumberOfPages(0.01) * MemoryManager.DEFAULT_PAGE_SIZE;
-		conf.setInteger(TableConfigOptions.SQL_EXEC_SORT_MAX_NUM_FILE_HANDLES, 8);
+		conf.setInteger(TableConfigOptions.SQL_EXEC_SORT_FILE_HANDLES_MAX_NUM, 8);
 
 		BinaryExternalSorter sorter = new BinaryExternalSorter(
 			new Object(),

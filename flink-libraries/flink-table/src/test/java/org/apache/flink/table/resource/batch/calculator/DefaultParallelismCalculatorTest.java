@@ -53,9 +53,9 @@ public class DefaultParallelismCalculatorTest {
 	public void setUp() {
 		tableConf = new Configuration();
 		mq = mock(RelMetadataQuery.class);
-		tableConf.setString(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE, ExecResourceUtil.InferMode.ONLY_SOURCE.toString());
-		tableConf.setLong(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION, 100);
-		tableConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 50);
+		tableConf.setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, ExecResourceUtil.InferMode.ONLY_SOURCE.toString());
+		tableConf.setLong(TableConfigOptions.SQL_RESOURCE_INFER_ROWS_PER_PARTITION, 100);
+		tableConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 50);
 		when(mq.getRowCount(tableSourceScan)).thenReturn(3000d);
 		when(mq.getAverageRowSize(tableSourceScan)).thenReturn(4d);
 	}
@@ -88,8 +88,8 @@ public class DefaultParallelismCalculatorTest {
 
 	@Test
 	public void testEnvParallelism() {
-		tableConf.setString(TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE, ExecResourceUtil.InferMode.NONE.toString());
-		tableConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, -1);
+		tableConf.setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, ExecResourceUtil.InferMode.NONE.toString());
+		tableConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, -1);
 		ShuffleStage shuffleStage0 = mock(ShuffleStage.class);
 		BatchExecCalc calc = mock(BatchExecCalc.class);
 		when(shuffleStage0.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(tableSourceScan, calc)));

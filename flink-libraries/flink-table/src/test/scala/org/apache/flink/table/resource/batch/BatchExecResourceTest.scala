@@ -43,7 +43,7 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBatchExecBase {
   def before(): Unit = {
     util.getTableEnv.getConfig.setSubsectionOptimization(false)
     util.getTableEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE,
+      TableConfigOptions.SQL_RESOURCE_INFER_MODE,
       inferMode
     )
     val tableSchema1 = new TableSchema(
@@ -68,7 +68,7 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBatchExecBase {
   @Test
   def testSourcePartitionMaxNum(): Unit = {
     util.getTableEnv.getConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM,
+      TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_PARALLELISM_MAX,
       300
     )
     val sqlQuery = "SELECT * FROM SmallTable3"
@@ -84,7 +84,7 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBatchExecBase {
   @Test
   def testConfigSourceParallelism(): Unit = {
     util.getTableEnv.getConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_SOURCE_PARALLELISM, 100)
+      TableConfigOptions.SQL_RESOURCE_SOURCE_PARALLELISM, 100)
     val sqlQuery = "SELECT sum(a) as sum_a, c FROM SmallTable3 group by c order by c limit 2"
     util.verifyResource(sqlQuery)
   }
@@ -92,7 +92,7 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBatchExecBase {
   @Test
   def testRangePartition(): Unit ={
     util.getTableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_EXEC_SORT_ENABLE_RANGE,
+      TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED,
       true)
     val sqlQuery = "SELECT * FROM Table5 where d < 100 order by e"
     util.verifyResource(sqlQuery)
@@ -183,7 +183,7 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBatchExecBase {
   @Test
   def testEnvParallelism(): Unit ={
     util.getTableEnv.getConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM,
+      TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM,
       -1)
     when(util.getTableEnv.streamEnv.getParallelism).thenReturn(73)
     val customerSchema = TpcHSchemaProvider.getSchema("customer")
@@ -231,38 +231,38 @@ object BatchExecResourceTest {
 
   def setResourceConfig(tableConfig: TableConfig): Unit = {
     tableConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM,
+      TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM,
       18)
     tableConfig.getConf.setLong(
-      TableConfigOptions.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION,
+      TableConfigOptions.SQL_RESOURCE_INFER_ROWS_PER_PARTITION,
       2L)
     tableConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION,
+      TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_MB_PER_PARTITION,
       50000)
     tableConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM,
+      TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_PARALLELISM_MAX,
       1000)
     tableConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM,
+      TableConfigOptions.SQL_RESOURCE_INFER_OPERATOR_PARALLELISM_MAX,
       800)
     tableConfig.getConf.setInteger(
       ExecResourceUtil.SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM,
       20
     )
     tableConfig.getConf.setDouble(
-      TableConfigOptions.SQL_EXEC_DEFAULT_CPU,
+      TableConfigOptions.SQL_RESOURCE_DEFAULT_CPU,
       0.3
     )
     tableConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_SOURCE_MEM,
+      TableConfigOptions.SQL_RESOURCE_SOURCE_DEFAULT_MEM,
       52
     )
     tableConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_DEFAULT_MEM,
+      TableConfigOptions.SQL_RESOURCE_DEFAULT_MEM,
       46
     )
     tableConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MEM,
+      TableConfigOptions.SQL_RESOURCE_HASH_AGG_TABLE_MEM,
       33
     )
     tableConfig.getConf.setInteger(
@@ -270,7 +270,7 @@ object BatchExecResourceTest {
       37
     )
     tableConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_HASH_JOIN_TABLE_MEM,
+      TableConfigOptions.SQL_RESOURCE_HASH_JOIN_TABLE_MEM,
       43
     )
     tableConfig.getConf.setInteger(
@@ -278,19 +278,19 @@ object BatchExecResourceTest {
       47
     )
     tableConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_SORT_BUFFER_MEM,
+      TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM,
       53
     )
     tableConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_SORT_PREFER_BUFFER_MEM,
+      TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM_PREFER,
       57
     )
     tableConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_SORT_MAX_BUFFER_MEM,
+      TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM_MAX,
       57
     )
     tableConfig.getConf.setLong(
-      TableConfigOptions.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION,
+      TableConfigOptions.SQL_RESOURCE_INFER_ROWS_PER_PARTITION,
       1000000
     )
     tableConfig.getConf.setDouble(
@@ -298,7 +298,7 @@ object BatchExecResourceTest {
       0.5
     )
     tableConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB,
+      TableConfigOptions.SQL_RESOURCE_INFER_OPERATOR_MEM_MAX,
       470
     )
     tableConfig.getConf.setInteger(

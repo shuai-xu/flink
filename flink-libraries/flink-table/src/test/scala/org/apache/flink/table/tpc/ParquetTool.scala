@@ -44,8 +44,8 @@ class ParquetTool extends QueryTest{
       tEnv.registerTableSource(tableSourceName, csvTableSource)
 
       tEnv.getConfig.getConf.setString(
-        TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE, InferMode.NONE.toString)
-      tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1)
+        TableConfigOptions.SQL_RESOURCE_INFER_MODE, InferMode.NONE.toString)
+      tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
       tEnv.sqlQuery(s"SELECT * from $tableSourceName")
           .writeToSink(new ParquetTableSink(s"$parquetPath/$tableName"))
       tEnv.execute()

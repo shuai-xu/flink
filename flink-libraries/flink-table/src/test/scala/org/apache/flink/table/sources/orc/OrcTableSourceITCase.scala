@@ -133,7 +133,7 @@ class OrcTableSourceITCase(configMode: TableConfigMode, copyToFlink: CopyMode)
 
     val tableConfig = config
     tableConfig.getConf.setInteger(
-      TableConfigOptions.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM, 1)
+      TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_PARALLELISM_MAX, 1)
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getBatchTableEnvironment(env, tableConfig)

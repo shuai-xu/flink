@@ -31,9 +31,9 @@ class BroadcastHashJoinTest extends TableTestBatchExecBase {
   @Before
   def before(): Unit = {
     util.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED, true)
     util.tableEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortMergeJoin")
+      TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "SortMergeJoin")
   }
 
   @Test

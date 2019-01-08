@@ -66,7 +66,7 @@ object ExpandCodeGenerator {
 
     val splitFunc = CodeGenUtils.generateSplitFunctionCalls(
       processCodes,
-      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_MAX_LENGTH),
+      config.getConf.getInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX),
       "applyExpand",
       "private final void",
       ctx.reuseFieldCode().length,

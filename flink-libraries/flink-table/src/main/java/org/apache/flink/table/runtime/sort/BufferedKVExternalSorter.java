@@ -92,8 +92,8 @@ public class BufferedKVExternalSorter {
 		this.comparator = comparator;
 		this.pageSize = pageSize;
 		this.sorter = new QuickSort();
-		this.maxNumFileHandles = conf.getInteger(TableConfigOptions.SQL_EXEC_SORT_MAX_NUM_FILE_HANDLES);
-		this.compressionEnable = conf.getBoolean(TableConfigOptions.SQL_EXEC_SPILL_COMPRESSION_ENABLE);
+		this.maxNumFileHandles = conf.getInteger(TableConfigOptions.SQL_EXEC_SORT_FILE_HANDLES_MAX_NUM);
+		this.compressionEnable = conf.getBoolean(TableConfigOptions.SQL_EXEC_SPILL_COMPRESSION_ENABLED);
 		this.compressionCodecFactory = this.compressionEnable
 			? BlockCompressionFactoryLoader.createBlockCompressionFactory(conf.getString(
 				TableConfigOptions.SQL_EXEC_SPILL_COMPRESSION_CODEC), conf)

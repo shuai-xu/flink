@@ -74,9 +74,9 @@ public class BatchRelCpuHeapMemCalculatorTest extends MockRelTestBase {
 		 *                \         /
 		 *                 6, HashJoin
 		 */
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_SOURCE_MEM, 40);
-		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_MEM, 20);
-		tEnv.getConfig().getConf().setDouble(TableConfigOptions.SQL_EXEC_DEFAULT_CPU, 0.5);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_SOURCE_DEFAULT_MEM, 40);
+		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_MEM, 20);
+		tEnv.getConfig().getConf().setDouble(TableConfigOptions.SQL_RESOURCE_DEFAULT_CPU, 0.5);
 		createRelList(8);
 		BatchExecScan scan0 = mock(BatchExecBoundedStreamScan.class);
 		updateRel(0, scan0);

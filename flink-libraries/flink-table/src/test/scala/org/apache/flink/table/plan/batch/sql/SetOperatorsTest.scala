@@ -31,7 +31,7 @@ class SetOperatorsTest extends TableTestBatchExecBase {
   @Before
   def before(): Unit = {
     util.tableEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
+      TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "SortAgg")
     util.addTable[(Int, Long, String)]("T1", 'a, 'b, 'c)
     util.addTable[(Int, Long, String)]("T2", 'd, 'e, 'f)
   }

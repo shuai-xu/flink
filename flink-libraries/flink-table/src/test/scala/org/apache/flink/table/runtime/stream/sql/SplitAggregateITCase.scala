@@ -49,9 +49,11 @@ class SplitAggregateITCase(
     super.before()
 
     if (partialAggMode.isPartialAggEnabled) {
-      tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_AGG_PARTIAL_ENABLED, true)
+      tEnv.getConfig.getConf.setBoolean(
+        TableConfigOptions.SQL_OPTIMIZER_DATA_SKEW_DISTINCT_AGG, true)
     } else {
-      tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_AGG_PARTIAL_ENABLED, false)
+      tEnv.getConfig.getConf.setBoolean(
+        TableConfigOptions.SQL_OPTIMIZER_DATA_SKEW_DISTINCT_AGG, false)
     }
 
     val data = List(

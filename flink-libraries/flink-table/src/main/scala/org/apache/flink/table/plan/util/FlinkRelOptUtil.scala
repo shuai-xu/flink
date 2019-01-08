@@ -75,10 +75,10 @@ object FlinkRelOptUtil {
     val isPhysicalRel = rel.isInstanceOf[FlinkPhysicalRel]
     // only print reuse info of physical plan
     val (subplanReuseContext, newRel) = if (isPhysicalRel && config.getConf.getBoolean(
-          TableConfigOptions.SQL_EXEC_REUSE_SUB_PLAN_ENABLED)) {
+          TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED)) {
       val planWithoutSameRef = rel.accept(new SameRelObjectShuttle)
       (Some(new SubplanReuseContext(
-        !config.getConf.getBoolean(TableConfigOptions.SQL_EXEC_REUSE_TABLE_SOURCE_ENABLED),
+        !config.getConf.getBoolean(TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED),
         planWithoutSameRef)),
         planWithoutSameRef)
     } else {
@@ -208,7 +208,7 @@ object FlinkRelOptUtil {
 
   /** Get max cnf node limit by context of rel */
   def getMaxCnfNodeCount(rel: RelNode): Int = {
-    getTableConfig(rel).getConf.getInteger(TableConfigOptions.SQL_CBO_CNF_NODES_LIMIT)
+    getTableConfig(rel).getConf.getInteger(TableConfigOptions.SQL_OPTIMIZER_CNF_NODES_LIMIT)
   }
 
   /**

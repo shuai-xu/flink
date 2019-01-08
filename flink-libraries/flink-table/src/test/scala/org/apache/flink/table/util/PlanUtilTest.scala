@@ -55,12 +55,12 @@ class PlanUtilTest extends AbstractTestBase {
 
   @Before
   def before(): Unit = {
-    conf.getConf.setBoolean(TableConfigOptions.SQL_EXEC_COLLECT_OPERATOR_METRIC_ENABLED, true)
+    conf.getConf.setBoolean(TableConfigOptions.SQL_EXEC_OPERATOR_METRIC_DUMP_ENABLED, true)
     env = StreamExecutionEnvironment.getExecutionEnvironment
     tableEnv = TableEnvironment.getBatchTableEnvironment(env, conf)
-    tableEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 2)
+    tableEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 2)
     tableEnv.getConfig.getConf.setString(
-      TableConfigOptions.SQL_EXEC_INFER_RESOURCE_MODE,
+      TableConfigOptions.SQL_RESOURCE_INFER_MODE,
       InferMode.NONE.toString
     )
     tableEnv.getConfig.setCalciteConfig(CalciteConfig.createBuilder().build())
@@ -83,7 +83,8 @@ class PlanUtilTest extends AbstractTestBase {
 
   @Test
   def testDumpPlanWithMetricsOfJoin(): Unit = {
-    tableEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED, true)
+    tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED, true)
     val programs = FlinkBatchPrograms.buildPrograms(tableEnv.getConfig.getConf)
     val physicalProgram = programs.getFlinkRuleSetProgram(FlinkBatchPrograms.PHYSICAL)
     physicalProgram.get.remove(RuleSets.ofList(
@@ -150,7 +151,7 @@ class PlanUtilTest extends AbstractTestBase {
     * Sets dumpFileOfPlanWithMetrics to execute environment.
     */
   private def setDumpFileToConfig(): Unit = {
-    conf.getConf.setString(TableConfigOptions.SQL_EXEC_COLLECT_OPERATOR_METRIC_PATH, tmpFile)
+    conf.getConf.setString(TableConfigOptions.SQL_EXEC_OPERATOR_METRIC_DUMP_PATH, tmpFile)
     tableEnv.setupOperatorMetricCollect()
   }
 

@@ -149,7 +149,7 @@ class BatchExecHashJoinRule(joinClass: Class[_ <: Join])
       // add more possibility to only shuffle by partial joinKeys, now only single one
       val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])
       val isShuffleByPartialKeyEnabled = tableConfig.getConf.getBoolean(
-        TableConfigOptions.SQL_CBO_JOIN_SHUFFLE_BY_PARTIALKEY_ENABLED)
+        TableConfigOptions.SQL_OPTIMIZER_SHUFFLE_PARTIAL_KEY_ENABLED)
       if (isShuffleByPartialKeyEnabled && joinInfo.pairs().length > 1) {
         joinInfo.pairs().foreach { pair =>
           transformToEquiv(
@@ -177,7 +177,7 @@ class BatchExecHashJoinRule(joinClass: Class[_ <: Join])
       return (false, false)
     }
     val conf = join.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
-    val threshold = conf.getConf.getLong(TableConfigOptions.SQL_HASH_JOIN_BROADCAST_THRESHOLD)
+    val threshold = conf.getConf.getLong(TableConfigOptions.SQL_EXEC_HASH_JOIN_BROADCAST_THRESHOLD)
     val joinType = getFlinkJoinRelType(join)
     joinType match {
       case FlinkJoinRelType.LEFT => (rightSize <= threshold, false)

@@ -34,7 +34,7 @@ class SubsectionOptimizationTest extends TableTestBatchExecBase {
     util.addTable[(Int, Long, String)]("SmallTable3", 'a, 'b, 'c)
     util.tableEnv.getConfig.setSubsectionOptimization(true)
     util.tableEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_SUBSECTION_OPTIMIZATION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
+      TableConfigOptions.SQL_OPTIMIZER_SUBSECTION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
   }
 
   @Test

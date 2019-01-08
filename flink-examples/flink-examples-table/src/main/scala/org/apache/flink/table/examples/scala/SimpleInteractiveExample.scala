@@ -33,7 +33,7 @@ object SimpleInteractiveExample {
     env.getConfig.setGlobalJobParameters(params)
 
     val tEnv = TableEnvironment.getBatchTableEnvironment(env)
-    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
 
     val data = Seq(
       ("US", "Red", 10),

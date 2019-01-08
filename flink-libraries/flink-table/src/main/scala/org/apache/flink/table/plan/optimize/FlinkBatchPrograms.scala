@@ -127,7 +127,7 @@ object FlinkBatchPrograms {
         .build())
 
     // join reorder
-    if (config.getBoolean(TableConfigOptions.SQL_CBO_JOIN_REORDER_ENABLED)) {
+    if (config.getBoolean(TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED)) {
       programs.addLast(
         JOIN_REORDER,
         FlinkHepRuleSetProgramBuilder.newBuilder

@@ -67,7 +67,7 @@ class ParquetTableSourceITCase(configMode: TableConfigMode)
 
   @Test
   def testDecimalType(): Unit = {
-    config.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1)
+    config.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
     val expected = Seq(
       "0.00,0,0.0000,0E-9,0,0.0,0E-10,0,0.00000,0E-18,0,0,0.000",
       "1.23,999999999,12345.6700,1E-9,2147483648,12345678.9,1E-10,999999999999999999," +
@@ -90,7 +90,7 @@ class ParquetTableSourceITCase(configMode: TableConfigMode)
 
   @Test
   def testDecimalTypeWithDictionary(): Unit = {
-    config.getConf.setInteger(TableConfigOptions.SQL_EXEC_DEFAULT_PARALLELISM, 1)
+    config.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
     val expected = Seq(
       "0.00,0,0.0000,0E-9,0,0.0,0E-10,0,0.00000,0E-18,0,0,0.000",
       "1.23,999999999,12345.6700,1E-9,2147483648,12345678.9,1E-10,999999999999999999," +
