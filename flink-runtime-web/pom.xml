@@ -197,7 +197,7 @@ under the License.
 			<plugin>
 				<groupId>com.github.eirslett</groupId>
 				<artifactId>frontend-maven-plugin</artifactId>
-				<version>1.5</version>
+				<version>1.6</version>
 				<executions>
 					<execution>
 						<id>install node and npm</id>
@@ -205,8 +205,7 @@ under the License.
 							<goal>install-node-and-npm</goal>
 						</goals>
 						<configuration>
-							<nodeVersion>v11.0.0</nodeVersion>
-							<nodeDownloadRoot>https://npm.taobao.org/mirrors/node/</nodeDownloadRoot>
+							<nodeVersion>v10.9.0</nodeVersion>
 						</configuration>
 					</execution>
 					<execution>
