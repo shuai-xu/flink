@@ -36,7 +36,7 @@ import org.apache.flink.table.api.types.ShortType;
 import org.apache.flink.table.api.types.StringType;
 import org.apache.flink.table.api.types.TimeType;
 import org.apache.flink.table.api.types.TimestampType;
-import org.apache.flink.table.catalog.ExternalCatalogTable;
+import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.ExternalCatalogTablePartition;
 import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TablePartitionStats;
@@ -107,7 +107,7 @@ public class MetaConverter {
 	private MetaConverter() { }
 
 	static Table convertToHiveTable(
-			ExternalCatalogTable table,
+			CatalogTable table,
 			String databaseName,
 			String tableName) throws IOException {
 
@@ -163,7 +163,7 @@ public class MetaConverter {
 		return object;
 	}
 
-	static ExternalCatalogTable convertToExternalCatalogTable(
+	static CatalogTable convertToExternalCatalogTable(
 			Table table,
 			IMetaStoreClient msc) throws TException, IOException, ClassNotFoundException {
 
@@ -211,7 +211,7 @@ public class MetaConverter {
 			}
 		}
 
-		return new ExternalCatalogTable(
+		return new CatalogTable(
 				tableType,
 				tableSchema,
 				table.getParameters(),

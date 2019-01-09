@@ -22,7 +22,7 @@ import java.util
 
 import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.catalog.{ExternalCatalogTable, ExternalTableUtil}
+import org.apache.flink.table.catalog.ExternalTableUtil
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.calcite.rel.`type`.RelDataTypeFactory
 import org.apache.calcite.schema.{ConfigurableTable, TemporalTable}
@@ -33,18 +33,21 @@ import org.apache.flink.table.sources.{BatchTableSource, StreamTableSource, Tabl
 import scala.collection.mutable.ArrayBuffer
 
 /**
- * CatalogTable represents an ExternalCatalogTable in Calcite.
+ * CatalogTable represents an CatalogTable in Calcite.
  * 1. The isStreaming flag indicates the execution environment of the job which is used to
  * determine the schema of the table and which TableSink can be create from catalog table.
  * 2. CatalogTable will be transferred to a TableSource in TableScan and a TableSink in DML query
  * and a DimensionTableSource in TemporalTableScan by CatalogTableRules.
  * 3. The schema of CatalogTable can be different in different execution environment since there is
  * no TimeIndicator in batch table and dimension table.
- * 4. The computed columns of ExternalCatalogTable will registered as virtual columns in calcite
+ * 4. The computed columns of CatalogTable will registered as virtual columns in calcite
  * which cannot be update in dml query.
  *
  */
-class CatalogTable(val name:String, val table: ExternalCatalogTable, val isStreaming: Boolean)
+class CatalogTable(
+    val name:String,
+    val table: org.apache.flink.table.catalog.CatalogTable,
+    val isStreaming: Boolean)
     extends FlinkTable with ConfigurableTable {
 
   /**
@@ -63,7 +66,7 @@ class CatalogTable(val name:String, val table: ExternalCatalogTable, val isStrea
     val newProperties = new util.HashMap[String, String]()
     newProperties.putAll(table.getProperties)
     newProperties.putAll(dynamicParameters)
-    val newTable = new ExternalCatalogTable(
+    val newTable = new org.apache.flink.table.catalog.CatalogTable(
       table.getTableType,
       table.getTableSchema,
       newProperties,

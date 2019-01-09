@@ -38,7 +38,7 @@ import scala.collection.JavaConverters._
   *
   *
   * Caution: this is only used to test cases now, we should rework and use this
-  * [[ExternalCatalogTable2]] instead of the old [[ExternalCatalogTable]].
+  * [[ExternalCatalogTable2]] instead of the old [[CatalogTable]].
   *
   * @param isBatch Flag whether this external table is intended for batch environments.
   * @param isStreaming Flag whether this external table is intended for streaming environments.
@@ -135,7 +135,7 @@ object ExternalCatalogTable2 {
     * declaring it as a table source:
     *
     * {{{
-    *   ExternalCatalogTable(
+    *   CatalogTable(
     *     new ExternalSystemXYZ()
     *       .version("0.11"))
     *   .withFormat(
@@ -159,7 +159,7 @@ object ExternalCatalogTable2 {
 }
 
 /**
-  * Builder for an [[ExternalCatalogTable]].
+  * Builder for an [[CatalogTable]].
   *
   * @param connectorDescriptor Connector descriptor describing the external system
   */
@@ -289,7 +289,7 @@ class ExternalCatalogTableBuilder(private val connectorDescriptor: ConnectorDesc
 
   /**
     * Declares this external table as a table source and returns the
-    * configured [[ExternalCatalogTable]].
+    * configured [[CatalogTable]].
     *
     * @return External catalog table
     */
@@ -304,7 +304,7 @@ class ExternalCatalogTableBuilder(private val connectorDescriptor: ConnectorDesc
 
   /**
     * Declares this external table as a table sink and returns the
-    * configured [[ExternalCatalogTable]].
+    * configured [[CatalogTable]].
     *
     * @return External catalog table
     */
@@ -319,7 +319,7 @@ class ExternalCatalogTableBuilder(private val connectorDescriptor: ConnectorDesc
 
   /**
     * Declares this external table as both a table source and sink. It returns the
-    * configured [[ExternalCatalogTable]].
+    * configured [[CatalogTable]].
     *
     * @return External catalog table
     */

@@ -38,7 +38,7 @@ import org.apache.flink.table.api.types.TimeType;
 import org.apache.flink.table.api.types.TimestampType;
 import org.apache.flink.table.catalog.CatalogDatabase;
 import org.apache.flink.table.catalog.CatalogPartition;
-import org.apache.flink.table.catalog.ExternalCatalogTable;
+import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.hive.config.HiveDbConfig;
 import org.apache.flink.table.plan.stats.ColumnStats;
@@ -104,9 +104,9 @@ public class HiveMetadataUtil {
 	}
 
 	/**
-	 * Create a Hive table from ExternalCatalogTable.
+	 * Create a Hive table from CatalogTable.
 	 */
-	public static Table createHiveTable(ObjectPath tablePath, ExternalCatalogTable table) {
+	public static Table createHiveTable(ObjectPath tablePath, CatalogTable table) {
 		Properties prop = new Properties();
 		prop.putAll(table.getProperties());
 
@@ -189,10 +189,10 @@ public class HiveMetadataUtil {
 	}
 
 	/**
-	 * Create an ExternalCatalogTable from Hive table.
+	 * Create an CatalogTable from Hive table.
 	 */
-	public static ExternalCatalogTable createExternalCatalogTable(Table hiveTable, TableSchema tableSchema, TableStats tableStats) {
-		return new ExternalCatalogTable(
+	public static CatalogTable createCatalogTable(Table hiveTable, TableSchema tableSchema, TableStats tableStats) {
+		return new CatalogTable(
 			"hive",
 			tableSchema,
 			getPropertiesFromHiveTable(hiveTable),

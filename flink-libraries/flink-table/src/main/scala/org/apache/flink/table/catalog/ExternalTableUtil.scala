@@ -30,7 +30,7 @@ import org.apache.flink.table.util.{Logging, TableProperties}
 import _root_.scala.collection.JavaConversions._
 
 /**
-  * The utility class is used to convert ExternalCatalogTable to TableSinkTable.
+  * The utility class is used to convert CatalogTable to TableSinkTable.
   */
 object ExternalTableUtil extends Logging {
 
@@ -51,15 +51,15 @@ object ExternalTableUtil extends Logging {
   }
 
   /**
-   * Converts table source parser from the given ExternalCatalogTable.
+   * Converts table source parser from the given CatalogTable.
    *
-   * @param name the name of the table
-   * @param table the [[ExternalCatalogTable]] instance which to convert
+   * @param name        the name of the table
+   * @param table       the [[CatalogTable]] instance which to convert
    * @param isStreaming Is in streaming mode or not
    * @return the extracted parser
    */
   def toParser(
-      name: String, table: ExternalCatalogTable, isStreaming: Boolean): TableSourceParser = {
+                name: String, table: CatalogTable, isStreaming: Boolean): TableSourceParser = {
 
     val tableProperties = generateTableProperties(name, table, isStreaming)
     try {
@@ -74,19 +74,19 @@ object ExternalTableUtil extends Logging {
   }
 
   /**
-   * Converts an [[ExternalCatalogTable]] instance to a [[TableSource]] instance
+   * Converts an [[CatalogTable]] instance to a [[TableSource]] instance
    *
    * @param name the name of the table source
-   * @param externalCatalogTable the [[ExternalCatalogTable]] instance which to convert
+   * @param catalogTable the [[CatalogTable]] instance which to convert
    * @param isStreaming is streaming source expected.
    * @return converted [[TableSource]] instance from the input catalog table
    */
   def toTableSource(
-      name: String,
-      externalCatalogTable: ExternalCatalogTable,
-      isStreaming: Boolean): TableSource = {
+     name: String,
+     catalogTable: CatalogTable,
+     isStreaming: Boolean): TableSource = {
 
-        val tableProperties = generateTableProperties(name, externalCatalogTable, isStreaming)
+        val tableProperties = generateTableProperties(name, catalogTable, isStreaming)
         if (isStreaming) {
           val tableFactory = TableFactoryService.find(
             classOf[StreamTableSourceFactory[_]],
@@ -101,16 +101,17 @@ object ExternalTableUtil extends Logging {
   }
 
   /**
-   * Converts an [[ExternalCatalogTable]] instance to a [[TableSink]] instance
-   * @param name          name of the table
-   * @param externalTable the [[ExternalCatalogTable]] instance to convert
+   * Converts an [[CatalogTable]] instance to a [[TableSink]] instance
+    *
+    * @param name          name of the table
+   * @param externalTable the [[CatalogTable]] instance to convert
    * @param isStreaming   is in streaming mode or not.
    * @return
    */
   def toTableSink(
-      name: String,
-      externalTable: ExternalCatalogTable,
-      isStreaming: Boolean): TableSink[_] = {
+                   name: String,
+                   externalTable: CatalogTable,
+                   isStreaming: Boolean): TableSink[_] = {
 
     val tableProperties: TableProperties = generateTableProperties(name, externalTable, isStreaming)
     if (isStreaming) {
@@ -125,8 +126,8 @@ object ExternalTableUtil extends Logging {
   }
 
   def generateTableProperties(sqlTableName: String,
-    externalTable: ExternalCatalogTable,
-    isStream: Boolean): TableProperties = {
+                              externalTable: CatalogTable,
+                              isStream: Boolean): TableProperties = {
 
     val tableProperties = new TableProperties()
     tableProperties.addAll(externalTable.getProperties)

@@ -63,7 +63,7 @@ public class FlinkInMemoryCatalogTest extends CatalogTestBase {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createDatabase(db2, createAnotherDb(), false);
 
-		ExternalCatalogTable table = createTable();
+		CatalogTable table = createTable();
 		catalog.createTable(path1, table, false);
 
 		assertEquals(path1, catalog.listAllTables().get(0));

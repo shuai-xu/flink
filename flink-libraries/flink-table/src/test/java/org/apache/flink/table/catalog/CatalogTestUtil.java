@@ -48,11 +48,11 @@ public class CatalogTestUtil {
 		return data;
 	}
 
-	public static ExternalCatalogTable createExternalCatalogTable() {
-		return createExternalCatalogTable(getTestData());
+	public static CatalogTable createCatalogTable() {
+		return createCatalogTable(getTestData());
 	}
 
-	public static ExternalCatalogTable createExternalCatalogTable(List<Row> data) {
+	public static CatalogTable createCatalogTable(List<Row> data) {
 		TableSchema tableSchema = TableSchemaUtil.fromDataType(DataTypes.of(getRowTypeInfo()), Option.empty());
 
 		RichTableSchema richTableSchema = new RichTableSchema(tableSchema.getFieldNames(), tableSchema.getFieldTypes());
@@ -60,7 +60,7 @@ public class CatalogTestUtil {
 
 		CollectionTableFactory.initData(getRowTypeInfo(), data);
 
-		return new ExternalCatalogTable(
+		return new CatalogTable(
 			"collection",
 			tableSchema,
 			new HashMap<>(),
@@ -93,12 +93,12 @@ public class CatalogTestUtil {
 		return row;
 	}
 
-	public static ExternalCatalogTable createExternalCatalogTable(
+	public static CatalogTable createCatalogTable(
 		String tableType,
 		TableSchema schema,
 		Map<String, String> tableProperties) {
 
-		return new ExternalCatalogTable(
+		return new CatalogTable(
 			tableType,
 			schema,
 			tableProperties,
@@ -114,13 +114,13 @@ public class CatalogTestUtil {
 			-1L);
 	}
 
-	public static ExternalCatalogTable createExternalCatalogTable(
+	public static CatalogTable createCatalogTable(
 		String tableType,
 		TableSchema schema,
 		Map<String, String> tableProperties,
 		LinkedHashSet<String> partitionCols) {
 
-		return new ExternalCatalogTable(
+		return new CatalogTable(
 			tableType,
 			schema,
 			tableProperties,

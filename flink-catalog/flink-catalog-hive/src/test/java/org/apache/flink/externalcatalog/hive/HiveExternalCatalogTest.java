@@ -27,8 +27,8 @@ import org.apache.flink.table.api.types.IntType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.TimeType;
 import org.apache.flink.table.api.types.TimestampType;
+import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.CrudExternalCatalog;
-import org.apache.flink.table.catalog.ExternalCatalogTable;
 import org.apache.flink.table.catalog.ExternalCatalogTablePartition;
 import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
@@ -103,12 +103,12 @@ public class HiveExternalCatalogTest {
 		TableSchema tableSchema = new TableSchema(names, types);
 
 		Table hiveTable = MetaConverter.getEmptyTable(database, "src");
-		ExternalCatalogTable table = MetaConverter.convertToExternalCatalogTable(
+		CatalogTable table = MetaConverter.convertToExternalCatalogTable(
 				hiveTable, null);
 
 		RichTableSchema richTableSchema = new RichTableSchema(names, types);
 
-		table = new ExternalCatalogTable(
+		table = new CatalogTable(
 				table.getTableType(),
 				tableSchema,
 				table.getProperties(),
@@ -128,7 +128,7 @@ public class HiveExternalCatalogTest {
 				table,
 				false);
 
-		ExternalCatalogTable t = catalog.getTable("src");
+		CatalogTable t = catalog.getTable("src");
 		Assert.assertEquals(t.getTableType(), "hive");
 		Assert.assertTrue((new File("/tmp/hive/src")).exists());
 		Assert.assertEquals(1, t.getTableSchema().getColumns().length);
@@ -171,9 +171,9 @@ public class HiveExternalCatalogTest {
 		// Table Level Statistics are properties
 		hiveTable.getParameters().put("numRows", "8");
 
-		ExternalCatalogTable table = MetaConverter.convertToExternalCatalogTable(
+		CatalogTable table = MetaConverter.convertToExternalCatalogTable(
 				hiveTable, null);
-		table = new ExternalCatalogTable(
+		table = new CatalogTable(
 				table.getTableType(),
 				tableSchema,
 				table.getProperties(),
@@ -267,7 +267,7 @@ public class HiveExternalCatalogTest {
 		Assert.assertTrue(msc.updateTableColumnStatistics(statsObj));
 
 		// Get from the meta and compare
-		ExternalCatalogTable t = catalog.getTable("src");
+		CatalogTable t = catalog.getTable("src");
 		Assert.assertEquals(t.getTableType(), "hive");
 		Assert.assertTrue((new File("/tmp/hive/src")).exists());
 		Assert.assertEquals(8, t.getTableSchema().getColumns().length);
@@ -422,24 +422,24 @@ public class HiveExternalCatalogTest {
 	@Test
 	public void testAlterTableStats() {
 		String tableName = "t1";
-		ExternalCatalogTable table = createTableInstance();
+		CatalogTable table = createTableInstance();
 		Assert.assertNull(table.getTableStats());
 		catalog.createTable(tableName, table, false);
 
 		TableStats newTableStats = new TableStats(1000L, null);
 		catalog.alterTableStats(tableName, new Some<>(newTableStats), false);
-		ExternalCatalogTable currentTable = catalog.getTable(tableName);
+		CatalogTable currentTable = catalog.getTable(tableName);
 		Assert.assertNotEquals(table, currentTable);
 		Assert.assertEquals(newTableStats.rowCount(), currentTable.getTableStats().rowCount());
 
 		// update TableStats with None
 		catalog.alterTableStats(tableName, null, false);
-		ExternalCatalogTable currentTable2 = catalog.getTable(tableName);
+		CatalogTable currentTable2 = catalog.getTable(tableName);
 		Assert.assertEquals(0L, currentTable2.getTableStats().rowCount().longValue());
 		Assert.assertTrue(currentTable2.getTableStats().colStats().isEmpty());
 	}
 
-	private ExternalCatalogTable createTableInstance() {
+	private CatalogTable createTableInstance() {
 		TableSchema schema = new TableSchema(
 			new String[] {"first", "second"},
 			new InternalType[]{
@@ -447,7 +447,7 @@ public class HiveExternalCatalogTest {
 				DataTypes.INT
 			}
 		);
-		return new ExternalCatalogTable(
+		return new CatalogTable(
 			"csv",
 			schema,
 			null,
@@ -463,7 +463,7 @@ public class HiveExternalCatalogTest {
 			System.currentTimeMillis());
 	}
 
-	private ExternalCatalogTable createPartitionedTableInstance()  {
+	private CatalogTable createPartitionedTableInstance()  {
 
 		String[] colNames = {"first", "second"};
 		InternalType[] dataTypes = {STRING, INT};
@@ -472,7 +472,7 @@ public class HiveExternalCatalogTest {
 		LinkedHashSet<String> partitions = new LinkedHashSet<>();
 		partitions.add("ds");
 		partitions.add("hour");
-		return new ExternalCatalogTable(
+		return new CatalogTable(
 				"hive",
 				schema,
 				null,

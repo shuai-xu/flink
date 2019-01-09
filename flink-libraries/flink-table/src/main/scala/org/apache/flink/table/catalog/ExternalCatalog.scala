@@ -84,7 +84,7 @@ trait ExternalCatalog {
     * @return The requested table.
     */
   @throws[TableNotExistException]
-  def getTable(tableName: String): ExternalCatalogTable
+  def getTable(tableName: String): CatalogTable
 
   /**
     * Gets the names of all tables registered in this catalog.

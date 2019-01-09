@@ -45,7 +45,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	private String catalogName;
 
 	private final Map<String, CatalogDatabase> databases;
-	private final Map<ObjectPath, ExternalCatalogTable> tables;
+	private final Map<ObjectPath, CatalogTable> tables;
 	private final Map<ObjectPath, Map<CatalogPartition.PartitionSpec, CatalogPartition>> partitions;
 
 	public FlinkInMemoryCatalog(String name) {
@@ -68,7 +68,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void createTable(ObjectPath tableName, ExternalCatalogTable table, boolean ignoreIfExists)
+	public void createTable(ObjectPath tableName, CatalogTable table, boolean ignoreIfExists)
 		throws TableAlreadyExistException, DatabaseNotExistException {
 
 		if (!dbExists(tableName.getDbName())) {
@@ -98,7 +98,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void alterTable(ObjectPath tableName, ExternalCatalogTable newTable, boolean ignoreIfNotExists) throws TableNotExistException {
+	public void alterTable(ObjectPath tableName, CatalogTable newTable, boolean ignoreIfNotExists) throws TableNotExistException {
 		if (tableExists(tableName)) {
 			tables.put(tableName, newTable);
 		} else if (!ignoreIfNotExists) {
@@ -136,7 +136,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public ExternalCatalogTable getTable(ObjectPath tableName) throws TableNotExistException {
+	public CatalogTable getTable(ObjectPath tableName) throws TableNotExistException {
 
 		if (!tableExists(tableName)) {
 			throw new TableNotExistException(catalogName, tableName.getFullName());
@@ -289,7 +289,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	public CatalogPartition getPartition(ObjectPath path, CatalogPartition.PartitionSpec partitionSpec)
 		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException {
 
-		ExternalCatalogTable table = getTable(path);
+		CatalogTable table = getTable(path);
 
 		if (!table.isPartitioned()) {
 			throw new TableNotPartitionedException(catalogName, path);

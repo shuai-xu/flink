@@ -27,10 +27,10 @@ import org.apache.flink.table.api.PartitionAlreadyExistException;
 import org.apache.flink.table.api.PartitionNotExistException;
 import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
+import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.CrudExternalCatalog;
 import org.apache.flink.table.catalog.ExternalCatalog;
 import org.apache.flink.table.catalog.ExternalCatalogFunction;
-import org.apache.flink.table.catalog.ExternalCatalogTable;
 import org.apache.flink.table.catalog.ExternalCatalogTablePartition;
 import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
@@ -305,7 +305,7 @@ public class HiveExternalCatalog implements CrudExternalCatalog {
 	@Override
 	public void createTable(
 			String tableName,
-			ExternalCatalogTable table,
+			CatalogTable table,
 			boolean ignoreIfExists)
 			throws TableAlreadyExistException {
 
@@ -341,7 +341,7 @@ public class HiveExternalCatalog implements CrudExternalCatalog {
 	@Override
 	public void alterTable(
 			String tableName,
-			ExternalCatalogTable table,
+			CatalogTable table,
 			boolean ignoreIfNotExists) throws TableNotExistException {
 
 		LOG.info("alterTable, tableName={}, table={}, ignoreIfNotExists={}",
@@ -542,7 +542,7 @@ public class HiveExternalCatalog implements CrudExternalCatalog {
 	}
 
 	@Override
-	public ExternalCatalogTable getTable(String tableName) throws TableNotExistException {
+	public CatalogTable getTable(String tableName) throws TableNotExistException {
 
 		LOG.info("getTable, tableName={}", tableName);
 

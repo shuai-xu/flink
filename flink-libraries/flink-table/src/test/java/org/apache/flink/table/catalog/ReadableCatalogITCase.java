@@ -76,7 +76,7 @@ public class ReadableCatalogITCase {
 		expected.add(toRow(new Integer(3), new Integer(1)));
 
 		// Test resolving <table>
-		catalog.createTable(new ObjectPath(dbName, "t1"), CatalogTestUtil.createExternalCatalogTable(), false);
+		catalog.createTable(new ObjectPath(dbName, "t1"), CatalogTestUtil.createCatalogTable(), false);
 		batchEnv.sqlUpdate("insert into t1 with (tableType = '3') select t1.b, w.a " +
 			"from t1 with (tableType = '1') " +
 			"join t1 with (tableType = '2') " +
@@ -86,7 +86,7 @@ public class ReadableCatalogITCase {
 		assertEquals(expected, CollectionTableFactory.RESULT);
 
 		// Test resolving <db>.<table>
-		catalog.createTable(new ObjectPath(dbName, "t2"), CatalogTestUtil.createExternalCatalogTable(), false);
+		catalog.createTable(new ObjectPath(dbName, "t2"), CatalogTestUtil.createCatalogTable(), false);
 		batchEnv.sqlUpdate("insert into db.t2 with (tableType = '3') select t2.b, w.a " +
 			"from db.t2 with (tableType = '1') " +
 			"join db.t2 with (tableType = '2') " +
@@ -97,7 +97,7 @@ public class ReadableCatalogITCase {
 		assertEquals(expected, CollectionTableFactory.RESULT);
 
 		// Test resolving <catalog>.<db>.<table>
-		catalog.createTable(new ObjectPath(dbName, "t3"), CatalogTestUtil.createExternalCatalogTable(), false);
+		catalog.createTable(new ObjectPath(dbName, "t3"), CatalogTestUtil.createCatalogTable(), false);
 		batchEnv.sqlUpdate("insert into test.db.t3 with (tableType = '3') select t3.b, w.a " +
 			"from test.db.t3 with (tableType = '1') " +
 			"join test.db.t3 with (tableType = '2') " +
@@ -110,9 +110,9 @@ public class ReadableCatalogITCase {
 	@Test
 	public void testSqlUpdate() {
 		// Test resolving <table>
-		catalog.createTable(new ObjectPath(dbName, "t1"), CatalogTestUtil.createExternalCatalogTable(), false);
+		catalog.createTable(new ObjectPath(dbName, "t1"), CatalogTestUtil.createCatalogTable(), false);
 		// Test resolving <db>.<table>
-		catalog.createTable(new ObjectPath(dbName, "t2"), CatalogTestUtil.createExternalCatalogTable(), false);
+		catalog.createTable(new ObjectPath(dbName, "t2"), CatalogTestUtil.createCatalogTable(), false);
 
 		batchEnv.sqlUpdate("insert into t2 select * from t1");
 		batchEnv.execute();
@@ -138,7 +138,7 @@ public class ReadableCatalogITCase {
 		expected.add(toRow(new Integer(1), new Integer(3)));
 
 		// Test resolving <table>
-		catalog.createTable(new ObjectPath(dbName, "t1"), CatalogTestUtil.createExternalCatalogTable(), false);
+		catalog.createTable(new ObjectPath(dbName, "t1"), CatalogTestUtil.createCatalogTable(), false);
 		Table result1 = batchEnv.sqlQuery("select * from t1");
 		result1.collect();
 
@@ -167,7 +167,7 @@ public class ReadableCatalogITCase {
 		expected.add(toRow(new Integer(3), new Integer(1)));
 
 		// Test resolving <table>
-		catalog.createTable(new ObjectPath(dbName, "t1"), CatalogTestUtil.createExternalCatalogTable(), false);
+		catalog.createTable(new ObjectPath(dbName, "t1"), CatalogTestUtil.createCatalogTable(), false);
 		Table result = batchEnv.sqlQuery("select t1.b, w.a " +
 			"from t1 with (tableType = '1') " +
 			"join t1 with (tableType = '2') " +
@@ -194,7 +194,7 @@ public class ReadableCatalogITCase {
 
 	@Test
 	public void testStreamSourceParser() {
-		catalog.createTable(new ObjectPath(dbName, "t1"), CatalogTestUtil.createExternalCatalogTable(), false);
+		catalog.createTable(new ObjectPath(dbName, "t1"), CatalogTestUtil.createCatalogTable(), false);
 
 		List<String> parameters = new ArrayList<>();
 		parameters.add("b");
@@ -212,7 +212,7 @@ public class ReadableCatalogITCase {
 
 	@Test
 	public void testBatchSourceParser() {
-		catalog.createTable(new ObjectPath(dbName, "t1"), CatalogTestUtil.createExternalCatalogTable(), false);
+		catalog.createTable(new ObjectPath(dbName, "t1"), CatalogTestUtil.createCatalogTable(), false);
 
 		List<String> parameters = new ArrayList<>();
 		parameters.add("b");

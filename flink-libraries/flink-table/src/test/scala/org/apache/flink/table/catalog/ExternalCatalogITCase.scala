@@ -100,7 +100,7 @@ class ExternalCatalogITCase {
 
     catalog.createTable(
       new ObjectPath(tableEnv.getDefaultDatabaseName(),"t1"),
-      new ExternalCatalogTable(
+      new CatalogTable(
         "collection",
         tableSchemaBuilder.build(),
         new util.HashMap[String, String](),
@@ -170,7 +170,7 @@ class ExternalCatalogITCase {
 
     catalog.createTable(
       new ObjectPath(tableEnv.getDefaultDatabaseName(),"t1"),
-      new ExternalCatalogTable(
+      new CatalogTable(
         "collection",
         tableSchemaBuilder.build(),
         new util.HashMap[String, String](),
@@ -240,7 +240,7 @@ class ExternalCatalogITCase {
 
     catalog.createTable(
       new ObjectPath(tableEnv.getDefaultDatabaseName(),"t1"),
-      new ExternalCatalogTable(
+      new CatalogTable(
         "collection",
         tableSchemaBuilder.build(),
         new util.HashMap[String, String](),
@@ -308,7 +308,7 @@ class ExternalCatalogITCase {
 
     catalog.createTable(
       new ObjectPath(tableEnv.getDefaultDatabaseName(),"t1"),
-      new ExternalCatalogTable(
+      new CatalogTable(
         "collection",
         tableSchemaBuilder.build(),
         new util.HashMap[String, String](),
@@ -377,7 +377,7 @@ class ExternalCatalogITCase {
 
     catalog.createTable(
       new ObjectPath(tableEnv.getDefaultDatabaseName(),"t1"),
-      new ExternalCatalogTable(
+      new CatalogTable(
         "collection",
         tableSchemaBuilder.build(),
         new util.HashMap[String, String](),

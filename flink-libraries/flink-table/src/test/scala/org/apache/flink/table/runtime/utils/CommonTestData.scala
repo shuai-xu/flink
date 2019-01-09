@@ -275,7 +275,7 @@ object CommonTestData {
     properties1.put("path", tempFilePath1)
     properties1.put("fieldDelim", "#")
     properties1.put("rowDelim", "$")
-    val catalogTable1 = new ExternalCatalogTable(
+    val catalogTable1 = new CatalogTable(
       "csv",
       new TableSchema(
         Array("a", "b", "c"),
@@ -323,7 +323,7 @@ object CommonTestData {
     properties2.put("path", tempFilePath2)
     properties2.put("fieldDelim", "#")
     properties2.put("rowDelim", "$")
-    val catalogTable2 = new ExternalCatalogTable(
+    val catalogTable2 = new CatalogTable(
       "csv",
       new TableSchema(
         Array("d", "e", "f", "g", "h"),

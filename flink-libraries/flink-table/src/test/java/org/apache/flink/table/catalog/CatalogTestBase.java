@@ -99,7 +99,7 @@ public abstract class CatalogTestBase {
 	public void testCreateTable_TableAlreadyExist_ignored() {
 		catalog.createDatabase(db1, createDb(), false);
 
-		ExternalCatalogTable table = createTable();
+		CatalogTable table = createTable();
 		catalog.createTable(path1, table, false);
 
 		assertEquals(table, catalog.getTable(path1));
@@ -111,7 +111,7 @@ public abstract class CatalogTestBase {
 
 	@Test
 	public void testGetTable() {
-		ExternalCatalogTable originTable = createTable();
+		CatalogTable originTable = createTable();
 
 		assertFalse(catalog.tableExists(path1));
 
@@ -157,13 +157,13 @@ public abstract class CatalogTestBase {
 
 	@Test
 	public void testAlterTable() {
-		ExternalCatalogTable table = createTable();
+		CatalogTable table = createTable();
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createTable(path1, table, false);
 
 		assertEquals(catalog.getTable(path1), table);
 
-		ExternalCatalogTable newTable = createAnotherTable();
+		CatalogTable newTable = createAnotherTable();
 		catalog.alterTable(path1, newTable, false);
 
 		assertNotEquals(table, catalog.getTable(path1));
@@ -502,8 +502,8 @@ public abstract class CatalogTestBase {
 		return new CatalogPartition(partitionSpec, partitionProperties);
 	}
 
-	protected ExternalCatalogTable createPartitionedTable() {
-		return CatalogTestUtil.createExternalCatalogTable(
+	protected CatalogTable createPartitionedTable() {
+		return CatalogTestUtil.createCatalogTable(
 			getTableType(),
 			createTableSchema(),
 			getTableProperties(),
@@ -528,15 +528,15 @@ public abstract class CatalogTestBase {
 		}});
 	}
 
-	protected ExternalCatalogTable createTable() {
-		return CatalogTestUtil.createExternalCatalogTable(
+	protected CatalogTable createTable() {
+		return CatalogTestUtil.createCatalogTable(
 			getTableType(),
 			createTableSchema(),
 			getTableProperties());
 	}
 
-	protected ExternalCatalogTable createAnotherTable() {
-		return CatalogTestUtil.createExternalCatalogTable(
+	protected CatalogTable createAnotherTable() {
+		return CatalogTestUtil.createCatalogTable(
 			getTableType(),
 			createAnotherTableSchema(),
 			getTableProperties());

@@ -28,7 +28,7 @@ import org.apache.flink.table.api.exceptions.PartitionNotExistException;
 import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
 import org.apache.flink.table.catalog.CatalogDatabase;
 import org.apache.flink.table.catalog.CatalogPartition;
-import org.apache.flink.table.catalog.ExternalCatalogTable;
+import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.ReadableWritableCatalog;
 import org.apache.flink.table.plan.stats.TableStats;
@@ -116,7 +116,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	// ------ tables ------
 
 	@Override
-	public ExternalCatalogTable getTable(ObjectPath path) throws TableNotExistException {
+	public CatalogTable getTable(ObjectPath path) throws TableNotExistException {
 		Table hiveTable = getHiveTable(path);
 
 		TableSchema tableSchema = HiveMetadataUtil.createTableSchema(hiveTable.getSd().getCols(),
@@ -137,10 +137,10 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			}
 		}
 
-		ExternalCatalogTable externalCatalogTable =  HiveMetadataUtil.createExternalCatalogTable(hiveTable, tableSchema, tableStats);
-		externalCatalogTable.getProperties().put(HiveConf.ConfVars.METASTOREURIS.varname,
+		CatalogTable catalogTable = HiveMetadataUtil.createCatalogTable(hiveTable, tableSchema, tableStats);
+		catalogTable.getProperties().put(HiveConf.ConfVars.METASTOREURIS.varname,
 												hiveConf.get(HiveConf.ConfVars.METASTOREURIS.varname));
-		return externalCatalogTable;
+		return catalogTable;
 	}
 
 	private Table getHiveTable(ObjectPath path) {
@@ -197,7 +197,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void createTable(ObjectPath path, ExternalCatalogTable table, boolean ignoreIfExists)
+	public void createTable(ObjectPath path, CatalogTable table, boolean ignoreIfExists)
 		throws TableAlreadyExistException, DatabaseNotExistException {
 
 		try {
@@ -235,7 +235,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void alterTable(ObjectPath path, ExternalCatalogTable newTable, boolean ignoreIfNotExists) throws TableNotExistException {
+	public void alterTable(ObjectPath path, CatalogTable newTable, boolean ignoreIfNotExists) throws TableNotExistException {
 		try {
 			if (tableExists(path)) {
 				client.alter_table(path.getDbName(), path.getObjectName(), HiveMetadataUtil.createHiveTable(path, newTable));

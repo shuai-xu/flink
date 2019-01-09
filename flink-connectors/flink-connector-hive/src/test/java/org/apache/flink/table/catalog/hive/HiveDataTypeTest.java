@@ -21,8 +21,8 @@ package org.apache.flink.table.catalog.hive;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.CatalogTestUtil;
-import org.apache.flink.table.catalog.ExternalCatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
 
 import org.junit.After;
@@ -85,11 +85,11 @@ public class HiveDataTypeTest {
 
 		TableSchema schema = new TableSchema(cols, types);
 
-		ExternalCatalogTable table = CatalogTestUtil.createExternalCatalogTable("hive", schema,
+		CatalogTable table = CatalogTestUtil.createCatalogTable("hive", schema,
 			new HashMap<>());
 		ObjectPath tablePath = new ObjectPath("default", "datatypes");
 		catalog.createTable(tablePath, table, true);
-		ExternalCatalogTable table1 = catalog.getTable(tablePath);
+		CatalogTable table1 = catalog.getTable(tablePath);
 
 		assertTrue(table.equals(table1));
 	}
@@ -108,11 +108,11 @@ public class HiveDataTypeTest {
 
 		TableSchema schema = new TableSchema(cols, types);
 
-		ExternalCatalogTable table = CatalogTestUtil.createExternalCatalogTable("hive", schema,
+		CatalogTable table = CatalogTestUtil.createCatalogTable("hive", schema,
 			new HashMap<>());
 		ObjectPath tablePath = new ObjectPath("default", "datatypes");
 		catalog.createTable(tablePath, table, true);
-		ExternalCatalogTable table1 = catalog.getTable(tablePath);
+		CatalogTable table1 = catalog.getTable(tablePath);
 		TableSchema tableSchema = table1.getTableSchema();
 		InternalType[] colTypes = tableSchema.getTypes();
 

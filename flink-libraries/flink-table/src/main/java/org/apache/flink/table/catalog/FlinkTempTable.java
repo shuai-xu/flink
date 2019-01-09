@@ -31,7 +31,7 @@ import java.util.Map;
 /**
  * Represents AbstractTable/RelTable in Flink catalog.
  */
-public class FlinkTempTable extends ExternalCatalogTable {
+public class FlinkTempTable extends CatalogTable {
 
 	private final AbstractTable abstractTable;
 

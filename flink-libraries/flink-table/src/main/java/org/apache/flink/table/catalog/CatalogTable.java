@@ -18,39 +18,87 @@
 
 package org.apache.flink.table.catalog;
 
+import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.plan.stats.TableStats;
 
+import org.apache.calcite.rex.RexNode;
+
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Objects;
 
 /**
- * Represents a table object in catalog.
+ * Represents a table in catalog.
  */
-public class CatalogTable extends CommonTable {
+public class CatalogTable {
+	// Table type, e.g csv, hbase, kafka
 	private final String tableType;
+	// Schema of the table (column names and types)
 	private final TableSchema tableSchema;
-	private final TableStats tableStats;
+	// Properties of the table
+	private Map<String, String> properties = new HashMap<>();
+	// RichTableSchema of the table
+	private RichTableSchema richTableSchema;
+	// Statistics of the table
+	private TableStats tableStats = new TableStats();
+	// Comment of the table
+	private String comment;
+	// Partitioned columns
+	private LinkedHashSet<String> partitionColumnNames;
+	// Whether the table is partitioned
+	private boolean isPartitioned = false;
+	// Computed columns expression
+	private Map<String, RexNode> computedColumns;
+	// Row time field
+	private String rowTimeField = null;
+	// Watermark offset for row time
+	private long watermarkOffset = -1L;
+	// Create timestamp of the table
+	private long createTime = System.currentTimeMillis();
+	// Timestamp of last access of the table
+	private long lastAccessTime = -1L;
 
-	// Many catalog allows for temporary objects such as tables which are live only with the current session.
-	// They are usually stored in memory only. Thus, “temporary” attribute here is used to mark such temp tables.
-	private boolean temporary = false;
+	public CatalogTable(String tableType, TableSchema tableSchema) {
+		this.tableType = tableType;
+		this.tableSchema = tableSchema;
+	}
 
-	public CatalogTable(String tableType, TableSchema tableSchema, TableStats tableStats, Map<String, String> tableProperties) {
-		this(tableType, tableSchema, tableStats, tableProperties, false);
+	public CatalogTable(String tableType, TableSchema tableSchema, Map<String, String> properties) {
+		this.tableType = tableType;
+		this.tableSchema = tableSchema;
+		this.properties = properties;
 	}
 
 	public CatalogTable(
 		String tableType,
 		TableSchema tableSchema,
+		Map<String, String> properties,
+		RichTableSchema richTableSchema,
 		TableStats tableStats,
-		Map<String, String> tableProperties,
-		boolean temporary) {
+		String comment,
+		LinkedHashSet<String> partitionColumnNames,
+		boolean isPartitioned,
+		Map<String, RexNode> computedColumns,
+		String rowTimeField,
+		long watermarkOffset,
+		long createTime,
+		long lastAccessTime) {
 
-		super(tableProperties);
 		this.tableType = tableType;
 		this.tableSchema = tableSchema;
+		this.properties = properties;
+		this.richTableSchema = richTableSchema;
 		this.tableStats = tableStats;
-		this.temporary = temporary;
+		this.comment = comment;
+		this.partitionColumnNames = partitionColumnNames;
+		this.isPartitioned = isPartitioned;
+		this.computedColumns = computedColumns;
+		this.rowTimeField = rowTimeField;
+		this.watermarkOffset = watermarkOffset;
+		this.createTime = createTime;
+		this.lastAccessTime = lastAccessTime;
 	}
 
 	public String getTableType() {
@@ -61,15 +109,95 @@ public class CatalogTable extends CommonTable {
 		return tableSchema;
 	}
 
+	public Map<String, String> getProperties() {
+		return properties;
+	}
+
+	public RichTableSchema getRichTableSchema() {
+		return richTableSchema;
+	}
+
 	public TableStats getTableStats() {
 		return tableStats;
 	}
 
-	public boolean isTemporary() {
-		return temporary;
+	public String getComment() {
+		return comment;
 	}
 
-	public void setTemporary(boolean temporary) {
-		this.temporary = temporary;
+	public LinkedHashSet<String> getPartitionColumnNames() {
+		return partitionColumnNames;
+	}
+
+	public boolean isPartitioned() {
+		return isPartitioned;
+	}
+
+	public Map<String, RexNode> getComputedColumns() {
+		return computedColumns;
+	}
+
+	public String getRowTimeField() {
+		return rowTimeField;
+	}
+
+	public long getWatermarkOffset() {
+		return watermarkOffset;
+	}
+
+	public long getCreateTime() {
+		return createTime;
+	}
+
+	public long getLastAccessTime() {
+		return lastAccessTime;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+
+		CatalogTable that = (CatalogTable) o;
+
+		return Objects.equals(tableType, that.tableType) &&
+			Objects.equals(tableSchema, that.tableSchema) &&
+			Objects.equals(tableStats, that.tableStats) &&
+			isPartitioned == that.isPartitioned &&
+			partitionColumnNames.equals(that.partitionColumnNames);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(
+			tableType,
+			tableSchema,
+			tableStats,
+			isPartitioned,
+			partitionColumnNames);
+	}
+
+	@Override
+	public String toString() {
+		return "CatalogTable{" +
+			"tableType='" + tableType + '\'' +
+			", tableSchema=" + tableSchema +
+			", properties=" + properties +
+			", richTableSchema=" + richTableSchema +
+			", tableStats=" + tableStats +
+			", comment='" + comment + '\'' +
+			", partitionColumnNames=" + partitionColumnNames +
+			", isPartitioned=" + isPartitioned +
+			", computedColumns=" + computedColumns +
+			", rowTimeField='" + rowTimeField + '\'' +
+			", watermarkOffset=" + watermarkOffset +
+			", createTime=" + createTime +
+			", lastAccessTime=" + lastAccessTime +
+			'}';
 	}
 }

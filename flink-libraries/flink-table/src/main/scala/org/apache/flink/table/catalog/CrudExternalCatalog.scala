@@ -124,7 +124,7 @@ trait CrudExternalCatalog extends ExternalCatalog {
     * @throws TableAlreadyExistException thrown if table already exists and ignoreIfExists is false
     */
   @throws[TableAlreadyExistException]
-  def createTable(tableName: String, table: ExternalCatalogTable, ignoreIfExists: Boolean): Unit
+  def createTable(tableName: String, table: CatalogTable, ignoreIfExists: Boolean): Unit
 
   /**
     * Deletes table from this catalog.
@@ -149,7 +149,7 @@ trait CrudExternalCatalog extends ExternalCatalog {
     * @throws TableNotExistException   thrown if the table does not exist in the catalog
     */
   @throws[TableNotExistException]
-  def alterTable(tableName: String, table: ExternalCatalogTable, ignoreIfNotExists: Boolean): Unit
+  def alterTable(tableName: String, table: CatalogTable, ignoreIfNotExists: Boolean): Unit
 
   /**
     * Alter the statistics of a table. If `stats` is None, then remove existing TableStats.
