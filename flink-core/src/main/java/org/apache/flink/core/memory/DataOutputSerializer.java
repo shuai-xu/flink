@@ -50,8 +50,8 @@ public class DataOutputSerializer implements DataOutputView {
 	// ------------------------------------------------------------------------
 
 	public DataOutputSerializer(int startSize) {
-		if (startSize < 1) {
-			throw new IllegalArgumentException();
+		if (startSize < 4) {
+			throw new IllegalArgumentException("The start size of DataOutputSerializer must not be less than 4.");
 		}
 
 		this.startBuffer = new byte[startSize];
