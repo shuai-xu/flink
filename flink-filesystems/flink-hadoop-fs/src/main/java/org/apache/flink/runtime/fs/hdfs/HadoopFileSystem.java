@@ -27,6 +27,7 @@ import org.apache.flink.core.fs.Path;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 import java.io.IOException;
 import java.net.URI;
@@ -48,6 +49,18 @@ public class HadoopFileSystem extends FileSystem {
 	private FileSystemKind fsKind;
 
 	private Configuration config;
+
+	/**
+	 * Wraps the given Hadoop File System object as a Flink File System object.
+	 * The given Hadoop file system object is expected to be initialized already.
+	 *
+	 * @param hadoopFileSystem The Hadoop FileSystem that will be used under the hood.
+	 */
+	public HadoopFileSystem(org.apache.hadoop.fs.FileSystem hadoopFileSystem) {
+		// New hdfs configuration from classpath.
+		this.config = new HdfsConfiguration();
+		this.fs = checkNotNull(hadoopFileSystem, "hadoopFileSystem");
+	}
 
 	/**
 	 * Wraps the given Hadoop File System object as a Flink File System object.
