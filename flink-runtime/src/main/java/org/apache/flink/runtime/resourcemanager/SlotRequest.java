@@ -70,11 +70,7 @@ public class SlotRequest implements Serializable {
 		this.allocationId = checkNotNull(allocationId);
 		this.resourceProfile = checkNotNull(resourceProfile);
 		this.targetAddress = checkNotNull(targetAddress);
-
-		for (SlotTag tag : checkNotNull(tags)) {
-			tag.setJobId(jobId);
-		}
-		this.tags = tags;
+		this.tags = checkNotNull(tags);
 	}
 
 	/**

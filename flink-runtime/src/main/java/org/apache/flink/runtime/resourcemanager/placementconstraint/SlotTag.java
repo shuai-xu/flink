@@ -29,28 +29,15 @@ import static org.apache.flink.runtime.resourcemanager.placementconstraint.SlotT
  */
 public class SlotTag {
 	private final String tagName;
-	private JobID jobId;
+	private final JobID jobId;
 
 	public SlotTag(String tagName, JobID jobId) {
 		this.tagName = tagName;
 		this.jobId = jobId;
 	}
 
-	public SlotTag(String tagName) {
-		this(tagName, null);
-	}
-
-	public String getTagName() {
-		return tagName;
-	}
-
-	public void setJobId(JobID jobId) {
-		this.jobId = jobId;
-	}
-
-	public JobID getJobId() {
-		return jobId;
-	}
+	public String getTagName() { return tagName; }
+	public JobID getJobId() { return  jobId; }
 
 	public boolean match(SlotTag tag, SlotTagScope scope) {
 		switch (scope) {
