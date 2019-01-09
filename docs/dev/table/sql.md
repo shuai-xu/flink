@@ -768,11 +768,11 @@ FROM Orders LEFT JOIN LATERAL TABLE(unnest_udtf(tags)) t AS tag ON TRUE
     </tr>
     <tr>
       <td>
-        <strong>Join with Temporal Table</strong><br>
+        <strong>Join with Temporal Table Function</strong><br>
         <span class="label label-primary">Streaming</span>
       </td>
       <td>
-        <p><a href="streaming/temporal_tables.html">Temporal Tables</a> are tables that track changes over time.
+        <p><a href="streaming/temporal_tables.html">Temporal Table Function</a> are tables that track changes over time.
         A <a href="streaming/temporal_tables.html#temporal-table-functions">Temporal Table Function</a> provides access to the state of a temporal table at a specific point in time.
         The syntax to join a table with a temporal table function is the same as in Join with Table Functions.</p>
 
@@ -786,6 +786,28 @@ FROM
   LATERAL TABLE (Rates(o_proctime))
 WHERE
   r_currency = o_currency
+{% endhighlight %}
+        <p>For more information please check the more detailed <a href="streaming/temporal_tables.html">Temporal Tables concept description.</a></p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <strong>Join with Temporal Table</strong><br>
+        <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span>
+      </td>
+      <td>
+        <p><a href="streaming/temporal_tables.html">Temporal Tables</a> are tables that track changes over time.
+        A <a href="streaming/temporal_tables.html#temporal-table">Temporal Table</a> provides access to the versions of a temporal table at a specific point in time.
+
+        <p>Only support inner and left joins with temporal table. Only support processing-time temporal table joins.</p>
+        Assuming <strong>LatestRates</strong> is a <a href="streaming/temporal_tables.html#temporal-table">Temporal Table</a> which is usually a remote database table (dimension table).</p>
+{% highlight sql %}
+SELECT
+  o.amout, o.currency, r.rate, o.amount * r.rate
+FROM
+  Orders AS o
+  JOIN LatestRates FOR SYSTEM_TIME AS OF o.proctime AS r
+  ON r.currency = o.currency
 {% endhighlight %}
         <p>For more information please check the more detailed <a href="streaming/temporal_tables.html">Temporal Tables concept description.</a></p>
       </td>

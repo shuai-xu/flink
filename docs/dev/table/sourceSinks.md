@@ -1022,6 +1022,47 @@ FilterableTableSource {
 * `applyPredicate(predicates)`: Returns a *copy* of the `TableSource` with added predicates. The `predicates` parameter is a mutable list of conjunctive predicates that are "offered" to the `TableSource`. The `TableSource` accepts to evaluate a predicate by removing it from the list. Predicates that are left in the list will be evaluated by a subsequent filter operator. 
 * `isFilterPushedDown()`: Returns true if the `applyPredicate()` method was called before. Hence, `isFilterPushedDown()` must return true for all `TableSource` instances returned from a `applyPredicate()` call.
 
+### Defining a TableSource with lookupable
+
+The `LookupableTableSource` interface adds support for the table to be accessed via key column(s) in a lookup fashion. This is very useful when used as a dimension table to be joined with the main stream to extend columns. If want to use the TableSource in lookup mode, you should use [temporal table join syntax](streaming/joins.html).
+
+<span class="label label-danger">Attention</span> Currently, a `LookupableTableSource` must also implement `StreamTableSource` or `BatchTableSource`. If the table source doesn't need to support scan, the `getDataStream` and `getBoundedStream` can throw an exception.
+
+The interface looks as follows:
+
+<div class="codetabs" markdown="1">
+<div data-lang="java" markdown="1">
+{% highlight java %}
+LookupableTableSource<T> implements TableSource<T> {
+
+  public TableFunction<T> getLookupFunction(int[] lookupkeys);
+
+  public AsyncTableFunction<T> getAsyncLookupFunction(int[] lookupkeys);
+
+  public LookupConfig getLookupConfig();
+}
+{% endhighlight %}
+</div>
+
+<div data-lang="scala" markdown="1">
+{% highlight scala %}
+LookupableTableSource[T] extends TableSource[T] {
+
+  def getLookupFunction(lookupKeys: Array[Int]): TableFunction[T]
+
+  def getAsyncLookupFunction(lookupKeys: Array[Int]): AsyncTableFunction[T]
+
+  def getLookupConfig: LookupConfig
+}
+{% endhighlight %}
+</div>
+</div>
+
+* `TableSource.getTableSchema()`: Should defines additional primary key or unique key or index on the schema. Flink will choose one of the primary key and unique key and index and tell the TableSource when `getLookupFunction` or `getAsyncLookupFunction`. If none is defined, then an exception will be thrown.
+* `getLookupFunction(lookupkeys)`: Returns a `TableFunction` which used to lookup the matched row(s) via lookup keys. The lookupkeys is one of the defined primary key or unique key or index in TableSchema. The eval method parameters are the lookup keys in the order which `lookupkeys` defined. The return type of the `TableFunction` must be identical to the return type defined by the TableSource.getReturnType() method.
+* `getAsyncLookupFunction(lookupkeys)`: Optional. Similar to `getLookupFunction`, but the `AsyncLookupFunction` lookups the matched row(s) asynchronously. The underlying of `AsyncLookupFunction` will be called via [Async I/O](/dev/stream/operators/asyncio.html).
+* `getLookupConfig()`: Optional. Returns a LookupConfig which defines whether use AsyncLookupFunction and some async parameters such as async buffer capacity and async timeout.
+
 {% top %}
 
 Define a TableSink

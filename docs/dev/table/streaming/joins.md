@@ -65,10 +65,10 @@ WHERE o.id = s.orderId AND
 
 Compared to a regular join operation, this kind of join only supports append-only tables with time attributes. Since time attributes are quasi-monontic increasing, Flink can remove old values from its state without affecting the correctness of the result.
 
-Join with a Temporal Table
+Join with a Temporal Table Function
 --------------------------
 
-A join with a temporal table joins an append-only table (left input/probe side) with a temporal table (right input/build side),
+A join with a temporal table function joins an append-only table (left input/probe side) with a temporal table (right input/build side),
 i.e., a table that changes over time and tracks its changes. Please check the corresponding page for more information about [temporal tables](temporal_tables.html).
 
 The following example shows an append-only table `Orders` that should be joined with the continuously changing currency rates table `RatesHistory`.
@@ -143,7 +143,7 @@ WHERE r.currency = o.currency
 Each record from the probe side will be joined with the version of the build side table at the time of the correlated time attribute of the probe side record.
 In order to support updates (overwrites) of previous values on the build side table, the table must define a primary key.
 
-In our example, each record from `Orders` will be joined with the version of `Rates` at time `o.rowtime`. The `currency` field has been defined as the primary key of `Rates` before and is used to connect both tables in our example. If the query were using a processing-time notion, a newly appended order would always be joined with the most recent version of `Rates` when executing the operation. 
+In our example, each record from `Orders` will be joined with the version of `Rates` at time `o.rowtime`. The `currency` field has been defined as the primary key of `Rates` before and is used to connect both tables in our example. If the query were using a processing-time notion, a newly appended order would always be joined with the most recent version of `Rates` when executing the operation.
 
 In contrast to [regular joins](#regular-joins), this means that if there is a new record on the build side, it will not affect the previous results of the join.
 This again allows Flink to limit the number of elements that must be kept in the state.
@@ -199,7 +199,7 @@ By definition, it is always the current timestamp. Thus, invocations of a proces
 and any updates in the underlying history table will also immediately overwrite the current values.
 
 Only the latest versions (with respect to the defined primary key) of the build side records are kept in the state.
-New updates will have no effect on the previously results emitted/processed records from the probe side.
+Updates of the build side will have no effect on previously emitted join results.
 
 One can think about a processing-time temporal join as a simple `HashMap<K, V>` that stores all of the records from the build side.
 When a new record from the build side has the same key as some previous record, the old value is just simply overwritten.
@@ -221,3 +221,126 @@ applied updates according to the primary key until this point in time.
 By definition of event time, [watermarks]({{ site.baseurl }}/dev/event_time.html) allow the join operation to move
 forward in time and discard versions of the build table that are no longer necessary because no incoming row with
 lower or equal timestamp is expected.
+
+Join with a Temporal Table
+--------------------------
+
+A join with a temporal table joins a (append/upsert/retract) stream (left input/probe side) with a temporal table (right input/build side),
+i.e., a remote dimension table that changes over time. Please check the corresponding page for more information about [temporal tables](temporal_tables.html).
+
+The following example shows an `Orders` stream that should be joined with the continuously changing currency rates table `LatestRates`.
+
+`LatestRates` is a dimension table that is populated with the latest rate. At time `10:15`, `10:30`, `10:52`, the content of `LatestRates` looks as follows:
+
+{% highlight sql %}
+10:15> SELECT * FROM LatestRates;
+
+currency   rate
+======== ======
+US Dollar   102
+Euro        114
+Yen           1
+
+10:30> SELECT * FROM LatestRates;
+
+currency   rate
+======== ======
+US Dollar   102
+Euro        114
+Yen           1
+
+
+10:52> SELECT * FROM LatestRates;
+
+currency   rate
+======== ======
+US Dollar   102
+Euro        116     <==== changed from 114 to 116
+Yen           1
+{% endhighlight %}
+
+The content of `LastestRates` at time `10:15` and `10:30` are equal. The Euro rate has changed from 114 to 116 at `10:52`.
+
+`Orders` is an append-only table that represents payments for the given `amount` and the given `currency`.
+For example at `10:15` there was an order for an amount of `2 Euro`.
+
+{% highlight sql %}
+SELECT * FROM Orders;
+
+amount currency
+====== =========
+     2 Euro             <== arrived at time 10:15
+     1 US Dollar        <== arrived at time 10:30
+     3 Euro             <== arrived at time 10:52
+{% endhighlight %}
+
+Given that we would like to calculate the amount of all `Orders` converted to a common currency (`Yen`).
+
+For example, we would like to convert the following orders using the appropriate conversion rate in `LatestRates`. The result would be:
+
+{% highlight text %}
+amount currency     rate   amout*rate
+====== ========= ======= ============
+     2 Euro          114          228    <== arrived at time 10:15
+     1 US Dollar     102          102    <== arrived at time 10:15
+     2 Euro          116          232    <== arrived at time 10:15
+{% endhighlight %}
+
+
+With the help of a temporal table `LatestRates`, we can express such a query in SQL as:
+
+{% highlight sql %}
+SELECT
+  o.amout, o.currency, r.rate, o.amount * r.rate
+FROM
+  Orders AS o
+  JOIN LatestRates FOR SYSTEM_TIME AS OF o.proctime AS r
+  ON r.currency = o.currency
+{% endhighlight %}
+
+Each record from the probe side will be joined with the current version of the build side table. In our example, the query is using processing-time notion, a newly appended order would always be joined with the most recent version of `LatestRates` when executing the operation.
+
+In contrast to [regular joins](#regular-joins), this means that if there is any changes on the build side, it will not affect the previous results of the join. And the temporal table join operator is very lightweight which do not keep any state. The execution mode of temporal table join is very similar to Join UDTF.
+
+Compared to [time-windowed joins](#time-windowed-joins), temporal table joins do not define a time window within which bounds the records will be joined.
+Records from the probe side are always joined with the build side's latest version at processing time. Thus, records on the build side might be arbitrarily old.
+
+Compared to [temporal table function joins](#temporal-table-function-joins), they are comes from the same motivation but has different SQL sytax and runtime implementation. The syntax of temporal table function join is a Join UDTF, but temporal table join is the regular temporal table query syntax introduced in SQL:2011. The implementation of temporal table function join is joins two streams and keeps them in state, but temporal table join accepts the only input stream and lookup database according to the key in the record.
+
+Such behaviour makes a temporal table join a good candidate to express stream enrichment in relational terms.
+
+### Usage
+
+The syntax of temporal table join is as follows:
+
+{% highlight sql %}
+SELECT column-names
+FROM table1 [AS <alias1>]
+[LEFT] JOIN table2 FOR SYSTEM_TIME AS OF PROCTIME() [AS <alias2>]
+ON table1.column-name1 = table2.key-name1
+{% endhighlight %}
+
+Currently, only support INNER JOIN and LEFT JOIN. The `FOR SYSTEM_TIME AS OF PROCTIME()` should be followed after temporal table, the meaning is snapshot the temporal table at processing time when joining every record from left table.
+
+For example, after [defining temporal table](temporal_tables.html#defining-temporal-table), we can start using it.
+
+
+<div class="codetabs" markdown="1">
+<div data-lang="SQL" markdown="1">
+{% highlight sql %}
+SELECT
+  SUM(o_amount * r_rate) AS amount
+FROM
+  Orders
+  JOIN LatestRates FOR SYSTEM_TIME AS OF o_proctime
+  ON r_currency = o_currency
+{% endhighlight %}
+</div>
+</div>
+
+**Note**:
+1. Temporal Table Join only support SQL, do not support Table API currently.
+2. Flink do not support Event-time Temporal Table Joins currently.
+They will be supportd in the future.
+
+{% top %}
