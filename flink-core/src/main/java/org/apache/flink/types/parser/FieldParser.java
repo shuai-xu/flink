@@ -113,6 +113,10 @@ public abstract class FieldParser<T> {
 		}
 	}
 
+	public int resetErrorStateAndParse(byte[] bytes, int startPos, int limit, byte[] delim, T reuse) {
+		return resetErrorStateAndParse(bytes, startPos, limit, delim, reuse, false);
+	}
+
 	/**
 	 * Each parser's logic should be implemented inside this method
 	 */

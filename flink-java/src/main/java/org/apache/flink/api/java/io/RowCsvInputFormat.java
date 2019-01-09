@@ -36,6 +36,10 @@ public class RowCsvInputFormat extends AbstractRowCsvInputFormat<Row> {
 		super(filePath, fieldTypeInfos, lineDelimiter, fieldDelimiter, selectedFields, emptyColumnAsNull, limit);
 	}
 
+	public RowCsvInputFormat(Path filePath, TypeInformation[] fieldTypeInfos, String lineDelimiter, String fieldDelimiter, int[] selectedFields, boolean emptyColumnAsNull) {
+		this(filePath, fieldTypeInfos, lineDelimiter, fieldDelimiter, selectedFields, emptyColumnAsNull, Long.MAX_VALUE);
+	}
+
 	public RowCsvInputFormat(Path filePath, TypeInformation[] fieldTypes, String lineDelimiter, String fieldDelimiter, int[] selectedFields) {
 		this(filePath, fieldTypes, lineDelimiter, fieldDelimiter, selectedFields, false, Long.MAX_VALUE);
 	}
