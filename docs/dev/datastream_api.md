@@ -199,7 +199,7 @@ SourceV2:
 
 - Currently we introduce a new source interface named *SourceV2*.
 The main reason of this is that current implementation of DataStream source does not work well with complex chain structure.
-See [Tasks and Operator Chains]({{ site.baseurl }}/concepts/runtime#tasks-and-operator-chains) for more details.
+See [Tasks and Operator Chains]({{ site.baseurl }}/concepts/runtime.html#tasks-and-operator-chains) for more details.
 - You can use V2 interface with `streamExecutionEnvironment.addSourceV2(sourceFunctionV2)`.
 - We have not migrated all predefined sources to V2 yet.
 And the *SourceV2* may be refactored later since there is a proposal introduced in Flink community.
@@ -267,7 +267,7 @@ SourceV2:
 
 - Currently we introduce a new source interface named *SourceV2*.
 The main reason of this is that current implementation of DataStream source does not work well with complex chain structure.
-See [Tasks and Operator Chains]({{ site.baseurl }}/concepts/runtime#tasks-and-operator-chains) for more details.
+See [Tasks and Operator Chains]({{ site.baseurl }}/concepts/runtime.html#tasks-and-operator-chains) for more details.
 - You can use V2 interface with `streamExecutionEnvironment.addSourceV2(sourceFunctionV2)`.
 - We have not migrated all predefined sources to V2 yet.
 And the *SourceV2* may be refactored later since there is a proposal introduced in Flink community.
