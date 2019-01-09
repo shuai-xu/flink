@@ -21,7 +21,7 @@ package org.apache.flink.table.runtime
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.{RowType, DataTypes}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
@@ -41,7 +41,7 @@ class SubstituteStreamOperatorTest {
   def testCodegenOneInputStreamOperator(): Unit = {
     val processCode = "in1.setInt(0, 2);"
     val generatedOperator = OperatorCodeGenerator.generateOneInputStreamOperator[Date, Date](
-      ctx, operatorName, processCode, "", new BaseRowType(classOf[BaseRow], DataTypes.DATE),
+      ctx, operatorName, processCode, "", new RowType(classOf[BaseRow], DataTypes.DATE),
       new TableConfig)
     val substituteOperator = new OneInputSubstituteStreamOperator[Date, Date](
       generatedOperator.name, generatedOperator.code)

@@ -23,7 +23,7 @@ import java.lang.{Long => JLong}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.dataview.MapView
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{RowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
 import org.apache.flink.table.codegen.CodeGenUtils.newName
@@ -372,7 +372,7 @@ class DistinctAggCodeGen(
       // always create a new result row
       generator.generateResultExpression(
         fieldExprs,
-        DataTypes.internal(valueType).asInstanceOf[BaseRowType],
+        DataTypes.internal(valueType).asInstanceOf[RowType],
         outRow = keyTerm,
         reusedOutRow = false)
     } else {

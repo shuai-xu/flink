@@ -23,7 +23,7 @@ import org.apache.flink.api.common.operators.base.JoinOperatorBase.JoinHint
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
@@ -478,8 +478,8 @@ class StreamExecJoin(
       generateProjection(
         CodeGeneratorContext(config),
         "PkProjection",
-        DataTypes.internal(inputType).asInstanceOf[BaseRowType],
-        DataTypes.internal(pkType).asInstanceOf[BaseRowType],
+        DataTypes.internal(inputType).asInstanceOf[RowType],
+        DataTypes.internal(pkType).asInstanceOf[RowType],
         pk.get,
         reusedOutRecord = false)
     } else {

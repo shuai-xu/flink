@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
 import org.apache.flink.table.api.{AggPhaseEnforcer, BatchTableEnvironment, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.BatchExecAggregateCodeGen
@@ -87,7 +87,7 @@ abstract class BatchExecGroupAggregateBase(
       Array(getAccumulatorTypeOfAggregateFunction(a).toInternalType)
   }.toArray[Array[InternalType]]
 
-  lazy val groupKeyRowType = new BaseRowType(
+  lazy val groupKeyRowType = new RowType(
     classOf[BinaryRow],
     grouping.map { index =>
       FlinkTypeFactory.toDataType(inputRelDataType.getFieldList.get(index).getType)
@@ -111,7 +111,7 @@ abstract class BatchExecGroupAggregateBase(
 
   def getAggCallToAggFunction: Seq[(AggregateCall, UserDefinedFunction)] = aggCallToAggFunction
 
-  def getOutputRowType: BaseRowType
+  def getOutputRowType: RowType
 
   private[flink] def getAggOperatorName(prefix: String): String = {
     val groupingStr = if (grouping.nonEmpty) {
@@ -146,8 +146,8 @@ abstract class BatchExecGroupAggregateBase(
       isFinal: Boolean,
       ctx: CodeGeneratorContext,
       tableEnv: BatchTableEnvironment,
-      inputType: BaseRowType,
-      outputType: BaseRowType,
+      inputType: RowType,
+      outputType: RowType,
       prefix: String): GeneratedOperator = {
 
     val config = tableEnv.config

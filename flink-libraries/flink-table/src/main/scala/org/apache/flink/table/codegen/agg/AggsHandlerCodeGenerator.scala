@@ -22,7 +22,7 @@ import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.dataview.{ListView, MapView}
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction}
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.codegen._
@@ -47,7 +47,7 @@ class AggsHandlerCodeGenerator(
     nullCheck: Boolean,
     copyInputField: Boolean) {
 
-  private val inputType = new BaseRowType(classOf[BaseRow], inputFieldTypes: _*)
+  private val inputType = new RowType(classOf[BaseRow], inputFieldTypes: _*)
 
   /** constant expressions that act like a second input in the parameter indices. */
   private var constantExprs: Seq[GeneratedExpression] = Seq()
@@ -58,7 +58,7 @@ class AggsHandlerCodeGenerator(
   private var hasNamespace: Boolean = false
 
   /** Aggregates informations */
-  private var accTypeInfo: BaseRowType = _
+  private var accTypeInfo: RowType = _
   private var aggBufferSize: Int = _
 
   private var mergedAccExternalTypes: Array[DataType] = _
@@ -67,7 +67,7 @@ class AggsHandlerCodeGenerator(
 
   private var ignoreAggValues: Array[Int] = Array()
 
-  var valueType: BaseRowType = _
+  var valueType: RowType = _
 
   /**
     * The [[aggBufferCodeGens]] and [[aggActionCodeGens]] will be both created when code generate
@@ -163,7 +163,7 @@ class AggsHandlerCodeGenerator(
     */
   private def initialAggregateInformation(aggInfoList: AggregateInfoList): Unit = {
 
-    this.accTypeInfo = new BaseRowType(
+    this.accTypeInfo = new RowType(
       classOf[GenericRow],
       aggInfoList.getAccTypes.map(_.toInternalType): _*)
     this.aggBufferSize = accTypeInfo.getArity
@@ -478,7 +478,7 @@ class AggsHandlerCodeGenerator(
     val accTerm = newName("acc")
     val resultExpr = exprGenerator.generateResultExpression(
       initAccExprs,
-      accTypeInfo.toInternalType.asInstanceOf[BaseRowType],
+      accTypeInfo.toInternalType.asInstanceOf[RowType],
       outRow = accTerm,
       reusedOutRow = false)
 
@@ -500,7 +500,7 @@ class AggsHandlerCodeGenerator(
     // always create a new accumulator row
     val resultExpr = exprGenerator.generateResultExpression(
       accExprs,
-      accTypeInfo.toInternalType.asInstanceOf[BaseRowType],
+      accTypeInfo.toInternalType.asInstanceOf[RowType],
       outRow = accTerm,
       reusedOutRow = false)
 
@@ -595,9 +595,9 @@ class AggsHandlerCodeGenerator(
         // the padding types will be ignored
         val padding = Array.range(0, mergedAccOffset).map(_ => DataTypes.INT)
         val typeInfo = padding ++ mergedAccExternalTypes
-        new BaseRowType(classOf[GenericRow], typeInfo.map(_.toInternalType): _*)
+        new RowType(classOf[GenericRow], typeInfo.map(_.toInternalType): _*)
       } else {
-        new BaseRowType(classOf[GenericRow], mergedAccExternalTypes.map(_.toInternalType): _*)
+        new RowType(classOf[GenericRow], mergedAccExternalTypes.map(_.toInternalType): _*)
       }
 
       // bind input1 as otherAcc
@@ -653,7 +653,7 @@ class AggsHandlerCodeGenerator(
     }
 
     val aggValueTerm = newName("aggValue")
-    valueType = new BaseRowType(classOf[GenericRow], valueExprs.map(_.resultType): _*)
+    valueType = new RowType(classOf[GenericRow], valueExprs.map(_.resultType): _*)
 
     // always create a new result row
     val resultExpr = exprGenerator.generateResultExpression(

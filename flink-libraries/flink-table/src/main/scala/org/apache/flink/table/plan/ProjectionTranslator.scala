@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan
 
-import org.apache.flink.table.api.types.BaseRowType
+import org.apache.flink.table.api.types.{RowType}
 import org.apache.flink.table.api.{OverWindow, TableEnvironment}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.logical.{LogicalNode, Project}
@@ -222,7 +222,7 @@ object ProjectionTranslator {
           .getOrElse(throw new RuntimeException("Could not find resolved composite."))
         resolvedExpr.validateInput()
         val newProjects = resolvedExpr.resultType match {
-          case ct: BaseRowType =>
+          case ct: RowType =>
             (0 until ct.getArity).map { idx =>
               projectList += GetCompositeField(unresolved, ct.getFieldNames()(idx))
             }

@@ -22,8 +22,8 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.plan.stats.TableStats;
@@ -113,8 +113,8 @@ public class HBaseTableSource implements BatchTableSource<GenericRow>, Projectab
 	}
 
 	@Override
-	public BaseRowType getReturnType() {
-		return new BaseRowType(
+	public RowType getReturnType() {
+		return new RowType(
 				GenericRow.class,
 				Arrays.stream(getFieldTypes()).map((Function<TypeInformation, DataType>) TypeInfoWrappedDataType::new)
 						.toArray(DataType[]::new),

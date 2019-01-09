@@ -20,13 +20,12 @@ package org.apache.flink.table.util
 
 import java.util
 import java.util.Collections
-
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableSchema
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
+import org.apache.flink.table.api.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.runtime.utils.TimeTestUtil.EventTimeSourceFunction
 import org.apache.flink.table.sources._
 import org.apache.flink.table.sources.tsextractors.ExistingField
@@ -142,7 +141,7 @@ class TestProjectableTableSource(
 
   override def explainSource(): String = {
     s"TestSource(" +
-      s"physical fields: ${getReturnType.toInternalType.asInstanceOf[BaseRowType]
+      s"physical fields: ${getReturnType.toInternalType.asInstanceOf[RowType]
           .getFieldNames.mkString(", ")})"
   }
 }

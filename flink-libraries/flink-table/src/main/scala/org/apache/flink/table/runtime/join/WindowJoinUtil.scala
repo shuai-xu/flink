@@ -19,7 +19,7 @@ package org.apache.flink.table.runtime.join
 
 import org.apache.flink.api.common.functions.FlatJoinFunction
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
-import org.apache.flink.table.api.types.BaseRowType
+import org.apache.flink.table.api.types.{RowType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.plan.schema.TimeIndicatorRelDataType
@@ -433,8 +433,8 @@ object WindowJoinUtil {
   private[flink] def generateJoinFunction(
     config: TableConfig,
     joinType: JoinRelType,
-    leftType: BaseRowType,
-    rightType: BaseRowType,
+    leftType: RowType,
+    rightType: RowType,
     returnType: RelDataType,
     otherCondition: Option[RexNode],
     ruleDescription: String): GeneratedFunction[FlatJoinFunction[BaseRow, BaseRow, BaseRow],

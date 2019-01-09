@@ -25,7 +25,7 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.source.{RichParallelSourceFunction, SourceFunction}
 import org.apache.flink.table.api.TableSchema
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
+import org.apache.flink.table.api.types.{RowType, DataType, DataTypes}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sources.{BatchTableSource, StreamTableSource}
 import org.apache.flink.table.temptable.FlinkTableServiceFactory.{TABLE_SERVICE_DEFAULT_READY_GAP_MS_VALUE, TABLE_SERVICE_DEFAULT_READY_RETRYTIMES_VALUE, TABLE_SERVICE_READY_RETRY_BACKOFF_MS, TABLE_SERVICE_READY_RETRY_TIMES}
@@ -41,7 +41,7 @@ class FlinkTableServiceSource(
   clientClassName: String,
   tableProperties: TableProperties,
   tableName: String,
-  resultType: BaseRowType) extends BatchTableSource[BaseRow] with StreamTableSource[BaseRow] {
+  resultType: RowType) extends BatchTableSource[BaseRow] with StreamTableSource[BaseRow] {
 
   override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[BaseRow] = {
     streamEnv.addSource(
@@ -78,7 +78,7 @@ class FlinkTableServiceSourceFunction(
   clientClassName: String,
   tableProperties: TableProperties,
   tableName: String,
-  resultType: BaseRowType) extends RichParallelSourceFunction[BaseRow] {
+  resultType: RowType) extends RichParallelSourceFunction[BaseRow] {
 
   private var flinkTableServiceClient: TableServiceClient = _
 

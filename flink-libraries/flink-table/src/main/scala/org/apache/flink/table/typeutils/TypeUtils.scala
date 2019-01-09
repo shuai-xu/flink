@@ -98,7 +98,7 @@ object TypeUtils {
           createTypeInfoFromDataType(mp.getValueType)).getTypeClass
 
       // composite types
-      case br: BaseRowType => classOf[BaseRow]
+      case br: RowType => classOf[BaseRow]
 
       case gt: GenericType[_] => gt.getTypeInfo.getTypeClass
 
@@ -210,7 +210,7 @@ object TypeUtils {
   def createDataTypeFromTypeInfo(typeInfo: TypeInformation[_]): DataType =
     new TypeInfoWrappedDataType(typeInfo)
 
-  def toBaseRowTypeInfo(t: BaseRowType): BaseRowTypeInfo[BaseRow] = {
+  def toBaseRowTypeInfo(t: RowType): BaseRowTypeInfo[BaseRow] = {
     new BaseRowTypeInfo[BaseRow](
       t.getInternalTypeClass.asInstanceOf[Class[BaseRow]],
       t.getFieldInternalTypes.map(createTypeInfoFromDataType),
@@ -281,7 +281,7 @@ object TypeUtils {
           createTypeInfoFromDataType(mp.getValueType))
 
       // composite types
-      case br: BaseRowType =>
+      case br: RowType =>
         if (br.isUseBaseRow) {
           new BaseRowTypeInfo(
             br.getInternalTypeClass,
@@ -300,26 +300,26 @@ object TypeUtils {
   }
 
   def internalTypeFromTypeInfo(typeInfo: TypeInformation[_]): InternalType = typeInfo match {
-    // built-in composite type info. (Need to be converted to BaseRowType)
+    // built-in composite type info. (Need to be converted to RowType)
     case rt: RowTypeInfo =>
-      new BaseRowType(
+      new RowType(
         classOf[BaseRow],
         rt.getFieldTypes.map(DataTypes.of),
         rt.getFieldNames)
 
     case tt: TupleTypeInfo[_] =>
-      new BaseRowType(
+      new RowType(
         (0 until tt.getArity).map(tt.getTypeAt).map(DataTypes.of).toArray,
         tt.getFieldNames)
 
     case pt: PojoTypeInfo[_] =>
       val fields = (0 until pt.getArity).map(pt.getPojoFieldAt)
-      new BaseRowType(
+      new RowType(
         fields.map{(field: PojoField) =>
           DataTypes.of(field.getTypeInformation)}.toArray,
         fields.map{(field: PojoField) => field.getField.getName}.toArray)
 
-    case cs: CaseClassTypeInfo[_] => new BaseRowType(
+    case cs: CaseClassTypeInfo[_] => new RowType(
       (0 until cs.getArity).map(cs.getTypeAt).map(DataTypes.of).toArray,
       cs.fieldNames.toArray)
 
@@ -375,7 +375,7 @@ object TypeUtils {
         internalTypeFromTypeInfo(mp.getValueTypeInfo))
 
     case br: BaseRowTypeInfo[_] =>
-      new BaseRowType(
+      new RowType(
         br.getTypeClass,
         br.getFieldTypes.map(DataTypes.of),
         br.getFieldNames,

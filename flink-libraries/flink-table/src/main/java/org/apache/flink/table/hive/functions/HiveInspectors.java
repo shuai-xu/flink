@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.hive.functions;
 
-import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.BooleanType;
 import org.apache.flink.table.api.types.ByteArrayType;
 import org.apache.flink.table.api.types.ByteType;
@@ -27,6 +26,7 @@ import org.apache.flink.table.api.types.FloatType;
 import org.apache.flink.table.api.types.IntType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.LongType;
+import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.api.types.ShortType;
 import org.apache.flink.table.api.types.StringType;
 import org.apache.flink.table.dataformat.Decimal;
@@ -164,7 +164,7 @@ public class HiveInspectors {
 				fieldNames[i] = fieldName;
 				i++;
 			}
-			return new BaseRowType(types, fieldNames);
+			return new RowType(types, fieldNames);
 		} else {
 			throw new UnsupportedOperationException("Unsupported inspectors: " + inspector);
 		}

@@ -24,7 +24,7 @@ import org.apache.flink.service.ServiceRegistryFactory
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.functions.sink.{RichSinkFunction, SinkFunction}
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.{BaseRowType, DataType}
+import org.apache.flink.table.api.types.{RowType, DataType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks.{AppendStreamTableSink, BatchTableSink, TableSinkBase}
 import org.apache.flink.table.temptable.FlinkTableServiceFactory.{TABLE_SERVICE_DEFAULT_READY_GAP_MS_VALUE, TABLE_SERVICE_DEFAULT_READY_RETRYTIMES_VALUE, TABLE_SERVICE_READY_RETRY_BACKOFF_MS, TABLE_SERVICE_READY_RETRY_TIMES}
@@ -42,7 +42,7 @@ class FlinkTableServiceSink(
   clientClassName: String,
   tableProperties: TableProperties,
   tableName: String,
-  resultType: BaseRowType) extends TableSinkBase[BaseRow]
+  resultType: RowType) extends TableSinkBase[BaseRow]
   with BatchTableSink[BaseRow]
   with AppendStreamTableSink[BaseRow] {
 
@@ -83,7 +83,7 @@ class FlinkTableServiceSinkFunction(
   clientClassName: String,
   tableProperties: TableProperties,
   tableName: String,
-  resultType: BaseRowType)
+  resultType: RowType)
   extends RichSinkFunction[BaseRow] {
 
   private var partitionId: Int = _

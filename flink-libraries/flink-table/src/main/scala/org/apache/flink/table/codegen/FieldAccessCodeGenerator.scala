@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.codegen
 
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.{RowType, DataTypes}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.codegen.Indenter.toISC
@@ -33,7 +33,7 @@ object FieldAccessCodeGenerator {
   def generateRowFieldExtractor(
     ctx: CodeGeneratorContext,
     name: String,
-    inType: BaseRowType,
+    inType: RowType,
     index: Int,
     inputTerm: String = DEFAULT_INPUT1_TERM,
     outRecordTerm: String = DEFAULT_OUT_RECORD_TERM,
@@ -77,7 +77,7 @@ object FieldAccessCodeGenerator {
   def generateRowFieldExtractor(
     ctx: CodeGeneratorContext,
     name: String,
-    inputType: BaseRowType,
+    inputType: RowType,
     index: Int): GeneratedFieldExtractor ={
     generateRowFieldExtractor(
       ctx, name, inputType, index, inputTerm = DEFAULT_INPUT1_TERM)

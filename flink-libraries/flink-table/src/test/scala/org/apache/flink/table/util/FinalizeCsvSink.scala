@@ -23,7 +23,7 @@ import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.BaseRowType
+import org.apache.flink.table.api.types.{RowType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks.csv.BaseRowCsvOutputFormat
 import org.apache.flink.table.sinks.{BatchTableSink, TableSinkBase}
@@ -87,8 +87,8 @@ class FinalizeCsvSink(
     new FinalizeCsvSink(path, fieldDelim, numFiles, writeMode, outputFieldNames, markPath)
   }
 
-  override def getOutputType: BaseRowType = {
-    new BaseRowType(classOf[BaseRow], getFieldTypes, true)
+  override def getOutputType: RowType = {
+    new RowType(classOf[BaseRow], getFieldTypes, true)
   }
 
 }

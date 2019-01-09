@@ -23,9 +23,9 @@ import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.core.memory.MemoryType;
 import org.apache.flink.runtime.io.disk.RandomAccessInputView;
 import org.apache.flink.runtime.memory.MemoryManager;
-import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.dataformat.util.BinaryRowUtil;
@@ -85,8 +85,8 @@ public class BytesHashMapTest {
 	public void testHashSetMode() throws IOException {
 		final int numMemSegments = needNumMemSegments(
 				NUM_ENTRIES,
-				rowLength(new BaseRowType(BinaryRow.class, valueTypes)),
-				rowLength(new BaseRowType(BinaryRow.class, keyTypes)),
+				rowLength(new RowType(BinaryRow.class, valueTypes)),
+				rowLength(new RowType(BinaryRow.class, keyTypes)),
 				PAGE_SIZE);
 		int memorySize = numMemSegments * PAGE_SIZE;
 		MemoryManager memoryManager = new MemoryManager(numMemSegments * PAGE_SIZE, 32);
@@ -107,8 +107,8 @@ public class BytesHashMapTest {
 
 		final int numMemSegments = needNumMemSegments(
 				NUM_ENTRIES,
-				rowLength(new BaseRowType(BinaryRow.class, valueTypes)),
-				rowLength(new BaseRowType(BinaryRow.class, keyTypes)),
+				rowLength(new RowType(BinaryRow.class, valueTypes)),
+				rowLength(new RowType(BinaryRow.class, keyTypes)),
 				PAGE_SIZE);
 		int memorySize = numMemSegments * PAGE_SIZE;
 		MemoryManager memoryManager = new MemoryManager(memorySize, 32);
@@ -130,8 +130,8 @@ public class BytesHashMapTest {
 		final BinaryRow[] rows = getRandomizedInput(NUM_ENTRIES, rnd, true);
 		final int numMemSegments = needNumMemSegments(
 				NUM_ENTRIES,
-				rowLength(new BaseRowType(BinaryRow.class, valueTypes)),
-				rowLength(new BaseRowType(BinaryRow.class, keyTypes)),
+				rowLength(new RowType(BinaryRow.class, valueTypes)),
+				rowLength(new RowType(BinaryRow.class, keyTypes)),
 				PAGE_SIZE);
 		int memorySize = numMemSegments * PAGE_SIZE;
 
@@ -153,8 +153,8 @@ public class BytesHashMapTest {
 
 		final int numMemSegments = needNumMemSegments(
 				NUM_ENTRIES,
-				rowLength(new BaseRowType(BinaryRow.class, valueTypes)),
-				rowLength(new BaseRowType(BinaryRow.class, keyTypes)),
+				rowLength(new RowType(BinaryRow.class, valueTypes)),
+				rowLength(new RowType(BinaryRow.class, keyTypes)),
 				PAGE_SIZE);
 
 		int memorySize = numMemSegments * PAGE_SIZE;
@@ -257,8 +257,8 @@ public class BytesHashMapTest {
 	public void testSingleKeyMultipleOps() throws Exception {
 		final int numMemSegments = needNumMemSegments(
 				NUM_ENTRIES,
-				rowLength(new BaseRowType(BinaryRow.class, valueTypes)),
-				rowLength(new BaseRowType(BinaryRow.class, keyTypes)),
+				rowLength(new RowType(BinaryRow.class, valueTypes)),
+				rowLength(new RowType(BinaryRow.class, keyTypes)),
 				PAGE_SIZE);
 
 		int memorySize = numMemSegments * PAGE_SIZE;
@@ -480,7 +480,7 @@ public class BytesHashMapTest {
 		return builder.toString();
 	}
 
-	private int rowLength(BaseRowType tpe) {
+	private int rowLength(RowType tpe) {
 		return BinaryRow.calculateFixPartSizeInBytes(tpe.getArity())
 				+ BinaryRowUtil.getVariableLength(tpe.getFieldInternalTypes());
 	}

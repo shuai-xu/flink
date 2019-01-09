@@ -26,7 +26,7 @@ import org.apache.flink.runtime.io.network.DataExchangeMode
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, PartitionTransformation, StreamTransformation, TwoInputTransformation}
 import org.apache.flink.streaming.runtime.partitioner._
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
@@ -285,12 +285,12 @@ class BatchExecExchange(
         // 1. Fixed size sample in each partitions.
         val localSampleOutRowType = DataTypes.internal(
           new BaseRowTypeInfo(classOf[GenericRow], keys.map(types(_)): _ *))
-            .asInstanceOf[BaseRowType]
+            .asInstanceOf[RowType]
 
         val localSampleProjection = ProjectionCodeGenerator.generateProjection(
           CodeGeneratorContext(tableEnv.getConfig),
           "LocalSample",
-          DataTypes.internal(inputType).asInstanceOf[BaseRowType],
+          DataTypes.internal(inputType).asInstanceOf[RowType],
           localSampleOutRowType,
           keys,
           reusedOutRecord = false)
@@ -309,7 +309,7 @@ class BatchExecExchange(
         // and use sampled data to build range boundaries.
         val sampleType = DataTypes.internal(
           new BaseRowTypeInfo(classOf[BinaryRow], keys.map(types(_)): _*))
-            .asInstanceOf[BaseRowType]
+            .asInstanceOf[RowType]
         val ctx = CodeGeneratorContext(tableEnv.getConfig)
         val copyToBinaryRow = ProjectionCodeGenerator.generateProjection(
           ctx,

@@ -108,7 +108,7 @@ class RowBoundComparatorCodeGenerator(config: TableConfig, bound: Long) {
 class RangeBoundComparatorCodeGenerator(
     relBuilder: RelBuilder,
     config: TableConfig,
-    inType: BaseRowType,
+    inType: RowType,
     bound: Any,
     key: Int = -1,
     keyType: InternalType = null,
@@ -265,7 +265,7 @@ class RangeBoundComparatorCodeGenerator(
  * RANGE allow the compound ORDER BY and the random type when the bound is current row.
  */
 class MultiFieldRangeBoundComparatorCodeGenerator(
-    inType: BaseRowType,
+    inType: RowType,
     keys: Array[Int],
     keyTypes: Array[InternalType],
     keyOrders: Array[Boolean],
@@ -321,7 +321,7 @@ class MultiFieldRangeBoundComparatorCodeGenerator(
 
       val compareCode = if (prefix != null) {
         t match {
-          case bt: BaseRowType =>
+          case bt: RowType =>
             val arity = bt.getArity
             s"$compCompare(o1.get$prefix($index, $arity), o2.get$prefix($index, $arity))"
           case _ =>

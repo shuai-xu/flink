@@ -19,7 +19,6 @@ package org.apache.flink.table.runtime.harness
 
 import java.lang.{Integer => JInt, Long => JLong}
 import java.util.concurrent.ConcurrentLinkedQueue
-
 import org.apache.calcite.rel.core.JoinInfo
 import org.apache.calcite.rex.{RexBuilder, RexNode}
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
@@ -32,7 +31,7 @@ import org.apache.flink.streaming.api.operators.TwoInputStreamOperator
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.KeyedTwoInputStreamOperatorTestHarness
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.api.{TableConfig, Types, ValidationException}
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.dataformat.BinaryString.fromString
@@ -46,6 +45,7 @@ import org.apache.flink.table.runtime.BaseRowKeySelector
 import org.apache.flink.table.runtime.utils.BaseRowHarnessAssertor
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
+
 import org.hamcrest.CoreMatchers
 import org.hamcrest.Matchers.{endsWith, startsWith}
 import org.junit.Assert.assertTrue
@@ -592,7 +592,7 @@ class TemporalJoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mo
 
     val leftType = joinInfo.leftRowType
     val rightType = joinInfo.rightRowType
-    val joinType = new BaseRowType(
+    val joinType = new RowType(
       classOf[GenericRow],
       (leftType.getFieldTypes ++ rightType.getFieldTypes).map(DataTypes.of),
       leftType.getFieldNames ++ rightType.getFieldNames)

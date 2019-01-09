@@ -128,7 +128,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
    * @return instance of GeneratedExpression
    */
   def generateConverterResultExpression(
-      returnType: BaseRowType,
+      returnType: RowType,
       outRecordTerm: String = CodeGeneratorContext.DEFAULT_OUT_RECORD_TERM,
       outRecordWriterTerm: String = CodeGeneratorContext.DEFAULT_OUT_RECORD_WRITER_TERM,
       reusedOutRow: Boolean = true,
@@ -199,7 +199,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
     */
   def generateResultExpression(
       fieldExprs: Seq[GeneratedExpression],
-      returnType: BaseRowType,
+      returnType: RowType,
       outRow: String = CodeGeneratorContext.DEFAULT_OUT_RECORD_TERM,
       outRowWriter: Option[String] = Some(CodeGeneratorContext.DEFAULT_OUT_RECORD_WRITER_TERM),
       reusedOutRow: Boolean = true,
@@ -227,7 +227,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
   def generateResultExpression(
       fieldExprs: Seq[GeneratedExpression],
       fieldExprIdxToOutputRowPosMap: Map[Int, Int],
-      returnType: BaseRowType,
+      returnType: RowType,
       outRow: String,
       outRowWriter: Option[String],
       reusedOutRow: Boolean,

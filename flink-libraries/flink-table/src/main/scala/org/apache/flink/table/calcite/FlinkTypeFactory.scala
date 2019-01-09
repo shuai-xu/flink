@@ -513,14 +513,14 @@ object FlinkTypeFactory {
   }
 
   def toInternalBaseRowType[T <: BaseRow](
-      logicalRowType: RelDataType, referType: Class[T]): BaseRowType = {
+      logicalRowType: RelDataType, referType: Class[T]): RowType = {
     // convert to type information
     val logicalFieldTypes = logicalRowType.getFieldList.asScala map { relDataType =>
       FlinkTypeFactory.toInternalType(relDataType.getType)
     }
     // field names
     val logicalFieldNames = logicalRowType.getFieldNames.asScala
-    new BaseRowType(
+    new RowType(
       referType, logicalFieldTypes.toArray[DataType], logicalFieldNames.toArray, true)
   }
 

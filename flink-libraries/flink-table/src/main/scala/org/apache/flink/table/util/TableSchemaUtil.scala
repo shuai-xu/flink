@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.util
 
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, TimestampType}
+import org.apache.flink.table.api.types.{RowType, DataType, DataTypes, TimestampType}
 import org.apache.flink.table.api.{Column, TableSchema}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 
@@ -63,7 +63,7 @@ object TableSchemaUtil {
     dataType: DataType,
     fieldNullables: Option[Array[Boolean]] = None): TableSchema = {
     dataType.toInternalType match {
-      case bt: BaseRowType =>
+      case bt: RowType =>
         val fieldNames = bt.getFieldNames
         val fieldTypes = bt.getFieldTypes.map(_.toInternalType)
         if (fieldNullables.isDefined) {

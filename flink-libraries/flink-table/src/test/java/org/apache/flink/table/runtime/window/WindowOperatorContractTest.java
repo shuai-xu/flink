@@ -23,9 +23,9 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.streaming.util.KeyedOneInputStreamOperatorTestHarness;
 import org.apache.flink.streaming.util.OneInputStreamOperatorTestHarness;
 import org.apache.flink.table.api.Types;
-import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.api.window.TimeWindow;
 import org.apache.flink.table.api.window.Window;
 import org.apache.flink.table.dataformat.BaseRow;
@@ -181,7 +181,7 @@ public class WindowOperatorContractTest {
 		long allowedLateness) throws Exception {
 
 		BaseRowTypeInfo<BaseRow> inputType = new BaseRowTypeInfo<>(BaseRow.class, Types.STRING(), Types.INT());
-		BaseRowType inputT = (BaseRowType) DataTypes.internal(inputType);
+		RowType inputT = (RowType) DataTypes.internal(inputType);
 		BaseRowKeySelector keySelector = StreamExecUtil.getKeySelector(new int[]{0}, inputType);
 		TypeInformation<BaseRow> keyType = keySelector.getProducedType();
 		InternalType[] accTypes = new InternalType[]{DataTypes.LONG, DataTypes.LONG};

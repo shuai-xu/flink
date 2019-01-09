@@ -22,7 +22,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, TypeInfoWrappedDataType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, RowType, TypeInfoWrappedDataType}
 import org.apache.flink.table.api.{TableConfigOptions, TableException, Types}
 import org.apache.flink.table.expressions.AggFunctionCall
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
@@ -166,8 +166,8 @@ class AggregateTest extends TableTestBase {
 
     val typeInfo2 = call2.externalAccType
     assertEquals(2,
-      typeInfo2.asInstanceOf[BaseRowType].getFieldNames.length)
-    val rowTypeInfo = typeInfo2.asInstanceOf[BaseRowType]
+      typeInfo2.asInstanceOf[RowType].getFieldNames.length)
+    val rowTypeInfo = typeInfo2.asInstanceOf[RowType]
     assertEquals(DataTypes.LONG, rowTypeInfo.getInternalTypeAt(0))
     assertEquals(DataTypes.INT, rowTypeInfo.getInternalTypeAt(1))
   }

@@ -24,7 +24,7 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManager
 import org.apache.flink.runtime.memory.MemoryManager
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.functions.{FunctionContext, UserDefinedFunction}
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
@@ -286,7 +286,7 @@ class CodeGeneratorContext(val tableConfig: TableConfig, val supportReference: B
       outRecordWriterTerm: Option[String] = None,
       reused: Boolean = true): String = {
     val statement = t match {
-      case rt: BaseRowType if rt.getInternalTypeClass == classOf[BinaryRow] =>
+      case rt: RowType if rt.getInternalTypeClass == classOf[BinaryRow] =>
         val writerTerm = outRecordWriterTerm.getOrElse(
           throw new CodeGenException("No writer is specified when writing BinaryRow record.")
         )
@@ -296,10 +296,10 @@ class CodeGeneratorContext(val tableConfig: TableConfig, val supportReference: B
            |final $typeTerm $outRecordTerm = new $typeTerm(${rt.getArity});
            |final $binaryRowWriter $writerTerm = new $binaryRowWriter($outRecordTerm);
            |""".stripMargin.trim
-      case rt: BaseRowType if classOf[ObjectArrayRow].isAssignableFrom(rt.getInternalTypeClass) =>
+      case rt: RowType if classOf[ObjectArrayRow].isAssignableFrom(rt.getInternalTypeClass) =>
         val typeTerm = rt.getInternalTypeClass.getCanonicalName
         s"final $typeTerm $outRecordTerm = new $typeTerm(${rt.getArity});"
-      case rt: BaseRowType if rt.getInternalTypeClass == classOf[JoinedRow] =>
+      case rt: RowType if rt.getInternalTypeClass == classOf[JoinedRow] =>
         val typeTerm = rt.getInternalTypeClass.getCanonicalName
         s"final $typeTerm $outRecordTerm = new $typeTerm();"
       case _ =>
@@ -319,7 +319,7 @@ class CodeGeneratorContext(val tableConfig: TableConfig, val supportReference: B
     */
   def addReusableNullRow(rowTerm: String, arity: Int): String = {
     addOutputRecord(
-      new BaseRowType(
+      new RowType(
         classOf[GenericRow],
         (0 until arity).map(_ => DataTypes.INT): _*),
       rowTerm)

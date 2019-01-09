@@ -19,7 +19,7 @@
 package org.apache.flink.table.runtime.overagg
 
 import java.util
-import org.apache.flink.table.api.types.BaseRowType
+import org.apache.flink.table.api.types.{RowType}
 import org.apache.flink.table.codegen.{CodeGenUtils, GeneratedAggsHandleFunction, GeneratedBoundComparator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
@@ -121,7 +121,7 @@ class UnboundedPrecedingOverWindowFrame(
 class UnboundedFollowingOverWindowFrame(
     aggsHandleFunction: GeneratedAggsHandleFunction,
     var boundComparator: GeneratedBoundComparator,
-    valueType: BaseRowType)
+    valueType: RowType)
   extends OverWindowFrame(aggsHandleFunction) {
 
   private val valueSer = TypeUtils.createSerializer(valueType)
@@ -197,7 +197,7 @@ class UnboundedFollowingOverWindowFrame(
  */
 class UnboundedOverWindowFrame(
     aggsHandleFunction: GeneratedAggsHandleFunction,
-    valueType: BaseRowType)
+    valueType: RowType)
   extends OverWindowFrame(aggsHandleFunction) {
   private[this] var processor: AggsHandleFunction = _
   private[this] var accValue: BaseRow = _
@@ -235,8 +235,8 @@ class UnboundedOverWindowFrame(
  * @param rboundComparator comparator used to identify the upper bound of an output row.
  */
 class SlidingOverWindowFrame(
-    inputType: BaseRowType,
-    valueType: BaseRowType,
+    inputType: RowType,
+    valueType: RowType,
     aggsHandleFunction: GeneratedAggsHandleFunction,
     var lboundComparator: GeneratedBoundComparator,
     var rboundComparator: GeneratedBoundComparator)

@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.util
 import org.apache.flink.streaming.api.bundle.CountBundleTrigger
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
 import org.apache.flink.table.api.types.DataTypes._
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, DecimalType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, RowType}
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException, Types}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
@@ -378,7 +378,7 @@ object AggregateUtil extends Enumeration {
             TableErrors.INST.sqlAggFunctionDataTypeNotSupported("Distinct", t.toString))
       }
     } else {
-      new BaseRowType(classOf[BaseRow], argTypes, true)
+      new RowType(classOf[BaseRow], argTypes, true)
     }
   }
 

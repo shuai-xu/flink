@@ -19,7 +19,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.functions.{AggregateFunction, UserDefinedFunction}
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator._
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedOperator}
@@ -77,7 +77,7 @@ abstract class BatchExecSortAggregateBase(
     costFactory.makeCost(mq.getRowCount(this), cpuCost, 0, 0, memCost)
   }
 
-  override def getOutputRowType: BaseRowType = {
+  override def getOutputRowType: RowType = {
     if (grouping.isEmpty) {
       FlinkTypeFactory.toInternalBaseRowType(getRowType, classOf[GenericRow])
     } else {
@@ -88,8 +88,8 @@ abstract class BatchExecSortAggregateBase(
   private[flink] def codegenWithKeys(
       ctx: CodeGeneratorContext,
       tableEnv: BatchTableEnvironment,
-      inputType: BaseRowType,
-      outputType: BaseRowType): GeneratedOperator = {
+      inputType: RowType,
+      outputType: RowType): GeneratedOperator = {
     val config = tableEnv.config
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
 

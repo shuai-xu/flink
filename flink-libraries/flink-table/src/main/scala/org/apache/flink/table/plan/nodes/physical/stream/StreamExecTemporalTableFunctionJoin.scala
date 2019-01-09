@@ -23,7 +23,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
-import org.apache.flink.table.api.types.BaseRowType
+import org.apache.flink.table.api.types.RowType
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.calcite.FlinkTypeFactory.{isProctimeIndicatorType, isRowtimeIndicatorType}
@@ -170,7 +170,7 @@ class StreamExecTemporalTableFunctionJoin(
 class StreamExecTemporalJoinToCoProcessTranslator private (
   textualRepresentation: String,
   config: TableConfig,
-  returnType: BaseRowType,
+  returnType: RowType,
   leftSchema: BaseRowSchema,
   rightSchema: BaseRowSchema,
   joinInfo: JoinInfo,
@@ -280,7 +280,7 @@ object StreamExecTemporalJoinToCoProcessTranslator {
   def create(
     textualRepresentation: String,
     config: TableConfig,
-    returnType: BaseRowType,
+    returnType: RowType,
     leftSchema: BaseRowSchema,
     rightSchema: BaseRowSchema,
     joinInfo: JoinInfo,

@@ -18,7 +18,7 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.BaseRowType
+import org.apache.flink.table.api.types.{RowType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
@@ -85,7 +85,7 @@ trait BatchExecJoinBase extends Join with RowBatchExecRel {
     outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]]
   }
 
-  def getOutputRowType: BaseRowType =
+  def getOutputRowType: RowType =
     if (flinkJoinType.equals(SEMI) || flinkJoinType.equals(ANTI)) {
       FlinkTypeFactory.toInternalBaseRowType(getRowType, classOf[BaseRow])
     } else {
@@ -247,8 +247,8 @@ trait BatchExecJoinBase extends Join with RowBatchExecRel {
 
   private[flink] def generateConditionFunction(
       config: TableConfig,
-      leftType: BaseRowType,
-      rightType: BaseRowType): GeneratedJoinConditionFunction = {
+      leftType: RowType,
+      rightType: RowType): GeneratedJoinConditionFunction = {
     val ctx = CodeGeneratorContext(config)
     val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck)
         .bindInput(leftType)

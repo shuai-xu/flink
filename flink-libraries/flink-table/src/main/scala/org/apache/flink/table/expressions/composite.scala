@@ -21,7 +21,7 @@ package org.apache.flink.table.expressions
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.UnresolvedException
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
 import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
 
@@ -51,10 +51,10 @@ case class GetCompositeField(child: Expression, key: Any) extends UnaryExpressio
 
   override private[flink] def validateInput(): ValidationResult = {
     // check for composite type
-    if (!child.resultType.isInstanceOf[BaseRowType]) {
+    if (!child.resultType.isInstanceOf[RowType]) {
       return ValidationFailure(s"Cannot access field of non-composite type '${child.resultType}'.")
     }
-    val compositeType = child.resultType.asInstanceOf[BaseRowType]
+    val compositeType = child.resultType.asInstanceOf[RowType]
 
     // check key
     key match {
@@ -79,7 +79,7 @@ case class GetCompositeField(child: Expression, key: Any) extends UnaryExpressio
   }
 
   override private[flink] def resultType: InternalType =
-    child.resultType.asInstanceOf[BaseRowType].getInternalTypeAt(fieldIndex.get)
+    child.resultType.asInstanceOf[RowType].getInternalTypeAt(fieldIndex.get)
 
   override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
     relBuilder

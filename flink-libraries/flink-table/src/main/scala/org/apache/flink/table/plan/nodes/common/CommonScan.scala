@@ -43,7 +43,7 @@ import scala.collection.JavaConversions._
 trait CommonScan[T] {
 
   private[flink] def needsConversion(dataType: DataType): Boolean = dataType match {
-    case bt: BaseRowType => !bt.isUseBaseRow
+    case bt: RowType => !bt.isUseBaseRow
     case t: TypeInfoWrappedDataType if t.getTypeInfo.isInstanceOf[BaseRowTypeInfo[_]] => false
     case _ => true
   }
@@ -81,16 +81,16 @@ trait CommonScan[T] {
     // type convert
     val inputTerm = DEFAULT_INPUT1_TERM
     val (inputTermConverter, internalInputType: InternalType) =
-      if (!inputType.isInstanceOf[BaseRowType] ||
-          !inputType.asInstanceOf[BaseRowType].isUseBaseRow) {
+      if (!inputType.isInstanceOf[RowType] ||
+          !inputType.asInstanceOf[RowType].isUseBaseRow) {
         val convertFunc = genToInternal(ctx, inputType)
-        if (inputType.toInternalType.isInstanceOf[BaseRowType]) {
+        if (inputType.toInternalType.isInstanceOf[RowType]) {
           (convertFunc, inputType.toInternalType)
         } else {
           (
               (record: String) =>
                 s"${classOf[GenericRow].getCanonicalName}.wrap(${convertFunc(record)})",
-              new BaseRowType(inputType.toInternalType)
+              new RowType(inputType.toInternalType)
           )
         }
       } else {
@@ -99,7 +99,7 @@ trait CommonScan[T] {
 
     var codeSplit = GeneratedSplittableExpression.UNSPLIT_EXPRESSION
     val (inputTypes, inputNames) = inputType.toInternalType match {
-      case rowType: BaseRowType => (rowType.getFieldInternalTypes, rowType.getFieldNames)
+      case rowType: RowType => (rowType.getFieldInternalTypes, rowType.getFieldNames)
       case t => (Array(t), Array("f0"))
     }
 
@@ -113,7 +113,7 @@ trait CommonScan[T] {
         // field index change (pojo)
         val resultGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck)
             .bindInput(
-              internalInputType, // this must be a BaseRowType
+              internalInputType, // this must be a RowType
               inputTerm = inputTerm,
               inputFieldMapping = Some(fieldIndexes))
 

@@ -19,10 +19,10 @@
 package org.apache.flink.table.api;
 
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
-import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.sources.IndexKey;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
@@ -219,8 +219,8 @@ public class RichTableSchema implements Serializable {
 	 * Returns the final result type info of this table.
 	 * This type info including the computed columns (if exist) and exclude proctime field.
 	 */
-	public <T extends BaseRow> BaseRowType getResultType(Class<T> rowType) {
-		return new BaseRowType(rowType, getColumnTypes(), getColumnNames());
+	public <T extends BaseRow> RowType getResultType(Class<T> rowType) {
+		return new RowType(rowType, getColumnTypes(), getColumnNames());
 	}
 
 	/**

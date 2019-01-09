@@ -19,8 +19,8 @@
 package org.apache.flink.table.api.functions;
 
 import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.expressions.Expression;
 
@@ -39,13 +39,13 @@ public class TemporalTableFunction extends TableFunction<BaseRow> {
 	private final transient Table underlyingHistoryTable;
 	private final Expression timeAttribute;
 	private final String primaryKey;
-	private final BaseRowType rowType;
+	private final RowType rowType;
 
 	private TemporalTableFunction(
 		Table underlyingHistoryTable,
 		Expression timeAttribute,
 		String primaryKey,
-		BaseRowType rowType) {
+		RowType rowType) {
 		this.underlyingHistoryTable = underlyingHistoryTable;
 		this.timeAttribute = timeAttribute;
 		this.primaryKey = primaryKey;
@@ -57,7 +57,7 @@ public class TemporalTableFunction extends TableFunction<BaseRow> {
 	}
 
 	@Override
-	public BaseRowType getResultType(Object[] arguments, Class[] argTypes) {
+	public RowType getResultType(Object[] arguments, Class[] argTypes) {
 		return rowType;
 	}
 

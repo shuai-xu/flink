@@ -104,7 +104,7 @@ object TypeCheckUtils {
   def isComparable(dataType: InternalType): Boolean =
     !dataType.isInstanceOf[GenericType[_]] &&
         !dataType.isInstanceOf[MapType] &&
-        !dataType.isInstanceOf[BaseRowType] &&
+        !dataType.isInstanceOf[RowType] &&
         !isArray(dataType)
 
   def assertNumericExpr(

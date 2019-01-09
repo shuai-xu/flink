@@ -22,7 +22,7 @@ import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.runtime.operators.sort.QuickSort
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
 import org.apache.flink.table.api.window.TimeWindow
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, Types}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
@@ -85,10 +85,10 @@ abstract class BatchExecHashWindowAggregateBase(
     isFinal: Boolean)
   with BatchExecHashAggregateCodeGen {
 
-  lazy val aggBufferRowType: BaseRowType = new BaseRowType(
+  lazy val aggBufferRowType: RowType = new RowType(
     classOf[BinaryRow], aggBufferTypes.flatten.toArray[DataType], aggBufferNames.flatten)
 
-  lazy val aggMapKeyRowType: BaseRowType = new BaseRowType(
+  lazy val aggMapKeyRowType: RowType = new RowType(
     classOf[BinaryRow],
     groupKeyRowType.getFieldTypes :+ timestampInternalType,
     groupKeyRowType.getFieldNames :+ "assignedTs")
@@ -96,8 +96,8 @@ abstract class BatchExecHashWindowAggregateBase(
   private[flink] def codegen(
       ctx: CodeGeneratorContext,
       tableEnv: BatchTableEnvironment,
-      inputType: BaseRowType,
-      outputType: BaseRowType,
+      inputType: RowType,
+      outputType: RowType,
       buffLimitSize: Int,
       reservedAggMapMemory: Long,
       preferredAggMapMemory: Long,
@@ -280,7 +280,7 @@ abstract class BatchExecHashWindowAggregateBase(
       slideSize: Long,
       window: LogicalWindow,
       inputTerm: String,
-      inputType: BaseRowType): Seq[GeneratedExpression] = {
+      inputType: RowType): Seq[GeneratedExpression] = {
     window match {
       case SlidingGroupWindow(_, timeField, _, _) =>
         if (assignPane) {
@@ -312,7 +312,7 @@ abstract class BatchExecHashWindowAggregateBase(
       inputTerm: String,
       inputType: InternalType,
       assignedTimestampExpr: Option[GeneratedExpression],
-      currentKeyType: BaseRowType,
+      currentKeyType: RowType,
       currentKeyTerm: String,
       currentKeyWriterTerm: String): GeneratedExpression = {
     val codeGen = new ExprCodeGenerator(ctx, false, nullCheck = true)
@@ -344,7 +344,7 @@ abstract class BatchExecHashWindowAggregateBase(
       grouping.map(
         idx => generateFieldAccess(
           ctx, inputType, inputTerm, idx, nullCheck = true)) :+ expr,
-      currentKeyType.asInstanceOf[BaseRowType],
+      currentKeyType.asInstanceOf[RowType],
       outRow = currentKeyTerm,
       outRowWriter = Some(currentKeyWriterTerm))
   }
@@ -361,8 +361,8 @@ abstract class BatchExecHashWindowAggregateBase(
       bufferLimitSize: Int,
       aggregateMapTerm: String,
       inputTerm: String,
-      inputType: BaseRowType,
-      outputType: BaseRowType,
+      inputType: RowType,
+      outputType: RowType,
       currentAggBufferTerm: String): (GeneratedExpression, GeneratedExpression, String) = {
     // build mapping for DeclarativeAggregationFunction binding references
     val offset = if (isMerge) grouping.length + 1 else grouping.length
@@ -402,14 +402,14 @@ abstract class BatchExecHashWindowAggregateBase(
       windowSize: Long,
       slideSize: Long,
       bufferLimitSize: Int,
-      outputType: BaseRowType,
+      outputType: RowType,
       aggregateMapTerm: String,
       argsMapping: Array[Array[(Int, InternalType)]],
       aggBuffMapping: Array[Array[(Int, InternalType)]],
       aggKeyTypeTerm: String,
       aggBufferTypeTerm: String,
-      aggMapKeyType: BaseRowType,
-      aggBufferType: BaseRowType): String = {
+      aggMapKeyType: RowType,
+      aggBufferType: RowType): String = {
 
     val keyComputerTerm = CodeGenUtils.newName("keyComputer")
     val recordComparatorTerm = CodeGenUtils.newName("recordComparator")
@@ -566,8 +566,8 @@ abstract class BatchExecHashWindowAggregateBase(
       config: TableConfig,
       windowSize: Long,
       inputTerm: String,
-      inputType: BaseRowType,
-      outputType: BaseRowType,
+      inputType: RowType,
+      outputType: RowType,
       aggregateMapTerm: String,
       argsMapping: Array[Array[(Int, InternalType)]],
       aggBuffMapping: Array[Array[(Int, InternalType)]]): String = {
@@ -653,8 +653,8 @@ abstract class BatchExecHashWindowAggregateBase(
       windowSize: Long,
       slideSize: Long,
       inputTerm: String,
-      inputType: BaseRowType,
-      outputType: BaseRowType,
+      inputType: RowType,
+      outputType: RowType,
       aggMapKey: String,
       logTerm: String): (String, String) = {
     // prepare aggregate map

@@ -23,8 +23,8 @@ import org.apache.flink.core.fs.FileInputSplit;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.api.functions.FunctionContext;
 import org.apache.flink.table.api.functions.TableFunction;
-import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.sources.IndexKey;
@@ -43,7 +43,7 @@ import java.util.TimeZone;
 public class CsvLookupFunction extends TableFunction<BaseRow> {
 	private final String path;
 	private final InternalType[] fieldTypes;
-	private final BaseRowType rowType;
+	private final RowType rowType;
 	private final TimeZone timezone;
 	private final List<Integer> sourceKeys = new ArrayList<>();
 	private final List<Integer> targetKeys = new ArrayList<>();
@@ -66,7 +66,7 @@ public class CsvLookupFunction extends TableFunction<BaseRow> {
 
 	public CsvLookupFunction(
 			String path,
-			BaseRowType rowType,
+			RowType rowType,
 			IndexKey checkedIndex,
 			boolean emptyColumnAsNull,
 			TimeZone timezone,

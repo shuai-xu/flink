@@ -18,11 +18,10 @@
 package org.apache.flink.table.runtime.aggregate
 
 import java.util.Comparator
-
 import org.apache.calcite.rel.RelFieldCollation
 import org.apache.flink.api.common.functions.{Comparator => FlinkComparator}
 import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
 import org.apache.flink.table.codegen.{CodeGenUtils, GeneratedSorter, SortCodeGenerator}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.util.SortUtil
@@ -44,7 +43,7 @@ object SorterHelper {
     * @return A GeneratedSorter for the provided sort collations and input type.
     */
   def createSorter(
-      inputType: BaseRowType,
+      inputType: RowType,
       fieldCollations: Seq[RelFieldCollation]): GeneratedSorter = {
     val (sortFields, sortDirections, nullsIsLast) = SortUtil.getKeysAndOrders(fieldCollations)
     createSorter(

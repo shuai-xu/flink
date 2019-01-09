@@ -195,25 +195,25 @@ public class DataTypes {
 		return types;
 	}
 
-	public static BaseRowType createBaseRowType(InternalType[] types) {
-		return new BaseRowType(types);
+	public static RowType createBaseRowType(InternalType[] types) {
+		return new RowType(types);
 	}
 
-	public static BaseRowType createBaseRowType(
+	public static RowType createBaseRowType(
 			InternalType[] types, String[] fieldNames) {
-		return new BaseRowType(types, fieldNames);
+		return new RowType(types, fieldNames);
 	}
 
 	public static DataType createRowType(DataType[] types, String[] fieldNames) {
-		return new BaseRowType(types, fieldNames);
+		return new RowType(types, fieldNames);
 	}
 
 	public static DataType createRowType(InternalType[] types, String[] fieldNames) {
-		return new BaseRowType(types, fieldNames);
+		return new RowType(types, fieldNames);
 	}
 
 	public static DataType createRowType(DataType... types) {
-		return new BaseRowType(types);
+		return new RowType(types);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -266,8 +266,8 @@ public class DataTypes {
 	}
 
 	public static int getArity(InternalType t) {
-		if (t instanceof BaseRowType) {
-			return ((BaseRowType) t).getArity();
+		if (t instanceof RowType) {
+			return ((RowType) t).getArity();
 		}
 		return 1;
 	}

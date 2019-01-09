@@ -18,7 +18,7 @@
 package org.apache.flink.table.plan.schema
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.types.{BaseRowType, DataType, InternalType}
+import org.apache.flink.table.api.types.{DataType, InternalType, RowType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -57,15 +57,15 @@ class BaseRowSchema(private val logicalRowType: RelDataType) {
     }
   }
 
-  def internalType[T <: BaseRow](cls: Class[T]): BaseRowType = {
+  def internalType[T <: BaseRow](cls: Class[T]): RowType = {
     val logicalFieldNames = logicalRowType.getFieldNames.asScala
     val types = logicalRowType.getFieldList.asScala.map {
       f => FlinkTypeFactory.toInternalType(f.getType)
     }.toArray[DataType]
     if (cls == classOf[BinaryRow]) {
-      new BaseRowType(classOf[BinaryRow], types, logicalFieldNames.toArray)
+      new RowType(classOf[BinaryRow], types, logicalFieldNames.toArray)
     } else {
-      new BaseRowType(cls, types, logicalFieldNames.toArray)
+      new RowType(cls, types, logicalFieldNames.toArray)
     }
   }
 

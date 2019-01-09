@@ -18,19 +18,19 @@
 package org.apache.flink.table.api.stream.sql
 
 import java.sql.Timestamp
-
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.async.ResultFuture
 import org.apache.flink.table.api.functions.{AsyncTableFunction, TableFunction}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
 import org.apache.flink.table.api.{SqlParserException, TableException, TableSchema, ValidationException}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString}
 import org.apache.flink.table.sources._
 import org.apache.flink.table.util.{StreamTableTestUtil, TableSchemaUtil, TableTestBase}
 import org.apache.flink.types.Row
+
 import org.junit.Assert.{assertTrue, fail}
 import org.junit.Test
 
@@ -142,7 +142,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
       "SELECT * FROM T AS T JOIN temporalTable6 " +
         "FOR SYSTEM_TIME AS OF T.proc AS D ON T.a = D.id AND T.b = D.name AND T.ts = D.ts",
       "The TableSource [TestInvalidTemporalTable(id, name, age, ts)] return type " +
-        "BaseRow(id: Integer, name: String, age: Integer, ts: Timestamp) do not match " +
+        "Row(id: Integer, name: String, age: Integer, ts: Timestamp) do not match " +
         "its lookup function extracted return type GenericType<org.apache.flink.types.Row>",
       classOf[TableException]
     )
@@ -326,7 +326,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
   class TestTemporalTable extends StreamTableSource[BaseRow] with LookupableTableSource[BaseRow] {
 
     override def getReturnType: DataType = {
-      new BaseRowType(
+      new RowType(
         classOf[BaseRow],
         Array[DataType](DataTypes.INT, DataTypes.STRING, DataTypes.INT),
         Array("id", "name", "age"),
@@ -370,7 +370,7 @@ class TestInvalidTemporalTable private(
   }
 
   override def getReturnType: DataType = {
-    new BaseRowType(
+    new RowType(
       classOf[BaseRow],
       Array[DataType](DataTypes.INT, DataTypes.STRING, DataTypes.INT, DataTypes.TIMESTAMP),
       Array("id", "name", "age", "ts"),

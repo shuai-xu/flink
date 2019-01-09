@@ -81,7 +81,7 @@ object InternalTypeConverters {
         PrimitiveMapConverter(mt.getKeyType, mt.getValueType)
       case mt: MapType => ObjectMapConverter(mt.getKeyType, mt.getValueType)
 
-      case br: BaseRowType => RowConverter(br)
+      case br: RowType => RowConverter(br)
       case gt: GenericType[_] => GenericConverter(gt)
 
       case tw: TypeInfoWrappedDataType =>
@@ -165,7 +165,7 @@ object InternalTypeConverters {
       toExternalImpl(row.getBaseRow(column, numField))
   }
 
-  case class RowConverter(t: BaseRowType)
+  case class RowConverter(t: RowType)
       extends AbstractBaseRowConverter[Any](t.getArity) {
 
     private[this] val converters = t.getFieldTypes.map(getConverterForType)

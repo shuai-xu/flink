@@ -19,7 +19,6 @@ package org.apache.flink.table.codegen
 
 
 import java.util.{ArrayList => JArrayList, Collection => JCollection}
-
 import org.apache.calcite.rex.{RexLiteral, RexNode, RexProgram}
 import org.apache.flink.api.common.functions.FlatMapFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
@@ -27,7 +26,7 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.functions.async.{AsyncFunction, ResultFuture}
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.functions.{AsyncTableFunction, TableFunction}
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
@@ -207,8 +206,8 @@ object TemporalJoinCodeGenerator {
     */
   def generateAsyncCollector(
     config: TableConfig,
-    inputType: BaseRowType,
-    tableType: BaseRowType,
+    inputType: RowType,
+    tableType: RowType,
     joinCondition: Option[RexNode]): GeneratedCollector = {
 
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
@@ -263,9 +262,9 @@ object TemporalJoinCodeGenerator {
   def generateCollector(
     ctx: CodeGeneratorContext,
     config: TableConfig,
-    inputType: BaseRowType,
-    udtfTypeInfo: BaseRowType,
-    resultType: BaseRowType,
+    inputType: RowType,
+    udtfTypeInfo: RowType,
+    resultType: RowType,
     condition: Option[RexNode],
     pojoFieldMapping: Option[Array[Int]],
     retainHeader: Boolean = true): GeneratedCollector = {
@@ -332,8 +331,8 @@ object TemporalJoinCodeGenerator {
     ctx: CodeGeneratorContext,
     name: String,
     bodyCode: String,
-    inputType: BaseRowType,
-    collectedType: BaseRowType,
+    inputType: RowType,
+    collectedType: RowType,
     config: TableConfig,
     inputTerm: String = CodeGeneratorContext.DEFAULT_INPUT1_TERM,
     collectedTerm: String = CodeGeneratorContext.DEFAULT_INPUT2_TERM)
@@ -452,7 +451,7 @@ object TemporalJoinCodeGenerator {
     extends TableFunctionCollector[Row] with Serializable {
 
     private val converter =
-      RowConverter(DataTypes.internal(rowTypeInfo).asInstanceOf[BaseRowType])
+      RowConverter(DataTypes.internal(rowTypeInfo).asInstanceOf[RowType])
 
     override def collect(record: Row): Unit = {
       super.collect(record)
@@ -472,7 +471,7 @@ object TemporalJoinCodeGenerator {
     extends ResultFuture[Row] with Serializable {
 
     private val converter =
-      RowConverter(DataTypes.internal(rowTypeInfo).asInstanceOf[BaseRowType])
+      RowConverter(DataTypes.internal(rowTypeInfo).asInstanceOf[RowType])
     private var future: ResultFuture[BaseRow] = _
 
     def setFuture(future: ResultFuture[BaseRow]): Unit = {

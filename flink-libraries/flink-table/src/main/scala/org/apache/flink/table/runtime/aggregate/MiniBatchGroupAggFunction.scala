@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.aggregate
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Map => JMap}
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{RowType, DataTypes, InternalType}
 import org.apache.flink.table.codegen.{EqualiserCodeGenerator, GeneratedAggsHandleFunction}
 import org.apache.flink.table.dataformat.util.{BaseRowUtil, BinaryRowUtil}
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
@@ -42,7 +42,7 @@ import org.apache.flink.util.Collector
   * @param generateRetraction whether this operator will generate retraction
   */
 class MiniBatchGroupAggFunction(
-    inputType: BaseRowType,
+    inputType: RowType,
     genAggsHandler: GeneratedAggsHandleFunction,
     accTypes: Array[InternalType],
     aggValueTypes: Array[InternalType],

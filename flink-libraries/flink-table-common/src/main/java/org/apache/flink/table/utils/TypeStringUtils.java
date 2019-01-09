@@ -33,12 +33,12 @@ import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.api.types.ArrayType;
-import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.MapType;
 import org.apache.flink.table.api.types.MultisetType;
+import org.apache.flink.table.api.types.RowType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -188,8 +188,8 @@ public class TypeStringUtils {
 			return SQL_TIME;
 		} else if (dataType instanceof org.apache.flink.table.api.types.TimestampType) {
 			return SQL_TIMESTAMP;
-		} else if (dataType instanceof org.apache.flink.table.api.types.BaseRowType) {
-			final BaseRowType rt = (org.apache.flink.table.api.types.BaseRowType) dataType;
+		} else if (dataType instanceof RowType) {
+			final RowType rt = (RowType) dataType;
 			final String[] fieldNames = rt.getFieldNames();
 			final DataType[] fieldTypes = rt.getFieldTypes();
 
@@ -478,7 +478,7 @@ public class TypeStringUtils {
 				}
 				nextToken(TokenType.END);
 
-				return new BaseRowType(
+				return new RowType(
 					types.toArray(new InternalType[0]),
 					names.toArray(new String[0])
 				);
@@ -495,7 +495,7 @@ public class TypeStringUtils {
 					nextToken(TokenType.SEPARATOR);
 				}
 				nextToken(TokenType.END);
-				return new BaseRowType(types.toArray(new InternalType[0]));
+				return new RowType(types.toArray(new InternalType[0]));
 			}
 		}
 

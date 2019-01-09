@@ -32,8 +32,8 @@ import org.apache.flink.streaming.runtime.tasks.StreamMockEnvironment;
 import org.apache.flink.streaming.runtime.tasks.TwoInputStreamTask;
 import org.apache.flink.streaming.runtime.tasks.TwoInputStreamTaskTestHarness;
 import org.apache.flink.streaming.util.TestHarnessUtil;
-import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 import org.apache.flink.table.typeutils.TypeUtils;
@@ -72,7 +72,7 @@ public class AssignRangeIndexOperatorTest {
 		data.add(newRow("xyz", "0"));
 
 		BaseRowTypeInfo typeInfo = new BaseRowTypeInfo<>(BinaryRow.class, STRING_TYPE_INFO, STRING_TYPE_INFO);
-		BaseRowType type = (BaseRowType) DataTypes.internal(typeInfo);
+		RowType type = (RowType) DataTypes.internal(typeInfo);
 		int[] keys = new int[]{0};
 		boolean[] orders = new boolean[]{true};
 		scala.Tuple2<TypeComparator<?>[], TypeSerializer<?>[]> tuple2 =

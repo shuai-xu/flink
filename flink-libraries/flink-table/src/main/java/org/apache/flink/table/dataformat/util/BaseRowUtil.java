@@ -25,7 +25,6 @@ import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.typeutils.MapTypeInfo;
 import org.apache.flink.table.api.types.ArrayType;
-import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DateType;
@@ -33,6 +32,7 @@ import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.MapType;
+import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.api.types.TimestampType;
 import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
 import org.apache.flink.table.dataformat.BaseArray;
@@ -208,8 +208,8 @@ public final class BaseRowUtil {
 			return row.getBaseArray(ordinal);
 		} else if (type instanceof MapType) {
 			return row.getBaseMap(ordinal);
-		} else if (type instanceof BaseRowType) {
-			return row.getBaseRow(ordinal, ((BaseRowType) type).getArity());
+		} else if (type instanceof RowType) {
+			return row.getBaseRow(ordinal, ((RowType) type).getArity());
 		} else if (type instanceof GenericType) {
 			return row.getGeneric(ordinal, (GenericType) type);
 		} else if (type instanceof TypeInfoWrappedDataType) {
@@ -270,7 +270,7 @@ public final class BaseRowUtil {
 			writeBaseArray(writer, pos, (BaseArray) o, (BaseArraySerializer) serializer);
 		} else if (type instanceof MapType) {
 			writeBaseMap(writer, pos, (BinaryMap) o, (BaseMapSerializer) serializer);
-		} else if (type instanceof BaseRowType) {
+		} else if (type instanceof RowType) {
 			writeBaseRow(writer, pos, (BaseRow) o, (BaseRowSerializer) serializer);
 		} else {
 			writer.writeGeneric(pos, o, (GenericType) type);

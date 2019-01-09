@@ -23,9 +23,9 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.typeutils.PojoTypeInfo;
 import org.apache.flink.core.fs.FileInputSplit;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 
@@ -121,7 +121,7 @@ public class PojoParquetInputFormat<OUT> extends ParquetInputFormat<OUT, Row> {
 		Preconditions.checkNotNull(fieldNames);
 		Preconditions.checkArgument(pojoTypeInfo.getArity() >= fieldNames.length);
 
-		BaseRowType rowType = (BaseRowType) DataTypes.internal(pojoTypeInfo);
+		RowType rowType = (RowType) DataTypes.internal(pojoTypeInfo);
 
 		InternalType[] fieldTypes = new InternalType[fieldNames.length];
 		for (int i = 0; i < fieldNames.length; ++i) {

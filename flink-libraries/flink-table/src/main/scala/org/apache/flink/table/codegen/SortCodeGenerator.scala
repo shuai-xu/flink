@@ -420,7 +420,7 @@ class SortCodeGenerator(
 
       val compareCode = if (prefix != null) {
         t match {
-          case bt: BaseRowType =>
+          case bt: RowType =>
             val arity = bt.getArity
             s"$compCompare(o1.get$prefix($index, $arity), o2.get$prefix($index, $arity))"
           case _ =>
@@ -500,7 +500,7 @@ class SortCodeGenerator(
     case _: DateType => "Int"
     case DataTypes.TIME => "Int"
     case _: TimestampType => "Long"
-    case _: BaseRowType => "BaseRow"
+    case _: RowType => "BaseRow"
     case _ => null
   }
 
@@ -519,7 +519,7 @@ class SortCodeGenerator(
   def supportNormalizedKey(t: InternalType, comparator: TypeComparator[_]): Boolean = {
     t match {
       case DataTypes.BYTE_ARRAY | DataTypes.FLOAT | DataTypes.DOUBLE => true
-      case _: ArrayType | _: MapType | _: BaseRowType => false
+      case _: ArrayType | _: MapType | _: RowType => false
       case _ => comparator.supportsNormalizedKey
     }
   }

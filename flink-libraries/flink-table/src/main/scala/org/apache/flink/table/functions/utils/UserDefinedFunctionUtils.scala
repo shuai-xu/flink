@@ -593,7 +593,7 @@ object UserDefinedFunctionUtils {
   /**
     * Returns field names and field positions for a given [[DataType]].
     *
-    * Field names are automatically extracted for [[BaseRowType]].
+    * Field names are automatically extracted for [[RowType]].
     *
     * @param inputType The DataType to extract the field names and positions from.
     * @return A tuple of two arrays holding the field names and corresponding field positions.
@@ -802,7 +802,7 @@ object UserDefinedFunctionUtils {
 
     val fieldTypes: Array[InternalType] =
       resultType match {
-        case bt: BaseRowType =>
+        case bt: RowType =>
           if (fieldNames.length != bt.getArity) {
             throw new TableException(
               s"Arity of type (" + bt.getFieldNames.deep + ") " +

@@ -1479,7 +1479,7 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     * used if the input type has a defined field order (tuple, case class, Row) and no of fields
     * references a field of the input type.
     */
-  protected def isReferenceByPosition(ct: BaseRowType, fields: Array[Expression]): Boolean = {
+  protected def isReferenceByPosition(ct: RowType, fields: Array[Expression]): Boolean = {
 
     val inputNames = ct.getFieldNames
 
@@ -1520,7 +1520,7 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
 
     TableEnvironment.validateType(inputType)
 
-    def referenceByName(name: String, ct: BaseRowType): Option[Int] = {
+    def referenceByName(name: String, ct: RowType): Option[Int] = {
       val inputIdx = ct.getFieldIndex(name)
       if (inputIdx < 0) {
         throw new TableException(s"$name is not a field of type $ct. " +
@@ -1534,7 +1534,7 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
 
     val indexedNames: Array[(Int, String)] = inputType.toInternalType match {
 
-      case t: BaseRowType =>
+      case t: RowType =>
 
         val isRefByPos = isReferenceByPosition(t, exprs)
         exprs.zipWithIndex flatMap {
@@ -1800,7 +1800,7 @@ object TableEnvironment {
     validateType(inputType)
 
     val fieldNames: Array[String] = inputType.toInternalType match {
-      case t: BaseRowType => t.getFieldNames
+      case t: RowType => t.getFieldNames
       case _: InternalType => Array("f0")
     }
 
@@ -1831,7 +1831,7 @@ object TableEnvironment {
     validateType(inputType)
 
     inputType.toInternalType match {
-      case ct: BaseRowType =>
+      case ct: RowType =>
         0.until(ct.getArity).map(i => ct.getInternalTypeAt(i).toInternalType).toArray
       case t: InternalType => Array(t)
     }

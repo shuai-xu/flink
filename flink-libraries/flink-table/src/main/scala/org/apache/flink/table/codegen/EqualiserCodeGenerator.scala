@@ -55,7 +55,7 @@ class EqualiserCodeGenerator(fieldTypes: Seq[InternalType]) {
         s"$leftFieldTerm == $rightFieldTerm"
       } else if (isBaseRow(fieldType)) {
         val equaliserGenerator =
-          new EqualiserCodeGenerator(fieldType.asInstanceOf[BaseRowType].getFieldInternalTypes)
+          new EqualiserCodeGenerator(fieldType.asInstanceOf[RowType].getFieldInternalTypes)
         val generatedEqualiser = equaliserGenerator
           .generateRecordEqualiser("field$" + i + "GeneratedEqualiser")
         val generatedEqualiserTerm = ctx.addReusableObject(
@@ -142,7 +142,7 @@ class EqualiserCodeGenerator(fieldTypes: Seq[InternalType]) {
   }
 
   private def isBaseRow(t: InternalType): Boolean = t match {
-    case _: BaseRowType => true
+    case _: RowType => true
     case _ => false
   }
 }

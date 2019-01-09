@@ -414,7 +414,7 @@ class MatchCodeGenerator(
         .bindInput(input1Type, inputTerm = input1Term)
     val resultExpression = resultCodeGenerator.generateResultExpression(
       resultExprs,
-      new BaseRowType(
+      new RowType(
         classOf[GenericRow],
         returnSchema.fieldTypeInfos.map(new TypeInfoWrappedDataType(_)).toArray[DataType],
         returnSchema.fieldNames.toArray))
@@ -460,7 +460,7 @@ class MatchCodeGenerator(
         .bindInput(input1Type, inputTerm = input1Term)
     val resultExpression = resultCodeGenerator.generateResultExpression(
       resultExprs,
-      new BaseRowType(
+      new RowType(
         classOf[GenericRow],
         returnSchema.fieldTypeInfos.map(DataTypes.of).toArray,
         returnSchema.fieldNames.toArray))

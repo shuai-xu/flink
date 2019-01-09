@@ -26,7 +26,7 @@ import org.apache.calcite.rel.logical.LogicalValues
 import org.apache.calcite.rex.{RexLiteral, RexNode}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.{TableException, ValidationException}
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.expressions.{Cast, ResolvedFieldReference}
 
@@ -91,7 +91,7 @@ object TableSourceUtil {
         mappedFieldCnt += 1
     }
     // ensure that only one field is mapped to an atomic type
-    if (!tableSource.getReturnType.toInternalType.isInstanceOf[BaseRowType]
+    if (!tableSource.getReturnType.toInternalType.isInstanceOf[RowType]
         && mappedFieldCnt > 1) {
       throw new ValidationException(
         s"More than one table field matched to atomic input type ${tableSource.getReturnType}.")
@@ -229,7 +229,7 @@ object TableSourceUtil {
     }
 
     // ensure that only one field is mapped to an atomic type
-    if (!inputType.isInstanceOf[BaseRowType] && mapping.count(_ >= 0) > 1) {
+    if (!inputType.isInstanceOf[RowType] && mapping.count(_ >= 0) > 1) {
       throw new ValidationException(
         s"More than one table field matched to atomic input type $inputType.")
     }
@@ -472,7 +472,7 @@ object TableSourceUtil {
     def lookupField(fieldName: String, failMsg: String): (String, Int, InternalType) = {
       returnType.toInternalType match {
 
-        case c: BaseRowType =>
+        case c: RowType =>
           // get and check field index
           val idx = c.getFieldIndex(fieldName)
           if (idx < 0) {

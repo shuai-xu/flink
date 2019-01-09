@@ -78,7 +78,7 @@ object CodeGenUtils {
     case DataTypes.STRING => true
     case _: ArrayType => true
     case _: MapType => true
-    case _: BaseRowType => true
+    case _: RowType => true
     case _: GenericType[_] => true
     case _ => false
   }
@@ -129,7 +129,7 @@ object CodeGenUtils {
     case _: DecimalType => classOf[JBigDecimal].getCanonicalName
     case at: ArrayType if at.isPrimitive => s"${primitiveTypeTermForType(at.getElementType)}[]"
     case at: ArrayType => s"${externalBoxedTermForType(at.getElementType)}[]"
-    case bt: BaseRowType =>
+    case bt: RowType =>
       if (bt.isUseBaseRow) bt.getInternalTypeClass.getCanonicalName
       else classOf[Row].getCanonicalName
     case _: MapType => classOf[java.util.Map[_, _]].getCanonicalName
@@ -171,7 +171,7 @@ object CodeGenUtils {
     case _: DecimalType => classOf[Decimal].getCanonicalName
     case _: ArrayType => classOf[BaseArray].getCanonicalName
     case _: MapType => classOf[BaseMap].getCanonicalName
-    case _: BaseRowType => classOf[BaseRow].getCanonicalName
+    case _: RowType => classOf[BaseRow].getCanonicalName
 
     case gt: GenericType[_] => gt.getTypeInfo.getTypeClass.getCanonicalName
   }
@@ -200,7 +200,7 @@ object CodeGenUtils {
 
     case _: ArrayType => clazz == classOf[BaseArray]
     case _: MapType => clazz == classOf[BaseMap]
-    case _: BaseRowType => clazz == classOf[BaseRow]
+    case _: RowType => clazz == classOf[BaseRow]
     case _: GenericType[_] => true
     case _: ExternalType => false
     case _ => true // internal equalTo external class.
@@ -618,7 +618,7 @@ object CodeGenUtils {
       index: Int,
       nullCheck: Boolean): GeneratedExpression =
     inputType match {
-      case ct: BaseRowType =>
+      case ct: RowType =>
         val fieldType = ct.getFieldTypes()(index).toInternalType
         val resultTypeTerm = primitiveTypeTermForType(fieldType)
         val defaultValue = primitiveDefaultValue(fieldType)
@@ -657,7 +657,7 @@ object CodeGenUtils {
       fieldCopy: Boolean = false): GeneratedExpression = {
 
     val fieldType = inputType match {
-      case ct: BaseRowType => ct.getFieldTypes()(index).toInternalType
+      case ct: RowType => ct.getFieldTypes()(index).toInternalType
       case _ => inputType
     }
     val resultTypeTerm = primitiveTypeTermForType(fieldType)
@@ -1056,7 +1056,7 @@ object CodeGenUtils {
       case DataTypes.BYTE_ARRAY => s"$rowTerm.getByteArray($pos)"
       case _: ArrayType => s"$rowTerm.getBaseArray($pos)"
       case _: MapType  => s"$rowTerm.getBaseMap($pos)"
-      case rt: BaseRowType =>
+      case rt: RowType =>
         s"$rowTerm.getBaseRow($pos, ${rt.getArity})"
 
       case gt: GenericType[_] =>
@@ -1135,7 +1135,7 @@ object CodeGenUtils {
           s"(${classOf[BaseMapSerializer].getCanonicalName}) " +
           s"${ctx.addReusableTypeSerializer(fieldType)})"
 
-      case _: BaseRowType =>
+      case _: RowType =>
         s"$BASE_ROW_UTIL.writeBaseRow($writerTerm, $pos, $fieldValTerm, " +
           s"(${classOf[BaseRowSerializer[_]].getCanonicalName}) " +
           s"${ctx.addReusableTypeSerializer(fieldType)})"

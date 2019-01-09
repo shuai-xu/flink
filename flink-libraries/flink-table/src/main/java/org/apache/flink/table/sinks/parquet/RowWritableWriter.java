@@ -18,10 +18,10 @@
 
 package org.apache.flink.table.sinks.parquet;
 
-import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.sources.parquet.ParquetSchemaConverter;
@@ -69,7 +69,7 @@ public class RowWritableWriter {
 		if (record != null) {
 			if (messageWriter == null) {
 				try {
-					messageWriter = createMessageWriter(new BaseRowType(fieldTypes), schema);
+					messageWriter = createMessageWriter(new RowType(fieldTypes), schema);
 				} catch (RuntimeException e) {
 					String errorMessage = "Parquet record is malformed: " + e.getMessage();
 					LOG.error(errorMessage, e);
@@ -80,7 +80,7 @@ public class RowWritableWriter {
 		}
 	}
 
-	private MessageRowWriter createMessageWriter(BaseRowType rowTypeInfo, GroupType schema) {
+	private MessageRowWriter createMessageWriter(RowType rowTypeInfo, GroupType schema) {
 		return new MessageRowWriter(rowTypeInfo, schema);
 	}
 
@@ -128,11 +128,11 @@ public class RowWritableWriter {
 	}
 
 	private class GroupRowWriter implements RowWriter {
-		private BaseRowType rowTypeInfo;
+		private RowType rowTypeInfo;
 		private FieldWriter[] writers;
 		private String[] fieldNames;
 
-		public GroupRowWriter(BaseRowType rowTypeInfo, GroupType groupType) {
+		public GroupRowWriter(RowType rowTypeInfo, GroupType groupType) {
 			this.rowTypeInfo = rowTypeInfo;
 			this.writers = new FieldWriter[rowTypeInfo.getFieldTypes().length];
 			this.fieldNames = rowTypeInfo.getFieldNames();
@@ -158,7 +158,7 @@ public class RowWritableWriter {
 	}
 
 	private class MessageRowWriter extends GroupRowWriter implements RowWriter {
-		public MessageRowWriter(BaseRowType rowTypeInfo, GroupType groupType) {
+		public MessageRowWriter(RowType rowTypeInfo, GroupType groupType) {
 			super(rowTypeInfo, groupType);
 		}
 

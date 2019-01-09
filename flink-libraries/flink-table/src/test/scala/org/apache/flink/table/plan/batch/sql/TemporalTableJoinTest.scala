@@ -23,12 +23,13 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.functions.{AsyncTableFunction, TableFunction}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.sources._
 import org.apache.flink.table.util.{TableSchemaUtil, TableTestBatchExecBase}
+
 import org.junit.Assert.{assertTrue, fail}
 import org.junit.{Before, Test}
 
@@ -280,7 +281,7 @@ class TemporalTableJoinTest extends TableTestBatchExecBase {
   class TestTemporalTable extends BatchTableSource[BaseRow] with LookupableTableSource[BaseRow] {
 
     override def getReturnType: DataType = {
-      new BaseRowType(
+      new RowType(
         classOf[BaseRow],
         Array[DataType](DataTypes.INT, DataTypes.STRING, DataTypes.INT),
         Array("id", "name", "age"),

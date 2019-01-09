@@ -20,7 +20,6 @@ package org.apache.flink.table.expressions.utils
 
 import java.{io, util}
 import java.util.concurrent.CompletableFuture
-
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.hep.{HepMatchOrder, HepPlanner, HepProgramBuilder}
 import org.apache.calcite.rex.RexNode
@@ -35,7 +34,7 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.functions.ScalarFunction
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.api.{TableConfig, TableEnvironment}
 import org.apache.flink.table.calcite.FlinkPlannerImpl
 import org.apache.flink.table.catalog.CatalogManager
@@ -47,6 +46,7 @@ import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.createToInternalConverter
 import org.apache.flink.types.Row
+
 import org.junit.Assert._
 import org.junit.{After, Before}
 
@@ -89,7 +89,7 @@ abstract class ExpressionTestBase {
     new HepPlanner(builder.build, context._2.getFrameworkConfig.getContext)
   }
 
-  private def prepareContext(t: BaseRowType)
+  private def prepareContext(t: RowType)
     : (RelBuilder, TableEnvironment, StreamExecutionEnvironment) = {
 
     val env = StreamExecutionEnvironment.createLocalEnvironment(4)
@@ -116,7 +116,7 @@ abstract class ExpressionTestBase {
 
   def rowTestData: Row
 
-  def baseRowType: BaseRowType = DataTypes.internal(rowType).asInstanceOf[BaseRowType]
+  def baseRowType: RowType = DataTypes.internal(rowType).asInstanceOf[RowType]
 
   def rowType: RowTypeInfo
 
@@ -138,7 +138,7 @@ abstract class ExpressionTestBase {
     val stringTestExprs = testExprs.map(expr => relBuilder.cast(expr._1, VARCHAR))
 
     // generate code
-    val resultType = new BaseRowType(
+    val resultType = new RowType(
       classOf[BinaryRow], Seq.fill(testExprs.size)(DataTypes.STRING): _*)
 
     val exprs = stringTestExprs.map(exprGenerator.generateExpression)

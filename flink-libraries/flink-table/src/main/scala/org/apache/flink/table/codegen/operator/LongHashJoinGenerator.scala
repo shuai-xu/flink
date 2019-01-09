@@ -20,7 +20,7 @@ package org.apache.flink.table.codegen.operator
 
 import org.apache.flink.metrics.Gauge
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes, DateType, TimestampType}
+import org.apache.flink.table.api.types.{DataTypes, DateType, RowType, TimestampType}
 import org.apache.flink.table.codegen.CodeGenUtils.{baseRowFieldReadAccess, newName}
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator._
@@ -35,7 +35,7 @@ object LongHashJoinGenerator {
 
   def support(
       joinType: HashJoinType,
-      keyType: BaseRowType,
+      keyType: RowType,
       filterNulls: Array[Boolean]): Boolean = {
     (joinType == HashJoinType.INNER ||
         joinType == HashJoinType.SEMI ||
@@ -53,7 +53,7 @@ object LongHashJoinGenerator {
 
   private def genGetLongKey(
       ctx: CodeGeneratorContext,
-      keyType: BaseRowType,
+      keyType: RowType,
       keyMapping: Array[Int],
       rowTerm: String): String = {
     val singleType = keyType.getFieldTypes()(0).toInternalType
@@ -81,9 +81,9 @@ object LongHashJoinGenerator {
   def gen(
       conf: TableConfig,
       hashJoinType: HashJoinType,
-      keyType: BaseRowType,
-      buildType: BaseRowType,
-      probeType: BaseRowType,
+      keyType: RowType,
+      buildType: RowType,
+      probeType: RowType,
       buildKeyMapping: Array[Int],
       probeKeyMapping: Array[Int],
       managedMemorySize: Long,
@@ -177,7 +177,7 @@ object LongHashJoinGenerator {
     ctx.addReusableInnerClass(tableTerm, tableCode)
 
     ctx.addReusableNullRow("buildSideNullRow", buildSer.getNumFields)
-    ctx.addOutputRecord(new BaseRowType(classOf[JoinedRow]), "joinedRow")
+    ctx.addOutputRecord(new RowType(classOf[JoinedRow]), "joinedRow")
     ctx.addReusableMember(s"$tableTerm table;")
     ctx.addReusableOpenStatement(s"table = new $tableTerm();")
 

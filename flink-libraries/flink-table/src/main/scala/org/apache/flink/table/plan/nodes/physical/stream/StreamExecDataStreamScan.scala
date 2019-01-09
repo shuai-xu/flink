@@ -21,10 +21,11 @@ package org.apache.flink.table.plan.nodes.physical.stream
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.StreamTableEnvironment
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.expressions.{Cast, Expression}
 import org.apache.flink.table.plan.schema.DataStreamTable
+
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
@@ -98,7 +99,7 @@ class StreamExecDataStreamScan(
 
       // get expression to extract timestamp
       dataStreamTable.dataType.toInternalType match {
-        case dataType: BaseRowType
+        case dataType: RowType
           if (dataType.getFieldNames.contains(rowtimeField) &&
               dataType.getInternalTypeAt(
                 dataType.getFieldIndex(rowtimeField)).equals(DataTypes.ROWTIME_INDICATOR)) =>

@@ -24,11 +24,11 @@ import org.apache.flink.types.Row;
 import java.util.Arrays;
 
 /**
- * Row type for baseRow.
+ * Row type for row.
  *
  * <p>It's internal data structure is {@link BaseRow}, and it's external data structure is {@link Row}.
  */
-public class BaseRowType extends InternalType {
+public class RowType extends InternalType {
 
 	/**
 	 * Internal type class to BaseRow.
@@ -47,27 +47,27 @@ public class BaseRowType extends InternalType {
 	 */
 	private final boolean useBaseRow;
 
-	public BaseRowType(DataType... types) {
+	public RowType(DataType... types) {
 		this(BaseRow.class, types, getFieldNames(types.length));
 	}
 
-	public BaseRowType(Class<? extends BaseRow> internalTypeClass, DataType... types) {
+	public RowType(Class<? extends BaseRow> internalTypeClass, DataType... types) {
 		this(internalTypeClass, types, getFieldNames(types.length));
 	}
 
-	public BaseRowType(DataType[] types, String[] fieldNames) {
+	public RowType(DataType[] types, String[] fieldNames) {
 		this(BaseRow.class, types, fieldNames);
 	}
 
-	public BaseRowType(Class<? extends BaseRow> internalTypeClass, DataType[] types, String[] fieldNames) {
+	public RowType(Class<? extends BaseRow> internalTypeClass, DataType[] types, String[] fieldNames) {
 		this(internalTypeClass, types, fieldNames, false);
 	}
 
-	public BaseRowType(Class<? extends BaseRow> internalTypeClass, DataType[] types, boolean useBaseRow) {
+	public RowType(Class<? extends BaseRow> internalTypeClass, DataType[] types, boolean useBaseRow) {
 		this(internalTypeClass, types, getFieldNames(types.length), useBaseRow);
 	}
 
-	public BaseRowType(Class<? extends BaseRow> internalTypeClass, DataType[] types, String[] fieldNames, boolean useBaseRow) {
+	public RowType(Class<? extends BaseRow> internalTypeClass, DataType[] types, String[] fieldNames, boolean useBaseRow) {
 		this.internalTypeClass = internalTypeClass;
 		this.types = types;
 		this.fieldNames = fieldNames;
@@ -128,7 +128,7 @@ public class BaseRowType extends InternalType {
 			return false;
 		}
 
-		BaseRowType that = (BaseRowType) o;
+		RowType that = (RowType) o;
 
 		return internalTypeClass.equals(that.internalTypeClass) &&
 				Arrays.equals(getFieldInternalTypes(), that.getFieldInternalTypes()) &&
@@ -145,7 +145,7 @@ public class BaseRowType extends InternalType {
 
 	@Override
 	public String toString() {
-		return "BaseRowType{" +
+		return "RowType{" +
 				"internalTypeClass=" + internalTypeClass +
 				", types=" + Arrays.toString(types) +
 				", fieldNames=" + Arrays.toString(fieldNames) +

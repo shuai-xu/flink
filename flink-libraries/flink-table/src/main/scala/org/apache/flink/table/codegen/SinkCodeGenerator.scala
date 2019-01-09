@@ -25,7 +25,7 @@ import org.apache.flink.api.java.typeutils.{GenericTypeInfo, PojoTypeInfo, RowTy
 import org.apache.flink.api.scala.createTuple2TypeInformation
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
+import org.apache.flink.table.api.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.api.{Table, TableConfig, TableException, Types}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
@@ -141,7 +141,7 @@ object SinkCodeGenerator {
         val outputBaseRowType = new BaseRowTypeInfo(
           classOf[GenericRow], getCompositeTypes(convertOutputType): _*)
         val conversion = resultGenerator.generateConverterResultExpression(
-          DataTypes.internal(outputBaseRowType).asInstanceOf[BaseRowType])
+          DataTypes.internal(outputBaseRowType).asInstanceOf[RowType])
         afterIndexModify = CodeGenUtils.newName("afterIndexModify")
         s"""
            |${conversion.code}

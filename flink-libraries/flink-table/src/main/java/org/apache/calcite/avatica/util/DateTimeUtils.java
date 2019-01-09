@@ -16,14 +16,18 @@
  */
 package org.apache.calcite.avatica.util;
 
-import org.apache.calcite.util.Pair;
 import org.apache.flink.table.api.ValidationException;
+
+import org.apache.calcite.util.Pair;
 
 import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
 
 /*
  * THIS FILE HAS BEEN COPIED FROM THE APACHE CALCITE PROJECT UNTIL CALCITE-1884 IS FIXED.

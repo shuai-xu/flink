@@ -23,7 +23,7 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
-import org.apache.flink.table.api.types.BaseRowType;
+import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.codegen.CodeGenUtils;
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction;
 import org.apache.flink.table.codegen.GeneratedProjection;
@@ -229,7 +229,7 @@ public abstract class HashJoinOperator extends AbstractStreamOperatorWithMetrics
 			int buildRowSize,
 			long buildRowCount,
 			long probeRowCount,
-			BaseRowType keyType) {
+			RowType keyType) {
 		HashJoinParameter parameter = new HashJoinParameter(minMemorySize, maxMemorySize, eachRequestMemorySize,
 				type, condFuncCode, reverseJoinFunction, filterNullKeys, buildProjectionCode, probeProjectionCode,
 				tryDistinctBuildRow, buildRowSize, buildRowCount, probeRowCount, keyType);
@@ -268,7 +268,7 @@ public abstract class HashJoinOperator extends AbstractStreamOperatorWithMetrics
 		int buildRowSize;
 		long buildRowCount;
 		long probeRowCount;
-		BaseRowType keyType;
+		RowType keyType;
 
 		HashJoinParameter(
 				long reservedMemorySize, long maxMemorySize, long perRequestMemorySize, HashJoinType type,
@@ -276,7 +276,7 @@ public abstract class HashJoinOperator extends AbstractStreamOperatorWithMetrics
 				boolean[] filterNullKeys,
 				GeneratedProjection buildProjectionCode,
 				GeneratedProjection probeProjectionCode, boolean tryDistinctBuildRow,
-				int buildRowSize, long buildRowCount, long probeRowCount, BaseRowType keyType) {
+				int buildRowSize, long buildRowCount, long probeRowCount, RowType keyType) {
 			this.reservedMemorySize = reservedMemorySize;
 			this.maxMemorySize = maxMemorySize;
 			this.perRequestMemorySize = perRequestMemorySize;

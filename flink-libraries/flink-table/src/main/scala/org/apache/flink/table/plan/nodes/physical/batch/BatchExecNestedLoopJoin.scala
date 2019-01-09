@@ -21,7 +21,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import org.apache.flink.streaming.api.transformations.TwoInputTransformation.ReadOrder
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.codegen.CodeGenUtils.newName
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
@@ -120,8 +120,8 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
     val leftInput = getLeft.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
     val rightInput = getRight.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
 
-    val leftType = DataTypes.internal(leftInput.getOutputType).asInstanceOf[BaseRowType]
-    val rightType = DataTypes.internal(rightInput.getOutputType).asInstanceOf[BaseRowType]
+    val leftType = DataTypes.internal(leftInput.getOutputType).asInstanceOf[RowType]
+    val rightType = DataTypes.internal(rightInput.getOutputType).asInstanceOf[RowType]
 
     val ctx = CodeGeneratorContext(config)
     val exprGenerator = new ExprCodeGenerator(ctx, flinkJoinType.isOuter, config.getNullCheck)

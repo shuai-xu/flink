@@ -18,9 +18,9 @@
 package org.apache.flink.table.codegen
 
 import java.lang.{Integer => JInt, Long => JLong}
-
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BinaryRowWriter, GenericRow}
+
 import org.junit.Assert.{assertFalse, assertTrue}
 import org.junit.Test
 
@@ -33,10 +33,10 @@ class EqualiserCodeGeneratorTest {
   def testEqualiser(): Unit = {
     val types = Array[InternalType](
       DataTypes.INT,
-      new BaseRowType(
+      new RowType(
         DataTypes.INT,
         DataTypes.STRING,
-        new BaseRowType(DataTypes.STRING, DataTypes.STRING)),
+        new RowType(DataTypes.STRING, DataTypes.STRING)),
       DataTypes.LONG)
     val generator = new EqualiserCodeGenerator(types)
     val recordEqualiser = generator.generateRecordEqualiser("recordEqualiser")

@@ -102,6 +102,7 @@ import org.apache.calcite.util.trace.CalciteTrace;
 import org.slf4j.Logger;
 
 import javax.annotation.Nonnull;
+
 import java.math.BigDecimal;
 import java.util.ArrayDeque;
 import java.util.ArrayList;

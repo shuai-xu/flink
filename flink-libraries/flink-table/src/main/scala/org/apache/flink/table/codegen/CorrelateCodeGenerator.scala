@@ -21,7 +21,7 @@ package org.apache.flink.table.codegen
 import org.apache.flink.api.common.functions.Function
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
 import org.apache.flink.table.api.{TableConfig, TableEnvironment, TableException, TableSchema}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils._
@@ -147,11 +147,11 @@ object CorrelateCodeGenerator {
       ctx: CodeGeneratorContext,
       collectorCtx: CodeGeneratorContext,
       config: TableConfig,
-      inputType: BaseRowType,
+      inputType: RowType,
       projectProgram: Option[RexProgram],
       swallowInputOnly: Boolean = false,
       udtfType: InternalType,
-      returnType: BaseRowType,
+      returnType: RowType,
       joinType: SemiJoinType,
       rexCall: RexCall,
       pojoFieldMapping: Option[Array[Int]],
@@ -280,21 +280,21 @@ object CorrelateCodeGenerator {
       references = ctx.references)
   }
 
-  private def toGenericRowType(fromType: InternalType): BaseRowType = {
+  private def toGenericRowType(fromType: InternalType): RowType = {
     val tableSchema = TableSchemaUtil.fromDataType(fromType)
     val fieldNames = tableSchema.getColumnNames
     val fieldTypes = tableSchema.getTypes
-    new BaseRowType(classOf[GenericRow], fieldTypes.toArray[DataType], fieldNames)
+    new RowType(classOf[GenericRow], fieldTypes.toArray[DataType], fieldNames)
   }
 
   private def generateProjectResultExpr(
       ctx: CodeGeneratorContext,
       config: TableConfig,
-      input1Type: BaseRowType,
+      input1Type: RowType,
       udtfType: InternalType,
       udtfPojoFieldMapping: Option[Array[Int]],
       udtfAlwaysNull: Boolean,
-      returnType: BaseRowType,
+      returnType: RowType,
       outputTerm: String,
       program: RexProgram): GeneratedExpression = {
     val projectExprGenerator = new ExprCodeGenerator(ctx, udtfAlwaysNull, config.getNullCheck)
@@ -323,11 +323,11 @@ object CorrelateCodeGenerator {
   private[flink] def generateCollector(
       ctx: CodeGeneratorContext,
       config: TableConfig,
-      inputType: BaseRowType,
+      inputType: RowType,
       projectProgram: Option[RexProgram],
       swallowInputOnly: Boolean,
       udtfExternalType: DataType,
-      resultType: BaseRowType,
+      resultType: RowType,
       condition: Option[RexNode],
       pojoFieldMapping: Option[Array[Int]],
       retainHeader: Boolean = true): GeneratedCollector = {

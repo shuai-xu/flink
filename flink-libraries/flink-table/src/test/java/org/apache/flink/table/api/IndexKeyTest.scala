@@ -19,6 +19,7 @@ package org.apache.flink.table.api
 
 import org.apache.flink.table.sources.IndexKey
 import org.apache.flink.table.util.TableTestBase
+
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 

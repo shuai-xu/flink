@@ -45,8 +45,8 @@ import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.operators.TimestampedCollector;
 import org.apache.flink.streaming.api.operators.Triggerable;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
-import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.api.window.Window;
 import org.apache.flink.table.codegen.GeneratedRecordEqualiser;
 import org.apache.flink.table.codegen.GeneratedSubKeyedAggsHandleFunction;
@@ -271,7 +271,7 @@ public class WindowOperator<K, W extends Window>
 		triggerContext = new TriggerContext();
 		triggerContext.open();
 
-		BaseRowType accTypeInfo = new BaseRowType(BaseRow.class, accumulatorTypes);
+		RowType accTypeInfo = new RowType(BaseRow.class, accumulatorTypes);
 		SubKeyedValueStateDescriptor<K, W, BaseRow> windowStateDescriptor = new SubKeyedValueStateDescriptor<>(
 			"window-aggs",
 			keySerializer,
@@ -282,7 +282,7 @@ public class WindowOperator<K, W extends Window>
 
 		if (sendRetraction) {
 			InternalType[] valueTypes = ArrayUtils.addAll(aggResultTypes, windowPropertyTypes);
-			BaseRowType prevAggResultType = new BaseRowType(BaseRow.class, valueTypes);
+			RowType prevAggResultType = new RowType(BaseRow.class, valueTypes);
 			SubKeyedValueStateDescriptor<K, W, BaseRow> previousStateDescriptor = new SubKeyedValueStateDescriptor<>(
 				"previous-aggs",
 				keySerializer,

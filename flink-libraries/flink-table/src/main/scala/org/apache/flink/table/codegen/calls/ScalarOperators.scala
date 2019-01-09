@@ -979,7 +979,7 @@ object ScalarOperators {
       }
 
     // composite type -> String
-    case (brt: BaseRowType, DataTypes.STRING) =>
+    case (brt: RowType, DataTypes.STRING) =>
       generateReturnStringCallWithStmtIfArgsNotNull(ctx, Seq(operand)) {
         terms =>
           val builderCls = classOf[StringBuilder].getCanonicalName
@@ -1415,7 +1415,7 @@ object ScalarOperators {
 
   private[flink] def makeReusableRow(
       ctx: CodeGeneratorContext,
-      rowType: BaseRowType,
+      rowType: RowType,
       elements: Seq[GeneratedExpression],
       nullCheck: Boolean,
       initRow: Boolean): GeneratedExpression = {
@@ -1464,7 +1464,7 @@ object ScalarOperators {
       resultType: InternalType,
       elements: Seq[GeneratedExpression],
       nullCheck: Boolean): GeneratedExpression = {
-    val rowType = resultType.asInstanceOf[BaseRowType]
+    val rowType = resultType.asInstanceOf[RowType]
     val fieldTypes = rowType.getFieldTypes
 
     def getLiteralRow: GeneratedExpression =
@@ -2086,7 +2086,7 @@ object ScalarOperators {
     val fieldIdx = operands
         .head
         .resultType
-        .asInstanceOf[BaseRowType]
+        .asInstanceOf[RowType]
         .getFieldIndex(fieldName)
     val access = generateFieldAccess(
       ctx,

@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.codegen
 
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.RowType
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.codegen.Indenter.toISC
@@ -39,8 +39,8 @@ object ProjectionCodeGenerator {
   def generateProjection(
       ctx: CodeGeneratorContext,
       name: String,
-      inType: BaseRowType,
-      outType: BaseRowType,
+      inType: RowType,
+      outType: RowType,
       inputMapping: Array[Int],
       inputTerm: String = DEFAULT_INPUT1_TERM,
       outRecordTerm: String = DEFAULT_OUT_RECORD_TERM,
@@ -59,7 +59,7 @@ object ProjectionCodeGenerator {
 
     val expression = resultGenerator.generateResultExpression(
       accessExprs,
-      outType.toInternalType.asInstanceOf[BaseRowType],
+      outType.toInternalType.asInstanceOf[RowType],
       outRow = outRecordTerm,
       outRowWriter = Option(outRecordWriterTerm),
       reusedOutRow = reusedOutRecord)
@@ -98,8 +98,8 @@ object ProjectionCodeGenerator {
   def generateProjection(
       ctx: CodeGeneratorContext,
       name: String,
-      inputType: BaseRowType,
-      outputType: BaseRowType,
+      inputType: RowType,
+      outputType: RowType,
       inputMapping: Array[Int]): GeneratedProjection =
     generateProjection(
       ctx, name, inputType, outputType, inputMapping, inputTerm = DEFAULT_INPUT1_TERM)
@@ -107,8 +107,8 @@ object ProjectionCodeGenerator {
   def generateNonNullProjection(
       ctx: CodeGeneratorContext,
       name: String,
-      inputType: BaseRowType,
-      outputType: BaseRowType,
+      inputType: RowType,
+      outputType: RowType,
       inputMapping: Array[Int]): GeneratedProjection =
     generateProjection(ctx, name, inputType, outputType, inputMapping, nullCheck = false)
 }

@@ -26,7 +26,7 @@ import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.metrics.Gauge
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
 import org.apache.flink.table.codegen.CodeGenUtils.{binaryRowFieldSetAccess, binaryRowSetNull}
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
@@ -44,8 +44,8 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       ctx: CodeGeneratorContext,
       aggMapKeyTypesTerm: String,
       aggBufferTypesTerm: String,
-      aggMapKeyType: BaseRowType,
-      aggBufferType: BaseRowType): Unit = {
+      aggMapKeyType: RowType,
+      aggBufferType: RowType): Unit = {
     val tpTerm = classOf[InternalType].getName
     ctx.addReusableMember(
       s"private transient $tpTerm[] $aggMapKeyTypesTerm;",
@@ -89,9 +89,9 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
   private[flink] def prepareTermForAggMapIteration(
       ctx: CodeGeneratorContext,
       outputTerm: String,
-      outputType: BaseRowType,
-      aggMapKeyType: BaseRowType,
-      aggBufferType: BaseRowType): (String, String, String) = {
+      outputType: RowType,
+      aggMapKeyType: RowType,
+      aggBufferType: RowType): (String, String, String) = {
     // prepare iteration var terms
     val reuseAggMapKeyTerm = CodeGenUtils.newName("reuseAggMapKey")
     val reuseAggBufferTerm = CodeGenUtils.newName("reuseAggBuffer")
@@ -184,13 +184,13 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       builder: RelBuilder,
       inputRelDataType: RelDataType,
       inputTerm: String,
-      inputType: BaseRowType,
+      inputType: RowType,
       currentAggBufferTerm: String,
       auxGrouping: Array[Int],
       aggCallToAggFunction: Seq[(AggregateCall, UserDefinedFunction)],
       argsMapping: Array[Array[(Int, InternalType)]],
       aggBuffMapping: Array[Array[(Int, InternalType)]],
-      aggBufferType: BaseRowType): GeneratedExpression = {
+      aggBufferType: RowType): GeneratedExpression = {
     val exprCodegen = new ExprCodeGenerator(ctx, false, config.getNullCheck)
         .bindInput(inputType, inputTerm = inputTerm)
         .bindSecondInput(aggBufferType, inputTerm = currentAggBufferTerm)
@@ -259,10 +259,10 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       config: TableConfig,
       builder: RelBuilder,
       inputTerm: String,
-      inputType: BaseRowType,
+      inputType: RowType,
       auxGrouping: Array[Int],
       aggregates: Seq[UserDefinedFunction],
-      aggBufferType: BaseRowType): GeneratedExpression = {
+      aggBufferType: RowType): GeneratedExpression = {
     val exprCodegen = new ExprCodeGenerator(ctx, false, config.getNullCheck)
       .bindInput(inputType, inputTerm = inputTerm, inputFieldMapping = Some(auxGrouping))
 
@@ -299,13 +299,13 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       builder: RelBuilder,
       inputRelDataType: RelDataType,
       inputTerm: String,
-      inputType: BaseRowType,
+      inputType: RowType,
       currentAggBufferTerm: String,
       auxGrouping: Array[Int],
       aggregates: Seq[UserDefinedFunction],
       argsMapping: Array[Array[(Int, InternalType)]],
       aggBuffMapping: Array[Array[(Int, InternalType)]],
-      aggBufferType: BaseRowType): GeneratedExpression = {
+      aggBufferType: RowType): GeneratedExpression = {
     val exprCodegen = new ExprCodeGenerator(ctx, false, config.getNullCheck)
         .bindInput(inputType.toInternalType, inputTerm = inputTerm)
         .bindSecondInput(aggBufferType.toInternalType, inputTerm = currentAggBufferTerm)
@@ -321,7 +321,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
 
     val aggBufferTypeWithoutAuxGrouping = if (auxGrouping.nonEmpty) {
       // auxGrouping does not need merge-code
-      new BaseRowType(aggBufferType.getInternalTypeClass,
+      new RowType(aggBufferType.getInternalTypeClass,
         aggBufferType.getFieldTypes.slice(auxGrouping.length, aggBufferType.getArity),
         aggBufferType.getFieldNames.slice(auxGrouping.length, aggBufferType.getArity))
     } else {
@@ -350,7 +350,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       config: TableConfig,
       builder: RelBuilder,
       inputRelDataType: RelDataType,
-      inputType: BaseRowType,
+      inputType: RowType,
       inputTerm: String,
       auxGrouping: Array[Int],
       aggregates: Seq[UserDefinedFunction],
@@ -358,7 +358,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       argsMapping: Array[Array[(Int, InternalType)]],
       aggBuffMapping: Array[Array[(Int, InternalType)]],
       currentAggBufferTerm: String,
-      aggBufferRowType: BaseRowType): GeneratedExpression = {
+      aggBufferRowType: RowType): GeneratedExpression = {
     if (isMerge) {
       genMergeAggBuffer(ctx, config, builder, inputRelDataType, inputTerm, inputType,
         currentAggBufferTerm, auxGrouping, aggregates, argsMapping, aggBuffMapping,
@@ -382,12 +382,12 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       argsMapping: Array[Array[(Int, InternalType)]],
       aggBuffMapping: Array[Array[(Int, InternalType)]],
       outputTerm: String,
-      outputType: BaseRowType,
+      outputType: RowType,
       inputTerm: String,
-      inputType: BaseRowType,
+      inputType: RowType,
       groupKeyTerm: Option[String],
       aggBufferTerm: String,
-      aggBufferType: BaseRowType): GeneratedExpression = {
+      aggBufferType: RowType): GeneratedExpression = {
     // gen code to get agg result
     val exprCodegen = new ExprCodeGenerator(ctx, false, config.getNullCheck)
         .bindInput(inputType.toInternalType, inputTerm = inputTerm)
@@ -408,7 +408,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
 
       val getValueExprs = getAuxGroupingExprs ++ getAggValueExprs
       val aggValueTerm = CodeGenUtils.newName("aggVal")
-      val valueType = new BaseRowType(classOf[GenericRow], getValueExprs.map(_.resultType): _*)
+      val valueType = new RowType(classOf[GenericRow], getValueExprs.map(_.resultType): _*)
       exprCodegen.generateResultExpression(
         getValueExprs,
         valueType,
@@ -438,16 +438,16 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       groupingAndAuxGrouping: (Array[Int], Array[Int]),
       inputRelDataType: RelDataType,
       inputTerm: String,
-      inputType: BaseRowType,
+      inputType: RowType,
       aggregateCalls: Seq[AggregateCall],
       aggCallToAggFunction: Seq[(AggregateCall, UserDefinedFunction)],
       aggregates: Seq[UserDefinedFunction],
       currentAggBufferTerm: String,
-      aggBufferRowType: BaseRowType,
+      aggBufferRowType: RowType,
       aggBufferNames: Array[Array[String]],
       aggBufferTypes: Array[Array[InternalType]],
       outputTerm: String,
-      outputType: BaseRowType,
+      outputType: RowType,
       groupKeyTerm: String,
       aggBufferTerm: String): (GeneratedExpression, GeneratedExpression, GeneratedExpression) = {
 
@@ -507,11 +507,11 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       logTerm: String,
       aggregateMapTerm: String,
       aggMapKVTypesTerm: (String, String),
-      aggMapKVRowType: (BaseRowType, BaseRowType),
+      aggMapKVRowType: (RowType, RowType),
       aggBufferNames: Array[Array[String]],
       aggBufferTypes: Array[Array[InternalType]],
       outputTerm: String,
-      outputType: BaseRowType,
+      outputType: RowType,
       outputResultFromMap: String,
       sorterTerm: String,
       retryAppend: String): (String, String) = {
@@ -617,7 +617,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
 
   private[flink] def genCreateFallbackSorter(
       ctx: CodeGeneratorContext,
-      groupKeyRowType: BaseRowType,
+      groupKeyRowType: RowType,
       groupKeyTypesTerm: String,
       aggBufferTypesTerm: String,
       sorterTerm: String): String = {
@@ -653,11 +653,11 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       aggregates: Seq[UserDefinedFunction],
       udaggs: Map[AggregateFunction[_, _], String],
       mapTerm: String,
-      mapKVRowTypes: (BaseRowType, BaseRowType),
+      mapKVRowTypes: (RowType, RowType),
       aggregateMapTerm: String,
       sorterTerm: String,
       outputTerm: String,
-      outputType: BaseRowType,
+      outputType: RowType,
       aggBufferNames: Array[Array[String]],
       aggBufferTypes: Array[Array[InternalType]]): String = {
     val (groupKeyRowType, aggBufferRowType) = mapKVRowTypes
@@ -667,7 +667,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
 
     val joinedRow = classOf[JoinedRow].getName
     val fallbackInputTerm = ctx.newReusableField("fallbackInput", joinedRow)
-    val fallbackInputType = new BaseRowType(
+    val fallbackInputType = new RowType(
       classOf[JoinedRow],
       groupKeyRowType.getFieldTypes ++ aggBufferRowType.getFieldTypes,
       groupKeyRowType.getFieldNames ++ aggBufferRowType.getFieldNames)
@@ -730,7 +730,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       ctx: CodeGeneratorContext,
       keyComputerTerm: String,
       recordComparatorTerm: String,
-      aggMapKeyType: BaseRowType) : String = {
+      aggMapKeyType: RowType) : String = {
     val keyFieldTypes = aggMapKeyType.getFieldInternalTypes
     val keys = keyFieldTypes.indices.toArray
     val orders = keys.map((_) => true)

@@ -19,7 +19,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.{BaseRowType, DataType}
+import org.apache.flink.table.api.types.{DataType, RowType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.BatchExecHashAggregateCodeGen
@@ -63,7 +63,7 @@ abstract class BatchExecHashAggregateBase(
     isFinal)
   with BatchExecHashAggregateCodeGen {
 
-  lazy val aggBufferRowType: BaseRowType = new BaseRowType(
+  lazy val aggBufferRowType: RowType = new RowType(
     classOf[BinaryRow], aggBufferTypes.flatten.toArray[DataType], aggBufferNames.flatten)
 
   override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
@@ -96,7 +96,7 @@ abstract class BatchExecHashAggregateBase(
     costFactory.makeCost(mq.getRowCount(this), cpuCost, 0, 0, memCost)
   }
 
-  override def getOutputRowType: BaseRowType = {
+  override def getOutputRowType: RowType = {
     if (grouping.isEmpty) {
       FlinkTypeFactory.toInternalBaseRowType(getRowType, classOf[GenericRow])
     } else {
@@ -107,8 +107,8 @@ abstract class BatchExecHashAggregateBase(
   def codegenWithKeys(
       ctx: CodeGeneratorContext,
       tableEnv: BatchTableEnvironment,
-      inputType: BaseRowType,
-      outputType: BaseRowType,
+      inputType: RowType,
+      outputType: RowType,
       reservedManagedMemory: Long,
       maxManagedMemory: Long): GeneratedOperator = {
     val config = tableEnv.config

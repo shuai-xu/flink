@@ -21,7 +21,7 @@ package org.apache.flink.table.runtime
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.{RowType, DataTypes}
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.util.BinaryRowUtil
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
@@ -43,8 +43,8 @@ class BinaryRowKeySelector(
   @transient lazy private val gProjection: GeneratedProjection = ProjectionCodeGenerator
     .generateProjection(CodeGeneratorContext.apply(new TableConfig, supportReference = false),
       classOf[BaseRowSerializer[_ <: BaseRow]].getSimpleName,
-      DataTypes.internal(inputType).asInstanceOf[BaseRowType],
-      DataTypes.internal(returnType).asInstanceOf[BaseRowType],
+      DataTypes.internal(inputType).asInstanceOf[RowType],
+      DataTypes.internal(returnType).asInstanceOf[RowType],
       keyFields)
 
   @transient lazy private val projection: Projection[BaseRow, BinaryRow] = {

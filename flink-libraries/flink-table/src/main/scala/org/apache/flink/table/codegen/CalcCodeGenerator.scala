@@ -23,7 +23,7 @@ import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlKind
 import org.apache.flink.api.common.functions.Function
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForType, newNames}
@@ -50,7 +50,7 @@ object CalcCodeGenerator {
     retainHeader: Boolean = false,
     ruleDescription: String
   ): (OneInputSubstituteStreamOperator[BaseRow, BaseRow], BaseRowTypeInfo[BaseRow]) = {
-    val inputType = DataTypes.internal(inputTransform.getOutputType).asInstanceOf[BaseRowType]
+    val inputType = DataTypes.internal(inputTransform.getOutputType).asInstanceOf[RowType]
     // filter out time attributes
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
     val possibleOutputType = FlinkTypeFactory.toInternalBaseRowType(
@@ -87,9 +87,9 @@ object CalcCodeGenerator {
   }
 
   private[flink] def generateFunction[T <: Function](
-      inputType: BaseRowType,
+      inputType: RowType,
       ruleDescription: String,
-      returnType: BaseRowType,
+      returnType: RowType,
       calcProjection: RexProgram,
       calcCondition: Option[RexNode],
       config: TableConfig,
@@ -125,8 +125,8 @@ object CalcCodeGenerator {
 
   private[flink] def generateProcessCode(
       ctx: CodeGeneratorContext,
-      inputType: BaseRowType,
-      outRowType: BaseRowType,
+      inputType: RowType,
+      outRowType: RowType,
       resultFieldNames: Seq[String],
       config: TableConfig,
       calcProgram: RexProgram,
@@ -135,7 +135,7 @@ object CalcCodeGenerator {
       collectorTerm: String = CodeGeneratorContext.DEFAULT_OPERATOR_COLLECTOR_TERM,
       retainHeader: Boolean = false,
       outputDirectly: Boolean = false
-  ): (String, GeneratedSplittableExpression, GeneratedSplittableExpression, BaseRowType) = {
+  ): (String, GeneratedSplittableExpression, GeneratedSplittableExpression, RowType) = {
 
     val projection = calcProgram.getProjectList.map(calcProgram.expandLocalRef)
     val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck)
@@ -161,7 +161,7 @@ object CalcCodeGenerator {
       val projectionExprs = projection.map(exprGenerator.generateExpression)
       val projectionExpression = exprGenerator.generateResultExpression(
         projectionExprs,
-        outputType.toInternalType.asInstanceOf[BaseRowType])
+        outputType.toInternalType.asInstanceOf[RowType])
 
       val inputTypeTerm = boxedTypeTermForType(inputType.toInternalType)
 

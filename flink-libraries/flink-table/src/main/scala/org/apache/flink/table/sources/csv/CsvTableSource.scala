@@ -27,7 +27,7 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.functions.{AsyncTableFunction, TableFunction}
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
@@ -87,7 +87,7 @@ class CsvTableSource(
     throw new TableException("Number of field names and field nullables must be equal.")
   }
 
-  private val returnType = new BaseRowType(
+  private val returnType = new RowType(
     classOf[GenericRow], fieldTypes.toArray[DataType], fieldNames, true)
   private val returnTypeInfo = TypeUtils.toBaseRowTypeInfo(returnType)
 

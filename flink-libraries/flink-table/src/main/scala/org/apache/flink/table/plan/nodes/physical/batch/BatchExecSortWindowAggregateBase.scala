@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.BaseRowType
+import org.apache.flink.table.api.types.{RowType}
 import org.apache.flink.table.api.window.TimeWindow
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.codegen.CodeGeneratorContext._
@@ -75,8 +75,8 @@ abstract class BatchExecSortWindowAggregateBase(
   private[flink] def codegenWithoutKeys(
       ctx: CodeGeneratorContext,
       tableEnv: BatchTableEnvironment,
-      inputType: BaseRowType,
-      outputType: BaseRowType,
+      inputType: RowType,
+      outputType: RowType,
       buffLimitSize: Int,
       windowStart: Long,
       windowSize: Long,
@@ -134,8 +134,8 @@ abstract class BatchExecSortWindowAggregateBase(
   private[flink] def codegenWithKeys(
       ctx: CodeGeneratorContext,
       tableEnv: BatchTableEnvironment,
-      inputType: BaseRowType,
-      outputType: BaseRowType,
+      inputType: RowType,
+      outputType: RowType,
       buffLimitSize: Int,
       windowStart: Long,
       windowSize: Long,

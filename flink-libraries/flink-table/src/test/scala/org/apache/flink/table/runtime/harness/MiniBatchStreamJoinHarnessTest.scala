@@ -24,7 +24,7 @@ import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.KeyedTwoInputStreamOperatorTestHarness
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedJoinConditionFunction, ProjectionCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
@@ -179,8 +179,8 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
     val pkProject = ProjectionCodeGenerator.generateProjection(
       CodeGeneratorContext.apply(config, false),
       "pkProject",
-      new BaseRowType(classOf[BinaryRow], DataTypes.LONG, DataTypes.INT),
-      new BaseRowType(classOf[BinaryRow], DataTypes.INT),
+      new RowType(classOf[BinaryRow], DataTypes.LONG, DataTypes.INT),
+      new RowType(classOf[BinaryRow], DataTypes.INT),
       Array(1),
       "in1",
       "out",
@@ -289,8 +289,8 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
     val pkProject = ProjectionCodeGenerator.generateProjection(
       CodeGeneratorContext.apply(config, false),
       "pkProject",
-      new BaseRowType(classOf[BinaryRow], DataTypes.LONG, DataTypes.INT),
-      new BaseRowType(classOf[BinaryRow], DataTypes.LONG),
+      new RowType(classOf[BinaryRow], DataTypes.LONG, DataTypes.INT),
+      new RowType(classOf[BinaryRow], DataTypes.LONG),
       Array(0),
       "in1",
       "out",

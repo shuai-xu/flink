@@ -21,7 +21,7 @@ import java.lang.{Iterable => JIterable}
 import java.util.{List => JList}
 import org.apache.flink.table.api.dataview.ListView
 import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
+import org.apache.flink.table.api.types.{RowType, DataType, DataTypes}
 import org.apache.flink.table.runtime.functions.aggfunctions.ConcatAggFunction._
 import org.apache.flink.table.dataformat.{BinaryString, GenericRow}
 import org.apache.flink.table.typeutils.BinaryStringTypeInfo
@@ -124,7 +124,7 @@ class ConcatAggFunction extends AggregateFunction[BinaryString, GenericRow] {
       // it will be replaced to ListViewType
       DataTypes.createGenericType(classOf[ListView[_]]))
     val fieldNames = Array("list", "retractList")
-    new BaseRowType(classOf[GenericRow], fieldTypes, fieldNames, true)
+    new RowType(classOf[GenericRow], fieldTypes, fieldNames, true)
   }
 }
 

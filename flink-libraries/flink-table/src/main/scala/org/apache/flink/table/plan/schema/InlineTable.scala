@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.schema
 
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
 import org.apache.flink.table.api.TableException
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{RowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.stats.FlinkStatistic
 
@@ -56,7 +56,7 @@ abstract class InlineTable(
   val fieldTypes: Array[InternalType] =
     dataType.toInternalType match {
 
-      case ct: BaseRowType =>
+      case ct: RowType =>
         // it is ok to leave out fields
         if (fieldIndexes.count(_ >= 0) > ct.getArity) {
           throw new TableException(

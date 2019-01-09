@@ -28,7 +28,7 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.{StreamGraph, StreamGraphGenerator}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
+import org.apache.flink.table.api.types.{RowType, DataType, DataTypes}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.catalog.ReadableCatalog
 import org.apache.flink.table.dataformat.BinaryRow
@@ -727,7 +727,7 @@ class BatchTableEnvironment(
       .map(field => FlinkTypeFactory.toInternalType(field.getType))
     val transformation = translate(
       optimizedPlan,
-      new BaseRowType(classOf[BinaryRow], fieldTypes: _*))
+      new RowType(classOf[BinaryRow], fieldTypes: _*))
     val streamGraph = translateStreamGraph(ArrayBuffer(transformation), None)
 
     val sqlPlan = PlanUtil.explainPlan(streamGraph)

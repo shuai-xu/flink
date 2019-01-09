@@ -332,7 +332,7 @@ class BatchExecOverAggregate(
     }
   }
 
-  def createOverWindowFrames(tableEnv: BatchTableEnvironment, inType: BaseRowType)
+  def createOverWindowFrames(tableEnv: BatchTableEnvironment, inType: RowType)
     : Array[OverWindowFrame] = {
     val config = tableEnv.getConfig
     val constants = logicWindow.constants
@@ -479,7 +479,7 @@ class BatchExecOverAggregate(
   }
 
   private[flink] def createBoundOrdering(isRow: Boolean,
-      config: TableConfig, inType: BaseRowType, windowGroup: Window.Group,
+      config: TableConfig, inType: RowType, windowGroup: Window.Group,
       windowBound: RexWindowBound, isLowerBound: Boolean): GeneratedBoundComparator = {
     val bound = OverAggregateUtil.getBoundary(logicWindow, windowBound)
     if (isRow) {

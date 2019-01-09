@@ -23,7 +23,7 @@ import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.dataview.{MapView, Order, SortedMapView}
 import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, DecimalType, InternalType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, InternalType, RowType}
 import org.apache.flink.table.dataformat.{BinaryString, Decimal, GenericRow}
 import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, DecimalTypeInfo, TypeUtils}
 
@@ -193,7 +193,7 @@ abstract class FirstValueWithRetractAggFunction[T]
       // it will be replaced to SortedMapViewType
       DataTypes.createGenericType(classOf[SortedMapView[_, _]]))
     val fieldNames = Array("firstValue", "firstOrder", "dataMap", "sortedDataMap")
-    new BaseRowType(classOf[GenericRow], fieldTypes, fieldNames, true)
+    new RowType(classOf[GenericRow], fieldTypes, fieldNames, true)
   }
 }
 

@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
@@ -151,7 +151,7 @@ class BatchExecHashAggregate(
     val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
     val outputRowType = getOutputRowType
-    val inputType = DataTypes.internal(input.getOutputType).asInstanceOf[BaseRowType]
+    val inputType = DataTypes.internal(input.getOutputType).asInstanceOf[RowType]
     val generatedOperator = if (grouping.isEmpty) {
       codegenWithoutKeys(isMerge, isFinal, ctx, tableEnv, inputType, outputRowType, "NoGrouping")
     } else {

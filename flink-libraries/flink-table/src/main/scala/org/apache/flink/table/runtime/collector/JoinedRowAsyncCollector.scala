@@ -23,7 +23,7 @@ import java.util.Collections
 import java.util.concurrent.BlockingQueue
 
 import org.apache.flink.streaming.api.functions.async.ResultFuture
-import org.apache.flink.table.api.types.{BaseRowType, InternalType}
+import org.apache.flink.table.api.types.{RowType, InternalType}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.typeutils.{BaseRowSerializer, TypeUtils}
 
@@ -44,7 +44,7 @@ class JoinedRowAsyncCollector(
   val nullRow: GenericRow = new GenericRow(rightArity)
   val delegate = new DelegateResultFuture
   private val rightSer = TypeUtils.createSerializer(
-    new BaseRowType(classOf[GenericRow], rightTypes: _*)).asInstanceOf[BaseRowSerializer[BaseRow]]
+    new RowType(classOf[GenericRow], rightTypes: _*)).asInstanceOf[BaseRowSerializer[BaseRow]]
 
   def reset(row: BaseRow, realOutput: ResultFuture[BaseRow]): Unit = {
     this.realOutput = realOutput

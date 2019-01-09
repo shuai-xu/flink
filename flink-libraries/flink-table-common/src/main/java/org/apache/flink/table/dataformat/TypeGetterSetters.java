@@ -19,11 +19,11 @@ package org.apache.flink.table.dataformat;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.table.api.types.ArrayType;
-import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.MapType;
+import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.api.types.Types;
 
 /**
@@ -170,8 +170,8 @@ public interface TypeGetterSetters {
 			return getBaseArray(ordinal);
 		} else if (type instanceof MapType) {
 			return getBaseMap(ordinal);
-		} else if (type instanceof BaseRowType) {
-			return getBaseRow(ordinal, ((BaseRowType) type).getArity());
+		} else if (type instanceof RowType) {
+			return getBaseRow(ordinal, ((RowType) type).getArity());
 		} else if (type instanceof GenericType) {
 			return getGeneric(ordinal, (GenericType) type);
 		} else {

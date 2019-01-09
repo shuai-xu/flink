@@ -23,7 +23,7 @@ import java.lang.{Iterable => JIterable}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.runtime.util.SingleElementIterator
 import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{RowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.{CodeGenException, CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
@@ -87,7 +87,7 @@ class ImperativeAggCodeGen(
     * Currently we only support GenericRow as internal acc type */
   val isAccTypeInternal: Boolean = externalAccType match {
     // current we only support GenericRow as internal ACC type
-    case t: BaseRowType if t.getInternalTypeClass == classOf[GenericRow] => true
+    case t: RowType if t.getInternalTypeClass == classOf[GenericRow] => true
     case _ => false
   }
 
@@ -337,9 +337,9 @@ class ImperativeAggCodeGen(
         val expr = generateFieldAccess(ctx, inputType, inputTerm, index, nullCheck)
 
         val newExpr = inputType match {
-          case ct: BaseRowType if isAccTypeInternal =>
+          case ct: RowType if isAccTypeInternal =>
             // acc is never be null
-            val fieldType = ct.getInternalTypeAt(index).asInstanceOf[BaseRowType]
+            val fieldType = ct.getInternalTypeAt(index).asInstanceOf[RowType]
             val exprGenerator = new ExprCodeGenerator(ctx, false, nullCheck)
               .bindInput(fieldType, inputTerm = expr.resultTerm)
             val converted = exprGenerator.generateConverterResultExpression(
@@ -363,7 +363,7 @@ class ImperativeAggCodeGen(
         }
 
         val exprWithDataView = inputType match {
-          case ct: BaseRowType if viewSpecs.nonEmpty && useStateDataView =>
+          case ct: RowType if viewSpecs.nonEmpty && useStateDataView =>
             if (isAccTypeInternal) {
               val code =
                 s"""

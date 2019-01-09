@@ -24,8 +24,8 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.tasks.TwoInputStreamTask;
 import org.apache.flink.streaming.runtime.tasks.TwoInputStreamTaskTestHarness;
 import org.apache.flink.streaming.util.TestHarnessUtil;
-import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.codegen.Projection;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
@@ -285,7 +285,7 @@ public class String2HashJoinOperatorTest {
 				boolean reverseJoinFunction) {
 			super(new HashJoinParameter(memorySize, memorySize, 0, type, null, reverseJoinFunction,
 					new boolean[]{true}, null, null, false, 20, 10000,
-					10000, new BaseRowType(DataTypes.STRING)));
+					10000, new RowType(DataTypes.STRING)));
 		}
 
 		@Override

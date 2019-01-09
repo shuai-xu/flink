@@ -19,15 +19,15 @@
 package org.apache.flink.table.sinks.orc
 
 import java.io.File
-
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api._
-import org.apache.flink.table.api.types.BaseRowType
+import org.apache.flink.table.api.types.RowType
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks.{BatchTableSink, TableSinkBase}
+
 import org.apache.hadoop.fs.FileUtil
 import org.apache.orc.CompressionKind
 
@@ -76,6 +76,6 @@ class OrcTableSink(
     *
     * @return The type expected by this [[org.apache.flink.table.sinks.TableSink]].
     */
-  override def getOutputType: BaseRowType =
-    new BaseRowType(classOf[BaseRow], getFieldTypes, true)
+  override def getOutputType: RowType =
+    new RowType(classOf[BaseRow], getFieldTypes, true)
 }

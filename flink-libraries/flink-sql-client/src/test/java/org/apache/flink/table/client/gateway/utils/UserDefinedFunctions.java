@@ -21,9 +21,9 @@ package org.apache.flink.table.client.gateway.utils;
 import org.apache.flink.table.api.functions.AggregateFunction;
 import org.apache.flink.table.api.functions.ScalarFunction;
 import org.apache.flink.table.api.functions.TableFunction;
-import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.types.Row;
 
 /**
@@ -97,7 +97,7 @@ public class UserDefinedFunctions {
 
 		@Override
 		public DataType getResultType(Object[] arguments, Class[] argTypes) {
-			return new BaseRowType(DataTypes.STRING, DataTypes.LONG);
+			return new RowType(DataTypes.STRING, DataTypes.LONG);
 		}
 	}
 }

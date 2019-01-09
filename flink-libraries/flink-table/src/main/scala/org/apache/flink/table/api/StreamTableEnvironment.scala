@@ -26,7 +26,7 @@ import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.{StreamGraph, StreamGraphGenerator}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
 import org.apache.flink.table.calcite.{FlinkChainContext, FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.catalog.ReadableCatalog
 import org.apache.flink.table.dataformat.BaseRow
@@ -48,10 +48,12 @@ import org.apache.flink.table.sources._
 import org.apache.flink.table.typeutils.TypeCheckUtils
 import org.apache.flink.table.util._
 import org.apache.flink.util.Preconditions
+
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex.RexBuilder
 import org.apache.calcite.sql2rel.SqlToRelConverter
+
 import _root_.java.util
 import org.apache.flink.table.factories.{TableFactoryService, TableFactoryUtil, TableSourceParserFactory}
 
@@ -607,7 +609,7 @@ abstract class StreamTableEnvironment(
   : (Option[(Int, String)], Option[(Int, String)]) = {
 
     val (isRefByPos, fieldTypes) = streamType.toInternalType match {
-      case c: BaseRowType =>
+      case c: RowType =>
         // determine schema definition mode (by position or by name)
         (isReferenceByPosition(c, exprs),
             (0 until c.getArity).map(i => c.getInternalTypeAt(i)).toArray)
@@ -650,7 +652,7 @@ abstract class StreamTableEnvironment(
           val aliasOrName = origName.getOrElse(name)
           streamType.toInternalType match {
             // both alias and reference must have a valid type if they replace a field
-            case ct: BaseRowType if ct.getFieldIndex(aliasOrName) >= 0 =>
+            case ct: RowType if ct.getFieldIndex(aliasOrName) >= 0 =>
               val t = ct.getInternalTypeAt(ct.getFieldIndex(aliasOrName))
               checkRowtimeType(t.toInternalType)
             // alias could not be found
@@ -683,12 +685,12 @@ abstract class StreamTableEnvironment(
         // check reference-by-name
         else {
           streamType.toInternalType match {
-            case ct: BaseRowType if
+            case ct: RowType if
             ct.getFieldIndex(name) < 0 =>
-            case ct: BaseRowType if
+            case ct: RowType if
               ct.getInternalTypeAt(ct.getFieldIndex(name)).equals(DataTypes.PROCTIME_INDICATOR) =>
             // proctime attribute must not replace a field
-            case ct: BaseRowType if ct.getFieldIndex(name) >= 0 =>
+            case ct: RowType if ct.getFieldIndex(name) >= 0 =>
               throw new TableException(
                 s"The proctime attribute '$name' must not replace an existing field.")
             case _ => // ok

@@ -19,7 +19,6 @@
 package org.apache.flink.table.codegen
 
 import java.io.File
-
 import org.apache.calcite.avatica.util.ByteString
 import org.apache.calcite.plan.RelOptPlanner
 import org.apache.calcite.rex.{RexBuilder, RexNode}
@@ -30,7 +29,7 @@ import org.apache.flink.configuration.Configuration
 import org.apache.flink.metrics.MetricGroup
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.functions.{FunctionContext, UserDefinedFunction}
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.FunctionCodeGenerator.generateFunction
 import org.apache.flink.table.dataformat.{Decimal, GenericRow}
@@ -44,7 +43,7 @@ import scala.collection.JavaConverters._
 class ExpressionReducer(config: TableConfig)
   extends RelOptPlanner.Executor with Compiler[RichMapFunction[GenericRow, GenericRow]] {
 
-  private val EMPTY_ROW_TYPE = new BaseRowType(classOf[GenericRow])
+  private val EMPTY_ROW_TYPE = new RowType(classOf[GenericRow])
   private val EMPTY_ROW = new GenericRow(0)
 
   override def reduce(
@@ -65,7 +64,7 @@ class ExpressionReducer(config: TableConfig)
     }
 
     val literalTypes = literals.map(e => FlinkTypeFactory.toInternalType(e.getType))
-    val resultType =  new BaseRowType(classOf[GenericRow], literalTypes: _*)
+    val resultType =  new RowType(classOf[GenericRow], literalTypes: _*)
 
     // generate MapFunction
     val ctx = new ConstantCodeGeneratorContext(config)
