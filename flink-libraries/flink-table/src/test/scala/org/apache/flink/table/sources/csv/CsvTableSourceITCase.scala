@@ -19,6 +19,7 @@
 package org.apache.flink.table.sources.csv
 
 import java.io.File
+import java.util.Collections
 
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
@@ -78,6 +79,44 @@ class CsvTableSourceITCase extends QueryTest {
     val results = tEnv.sqlQuery(sql).collect()
 
     TestBaseUtils.compareResultAsText(results.asJava, expected)
+  }
+
+  @Test
+  def testTemporalJoinCsv(): Unit = {
+    val csvSource = CsvTableSource.builder()
+      .path(createTmpCsvFile(cars_csv_null))
+      .field("yr", DataTypes.INT)
+      .field("make", DataTypes.STRING)
+      .field("model", DataTypes.STRING)
+      .field("comment", DataTypes.STRING)
+      .enableEmptyColumnAsNull()
+      .build()
+    tEnv.registerTableSource("cars", csvSource)
+
+    val csvTemporal = CsvTableSource.builder()
+      .path(createTmpCsvFile(cars_csv))
+      .field("yr", DataTypes.INT)
+      .field("make", DataTypes.STRING)
+      .field("model", DataTypes.STRING)
+      .field("comment", DataTypes.STRING)
+      .uniqueKeys(Collections.singleton(Collections.singleton("make")))
+      .build()
+    tEnv.registerTableSource("carsTemporal", csvTemporal)
+
+    val sql =
+      """
+        |SELECT C.*, T.*
+        |FROM cars AS C
+        |LEFT JOIN carsTemporal FOR SYSTEM_TIME AS OF PROCTIME() AS T
+        |ON C.make = T.make
+      """.stripMargin
+
+    val results = tEnv.sqlQuery(sql).collect()
+    val expected = List(
+      "2012,\"Tesla\",\"S\",\"No comment\",2012,\"Tesla\",\"S\",\"No comment\"",
+      "null,Ford,null,\"fast\",1997,Ford,E350,\"Go get one now they are going fast\"",
+      "2015,Chevy,Volt,\"\",2015,Chevy,Volt,\"\"")
+    Assert.assertEquals(results.map(_.toString).sorted, expected.sorted)
   }
 
   @Test

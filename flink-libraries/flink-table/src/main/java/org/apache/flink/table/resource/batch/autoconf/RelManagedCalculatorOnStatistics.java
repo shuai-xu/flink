@@ -29,7 +29,6 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExpand;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecHashAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecHashJoinBase;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecHashWindowAggregate;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecJoinTable;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecLimit;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecLocalHashAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecLocalHashWindowAggregate;
@@ -47,6 +46,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortLimit;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortMergeJoinBase;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortWindowAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTemporalTableJoin;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
 import org.apache.flink.table.resource.RelResource;
@@ -297,7 +297,7 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 	}
 
 	@Override
-	public Void visit(BatchExecJoinTable joinTable) {
+	public Void visit(BatchExecTemporalTableJoin joinTable) {
 		calculateNoManagedMem(joinTable);
 		return null;
 	}

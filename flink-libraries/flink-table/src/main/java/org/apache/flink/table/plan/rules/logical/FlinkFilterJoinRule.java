@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.plan.rules.logical;
 
-import org.apache.flink.table.plan.nodes.calcite.LogicalTemporalTableJoin;
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalSemiJoin;
 import org.apache.flink.util.Preconditions;
 
@@ -344,11 +343,10 @@ public abstract class FlinkFilterJoinRule extends RelOptRule {
 	}
 
 	/**
-	 * only matches Calcite LogicalJoin or Calcite SemiJoin or LogicalTemporalTableJoin.
+	 * only matches Calcite LogicalJoin or Calcite SemiJoin or LogicalTemporalTableFunctionJoin.
 	 */
 	protected boolean matches(Join join) {
-		return join instanceof LogicalJoin || join instanceof LogicalTemporalTableJoin ||
-				join instanceof SemiJoin && !(join instanceof FlinkLogicalSemiJoin);
+		return join instanceof LogicalJoin || join instanceof SemiJoin && !(join instanceof FlinkLogicalSemiJoin);
 	}
 
 	/** Rule that pushes parts of the join condition to its inputs. */

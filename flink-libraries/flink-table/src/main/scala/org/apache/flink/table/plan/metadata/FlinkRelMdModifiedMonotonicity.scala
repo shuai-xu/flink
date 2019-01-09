@@ -82,7 +82,7 @@ class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMon
         getBasicMono(wa.getInput, mq, rowSize)
       case mb: StreamExecMiniBatchAssigner =>
         getBasicMono(mb.getInput, mq, rowSize)
-      case _: StreamExecJoinTable | _: FlinkLogicalJoinTable =>
+      case _: StreamExecTemporalTableFunctionJoin =>
         getBasicMono(rel.getInput(0), mq, rowSize)
       case _: StreamExecExpand =>
         getBasicMono(rel.getInput(0), mq, rowSize)

@@ -45,33 +45,36 @@ public class TableSchema {
 
 	private final String[][] uniqueKeys;
 
+	private final String[][] indexes;
+
 	private final ComputedColumn[] computedColumns;
 
 	private final Watermark[] watermarks;
 
-	private final Map<String, Integer> columnNameToIndex;
+	private final Map<String, Integer> columnNameToColumnIndex;
 
 	public TableSchema(Column[] columns) {
-		this(columns, new String[]{}, new String[][]{}, new ComputedColumn[]{}, new Watermark[]{});
+		this(columns, new String[]{}, new String[][]{}, new String[][]{}, new ComputedColumn[]{}, new Watermark[]{});
 	}
 
 	public TableSchema(
-			Column[] columns, String[] primaryKeys, String[][] uniqueKeys,
+			Column[] columns, String[] primaryKeys, String[][] uniqueKeys, String[][] indexes,
 			ComputedColumn[] computedColumns, Watermark[] watermarks) {
 		this.columns = columns;
 		this.primaryKeys = primaryKeys;
 		this.uniqueKeys = uniqueKeys;
+		this.indexes = indexes;
 		this.computedColumns = computedColumns;
 		this.watermarks = watermarks;
 
-		// validate and create name to index
-		columnNameToIndex = new HashMap<>();
+		// validate and create name to column index
+		columnNameToColumnIndex = new HashMap<>();
 		final Set<String> duplicateNames = new HashSet<>();
 		final Set<String> uniqueNames = new HashSet<>();
 		for (int i = 0; i < this.columns.length; i++) {
 			Preconditions.checkNotNull(columns[i]);
 			final String fieldName = this.columns[i].name();
-			columnNameToIndex.put(fieldName, i);
+			columnNameToColumnIndex.put(fieldName, i);
 
 			if (uniqueNames.contains(fieldName)) {
 				duplicateNames.add(fieldName);
@@ -91,7 +94,7 @@ public class TableSchema {
 
 		// validate primary keys
 		for (int i = 0; i < primaryKeys.length; i++) {
-			if (!columnNameToIndex.containsKey(primaryKeys[i])) {
+			if (!columnNameToColumnIndex.containsKey(primaryKeys[i])) {
 				throw new TableException(
 					"Primary key field: " + primaryKeys[i] + " not found in table schema."
 				);
@@ -107,7 +110,7 @@ public class TableSchema {
 			}
 
 			for (int j = 0; j < uniqueKey.length; j++) {
-				if (!columnNameToIndex.containsKey(uniqueKey[j])) {
+				if (!columnNameToColumnIndex.containsKey(uniqueKey[j])) {
 					throw new TableException(
 						"Unique key field: " + uniqueKey[j] + " not found in table schema."
 					);
@@ -173,6 +176,45 @@ public class TableSchema {
 		return this.uniqueKeys;
 	}
 
+	public String[][] getNormalIndexes() {
+		// keep the original index order
+		List<String[]> normalIndexes = new ArrayList<>();
+		for (String[] fields : indexes) {
+			if (!isUniqueColumns(fields)) {
+				normalIndexes.add(fields);
+			}
+		}
+		return normalIndexes.toArray(new String[0][]);
+	}
+
+	public String[][] getUniqueIndexes() {
+		// keep the original index order
+		List<String[]> uniqueIndexes = new ArrayList<>();
+		for (String[] fields : indexes) {
+			if (isUniqueColumns(fields)) {
+				uniqueIndexes.add(fields);
+			}
+		}
+		return uniqueIndexes.toArray(new String[0][]);
+	}
+
+	public int getColumnIndex(String columnName) {
+		if (columnNameToColumnIndex.containsKey(columnName)) {
+			return columnNameToColumnIndex.get(columnName);
+		} else {
+			throw new IllegalArgumentException("The given column name is not in the table schema.");
+		}
+	}
+
+	public boolean isUniqueColumns(String[] fields) {
+		for (String[] uniqueKey : uniqueKeys) {
+			if (Arrays.equals(uniqueKey, fields)) {
+				return true;
+			}
+		}
+		return Arrays.equals(primaryKeys, fields);
+	}
+
 	/**
 	 * Returns all field type information as an array.
 	 */
@@ -198,8 +240,8 @@ public class TableSchema {
 	 * @param fieldName the name of the field
 	 */
 	public Optional<InternalType> getFieldType(String fieldName) {
-		if (columnNameToIndex.containsKey(fieldName)) {
-			return Optional.of(columns[columnNameToIndex.get(fieldName)].internalType());
+		if (columnNameToColumnIndex.containsKey(fieldName)) {
+			return Optional.of(columns[columnNameToColumnIndex.get(fieldName)].internalType());
 		}
 		return Optional.empty();
 	}
@@ -287,7 +329,7 @@ public class TableSchema {
 	 * Returns the map for column name to field index.
 	 */
 	public Map<String, Integer> columnNameToIndex() {
-		return columnNameToIndex;
+		return columnNameToColumnIndex;
 	}
 
 	/**
@@ -304,8 +346,8 @@ public class TableSchema {
 	 */
 	@Deprecated
 	public Optional<InternalType> getType(String fieldName) {
-		if (columnNameToIndex.containsKey(fieldName)) {
-			return Optional.of(columns[columnNameToIndex.get(fieldName)].internalType());
+		if (columnNameToColumnIndex.containsKey(fieldName)) {
+			return Optional.of(columns[columnNameToColumnIndex.get(fieldName)].internalType());
 		}
 		return Optional.empty();
 	}
@@ -340,6 +382,13 @@ public class TableSchema {
 				sb.append(" |-- ").append(String.join(", ", uniqueKeys[i])).append("\n");
 			}
 		}
+
+		if (indexes.length > 0) {
+			sb.append("indexes\n");
+			for (int i = 0; i < indexes.length; i++) {
+				sb.append(" |-- ").append(String.join(", ", indexes[i])).append("\n");
+			}
+		}
 		return sb.toString();
 	}
 
@@ -354,7 +403,8 @@ public class TableSchema {
 		TableSchema schema = (TableSchema) o;
 		return Arrays.equals(columns, schema.columns) &&
 			Arrays.equals(primaryKeys, schema.primaryKeys) &&
-			Arrays.equals(uniqueKeys, schema.uniqueKeys);
+			Arrays.equals(uniqueKeys, schema.uniqueKeys) &&
+			Arrays.equals(indexes, schema.indexes);
 	}
 
 	@Override
@@ -362,6 +412,7 @@ public class TableSchema {
 		int result = Arrays.hashCode(columns);
 		result = 31 * result + Arrays.hashCode(primaryKeys);
 		result = 31 * result + Arrays.hashCode(uniqueKeys);
+		result = 31 * result + Arrays.hashCode(indexes);
 		return result;
 	}
 
@@ -376,20 +427,23 @@ public class TableSchema {
 	 */
 	public static class Builder {
 
-		private List<Column> columns;
+		private final List<Column> columns;
 
-		private List<String> primaryKey;
+		private final List<String> primaryKey;
 
-		private List<List<String>> uniqueKeys;
+		private final List<List<String>> uniqueKeys;
 
-		private List<ComputedColumn> computedColumns;
+		private final List<List<String>> indexes;
 
-		private List<Watermark> watermarks;
+		private final List<ComputedColumn> computedColumns;
+
+		private final List<Watermark> watermarks;
 
 		public Builder() {
 			columns = new ArrayList<>();
 			primaryKey = new ArrayList<>();
 			uniqueKeys = new ArrayList<>();
+			indexes = new ArrayList<>();
 			computedColumns = new ArrayList<>();
 			watermarks = new ArrayList<>();
 		}
@@ -421,15 +475,41 @@ public class TableSchema {
 		}
 
 		public Builder primaryKey(String... fields) {
-			Arrays.stream(fields).forEach(field -> primaryKey.add(field));
+			Preconditions.checkArgument(
+				primaryKey.isEmpty(),
+				"A primary key " + primaryKey +
+				" have been defined, can not define another primary key " +
+				Arrays.toString(fields));
+			primaryKey.addAll(Arrays.asList(fields));
+			// add index for primary key
+			indexes.add(Arrays.asList(fields));
 			return this;
 		}
 
 		public Builder uniqueKey(String... fields) {
-			List<String> uniqueKey = new ArrayList<>();
-			Arrays.stream(fields).forEach(field -> uniqueKey.add(field));
-			uniqueKeys.add(uniqueKey);
+			uniqueKeys.add(Arrays.asList(fields));
+			// add index for unique key
+			indexes.add(Arrays.asList(fields));
 			return this;
+		}
+
+		/**
+		 * Declare the given fields is a "normal" index which is not an unique index or
+		 * clustered index or other type indexes.
+		 * @param fields the column fields to be the normal index
+		 */
+		public Builder normalIndex(String... fields) {
+			indexes.add(Arrays.asList(fields));
+			return this;
+		}
+
+		/**
+		 * Declare the given fields is an unique index which the fields are unique in the table.
+		 * @param fields the column fields to be the unique index
+		 */
+		public Builder uniqueIndex(String... fields) {
+			// unique index is the same as unique key
+			return uniqueKey(fields);
 		}
 
 		public Builder computedColumn(String name, String expression) {
@@ -447,15 +527,24 @@ public class TableSchema {
 		 */
 		public TableSchema build() {
 			return new TableSchema(
-				columns.stream().toArray(Column[]::new),
-				primaryKey.stream().toArray(String[]::new),
+				columns.toArray(new Column[0]),
+				primaryKey.toArray(new String[0]),
 				// List<List<String>> -> String[][]
-				uniqueKeys.stream()
-					.map(u -> u.toArray(new String[u.size()]))  // mapping each List to an array
+				uniqueKeys
+					.stream()
+					.map(u -> u.toArray(new String[0]))  // mapping each List to an array
 					.collect(Collectors.toList())               // collecting as a List<String[]>
 					.toArray(new String[uniqueKeys.size()][]),
-				computedColumns.stream().toArray(ComputedColumn[]::new),
-				watermarks.stream().toArray(Watermark[]::new));
+				// List<List<String>> -> String[][]
+				indexes
+					.stream()
+					.map(u -> u.toArray(new String[0]))  // mapping each List to an array
+					.collect(Collectors.toList())               // collecting as a List<String[]>
+					.toArray(new String[indexes.size()][]),
+				computedColumns.toArray(new ComputedColumn[0]),
+				watermarks.toArray(new Watermark[0]));
 		}
 	}
 }
+
+// TODO: add tests

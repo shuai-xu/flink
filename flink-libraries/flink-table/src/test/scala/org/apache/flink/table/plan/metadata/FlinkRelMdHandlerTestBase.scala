@@ -117,28 +117,32 @@ class FlinkRelMdHandlerTestBase {
       catalogReader.getTable(tableNames).asInstanceOf[FlinkRelOptTable])
   }
 
-  protected def createLogicalDimensionTableSourceScan(
-      tableNames: JList[String]): FlinkLogicalDimensionTableSourceScan = {
+  protected def createLogicalTemporalTableSourceScan(
+      tableNames: JList[String]): FlinkLogicalSnapshot = {
     val table = catalogReader.getTable(tableNames).asInstanceOf[FlinkRelOptTable]
 
     val rexProgramBuilder = new RexProgramBuilder(
       typeFactory.createStructType(
-        table.getRowType.getFieldList.map(_.getType).toList ++
-          ImmutableList.of(typeFactory.createSqlType(SqlTypeName.VARCHAR)),
-        table.getRowType.getFieldNames ++ ImmutableList.of("__i__")),
+        table.getRowType.getFieldList.map(_.getType).toList,
+        table.getRowType.getFieldNames),
       rexBuilder
     )
     rexProgramBuilder.getInputRowType.getFieldList.indices.foreach {
       i => rexProgramBuilder.addProject(i, rexProgramBuilder.getInputRowType.getFieldNames.get(i))
     }
 
-    new FlinkLogicalDimensionTableSourceScan(
+    val scan = new FlinkLogicalTableSourceScan(
       cluster,
       logicalTraits,
-      table,
-      Some(relBuilder.call(ScalarSqlFunctions.PROCTIME)),
-      Some(rexProgramBuilder.getProgram)
-    )
+      table)
+
+    val calc = FlinkLogicalCalc.create(scan, rexProgramBuilder.getProgram)
+
+    new FlinkLogicalSnapshot(
+      cluster,
+      logicalTraits,
+      calc,
+      relBuilder.call(ScalarSqlFunctions.PROCTIME))
   }
 
   // scan on table t1
@@ -157,9 +161,9 @@ class FlinkRelMdHandlerTestBase {
   protected lazy val scanOfBigT1: BatchExecTableSourceScan =
     createTableSourceScanBatchExec(ImmutableList.of("bigT1"))
 
-  // dimension table source with calc
-  protected lazy val dimensionTableSourceScanWithCalc: FlinkLogicalDimensionTableSourceScan =
-    createLogicalDimensionTableSourceScan(ImmutableList.of("t1"))
+  // temporal table source with calc
+  protected lazy val temporalTableSourceScanWithCalc: FlinkLogicalSnapshot =
+    createLogicalTemporalTableSourceScan(ImmutableList.of("t1"))
 
   // SELECT * FROM t3 INTERSECT ALL SELECT id, score FROM student
   protected lazy val intersectAll: RelNode = relBuilder.scan("t3")

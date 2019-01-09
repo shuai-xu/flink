@@ -18,10 +18,12 @@
 
 package org.apache.flink.table.plan.schema
 
-import org.apache.calcite.schema.impl.AbstractTable
 import org.apache.flink.table.plan.stats.FlinkStatistic
 
-abstract class FlinkTable extends AbstractTable {
+import org.apache.calcite.schema.TemporalTable
+import org.apache.calcite.schema.impl.AbstractTable
+
+abstract class FlinkTable extends AbstractTable with TemporalTable {
 
   /**
    * Restrict return type of statistic to FlinkStatistic.
@@ -36,5 +38,9 @@ abstract class FlinkTable extends AbstractTable {
     * @return Copy of this table, substituting statistic.
     */
   def copy(statistic: FlinkStatistic): FlinkTable
+
+  override def getSysStartFieldName: String = "sys_start"
+
+  override def getSysEndFieldName: String = "sys_end"
 
 }

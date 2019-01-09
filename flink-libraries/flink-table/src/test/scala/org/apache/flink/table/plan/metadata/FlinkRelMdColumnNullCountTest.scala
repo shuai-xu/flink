@@ -40,9 +40,9 @@ class FlinkRelMdColumnNullCountTest extends FlinkRelMdHandlerTestBase {
 
   @Test
   def testGetColumnNullCountOnLogicalDimensionTableScan(): Unit = {
-    assertEquals(null, mq.getColumnNullCount(dimensionTableSourceScanWithCalc, 0))
-    assertEquals(null, mq.getColumnNullCount(dimensionTableSourceScanWithCalc, 1))
-    assertEquals(null, mq.getColumnNullCount(dimensionTableSourceScanWithCalc, 2))
+    assertEquals(null, mq.getColumnNullCount(temporalTableSourceScanWithCalc, 0))
+    assertEquals(null, mq.getColumnNullCount(temporalTableSourceScanWithCalc, 1))
+    assertEquals(null, mq.getColumnNullCount(temporalTableSourceScanWithCalc, 2))
   }
 
   @Test

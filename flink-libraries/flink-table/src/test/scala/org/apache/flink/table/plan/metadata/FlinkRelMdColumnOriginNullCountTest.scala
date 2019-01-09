@@ -35,9 +35,9 @@ class FlinkRelMdColumnOriginNullCountTest extends FlinkRelMdHandlerTestBase {
   }
 
   @Test
-  def testGetColumnOriginNullCountOnLogicalDimensionTableScan(): Unit = {
-    assertEquals(1.0, mq.getColumnOriginNullCount(dimensionTableSourceScanWithCalc, 0))
-    assertEquals(0.0, mq.getColumnOriginNullCount(dimensionTableSourceScanWithCalc, 1))
+  def testGetColumnOriginNullCountOnLogicalSnapshot(): Unit = {
+    assertEquals(null, mq.getColumnOriginNullCount(temporalTableSourceScanWithCalc, 0))
+    assertEquals(null, mq.getColumnOriginNullCount(temporalTableSourceScanWithCalc, 1))
   }
 
   @Test

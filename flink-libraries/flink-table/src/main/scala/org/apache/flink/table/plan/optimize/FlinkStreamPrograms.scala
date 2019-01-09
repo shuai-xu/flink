@@ -31,7 +31,7 @@ import org.apache.calcite.plan.hep.HepMatchOrder
 object FlinkStreamPrograms {
 
   val SUBQUERY_REWRITE = "subquery_rewrite"
-  val TABLE_FUNCTION_REWRITE = "table_function_rewrite"
+  val CORRELATE_REWRITE = "correlate_rewrite"
   val DECORRELATE = "decorrelate"
   val TIME_INDICATOR = "time_indicator"
   val DEFAULT_REWRITE = "default_rewrite"
@@ -74,9 +74,9 @@ object FlinkStreamPrograms {
           .build(), "convert table references after sub-queries removed")
         .build())
 
-    // rewrite special table function scan
+    // rewrite special temporal join plan
     programs.addLast(
-      TABLE_FUNCTION_REWRITE,
+      CORRELATE_REWRITE,
       FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
         .addProgram(
           FlinkHepRuleSetProgramBuilder.newBuilder
@@ -185,25 +185,10 @@ object FlinkStreamPrograms {
     // logical rewrite
     programs.addLast(
       LOGICAL_REWRITE,
-      FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
-        .addProgram(
-          FlinkHepRuleSetProgramBuilder.newBuilder
-            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-            .add(FlinkStreamExecRuleSets.STREAM_EXEC_TOPN_RULES)
-            .build(), "topn")
-        .addProgram(
-          FlinkHepRuleSetProgramBuilder.newBuilder
-            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-            .add(FlinkStreamExecRuleSets.STREAM_EXEC_LAST_ROW_RULES)
-            .build(), "last_row")
-        .addProgram(
-          FlinkHepRuleSetProgramBuilder.newBuilder
-            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-            .setHepMatchOrder(HepMatchOrder.TOP_DOWN)
-            .add(FlinkStreamExecRuleSets.STREAM_EXEC_AGG_SPLIT_RULES)
-            .build(), "split agg")
+      FlinkHepRuleSetProgramBuilder.newBuilder
+        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+        .add(FlinkStreamExecRuleSets.LOGICAL_REWRITE)
         .build())
 
     // optimize the physical plan

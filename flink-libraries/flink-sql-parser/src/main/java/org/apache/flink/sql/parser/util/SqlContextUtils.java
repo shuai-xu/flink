@@ -111,7 +111,6 @@ public class SqlContextUtils {
 			if (sqlNodeInfo.getSqlNode() instanceof SqlCreateTable) {
 				SqlCreateTable sqlCreateTable = (SqlCreateTable) sqlNodeInfo.getSqlNode();
 				switch (sqlCreateTable.getTableType()) {
-					case "DIM":
 					case "SOURCE":
 						sourceTables.add(extractTableInfo(sqlCreateTable));
 						break;

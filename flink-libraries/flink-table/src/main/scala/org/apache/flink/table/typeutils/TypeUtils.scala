@@ -29,13 +29,85 @@ import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.Types._
 import org.apache.flink.table.api.types._
-import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.dataformat.{BaseRow, BinaryString, Decimal}
 
 import scala.collection.mutable
 
 object TypeUtils {
 
   def getExternalClassForType(t: DataType): Class[_] = DataTypes.toTypeInfo(t).getTypeClass
+
+  def getInternalClassForType(t: DataType): Class[_] = {
+    t match {
+      // primitives
+      case DataTypes.BOOLEAN => BOOLEAN_TYPE_INFO.getTypeClass
+      case DataTypes.BYTE => BYTE_TYPE_INFO.getTypeClass
+      case DataTypes.SHORT => SHORT_TYPE_INFO.getTypeClass
+      case DataTypes.INT | DataTypes.DATE | DataTypes.TIME => INT_TYPE_INFO.getTypeClass
+      case DataTypes.LONG | DataTypes.TIMESTAMP => LONG_TYPE_INFO.getTypeClass
+      case DataTypes.FLOAT => FLOAT_TYPE_INFO.getTypeClass
+      case DataTypes.DOUBLE => DOUBLE_TYPE_INFO.getTypeClass
+      case DataTypes.CHAR => CHAR_TYPE_INFO.getTypeClass
+
+      case _: StringType => classOf[BinaryString]
+      case dt: DecimalType => classOf[Decimal]
+      case DataTypes.BYTE_ARRAY => BYTE_PRIMITIVE_ARRAY_TYPE_INFO.getTypeClass
+
+      // temporal types
+      case DataTypes.INTERVAL_MONTHS => TimeIntervalTypeInfo.INTERVAL_MONTHS.getTypeClass
+      case DataTypes.INTERVAL_MILLIS => TimeIntervalTypeInfo.INTERVAL_MILLIS.getTypeClass
+      case DataTypes.ROWTIME_INDICATOR => LONG_TYPE_INFO.getTypeClass
+      case DataTypes.PROCTIME_INDICATOR => LONG_TYPE_INFO.getTypeClass
+      case DataTypes.INTERVAL_ROWS => RowIntervalTypeInfo.INTERVAL_ROWS.getTypeClass
+
+      // arrays and map types
+      case at: ArrayType if at.isPrimitive => at.getElementType match {
+        case DataTypes.BOOLEAN =>
+          PrimitiveArrayTypeInfo.BOOLEAN_PRIMITIVE_ARRAY_TYPE_INFO.getTypeClass
+        case DataTypes.SHORT =>
+          PrimitiveArrayTypeInfo.SHORT_PRIMITIVE_ARRAY_TYPE_INFO.getTypeClass
+        case DataTypes.INT =>
+          PrimitiveArrayTypeInfo.INT_PRIMITIVE_ARRAY_TYPE_INFO.getTypeClass
+        case DataTypes.LONG =>
+          PrimitiveArrayTypeInfo.LONG_PRIMITIVE_ARRAY_TYPE_INFO.getTypeClass
+        case DataTypes.FLOAT =>
+          PrimitiveArrayTypeInfo.FLOAT_PRIMITIVE_ARRAY_TYPE_INFO.getTypeClass
+        case DataTypes.DOUBLE =>
+          PrimitiveArrayTypeInfo.DOUBLE_PRIMITIVE_ARRAY_TYPE_INFO.getTypeClass
+        case DataTypes.CHAR =>
+          PrimitiveArrayTypeInfo.CHAR_PRIMITIVE_ARRAY_TYPE_INFO.getTypeClass
+      }
+
+      case at: ArrayType => at.getElementType match {
+        case DataTypes.BOOLEAN => BasicArrayTypeInfo.BOOLEAN_ARRAY_TYPE_INFO.getTypeClass
+        case DataTypes.SHORT => BasicArrayTypeInfo.SHORT_ARRAY_TYPE_INFO.getTypeClass
+        case DataTypes.INT => BasicArrayTypeInfo.INT_ARRAY_TYPE_INFO.getTypeClass
+        case DataTypes.LONG =>  BasicArrayTypeInfo.LONG_ARRAY_TYPE_INFO.getTypeClass
+        case DataTypes.FLOAT => BasicArrayTypeInfo.FLOAT_ARRAY_TYPE_INFO.getTypeClass
+        case DataTypes.DOUBLE => BasicArrayTypeInfo.DOUBLE_ARRAY_TYPE_INFO.getTypeClass
+        case DataTypes.CHAR => BasicArrayTypeInfo.CHAR_ARRAY_TYPE_INFO.getTypeClass
+        case DataTypes.STRING => BasicArrayTypeInfo.STRING_ARRAY_TYPE_INFO.getTypeClass
+      }
+
+      case mp: MultisetType =>
+        new MultisetTypeInfo(createTypeInfoFromDataType(mp.getKeyType)).getTypeClass
+
+      case mp: MapType =>
+        new MapTypeInfo(
+          createTypeInfoFromDataType(mp.getKeyType),
+          createTypeInfoFromDataType(mp.getValueType)).getTypeClass
+
+      // composite types
+      case br: BaseRowType => classOf[BaseRow]
+
+      case gt: GenericType[_] => gt.getTypeInfo.getTypeClass
+
+      case et: TypeInfoWrappedType => et.getTypeInfo.getTypeClass
+
+      case _ =>
+        throw new TableException(s"Type is not supported: $t")
+    }
+  }
 
   def isPrimitive(dataType: TypeInformation[_]): Boolean = {
     dataType match {

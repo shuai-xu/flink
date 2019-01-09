@@ -579,29 +579,9 @@ class BatchTableEnvironment(
             registerTableInternal(name, newTable)
         }
 
-      // check for proper dim table source
-      case dimTableSource: DimensionTableSource[_] =>
-        // check if a table (source or sink) is registered
-        getTable(name) match {
-
-          // dimension table source is already registered
-          case Some(_: TableSourceTable) =>
-            throw new TableException(s"Table '$name' already exists. " +
-              s"Please choose a different name.")
-
-          // no table is registered
-          case _ =>
-            val dimTableSourceTable = if (dimTableSource.isTemporal) {
-              new TemporalDimensionTableSourceTable(dimTableSource, statistic)
-            } else {
-              new DimensionTableSourceTable(dimTableSource, statistic)
-            }
-            registerTableInternal(name, dimTableSourceTable)
-        }
-
       // not a batch table source
       case _ =>
-        throw new TableException("Only BatchTableSource and DimensionTableSource can be " +
+        throw new TableException("Only BatchTableSource can be " +
           "registered in BatchTableEnvironment.")
     }
   }

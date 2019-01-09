@@ -126,7 +126,7 @@ class ParquetVectorizedColumnRowTableSource(
     if (uniqueKeySet != null) {
       uniqueKeySet.foreach {
         case uniqueKey: JSet[String] =>
-          builder.uniqueKey(uniqueKey.toArray(new Array[String](0)):_*)
+          builder.uniqueIndex(uniqueKey.toArray(new Array[String](0)):_*)
       }
     }
     builder.build()

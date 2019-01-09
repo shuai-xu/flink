@@ -16,46 +16,93 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
-  <TestCase name="testSimpleJoin">
+  <TestCase name="testAvoidAggregatePushDown">
     <Resource name="plan">
       <![CDATA[
-StreamExecCalc(select=[*(o_amount, rate) AS rate])
-+- StreamExecTemporalTableJoin(where=[AND(__TEMPORAL_JOIN_CONDITION(o_rowtime, rowtime, currency), =(currency, o_currency))], join=[o_amount, o_currency, o_rowtime, currency, rate, rowtime], joinType=[InnerJoin])
-   :- StreamExecExchange(distribution=[hash[o_currency]])
-   :  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-   +- StreamExecExchange(distribution=[hash[currency]])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
+StreamExecGroupAggregate(groupBy=[b], select=[b, COUNT_RETRACT(a) AS EXPR$1, SUM_RETRACT(c) AS EXPR$2, SUM_RETRACT(d) AS EXPR$3])
++- StreamExecExchange(distribution=[hash[b]])
+   +- StreamExecCalc(select=[b, a, c, d])
+      +- StreamExecTemporalTableJoin(join=[b, a, c, d, id], source=[TestTemporalTable(id, name, age)], on=[a=id], joinType=[InnerJoin], where=[>(age, 10)], period=[PROCTIME()])
+         +- StreamExecCalc(select=[b, a, c, d])
+            +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) AS c, SUM(d) AS d])
+               +- StreamExecExchange(distribution=[hash[a, b]])
+                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testComplexJoin">
+  <TestCase name="testJoinOnDifferentKeyTypes">
     <Resource name="plan">
       <![CDATA[
-StreamExecJoin(where=[=(t3_secondary_key, secondary_key)], join=[rate, secondary_key, t3_comment, t3_secondary_key], joinType=[InnerJoin])
-:- StreamExecExchange(distribution=[hash[secondary_key]])
-:  +- StreamExecCalc(select=[*(o_amount, rate) AS rate, secondary_key])
-:     +- StreamExecTemporalTableJoin(where=[AND(__TEMPORAL_JOIN_CONDITION(o_rowtime, rowtime, currency), OR(=(currency, o_currency), =(secondary_key, o_secondary_key)))], join=[o_rowtime, o_amount, o_currency, o_secondary_key, rowtime, currency, rate, secondary_key], joinType=[InnerJoin])
-:        :- StreamExecExchange(distribution=[single])
-:        :  +- StreamExecCalc(select=[o_rowtime, o_amount, o_currency, o_secondary_key])
-:        :     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
-:        +- StreamExecExchange(distribution=[single])
-:           +- StreamExecCalc(select=[rowtime, currency, rate, secondary_key], where=[>(rate, 110)])
-:              +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
-+- StreamExecExchange(distribution=[hash[t3_secondary_key]])
+StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
++- StreamExecTemporalTableJoin(join=[a, b, c, proc, rt, b0, id, name, age], source=[TestTemporalTable(id, name, age)], on=[b0=id], joinType=[InnerJoin], period=[$cor0.proc])
+   +- StreamExecCalc(select=[a, b, c, proc, rt, CAST(b) AS b0])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testJoinTemporalTable">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
++- StreamExecTemporalTableJoin(join=[a, b, c, proc, rt, id, name, age], source=[TestTemporalTable(id, name, age)], on=[a=id], joinType=[InnerJoin], period=[$cor0.proc])
    +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testSimpleProctimeJoin">
+  <TestCase name="testJoinTemporalTableWithCalcPushDown">
     <Resource name="plan">
       <![CDATA[
-StreamExecCalc(select=[*(o_amount, rate) AS rate])
-+- StreamExecTemporalTableJoin(where=[AND(__TEMPORAL_JOIN_CONDITION(o_proctime, currency), =(currency, o_currency))], join=[o_amount, o_currency, o_proctime, currency, rate], joinType=[InnerJoin])
-   :- StreamExecExchange(distribution=[hash[o_currency]])
-   :  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_2]])
-   +- StreamExecExchange(distribution=[hash[currency]])
-      +- StreamExecCalc(select=[currency, rate])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_3]])
+StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, CAST(10) AS age])
++- StreamExecTemporalTableJoin(join=[a, b, c, proc, rt, id, name], source=[TestTemporalTable(id, name, age)], on=[a=id], joinType=[InnerJoin], where=[AND(=(age, 10), >(CAST(name), 1000))], period=[$cor0.proc])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testJoinTemporalTableWithFilterPushDown">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, CAST(10) AS age])
++- StreamExecTemporalTableJoin(join=[a, b, c, proc, rt, id, name], source=[TestTemporalTable(id, name, age)], on=[a=id], joinType=[InnerJoin], where=[=(age, 10)], period=[$cor0.proc])
+   +- StreamExecCalc(select=[a, b, c, proc, rt], where=[>(c, 1000)])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testJoinTemporalTableWithMultiIndexColumn">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, CAST('AAA') AS name, CAST(10) AS age])
++- StreamExecTemporalTableJoin(join=[a, b, c, proc, rt, id], source=[TestTemporalTable(id, name, age)], on=[a=id], joinType=[InnerJoin], where=[AND(=(age, 10), =(name, 'AAA'))], period=[$cor0.proc])
+   +- StreamExecCalc(select=[a, b, c, proc, rt], where=[>(c, 1000)])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testJoinTemporalTableWithNestedQuery">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a, b, PROCTIME(proc) AS proc, id, name, age])
++- StreamExecTemporalTableJoin(join=[a, b, proc, id, name, age], source=[TestTemporalTable(id, name, age)], on=[a=id], joinType=[InnerJoin], period=[$cor0.proc])
+   +- StreamExecCalc(select=[a, b, proc], where=[>(c, 1000)])
+      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testLeftJoinTemporalTable">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
++- StreamExecTemporalTableJoin(join=[a, b, c, proc, rt, id, name, age], source=[TestTemporalTable(id, name, age)], on=[a=id], joinType=[LeftOuterJoin], period=[PROCTIME()])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testJoinTemporalTableWithProjectionPushDown">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id])
++- StreamExecTemporalTableJoin(join=[a, b, c, proc, rt, id], source=[TestTemporalTable(id, name, age)], on=[a=id], joinType=[InnerJoin], period=[PROCTIME()])
+   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

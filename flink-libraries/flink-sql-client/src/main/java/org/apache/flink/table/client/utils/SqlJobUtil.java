@@ -507,7 +507,7 @@ public class SqlJobUtil {
 
 		builder.primaryKey(richTableSchema.getPrimaryKeys().stream().toArray(String[]::new));
 		for (List<String> uniqueKey: richTableSchema.getUniqueKeys()) {
-			builder.primaryKey(uniqueKey.stream().toArray(String[]::new));
+			builder.uniqueIndex(uniqueKey.stream().toArray(String[]::new));
 		}
 		return builder.build();
 	}

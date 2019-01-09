@@ -44,7 +44,7 @@ import org.apache.flink.table.plan.logical.{CatalogNode, LogicalNode, LogicalRel
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
 import org.apache.flink.table.sinks._
-import org.apache.flink.table.sources.TableSource
+import org.apache.flink.table.sources.{LookupableTableSource, TableSource}
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, FunctionCatalog}
 

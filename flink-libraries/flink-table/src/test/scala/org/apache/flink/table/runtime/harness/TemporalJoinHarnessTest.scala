@@ -18,7 +18,6 @@
 package org.apache.flink.table.runtime.harness
 
 import java.lang.{Integer => JInt, Long => JLong}
-import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import org.apache.calcite.rel.core.JoinInfo
@@ -39,10 +38,10 @@ import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.dataformat.BinaryString.fromString
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BinaryRowWriter, GenericRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
-import org.apache.flink.table.plan.nodes.calcite.LogicalTemporalTableJoin
-import org.apache.flink.table.plan.nodes.calcite.LogicalTemporalTableJoin.TEMPORAL_JOIN_CONDITION
 import org.apache.flink.table.plan.nodes.physical.stream.StreamExecTemporalJoinToCoProcessTranslator
 import org.apache.flink.table.plan.schema.BaseRowSchema
+import org.apache.flink.table.plan.util.TemporalJoinUtil
+import org.apache.flink.table.plan.util.TemporalJoinUtil.TEMPORAL_JOIN_CONDITION
 import org.apache.flink.table.runtime.BaseRowKeySelector
 import org.apache.flink.table.runtime.utils.BaseRowHarnessAssertor
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
@@ -54,8 +53,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
-import collection.JavaConverters._
 
 @RunWith(classOf[Parameterized])
 class TemporalJoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
@@ -383,8 +382,8 @@ class TemporalJoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mo
         RATES_KEY,
         ORDERS_PROCTIME) {
         /**
-          * @return [[LogicalTemporalTableJoin.TEMPORAL_JOIN_CONDITION]](...) AND
-          *        leftInputRef(3) > rightInputRef(3)
+          * @return TEMPORAL_JOIN_CONDITION(...) AND
+          *         leftInputRef(3) > rightInputRef(3)
           */
         override def getRemaining(rexBuilder: RexBuilder): RexNode = {
           rexBuilder.makeCall(
@@ -530,7 +529,7 @@ class TemporalJoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mo
     translateJoin(
       new OrdersRatesProctimeTemporalJoinInfo() {
         override def getRemaining(rexBuilder: RexBuilder): RexNode = {
-          LogicalTemporalTableJoin.makeProcTimeTemporalJoinConditionCall(
+          TemporalJoinUtil.makeProcTimeTemporalJoinConditionCall(
             rexBuilder,
             makeLeftInputRef(leftTimeAttribute),
             rexBuilder.makeCall(
@@ -554,7 +553,7 @@ class TemporalJoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mo
         ImmutableIntList.of(1, 0)) {
 
         override def getRemaining(rexBuilder: RexBuilder): RexNode = {
-          LogicalTemporalTableJoin.makeProcTimeTemporalJoinConditionCall(
+          TemporalJoinUtil.makeProcTimeTemporalJoinConditionCall(
             rexBuilder,
             makeLeftInputRef(ORDERS_PROCTIME),
             makeRightInputRef(RATES_KEY))
@@ -667,7 +666,7 @@ class TemporalJoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mo
     extends TemporalJoinInfo(leftRowType, rightRowType, leftKey, rightKey) {
 
     override def getRemaining(rexBuilder: RexBuilder): RexNode = {
-      LogicalTemporalTableJoin.makeProcTimeTemporalJoinConditionCall(
+      TemporalJoinUtil.makeProcTimeTemporalJoinConditionCall(
         rexBuilder,
         makeLeftInputRef(leftTimeAttribute),
         makeRightInputRef(rightKey))
@@ -696,7 +695,7 @@ class TemporalJoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mo
       leftKey,
       rightKey) {
     override def getRemaining(rexBuilder: RexBuilder): RexNode = {
-      LogicalTemporalTableJoin.makeRowTimeTemporalJoinConditionCall(
+      TemporalJoinUtil.makeRowTimeTemporalJoinConditionCall(
         rexBuilder,
         makeLeftInputRef(leftTimeAttribute),
         makeRightInputRef(rightTimeAttribute),

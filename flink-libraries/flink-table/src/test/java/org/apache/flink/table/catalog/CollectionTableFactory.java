@@ -19,7 +19,6 @@
 package org.apache.flink.table.catalog;
 
 import org.apache.flink.api.common.ExecutionConfig;
-import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.io.CollectionInputFormat;
@@ -28,43 +27,37 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.async.AsyncFunction;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.TableSourceParser;
+import org.apache.flink.table.api.functions.AsyncTableFunction;
+import org.apache.flink.table.api.functions.TableFunction;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.dataformat.BaseRow;
-import org.apache.flink.table.dataformat.BinaryString;
-import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.descriptors.SchemaValidator;
 import org.apache.flink.table.factories.BatchTableSinkFactory;
 import org.apache.flink.table.factories.BatchTableSourceFactory;
-import org.apache.flink.table.factories.DimensionTableSourceFactory;
 import org.apache.flink.table.factories.StreamTableSinkFactory;
 import org.apache.flink.table.factories.StreamTableSourceFactory;
 import org.apache.flink.table.factories.TableSourceParserFactory;
-import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.sinks.AppendStreamTableSink;
 import org.apache.flink.table.sinks.BatchTableSink;
 import org.apache.flink.table.sinks.StreamTableSink;
 import org.apache.flink.table.sinks.TableSink;
 import org.apache.flink.table.sources.AbstractTableSource;
-import org.apache.flink.table.sources.AsyncConfig;
 import org.apache.flink.table.sources.BatchTableSource;
-import org.apache.flink.table.sources.DimensionTableSource;
 import org.apache.flink.table.sources.IndexKey;
+import org.apache.flink.table.sources.LookupConfig;
+import org.apache.flink.table.sources.LookupableTableSource;
 import org.apache.flink.table.sources.StreamTableSource;
 import org.apache.flink.table.util.TableProperties;
 import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.types.Row;
-import org.apache.flink.util.Collector;
 import org.apache.flink.util.Preconditions;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -72,7 +65,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import scala.Option;
 
 import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CONNECTOR_PROPERTY_VERSION;
 import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CONNECTOR_TYPE;
@@ -83,7 +75,6 @@ import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CO
 public class CollectionTableFactory<T1> implements StreamTableSourceFactory<T1>,
 	StreamTableSinkFactory<Row>,
 	TableSourceParserFactory,
-	DimensionTableSourceFactory<BaseRow>,
 	BatchTableSinkFactory<Row>,
 	BatchTableSourceFactory<Row> {
 
@@ -146,17 +137,6 @@ public class CollectionTableFactory<T1> implements StreamTableSourceFactory<T1>,
 	}
 
 	@Override
-	public DimensionTableSource<BaseRow> createDimensionTableSource(Map<String, String> props) {
-		TableProperties properties = new TableProperties();
-		properties.putProperties(props);
-		RichTableSchema schema = properties.readSchemaFromProperties(classLoader);
-		if (checkParam) {
-			Preconditions.checkArgument(properties.getInteger(TABLE_TYPE_KEY, -1) == DIM);
-		}
-		return new CollectionDimensionTable(schema);
-	}
-
-	@Override
 	public StreamTableSink<Row> createStreamTableSink(Map<String, String> props) {
 		return getCollectionSink(props);
 	}
@@ -181,11 +161,12 @@ public class CollectionTableFactory<T1> implements StreamTableSourceFactory<T1>,
 		TableProperties properties = new TableProperties();
 		properties.putProperties(props);
 		String tableName = properties.readTableNameFromProperties();
+		RichTableSchema schema = properties.readSchemaFromProperties(classLoader);
 
 		if (checkParam) {
 			Preconditions.checkArgument(properties.getInteger(TABLE_TYPE_KEY, -1) == SOURCE);
 		}
-		return new CollectionTableSource(tableName);
+		return new CollectionTableSource(tableName, schema);
 	}
 
 	private CollectionTableSink getCollectionSink(Map<String, String> props) {
@@ -201,26 +182,24 @@ public class CollectionTableFactory<T1> implements StreamTableSourceFactory<T1>,
 	/**
 	 * Dimension table source fetcher.
 	 */
-	public static class DimFetcher implements FlatMapFunction<BaseRow, BaseRow>, Serializable {
+	public static class TemporalTableFetcher extends TableFunction<Row> {
 
-		private IndexKey keys;
+		private int[] keys;
 
-		public DimFetcher(IndexKey keys) {
+		public TemporalTableFetcher(int[] keys) {
 			this.keys = keys;
 		}
 
-		@Override
-		public void flatMap(BaseRow value, Collector<BaseRow> out) throws Exception {
-			int[] fieldMapping = keys.toArray();
+		public void eval(Object... values) throws Exception {
 			for (Row data : DATA) {
 				boolean matched = true;
-				for (int i = 0; i < fieldMapping.length; i++) {
-					Object dataField = data.getField(fieldMapping[i]);
+				for (int i = 0; i < keys.length; i++) {
+					Object dataField = data.getField(keys[i]);
 					Object inputField = null;
 					if (dataField instanceof String) {
-						inputField = value.getBinaryString(i).toString();
+						inputField = values[i].toString();
 					} else if (dataField instanceof Integer) {
-						inputField = Integer.valueOf(value.getInt(i));
+						inputField = values[i];
 					}
 					if (!dataField.equals(inputField)) {
 						matched = false;
@@ -228,80 +207,14 @@ public class CollectionTableFactory<T1> implements StreamTableSourceFactory<T1>,
 					}
 				}
 				if (matched) {
-					GenericRow row = new GenericRow(data.getArity());
+					Row row = new Row(data.getArity());
 					for (int i = 0; i < data.getArity(); i++) {
 						Object dataField = data.getField(i);
-						if (dataField instanceof String) {
-							row.update(i, BinaryString.fromString(dataField));
-						} else {
-							row.update(i, dataField);
-						}
-
+						row.setField(i, dataField);
 					}
-					out.collect(row);
+					collect(row);
 				}
 			}
-		}
-	}
-
-	/**
-	 * Dimension table source.
-	 */
-	public static class CollectionDimensionTable implements DimensionTableSource<BaseRow> {
-		private RichTableSchema schema;
-
-		public CollectionDimensionTable(RichTableSchema schema) {
-			this.schema = schema;
-		}
-
-		@Override
-		public Collection<IndexKey> getIndexes() {
-			return schema.toIndexKeys();
-		}
-
-		@Override
-		public FlatMapFunction<BaseRow, BaseRow> getLookupFunction(IndexKey keys) {
-			return new DimFetcher(keys);
-		}
-
-		@Override
-		public AsyncFunction<BaseRow, BaseRow> getAsyncLookupFunction(IndexKey keys) {
-			return null;
-		}
-
-		@Override
-		public boolean isTemporal() {
-			return true;
-		}
-
-		@Override
-		public boolean isAsync() {
-			return false;
-		}
-
-		@Override
-		public AsyncConfig getAsyncConfig() {
-			return null;
-		}
-
-		@Override
-		public DataType getReturnType() {
-			return DataTypes.internal(rowType);
-		}
-
-		@Override
-		public TableSchema getTableSchema() {
-			return TableSchemaUtil.fromDataType(getReturnType(), Option.empty());
-		}
-
-		@Override
-		public TableStats getTableStats() {
-			return null;
-		}
-
-		@Override
-		public String explainSource() {
-			return "Test";
 		}
 	}
 
@@ -326,18 +239,20 @@ public class CollectionTableFactory<T1> implements StreamTableSourceFactory<T1>,
 	/**
 	 * Table source of collection.
 	 */
-	public static class CollectionTableSource<T>
+	public static class CollectionTableSource
 		extends AbstractTableSource
-		implements BatchTableSource<T>, StreamTableSource<T> {
+		implements BatchTableSource<Row>, StreamTableSource<Row>, LookupableTableSource<Row> {
 
 		private String name;
+		private RichTableSchema schema;
 
-		public CollectionTableSource(String name) {
+		public CollectionTableSource(String name, RichTableSchema schema) {
 			this.name = name;
+			this.schema = schema;
 		}
 
 		@Override
-		public DataStream<T> getBoundedStream(StreamExecutionEnvironment streamEnv) {
+		public DataStream<Row> getBoundedStream(StreamExecutionEnvironment streamEnv) {
 			return streamEnv.createInput(
 				new TestCollectionInputFormat<>(DATA,
 					rowType.createSerializer(new ExecutionConfig())),
@@ -351,12 +266,38 @@ public class CollectionTableFactory<T1> implements StreamTableSourceFactory<T1>,
 
 		@Override
 		public TableSchema getTableSchema() {
-			return TableSchemaUtil.fromDataType(getReturnType(), Option.empty());
+			List<IndexKey> indexKeys = schema.toIndexKeys();
+			TableSchema.Builder builder = TableSchemaUtil.builderFromDataType(getReturnType());
+			String[] fieldNames = schema.getColumnNames();
+			for (IndexKey index : indexKeys) {
+				int[] keys = index.toArray();
+				String[] indexNames = new String[keys.length];
+				for (int i = 0; i < keys.length; i++) {
+					indexNames[i] = fieldNames[keys[i]];
+				}
+				builder.uniqueIndex(indexNames);
+			}
+			return builder.build();
 		}
 
 		@Override
-		public DataStream<T> getDataStream(StreamExecutionEnvironment execEnv) {
+		public DataStream<Row> getDataStream(StreamExecutionEnvironment execEnv) {
 			return new DataStream<>(execEnv, getBoundedStream(execEnv).getTransformation());
+		}
+
+		@Override
+		public TableFunction<Row> getLookupFunction(int[] lookupKeys) {
+			return new TemporalTableFetcher(lookupKeys);
+		}
+
+		@Override
+		public AsyncTableFunction<Row> getAsyncLookupFunction(int[] lookupKeys) {
+			return null;
+		}
+
+		@Override
+		public LookupConfig getLookupConfig() {
+			return null;
 		}
 	}
 

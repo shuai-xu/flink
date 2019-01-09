@@ -36,7 +36,7 @@ import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalJoin;
-import org.apache.calcite.rel.logical.LogicalTemporalTableScan;
+import org.apache.calcite.rel.logical.LogicalSnapshot;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -156,7 +156,7 @@ public class FlinkAggregateJoinTransposeRule extends RelOptRule {
 				allowFunctions, false);
 	}
 
-	private boolean containsTemporalTable(RelNode relNode) {
+	private boolean containsSnapshot(RelNode relNode) {
 		RelNode original = null;
 		if (relNode instanceof RelSubset) {
 			original = ((RelSubset) relNode).getOriginal();
@@ -165,10 +165,10 @@ public class FlinkAggregateJoinTransposeRule extends RelOptRule {
 		} else {
 			original = relNode;
 		}
-		if (original instanceof LogicalTemporalTableScan) {
+		if (original instanceof LogicalSnapshot) {
 			return true;
 		} else if (original instanceof SingleRel) {
-			return containsTemporalTable(((SingleRel) original).getInput());
+			return containsSnapshot(((SingleRel) original).getInput());
 		} else {
 			return false;
 		}
@@ -180,7 +180,7 @@ public class FlinkAggregateJoinTransposeRule extends RelOptRule {
 		Join join = call.rel(1);
 		RelNode right = join.getRight();
 		// right tree should not contain temporal table
-		return !containsTemporalTable(right);
+		return !containsSnapshot(right);
 	}
 
 	public void onMatch(RelOptRuleCall call) {

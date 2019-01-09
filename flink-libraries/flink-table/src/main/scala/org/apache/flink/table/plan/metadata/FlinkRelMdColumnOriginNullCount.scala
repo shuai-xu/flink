@@ -19,11 +19,12 @@
 package org.apache.flink.table.plan.metadata
 
 import org.apache.flink.table.plan.metadata.FlinkMetadata.ColumnOriginNullCount
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalSnapshot
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.util.Preconditions
 
 import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.core.{Calc, Join, JoinInfo, JoinRelType, Project, TableScan}
+import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata._
 import org.apache.calcite.rex.{RexInputRef, RexLiteral, RexNode}
 
@@ -66,6 +67,11 @@ class FlinkRelMdColumnOriginNullCount private extends MetadataHandler[ColumnOrig
       null
     }
   }
+
+  def getColumnOriginNullCount(
+      snapshot: FlinkLogicalSnapshot,
+      mq: RelMetadataQuery,
+      index: Int): JDouble = null
 
   private def getColumnOriginNullAfterProjects(
       input: RelNode,

@@ -32,7 +32,7 @@ import org.apache.calcite.sql.SqlMatchRecognize;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlSelect;
-import org.apache.calcite.sql.SqlTemporal;
+import org.apache.calcite.sql.SqlSnapshot;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.util.Util;
@@ -178,8 +178,8 @@ public class SqlToTreeConverter {
 				return convertFrom(((SqlCall) from).operand(0));
 			case MATCH_RECOGNIZE:
 				return convertMatchRecognize((SqlCall) from);
-			case TEMPORAL:
-				return convertTemporal((SqlTemporal) from);
+			case SNAPSHOT:
+				return convertTemporal((SqlSnapshot) from);
 			case JOIN:
 				return convertJoin((SqlJoin) from);
 			case SELECT:
@@ -214,7 +214,7 @@ public class SqlToTreeConverter {
 		}
 	}
 
-	private SqlTreeNode convertTemporal(SqlTemporal call) {
+	private SqlTreeNode convertTemporal(SqlSnapshot call) {
 		String tableName = call.getTableRef().toString();
 		return context.get(tableName);
 	}
@@ -237,10 +237,6 @@ public class SqlToTreeConverter {
 		switch (node.getTableType()) {
 			case "SOURCE":
 				table = SqlTreeNodes.source(pos, tableName);
-				context.put(tableName, table);
-				return table;
-			case "DIM":
-				table = SqlTreeNodes.dim(pos, tableName);
 				context.put(tableName, table);
 				return table;
 			case "SINK":

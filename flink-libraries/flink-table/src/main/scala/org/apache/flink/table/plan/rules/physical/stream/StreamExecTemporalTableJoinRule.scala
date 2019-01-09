@@ -15,85 +15,133 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.flink.table.plan.rules.physical.stream
 
-import java.util
-
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelTraitSet}
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.convert.ConverterRule
-import org.apache.calcite.rel.core.JoinRelType
-import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.plan.FlinkJoinRelType
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.connector.DefinedDistribution
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTemporalTableJoin
+import org.apache.flink.table.plan.nodes.logical._
 import org.apache.flink.table.plan.nodes.physical.stream.StreamExecTemporalTableJoin
-import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.runtime.join.WindowJoinUtil
-
-class StreamExecTemporalTableJoinRule
-  extends ConverterRule(
-    classOf[FlinkLogicalTemporalTableJoin],
-    FlinkConventions.LOGICAL,
-    FlinkConventions.STREAMEXEC,
-    "StreamExecTemporalTableJoinRule") {
-
-  override def matches(call: RelOptRuleCall): Boolean = {
-    val join: FlinkLogicalTemporalTableJoin = call.rel(0)
-    val joinInfo = join.analyzeCondition
-
-    val (windowBounds, remainingPreds) = WindowJoinUtil.extractWindowBoundsFromPredicate(
-      joinInfo.getRemaining(join.getCluster.getRexBuilder),
-      join.getLeft.getRowType.getFieldCount,
-      join.getRowType,
-      join.getCluster.getRexBuilder,
-      TableConfig.DEFAULT)
-
-    windowBounds.isEmpty && join.getJoinType == JoinRelType.INNER
-  }
-
-  override def convert(rel: RelNode): RelNode = {
-    val temporalJoin = rel.asInstanceOf[FlinkLogicalTemporalTableJoin]
-    val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
-    val joinInfo = temporalJoin.analyzeCondition
-
-    def toHashTraitByColumns(columns: util.Collection[_ <: Number], inputTraitSets: RelTraitSet) = {
-      val distribution = if (columns.size() == 0) {
-        FlinkRelDistribution.SINGLETON
-      } else {
-        FlinkRelDistribution.hash(columns)
-      }
-      inputTraitSets.
-      replace(FlinkConventions.STREAMEXEC).
-      replace(distribution)
-    }
-    val (leftRequiredTrait, rightRequiredTrait) = (
-      toHashTraitByColumns(joinInfo.leftKeys, temporalJoin.getLeft.getTraitSet),
-      toHashTraitByColumns(joinInfo.rightKeys, temporalJoin.getRight.getTraitSet))
-
-    val convLeft: RelNode = RelOptRule.convert(temporalJoin.getInput(0), leftRequiredTrait)
-    val convRight: RelNode = RelOptRule.convert(temporalJoin.getInput(1), rightRequiredTrait)
-
-    val leftRowSchema = new BaseRowSchema(convLeft.getRowType)
-    val rightRowSchema = new BaseRowSchema(convRight.getRowType)
-
-    new StreamExecTemporalTableJoin(
-      rel.getCluster,
-      traitSet,
-      convLeft,
-      convRight,
-      temporalJoin.getCondition,
-      joinInfo,
-      leftRowSchema,
-      rightRowSchema,
-      new BaseRowSchema(rel.getRowType),
-      FlinkJoinRelType.toFlinkJoinRelType(temporalJoin.getJoinType),
-      description)
-  }
-}
+import org.apache.flink.table.plan.schema.TableSourceTable
+import org.apache.flink.table.plan.util.TemporalJoinUtil.containsTemporalJoinCondition
+import org.apache.flink.table.sources.LookupableTableSource
+import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
+import org.apache.calcite.plan.RelOptRule.{any, operand}
+import org.apache.calcite.rel.core.TableScan
+import org.apache.calcite.rex.{RexNode, RexProgram}
 
 object StreamExecTemporalTableJoinRule {
-  val INSTANCE: RelOptRule = new StreamExecTemporalTableJoinRule
+  val SNAPSHOT_ON_TABLESCAN: RelOptRule = new SnapshotOnTableScanRule
+  val SNAPSHOT_ON_CALC_TABLESCAN: RelOptRule = new SnapshotOnCalcTableScanRule
+
+  class SnapshotOnTableScanRule
+    extends RelOptRule(
+      operand(
+        classOf[FlinkLogicalJoin],
+        operand(classOf[FlinkLogicalRel], any()),
+        operand(classOf[FlinkLogicalSnapshot],
+                operand(classOf[TableScan], any()))),
+      "StreamExecSnapshotOnTableScanRule") {
+
+    override def matches(call: RelOptRuleCall): Boolean = {
+      val join = call.rel[FlinkLogicalJoin](0)
+      val tableScan = call.rel[TableScan](3)
+      StreamExecTemporalTableJoinRule.matches(join, tableScan)
+    }
+
+    override def onMatch(call: RelOptRuleCall): Unit = {
+      val join = call.rel[FlinkLogicalJoin](0)
+      val input = call.rel[FlinkLogicalRel](1)
+      val snapshot = call.rel[FlinkLogicalSnapshot](2)
+      val tableScan = call.rel[FlinkLogicalTableSourceScan](3)
+
+      val temporalJoin = transform(join, input, tableScan, snapshot.getPeriod, None)
+      call.transformTo(temporalJoin)
+    }
+
+  }
+
+  class SnapshotOnCalcTableScanRule
+    extends RelOptRule(
+      operand(
+        classOf[FlinkLogicalJoin],
+        operand(classOf[FlinkLogicalRel], any()),
+        operand(classOf[FlinkLogicalSnapshot],
+                operand(classOf[FlinkLogicalCalc],
+                        operand(classOf[TableScan], any())))),
+      "StreamExecSnapshotOnCalcTableScanRule") {
+
+    override def matches(call: RelOptRuleCall): Boolean = {
+      val join = call.rel[FlinkLogicalJoin](0)
+      val tableScan = call.rel[TableScan](4)
+      StreamExecTemporalTableJoinRule.matches(join, tableScan)
+    }
+
+    override def onMatch(call: RelOptRuleCall): Unit = {
+      val join = call.rel[FlinkLogicalJoin](0)
+      val input = call.rel[FlinkLogicalRel](1)
+      val snapshot = call.rel[FlinkLogicalSnapshot](2)
+      val calc = call.rel[FlinkLogicalCalc](3)
+      val tableScan = call.rel[FlinkLogicalTableSourceScan](4)
+      val temporalJoin = transform(
+        join, input, tableScan, snapshot.getPeriod, Some(calc.getProgram))
+      call.transformTo(temporalJoin)
+    }
+
+  }
+
+  private def matches(join: FlinkLogicalJoin, tableScan: TableScan): Boolean = {
+    // shouldn't match temporal table function join
+    if (containsTemporalJoinCondition(join.getCondition)) {
+      return false
+    }
+    if (!tableScan.isInstanceOf[FlinkLogicalTableSourceScan]) {
+      throw new TableException(
+        "Temporal table join only support join on a TableSource " +
+          "not on a DataStream or an intermediate query")
+    }
+    // currently temporal table join only support LookupableTableSource
+    val tableSourceTable: TableSourceTable = tableScan.getTable.unwrap(classOf[TableSourceTable])
+    tableSourceTable.tableSource.isInstanceOf[LookupableTableSource[_]]
+  }
+
+  private def transform(
+    join: FlinkLogicalJoin,
+    input: FlinkLogicalRel,
+    tableScan: FlinkLogicalTableSourceScan,
+    period: RexNode,
+    calcProgram: Option[RexProgram]): StreamExecTemporalTableJoin = {
+
+    val joinInfo = join.analyzeCondition
+
+    val cluster = join.getCluster
+    val typeFactory = cluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
+    val tableSource = tableScan.tableSource
+    val tableRowType = typeFactory.buildLogicalRowType(tableSource.getTableSchema, true)
+
+    val providedTrait = join.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+    var requiredTrait = input.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+
+    // if partitioning enabled, use the join key as partition key
+    tableSource match {
+      case ps: DefinedDistribution if ps.getPartitionField() != null &&
+        !joinInfo.pairs().isEmpty =>
+        requiredTrait = requiredTrait.plus(FlinkRelDistribution.hash(joinInfo.leftKeys))
+      case _ =>
+    }
+
+    val convInput = RelOptRule.convert(input, requiredTrait)
+    new StreamExecTemporalTableJoin(
+      cluster,
+      providedTrait,
+      convInput,
+      tableSource,
+      tableRowType,
+      calcProgram,
+      period,
+      joinInfo,
+      join.getJoinType)
+  }
 }

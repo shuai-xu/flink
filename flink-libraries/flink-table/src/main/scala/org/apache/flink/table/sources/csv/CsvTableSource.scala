@@ -27,6 +27,7 @@ import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api._
+import org.apache.flink.table.api.functions.{AsyncTableFunction, TableFunction}
 import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.stats.TableStats
@@ -69,10 +70,12 @@ class CsvTableSource(
     private var isLimitPushdown: Boolean = false,
     private var limit: Long = Long.MaxValue,
     private var uniqueKeySet: JSet[JSet[String]] = null,
+    private var indexKeySet: JSet[JSet[String]] = null,
     private var timezone: TimeZone = null,
     private var nestedEnumerate: Boolean = true)
   extends BatchTableSource[BaseRow]
   with StreamTableSource[BaseRow]
+  with LookupableTableSource[BaseRow]
   with LimitableTableSource
   with ProjectableTableSource
   with Logging {
@@ -150,6 +153,7 @@ class CsvTableSource(
       isLimitPushdown,
       limit,
       null,
+      null,
       timezone,
       nestedEnumerate
     )
@@ -182,6 +186,7 @@ class CsvTableSource(
       true,
       applylimit,
       uniqueKeySet,
+      indexKeySet,
       timezone,
       nestedEnumerate)
     csvTableSource.selectedFields = selectedFields
@@ -279,14 +284,43 @@ class CsvTableSource(
         builder.field(name, tpe, nullable)
     }
     if (uniqueKeySet != null) {
-      uniqueKeySet.foreach {
-        case uniqueKey: JSet[String] =>
-          builder.uniqueKey(uniqueKey.toArray(new Array[String](0)):_*)
+      uniqueKeySet.foreach { uniqueKey =>
+          builder.uniqueIndex(uniqueKey.toArray(new Array[String](0)):_*)
+      }
+    }
+    if (indexKeySet != null) {
+      indexKeySet.foreach { indexKey =>
+        builder.normalIndex(indexKey.toArray(new Array[String](0)):_*)
       }
     }
     builder.build()
   }
 
+  override def getLookupFunction(lookupKeys: Array[Int]): TableFunction[BaseRow] = {
+    val keyFieldNames = lookupKeys.map(fieldNames(_))
+    val unique = getTableSchema.isUniqueColumns(keyFieldNames)
+    val lookuper = new CsvLookupFunction(
+      path,
+      returnType,
+      IndexKey.of(unique, lookupKeys:_*),
+      emptyColumnAsNull,
+      timezone,
+      nestedEnumerate)
+    lookuper.setCharsetName(charset)
+    lookuper.setFieldDelim(fieldDelim)
+    lookuper.setLineDelim(rowDelim)
+    lookuper.setIgnoreComments(ignoreComments)
+    lookuper.setLenient(lenient)
+    lookuper.setQuoteCharacter(quoteCharacter)
+    lookuper.setIgnoreFirstLine(ignoreFirstLine)
+    lookuper
+  }
+
+  override def getAsyncLookupFunction(lookupKeys: Array[Int]): AsyncTableFunction[BaseRow] = {
+    throw new UnsupportedOperationException("CSV do not support async lookup")
+  }
+
+  override def getLookupConfig: LookupConfig = new LookupConfig
 }
 
 object CsvTableSource {
@@ -319,6 +353,7 @@ object CsvTableSource {
     private var charset: String = _
     private var emptyColumnAsNull: Boolean = _
     private var uniqueKeySet: JSet[JSet[String]] = _
+    private var indexKeySet: JSet[JSet[String]] = _
     private var timezone: TimeZone = _
     private var enumerateNestedFile: Boolean = true
 
@@ -480,6 +515,11 @@ object CsvTableSource {
       this
     }
 
+    def indexKeys(indexKeys: JSet[JSet[String]]): Builder = {
+      this.indexKeySet = indexKeys
+      this
+    }
+
     def timezone(tz: TimeZone): Builder = {
       this.timezone = tz
       this
@@ -518,6 +558,7 @@ object CsvTableSource {
         false,
         Long.MaxValue,
         uniqueKeySet,
+        indexKeySet,
         timezone,
         enumerateNestedFile)
     }

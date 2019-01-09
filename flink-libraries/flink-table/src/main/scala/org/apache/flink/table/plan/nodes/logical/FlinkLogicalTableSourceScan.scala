@@ -22,6 +22,7 @@ import org.apache.flink.table.api.TableException
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableSourceScan.isLogicalTableSourceScan
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
 import org.apache.flink.table.sources._
 
@@ -63,7 +64,7 @@ class FlinkLogicalTableSourceScan(
     tableSource match {
       case s: StreamTableSource[_] =>
         TableSourceUtil.getRelDataType(s, None, streaming = true, flinkTypeFactory)
-      case _: BatchTableSource[_] | _: DimensionTableSource[_]=>
+      case _: BatchTableSource[_] =>
         flinkTypeFactory.buildLogicalRowType(tableSource.getTableSchema, isStreaming = false)
       case _ => throw new TableException("Unknown TableSource type.")
     }
@@ -92,7 +93,7 @@ class FlinkLogicalTableSourceScanConverter
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val scan = call.rel[TableScan](0)
-    FlinkLogicalTableSourceScan.isLogicalTableSourceScan(scan)
+    isLogicalTableSourceScan(scan)
   }
 
   def convert(rel: RelNode): RelNode = {

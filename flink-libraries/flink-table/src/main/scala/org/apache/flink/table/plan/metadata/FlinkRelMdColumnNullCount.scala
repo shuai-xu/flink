@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.metadata
 
 import org.apache.flink.table.plan.metadata.FlinkMetadata.ColumnNullCount
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalDimensionTableSourceScan
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalSnapshot
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.plan.util.{FlinkRelOptUtil, FlinkRexUtil}
 import org.apache.flink.util.Preconditions
@@ -70,20 +70,18 @@ class FlinkRelMdColumnNullCount private extends MetadataHandler[ColumnNullCount]
   }
 
   /**
-    * Gets the null count of the given column in FlinkLogicalDimensionTableSourceScan.
+    * Gets the null count of the given column in FlinkLogicalSnapshot.
     * TODO implements it.
-    * currently the estimation logic is same with BatchExecJoinTable which matches
-    * method: getColumnNullCount(rel: RelNode, mq: RelMetadataQuery, index: Int).
     *
-    * @param ts    TableScan RelNode
+    * @param snapshot    Snapshot RelNode
     * @param mq    RelMetadataQuery instance
     * @param index the index of the given column
     * @return the null count of the given column in TableScan
     */
   def getColumnNullCount(
-    ts: FlinkLogicalDimensionTableSourceScan,
-    mq: RelMetadataQuery,
-    index: Int): JDouble = null
+      snapshot: FlinkLogicalSnapshot,
+      mq: RelMetadataQuery,
+      index: Int): JDouble = null
 
   /**
     * Gets the null count of the given column in Project.

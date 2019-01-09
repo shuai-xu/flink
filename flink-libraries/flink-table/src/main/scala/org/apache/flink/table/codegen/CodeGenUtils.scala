@@ -23,9 +23,14 @@ import java.lang.{Boolean => JBoolean, Byte => JByte, Character => JChar, Double
 import java.math.{BigDecimal => JBigDecimal}
 import java.sql.{Date, Time, Timestamp}
 import java.util.concurrent.atomic.AtomicInteger
+
+import org.apache.calcite.avatica.util.ByteString
+import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.sql.SqlOperator
+import org.apache.calcite.sql.`type`.SqlTypeName.{ROW => _, _}
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.BuiltInMethod
+import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.flink.api.common.InvalidProgramException
 import org.apache.flink.api.common.functions.{FlatJoinFunction, FlatMapFunction, MapFunction}
 import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo._
@@ -339,6 +344,169 @@ object CodeGenUtils {
       literalType,
       literal = true,
       literalValue = literalValue)
+  }
+
+  def generateLiteral(
+      ctx: CodeGeneratorContext,
+      literalRelDataType: RelDataType,
+      literalInternalType: InternalType,
+      literalValue: Any,
+      nullCheck: Boolean): GeneratedExpression = {
+    if (literalValue == null) {
+      return generateNullLiteral(literalInternalType, nullCheck)
+    }
+    // non-null values
+    literalRelDataType.getSqlTypeName match {
+
+      case BOOLEAN =>
+        generateNonNullLiteral(literalInternalType, literalValue.toString, literalValue, nullCheck)
+
+      case TINYINT =>
+        val decimal = BigDecimal(literalValue.asInstanceOf[JBigDecimal])
+        generateNonNullLiteral(
+          literalInternalType,
+          decimal.byteValue().toString,
+          decimal.byteValue(), nullCheck)
+
+      case SMALLINT =>
+        val decimal = BigDecimal(literalValue.asInstanceOf[JBigDecimal])
+        generateNonNullLiteral(
+          literalInternalType,
+          decimal.shortValue().toString,
+          decimal.shortValue(), nullCheck)
+
+      case INTEGER =>
+        val decimal = BigDecimal(literalValue.asInstanceOf[JBigDecimal])
+        generateNonNullLiteral(
+          literalInternalType,
+          decimal.intValue().toString,
+          decimal.intValue(), nullCheck)
+
+      case BIGINT =>
+        val decimal = BigDecimal(literalValue.asInstanceOf[JBigDecimal])
+        generateNonNullLiteral(
+          literalInternalType,
+          decimal.longValue().toString + "L",
+          decimal.longValue(), nullCheck)
+
+      case FLOAT =>
+        val floatValue = literalValue.asInstanceOf[JBigDecimal].floatValue()
+        floatValue match {
+          case Float.NaN => generateNonNullLiteral(
+            literalInternalType, "java.lang.Float.NaN", Float.NaN, nullCheck)
+          case Float.NegativeInfinity =>
+            generateNonNullLiteral(
+              literalInternalType,
+              "java.lang.Float.NEGATIVE_INFINITY",
+              Float.NegativeInfinity, nullCheck)
+          case Float.PositiveInfinity => generateNonNullLiteral(
+            literalInternalType,
+            "java.lang.Float.POSITIVE_INFINITY",
+            Float.PositiveInfinity, nullCheck)
+          case _ => generateNonNullLiteral(
+            literalInternalType,
+            floatValue.toString + "f",
+            floatValue,
+            nullCheck)
+        }
+
+      case DOUBLE =>
+        val doubleValue = literalValue.asInstanceOf[JBigDecimal].doubleValue()
+        doubleValue match {
+          case Double.NaN => generateNonNullLiteral(
+            literalInternalType, "java.lang.Double.NaN", Double.NaN, nullCheck)
+          case Double.NegativeInfinity =>
+            generateNonNullLiteral(
+              literalInternalType,
+              "java.lang.Double.NEGATIVE_INFINITY",
+              Double.NegativeInfinity, nullCheck)
+          case Double.PositiveInfinity =>
+            generateNonNullLiteral(
+              literalInternalType,
+              "java.lang.Double.POSITIVE_INFINITY",
+              Double.PositiveInfinity, nullCheck)
+          case _ => generateNonNullLiteral(
+            literalInternalType, doubleValue.toString + "d", doubleValue, nullCheck)
+        }
+      case DECIMAL =>
+        val precision = literalRelDataType.getPrecision
+        val scale = literalRelDataType.getScale
+        val fieldTerm = newName("decimal")
+        val fieldDecimal =
+          s"""
+             |${classOf[Decimal].getCanonicalName} $fieldTerm =
+             |    ${Decimal.Ref.castFrom}("${literalValue.toString}", $precision, $scale);
+             |""".stripMargin
+        ctx.addReusableMember(fieldDecimal)
+        generateNonNullLiteral(
+          literalInternalType,
+          fieldTerm,
+          Decimal.fromBigDecimal(literalValue.asInstanceOf[JBigDecimal], precision, scale),
+          nullCheck)
+
+      case VARCHAR | CHAR =>
+        val escapedValue = StringEscapeUtils.ESCAPE_JAVA.translate(literalValue.toString)
+        val field = ctx.addReusableStringConstants(escapedValue)
+        generateNonNullLiteral(
+          literalInternalType,
+          field,
+          BinaryString.fromString(escapedValue),
+          nullCheck)
+      case VARBINARY | BINARY =>
+        val bytesVal = literalValue.asInstanceOf[ByteString].getBytes
+        val fieldTerm = ctx.addReusableObject(bytesVal, "binary",
+                                              bytesVal.getClass.getCanonicalName)
+        generateNonNullLiteral(
+          literalInternalType,
+          fieldTerm,
+          BinaryString.fromBytes(bytesVal),
+          nullCheck)
+      case SYMBOL =>
+        generateSymbol(literalValue.asInstanceOf[Enum[_]])
+
+      case DATE =>
+        generateNonNullLiteral(literalInternalType, literalValue.toString, literalValue, nullCheck)
+
+      case TIME =>
+        generateNonNullLiteral(literalInternalType, literalValue.toString, literalValue, nullCheck)
+
+      case TIMESTAMP =>
+        // Hack
+        // Currently, in RexLiteral/SqlLiteral(Calcite), TimestampString has no time zone.
+        // TimeString, DateString TimestampString are treated as UTC time/(unix time)
+        // when they are converted/formatted/validated
+        // Here, we adjust millis before Calcite solve TimeZone perfectly
+        val millis = literalValue.asInstanceOf[Long]
+        val adjustedValue = millis - ctx.getTableConfig.getTimeZone.getOffset(millis)
+        generateNonNullLiteral(
+          literalInternalType, adjustedValue.toString + "L", literalValue, nullCheck)
+      case typeName if YEAR_INTERVAL_TYPES.contains(typeName) =>
+        val decimal = BigDecimal(literalValue.asInstanceOf[JBigDecimal])
+        if (decimal.isValidInt) {
+          generateNonNullLiteral(
+            literalInternalType,
+            decimal.intValue().toString,
+            decimal.intValue(), nullCheck)
+        } else {
+          throw new CodeGenException(
+            s"Decimal '$decimal' can not be converted to interval of months.")
+        }
+
+      case typeName if DAY_INTERVAL_TYPES.contains(typeName) =>
+        val decimal = BigDecimal(literalValue.asInstanceOf[JBigDecimal])
+        if (decimal.isValidLong) {
+          generateNonNullLiteral(
+            literalInternalType,
+            decimal.longValue().toString + "L",
+            decimal.longValue(), nullCheck)
+        } else {
+          throw new CodeGenException(
+            s"Decimal '$decimal' can not be converted to interval of milliseconds.")
+        }
+
+      case t@_ =>
+        throw new CodeGenException(s"Type not supported: $t")
+    }
   }
 
   def generateNonNullField(

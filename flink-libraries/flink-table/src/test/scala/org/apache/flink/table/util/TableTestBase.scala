@@ -18,12 +18,18 @@
 
 package org.apache.flink.table.util
 
+import java.util
+import java.util.{ArrayList => JArrayList}
+
+import org.apache.calcite.plan.hep.HepMatchOrder
+import org.apache.calcite.tools.RuleSet
+import org.apache.calcite.util.ImmutableBitSet
+import org.apache.commons.lang3.SystemUtils
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.streaming.api.datastream.{DataStream => JDataStream}
-import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JStreamExecutionEnvironment}
-import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
-import org.apache.flink.streaming.api.transformations.StreamTransformation
+import org.apache.flink.streaming.api.environment.LocalStreamEnvironment
+import org.apache.flink.streaming.api.functions.source.SourceFunction
+import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.api.java.{StreamTableEnvironment => JStreamTableEnvironment}
 import org.apache.flink.table.api.scala._
@@ -34,17 +40,9 @@ import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.util.FlinkRelOptUtil
-import org.apache.calcite.plan.hep.HepMatchOrder
-import org.apache.calcite.tools.RuleSet
-import org.apache.calcite.util.ImmutableBitSet
-import org.apache.commons.lang3.SystemUtils
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}
-import org.mockito.Mockito.{mock, when}
-
-import java.util
-import java.util.{ArrayList => JArrayList}
 
 /**
   * Test base for testing Table API / SQL plans.
@@ -133,40 +131,26 @@ abstract class TableTestUtil {
 case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
 
   private lazy val diffRepository = DiffRepository.lookup(test.getClass)
-  val javaEnv: JStreamExecutionEnvironment = mock(classOf[JStreamExecutionEnvironment])
-  when(javaEnv.getStreamTimeCharacteristic).thenReturn(TimeCharacteristic.EventTime)
+  val javaEnv = new LocalStreamEnvironment()
+  javaEnv.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
   val javaTableEnv: JStreamTableEnvironment = TableEnvironment.getTableEnvironment(javaEnv)
-  val env: StreamExecutionEnvironment = mock(classOf[StreamExecutionEnvironment])
-  when(env.getWrappedStreamExecutionEnvironment).thenReturn(javaEnv)
+  val env = new StreamExecutionEnvironment(javaEnv)
   val tableEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env)
 
   def addTable[T: TypeInformation](
       name: String,
       fields: Expression*)
   : Table = {
-
-    val ds = mock(classOf[DataStream[T]])
-    val jDs = mock(classOf[JDataStream[T]])
-    val jTrans = mock(classOf[StreamTransformation[T]])
-    when(ds.javaStream).thenReturn(jDs)
-    val typeInfo: TypeInformation[T] = implicitly[TypeInformation[T]]
-    when(jDs.getType).thenReturn(typeInfo)
-    when(jDs.getTransformation).thenReturn(jTrans)
-    when(jTrans.getParallelism).thenReturn(1)
-
-    val t = ds.toTable(tableEnv, fields: _*)
-    tableEnv.registerTable(name, t)
-    t
+    val table = env.fromElements().toTable(tableEnv, fields: _*)
+    tableEnv.registerTable(name, table)
+    table
   }
 
   def addJavaTable[T](typeInfo: TypeInformation[T], name: String, fields: String): Table = {
-
-    val jDs = mock(classOf[JDataStream[T]])
-    when(jDs.getType).thenReturn(typeInfo)
-
-    val t = javaTableEnv.fromDataStream(jDs, fields)
-    javaTableEnv.registerTable(name, t)
-    t
+    val stream = javaEnv.addSource(new EmptySource[T], typeInfo)
+    val table = javaTableEnv.fromDataStream(stream, fields)
+    javaTableEnv.registerTable(name, table)
+    table
   }
 
   def addFunction[T: TypeInformation](
@@ -275,5 +259,13 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
       // expected does not exist, update
       diffRepository.expand(test.name.getMethodName, tag, actual)
     }
+  }
+}
+
+class EmptySource[T]() extends SourceFunction[T] {
+  override def run(ctx: SourceFunction.SourceContext[T]): Unit = {
+  }
+
+  override def cancel(): Unit = {
   }
 }

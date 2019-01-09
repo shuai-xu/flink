@@ -30,7 +30,6 @@ import org.apache.flink.table.util.{ExecResourceUtil, TableTestBatchExecBase}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Before, Test}
-import org.mockito.Mockito.when
 
 import _root_.scala.collection.JavaConversions._
 
@@ -185,7 +184,7 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBatchExecBase {
     util.getTableEnv.getConfig.getConf.setInteger(
       TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM,
       -1)
-    when(util.getTableEnv.streamEnv.getParallelism).thenReturn(73)
+    util.tableEnv.streamEnv.setParallelism(73)
     val customerSchema = TpcHSchemaProvider.getSchema("customer")
     val colStatsOfCustomer =
       TpchTableStatsProvider.getTableStatsMap(1000, STATS_MODE.FULL).get("customer")

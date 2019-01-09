@@ -218,30 +218,10 @@ abstract class StreamTableEnvironment(
             registerTableInternal(name, newTable)
         }
 
-      // check for proper dimension table source
-      case dimensionTableSource: DimensionTableSource[_] =>
-        // register
-        getTable(name) match {
-
-          // a dimension table is already registered
-          case Some(_: TableSourceTable) =>
-            throw new TableException(s"Table '$name' already exists. " +
-              s"Please choose a different name.")
-
-          // no table is registered
-          case _ =>
-            val dimTableSourceTable =  if (dimensionTableSource.isTemporal) {
-              new TemporalDimensionTableSourceTable(dimensionTableSource)
-            } else {
-              new DimensionTableSourceTable(dimensionTableSource)
-            }
-            registerTableInternal(name, dimTableSourceTable)
-        }
-
       // not a stream table source
       case _ =>
-        throw new TableException("Only StreamTableSource and DimensionTableSource " +
-          "can be registered in StreamTableEnvironment")
+        throw new TableException(
+          "Only StreamTableSource can be registered in StreamTableEnvironment")
     }
   }
 

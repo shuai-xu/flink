@@ -21,20 +21,19 @@ package org.apache.flink.table.plan.metadata
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
-import org.apache.flink.table.plan.nodes.common.CommonJoinTable
 import org.apache.flink.table.plan.nodes.logical._
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCorrelate, BatchExecGroupAggregateBase, BatchExecOverAggregate, BatchExecWindowAggregateBase}
+import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.nodes.physical.stream._
-import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
-import org.apache.flink.table.plan.util.FlinkRelMdUtil
-import org.apache.flink.table.sources.{DimensionTableSource, IndexKey, TableSource}
+import org.apache.flink.table.plan.schema.FlinkRelOptTable
+import org.apache.flink.table.plan.util.{FlinkRelMdUtil, TemporalJoinUtil}
+import org.apache.flink.table.sources.{IndexKey, TableSource}
 
 import com.google.common.collect.ImmutableSet
 import org.apache.calcite.plan.RelOptTable
 import org.apache.calcite.plan.volcano.RelSubset
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.{JoinRelType, _}
-import org.apache.calcite.rel.logical.LogicalTemporalTableScan
+import org.apache.calcite.rel.logical.LogicalSnapshot
 import org.apache.calcite.rel.metadata._
 import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.rex.{RexCall, RexInputRef, RexNode}
@@ -57,13 +56,15 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
   private def getTableUniqueKeys(
       tableSource: TableSource,
       relOptTable: RelOptTable): util.Set[ImmutableBitSet] = {
-    tableSource match {
-      case dimTableSource: DimensionTableSource[_] =>
-        uniqueKeyToImmutableSet(dimTableSource.getIndexes)
-      case _ => relOptTable match {
-        case flinkRelOptTable: FlinkRelOptTable => flinkRelOptTable.uniqueKeysSet.orNull
-        case _ => null
+    if (tableSource != null) {
+      val indexes = TemporalJoinUtil.getTableIndexKeys(tableSource)
+      if (indexes.nonEmpty) {
+        return indexKeysToUniqueBitSet(indexes)
       }
+    }
+    relOptTable match {
+      case flinkRelOptTable: FlinkRelOptTable => flinkRelOptTable.uniqueKeysSet.orNull
+      case _ => null
     }
   }
 
@@ -75,12 +76,10 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
   }
 
   def getUniqueKeys(
-      rel: LogicalTemporalTableScan,
+      snapshot: LogicalSnapshot,
       mq: RelMetadataQuery,
       ignoreNulls: Boolean): util.Set[ImmutableBitSet] = {
-    val sourceTable = rel.getTable.unwrap(classOf[TableSourceTable])
-    val tableSource = if (sourceTable != null) sourceTable.tableSource else null
-    getTableUniqueKeys(tableSource, rel.getTable)
+    mq.getUniqueKeys(snapshot.getInput, ignoreNulls)
   }
 
   def getUniqueKeys(
@@ -469,16 +468,16 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
     }
   }
 
-  private def getJoinTableUniqueKeys(
+  private def getTemporalTableJoinUniqueKeys(
       joinInfo: JoinInfo,
       joinRelType: JoinRelType,
       left: RelNode,
-      rightTable: DimensionTableSource[_],
+      joinedIndex: Option[IndexKey],
       mq: RelMetadataQuery,
       ignoreNulls: Boolean): util.Set[ImmutableBitSet] = {
     val leftUniqueKeys = mq.getUniqueKeys(left, ignoreNulls)
     val leftType = left.getRowType
-    val rightUniqueKeys = uniqueKeyToImmutableSet(rightTable.getIndexes)
+    val rightUniqueKeys = indexKeyToUniqueBitSet(joinedIndex)
     getJoinUniqueKeys(
       joinInfo, joinRelType, leftType, leftUniqueKeys, rightUniqueKeys,
       mq.areColumnsUnique(left, joinInfo.leftSet, ignoreNulls),
@@ -489,19 +488,29 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
   }
 
   def getUniqueKeys(
-      join: CommonJoinTable,
+      join: StreamExecTemporalTableJoin,
       mq: RelMetadataQuery,
       ignoreNulls: Boolean): util.Set[ImmutableBitSet] = {
-    getJoinTableUniqueKeys(
-      join.joinInfo, join.joinType, join.getInput, join.tableSource, mq, ignoreNulls)
+    getTemporalTableJoinUniqueKeys(
+      join.joinInfo,
+      join.joinType,
+      join.getInput,
+      join.joinedIndex,
+      mq,
+      ignoreNulls)
   }
 
   def getUniqueKeys(
-      join: FlinkLogicalJoinTable,
+      join: BatchExecTemporalTableJoin,
       mq: RelMetadataQuery,
       ignoreNulls: Boolean): util.Set[ImmutableBitSet] = {
-    getJoinTableUniqueKeys(
-      join.joinInfo, join.joinType, join.getInput, join.tableSource, mq, ignoreNulls)
+    getTemporalTableJoinUniqueKeys(
+      join.joinInfo,
+      join.joinType,
+      join.getInput,
+      join.joinedIndex,
+      mq,
+      ignoreNulls)
   }
 
   def getUniqueKeys(
@@ -613,8 +622,15 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
     }
   }
 
-  private def uniqueKeyToImmutableSet(
-      indexes: util.Collection[IndexKey]): util.Set[ImmutableBitSet] = {
+  private def indexKeyToUniqueBitSet(
+      index: Option[IndexKey]): util.Set[ImmutableBitSet] = index match {
+    case Some(idx) if idx.isUnique =>
+      toImmutableSet(idx.toArray)
+    case _ => null
+  }
+
+  private def indexKeysToUniqueBitSet(
+    indexes: util.Collection[IndexKey]): util.Set[ImmutableBitSet] = {
     if (null != indexes && indexes.nonEmpty) {
       val retSet = new util.HashSet[ImmutableBitSet]
       indexes.filter(_.isUnique).map(_.toArray).foreach { uk => retSet.addAll(toImmutableSet(uk)) }
@@ -627,6 +643,7 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
       null
     }
   }
+
 }
 
 object FlinkRelMdUniqueKeys {

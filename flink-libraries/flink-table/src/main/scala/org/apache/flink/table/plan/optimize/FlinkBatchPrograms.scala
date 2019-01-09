@@ -22,7 +22,6 @@ import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
-
 import org.apache.calcite.plan.hep.HepMatchOrder
 
 /**
@@ -31,6 +30,7 @@ import org.apache.calcite.plan.hep.HepMatchOrder
 object FlinkBatchPrograms {
 
   val SUBQUERY_REWRITE = "subquery_rewrite"
+  val CORRELATE_REWRITE = "correlate_rewrite"
   val DECORRELATE = "decorrelate"
   val DEFAULT_REWRITE = "default_rewrite"
   val PREDICATE_PUSHDOWN = "predicate_pushdown"
@@ -38,6 +38,7 @@ object FlinkBatchPrograms {
   val JOIN_REWRITE = "join_rewrite"
   val WINDOW = "window"
   val LOGICAL = "logical"
+  val LOGICAL_REWRITE = "logical_rewrite"
   val PHYSICAL = "physical"
   val PHYSICAL_REWRITE = "physical_rewrite"
 
@@ -72,6 +73,30 @@ object FlinkBatchPrograms {
           .build(), "convert table references after sub-queries removed")
         .build()
     )
+
+    // rewrite special temporal join plan
+    programs.addLast(
+      CORRELATE_REWRITE,
+      FlinkGroupProgramBuilder.newBuilder[BatchOptimizeContext]
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkBatchExecRuleSets.EXPAND_PLAN_RULES)
+          .build(), "convert correlate to temporal table join")
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkBatchExecRuleSets.POST_EXPAND_CLEAN_UP_RULES)
+          .build(), "convert enumerable table scan")
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkBatchExecRuleSets.UNNEST_RULES)
+          .build(), "convert unnest into table function scan")
+        .build())
 
     // query decorrelation
     programs.addLast(
@@ -187,6 +212,15 @@ object FlinkBatchPrograms {
         .add(FlinkBatchExecRuleSets.BATCH_EXEC_LOGICAL_OPT_RULES)
         .setTargetTraits(Array(FlinkConventions.LOGICAL))
         .build())
+
+    // logical rewrite
+    programs.addLast(
+      LOGICAL_REWRITE,
+      FlinkHepRuleSetProgramBuilder.newBuilder
+      .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+      .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+      .add(FlinkBatchExecRuleSets.LOGICAL_REWRITE)
+      .build())
 
     // optimize the physical plan
     programs.addLast(

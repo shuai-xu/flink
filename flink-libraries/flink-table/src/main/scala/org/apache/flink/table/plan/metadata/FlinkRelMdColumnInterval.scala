@@ -22,13 +22,13 @@ import org.apache.flink.table.api.TableException
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.plan.metadata.FlinkMetadata.ColumnInterval
 import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
-import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalDimensionTableSourceScan, FlinkLogicalWindowAggregate}
+import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalSnapshot, FlinkLogicalWindowAggregate}
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.plan.stats._
-import org.apache.flink.table.plan.util.{ConstantRankRange, ColumnIntervalUtil, FlinkRelMdUtil, VariableRankRange}
 import org.apache.flink.table.plan.util.FlinkRelOptUtil._
+import org.apache.flink.table.plan.util.{ColumnIntervalUtil, ConstantRankRange, FlinkRelMdUtil, VariableRankRange}
 import org.apache.flink.util.Preconditions
 
 import org.apache.calcite.plan.volcano.RelSubset
@@ -78,20 +78,18 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
   }
 
   /**
-    * Gets interval of the given column in FlinkLogicalDimensionTableSourceScan.
+    * Gets interval of the given column in FlinkLogicalSnapshot.
     * TODO implements it.
-    * currently the estimation logic is same with BatchExecJoinTable which matches
-    * method: getColumnInterval(rel: RelNode, mq: RelMetadataQuery, index: Int).
     *
-    * @param ts    TableScan RelNode
+    * @param snapshot    Snapshot RelNode
     * @param mq    RelMetadataQuery instance
     * @param index the index of the given column
     * @return interval of the given column in TableScan
     */
   def getColumnInterval(
-      ts: FlinkLogicalDimensionTableSourceScan,
-      mq: RelMetadataQuery,
-      index: Int): ValueInterval = null
+    snapshot: FlinkLogicalSnapshot,
+    mq: RelMetadataQuery,
+    index: Int): ValueInterval = null
 
   /**
     * Gets interval of the given column in Project.

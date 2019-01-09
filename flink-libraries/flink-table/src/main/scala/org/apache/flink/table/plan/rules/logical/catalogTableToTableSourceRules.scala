@@ -184,67 +184,9 @@ class CatalogTableToBatchTableSourceRule
   }
 }
 
-/**
- * Catalog Table to dim table source rule.
- */
-class CatalogTableToDimensionTableSource extends RelOptRule(
-  operand(classOf[LogicalTemporalTableScan], any), "CatalogTableToDimensionTableSource") {
-
-  override def matches(call: RelOptRuleCall): Boolean = {
-    val rel = call.rel(0).asInstanceOf[LogicalTemporalTableScan]
-    rel.getTable.unwrap(classOf[CatalogTable]) != null
-  }
-
-  override def onMatch(call: RelOptRuleCall): Unit = {
-    val oldRel = call.rel(0).asInstanceOf[LogicalTemporalTableScan]
-    val catalogTable = oldRel.getTable.unwrap(classOf[CatalogTable])
-    val tableSource = catalogTable.dimTableSource
-    val dimensionTableSourceTable = tableSource match {
-      case  _ if tableSource.isTemporal => new TemporalDimensionTableSourceTable(
-        tableSource, catalogTable.getStatistic())
-      case  _ => new DimensionTableSourceTable(
-        tableSource, catalogTable.getStatistic())
-    }
-    var table = oldRel.getTable.asInstanceOf[FlinkRelOptTable].copy(
-      dimensionTableSourceTable,
-      TableSourceUtil.getRelDataType(
-        tableSource, None, false, oldRel.getCluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]))
-
-    table = if (tableSource.explainSource().isEmpty) {
-      val builder = ImmutableList.builder[String]()
-      builder.add("From")
-      builder.addAll(oldRel.getTable.getQualifiedName)
-      table.config(builder.build(), table.unwrap(classOf[TableSourceTable]))
-    } else {
-      table
-    }
-
-    val newRel = LogicalTemporalTableScan.create(oldRel.getCluster, table, oldRel.getPeriod)
-
-
-    val computedColumns = new JHashMap[String, RexNode]()
-    if (catalogTable.table.getComputedColumns != null) {
-      computedColumns.putAll(catalogTable.table.getComputedColumns)
-
-      catalogTable.table.getComputedColumns.foreach {
-        case (name: String, expr: RexCall)
-            if expr.getOperator.equals(ScalarSqlFunctions.PROCTIME) =>
-          computedColumns.put(
-            name, Cast(CurrentTimestamp(), DataTypes.TIMESTAMP).toRexNode(call.builder()))
-        case _ =>
-      }
-    }
-
-    call.transformTo(CatalogTableRules.appendComputedColumns(
-      call.builder(), newRel, catalogTable.table.getTableSchema, computedColumns))
-
-  }
-}
-
 object CatalogTableRules {
   val STREAM_TABLE_SCAN_RULE = new CatalogTableToStreamTableSourceRule
   val BATCH_TABLE_SCAN_RULE = new CatalogTableToBatchTableSourceRule
-  val DIM_TABLE_SCAN_RULE = new CatalogTableToDimensionTableSource
 
   def appendParserNode(
       catalogTable: CatalogTable, inputNode: RelNode, relBuilder: RelBuilder):RelNode = {

@@ -70,8 +70,7 @@ public class SqlContextValidator {
 				"  a bigint,\n" +
 				"  b VARCHAR,\n" +
 				"  PRIMARY KEY(a, b),\n" +
-				"  WATERMARK wk FOR a AS withd(b, 1000),\n" +
-				"  PERIOD FOR SYSTEM_TIME\n" +
+				"  WATERMARK wk FOR a AS withd(b, 1000)\n" +
 				") with ( x = 'y', asd = 'dada');\n" +
 				"create table rds_output(\n" +
 				"  a VARCHAR,\n" +

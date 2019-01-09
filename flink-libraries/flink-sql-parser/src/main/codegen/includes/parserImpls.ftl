@@ -31,8 +31,6 @@ void TableColumnLine(TableTempWrapper wrapper) :
     UniqueKey(wrapper.uniqueKeysList)
     |
     IndexKey(wrapper.indexKeysList)
-    |
-    wrapper.tableType = DimDetect()
 }
 
 void ComputedColumn(TableTempWrapper wrapper) :
@@ -74,16 +72,6 @@ void TableColumn(List<SqlNode> list) :
         SqlTableColumn tableColumn = new SqlTableColumn(name, type, comment, pos.plus(getPos()));
         tableColumn.setHeader(isHeader);
         list.add(tableColumn);
-    }
-}
-
-String DimDetect() :
-{
-}
-{
-    <PERIOD> <FOR> <SYSTEM_TIME>
-    {
-        return "DIM";
     }
 }
 

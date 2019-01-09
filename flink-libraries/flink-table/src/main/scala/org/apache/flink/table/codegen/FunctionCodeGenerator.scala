@@ -20,6 +20,7 @@ package org.apache.flink.table.codegen
 import org.apache.flink.api.common.functions._
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.ProcessFunction
+import org.apache.flink.streaming.api.functions.async.{AsyncFunction, RichAsyncFunction}
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils.boxedTypeTermForType
@@ -119,6 +120,16 @@ object FunctionCodeGenerator {
           s"org.apache.flink.util.Collector $collectorTerm)",
         List(s"$inputTypeTerm $input1Term = ($inputTypeTerm) _in1;"))
     }
+
+    // AsyncFunction
+    else if (clazz == classOf[AsyncFunction[_, _]]) {
+      val baseClass = classOf[RichAsyncFunction[_, _]]
+      (baseClass,
+        s"void asyncInvoke(Object _in1, " +
+          s"org.apache.flink.streaming.api.functions.async.ResultFuture $collectorTerm)",
+        List(s"$inputTypeTerm $input1Term = ($inputTypeTerm) _in1;"))
+    }
+
     else {
       // TODO more functions
       throw new CodeGenException("Unsupported Function.")

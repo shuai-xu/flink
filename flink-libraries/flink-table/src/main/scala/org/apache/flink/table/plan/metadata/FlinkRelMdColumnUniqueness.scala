@@ -22,21 +22,19 @@ import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.nodes.FlinkRelNode
 import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
-import org.apache.flink.table.plan.nodes.common.CommonJoinTable
 import org.apache.flink.table.plan.nodes.logical._
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCorrelate, BatchExecGroupAggregateBase, BatchExecOverAggregate, BatchExecWindowAggregateBase}
+import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.nodes.physical.stream._
-import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
-import org.apache.flink.table.plan.util.FlinkRelMdUtil
+import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.plan.util.FlinkRelMdUtil.splitColumnsIntoLeftAndRight
-import org.apache.flink.table.sources.{DimensionTableSource, TableSource}
-
+import org.apache.flink.table.plan.util.{FlinkRelMdUtil, TemporalJoinUtil}
+import org.apache.flink.table.sources.{IndexKey, TableSource}
 import org.apache.calcite.plan.RelOptTable
 import org.apache.calcite.plan.volcano.RelSubset
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.convert.Converter
 import org.apache.calcite.rel.core._
-import org.apache.calcite.rel.logical.LogicalTemporalTableScan
+import org.apache.calcite.rel.logical.LogicalSnapshot
 import org.apache.calcite.rel.metadata._
 import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.rex.{RexCall, RexInputRef, RexNode}
@@ -44,7 +42,6 @@ import org.apache.calcite.sql.SemiJoinType._
 import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.util.{BuiltInMethod, ImmutableBitSet}
-
 import java.lang.{Boolean => JBool}
 import java.util
 
@@ -62,18 +59,21 @@ class FlinkRelMdColumnUniqueness private extends MetadataHandler[BuiltInMetadata
     if (columns.cardinality == 0) {
       return false
     }
-    tableSource match {
-      case dimTableSource: DimensionTableSource[_] =>
-        val indexes = dimTableSource.getIndexes
-        null != indexes && indexes.exists(index => index.isUnique && index.isIndex(columns.toArray))
-      case _ => relOptTable match {
-        case flinkRelOptTable: FlinkRelOptTable => flinkRelOptTable.uniqueKeysSet match {
-          case Some(keysSet) if keysSet.isEmpty => false
-          case Some(keysSet) => keysSet.exists(columns.contains)
-          case _ => null
-        }
-        case _ => rel.getTable.isKey(columns)
+    if (tableSource != null) {
+      val indexes = TemporalJoinUtil.getTableIndexKeys(tableSource)
+      if (null != indexes &&
+        indexes.exists(index => index.isUnique && index.isIndex(columns.toArray))) {
+        return true
       }
+    }
+
+    relOptTable match {
+      case flinkRelOptTable: FlinkRelOptTable => flinkRelOptTable.uniqueKeysSet match {
+        case Some(keysSet) if keysSet.isEmpty => false
+        case Some(keysSet) => keysSet.exists(columns.contains)
+        case _ => null
+      }
+      case _ => rel.getTable.isKey(columns)
     }
   }
 
@@ -119,13 +119,11 @@ class FlinkRelMdColumnUniqueness private extends MetadataHandler[BuiltInMetadata
   }
 
   def areColumnsUnique(
-      rel: LogicalTemporalTableScan,
+      snapshot: LogicalSnapshot,
       mq: RelMetadataQuery,
       columns: ImmutableBitSet,
       ignoreNulls: Boolean): JBool = {
-    val sourceTable = rel.getTable.unwrap(classOf[TableSourceTable])
-    val tableSource = if (sourceTable != null) sourceTable.tableSource else null
-    areTableColumnsUnique(rel, tableSource, rel.getTable, columns)
+    mq.areColumnsUnique(snapshot.getInput, columns, ignoreNulls)
   }
 
   def areColumnsUnique(
@@ -664,39 +662,51 @@ class FlinkRelMdColumnUniqueness private extends MetadataHandler[BuiltInMetadata
       joinInfo: JoinInfo,
       joinRelType: JoinRelType,
       left: RelNode,
-      rightTable: DimensionTableSource[_],
+      joinedIndex: Option[IndexKey],
       columns: ImmutableBitSet,
       mq: RelMetadataQuery,
       ignoreNulls: Boolean): JBool = {
-    val rightIndexes = rightTable.getIndexes
     areJoinColumnsUnique(
       joinInfo, joinRelType, left.getRowType,
       (leftSet: ImmutableBitSet) => mq.areColumnsUnique(left, leftSet, ignoreNulls),
       (rightSet: ImmutableBitSet) => {
-        null != rightIndexes &&
-          rightIndexes.exists(index => index.isUnique && index.isIndex(rightSet.toArray))
+        null != joinedIndex &&
+          joinedIndex.exists(index => index.isUnique && index.isIndex(rightSet.toArray))
       },
       mq, columns
     )
   }
 
   def areColumnsUnique(
-      join: CommonJoinTable,
+      join: BatchExecTemporalTableJoin,
       mq: RelMetadataQuery,
       columns: ImmutableBitSet,
       ignoreNulls: Boolean): JBool = {
     areJoinTableColumnsUnique(
-      join.joinInfo, join.joinType, join.getInput, join.tableSource, columns, mq, ignoreNulls
+      join.joinInfo,
+      join.joinType,
+      join.getInput,
+      join.joinedIndex,
+      columns,
+      mq,
+      ignoreNulls
     )
   }
 
   def areColumnsUnique(
-      join: FlinkLogicalJoinTable,
+      join: StreamExecTemporalTableJoin,
       mq: RelMetadataQuery,
       columns: ImmutableBitSet,
       ignoreNulls: Boolean): JBool = {
     areJoinTableColumnsUnique(
-      join.joinInfo, join.joinType, join.getInput, join.tableSource, columns, mq, ignoreNulls)
+      join.joinInfo,
+      join.joinType,
+      join.getInput,
+      join.joinedIndex,
+      columns,
+      mq,
+      ignoreNulls
+    )
   }
 
   def areColumnsUnique(

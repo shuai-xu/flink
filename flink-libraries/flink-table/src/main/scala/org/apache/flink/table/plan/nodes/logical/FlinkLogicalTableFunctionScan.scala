@@ -88,8 +88,8 @@ class FlinkLogicalTableFunctionScanConverter
   /**
     * This rule do not match to [[TemporalTableFunction]]. We do not support reading from
     * [[TemporalTableFunction]]s as TableFunctions. We expect them to be rewritten into
-    * [[org.apache.flink.table.plan.nodes.physical.stream.StreamExecScan]] followed by for
-    * example [[org.apache.flink.table.plan.nodes.physical.stream..DataStreamTemporalTableJoin]].
+    * [[org.apache.flink.table.plan.nodes.physical.stream.StreamExecScan]] followed by for example
+    * [[org.apache.flink.table.plan.nodes.physical.stream.StreamExecTemporalTableFunctionJoin]].
     */
   override def matches(call: RelOptRuleCall): Boolean = {
     val logicalTableFunction: LogicalTableFunctionScan = call.rel(0)
@@ -168,8 +168,7 @@ class FlinkLogicalTableFunctionScanConverter
       newScan,
       cluster.createCorrel(), // a dummy CorrelationId
       ImmutableBitSet.of(),
-      SemiJoinType.INNER
-    )
+      SemiJoinType.INNER)
   }
 }
 

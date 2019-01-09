@@ -53,6 +53,7 @@ object FlinkStreamExecRuleSets {
     */
   val EXPAND_PLAN_RULES: RuleSet = RuleSets.ofList(
     LogicalCorrelateToTemporalTableJoinRule.INSTANCE,
+    LogicalCorrelateToTemporalTableFunctionJoinRule.INSTANCE,
     TableScanRule.INSTANCE)
 
   val POST_EXPAND_CLEAN_UP_RULES: RuleSet = RuleSets.ofList(
@@ -209,14 +210,7 @@ object FlinkStreamExecRuleSets {
 
     // set operators
     ReplaceIntersectWithSemiJoinRule.INSTANCE,
-    ReplaceExceptWithAntiJoinRule.INSTANCE,
-
-    // dimension join rule
-    FlinkLogicalTemporalTableSourceScan.CONVERTER,
-    FlinkLogicalDimensionTableSourceScan.STATIC_CONVERTER,
-    FlinkLogicalDimensionTableSourceScan.TEMPORAL_CONVERTER,
-    PushCalcIntoDimTableSourceScanRule.INSTANCE,
-    FlinkLogicalJoinTableRule.INSTANCE
+    ReplaceExceptWithAntiJoinRule.INSTANCE
   )
 
   private val STREAM_EXEC_LOGICAL_CONVERTERS: RuleSet = RuleSets.ofList(
@@ -227,7 +221,6 @@ object FlinkStreamExecRuleSets {
     FlinkLogicalCalc.CONVERTER,
     FlinkLogicalCorrelate.CONVERTER,
     FlinkLogicalJoin.CONVERTER,
-    FlinkLogicalTemporalTableJoin.CONVERTER,
     FlinkLogicalSemiJoin.CONVERTER,
     FlinkLogicalSort.STREAM_CONVERTER,
     FlinkLogicalUnion.CONVERTER,
@@ -235,12 +228,10 @@ object FlinkStreamExecRuleSets {
     FlinkLogicalTableSourceScan.CONVERTER,
     FlinkLogicalTableFunctionScan.CONVERTER,
     FlinkLogicalNativeTableScan.CONVERTER,
+    FlinkLogicalSnapshot.CONVERTER,
     FlinkLogicalIntermediateTableScan.CONVERTER,
     FlinkLogicalMatch.CONVERTER,
     FlinkLogicalExpand.CONVERTER,
-    FlinkLogicalTemporalTableSourceScan.CONVERTER,
-    FlinkLogicalDimensionTableSourceScan.STATIC_CONVERTER,
-    FlinkLogicalDimensionTableSourceScan.TEMPORAL_CONVERTER,
     FlinkLogicalWatermarkAssigner.CONVERTER,
     FlinkLogicalLastRow.CONVERTER,
     FlinkLogicalSink.CONVERTER
@@ -282,7 +273,6 @@ object FlinkStreamExecRuleSets {
 
           // rules to convert catalog table to normal table.
           CatalogTableRules.STREAM_TABLE_SCAN_RULE,
-          CatalogTableRules.DIM_TABLE_SCAN_RULE,
 
           MergeMultiEqualsToInRule.INSTANCE,
           MergeMultiNotEqualsToNotInRule.INSTANCE
@@ -309,15 +299,16 @@ object FlinkStreamExecRuleSets {
     LoptOptimizeJoinRule.INSTANCE
   )
 
-  val STREAM_EXEC_TOPN_RULES: RuleSet = RuleSets.ofList(
+  val LOGICAL_REWRITE: RuleSet = RuleSets.ofList(
     // transform over window to topn node
-    FlinkLogicalRankRule.INSTANCE)
-
-  val STREAM_EXEC_LAST_ROW_RULES: RuleSet = RuleSets.ofList(
-    LastRowCalcTransposeRule.INSTANCE)
-
-  val STREAM_EXEC_AGG_SPLIT_RULES: RuleSet = RuleSets.ofList(
+    FlinkLogicalRankRule.INSTANCE,
+    // transpose calc past lastrow to reduce state size
+    CalcLastRowTransposeRule.INSTANCE,
+    // split distinct aggregate to reduce data skew
     SplitAggregateRule.INSTANCE,
+    // transpose calc past snapshot
+    CalcSnapshotTransposeRule.INSTANCE,
+    // merge calc after calc transpose
     CalcMergeRule.INSTANCE)
 
   /**
@@ -336,13 +327,14 @@ object FlinkStreamExecRuleSets {
     StreamExecUnionRule.INSTANCE,
     StreamExecJoinRule.INSTANCE,
     StreamExecSemiJoinRule.INSTANCE,
-    StreamExecTemporalTableJoinRule.INSTANCE,
+    StreamExecTemporalTableFunctionJoinRule.INSTANCE,
+    StreamExecTemporalTableJoinRule.SNAPSHOT_ON_TABLESCAN,
+    StreamExecTemporalTableJoinRule.SNAPSHOT_ON_CALC_TABLESCAN,
     StreamExecValuesRule.INSTANCE,
     StreamExecCorrelateRule.INSTANCE,
     StreamExecWindowJoinRule.INSTANCE,
     StreamExecTableSourceScanRule.INSTANCE,
     StreamExecMatchRule.INSTANCE,
-    StreamExecJoinTableRule.INSTANCE,
     StreamExecRankRules.SORT_INSTANCE,
     StreamExecRankRules.RANK_INSTANCE,
     StreamExecWatermarkAssignerRule.INSTANCE,

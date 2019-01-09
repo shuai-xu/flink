@@ -18,13 +18,13 @@
 
 package org.apache.flink.table.util
 
-import org.apache.flink.api.common.functions.Function
-import org.apache.flink.api.common.operators.ResourceSpec
+import org.apache.calcite.sql.SqlExplainLevel
+import org.apache.commons.lang3.SystemUtils
 import org.apache.flink.api.common.typeinfo.{AtomicType, TypeInformation}
 import org.apache.flink.api.java.typeutils.TupleTypeInfo
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JavaEnv}
+import org.apache.flink.streaming.api.environment.{LocalStreamEnvironment, StreamExecutionEnvironment => JavaEnv}
 import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment, DataStream => ScalaStream}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
@@ -52,7 +52,6 @@ import _root_.scala.collection.JavaConverters._
 import org.junit.Assert._
 import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}
-import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
@@ -151,11 +150,10 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
   }
 
   private lazy val diffRepository = DiffRepository.lookup(test.getClass)
-  val env: StreamExecutionEnvironment = mock(classOf[StreamExecutionEnvironment])
-  val javaEnv: JavaEnv = mock(classOf[JavaEnv])
-  when(javaEnv.clean[Function](any[Function])).thenAnswer(answer(ivk => ivk.getArguments.head))
-  when(env.getWrappedStreamExecutionEnvironment).thenReturn(javaEnv)
-  val tableEnv: BatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(env)
+  val javaEnv = new LocalStreamEnvironment()
+  val javaTableEnv = TableEnvironment.getBatchTableEnvironment(javaEnv)
+  val env = new StreamExecutionEnvironment(javaEnv)
+  val tableEnv = TableEnvironment.getBatchTableEnvironment(env)
   tableEnv.getConfig.setCalciteConfig(CalciteConfig.createBuilder().build())
   tableEnv.getConfig.setSubsectionOptimization(true)
 
@@ -190,15 +188,9 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
   def addTable[T: TypeInformation](
       name: String,
       fields: Expression*): Table = {
-    val bs = mock(classOf[DataStream[T]])
-    val transform = mock(classOf[StreamTransformation[T]])
-    val typeInfo: TypeInformation[T] = implicitly[TypeInformation[T]]
-    when(bs.getTransformation).thenReturn(transform)
-    when(bs.getType).thenReturn(typeInfo)
-    when(transform.getOutputType).thenReturn(typeInfo)
-    when(transform.getMinResources).thenReturn(ResourceSpec.DEFAULT)
 
-    val t = tableEnv.fromBoundedStream(new ScalaStream[T](bs), fields: _*)
+    val bs = env.fromElements()
+    val t = tableEnv.fromBoundedStream(bs, fields: _*)
     tableEnv.registerTable(name, t)
     t
   }
@@ -214,13 +206,8 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
   }
 
   def addJavaTable[T](typeInfo: TypeInformation[T], name: String, fields: Expression*): Table = {
-    val bs = mock(classOf[DataStream[T]])
-    val transform = mock(classOf[StreamTransformation[T]])
-    when(bs.getTransformation).thenReturn(transform)
-    when(bs.getType).thenReturn(typeInfo)
-    when(transform.getOutputType).thenReturn(typeInfo)
-
-    val t = tableEnv.fromBoundedStream(new ScalaStream[T](bs), fields: _*)
+    val stream = javaEnv.addSource(new EmptySource[T], typeInfo)
+    val t = tableEnv.fromBoundedStream(new ScalaStream[T](stream), fields: _*)
     tableEnv.registerTable(name, t)
     t
   }

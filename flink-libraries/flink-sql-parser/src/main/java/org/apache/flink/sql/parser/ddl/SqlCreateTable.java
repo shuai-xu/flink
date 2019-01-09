@@ -216,14 +216,6 @@ public class SqlCreateTable extends SqlCall {
 			}
 		}
 
-		if (this.tableType != null && this.tableType.equals("DIM")) {
-			if ((this.primaryKeyList == null || this.primaryKeyList.size() == 0) && (this.uniqueKeysList == null || this.uniqueKeysList.size() == 0)
-				&& (this.indexKeysList == null || this.indexKeysList.size() == 0)) {
-				throw new SqlParseException(
-					super.pos,
-					"A dim table must define primary key or unique key or index");
-			}
-		}
 	}
 
 	public boolean containsComputedColumn() {
@@ -273,12 +265,6 @@ public class SqlCreateTable extends SqlCall {
 			} else {
 				column.unparse(writer, leftPrec, rightPrec);
 			}
-		}
-		if (tableType != null && tableType.equals("DIM")) {
-			writer.sep(",");
-			writer.newlineAndIndent();
-			writer.print("  ");
-			writer.keyword("PERIOD FOR SYSTEM_TIME");
 		}
 		if (primaryKeyList != null && primaryKeyList.size() > 0) {
 			printIndent(writer);

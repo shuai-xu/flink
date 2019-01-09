@@ -24,7 +24,7 @@ import org.apache.flink.table.calcite.{FlinkCalciteCatalogReader, FlinkTypeSyste
 import org.apache.flink.table.codegen.ExpressionReducer
 import org.apache.flink.table.plan.cost.FlinkStreamCostFactory
 import org.apache.flink.table.plan.stats.{ColumnStats, FlinkStatistic, TableStats}
-import org.apache.flink.table.sources.TableSource
+import org.apache.flink.table.sources.{StreamTableSource, TableSource}
 import org.apache.flink.table.util.{TableSchemaUtil, TestTableSourceTable}
 import org.apache.flink.table.validate.BuiltInFunctionCatalog
 import com.google.common.collect.ImmutableSet
@@ -36,6 +36,10 @@ import org.apache.calcite.sql.parser.SqlParser
 import org.apache.calcite.tools.{FrameworkConfig, Frameworks}
 import java.util
 import java.util.{Collections, Properties}
+
+import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+import org.apache.flink.types.Row
 
 import scala.collection.JavaConversions._
 
@@ -82,7 +86,7 @@ object MetadataTestUtil {
       "id" -> ColumnStats(3L, 1L, 8D, 8, 5, -5),
       "score" -> ColumnStats(5L, 0L, 32D, 32, 6.1D, 0D)
     )
-    val ts1 = new TableSource {
+    val ts1 = new StreamTableSource[Row] {
       override def getReturnType: DataType =
         DataTypes.createRowType(types, tableSchema.getColumnNames)
 
@@ -90,6 +94,8 @@ object MetadataTestUtil {
 
       /** Returns the table schema of the table source */
       override def getTableSchema: TableSchema = tableSchema
+
+      override def getDataStream(execEnv: StreamExecutionEnvironment): DataStream[Row] = ???
     }
     rootSchema.add("t1", new TestTableSourceTable(ts1))
 

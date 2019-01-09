@@ -25,13 +25,13 @@ import org.apache.flink.table.functions.sql.{ProctimeSqlFunction, ScalarSqlFunct
 import org.apache.flink.table.plan.nodes.calcite._
 import org.apache.flink.table.plan.schema.TimeIndicatorRelDataType
 import org.apache.flink.table.validate.BasicOperatorTable
-
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.logical._
 import org.apache.calcite.rel.{RelNode, RelShuttle}
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
+import org.apache.flink.table.plan.util.TemporalJoinUtil
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -113,8 +113,9 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
         input,
         lastRow.uniqueKeys)
 
-    case temporalTableJoin: LogicalTemporalTableJoin =>
-      visit(temporalTableJoin)
+    case snapshot: LogicalSnapshot =>
+      val input = snapshot.getInput.accept(this)
+      snapshot.copy(snapshot.getTraitSet, input, snapshot.getPeriod)
 
     case sink: LogicalSink =>
       var newInput = sink.getInput.accept(this)
@@ -184,38 +185,36 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
     val left = join.getLeft.accept(this)
     val right = join.getRight.accept(this)
 
-    val newCondition = join.getCondition.accept(new RexShuttle {
-      private val leftFieldCount = left.getRowType.getFieldCount
-      private val leftFields = left.getRowType.getFieldList.toList
-      private val leftRightFields =
-        (left.getRowType.getFieldList ++ right.getRowType.getFieldList).toList
+    if (TemporalJoinUtil.containsTemporalJoinCondition(join.getCondition)) {
+      // temporal table function join
+      val rewrittenTemporalJoin = join.copy(join.getTraitSet, List(left, right))
 
-      override def visitInputRef(inputRef: RexInputRef): RexNode = {
-        if (isTimeIndicatorType(inputRef.getType)) {
-          val fields = if (inputRef.getIndex < leftFieldCount) {
-            leftFields
+      val indicesToMaterialize = gatherIndicesToMaterialize(rewrittenTemporalJoin, left, right)
+
+      materializerUtils.projectAndMaterializeFields(rewrittenTemporalJoin, indicesToMaterialize)
+    } else {
+      val newCondition = join.getCondition.accept(new RexShuttle {
+        private val leftFieldCount = left.getRowType.getFieldCount
+        private val leftFields = left.getRowType.getFieldList.toList
+        private val leftRightFields =
+          (left.getRowType.getFieldList ++ right.getRowType.getFieldList).toList
+
+        override def visitInputRef(inputRef: RexInputRef): RexNode = {
+          if (isTimeIndicatorType(inputRef.getType)) {
+            val fields = if (inputRef.getIndex < leftFieldCount) {
+              leftFields
+            } else {
+              leftRightFields
+            }
+            RexInputRef.of(inputRef.getIndex, fields)
           } else {
-            leftRightFields
+            super.visitInputRef(inputRef)
           }
-          RexInputRef.of(inputRef.getIndex, fields)
-        } else {
-          super.visitInputRef(inputRef)
         }
-      }
-    })
+      })
 
-    LogicalJoin.create(left, right, newCondition, join.getVariablesSet, join.getJoinType)
-  }
-
-  def visit(temporalJoin: LogicalTemporalTableJoin): RelNode = {
-    val left = temporalJoin.getLeft.accept(this)
-    val right = temporalJoin.getRight.accept(this)
-
-    val rewrittenTemporalJoin = temporalJoin.copy(temporalJoin.getTraitSet, List(left, right))
-
-    val indicesToMaterialize = gatherIndicesToMaterialize(rewrittenTemporalJoin, left, right)
-
-    materializerUtils.projectAndMaterializeFields(rewrittenTemporalJoin, indicesToMaterialize)
+      LogicalJoin.create(left, right, newCondition, join.getVariablesSet, join.getJoinType)
+    }
   }
 
   override def visit(correlate: LogicalCorrelate): RelNode = {

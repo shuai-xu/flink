@@ -75,9 +75,9 @@ class FlinkRelMdColumnIntervalTest extends FlinkRelMdHandlerTestBase {
 
   @Test
   def testGetColumnIntervalOnLogicalDimensionTableScan(): Unit = {
-    assertEquals(null, mq.getColumnInterval(dimensionTableSourceScanWithCalc, 0))
-    assertEquals(null, mq.getColumnInterval(dimensionTableSourceScanWithCalc, 1))
-    assertEquals(null, mq.getColumnInterval(dimensionTableSourceScanWithCalc, 2))
+    assertEquals(null, mq.getColumnInterval(temporalTableSourceScanWithCalc, 0))
+    assertEquals(null, mq.getColumnInterval(temporalTableSourceScanWithCalc, 1))
+    assertEquals(null, mq.getColumnInterval(temporalTableSourceScanWithCalc, 2))
   }
 
   @Test

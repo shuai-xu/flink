@@ -28,7 +28,7 @@ import org.apache.calcite.rel.`type`.RelDataTypeFactory
 import org.apache.calcite.schema.{ConfigurableTable, TemporalTable}
 import org.apache.flink.table.api.TableSourceParser
 import org.apache.flink.table.sinks.TableSink
-import org.apache.flink.table.sources.{BatchTableSource, DimensionTableSource, StreamTableSource}
+import org.apache.flink.table.sources.{BatchTableSource, StreamTableSource, TableSource}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -45,7 +45,7 @@ import scala.collection.mutable.ArrayBuffer
  *
  */
 class CatalogTable(val name:String, val table: ExternalCatalogTable, val isStreaming: Boolean)
-    extends FlinkTable with ConfigurableTable with TemporalTable {
+    extends FlinkTable with ConfigurableTable {
 
   /**
    * Creates a copy of this table, changing statistic.
@@ -133,7 +133,7 @@ class CatalogTable(val name:String, val table: ExternalCatalogTable, val isStrea
     if (!isStreaming) {
       null
     } else {
-      ExternalTableUtil.toTableSource(name, table, true, false) match {
+      ExternalTableUtil.toTableSource(name, table, true) match {
         case t: StreamTableSource[Any] => t
         case _ => null
       }
@@ -153,24 +153,9 @@ class CatalogTable(val name:String, val table: ExternalCatalogTable, val isStrea
     if (isStreaming) {
       null
     } else {
-      ExternalTableUtil.toTableSource(name, table, false, false) match {
+      ExternalTableUtil.toTableSource(name, table, false) match {
         case t: BatchTableSource[Any] => t
         case _ => null
       }
     }
-
-  /**
-   * Create a dimension table source from external catalog table.
-   * @return the dimension table source
-   */
-  def dimTableSource: DimensionTableSource[Any] =
-    ExternalTableUtil.toTableSource(name, table, isStreaming, true) match {
-      case t: DimensionTableSource[Any] => t
-      case _ => null
-    }
-
-  override def getSysStartFieldName: String = "sys_start"
-
-  override def getSysEndFieldName: String = "sys_end"
-
 }

@@ -18,15 +18,16 @@
 
 package org.apache.flink.table.plan.rules
 
+import org.apache.flink.table.plan.nodes.logical._
+import org.apache.flink.table.plan.rules.logical._
+import org.apache.flink.table.plan.rules.physical.FlinkExpandConversionRule
+import org.apache.flink.table.plan.rules.physical.batch._
+import org.apache.flink.table.plan.rules.physical.batch.runtimefilter._
+
 import org.apache.calcite.rel.core.RelFactories
 import org.apache.calcite.rel.logical.{LogicalIntersect, LogicalMinus, LogicalUnion}
 import org.apache.calcite.rel.rules.{ReduceExpressionsRule, _}
 import org.apache.calcite.tools.{RuleSet, RuleSets}
-import org.apache.flink.table.plan.nodes.logical._
-import org.apache.flink.table.plan.rules.physical.batch._
-import org.apache.flink.table.plan.rules.physical.batch.runtimefilter._
-import org.apache.flink.table.plan.rules.logical._
-import org.apache.flink.table.plan.rules.physical.FlinkExpandConversionRule
 
 import scala.collection.JavaConverters._
 
@@ -47,6 +48,22 @@ object FlinkBatchExecRuleSets {
     SubQueryRemoveRule.FILTER,
     SubQueryRemoveRule.PROJECT,
     SubQueryRemoveRule.JOIN)
+
+
+  /**
+    * Expand plan by replacing references to tables into a proper plan sub trees. Those rules
+    * can create new plan nodes.
+    */
+  val EXPAND_PLAN_RULES: RuleSet = RuleSets.ofList(
+    LogicalCorrelateToTemporalTableJoinRule.INSTANCE,
+    TableScanRule.INSTANCE)
+
+  val POST_EXPAND_CLEAN_UP_RULES: RuleSet = RuleSets.ofList(
+    EnumerableToLogicalTableScan.INSTANCE)
+
+  val UNNEST_RULES: RuleSet = RuleSets.ofList(
+    LogicalUnnestRule.INSTANCE
+  )
 
   /**
     * Convert table references before query decorrelation.
@@ -213,15 +230,14 @@ object FlinkBatchExecRuleSets {
 
     // set operators
     ReplaceIntersectWithSemiJoinRule.INSTANCE,
-    ReplaceExceptWithAntiJoinRule.INSTANCE,
-
-    // dimension join rule
-    FlinkLogicalTemporalTableSourceScan.CONVERTER,
-    FlinkLogicalDimensionTableSourceScan.STATIC_CONVERTER,
-    FlinkLogicalDimensionTableSourceScan.TEMPORAL_CONVERTER,
-    PushCalcIntoDimTableSourceScanRule.INSTANCE,
-    FlinkLogicalJoinTableRule.INSTANCE
+    ReplaceExceptWithAntiJoinRule.INSTANCE
   )
+
+  val LOGICAL_REWRITE: RuleSet = RuleSets.ofList(
+    // transpose calc past snapshot
+    CalcSnapshotTransposeRule.INSTANCE,
+    // merge calc after calc transpose
+    CalcMergeRule.INSTANCE)
 
   private val BATCH_EXEC_LOGICAL_CONVERTERS: RuleSet = RuleSets.ofList(
     // translate to flink logical rel nodes
@@ -239,6 +255,7 @@ object FlinkBatchExecRuleSets {
     FlinkLogicalTableFunctionScan.CONVERTER,
     FlinkLogicalNativeTableScan.CONVERTER,
     FlinkLogicalIntermediateTableScan.CONVERTER,
+    FlinkLogicalSnapshot.CONVERTER,
     FlinkLogicalMatch.CONVERTER,
     FlinkLogicalExpand.CONVERTER,
     FlinkLogicalRank.CONVERTER,
@@ -282,7 +299,6 @@ object FlinkBatchExecRuleSets {
 
             // rules to convert catalog table to normal table.
             CatalogTableRules.BATCH_TABLE_SCAN_RULE,
-            CatalogTableRules.DIM_TABLE_SCAN_RULE,
 
             // unnest rule
             LogicalUnnestRule.INSTANCE
@@ -364,7 +380,8 @@ object FlinkBatchExecRuleSets {
     //expand
     BatchExecExpandRule.INSTANCE,
 
-    BatchExecJoinTableRule.INSTANCE,
+    BatchExecTemporalTableJoinRule.SNAPSHOT_ON_TABLESCAN,
+    BatchExecTemporalTableJoinRule.SNAPSHOT_ON_CALC_TABLESCAN,
     // rank
     BatchExecRankRule.INSTANCE,
     RemoveRedundantLocalRankRule.INSTANCE,
