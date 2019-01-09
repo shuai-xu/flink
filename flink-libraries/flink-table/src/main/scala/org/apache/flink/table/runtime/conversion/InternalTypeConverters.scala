@@ -81,11 +81,10 @@ object InternalTypeConverters {
         PrimitiveMapConverter(mt.getKeyType, mt.getValueType)
       case mt: MapType => ObjectMapConverter(mt.getKeyType, mt.getValueType)
 
-      case br: BaseRowType if br.getTypeClass == classOf[GenericRow] => GenericRowConverter(br)
-      case br: BaseRowType => BaseRowConverter(br)
+      case br: BaseRowType => RowConverter(br)
       case gt: GenericType[_] => GenericConverter(gt)
 
-      case tw: TypeInfoWrappedType =>
+      case tw: TypeInfoWrappedDataType =>
         tw.getTypeInfo match {
           case pa: PrimitiveArrayTypeInfo[_] if pa != BYTE_PRIMITIVE_ARRAY_TYPE_INFO =>
             PrimitiveArrayConverter(DataTypes.of(pa.getComponentType))
@@ -99,7 +98,6 @@ object InternalTypeConverters {
               DataTypes.of(mt.getKeyTypeInfo), DataTypes.of(mt.getValueTypeInfo))
           case mt: MapTypeInfo[_, _] =>
             ObjectMapConverter(DataTypes.of(mt.getKeyTypeInfo), DataTypes.of(mt.getValueTypeInfo))
-          case rt: RowTypeInfo => RowConverter(rt)
           case pj: PojoTypeInfo[_] => PojoConverter(pj)
           case tt: TupleTypeInfo[_] => TupleConverter(tt)
           case cc: CaseClassTypeInfo[Product] => CaseClassConverter(cc)
@@ -167,29 +165,37 @@ object InternalTypeConverters {
       toExternalImpl(row.getBaseRow(column, numField))
   }
 
-  case class RowConverter(t: RowTypeInfo)
-      extends AbstractBaseRowConverter[Row](t.getArity) {
+  case class RowConverter(t: BaseRowType)
+      extends AbstractBaseRowConverter[Any](t.getArity) {
 
-    private[this] val converters = t.getFieldTypes.map(DataTypes.of).map(getConverterForType)
+    private[this] val converters = t.getFieldTypes.map(getConverterForType)
 
-    override def toInternalImpl(row: Row): BaseRow = {
-      val genericRow = new GenericRow(t.getArity)
-      var idx = 0
-      while (idx < t.getArity) {
-        genericRow.update(idx, converters(idx).toInternal(row.getField(idx)))
-        idx += 1
+    override def toInternalImpl(row: Any): BaseRow = {
+      row match {
+        case baseRow: BaseRow => baseRow
+        case row: Row =>
+          val genericRow = new GenericRow(t.getArity)
+          var idx = 0
+          while (idx < t.getArity) {
+            genericRow.update(idx, converters(idx).toInternal(row.getField(idx)))
+            idx += 1
+          }
+          genericRow
       }
-      genericRow
     }
 
-    override def toExternalImpl(baseRow: BaseRow): Row = {
-      val row = new Row(baseRow.getArity)
-      var idx = 0
-      while (idx < baseRow.getArity) {
-        row.setField(idx, converters(idx).toExternal(baseRow, idx))
-        idx += 1
+    override def toExternalImpl(baseRow: BaseRow): Any = {
+      if (t.isUseBaseRow) {
+        baseRow
+      } else {
+        val row = new Row(baseRow.getArity)
+        var idx = 0
+        while (idx < baseRow.getArity) {
+          row.setField(idx, converters(idx).toExternal(baseRow, idx))
+          idx += 1
+        }
+        row
       }
-      row
     }
   }
 
@@ -250,37 +256,6 @@ object InternalTypeConverters {
     }
   }
 
-  case class BaseRowConverter(t: BaseRowType)
-      extends AbstractBaseRowConverter[BaseRow](t.getArity) {
-    override def toInternalImpl(row: BaseRow): BaseRow = row
-
-    override def toExternalImpl(baseRow: BaseRow): BaseRow = baseRow
-  }
-
-  case class GenericRowConverter(t: BaseRowType)
-    extends AbstractBaseRowConverter[GenericRow](t.getArity) {
-
-    private[this] val converters =
-      (0 until t.getArity).map(t.getTypeAt).map(getConverterForType)
-
-    override def toInternalImpl(row: GenericRow): BaseRow = row
-
-    override def toExternalImpl(baseRow: BaseRow): GenericRow = {
-      baseRow match {
-        case row: GenericRow =>
-          row
-        case _ =>
-          val row = new GenericRow(baseRow.getArity)
-          var idx = 0
-          while (idx < baseRow.getArity) {
-            row.update(idx, converters(idx).toExternal(baseRow, idx))
-            idx += 1
-          }
-          row
-      }
-    }
-  }
-
   case class PojoConverter(t: PojoTypeInfo[_])
       extends AbstractBaseRowConverter[Any](t.getArity) {
 
@@ -317,7 +292,7 @@ object InternalTypeConverters {
   case class PrimitiveArrayConverter(eleType: DataType)
       extends InternalTypeConverter[Any, Any, BaseArray] {
 
-    val internalEleT: InternalType = DataTypes.internal(eleType)
+    val internalEleT: InternalType = eleType.toInternalType
 
     override protected def toInternalImpl(scalaValue: Any): BaseArray =
       scalaValue match {
@@ -341,7 +316,7 @@ object InternalTypeConverters {
       typeClass: Class[_],
       eleType: DataType) extends InternalTypeConverter[Any, Any, BaseArray] {
 
-    val internalEleT: InternalType = DataTypes.internal(eleType)
+    val internalEleT: InternalType = eleType.toInternalType
     val elementConverter: InternalTypeConverter[Any, Any, Any] = getConverterForType(eleType)
     val internalEleSer: TypeSerializer[_] = TypeUtils.createSerializer(internalEleT)
     private val elementSize = calculateElementSize(internalEleT)
@@ -390,8 +365,8 @@ object InternalTypeConverters {
   case class PrimitiveMapConverter(keyType: DataType, valueType: DataType)
       extends InternalTypeConverter[Any, Any, BaseMap] {
 
-    private val internalKeyT = DataTypes.internal(keyType)
-    private val internalValueT = DataTypes.internal(valueType)
+    private val internalKeyT = keyType.toInternalType
+    private val internalValueT = valueType.toInternalType
 
     override protected def toInternalImpl(scalaValue: Any): BaseMap =
       scalaValue match {
@@ -412,8 +387,8 @@ object InternalTypeConverters {
   case class ObjectMapConverter(keyType: DataType, valueType: DataType)
       extends InternalTypeConverter[Any, Any, BaseMap] {
 
-    private val internalKeyT = DataTypes.internal(keyType)
-    private val internalValueT = DataTypes.internal(valueType)
+    private val internalKeyT = keyType.toInternalType
+    private val internalValueT = valueType.toInternalType
 
     private val internalKeySer = TypeUtils.createSerializer(internalKeyT)
     private val internalValueSer = TypeUtils.createSerializer(internalValueT)
@@ -642,7 +617,7 @@ object InternalTypeConverters {
   }
 
   def genToExternal(ctx: CodeGeneratorContext, t: DataType, term: String): String = {
-    val iTerm = boxedTypeTermForType(DataTypes.internal(t))
+    val iTerm = boxedTypeTermForType(t.toInternalType)
     val eTerm = externalBoxedTermForType(t)
     if (isIdentity(t)) {
       s"($eTerm) $term"
@@ -663,7 +638,7 @@ object InternalTypeConverters {
     genToInternal(ctx, t)(term)
 
   def genToInternal(ctx: CodeGeneratorContext, t: DataType): String => String = {
-    val iTerm = boxedTypeTermForType(DataTypes.internal(t))
+    val iTerm = boxedTypeTermForType(t.toInternalType)
     val eTerm = externalBoxedTermForType(t)
     if (isIdentity(t)) {
       term => s"($iTerm) $term"
@@ -690,8 +665,8 @@ object InternalTypeConverters {
       t: DataType,
       clazz: Class[_],
       term: String): String = {
-    if (isInternalClass(clazz, DataTypes.internal(t))) {
-      s"(${boxedTypeTermForType(DataTypes.internal(t))}) $term"
+    if (isInternalClass(clazz, t.toInternalType)) {
+      s"(${boxedTypeTermForType(t.toInternalType)}) $term"
     } else {
       genToExternal(ctx, t, term)
     }
@@ -702,8 +677,8 @@ object InternalTypeConverters {
       t: DataType,
       clazz: Class[_],
       term: String): String = {
-    if (isInternalClass(clazz, DataTypes.internal(t))) {
-      s"(${boxedTypeTermForType(DataTypes.internal(t))}) $term"
+    if (isInternalClass(clazz, t.toInternalType)) {
+      s"(${boxedTypeTermForType(t.toInternalType)}) $term"
     } else {
       genToInternal(ctx, t, term)
     }

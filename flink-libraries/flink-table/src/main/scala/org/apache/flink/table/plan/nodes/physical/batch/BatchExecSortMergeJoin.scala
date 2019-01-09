@@ -324,7 +324,7 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       originalOrders,
       SortUtil.getNullDefaultOrders(originalOrders))
 
-    val types = keys.map(t.getFieldTypes()(_))
+    val types = keys.map(t.getFieldInternalTypes()(_))
     val compAndSers = types.zip(orders).map { case (internalType, order) =>
       (TypeUtils.createComparator(internalType, order), TypeUtils.createSerializer(internalType))
     }

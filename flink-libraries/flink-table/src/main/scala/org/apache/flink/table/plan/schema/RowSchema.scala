@@ -32,7 +32,7 @@ class RowSchema(private val logicalRowType: RelDataType) {
 
   private lazy val physicalRowFieldTypes: Seq[InternalType] =
     logicalRowType.getFieldList map {
-      f => DataTypes.internal(FlinkTypeFactory.toDataType(f.getType))
+      f => FlinkTypeFactory.toDataType(f.getType).toInternalType
     }
 
   private lazy val physicalRowType: InternalType = DataTypes.createBaseRowType(

@@ -61,7 +61,7 @@ class BatchExecHashAggRule
       //localHashAgg
       val localAggRelType = inferLocalAggType(
         input.getRowType, agg, groupSet, auxGroupSet, aggregates,
-        aggBufferTypes.map(_.map(DataTypes.internal)))
+        aggBufferTypes.map(_.map(_.toInternalType)))
       val localRequiredTraitSet = input.getTraitSet.replace(FlinkConventions.BATCHEXEC)
       val newInput = RelOptRule.convert(input, localRequiredTraitSet)
       val providedTraitSet = localRequiredTraitSet

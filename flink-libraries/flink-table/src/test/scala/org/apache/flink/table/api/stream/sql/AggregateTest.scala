@@ -18,12 +18,11 @@
 
 package org.apache.flink.table.api.stream.sql
 
-import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes, TypeInfoWrappedType}
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, TypeInfoWrappedDataType}
 import org.apache.flink.table.api.{TableConfigOptions, TableException, Types}
 import org.apache.flink.table.expressions.AggFunctionCall
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
@@ -151,9 +150,9 @@ class AggregateTest extends TableTestBase {
 
     val typeInfo = call.externalAccType
     assertEquals(2,
-      typeInfo.asInstanceOf[TypeInfoWrappedType].
+      typeInfo.asInstanceOf[TypeInfoWrappedDataType].
           getTypeInfo.asInstanceOf[CaseClassTypeInfo[_]].getTotalFields)
-    val caseTypeInfo = typeInfo.asInstanceOf[TypeInfoWrappedType].
+    val caseTypeInfo = typeInfo.asInstanceOf[TypeInfoWrappedDataType].
         getTypeInfo.asInstanceOf[CaseClassTypeInfo[_]]
     assertEquals(Types.LONG, caseTypeInfo.getTypeAt(0))
     assertEquals(Types.LONG, caseTypeInfo.getTypeAt(1))
@@ -167,12 +166,10 @@ class AggregateTest extends TableTestBase {
 
     val typeInfo2 = call2.externalAccType
     assertEquals(2,
-      typeInfo2.asInstanceOf[TypeInfoWrappedType].
-          getTypeInfo.asInstanceOf[RowTypeInfo].getTotalFields)
-    val rowTypeInfo = typeInfo2.asInstanceOf[TypeInfoWrappedType].
-        getTypeInfo.asInstanceOf[RowTypeInfo]
-    assertEquals(Types.LONG, rowTypeInfo.getTypeAt(0))
-    assertEquals(Types.INT, rowTypeInfo.getTypeAt(1))
+      typeInfo2.asInstanceOf[BaseRowType].getFieldNames.length)
+    val rowTypeInfo = typeInfo2.asInstanceOf[BaseRowType]
+    assertEquals(DataTypes.LONG, rowTypeInfo.getInternalTypeAt(0))
+    assertEquals(DataTypes.INT, rowTypeInfo.getInternalTypeAt(1))
   }
 
   @Test

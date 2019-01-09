@@ -46,6 +46,6 @@ class TypedFlinkTableFunction(
       argTypes: Array[Class[_]]): RelDataType = {
     // we have determined the row type before, just convert it to RelDataType
     typeFactory.asInstanceOf[FlinkTypeFactory].createTypeFromInternalType(
-      DataTypes.internal(externalResultType), isNullable = true)
+      externalResultType.toInternalType, isNullable = true)
   }
 }

@@ -20,7 +20,6 @@ package org.apache.flink.table.sources.csv
 
 import java.util.{Set => JSet}
 import java.util.TimeZone
-
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.io.CsvInputFormat
 import org.apache.flink.core.fs.Path
@@ -33,7 +32,7 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.sources._
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.Logging
 
 import _root_.scala.collection.mutable
@@ -88,9 +87,9 @@ class CsvTableSource(
     throw new TableException("Number of field names and field nullables must be equal.")
   }
 
-  private val returnType = new BaseRowType(classOf[GenericRow], fieldTypes, fieldNames)
-  private val returnTypeInfo =
-    DataTypes.toTypeInfo(returnType).asInstanceOf[BaseRowTypeInfo[BaseRow]]
+  private val returnType = new BaseRowType(
+    classOf[GenericRow], fieldTypes.toArray[DataType], fieldNames, true)
+  private val returnTypeInfo = TypeUtils.toBaseRowTypeInfo(returnType)
 
   private var selectedFields: Array[Int] = fieldTypes.indices.toArray
 

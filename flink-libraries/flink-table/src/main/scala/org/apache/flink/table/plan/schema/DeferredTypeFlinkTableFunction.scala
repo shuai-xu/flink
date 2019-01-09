@@ -54,6 +54,6 @@ class DeferredTypeFlinkTableFunction(
     val resultType = getExternalResultType(arguments, argTypes)
     val (fieldNames, fieldIndexes, _) = UserDefinedFunctionUtils.getFieldInfo(resultType)
     UserDefinedFunctionUtils.buildRelDataType(
-      typeFactory, DataTypes.internal(resultType), fieldNames, fieldIndexes)
+      typeFactory, resultType.toInternalType, fieldNames, fieldIndexes)
   }
 }

@@ -23,13 +23,11 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.types.{DataTypes, DecimalType}
 import org.apache.flink.table.api.{TableConfigOptions, TableException, Types}
-import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.{binaryRow, row}
+import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.sources.csv.CsvTableSource
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.types.Row
 
 import org.junit.{Before, Test}
@@ -68,9 +66,9 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
     checkResult(
       "SELECT j, sum(k) FROM GenericTypedTable3 GROUP BY i, j",
       Seq(
-        row("0,1,1", 2),
-        row("0,1,1", 2),
-        row("0,a,1", 3)
+        row("1,1", 2),
+        row("1,1", 2),
+        row("10,1", 3)
       )
     )
 
@@ -101,8 +99,7 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
     registerCollection("LargeTypedTable5", largeTypedData5, genericType5, "d, e, f, g, h")
     val expectedTypedData5 =
       for (i <- 0 until 100000) yield
-        row(binaryRow(new BaseRowTypeInfo(classOf[BinaryRow], Types.INT, Types.INT), i, i),
-          "Hallo", 1L, 10.0, 1L)
+        row(row(i, i), "Hallo", 1L, 10.0, 1L)
     checkResult(
       "SELECT d, g,sum(e), avg(f), min(h) FROM LargeTypedTable5 GROUP BY d, g",
       expectedTypedData5

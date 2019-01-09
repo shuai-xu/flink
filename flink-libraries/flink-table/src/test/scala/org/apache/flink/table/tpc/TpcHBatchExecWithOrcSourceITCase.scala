@@ -44,7 +44,7 @@ class TpcHBatchExecWithOrcSourceITCase(caseName: String) extends QueryTest with 
     for ((tableName, schema) <- TpcHSchemaProvider.schemaMap) {
       lazy val tableSource = new OrcVectorizedColumnRowTableSource(
         new Path(getDataPath(tableName, schema)),
-        schema.getFieldTypes.map(DataTypes.internal),
+        schema.getFieldTypes,
         schema.getFieldNames,
         schema.getFieldNullables,
         true

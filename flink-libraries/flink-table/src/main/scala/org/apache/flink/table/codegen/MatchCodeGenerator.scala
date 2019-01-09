@@ -416,7 +416,7 @@ class MatchCodeGenerator(
       resultExprs,
       new BaseRowType(
         classOf[GenericRow],
-        returnSchema.fieldTypeInfos.map(DataTypes.internal).toArray,
+        returnSchema.fieldTypeInfos.map(new TypeInfoWrappedDataType(_)).toArray[DataType],
         returnSchema.fieldNames.toArray))
 
     aggregatesPerVariable.values.foreach(_.generateAggFunction())
@@ -462,7 +462,7 @@ class MatchCodeGenerator(
       resultExprs,
       new BaseRowType(
         classOf[GenericRow],
-        returnSchema.fieldTypeInfos.map(DataTypes.internal).toArray,
+        returnSchema.fieldTypeInfos.map(DataTypes.of).toArray,
         returnSchema.fieldNames.toArray))
 
     val resultCode = {

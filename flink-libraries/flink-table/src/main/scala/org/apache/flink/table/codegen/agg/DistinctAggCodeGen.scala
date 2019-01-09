@@ -137,7 +137,7 @@ class DistinctAggCodeGen(
     } else {
       val accTerm = newName("distinct_acc")
       val code = s"$MAP_VIEW $accTerm = new $MAP_VIEW();"
-      Seq(GeneratedExpression(accTerm, NEVER_NULL, code, DataTypes.internal(externalAccType)))
+      Seq(GeneratedExpression(accTerm, NEVER_NULL, code, externalAccType.toInternalType))
     }
   }
 
@@ -170,7 +170,7 @@ class DistinctAggCodeGen(
         distinctAccTerm,
         NEVER_NULL,
         NO_CODE,
-        DataTypes.internal(externalAccType)))
+        externalAccType.toInternalType))
     }
   }
 
@@ -289,7 +289,7 @@ class DistinctAggCodeGen(
 
     val keyTerm = newName(DISTINCT_KEY_TERM)
     val exprGenerator = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck = true)
-      .bindInput(DataTypes.internal(keyType), inputTerm = keyTerm)
+      .bindInput(keyType.toInternalType, inputTerm = keyTerm)
     val accumulateCodes = innerAggCodeGens.map(_.accumulate(exprGenerator))
     val retractCodes = if (consumeRetraction) {
       innerAggCodeGens.map(_.retract(exprGenerator))
@@ -447,7 +447,7 @@ class DistinctAggCodeGen(
                |$resultTerm = $dataViewTerm;
             """.stripMargin
           }
-          GeneratedExpression(resultTerm, NEVER_NULL, code, DataTypes.internal(externalAccType))
+          GeneratedExpression(resultTerm, NEVER_NULL, code, externalAccType.toInternalType)
         } else {
           val expr = generateFieldAccess(ctx, inputType, inputTerm, index, nullCheck = true)
           if (useBackupDataView) {

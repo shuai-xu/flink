@@ -21,5 +21,13 @@ package org.apache.flink.table.api.types;
 /**
  * InternalType.
  */
-public interface InternalType extends DataType {
+public abstract class InternalType implements DataType {
+
+	/**
+	 * To give DataType a way to convert a DataType to a InternalType.
+	 */
+	@Override
+	public InternalType toInternalType() {
+		return this;
+	}
 }

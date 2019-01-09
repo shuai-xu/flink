@@ -102,7 +102,7 @@ object TypeUtils {
 
       case gt: GenericType[_] => gt.getTypeInfo.getTypeClass
 
-      case et: TypeInfoWrappedType => et.getTypeInfo.getTypeClass
+      case et: TypeInfoWrappedDataType => et.getTypeInfo.getTypeClass
 
       case _ =>
         throw new TableException(s"Type is not supported: $t")
@@ -131,7 +131,7 @@ object TypeUtils {
       case DataTypes.LONG => true
       case DataTypes.FLOAT => true
       case DataTypes.DOUBLE => true
-      case wt: TypeInfoWrappedType => isPrimitive(wt.getTypeInfo)
+      case wt: TypeInfoWrappedDataType => isPrimitive(wt.getTypeInfo)
       case _ => false
     }
   }
@@ -208,7 +208,14 @@ object TypeUtils {
 
   @deprecated
   def createDataTypeFromTypeInfo(typeInfo: TypeInformation[_]): DataType =
-    new TypeInfoWrappedType(typeInfo)
+    new TypeInfoWrappedDataType(typeInfo)
+
+  def toBaseRowTypeInfo(t: BaseRowType): BaseRowTypeInfo[BaseRow] = {
+    new BaseRowTypeInfo[BaseRow](
+      t.getInternalTypeClass.asInstanceOf[Class[BaseRow]],
+      t.getFieldInternalTypes.map(createTypeInfoFromDataType),
+      t.getFieldNames)
+  }
 
   /**
     * Create a TypeInformation from DataType.
@@ -275,12 +282,17 @@ object TypeUtils {
 
       // composite types
       case br: BaseRowType =>
-        val types = br.getFieldTypes.map(createTypeInfoFromDataType)
-        new BaseRowTypeInfo(br.getTypeClass.asInstanceOf[Class[BaseRow]], types, br.getFieldNames)
+        if (br.isUseBaseRow) {
+          new BaseRowTypeInfo(
+            br.getInternalTypeClass,
+            br.getFieldInternalTypes.map(createTypeInfoFromDataType), br.getFieldNames)
+        } else {
+          new RowTypeInfo(br.getFieldTypes.map(createTypeInfoFromDataType), br.getFieldNames)
+        }
 
       case gt: GenericType[_] => gt.getTypeInfo
 
-      case et: TypeInfoWrappedType => et.getTypeInfo
+      case et: TypeInfoWrappedDataType => et.getTypeInfo
 
       case _ =>
         throw new TableException(s"Type is not supported: $t")
@@ -290,22 +302,25 @@ object TypeUtils {
   def internalTypeFromTypeInfo(typeInfo: TypeInformation[_]): InternalType = typeInfo match {
     // built-in composite type info. (Need to be converted to BaseRowType)
     case rt: RowTypeInfo =>
-      new BaseRowType(rt.getFieldTypes.map(internalTypeFromTypeInfo), rt.getFieldNames)
+      new BaseRowType(
+        classOf[BaseRow],
+        rt.getFieldTypes.map(DataTypes.of),
+        rt.getFieldNames)
 
     case tt: TupleTypeInfo[_] =>
       new BaseRowType(
-        (0 until tt.getArity).map(tt.getTypeAt).map(internalTypeFromTypeInfo).toArray,
+        (0 until tt.getArity).map(tt.getTypeAt).map(DataTypes.of).toArray,
         tt.getFieldNames)
 
     case pt: PojoTypeInfo[_] =>
       val fields = (0 until pt.getArity).map(pt.getPojoFieldAt)
       new BaseRowType(
         fields.map{(field: PojoField) =>
-          internalTypeFromTypeInfo(field.getTypeInformation)}.toArray,
+          DataTypes.of(field.getTypeInformation)}.toArray,
         fields.map{(field: PojoField) => field.getField.getName}.toArray)
 
     case cs: CaseClassTypeInfo[_] => new BaseRowType(
-      (0 until cs.getArity).map(cs.getTypeAt).map(internalTypeFromTypeInfo).toArray,
+      (0 until cs.getArity).map(cs.getTypeAt).map(DataTypes.of).toArray,
       cs.fieldNames.toArray)
 
     //primitive types
@@ -362,8 +377,9 @@ object TypeUtils {
     case br: BaseRowTypeInfo[_] =>
       new BaseRowType(
         br.getTypeClass,
-        br.getFieldTypes.map(internalTypeFromTypeInfo),
-        br.getFieldNames)
+        br.getFieldTypes.map(DataTypes.of),
+        br.getFieldNames,
+        true)
 
     // unknown type info, treat as generic.
     case _ => DataTypes.createGenericType(typeInfo)
@@ -415,7 +431,7 @@ object TypeUtils {
 
   def isGeneric(tp: DataType): Boolean = tp match {
     case _: GenericType[_] => true
-    case wt: TypeInfoWrappedType =>
+    case wt: TypeInfoWrappedDataType =>
       wt.getTypeInfo match {
         // TODO special to trust it.
         case _: BinaryStringTypeInfo | _: DecimalTypeInfo => false

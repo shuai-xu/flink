@@ -41,7 +41,7 @@ import org.apache.flink.streaming.api.operators.ProcessOperator
 import org.apache.flink.streaming.api.operators.async.AsyncWaitOperator
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.functions.{AsyncTableFunction, TableFunction, UserDefinedFunction}
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataType, InternalType}
 import org.apache.flink.table.api.{TableConfig, TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.TemporalJoinCodeGenerator._
@@ -378,7 +378,7 @@ abstract class CommonTemporalTableJoin(
       inputTransformation,
       operatorName,
       operator,
-      DataTypes.toTypeInfo(resultBaseRowType).asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      TypeUtils.toBaseRowTypeInfo(resultBaseRowType),
       inputTransformation.getParallelism)
   }
   

@@ -594,7 +594,7 @@ class TemporalJoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mo
     val rightType = joinInfo.rightRowType
     val joinType = new BaseRowType(
       classOf[GenericRow],
-      (leftType.getFieldTypes ++ rightType.getFieldTypes).map(DataTypes.internal),
+      (leftType.getFieldTypes ++ rightType.getFieldTypes).map(DataTypes.of),
       leftType.getFieldNames ++ rightType.getFieldNames)
 
     val joinTranslator = StreamExecTemporalJoinToCoProcessTranslator.create(

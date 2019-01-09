@@ -22,7 +22,6 @@ import java.util
 
 import org.apache.flink.core.fs.Path
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.sources.parquet.ParquetVectorizedColumnRowTableSource
 import org.apache.flink.table.tpc.TpcUtils.getTpcHQuery
@@ -44,7 +43,7 @@ class TpcHBatchExecWithParquetSourceITCase(caseName: String) extends QueryTest w
     for ((tableName, schema) <- TpcHSchemaProvider.schemaMap) {
      lazy val tableSource = new ParquetVectorizedColumnRowTableSource(
         new Path(getDataPath(tableName, schema)),
-        schema.getFieldTypes.map(DataTypes.internal),
+        schema.getFieldTypes,
         schema.getFieldNames,
         schema.getFieldNullables,
         true

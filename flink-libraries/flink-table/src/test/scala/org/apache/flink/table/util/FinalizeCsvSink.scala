@@ -23,7 +23,7 @@ import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.BaseRowType
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks.csv.BaseRowCsvOutputFormat
 import org.apache.flink.table.sinks.{BatchTableSink, TableSinkBase}
@@ -49,7 +49,7 @@ class FinalizeCsvSink(
 
   def newOutputFormat(): BaseRowCsvOutputFormat = {
     val outputFormat = new FinalizedTestCsvFormat(
-      new Path(path), getFieldTypes.map(DataTypes.internal), markPath.getOrElse("/tmp/finalized"))
+      new Path(path), getFieldTypes.map(_.toInternalType), markPath.getOrElse("/tmp/finalized"))
     outputFormat.setFieldDelimiter(fieldDelim.getOrElse(","))
     outputFormat.setAllowNullValues(true)
     writeMode match {
@@ -88,7 +88,7 @@ class FinalizeCsvSink(
   }
 
   override def getOutputType: BaseRowType = {
-    new BaseRowType(classOf[BaseRow], getFieldInternalTypes: _*)
+    new BaseRowType(classOf[BaseRow], getFieldTypes, true)
   }
 
 }

@@ -31,7 +31,7 @@ import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
 import org.apache.flink.table.api._
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.connector.DefinedDistribution
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
@@ -403,7 +403,7 @@ final class TestingUpsertTableSink(keys: Array[Int])
   }
 
   override def getOutputType: DataType =
-    DataTypes.createBaseRowType(fTypes.map(DataTypes.internal), fNames)
+    new BaseRowType(classOf[BaseRow], fTypes, fNames, true)
 
   override def emitDataStream(dataStream: DataStream[BaseRow]) = {
     dataStream.addSink(sink)

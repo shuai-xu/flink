@@ -47,6 +47,7 @@ import org.apache.flink.table.functions.sql.internal.{SqlRuntimeFilterBuilderFun
 import org.apache.flink.table.typeutils.TypeCheckUtils.{isNumeric, isTemporal, isTimeInterval}
 import org.apache.flink.table.typeutils._
 import org.apache.flink.table.util.Logging.CODE_LOG
+import org.apache.flink.types.Row
 import org.apache.flink.util.StringUtils
 
 import org.codehaus.commons.compiler.{CompileException, ICookable}
@@ -128,13 +129,15 @@ object CodeGenUtils {
     case _: DecimalType => classOf[JBigDecimal].getCanonicalName
     case at: ArrayType if at.isPrimitive => s"${primitiveTypeTermForType(at.getElementType)}[]"
     case at: ArrayType => s"${externalBoxedTermForType(at.getElementType)}[]"
-    case bt: BaseRowType => bt.getTypeClass.getCanonicalName
+    case bt: BaseRowType =>
+      if (bt.isUseBaseRow) bt.getInternalTypeClass.getCanonicalName
+      else classOf[Row].getCanonicalName
     case _: MapType => classOf[java.util.Map[_, _]].getCanonicalName
     case _: TimestampType if t != DataTypes.INTERVAL_MILLIS => classOf[Timestamp].getCanonicalName
     case _: DateType if t != DataTypes.INTERVAL_MONTHS => classOf[Date].getCanonicalName
     case DataTypes.TIME => classOf[Time].getCanonicalName
     case it: InternalType => boxedTypeTermForType(it)
-    case wt: TypeInfoWrappedType => wt.getTypeInfo match {
+    case wt: TypeInfoWrappedDataType => wt.getTypeInfo match {
       // From PrimitiveArrayTypeInfo we would get class "int[]", scala reflections
       // does not seem to like this, so we manually give the correct type here.
       case INT_PRIMITIVE_ARRAY_TYPE_INFO => "int[]"
@@ -616,7 +619,7 @@ object CodeGenUtils {
       nullCheck: Boolean): GeneratedExpression =
     inputType match {
       case ct: BaseRowType =>
-        val fieldType = ct.getFieldTypes()(index)
+        val fieldType = ct.getFieldTypes()(index).toInternalType
         val resultTypeTerm = primitiveTypeTermForType(fieldType)
         val defaultValue = primitiveDefaultValue(fieldType)
         val readCode = baseRowFieldReadAccess(ctx, index.toString, inputTerm, fieldType)
@@ -654,7 +657,7 @@ object CodeGenUtils {
       fieldCopy: Boolean = false): GeneratedExpression = {
 
     val fieldType = inputType match {
-      case ct: BaseRowType => ct.getFieldTypes()(index)
+      case ct: BaseRowType => ct.getFieldTypes()(index).toInternalType
       case _ => inputType
     }
     val resultTypeTerm = primitiveTypeTermForType(fieldType)

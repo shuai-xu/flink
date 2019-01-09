@@ -21,6 +21,7 @@ import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{GeneratedSorter, SortCodeGenerator}
@@ -132,7 +133,7 @@ class BatchExecSort(
     : (Array[TypeComparator[_]], Array[TypeSerializer[_]], SortCodeGenerator) = {
     val inputRowType = FlinkTypeFactory.toInternalBaseRowType(input.getRowType, classOf[BaseRow])
     // sort code gen
-    val keyTypes = keys.map(inputRowType.getFieldTypes()(_))
+    val keyTypes = keys.map(inputRowType.getFieldInternalTypes()(_))
     val compAndSers = keyTypes.zip(orders).map { case (internalType, order) =>
       (TypeUtils.createComparator(internalType, order), TypeUtils.createSerializer(internalType))
     }

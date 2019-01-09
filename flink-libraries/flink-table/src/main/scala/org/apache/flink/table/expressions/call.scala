@@ -409,14 +409,14 @@ case class ScalarFunctionCall(
     s"${scalarFunction.getClass.getCanonicalName}(${parameters.mkString(", ")})"
 
   override private[flink] def resultType =
-    DataTypes.internal(getResultTypeOfCTDFunction(
+    getResultTypeOfCTDFunction(
       scalarFunction,
       parameters.toArray,
       () => {extractTypeFromScalarFunc(
-        scalarFunction, parameters.map(_.resultType).toArray)}))
+        scalarFunction, parameters.map(_.resultType).toArray)}).toInternalType
 
   override private[flink] def validateInput(): ValidationResult = {
-    val signature = children.map(_.resultType).map(DataTypes.internal)
+    val signature = children.map(_.resultType)
     // look for a signature that matches the input types
     if (getEvalUserDefinedMethod(scalarFunction, signature).isEmpty) {
       ValidationFailure(s"Given parameters do not match any signature. \n" +
@@ -451,7 +451,7 @@ case class TableFunctionCall(
 
   override private[flink] def children: Seq[Expression] = parameters
 
-  override private[flink] def resultType: InternalType = DataTypes.internal(externalResultType)
+  override private[flink] def resultType: InternalType = externalResultType.toInternalType
 
   /**
     * Assigns an alias for this table function's returned fields that the following operator

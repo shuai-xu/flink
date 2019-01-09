@@ -97,10 +97,10 @@ class StreamExecDataStreamScan(
         dataStreamTable.fieldNames(fieldIdxs.indexOf(DataTypes.ROWTIME_STREAM_MARKER))
 
       // get expression to extract timestamp
-      DataTypes.internal(dataStreamTable.dataType) match {
+      dataStreamTable.dataType.toInternalType match {
         case dataType: BaseRowType
           if (dataType.getFieldNames.contains(rowtimeField) &&
-              dataType.getTypeAt(
+              dataType.getInternalTypeAt(
                 dataType.getFieldIndex(rowtimeField)).equals(DataTypes.ROWTIME_INDICATOR)) =>
           // if rowtimeField already existed in the data stream, use the default rowtime
           None

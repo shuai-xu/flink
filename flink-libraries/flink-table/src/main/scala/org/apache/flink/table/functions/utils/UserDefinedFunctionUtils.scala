@@ -22,7 +22,6 @@ package org.apache.flink.table.functions.utils
 import java.lang.reflect.{Method, Modifier}
 import java.lang.{Integer => JInt, Long => JLong}
 import java.sql.{Date, Time, Timestamp}
-
 import com.google.common.primitives.Primitives
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
 import org.apache.calcite.rex.{RexLiteral, RexNode}
@@ -38,12 +37,14 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.plan.schema.DeferredTypeFlinkTableFunction
-import org.apache.flink.table.dataformat.{BinaryString, Decimal}
+import org.apache.flink.table.dataformat.{BaseRow, BinaryString, Decimal}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.hive.functions._
 import org.apache.flink.table.api.types._
 import org.apache.flink.table.typeutils.TypeUtils
+import org.apache.flink.types.Row
 import org.apache.flink.util.InstantiationUtil
+
 import org.apache.hadoop.hive.ql.exec.{UDAF, UDF}
 import org.apache.hadoop.hive.ql.udf.generic.{GenericUDAFResolver2, GenericUDF, GenericUDTF}
 
@@ -185,7 +186,7 @@ object UserDefinedFunctionUtils {
       function,
       "eval",
       typesToClasses(expectedTypes),
-      expectedTypes.map(DataTypes.internal).toArray,
+      expectedTypes.toArray,
       (paraClasses) => function.getParameterTypes(paraClasses))
   }
 
@@ -200,7 +201,7 @@ object UserDefinedFunctionUtils {
       function,
       methodName,
       typesToClasses(input),
-      input.map(DataTypes.internal).toArray,
+      input.map(_.toInternalType).toArray,
       (cls) => Array(accType) ++
           function.getUserDefinedInputTypes(cls.drop(1)))
   }
@@ -217,7 +218,7 @@ object UserDefinedFunctionUtils {
       function,
       methodName,
       typesToClasses(signature),
-      signature.map(DataTypes.internal).toArray,
+      signature.map(_.toInternalType).toArray,
       (cls) => cls.indices.map((_) => null).toArray)
   }
 
@@ -658,6 +659,8 @@ object UserDefinedFunctionUtils {
     candidate == classOf[Timestamp] && (expected == classOf[Long] || expected == classOf[JLong]) ||
     candidate == classOf[BinaryString] && expected == classOf[String] ||
     candidate == classOf[String] && expected == classOf[BinaryString] ||
+    classOf[BaseRow].isAssignableFrom(candidate) && expected == classOf[Row] ||
+    candidate == classOf[Row] && classOf[BaseRow].isAssignableFrom(expected) ||
     candidate == classOf[Decimal] && expected == classOf[BigDecimal] ||
     candidate == classOf[BigDecimal] && expected == classOf[Decimal] ||
     (candidate.isArray &&
@@ -667,7 +670,7 @@ object UserDefinedFunctionUtils {
 
   private def parameterDataTypeEquals(internal: InternalType, parameterType: DataType): Boolean =
     // There is a special equal to GenericType. We need rewrite type extract to BaseRow etc...
-    DataTypes.internal(parameterType) == internal ||
+    parameterType.toInternalType == internal ||
         DataTypes.toTypeInfo(internal).getTypeClass ==
             DataTypes.toTypeInfo(parameterType).getTypeClass
 
@@ -743,7 +746,7 @@ object UserDefinedFunctionUtils {
       if (param.valid) param.resultType
       else new GenericType(new Object().getClass)  // apply() can not decide type
     }
-    val argTypes = getEvalMethodSignature(func, signature.map(DataTypes.internal))
+    val argTypes = getEvalMethodSignature(func, signature)
     val udt = func.getResultType(arguments, argTypes)
     if (udt != null) udt else getImplicitResultType()
   }
@@ -805,7 +808,7 @@ object UserDefinedFunctionUtils {
               s"Arity of type (" + bt.getFieldNames.deep + ") " +
                   "not equal to number of field names " + fieldNames.deep + ".")
           }
-          fieldIndexes.map(bt.getTypeAt)
+          fieldIndexes.map(i => bt.getInternalTypeAt(i).toInternalType)
         case _ =>
           if (fieldIndexes.length != 1 || fieldIndexes(0) != 0) {
             throw new TableException(

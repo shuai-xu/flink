@@ -42,7 +42,7 @@ object FieldAccessCodeGenerator {
     val className = newName(name)
 
     val expr = CodeGenUtils.generateFieldAccess(
-      ctx, DataTypes.internal(inType), inputTerm, index, nullCheck = true)
+      ctx, inType.toInternalType, inputTerm, index, nullCheck = true)
 
     val outType = expr.resultType
     val resultTypeTerm = externalBoxedTermForType(outType)

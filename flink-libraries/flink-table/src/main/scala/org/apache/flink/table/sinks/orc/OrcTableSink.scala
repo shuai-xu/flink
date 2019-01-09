@@ -25,7 +25,7 @@ import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api._
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.types.BaseRowType
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks.{BatchTableSink, TableSinkBase}
 import org.apache.hadoop.fs.FileUtil
@@ -65,7 +65,7 @@ class OrcTableSink(
         }
     }
     boundedStream.writeUsingOutputFormat(new RowOrcOutputFormat(
-        getFieldTypes.map(DataTypes.internal), getFieldNames, dir, compression))
+        getFieldTypes.map(_.toInternalType), getFieldNames, dir, compression))
       .name("Orc Sink: " + dir)
   }
 
@@ -77,5 +77,5 @@ class OrcTableSink(
     * @return The type expected by this [[org.apache.flink.table.sinks.TableSink]].
     */
   override def getOutputType: BaseRowType =
-    new BaseRowType(classOf[BaseRow], getFieldInternalTypes: _*)
+    new BaseRowType(classOf[BaseRow], getFieldTypes, true)
 }

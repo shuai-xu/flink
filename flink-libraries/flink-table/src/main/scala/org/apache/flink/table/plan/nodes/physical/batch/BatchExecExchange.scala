@@ -324,7 +324,7 @@ class BatchExecExchange(
           keys.length, newKeyIndexes, orders, keys.map(types(_)))
         val generator = new SortCodeGenerator(
           newKeyIndexes,
-          sampleType.getFieldTypes,
+          sampleType.getFieldTypes.map(_.toInternalType),
           comparators,
           orders,
           nullsIsLast)

@@ -18,14 +18,13 @@
 package org.apache.flink.table.dataview
 
 import java.util
-
 import org.apache.flink.api.common.functions.Comparator
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.api.java.typeutils.{PojoField, PojoTypeInfo}
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.dataview._
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.dataformat.GenericRow
 import org.apache.flink.table.typeutils._
@@ -105,10 +104,11 @@ object DataViewUtils {
           newTypeInfo
         }
 
-        val newType = DataTypes.createBaseRowType(
+        val newType = new BaseRowType(
           bt.getTypeClass,
-          newFieldTypes.map(TypeUtils.internalTypeFromTypeInfo).toArray,
-          bt.getFieldNames)
+          newFieldTypes.map(DataTypes.of).toArray,
+          bt.getFieldNames,
+          true)
 
         (newType, accumulatorSpecs.toArray)
       case ct: CompositeType[_] if includesDataView(ct) =>

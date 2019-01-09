@@ -251,8 +251,8 @@ class CorrelateITCase extends StreamingTestBase {
     env.execute()
 
     val expected = mutable.MutableList(
-      "0,1,2,3,3",
-      "0,1,2,3,3")
+      "1,2,3,3",
+      "1,2,3,3")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 

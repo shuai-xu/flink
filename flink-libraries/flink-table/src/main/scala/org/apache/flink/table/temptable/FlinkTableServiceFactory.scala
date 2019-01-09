@@ -19,8 +19,7 @@
 package org.apache.flink.table.temptable
 
 import java.util.Collections
-
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.factories.{BatchTableSinkFactory, BatchTableSourceFactory}
 import org.apache.flink.table.sinks.BatchTableSink
@@ -42,7 +41,8 @@ class FlinkTableServiceFactory extends BatchTableSinkFactory[BaseRow]
       FlinkTableServiceFactory.CLIENT_NAME,
       tableProperties,
       tableName,
-      DataTypes.createBaseRowType(schema.getColumnTypes, schema.getColumnNames)
+      new BaseRowType(
+        classOf[BaseRow], schema.getColumnTypes.toArray[DataType], schema.getColumnNames, true)
     )
   }
 

@@ -73,7 +73,7 @@ public class CsvLookupFunction extends TableFunction<BaseRow> {
 			boolean nestedFileEnumerate) {
 		this.path = path;
 		this.rowType = rowType;
-		this.fieldTypes = rowType.getFieldTypes();
+		this.fieldTypes = rowType.getFieldInternalTypes();
 		this.uniqueIndex = checkedIndex.isUnique();
 		List<Integer> indexCols = checkedIndex.getDefinedColumns();
 		for (int i = 0; i < indexCols.size(); i++) {

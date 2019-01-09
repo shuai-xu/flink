@@ -107,19 +107,20 @@ object BatchExecRel {
     val mq = FlinkRelMetadataQuery.reuseOrCreate(rel.getCluster.getMetadataQuery)
     val columnSizes = mq.getAverageColumnSizes(rel)
     var length = 0d
-    columnSizes.zip(binaryType.getFieldTypes).foreach { case (columnSize, internal) =>
-      if (BinaryRow.isFixedLength(internal)) {
-        length += 8
-      } else {
-        if (columnSize == null) {
-          // find a better way of computing generic type field variable-length
-          // right now we use a small value assumption
-          length += 16
+    columnSizes.zip(binaryType.getFieldTypes.map(_.toInternalType)).foreach {
+      case (columnSize, internal) =>
+        if (BinaryRow.isFixedLength(internal)) {
+          length += 8
         } else {
-          // the 8 bytes is used store the length and offset of variable-length part.
-          length += columnSize + 8
+          if (columnSize == null) {
+            // find a better way of computing generic type field variable-length
+            // right now we use a small value assumption
+            length += 16
+          } else {
+            // the 8 bytes is used store the length and offset of variable-length part.
+            length += columnSize + 8
+          }
         }
-      }
     }
     length += BinaryRow.calculateBitSetWidthInBytes(columnSizes.size())
     length

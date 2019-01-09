@@ -61,11 +61,11 @@ case class EqualTo(left: Expression, right: Expression) extends BinaryComparison
   override private[flink] def validateInput(): ValidationResult =
     (left.resultType, right.resultType) match {
       case (lType, rType)
-        if isNumeric(DataTypes.internal(lType)) && isNumeric(DataTypes.internal(rType)) =>
+        if isNumeric(lType) && isNumeric(rType) =>
         ValidationSuccess
       case (lType, rType) if lType == rType => ValidationSuccess
       case (lType, rType)
-        if isArray(DataTypes.internal(lType)) &&
+        if isArray(lType) &&
             TypeUtils.getExternalClassForType(lType) == TypeUtils.getExternalClassForType(rType) =>
         ValidationSuccess
       case (lType, rType) =>
@@ -84,11 +84,11 @@ case class NotEqualTo(left: Expression, right: Expression) extends BinaryCompari
   override private[flink] def validateInput(): ValidationResult =
     (left.resultType, right.resultType) match {
       case (lType, rType)
-        if isNumeric(DataTypes.internal(lType)) && isNumeric(DataTypes.internal(rType)) =>
+        if isNumeric(lType) && isNumeric(rType) =>
         ValidationSuccess
       case (lType, rType) if lType == rType => ValidationSuccess
       case (lType, rType)
-        if isArray(DataTypes.internal(lType)) &&
+        if isArray(lType) &&
             TypeUtils.getExternalClassForType(lType) == TypeUtils.getExternalClassForType(rType) =>
       ValidationSuccess
       case (lType, rType) =>

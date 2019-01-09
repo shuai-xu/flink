@@ -19,34 +19,59 @@
 package org.apache.flink.table.api.types;
 
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.types.Row;
 
 import java.util.Arrays;
 
 /**
  * Row type for baseRow.
+ *
+ * <p>It's internal data structure is {@link BaseRow}, and it's external data structure is {@link Row}.
  */
-public class BaseRowType implements InternalType {
+public class BaseRowType extends InternalType {
 
-	private final Class<?> typeClass;
-	private final InternalType[] types;
+	/**
+	 * Internal type class to BaseRow.
+	 */
+	private final Class<? extends BaseRow> internalTypeClass;
+
+	/**
+	 * Use DataType instead of InternalType to convert to Row (if a Pojo in Row).
+	 */
+	private final DataType[] types;
+
 	private final String[] fieldNames;
 
-	public BaseRowType(InternalType... types) {
+	/**
+	 * Default useBaseRow is false, user use Row in Source/Sink/Udx.
+	 */
+	private final boolean useBaseRow;
+
+	public BaseRowType(DataType... types) {
 		this(BaseRow.class, types, getFieldNames(types.length));
 	}
 
-	public BaseRowType(Class<?> typeClass, InternalType... types) {
-		this(typeClass, types, getFieldNames(types.length));
+	public BaseRowType(Class<? extends BaseRow> internalTypeClass, DataType... types) {
+		this(internalTypeClass, types, getFieldNames(types.length));
 	}
 
-	public BaseRowType(InternalType[] types, String[] fieldNames) {
+	public BaseRowType(DataType[] types, String[] fieldNames) {
 		this(BaseRow.class, types, fieldNames);
 	}
 
-	public BaseRowType(Class<?> typeClass, InternalType[] types, String[] fieldNames) {
-		this.typeClass = typeClass;
+	public BaseRowType(Class<? extends BaseRow> internalTypeClass, DataType[] types, String[] fieldNames) {
+		this(internalTypeClass, types, fieldNames, false);
+	}
+
+	public BaseRowType(Class<? extends BaseRow> internalTypeClass, DataType[] types, boolean useBaseRow) {
+		this(internalTypeClass, types, getFieldNames(types.length), useBaseRow);
+	}
+
+	public BaseRowType(Class<? extends BaseRow> internalTypeClass, DataType[] types, String[] fieldNames, boolean useBaseRow) {
+		this.internalTypeClass = internalTypeClass;
 		this.types = types;
 		this.fieldNames = fieldNames;
+		this.useBaseRow = useBaseRow;
 	}
 
 	private static String[] getFieldNames(int length) {
@@ -61,16 +86,20 @@ public class BaseRowType implements InternalType {
 		return types.length;
 	}
 
-	public Class<?> getTypeClass() {
-		return typeClass;
+	public Class<? extends BaseRow> getInternalTypeClass() {
+		return internalTypeClass;
 	}
 
-	public InternalType[] getFieldTypes() {
+	public DataType[] getFieldTypes() {
 		return types;
 	}
 
-	public InternalType getTypeAt(int i) {
-		return types[i];
+	public InternalType[] getFieldInternalTypes() {
+		return Arrays.stream(types).map(DataType::toInternalType).toArray(InternalType[]::new);
+	}
+
+	public InternalType getInternalTypeAt(int i) {
+		return types[i].toInternalType();
 	}
 
 	public String[] getFieldNames() {
@@ -86,6 +115,10 @@ public class BaseRowType implements InternalType {
 		return -1;
 	}
 
+	public boolean isUseBaseRow() {
+		return useBaseRow;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -97,16 +130,26 @@ public class BaseRowType implements InternalType {
 
 		BaseRowType that = (BaseRowType) o;
 
-		return typeClass.equals(that.typeClass) &&
-				Arrays.equals(types, that.types) &&
+		return internalTypeClass.equals(that.internalTypeClass) &&
+				Arrays.equals(getFieldInternalTypes(), that.getFieldInternalTypes()) &&
 				Arrays.equals(fieldNames, that.fieldNames);
 	}
 
 	@Override
 	public int hashCode() {
-		int result = typeClass.hashCode();
+		int result = internalTypeClass.hashCode();
 		result = 31 * result + Arrays.hashCode(types);
 		result = 31 * result + Arrays.hashCode(fieldNames);
 		return result;
+	}
+
+	@Override
+	public String toString() {
+		return "BaseRowType{" +
+				"internalTypeClass=" + internalTypeClass +
+				", types=" + Arrays.toString(types) +
+				", fieldNames=" + Arrays.toString(fieldNames) +
+				", useBaseRow=" + useBaseRow +
+				'}';
 	}
 }

@@ -180,14 +180,14 @@ class StreamExecGroupWindowAggregate(
       inputSchema.fieldTypes,
       needRetraction)
 
-    val accTypes = aggInfoList.getAccTypes.map(DataTypes.internal)
-    val aggResultTypes = aggInfoList.getActualValueTypes.map(DataTypes.internal)
+    val accTypes = aggInfoList.getAccTypes.map(_.toInternalType)
+    val aggResultTypes = aggInfoList.getActualValueTypes.map(_.toInternalType)
     val windowPropertyTypes = namedProperties
       .map(_.property.resultType)
       .toArray
     val equaliser = createEqualiser(aggResultTypes, windowPropertyTypes)
 
-    val aggValueTypes = aggInfoList.getActualValueTypes.map(DataTypes.internal)
+    val aggValueTypes = aggInfoList.getActualValueTypes.map(_.toInternalType)
 
     val operator = createWindowOperator(
       config,

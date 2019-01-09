@@ -22,9 +22,4 @@ package org.apache.flink.table.api.types;
  * External type.
  */
 public interface ExternalType extends DataType {
-
-	/**
-	 * Underlying storage type for this UDT.
-	 */
-	InternalType toInternalType();
 }

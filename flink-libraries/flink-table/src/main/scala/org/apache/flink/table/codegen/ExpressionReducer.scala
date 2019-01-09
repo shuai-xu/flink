@@ -74,8 +74,7 @@ class ExpressionReducer(config: TableConfig)
         .bindInput(EMPTY_ROW_TYPE)
 
     val literalExprs = literals.map(exprGenerator.generateExpression)
-    val result = exprGenerator.generateResultExpression(literalExprs,
-      DataTypes.internal(resultType).asInstanceOf[BaseRowType])
+    val result = exprGenerator.generateResultExpression(literalExprs, resultType)
 
     val generatedFunction = generateFunction[MapFunction[GenericRow, GenericRow], GenericRow](
       ctx,

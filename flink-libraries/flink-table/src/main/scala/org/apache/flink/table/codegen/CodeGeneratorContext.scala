@@ -286,21 +286,21 @@ class CodeGeneratorContext(val tableConfig: TableConfig, val supportReference: B
       outRecordWriterTerm: Option[String] = None,
       reused: Boolean = true): String = {
     val statement = t match {
-      case rt: BaseRowType if rt.getTypeClass == classOf[BinaryRow] =>
+      case rt: BaseRowType if rt.getInternalTypeClass == classOf[BinaryRow] =>
         val writerTerm = outRecordWriterTerm.getOrElse(
           throw new CodeGenException("No writer is specified when writing BinaryRow record.")
         )
         val binaryRowWriter = classOf[BinaryRowWriter].getName
-        val typeTerm = rt.getTypeClass.getCanonicalName
+        val typeTerm = rt.getInternalTypeClass.getCanonicalName
         s"""
            |final $typeTerm $outRecordTerm = new $typeTerm(${rt.getArity});
            |final $binaryRowWriter $writerTerm = new $binaryRowWriter($outRecordTerm);
            |""".stripMargin.trim
-      case rt: BaseRowType if classOf[ObjectArrayRow].isAssignableFrom(rt.getTypeClass) =>
-        val typeTerm = rt.getTypeClass.getCanonicalName
+      case rt: BaseRowType if classOf[ObjectArrayRow].isAssignableFrom(rt.getInternalTypeClass) =>
+        val typeTerm = rt.getInternalTypeClass.getCanonicalName
         s"final $typeTerm $outRecordTerm = new $typeTerm(${rt.getArity});"
-      case rt: BaseRowType if rt.getTypeClass == classOf[JoinedRow] =>
-        val typeTerm = rt.getTypeClass.getCanonicalName
+      case rt: BaseRowType if rt.getInternalTypeClass == classOf[JoinedRow] =>
+        val typeTerm = rt.getInternalTypeClass.getCanonicalName
         s"final $typeTerm $outRecordTerm = new $typeTerm();"
       case _ =>
         val typeTerm = boxedTypeTermForType(t)

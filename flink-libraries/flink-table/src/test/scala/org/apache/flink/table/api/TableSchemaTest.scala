@@ -36,8 +36,8 @@ class TableSchemaTest extends TableTestBase {
     assertEquals("a", schema.getColumnNames.apply(0))
     assertEquals("b", schema.getColumnNames.apply(1))
 
-    assertEquals(DataTypes.INT, DataTypes.internal(schema.getTypes.apply(0)))
-    assertEquals(DataTypes.STRING, DataTypes.internal(schema.getTypes.apply(1)))
+    assertEquals(DataTypes.INT, schema.getTypes.apply(0).toInternalType)
+    assertEquals(DataTypes.STRING, schema.getTypes.apply(1).toInternalType)
 
     val expectedString = "root\n" +
       " |-- name: a\n"      +

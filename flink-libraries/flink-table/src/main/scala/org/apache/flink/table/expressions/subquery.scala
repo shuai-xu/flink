@@ -62,10 +62,10 @@ case class In(expression: Expression, elements: Seq[Expression]) extends Express
         (expression.resultType, tableOutput.head.resultType) match {
           case (lType, rType) if lType == rType => ValidationSuccess
           case (lType, rType)
-            if isNumeric(DataTypes.internal(lType)) && isNumeric(DataTypes.internal(rType)) =>
+            if isNumeric(lType) && isNumeric(rType) =>
             ValidationSuccess
           case (lType, rType)
-            if isArray(DataTypes.internal(lType)) &&
+            if isArray(lType) &&
                 TypeUtils.getExternalClassForType(lType) ==
                     TypeUtils.getExternalClassForType(rType) =>
             ValidationSuccess
@@ -76,7 +76,7 @@ case class In(expression: Expression, elements: Seq[Expression]) extends Express
       case _ =>
 
         // n1 in (n2, n3, ...)  -- allowed by major databases
-        if (children.forall(c => isNumeric(DataTypes.internal(c.resultType)))) {
+        if (children.forall(c => isNumeric(c.resultType))) {
           return ValidationSuccess
         }
 
@@ -89,7 +89,7 @@ case class In(expression: Expression, elements: Seq[Expression]) extends Express
         (children.head.resultType, children.last.resultType) match {
           case (lType, rType) if lType == rType => ValidationSuccess
           case (lType, rType)
-            if isArray(DataTypes.internal(lType)) &&
+            if isArray(lType) &&
                 TypeUtils.getExternalClassForType(lType) ==
                     TypeUtils.getExternalClassForType(rType) =>
             ValidationSuccess

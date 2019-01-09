@@ -27,7 +27,7 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.util.{AggregateNameUtil, FlinkRelOptUtil}
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
@@ -175,7 +175,7 @@ class BatchExecHashAggregate(
       input,
       getOperatorName,
       operator,
-      DataTypes.toTypeInfo(outputRowType).asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      TypeUtils.toBaseRowTypeInfo(outputRowType),
       resultPartitionCount)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setDamBehavior(DamBehavior.FULL_DAM)

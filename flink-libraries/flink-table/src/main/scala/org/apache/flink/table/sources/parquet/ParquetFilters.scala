@@ -230,8 +230,7 @@ object ParquetFilters {
       expression: Expression,
       option: Option[InternalType] = None): Boolean = {
     expression match {
-      case Literal(_, retType) if option.isEmpty ||
-          DataTypes.internal(option.get) == retType => true
+      case Literal(_, retType) if option.isEmpty || option.get.toInternalType == retType => true
       case ArrayConstructor(expressions) if expressions.forall(
         ret => isLiteral(ret, Some(DataTypes.BYTE))) => true
       case _ => false

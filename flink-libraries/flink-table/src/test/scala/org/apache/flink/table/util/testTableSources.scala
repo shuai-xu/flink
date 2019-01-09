@@ -142,7 +142,7 @@ class TestProjectableTableSource(
 
   override def explainSource(): String = {
     s"TestSource(" +
-      s"physical fields: ${DataTypes.internal(getReturnType).asInstanceOf[BaseRowType]
+      s"physical fields: ${getReturnType.toInternalType.asInstanceOf[BaseRowType]
           .getFieldNames.mkString(", ")})"
   }
 }

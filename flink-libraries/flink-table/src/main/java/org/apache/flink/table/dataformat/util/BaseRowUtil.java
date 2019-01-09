@@ -34,7 +34,7 @@ import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.MapType;
 import org.apache.flink.table.api.types.TimestampType;
-import org.apache.flink.table.api.types.TypeInfoWrappedType;
+import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
 import org.apache.flink.table.dataformat.BaseArray;
 import org.apache.flink.table.dataformat.BaseMap;
 import org.apache.flink.table.dataformat.BaseRow;
@@ -212,8 +212,8 @@ public final class BaseRowUtil {
 			return row.getBaseRow(ordinal, ((BaseRowType) type).getArity());
 		} else if (type instanceof GenericType) {
 			return row.getGeneric(ordinal, (GenericType) type);
-		} else if (type instanceof TypeInfoWrappedType) {
-			return row.get(ordinal, ((TypeInfoWrappedType) type).toInternalType());
+		} else if (type instanceof TypeInfoWrappedDataType) {
+			return row.get(ordinal, ((TypeInfoWrappedDataType) type).toInternalType());
 		} else {
 			throw new RuntimeException("Not support type: " + type);
 		}

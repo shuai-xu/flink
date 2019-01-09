@@ -109,7 +109,7 @@ public class BaseRowTypeInfo<T extends BaseRow> extends TupleTypeInfoBase<T> {
 
 	@Override
 	public String toString() {
-		StringBuilder bld = new StringBuilder("BaseRow");
+		StringBuilder bld = new StringBuilder("Row");
 		if (types.length > 0) {
 			bld.append('(').append(fieldNames[0]).append(": ").append(types[0]);
 

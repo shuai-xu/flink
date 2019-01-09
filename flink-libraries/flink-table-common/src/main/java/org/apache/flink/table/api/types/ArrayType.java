@@ -23,7 +23,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 /**
  * Type for Array.
  */
-public class ArrayType implements InternalType {
+public class ArrayType extends InternalType {
 
 	private boolean isPrimitive;
 	private InternalType elementType;

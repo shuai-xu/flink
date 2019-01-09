@@ -53,7 +53,7 @@ class AggSqlFunction(
     requiresOver: Boolean)
   extends SqlUserDefinedAggFunction(
     new SqlIdentifier(name, SqlParserPos.ZERO),
-    createReturnTypeInference(DataTypes.internal(externalResultType), typeFactory),
+    createReturnTypeInference(externalResultType.toInternalType, typeFactory),
     createOperandTypeInference(name, aggregateFunction, typeFactory),
     createOperandTypeChecker(name, aggregateFunction),
     // Do not need to provide a calcite aggregateFunction here. Flink aggregateion function

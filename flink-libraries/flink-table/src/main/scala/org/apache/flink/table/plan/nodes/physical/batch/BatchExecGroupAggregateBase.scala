@@ -82,15 +82,15 @@ abstract class BatchExecGroupAggregateBase(
     Array(FlinkTypeFactory.toInternalType(inputRelDataType.getFieldList.get(index).getType))
   } ++ aggregates.map {
     case a: DeclarativeAggregateFunction =>
-      a.aggBufferSchema.map(DataTypes.internal).toArray
+      a.aggBufferSchema.map(_.toInternalType).toArray
     case a: AggregateFunction[_, _] =>
-      Array(DataTypes.internal(getAccumulatorTypeOfAggregateFunction(a)))
+      Array(getAccumulatorTypeOfAggregateFunction(a).toInternalType)
   }.toArray[Array[InternalType]]
 
   lazy val groupKeyRowType = new BaseRowType(
     classOf[BinaryRow],
     grouping.map { index =>
-      FlinkTypeFactory.toInternalType(inputRelDataType.getFieldList.get(index).getType)
+      FlinkTypeFactory.toDataType(inputRelDataType.getFieldList.get(index).getType)
     }, grouping.map(inputRelDataType.getFieldNames.get(_)))
 
   // get udagg instance names

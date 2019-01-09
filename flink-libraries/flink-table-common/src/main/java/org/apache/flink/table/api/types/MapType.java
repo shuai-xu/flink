@@ -21,7 +21,7 @@ package org.apache.flink.table.api.types;
 /**
  * Map type.
  */
-public class MapType implements InternalType {
+public class MapType extends InternalType {
 
 	private final InternalType keyType;
 	private final InternalType valueType;

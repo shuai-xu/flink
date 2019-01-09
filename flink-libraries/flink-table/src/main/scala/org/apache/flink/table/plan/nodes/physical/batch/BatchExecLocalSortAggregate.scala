@@ -28,7 +28,7 @@ import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistri
 import org.apache.flink.table.plan.util.AggregateNameUtil
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.BatchExecRelVisitor
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
@@ -164,7 +164,7 @@ class BatchExecLocalSortAggregate(
       input,
       getAggOperatorName("LocalSortAggregate"),
       operator,
-      DataTypes.toTypeInfo(outputRowType).asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      TypeUtils.toBaseRowTypeInfo(outputRowType),
       resultPartitionCount)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     if (grouping.length == 0) {

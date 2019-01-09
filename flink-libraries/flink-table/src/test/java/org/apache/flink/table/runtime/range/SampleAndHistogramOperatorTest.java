@@ -97,14 +97,14 @@ public class SampleAndHistogramOperatorTest {
 						typeInfo.getArity(), keys, orders, typeInfo.getFieldTypes());
 		boolean[] nullsIsLast = SortUtil.getNullDefaultOrders(orders);
 		SortCodeGenerator sortGen = new SortCodeGenerator(
-				keys, dataType.getFieldTypes(), tuple2._1, orders, nullsIsLast);
+				keys, dataType.getFieldInternalTypes(), tuple2._1, orders, nullsIsLast);
 		SampleAndHistogramOperator sampleAndHistogramOperator = new SampleAndHistogramOperator(
 			10, copyToBinaryRow,
 				new GeneratedSorter(
 						sortGen.generateNormalizedKeyComputer("SampleAndHistogramComputer"),
 						sortGen.generateRecordComparator("SampleAndHistogramComparator"),
 						tuple2._2, tuple2._1),
-				new KeyExtractor(keys, orders, type.getFieldTypes(), tuple2._1), 4);
+				new KeyExtractor(keys, orders, type.getFieldInternalTypes(), tuple2._1), 4);
 
 		TypeInformation<IntermediateSampleData> inTypeInfo =
 				TypeExtractor.getForClass(IntermediateSampleData.class);

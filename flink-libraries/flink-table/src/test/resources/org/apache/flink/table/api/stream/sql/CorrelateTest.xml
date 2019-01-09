@@ -213,7 +213,7 @@ StreamExecCalc(select=[c, name, age])
   <TestCase name="testRowType">
     <Resource name="plan">
       <![CDATA[
-StreamExecCorrelate(invocation=[tableFunc6($cor0.c)], correlate=[table(tableFunc6($cor0.c))], select=[c,f2], rowType=[RecordType(COMPOSITE(BaseRow(f0: Integer, f1: Integer, f2: Integer)) c, INTEGER f2)], joinType=[INNER])
+StreamExecCorrelate(invocation=[tableFunc6($cor0.c)], correlate=[table(tableFunc6($cor0.c))], select=[c,f2], rowType=[RecordType(COMPOSITE(Row(f0: Integer, f1: Integer, f2: Integer)) c, INTEGER f2)], joinType=[INNER])
 +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>

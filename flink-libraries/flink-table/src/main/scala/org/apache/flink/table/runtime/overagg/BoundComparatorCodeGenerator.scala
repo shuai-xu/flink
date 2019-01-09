@@ -275,7 +275,7 @@ class MultiFieldRangeBoundComparatorCodeGenerator(
   def generateBoundComparator(name: String): GeneratedBoundComparator = {
 
     val (comparators, _) = TypeUtils.flattenComparatorAndSerializer(
-      inType.getArity, keys, keyOrders, inType.getFieldTypes)
+      inType.getArity, keys, keyOrders, inType.getFieldTypes.map(_.toInternalType))
     val sortCodeGen = new SortCodeGenerator(keys, keyTypes, comparators, keyOrders, nullsIsLasts)
 
     val className = newName(name)

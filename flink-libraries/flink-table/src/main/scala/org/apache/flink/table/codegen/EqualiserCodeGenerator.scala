@@ -55,7 +55,7 @@ class EqualiserCodeGenerator(fieldTypes: Seq[InternalType]) {
         s"$leftFieldTerm == $rightFieldTerm"
       } else if (isBaseRow(fieldType)) {
         val equaliserGenerator =
-          new EqualiserCodeGenerator(fieldType.asInstanceOf[BaseRowType].getFieldTypes)
+          new EqualiserCodeGenerator(fieldType.asInstanceOf[BaseRowType].getFieldInternalTypes)
         val generatedEqualiser = equaliserGenerator
           .generateRecordEqualiser("field$" + i + "GeneratedEqualiser")
         val generatedEqualiserTerm = ctx.addReusableObject(

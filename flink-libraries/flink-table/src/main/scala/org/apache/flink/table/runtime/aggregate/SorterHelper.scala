@@ -47,7 +47,8 @@ object SorterHelper {
       inputType: BaseRowType,
       fieldCollations: Seq[RelFieldCollation]): GeneratedSorter = {
     val (sortFields, sortDirections, nullsIsLast) = SortUtil.getKeysAndOrders(fieldCollations)
-    createSorter(inputType.getFieldTypes, sortFields, sortDirections, nullsIsLast)
+    createSorter(
+      inputType.getFieldTypes.map(_.toInternalType), sortFields, sortDirections, nullsIsLast)
   }
 
   def createSorter(
@@ -59,7 +60,7 @@ object SorterHelper {
     val (comparators, serializers) = TypeUtils.flattenComparatorAndSerializer(
       fieldTypes.length, sortFields, sortDirections, fieldTypes)
     val codeGen = new SortCodeGenerator(sortFields, sortFields.map((key) =>
-      fieldTypes(key)).map(DataTypes.internal), comparators, sortDirections, nullsIsLast)
+      fieldTypes(key)).map(_.toInternalType), comparators, sortDirections, nullsIsLast)
 
     val comparator = codeGen.generateRecordComparator("StreamExecSortComparator")
     val computer = codeGen.generateNormalizedKeyComputer("StreamExecSortComputer")

@@ -1291,7 +1291,7 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
 
     // validate schema of source table and table sink
     val srcFieldTypes = sourceTable.getSchema.getTypes
-    val sinkFieldTypes = tableSink.getFieldTypes.map(DataTypes.internal)
+    val sinkFieldTypes = tableSink.getFieldTypes.map(_.toInternalType)
 
     val srcFieldNames = sourceTable.getSchema.getColumnNames
     val sinkFieldNames = tableSink.getFieldNames
@@ -1532,7 +1532,7 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
       }
     }
 
-    val indexedNames: Array[(Int, String)] = DataTypes.internal(inputType) match {
+    val indexedNames: Array[(Int, String)] = inputType.toInternalType match {
 
       case t: BaseRowType =>
 
@@ -1799,7 +1799,7 @@ object TableEnvironment {
   def getFieldNames(inputType: DataType): Array[String] = {
     validateType(inputType)
 
-    val fieldNames: Array[String] = DataTypes.internal(inputType) match {
+    val fieldNames: Array[String] = inputType.toInternalType match {
       case t: BaseRowType => t.getFieldNames
       case _: InternalType => Array("f0")
     }
@@ -1830,8 +1830,9 @@ object TableEnvironment {
   def getFieldTypes(inputType: DataType): Array[InternalType] = {
     validateType(inputType)
 
-    DataTypes.internal(inputType) match {
-      case ct: BaseRowType => 0.until(ct.getArity).map(i => ct.getTypeAt(i)).toArray
+    inputType.toInternalType match {
+      case ct: BaseRowType =>
+        0.until(ct.getArity).map(i => ct.getInternalTypeAt(i).toInternalType).toArray
       case t: InternalType => Array(t)
     }
   }

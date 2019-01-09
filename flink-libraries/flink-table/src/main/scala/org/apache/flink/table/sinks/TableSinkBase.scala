@@ -48,7 +48,7 @@ trait TableSinkBase[T] extends TableSink[T] {
   }
 
   def getFieldInternalTypes: Array[InternalType] = {
-    getFieldTypes.map(DataTypes.internal)
+    getFieldTypes.map(_.toInternalType)
   }
 
   /**

@@ -87,7 +87,7 @@ class ImperativeAggCodeGen(
     * Currently we only support GenericRow as internal acc type */
   val isAccTypeInternal: Boolean = externalAccType match {
     // current we only support GenericRow as internal ACC type
-    case t: BaseRowType if t.getTypeClass == classOf[GenericRow] => true
+    case t: BaseRowType if t.getInternalTypeClass == classOf[GenericRow] => true
     case _ => false
   }
 
@@ -96,7 +96,7 @@ class ImperativeAggCodeGen(
   val accTypeInternalTerm: String = if (isAccTypeInternal) {
     GENERIC_ROW
   } else {
-    boxedTypeTermForType(DataTypes.internal(externalAccType))
+    boxedTypeTermForType(externalAccType.toInternalType)
   }
   val accTypeExternalTerm: String = externalBoxedTermForType(externalAccType)
 
@@ -121,7 +121,7 @@ class ImperativeAggCodeGen(
     }
     val accInternal = newName("acc_internal")
     val code = s"$accTypeInternalTerm $accInternal = $accField;"
-    Seq(GeneratedExpression(accInternal, "false", code, DataTypes.internal(externalAccType)))
+    Seq(GeneratedExpression(accInternal, "false", code, externalAccType.toInternalType))
   }
 
   def setAccumulator(generator: ExprCodeGenerator): String = {
@@ -169,7 +169,7 @@ class ImperativeAggCodeGen(
     } else {
       s"$accInternalTerm = ${genToInternal(ctx, externalAccType, accExternalTerm)};"
     }
-    Seq(GeneratedExpression(accInternalTerm, "false", code, DataTypes.internal(externalAccType)))
+    Seq(GeneratedExpression(accInternalTerm, "false", code, externalAccType.toInternalType))
   }
 
   def accumulate(generator: ExprCodeGenerator): String = {
@@ -247,7 +247,7 @@ class ImperativeAggCodeGen(
     val valueExternalTerm = newName("value_external")
     val valueExternalTypeTerm = externalBoxedTermForType(resultType)
     val valueInternalTerm = newName("value_internal")
-    val valueInternalTypeTerm = boxedTypeTermForType(DataTypes.internal(resultType))
+    val valueInternalTypeTerm = boxedTypeTermForType(resultType.toInternalType)
     val nullTerm = newName("valueIsNull")
     val accTerm = if (isAccTypeInternal) accInternalTerm else accExternalTerm
     val code =
@@ -259,7 +259,7 @@ class ImperativeAggCodeGen(
          |boolean $nullTerm = $valueInternalTerm == null;
       """.stripMargin
 
-    GeneratedExpression(valueInternalTerm, nullTerm, code, DataTypes.internal(resultType))
+    GeneratedExpression(valueInternalTerm, nullTerm, code, resultType.toInternalType)
   }
 
   private def aggParametersCode(generator: ExprCodeGenerator): (String, String) = {
@@ -339,7 +339,7 @@ class ImperativeAggCodeGen(
         val newExpr = inputType match {
           case ct: BaseRowType if isAccTypeInternal =>
             // acc is never be null
-            val fieldType = ct.getTypeAt(index).asInstanceOf[BaseRowType]
+            val fieldType = ct.getInternalTypeAt(index).asInstanceOf[BaseRowType]
             val exprGenerator = new ExprCodeGenerator(ctx, false, nullCheck)
               .bindInput(fieldType, inputTerm = expr.resultTerm)
             val converted = exprGenerator.generateConverterResultExpression(
@@ -372,7 +372,7 @@ class ImperativeAggCodeGen(
                 """.stripMargin
               GeneratedExpression(newExpr.resultTerm, newExpr.nullTerm, code, newExpr.resultType)
             } else {
-              val fieldType = ct.getTypeAt(index)
+              val fieldType = ct.getInternalTypeAt(index)
               val fieldTerm = ctx.newReusableField("field", UPDATABLE_ROW)
               val code =
                 s"""

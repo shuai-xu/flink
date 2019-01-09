@@ -20,13 +20,12 @@ package org.apache.flink.table.runtime.batch.table
 
 import java.sql.Timestamp
 import java.util
-
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.types.DataTypes._
 import org.apache.flink.table.api.types.DecimalType
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.dataformat.{BaseRow, Decimal}
+import org.apache.flink.table.dataformat.Decimal
 import org.apache.flink.table.expressions.Literal
 import org.apache.flink.table.expressions.utils.{Func13, SplitUDF}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
@@ -35,6 +34,8 @@ import org.apache.flink.table.util.CollectionBatchExecTable
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.test.util.TestBaseUtils
 import org.apache.flink.test.util.TestBaseUtils.compareResultAsText
+import org.apache.flink.types.Row
+
 import org.junit._
 import org.junit.Assert.assertEquals
 import org.junit.runners.Parameterized
@@ -401,29 +402,29 @@ class CalcITCase extends QueryTest {
     // literals
     in.select(row(1, "Hi", true))
       .collect().foreach { record =>
-      val baseRow = record.getField(0).asInstanceOf[BaseRow]
-      assertEquals(1, baseRow.getInt(0))
-      assertEquals("Hi", baseRow.getString(1))
-      assertEquals(true, baseRow.getBoolean(2))
+      val baseRow = record.getField(0).asInstanceOf[Row]
+      assertEquals(1, baseRow.getField(0))
+      assertEquals("Hi", baseRow.getField(1))
+      assertEquals(true, baseRow.getField(2))
     }
 
     // primitive type
     in.select(row(1, 'a, 'b))
       .collect().zipWithIndex.foreach { case (record, idx) =>
-      val baseRow = record.getField(0).asInstanceOf[BaseRow]
-      assertEquals(1, baseRow.getInt(0))
-      assertEquals(data(idx)._1, baseRow.getInt(1))
-      assertEquals(data(idx)._2, baseRow.getLong(2))
+      val baseRow = record.getField(0).asInstanceOf[Row]
+      assertEquals(1, baseRow.getField(0))
+      assertEquals(data(idx)._1, baseRow.getField(1))
+      assertEquals(data(idx)._2, baseRow.getField(2))
     }
 
     // non-primitive type
     val d = Decimal.castFrom(2.0002, 5, 4)
     in.select(row(BigDecimal(2.0002), 'a, 'c))
       .collect().zipWithIndex.foreach { case (record, idx) =>
-      val baseRow = record.getField(0).asInstanceOf[BaseRow]
-      assertEquals(d, baseRow.getDecimal(0, 5, 4))
-      assertEquals(data(idx)._1, baseRow.getInt(1))
-      assertEquals(data(idx)._3, baseRow.getString(2))
+      val baseRow = record.getField(0).asInstanceOf[Row]
+      assertEquals(d.toBigDecimal, baseRow.getField(0))
+      assertEquals(data(idx)._1, baseRow.getField(1))
+      assertEquals(data(idx)._3, baseRow.getField(2))
     }
   }
 
@@ -499,10 +500,10 @@ class CalcITCase extends QueryTest {
 
     val result = in.select(row('_1, '_2, '_3), array(12, '_2), map('_1, '_3)).collect()
 
-    val baseRow = result.head.getField(0).asInstanceOf[BaseRow]
-    assertEquals(data.head._1, baseRow.getString(0))
-    assertEquals(data.head._2, baseRow.getInt(1))
-    assertEquals(data.head._3, new Timestamp(baseRow.getLong(2)))
+    val baseRow = result.head.getField(0).asInstanceOf[Row]
+    assertEquals(data.head._1, baseRow.getField(0))
+    assertEquals(data.head._2, baseRow.getField(1))
+    assertEquals(data.head._3, baseRow.getField(2))
 
     val arr = result.head.getField(1).asInstanceOf[Array[Integer]]
     assertEquals(12, arr(0))
@@ -526,9 +527,9 @@ class CalcITCase extends QueryTest {
     val results = table.select('*).collect()
     results.zipWithIndex.foreach {
       case (row, i) =>
-        val baseRow = row.getField(0).asInstanceOf[BaseRow]
-        assertEquals(i, baseRow.getInt(0))
-        assertEquals(i, baseRow.getInt(1))
+        val baseRow = row.getField(0).asInstanceOf[Row]
+        assertEquals(i, baseRow.getField(0))
+        assertEquals(i, baseRow.getField(1))
         assertEquals(i.toString, row.getField(1))
     }
   }

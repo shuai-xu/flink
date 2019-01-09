@@ -91,7 +91,7 @@ object TableSourceUtil {
         mappedFieldCnt += 1
     }
     // ensure that only one field is mapped to an atomic type
-    if (!DataTypes.internal(tableSource.getReturnType).isInstanceOf[BaseRowType]
+    if (!tableSource.getReturnType.toInternalType.isInstanceOf[BaseRowType]
         && mappedFieldCnt > 1) {
       throw new ValidationException(
         s"More than one table field matched to atomic input type ${tableSource.getReturnType}.")
@@ -169,7 +169,7 @@ object TableSourceUtil {
       tableSource: TableSource,
       isStreamTable: Boolean,
       selectedFields: Option[Array[Int]]): Array[Int] = {
-    val inputType = DataTypes.internal(tableSource.getReturnType)
+    val inputType = tableSource.getReturnType.toInternalType
     val tableSchema = tableSource.getTableSchema
 
     // get names of selected fields
@@ -470,7 +470,7 @@ object TableSourceUtil {
 
     /** Look up a field by name in a type information */
     def lookupField(fieldName: String, failMsg: String): (String, Int, InternalType) = {
-      DataTypes.internal(returnType) match {
+      returnType.toInternalType match {
 
         case c: BaseRowType =>
           // get and check field index
@@ -479,7 +479,7 @@ object TableSourceUtil {
             throw new ValidationException(failMsg)
           }
           // return field name, index, and field type
-          (fieldName, idx, c.getTypeAt(idx))
+          (fieldName, idx, c.getInternalTypeAt(idx).toInternalType)
 
         case t: InternalType =>
           // no composite type, we return the full atomic type as field

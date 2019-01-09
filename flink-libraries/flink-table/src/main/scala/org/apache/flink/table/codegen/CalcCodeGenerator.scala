@@ -30,7 +30,7 @@ import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForType, newNam
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BoxedWrapperRow}
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -83,8 +83,7 @@ object CalcCodeGenerator {
       genOperatorExpression.code,
       references = ctx.references)
 
-    (substituteStreamOperator,
-      DataTypes.toTypeInfo(outputType).asInstanceOf[BaseRowTypeInfo[BaseRow]])
+    (substituteStreamOperator, TypeUtils.toBaseRowTypeInfo(outputType))
   }
 
   private[flink] def generateFunction[T <: Function](
@@ -162,9 +161,9 @@ object CalcCodeGenerator {
       val projectionExprs = projection.map(exprGenerator.generateExpression)
       val projectionExpression = exprGenerator.generateResultExpression(
         projectionExprs,
-        DataTypes.internal(outputType).asInstanceOf[BaseRowType])
+        outputType.toInternalType.asInstanceOf[BaseRowType])
 
-      val inputTypeTerm = boxedTypeTermForType(DataTypes.internal(inputType))
+      val inputTypeTerm = boxedTypeTermForType(inputType.toInternalType)
 
       splitFunc = CodeGenUtils.generateSplitFunctionCalls(
         projectionExpression.codeBuffer,

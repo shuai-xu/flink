@@ -42,7 +42,7 @@ object OrderedTypeUtils {
            DataTypes.INTERVAL_MONTHS | DataTypes.INTERVAL_MILLIS | DataTypes.ROWTIME_INDICATOR |
            DataTypes.PROCTIME_INDICATOR | _: DecimalType =>
         new ComparableComparator[Any](ord == Order.ASCENDING)
-      case t: TypeInfoWrappedType if classOf[Comparable[_]]
+      case t: TypeInfoWrappedDataType if classOf[Comparable[_]]
           .isAssignableFrom(t.getTypeInfo.getTypeClass) =>
         new ComparableComparator[Any](ord == Order.ASCENDING)
 
@@ -86,7 +86,7 @@ object OrderedTypeUtils {
         case DataTypes.TIMESTAMP => ASC_TIMESTAMP
 
         case dt: DecimalType => OrderedBigDecTypeInfo.of(dt.precision, dt.scale, true);
-        case et: TypeInfoWrappedType => createOrderedTypeInfoFromTypeInfo(et.getTypeInfo, ord)
+        case et: TypeInfoWrappedDataType => createOrderedTypeInfoFromTypeInfo(et.getTypeInfo, ord)
 
         case _ =>
           throw new TableException(s"Type is not supported as the sort key: $t")
@@ -117,7 +117,7 @@ object OrderedTypeUtils {
         case DataTypes.TIMESTAMP => DESC_TIMESTAMP
 
         case dt: DecimalType => OrderedBigDecTypeInfo.of(dt.precision, dt.scale, false);
-        case et: TypeInfoWrappedType => createOrderedTypeInfoFromTypeInfo(et.getTypeInfo, ord)
+        case et: TypeInfoWrappedDataType => createOrderedTypeInfoFromTypeInfo(et.getTypeInfo, ord)
 
         case _ =>
           throw new TableException(s"Type is not supported as the sort key: $t")

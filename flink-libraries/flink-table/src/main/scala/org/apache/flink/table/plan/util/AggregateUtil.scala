@@ -378,7 +378,7 @@ object AggregateUtil extends Enumeration {
             TableErrors.INST.sqlAggFunctionDataTypeNotSupported("Distinct", t.toString))
       }
     } else {
-      new BaseRowType(argTypes.map(DataTypes.internal): _*)
+      new BaseRowType(classOf[BaseRow], argTypes, true)
     }
   }
 
@@ -455,7 +455,7 @@ object AggregateUtil extends Enumeration {
 
     typeFactory.buildRelDataType(
       groupingNames ++ accFieldNames,
-      groupingTypes ++ accTypes.map(DataTypes.internal))
+      groupingTypes ++ accTypes.map(_.toInternalType))
   }
 
   private[flink] def asLong(expr: Expression): Long = expr match {

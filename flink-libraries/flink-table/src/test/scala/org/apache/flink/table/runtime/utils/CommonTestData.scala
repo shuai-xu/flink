@@ -26,7 +26,7 @@ import java.{lang, util}
 import org.apache.calcite.avatica.util.DateTimeUtils
 import org.apache.flink.api.java.io.CsvInputFormat
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType, TypeInfoWrappedType}
+import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.api.{RichTableSchema, TableSchema}
 import org.apache.flink.table.catalog._
 import org.apache.flink.table.dataformat.Decimal
@@ -88,8 +88,9 @@ object CommonTestData {
         row.setField(1, f1)
         row.setField(2, f2)
         row
-    }, DataTypes.createRowType(DataTypes.INT, DataTypes.LONG, DataTypes.STRING)
-        .asInstanceOf[TypeInfoWrappedType].getTypeInfo.asInstanceOf[RowTypeInfo])
+    }, DataTypes.toTypeInfo(DataTypes.createRowType(
+      DataTypes.INT, DataTypes.LONG, DataTypes.STRING))
+        .asInstanceOf[RowTypeInfo])
   }
 
   def get3Data(): mutable.MutableList[(Integer, lang.Long, String)] = {
@@ -218,9 +219,9 @@ object CommonTestData {
         row.setField(3, f3)
         row.setField(4, f4)
         row
-    }, DataTypes.createRowType(
-      DataTypes.INT, DataTypes.LONG, DataTypes.INT, DataTypes.STRING, DataTypes.LONG)
-        .asInstanceOf[TypeInfoWrappedType].getTypeInfo.asInstanceOf[RowTypeInfo])
+    }, DataTypes.toTypeInfo(DataTypes.createRowType(
+      DataTypes.INT, DataTypes.LONG, DataTypes.INT, DataTypes.STRING, DataTypes.LONG))
+        .asInstanceOf[RowTypeInfo])
   }
 
   def get5Data(): mutable.MutableList[(Integer, lang.Long, Integer, String, lang.Long)] = {

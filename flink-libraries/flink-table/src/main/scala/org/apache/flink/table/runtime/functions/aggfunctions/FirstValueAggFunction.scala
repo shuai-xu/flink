@@ -18,9 +18,8 @@
 package org.apache.flink.table.runtime.functions.aggfunctions
 
 import java.lang.{Boolean => JBoolean, Byte => JByte, Double => JDouble, Float => JFloat, Integer => JInt, Long => JLong, Short => JShort}
-
 import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, InternalType}
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.dataformat.{BinaryString, Decimal, GenericRow}
 import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, DecimalTypeInfo}
 
@@ -78,9 +77,9 @@ abstract class FirstValueAggFunction[T] extends AggregateFunction[T, GenericRow]
   override def getResultType: DataType = getValueType
 
   override def getAccumulatorType: DataType = {
-    val fieldTypes: Array[InternalType] = Array(getInternalValueType, DataTypes.LONG)
+    val fieldTypes: Array[DataType] = Array(getInternalValueType, DataTypes.LONG)
     val fieldNames = Array("value", "time")
-    DataTypes.createBaseRowType(classOf[GenericRow], fieldTypes, fieldNames)
+    new BaseRowType(classOf[GenericRow], fieldTypes, fieldNames, true)
   }
 
   override def getUserDefinedInputTypes(signature: Array[Class[_]]): Array[DataType] = {

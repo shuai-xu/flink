@@ -28,7 +28,7 @@ import org.apache.flink.api.java.typeutils.{ListTypeInfo, RowTypeInfo, TypeExtra
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes, TypeInfoWrappedType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, TypeInfoWrappedDataType}
 import org.apache.flink.table.api.{TableConfigOptions, Types, ValidationException}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString, Decimal}
 import org.apache.flink.table.expressions.utils.{RichFunc1, RichFunc2, RichFunc3, SplitUDF}
@@ -342,9 +342,9 @@ class CalcITCase extends QueryTest {
     check(
       "SELECT a FROM MyTable",
       (result: Seq[Row]) => {
-        if (result.head.getField(0).asInstanceOf[BaseRow].getInt(1) == 105 &&
-            result(1).getField(0).asInstanceOf[BaseRow].getInt(1) == 11 &&
-            result(2).getField(0).asInstanceOf[BaseRow].getInt(1) == 12) {
+        if (result.head.getField(0).asInstanceOf[Row].getField(1) == 105 &&
+            result(1).getField(0).asInstanceOf[Row].getField(1) == 11 &&
+            result(2).getField(0).asInstanceOf[Row].getField(1) == 12) {
           None
         } else {
           Some("Fail: " + result)
@@ -375,9 +375,9 @@ class CalcITCase extends QueryTest {
     check(
       "SELECT toPojoFunc(pojoFunc(a)) FROM MyTable",
       (result: Seq[Row]) => {
-        if (result.head.getField(0).asInstanceOf[BaseRow].getInt(1) == 105 &&
-            result(1).getField(0).asInstanceOf[BaseRow].getInt(1) == 11 &&
-            result(2).getField(0).asInstanceOf[BaseRow].getInt(1) == 12) {
+        if (result.head.getField(0).asInstanceOf[Row].getField(1) == 105 &&
+            result(1).getField(0).asInstanceOf[Row].getField(1) == 11 &&
+            result(2).getField(0).asInstanceOf[Row].getField(1) == 12) {
           None
         } else {
           Some("Fail: " + result)
@@ -624,9 +624,9 @@ class CalcITCase extends QueryTest {
     val results = result.collect()
     results.zipWithIndex.foreach {
       case (row, i) =>
-        val baseRow = row.getField(0).asInstanceOf[BaseRow]
-        assertEquals(i, baseRow.getInt(0))
-        assertEquals(i, baseRow.getInt(1))
+        val baseRow = row.getField(0).asInstanceOf[Row]
+        assertEquals(i, baseRow.getField(0))
+        assertEquals(i, baseRow.getField(1))
         assertEquals(i.toString, row.getField(1))
     }
   }
@@ -750,11 +750,11 @@ object DateFunction extends ScalarFunction {
     DataTypes.DATE
 }
 
-// Understand type: Row wrapped as TypeInfoWrappedType.
+// Understand type: Row wrapped as TypeInfoWrappedDataType.
 object RowFunc extends ScalarFunction {
   def eval(s: String): Row = Row.of(s)
   override def getResultType(arguments: Array[AnyRef], signature: Array[Class[_]]) =
-    new TypeInfoWrappedType(new RowTypeInfo(Types.STRING))
+    new TypeInfoWrappedDataType(new RowTypeInfo(Types.STRING))
 }
 
 object RowToStrFunc extends ScalarFunction {
@@ -765,14 +765,14 @@ object RowToStrFunc extends ScalarFunction {
 object ListFunc extends ScalarFunction {
   def eval(s: String): java.util.List[String] = util.Arrays.asList(s)
   override def getResultType(arguments: Array[AnyRef], signature: Array[Class[_]]) =
-    new TypeInfoWrappedType(new ListTypeInfo(Types.STRING))
+    new TypeInfoWrappedDataType(new ListTypeInfo(Types.STRING))
 }
 
-// internal but wrapped as TypeInfoWrappedType.
+// internal but wrapped as TypeInfoWrappedDataType.
 object StringFunc extends ScalarFunction {
   def eval(s: String): String = s
   override def getResultType(arguments: Array[AnyRef], signature: Array[Class[_]]) =
-    new TypeInfoWrappedType(Types.STRING)
+    new TypeInfoWrappedDataType(Types.STRING)
 }
 
 class MyPojo() {

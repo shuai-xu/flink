@@ -25,7 +25,7 @@ import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
+import org.apache.flink.table.api.types.{BaseRowType, DataType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks.{BatchTableSink, TableSinkBase}
 
@@ -52,7 +52,7 @@ class ParquetTableSink(
   }
 
   override def getOutputType: DataType =
-    new BaseRowType(classOf[BaseRow], getFieldTypes.map(DataTypes.internal): _*)
+    new BaseRowType(classOf[BaseRow], getFieldTypes, true)
 
   /** Emits the BoundedStream. */
   override def emitBoundedStream(boundedStream: DataStream[BaseRow],
@@ -77,7 +77,7 @@ class ParquetTableSink(
         TableConfigOptions.SQL_PARQUET_SINK_DICTIONARY_ENABLED)
 
     boundedStream.writeUsingOutputFormat(new RowParquetOutputFormat(
-      dir, getFieldTypes.map(DataTypes.internal), getFieldNames, compression,
+      dir, getFieldTypes.map(_.toInternalType), getFieldNames, compression,
       blockSize, enableDictionary)).name("parquet sink: " + dir)
   }
 }

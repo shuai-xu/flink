@@ -90,7 +90,7 @@ public class JDBCAppendTableSink implements AppendStreamTableSink<Row>, BatchTab
 		String sinkSchema =
 			String.join(", ", IntStream.of(types).mapToObj(JDBCTypeUtil::getTypeName).collect(Collectors.toList()));
 		String tableSchema =
-			String.join(", ", Stream.of(fieldTypes).map(DataTypes::internal)
+			String.join(", ", Stream.of(fieldTypes).map(DataType::toInternalType)
 					.map(JDBCTypeUtil::getTypeName).collect(Collectors.toList()));
 		String msg = String.format("Schema of output table is incompatible with JDBCAppendTableSink schema. " +
 			"Table schema: [%s], sink schema: [%s]", tableSchema, sinkSchema);
@@ -98,7 +98,7 @@ public class JDBCAppendTableSink implements AppendStreamTableSink<Row>, BatchTab
 		Preconditions.checkArgument(fieldTypes.length == types.length, msg);
 		for (int i = 0; i < types.length; ++i) {
 			Preconditions.checkArgument(
-				JDBCTypeUtil.typeInformationToSqlType(DataTypes.internal(fieldTypes[i])) == types[i],
+				JDBCTypeUtil.typeInformationToSqlType(fieldTypes[i].toInternalType()) == types[i],
 				msg);
 		}
 

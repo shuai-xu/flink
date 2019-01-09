@@ -18,10 +18,9 @@
 package org.apache.flink.table.runtime.functions.aggfunctions
 
 import java.lang.{Boolean => JBoolean, Byte => JByte, Double => JDouble, Float => JFloat, Integer => JInt, Iterable => JIterable, Long => JLong, Short => JShort}
-
 import org.apache.flink.table.api.dataview.{MapView, Order, SortedMapView}
 import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, InternalType}
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.dataformat.{BinaryString, Decimal, GenericRow}
 import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, DecimalTypeInfo}
 
@@ -244,14 +243,14 @@ abstract class MinWithRetractAggFunction[T](implicit ord: Ordering[T])
   }
 
   override def getAccumulatorType: DataType = {
-    val fieldTypes: Array[InternalType] = Array(
+    val fieldTypes: Array[DataType] = Array(
       getInternalValueType,
       // it will be replaced to SortedMapViewType
       DataTypes.createGenericType(classOf[SortedMapView[_, _]]),
       // it will be replaced to MapViewType
       DataTypes.createGenericType(classOf[MapView[_, _]]))
     val fieldNames = Array("min", "map", "retractMap")
-    DataTypes.createBaseRowType(classOf[GenericRow], fieldTypes, fieldNames)
+    new BaseRowType(classOf[GenericRow], fieldTypes, fieldNames, true)
   }
 }
 

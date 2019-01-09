@@ -116,13 +116,15 @@ class TableEnvironmentTest extends TableTestBase {
       CatalogManager.DEFAULT_CATALOG_NAME, CatalogManager.DEFAULT_DATABASE_NAME, "t1").getSchema
 
     assert(tableSchema.getColumnNames.sameElements(Array("a", "b")))
-    assert(TableSchemaUtil.toRowType(tableSchema) == DataTypes.of(CatalogTestUtil.getRowTypeInfo))
+    assert(TableSchemaUtil.toRowType(tableSchema) ==
+        DataTypes.internal(CatalogTestUtil.getRowTypeInfo))
 
     // test table inference
     tableSchema = tEnv.scan("t1").getSchema
 
     assert(tableSchema.getColumnNames.sameElements(Array("a", "b")))
-    assert(TableSchemaUtil.toRowType(tableSchema) == DataTypes.of(CatalogTestUtil.getRowTypeInfo))
+    assert(TableSchemaUtil.toRowType(tableSchema) ==
+        DataTypes.internal(CatalogTestUtil.getRowTypeInfo))
   }
 
   @Test(expected = classOf[TableException])

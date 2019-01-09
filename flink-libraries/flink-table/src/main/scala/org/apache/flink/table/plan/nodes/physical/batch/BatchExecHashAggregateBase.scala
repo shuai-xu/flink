@@ -19,7 +19,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.BaseRowType
+import org.apache.flink.table.api.types.{BaseRowType, DataType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.BatchExecHashAggregateCodeGen
@@ -64,7 +64,7 @@ abstract class BatchExecHashAggregateBase(
   with BatchExecHashAggregateCodeGen {
 
   lazy val aggBufferRowType: BaseRowType = new BaseRowType(
-    classOf[BinaryRow], aggBufferTypes.flatten, aggBufferNames.flatten)
+    classOf[BinaryRow], aggBufferTypes.flatten.toArray[DataType], aggBufferNames.flatten)
 
   override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
     val numOfGroupKey = grouping.length

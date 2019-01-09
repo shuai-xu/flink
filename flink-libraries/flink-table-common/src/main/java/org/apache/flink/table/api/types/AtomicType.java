@@ -21,7 +21,7 @@ package org.apache.flink.table.api.types;
 /**
  * Atomic Type.
  */
-public abstract class AtomicType implements InternalType {
+public abstract class AtomicType extends InternalType {
 
 	@Override
 	public boolean equals(Object o) {

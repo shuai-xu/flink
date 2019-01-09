@@ -792,7 +792,7 @@ case class LogicalTableFunctionCall(
     // check if class could be instantiated
     checkForInstantiation(tableFunction.getClass)
     // look for a signature that matches the input types
-    val signature = node.parameters.map(_.resultType).map(DataTypes.internal)
+    val signature = node.parameters.map(_.resultType)
     val foundMethod = getEvalUserDefinedMethod(tableFunction, signature)
     if (foundMethod.isEmpty) {
       failValidation(
@@ -825,7 +825,7 @@ case class LogicalTableFunctionCall(
       function.getElementType(null),
       UserDefinedFunctionUtils.buildRelDataType(
         relBuilder.getTypeFactory,
-        DataTypes.internal(externalResultType),
+        externalResultType.toInternalType,
         if (fieldNames.isEmpty) generatedNames else fieldNames,
         fieldIndexes),
       null)

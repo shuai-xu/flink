@@ -20,7 +20,6 @@ package org.apache.flink.table.codegen.expr
 
 import java.sql.{Date, Time, Timestamp}
 
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.table.api.functions.DeclarativeAggregateFunction
 import org.apache.flink.table.api.types._
 import org.apache.flink.table.expressions._
@@ -53,7 +52,7 @@ abstract class RankLikeFunction(orderKeyType: Array[InternalType])
         EqualTo(lastVal.apply(idx), operands(idx)))}.reduceOption(And).getOrElse(Literal(true))
 
   protected def generateInitLiteral(orderType: InternalType): Literal = {
-    Literal(DataTypes.internal(orderType) match {
+    Literal(orderType match {
         case DataTypes.BOOLEAN => false
         case DataTypes.BYTE => 0.toByte
         case DataTypes.SHORT => 0.toShort
@@ -61,8 +60,6 @@ abstract class RankLikeFunction(orderKeyType: Array[InternalType])
         case DataTypes.LONG => 0L
         case DataTypes.FLOAT => 0.toFloat
         case DataTypes.DOUBLE => 0.toDouble
-        case et: TypeInfoWrappedType if et.getTypeInfo == BasicTypeInfo.BIG_INT_TYPE_INFO =>
-          java.math.BigInteger.ZERO
         case _: DecimalType => java.math.BigDecimal.ZERO
         case DataTypes.STRING => ""
         case DataTypes.DATE => new Date(0)

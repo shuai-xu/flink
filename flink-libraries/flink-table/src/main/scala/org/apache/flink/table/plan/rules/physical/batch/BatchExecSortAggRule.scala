@@ -61,7 +61,7 @@ class BatchExecSortAggRule
     if (isTwoPhaseAggWorkable(aggregates, call)) {
       val localAggRelType = inferLocalAggType(
         input.getRowType, agg, groupSet, auxGroupSet, aggregates,
-        aggBufferTypes.map(_.map(DataTypes.internal)))
+        aggBufferTypes.map(_.map(_.toInternalType)))
       //localSortAgg
       var localRequiredTraitSet = input.getTraitSet.replace(FlinkConventions.BATCHEXEC)
       if (agg.getGroupCount != 0) {

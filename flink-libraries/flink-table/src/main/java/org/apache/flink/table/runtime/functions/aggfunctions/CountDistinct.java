@@ -20,6 +20,7 @@ package org.apache.flink.table.runtime.functions.aggfunctions;
 
 import org.apache.flink.table.api.dataview.MapView;
 import org.apache.flink.table.api.functions.AggregateFunction;
+import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
@@ -165,7 +166,7 @@ public class CountDistinct {
 				DataTypes.createGenericType(MapView.class),
 			};
 			String[] fieldNames = new String[]{"count", "map"};
-			return DataTypes.createBaseRowType(GenericRow.class, fieldTypes, fieldNames);
+			return new BaseRowType(GenericRow.class, fieldTypes, fieldNames, true);
 		}
 	}
 

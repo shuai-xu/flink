@@ -213,7 +213,7 @@ trait BatchExecAggregateCodeGen {
         val resultTerm = genToInternal(ctx, resultType,
           s"${udaggs(agg)}.getValue(${genToExternal(ctx, accType, aggBufferNames(aggIndex)(0))})")
         val nullTerm = s"${aggBufferNames(aggIndex)(0)}IsNull"
-        GeneratedExpression(resultTerm, nullTerm, "", DataTypes.internal(resultType))
+        GeneratedExpression(resultTerm, nullTerm, "", resultType.toInternalType)
     }
 
     auxGroupingExprs ++ aggExprs
@@ -247,7 +247,7 @@ trait BatchExecAggregateCodeGen {
       }
     }.map { idx =>
       CodeGenUtils.generateFieldAccess(
-        ctx, DataTypes.internal(inputType), inputTerm, idx, nullCheck = true)
+        ctx, inputType.toInternalType, inputTerm, idx, nullCheck = true)
     }
 
     val initAggCallBufferExprs = aggregates.flatMap {
@@ -265,7 +265,7 @@ trait BatchExecAggregateCodeGen {
         val nullTerm = "false"
         val resultType = getAccumulatorTypeOfAggregateFunction(agg)
         GeneratedExpression(
-          genToInternal(ctx, resultType, resultTerm), nullTerm, "", DataTypes.internal(resultType))
+          genToInternal(ctx, resultType, resultTerm), nullTerm, "", resultType.toInternalType)
     }
 
     val initAggBufferExprs = initAuxGroupingExprs ++ initAggCallBufferExprs
@@ -306,7 +306,7 @@ trait BatchExecAggregateCodeGen {
       aggBufferTypes: Array[Array[InternalType]],
       aggBufferExprs: Seq[GeneratedExpression]): String = {
     val exprCodegen = new ExprCodeGenerator(ctx, false, config.getNullCheck)
-        .bindInput(DataTypes.internal(inputType), inputTerm = inputTerm)
+        .bindInput(inputType.toInternalType, inputTerm = inputTerm)
 
     // flat map to get flat agg buffers.
     aggCallToAggFunction.zipWithIndex.flatMap {
@@ -396,7 +396,7 @@ trait BatchExecAggregateCodeGen {
       aggBufferExprs: Seq[GeneratedExpression]): String = {
 
     val exprCodegen = new ExprCodeGenerator(ctx, false, config.getNullCheck)
-        .bindInput(DataTypes.internal(inputType), inputTerm = inputTerm)
+        .bindInput(inputType.toInternalType, inputTerm = inputTerm)
 
     // flat map to get flat agg buffers.
     aggregates.zipWithIndex.flatMap {

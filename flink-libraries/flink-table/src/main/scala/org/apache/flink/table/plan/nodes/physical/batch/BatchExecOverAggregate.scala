@@ -269,9 +269,10 @@ class BatchExecOverAggregate(
     val collation = grouping.map(_ => (true, false))
     val inputRowType = FlinkTypeFactory.toInternalBaseRowType(inputRelDataType, classOf[BaseRow])
     val (comparators, serializers) = TypeUtils.flattenComparatorAndSerializer(
-      inputRowType.getArity, grouping, collation.map(_._1), inputRowType.getFieldTypes)
+      inputRowType.getArity, grouping, collation.map(_._1),
+      inputRowType.getFieldTypes.map(_.toInternalType))
     val sortCodeGen = new SortCodeGenerator(
-      grouping, grouping.map(inputRowType.getTypeAt), comparators,
+      grouping, grouping.map(inputRowType.getInternalTypeAt).map(_.toInternalType), comparators,
       collation.map(_._1), collation.map(_._2))
     val generatorSort = GeneratedSorter(
       null,
@@ -373,7 +374,7 @@ class BatchExecOverAggregate(
                 aggCall.getArgList.get(1) - OverAggregateUtil.calcOriginInputRows(logicWindow)
               if (constantIndex < 0) {
                 val rowIndex = aggCall.getArgList.get(1)
-                val func = inType.getTypeAt(rowIndex) match {
+                val func = inType.getInternalTypeAt(rowIndex) match {
                   case _: LongType => (value: BaseRow) => value.getLong(rowIndex) * flag
                   case _: IntType => (value: BaseRow) => value.getInt(rowIndex).toLong * flag
                   case _: ShortType => (value: BaseRow) => value.getShort(rowIndex).toLong * flag
@@ -489,13 +490,13 @@ class BatchExecOverAggregate(
       val sortKey = orderKeyIdxs(0)
       new RangeBoundComparatorCodeGenerator(
         relBuilder, config, inType, bound, sortKey,
-        DataTypes.internal(inType.getTypeAt(sortKey)),
+        inType.getInternalTypeAt(sortKey).toInternalType,
         orders(0), isLowerBound).generateBoundComparator(newName("RangeBoundComparator"))
     } else {
       //if the bound is current row, then window support comparing based on multi fields.
       new MultiFieldRangeBoundComparatorCodeGenerator(
         inType, orderKeyIdxs,
-        orderKeyIdxs.map(inType.getTypeAt).map(DataTypes.internal),
+        orderKeyIdxs.map(inType.getInternalTypeAt).map(_.toInternalType),
         orders, nullIsLasts, isLowerBound).generateBoundComparator(
         newName("MultiFieldRangeBoundComparator"))
     }

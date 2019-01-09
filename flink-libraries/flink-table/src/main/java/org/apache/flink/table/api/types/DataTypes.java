@@ -22,7 +22,6 @@ import org.apache.flink.api.java.typeutils.MapTypeInfo;
 import org.apache.flink.api.java.typeutils.ObjectArrayTypeInfo;
 import org.apache.flink.api.java.typeutils.PojoField;
 import org.apache.flink.api.java.typeutils.PojoTypeInfo;
-import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.api.java.typeutils.TupleTypeInfo;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.table.typeutils.TypeUtils;
@@ -151,7 +150,7 @@ public class DataTypes {
 	}
 
 	public static DataType of(TypeInformation typeInfo) {
-		return new TypeInfoWrappedType(typeInfo);
+		return new TypeInfoWrappedDataType(typeInfo);
 	}
 
 	public static TypeInformation to(DataType type) {
@@ -163,24 +162,6 @@ public class DataTypes {
 			return null;
 		}
 		return TypeUtils.internalTypeFromTypeInfo(typeInfo);
-	}
-
-	public static InternalType internal(DataType type) {
-		if (type == null) {
-			return null;
-		} else if (type instanceof InternalType) {
-			return (InternalType) type;
-		} else {
-			return ((ExternalType) type).toInternalType();
-		}
-	}
-
-	public static TypeInformation internalTypeInfo(TypeInformation typeInfo) {
-		return to(TypeUtils.internalTypeFromTypeInfo(typeInfo));
-	}
-
-	public static TypeInformation internalTypeInfo(DataType t) {
-		return to(internal(t));
 	}
 
 	public static TypeInformation toTypeInfo(DataType t) {
@@ -223,21 +204,16 @@ public class DataTypes {
 		return new BaseRowType(types, fieldNames);
 	}
 
-	public static BaseRowType createBaseRowType(
-			Class<?> typeClass, InternalType[] types, String[] fieldNames) {
-		return new BaseRowType(typeClass, types, fieldNames);
-	}
-
 	public static DataType createRowType(DataType[] types, String[] fieldNames) {
-		return new TypeInfoWrappedType(new RowTypeInfo(typeInfos(types), fieldNames));
+		return new BaseRowType(types, fieldNames);
 	}
 
 	public static DataType createRowType(InternalType[] types, String[] fieldNames) {
-		return new TypeInfoWrappedType(new RowTypeInfo(typeInfos(types), fieldNames));
+		return new BaseRowType(types, fieldNames);
 	}
 
 	public static DataType createRowType(DataType... types) {
-		return new TypeInfoWrappedType(new RowTypeInfo(typeInfos(types)));
+		return new BaseRowType(types);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -274,15 +250,19 @@ public class DataTypes {
 			return this;
 		}
 
-		public TypeInfoWrappedType build() {
+		public TypeInfoWrappedDataType build() {
 			PojoTypeInfo<T> typeInfo = new PojoTypeInfo<T>(typeClass, fields);
-			return new TypeInfoWrappedType(typeInfo);
+			return new TypeInfoWrappedDataType(typeInfo);
 		}
 	}
 
 	private static TypeInformation[] typeInfos(DataType... types) {
 		return Arrays.stream(types).<TypeInformation>map(TypeUtils::createTypeInfoFromDataType)
 				.toArray(TypeInformation[]::new);
+	}
+
+	public static int getArity(DataType t) {
+		return getArity(t.toInternalType());
 	}
 
 	public static int getArity(InternalType t) {

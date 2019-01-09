@@ -28,4 +28,9 @@ import java.io.Serializable;
  * but users prefer to use Java's data structures.
  */
 public interface DataType extends Serializable {
+
+	/**
+	 * Underlying storage type.
+	 */
+	InternalType toInternalType();
 }

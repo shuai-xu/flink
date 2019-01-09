@@ -340,8 +340,8 @@ object TemporalJoinCodeGenerator {
   : GeneratedCollector = {
 
     val className = newName(name)
-    val input1TypeClass = boxedTypeTermForType(DataTypes.internal(inputType))
-    val input2TypeClass = boxedTypeTermForType(DataTypes.internal(collectedType))
+    val input1TypeClass = boxedTypeTermForType(inputType)
+    val input2TypeClass = boxedTypeTermForType(collectedType)
 
     val unboxingCodeSplit = generateSplitFunctionCalls(
       ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
@@ -451,7 +451,8 @@ object TemporalJoinCodeGenerator {
   class RowToBaseRowCollector(rowTypeInfo: RowTypeInfo)
     extends TableFunctionCollector[Row] with Serializable {
 
-    private val converter = RowConverter(rowTypeInfo)
+    private val converter =
+      RowConverter(DataTypes.internal(rowTypeInfo).asInstanceOf[BaseRowType])
 
     override def collect(record: Row): Unit = {
       super.collect(record)
@@ -470,7 +471,8 @@ object TemporalJoinCodeGenerator {
   class RowToBaseRowResultFuture(rowTypeInfo: RowTypeInfo)
     extends ResultFuture[Row] with Serializable {
 
-    private val converter = RowConverter(rowTypeInfo)
+    private val converter =
+      RowConverter(DataTypes.internal(rowTypeInfo).asInstanceOf[BaseRowType])
     private var future: ResultFuture[BaseRow] = _
 
     def setFuture(future: ResultFuture[BaseRow]): Unit = {

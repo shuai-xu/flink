@@ -47,7 +47,7 @@ abstract class Sink(
 
   override def deriveRowType(): RelDataType = {
     val typeFactory = getCluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
-    val internalTypeOfSink = DataTypes.internal(sink.getOutputType)
+    val internalTypeOfSink = sink.getOutputType.toInternalType
     typeFactory.createTypeFromInternalType(internalTypeOfSink, isNullable = true)
   }
 

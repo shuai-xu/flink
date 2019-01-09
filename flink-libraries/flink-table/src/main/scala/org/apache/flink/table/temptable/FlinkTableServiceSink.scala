@@ -73,8 +73,7 @@ class FlinkTableServiceSink(
 
   override def getFieldNames: Array[String] = resultType.getFieldNames
 
-  override def getFieldTypes: Array[DataType] =
-    resultType.getFieldTypes.asInstanceOf[Array[DataType]]
+  override def getFieldTypes: Array[DataType] = resultType.getFieldTypes
 }
 
 /**

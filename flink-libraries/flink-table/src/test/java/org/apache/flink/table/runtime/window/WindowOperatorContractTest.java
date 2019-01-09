@@ -197,7 +197,7 @@ public class WindowOperatorContractTest {
 			assigner,
 			trigger,
 			assigner.getWindowSerializer(new ExecutionConfig()),
-			inputT.getFieldTypes(),
+			inputT.getFieldInternalTypes(),
 			outputTypeWithoutKeys,
 			accTypes,
 			windowTypes,

@@ -78,7 +78,7 @@ class DeclarativeAggCodeGen(
     val aggBufferAccesses = function.aggBufferAttributes.zipWithIndex
       .map { case (attr, index) =>
         ResolvedAggInputReference(
-          attr.name, bufferIndexes(index), DataTypes.internal(bufferTypes(index)))
+          attr.name, bufferIndexes(index), bufferTypes(index).toInternalType)
       }
       .map(expr => generator.generateExpression(expr.toRexNode(relBuilder)))
 
@@ -117,7 +117,7 @@ class DeclarativeAggCodeGen(
   def getAccumulator(generator: ExprCodeGenerator): Seq[GeneratedExpression] = {
     bufferTypes.zipWithIndex.map { case (bufferType, index) =>
       GeneratedExpression(
-        bufferTerms(index), bufferNullTerms(index), "", DataTypes.internal(bufferType))
+        bufferTerms(index), bufferNullTerms(index), "", bufferType.toInternalType)
     }
   }
 
@@ -234,7 +234,7 @@ class DeclarativeAggCodeGen(
         ResolvedAggInputReference(
           input.name,
           mergedAccOffset + bufferIndexes(localIndex),
-          DataTypes.internal(bufferTypes(localIndex)))
+          bufferTypes(localIndex).toInternalType)
       } else {
         val localIndex = function.operands.indexOf(input)
         val inputIndex = argIndexes(localIndex)
@@ -267,7 +267,7 @@ class DeclarativeAggCodeGen(
       val name = bufferTerms(localIndex)
       val nullTerm = bufferNullTerms(localIndex)
       // buffer access is reused as member variable
-      ResolvedAggLocalReference(name, nullTerm, DataTypes.internal(bufferTypes(localIndex)))
+      ResolvedAggLocalReference(name, nullTerm, bufferTypes(localIndex).toInternalType)
   }
 
   def checkNeededMethods(

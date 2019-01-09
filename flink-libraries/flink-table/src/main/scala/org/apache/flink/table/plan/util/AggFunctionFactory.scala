@@ -129,7 +129,7 @@ class AggFunctionFactory(
   }
 
   private def createAvgAggFunction(argTypes: Array[DataType]): UserDefinedFunction = {
-    DataTypes.internal(argTypes(0)) match {
+    argTypes(0).toInternalType match {
       case BYTE | SHORT | INT | LONG =>
         new org.apache.flink.table.codegen.expr.IntegralAvgAggFunction
       case FLOAT | DOUBLE =>
@@ -144,7 +144,7 @@ class AggFunctionFactory(
 
   private def createSumAggFunction(argTypes: Array[DataType], index: Int): UserDefinedFunction = {
     if (needRetraction(index)) {
-      DataTypes.internal(argTypes(0)) match {
+      argTypes(0).toInternalType match {
         case BYTE =>
           new org.apache.flink.table.codegen.expr.ByteSumWithRetractAggFunction
         case SHORT =>
@@ -164,7 +164,7 @@ class AggFunctionFactory(
             TableErrors.INST.sqlAggFunctionDataTypeNotSupported("Sum", t.toString))
       }
     } else {
-      DataTypes.internal(argTypes(0)) match {
+      argTypes(0).toInternalType match {
         case BYTE =>
           new org.apache.flink.table.codegen.expr.ByteSumAggFunction
         case SHORT =>
@@ -187,7 +187,7 @@ class AggFunctionFactory(
   }
 
   private def createSum0AggFunction(argTypes: Array[DataType]): UserDefinedFunction = {
-    DataTypes.internal(argTypes(0)) match {
+    argTypes(0).toInternalType match {
       case BYTE =>
         new org.apache.flink.table.codegen.expr.ByteSum0AggFunction
       case SHORT =>
@@ -210,7 +210,7 @@ class AggFunctionFactory(
 
   private def createMinAggFunction(argTypes: Array[DataType], index: Int): UserDefinedFunction = {
     if (needRetraction(index)) {
-      DataTypes.internal(argTypes(0)) match {
+      argTypes(0).toInternalType match {
         case BYTE =>
           new ByteMinWithRetractAggFunction
         case SHORT =>
@@ -234,7 +234,7 @@ class AggFunctionFactory(
             TableErrors.INST.sqlAggFunctionDataTypeNotSupported("Min with retract", t.toString))
       }
     } else {
-      DataTypes.internal(argTypes(0)) match {
+      argTypes(0).toInternalType match {
         case BYTE =>
           new org.apache.flink.table.codegen.expr.ByteMinAggFunction
         case SHORT =>
@@ -268,7 +268,7 @@ class AggFunctionFactory(
 
   private def createLeadLagAggFunction(
       argTypes: Array[DataType], index: Int): UserDefinedFunction = {
-      DataTypes.internal(argTypes(0)) match {
+      argTypes(0).toInternalType match {
       case BYTE =>
         new org.apache.flink.table.codegen.expr.ByteLeadLagAggFunction(argTypes.length)
       case SHORT =>
@@ -301,7 +301,7 @@ class AggFunctionFactory(
 
   private def createMaxAggFunction(argTypes: Array[DataType], index: Int): UserDefinedFunction = {
     if (needRetraction(index)) {
-      DataTypes.internal(argTypes(0)) match {
+      argTypes(0).toInternalType match {
         case BYTE =>
           new ByteMaxWithRetractAggFunction
         case SHORT =>
@@ -325,7 +325,7 @@ class AggFunctionFactory(
             TableErrors.INST.sqlAggFunctionDataTypeNotSupported("Max with retract", t.toString))
       }
     } else {
-      DataTypes.internal(argTypes(0)) match {
+      argTypes(0).toInternalType match {
         case BYTE =>
           new org.apache.flink.table.codegen.expr.ByteMaxAggFunction
         case SHORT =>
@@ -358,7 +358,7 @@ class AggFunctionFactory(
   }
 
   private def createCountDistinctAggFunction(argTypes: Array[DataType]): UserDefinedFunction = {
-    DataTypes.internal(argTypes(0)) match {
+    argTypes(0).toInternalType match {
       case BYTE =>
         new ByteCountDistinctAggFunction
       case SHORT =>
@@ -391,7 +391,7 @@ class AggFunctionFactory(
 
   private def createApproximateCountDistinctAggFunction(argTypes: Array[DataType]):
   UserDefinedFunction = {
-    DataTypes.internal(argTypes(0)) match {
+    argTypes(0).toInternalType match {
       case BYTE =>
         new ByteApproximateCountDistinctAggFunction
       case SHORT =>
@@ -452,7 +452,7 @@ class AggFunctionFactory(
   private def createMax2ndAggFunction(argTypes: Array[DataType], index: Int):
   UserDefinedFunction = {
     if (needRetraction(index)) {
-      DataTypes.internal(argTypes(0)) match {
+      argTypes(0).toInternalType match {
         case BYTE =>
           new ByteMax2ndWithRetractAggFunction
         case SHORT =>
@@ -476,7 +476,7 @@ class AggFunctionFactory(
             TableErrors.INST.sqlAggFunctionDataTypeNotSupported("Max2nd with retract", t.toString))
       }
     } else {
-      DataTypes.internal(argTypes(0)) match {
+      argTypes(0).toInternalType match {
         case BYTE =>
           new ByteMax2ndAggFunction
         case SHORT =>
@@ -503,7 +503,7 @@ class AggFunctionFactory(
   }
 
   private def createSingleValueAggFunction(argTypes: Array[DataType]): UserDefinedFunction = {
-    DataTypes.internal(argTypes(0)) match {
+    argTypes(0).toInternalType match {
       case BYTE =>
         new org.apache.flink.table.codegen.expr.ByteSingleValueAggFunction
       case SHORT =>
@@ -537,7 +537,7 @@ class AggFunctionFactory(
   private def createFirstValueAggFunction(argTypes: Array[DataType], index: Int):
   UserDefinedFunction = {
     if (needRetraction(index)) {
-      DataTypes.internal(argTypes(0)) match {
+      argTypes(0).toInternalType match {
         case BYTE =>
           new ByteFirstValueWithRetractAggFunction
         case SHORT =>
@@ -561,7 +561,7 @@ class AggFunctionFactory(
             TableErrors.INST.sqlAggFunctionDataTypeNotSupported("FIRST_VALUE", t.toString))
       }
     } else {
-      DataTypes.internal(argTypes(0)) match {
+      argTypes(0).toInternalType match {
         case BYTE =>
           new ByteFirstValueAggFunction
         case SHORT =>
@@ -590,7 +590,7 @@ class AggFunctionFactory(
   private def createLastValueAggFunction(argTypes: Array[DataType], index: Int):
   UserDefinedFunction = {
     if (needRetraction(index)) {
-      DataTypes.internal(argTypes(0)) match {
+      argTypes(0).toInternalType match {
         case BYTE =>
           new ByteLastValueWithRetractAggFunction
         case SHORT =>
@@ -614,7 +614,7 @@ class AggFunctionFactory(
             TableErrors.INST.sqlAggFunctionDataTypeNotSupported("LAST_VALUE", t.toString))
       }
     } else {
-      DataTypes.internal(argTypes(0)) match {
+      argTypes(0).toInternalType match {
         case BYTE =>
           new ByteLastValueAggFunction
         case SHORT =>
@@ -663,7 +663,7 @@ class AggFunctionFactory(
   }
 
   private def createCollectAggFunction(argTypes: Array[DataType]): UserDefinedFunction = {
-    DataTypes.internal(argTypes(0)) match {
+    argTypes(0).toInternalType match {
       case STRING =>
         new CollectAggFunction(DataTypes.of(BinaryStringTypeInfo.INSTANCE))
       case d: DecimalType =>

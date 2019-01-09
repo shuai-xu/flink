@@ -21,7 +21,7 @@ package org.apache.flink.table.expressions
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.UnresolvedException
-import org.apache.flink.table.api.types.{BaseRowType, InternalType}
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
 import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
 
@@ -79,7 +79,7 @@ case class GetCompositeField(child: Expression, key: Any) extends UnaryExpressio
   }
 
   override private[flink] def resultType: InternalType =
-    child.resultType.asInstanceOf[BaseRowType].getTypeAt(fieldIndex.get)
+    child.resultType.asInstanceOf[BaseRowType].getInternalTypeAt(fieldIndex.get)
 
   override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
     relBuilder

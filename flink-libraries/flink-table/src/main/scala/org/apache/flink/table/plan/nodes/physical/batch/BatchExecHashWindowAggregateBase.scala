@@ -22,7 +22,7 @@ import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.runtime.operators.sort.QuickSort
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.api.window.TimeWindow
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, Types}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
@@ -86,7 +86,7 @@ abstract class BatchExecHashWindowAggregateBase(
   with BatchExecHashAggregateCodeGen {
 
   lazy val aggBufferRowType: BaseRowType = new BaseRowType(
-    classOf[BinaryRow], aggBufferTypes.flatten, aggBufferNames.flatten)
+    classOf[BinaryRow], aggBufferTypes.flatten.toArray[DataType], aggBufferNames.flatten)
 
   lazy val aggMapKeyRowType: BaseRowType = new BaseRowType(
     classOf[BinaryRow],
@@ -316,7 +316,7 @@ abstract class BatchExecHashWindowAggregateBase(
       currentKeyTerm: String,
       currentKeyWriterTerm: String): GeneratedExpression = {
     val codeGen = new ExprCodeGenerator(ctx, false, nullCheck = true)
-        .bindInput(DataTypes.internal(inputType), inputTerm = inputTerm)
+        .bindInput(inputType, inputTerm = inputTerm)
     val expr = if (assignedTimestampExpr.isDefined) {
       val assignedLongTimestamp = assignedTimestampExpr.get
       if (timestampIsDate) {
@@ -343,8 +343,8 @@ abstract class BatchExecHashWindowAggregateBase(
     codeGen.generateResultExpression(
       grouping.map(
         idx => generateFieldAccess(
-          ctx, DataTypes.internal(inputType), inputTerm, idx, nullCheck = true)) :+ expr,
-      DataTypes.internal(currentKeyType).asInstanceOf[BaseRowType],
+          ctx, inputType, inputTerm, idx, nullCheck = true)) :+ expr,
+      currentKeyType.asInstanceOf[BaseRowType],
       outRow = currentKeyTerm,
       outRowWriter = Some(currentKeyWriterTerm))
   }
@@ -460,13 +460,13 @@ abstract class BatchExecHashWindowAggregateBase(
     // TODO refine this. Is it possible to reuse grouping key projection?
     val accessKeyExprs = for (idx <- 0 until aggMapKeyType.getArity - 1) yield
       CodeGenUtils.generateFieldAccess(
-        ctx, DataTypes.internal(aggMapKeyType), reuseAggMapKeyTerm, idx, nullCheck = true)
+        ctx, aggMapKeyType, reuseAggMapKeyTerm, idx, nullCheck = true)
     val accessTimestampExpr = CodeGenUtils.generateFieldAccess(
-      ctx, DataTypes.internal(aggMapKeyType),
+      ctx, aggMapKeyType,
       reuseAggMapKeyTerm, aggMapKeyType.getArity - 1, nullCheck = false)
     val accessValExprs = for (idx <- 0 until aggBufferType.getArity) yield
       CodeGenUtils.generateFieldAccess(
-        ctx, DataTypes.internal(aggBufferType), reuseAggBufferTerm, idx, nullCheck = true)
+        ctx, aggBufferType, reuseAggBufferTerm, idx, nullCheck = true)
     val accessExprs = (accessKeyExprs :+ GeneratedExpression(
       accessTimestampExpr.resultTerm,
       "false",
@@ -475,7 +475,7 @@ abstract class BatchExecHashWindowAggregateBase(
       literal = true)) ++ accessValExprs
     val buildWindowsGroupingElementExpr = exprCodegen.generateResultExpression(
       accessExprs,
-      DataTypes.internal(windowElementType).asInstanceOf[BaseRowType],
+      windowElementType,
       outRow = bufferWindowElementTerm,
       outRowWriter = Some(bufferWindowElementWriterTerm))
 
@@ -572,7 +572,7 @@ abstract class BatchExecHashWindowAggregateBase(
       argsMapping: Array[Array[(Int, InternalType)]],
       aggBuffMapping: Array[Array[(Int, InternalType)]]): String = {
     val outputTerm = "hashAggOutput"
-    ctx.addOutputRecord(DataTypes.internal(outputType), outputTerm)
+    ctx.addOutputRecord(outputType, outputTerm)
     val (reuseAggMapEntryTerm, reuseAggMapKeyTerm, reuseAggBufferTerm) =
       prepareTermForAggMapIteration(
         ctx, outputTerm, outputType, aggMapKeyRowType, aggBufferRowType)
@@ -623,7 +623,7 @@ abstract class BatchExecHashWindowAggregateBase(
            |${winResExpr.code}
          """.stripMargin
       new GeneratedExpression(
-        winResExpr.resultTerm, "false", output, DataTypes.internal(outputType))
+        winResExpr.resultTerm, "false", output, outputType)
     } else {
       genHashAggOutputExpr(isMerge, isFinal, ctx, config, builder, inputRelDataType, auxGrouping,
         aggregates, argsMapping, aggBuffMapping, outputTerm, outputType, inputTerm, inputType,

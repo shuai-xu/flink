@@ -19,7 +19,6 @@
 package org.apache.flink.table.plan.schema
 
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sinks.TableSink
@@ -34,7 +33,7 @@ class TableSinkTable[T](
     val flinkTypeFactory = typeFactory.asInstanceOf[FlinkTypeFactory]
     flinkTypeFactory.buildRelDataType(
       tableSink.getFieldNames,
-      tableSink.getFieldTypes.map(DataTypes.internal))
+      tableSink.getFieldTypes.map(_.toInternalType))
   }
 
   /**

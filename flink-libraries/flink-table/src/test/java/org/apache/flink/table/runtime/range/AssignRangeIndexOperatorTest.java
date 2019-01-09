@@ -79,7 +79,7 @@ public class AssignRangeIndexOperatorTest {
 				TypeUtils.flattenComparatorAndSerializer(
 						typeInfo.getArity(), keys, orders, typeInfo.getFieldTypes());
 		AssignRangeIndexOperator sampleAndHistogramOperator = new AssignRangeIndexOperator(
-				new KeyExtractor(keys, orders, type.getFieldTypes(), tuple2._1));
+				new KeyExtractor(keys, orders, type.getFieldInternalTypes(), tuple2._1));
 
 		TypeInformation<Object[][]> rangesTypeInfo = TypeExtractor.getForClass(Object[][].class);
 		TupleTypeInfo<Tuple2<Integer, BinaryRow>> outTypeInfo = new TupleTypeInfo(BasicTypeInfo.INT_TYPE_INFO, typeInfo);

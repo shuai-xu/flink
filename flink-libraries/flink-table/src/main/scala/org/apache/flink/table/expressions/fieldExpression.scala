@@ -140,7 +140,7 @@ case class ResolvedAggBufferReference(name: String, resultType: InternalType)
     RexAggBufferVariable(
       name,
       typeFactory.createTypeFromInternalType(resultType, isNullable = true),
-      DataTypes.internal(resultType))
+      resultType)
   }
 
   override private[flink] def withName(newName: String): Attribute = {
@@ -173,7 +173,7 @@ case class ResolvedAggLocalReference(
       name,
       nullTerm,
       typeFactory.createTypeFromInternalType(resultType, isNullable = true),
-      DataTypes.internal(resultType))
+      resultType)
   }
 
   override private[flink] def withName(newName: String): Attribute = {
@@ -201,7 +201,7 @@ case class ResolvedDistinctKeyReference(
     RexDistinctKeyVariable(
       name,
       typeFactory.createTypeFromInternalType(resultType, isNullable = true),
-      DataTypes.internal(resultType))
+      resultType)
   }
 
   override private[flink] def withName(newName: String): Attribute = {

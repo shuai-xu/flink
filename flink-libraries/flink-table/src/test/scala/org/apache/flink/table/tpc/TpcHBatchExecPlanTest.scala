@@ -55,7 +55,7 @@ abstract class TpcHBatchExecPlanTest(
     for ((tableName, schema) <- TpcHSchemaProvider.schemaMap) {
       lazy val tableSource = new TestParquetTableSource(
         tableName,
-        schema.getFieldTypes.map(DataTypes.internal),
+        schema.getFieldTypes,
         schema.getFieldNames,
         schema.getFieldNullables)
       tEnv.registerTableSource(tableName, tableSource, schema.getUniqueKeys)

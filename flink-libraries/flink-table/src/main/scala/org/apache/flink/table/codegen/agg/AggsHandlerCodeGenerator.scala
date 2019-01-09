@@ -165,7 +165,7 @@ class AggsHandlerCodeGenerator(
 
     this.accTypeInfo = new BaseRowType(
       classOf[GenericRow],
-      aggInfoList.getAccTypes.map(DataTypes.internal): _*)
+      aggInfoList.getAccTypes.map(_.toInternalType): _*)
     this.aggBufferSize = accTypeInfo.getArity
     var aggBufferOffset: Int = 0
 
@@ -478,7 +478,7 @@ class AggsHandlerCodeGenerator(
     val accTerm = newName("acc")
     val resultExpr = exprGenerator.generateResultExpression(
       initAccExprs,
-      DataTypes.internal(accTypeInfo).asInstanceOf[BaseRowType],
+      accTypeInfo.toInternalType.asInstanceOf[BaseRowType],
       outRow = accTerm,
       reusedOutRow = false)
 
@@ -500,7 +500,7 @@ class AggsHandlerCodeGenerator(
     // always create a new accumulator row
     val resultExpr = exprGenerator.generateResultExpression(
       accExprs,
-      DataTypes.internal(accTypeInfo).asInstanceOf[BaseRowType],
+      accTypeInfo.toInternalType.asInstanceOf[BaseRowType],
       outRow = accTerm,
       reusedOutRow = false)
 
@@ -595,9 +595,9 @@ class AggsHandlerCodeGenerator(
         // the padding types will be ignored
         val padding = Array.range(0, mergedAccOffset).map(_ => DataTypes.INT)
         val typeInfo = padding ++ mergedAccExternalTypes
-        new BaseRowType(classOf[GenericRow], typeInfo.map(DataTypes.internal): _*)
+        new BaseRowType(classOf[GenericRow], typeInfo.map(_.toInternalType): _*)
       } else {
-        new BaseRowType(classOf[GenericRow], mergedAccExternalTypes.map(DataTypes.internal): _*)
+        new BaseRowType(classOf[GenericRow], mergedAccExternalTypes.map(_.toInternalType): _*)
       }
 
       // bind input1 as otherAcc
@@ -636,18 +636,18 @@ class AggsHandlerCodeGenerator(
         case w: WindowStart =>
           // return a Timestamp(Internal is long)
           GeneratedExpression(
-            s"$NAMESPACE_TERM.getStart()", "false", "", DataTypes.internal(w.resultType))
+            s"$NAMESPACE_TERM.getStart()", "false", "", w.resultType.toInternalType)
         case w: WindowEnd =>
           // return a Timestamp(Internal is long)
           GeneratedExpression(
-            s"$NAMESPACE_TERM.getEnd()", "false", "", DataTypes.internal(w.resultType))
+            s"$NAMESPACE_TERM.getEnd()", "false", "", w.resultType.toInternalType)
         case r: RowtimeAttribute =>
           // return a rowtime, use long as internal type
           GeneratedExpression(
-            s"$NAMESPACE_TERM.getEnd() - 1", "false", "", DataTypes.internal(r.resultType))
+            s"$NAMESPACE_TERM.getEnd() - 1", "false", "", r.resultType.toInternalType)
         case p: ProctimeAttribute =>
           // ignore this property, it will be null at the position later
-          GeneratedExpression("-1L", "true", "", DataTypes.internal(p.resultType))
+          GeneratedExpression("-1L", "true", "", p.resultType.toInternalType)
       }
       valueExprs = valueExprs ++ windowExprs
     }

@@ -45,8 +45,8 @@ abstract class BinaryArithmetic extends BinaryExpression {
     }
 
   override private[flink] def validateInput(): ValidationResult = {
-    if (!isNumeric(DataTypes.internal(left.resultType)) ||
-        !isNumeric(DataTypes.internal(right.resultType))) {
+    if (!isNumeric(left.resultType) ||
+        !isNumeric(right.resultType)) {
       ValidationFailure(s"$this requires both operands to be numeric, but was " +
         s"$left : ${left.resultType} and $right : ${right.resultType}")
     } else {
@@ -61,22 +61,22 @@ case class Plus(left: Expression, right: Expression) extends BinaryArithmetic {
   private[flink] val sqlOperator = SqlStdOperatorTable.PLUS
 
   override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
-    if(isString(DataTypes.internal(left.resultType))) {
+    if(isString(left.resultType)) {
       val castedRight = Cast(right, DataTypes.STRING)
       relBuilder.call(SqlStdOperatorTable.CONCAT, left.toRexNode, castedRight.toRexNode)
-    } else if(isString(DataTypes.internal(right.resultType))) {
+    } else if(isString(right.resultType)) {
       val castedLeft = Cast(left, DataTypes.STRING)
       relBuilder.call(SqlStdOperatorTable.CONCAT, castedLeft.toRexNode, right.toRexNode)
-    } else if (isTimeInterval(DataTypes.internal(left.resultType)) &&
+    } else if (isTimeInterval(left.resultType) &&
         left.resultType == right.resultType) {
       relBuilder.call(SqlStdOperatorTable.PLUS, left.toRexNode, right.toRexNode)
-    } else if (isTimeInterval(DataTypes.internal(left.resultType))
-        && isTemporal(DataTypes.internal(right.resultType))) {
+    } else if (isTimeInterval(left.resultType)
+        && isTemporal(right.resultType)) {
       // Calcite has a bug that can't apply INTERVAL + DATETIME (INTERVAL at left)
       // we manually switch them here
       relBuilder.call(SqlStdOperatorTable.DATETIME_PLUS, right.toRexNode, left.toRexNode)
-    } else if (isTemporal(DataTypes.internal(left.resultType)) &&
-        isTemporal(DataTypes.internal(right.resultType))) {
+    } else if (isTemporal(left.resultType) &&
+        isTemporal(right.resultType)) {
       relBuilder.call(SqlStdOperatorTable.DATETIME_PLUS, left.toRexNode, right.toRexNode)
     } else {
       super.toRexNode
@@ -84,20 +84,20 @@ case class Plus(left: Expression, right: Expression) extends BinaryArithmetic {
   }
 
   override private[flink] def validateInput(): ValidationResult = {
-    if (isString(DataTypes.internal(left.resultType)) ||
-        isString(DataTypes.internal(right.resultType))) {
+    if (isString(left.resultType) ||
+        isString(right.resultType)) {
       ValidationSuccess
-    } else if (isTimeInterval(DataTypes.internal(left.resultType)) &&
+    } else if (isTimeInterval(left.resultType) &&
         left.resultType == right.resultType) {
       ValidationSuccess
-    } else if (isTimePoint(DataTypes.internal(left.resultType)) &&
-        isTimeInterval(DataTypes.internal(right.resultType))) {
+    } else if (isTimePoint(left.resultType) &&
+        isTimeInterval(right.resultType)) {
       ValidationSuccess
-    } else if (isTimeInterval(DataTypes.internal(left.resultType)) &&
-        isTimePoint(DataTypes.internal(right.resultType))) {
+    } else if (isTimeInterval(left.resultType) &&
+        isTimePoint(right.resultType)) {
       ValidationSuccess
-    } else if (isNumeric(DataTypes.internal(left.resultType)) &&
-        isNumeric(DataTypes.internal(right.resultType))) {
+    } else if (isNumeric(left.resultType) &&
+        isNumeric(right.resultType)) {
       ValidationSuccess
     } else {
       ValidationFailure(
@@ -121,9 +121,9 @@ case class UnaryMinus(child: Expression) extends UnaryExpression {
   override private[flink] def resultType = child.resultType
 
   override private[flink] def validateInput(): ValidationResult = {
-    if (isNumeric(DataTypes.internal(child.resultType))) {
+    if (isNumeric(child.resultType)) {
       ValidationSuccess
-    } else if (isTimeInterval(DataTypes.internal(child.resultType))) {
+    } else if (isTimeInterval(child.resultType)) {
       ValidationSuccess
     } else {
       ValidationFailure(s"$this requires Numeric, or Interval input, get ${child.resultType}")
@@ -140,14 +140,14 @@ case class Minus(left: Expression, right: Expression) extends BinaryArithmetic {
   private[flink] val sqlOperator = SqlStdOperatorTable.MINUS
 
   override private[flink] def validateInput(): ValidationResult = {
-    if (isTimeInterval(DataTypes.internal(left.resultType)) &&
+    if (isTimeInterval(left.resultType) &&
         left.resultType == right.resultType) {
       ValidationSuccess
-    } else if (isTimePoint(DataTypes.internal(left.resultType)) &&
-        isTimeInterval(DataTypes.internal(right.resultType))) {
+    } else if (isTimePoint(left.resultType) &&
+        isTimeInterval(right.resultType)) {
       ValidationSuccess
-    } else if (isTimeInterval(DataTypes.internal(left.resultType)) &&
-        isTimePoint(DataTypes.internal(right.resultType))) {
+    } else if (isTimeInterval(left.resultType) &&
+        isTimePoint(right.resultType)) {
       ValidationSuccess
     } else {
       super.validateInput()

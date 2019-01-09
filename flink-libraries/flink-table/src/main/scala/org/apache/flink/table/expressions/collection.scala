@@ -155,7 +155,7 @@ case class ArrayElement(array: Expression) extends Expression {
 
   override private[flink] def validateInput(): ValidationResult = {
     array.resultType match {
-      case ati: InternalType if isArray(DataTypes.internal(ati)) => ValidationSuccess
+      case ati: InternalType if isArray(ati) => ValidationSuccess
       case other@_ => ValidationFailure(s"Array expected but was '$other'.")
     }
   }

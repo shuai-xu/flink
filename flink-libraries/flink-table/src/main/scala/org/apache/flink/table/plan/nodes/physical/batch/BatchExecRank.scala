@@ -249,10 +249,10 @@ class BatchExecRank(
       inputRowType.getArity,
       partitionBySortingKeys,
       partitionBySortCollation.map(_._1),
-      inputRowType.getFieldTypes)
+      inputRowType.getFieldInternalTypes)
     val partitionByCodeGen = new SortCodeGenerator(
       partitionBySortingKeys,
-      partitionBySortingKeys.map(inputRowType.getTypeAt),
+      partitionBySortingKeys.map(inputRowType.getInternalTypeAt),
       partitionByComparators,
       partitionBySortCollation.map(_._1),
       partitionBySortCollation.map(_._2))
@@ -272,10 +272,10 @@ class BatchExecRank(
       inputRowType.getArity,
       orderByKeys,
       orderByCollation.map(_._1),
-      inputRowType.getFieldTypes)
+      inputRowType.getFieldInternalTypes)
     val orderBySortCodeGen = new SortCodeGenerator(
       orderByKeys,
-      orderByKeys.map(inputRowType.getTypeAt),
+      orderByKeys.map(inputRowType.getInternalTypeAt),
       orderByComparators,
       orderByCollation.map(_._1),
       orderByCollation.map(_._2))

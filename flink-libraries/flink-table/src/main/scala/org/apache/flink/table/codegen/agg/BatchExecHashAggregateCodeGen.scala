@@ -50,11 +50,11 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
     ctx.addReusableMember(
       s"private transient $tpTerm[] $aggMapKeyTypesTerm;",
       s"$aggMapKeyTypesTerm = ${ctx.addReferenceObj(
-        aggMapKeyType.getFieldTypes, s"$tpTerm[]")};")
+        aggMapKeyType.getFieldInternalTypes, s"$tpTerm[]")};")
     ctx.addReusableMember(
       s"private transient $tpTerm[] $aggBufferTypesTerm;",
       s"$aggBufferTypesTerm = ${ctx.addReferenceObj(
-        aggBufferType.getFieldTypes, s"$tpTerm[]")};")
+        aggBufferType.getFieldInternalTypes, s"$tpTerm[]")};")
   }
 
   private[flink] def prepareHashAggMap(
@@ -216,14 +216,14 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
     val code = accumulateExprsWithFilterArgs.zipWithIndex.map({
       case ((accumulateExpr, filterArg), index) =>
         val idx = auxGrouping.length + index
-        val t = aggBufferType.getTypeAt(idx)
+        val t = aggBufferType.getInternalTypeAt(idx)
         val writeCode = binaryRowFieldSetAccess(
-          idx, currentAggBufferTerm, DataTypes.internal(t), accumulateExpr.resultTerm)
+          idx, currentAggBufferTerm, t.toInternalType, accumulateExpr.resultTerm)
         val innerCode = if (config.getNullCheck) {
           s"""
              |${accumulateExpr.code}
              |if (${accumulateExpr.nullTerm}) {
-             |  ${binaryRowSetNull(idx, currentAggBufferTerm, DataTypes.internal(t))};
+             |  ${binaryRowSetNull(idx, currentAggBufferTerm, t.toInternalType)};
              |} else {
              |  $writeCode;
              |}
@@ -248,7 +248,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
 
     }) mkString "\n"
 
-    GeneratedExpression(currentAggBufferTerm, "false", code, DataTypes.internal(aggBufferType))
+    GeneratedExpression(currentAggBufferTerm, "false", code, aggBufferType.toInternalType)
   }
 
   /**
@@ -268,7 +268,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
 
     val initAuxGroupingExprs = auxGrouping.map { idx =>
       CodeGenUtils.generateFieldAccess(
-        ctx, DataTypes.internal(inputType), inputTerm, idx, nullCheck = true)
+        ctx, inputType.toInternalType, inputTerm, idx, nullCheck = true)
     }
 
     val initAggCallBufferExprs = aggregates.flatMap(a =>
@@ -307,8 +307,8 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       aggBuffMapping: Array[Array[(Int, InternalType)]],
       aggBufferType: BaseRowType): GeneratedExpression = {
     val exprCodegen = new ExprCodeGenerator(ctx, false, config.getNullCheck)
-        .bindInput(DataTypes.internal(inputType), inputTerm = inputTerm)
-        .bindSecondInput(DataTypes.internal(aggBufferType), inputTerm = currentAggBufferTerm)
+        .bindInput(inputType.toInternalType, inputTerm = inputTerm)
+        .bindSecondInput(aggBufferType.toInternalType, inputTerm = currentAggBufferTerm)
 
     val mergeExprs = aggregates.zipWithIndex.flatMap {
       case (agg: DeclarativeAggregateFunction, aggIndex) =>
@@ -321,7 +321,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
 
     val aggBufferTypeWithoutAuxGrouping = if (auxGrouping.nonEmpty) {
       // auxGrouping does not need merge-code
-      new BaseRowType(aggBufferType.getTypeClass,
+      new BaseRowType(aggBufferType.getInternalTypeClass,
         aggBufferType.getFieldTypes.slice(auxGrouping.length, aggBufferType.getArity),
         aggBufferType.getFieldNames.slice(auxGrouping.length, aggBufferType.getArity))
     } else {
@@ -390,8 +390,8 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       aggBufferType: BaseRowType): GeneratedExpression = {
     // gen code to get agg result
     val exprCodegen = new ExprCodeGenerator(ctx, false, config.getNullCheck)
-        .bindInput(DataTypes.internal(inputType), inputTerm = inputTerm)
-        .bindSecondInput(DataTypes.internal(aggBufferType), inputTerm = aggBufferTerm)
+        .bindInput(inputType.toInternalType, inputTerm = inputTerm)
+        .bindSecondInput(aggBufferType.toInternalType, inputTerm = aggBufferTerm)
     val resultExpr = if (isFinal) {
       val bindRefOffset = inputRelDataType.getFieldCount
       val getAuxGroupingExprs = auxGrouping.indices.map { idx =>
@@ -731,7 +731,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       keyComputerTerm: String,
       recordComparatorTerm: String,
       aggMapKeyType: BaseRowType) : String = {
-    val keyFieldTypes = aggMapKeyType.getFieldTypes
+    val keyFieldTypes = aggMapKeyType.getFieldInternalTypes
     val keys = keyFieldTypes.indices.toArray
     val orders = keys.map((_) => true)
     val nullsIsLast = SortUtil.getNullDefaultOrders(orders)
@@ -739,7 +739,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       keyFieldTypes.length, keys, orders, keyFieldTypes)
 
     val sortCodeGenerator = new SortCodeGenerator(
-      keys, keyFieldTypes.map(DataTypes.internal), comparators, orders, nullsIsLast)
+      keys, keyFieldTypes, comparators, orders, nullsIsLast)
     val genedSorter = GeneratedSorter(
       sortCodeGenerator.generateNormalizedKeyComputer("AggMapKeyComputer"),
       sortCodeGenerator.generateRecordComparator("AggMapValueComparator"),

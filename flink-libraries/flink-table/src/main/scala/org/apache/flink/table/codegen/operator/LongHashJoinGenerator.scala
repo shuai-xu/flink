@@ -56,7 +56,7 @@ object LongHashJoinGenerator {
       keyType: BaseRowType,
       keyMapping: Array[Int],
       rowTerm: String): String = {
-    val singleType = keyType.getFieldTypes()(0)
+    val singleType = keyType.getFieldTypes()(0).toInternalType
     val getCode = baseRowFieldReadAccess(ctx, keyMapping(0), rowTerm, singleType)
     val term = singleType match {
       case DataTypes.FLOAT => s"Float.floatToIntBits($getCode)"
@@ -95,8 +95,8 @@ object LongHashJoinGenerator {
       condFunc: GeneratedJoinConditionFunction)
     : TwoInputSubstituteStreamOperator[BaseRow, BaseRow, BaseRow] = {
 
-    val buildSer = new BinaryRowSerializer(buildType.getFieldTypes: _*)
-    val probeSer = new BinaryRowSerializer(probeType.getFieldTypes: _*)
+    val buildSer = new BinaryRowSerializer(buildType.getFieldInternalTypes: _*)
+    val probeSer = new BinaryRowSerializer(probeType.getFieldInternalTypes: _*)
 
     val tableTerm = newName("LongHashTable")
     val ctx = CodeGeneratorContext(conf, supportReference = true)

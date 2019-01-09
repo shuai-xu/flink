@@ -62,10 +62,10 @@ object TableSchemaUtil {
   def fromDataType(
     dataType: DataType,
     fieldNullables: Option[Array[Boolean]] = None): TableSchema = {
-    DataTypes.internal(dataType) match {
+    dataType.toInternalType match {
       case bt: BaseRowType =>
         val fieldNames = bt.getFieldNames
-        val fieldTypes = bt.getFieldTypes
+        val fieldTypes = bt.getFieldTypes.map(_.toInternalType)
         if (fieldNullables.isDefined) {
           new TableSchema(fieldNames, fieldTypes, fieldNullables.get)
         } else {

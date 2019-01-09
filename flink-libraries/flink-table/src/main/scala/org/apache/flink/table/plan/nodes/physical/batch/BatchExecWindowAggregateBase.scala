@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType, PrimitiveType}
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType, PrimitiveType}
 import org.apache.flink.table.api.window.TimeWindow
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
@@ -102,16 +102,16 @@ abstract class BatchExecWindowAggregateBase(
   lazy val aggBufferTypes: Array[Array[InternalType]] = auxGrouping.map { index =>
     Array(FlinkTypeFactory.toInternalType(inputRelDataType.getFieldList.get(index).getType))
   } ++ aggregates.map {
-    case a: DeclarativeAggregateFunction => a.aggBufferSchema.map(DataTypes.internal).toArray
+    case a: DeclarativeAggregateFunction => a.aggBufferSchema.map(_.toInternalType).toArray
     case a: AggregateFunction[_, _] =>
-      Array(getAccumulatorTypeOfAggregateFunction(a)).map(DataTypes.internal)
+      Array(getAccumulatorTypeOfAggregateFunction(a)).map(_.toInternalType)
   }.toArray[Array[InternalType]]
 
   lazy val groupKeyRowType = new BaseRowType(
     classOf[BinaryRow],
     grouping.map { index =>
       FlinkTypeFactory.toInternalType(inputRelDataType.getFieldList.get(index).getType)
-    }, grouping.map(inputRelDataType.getFieldNames.get(_)))
+    }.toArray[DataType], grouping.map(inputRelDataType.getFieldNames.get(_)))
 
   // get udagg instance names
   lazy val udaggs: Map[AggregateFunction[_, _], String] = aggregates
@@ -298,14 +298,14 @@ abstract class BatchExecWindowAggregateBase(
       case Some(key) =>
         // generate agg result
         val windowAggResultTerm = CodeGenUtils.newName("windowAggResult")
-        ctx.addOutputRecord(DataTypes.internal(outputType), windowAggResultTerm)
+        ctx.addOutputRecord(outputType.toInternalType, windowAggResultTerm)
         val output =
           s"""
              |${setValueResult.code}
              |$windowAggResultTerm.replace($key, ${setValueResult.resultTerm});
          """.stripMargin
         new GeneratedExpression(
-          windowAggResultTerm, NEVER_NULL, output, DataTypes.internal(outputType))
+          windowAggResultTerm, NEVER_NULL, output, outputType.toInternalType)
       // all group agg output
       case _ => setValueResult
     }
@@ -377,7 +377,7 @@ abstract class BatchExecWindowAggregateBase(
         window: LogicalWindow): GeneratedExpression = {
       if (isFinal && isMerge) {
         // get assigned timestamp by local window agg
-        val ret = CodeGenUtils.generateFieldAccess(ctx, DataTypes.internal(windowedGroupKeyType),
+        val ret = CodeGenUtils.generateFieldAccess(ctx, windowedGroupKeyType.toInternalType,
           inputTerm,
           windowedGroupKeyType.getArity - 1, nullCheck = false)
         if (timestampIsDate) {
@@ -445,11 +445,11 @@ abstract class BatchExecWindowAggregateBase(
         val exprCodegen = new ExprCodeGenerator(ctx, false, config.getNullCheck)
         val setResultExprs = grouping.indices.map(
           CodeGenUtils.generateFieldAccess(
-            ctx, DataTypes.internal(groupKeyRowType), lastKey.get, _, config.getNullCheck)) ++
+            ctx, groupKeyRowType.toInternalType, lastKey.get, _, config.getNullCheck)) ++
           (GeneratedExpression(lastTimestampTerm, NEVER_NULL, NO_CODE, DataTypes.LONG,
             literal = true) +: aggBufferExprs)
         val setPanedAggResultExpr = exprCodegen.generateResultExpression(
-          setResultExprs, DataTypes.internal(windowElementType).asInstanceOf[BaseRowType],
+          setResultExprs, windowElementType.toInternalType.asInstanceOf[BaseRowType],
           preAccResult, Some(preAccResultWriter))
 
         // using windows grouping buffer to merge paned agg results
@@ -525,7 +525,7 @@ abstract class BatchExecWindowAggregateBase(
     }
 
     val processFuncName = CodeGenUtils.newName("preAccumulate")
-    val inputTypeTerm = boxedTypeTermForType(DataTypes.internal(inputType))
+    val inputTypeTerm = boxedTypeTermForType(inputType.toInternalType)
     ctx.addReusableMember(
       s"""
          |private void $processFuncName($inputTypeTerm $inputTerm) throws java.io.IOException {
@@ -580,9 +580,9 @@ abstract class BatchExecWindowAggregateBase(
       val propOutputType = new BaseRowType(classOf[GenericRow], propFields: _*)
       // reusable row to set window property fields
       val propTerm = CodeGenUtils.newName("windowProp")
-      ctx.addOutputRecord(DataTypes.internal(propOutputType), propTerm)
+      ctx.addOutputRecord(propOutputType.toInternalType, propTerm)
       val windowAggResultWithPropTerm = CodeGenUtils.newName("windowAggResultWithProperty")
-      ctx.addOutputRecord(DataTypes.internal(outputType), windowAggResultWithPropTerm)
+      ctx.addOutputRecord(outputType.toInternalType, windowAggResultWithPropTerm)
 
       // set window start, end property according to window type
       val (startPos, endPos, rowTimePos) = AggregateUtil.computeWindowPropertyPos(namedProperties)
@@ -625,7 +625,7 @@ abstract class BatchExecWindowAggregateBase(
            |$windowAggResultWithPropTerm.replace(${aggResultExpr.resultTerm}, $propTerm);
          """.stripMargin
       new GeneratedExpression(
-        windowAggResultWithPropTerm, NEVER_NULL, output, DataTypes.internal(outputType))
+        windowAggResultWithPropTerm, NEVER_NULL, output, outputType.toInternalType)
     }
   }
 
@@ -677,7 +677,7 @@ abstract class BatchExecWindowAggregateBase(
       slideSize: Long,
       index: Int = 0): GeneratedExpression = {
     val exprCodegen = new ExprCodeGenerator(ctx, nullableInput = false, nullCheck = false)
-        .bindInput(DataTypes.internal(inputType), inputTerm = inputTerm)
+        .bindInput(inputType.toInternalType, inputTerm = inputTerm)
     val timeStampInLong = timeField.reinterpret(DataTypes.LONG, checkOverflow = false)
     val millValue = if (timestampIsDate) DateTimeFunctions.MILLIS_PER_DAY else 1L
     val timeStampValue = timeStampInLong * Literal(millValue, DataTypes.LONG)

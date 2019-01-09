@@ -19,10 +19,9 @@ package org.apache.flink.table.runtime.functions.aggfunctions
 
 import java.lang.{Iterable => JIterable}
 import java.util.{List => JList}
-
 import org.apache.flink.table.api.dataview.ListView
 import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.runtime.functions.aggfunctions.ConcatAggFunction._
 import org.apache.flink.table.dataformat.{BinaryString, GenericRow}
 import org.apache.flink.table.typeutils.BinaryStringTypeInfo
@@ -118,24 +117,14 @@ class ConcatAggFunction extends AggregateFunction[BinaryString, GenericRow] {
     retractList.clear()
   }
 
-  override def getResultType: DataType = DataTypes.of(BinaryStringTypeInfo.INSTANCE)
-
   override def getAccumulatorType: DataType = {
-    val fieldTypes: Array[InternalType] = Array(
+    val fieldTypes: Array[DataType] = Array(
       // it will be replaced to ListViewType
       DataTypes.createGenericType(classOf[ListView[_]]),
       // it will be replaced to ListViewType
       DataTypes.createGenericType(classOf[ListView[_]]))
     val fieldNames = Array("list", "retractList")
-    DataTypes.createBaseRowType(classOf[GenericRow], fieldTypes, fieldNames)
-  }
-
-  override def getUserDefinedInputTypes(signature: Array[Class[_]]): Array[DataType] = {
-    if (signature.length == 1) {
-      Array[DataType](DataTypes.of(BinaryStringTypeInfo.INSTANCE))
-    } else {
-      throw new UnsupportedOperationException
-    }
+    new BaseRowType(classOf[GenericRow], fieldTypes, fieldNames, true)
   }
 }
 

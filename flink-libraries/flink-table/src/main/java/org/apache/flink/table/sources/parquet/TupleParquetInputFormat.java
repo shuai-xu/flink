@@ -23,10 +23,13 @@ import org.apache.flink.api.java.typeutils.TupleTypeInfoBase;
 import org.apache.flink.api.java.typeutils.runtime.TupleSerializerBase;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.api.types.BaseRowType;
+import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
+
+import java.util.Arrays;
 
 /**
  * A subclass of {@link ParquetInputFormat} to read from Parquet files and convert to Tuple.
@@ -61,7 +64,8 @@ public class TupleParquetInputFormat<OUT> extends ParquetInputFormat<OUT, Row> {
 
 	private static <OUT> InternalType[] extractTypeInfo(TupleTypeInfoBase<OUT> tupleTypeInfo) {
 		Preconditions.checkNotNull(tupleTypeInfo);
-		return ((BaseRowType) DataTypes.internal(tupleTypeInfo)).getFieldTypes();
+		return Arrays.stream(((BaseRowType) DataTypes.internal(tupleTypeInfo)).getFieldTypes())
+				.map(DataType::toInternalType).toArray(InternalType[]::new);
 	}
 
 }

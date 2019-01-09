@@ -169,8 +169,8 @@ class SortAggITCase
     check(
       "SELECT pojoFunc(b) FROM MyTable group by a",
       (result: Seq[Row]) => {
-        val baseRow = result.head.getField(0).asInstanceOf[BaseRow]
-        if (baseRow.getInt(0) == 128 && baseRow.getInt(1) == 128) {
+        val baseRow = result.head.getField(0).asInstanceOf[Row]
+        if (baseRow.getField(0) == 128 && baseRow.getField(1) == 128) {
           None
         } else {
           Some("Fail: " + result)

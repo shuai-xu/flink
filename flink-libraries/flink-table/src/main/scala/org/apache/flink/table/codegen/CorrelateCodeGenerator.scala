@@ -35,7 +35,8 @@ import org.apache.flink.table.plan.util.CorrelateUtil
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
 import org.apache.flink.table.runtime.util.StreamRecordCollector
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
+
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.SemiJoinType
@@ -116,7 +117,7 @@ object CorrelateCodeGenerator {
       inputType,
       projectProgram,
       swallowInputOnly,
-      DataTypes.internal(udtfExternalType),
+      udtfExternalType.toInternalType,
       returnType,
       joinType,
       rexCall,
@@ -135,7 +136,7 @@ object CorrelateCodeGenerator {
         outDataType,
         expression),
       substituteStreamOperator,
-      DataTypes.toTypeInfo(returnType).asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      TypeUtils.toBaseRowTypeInfo(returnType),
       parallelism)
   }
 
@@ -283,7 +284,7 @@ object CorrelateCodeGenerator {
     val tableSchema = TableSchemaUtil.fromDataType(fromType)
     val fieldNames = tableSchema.getColumnNames
     val fieldTypes = tableSchema.getTypes
-    new BaseRowType(classOf[GenericRow], fieldTypes, fieldNames)
+    new BaseRowType(classOf[GenericRow], fieldTypes.toArray[DataType], fieldNames)
   }
 
   private def generateProjectResultExpr(
@@ -333,7 +334,7 @@ object CorrelateCodeGenerator {
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
     val udtfInputTerm = CodeGeneratorContext.DEFAULT_INPUT2_TERM
 
-    val udtfType = DataTypes.internal(udtfExternalType)
+    val udtfType = udtfExternalType.toInternalType
     val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck).bindInput(
       udtfType, inputTerm = udtfInputTerm, inputFieldMapping = pojoFieldMapping)
 

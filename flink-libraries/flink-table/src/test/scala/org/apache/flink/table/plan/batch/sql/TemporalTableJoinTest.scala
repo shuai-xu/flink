@@ -282,8 +282,9 @@ class TemporalTableJoinTest extends TableTestBatchExecBase {
     override def getReturnType: DataType = {
       new BaseRowType(
         classOf[BaseRow],
-        Array[InternalType](DataTypes.INT, DataTypes.STRING, DataTypes.INT),
-        Array("id", "name", "age"))
+        Array[DataType](DataTypes.INT, DataTypes.STRING, DataTypes.INT),
+        Array("id", "name", "age"),
+        true)
     }
 
     override def getTableSchema: TableSchema = {

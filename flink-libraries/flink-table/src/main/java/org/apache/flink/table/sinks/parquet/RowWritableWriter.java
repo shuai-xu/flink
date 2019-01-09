@@ -138,7 +138,7 @@ public class RowWritableWriter {
 			this.fieldNames = rowTypeInfo.getFieldNames();
 
 			for (int i = 0; i < this.rowTypeInfo.getFieldTypes().length; i++) {
-				writers[i] = createWriter(rowTypeInfo.getTypeAt(i), groupType.getType(i));
+				writers[i] = createWriter(rowTypeInfo.getInternalTypeAt(i), groupType.getType(i));
 			}
 		}
 

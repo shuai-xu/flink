@@ -181,8 +181,8 @@ class StreamExecGroupAggregate(
       copyInputField = true)
 
     val aggsHandler = generator.generateAggsHandler("GroupAggsHandler", aggInfoList)
-    val accTypes = aggInfoList.getAccTypes.map(DataTypes.internal)
-    val aggValueTypes = aggInfoList.getActualValueTypes.map(DataTypes.internal)
+    val accTypes = aggInfoList.getAccTypes.map(_.toInternalType)
+    val aggValueTypes = aggInfoList.getActualValueTypes.map(_.toInternalType)
     val inputCountIndex = aggInfoList.getCount1AccIndex
 
     val operator = if (tableConfig.getConf.contains(

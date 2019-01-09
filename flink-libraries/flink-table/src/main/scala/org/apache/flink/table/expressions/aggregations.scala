@@ -724,7 +724,7 @@ case class AggFunctionCall(
 
   override private[flink] def children: Seq[Expression] = args
 
-  override def resultType: InternalType = DataTypes.internal(externalResultType)
+  override def resultType: InternalType = externalResultType.toInternalType
 
   override def validateInput(): ValidationResult = {
     val signature = children.map(_.resultType)

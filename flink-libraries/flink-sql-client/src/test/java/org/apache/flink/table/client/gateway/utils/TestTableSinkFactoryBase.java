@@ -132,7 +132,7 @@ public abstract class TestTableSinkFactoryBase implements StreamTableSinkFactory
 					fieldNames,
 					Arrays
 						.stream(fieldTypes)
-						.map(t -> DataTypes.internal(t))
+						.map(DataType::toInternalType)
 						.toArray(InternalType[]::new)),
 				property);
 		}

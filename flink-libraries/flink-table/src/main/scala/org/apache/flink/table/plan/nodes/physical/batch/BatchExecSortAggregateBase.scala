@@ -112,7 +112,7 @@ abstract class BatchExecSortAggregateBase(
       aggBufferNames, aggBufferTypes, outputType)
 
     val joinedRow = "joinedRow"
-    ctx.addOutputRecord(DataTypes.internal(outputType), joinedRow)
+    ctx.addOutputRecord(outputType.toInternalType, joinedRow)
     val binaryRow = classOf[BinaryRow].getName
     ctx.addReusableMember(s"$binaryRow $lastKeyTerm = null;")
 

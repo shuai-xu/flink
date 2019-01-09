@@ -54,7 +54,7 @@ abstract class InlineTable(
   }
 
   val fieldTypes: Array[InternalType] =
-    DataTypes.internal(dataType) match {
+    dataType.toInternalType match {
 
       case ct: BaseRowType =>
         // it is ok to leave out fields
@@ -72,7 +72,7 @@ abstract class InlineTable(
             DataTypes.TIMESTAMP
           case DataTypes.PROCTIME_BATCH_MARKER =>
             DataTypes.TIMESTAMP
-          case i => ct.getTypeAt(i)
+          case i => ct.getInternalTypeAt(i).toInternalType
         }
 
       case t: InternalType =>

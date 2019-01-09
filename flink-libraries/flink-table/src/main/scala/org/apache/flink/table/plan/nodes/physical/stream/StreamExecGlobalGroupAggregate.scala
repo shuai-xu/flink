@@ -176,8 +176,8 @@ class StreamExecGlobalGroupAggregate(
       // then multiput to state, so it need copy
       inputFieldCopy = true)
 
-    val globalAccTypes = globalAggInfoList.getAccTypes.map(DataTypes.internal)
-    val globalAggValueTypes = globalAggInfoList.getActualValueTypes.map(DataTypes.internal)
+    val globalAccTypes = globalAggInfoList.getAccTypes.map(_.toInternalType)
+    val globalAggValueTypes = globalAggInfoList.getActualValueTypes.map(_.toInternalType)
     val inputCountIndex = globalAggInfoList.getCount1AccIndex
 
     val operator = if (tableConfig.getConf.contains(

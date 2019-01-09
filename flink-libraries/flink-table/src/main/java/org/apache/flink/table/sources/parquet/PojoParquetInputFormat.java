@@ -130,7 +130,7 @@ public class PojoParquetInputFormat<OUT> extends ParquetInputFormat<OUT, Row> {
 			int fieldPos = pojoTypeInfo.getFieldIndex(fieldName);
 			Preconditions.checkArgument(fieldPos >= 0, "Field \"" + fieldName + "\" is not a member of POJO class "
 					+ pojoTypeInfo.getTypeClass().getName());
-			fieldTypes[i] = rowType.getTypeAt(fieldPos);
+			fieldTypes[i] = rowType.getInternalTypeAt(fieldPos).toInternalType();
 		}
 		return fieldTypes;
 	}

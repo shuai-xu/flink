@@ -27,7 +27,7 @@ import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.functions.sink.OutputFormatSinkFunction
 import org.apache.flink.table.api._
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
+import org.apache.flink.table.api.types.{BaseRowType, DataType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks._
 
@@ -148,7 +148,7 @@ class CsvTableSink(
 
   def newOutputFormat(): BaseRowCsvOutputFormat = {
     val outputFormat = new BaseRowCsvOutputFormat(
-      new Path(path), getFieldTypes.map(DataTypes.internal))
+      new Path(path), getFieldTypes.map(_.toInternalType))
     outputFormat.setFieldDelimiter(fieldDelim.getOrElse(
       AbstractCsvOutputFormat.DEFAULT_FIELD_DELIMITER))
     outputFormat.setRecordDelimiter(recordDelim.getOrElse(
@@ -203,6 +203,6 @@ class CsvTableSink(
   }
 
   override def getOutputType: DataType = {
-    new BaseRowType(classOf[BaseRow], getFieldTypes.map(DataTypes.internal): _*)
+    new BaseRowType(classOf[BaseRow], getFieldTypes, true)
   }
 }

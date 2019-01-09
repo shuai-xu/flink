@@ -18,13 +18,8 @@
 
 package org.apache.flink.table.codegen
 
-import java.math.{BigDecimal => JBigDecimal}
-
-import org.apache.calcite.avatica.util.ByteString
 import org.apache.calcite.rex._
-import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.sql.`type`.{ReturnTypes, SqlTypeName}
-import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.types._
@@ -255,16 +250,16 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
       case (fieldExpr, i)
         if fieldExpr.resultType.isInstanceOf[GenericType[_]] ||
             fieldExpr.resultType.isInstanceOf[TimestampType] =>
-        if (returnType.getTypeAt(i).getClass != fieldExpr.resultType.getClass
-          && !returnType.getTypeAt(i).isInstanceOf[GenericType[_]]) {
+        if (returnType.getInternalTypeAt(i).getClass != fieldExpr.resultType.getClass
+          && !returnType.getInternalTypeAt(i).isInstanceOf[GenericType[_]]) {
           throw new CodeGenException(
             s"Incompatible types of expression and result type, Expression[$fieldExpr] type is " +
-                s"[${fieldExpr.resultType}], result type is [${returnType.getTypeAt(i)}]")
+                s"[${fieldExpr.resultType}], result type is [${returnType.getInternalTypeAt(i)}]")
         }
-      case (fieldExpr, i) if fieldExpr.resultType != returnType.getTypeAt(i) =>
+      case (fieldExpr, i) if fieldExpr.resultType != returnType.getInternalTypeAt(i) =>
         throw new CodeGenException(
           s"Incompatible types of expression and result type. Expression[$fieldExpr] type is " +
-              s"[${fieldExpr.resultType}], result type is [${returnType.getTypeAt(i)}]")
+              s"[${fieldExpr.resultType}], result type is [${returnType.getInternalTypeAt(i)}]")
       case _ => // ok
     }
 
@@ -310,7 +305,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
         codeBuffer = resultBuffer, preceding = s"$initReturnRecord")
     }
 
-    returnType.getTypeClass match {
+    returnType.getInternalTypeClass match {
       case cls if cls == classOf[BinaryRow] =>
         outRowWriter match {
           case Some(writer) => // binary row writer.
@@ -323,7 +318,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
             val completeWriter: String = s"$writer.complete();"
             val resultBuffer = fieldExprs.zipWithIndex map {
               case (fieldExpr, i) =>
-                val t = returnType.getTypeAt(i)
+                val t = returnType.getInternalTypeAt(i)
                 val idx = getOutputRowPos(i)
                 val writeCode = binaryWriterWriteField(ctx, idx, fieldExpr.resultTerm, writer, t)
                 if (nullCheck) {
@@ -359,7 +354,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
             checkArgument(outRowAlreadyExists)
             val resultBuffer = fieldExprs.zipWithIndex map {
               case (fieldExpr, i) =>
-                val t = returnType.getTypeAt(i)
+                val t = returnType.getInternalTypeAt(i)
                 val idx = getOutputRowPos(i)
                 val writeCode = binaryRowFieldSetAccess(idx, outRow, t, fieldExpr.resultTerm)
                 if (nullCheck) {

@@ -191,7 +191,7 @@ public class TypeStringUtils {
 		} else if (dataType instanceof org.apache.flink.table.api.types.BaseRowType) {
 			final BaseRowType rt = (org.apache.flink.table.api.types.BaseRowType) dataType;
 			final String[] fieldNames = rt.getFieldNames();
-			final InternalType[] fieldTypes = rt.getFieldTypes();
+			final DataType[] fieldTypes = rt.getFieldTypes();
 
 			final StringBuilder result = new StringBuilder();
 			result.append(ROW);

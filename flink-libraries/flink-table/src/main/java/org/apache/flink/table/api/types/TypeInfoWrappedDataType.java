@@ -24,12 +24,12 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
  * External type to wrap {@link TypeInformation}, may be it is a internally known
  * composite type(row, pojo, tuple, caseClass).
  */
-public class TypeInfoWrappedType implements ExternalType {
+public class TypeInfoWrappedDataType implements ExternalType {
 
 	private TypeInformation typeInfo;
 	private InternalType internalType;
 
-	public TypeInfoWrappedType(TypeInformation typeInfo) {
+	public TypeInfoWrappedDataType(TypeInformation typeInfo) {
 		this.typeInfo = typeInfo;
 		this.internalType = DataTypes.internal(typeInfo);
 	}
@@ -52,7 +52,7 @@ public class TypeInfoWrappedType implements ExternalType {
 			return false;
 		}
 
-		TypeInfoWrappedType that = (TypeInfoWrappedType) o;
+		TypeInfoWrappedDataType that = (TypeInfoWrappedDataType) o;
 
 		return typeInfo.equals(that.typeInfo);
 	}

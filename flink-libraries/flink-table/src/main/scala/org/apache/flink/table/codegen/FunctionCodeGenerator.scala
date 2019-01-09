@@ -79,7 +79,7 @@ object FunctionCodeGenerator {
       GeneratedSplittableExpression.UNSPLIT_EXPRESSION)
   : GeneratedFunction[F, T] = {
     val funcName = newName(name)
-    val inputTypeTerm = boxedTypeTermForType(DataTypes.internal(input1Type))
+    val inputTypeTerm = boxedTypeTermForType(input1Type.toInternalType)
 
     // Janino does not support generics, that's why we need
     // manual casting here
@@ -103,8 +103,8 @@ object FunctionCodeGenerator {
     // FlatJoinFunction
     else if (clazz == classOf[FlatJoinFunction[_, _, _]]) {
       val baseClass = classOf[RichFlatJoinFunction[_, _, _]]
-      val inputTypeTerm2 = boxedTypeTermForType(DataTypes.internal(input2Type.getOrElse(
-        throw new CodeGenException("Input 2 for FlatJoinFunction should not be null"))))
+      val inputTypeTerm2 = boxedTypeTermForType(input2Type.getOrElse(throw new CodeGenException(
+        "Input 2 for FlatJoinFunction should not be null")).toInternalType)
       (baseClass,
         s"void join(Object _in1, Object _in2, org.apache.flink.util.Collector $collectorTerm)",
         List(s"$inputTypeTerm $input1Term = ($inputTypeTerm) _in1;",

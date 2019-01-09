@@ -354,9 +354,9 @@ class AggregationITCase extends QueryTest {
 
     val ret = t.collect()
     val results = ret.map { row =>
-      val arr = row.getField(1).asInstanceOf[Array[BaseRow]].map {
+      val arr = row.getField(1).asInstanceOf[Array[Row]].map {
         case null => null
-        case baseRow => new JTuple2(new JInt(baseRow.getInt(0)), new JDouble(baseRow.getFloat(1)))
+        case baseRow => new JTuple2(baseRow.getField(0), baseRow.getField(1))
       }
       Row.of(row.getField(0), arr)
     }

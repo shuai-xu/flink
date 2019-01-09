@@ -85,8 +85,7 @@ object ScalarSqlFunction {
           }
         ).toArray
         val resultType = getResultTypeOfScalarFunction(scalarFunction, arguments, parameters)
-        typeFactory.createTypeFromTypeInfo(
-          DataTypes.internalTypeInfo(resultType), isNullable = true)
+        typeFactory.createTypeFromInternalType(resultType.toInternalType, isNullable = true)
       }
     }
   }

@@ -414,7 +414,7 @@ case class Round(left: Expression, right: Expression) extends BinaryExpression {
   override private[flink] def resultType: InternalType = left.resultType
 
   override private[flink] def validateInput(): ValidationResult = {
-    if (!TypeCheckUtils.isInteger(DataTypes.internal(right.resultType))) {
+    if (!TypeCheckUtils.isInteger(right.resultType)) {
       ValidationFailure(s"round right requires int, get " +
         s"$right : ${right.resultType}")
     }

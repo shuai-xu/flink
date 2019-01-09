@@ -606,10 +606,11 @@ abstract class StreamTableEnvironment(
     exprs: Array[Expression])
   : (Option[(Int, String)], Option[(Int, String)]) = {
 
-    val (isRefByPos, fieldTypes) = DataTypes.internal(streamType) match {
+    val (isRefByPos, fieldTypes) = streamType.toInternalType match {
       case c: BaseRowType =>
         // determine schema definition mode (by position or by name)
-        (isReferenceByPosition(c, exprs), (0 until c.getArity).map(i => c.getTypeAt(i)).toArray)
+        (isReferenceByPosition(c, exprs),
+            (0 until c.getArity).map(i => c.getInternalTypeAt(i)).toArray)
       case t: InternalType =>
         (false, Array(t))
     }
@@ -641,17 +642,17 @@ abstract class StreamTableEnvironment(
           }
           // check type of field that is replaced
           if (idx < fieldTypes.length) {
-            checkRowtimeType(fieldTypes(idx))
+            checkRowtimeType(fieldTypes(idx).toInternalType)
           }
         }
         // check reference-by-name
         else {
           val aliasOrName = origName.getOrElse(name)
-          DataTypes.internal(streamType) match {
+          streamType.toInternalType match {
             // both alias and reference must have a valid type if they replace a field
             case ct: BaseRowType if ct.getFieldIndex(aliasOrName) >= 0 =>
-              val t = ct.getTypeAt(ct.getFieldIndex(aliasOrName))
-              checkRowtimeType(t)
+              val t = ct.getInternalTypeAt(ct.getFieldIndex(aliasOrName))
+              checkRowtimeType(t.toInternalType)
             // alias could not be found
             case _ if origName.isDefined =>
               throw new TableException(s"Alias '${origName.get}' must reference an existing field.")
@@ -681,11 +682,11 @@ abstract class StreamTableEnvironment(
         }
         // check reference-by-name
         else {
-          DataTypes.internal(streamType) match {
+          streamType.toInternalType match {
             case ct: BaseRowType if
             ct.getFieldIndex(name) < 0 =>
             case ct: BaseRowType if
-              ct.getTypeAt(ct.getFieldIndex(name)).equals(DataTypes.PROCTIME_INDICATOR) =>
+              ct.getInternalTypeAt(ct.getFieldIndex(name)).equals(DataTypes.PROCTIME_INDICATOR) =>
             // proctime attribute must not replace a field
             case ct: BaseRowType if ct.getFieldIndex(name) >= 0 =>
               throw new TableException(

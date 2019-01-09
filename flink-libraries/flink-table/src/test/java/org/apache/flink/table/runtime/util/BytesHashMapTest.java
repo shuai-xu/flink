@@ -482,7 +482,7 @@ public class BytesHashMapTest {
 
 	private int rowLength(BaseRowType tpe) {
 		return BinaryRow.calculateFixPartSizeInBytes(tpe.getArity())
-				+ BinaryRowUtil.getVariableLength(tpe.getFieldTypes());
+				+ BinaryRowUtil.getVariableLength(tpe.getFieldInternalTypes());
 	}
 
 }

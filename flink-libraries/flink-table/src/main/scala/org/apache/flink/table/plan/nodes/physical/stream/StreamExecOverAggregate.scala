@@ -319,7 +319,7 @@ class StreamExecOverAggregate(
       .withConstants(constants)
       .generateAggsHandler("UnboundedOverAggregateHelper", aggInfoList)
 
-    val flattenAccTypes = aggInfoList.getAccTypes.map(DataTypes.internal)
+    val flattenAccTypes = aggInfoList.getAccTypes.map(_.toInternalType)
 
     if (rowTimeIdx.isDefined) {
       if (isRowsClause) {
@@ -393,7 +393,7 @@ class StreamExecOverAggregate(
       .withConstants(constants)
       .generateAggsHandler("BoundedOverAggregateHelper", aggInfoList)
 
-    val flattenAccTypes = aggInfoList.getAccTypes.map(DataTypes.internal)
+    val flattenAccTypes = aggInfoList.getAccTypes.map(_.toInternalType)
 
     if (rowTimeIdx.isDefined) {
       if (isRowsClause) {

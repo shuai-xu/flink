@@ -19,17 +19,16 @@ package org.apache.flink.table.runtime.aggregate
 
 import java.lang.{Long => JLong}
 import java.util.{ArrayList => JArrayList, LinkedList => JLinkedList, List => JList}
-
 import org.apache.flink.api.common.state.{MapStateDescriptor, ValueStateDescriptor}
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.runtime.state.keyed.{KeyedMapState, KeyedValueState}
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{BaseRowType, InternalType}
 import org.apache.flink.table.api.{TableConfig, Types}
 import org.apache.flink.table.codegen.GeneratedAggsHandleFunction
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.runtime.functions.ProcessFunction.{Context, OnTimerContext}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.{Logging, StateUtil}
 import org.apache.flink.util.Collector
 
@@ -72,14 +71,14 @@ abstract class RowTimeUnboundedOver(
     sortedTimestamps = new JLinkedList[JLong]()
 
     // initialize accumulator state
-    val accStateDesc = new ValueStateDescriptor[BaseRow]("accState", DataTypes.toTypeInfo(
-      new BaseRowType(classOf[BaseRow], accTypes: _*)).asInstanceOf[BaseRowTypeInfo[BaseRow]])
+    val accStateDesc = new ValueStateDescriptor[BaseRow](
+      "accState",
+      TypeUtils.toBaseRowTypeInfo(new BaseRowType(classOf[BaseRow], accTypes: _*)))
     accState = ctx.getKeyedValueState(accStateDesc)
 
     // input element are all binary row as they are came from network
-    val rowListTypeInfo = new ListTypeInfo[BaseRow](DataTypes.toTypeInfo(
-      new BaseRowType(classOf[BaseRow], inputFieldTypes: _*))
-        .asInstanceOf[BaseRowTypeInfo[BaseRow]])
+    val rowListTypeInfo = new ListTypeInfo[BaseRow](
+      TypeUtils.toBaseRowTypeInfo(new BaseRowType(classOf[BaseRow], inputFieldTypes: _*)))
     val inputStateDesc = new MapStateDescriptor[JLong, JList[BaseRow]](
       "inputState",
       Types.LONG,

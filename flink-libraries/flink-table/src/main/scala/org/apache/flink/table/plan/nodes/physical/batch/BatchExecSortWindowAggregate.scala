@@ -27,7 +27,7 @@ import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
@@ -130,7 +130,7 @@ class BatchExecSortWindowAggregate(
       input,
       getOperatorName,
       operator,
-      DataTypes.toTypeInfo(outputRowType).asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      TypeUtils.toBaseRowTypeInfo(outputRowType),
       resultPartitionCount)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
 

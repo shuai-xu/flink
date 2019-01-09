@@ -198,7 +198,7 @@ trait BatchExecAggRuleBase {
     val aggBufferTypes = AggregateUtil.transformToBatchAggregateFunctions(
       aggCallsWithoutAuxGroupCalls, input.getRowType)._2
 
-    isAggBufferFixedLength(aggBufferTypes.map(_.map(DataTypes.internal)))
+    isAggBufferFixedLength(aggBufferTypes.map(_.map(_.toInternalType)))
   }
 
   protected def isAggBufferFixedLength(

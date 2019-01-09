@@ -988,7 +988,7 @@ object ScalarOperators {
 
           val rowTerm = terms.head
 
-          val appendCode = brt.getFieldTypes.zipWithIndex.map {
+          val appendCode = brt.getFieldTypes.map(_.toInternalType).zipWithIndex.map {
             case (elementType, idx) =>
               val elementCls = primitiveTypeTermForType(elementType)
               val elementTerm = newName("element")
@@ -1428,7 +1428,7 @@ object ScalarOperators {
 
     val writeCode = elements.zipWithIndex.map {
       case (element, idx) =>
-        val tpe = rowType.getTypeAt(idx)
+        val tpe = rowType.getInternalTypeAt(idx)
         if (nullCheck) {
           s"""
              |${element.code}
@@ -1475,7 +1475,7 @@ object ScalarOperators {
         if (element.literal) {
           element
         } else {
-          val tpe = fieldTypes(idx)
+          val tpe = fieldTypes(idx).toInternalType
           val resultTerm = primitiveDefaultValue(tpe)
           val nullTerm = if (resultTerm == "null") "true" else "false"
           GeneratedExpression(resultTerm, nullTerm, "", tpe)
@@ -1495,7 +1495,7 @@ object ScalarOperators {
       case (true, false) =>
         val row = getPrimitiveRow
         val updateCode = elements.zipWithIndex.map { case (element, idx) =>
-          val tpe = fieldTypes(idx)
+          val tpe = fieldTypes(idx).toInternalType
           if (element.literal) {
             ""
           } else if(nullCheck) {

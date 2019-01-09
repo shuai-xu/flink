@@ -74,7 +74,7 @@ class BatchExecWindowAggregateRule
     val (_, aggBufferTypes, aggregates) = AggregateUtil.transformToBatchAggregateFunctions(
       aggCallsWithoutAuxGroupCalls, input.getRowType)
     val aggCallToAggFunction = aggCallsWithoutAuxGroupCalls.zip(aggregates)
-    val internalAggBufferTypes = aggBufferTypes.map(_.map(DataTypes.internal))
+    val internalAggBufferTypes = aggBufferTypes.map(_.map(_.toInternalType))
 
     window match {
       case TumblingGroupWindow(_, _, size) if isTimeIntervalLiteral(size) =>

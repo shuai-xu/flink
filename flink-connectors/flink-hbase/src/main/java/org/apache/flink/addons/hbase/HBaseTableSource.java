@@ -22,20 +22,24 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataType;
-import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.ProjectableTableSource;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
+import org.apache.flink.table.typeutils.TypeUtils;
 import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 
+import java.util.Arrays;
 import java.util.Map;
+import java.util.function.Function;
 
 import scala.Option;
 
@@ -109,9 +113,12 @@ public class HBaseTableSource implements BatchTableSource<GenericRow>, Projectab
 	}
 
 	@Override
-	public DataType getReturnType() {
-
-		return DataTypes.internal(new BaseRowTypeInfo(GenericRow.class, getFieldTypes(), getFieldNames()));
+	public BaseRowType getReturnType() {
+		return new BaseRowType(
+				GenericRow.class,
+				Arrays.stream(getFieldTypes()).map((Function<TypeInformation, DataType>) TypeInfoWrappedDataType::new)
+						.toArray(DataType[]::new),
+				getFieldNames(), true);
 	}
 
 	@Override
@@ -138,7 +145,7 @@ public class HBaseTableSource implements BatchTableSource<GenericRow>, Projectab
 	public DataStream<GenericRow> getBoundedStream(StreamExecutionEnvironment streamEnv) {
 		return streamEnv.createInput(
 			new HBaseRowInputFormat(conf, tableName, hBaseSchema),
-			DataTypes.internalTypeInfo(getReturnType()),
+				(BaseRowTypeInfo) TypeUtils.toBaseRowTypeInfo(getReturnType()),
 			explainSource());
 	}
 

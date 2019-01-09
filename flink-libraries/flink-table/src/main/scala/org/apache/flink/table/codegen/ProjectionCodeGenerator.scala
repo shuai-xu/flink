@@ -55,16 +55,16 @@ object ProjectionCodeGenerator {
       .bindInput(inType, inputTerm = inputTerm, inputFieldMapping = Some(inputMapping))
     val accessExprs = inputMapping.map(
       idx => CodeGenUtils.generateFieldAccess(
-        ctx, DataTypes.internal(inType), inputTerm, idx, nullCheck))
+        ctx, inType.toInternalType, inputTerm, idx, nullCheck))
 
     val expression = resultGenerator.generateResultExpression(
       accessExprs,
-      DataTypes.internal(outType).asInstanceOf[BaseRowType],
+      outType.toInternalType.asInstanceOf[BaseRowType],
       outRow = outRecordTerm,
       outRowWriter = Option(outRecordWriterTerm),
       reusedOutRow = reusedOutRecord)
 
-    val outTerm = if (outType.getTypeClass == classOf[BinaryRow]) {
+    val outTerm = if (outType.getInternalTypeClass == classOf[BinaryRow]) {
       BINARY_ROW
     }  else {
       BASE_ROW

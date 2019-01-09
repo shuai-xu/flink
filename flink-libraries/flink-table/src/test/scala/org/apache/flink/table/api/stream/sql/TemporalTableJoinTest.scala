@@ -328,8 +328,9 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
     override def getReturnType: DataType = {
       new BaseRowType(
         classOf[BaseRow],
-        Array[InternalType](DataTypes.INT, DataTypes.STRING, DataTypes.INT),
-        Array("id", "name", "age"))
+        Array[DataType](DataTypes.INT, DataTypes.STRING, DataTypes.INT),
+        Array("id", "name", "age"),
+        true)
     }
 
     override def getTableSchema: TableSchema = {
@@ -371,8 +372,9 @@ class TestInvalidTemporalTable private(
   override def getReturnType: DataType = {
     new BaseRowType(
       classOf[BaseRow],
-      Array[InternalType](DataTypes.INT, DataTypes.STRING, DataTypes.INT, DataTypes.TIMESTAMP),
-      Array("id", "name", "age", "ts"))
+      Array[DataType](DataTypes.INT, DataTypes.STRING, DataTypes.INT, DataTypes.TIMESTAMP),
+      Array("id", "name", "age", "ts"),
+      true)
   }
 
   override def getTableSchema: TableSchema = {

@@ -19,7 +19,6 @@
 package org.apache.flink.table.plan.nodes.common
 
 import java.util.{List => JList}
-
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
@@ -34,7 +33,7 @@ import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.{ELEMENT, S
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToInternal
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 
 import scala.collection.JavaConversions._
 
@@ -44,8 +43,8 @@ import scala.collection.JavaConversions._
 trait CommonScan[T] {
 
   private[flink] def needsConversion(dataType: DataType): Boolean = dataType match {
-    case _: BaseRowType => false
-    case t: TypeInfoWrappedType if t.getTypeInfo.isInstanceOf[BaseRowTypeInfo[_]] => false
+    case bt: BaseRowType => !bt.isUseBaseRow
+    case t: TypeInfoWrappedDataType if t.getTypeInfo.isInstanceOf[BaseRowTypeInfo[_]] => false
     case _ => true
   }
 
@@ -82,15 +81,16 @@ trait CommonScan[T] {
     // type convert
     val inputTerm = DEFAULT_INPUT1_TERM
     val (inputTermConverter, internalInputType: InternalType) =
-      if (!inputType.isInstanceOf[BaseRowType]) {
+      if (!inputType.isInstanceOf[BaseRowType] ||
+          !inputType.asInstanceOf[BaseRowType].isUseBaseRow) {
         val convertFunc = genToInternal(ctx, inputType)
-        if (DataTypes.internal(inputType).isInstanceOf[BaseRowType]) {
-          (convertFunc, DataTypes.internal(inputType))
+        if (inputType.toInternalType.isInstanceOf[BaseRowType]) {
+          (convertFunc, inputType.toInternalType)
         } else {
           (
               (record: String) =>
                 s"${classOf[GenericRow].getCanonicalName}.wrap(${convertFunc(record)})",
-              new BaseRowType(DataTypes.internal(inputType))
+              new BaseRowType(inputType.toInternalType)
           )
         }
       } else {
@@ -98,13 +98,13 @@ trait CommonScan[T] {
       }
 
     var codeSplit = GeneratedSplittableExpression.UNSPLIT_EXPRESSION
-    val (inputTypes, inputNames) = DataTypes.internal(inputType) match {
-      case rowType: BaseRowType => (rowType.getFieldTypes, rowType.getFieldNames)
+    val (inputTypes, inputNames) = inputType.toInternalType match {
+      case rowType: BaseRowType => (rowType.getFieldInternalTypes, rowType.getFieldNames)
       case t => (Array(t), Array("f0"))
     }
 
     val processCode =
-      if ((inputTypes sameElements outputRowType.getFieldTypes) &&
+      if ((inputTypes sameElements outputRowType.getFieldInternalTypes) &&
           (inputNames sameElements outputRowType.getFieldNames) &&
           !hasTimeAttributeField(fieldIndexes)) {
         s"${generatorCollect(inputTerm)}"
@@ -117,7 +117,7 @@ trait CommonScan[T] {
               inputTerm = inputTerm,
               inputFieldMapping = Some(fieldIndexes))
 
-        val inputTypeTerm = boxedTypeTermForType(DataTypes.internal(internalInputType))
+        val inputTypeTerm = boxedTypeTermForType(internalInputType)
 
         val conversion = resultGenerator.generateConverterResultExpression(
           outputRowType, rowtimeExpression = rowtimeExpr)
@@ -174,7 +174,7 @@ trait CommonScan[T] {
       input,
       getOperatorName(qualifiedName, outRowType),
       substituteStreamOperator,
-      DataTypes.toTypeInfo(outputRowType).asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      TypeUtils.toBaseRowTypeInfo(outputRowType),
       input.getParallelism)
   }
 }

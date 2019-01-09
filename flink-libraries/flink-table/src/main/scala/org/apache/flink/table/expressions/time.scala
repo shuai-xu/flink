@@ -40,7 +40,7 @@ case class Extract(timeIntervalUnit: Expression, temporal: Expression) extends E
   override private[flink] def resultType: InternalType = DataTypes.LONG
 
   override private[flink] def validateInput(): ValidationResult = {
-    if (!TypeCheckUtils.isTemporal(DataTypes.internal(temporal.resultType))) {
+    if (!TypeCheckUtils.isTemporal(temporal.resultType)) {
       return ValidationFailure(s"Extract operator requires Temporal input, " +
         s"but $temporal is of type ${temporal.resultType}")
     }
@@ -94,7 +94,7 @@ abstract class TemporalCeilFloor(
   override private[flink] def resultType: InternalType = temporal.resultType
 
   override private[flink] def validateInput(): ValidationResult = {
-    if (!TypeCheckUtils.isTimePoint(DataTypes.internal(temporal.resultType))) {
+    if (!TypeCheckUtils.isTimePoint(temporal.resultType)) {
       return ValidationFailure(s"Temporal ceil/floor operator requires Time Point input, " +
         s"but $temporal is of type ${temporal.resultType}")
     }
@@ -165,7 +165,7 @@ abstract class CurrentTimePoint(
   override private[flink] def resultType: InternalType = targetType
 
   override private[flink] def validateInput(): ValidationResult = {
-    if (!TypeCheckUtils.isTimePoint(DataTypes.internal(targetType))) {
+    if (!TypeCheckUtils.isTimePoint(targetType)) {
       ValidationFailure(s"CurrentTimePoint operator requires Time Point target type, " +
         s"but get $targetType.")
     } else if (local && targetType == DataTypes.DATE) {
@@ -268,11 +268,11 @@ case class TemporalOverlaps(
   override private[flink] def resultType: InternalType = DataTypes.BOOLEAN
 
   override private[flink] def validateInput(): ValidationResult = {
-    if (!TypeCheckUtils.isTimePoint(DataTypes.internal(leftTimePoint.resultType))) {
+    if (!TypeCheckUtils.isTimePoint(leftTimePoint.resultType)) {
       return ValidationFailure(s"TemporalOverlaps operator requires leftTimePoint to be of type " +
         s"Time Point, but get ${leftTimePoint.resultType}.")
     }
-    if (!TypeCheckUtils.isTimePoint(DataTypes.internal(rightTimePoint.resultType))) {
+    if (!TypeCheckUtils.isTimePoint(rightTimePoint.resultType)) {
       return ValidationFailure(s"TemporalOverlaps operator requires rightTimePoint to be of " +
         s"type Time Point, but get ${rightTimePoint.resultType}.")
     }
@@ -282,23 +282,23 @@ case class TemporalOverlaps(
     }
 
     // leftTemporal is point, then it must be comparable with leftTimePoint
-    if (TypeCheckUtils.isTimePoint(DataTypes.internal(leftTemporal.resultType))) {
+    if (TypeCheckUtils.isTimePoint(leftTemporal.resultType)) {
       if (leftTemporal.resultType != leftTimePoint.resultType) {
         return ValidationFailure(s"TemporalOverlaps operator requires leftTemporal and " +
           s"leftTimePoint to be of same type if leftTemporal is of type Time Point.")
       }
-    } else if (!isTimeInterval(DataTypes.internal(leftTemporal.resultType))) {
+    } else if (!isTimeInterval(leftTemporal.resultType)) {
       return ValidationFailure(s"TemporalOverlaps operator requires leftTemporal to be of " +
         s"type Time Point or Time Interval.")
     }
 
     // rightTemporal is point, then it must be comparable with rightTimePoint
-    if (TypeCheckUtils.isTimePoint(DataTypes.internal(rightTemporal.resultType))) {
+    if (TypeCheckUtils.isTimePoint(rightTemporal.resultType)) {
       if (rightTemporal.resultType != rightTimePoint.resultType) {
         return ValidationFailure(s"TemporalOverlaps operator requires rightTemporal and " +
           s"rightTimePoint to be of same type if rightTemporal is of type Time Point.")
       }
-    } else if (!isTimeInterval(DataTypes.internal(rightTemporal.resultType))) {
+    } else if (!isTimeInterval(rightTemporal.resultType)) {
       return ValidationFailure(s"TemporalOverlaps operator requires rightTemporal to be of " +
         s"type Time Point or Time Interval.")
     }
@@ -344,7 +344,7 @@ case class TemporalOverlaps(
       relBuilder: FlinkRelBuilder,
       start: RexNode, end: RexNode,
       endType: InternalType) = {
-    if (isTimeInterval(DataTypes.internal(endType))) {
+    if (isTimeInterval(endType)) {
       relBuilder.call(SqlStdOperatorTable.DATETIME_PLUS, start, end)
     } else {
       end
