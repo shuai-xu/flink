@@ -44,6 +44,7 @@ public final class CliStrings {
 		.append(formatCommand(SqlCommand.QUIT, "Quits the SQL CLI client."))
 		.append(formatCommand(SqlCommand.CLEAR, "Clears the current terminal."))
 		.append(formatCommand(SqlCommand.HELP, "Prints the available commands."))
+		.append(formatCommand(SqlCommand.CREATE_TABLE, "Create a table with SQL DDL. Syntax: 'CREATE TABLE <name> (<field_name, field_type>) with (<key>=<value>)"))
 		.append(formatCommand(SqlCommand.SHOW_TABLES, "Shows all registered tables."))
 		.append(formatCommand(SqlCommand.SHOW_FUNCTIONS, "Shows all registered user-defined functions."))
 		.append(formatCommand(SqlCommand.DESCRIBE, "Describes the schema of a table with the given name."))

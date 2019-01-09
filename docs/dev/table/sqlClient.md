@@ -580,6 +580,13 @@ Currently Flink supports two types of catalog - `FlinkInMemoryCatalog` and `Hive
 
 For more information about integration with Hive metastore, see [Hive Compatibility]({{ site.baseurl }}/dev/batch/hive_compatibility.html)
 
+SQL language supports
+--------------------
+
+Currently Flink has a preliminary supports for SQL language(include DDL, Query and DML features). see [sql]({{ site.baseurl }}/dev/table/sql.html)
+
+SQL CLI provides a CREATE TABLE command to replace the table definitions in YAML configuation file. SQL users pass a SQL DDL description text to SQL CLI, it will be passed into table objects and registered to the tableEnvironment, then following SQL Querys can access these tables directly (we would reuse the tableEnvironment in a session).
+
 Limitations & Future
 --------------------
 
