@@ -479,7 +479,7 @@ public class HiveMetadataUtil {
 	/**
 	 * Convert Flink's internal type to String for hive.
 	 */
-	private static String convert(InternalType internalType) {
+	public static String convert(InternalType internalType) {
 		if (internalType.equals(BooleanType.INSTANCE)) {
 			return serdeConstants.BOOLEAN_TYPE_NAME;
 		} else if (internalType.equals(ByteType.INSTANCE)) {
