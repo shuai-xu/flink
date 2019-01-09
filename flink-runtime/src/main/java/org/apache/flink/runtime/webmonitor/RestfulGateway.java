@@ -24,6 +24,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.checkpoint.CompletedCheckpoint;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.executiongraph.AccessExecutionGraph;
+import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobmaster.JobResult;
@@ -37,6 +38,7 @@ import org.apache.flink.runtime.rest.handler.legacy.backpressure.OperatorBackPre
 import org.apache.flink.runtime.rpc.RpcEndpoint;
 import org.apache.flink.runtime.rpc.RpcGateway;
 import org.apache.flink.runtime.rpc.RpcTimeout;
+import org.apache.flink.runtime.update.JobUpdateRequest;
 
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
@@ -181,6 +183,31 @@ public interface RestfulGateway extends RpcGateway {
 	default CompletableFuture<OperatorBackPressureStatsResponse> requestOperatorBackPressureStats(
 			JobID jobId,
 			JobVertexID jobVertexId) {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * Request the current JobGraph.
+	 *
+	 * @param jobId       Job for which the stats are requested.
+	 * @return A Future to the {@link JobGraph}
+	 */
+	default CompletableFuture<JobGraph> requestJobGraph(JobID jobId, @RpcTimeout Time timeout) {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * Trigger update of the given job.
+	 *
+	 * @param jobId specifying the job to rescale
+	 * @param request indicating how to update the job
+	 * @param timeout of this operation
+	 * @return Future which is completed with {@link Acknowledge} once the update was successful
+	 */
+	default CompletableFuture<Acknowledge> updateJob(
+		JobID jobId,
+		JobUpdateRequest request,
+		@RpcTimeout Time timeout) {
 		throw new UnsupportedOperationException();
 	}
 

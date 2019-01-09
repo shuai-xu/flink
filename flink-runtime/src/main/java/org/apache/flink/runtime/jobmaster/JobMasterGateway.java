@@ -49,6 +49,7 @@ import org.apache.flink.runtime.taskexecutor.TaskExecutorReportResponse;
 import org.apache.flink.runtime.taskexecutor.slot.SlotOffer;
 import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
+import org.apache.flink.runtime.update.JobUpdateRequest;
 
 import javax.annotation.Nullable;
 
@@ -81,6 +82,15 @@ public interface JobMasterGateway extends
 	 * @return Future acknowledge if the cancellation was successful
 	 */
 	CompletableFuture<Acknowledge> stop(@RpcTimeout Time timeout);
+
+	/**
+	 * Trigger update of the executed job.
+	 *
+	 * @param request indicating how to update the job
+	 * @param timeout of this operation
+	 * @return Future which is completed with {@link Acknowledge} once the update was successful
+	 */
+	CompletableFuture<Acknowledge> updateJob(JobUpdateRequest request, Time timeout);
 
 	/**
 	 * Triggers rescaling of the executed job.

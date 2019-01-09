@@ -74,6 +74,7 @@ import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.jobgraph.tasks.CheckpointCoordinatorConfiguration;
 import org.apache.flink.runtime.jobgraph.tasks.JobCheckpointingSettings;
 import org.apache.flink.runtime.jobmanager.OnCompletionActions;
+import org.apache.flink.runtime.jobmanager.StandaloneSubmittedJobGraphStore;
 import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.runtime.jobmaster.factories.UnregisteredJobManagerJobMetricGroupFactory;
 import org.apache.flink.runtime.jobmaster.slotpool.DefaultSlotPoolFactory;
@@ -202,6 +203,7 @@ public class JobMasterTest extends TestLogger {
 			null,
 			null);
 		haServices.setResourceManagerLeaderRetriever(rmLeaderRetrievalService);
+		haServices.setSubmittedJobGraphStore(new StandaloneSubmittedJobGraphStore());
 
 		configuration.setString(BlobServerOptions.STORAGE_DIRECTORY, temporaryFolder.newFolder().getAbsolutePath());
 		blobServer = new BlobServer(configuration, new VoidBlobStore());
@@ -867,7 +869,8 @@ public class JobMasterTest extends TestLogger {
 					}
 				},
 				testingFatalErrorHandler,
-				JobMasterTest.class.getClassLoader());
+				JobMasterTest.class.getClassLoader(),
+				haServices.getSubmittedJobGraphStore());
 
 		CompletableFuture<Acknowledge> startFuture = jobMaster.start(jobMasterId, testingTimeout);
 
@@ -1465,7 +1468,8 @@ public class JobMasterTest extends TestLogger {
 			UnregisteredJobManagerJobMetricGroupFactory.INSTANCE,
 			new NoOpOnCompletionActions(),
 			testingFatalErrorHandler,
-			JobMasterTest.class.getClassLoader()) {
+			JobMasterTest.class.getClassLoader(),
+			haServices.getSubmittedJobGraphStore()) {
 
 			@Override
 			public CompletableFuture<String> triggerSavepoint(
@@ -1584,7 +1588,8 @@ public class JobMasterTest extends TestLogger {
 			UnregisteredJobManagerJobMetricGroupFactory.INSTANCE,
 			new NoOpOnCompletionActions(),
 			testingFatalErrorHandler,
-			JobMasterTest.class.getClassLoader());
+			JobMasterTest.class.getClassLoader(),
+			highAvailabilityServices.getSubmittedJobGraphStore());
 	}
 
 	/**

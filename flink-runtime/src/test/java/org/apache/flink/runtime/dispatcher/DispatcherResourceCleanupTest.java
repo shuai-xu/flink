@@ -421,7 +421,8 @@ public class DispatcherResourceCleanupTest extends TestLogger {
 				JobManagerSharedServices jobManagerServices,
 				JobManagerJobMetricGroupFactory jobManagerJobMetricGroupFactory,
 				FatalErrorHandler fatalErrorHandler,
-				LeaderShipLostHandler leaderShipLostHandler) {
+				LeaderShipLostHandler leaderShipLostHandler,
+				SubmittedJobGraphStore submittedJobGraphStore) {
 			final JobManagerRunner jobManagerRunnerMock = mock(JobManagerRunner.class);
 
 			when(jobManagerRunnerMock.getResultFuture()).thenReturn(resultFuture);

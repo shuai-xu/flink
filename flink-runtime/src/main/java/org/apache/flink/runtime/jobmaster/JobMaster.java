@@ -73,6 +73,8 @@ import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.runtime.jobmanager.OnCompletionActions;
 import org.apache.flink.runtime.jobmanager.PartitionProducerDisposedException;
+import org.apache.flink.runtime.jobmanager.SubmittedJobGraph;
+import org.apache.flink.runtime.jobmanager.SubmittedJobGraphStore;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.runtime.jobmaster.exceptions.JobModificationException;
@@ -121,6 +123,10 @@ import org.apache.flink.runtime.taskexecutor.TaskExecutorReportResponse;
 import org.apache.flink.runtime.taskexecutor.slot.SlotOffer;
 import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
+import org.apache.flink.runtime.update.JobUpdateRequest;
+import org.apache.flink.runtime.update.action.JobGraphReplaceAction;
+import org.apache.flink.runtime.update.action.JobGraphUpdateAction;
+import org.apache.flink.runtime.update.action.JobUpdateAction;
 import org.apache.flink.runtime.webmonitor.WebMonitorUtils;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
@@ -177,7 +183,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 	private final ResourceID resourceId;
 
-	private final JobGraph jobGraph;
+	private JobGraph jobGraph;
 
 	private final Time rpcTimeout;
 
@@ -200,6 +206,8 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	private final FatalErrorHandler fatalErrorHandler;
 
 	private final ClassLoader userCodeLoader;
+
+	private final SubmittedJobGraphStore submittedJobGraphStore;
 
 	private final SlotPool slotPool;
 
@@ -227,6 +235,8 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	// -------- Mutable fields ---------
 
 	private ExecutionGraph executionGraph;
+
+	private boolean inJobUpdate = false;
 
 	/** The graph manager manages the expansion and schedule of graph. */
 	private GraphManager graphManager;
@@ -264,7 +274,8 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 			JobManagerJobMetricGroupFactory jobMetricGroupFactory,
 			OnCompletionActions jobCompletionActions,
 			FatalErrorHandler fatalErrorHandler,
-			ClassLoader userCodeLoader) throws Exception {
+			ClassLoader userCodeLoader,
+			SubmittedJobGraphStore submittedJobGraphStore) throws Exception {
 
 		super(rpcService, AkkaRpcServiceUtils.createRandomName(JOB_MANAGER_NAME));
 
@@ -281,6 +292,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		this.fatalErrorHandler = checkNotNull(fatalErrorHandler);
 		this.userCodeLoader = checkNotNull(userCodeLoader);
 		this.jobMetricGroupFactory = checkNotNull(jobMetricGroupFactory);
+		this.submittedJobGraphStore = checkNotNull(submittedJobGraphStore);
 
 		this.accumulatorAggregationCoordinator = new AccumulatorAggregationCoordinator();
 
@@ -336,7 +348,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		this.establishedResourceManagerConnection = null;
 
 		JobManagerJobMetricGroup jmJobMetricGroup = jobMetricGroupFactory.create(jobGraph);
-		ExecutionGraph eg = createAndRestoreExecutionGraph(jmJobMetricGroup);
+		ExecutionGraph eg = createAndRestoreExecutionGraph(jobGraph, jmJobMetricGroup);
 
 		assignExecutionGraph(eg, jmJobMetricGroup);
 	}
@@ -400,7 +412,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 			clearExecutionGraphFields();
 
 			final JobManagerJobMetricGroup newJobManagerJobMetricGroup = jobMetricGroupFactory.create(jobGraph);
-			final ExecutionGraph newExecutionGraph = createAndRestoreExecutionGraph(newJobManagerJobMetricGroup);
+			final ExecutionGraph newExecutionGraph = createAndRestoreExecutionGraph(jobGraph, newJobManagerJobMetricGroup);
 			assignExecutionGraph(newExecutionGraph, newJobManagerJobMetricGroup);
 		}
 
@@ -415,7 +427,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 			clearExecutionGraphFields();
 
 			final JobManagerJobMetricGroup newJobManagerJobMetricGroup = jobMetricGroupFactory.create(jobGraph);
-			final ExecutionGraph newExecutionGraph = createAndRestoreExecutionGraph(newJobManagerJobMetricGroup);
+			final ExecutionGraph newExecutionGraph = createAndRestoreExecutionGraph(jobGraph, newJobManagerJobMetricGroup);
 			assignExecutionGraph(newExecutionGraph, newJobManagerJobMetricGroup);
 			return;
 		}
@@ -494,6 +506,31 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	}
 
 	@Override
+	public CompletableFuture<Acknowledge> updateJob(JobUpdateRequest request, Time timeout) {
+		// generate a new JobGraph with the job update request
+		JobGraph jobGraph = null;
+		try {
+			jobGraph = submittedJobGraphStore.recoverJobGraph(this.jobGraph.getJobID()).getJobGraph();
+		} catch (Exception e) {
+			return FutureUtils.completedExceptionally(
+				new JobModificationException("Failed to retrieve job graph of job " + jobGraph.getJobID(), e));
+		}
+		for (JobUpdateAction action : request.getJobUpdateActions()) {
+			if (action instanceof JobGraphUpdateAction) {
+				((JobGraphUpdateAction) action).updateJobGraph(jobGraph);
+			} else if (action instanceof JobGraphReplaceAction) {
+				jobGraph = ((JobGraphReplaceAction) action).getNewJobGraph();
+			} else {
+				return FutureUtils.completedExceptionally(
+					new IllegalArgumentException("Unknown job update action: " + action));
+			}
+		}
+
+		// update the job with the new JobGraph
+		return updateJob(jobGraph);
+	}
+
+	@Override
 	public CompletableFuture<Acknowledge> rescaleJob(
 			int newParallelism,
 			RescalingBehaviour rescalingBehaviour,
@@ -535,7 +572,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		final ExecutionGraph newExecutionGraph;
 
 		try {
-			newExecutionGraph = createExecutionGraph(newJobManagerJobMetricGroup);
+			newExecutionGraph = createExecutionGraph(jobGraph, newJobManagerJobMetricGroup);
 		} catch (JobExecutionException | JobException e) {
 			return FutureUtils.completedExceptionally(
 				new JobModificationException("Could not create rescaled ExecutionGraph.", e));
@@ -1358,9 +1395,11 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		}
 	}
 
-	private ExecutionGraph createAndRestoreExecutionGraph(JobManagerJobMetricGroup currentJobManagerJobMetricGroup) throws Exception {
+	private ExecutionGraph createAndRestoreExecutionGraph(
+		JobGraph jobGraph,
+		JobManagerJobMetricGroup currentJobManagerJobMetricGroup) throws Exception {
 
-		ExecutionGraph newExecutionGraph = createExecutionGraph(currentJobManagerJobMetricGroup);
+		ExecutionGraph newExecutionGraph = createExecutionGraph(jobGraph, currentJobManagerJobMetricGroup);
 
 		final CheckpointCoordinator checkpointCoordinator = newExecutionGraph.getCheckpointCoordinator();
 
@@ -1379,7 +1418,9 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		return newExecutionGraph;
 	}
 
-	private ExecutionGraph createExecutionGraph(JobManagerJobMetricGroup currentJobManagerJobMetricGroup) throws JobExecutionException, JobException {
+	private ExecutionGraph createExecutionGraph(
+			JobGraph jobGraph,
+			JobManagerJobMetricGroup currentJobManagerJobMetricGroup) throws JobExecutionException, JobException {
 		return ExecutionGraphBuilder.buildGraph(
 			null,
 			jobGraph,
@@ -1488,6 +1529,145 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 					savepointRestoreSettings.resumeFromLatestCheckpoint(),
 					executionGraphToRestore.getAllVertices(),
 					userCodeLoader);
+			}
+		}
+	}
+
+	/**
+	 * Update the job with the given {@link JobGraph}.
+	 *
+	 * @param newJobGraph is the new {@link JobGraph} to update current job
+	 * @return Future which is completed with {@link Acknowledge} once the update was successful
+	 */
+	private CompletableFuture<Acknowledge> updateJob(JobGraph newJobGraph) {
+		if (inJobUpdate) {
+			final String msg = "Fail to update the job as a previous update is still in progress.";
+			log.warn(msg);
+			return FutureUtils.completedExceptionally(new JobModificationException(msg));
+		}
+
+		// Only one update operation is allowed at one time
+		inJobUpdate = true;
+		try {
+			// 1. disable checkpoint coordinator to suppress subsequent checkpoints
+			final ExecutionGraph currentExecutionGraph = executionGraph;
+			final CheckpointCoordinator checkpointCoordinator = currentExecutionGraph.getCheckpointCoordinator();
+			if (checkpointCoordinator != null) {
+				checkpointCoordinator.stopCheckpointScheduler();
+			}
+
+			// 2. generate new ExecutionGraph with the new JobGraph and restore states
+			final JobManagerJobMetricGroup newJobManagerJobMetricGroup = jobMetricGroupFactory.create(newJobGraph);
+			final ExecutionGraph newExecutionGraph;
+			try {
+				newExecutionGraph = createAndRestoreExecutionGraph(newJobGraph, newJobManagerJobMetricGroup);
+			} catch (Exception e) {
+				// in case that the new ExecutionGraph creation or states restoration,
+				// restart the checkpoint coordinator and abort the job update operation
+				if (checkpointCoordinator != null && checkpointCoordinator.isPeriodicCheckpointingConfigured()) {
+					checkpointCoordinator.startCheckpointScheduler();
+				}
+
+				final String msg = "Fail to create the new ExecutionGraph or restore states from the latest checkpoint.";
+				log.warn(msg);
+				throw new JobModificationException(msg, e);
+			}
+
+			// 3. assign the new JobGraph to JobMaster to prepare for the real update operation
+			this.jobGraph = newJobGraph;
+
+			// 4. suspend the current job
+			runAsync(() -> suspendExecutionGraph(new FlinkException("Suspend the old job to update it.")));
+			final CompletableFuture<JobStatus> terminationFuture = currentExecutionGraph.getTerminationFuture();
+			final CompletableFuture<Void> suspendedFuture = terminationFuture.thenAccept(
+				(JobStatus jobStatus) -> {
+					if (jobStatus != JobStatus.SUSPENDED) {
+						final String msg = String.format("Job %s update failed because we could not suspend the execution graph.", jobGraph.getName());
+						log.warn(msg);
+						throw new CompletionException(new JobModificationException(msg));
+					}
+				});
+
+			// 5. resume the new execution graph
+			final CompletableFuture<Void> resumingFuture = suspendedFuture.thenAcceptAsync(
+				(Void ignore) -> {
+					// check if the ExecutionGraph is still the same
+					if (executionGraph == currentExecutionGraph) {
+						clearExecutionGraphFields();
+						checkState(executionGraph.getState().isTerminalState());
+
+						// Optimize the new ExecutionGraph with current ExecutionGraph
+						optimizeNewExecutionGraph(newExecutionGraph, currentExecutionGraph);
+
+						assignExecutionGraph(newExecutionGraph, newJobManagerJobMetricGroup);
+						operationLogManager.clear();
+						scheduleExecutionGraph();
+					} else {
+						final String msg = "Detected unexpected concurrent modification of ExecutionGraph.";
+						log.warn(msg);
+						throw new CompletionException(new JobModificationException(msg));
+					}
+				},
+				getMainThreadExecutor());
+
+			// 6. persist the new JobGraph if the update is succeeded
+			final CompletableFuture<Acknowledge> persistFuture = resumingFuture.thenApply(
+				(Void ignored) -> {
+					try {
+						submittedJobGraphStore.putJobGraph(new SubmittedJobGraph(newJobGraph, null));
+
+						return Acknowledge.get();
+					} catch (Exception e) {
+						final String msg = "Failed to store job graph of job " + newJobGraph.getJobID();
+						log.warn(msg);
+						throw new CompletionException(new JobModificationException(msg));
+					}
+				});
+
+			// notify fatal error if any error happens in stages 4,5,6
+			persistFuture.whenComplete(
+				(Acknowledge ignored, Throwable throwable) -> {
+					if (throwable != null) {
+						final String msg = "Unexpected error happens in job update.";
+						log.error(msg, throwable);
+
+						// An unhandled error means the job state can be corrupted
+						// Notify JM as a fatalError to trigger JM failover
+						RuntimeException unexpectedError = new RuntimeException(msg, throwable);
+						handleJobMasterError(unexpectedError);
+					}
+					// Leave the job updating status in the future thread
+					inJobUpdate = false;
+				});
+
+			return persistFuture;
+		} catch (Throwable t) {
+			// Leave the job updating status in the direct thread
+			inJobUpdate = false;
+
+			return FutureUtils.completedExceptionally(t);
+		}
+	}
+
+	/**
+	 * Optimize the new {@link ExecutionGraph}. Enrich it with execution prior locations to improve the scheduling.
+	 *
+	 * @param newExecutionGraph is the new {@link ExecutionGraph} to optimize by enriching
+	 * @param oldExecutionGraph is the old {@link ExecutionGraph} to help with the optimization
+	 */
+	private void optimizeNewExecutionGraph(ExecutionGraph newExecutionGraph, ExecutionGraph oldExecutionGraph) {
+		Map<JobVertexID, ExecutionJobVertex> oldVertices = oldExecutionGraph.getAllVertices();
+		Map<JobVertexID, ExecutionJobVertex> newVertices = newExecutionGraph.getAllVertices();
+		for (JobVertexID jobVertexID : newVertices.keySet()) {
+			ExecutionJobVertex oldEjv = oldVertices.get(jobVertexID);
+			if (oldEjv != null) {
+				ExecutionJobVertex newEjv = newVertices.get(jobVertexID);
+				int minParallelism = oldEjv.getParallelism() < newEjv.getParallelism() ?
+						oldEjv.getParallelism() : newEjv.getParallelism();
+				for (int i = 0; i < minParallelism; i++) {
+					newEjv.getTaskVertices()[i].setLatestPriorLocation(
+							oldEjv.getTaskVertices()[i].getCurrentAssignedResourceLocation());
+				}
 			}
 		}
 	}
@@ -1760,7 +1940,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	//----------------------------------------------------------------------------------------------
 
 	@VisibleForTesting
-	ExecutionGraph getExecutionGraph() {
+	public ExecutionGraph getExecutionGraph() {
 		return executionGraph;
 	}
 

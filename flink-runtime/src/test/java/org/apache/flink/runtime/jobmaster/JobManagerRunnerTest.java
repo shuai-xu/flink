@@ -32,6 +32,7 @@ import org.apache.flink.runtime.highavailability.TestingHighAvailabilityServices
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobgraph.JobVertex;
+import org.apache.flink.runtime.jobmanager.StandaloneSubmittedJobGraphStore;
 import org.apache.flink.runtime.jobmaster.factories.UnregisteredJobManagerJobMetricGroupFactory;
 import org.apache.flink.runtime.leaderelection.TestingLeaderElectionService;
 import org.apache.flink.runtime.leaderretrieval.SettableLeaderRetrievalService;
@@ -118,6 +119,7 @@ public class JobManagerRunnerTest extends TestLogger {
 		haServices.setJobMasterLeaderElectionService(jobGraph.getJobID(), new TestingLeaderElectionService());
 		haServices.setResourceManagerLeaderRetriever(new SettableLeaderRetrievalService());
 		haServices.setCheckpointRecoveryFactory(new StandaloneCheckpointRecoveryFactory());
+		haServices.setSubmittedJobGraphStore(new StandaloneSubmittedJobGraphStore());
 
 		fatalErrorHandler = new TestingFatalErrorHandler();
 		leaderShipLostHandler = new TestingLeaderShipLostHandler();
@@ -243,6 +245,7 @@ public class JobManagerRunnerTest extends TestLogger {
 			jobManagerSharedServices,
 			UnregisteredJobManagerJobMetricGroupFactory.INSTANCE,
 			fatalErrorHandler,
-			leaderShipLostHandler);
+			leaderShipLostHandler,
+			haServices.getSubmittedJobGraphStore());
 	}
 }

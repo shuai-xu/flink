@@ -62,6 +62,7 @@ import org.apache.flink.runtime.rpc.FencedRpcEndpoint;
 import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.rpc.RpcUtils;
+import org.apache.flink.runtime.update.JobUpdateRequest;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.Preconditions;
@@ -300,7 +301,8 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 			jobManagerSharedServices,
 			new DefaultJobManagerJobMetricGroupFactory(jobManagerMetricGroup),
 			fatalErrorHandler,
-			leaderShipLostHandler);
+			leaderShipLostHandler,
+			submittedJobGraphStore);
 
 		jobManagerRunner.getResultFuture().whenCompleteAsync(
 			(ArchivedExecutionGraph archivedExecutionGraph, Throwable throwable) -> {
@@ -363,6 +365,24 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 		final CompletableFuture<JobMasterGateway> jobMasterGatewayFuture = getJobMasterGatewayFuture(jobId);
 
 		return jobMasterGatewayFuture.thenCompose((JobMasterGateway jobMasterGateway) -> jobMasterGateway.stop(timeout));
+	}
+
+	@Override
+	public CompletableFuture<JobGraph> requestJobGraph(JobID jobId, Time timeout) {
+		try {
+			return CompletableFuture.completedFuture(submittedJobGraphStore.recoverJobGraph(jobId).getJobGraph());
+		} catch (Exception e) {
+			return FutureUtils.completedExceptionally(
+				new FlinkException("Fail to retrieve job graph for job " + jobId + ".", e));
+		}
+	}
+
+	@Override
+	public CompletableFuture<Acknowledge> updateJob(JobID jobId, JobUpdateRequest request, Time timeout) {
+		final CompletableFuture<JobMasterGateway> jobMasterGatewayFuture = getJobMasterGatewayFuture(jobId);
+
+		return jobMasterGatewayFuture.thenCompose(
+			(JobMasterGateway jobMasterGateway) -> jobMasterGateway.updateJob(request, timeout));
 	}
 
 	@Override
@@ -885,7 +905,8 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 			JobManagerSharedServices jobManagerServices,
 			JobManagerJobMetricGroupFactory jobManagerJobMetricGroupFactory,
 			FatalErrorHandler fatalErrorHandler,
-			LeaderShipLostHandler leaderShipLostHandler) throws Exception;
+			LeaderShipLostHandler leaderShipLostHandler,
+			SubmittedJobGraphStore submittedJobGraphStore) throws Exception;
 	}
 
 	/**
@@ -906,7 +927,8 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 				JobManagerSharedServices jobManagerServices,
 				JobManagerJobMetricGroupFactory jobManagerJobMetricGroupFactory,
 				FatalErrorHandler fatalErrorHandler,
-				LeaderShipLostHandler leaderShipLostHandler) throws Exception {
+				LeaderShipLostHandler leaderShipLostHandler,
+				SubmittedJobGraphStore submittedJobGraphStore) throws Exception {
 			return new JobManagerRunner(
 				resourceId,
 				jobGraph,
@@ -918,7 +940,8 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 				jobManagerServices,
 				jobManagerJobMetricGroupFactory,
 				fatalErrorHandler,
-				leaderShipLostHandler);
+				leaderShipLostHandler,
+				submittedJobGraphStore);
 		}
 	}
 }

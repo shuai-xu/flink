@@ -59,6 +59,7 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.jobmanager.OnCompletionActions;
+import org.apache.flink.runtime.jobmanager.StandaloneSubmittedJobGraphStore;
 import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.runtime.jobmaster.factories.UnregisteredJobManagerJobMetricGroupFactory;
 import org.apache.flink.runtime.jobmaster.failover.MemoryOperationLogStore;
@@ -164,6 +165,7 @@ public class JobMasterFailoverTest extends TestLogger {
 			null,
 			null);
 		haServices.setResourceManagerLeaderRetriever(rmLeaderRetrievalService);
+		haServices.setSubmittedJobGraphStore(new StandaloneSubmittedJobGraphStore());
 
 		configuration.setString(BlobServerOptions.STORAGE_DIRECTORY, temporaryFolder.newFolder().getAbsolutePath());
 		configuration.setString(JobManagerOptions.OPERATION_LOG_STORE, "memory");
@@ -1316,7 +1318,8 @@ public class JobMasterFailoverTest extends TestLogger {
 			UnregisteredJobManagerJobMetricGroupFactory.INSTANCE,
 			new NoOpOnCompletionActions(),
 			testingFatalErrorHandler,
-			JobMasterFailoverTest.class.getClassLoader());
+			JobMasterFailoverTest.class.getClassLoader(),
+			highAvailabilityServices.getSubmittedJobGraphStore());
 	}
 
 	/**

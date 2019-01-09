@@ -236,7 +236,7 @@ public class ExecutionGraphTestUtils {
 	 */
 	static final Predicate<Execution> hasResourceAssigned = (Execution execution) -> execution.getAssignedResource() != null;
 
-	static Predicate<Execution> isInExecutionState(ExecutionState executionState) {
+	public static Predicate<Execution> isInExecutionState(ExecutionState executionState) {
 		return (Execution execution) -> execution.getState() == executionState;
 	}
 

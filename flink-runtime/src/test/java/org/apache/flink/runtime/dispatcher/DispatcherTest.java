@@ -602,7 +602,8 @@ public class DispatcherTest extends TestLogger {
 				JobManagerSharedServices jobManagerSharedServices,
 				JobManagerJobMetricGroupFactory jobManagerJobMetricGroupFactory,
 				FatalErrorHandler fatalErrorHandler,
-				LeaderShipLostHandler leaderShipLostHandler) throws Exception {
+				LeaderShipLostHandler leaderShipLostHandler,
+				SubmittedJobGraphStore submittedJobGraphStore) throws Exception {
 			assertEquals(expectedJobId, jobGraph.getJobID());
 
 			createdJobManagerRunnerLatch.countDown();
@@ -618,7 +619,8 @@ public class DispatcherTest extends TestLogger {
 				jobManagerSharedServices,
 				jobManagerJobMetricGroupFactory,
 				fatalErrorHandler,
-				leaderShipLostHandler);
+				leaderShipLostHandler,
+				submittedJobGraphStore);
 		}
 	}
 

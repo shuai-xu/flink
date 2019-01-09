@@ -116,6 +116,9 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	/** The create timestamp of execution. */
 	private long createTimestamp;
 
+	/** The location of the last execution. */
+	private TaskManagerLocation latestPriorLocation = null;
+
 	private final Map<OperatorID, List<InputSplit>> assignedInputSplitsMap = new HashMap<>();
 
 	private final Map<OperatorID, Integer> inputSplitIndexMap = new HashMap<>();
@@ -340,8 +343,11 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	 * @return The latest prior execution location, or null, if there is none, yet.
 	 */
 	public TaskManagerLocation getLatestPriorLocation() {
-		Execution latestPriorExecution = getLatestPriorExecution();
-		return latestPriorExecution != null ? latestPriorExecution.getAssignedResourceLocation() : null;
+		return latestPriorLocation;
+	}
+
+	public void setLatestPriorLocation(TaskManagerLocation location) {
+		this.latestPriorLocation = location;
 	}
 
 	public AllocationID getLatestPriorAllocation() {
@@ -511,6 +517,7 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 
 			if (oldState.isTerminal() || getExecutionGraph().getGraphManager().isReplaying()) {
 				priorExecutions.add(oldExecution);
+				latestPriorLocation = oldExecution.getAssignedResourceLocation();
 
 				final Execution newExecution = new Execution(
 					getExecutionGraph().getFutureExecutor(),
