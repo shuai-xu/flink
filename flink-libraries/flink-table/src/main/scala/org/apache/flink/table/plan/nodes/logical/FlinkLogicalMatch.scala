@@ -47,7 +47,6 @@ class FlinkLogicalMatch(
     partitionKeys: util.List[RexNode],
     orderKeys: RelCollation,
     interval: RexNode,
-    emit: RexNode,
     rowType: RelDataType)
   extends Match(
     cluster,
@@ -64,8 +63,7 @@ class FlinkLogicalMatch(
     rowsPerMatch,
     partitionKeys,
     orderKeys,
-    interval,
-    emit)
+    interval)
   with FlinkLogicalRel {
 
   def copy(
@@ -82,8 +80,7 @@ class FlinkLogicalMatch(
       rowsPerMatch: RexNode,
       partitionKeys: util.List[RexNode],
       orderKeys: RelCollation,
-      interval: RexNode,
-      emit: RexNode): Match = {
+      interval: RexNode): Match = {
     new FlinkLogicalMatch(
       cluster,
       traitSet,
@@ -99,7 +96,6 @@ class FlinkLogicalMatch(
       partitionKeys,
       orderKeys,
       interval,
-      emit,
       rowType)
   }
 
@@ -116,8 +112,7 @@ class FlinkLogicalMatch(
       rowsPerMatch: RexNode,
       partitionKeys: util.List[RexNode],
       orderKeys: RelCollation,
-      interval: RexNode,
-      emit: RexNode): Match = {
+      interval: RexNode): Match = {
     new FlinkLogicalMatch(
       cluster,
       traitSet,
@@ -133,7 +128,6 @@ class FlinkLogicalMatch(
       partitionKeys,
       orderKeys,
       interval,
-      emit,
       rowType)
   }
 
@@ -163,7 +157,6 @@ private class FlinkLogicalMatchConverter
       logicalMatch.getPartitionKeys,
       logicalMatch.getOrderKeys,
       logicalMatch.getInterval,
-      logicalMatch.getEmit,
       logicalMatch.getRowType)
   }
 }
@@ -184,7 +177,6 @@ object FlinkLogicalMatch {
       partitionKeys: util.List[RexNode],
       orderKeys: RelCollation,
       interval: RexNode,
-      emit: RexNode,
       rowType: RelDataType): FlinkLogicalMatch = {
     val cluster = input.getCluster
     val traitSet = cluster.traitSetOf(Convention.NONE)
@@ -206,7 +198,6 @@ object FlinkLogicalMatch {
       partitionKeys,
       orderKeys,
       interval,
-      emit,
       rowType)
     val newTraitSet = FlinkRelMetadataQuery.traitSet(logicalMatch)
       .replace(FlinkConventions.LOGICAL).simplify()
@@ -224,7 +215,6 @@ object FlinkLogicalMatch {
       rowsPerMatch,
       partitionKeys,
       orderKeys,
-      interval,
-      emit).asInstanceOf[FlinkLogicalMatch]
+      interval).asInstanceOf[FlinkLogicalMatch]
   }
 }

@@ -38,5 +38,4 @@ case class MatchRecognize(
   rowsPerMatch: RexNode,
   partitionKeys: util.List[RexNode],
   orderKeys: RelCollation,
-  interval: RexNode,
-  emit: RexNode)
+  interval: RexNode)

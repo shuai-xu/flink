@@ -276,8 +276,7 @@ object FlinkLogicalRelFactories {
         rowsPerMatch: RexNode,
         partitionKeys: util.List[RexNode],
         orderKeys: RelCollation,
-        interval: RexNode,
-        emit: RexNode): RelNode = {
+        interval: RexNode): RelNode = {
       FlinkLogicalMatch.create(
         input,
         pattern,
@@ -291,7 +290,6 @@ object FlinkLogicalRelFactories {
         partitionKeys,
         orderKeys,
         interval,
-        emit,
         rowType)
     }
   }

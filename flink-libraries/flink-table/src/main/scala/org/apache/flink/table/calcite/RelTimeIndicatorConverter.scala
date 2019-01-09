@@ -330,8 +330,7 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
       matchRel.getRowsPerMatch,
       partitionKeys,
       matchRel.getOrderKeys,
-      interval,
-      matchRel.getEmit)
+      interval)
   }
 
   private def gatherIndicesToMaterialize(

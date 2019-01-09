@@ -94,8 +94,7 @@ class StreamExecMatchRule
         logicalMatch.getRowsPerMatch,
         logicalMatch.getPartitionKeys,
         logicalMatch.getOrderKeys,
-        logicalMatch.getInterval,
-        logicalMatch.getEmit
+        logicalMatch.getInterval
       ),
       new BaseRowSchema(logicalMatch.getRowType),
       new BaseRowSchema(logicalMatch.getInput.getRowType))

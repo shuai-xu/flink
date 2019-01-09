@@ -54,8 +54,7 @@ object MatchUtil {
       FlinkRexUtil.isDeterministicOperator(`match`.getRowsPerMatch) &&
       `match`.getPatternDefinitions.values().asScala.forall(FlinkRexUtil.isDeterministicOperator) &&
       `match`.getPartitionKeys.asScala.forall(FlinkRexUtil.isDeterministicOperator) &&
-      FlinkRexUtil.isDeterministicOperator(`match`.getInterval) &&
-      FlinkRexUtil.isDeterministicOperator(`match`.getEmit)
+      FlinkRexUtil.isDeterministicOperator(`match`.getInterval)
   }
 
   def isDeterministic(logicalMatch: MatchRecognize): Boolean = {
@@ -64,8 +63,7 @@ object MatchUtil {
       FlinkRexUtil.isDeterministicOperator(logicalMatch.rowsPerMatch) &&
       logicalMatch.patternDefinitions.values().forall(FlinkRexUtil.isDeterministicOperator) &&
       logicalMatch.partitionKeys.forall(FlinkRexUtil.isDeterministicOperator) &&
-      FlinkRexUtil.isDeterministicOperator(logicalMatch.interval) &&
-      FlinkRexUtil.isDeterministicOperator(logicalMatch.emit)
+      FlinkRexUtil.isDeterministicOperator(logicalMatch.interval)
   }
 
   private[flink] def generateIterativeCondition(
