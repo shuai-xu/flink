@@ -61,7 +61,7 @@ under the License.
 		<module>flink-scala</module>
 		<module>flink-filesystems</module>
 		<module>flink-runtime</module>
-		<!--<module>flink-runtime-web</module>-->
+		<module>flink-runtime-web</module>
 		<module>flink-optimizer</module>
 		<module>flink-streaming-java</module>
 		<module>flink-streaming-scala</module>
@@ -359,7 +359,7 @@ under the License.
 				<version>1.1.4</version>
 			</dependency>
 
-			<!-- Make sure we use a consistent avro version between Flink and Hadoop -->		
+			<!-- Make sure we use a consistent avro version between Flink and Hadoop -->
  			<dependency>
 				<groupId>org.apache.avro</groupId>
 				<artifactId>avro</artifactId>
@@ -1442,7 +1442,7 @@ under the License.
 						<failOnViolation>true</failOnViolation>
 					</configuration>
 				</plugin>
-				
+
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-javadoc-plugin</artifactId>
