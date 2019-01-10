@@ -35,10 +35,6 @@ under the License.
 
 	<packaging>jar</packaging>
 
-	<properties>
-		<jmh.version>1.19</jmh.version>
-	</properties>
-
 	<dependencies>
 
 		<dependency>
@@ -245,19 +241,6 @@ under the License.
 		<dependency>
 			<groupId>org.reflections</groupId>
 			<artifactId>reflections</artifactId>
-		</dependency>
-
-		<!-- utility for micro benchmark -->
-		<dependency>
-			<groupId>org.openjdk.jmh</groupId>
-			<artifactId>jmh-core</artifactId>
-			<version>${jmh.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.openjdk.jmh</groupId>
-			<artifactId>jmh-generator-annprocess</artifactId>
-			<version>${jmh.version}</version>
 		</dependency>
 
 	</dependencies>
