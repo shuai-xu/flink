@@ -22,8 +22,8 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.schema.IntermediateRelNodeTable
-import org.apache.flink.table.util.BatchExecRelVisitor
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.`type`.RelDataType
@@ -64,8 +64,6 @@ class BatchExecIntermediateTableScan(
 
   //~ ExecNode methods -----------------------------------------------------------
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   /**
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
@@ -87,5 +85,10 @@ class BatchExecIntermediateTableScan(
     // There is no possible to go here.
     throw new TableException(
       "getSourceTransformation is not supported in BatchExecIntermediateTableScan.")
+  }
+
+  // TODO it will be removed later.
+  override def accept(visitor: BatchExecNodeVisitor): Unit = {
+    throw new TableException("this should happen.")
   }
 }

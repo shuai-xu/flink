@@ -28,11 +28,11 @@ import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistri
 import org.apache.flink.table.plan.cost.FlinkBatchCost.FUNC_CPU_COST
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.calcite.Rank
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.util.{ConstantRankRange, FlinkRelOptUtil, FlinkRexUtil, RankRange}
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.rank.RankOperator
 import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.table.util.BatchExecRelVisitor
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelDistribution.Type
@@ -225,8 +225,6 @@ class BatchExecRank(
 
   //~ ExecNode methods -----------------------------------------------------------
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
     * into a Batch operator.
@@ -297,6 +295,10 @@ class BatchExecRank(
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
+  }
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = {
+    visitor.visit(this)
   }
 
   private def getOperatorName: String = {

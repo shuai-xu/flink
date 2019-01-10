@@ -25,11 +25,11 @@ import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.util.AggregateNameUtil
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.BatchExecRelVisitor
+import org.apache.flink.table.typeutils.TypeUtils
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
 import org.apache.calcite.rel.RelDistribution.Type
@@ -136,8 +136,6 @@ class BatchExecLocalSortAggregate(
 
   //~ ExecNode methods -----------------------------------------------------------
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
     * into a Batch operator.
@@ -172,6 +170,10 @@ class BatchExecLocalSortAggregate(
     }
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
+  }
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = {
+    visitor.visit(this)
   }
 
 }

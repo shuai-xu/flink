@@ -22,9 +22,9 @@ import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.sort.LimitOperator
-import org.apache.flink.table.util.BatchExecRelVisitor
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
 import org.apache.calcite.rel._
@@ -102,8 +102,6 @@ class BatchExecLimit(
 
   //~ ExecNode methods -----------------------------------------------------------
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
     * into a Batch operator.
@@ -130,4 +128,7 @@ class BatchExecLimit(
     s"${if (isGlobal) "Global" else "Local"}Limit(offset: $offsetToString, limit: $limitToString)"
   }
 
+  override def accept(visitor: BatchExecNodeVisitor): Unit = {
+    visitor.visit(this)
+  }
 }

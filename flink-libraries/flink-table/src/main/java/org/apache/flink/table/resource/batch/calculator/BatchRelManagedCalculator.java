@@ -20,6 +20,7 @@ package org.apache.flink.table.resource.batch.calculator;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.api.TableException;
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
@@ -50,7 +51,6 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTemporalTableJo
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
 import org.apache.flink.table.resource.RelResource;
-import org.apache.flink.table.util.BatchExecRelVisitor;
 import org.apache.flink.table.util.ExecResourceUtil;
 
 import org.apache.calcite.rel.RelNode;
@@ -60,7 +60,7 @@ import java.util.Map;
 /**
  * Default managed memory calculator for relNode.
  */
-public class BatchRelManagedCalculator implements BatchExecRelVisitor<Void> {
+public class BatchRelManagedCalculator extends BatchExecNodeVisitor {
 
 	private final Map<BatchExecRel<?>, RelResource> relResMap;
 	private final Configuration tableConf;
@@ -76,45 +76,38 @@ public class BatchRelManagedCalculator implements BatchExecRelVisitor<Void> {
 	}
 
 	@Override
-	public Void visit(BatchExecBoundedStreamScan boundedStreamScan) {
+	public void visit(BatchExecBoundedStreamScan boundedStreamScan) {
 		calculateNoManagedMem(boundedStreamScan);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecTableSourceScan scanTableSource) {
+	public void visit(BatchExecTableSourceScan scanTableSource) {
 		calculateNoManagedMem(scanTableSource);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecValues values) {
+	public void visit(BatchExecValues values) {
 		calculateNoManagedMem(values);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecCalc calc) {
+	public void visit(BatchExecCalc calc) {
 		calculateNoManagedMem(calc);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecCorrelate correlate) {
+	public void visit(BatchExecCorrelate correlate) {
 		calculateNoManagedMem(correlate);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecExchange exchange) {
+	public void visit(BatchExecExchange exchange) {
 		visitChildren(exchange);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecExpand expand) {
+	public void visit(BatchExecExpand expand) {
 		calculateNoManagedMem(expand);
-		return null;
 	}
 
 	private void calculateHashAgg(BatchExecHashAggregateBase hashAgg) {
@@ -136,28 +129,25 @@ public class BatchRelManagedCalculator implements BatchExecRelVisitor<Void> {
 	}
 
 	@Override
-	public Void visit(BatchExecHashAggregate hashAggregate) {
+	public void visit(BatchExecHashAggregate hashAggregate) {
 		calculateHashAgg(hashAggregate);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecHashWindowAggregate hashAggregate) {
+	public void visit(BatchExecHashWindowAggregate hashAggregate) {
 		calculateHashWindowAgg(hashAggregate);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecHashJoinBase hashJoin) {
+	public void visit(BatchExecHashJoinBase hashJoin) {
 		visitChildren(hashJoin);
 		int reservedMem = ExecResourceUtil.getHashJoinTableManagedMemory(tableConf);
 		int preferMem = ExecResourceUtil.getHashJoinTableManagedPreferredMemory(tableConf);
 		relResMap.get(hashJoin).setManagedMem(reservedMem, preferMem, preferMem);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecSortMergeJoinBase sortMergeJoin) {
+	public void visit(BatchExecSortMergeJoinBase sortMergeJoin) {
 		visitChildren(sortMergeJoin);
 		int externalBufferMemoryMb = ExecResourceUtil.getExternalBufferManagedMemory(
 				tableConf) * sortMergeJoin.getExternalBufferNum();
@@ -167,11 +157,10 @@ public class BatchRelManagedCalculator implements BatchExecRelVisitor<Void> {
 				tableConf);
 		int preferMemory = preferSortMemory * 2 + externalBufferMemoryMb;
 		relResMap.get(sortMergeJoin).setManagedMem(reservedMemory, preferMemory, preferMemory);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecNestedLoopJoinBase nestedLoopJoin) {
+	public void visit(BatchExecNestedLoopJoinBase nestedLoopJoin) {
 		if (nestedLoopJoin.singleRowJoin()) {
 			calculateNoManagedMem(nestedLoopJoin);
 		} else {
@@ -179,52 +168,45 @@ public class BatchRelManagedCalculator implements BatchExecRelVisitor<Void> {
 			int externalBufferMemoryMb = ExecResourceUtil.getExternalBufferManagedMemory(tableConf);
 			relResMap.get(nestedLoopJoin).setManagedMem(externalBufferMemoryMb, externalBufferMemoryMb, externalBufferMemoryMb);
 		}
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecSink<?> sink) {
+	public void visit(BatchExecSink<?> sink) {
 		throw new TableException("could not reach sink here.");
 	}
 
 	@Override
-	public Void visit(BatchExecLocalHashAggregate localHashAggregate) {
+	public void visit(BatchExecLocalHashAggregate localHashAggregate) {
 		calculateHashAgg(localHashAggregate);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecSortAggregate sortAggregate) {
+	public void visit(BatchExecSortAggregate sortAggregate) {
 		calculateNoManagedMem(sortAggregate);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecLocalHashWindowAggregate localHashAggregate) {
+	public void visit(BatchExecLocalHashWindowAggregate localHashAggregate) {
 		calculateHashWindowAgg(localHashAggregate);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecLocalSortAggregate localSortAggregate) {
+	public void visit(BatchExecLocalSortAggregate localSortAggregate) {
 		calculateNoManagedMem(localSortAggregate);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecLocalSortWindowAggregate localSortAggregate) {
+	public void visit(BatchExecLocalSortWindowAggregate localSortAggregate) {
 		calculateNoManagedMem(localSortAggregate);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecSortWindowAggregate sortAggregate) {
+	public void visit(BatchExecSortWindowAggregate sortAggregate) {
 		calculateNoManagedMem(sortAggregate);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecOverAggregate overWindowAgg) {
+	public void visit(BatchExecOverAggregate overWindowAgg) {
 		boolean[] needBufferList = overWindowAgg.needBufferDataToNeedResetAcc()._1;
 		boolean needBuffer = false;
 		for (boolean b : needBufferList) {
@@ -240,53 +222,40 @@ public class BatchRelManagedCalculator implements BatchExecRelVisitor<Void> {
 			int externalBufferMemory = ExecResourceUtil.getExternalBufferManagedMemory(tableConf);
 			relResMap.get(overWindowAgg).setManagedMem(externalBufferMemory, externalBufferMemory, externalBufferMemory);
 		}
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecLimit limit) {
+	public void visit(BatchExecLimit limit) {
 		calculateNoManagedMem(limit);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecSort sort) {
+	public void visit(BatchExecSort sort) {
 		visitChildren(sort);
 		int reservedMemory = ExecResourceUtil.getSortBufferManagedMemory(tableConf);
 		int preferMemory = ExecResourceUtil.getSortBufferManagedPreferredMemory(tableConf);
 		int maxMemory = ExecResourceUtil.getSortBufferManagedMaxMemory(tableConf);
 		relResMap.get(sort).setManagedMem(reservedMemory, preferMemory, maxMemory);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecSortLimit sortLimit) {
+	public void visit(BatchExecSortLimit sortLimit) {
 		calculateNoManagedMem(sortLimit);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecRank rank) {
+	public void visit(BatchExecRank rank) {
 		calculateNoManagedMem(rank);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecUnion union) {
+	public void visit(BatchExecUnion union) {
 		visitChildren(union);
-		return null;
 	}
 
 	@Override
-	public Void visit(BatchExecTemporalTableJoin joinTable) {
+	public void visit(BatchExecTemporalTableJoin joinTable) {
 		calculateNoManagedMem(joinTable);
-		return null;
-	}
-
-	@Override
-	public Void visit(BatchExecRel<?> batchExec) {
-		calculateNoManagedMem(batchExec);
-		return null;
 	}
 
 	private void visitChildren(BatchExecRel<?> batchExec) {

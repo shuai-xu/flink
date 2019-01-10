@@ -25,10 +25,10 @@ import org.apache.flink.table.codegen.{GeneratedSorter, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.sort.SortLimitOperator
 import org.apache.flink.table.typeutils._
-import org.apache.flink.table.util.BatchExecRelVisitor
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
 import org.apache.calcite.rel.core.Sort
@@ -134,8 +134,6 @@ class BatchExecSortLimit(
 
   //~ ExecNode methods -----------------------------------------------------------
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   override def isBarrierNode: Boolean = true
 
   /**
@@ -189,6 +187,10 @@ class BatchExecSortLimit(
         s"orderBy: [${SortUtil.sortFieldsToString(collations, getRowType)}], " +
         s"offset: $offsetToString, " +
         s"limit: $limitToString)"
+  }
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = {
+    visitor.visit(this)
   }
 
 }

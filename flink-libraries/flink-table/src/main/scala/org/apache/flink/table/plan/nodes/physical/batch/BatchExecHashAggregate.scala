@@ -25,10 +25,13 @@ import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.util.{AggregateNameUtil, FlinkRelOptUtil}
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.util.ExecResourceUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
 import org.apache.calcite.rel.RelDistribution.Type._
@@ -136,8 +139,6 @@ class BatchExecHashAggregate(
 
   //~ ExecNode methods -----------------------------------------------------------
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   override def isBarrierNode: Boolean = true
 
   /**
@@ -189,4 +190,7 @@ class BatchExecHashAggregate(
     getAggOperatorName(aggregateNamePrefix + "HashAggregate")
   }
 
+  override def accept(visitor: BatchExecNodeVisitor): Unit = {
+    visitor.visit(this)
+  }
 }

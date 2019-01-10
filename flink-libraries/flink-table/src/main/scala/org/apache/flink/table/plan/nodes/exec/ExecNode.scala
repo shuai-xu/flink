@@ -102,4 +102,14 @@ trait ExecNode[E <: TableEnvironment, T] {
     * Returns the [[FlinkPhysicalRel]] object corresponding to this node.
     */
   def getFlinkPhysicalRel: FlinkPhysicalRel
+
+  /**
+    * Accepts a visit from a [[ExecNodeVisitor]].
+    *
+    * @param visitor ExecNodeVisitor
+    */
+  def accept(visitor: ExecNodeVisitor): Unit = {
+    visitor.visit(this)
+  }
+
 }

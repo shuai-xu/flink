@@ -29,13 +29,15 @@ import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.ExpressionFormat
+import org.apache.flink.table.plan.nodes.exec.ExecNodeVisitor
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.util.{JoinUtil, SortUtil}
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.join.batch.{MergeJoinOperator, OneSideSortMergeJoinOperator, SortMergeJoinOperator}
 import org.apache.flink.table.runtime.sort.BinaryExternalSorter
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.ExecResourceUtil.InferMode
-import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
+import org.apache.flink.table.util.ExecResourceUtil
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.core._
@@ -165,8 +167,6 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
 
   //~ ExecNode methods -----------------------------------------------------------
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   override def isBarrierNode: Boolean = !leftSorted && !rightSorted
 
   /**
@@ -289,6 +289,10 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     }
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
+  }
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = {
+    visitor.visit(this)
   }
 
   private def inferLeftRowCountRatio: Double = {

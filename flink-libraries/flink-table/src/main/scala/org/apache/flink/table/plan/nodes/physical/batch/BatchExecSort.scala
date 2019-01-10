@@ -28,10 +28,11 @@ import org.apache.flink.table.codegen.{GeneratedSorter, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.sort.SortOperator
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
+import org.apache.flink.table.util.ExecResourceUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
 import org.apache.calcite.rel.core.Sort
@@ -82,8 +83,6 @@ class BatchExecSort(
   override def isDeterministic: Boolean = true
 
   //~ ExecNode methods -----------------------------------------------------------
-
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   override def isBarrierNode: Boolean = true
 
@@ -141,5 +140,9 @@ class BatchExecSort(
     val sers = compAndSers.map(_._2)
     val codeGen = new SortCodeGenerator(keys, keyTypes, comps, orders, nullsIsLast)
     (comps, sers, codeGen)
+  }
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = {
+    visitor.visit(this)
   }
 }

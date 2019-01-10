@@ -33,11 +33,11 @@ import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, Pr
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, GenericRow}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.common.CommonExchange
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.util.{FlinkRelOptUtil, SortUtil}
 import org.apache.flink.table.runtime.BinaryHashPartitioner
 import org.apache.flink.table.runtime.range._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.BatchExecRelVisitor
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.{RelDistribution, RelNode, RelWriter}
@@ -159,8 +159,6 @@ class BatchExecExchange(
   }
 
   //~ ExecNode methods -----------------------------------------------------------
-
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   override def isBarrierNode: Boolean = {
     val tableConfig = FlinkRelOptUtil.getTableConfig(this)
@@ -399,6 +397,10 @@ class BatchExecExchange(
       resultPartitionCount)
     removeIdTransformation.setResources(reservedResSpec, preferResSpec)
     removeIdTransformation
+  }
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = {
+    visitor.visit(this)
   }
 }
 

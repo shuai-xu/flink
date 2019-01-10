@@ -23,11 +23,11 @@ import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSourceUtil}
 import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.table.util.BatchExecRelVisitor
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
@@ -68,8 +68,6 @@ class BatchExecTableSourceScan(
 
   //~ ExecNode methods -----------------------------------------------------------
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
     * into a Batch operator.
@@ -107,6 +105,10 @@ class BatchExecTableSourceScan(
 
     convertToInternalRow(tableEnv, input, fieldIndexes,
       getRowType, tableSource.getReturnType, config, rowtimeExpression)
+  }
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = {
+    visitor.visit(this)
   }
 
   override def needInternalConversion: Boolean = {

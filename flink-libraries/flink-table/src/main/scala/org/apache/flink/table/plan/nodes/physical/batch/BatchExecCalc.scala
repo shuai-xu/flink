@@ -23,9 +23,9 @@ import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.codegen.{CalcCodeGenerator, CodeGeneratorContext}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef, TraitSetHelper}
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalCalc
 import org.apache.flink.table.plan.util.CalcUtil
-import org.apache.flink.table.util.BatchExecRelVisitor
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel._
@@ -134,8 +134,6 @@ class BatchExecCalc(
 
   //~ ExecNode methods -----------------------------------------------------------
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
     * into a Batch operator.
@@ -174,5 +172,9 @@ class BatchExecCalc(
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
+  }
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = {
+    visitor.visit(this)
   }
 }

@@ -28,7 +28,7 @@ import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.runtime.sort.BinaryIndexedSortable
 import org.apache.flink.table.typeutils.BinaryRowSerializer
-import org.apache.flink.table.util.{BatchExecRelVisitor, Logging}
+import org.apache.flink.table.util.Logging
 
 import org.apache.calcite.plan.RelTraitSet
 import org.apache.calcite.rel.RelNode
@@ -52,16 +52,6 @@ trait BatchExecRel[T] extends FlinkPhysicalRel with BatchExecNode[T] with Loggin
   def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = null
 
   //~ ExecNode methods -----------------------------------------------------------
-
-  /**
-    * Accepts a visit from a [[BatchExecRelVisitor]].
-    *
-    * TODO move this method to [[BatchExecNode]]
-    *
-    * @param visitor BatchExecRelVisitor
-    * @tparam R Return type
-    */
-  def accept[R](visitor: BatchExecRelVisitor[R]): R
 
   override def getInputNodes: util.List[ExecNode[BatchTableEnvironment, _]] = {
     getInputs.map(_.asInstanceOf[BatchExecRel[T]])

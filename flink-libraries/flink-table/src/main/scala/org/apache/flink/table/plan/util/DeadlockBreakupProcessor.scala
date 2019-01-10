@@ -21,8 +21,9 @@ package org.apache.flink.table.plan.util
 import org.apache.flink.runtime.io.network.DataExchangeMode
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
-import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.util.{BatchExecRelShuttleImpl, BatchExecRelVisitorImpl}
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
+import org.apache.flink.table.plan.nodes.exec.{ExecNode, ExecNodeVisitor}
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecBoundedStreamScan, _}
 
 import com.google.common.collect.{Maps, Sets}
 import org.apache.calcite.rel.{RelNode, RelVisitor}
@@ -89,9 +90,10 @@ class DeadlockBreakupProcessor {
 
     val finder = new ReuseNodeFinder()
     sinks.foreach(sink => finder.go(sink))
-    sinks.map {
+    sinks.foreach(
       sink => sink.asInstanceOf[BatchExecRel[_]].accept(new DeadlockBreakupShuttleImpl(finder))
-    }
+    )
+    sinks
   }
 
   /**
@@ -141,9 +143,7 @@ class DeadlockBreakupProcessor {
     }
   }
 
-  class DeadlockBreakupShuttleImpl(finder: ReuseNodeFinder) extends BatchExecRelShuttleImpl {
-
-    private val mapOldNodeToNewNode = Maps.newIdentityHashMap[BatchExecRel[_], BatchExecRel[_]]()
+  class DeadlockBreakupShuttleImpl(finder: ReuseNodeFinder) extends BatchExecNodeVisitor {
 
     private def rewriteJoin(
         join: BatchExecJoinBase,
@@ -175,39 +175,23 @@ class DeadlockBreakupProcessor {
               probeNode,
               distribution)
             e.setRequiredDataExchangeMode(DataExchangeMode.BATCH)
-            val newInputs = if (leftIsBuild) List(join.getLeft, e) else List(e, join.getRight)
-            newInputs.zipWithIndex.foreach {
-              case (newInput, i) =>
-                join.replaceInput(i, newInput)
-            }
-            return join
+            join.replaceInputNode(if (leftIsBuild) 1 else 0, e)
         }
       }
       join
     }
 
-    override def visit(hashJoin: BatchExecHashJoinBase): BatchExecRel[_] = {
-      val newHashJoin = super.visit(hashJoin).asInstanceOf[BatchExecHashJoinBase]
+    override def visit(hashJoin: BatchExecHashJoinBase): Unit = {
+      super.visit(hashJoin)
       val joinInfo = hashJoin.joinInfo
       val columns = if (hashJoin.leftIsBuild) joinInfo.rightKeys else joinInfo.leftKeys
       val distribution = FlinkRelDistribution.hash(columns)
-      rewriteJoin(newHashJoin, newHashJoin.leftIsBuild, distribution)
+      rewriteJoin(hashJoin, hashJoin.leftIsBuild, distribution)
     }
 
-    override def visit(nestedLoopJoin: BatchExecNestedLoopJoinBase): BatchExecRel[_] = {
-      val newNlJoin = super.visit(nestedLoopJoin).asInstanceOf[BatchExecNestedLoopJoinBase]
-      rewriteJoin(newNlJoin, newNlJoin.leftIsBuild, FlinkRelDistribution.ANY)
-    }
-
-    override protected def visitInputs(batchExecRel: BatchExecRel[_]): BatchExecRel[_] = {
-      val newNode = mapOldNodeToNewNode.get(batchExecRel)
-      if (newNode != null) {
-        newNode
-      } else {
-        val node = super.visitInputs(batchExecRel)
-        mapOldNodeToNewNode.put(batchExecRel, node)
-        node
-      }
+    override def visit(nestedLoopJoin: BatchExecNestedLoopJoinBase): Unit = {
+      super.visit(nestedLoopJoin)
+      rewriteJoin(nestedLoopJoin, nestedLoopJoin.leftIsBuild, FlinkRelDistribution.ANY)
     }
   }
 
@@ -218,12 +202,13 @@ class DeadlockBreakupProcessor {
       buildNode: BatchExecRel[_],
       finder: ReuseNodeFinder): Set[BatchExecRel[_]] = {
     val nodesInBuildSide = Sets.newIdentityHashSet[BatchExecRel[_]]()
-    buildNode.accept(new BatchExecRelVisitorImpl[Unit] {
-      override protected def visitInputs(batchExecRel: BatchExecRel[_]): Unit = {
+    buildNode.accept(new ExecNodeVisitor {
+      override protected def visitInputs(batchExecNode: ExecNode[_, _]): Unit = {
+        val batchExecRel = batchExecNode.asInstanceOf[BatchExecRel[_]]
         if (finder.isReusedNode(batchExecRel)) {
           nodesInBuildSide.add(batchExecRel)
         }
-        super.visitInputs(batchExecRel)
+        super.visitInputs(batchExecNode)
       }
     })
     nodesInBuildSide.toSet
@@ -267,8 +252,9 @@ class DeadlockBreakupProcessor {
       return result.toList
     }
 
-    probeNode.accept(new BatchExecRelVisitorImpl[Unit] {
-      override protected def visitInputs(batchExecRel: BatchExecRel[_]): Unit = {
+    probeNode.accept(new ExecNodeVisitor {
+      override protected def visitInputs(batchExecNode: ExecNode[_, _]): Unit = {
+        val batchExecRel = batchExecNode.asInstanceOf[BatchExecRel[_]]
         stack.push(batchExecRel)
         if (finder.isReusedNode(batchExecRel) &&
           isReusedNodeInBuildSide(batchExecRel, reusedNodesInBuildSide)) {

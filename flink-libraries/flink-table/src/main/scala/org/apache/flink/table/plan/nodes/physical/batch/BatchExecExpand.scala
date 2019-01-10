@@ -24,9 +24,9 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExpandCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.plan.nodes.calcite.Expand
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.util.ExpandUtil
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.BatchExecRelVisitor
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
@@ -69,8 +69,6 @@ class BatchExecExpand(
 
   //~ ExecNode methods -----------------------------------------------------------
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
     * into a Batch operator.
@@ -107,5 +105,9 @@ class BatchExecExpand(
 
   private def getOperatorName: String = {
     s"BatchExecExpand: ${getRowType.getFieldList.map(_.getName).mkString(", ")}"
+  }
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = {
+    visitor.visit(this)
   }
 }

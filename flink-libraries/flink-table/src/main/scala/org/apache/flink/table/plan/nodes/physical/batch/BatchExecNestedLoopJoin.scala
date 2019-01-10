@@ -32,10 +32,11 @@ import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.ExpressionFormat
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.runtime.TwoInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.util.ResettableExternalBuffer
 import org.apache.flink.table.typeutils.BinaryRowSerializer
-import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
+import org.apache.flink.table.util.ExecResourceUtil
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.core._
@@ -104,8 +105,6 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
   }
 
   //~ ExecNode methods -----------------------------------------------------------
-
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
@@ -242,6 +241,10 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
       if (leftIsBuild) ReadOrder.INPUT1_FIRST else ReadOrder.INPUT2_FIRST)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
+  }
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = {
+    visitor.visit(this)
   }
 
   private def getOperatorName: String = {

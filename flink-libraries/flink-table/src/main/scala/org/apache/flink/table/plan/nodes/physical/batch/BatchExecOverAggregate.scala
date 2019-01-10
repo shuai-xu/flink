@@ -30,12 +30,14 @@ import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
+import org.apache.flink.table.plan.nodes.exec.ExecNodeVisitor
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.nodes.physical.batch.OverWindowMode.OverWindowMode
 import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToBatchAggregateInfoList}
 import org.apache.flink.table.plan.util.{AggregateUtil, FlinkRelOptUtil, OverAggregateUtil}
 import org.apache.flink.table.runtime.overagg._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
+import org.apache.flink.table.util.ExecResourceUtil
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelDistribution.Type._
@@ -251,8 +253,6 @@ class BatchExecOverAggregate(
 
   //~ ExecNode methods -----------------------------------------------------------
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
     * into a Batch operator.
@@ -330,6 +330,10 @@ class BatchExecOverAggregate(
       transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
       transformation
     }
+  }
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = {
+    visitor.visit(this)
   }
 
   def createOverWindowFrames(tableEnv: BatchTableEnvironment, inType: RowType)

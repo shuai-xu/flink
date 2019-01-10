@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,23 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.table.plan.nodes.exec
 
-import org.apache.flink.table.api.BatchTableEnvironment
-import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
+package org.apache.flink.table.plan.nodes.exec;
 
-trait BatchExecNode[T] extends ExecNode[BatchTableEnvironment, T] {
+/**
+ * Visitor pattern for traversing a dag of {@link ExecNode} objects.
+ */
+public abstract class ExecNodeVisitor {
 
-  /**
-    * Returns true if this node is a barrier node, else false.
-    * TODO remove default value
-    */
-  def isBarrierNode: Boolean = false
+	public void visit(ExecNode<?, ?> node) {
+		visitInputs(node);
+	}
 
-  /**
-    * Accepts a visit from a [[BatchExecNodeVisitor]].
-    *
-    * @param visitor BatchExecNodeVisitor
-    */
-  def accept(visitor: BatchExecNodeVisitor): Unit
+	protected void visitInputs(ExecNode<?, ?> node) {
+		node.getInputNodes().forEach(n -> n.accept(this));
+	}
 }

@@ -29,12 +29,13 @@ import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.nodes.{ExpressionFormat, FlinkConventions}
 import org.apache.flink.table.plan.util.JoinUtil
 import org.apache.flink.table.runtime.join.batch.hashtable.BinaryHashBucketArea
 import org.apache.flink.table.runtime.join.batch.{HashJoinOperator, HashJoinType}
 import org.apache.flink.table.typeutils.BinaryRowSerializer
-import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
+import org.apache.flink.table.util.ExecResourceUtil
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.core._
@@ -135,8 +136,6 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
 
   //~ ExecNode methods -----------------------------------------------------------
 
-  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
     * into a Batch operator.
@@ -234,6 +233,10 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
     transformation
   }
 
+  override def accept(visitor: BatchExecNodeVisitor): Unit = {
+    visitor.visit(this)
+  }
+
   private def getOperatorName: String = {
     val inFields = inputDataType.getFieldNames.toList
     val joinExpressionStr = if (getCondition != null) {
@@ -323,5 +326,4 @@ class BatchExecHashSemiJoin(
       description,
       haveInsertRf)
   }
-
 }
