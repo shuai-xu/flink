@@ -102,7 +102,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
       "SELECT * FROM T AS T JOIN temporalTable " +
         "FOR SYSTEM_TIME AS OF T.proc AS D ON T.a = D.id AND T.b = D.name AND T.ts = D.ts",
       "The TableSource [TestInvalidTemporalTable(id, name, age, ts)] " +
-        "return type BaseRow(id: Integer, name: String, age: Integer, ts: Timestamp) " +
+        "return type Row(id: Integer, name: String, age: Integer, ts: Timestamp) " +
         "do not match its lookup function extracted return type String",
       classOf[TableException]
     )
