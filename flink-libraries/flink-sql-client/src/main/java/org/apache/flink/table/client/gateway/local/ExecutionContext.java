@@ -47,7 +47,9 @@ import org.apache.flink.table.api.functions.TableFunction;
 import org.apache.flink.table.api.functions.UserDefinedFunction;
 import org.apache.flink.table.api.java.BatchTableEnvironment;
 import org.apache.flink.table.api.java.StreamTableEnvironment;
+import org.apache.flink.table.client.catalog.ClientCatalogFactory;
 import org.apache.flink.table.client.config.Environment;
+import org.apache.flink.table.client.config.entries.CatalogEntry;
 import org.apache.flink.table.client.config.entries.DeploymentEntry;
 import org.apache.flink.table.client.config.entries.ExecutionEntry;
 import org.apache.flink.table.client.config.entries.SinkTableEntry;
@@ -74,6 +76,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+
+import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**
  * Context for executing table programs. This class caches everything that can be cached across
@@ -297,6 +301,11 @@ public class ExecutionContext<T> {
 			// register user-defined functions
 			registerFunctions();
 
+			// register catalogs
+			mergedEnv.getCatalogs().forEach((name, catalog) ->
+				tableEnv.registerCatalog(name, ClientCatalogFactory.createCatalog(catalog))
+			);
+
 			// register views and temporal tables in specified order
 			mergedEnv.getTables().forEach((name, entry) -> {
 				// if registering a view fails at this point,
@@ -318,6 +327,33 @@ public class ExecutionContext<T> {
 
 			// always enable subsection optimization
 			tableEnv.getConfig().setSubsectionOptimization(true);
+
+			setDefaultCatalog(mergedEnv.getCatalogs());
+		}
+
+		private void setDefaultCatalog(Map<String, CatalogEntry> catalogs) {
+			long count = catalogs.values().stream().filter(c -> c.isDefaultCatalog()).count();
+
+			checkArgument(count <= 1,
+				String.format("Only one catalog can be set as default catalog, but currently are %d", count));
+
+			if (count == 0) {
+				return;
+			}
+
+			Map.Entry<String, CatalogEntry> entry = catalogs.entrySet().stream()
+				.filter(e -> e.getValue().isDefaultCatalog())
+				.findFirst()
+				.get();
+
+			String name = entry.getKey();
+			CatalogEntry defaultCatalog = entry.getValue();
+
+			if (defaultCatalog.getDefaultDatabase().isPresent()) {
+				tableEnv.setDefaultDatabase(name, defaultCatalog.getDefaultDatabase().get());
+			} else {
+				tableEnv.setDefaultCatalog(name);
+			}
 		}
 
 		public QueryConfig getQueryConfig() {

@@ -156,6 +156,21 @@ public class CliClientTest extends TestLogger {
 		}
 
 		@Override
+		public void setDefaultDatabase(SessionContext session, String namePath) throws SqlExecutionException {
+
+		}
+
+		@Override
+		public List<String> listCatalogs(SessionContext session) throws SqlExecutionException {
+			return null;
+		}
+
+		@Override
+		public List<String> listDatabases(SessionContext session) throws SqlExecutionException {
+			return null;
+		}
+
+		@Override
 		public TableSchema getTableSchema(SessionContext session, String name) throws SqlExecutionException {
 			return null;
 		}

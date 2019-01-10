@@ -210,6 +210,36 @@ public class LocalExecutor implements Executor {
 	}
 
 	@Override
+	public void setDefaultDatabase(SessionContext session, String namePath) throws SqlExecutionException {
+		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
+			.createEnvironmentInstance()
+			.getTableEnvironment();
+
+		try {
+			tableEnv.setDefaultDatabase(namePath.split("\\."));
+		} catch (Throwable t) {
+			// catch everything such that the query does not crash the executor
+			throw new SqlExecutionException("No catalog and database with this name could be found.", t);
+		}
+	}
+
+	@Override
+	public List<String> listCatalogs(SessionContext session) throws SqlExecutionException {
+		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
+			.createEnvironmentInstance()
+			.getTableEnvironment();
+		return Arrays.asList(tableEnv.listCatalogs());
+	}
+
+	@Override
+	public List<String> listDatabases(SessionContext session) throws SqlExecutionException {
+		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
+			.createEnvironmentInstance()
+			.getTableEnvironment();
+		return Arrays.asList(tableEnv.listDatabases());
+	}
+
+	@Override
 	public TableSchema getTableSchema(SessionContext session, String name) throws SqlExecutionException {
 		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
 			.createEnvironmentInstance()
