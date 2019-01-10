@@ -63,9 +63,29 @@
             <td>Whether to enable compress shuffle data when using external shuffle.</td>
         </tr>
         <tr>
+            <td><h5>task.external.shuffle.consumed-partition-ttl-in-seconds</h5></td>
+            <td style="word-wrap: break-word;">3600</td>
+            <td>The time interval to delete the fully consumed shuffle data directories since they become inactive.</td>
+        </tr>
+        <tr>
             <td><h5>task.external.shuffle.max-concurrent-requests</h5></td>
             <td style="word-wrap: break-word;">10</td>
             <td>The maximum number of concurrent requests in the reduce-side tasks.</td>
+        </tr>
+        <tr>
+            <td><h5>task.external.shuffle.partial-consumed-partition-ttl-in-seconds</h5></td>
+            <td style="word-wrap: break-word;">43200</td>
+            <td>The time interval to delete the partially consumed shuffle data directories since they become inactive.</td>
+        </tr>
+        <tr>
+            <td><h5>task.external.shuffle.unconsumed-partition-ttl-in-seconds</h5></td>
+            <td style="word-wrap: break-word;">43200</td>
+            <td>TThe time interval to delete the unconsumed shuffle data directories since they are ready to consume.</td>
+        </tr>
+        <tr>
+            <td><h5>task.external.shuffle.unfinished-partition-ttl-in-seconds</h5></td>
+            <td style="word-wrap: break-word;">3600</td>
+            <td>The time interval to delete the writing shuffle data directories since the last writing.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.capacity.cpu.core</h5></td>

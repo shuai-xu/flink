@@ -18,12 +18,19 @@
 
 package org.apache.flink.runtime.io.network.partition.external;
 
+import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.partition.PartitionNotFoundException;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
+import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.After;
@@ -49,8 +56,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -63,7 +72,21 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 public class YarnLocalResultPartitionResolverTest {
 	private static final Logger LOG = LoggerFactory.getLogger(YarnLocalResultPartitionResolverTest.class);
 
-	private static final FileSystem fileSystem = FileSystem.getLocalFileSystem();
+	private static final long UNCONSUMED_PARTITION_TTL = 600000;
+
+	private static final long UNFINISHED_PARTITION_TTL = 300000;
+
+	private static final long CUSTOMIZED_CONSUMED_PARTITION_TTL = 120000;
+
+	private static final long CUSTOMIZED_PARTIAL_CONSUMED_PARTITION_TTL = 130000;
+
+	private static final long CUSTOMIZED_UNCONSUMED_PARTITION_TTL = 160000;
+
+	private static final long CUSTOMIZED_UNFINISHED_PARTITION_TTL = 150000;
+
+	private static final ConfigOption<Boolean> ENABLE_CUSTOMIZED_TTL = ConfigOptions.key("enable-customized-ttl").defaultValue(false);
+
+	private static final FileSystem FILE_SYSTEM = FileSystem.getLocalFileSystem();
 
 	private final ExternalBlockShuffleServiceConfiguration externalBlockShuffleServiceConfiguration =
 		mock(ExternalBlockShuffleServiceConfiguration.class);
@@ -71,10 +94,6 @@ public class YarnLocalResultPartitionResolverTest {
 	private YarnLocalResultPartitionResolver resultPartitionResolver;
 
 	private final int localDirCnt = 3;
-
-	private final long unconsumedPartitionTTL = 600000;
-
-	private final long unfinishedPartitionTTL = 300000;
 
 	private String testRootDir;
 
@@ -86,7 +105,8 @@ public class YarnLocalResultPartitionResolverTest {
 
 	enum ResultPartitionState {
 		UNDEFINED,
-		UNFINISHED,
+		UNFINISHED_NO_CONFIG,
+		UNFINISHED_HAS_CONFIG,
 		UNCONSUMED,
 		CONSUMED
 	}
@@ -113,26 +133,37 @@ public class YarnLocalResultPartitionResolverTest {
 
 		Configuration configuration = new Configuration();
 		when(externalBlockShuffleServiceConfiguration.getConfiguration()).thenReturn(configuration);
-		when(externalBlockShuffleServiceConfiguration.getFileSystem()).thenReturn(fileSystem);
+		when(externalBlockShuffleServiceConfiguration.getFileSystem()).thenReturn(FILE_SYSTEM);
 		when(externalBlockShuffleServiceConfiguration.getDiskScanIntervalInMS()).thenReturn(3600000L);
-		when(externalBlockShuffleServiceConfiguration.getUnconsumedPartitionTTL()).thenReturn(unconsumedPartitionTTL);
-		when(externalBlockShuffleServiceConfiguration.getUnfinishedPartitionTTL()).thenReturn(unfinishedPartitionTTL);
+		when(externalBlockShuffleServiceConfiguration.getDefaultUnconsumedPartitionTTL()).thenReturn(UNCONSUMED_PARTITION_TTL);
+		when(externalBlockShuffleServiceConfiguration.getDefaultUnfinishedPartitionTTL()).thenReturn(UNFINISHED_PARTITION_TTL);
+
+		checkArgument( UNFINISHED_PARTITION_TTL < UNCONSUMED_PARTITION_TTL,
+			"UNFINISHED_PARTITION_TTL should be less than UNFINISHED_PARTITION_TTL to test recycling");
+
+		checkArgument( CUSTOMIZED_UNFINISHED_PARTITION_TTL < UNFINISHED_PARTITION_TTL,
+			"The customized UNFINISHED_PARTITION_TTL should be less than the default one to test the customized TTL");
+		checkArgument( CUSTOMIZED_UNCONSUMED_PARTITION_TTL < UNCONSUMED_PARTITION_TTL,
+			"The customized UNCONSUMED_PARTITION_TTL should be less than the default one to test the customized TTL");
+		checkArgument( CUSTOMIZED_UNFINISHED_PARTITION_TTL < UNCONSUMED_PARTITION_TTL,
+			"The customized CUSTOMIZED_UNFINISHED_PARTITION_TTL should be less than the customized UNCONSUMED_PARTITION_TTL to " +
+				"test the customized TTL");
 
 		this.testRootDir = System.getProperty("java.io.tmpdir");
 		if (!System.getProperty("java.io.tmpdir").endsWith("/")) {
 			this.testRootDir += "/";
 		}
 		this.testRootDir += "yarn_shuffle_test_" + UUID.randomUUID().toString() + "/";
-		fileSystem.mkdirs(new Path(testRootDir));
-		assertTrue("Fail to create testRootDir: " + testRootDir, fileSystem.exists(new Path(testRootDir)));
+		FILE_SYSTEM.mkdirs(new Path(testRootDir));
+		assertTrue("Fail to create testRootDir: " + testRootDir, FILE_SYSTEM.exists(new Path(testRootDir)));
 
 		String localDirPrefix = "localDir";
 		Map<String, String> dirToDiskType = new HashMap<>();
 		for (int i = 0; i < localDirCnt; i++) {
 			String localDir = testRootDir + localDirPrefix + i + "/";
 			dirToDiskType.put(localDir, "SSD");
-			fileSystem.mkdirs(new Path(localDir));
-			assertTrue("Fail to create local dir: " + localDir, fileSystem.exists(new Path(localDir)));
+			FILE_SYSTEM.mkdirs(new Path(localDir));
+			assertTrue("Fail to create local dir: " + localDir, FILE_SYSTEM.exists(new Path(localDir)));
 		}
 		when(externalBlockShuffleServiceConfiguration.getDirToDiskType()).thenReturn(dirToDiskType);
 
@@ -141,9 +172,9 @@ public class YarnLocalResultPartitionResolverTest {
 		when(System.getenv(ApplicationConstants.Environment.HADOOP_YARN_HOME.key())).thenReturn(testRootDir);
 		String containerExecutorPath = testRootDir + "bin/container-executor";
 		configuration.setString(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, containerExecutorPath);
-		fileSystem.create(new Path(containerExecutorPath), FileSystem.WriteMode.OVERWRITE);
+		FILE_SYSTEM.create(new Path(containerExecutorPath), FileSystem.WriteMode.OVERWRITE);
 		assertTrue("Fail to mock container-executor: " + containerExecutorPath,
-			fileSystem.exists(new Path(containerExecutorPath)));
+			FILE_SYSTEM.exists(new Path(containerExecutorPath)));
 
 		createYarnLocalResultPartitionResolver();
 
@@ -164,8 +195,8 @@ public class YarnLocalResultPartitionResolverTest {
 			// Do recycle after test cases pass.
 			try {
 				Path testRootDirPath = new Path(testRootDir);
-				if (fileSystem.exists(testRootDirPath)) {
-					fileSystem.delete(testRootDirPath, true);
+				if (FILE_SYSTEM.exists(testRootDirPath)) {
+					FILE_SYSTEM.delete(testRootDirPath, true);
 				}
 			} catch (IOException e) {
 				// Do nothing
@@ -198,24 +229,24 @@ public class YarnLocalResultPartitionResolverTest {
 		assertEquals(appIdToUser, resultPartitionResolver.appIdToUser);
 
 		// 2. Upstream tasks start to generate external result partitions.
-		// expect state: {UNDEFINED: 0, UNFINISHED: 6, UNCONSUMED: 0, CONSUMED: 0, REMOVED: 0}
-		changeResultPartitionState(ResultPartitionState.UNDEFINED, ResultPartitionState.UNFINISHED, resultPartitionCnt);
+		// expect state: {UNDEFINED: 0, UNFINISHED_HAS_CONFIG: 6, UNCONSUMED: 0, CONSUMED: 0, REMOVED: 0}
+		changeResultPartitionState(ResultPartitionState.UNDEFINED, ResultPartitionState.UNFINISHED_HAS_CONFIG, resultPartitionCnt);
 
 		when(System.currentTimeMillis()).thenReturn(++currTime);
 		triggerDiskScan();
 		validateResultPartitionMetaByState();
 
 		// 3. One upstream task finishes writing.
-		// expect state: {UNDEFINED: 0, UNFINISHED: 4, UNCONSUMED: 2, CONSUMED: 0, REMOVED: 0}
-		changeResultPartitionState(ResultPartitionState.UNFINISHED, ResultPartitionState.UNCONSUMED, 2);
+		// expect state: {UNDEFINED: 0, UNFINISHED_HAS_CONFIG: 4, UNCONSUMED: 2, CONSUMED: 0, REMOVED: 0}
+		changeResultPartitionState(ResultPartitionState.UNFINISHED_HAS_CONFIG, ResultPartitionState.UNCONSUMED, 2);
 
 		when(System.currentTimeMillis()).thenReturn(++currTime);
 		triggerDiskScan();
 		validateResultPartitionMetaByState();
 
 		// 4. One upstream task finishes writing and becomes consumed before disk scan.
-		// expect state: {UNDEFINED: 0, UNFINISHED: 3, UNCONSUMED: 2, CONSUMED: 1, REMOVED: 0}
-		changeResultPartitionState(ResultPartitionState.UNFINISHED, ResultPartitionState.CONSUMED, 1);
+		// expect state: {UNDEFINED: 0, UNFINISHED_HAS_CONFIG: 3, UNCONSUMED: 2, CONSUMED: 1, REMOVED: 0}
+		changeResultPartitionState(ResultPartitionState.UNFINISHED_HAS_CONFIG, ResultPartitionState.CONSUMED, 1);
 
 		// Knows this result partition is consumable by result partition request.
 		validateResultPartitionMetaByState();
@@ -226,7 +257,7 @@ public class YarnLocalResultPartitionResolverTest {
 
 		// 5. A new upstream task starts to generate external result partition, quickly becomes finished
 		//    then becomes consumed before disk scan.
-		// expect state: {UNDEFINED: 0, UNFINISHED: 3, UNCONSUMED: 2, CONSUMED: 2, REMOVED: 0}
+		// expect state: {UNDEFINED: 0, UNFINISHED_HAS_CONFIG: 3, UNCONSUMED: 2, CONSUMED: 2, REMOVED: 0}
 		createResultPartitionIDs(1);
 		changeResultPartitionState(ResultPartitionState.UNDEFINED, ResultPartitionState.CONSUMED, 1);
 
@@ -238,7 +269,7 @@ public class YarnLocalResultPartitionResolverTest {
 		validateResultPartitionMetaByState();
 
 		// 6. A new upstream task starts to generate external result partition, quickly becomes finished.
-		// expect state: {UNDEFINED: 0, UNFINISHED: 3, UNCONSUMED: 3, CONSUMED: 2, REMOVED: 0}
+		// expect state: {UNDEFINED: 0, UNFINISHED_HAS_CONFIG: 3, UNCONSUMED: 3, CONSUMED: 2, REMOVED: 0}
 		createResultPartitionIDs(1);
 		changeResultPartitionState(ResultPartitionState.UNDEFINED, ResultPartitionState.UNCONSUMED, 1);
 
@@ -247,7 +278,7 @@ public class YarnLocalResultPartitionResolverTest {
 		validateResultPartitionMetaByState();
 
 		// 7. One unconsumed result partition becomes consumed.
-		// expect state: {UNDEFINED: 0, UNFINISHED: 3, UNCONSUMED: 2, CONSUMED: 3, REMOVED: 0}
+		// expect state: {UNDEFINED: 0, UNFINISHED_HAS_CONFIG: 3, UNCONSUMED: 2, CONSUMED: 3, REMOVED: 0}
 		changeResultPartitionState(ResultPartitionState.UNCONSUMED, ResultPartitionState.CONSUMED, 1);
 
 		// Knows this result partition is consumable by result partition request.
@@ -258,7 +289,7 @@ public class YarnLocalResultPartitionResolverTest {
 		validateResultPartitionMetaByState();
 
 		// 8. Recycle a consumed result partition decided by ExternalResultPartitionManager.
-		// expect state: {UNDEFINED: 0, UNFINISHED: 3, UNCONSUMED: 2, CONSUMED: 2, REMOVED: 1}
+		// expect state: {UNDEFINED: 0, UNFINISHED_HAS_CONFIG: 3, UNCONSUMED: 2, CONSUMED: 2, REMOVED: 1}
 		triggerRecycleConsumedResultPartition(1);
 
 		validateResultPartitionMetaByState();
@@ -271,8 +302,8 @@ public class YarnLocalResultPartitionResolverTest {
 		validateResultPartitionMetaByState();
 
 		// 9. Remove three different kinds of result partition directories.
-		// expect state: {UNDEFINED: 0, UNFINISHED: 2, UNCONSUMED: 1, CONSUMED: 1, REMOVED: 4}
-		removeResultPartitionByState(ResultPartitionState.UNFINISHED, 1);
+		// expect state: {UNDEFINED: 0, UNFINISHED_HAS_CONFIG: 2, UNCONSUMED: 1, CONSUMED: 1, REMOVED: 4}
+		removeResultPartitionByState(ResultPartitionState.UNFINISHED_HAS_CONFIG, 1);
 		removeResultPartitionByState(ResultPartitionState.UNCONSUMED, 1);
 		removeResultPartitionByState(ResultPartitionState.CONSUMED, 1);
 
@@ -318,9 +349,9 @@ public class YarnLocalResultPartitionResolverTest {
 		assertEquals(appIdToUser, resultPartitionResolver.appIdToUser);
 
 		// 2. Prepare three different types of external result partition.
-		// expect state: {UNDEFINED: 0, UNFINISHED: 2, UNCONSUMED: 2, CONSUMED: 2, REMOVED: 0}
+		// expect state: {UNDEFINED: 0, UNFINISHED_HAS_CONFIG: 2, UNCONSUMED: 2, CONSUMED: 2, REMOVED: 0}
 		when(System.currentTimeMillis()).thenReturn(++currTime);
-		changeResultPartitionState(ResultPartitionState.UNDEFINED, ResultPartitionState.UNFINISHED, 2);
+		changeResultPartitionState(ResultPartitionState.UNDEFINED, ResultPartitionState.UNFINISHED_HAS_CONFIG, 2);
 		changeResultPartitionState(ResultPartitionState.UNDEFINED, ResultPartitionState.UNCONSUMED, 2);
 		changeResultPartitionState(ResultPartitionState.UNDEFINED, ResultPartitionState.CONSUMED, 2);
 
@@ -330,15 +361,15 @@ public class YarnLocalResultPartitionResolverTest {
 		// 3. Trigger UNFINISHED_PARTITION_TTL_TIMEOUT since its TTL is shorter.
 		when(System.currentTimeMillis()).thenCallRealMethod();
 		long realCurrTime = System.currentTimeMillis();
-		when(System.currentTimeMillis()).thenReturn(realCurrTime + unfinishedPartitionTTL);
+		when(System.currentTimeMillis()).thenReturn(realCurrTime + UNFINISHED_PARTITION_TTL);
 
 		triggerDiskScan();
-		Set<ResultPartitionID> unfinishedResultPartitionIDs = pollResultPartitionIDS(ResultPartitionState.UNFINISHED, 2);
+		Set<ResultPartitionID> unfinishedResultPartitionIDs = pollResultPartitionIDS(ResultPartitionState.UNFINISHED_HAS_CONFIG, 2);
 		removedResultPartitionIDs.addAll(unfinishedResultPartitionIDs);
 		validateResultPartitionMetaByState();
 
 		// 4. Trigger UNCONSUMED_PARTITION_TTL_TIMEOUT.
-		when(System.currentTimeMillis()).thenReturn(realCurrTime + unconsumedPartitionTTL);
+		when(System.currentTimeMillis()).thenReturn(realCurrTime + UNCONSUMED_PARTITION_TTL);
 
 		triggerDiskScan();
 		Set<ResultPartitionID> unconsumedResultPartitionIDs = pollResultPartitionIDS(ResultPartitionState.UNCONSUMED, 2);
@@ -385,6 +416,82 @@ public class YarnLocalResultPartitionResolverTest {
 	}
 
 	@Test
+	public void testCustomizedTTL() {
+		int userCnt = 2;
+		int appCnt = 3;
+		int resultPartitionCnt = 6;
+
+		Configuration configuration = new Configuration();
+		configuration.setBoolean(ENABLE_CUSTOMIZED_TTL, true);
+
+		generateAppIdToUser(userCnt, appCnt);
+		createResultPartitionIDs(resultPartitionCnt);
+		long currTime = 1L;
+
+		// 1. NM will call initializeApplication() before launching containers.
+		appIdToUser.forEach((app, user) -> {
+			resultPartitionResolver.initializeApplication(user, app);
+		});
+
+		// 2. Prepare the external result partition.
+		// expect state: {UNDEFINED: 0, UNFINISHED_NO_CONFIG: 6, UNCONSUMED: 0, CONSUMED: 0, REMOVED: 0}
+		when(System.currentTimeMillis()).thenReturn(++currTime);
+		changeResultPartitionState(ResultPartitionState.UNDEFINED, ResultPartitionState.UNFINISHED_NO_CONFIG, resultPartitionCnt, configuration);
+		triggerDiskScan();
+		validateResultPartitionMetaByState(configuration);
+
+		// 3. Test retrieving the result partitions before recycling. The returned fileInfo objects should
+		// have the customized TTL.
+		when(System.currentTimeMillis()).thenCallRealMethod();
+		long realCurrTime = System.currentTimeMillis();
+		when(System.currentTimeMillis()).thenReturn(realCurrTime + 1);
+
+		changeResultPartitionState(ResultPartitionState.UNFINISHED_NO_CONFIG, ResultPartitionState.UNCONSUMED, 2, configuration);
+		triggerDiskScan();
+
+		Set<ResultPartitionID> unconsumedResultPartitionIDs = pollResultPartitionIDS(ResultPartitionState.UNCONSUMED, 2);
+		unconsumedResultPartitionIDs.forEach(resultPartitionID -> {
+			try {
+				LocalResultPartitionResolver.ResultPartitionFileInfo fileInfo = resultPartitionResolver.getResultPartitionDir(resultPartitionID);
+
+				assertEquals(CUSTOMIZED_CONSUMED_PARTITION_TTL, fileInfo.getConsumedPartitionTTL());
+				assertEquals(CUSTOMIZED_PARTIAL_CONSUMED_PARTITION_TTL, fileInfo.getPartialConsumedPartitionTTL());
+			} catch (IOException e) {
+				fail("Failed to getResultPartitionDir due to " + e.getMessage());
+			}
+		});
+
+		// 4. Test recycling the unfinished result partitions due to customized UNFINISHED_PARTITION_TTL. The
+		// customized config should be smaller than the default one, thus the customized config works if they get
+		// recycled indeed.
+		when(System.currentTimeMillis()).thenReturn(realCurrTime + 2);
+		changeResultPartitionState(ResultPartitionState.UNFINISHED_NO_CONFIG, ResultPartitionState.UNFINISHED_HAS_CONFIG, 2, configuration);
+
+		when(System.currentTimeMillis()).thenCallRealMethod();
+		realCurrTime = System.currentTimeMillis();
+		when(System.currentTimeMillis()).thenReturn(realCurrTime + CUSTOMIZED_UNFINISHED_PARTITION_TTL);
+
+		triggerDiskScan();
+		Set<ResultPartitionID> unfinishedResultPartitionIDs = pollResultPartitionIDS(ResultPartitionState.UNFINISHED_HAS_CONFIG, 2);
+		removedResultPartitionIDs.addAll(unfinishedResultPartitionIDs);
+		validateResultPartitionMetaByState();
+
+		// 5. Test recycling the unconsumed result partitions due to customized UNCONSUMED_PARTITION_TTL. The
+		// customized config should be smaller than the default one, thus the customized config works if they get
+		// recycled indeed.
+		changeResultPartitionState(ResultPartitionState.UNFINISHED_NO_CONFIG, ResultPartitionState.UNCONSUMED, 2, configuration);
+
+		when(System.currentTimeMillis()).thenCallRealMethod();
+		realCurrTime = System.currentTimeMillis();
+		when(System.currentTimeMillis()).thenReturn(realCurrTime + CUSTOMIZED_UNCONSUMED_PARTITION_TTL);
+
+		triggerDiskScan();
+		unconsumedResultPartitionIDs = pollResultPartitionIDS(ResultPartitionState.UNCONSUMED, 2);
+		removedResultPartitionIDs.addAll(unconsumedResultPartitionIDs);
+		validateResultPartitionMetaByState();
+	}
+
+	@Test
 	public void testGetResultPartitionDir() {
 		int userCnt = 2;
 		int appCnt = 3;
@@ -401,9 +508,9 @@ public class YarnLocalResultPartitionResolverTest {
 		assertEquals(appIdToUser, resultPartitionResolver.appIdToUser);
 
 		// 2. Prepares three different types of external result partition.
-		// expect state: {UNDEFINED: 0, UNFINISHED: 2, UNCONSUMED: 2, CONSUMED: 2, REMOVED: 0}
+		// expect state: {UNDEFINED: 0, UNFINISHED_HAS_CONFIG: 2, UNCONSUMED: 2, CONSUMED: 2, REMOVED: 0}
 		when(System.currentTimeMillis()).thenReturn(++currTime);
-		changeResultPartitionState(ResultPartitionState.UNDEFINED, ResultPartitionState.UNFINISHED, 2);
+		changeResultPartitionState(ResultPartitionState.UNDEFINED, ResultPartitionState.UNFINISHED_HAS_CONFIG, 2);
 		changeResultPartitionState(ResultPartitionState.UNDEFINED, ResultPartitionState.UNCONSUMED, 2);
 		changeResultPartitionState(ResultPartitionState.UNDEFINED, ResultPartitionState.CONSUMED, 2);
 
@@ -414,7 +521,7 @@ public class YarnLocalResultPartitionResolverTest {
 		when(System.currentTimeMillis()).thenReturn(++currTime);
 		try {
 			ResultPartitionID newResultPartitionID = new ResultPartitionID();
-			Tuple2<String, String> rootDirAndPartitionDir =
+			LocalResultPartitionResolver.ResultPartitionFileInfo descriptor =
 				resultPartitionResolver.getResultPartitionDir(newResultPartitionID);
 			assertTrue("Expect PartitionNotFoundException to be thrown out.", false);
 		} catch (PartitionNotFoundException e){
@@ -431,8 +538,8 @@ public class YarnLocalResultPartitionResolverTest {
 		when(System.currentTimeMillis()).thenReturn(++currTime);
 		try {
 			ResultPartitionID unfinishedResultPartitionID =
-				stateToResultPartitionIDs.get(ResultPartitionState.UNFINISHED).getLast();
-			Tuple2<String, String> rootDirAndPartitionDir =
+				stateToResultPartitionIDs.get(ResultPartitionState.UNFINISHED_HAS_CONFIG).getLast();
+			LocalResultPartitionResolver.ResultPartitionFileInfo descriptor =
 				resultPartitionResolver.getResultPartitionDir(unfinishedResultPartitionID);
 			assertTrue("Expect PartitionNotFoundException to be thrown out.", false);
 		} catch (PartitionNotFoundException e) {
@@ -448,11 +555,11 @@ public class YarnLocalResultPartitionResolverTest {
 		// 5. Searches an unfinished result partition while it's unknown to the resolver.
 		when(System.currentTimeMillis()).thenReturn(++currTime);
 		createResultPartitionIDs(1);
-		changeResultPartitionState(ResultPartitionState.UNDEFINED, ResultPartitionState.UNFINISHED, 1);
+		changeResultPartitionState(ResultPartitionState.UNDEFINED, ResultPartitionState.UNFINISHED_HAS_CONFIG, 1);
 		try {
 			ResultPartitionID unfinishedResultPartitionID =
-				stateToResultPartitionIDs.get(ResultPartitionState.UNFINISHED).getLast();
-			Tuple2<String, String> rootDirAndPartitionDir =
+				stateToResultPartitionIDs.get(ResultPartitionState.UNFINISHED_HAS_CONFIG).getLast();
+			LocalResultPartitionResolver.ResultPartitionFileInfo descriptor =
 				resultPartitionResolver.getResultPartitionDir(unfinishedResultPartitionID);
 			assertTrue("Expect PartitionNotFoundException to be thrown out.", false);
 		} catch (PartitionNotFoundException e) {
@@ -470,9 +577,10 @@ public class YarnLocalResultPartitionResolverTest {
 		try {
 			ResultPartitionID unconsumedResultPartitionID =
 				stateToResultPartitionIDs.get(ResultPartitionState.UNCONSUMED).pollLast();
-			Tuple2<String, String> rootDirAndPartitionDir =
+			LocalResultPartitionResolver.ResultPartitionFileInfo descriptor =
 				resultPartitionResolver.getResultPartitionDir(unconsumedResultPartitionID);
-			assertEquals(resultPartitionIDToLocalDir.get(unconsumedResultPartitionID), rootDirAndPartitionDir);
+			assertEquals(resultPartitionIDToLocalDir.get(unconsumedResultPartitionID).f0, descriptor.getRootDir());
+			assertEquals(resultPartitionIDToLocalDir.get(unconsumedResultPartitionID).f1, descriptor.getPartitionDir());
 			stateToResultPartitionIDs.get(ResultPartitionState.CONSUMED).offerLast(unconsumedResultPartitionID);
 		} catch (IOException e) {
 			assertTrue("Unexpected exception: " + e.getMessage(), false);
@@ -489,9 +597,10 @@ public class YarnLocalResultPartitionResolverTest {
 		try {
 			ResultPartitionID unconsumedResultPartitionID =
 				stateToResultPartitionIDs.get(ResultPartitionState.UNCONSUMED).pollLast();
-			Tuple2<String, String> rootDirAndPartitionDir =
+			LocalResultPartitionResolver.ResultPartitionFileInfo descriptor =
 				resultPartitionResolver.getResultPartitionDir(unconsumedResultPartitionID);
-			assertEquals(resultPartitionIDToLocalDir.get(unconsumedResultPartitionID), rootDirAndPartitionDir);
+			assertEquals(resultPartitionIDToLocalDir.get(unconsumedResultPartitionID).f0, descriptor.getRootDir());
+			assertEquals(resultPartitionIDToLocalDir.get(unconsumedResultPartitionID).f1, descriptor.getPartitionDir());
 			stateToResultPartitionIDs.get(ResultPartitionState.CONSUMED).offerLast(unconsumedResultPartitionID);
 		} catch (IOException e) {
 			assertTrue("Unexpected exception: " + e.getMessage(), false);
@@ -506,9 +615,10 @@ public class YarnLocalResultPartitionResolverTest {
 		try {
 			ResultPartitionID consumedResultPartitionID =
 				stateToResultPartitionIDs.get(ResultPartitionState.CONSUMED).getLast();
-			Tuple2<String, String> rootDirAndPartitionDir =
+			LocalResultPartitionResolver.ResultPartitionFileInfo descriptor =
 				resultPartitionResolver.getResultPartitionDir(consumedResultPartitionID);
-			assertEquals(resultPartitionIDToLocalDir.get(consumedResultPartitionID), rootDirAndPartitionDir);
+			assertEquals(resultPartitionIDToLocalDir.get(consumedResultPartitionID).f0, descriptor.getRootDir());
+			assertEquals(resultPartitionIDToLocalDir.get(consumedResultPartitionID).f1, descriptor.getPartitionDir());
 		} catch (IOException e) {
 			assertTrue("Unexpected exception: " + e.getMessage(), false);
 		}
@@ -524,9 +634,10 @@ public class YarnLocalResultPartitionResolverTest {
 		try {
 			ResultPartitionID consumedResultPartitionID =
 				stateToResultPartitionIDs.get(ResultPartitionState.CONSUMED).getLast();
-			Tuple2<String, String> rootDirAndPartitionDir =
+			LocalResultPartitionResolver.ResultPartitionFileInfo descriptor =
 				resultPartitionResolver.getResultPartitionDir(consumedResultPartitionID);
-			assertEquals(resultPartitionIDToLocalDir.get(consumedResultPartitionID), rootDirAndPartitionDir);
+			assertEquals(resultPartitionIDToLocalDir.get(consumedResultPartitionID).f0, descriptor.getRootDir());
+			assertEquals(resultPartitionIDToLocalDir.get(consumedResultPartitionID).f1, descriptor.getPartitionDir());
 		} catch (IOException e) {
 			assertTrue("Unexpected exception: " + e.getMessage(), false);
 		}
@@ -549,8 +660,8 @@ public class YarnLocalResultPartitionResolverTest {
 			boolean printLog = invocation.getArgumentAt(3, boolean.class);
 
 			try {
-				fileSystem.delete(partitionDir, true);
-				assertTrue("Fail to delete result partition dir " + partitionDir, !fileSystem.exists(partitionDir));
+				FILE_SYSTEM.delete(partitionDir, true);
+				assertTrue("Fail to delete result partition dir " + partitionDir, !FILE_SYSTEM.exists(partitionDir));
 				LOG.debug("Delete partition's directory: {}, reason: {}, lastActiveTime: {}, printLog: {}",
 					partitionDir, recycleReason, lastActiveTime, printLog);
 			} catch (IOException e) {
@@ -577,8 +688,8 @@ public class YarnLocalResultPartitionResolverTest {
 			externalBlockShuffleServiceConfiguration.getDirToDiskType().keySet().forEach(localDir -> {
 				Path appLocalDir = new Path(localDir + relativeAppDir);
 				try {
-					fileSystem.mkdirs(appLocalDir);
-					assertTrue("Fail to mkdir for appLocalDir " + appLocalDir, fileSystem.exists(appLocalDir));
+					FILE_SYSTEM.mkdirs(appLocalDir);
+					assertTrue("Fail to mkdir for appLocalDir " + appLocalDir, FILE_SYSTEM.exists(appLocalDir));
 				} catch (IOException e) {
 					assertTrue("Caught except when mkdir for appLocalDir " + appLocalDir, false);
 				}
@@ -612,6 +723,15 @@ public class YarnLocalResultPartitionResolverTest {
 		ResultPartitionState expectedState,
 		int cnt) {
 
+		changeResultPartitionState(previousState, expectedState, cnt, new Configuration());
+	}
+
+	private void changeResultPartitionState(
+		ResultPartitionState previousState,
+		ResultPartitionState expectedState,
+		int cnt,
+		Configuration configuration) {
+
 		// Validate state transition.
 		assertTrue(previousState.ordinal() < expectedState.ordinal());
 		assertTrue(!previousState.equals(ResultPartitionState.CONSUMED));
@@ -621,9 +741,12 @@ public class YarnLocalResultPartitionResolverTest {
 		while (!expectedState.equals(currState)) {
 			switch (currState) {
 				case UNDEFINED:
-					transitResultPartitionFromUndefinedToUnfinished(cnt);
+					transitResultPartitionFromUndefinedToUnfinishedNoConfig(cnt);
 					break;
-				case UNFINISHED:
+				case UNFINISHED_NO_CONFIG:
+					transitResultPartitionWriteConfig(cnt, configuration.getBoolean(ENABLE_CUSTOMIZED_TTL));
+					break;
+				case UNFINISHED_HAS_CONFIG:
 					transitResultPartitionFromUnfinishedToUnconsumed(cnt);
 					break;
 				case UNCONSUMED:
@@ -636,13 +759,13 @@ public class YarnLocalResultPartitionResolverTest {
 		}
 	}
 
-	private void transitResultPartitionFromUndefinedToUnfinished(int cnt) {
+	private void transitResultPartitionFromUndefinedToUnfinishedNoConfig(int cnt) {
 		Set<ResultPartitionID> resultPartitionIDS = pollResultPartitionIDS(ResultPartitionState.UNDEFINED, cnt);
 		String[] rootDirs = externalBlockShuffleServiceConfiguration.getDirToDiskType().keySet().toArray(
 			new String[externalBlockShuffleServiceConfiguration.getDirToDiskType().size()]);
 		Random random = new Random();
 		resultPartitionIDS.forEach(resultPartitionID -> {
-			LOG.debug("Transit from UNDEFINED to UNFINISHED: " + resultPartitionID);
+			LOG.debug("Transit from UNDEFINED to UNFINISHED_NO_CONFIG: " + resultPartitionID);
 			String selectedRootDir = rootDirs[Math.abs(random.nextInt()) % rootDirs.length];
 			String appId = resultPartitionIDToAppId.get(resultPartitionID);
 			String user = appIdToUser.get(appId);
@@ -653,27 +776,72 @@ public class YarnLocalResultPartitionResolverTest {
 			resultPartitionIDToLocalDir.put(resultPartitionID,
 				new Tuple2<>(selectedRootDir, resultPartitionDir.toString() + "/"));
 			// Treat deque as a stack.
-			stateToResultPartitionIDs.get(ResultPartitionState.UNFINISHED).offerLast(resultPartitionID);
+			stateToResultPartitionIDs.get(ResultPartitionState.UNFINISHED_NO_CONFIG).offerLast(resultPartitionID);
 			try {
-				fileSystem.mkdirs(resultPartitionDir);
-				assertTrue("ResultPartition's directory should exist.", fileSystem.exists(resultPartitionDir));
+				FILE_SYSTEM.mkdirs(resultPartitionDir);
+				assertTrue("ResultPartition's directory should exist.", FILE_SYSTEM.exists(resultPartitionDir));
 			} catch (Exception e) {
 				assertTrue("Fail to generate result partition dir " + selectedRootDir + ", exception: " + e.getMessage(), false);
 			}
 		});
 	}
 
-	private void transitResultPartitionFromUnfinishedToUnconsumed(int cnt) {
-		Set<ResultPartitionID> resultPartitionIDS = pollResultPartitionIDS(ResultPartitionState.UNFINISHED, cnt);
+	private void transitResultPartitionWriteConfig(int cnt, boolean enableCustomizedTTL) {
+		Set<ResultPartitionID> resultPartitionIDS = pollResultPartitionIDS(ResultPartitionState.UNFINISHED_NO_CONFIG, cnt);
+
 		resultPartitionIDS.forEach(resultPartitionID -> {
-			LOG.debug("Transit from UNFINISHED to UNCONSUMED: " + resultPartitionID);
+			LOG.debug("Write customized config for: " + resultPartitionID);
+			// Treat deque as a stack.
+			stateToResultPartitionIDs.get(ResultPartitionState.UNFINISHED_HAS_CONFIG).offerLast(resultPartitionID);
+
+			if (enableCustomizedTTL) {
+				String appId = resultPartitionIDToAppId.get(resultPartitionID);
+				String user = appIdToUser.get(appId);
+				Configuration taskManagerConfig = new Configuration();
+				taskManagerConfig.setString(TaskManagerOptions.TASK_MANAGER_OUTPUT_LOCAL_OUTPUT_DIRS,
+					resultPartitionIDToLocalDir.get(resultPartitionID).f0 + YarnLocalResultPartitionResolver.generateRelativeLocalAppDir(user, appId));
+
+				taskManagerConfig.setInteger(TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_UNCONSUMED_PARTITION_TTL_IN_SECONDS,
+					(int) (CUSTOMIZED_UNCONSUMED_PARTITION_TTL / 1000));
+				taskManagerConfig.setInteger(TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_PARTIAL_CONSUMED_PARTITION_TTL_IN_SECONDS,
+					(int) (CUSTOMIZED_PARTIAL_CONSUMED_PARTITION_TTL / 1000));
+				taskManagerConfig.setInteger(TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_CONSUMED_PARTITION_TTL_IN_SECONDS,
+					(int) (CUSTOMIZED_CONSUMED_PARTITION_TTL / 1000));
+				taskManagerConfig.setInteger(TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_UNFINISHED_PARTITION_TTL_IN_SECONDS,
+					(int) (CUSTOMIZED_UNFINISHED_PARTITION_TTL / 1000));
+
+				ExternalResultPartition<Integer> externalResultPartition = spy(new ExternalResultPartition<>(
+					taskManagerConfig,
+					"",
+					new JobID(),
+					resultPartitionID,
+					ResultPartitionType.BLOCKING,
+					10,
+					10,
+					mock(MemoryManager.class),
+					mock(IOManager.class)));
+
+				assertEquals(resultPartitionIDToLocalDir.get(resultPartitionID).f1, externalResultPartition.getPartitionRootPath());
+				try {
+					externalResultPartition.writeConfigFile(FILE_SYSTEM);
+				} catch (Exception e) {
+					fail("Fail to write result partition config file");
+				}
+			}
+		});
+	}
+
+	private void transitResultPartitionFromUnfinishedToUnconsumed(int cnt) {
+		Set<ResultPartitionID> resultPartitionIDS = pollResultPartitionIDS(ResultPartitionState.UNFINISHED_HAS_CONFIG, cnt);
+		resultPartitionIDS.forEach(resultPartitionID -> {
+			LOG.debug("Transit from UNFINISHED_HAS_CONFIG to UNCONSUMED: " + resultPartitionID);
 			// Treat deque as a stack.
 			stateToResultPartitionIDs.get(ResultPartitionState.UNCONSUMED).offerLast(resultPartitionID);
 			String finishFile = ExternalBlockShuffleUtils.generateFinishedPath(
 				resultPartitionIDToLocalDir.get(resultPartitionID).f1);
 			try {
-				fileSystem.create(new Path(finishFile), FileSystem.WriteMode.OVERWRITE);
-				assertTrue("Fail to create finish file: " + finishFile, fileSystem.exists(new Path(finishFile)));
+				FILE_SYSTEM.create(new Path(finishFile), FileSystem.WriteMode.OVERWRITE);
+				assertTrue("Fail to create finish file: " + finishFile, FILE_SYSTEM.exists(new Path(finishFile)));
 			} catch (IOException e) {
 				assertTrue("Caught exception when creating finish file " + finishFile, false);
 			}
@@ -687,9 +855,10 @@ public class YarnLocalResultPartitionResolverTest {
 			stateToResultPartitionIDs.get(ResultPartitionState.CONSUMED).offerLast(resultPartitionID);
 			LOG.debug("Transit from UNCONSUMED to CONSUMED: " + resultPartitionID);
 			try {
-				Tuple2<String, String> rootDirAndPartitionDir = resultPartitionResolver.getResultPartitionDir(
+				LocalResultPartitionResolver.ResultPartitionFileInfo descriptor = resultPartitionResolver.getResultPartitionDir(
 					resultPartitionID);
-				assertEquals(resultPartitionIDToLocalDir.get(resultPartitionID), rootDirAndPartitionDir);
+				assertEquals(resultPartitionIDToLocalDir.get(resultPartitionID).f0, descriptor.getRootDir());
+				assertEquals(resultPartitionIDToLocalDir.get(resultPartitionID).f1, descriptor.getPartitionDir());
 			} catch (IOException e) {
 				assertTrue("Caught exception when getResultPartitionDir, exception: " + e.getMessage(), false);
 			}
@@ -703,9 +872,9 @@ public class YarnLocalResultPartitionResolverTest {
 			removedResultPartitionIDs.add(resultPartitionID);
 			try {
 				Tuple2<String, String> rootDirAndPartitionDir = resultPartitionIDToLocalDir.get(resultPartitionID);
-				fileSystem.delete(new Path(rootDirAndPartitionDir.f1), true);
+				FILE_SYSTEM.delete(new Path(rootDirAndPartitionDir.f1), true);
 				assertTrue("Fail to delete result partition dir " + rootDirAndPartitionDir.f1,
-					!fileSystem.exists(new Path(rootDirAndPartitionDir.f1)));
+					!FILE_SYSTEM.exists(new Path(rootDirAndPartitionDir.f1)));
 			} catch (IOException e) {
 				// Do nothing.
 			}
@@ -722,9 +891,9 @@ public class YarnLocalResultPartitionResolverTest {
 			removedResultPartitionIDs.add(resultPartitionID);
 			try {
 				Tuple2<String, String> rootDirAndPartitionDir = resultPartitionIDToLocalDir.get(resultPartitionID);
-				fileSystem.delete(new Path(rootDirAndPartitionDir.f1), true);
+				FILE_SYSTEM.delete(new Path(rootDirAndPartitionDir.f1), true);
 				assertTrue("Fail to delete result partition dir " + rootDirAndPartitionDir.f1,
-					!fileSystem.exists(new Path(rootDirAndPartitionDir.f1)));
+					!FILE_SYSTEM.exists(new Path(rootDirAndPartitionDir.f1)));
 			} catch (IOException e) {
 				// Do nothing.
 			}
@@ -741,20 +910,51 @@ public class YarnLocalResultPartitionResolverTest {
 	}
 
 	private void validateResultPartitionMetaByState() {
+		validateResultPartitionMetaByState(new Configuration());
+	}
+
+	private void validateResultPartitionMetaByState(Configuration configuration) {
 		stateToResultPartitionIDs.get(ResultPartitionState.UNDEFINED).forEach(resultPartitionID -> {
 			assertTrue("Undefined ResultPartition should not be in the resolver.",
 				!resultPartitionResolver.resultPartitionMap.contains(resultPartitionID));
 		});
 
-		stateToResultPartitionIDs.get(ResultPartitionState.UNFINISHED).forEach(resultPartitionID -> {
+		stateToResultPartitionIDs.get(ResultPartitionState.UNFINISHED_NO_CONFIG).forEach(resultPartitionID -> {
 			String appId = resultPartitionIDToAppId.get(resultPartitionID);
-			YarnLocalResultPartitionResolver.ResultPartitionFileInfo fileInfo =
+			YarnLocalResultPartitionResolver.YarnResultPartitionFileInfo fileInfo =
 				resultPartitionResolver.resultPartitionMap.get(resultPartitionID);
 
 			assertTrue("Resolver should find the directory for " + resultPartitionID, fileInfo != null);
 			assertTrue(resultPartitionID.toString(), !fileInfo.isReadyToBeConsumed());
 			assertTrue(resultPartitionID.toString(), !fileInfo.isConsumed());
 			assertTrue(resultPartitionID.toString(), !fileInfo.needToDelete());
+			assertTrue(resultPartitionID.toString(), !fileInfo.isConfigLoaded());
+			assertEquals(UNCONSUMED_PARTITION_TTL, fileInfo.getUnconsumedPartitionTTL());
+			assertEquals(UNFINISHED_PARTITION_TTL, fileInfo.getUnfinishedPartitionTTL());
+			assertTrue(resultPartitionID.toString(), fileInfo.getFileInfoTimestamp() > 0L);
+			assertTrue(resultPartitionID.toString(), fileInfo.getPartitionReadyTime() == -1L);
+			assertEquals(appId, fileInfo.getAppId());
+			assertEquals(resultPartitionIDToLocalDir.get(resultPartitionID), fileInfo.getRootDirAndPartitionDir());
+		});
+
+		stateToResultPartitionIDs.get(ResultPartitionState.UNFINISHED_HAS_CONFIG).forEach(resultPartitionID -> {
+			String appId = resultPartitionIDToAppId.get(resultPartitionID);
+			YarnLocalResultPartitionResolver.YarnResultPartitionFileInfo fileInfo =
+				resultPartitionResolver.resultPartitionMap.get(resultPartitionID);
+
+			assertTrue("Resolver should find the directory for " + resultPartitionID, fileInfo != null);
+			assertTrue(resultPartitionID.toString(), !fileInfo.isReadyToBeConsumed());
+			assertTrue(resultPartitionID.toString(), !fileInfo.isConsumed());
+			assertTrue(resultPartitionID.toString(), !fileInfo.needToDelete());
+
+			if (configuration.getBoolean(ENABLE_CUSTOMIZED_TTL)) {
+				assertTrue(resultPartitionID.toString(), fileInfo.isConfigLoaded());
+				assertEquals(CUSTOMIZED_UNCONSUMED_PARTITION_TTL, fileInfo.getUnconsumedPartitionTTL());
+				assertEquals(CUSTOMIZED_PARTIAL_CONSUMED_PARTITION_TTL, fileInfo.getPartialConsumedPartitionTTL());
+				assertEquals(CUSTOMIZED_CONSUMED_PARTITION_TTL, fileInfo.getConsumedPartitionTTL());
+				assertEquals(CUSTOMIZED_UNFINISHED_PARTITION_TTL, fileInfo.getUnfinishedPartitionTTL());
+			}
+
 			assertTrue(resultPartitionID.toString(), fileInfo.getFileInfoTimestamp() > 0L);
 			assertTrue(resultPartitionID.toString(), fileInfo.getPartitionReadyTime() == -1L);
 			assertEquals(appId, fileInfo.getAppId());
@@ -763,7 +963,7 @@ public class YarnLocalResultPartitionResolverTest {
 
 		stateToResultPartitionIDs.get(ResultPartitionState.UNCONSUMED).forEach(resultPartitionID -> {
 			String appId = resultPartitionIDToAppId.get(resultPartitionID);
-			YarnLocalResultPartitionResolver.ResultPartitionFileInfo fileInfo =
+			YarnLocalResultPartitionResolver.YarnResultPartitionFileInfo fileInfo =
 				resultPartitionResolver.resultPartitionMap.get(resultPartitionID);
 
 			assertTrue("Resolver should find the directory for " + resultPartitionID, fileInfo != null);
@@ -778,7 +978,7 @@ public class YarnLocalResultPartitionResolverTest {
 
 		stateToResultPartitionIDs.get(ResultPartitionState.CONSUMED).forEach(resultPartitionID -> {
 			String appId = resultPartitionIDToAppId.get(resultPartitionID);
-			YarnLocalResultPartitionResolver.ResultPartitionFileInfo fileInfo =
+			YarnLocalResultPartitionResolver.YarnResultPartitionFileInfo fileInfo =
 				resultPartitionResolver.resultPartitionMap.get(resultPartitionID);
 
 			assertTrue("Resolver should find the directory for " + resultPartitionID, fileInfo != null);
@@ -793,7 +993,7 @@ public class YarnLocalResultPartitionResolverTest {
 
 		toBeRemovedResultPartitionIDs.forEach(resultPartitionID -> {
 			String appId = resultPartitionIDToAppId.get(resultPartitionID);
-			YarnLocalResultPartitionResolver.ResultPartitionFileInfo fileInfo =
+			YarnLocalResultPartitionResolver.YarnResultPartitionFileInfo fileInfo =
 				resultPartitionResolver.resultPartitionMap.get(resultPartitionID);
 
 			assertTrue("Resolver should find the directory for " + resultPartitionID, fileInfo != null);
@@ -811,7 +1011,7 @@ public class YarnLocalResultPartitionResolverTest {
 				!resultPartitionResolver.resultPartitionMap.contains(resultPartitionID));
 			Tuple2<String, String> rootDirAndPartitionDir = resultPartitionIDToLocalDir.get(resultPartitionID);
 			try {
-				boolean exist = fileSystem.exists(new Path(rootDirAndPartitionDir.f1));
+				boolean exist = FILE_SYSTEM.exists(new Path(rootDirAndPartitionDir.f1));
 				assertTrue("ResultPartition directory should be recycled: " + rootDirAndPartitionDir.f1, !exist);
 			} catch (IOException e) {
 				// Do nothing.

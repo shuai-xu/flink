@@ -40,6 +40,8 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 public class ExternalBlockShuffleUtils {
 	private static final Logger LOG = LoggerFactory.getLogger(ExternalBlockShuffleUtils.class);
 
+	private static final String CONFIG_FILE = "config";
+
 	private static final String DATA_FILE = "data";
 
 	private static final String SPILL_FILE = "spill";
@@ -113,6 +115,10 @@ public class ExternalBlockShuffleUtils {
 
 	public static String generateFinishedPath(String partitionPrefix) {
 		return partitionPrefix + FINISHED_FILE;
+	}
+
+	public static String generateConfigPath(String partitionPrefix) {
+		return partitionPrefix + CONFIG_FILE;
 	}
 
 	public static int hashPartitionToDisk(String producerId, String partitionId) {

@@ -19,7 +19,6 @@
 package org.apache.flink.runtime.io.network.partition.external;
 
 import org.apache.flink.annotation.VisibleForTesting;
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.MemoryType;
 import org.apache.flink.runtime.io.network.partition.BufferAvailabilityListener;
 import org.apache.flink.runtime.io.network.partition.FixedLengthBufferPool;
@@ -108,13 +107,12 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 
 		ExternalBlockResultPartitionMeta resultPartitionMeta = resultPartitionMetaMap.get(resultPartitionId);
 		if (resultPartitionMeta == null) {
-			Tuple2<String, String> rootDirAndPartitionDir = resultPartitionResolver.getResultPartitionDir(
+			LocalResultPartitionResolver.ResultPartitionFileInfo fileInfo = resultPartitionResolver.getResultPartitionDir(
 				resultPartitionId);
 			resultPartitionMeta = new ExternalBlockResultPartitionMeta(
 				resultPartitionId,
 				shuffleServiceConfiguration.getFileSystem(),
-				rootDirAndPartitionDir.f0,
-				rootDirAndPartitionDir.f1);
+				fileInfo);
 			ExternalBlockResultPartitionMeta prevResultPartitionMeta =
 				resultPartitionMetaMap.putIfAbsent(resultPartitionId, resultPartitionMeta);
 			if (prevResultPartitionMeta != null) {
@@ -226,14 +224,14 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 				// It seems all the down streams have fetched their data from this result partition.
 				long lastActiveTimeInMs = resultPartitionMeta.getLastActiveTimeInMs();
 				// we may get -1L in a rare condition due to decreasing count and setting timestamp without lock
-				if ((currTime -lastActiveTimeInMs) > shuffleServiceConfiguration.getConsumedPartitionTTL()) {
+				if ((currTime -lastActiveTimeInMs) > resultPartitionMeta.getConsumedPartitionTTL()) {
 					consumedPartitionsToRemove.put(resultPartitionID, resultPartitionMeta);
 				}
 			} else {
 				// There are subpartitions left to be consumed. If this job fails, such partition
 				// will never be fully consumed.
 				long lastActiveTimeInMs = resultPartitionMeta.getLastActiveTimeInMs();
-				if ((currTime - lastActiveTimeInMs) > shuffleServiceConfiguration.getPartialConsumedPartitionTTL()) {
+				if ((currTime - lastActiveTimeInMs) > resultPartitionMeta.getPartialConsumedPartitionTTL()) {
 					partialConsumedPartitionsToRemove.put(resultPartitionID, resultPartitionMeta);
 				}
 			}

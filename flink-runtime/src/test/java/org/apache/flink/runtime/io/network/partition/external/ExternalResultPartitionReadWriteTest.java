@@ -283,11 +283,14 @@ public class ExternalResultPartitionReadWriteTest {
 		ExternalBlockResultPartitionMeta meta = new ExternalBlockResultPartitionMeta(
 			partitionID,
 			FileSystem.getLocalFileSystem(),
-			outputLocalDir,
-			ExternalBlockShuffleUtils.generatePartitionRootPath(
-				outputLocalDir + YarnLocalResultPartitionResolver.generateRelativeLocalAppDir(USER, APP_ID),
-				partitionID.getProducerId().toString(),
-				partitionID.getPartitionId().toString()));
+			new ExternalBlockResultPartitionManagerTest.MockResultPartitionFileInfo(
+				outputLocalDir,
+				ExternalBlockShuffleUtils.generatePartitionRootPath(
+					outputLocalDir + YarnLocalResultPartitionResolver.generateRelativeLocalAppDir(USER, APP_ID),
+					partitionID.getProducerId().toString(),
+					partitionID.getPartitionId().toString()),
+				3600,
+				3600));
 
 		FixedLengthBufferPool bufferPool = new FixedLengthBufferPool(10, PAGE_SIZE, MemoryType.OFF_HEAP);
 		ExecutorService producerThreadPool = Executors.newFixedThreadPool(

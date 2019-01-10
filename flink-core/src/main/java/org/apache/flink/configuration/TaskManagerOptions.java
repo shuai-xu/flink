@@ -446,6 +446,46 @@ public class TaskManagerOptions {
 			.defaultValue(32 * 1024)
 			.withDescription("The max buffer size to compress external shuffle data.");
 
+	/**
+	 * The duration to retain a partition's data after it has been fully consumed, in seconds.
+	 */
+	public static final ConfigOption<Integer> TASK_EXTERNAL_SHUFFLE_CONSUMED_PARTITION_TTL_IN_SECONDS =
+		key("task.external.shuffle.consumed-partition-ttl-in-seconds")
+			.defaultValue(60 * 60)
+			.withDescription("The time interval to delete the fully consumed shuffle data directories " +
+				"since they become inactive.");
+
+	/**
+	 * The duration to retain a partition's data after its last consumption if it hasn't been fully consumed,
+	 * in seconds.
+	 */
+	public static final ConfigOption<Integer> TASK_EXTERNAL_SHUFFLE_PARTIAL_CONSUMED_PARTITION_TTL_IN_SECONDS =
+		key("task.external.shuffle.partial-consumed-partition-ttl-in-seconds")
+			.defaultValue(60 * 60 * 12)
+			.withDescription("The time interval to delete the partially consumed shuffle data directories " +
+				"since they become inactive.");
+
+	/**
+	 * The duration to retain a partition's data after its last modified time
+	 * if this partition is ready for consumption but hasn't been consumed yet, in seconds.
+	 */
+	public static final ConfigOption<Integer> TASK_EXTERNAL_SHUFFLE_UNCONSUMED_PARTITION_TTL_IN_SECONDS =
+		key("task.external.shuffle.unconsumed-partition-ttl-in-seconds")
+			.defaultValue(60 * 60 * 12)
+			.withDescription("TThe time interval to delete the unconsumed shuffle data directories " +
+				"since they are ready to consume.");
+
+	/**
+	 * The duration to retain a partition's data after its last modified time
+	 * if this partition is unfinished and cannot be consumed, probably due to upstream write failure,
+	 * in seconds.
+	 */
+	public static final ConfigOption<Integer> TASK_EXTERNAL_SHUFFLE_UNFINISHED_PARTITION_TTL_IN_SECONDS =
+		key("task.external.shuffle.unfinished-partition-ttl-in-seconds")
+			.defaultValue(60 * 60)
+			.withDescription("The time interval to delete the writing shuffle data directories " +
+				"since the last writing.");
+
 	// ------------------------------------------------------------------------
 	//  Managed Memory Options
 	// ------------------------------------------------------------------------

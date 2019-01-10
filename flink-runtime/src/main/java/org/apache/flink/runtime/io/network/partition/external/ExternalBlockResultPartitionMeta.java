@@ -49,12 +49,6 @@ class ExternalBlockResultPartitionMeta {
 	/** File system of data and index file for this partition */
 	private final FileSystem fileSystem;
 
-	/** Root directory to identify which disk it locates at */
-	private final String rootDir;
-
-	/** Base directory of this result partition */
-	private final String resultPartitionDir;
-
 	/** Make sure result partition meta will be initialized only once. */
 	@GuardedBy("this")
 	private volatile boolean hasInitialized = false;
@@ -67,6 +61,8 @@ class ExternalBlockResultPartitionMeta {
 	 * we can just set null to make those unused PartitionIndices GC when memory gets tight.
 	 */
 	private List<ExternalSubpartitionMeta>[] subpartitionMetas;
+
+	private final LocalResultPartitionResolver.ResultPartitionFileInfo fileInfo;
 
 	/**
 	 * Spill count actually shows the count of logical partitioned files.
@@ -101,13 +97,11 @@ class ExternalBlockResultPartitionMeta {
 	ExternalBlockResultPartitionMeta(
 		ResultPartitionID resultPartitionID,
 		FileSystem fileSystem,
-		String rootDir,
-		String resultPartitionDir) {
+		LocalResultPartitionResolver.ResultPartitionFileInfo fileInfo) {
 
 		this.resultPartitionID = resultPartitionID;
 		this.fileSystem = fileSystem;
-		this.rootDir = rootDir;
-		this.resultPartitionDir = resultPartitionDir;
+		this.fileInfo = fileInfo;
 	}
 
 	boolean hasInitialized() {
@@ -134,11 +128,11 @@ class ExternalBlockResultPartitionMeta {
 	}
 
 	public String getRootDir() {
-		return rootDir;
+		return fileInfo.getRootDir();
 	}
 
 	public String getResultPartitionDir() {
-		return resultPartitionDir;
+		return fileInfo.getPartitionDir();
 	}
 
 	public synchronized List<ExternalSubpartitionMeta> getSubpartitionMeta(int subpartitionIndex) {
@@ -154,6 +148,14 @@ class ExternalBlockResultPartitionMeta {
 		} else {
 			throw new RuntimeException("This method should be called after initialize()");
 		}
+	}
+
+	long getConsumedPartitionTTL() {
+		return fileInfo.getConsumedPartitionTTL();
+	}
+
+	long getPartialConsumedPartitionTTL() {
+		return fileInfo.getPartialConsumedPartitionTTL();
 	}
 
 	void notifySubpartitionStartConsuming(int subpartitionIndex) {
@@ -206,7 +208,7 @@ class ExternalBlockResultPartitionMeta {
 	// -------------------------------- Internal Utilities ------------------------------------
 
 	private void initializeByFinishFile() throws IOException {
-		String finishedPathStr = ExternalBlockShuffleUtils.generateFinishedPath(resultPartitionDir);
+		String finishedPathStr = ExternalBlockShuffleUtils.generateFinishedPath(fileInfo.getPartitionDir());
 		Path finishFilePath = new Path(finishedPathStr);
 
 		if (!fileSystem.exists(finishFilePath)) {
@@ -279,7 +281,7 @@ class ExternalBlockResultPartitionMeta {
 				}
 
 				// generate index file
-				indexFilePath = new Path(ExternalBlockShuffleUtils.generateIndexPath(resultPartitionDir, idx));
+				indexFilePath = new Path(ExternalBlockShuffleUtils.generateIndexPath(fileInfo.getPartitionDir(), idx));
 				// check whether index files exist
 				if (!fileSystem.exists(indexFilePath)) {
 					throw new IOException("Index file doesn't exist, file path: " + indexFilePath.getPath());
@@ -297,7 +299,7 @@ class ExternalBlockResultPartitionMeta {
 					// Unlike the other mode, data files in SINGLE_SUBPARTITION_FILE mode
 					// is one per subpartition, we will generate its data files during
 					// matrix transposition.
-					dataFiles[idx] = new Path(ExternalBlockShuffleUtils.generateDataPath(resultPartitionDir, idx));
+					dataFiles[idx] = new Path(ExternalBlockShuffleUtils.generateDataPath(fileInfo.getPartitionDir(), idx));
 				}
 
 				// load partition indices for the current spill
@@ -328,7 +330,7 @@ class ExternalBlockResultPartitionMeta {
 				if (externalFileType == PersistentFileType.HASH_PARTITION_FILE) {
 					// spillCount should be only one in this mode, so actual
 					// new operation will do only once for each subpartition
-					dataFile = new Path(ExternalBlockShuffleUtils.generateDataPath(resultPartitionDir, subpartitionIndex));
+					dataFile = new Path(ExternalBlockShuffleUtils.generateDataPath(fileInfo.getPartitionDir(), subpartitionIndex));
 				} else {
 					dataFile = dataFiles[spillIdx];
 				}

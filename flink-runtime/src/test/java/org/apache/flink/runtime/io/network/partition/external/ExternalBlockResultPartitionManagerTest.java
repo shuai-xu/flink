@@ -18,7 +18,6 @@
 
 package org.apache.flink.runtime.io.network.partition.external;
 
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.io.network.partition.BufferAvailabilityListener;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
@@ -29,8 +28,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -55,8 +52,6 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ExternalBlockResultPartitionManager.class, LocalResultPartitionResolverFactory.class})
 public class ExternalBlockResultPartitionManagerTest {
-	private static final Logger LOG = LoggerFactory.getLogger(ExternalBlockResultPartitionManagerTest.class);
-
 	private final ExternalBlockShuffleServiceConfiguration externalBlockShuffleServiceConfiguration =
 		mock(ExternalBlockShuffleServiceConfiguration.class);
 
@@ -73,7 +68,7 @@ public class ExternalBlockResultPartitionManagerTest {
 	private final long partialConsumedPartitionTTL = 3600000L;
 
 	/** Map from ResultPartitionID to root Directory and result partition directory. */
-	private final Map<ResultPartitionID, Tuple2<String, String>> resultPartitionFileInfoMap = new HashMap<>();
+	private final Map<ResultPartitionID, LocalResultPartitionResolver.ResultPartitionFileInfo> resultPartitionFileInfoMap = new HashMap<>();
 
 	enum ResultPartitionState {
 
@@ -99,18 +94,18 @@ public class ExternalBlockResultPartitionManagerTest {
 		this.dirToDiskType = new HashMap<String, String>() {{
 			put("/local-dir1/", "SSD");
 			put("/local-dir2/", "SSD");
-			put("/local-dir3/", "HDD");
+			put("/local-dir3/", "MOCK_DISK_TYPE");
 			put("/local-dir4/", ExternalBlockShuffleServiceConfiguration.DEFAULT_DISK_TYPE);
 		}};
 
 		this.diskTypeToIOThreadNum = new HashMap<String, Integer>() {{
 			put("SSD", 30);
-			put("HDD", 4);
+			put("MOCK_DISK_TYPE", 4);
 			put(ExternalBlockShuffleServiceConfiguration.DEFAULT_DISK_TYPE, 1);
 		}};
 	}
 
-		@Before
+	@Before
 	public void setup() throws Exception {
 		Configuration configuration = new Configuration();
 		when(externalBlockShuffleServiceConfiguration.getConfiguration()).thenReturn(configuration);
@@ -120,8 +115,8 @@ public class ExternalBlockResultPartitionManagerTest {
 		when(externalBlockShuffleServiceConfiguration.getDirToDiskType()).thenReturn(dirToDiskType);
 		when(externalBlockShuffleServiceConfiguration.getDiskTypeToIOThreadNum()).thenReturn(diskTypeToIOThreadNum);
 		when(externalBlockShuffleServiceConfiguration.getWaitCreditDelay()).thenReturn(2L);
-		when(externalBlockShuffleServiceConfiguration.getConsumedPartitionTTL()).thenReturn(consumedPartitionTTL);
-		when(externalBlockShuffleServiceConfiguration.getPartialConsumedPartitionTTL()).thenReturn(partialConsumedPartitionTTL);
+		when(externalBlockShuffleServiceConfiguration.getDefaultConsumedPartitionTTL()).thenReturn(consumedPartitionTTL);
+		when(externalBlockShuffleServiceConfiguration.getDefaultPartialConsumedPartitionTTL()).thenReturn(partialConsumedPartitionTTL);
 
 		mockStatic(System.class);
 
@@ -130,9 +125,10 @@ public class ExternalBlockResultPartitionManagerTest {
 			.thenReturn(localResultPartitionResolver);
 		doAnswer(invocation -> {
 			ResultPartitionID resultPartitionID = invocation.getArgumentAt(0, ResultPartitionID.class);
-			Tuple2<String, String> rootDirAndPartitionDir = resultPartitionFileInfoMap.get(resultPartitionID);
-			if (rootDirAndPartitionDir != null) {
-				return rootDirAndPartitionDir;
+			LocalResultPartitionResolver.ResultPartitionFileInfo descriptor = resultPartitionFileInfoMap.get(resultPartitionID);
+
+			if (descriptor != null) {
+				return descriptor;
 			} else {
 				throw new IOException("Cannot find result partition " + resultPartitionID);
 			}
@@ -201,14 +197,14 @@ public class ExternalBlockResultPartitionManagerTest {
 				resultPartitionManager.resultPartitionMetaMap.containsKey(resultPartitionID));
 			ExternalBlockResultPartitionMeta resultPartitionMeta =
 				resultPartitionManager.resultPartitionMetaMap.get(resultPartitionID);
-			assertEquals(rootDirAndPartitionDir,
-				new Tuple2<>(resultPartitionMeta.getRootDir(), resultPartitionMeta.getResultPartitionDir()));
+			assertEquals(rootDirAndPartitionDir.getRootDir(), resultPartitionMeta.getRootDir());
+			assertEquals(rootDirAndPartitionDir.getPartitionDir(), resultPartitionMeta.getResultPartitionDir());
 			assertEquals(1, resultPartitionMeta.getReferenceCount());
 		});
 
 		// Tests reference count.
 		ResultPartitionID resultPartitionID = resultPartitionFileInfoMap.keySet().iterator().next();
-		Tuple2<String, String> rootDirAndPartitionDir = resultPartitionFileInfoMap.get(resultPartitionID);
+		LocalResultPartitionResolver.ResultPartitionFileInfo descriptor = resultPartitionFileInfoMap.get(resultPartitionID);
 		for (int i = 0; i < 5; i++) {
 			try {
 				ResultSubpartitionView resultSubpartitionView = resultPartitionManager.createSubpartitionView(
@@ -221,8 +217,8 @@ public class ExternalBlockResultPartitionManagerTest {
 				resultPartitionManager.resultPartitionMetaMap.containsKey(resultPartitionID));
 			ExternalBlockResultPartitionMeta resultPartitionMeta =
 				resultPartitionManager.resultPartitionMetaMap.get(resultPartitionID);
-			assertEquals(rootDirAndPartitionDir,
-				new Tuple2<>(resultPartitionMeta.getRootDir(), resultPartitionMeta.getResultPartitionDir()));
+			assertEquals(descriptor.getRootDir(), resultPartitionMeta.getRootDir());
+			assertEquals(descriptor.getPartitionDir(), resultPartitionMeta.getResultPartitionDir());
 			assertEquals(2 + i, resultPartitionMeta.getReferenceCount());
 		}
 	}
@@ -242,7 +238,8 @@ public class ExternalBlockResultPartitionManagerTest {
 				String rootDir = localDirArray[Math.abs(random.nextInt()) % localDirArray.length];
 				String partitionDir = rootDir + "partition" + i + "/";
 				ResultPartitionID resultPartitionID = new ResultPartitionID();
-				resultPartitionFileInfoMap.put(resultPartitionID, new Tuple2<>(rootDir, partitionDir));
+				resultPartitionFileInfoMap.put(resultPartitionID,
+					new MockResultPartitionFileInfo(rootDir, partitionDir, consumedPartitionTTL, partialConsumedPartitionTTL));
 
 				stateToResultPartitionIDs.get(state).add(resultPartitionID);
 
@@ -252,6 +249,8 @@ public class ExternalBlockResultPartitionManagerTest {
 				when(resultPartitionMeta.getRootDir()).thenReturn(rootDir);
 				when(resultPartitionMeta.getResultPartitionDir()).thenReturn(partitionDir);
 				when(resultPartitionMeta.getLastActiveTimeInMs()).thenReturn(baseTime);
+				when(resultPartitionMeta.getConsumedPartitionTTL()).thenReturn(consumedPartitionTTL);
+				when(resultPartitionMeta.getPartialConsumedPartitionTTL()).thenReturn(partialConsumedPartitionTTL);
 				if (state.hasReference) {
 					when(resultPartitionMeta.getReferenceCount()).thenReturn(2);
 				} else {
@@ -356,11 +355,41 @@ public class ExternalBlockResultPartitionManagerTest {
 			String localDir = localDirArray[Math.abs(random.nextInt()) % localDirArray.length];
 			// We don't really care about root dir and partition dir since we don't test read/write in this unittest.
 			resultPartitionFileInfoMap.put(new ResultPartitionID(),
-				new Tuple2<>(localDir, localDir + "partition" + i + "/"));
+				new MockResultPartitionFileInfo(localDir, localDir + "partition" + i + "/", consumedPartitionTTL, partialConsumedPartitionTTL));
 		}
 	}
 
 	void triggerRecycling() {
 		resultPartitionManager.recycleResultPartitions();
+	}
+
+	static class MockResultPartitionFileInfo implements LocalResultPartitionResolver.ResultPartitionFileInfo {
+		private final String rootDir;
+		private final String partitionDir;
+		private final long consumedPartitionTTL;
+		private final long partialConsumedPartitionTTL;
+
+		public MockResultPartitionFileInfo(String rootDir, String partitionDir, long consumedPartitionTTL, long partialConsumedPartitionTTL) {
+			this.rootDir = rootDir;
+			this.partitionDir = partitionDir;
+			this.consumedPartitionTTL = consumedPartitionTTL;
+			this.partialConsumedPartitionTTL = partialConsumedPartitionTTL;
+		}
+
+		public String getRootDir() {
+			return rootDir;
+		}
+
+		public String getPartitionDir() {
+			return partitionDir;
+		}
+
+		public long getConsumedPartitionTTL() {
+			return consumedPartitionTTL;
+		}
+
+		public long getPartialConsumedPartitionTTL() {
+			return partialConsumedPartitionTTL;
+		}
 	}
 }

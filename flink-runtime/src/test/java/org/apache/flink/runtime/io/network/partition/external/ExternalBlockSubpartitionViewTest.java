@@ -384,7 +384,8 @@ public class ExternalBlockSubpartitionViewTest {
 			finishedView.writeInt(bytesPerFileOfEachSubpartition.length);
 		}
 
-		return new ExternalBlockResultPartitionMeta(new ResultPartitionID(), fs, root, root);
+		return new ExternalBlockResultPartitionMeta(new ResultPartitionID(), fs,
+			new ExternalBlockResultPartitionManagerTest.MockResultPartitionFileInfo(root, root, 0, 0));
 	}
 
 	private ExternalBlockResultPartitionMeta createHashFilesAndMeta(int[] bytesEachSubpartition) throws Exception {
@@ -437,7 +438,8 @@ public class ExternalBlockSubpartitionViewTest {
 			finishedView.writeInt(bytesEachSubpartition.length);
 		}
 
-		return new ExternalBlockResultPartitionMeta(new ResultPartitionID(), fs, root, root);
+		return new ExternalBlockResultPartitionMeta(new ResultPartitionID(), fs,
+			new ExternalBlockResultPartitionManagerTest.MockResultPartitionFileInfo(root, root, 0, 0));
 	}
 
 	private void setupCheckForSubpartition(int subpartitionIndex) {

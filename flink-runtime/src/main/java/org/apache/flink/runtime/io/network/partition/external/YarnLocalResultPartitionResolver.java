@@ -20,9 +20,12 @@ package org.apache.flink.runtime.io.network.partition.external;
 
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.core.fs.FSDataInputStream;
 import org.apache.flink.core.fs.FileStatus;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.core.memory.DataInputView;
+import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.runtime.io.network.partition.PartitionNotFoundException;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 
@@ -66,7 +69,7 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	 *  in order to make sure that no information losses.
 	 */
 	@VisibleForTesting
-	protected final ConcurrentHashMap<ResultPartitionID, ResultPartitionFileInfo>
+	protected final ConcurrentHashMap<ResultPartitionID, YarnResultPartitionFileInfo>
 		resultPartitionMap = new ConcurrentHashMap<>(RESULT_PARTITION_MAP_INITIAL_CAPACITY);
 
 	/**
@@ -134,10 +137,10 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	Set<ResultPartitionID> stopApplication(String appId) {
 		// Don't need to deal with partition files because NodeManager will recycle application's directory.
 		Set<ResultPartitionID> toRemove = new HashSet<>();
-		Iterator<Map.Entry<ResultPartitionID, ResultPartitionFileInfo>> partitionIterator =
+		Iterator<Map.Entry<ResultPartitionID, YarnResultPartitionFileInfo>> partitionIterator =
 			resultPartitionMap.entrySet().iterator();
 		while (partitionIterator.hasNext()) {
-			Map.Entry<ResultPartitionID, ResultPartitionFileInfo> entry = partitionIterator.next();
+			Map.Entry<ResultPartitionID, YarnResultPartitionFileInfo> entry = partitionIterator.next();
 			if (entry.getValue().getAppId().equals(appId)) {
 				toRemove.add(entry.getKey());
 				partitionIterator.remove();
@@ -148,14 +151,14 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	}
 
 	@Override
-	Tuple2<String, String> getResultPartitionDir(ResultPartitionID resultPartitionID) throws IOException {
-		ResultPartitionFileInfo fileInfo = resultPartitionMap.get(resultPartitionID);
+	ResultPartitionFileInfo getResultPartitionDir(ResultPartitionID resultPartitionID) throws IOException {
+		YarnResultPartitionFileInfo fileInfo = resultPartitionMap.get(resultPartitionID);
 		if (fileInfo != null) {
 			if (!fileInfo.isReadyToBeConsumed()) {
 				updateUnfinishedResultPartition(resultPartitionID, fileInfo);
 			}
 			fileInfo.updateOnConsumption();
-			return fileInfo.getRootDirAndPartitionDir();
+			return fileInfo;
 		}
 
 		// Cache miss, scan configured directories to search for the result partition's directory.
@@ -163,12 +166,12 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 		if (fileInfo == null) {
 			throw new PartitionNotFoundException(resultPartitionID);
 		}
-		return fileInfo.getRootDirAndPartitionDir();
+		return fileInfo;
 	}
 
 	@Override
 	void recycleResultPartition(ResultPartitionID resultPartitionID) {
-		ResultPartitionFileInfo fileInfo = resultPartitionMap.get(resultPartitionID);
+		YarnResultPartitionFileInfo fileInfo = resultPartitionMap.get(resultPartitionID);
 		if (fileInfo != null) {
 			fileInfo.markToDelete(); // Lazy deletion, do real deletion during disk scan.
 		}
@@ -207,16 +210,16 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	 */
 	private void updateUnfinishedResultPartition(
 		ResultPartitionID resultPartitionID,
-		ResultPartitionFileInfo fileInfo) throws IOException {
+		YarnResultPartitionFileInfo fileInfo) throws IOException {
 
 		String finishedFilePath = ExternalBlockShuffleUtils.generateFinishedPath(
 			fileInfo.getRootDirAndPartitionDir().f1);
 		try {
 			// Use finishedFile to get the partition ready time.
 			FileStatus fileStatus = fileSystem.getFileStatus(new Path(finishedFilePath));
+
 			if (fileStatus != null) {
 				fileInfo.setReadyToBeConsumed(fileStatus.getModificationTime());
-				return;
 			}
 		} catch (FileNotFoundException e) {
 			// The result partition is still unfinished.
@@ -230,7 +233,7 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	 * @param resultPartitionID
 	 * @return The information of this result partition's data files.
 	 */
-	private ResultPartitionFileInfo searchResultPartitionDir(
+	private YarnResultPartitionFileInfo searchResultPartitionDir(
 		ResultPartitionID resultPartitionID) throws IOException {
 
 		// Search through all the running applications.
@@ -265,15 +268,16 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 					throw e;
 				}
 				if (fileStatus != null) {
-					ResultPartitionFileInfo fileInfo =
-						new ResultPartitionFileInfo(
+					YarnResultPartitionFileInfo fileInfo =
+						new YarnResultPartitionFileInfo(
 							appId,
 							new Tuple2<>(rootDir, partitionDir),
 							true,
 							true,
 							fileStatus.getModificationTime(),
-							System.currentTimeMillis());
-					ResultPartitionFileInfo prevFileInfo = resultPartitionMap.putIfAbsent(
+							System.currentTimeMillis(),
+							shuffleServiceConfiguration);
+					YarnResultPartitionFileInfo prevFileInfo = resultPartitionMap.putIfAbsent(
 						resultPartitionID, fileInfo);
 					if (prevFileInfo != null) {
 						if (!prevFileInfo.isReadyToBeConsumed()) {
@@ -282,18 +286,21 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 						prevFileInfo.updateOnConsumption();
 						fileInfo = prevFileInfo;
 					}
+
 					return fileInfo;
 				} else {
-					ResultPartitionFileInfo fileInfo =
-						new ResultPartitionFileInfo(
+					YarnResultPartitionFileInfo fileInfo =
+						new YarnResultPartitionFileInfo(
 							appId,
 							new Tuple2<>(rootDir, partitionDir),
 							false,
 							false,
 							-1L,
-							System.currentTimeMillis());
-					ResultPartitionFileInfo prevFileInfo = resultPartitionMap.putIfAbsent(
+							System.currentTimeMillis(),
+							shuffleServiceConfiguration);
+					YarnResultPartitionFileInfo prevFileInfo = resultPartitionMap.putIfAbsent(
 						resultPartitionID, fileInfo);
+
 					if (prevFileInfo != null && prevFileInfo.isReadyToBeConsumed()) {
 						prevFileInfo.updateOnConsumption();
 						return prevFileInfo;
@@ -358,11 +365,11 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 		}
 
 		// 2. Remove out-of-date caches and partition files to be deleted through resultPartitionMap.
-		Iterator<Map.Entry<ResultPartitionID, ResultPartitionFileInfo>> partitionIterator =
+		Iterator<Map.Entry<ResultPartitionID, YarnResultPartitionFileInfo>> partitionIterator =
 			resultPartitionMap.entrySet().iterator();
 		while (partitionIterator.hasNext()) {
-			Map.Entry<ResultPartitionID, ResultPartitionFileInfo> entry = partitionIterator.next();
-			ResultPartitionFileInfo fileInfo = entry.getValue();
+			Map.Entry<ResultPartitionID, YarnResultPartitionFileInfo> entry = partitionIterator.next();
+			YarnResultPartitionFileInfo fileInfo = entry.getValue();
 			boolean needToRemoveFileInfo = false;
 			if (fileInfo.needToDelete()) {
 				needToRemoveFileInfo = true;
@@ -379,7 +386,7 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 				// Do nothing, has dealt with this case in previous step, see updateResultPartitionFileInfoByFileStatus.
 			} else if (!fileInfo.isConsumed()) {
 				long lastActiveTime = fileInfo.getPartitionReadyTime();
-				if (currTime - lastActiveTime > shuffleServiceConfiguration.getUnconsumedPartitionTTL()) {
+				if (currTime - lastActiveTime > fileInfo.getUnconsumedPartitionTTL()) {
 					needToRemoveFileInfo = true;
 					removeResultPartition(new Path(fileInfo.rootDirAndPartitionDir.f1),
 						"UNCONSUMED_PARTITION_TTL_TIMEOUT",
@@ -407,9 +414,15 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 		String rootDir,
 		String appDir) {
 
-		ResultPartitionFileInfo fileInfo = resultPartitionMap.get(resultPartitionID);
+		YarnResultPartitionFileInfo fileInfo = resultPartitionMap.get(resultPartitionID);
+
 		if (fileInfo != null) {
 			fileInfo.updateFileInfoTimestamp(currTime);
+
+			if (!fileInfo.configLoaded) {
+				tryUpdateTTLByConfigFile(fileInfo);
+			}
+
 			// Don't need to check finished file for a finished result partition.
 			if (fileInfo.isReadyToBeConsumed()) {
 				return;
@@ -429,46 +442,95 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 
 		if (finishFileStatus != null) {
 			if (fileInfo == null) {
-				fileInfo = new ResultPartitionFileInfo(
+				fileInfo = new YarnResultPartitionFileInfo(
 					appId,
 					new Tuple2<>(rootDir, partitionDir),
 					true,
 					false,
 					finishFileStatus.getModificationTime(),
-					currTime);
-				ResultPartitionFileInfo prevFileInfo = resultPartitionMap.putIfAbsent(
+					currTime,
+					shuffleServiceConfiguration);
+				YarnResultPartitionFileInfo prevFileInfo = resultPartitionMap.putIfAbsent(
 					resultPartitionID, fileInfo);
 				if (prevFileInfo != null) {
 					fileInfo = prevFileInfo;
 				}
 			}
+
+			if (!fileInfo.isConfigLoaded()) {
+				tryUpdateTTLByConfigFile(fileInfo);
+			}
+
 			if (!fileInfo.isReadyToBeConsumed()) {
 				fileInfo.setReadyToBeConsumed(finishFileStatus.getModificationTime());
 			}
 		} else {
 			if (fileInfo == null) {
-				fileInfo = new ResultPartitionFileInfo(
+				fileInfo = new YarnResultPartitionFileInfo(
 					appId,
 					new Tuple2<>(rootDir, partitionDir),
 					false,
 					false,
 					-1L,
-					currTime);
-				ResultPartitionFileInfo prevFileInfo = resultPartitionMap.putIfAbsent(
+					currTime,
+					shuffleServiceConfiguration);
+				YarnResultPartitionFileInfo prevFileInfo = resultPartitionMap.putIfAbsent(
 					resultPartitionID, fileInfo);
 				if (prevFileInfo != null) {
 					fileInfo = prevFileInfo;
 				}
 			}
+
+			if (!fileInfo.isConfigLoaded()) {
+				tryUpdateTTLByConfigFile(fileInfo);
+			}
+
 			if (!fileInfo.isReadyToBeConsumed()) {
 				// If this producer doesn't finish writing, we can only use dir's access time to judge.
 				long lastActiveTime = partitionDirStatus.getModificationTime();
-				if (currTime - lastActiveTime > shuffleServiceConfiguration.getUnfinishedPartitionTTL()) {
-					removeResultPartition(partitionDirStatus.getPath(),
-						"UNFINISHED_PARTITION_TTL_TIMEOUT",
+				if (currTime - lastActiveTime > fileInfo.getUnfinishedPartitionTTL()) {
+						removeResultPartition(partitionDirStatus.getPath(),
+							"UNFINISHED_PARTITION_TTL_TIMEOUT",
 						lastActiveTime,
 						true);
 					resultPartitionMap.remove(resultPartitionID);
+				}
+			}
+		}
+	}
+
+	private void tryUpdateTTLByConfigFile(YarnResultPartitionFileInfo fileInfo) {
+		FSDataInputStream configIn = null;
+
+		String configFilePathStr = null;
+		try {
+			configFilePathStr = ExternalBlockShuffleUtils.generateConfigPath(fileInfo.getRootDirAndPartitionDir().f1);
+
+			Path configFilePath = new Path(configFilePathStr);
+			if (!fileSystem.exists(configFilePath)) {
+				return;
+			}
+
+			configIn = fileSystem.open(new Path(configFilePathStr));
+
+			if (configIn != null) {
+				DataInputView configView = new DataInputViewStreamWrapper(configIn);
+
+				long consumedPartitionTTL = configView.readLong();
+				long partialConsumedPartitionTTL = configView.readLong();
+				long unconsumedPartitionTTL = configView.readLong();
+				long unfinishedPartitionTTL = configView.readLong();
+
+				fileInfo.updateTTLConfig(consumedPartitionTTL, partialConsumedPartitionTTL, unconsumedPartitionTTL, unfinishedPartitionTTL);
+			}
+		} catch (IOException e) {
+			// The file is corrupted. will not
+		} finally {
+			if (configIn != null) {
+				try {
+					configIn.close();
+				} catch (IOException e) {
+					LOG.warn("Exception throws when trying to close the config file " + configFilePathStr, e);
 				}
 			}
 		}
@@ -557,7 +619,7 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	 * Hold the information of a result partition's files for searching and recycling.
 	 */
 	@VisibleForTesting
-	static class ResultPartitionFileInfo {
+	static class YarnResultPartitionFileInfo implements ResultPartitionFileInfo {
 
 		/** The application id of this result partition's producer. */
 		private final String appId;
@@ -577,13 +639,29 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 		/** Timestamp of this information, used to do recycling if the partition's directory has been deleted. */
 		private volatile long fileInfoTimestamp;
 
-		ResultPartitionFileInfo(
+		/** TTL for consumed partitions, in milliseconds. */
+		private volatile long consumedPartitionTTL;
+
+		/** TTL for partial consumed partitions, in milliseconds. */
+		private volatile long partialConsumedPartitionTTL;
+
+		/** TTL for unconsumed partitions, in milliseconds. */
+		private volatile long unconsumedPartitionTTL;
+
+		/** TTL for unfinished partitions, in milliseconds. */
+		private volatile long unfinishedPartitionTTL;
+
+		/** Whether the customized config has been loaded. */
+		private boolean configLoaded;
+
+		YarnResultPartitionFileInfo(
 			String appId,
 			Tuple2<String, String> rootDirAndPartitionDir,
 			boolean readyToBeConsumed,
 			boolean consumed,
 			long partitionReadyTime,
-			long fileInfoTimestamp) {
+			long fileInfoTimestamp,
+			ExternalBlockShuffleServiceConfiguration shuffleServiceConfiguration){
 
 			this.appId = appId;
 			this.rootDirAndPartitionDir = rootDirAndPartitionDir;
@@ -591,6 +669,10 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 			this.consumed = consumed;
 			this.partitionReadyTime = partitionReadyTime;
 			this.fileInfoTimestamp = fileInfoTimestamp;
+			this.consumedPartitionTTL = shuffleServiceConfiguration.getDefaultConsumedPartitionTTL();
+			this.partialConsumedPartitionTTL = shuffleServiceConfiguration.getDefaultPartialConsumedPartitionTTL();
+			this.unconsumedPartitionTTL = shuffleServiceConfiguration.getDefaultUnconsumedPartitionTTL();
+			this.unfinishedPartitionTTL = shuffleServiceConfiguration.getDefaultUnfinishedPartitionTTL();
 		}
 
 		String getAppId() {
@@ -615,6 +697,46 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 
 		long getFileInfoTimestamp() {
 			return fileInfoTimestamp;
+		}
+
+		long getUnconsumedPartitionTTL() {
+			return unconsumedPartitionTTL;
+		}
+
+		long getUnfinishedPartitionTTL() {
+			return unfinishedPartitionTTL;
+		}
+
+		boolean isConfigLoaded() {
+			return configLoaded;
+		}
+
+		@Override
+		public String getRootDir() {
+			return rootDirAndPartitionDir.f0;
+		}
+
+		@Override
+		public String getPartitionDir() {
+			return rootDirAndPartitionDir.f1;
+		}
+
+		@Override
+		public long getConsumedPartitionTTL() {
+			return consumedPartitionTTL;
+		}
+
+		@Override
+		public long getPartialConsumedPartitionTTL() {
+			return partialConsumedPartitionTTL;
+		}
+
+		void updateTTLConfig(long consumedPartitionTTL, long partialConsumedPartitionTTL, long unconsumedPartitionTTL, long unfinishedPartitionTTL) {
+			this.consumedPartitionTTL = consumedPartitionTTL;
+			this.partialConsumedPartitionTTL = partialConsumedPartitionTTL;
+			this.unconsumedPartitionTTL = unconsumedPartitionTTL;
+			this.unfinishedPartitionTTL = unfinishedPartitionTTL;
+			this.configLoaded = true;
 		}
 
 		void setReadyToBeConsumed(long partitionReadyTime) {

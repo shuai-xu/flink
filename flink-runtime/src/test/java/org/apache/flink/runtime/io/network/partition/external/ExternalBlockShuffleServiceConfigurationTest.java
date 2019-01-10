@@ -216,10 +216,10 @@ public class ExternalBlockShuffleServiceConfigurationTest {
 		assertEquals(new Integer(50), externalBlockShuffleServiceConfiguration.getTotalIOThreadNum());
 		assertEquals(50, externalBlockShuffleServiceConfiguration.getNettyConfig().getServerNumThreads());
 		assertEquals(31, externalBlockShuffleServiceConfiguration.getNettyConfig().getNumberOfArenas());
-		assertEquals(new Long(41000), externalBlockShuffleServiceConfiguration.getConsumedPartitionTTL());
-		assertEquals(new Long(42000), externalBlockShuffleServiceConfiguration.getPartialConsumedPartitionTTL());
-		assertEquals(new Long(43000), externalBlockShuffleServiceConfiguration.getUnconsumedPartitionTTL());
-		assertEquals(new Long(44000), externalBlockShuffleServiceConfiguration.getUnfinishedPartitionTTL());
+		assertEquals(new Long(41000), externalBlockShuffleServiceConfiguration.getDefaultConsumedPartitionTTL());
+		assertEquals(new Long(42000), externalBlockShuffleServiceConfiguration.getDefaultPartialConsumedPartitionTTL());
+		assertEquals(new Long(43000), externalBlockShuffleServiceConfiguration.getDefaultUnconsumedPartitionTTL());
+		assertEquals(new Long(44000), externalBlockShuffleServiceConfiguration.getDefaultUnfinishedPartitionTTL());
 		assertEquals(new Long(40000), externalBlockShuffleServiceConfiguration.getDiskScanIntervalInMS());
 		assertEquals(new Long(22), externalBlockShuffleServiceConfiguration.getWaitCreditDelay());
 	}

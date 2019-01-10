@@ -77,16 +77,16 @@ public class ExternalBlockShuffleServiceConfiguration {
 	private final Long waitCreditDelay;
 
 	/** TTL for consumed partitions, in milliseconds. */
-	private final Long consumedPartitionTTL;
+	private final Long defaultConsumedPartitionTTL;
 
 	/** TTL for partial consumed partitions, in milliseconds. */
-	private final Long partialConsumedPartitionTTL;
+	private final Long defaultPartialConsumedPartitionTTL;
 
 	/** TTL for unconsumed partitions, in milliseconds. */
-	private final Long unconsumedPartitionTTL;
+	private final Long defaultUnconsumedPartitionTTL;
 
 	/** TTL for unfinished partitions, in milliseconds. */
-	private final Long unfinishedPartitionTTL;
+	private final Long defaultUnfinishedPartitionTTL;
 
 	/** The interval to do disk scan to generate partition info and do recycling, in milliseconds. */
 	private final Long diskScanIntervalInMS;
@@ -103,10 +103,10 @@ public class ExternalBlockShuffleServiceConfiguration {
 		Integer bufferNumber,
 		Integer memorySizePerBufferInBytes,
 		Long waitCreditDelay,
-		Long consumedPartitionTTL,
-		Long partialConsumedPartitionTTL,
-		Long unconsumedPartitionTTL,
-		Long unfinishedPartitionTTL,
+		Long defaultConsumedPartitionTTL,
+		Long defaultPartialConsumedPartitionTTL,
+		Long defaultUnconsumedPartitionTTL,
+		Long defaultUnfinishedPartitionTTL,
 		Long diskScanIntervalInMS,
 		Class<?> subpartitionViewComparatorClass) {
 
@@ -118,10 +118,10 @@ public class ExternalBlockShuffleServiceConfiguration {
 		this.bufferNumber = bufferNumber;
 		this.memorySizePerBufferInBytes = memorySizePerBufferInBytes;
 		this.waitCreditDelay = waitCreditDelay;
-		this.consumedPartitionTTL = consumedPartitionTTL;
-		this.partialConsumedPartitionTTL = partialConsumedPartitionTTL;
-		this.unconsumedPartitionTTL = unconsumedPartitionTTL;
-		this.unfinishedPartitionTTL = unfinishedPartitionTTL;
+		this.defaultConsumedPartitionTTL = defaultConsumedPartitionTTL;
+		this.defaultPartialConsumedPartitionTTL = defaultPartialConsumedPartitionTTL;
+		this.defaultUnconsumedPartitionTTL = defaultUnconsumedPartitionTTL;
+		this.defaultUnfinishedPartitionTTL = defaultUnfinishedPartitionTTL;
 		this.diskScanIntervalInMS = diskScanIntervalInMS;
 		this.subpartitionViewComparatorClass = subpartitionViewComparatorClass;
 	}
@@ -164,20 +164,20 @@ public class ExternalBlockShuffleServiceConfiguration {
 		return waitCreditDelay;
 	}
 
-	Long getConsumedPartitionTTL() {
-		return consumedPartitionTTL;
+	Long getDefaultConsumedPartitionTTL() {
+		return defaultConsumedPartitionTTL;
 	}
 
-	Long getPartialConsumedPartitionTTL() {
-		return partialConsumedPartitionTTL;
+	Long getDefaultPartialConsumedPartitionTTL() {
+		return defaultPartialConsumedPartitionTTL;
 	}
 
-	Long getUnconsumedPartitionTTL() {
-		return unconsumedPartitionTTL;
+	Long getDefaultUnconsumedPartitionTTL() {
+		return defaultUnconsumedPartitionTTL;
 	}
 
-	Long getUnfinishedPartitionTTL() {
-		return unfinishedPartitionTTL;
+	Long getDefaultUnfinishedPartitionTTL() {
+		return defaultUnfinishedPartitionTTL;
 	}
 
 	Long getDiskScanIntervalInMS() {
@@ -276,21 +276,21 @@ public class ExternalBlockShuffleServiceConfiguration {
 				"please increase the total direct memory size or decrease the netty memory size.");
 
 		// 4. Parse and validate TTLs used for result partition recycling.
-		long consumedPartitionTTL = configuration.getInteger(
+		long defaultConsumedPartitionTTL = configuration.getInteger(
 			ExternalBlockShuffleServiceOptions.CONSUMED_PARTITION_TTL_IN_SECONDS) * 1000;
-		long partialConsumedPartitionTTL = configuration.getInteger(
+		long defaultPartialConsumedPartitionTTL = configuration.getInteger(
 			ExternalBlockShuffleServiceOptions.PARTIAL_CONSUMED_PARTITION_TTL_IN_SECONDS) * 1000;
-		long unconsumedPartitionTTL = configuration.getInteger(
+		long defaultUnconsumedPartitionTTL = configuration.getInteger(
 			ExternalBlockShuffleServiceOptions.UNCONSUMED_PARTITION_TTL_IN_SECONDS) * 1000;
-		long unfinishedPartitionTTL = configuration.getInteger(
+		long defaultUnfinishedPartitionTTL = configuration.getInteger(
 			ExternalBlockShuffleServiceOptions.UNFINISHED_PARTITION_TTL_IN_SECONDS) * 1000;
-		checkArgument(consumedPartitionTTL <= partialConsumedPartitionTTL,
+		checkArgument(defaultConsumedPartitionTTL <= defaultPartialConsumedPartitionTTL,
 			"ConsumedPartitionTTL should be less than PartialConsumedPartitionTTL, ConsumedPartitionTTL: "
-				+ consumedPartitionTTL + " ms, PartialConsumedPartitionTTL: " + partialConsumedPartitionTTL + " ms.");
+				+ defaultConsumedPartitionTTL + " ms, PartialConsumedPartitionTTL: " + defaultPartialConsumedPartitionTTL + " ms.");
 
 		Long diskScanIntervalInMS = Math.min(Math.min(
-			Math.min(consumedPartitionTTL, partialConsumedPartitionTTL),
-			Math.min(unconsumedPartitionTTL, unfinishedPartitionTTL)),
+			Math.min(defaultConsumedPartitionTTL, defaultPartialConsumedPartitionTTL),
+			Math.min(defaultUnconsumedPartitionTTL, defaultUnfinishedPartitionTTL)),
 			configuration.getLong(ExternalBlockShuffleServiceOptions.DISK_SCAN_INTERVAL_IN_MS));
 
 		// 5. Get subpartition view comparator.
@@ -316,10 +316,10 @@ public class ExternalBlockShuffleServiceConfiguration {
 			bufferNum,
 			memorySizePerBufferInBytes,
 			waitCreditDelay,
-			consumedPartitionTTL,
-			partialConsumedPartitionTTL,
-			unconsumedPartitionTTL,
-			unfinishedPartitionTTL,
+			defaultConsumedPartitionTTL,
+			defaultPartialConsumedPartitionTTL,
+			defaultUnconsumedPartitionTTL,
+			defaultUnfinishedPartitionTTL,
 			diskScanIntervalInMS,
 			subpartitionViewComparatorClass);
 	}
@@ -335,10 +335,10 @@ public class ExternalBlockShuffleServiceConfiguration {
 			.append("NettyThreadNum: ").append(configuration.getInteger(NettyConfig.NUM_THREADS_SERVER)).append(", ")
 			.append("NettyArenasNum: ").append(configuration.getInteger(NettyConfig.NUM_ARENAS)).append(", ")
 			.append("WaitCreditDelay: ").append(waitCreditDelay).append(", ")
-			.append("ConsumedPartitionTTL: ").append(consumedPartitionTTL).append(", ")
-			.append("PartialConsumedPartitionTTL: ").append(partialConsumedPartitionTTL).append(", ")
-			.append("UnconsumedPartitionTTL: ").append(unconsumedPartitionTTL).append(", ")
-			.append("UnfinishedPartitionTTL: ").append(unfinishedPartitionTTL).append(", ")
+			.append("ConsumedPartitionTTL: ").append(defaultConsumedPartitionTTL).append(", ")
+			.append("PartialConsumedPartitionTTL: ").append(defaultPartialConsumedPartitionTTL).append(", ")
+			.append("UnconsumedPartitionTTL: ").append(defaultUnconsumedPartitionTTL).append(", ")
+			.append("UnfinishedPartitionTTL: ").append(defaultUnfinishedPartitionTTL).append(", ")
 			.append("DiskScanIntervalInMS: ").append(diskScanIntervalInMS).append(",");
 		dirToDiskType.forEach((dir, diskType) -> {
 			stringBuilder.append("[").append(diskType).append("]").append(dir)

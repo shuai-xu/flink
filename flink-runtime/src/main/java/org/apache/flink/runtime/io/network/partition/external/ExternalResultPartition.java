@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.io.network.partition.external;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
@@ -69,6 +70,18 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 	private final int numPages;
 	private final SerializerManager<SerializationDelegate<T>> serializerManager;
 
+	/** TTL for consumed partitions, in milliseconds. */
+	private final long consumedPartitionTTL;
+
+	/** TTL for partial consumed partitions, in milliseconds. */
+	private final long partialConsumedPartitionTTL;
+
+	/** TTL for unconsumed partitions, in milliseconds. */
+	private final long unconsumedPartitionTTL;
+
+	/** TTL for unfinished partitions, in milliseconds. */
+	private final long unfinishedPartitionTTL;
+
 	private PersistentFileWriter<T> fileWriter;
 
 	private volatile boolean initialized;
@@ -117,6 +130,15 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 
 		this.serializerManager = new SerializerManager<SerializationDelegate<T>>(
 			ResultPartitionType.BLOCKING, taskManagerConfiguration);
+
+		this.consumedPartitionTTL = taskManagerConfiguration.getInteger(
+			TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_CONSUMED_PARTITION_TTL_IN_SECONDS) * 1000;
+		this.partialConsumedPartitionTTL = taskManagerConfiguration.getInteger(
+			TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_PARTIAL_CONSUMED_PARTITION_TTL_IN_SECONDS) * 1000;
+		this.unconsumedPartitionTTL = taskManagerConfiguration.getInteger(
+			TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_UNCONSUMED_PARTITION_TTL_IN_SECONDS) * 1000;
+		this.unfinishedPartitionTTL = taskManagerConfiguration.getInteger(
+			TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_UNFINISHED_PARTITION_TTL_IN_SECONDS) * 1000;
 	}
 
 	private void initialize() {
@@ -144,6 +166,8 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 					}
 				}
 			} while (!fs.exists(tmpPartitionRootPath));
+
+			writeConfigFile(fs);
 
 			List<MemorySegment> memory = memoryManager.allocatePages(parentTask, numPages);
 
@@ -183,6 +207,23 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 		} catch (Throwable t) {
 			deletePartitionDirOnFailure();
 			throw new RuntimeException(t);
+		}
+	}
+
+	@VisibleForTesting
+	void writeConfigFile(FileSystem fileSystem) throws IOException {
+		// Write the TTL configuration
+		String configPath = ExternalBlockShuffleUtils.generateConfigPath(partitionRootPath);
+		try (FSDataOutputStream configOut = fileSystem.create(new Path(configPath), FileSystem.WriteMode.OVERWRITE)) {
+			DataOutputView configView = new DataOutputViewStreamWrapper(configOut);
+
+			configView.writeLong(consumedPartitionTTL);
+			configView.writeLong(partialConsumedPartitionTTL);
+			configView.writeLong(unconsumedPartitionTTL);
+			configView.writeLong(unfinishedPartitionTTL);
+		} catch (IOException e) {
+			LOG.error("Write the config file " + configPath + " fail.", e);
+			throw e;
 		}
 	}
 
@@ -346,6 +387,11 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 		return dirs[hashCode % dirs.length];
 	}
 
+	@VisibleForTesting
+	String getPartitionRootPath() {
+		return partitionRootPath;
+	}
+
 	@Override
 	public String toString() {
 		return 	"External Result Partition: {" +
@@ -359,6 +405,10 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 				", numPages = " + numPages +
 				", enableAsyncMerging = " + enableAsyncMerging +
 				", mergeToOneFile = " + mergeToOneFile +
-				"}";
+				", consumedPartitionTTL" + consumedPartitionTTL +
+				", partialConsumedPartitionTTL" + partialConsumedPartitionTTL +
+				", unconsumedPartitionTTL" + unconsumedPartitionTTL +
+				", unfinishedPartitionTTL" + unfinishedPartitionTTL +
+			"}";
 	}
 }

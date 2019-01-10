@@ -10,7 +10,7 @@
         <tr>
             <td><h5>flink.shuffle-service.consumed-partition-ttl-in-seconds</h5></td>
             <td style="word-wrap: break-word;">3600</td>
-            <td>The time interval to delete the shuffle data directories that have been consumed by all the reduce-side tasks since inactivated.</td>
+            <td>The time interval to delete the fully consumed shuffle data directories since they become inactive.</td>
         </tr>
         <tr>
             <td><h5>flink.shuffle-service.default-io-thread-number-per-disk</h5></td>
@@ -30,7 +30,7 @@
         <tr>
             <td><h5>flink.shuffle-service.heap-memory-limit-in-mb</h5></td>
             <td style="word-wrap: break-word;">64</td>
-            <td></td>
+            <td>The heap memory consumed by the yarn shuffle service</td>
         </tr>
         <tr>
             <td><h5>flink.shuffle-service.internal.local-result-partition-resolver-class</h5></td>
@@ -60,7 +60,7 @@
         <tr>
             <td><h5>flink.shuffle-service.partial-consumed-partition-ttl-in-seconds</h5></td>
             <td style="word-wrap: break-word;">43200</td>
-            <td>The time interval to delete the shuffle data directories that has been consumed by part of the reduce-side tasks since inactivated.</td>
+            <td>The time interval to delete the partially consumed shuffle data directories since they become inactive.</td>
         </tr>
         <tr>
             <td><h5>flink.shuffle-service.port</h5></td>
@@ -80,12 +80,12 @@
         <tr>
             <td><h5>flink.shuffle-service.unconsumed-partition-ttl-in-seconds</h5></td>
             <td style="word-wrap: break-word;">43200</td>
-            <td>TThe time interval to delete the shuffle data directories that has not been consumed by any reduce-side tasks yet since inactivated.</td>
+            <td>TThe time interval to delete the unconsumed shuffle data directories since they are ready to consume.</td>
         </tr>
         <tr>
             <td><h5>flink.shuffle-service.unfinished-partition-ttl-in-seconds</h5></td>
             <td style="word-wrap: break-word;">3600</td>
-            <td>The time interval to delete the shuffle data directories that has not finish writing since inactivated.</td>
+            <td>The time interval to delete the writing shuffle data directories since the last writing.</td>
         </tr>
         <tr>
             <td><h5>flink.shuffle-service.wait-credit-delay-in-ms</h5></td>

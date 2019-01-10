@@ -32,8 +32,8 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Integer> FLINK_SHUFFLE_SERVICE_PORT_KEY =
 		key("flink.shuffle-service.port")
-		.defaultValue(14572)
-		.withDescription("The port of the shuffle service.");
+			.defaultValue(14572)
+			.withDescription("The port of the shuffle service.");
 
 	/**
 	 * Direct memory limit for flink shuffle service, in MB.
@@ -50,7 +50,9 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Integer> FLINK_SHUFFLE_SERVICE_HEAP_MEMORY_LIMIT_IN_MB =
 		key("flink.shuffle-service.heap-memory-limit-in-mb")
-		.defaultValue(64);
+			.defaultValue(64)
+			.withDescription("The heap memory consumed by the yarn shuffle service");
+
 
 	/**
 	 * Local directories to process shuffle data for flink shuffle service.
@@ -70,10 +72,10 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<String> LOCAL_DIRS =
 		key("flink.shuffle-service.local-dirs")
-		.defaultValue("")
-		.withDescription("The list of local directories separated by comma. Each directory can be " +
-			"configured with the disk type ([TYPE] directory,...) or without the disk type (directory, ...). " +
-			"If not configured, the NodeManager local directories will be used and each directory will be treated as on HDD.");
+			.defaultValue("")
+			.withDescription("The list of local directories separated by comma. Each directory can be " +
+				"configured with the disk type ([TYPE] directory,...) or without the disk type (directory, ...). " +
+				"If not configured, the NodeManager local directories will be used and each directory will be treated as on HDD.");
 
 	/**
 	 * IO thread number for each disk type suggested by LOCAL_DIRS.
@@ -89,17 +91,17 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<String> IO_THREAD_NUM_FOR_DISK_TYPE =
 		key("flink.shuffle-service.io-thread-number-for-disk-type")
-		.defaultValue("")
-		.withDescription("The list of disk types and thread numbers. Each disk type and the " +
-			"corresponding thread number is configured by TYPE_1: THREAD_1, TYPE_2: THREAD_2, ...");
+			.defaultValue("")
+			.withDescription("The list of disk types and thread numbers. Each disk type and the " +
+				"corresponding thread number is configured by TYPE_1: THREAD_1, TYPE_2: THREAD_2, ...");
 
 	/**
 	 * Default IO thread number for a directory if its disk type is not specified.
 	 */
 	public static final ConfigOption<Integer> DEFAULT_IO_THREAD_NUM_PER_DISK =
 		key("flink.shuffle-service.default-io-thread-number-per-disk")
-		.defaultValue(4)
-		.withDescription("The thread number for the default HDD disk type.");
+			.defaultValue(4)
+			.withDescription("The thread number for the default HDD disk type.");
 
 	/**
 	 * Netty thread number for handling requests, used to set NettyConfig.NUM_THREADS_SERVER in netty.
@@ -126,8 +128,8 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Integer> MEMORY_SIZE_PER_BUFFER_IN_BYTES =
 		key("flink.shuffle-service.memory-size-per-buffer-in-bytes")
-		.defaultValue(32768)
-		.withDescription("");
+			.defaultValue(32768)
+			.withDescription("");
 
 	/**
 	 * The duration to retain a partition's data after its last modified time
@@ -144,17 +146,17 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Long> DISK_SCAN_INTERVAL_IN_MS =
 		key("flink.shuffle-service.disk-scan-interval-in-ms")
-		.defaultValue(15000L)
-		.withDescription("");
+			.defaultValue(15000L)
+			.withDescription("");
 
 	/**
 	 * The duration to retain a partition's data after it has been fully consumed, in seconds.
 	 */
 	public static final ConfigOption<Integer> CONSUMED_PARTITION_TTL_IN_SECONDS =
 		key("flink.shuffle-service.consumed-partition-ttl-in-seconds")
-		.defaultValue(60 * 60)
-		.withDescription("The time interval to delete the shuffle data directories " +
-			"that have been consumed by all the reduce-side tasks since inactivated.");
+			.defaultValue(60 * 60)
+			.withDescription("The time interval to delete the fully consumed shuffle data directories " +
+				"since they become inactive.");
 
 	/**
 	 * The duration to retain a partition's data after its last consumption if it hasn't been fully consumed,
@@ -162,9 +164,9 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Integer> PARTIAL_CONSUMED_PARTITION_TTL_IN_SECONDS =
 		key("flink.shuffle-service.partial-consumed-partition-ttl-in-seconds")
-		.defaultValue(60 * 60 * 12)
-		.withDescription("The time interval to delete the shuffle data directories " +
-			"that has been consumed by part of the reduce-side tasks since inactivated.");
+			.defaultValue(60 * 60 * 12)
+			.withDescription("The time interval to delete the partially consumed shuffle data directories " +
+				"since they become inactive.");
 
 	/**
 	 * The duration to retain a partition's data after its last modified time
@@ -172,9 +174,9 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Integer> UNCONSUMED_PARTITION_TTL_IN_SECONDS =
 		key("flink.shuffle-service.unconsumed-partition-ttl-in-seconds")
-		.defaultValue(60 * 60 * 12)
-		.withDescription("TThe time interval to delete the shuffle data directories " +
-			"that has not been consumed by any reduce-side tasks yet since inactivated.");
+			.defaultValue(60 * 60 * 12)
+			.withDescription("TThe time interval to delete the unconsumed shuffle data directories " +
+				"since they are ready to consume.");
 
 	/**
 	 * The duration to retain a partition's data after its last modified time
@@ -183,9 +185,9 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Integer> UNFINISHED_PARTITION_TTL_IN_SECONDS =
 		key("flink.shuffle-service.unfinished-partition-ttl-in-seconds")
-		.defaultValue(60 * 60)
-		.withDescription("The time interval to delete the shuffle data " +
-			"directories that has not finish writing since inactivated.");
+			.defaultValue(60 * 60)
+			.withDescription("The time interval to delete the writing shuffle data directories " +
+				"since the last writing.");
 
 	/**
 	 * If this comparator is configured, disk IO thread will serve subpartition request based on

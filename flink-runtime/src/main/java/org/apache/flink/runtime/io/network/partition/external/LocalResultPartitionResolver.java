@@ -18,7 +18,6 @@
 
 package org.apache.flink.runtime.io.network.partition.external;
 
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 
 import java.io.IOException;
@@ -43,7 +42,7 @@ public abstract class LocalResultPartitionResolver {
 	 * @return Tuple2.f0 is the configured root directory at which the result partition locates,
 	 * 		Tuple2.f1 is the full directory path of the result partition.
 	 */
-	abstract Tuple2<String, String> getResultPartitionDir(ResultPartitionID resultPartitionID) throws IOException;
+	abstract ResultPartitionFileInfo getResultPartitionDir(ResultPartitionID resultPartitionID) throws IOException;
 
 	/**
 	 * Recycles result partition's directory and its meta information.
@@ -72,4 +71,37 @@ public abstract class LocalResultPartitionResolver {
 	 * Notifies LocalResultPartitionResolver to stop elegantly.
 	 */
 	abstract void stop();
+
+	/**
+	 * The information for the files of the external result partition.
+	 */
+	interface ResultPartitionFileInfo {
+		/**
+		 * The root directory of the result partition.
+		 *
+		 * @return the root directory.
+		 */
+		String getRootDir();
+
+		/**
+		 * The result partition's directory path.
+		 *
+		 * @return the result partition's directory path.
+		 */
+		String getPartitionDir();
+
+		/**
+		 * Get the time interval in milliseconds to delete this result partition after they are fully consumed.
+		 *
+		 * @return the time interval to delete this result partition after they are fully consumed.
+		 */
+		long getConsumedPartitionTTL();
+
+		/**
+		 * Get the time interval in milliseconds to delete this partition since the last access when it has not been fully consumed.
+		 *
+		 * @return the time interval to delete this partition since the last access when it has not been fully consumed.
+		 */
+		long getPartialConsumedPartitionTTL();
+	}
 }
