@@ -66,9 +66,14 @@ public abstract class CatalogTestBase {
 	@Test
 	public void testCreateTable() {
 		assertTrue(catalog.listAllTables().isEmpty());
+		assertFalse(catalog.tableExists(path1));
 
+		CatalogTable nonPartitionedTable = createTable();
 		catalog.createDatabase(db1, createDb(), false);
-		catalog.createTable(path1, createTable(), false);
+		catalog.createTable(path1, nonPartitionedTable, false);
+
+		assertEquals(nonPartitionedTable, catalog.getTable(path1));
+
 		List<ObjectPath> tables = catalog.listAllTables();
 
 		assertEquals(1, tables.size());
@@ -78,6 +83,18 @@ public abstract class CatalogTestBase {
 
 		assertEquals(1, s1Tables.size());
 		assertEquals(path1.getFullName(), tables.get(0).getFullName());
+	}
+
+	@Test
+	public void testCreateParitionedTable() {
+		assertTrue(catalog.listAllTables().isEmpty());
+		assertFalse(catalog.tableExists(path1));
+
+		CatalogTable partitionedTable = createPartitionedTable();
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, partitionedTable, false);
+
+		assertEquals(partitionedTable, catalog.getTable(path1));
 	}
 
 	@Test(expected = DatabaseNotExistException.class)
@@ -106,18 +123,6 @@ public abstract class CatalogTestBase {
 		catalog.createTable(path1, createAnotherTable(), true);
 
 		assertEquals(table, catalog.getTable(path1));
-	}
-
-	@Test
-	public void testGetTable() {
-		CatalogTable originTable = createTable();
-
-		assertFalse(catalog.tableExists(path1));
-
-		catalog.createDatabase(db1, createDb(), false);
-		catalog.createTable(path1, originTable, false);
-
-		assertEquals(originTable, catalog.getTable(path1));
 	}
 
 	@Test(expected = TableNotExistException.class)
@@ -537,20 +542,22 @@ public abstract class CatalogTestBase {
 
 	private TableSchema createTableSchema() {
 		return new TableSchema(
-			new String[] {"first", "second"},
+			new String[] {"first", "name", "year"},
 			new InternalType[]{
 				DataTypes.STRING,
-				DataTypes.INT
+				DataTypes.INT,
+				DataTypes.STRING,
 			}
 		);
 	}
 
 	private TableSchema createAnotherTableSchema() {
 		return new TableSchema(
-			new String[] {"first", "second"},
+			new String[] {"first", "name", "year"},
 			new InternalType[]{
 				DataTypes.STRING,
-				DataTypes.STRING  // different from create table instance.
+				DataTypes.STRING,  // different from create table instance.
+				DataTypes.STRING
 			}
 		);
 	}

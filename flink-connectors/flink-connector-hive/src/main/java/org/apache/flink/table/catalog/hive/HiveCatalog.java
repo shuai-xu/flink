@@ -137,7 +137,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 		TableSchema tableSchema = HiveMetadataUtil.createTableSchema(hiveTable.getSd().getCols(),
 																	hiveTable.getPartitionKeys());
 
-		TableStats tableStats = null;
+		TableStats tableStats = new TableStats();
 		// Get the column statistics for a set of columns in a table. This only works for non-partitioned tables.
 		// For partitioned tables, get partition columns stats from HiveCatalog.getPartition()
 		if (hiveTable.getPartitionKeysSize() == 0) {

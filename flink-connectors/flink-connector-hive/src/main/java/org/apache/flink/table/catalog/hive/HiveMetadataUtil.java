@@ -125,18 +125,17 @@ public class HiveMetadataUtil {
 		sd.setParameters(new HashMap<>());
 		sd.setNumBuckets(PropertiesUtil.getInt(prop, HIVE_TABLE_NUM_BUCKETS, -1));
 		sd.setBucketCols(new ArrayList<>());
-		sd.setCols(createHiveColumns(table.getTableSchema()));
+
+		List<FieldSchema> columns = createHiveColumns(table.getTableSchema());
+
+		// Only add non-partitioned columns as Hive table column. Partition columns should be set as partition keys in Hive's table
+		sd.setCols(columns.subList(0, columns.size() - table.getPartitionColumnNames().size()));
 		sd.setSortCols(new ArrayList<>());
 
 		// Partitions
 		List<FieldSchema> partitionKeys = new ArrayList<>();
 		if (table.isPartitioned()) {
-			LinkedHashSet<String> cols = table.getPartitionColumnNames();
-
-			for (String col : cols) {
-				FieldSchema fieldSchema = new FieldSchema(col, serdeConstants.STRING_TYPE_NAME, null);
-				partitionKeys.add(fieldSchema);
-			}
+			partitionKeys = columns.subList(columns.size() - table.getPartitionColumnNames().size(), columns.size());
 		}
 
 		Table hiveTable = new Table();
@@ -155,7 +154,7 @@ public class HiveMetadataUtil {
 	 * Create Hive columns from Flink TableSchema.
 	 */
 	private static List<FieldSchema> createHiveColumns(TableSchema schema) {
-		List<FieldSchema> columns = new ArrayList<>();
+		List<FieldSchema> columns = new ArrayList<>(schema.getColumns().length);
 		for (Column column : schema.getColumns()) {
 			FieldSchema fieldSchema = new FieldSchema(column.name(), convert(column.internalType()), null);
 			columns.add(fieldSchema);
