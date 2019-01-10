@@ -20,6 +20,8 @@ package org.apache.flink.runtime.io.network.buffer;
 
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.network.buffer.BufferListener.NotificationResult;
+import org.apache.flink.runtime.io.network.partition.InternalResultPartition;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.util.ExceptionUtils;
 
 import org.slf4j.Logger;
@@ -318,6 +320,18 @@ class LocalBufferPool implements BufferPool {
 		}
 
 		try {
+			networkBufferPool.tryDestroyBufferPool(
+				this, numberOfRequestedMemorySegments > 0 && isLazyDestroyByOwner());
+		} catch (IOException e) {
+			ExceptionUtils.rethrow(e);
+		}
+	}
+
+	@Override
+	public void notifyBufferPoolOwnerReleased() {
+		checkState(owner != null, "The buffer owner should not be null.");
+
+		try {
 			networkBufferPool.destroyBufferPool(this);
 		} catch (IOException e) {
 			ExceptionUtils.rethrow(e);
@@ -359,6 +373,19 @@ class LocalBufferPool implements BufferPool {
 		}
 	}
 
+	/**
+	 * Release all memory used by the owner. Currently, this method will be only called when the
+	 * network buffer is not enough and there are spillable buffers can be recycled.
+	 */
+	public void releaseMemory() throws IOException {
+		checkState(isDestroyed, "This method will only be called after the buffer pool is destroyed.");
+		checkState(isLazyDestroyByOwner(), "Must be lazy destroy: " + owner + " " + (owner instanceof InternalResultPartition));
+
+		if (numberOfRequestedMemorySegments > 0) {
+			owner.releaseMemory(maxNumberOfMemorySegments);
+		}
+	}
+
 	@Override
 	public String toString() {
 		synchronized (availableMemorySegments) {
@@ -370,6 +397,12 @@ class LocalBufferPool implements BufferPool {
 	}
 
 	// ------------------------------------------------------------------------
+
+	private boolean isLazyDestroyByOwner() {
+		return owner != null
+			&& owner instanceof InternalResultPartition
+			&& ((InternalResultPartition) owner).getPartitionType() == ResultPartitionType.BLOCKING;
+	}
 
 	private void returnMemorySegment(MemorySegment segment) {
 		assert Thread.holdsLock(availableMemorySegments);

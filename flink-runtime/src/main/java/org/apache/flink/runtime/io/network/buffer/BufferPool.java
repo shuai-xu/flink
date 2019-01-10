@@ -32,6 +32,11 @@ public interface BufferPool extends BufferProvider, BufferRecycler {
 	void setBufferPoolOwner(BufferPoolOwner owner);
 
 	/**
+	 * Notify that the buffer owner has been released.
+	 */
+	void notifyBufferPoolOwnerReleased();
+
+	/**
 	 * Destroys this buffer pool.
 	 *
 	 * <p> If not all buffers are available, they are recycled lazily as soon as they are recycled.

@@ -91,6 +91,11 @@ public class FixedLengthBufferPool implements BufferPool, BufferRecycler {
 	}
 
 	@Override
+	public void notifyBufferPoolOwnerReleased() {
+		// do nothing
+	}
+
+	@Override
 	public void lazyDestroy() {
 		synchronized (memorySegments) {
 			if (isDestroyed) {

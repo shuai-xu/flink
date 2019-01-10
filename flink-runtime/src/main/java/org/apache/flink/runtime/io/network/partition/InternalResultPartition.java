@@ -342,6 +342,10 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 				LOG.error("Error during release of result subpartition: " + t.getMessage(), t);
 			}
 		}
+
+		if (partitionType == ResultPartitionType.BLOCKING && bufferPool != null) {
+			bufferPool.notifyBufferPoolOwnerReleased();
+		}
 	}
 
 	/**

@@ -40,7 +40,12 @@ public interface BufferPoolFactory {
 
 	/**
 	 * Destroy callback for updating factory book keeping.
+	 *
+	 * @param bufferPool
+	 * 		the buffer pool to destroy
+	 * @param lazyDestroy
+	 * 		if set to true, the required buffer will not be returned immediately and the buffer pool will be destroyed later
 	 */
-	void destroyBufferPool(BufferPool bufferPool) throws IOException;
+	void tryDestroyBufferPool(BufferPool bufferPool, boolean lazyDestroy) throws IOException;
 
 }
