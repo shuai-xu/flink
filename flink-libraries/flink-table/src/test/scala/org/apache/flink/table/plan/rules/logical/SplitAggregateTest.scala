@@ -19,12 +19,12 @@
 package org.apache.flink.table.plan.rules.logical
 
 import java.util
-
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.TableConfigOptions
+import org.apache.flink.table.api.{AggPhaseEnforcer, TableConfigOptions}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.{AggMode, LocalGlobalOff, LocalGlobalOn}
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
+
 import org.junit.{Before, Test}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -46,10 +46,10 @@ class SplitAggregateTest(aggMode: AggMode) extends TableTestBase {
     tableConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_DATA_SKEW_DISTINCT_AGG, true)
 
     aggMode match {
-      case LocalGlobalOn => tableConfig.getConf.setBoolean(
-        TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
-      case LocalGlobalOff => tableConfig.getConf.setBoolean(
-        TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, false)
+      case LocalGlobalOn => tableConfig.getConf.setString(
+        TableConfigOptions.SQL_OPTIMIZER_AGG_PHASE_ENFORCER, AggPhaseEnforcer.TWO_PHASE.toString)
+      case LocalGlobalOff => tableConfig.getConf.setString(
+        TableConfigOptions.SQL_OPTIMIZER_AGG_PHASE_ENFORCER, AggPhaseEnforcer.ONE_PHASE.toString)
     }
   }
 

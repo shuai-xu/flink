@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.rules.physical.stream
 
-import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
+import org.apache.flink.table.api.{AggPhaseEnforcer, TableConfig, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.`trait`.{AccMode, AccModeTrait, FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
@@ -62,7 +62,8 @@ class TwoStageOptimizedAggregateRule extends RelOptRule(
       isStateBackendDataViews = true)
 
     tableConfig.getConf.contains(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY) &&
-      tableConfig.getConf.getBoolean(TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED) &&
+      !tableConfig.getConf.getString(TableConfigOptions.SQL_OPTIMIZER_AGG_PHASE_ENFORCER)
+        .equalsIgnoreCase(AggPhaseEnforcer.ONE_PHASE.toString) &&
       doAllSupportPartialMerge(aggInfoList.aggInfos) &&
       !satisfyRequiredDistribution(realInput, agg.getGroupings)
   }

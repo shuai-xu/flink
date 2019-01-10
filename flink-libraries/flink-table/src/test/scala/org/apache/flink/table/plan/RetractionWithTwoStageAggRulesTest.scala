@@ -20,9 +20,10 @@ package org.apache.flink.table.plan
 
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.TableConfigOptions
+import org.apache.flink.table.api.{AggPhaseEnforcer, TableConfigOptions}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
+
 import org.junit.{Before, Test}
 
 class RetractionWithTwoStageAggRulesTest extends TableTestBase {
@@ -38,7 +39,8 @@ class RetractionWithTwoStageAggRulesTest extends TableTestBase {
       .setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
     util.tableEnv.getConfig.getConf
       .setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_SIZE, 3)
-    util.tableEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_AGG_LOCAL_ENABLED, true)
+    util.tableEnv.getConfig.getConf.setString(
+      TableConfigOptions.SQL_OPTIMIZER_AGG_PHASE_ENFORCER, AggPhaseEnforcer.TWO_PHASE.toString)
   }
 
   // one level unbounded groupBy

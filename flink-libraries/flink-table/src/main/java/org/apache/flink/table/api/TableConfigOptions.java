@@ -538,10 +538,4 @@ public class TableConfigOptions {
 			.withDescription("Allow trying to push filter down to a orc [[TableSource]]. The default value is true, " +
 				"means allow the attempt.");
 
-	@Deprecated  // not
-	public static final ConfigOption<Boolean> SQL_EXEC_AGG_LOCAL_ENABLED =
-			key("sql.exec.local-agg.enabled")
-			.defaultValue(true)
-			.withDescription("Whether to enable local agg.");
-
 }

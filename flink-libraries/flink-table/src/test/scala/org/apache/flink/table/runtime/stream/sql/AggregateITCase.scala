@@ -17,7 +17,6 @@
  */
 package org.apache.flink.table.runtime.stream.sql
 
-import java.lang.{Integer => JInt, Long => JLong}
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, BigDecimalTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
@@ -25,14 +24,14 @@ import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.DataStream
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.functions.aggfunctions.{ConcatAggFunction, ConcatWsAggFunction}
 import org.apache.flink.table.hive.functions.{HiveFunctionWrapper, HiveUDAFFunction}
 import org.apache.flink.table.runtime.batch.sql.agg.{MyPojoAggFunction, VarArgsAggFunction}
 import org.apache.flink.table.runtime.batch.sql.{MyPojo, MyPojoFunc, MyToPojoFunc}
+import org.apache.flink.table.runtime.functions.aggfunctions.{ConcatAggFunction, ConcatWsAggFunction}
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.VarSumAggFunction
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.AggMode
-import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
+import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.UserDefinedFunctionTestUtils.CountNullNonNull
 import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingWithAggTestBase, TestingRetractSink}
 import org.apache.flink.table.util.DateTimeTestUtil._
@@ -43,6 +42,8 @@ import org.junit.Assert.assertEquals
 import org.junit._
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+
+import java.lang.{Integer => JInt, Long => JLong}
 
 import scala.collection.{Seq, mutable}
 import scala.util.Random
