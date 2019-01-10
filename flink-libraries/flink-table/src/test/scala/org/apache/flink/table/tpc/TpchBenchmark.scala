@@ -30,7 +30,8 @@ import org.junit.{Before, Ignore}
 @Ignore
 class TpchBenchmark extends QueryTest {
 
-  val parquetPath = "/Users/zhixin/data/tpch/parquet"
+  // need rewrite to your data path.
+  val parquetPath = "/data/tpch/parquet"
   val caseName = "01"
   val runCount = 100
 
