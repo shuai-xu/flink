@@ -19,37 +19,39 @@
 package org.apache.flink.table.api
 
 import org.apache.flink.annotation.{InterfaceStability, VisibleForTesting}
-import org.apache.flink.api.common.{ExecutionMode, JobExecutionResult}
 import org.apache.flink.api.common.accumulators.SerializedListAccumulator
 import org.apache.flink.api.common.typeutils.TypeSerializer
+import org.apache.flink.api.common.{ExecutionMode, JobExecutionResult}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.runtime.client.JobExecutionException
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.{StreamGraph, StreamGraphGenerator}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.types.{RowType, DataType, DataTypes}
+import org.apache.flink.table.api.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.catalog.ReadableCatalog
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescriptor}
+import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.{Expression, TimeAttribute}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
 import org.apache.flink.table.plan.cost.{FlinkBatchCost, FlinkCostFactory}
 import org.apache.flink.table.plan.logical.{LogicalNode, SinkNode}
+import org.apache.flink.table.plan.nodes.exec.BatchExecNode
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExecSink}
 import org.apache.flink.table.plan.optimize.{BatchOptimizeContext, FlinkBatchPrograms}
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.plan.subplan.BatchDAGOptimizer
-import org.apache.flink.table.plan.util.{DeadlockBreakupProcessor, FlinkRelOptUtil, SameRelObjectShuttle, SubplanReuseContext, SubplanReuseShuttle}
+import org.apache.flink.table.plan.util.{DeadlockBreakupProcessor, FlinkNodeOptUtil, FlinkRelOptUtil, SameRelObjectShuttle, SubplanReuseUtil}
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.{BatchTableSource, _}
 import org.apache.flink.table.temptable.TableServiceException
-import org.apache.flink.table.util._
 import org.apache.flink.table.util.PlanUtil._
+import org.apache.flink.table.util._
 import org.apache.flink.util.{AbstractID, ExceptionUtils, Preconditions}
 
 import org.apache.calcite.plan.{Context, ConventionTraitDef, RelOptPlanner}
@@ -64,9 +66,7 @@ import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable
 import _root_.scala.collection.mutable.ArrayBuffer
-import _root_.scala.util.Failure
-import _root_.scala.util.Success
-import _root_.scala.util.Try
+import _root_.scala.util.{Failure, Success, Try}
 
 
 /**
@@ -255,25 +255,27 @@ class BatchTableEnvironment(
   protected override def compile(): Unit = {
     if (config.getSubsectionOptimization) {
       if (sinkNodes.isEmpty) {
-        throw new TableException("No table sinks have been created yet. " +
-            "A program needs at least one sink that consumes data. ")
+        throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
       }
 
       val optSinkNodes = tableServiceManager.cachePlanBuilder.buildPlanIfNeeded(sinkNodes)
       val dagOptimizer = new BatchDAGOptimizer(optSinkNodes, this)
       // optimize dag
       val sinks = dagOptimizer.getOptimizedDag()
-      val sinkTransformations = translateRelNodeDag(sinks)
+      // convert to node dag
+      val nodeDag = translateToExecNodeDag(sinks)
+      // translate to transformation
+      val sinkTransformations = translateExecNodeDag(nodeDag)
       transformations.addAll(sinkTransformations)
     }
   }
 
-  private def translateRelNodeDag(sinks: Seq[RelNode]): Seq[StreamTransformation[_]] = {
+  private def translateExecNodeDag(sinks: Seq[BatchExecNode[_]]): Seq[StreamTransformation[_]] = {
     sinks.map {
       case n: BatchExecSink[_] =>
         val outputType = n.sink.getOutputType
         translate(n, outputType)
-      case _ => throw new TableException("SinkNode required here")
+      case _ => throw new TableException(TableErrors.INST.sqlCompileSinkNodeRequired())
     }
   }
 
@@ -394,39 +396,41 @@ class BatchTableEnvironment(
   private def translate[A](
       table: Table,
       sink: TableSink[A],
-      sinkName: String)
-    : StreamTransformation[_] = {
+      sinkName: String): StreamTransformation[_] = {
     val sinkNode = SinkNode(table.logicalPlan, sink, sinkName)
     val sinkTable = new Table(this, sinkNode)
     val originTree = sinkTable.getRelNode
     val optimizedTree = optimize(originTree)
     addQueryPlan(originTree, optimizedTree)
-    optimizedTree match {
+
+    val nodeDag = translateToExecNodeDag(Seq(optimizedTree))
+    require(nodeDag.size() == 1)
+    nodeDag.head match {
       case batchExecSink: BatchExecSink[A] =>
         translate(batchExecSink, sink.getOutputType)
       case _ =>
         throw new TableException(
           s"Cannot generate BoundedStream due to an invalid logical plan. " +
             "This is a bug and should not happen. Please file an issue.")
-
     }
   }
 
   /**
-   * Translates a logical [[RelNode]] into a [[StreamTransformation]].
+   * Translates a [[BatchExecNode]] plan into a [[StreamTransformation]].
    * Converts to target type if necessary.
    *
-   * @param logicalPlan The root node of the relational expression tree.
+   * @param node        The plan to translate.
    * @param resultType  The [[DataType]] of the elements that result from resulting
    *                    [[StreamTransformation]].
    * @return The [[StreamTransformation]] that corresponds to the translated [[Table]].
    */
   private def translate[OUT](
-      logicalPlan: RelNode,
+      node: BatchExecNode[OUT],
       resultType: DataType): StreamTransformation[OUT] = {
     TableEnvironment.validateType(resultType)
 
-    logicalPlan match {
+    node match {
+      // TODO refactor
       case node: BatchExecRel[OUT] =>
         ruKeeper.buildRUs(node)
         ruKeeper.calculateRelResource(node)
@@ -468,23 +472,26 @@ class BatchTableEnvironment(
       override def getRelOptPlanner: RelOptPlanner = getPlanner
     })
 
-    // FIXME refactor
     // Rewrite same rel object to different rel objects.
-    val diffObjPlan = optimizedPlan.accept(new SameRelObjectShuttle())
-    // reuse sub-plan if enabled
-    val reusedPlan = if (config.getConf.getBoolean(
-      TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED)) {
-      val context = new SubplanReuseContext(
-        !config.getConf.getBoolean(TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED),
-        diffObjPlan)
-      diffObjPlan.accept(new SubplanReuseShuttle(context))
-    } else {
-      diffObjPlan
-    }
+    optimizedPlan.accept(new SameRelObjectShuttle())
+  }
+
+  /**
+    * translate [[BatchExecRel]] DAG to [[BatchExecNode]] DAG.
+    */
+  private[flink] def translateToExecNodeDag(nodes: Seq[RelNode]): Seq[BatchExecNode[_]] = {
+    require(nodes.nonEmpty && nodes.forall(_.isInstanceOf[BatchExecRel[_]]))
+    // reuse subplan
+    val reusedPlan = SubplanReuseUtil.reuseSubplan(nodes, config)
+    // TODO convert to ExecNode dag
     // breakup deadlock
     val postOptimizedPlan = new DeadlockBreakupProcessor().process(reusedPlan)
-    dumpOptimizedPlanIfNeed(postOptimizedPlan)
-    postOptimizedPlan
+    val nodeDag = postOptimizedPlan.map(_.asInstanceOf[BatchExecNode[_]])
+
+    // TODO calc resource here
+
+    dumpOptimizedPlanIfNeed(nodeDag)
+    nodeDag
   }
 
   /**
@@ -723,26 +730,35 @@ class BatchTableEnvironment(
   private[flink] def explain(table: Table, extended: Boolean): String = {
     val ast = table.getRelNode
     val optimizedPlan = optimize(ast)
+    val nodeDag = translateToExecNodeDag(Seq(optimizedPlan))
+    require(nodeDag.size() == 1)
+    val optimizedNode = nodeDag.head
+
     val fieldTypes = ast.getRowType.getFieldList.asScala
       .map(field => FlinkTypeFactory.toInternalType(field.getType))
-    val transformation = translate(
-      optimizedPlan,
-      new RowType(classOf[BinaryRow], fieldTypes: _*))
+    val transformation = translate(optimizedNode, new RowType(classOf[BinaryRow], fieldTypes: _*))
     val streamGraph = translateStreamGraph(ArrayBuffer(transformation), None)
 
-    val sqlPlan = PlanUtil.explainPlan(streamGraph)
+    val executionPlan = PlanUtil.explainPlan(streamGraph)
+
+    val (explainLevel, withResource, withMemCost) = if (extended) {
+      (SqlExplainLevel.ALL_ATTRIBUTES, true, true)
+    } else {
+      (SqlExplainLevel.EXPPLAN_ATTRIBUTES, false, false)
+    }
 
     s"== Abstract Syntax Tree ==" +
-        System.lineSeparator +
-        s"${FlinkRelOptUtil.toString(ast)}" +
-        System.lineSeparator +
-        s"== Optimized Logical Plan ==" +
-        System.lineSeparator +
-        s"${FlinkRelOptUtil.toString(optimizedPlan)}" +
-        System.lineSeparator +
-        s"== Physical Execution Plan ==" +
-        System.lineSeparator +
-        s"$sqlPlan"
+      System.lineSeparator +
+      s"${FlinkRelOptUtil.toString(ast)}" +
+      System.lineSeparator +
+      s"== Optimized Logical Plan ==" +
+      System.lineSeparator +
+      s"${FlinkNodeOptUtil.treeToString(
+        optimizedNode, explainLevel, withResource, withMemCost)}" +
+      System.lineSeparator +
+      s"== Physical Execution Plan ==" +
+      System.lineSeparator +
+      s"$executionPlan"
   }
 
   def explain(table: Table): String = explain(table: Table, extended = false)
@@ -750,12 +766,11 @@ class BatchTableEnvironment(
   def explain(extended: Boolean = false): String = {
     if (!config.getSubsectionOptimization) {
       throw new TableException("Can not explain due to subsection optimization is not supported, " +
-          "please check your TableConfig.")
+        "please check your TableConfig.")
     }
 
     if (sinkNodes.isEmpty) {
-      throw new TableException("No table sinks have been created yet. " +
-                                 "A program needs at least one sink that consumes data. ")
+      throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
     }
 
     val sb = new StringBuilder
@@ -768,15 +783,22 @@ class BatchTableEnvironment(
       sb.append(System.lineSeparator)
     }
 
-    sb.append("== Optimized Logical Plan ==")
-    sb.append(System.lineSeparator)
     val optSinkNodes = tableServiceManager.cachePlanBuilder.buildPlanIfNeeded(sinkNodes)
     val dagOptimizer = new BatchDAGOptimizer(optSinkNodes, this)
     // optimize dag
     val sinkRelNodes = dagOptimizer.getOptimizedDag()
-    sb.append(dagOptimizer.explain())
+    val sinkExecNodes = translateToExecNodeDag(sinkRelNodes)
 
-    val sinkTransformations = translateRelNodeDag(sinkRelNodes)
+    sb.append("== Optimized Logical Plan ==")
+    sb.append(System.lineSeparator)
+    val (explainLevel, withResource, withMemCost) = if (extended) {
+      (SqlExplainLevel.ALL_ATTRIBUTES, true, true)
+    } else {
+      (SqlExplainLevel.EXPPLAN_ATTRIBUTES, false, false)
+    }
+    sb.append(FlinkNodeOptUtil.dagToString(sinkExecNodes, explainLevel, withResource, withMemCost))
+
+    val sinkTransformations = translateExecNodeDag(sinkExecNodes)
     val streamGraph = StreamGraphGenerator.generate(
       StreamGraphGenerator.Context.buildBatchProperties(streamEnv), sinkTransformations)
     val sqlPlan = PlanUtil.explainPlan(streamGraph)
@@ -804,22 +826,21 @@ class BatchTableEnvironment(
   }
 
   /**
-   * Dump optimized plan if config enabled.
-   *
-   * @param optimizedNode optimized plan
-   */
-  private[this] def dumpOptimizedPlanIfNeed(optimizedNode: RelNode): Unit = {
-    val dumpFilePath = config.getConf.getString(
-      TableConfigOptions.SQL_OPTIMIZER_PLAN_DUMP_PATH)
+    * Dump optimized plan if config enabled.
+    *
+    * @param optimizedNodes optimized plan
+    */
+  private[this] def dumpOptimizedPlanIfNeed(optimizedNodes: Seq[BatchExecNode[_]]): Unit = {
+    val dumpFilePath = config.getConf.getString(TableConfigOptions.SQL_OPTIMIZER_PLAN_DUMP_PATH)
+    val planDump = config.getConf.getBoolean(TableConfigOptions.SQL_OPTIMIZER_PLAN_DUMP_ENABLED)
 
-    if (config.getConf.getBoolean(TableConfigOptions.SQL_OPTIMIZER_PLAN_DUMP_ENABLED) &&
-        dumpFilePath != null) {
-      dumpRelNode(optimizedNode, dumpFilePath)
+    if (planDump && dumpFilePath != null) {
+      dumpExecNodes(optimizedNodes, dumpFilePath)
     }
   }
 
   override def registerCatalog(name: String, catalog: ReadableCatalog): Unit = {
-    registerCatalogInternal(name, catalog, false)
+    registerCatalogInternal(name, catalog, isStreaming = false)
   }
 
   override def registerTableSourceFromTableMetas(name: String, tableMeta: TableMeta): Unit = {

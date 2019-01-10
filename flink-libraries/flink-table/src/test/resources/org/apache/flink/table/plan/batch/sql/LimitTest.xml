@@ -45,7 +45,7 @@ Calc(select=[a, c])
       <![CDATA[
 LogicalSort(fetch=[10])
 +- LogicalProject(a=[$0], c=[$2])
-   +- LogicalTableScan(table=[[default_catalog, default_db, LimitTable, source: [limit: 10]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, LimitTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -147,7 +147,7 @@ Calc(select=[a, c])
       <![CDATA[
 LogicalSort(fetch=[10])
 +- LogicalProject(a=[$0], c=[$2])
-   +- LogicalTableScan(table=[[default_catalog, default_db, LimitTable, source: [limit: 10]]])
+   +- LogicalTableScan(table=[[default_catalog, default_db, LimitTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">

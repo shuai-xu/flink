@@ -17,18 +17,15 @@
  */
 package org.apache.flink.table.plan.util
 
-import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.nodes.calcite.Sink
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableSourceScan
 import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
 
+import com.google.common.collect.{Maps, Sets}
 import org.apache.calcite.rel.core.{Exchange, TableFunctionScan}
 import org.apache.calcite.rel.{RelNode, RelVisitor}
 
-import com.google.common.collect.{Maps, Sets}
-
 import java.util
-import java.util.concurrent.atomic.AtomicInteger
 
 import scala.collection.JavaConversions._
 
@@ -59,8 +56,6 @@ class SubplanReuseContext(disableTableSourceReuse: Boolean, roots: RelNode*) {
   private val mapNodeToDigest = Maps.newIdentityHashMap[RelNode, String]()
   // mapping the digest to RelNodes
   private val mapDigestToReusableNodes = new util.HashMap[String, util.List[RelNode]]()
-  // mapping the digest to reuse id
-  private val mapDigestToReuseId = new util.HashMap[String, Integer]()
 
   val visitor = new ReusableSubplanVisitor()
   roots.map(visitor.go)
@@ -69,36 +64,6 @@ class SubplanReuseContext(disableTableSourceReuse: Boolean, roots: RelNode*) {
     * Return the digest of the given rel node.
     */
   def getRelDigest(node: RelNode): String = RelDigestWriterImpl.getDigest(node)
-
-  /**
-    * Return reuse id for the given node.
-    * If the give node is not a reusable node, throw TableException
-    */
-  def getReuseId(node: RelNode): Integer = {
-    val digest = mapNodeToDigest.get(node)
-    if (digest == null) {
-      throw new TableException(s"${node.getRelTypeName}(id=${node.getId}) is not found")
-    }
-    val reuseId = mapDigestToReuseId.get(digest)
-    if (reuseId == null) {
-      throw new TableException(s"${node.getRelTypeName}(id=${node.getId}) is not a reusable node")
-    }
-    reuseId
-  }
-
-  /**
-    * Returns true if the given node can be reused by other nodes, else false.
-    * The nodes with same digest are reusable,
-    * and the head node of node-list is reused by remaining nodes.
-    */
-  def reusedByOtherNode(node: RelNode): Boolean = {
-    val reusableNodes = getReusableNodes(node)
-    if (isReusableNodes(reusableNodes)) {
-      node eq reusableNodes.head
-    } else {
-      false
-    }
-  }
 
   /**
     * Returns true if the given node can reuse other node, else false.
@@ -131,7 +96,7 @@ class SubplanReuseContext(disableTableSourceReuse: Boolean, roots: RelNode*) {
     * Returns true if the given nodes can be reused, else false.
     */
   private def isReusableNodes(reusableNodes: List[RelNode]): Boolean = {
-    if (reusableNodes.size > 1) {
+    if (reusableNodes.size() > 1) {
       // Does not reuse nodes which are reusable disabled
       !isNodeReusableDisabled(reusableNodes.head)
     } else {
@@ -156,30 +121,24 @@ class SubplanReuseContext(disableTableSourceReuse: Boolean, roots: RelNode*) {
 
   class ReusableSubplanVisitor extends RelVisitor {
     private val visitedNodes = Sets.newIdentityHashSet[RelNode]()
-    private val reuseIdCounter = new AtomicInteger(0)
 
     override def visit(node: RelNode, ordinal: Int, parent: RelNode): Unit = {
       if (visitedNodes.contains(node)) {
         // does not need to visit a node which is already visited.
+        // TODO same node should be reuse ???
         return
       }
       visitedNodes.add(node)
 
       // the same sub-plan should have same digest value,
       // uses `explain` with `RelDigestWriterImpl` to get the digest of a sub-plan.
-      val digest = RelDigestWriterImpl.getDigest(node)
+      val digest = getRelDigest(node)
       mapNodeToDigest.put(node, digest)
       val nodes = mapDigestToReusableNodes.getOrElseUpdate(digest, new util.ArrayList[RelNode]())
       nodes.add(node)
       // the node will be reused if there are more than one nodes with same digest,
       // so there is no need to visit a reused node's inputs.
-      if (isReusableNodes(nodes.toList)) {
-        // add reuse id for reused node's digest
-        if (!mapDigestToReuseId.contains(digest)) {
-          val reuseId = reuseIdCounter.incrementAndGet()
-          mapDigestToReuseId.put(digest, reuseId)
-        }
-      } else {
+      if (!isReusableNodes(nodes.toList)) {
         super.visit(node, ordinal, parent)
       }
     }

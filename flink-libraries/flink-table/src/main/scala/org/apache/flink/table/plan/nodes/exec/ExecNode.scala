@@ -97,4 +97,9 @@ trait ExecNode[E <: TableEnvironment, T] {
     * @param newInputNode New node that should be put at position ordinalInParent
     */
   def replaceInputNode(ordinalInParent: Int, newInputNode: ExecNode[E, _]): Unit
+
+  /**
+    * Returns the [[FlinkPhysicalRel]] object corresponding to this node.
+    */
+  def getFlinkPhysicalRel: FlinkPhysicalRel
 }

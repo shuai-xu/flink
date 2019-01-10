@@ -5,7 +5,6 @@ LogicalProject(num=[$0], cnt=[AS($1, 'cnt')])
       +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 
 == Optimized Logical Plan ==
-[[Sink]]
 StreamExecSink(fields=[num, cnt], retract=[false], accMode=[Acc])
 +- StreamExecCalc(select=[num, TMP_0 AS cnt], retract=[false], accMode=[Acc])
    +- StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS TMP_0], retract=[false], accMode=[Acc])

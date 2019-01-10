@@ -33,16 +33,18 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescriptor}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions._
+import org.apache.flink.table.factories.{TableFactoryService, TableFactoryUtil, TableSourceParserFactory}
 import org.apache.flink.table.plan.`trait`._
 import org.apache.flink.table.plan.cost.{FlinkCostFactory, FlinkStreamCost}
 import org.apache.flink.table.plan.logical.{LogicalRelNode, SinkNode}
 import org.apache.flink.table.plan.nodes.calcite._
+import org.apache.flink.table.plan.nodes.exec.StreamExecNode
 import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.optimize.{FlinkStreamPrograms, StreamOptimizeContext}
 import org.apache.flink.table.plan.schema.{TableSourceSinkTable, _}
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.plan.subplan.StreamDAGOptimizer
-import org.apache.flink.table.plan.util.{FlinkRelOptUtil, SameRelObjectShuttle}
+import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil, SameRelObjectShuttle}
 import org.apache.flink.table.sinks.{DataStreamTableSink, _}
 import org.apache.flink.table.sources._
 import org.apache.flink.table.typeutils.TypeCheckUtils
@@ -51,13 +53,12 @@ import org.apache.flink.util.Preconditions
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexBuilder
+import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.sql2rel.SqlToRelConverter
 
 import _root_.java.util
-import org.apache.flink.table.factories.{TableFactoryService, TableFactoryUtil, TableSourceParserFactory}
-
-import org.apache.calcite.rel.`type`.RelDataType
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
@@ -141,7 +142,6 @@ abstract class StreamTableEnvironment(
   }
 
   protected override def compile(): Unit = {
-
     mergeParameters()
 
     if (config.getSubsectionOptimization) {
@@ -151,16 +151,43 @@ abstract class StreamTableEnvironment(
       val dagOptimizer = new StreamDAGOptimizer(sinkNodes, this)
       // optimize dag
       val sinks = dagOptimizer.getOptimizedDag()
-      val sinkTransformations = translateRelNodeDag(sinks)
+      // convert to node dag
+      val nodeDag = translateToExecNodeDag(sinks)
+      // translate to transformation
+      val sinkTransformations = translateExecNodeDag(nodeDag)
       transformations.addAll(sinkTransformations)
     }
   }
 
-  private def translateRelNodeDag(sinks: Seq[RelNode]): Seq[StreamTransformation[_]] = {
+  private def translateExecNodeDag(sinks: Seq[StreamExecNode[_]]): Seq[StreamTransformation[_]] = {
     // translates sinks RelNodeBlock into transformations
     sinks.map {
-      case sink: Sink => translate(sink)
+      case sink: StreamExecSink[_] => translate(sink)
       case _ => throw new TableException(TableErrors.INST.sqlCompileSinkNodeRequired())
+    }
+  }
+
+  /**
+    * Merge global job parameters and table config parameters,
+    * and set the merged result to GlobalJobParameters
+    */
+  private def mergeParameters(): Unit = {
+    if (!isConfigMerged && execEnv != null && execEnv.getConfig != null) {
+      val parameters = new Configuration()
+      if (config != null && config.getConf != null) {
+        parameters.addAll(config.getConf)
+      }
+
+      if (execEnv.getConfig.getGlobalJobParameters != null) {
+        execEnv.getConfig.getGlobalJobParameters.toMap.asScala.foreach {
+          kv => parameters.setString(kv._1, kv._2)
+        }
+      }
+      parameters.setBoolean(
+        StateUtil.STATE_BACKEND_ON_HEAP,
+        StateUtil.isHeapState(execEnv.getStateBackend))
+      execEnv.getConfig.setGlobalJobParameters(parameters)
+      isConfigMerged = true
     }
   }
 
@@ -395,7 +422,9 @@ abstract class StreamTableEnvironment(
     } else {
       val table = new Table(this, sinkNode)
       val optimizedPlan = optimize(table.getRelNode)
-      transformations.add(translate(optimizedPlan))
+      val optimizedNodes = translateToExecNodeDag(Seq(optimizedPlan))
+      require(optimizedNodes.size() == 1)
+      transformations.add(translate(optimizedNodes.head))
     }
   }
 
@@ -824,10 +853,21 @@ abstract class StreamTableEnvironment(
 
       override def isSinkNode: Boolean = isSinkBlock
     })
-    // FIXME refactor
+
     // Rewrite same rel object to different rel objects.
-    val diffObjPlan = optimizeNode.accept(new SameRelObjectShuttle())
-    diffObjPlan
+    optimizeNode.accept(new SameRelObjectShuttle())
+  }
+
+  /**
+    * translate [[StreamExecRel]] DAG to [[StreamExecNode]] DAG.
+    */
+  private[flink] def translateToExecNodeDag(nodes: Seq[RelNode]): Seq[StreamExecNode[_]] = {
+    require(nodes.nonEmpty && nodes.forall(_.isInstanceOf[StreamExecRel[_]]))
+    val nodeDag = nodes.map(_.asInstanceOf[StreamExecNode[_]])
+
+    // TODO calc resource here
+
+    nodeDag
   }
 
   /**
@@ -854,18 +894,19 @@ abstract class StreamTableEnvironment(
     val sinkName = createUniqueTableName()
     val sinkNode = LogicalSink.create(table.getRelNode, sink, sinkName)
     val optimizedPlan = optimize(sinkNode)
-    val transformation = translate(optimizedPlan)
+    val optimizedNodes = translateToExecNodeDag(Seq(optimizedPlan))
+    require(optimizedNodes.size() == 1)
+    val transformation = translate(optimizedNodes.head)
     new DataStream(execEnv, transformation).asInstanceOf[DataStream[A]]
   }
 
     /**
-      * Translates a physical [[RelNode]] plan into a [[StreamTransformation]].
+      * Translates a [[StreamExecNode]] plan into a [[StreamTransformation]].
       *
-      * @param node The logical plan to translate.
+      * @param node The plan to translate.
       * @return The [[StreamTransformation]] of type [[BaseRow]].
       */
-    private def translate(node: RelNode): StreamTransformation[_] = {
-
+    private def translate(node: StreamExecNode[_]): StreamTransformation[_] = {
       node match {
         case node: StreamExecRel[_] => node.translateToPlan(this)
         case _ =>
@@ -883,53 +924,33 @@ abstract class StreamTableEnvironment(
   def explain(table: Table): String = {
     val ast = table.getRelNode
     val optimizedPlan = optimize(ast)
-    val transformStream = translate(optimizedPlan)
+    val optimizedNodes = translateToExecNodeDag(Seq(optimizedPlan))
+    require(optimizedNodes.size() == 1)
+    val optimizedNode = optimizedNodes.head
+
+    val transformStream = translate(optimizedNode)
 
     val streamGraph = translateStreamGraph(ArrayBuffer(transformStream), None)
 
-    val sqlPlan = PlanUtil.explainPlan(streamGraph)
+    val executionPlan = PlanUtil.explainPlan(streamGraph)
 
     s"== Abstract Syntax Tree ==" +
-        System.lineSeparator +
-        s"${FlinkRelOptUtil.toString(ast)}" +
-        System.lineSeparator +
-        s"== Optimized Logical Plan ==" +
-        System.lineSeparator +
-        s"${FlinkRelOptUtil.toString(optimizedPlan)}" +
-        System.lineSeparator +
-        s"== Physical Execution Plan ==" +
-        System.lineSeparator +
-        s"$sqlPlan"
-  }
-
-  /**
-    * Merge global job parameters and table config parameters,
-    * and set the merged result to GlobalJobParameters
-    */
-  private def mergeParameters(): Unit = {
-    if (!isConfigMerged && execEnv != null && execEnv.getConfig != null) {
-      val parameters = new Configuration()
-      if (config != null && config.getConf != null) {
-        parameters.addAll(config.getConf)
-      }
-
-      if (execEnv.getConfig.getGlobalJobParameters != null) {
-        execEnv.getConfig.getGlobalJobParameters.toMap.asScala.foreach {
-          kv => parameters.setString(kv._1, kv._2)
-        }
-      }
-      parameters.setBoolean(
-        StateUtil.STATE_BACKEND_ON_HEAP,
-        StateUtil.isHeapState(execEnv.getStateBackend))
-      execEnv.getConfig.setGlobalJobParameters(parameters)
-      isConfigMerged = true
-    }
+      System.lineSeparator +
+      s"${FlinkRelOptUtil.toString(ast)}" +
+      System.lineSeparator +
+      s"== Optimized Logical Plan ==" +
+      System.lineSeparator +
+      s"${FlinkNodeOptUtil.treeToString(optimizedNode)}" +
+      System.lineSeparator +
+      s"== Physical Execution Plan ==" +
+      System.lineSeparator +
+      s"$executionPlan"
   }
 
   def explain(extended: Boolean = false): String = {
     if (!config.getSubsectionOptimization) {
       throw new TableException("Can not explain due to subsection optimization is not supported, " +
-                                 "please check your TableConfig.")
+        "please check your TableConfig.")
     }
 
     if (sinkNodes.isEmpty) {
@@ -946,15 +967,24 @@ abstract class StreamTableEnvironment(
       sb.append(System.lineSeparator)
     }
 
-    sb.append("== Optimized Logical Plan ==")
-    sb.append(System.lineSeparator)
     val dagOptimizer = new StreamDAGOptimizer(sinkNodes, this)
     // optimize dag
-    val sinks = dagOptimizer.getOptimizedDag()
-    sb.append(dagOptimizer.explain())
+    val sinkRelNodes = dagOptimizer.getOptimizedDag()
+    val sinkExecNodes = translateToExecNodeDag(sinkRelNodes)
+
+    sb.append("== Optimized Logical Plan ==")
+    sb.append(System.lineSeparator)
+    val explainLevel = if (extended) {
+      SqlExplainLevel.ALL_ATTRIBUTES
+    } else {
+      SqlExplainLevel.EXPPLAN_ATTRIBUTES
+    }
+    // TODO print resource
+    sb.append(FlinkNodeOptUtil.dagToString(sinkExecNodes, explainLevel, withRetractTraits = true))
+    sb.append(System.lineSeparator)
 
     // translate relNodes to StreamTransformations
-    val sinkTransformations = translateRelNodeDag(sinks)
+    val sinkTransformations = translateExecNodeDag(sinkExecNodes)
     val sqlPlan = PlanUtil.explainPlan(StreamGraphGenerator.generate(
       StreamGraphGenerator.Context.buildBatchProperties(execEnv), sinkTransformations))
     sb.append("== Physical Execution Plan ==")

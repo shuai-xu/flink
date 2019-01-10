@@ -31,45 +31,39 @@ LogicalProject(total_min=[AS($0, 'total_min')])
             +- LogicalTableScan(table=[[default_catalog, default_db, t3]])
 
 == Optimized Logical Plan ==
-[[IntermediateTable=_DataStreamTable_3]]
-StreamExecCalc(select=[a, c], retract=[true], accMode=[Acc])
+StreamExecCalc(select=[a, c], retract=[true], accMode=[Acc], reuse_id=[1])
 +- StreamExecDataStreamScan(table=[[default_catalog, default_db, t1]], retract=[true], accMode=[Acc])
 
-[[IntermediateTable=_DataStreamTable_4]]
-StreamExecCalc(select=[d, f], retract=[true], accMode=[Acc])
+StreamExecCalc(select=[d, f], retract=[true], accMode=[Acc], reuse_id=[2])
 +- StreamExecDataStreamScan(table=[[default_catalog, default_db, t2]], retract=[true], accMode=[Acc])
 
-[[Sink]]
 StreamExecSink(fields=[a], retract=[false], accMode=[Acc])
 +- StreamExecUnion(all=[true], union=[a], retract=[false], accMode=[Acc])
    :- StreamExecCalc(select=[a], retract=[false], accMode=[Acc])
-   :  +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_3]], retract=[false], accMode=[Acc])
+   :  +- Reused(reference_id=[1])
    +- StreamExecCalc(select=[d], retract=[false], accMode=[Acc])
-      +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_4]], retract=[false], accMode=[Acc])
+      +- Reused(reference_id=[2])
 
-[[IntermediateTable=_DataStreamTable_5]]
-StreamExecUnion(all=[true], union=[a], retract=[true], accMode=[Acc])
+StreamExecUnion(all=[true], union=[a], retract=[true], accMode=[Acc], reuse_id=[3])
 :- StreamExecUnion(all=[true], union=[a], retract=[true], accMode=[Acc])
 :  :- StreamExecCalc(select=[a], retract=[true], accMode=[Acc])
-:  :  +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_3]], retract=[true], accMode=[Acc])
+:  :  +- Reused(reference_id=[1])
 :  +- StreamExecCalc(select=[d], retract=[true], accMode=[Acc])
-:     +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_4]], retract=[true], accMode=[Acc])
+:     +- Reused(reference_id=[2])
 +- StreamExecCalc(select=[a], retract=[true], accMode=[Acc])
    +- StreamExecDataStreamScan(table=[[default_catalog, default_db, t3]], retract=[true], accMode=[Acc])
 
-[[Sink]]
 StreamExecSink(fields=[total_sum], retract=[false], accMode=[AccRetract])
 +- StreamExecCalc(select=[TMP_0 AS total_sum], retract=[true], accMode=[AccRetract])
    +- StreamExecGroupAggregate(select=[SUM(a) AS TMP_0], retract=[true], accMode=[AccRetract])
       +- StreamExecExchange(distribution=[single], retract=[true], accMode=[Acc])
-         +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_5]], retract=[true], accMode=[Acc])
+         +- Reused(reference_id=[3])
 
-[[Sink]]
 StreamExecSink(fields=[total_min], retract=[false], accMode=[Acc])
 +- StreamExecCalc(select=[TMP_1 AS total_min], retract=[false], accMode=[Acc])
    +- StreamExecGroupAggregate(select=[MIN(a) AS TMP_1], retract=[false], accMode=[Acc])
       +- StreamExecExchange(distribution=[single], retract=[true], accMode=[Acc])
-         +- StreamExecIntermediateTableScan(table=[[default_catalog, default_db, _DataStreamTable_5]], retract=[true], accMode=[Acc])
+         +- Reused(reference_id=[3])
 
 == Physical Execution Plan ==
  : Data Source

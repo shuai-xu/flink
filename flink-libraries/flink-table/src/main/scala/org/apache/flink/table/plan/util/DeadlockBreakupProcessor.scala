@@ -21,7 +21,7 @@ package org.apache.flink.table.plan.util
 import org.apache.flink.runtime.io.network.DataExchangeMode
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecBoundedStreamScan, _}
+import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.util.{BatchExecRelShuttleImpl, BatchExecRelVisitorImpl}
 
 import com.google.common.collect.{Maps, Sets}
@@ -35,11 +35,11 @@ import scala.collection.mutable
 /**
   * A DeadlockBreakupHandler that finds out all deadlocks in the plan, and resolves them.
   *
-  * NOTES: This program can be only applied on [[BatchExecRel]] tree.
+  * NOTES: This program can be only applied on [[BatchExecRel]] DAG.
   *
   * Reused node (may be a [[BatchExecRel]] which has more than one outputs or
   * a [[BatchExecBoundedStreamScan]] which transformation is used for different scan)
-  * might lead to a deadlock when HashJoin or NestedLoopJoin have same reused input.
+  * might lead to a deadlock when HashJoin or NestedLoopJoin have same reused inputs.
   * Sets Exchange node(if it does not exist, add one) as BATCH mode to break up the deadlock.
   *
   * e.g. SQL: WITH r AS (SELECT a, b FROM x limit 10)
@@ -82,13 +82,15 @@ import scala.collection.mutable
   */
 class DeadlockBreakupProcessor {
 
-  def process(input: RelNode): RelNode = {
-    input match {
-      case root: BatchExecRel[_] =>
-        val finder = new ReuseNodeFinder()
-        finder.go(root)
-        root.accept(new DeadlockBreakupShuttleImpl(finder))
-      case _ => input
+  // TODO change arguments to sinks: Seq[BatchExecNode[_]]
+  def process(sinks: Seq[RelNode]): Seq[RelNode] = {
+    // TODO remove this
+    require(sinks.head.isInstanceOf[BatchExecRel[_]])
+
+    val finder = new ReuseNodeFinder()
+    sinks.foreach(sink => finder.go(sink))
+    sinks.map {
+      sink => sink.asInstanceOf[BatchExecRel[_]].accept(new DeadlockBreakupShuttleImpl(finder))
     }
   }
 
@@ -174,7 +176,11 @@ class DeadlockBreakupProcessor {
               distribution)
             e.setRequiredDataExchangeMode(DataExchangeMode.BATCH)
             val newInputs = if (leftIsBuild) List(join.getLeft, e) else List(e, join.getRight)
-            return join.copy(join.getTraitSet, newInputs).asInstanceOf[BatchExecRel[_]]
+            newInputs.zipWithIndex.foreach {
+              case (newInput, i) =>
+                join.replaceInput(i, newInput)
+            }
+            return join
         }
       }
       join

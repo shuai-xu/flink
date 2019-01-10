@@ -19,7 +19,6 @@ package org.apache.flink.table.plan.util
 
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.functions.sql.internal.SqlAuxiliaryGroupAggFunction
-import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, FunctionCatalog}
 
 import org.apache.calcite.plan.RelOptUtil
@@ -39,8 +38,8 @@ import java.sql.{Date, Time, Timestamp}
 import java.util
 import java.util.Calendar
 
-import scala.collection.JavaConverters._
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 object FlinkRelOptUtil {
@@ -54,10 +53,6 @@ object FlinkRelOptUtil {
     *
     * @param rel                the RelNode to convert
     * @param detailLevel        detailLevel defines detail levels for EXPLAIN PLAN.
-    * @param withResource       whether including resource information of RelNode (only apply to
-    *                           BatchExecRel node at present)
-    * @param withMemCost        whether including memory cost information of RelNode (only apply to
-    *                           BatchExecRel node at present)
     * @param withRelNodeId      whether including ID of RelNode
     * @param withRetractTraits  whether including Retraction Traits of RelNode (only apply to
     *                           StreamExecRel node at present)
@@ -66,34 +61,15 @@ object FlinkRelOptUtil {
   def toString(
       rel: RelNode,
       detailLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
-      withResource: Boolean = false,
-      withMemCost: Boolean = false,
       withRelNodeId: Boolean = false,
       withRetractTraits: Boolean = false): String = {
-    // FIXME refactor
-    val config = getTableConfig(rel)
-    val isPhysicalRel = rel.isInstanceOf[FlinkPhysicalRel]
-    // only print reuse info of physical plan
-    val (subplanReuseContext, newRel) = if (isPhysicalRel && config.getConf.getBoolean(
-          TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED)) {
-      val planWithoutSameRef = rel.accept(new SameRelObjectShuttle)
-      (Some(new SubplanReuseContext(
-        !config.getConf.getBoolean(TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED),
-        planWithoutSameRef)),
-        planWithoutSameRef)
-    } else {
-      (None, rel)
-    }
     val sw = new StringWriter
     val planWriter = new RelTreeWriterImpl(
       new PrintWriter(sw),
-      subplanReuseContext,
       detailLevel,
-      withResource,
-      withMemCost,
       withRelNodeId,
       withRetractTraits)
-    newRel.explain(planWriter)
+    rel.explain(planWriter)
     sw.toString
   }
 

@@ -17,11 +17,8 @@
  */
 package org.apache.flink.table.plan.util
 
-import org.apache.flink.api.common.operators.ResourceSpec
-import org.apache.flink.table.plan.cost.FlinkBatchCost
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashJoinBase, BatchExecNestedLoopJoinBase, BatchExecRel, BatchExecScan}
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRel
 import org.apache.flink.table.plan.`trait`.{AccModeTraitDef, UpdateAsRetractionTraitDef}
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRel
 
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.externalize.RelWriterImpl
@@ -35,10 +32,7 @@ import scala.collection.JavaConversions._
 
 class RelTreeWriterImpl(
     pw: PrintWriter,
-    subplanReuseContext: Option[SubplanReuseContext],
     explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
-    withResource: Boolean = false,
-    withMemCost: Boolean = false,
     withRelNodeId: Boolean = false,
     withRetractTraits: Boolean = false)
   extends RelWriterImpl(pw, explainLevel, false) {
@@ -64,90 +58,30 @@ class RelTreeWriterImpl(
       s.append(if (lastChildren.last) "+- " else ":- ")
     }
 
-    val isReuseOtherRel = reuseOtherRel(rel)
-    if (isReuseOtherRel) {
-      s.append("Reused")
-    } else {
-      rel.getRelTypeName match {
-        case name if name.endsWith("BatchExec") => s.append(name.substring(0, name.length - 9))
-        case name if name.startsWith("BatchExec") => s.append(name.substring(9))
-        case name => s.append(name)
-      }
+    rel.getRelTypeName match {
+      case name if name.endsWith("BatchExec") => s.append(name.substring(0, name.length - 9))
+      case name if name.startsWith("BatchExec") => s.append(name.substring(9))
+      case name => s.append(name)
     }
 
     val printValues = new JArrayList[Pair[String, AnyRef]]()
-    if (!isReuseOtherRel) {
-      if (withResource) {
-        rel match {
-          case rowBatchExec: BatchExecRel[_] =>
-            printValues.add(Pair.of(
-              "partition",
-              rowBatchExec.resultPartitionCount.asInstanceOf[AnyRef]))
-            rowBatchExec match {
-              case scan: BatchExecScan =>
-                printValues.add(Pair.of(
-                  "sourceRes",
-                  resourceSpecToString(rowBatchExec.asInstanceOf[BatchExecScan].sourceResSpec)))
-                if (scan.needInternalConversion) {
-                  printValues.add(Pair.of(
-                    "conversionRes",
-                    resourceSpecToString(rowBatchExec.asInstanceOf[BatchExecScan]
-                      .conversionResSpec)))
-
-                }
-              case hashJoin: BatchExecHashJoinBase => printValues.add(Pair.of(
-                "shuffleCount",
-                hashJoin.shuffleBuildCount(mq).toString))
-              case nestedLoopJoin: BatchExecNestedLoopJoinBase => printValues.add(Pair.of(
-                "shuffleCount",
-                nestedLoopJoin.shuffleBuildCount(mq).toString))
-              case _ => Unit
-            }
-            addResourceToPrint(rowBatchExec, printValues)
-        }
-      }
-      if (withMemCost || withResource) {
-        rel match {
-          case batchRel: BatchExecRel[_] =>
-            val memCost = mq.getNonCumulativeCost(batchRel).asInstanceOf[FlinkBatchCost].memory
-            printValues.add(Pair.of(
-              "memCost",
-              memCost.asInstanceOf[AnyRef]))
-            printValues.add(Pair.of(
-              "rowcount",
-              mq.getRowCount(rel)))
-        }
-      }
-      if (explainLevel != SqlExplainLevel.NO_ATTRIBUTES) {
-        printValues.addAll(values)
-      }
-
-      if (withRelNodeId) {
-        rel match {
-          case rowBatchExec: BatchExecRel[_] =>
-            printValues.add(Pair.of("__id__", rowBatchExec.getId.toString))
-        }
-      }
-      if (withRetractTraits) {
-        rel match {
-          case streamRel: StreamExecRel[_] =>
-            val traitSet = streamRel.getTraitSet
-            printValues.add(
-              Pair.of("retract", traitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE)))
-            printValues.add(
-              Pair.of("accMode", traitSet.getTrait(AccModeTraitDef.INSTANCE)))
-          case _ => // ignore
-        }
-      }
+    if (explainLevel != SqlExplainLevel.NO_ATTRIBUTES) {
+      printValues.addAll(values)
     }
 
-    val isReusedByOtherRel = reusedByOtherRel(rel)
-    if (isReusedByOtherRel) {
-      val reuseId = getReuseId(rel)
-      printValues.add(Pair.of("reuse_id", reuseId))
-    } else if (isReuseOtherRel) {
-      val reuseId = getReuseId(rel)
-      printValues.add(Pair.of("reference_id", reuseId))
+    if (withRelNodeId) {
+      printValues.add(Pair.of("__id__", rel.getId.toString))
+    }
+    if (withRetractTraits) {
+      rel match {
+        case streamRel: StreamExecRel[_] =>
+          val traitSet = streamRel.getTraitSet
+          printValues.add(
+            Pair.of("retract", traitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE)))
+          printValues.add(
+            Pair.of("accMode", traitSet.getTrait(AccModeTraitDef.INSTANCE)))
+        case _ => // ignore
+      }
     }
 
     if (!printValues.isEmpty) {
@@ -162,14 +96,14 @@ class RelTreeWriterImpl(
       if (j > 0) s.append(")")
     }
 
-    if (explainLevel == SqlExplainLevel.ALL_ATTRIBUTES && !isReuseOtherRel) {
+    if (explainLevel == SqlExplainLevel.ALL_ATTRIBUTES) {
       s.append(": rowcount = ")
         .append(mq.getRowCount(rel))
         .append(", cumulative cost = ")
         .append(mq.getCumulativeCost(rel))
     }
     pw.println(s)
-    if (inputs.length > 1 && !isReuseOtherRel) {
+    if (inputs.length > 1) {
       inputs.toSeq.init.foreach { rel =>
         depth = depth + 1
         lastChildren = lastChildren :+ false
@@ -178,60 +112,12 @@ class RelTreeWriterImpl(
         lastChildren = lastChildren.init
       }
     }
-    if (!inputs.isEmpty && !isReuseOtherRel) {
+    if (!inputs.isEmpty) {
       depth = depth + 1
       lastChildren = lastChildren :+ true
       inputs.toSeq.last.explain(this)
       depth = depth - 1
       lastChildren = lastChildren.init
-    }
-  }
-
-  private def reusedByOtherRel(rel: RelNode): Boolean = {
-    subplanReuseContext match {
-      case Some(context) => context.reusedByOtherNode(rel)
-      case _ => false
-    }
-  }
-
-  private def reuseOtherRel(rel: RelNode): Boolean = {
-    subplanReuseContext match {
-      case Some(context) => context.reuseOtherNode(rel)
-      case _ => false
-    }
-  }
-
-  private def getReuseId(rel: RelNode): Integer = {
-    subplanReuseContext match {
-      case Some(context) => context.getReuseId(rel)
-      case _ => null
-    }
-  }
-
-  private def addResourceToPrint(
-      rowBatchExec: BatchExecRel[_],
-      printValues: JArrayList[Pair[String, AnyRef]]): Unit = {
-    if (rowBatchExec.resource != null) {
-      printValues.add(Pair.of(
-        "resource",
-        rowBatchExec.resource.toString))
-    }
-  }
-
-  private def resourceSpecToString(resourceSpec: ResourceSpec): String = {
-    val s = "Resource: {cpu=" + resourceSpec.getCpuCores + ", heap=" + resourceSpec.getHeapMemory;
-    try {
-      if (!resourceSpec.getExtendedResources.containsKey(ResourceSpec.MANAGED_MEMORY_NAME) ||
-        resourceSpec.getExtendedResources.
-          get(ResourceSpec.MANAGED_MEMORY_NAME).getValue.toInt == 0) {
-        s + "}"
-      } else {
-        s + ", managed=" +
-          resourceSpec.getExtendedResources
-            .get(ResourceSpec.MANAGED_MEMORY_NAME).getValue.toInt + "}"
-      }
-    } catch {
-      case _: Exception => null
     }
   }
 }

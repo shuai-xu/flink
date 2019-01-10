@@ -31,16 +31,20 @@ import org.apache.flink.table.api.{SqlParserException, Table, TableConfig, Table
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.dataformat.{BinaryRow, BinaryRowWriter}
 import org.apache.flink.table.expressions.{Expression, ExpressionParser}
-import org.apache.flink.table.plan.util.FlinkRelOptUtil
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
+import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.ExecResourceUtil.InferMode
 import org.apache.flink.table.util.{DiffRepository, ExecResourceUtil}
 import org.apache.flink.types.Row
 
 import org.apache.calcite.runtime.CalciteContextException
-import org.apache.calcite.sql.parser.SqlParseException
 import org.apache.calcite.sql.SqlExplainLevel
+import org.apache.calcite.sql.parser.SqlParseException
 import org.apache.commons.lang3.SystemUtils
+import org.junit.Assert._
+import org.junit.rules.TestName
+import org.junit.{Assert, Rule}
 
 import java.lang.{Iterable => JIterable}
 import java.util.TimeZone
@@ -50,9 +54,6 @@ import scala.collection.JavaConverters._
 import scala.collection.Seq
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Sorting
-import org.junit.{Assert, Rule}
-import org.junit.Assert._
-import org.junit.rules.TestName
 
 class QueryTest {
 
@@ -63,8 +64,8 @@ class QueryTest {
   val javaEnv: StreamExecutionEnvironment = generatorTestEnv
   val tEnv: ScalaBatchTableEnv = TableEnvironment.getBatchTableEnvironment(env, conf)
   val javaTableEnv: JavaBatchTableEnv = TableEnvironment.getBatchTableEnvironment(javaEnv, conf)
-  val LINE_COL_PATTERN = Pattern.compile("At line ([0-9]+), column ([0-9]+)")
-  val LINE_COL_TWICE_PATTERN = Pattern.compile("(?s)From line ([0-9]+),"
+  val LINE_COL_PATTERN: Pattern = Pattern.compile("At line ([0-9]+), column ([0-9]+)")
+  val LINE_COL_TWICE_PATTERN: Pattern = Pattern.compile("(?s)From line ([0-9]+),"
     + " column ([0-9]+) to line ([0-9]+), column ([0-9]+): (.*)")
 
   private lazy val diffRepository = DiffRepository.lookup(this.getClass)
@@ -85,13 +86,22 @@ class QueryTest {
   def explainLogical(table: Table): String = {
     val ast = table.getRelNode
     val optimizedPlan = tEnv.optimize(ast)
+    val logicalPlan = optimizedPlan match {
+      case rel: BatchExecRel[_] =>
+        val optimizedNodes = tEnv.translateToExecNodeDag(Seq(rel))
+        require(optimizedNodes.length == 1)
+        FlinkNodeOptUtil.treeToString(optimizedNodes.head)
+      case _ =>
+        FlinkRelOptUtil.toString(optimizedPlan)
+    }
+
     s"== Abstract Syntax Tree ==" +
       System.lineSeparator +
       s"${FlinkRelOptUtil.toString(ast)}" +
       System.lineSeparator +
       s"== Optimized Logical Plan ==" +
       System.lineSeparator +
-      s"${FlinkRelOptUtil.toString(optimizedPlan)}"
+      s"$logicalPlan"
   }
 
   protected def generatorTestEnv: StreamExecutionEnvironment = {
@@ -141,8 +151,16 @@ class QueryTest {
   def verifyPlan(table: Table): Unit = {
     val relNode = table.getRelNode
     val optimized = tEnv.optimize(relNode)
-    val actual = SystemUtils.LINE_SEPARATOR + FlinkRelOptUtil.toString(
-      optimized, SqlExplainLevel.EXPPLAN_ATTRIBUTES)
+    val actual = optimized match {
+      case rel: BatchExecRel[_] =>
+        val optimizedNodes = tEnv.translateToExecNodeDag(Seq(rel))
+        require(optimizedNodes.length == 1)
+        SystemUtils.LINE_SEPARATOR +
+          FlinkNodeOptUtil.treeToString(optimizedNodes.head, SqlExplainLevel.EXPPLAN_ATTRIBUTES)
+      case _ =>
+        SystemUtils.LINE_SEPARATOR +
+          FlinkRelOptUtil.toString(optimized, SqlExplainLevel.EXPPLAN_ATTRIBUTES)
+    }
     assertEqualsOrExpand("planAfter", actual.toString, expand = false)
   }
 

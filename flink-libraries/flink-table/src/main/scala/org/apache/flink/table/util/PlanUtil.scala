@@ -20,21 +20,20 @@ package org.apache.flink.table.util
 
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.streaming.api.graph.StreamGraph
-import org.apache.flink.table.plan.util.FlinkRelOptUtil
+import org.apache.flink.table.plan.nodes.exec.ExecNode
+import org.apache.flink.table.plan.util.FlinkNodeOptUtil
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics._
+import org.apache.flink.table.util.PlanUtil._
 
-import org.apache.calcite.rel.RelNode
 import org.apache.calcite.sql.SqlExplainLevel
-
-import PlanUtil._
 import org.json.JSONObject
 
 import java.io.{PrintWriter, StringWriter}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths, StandardOpenOption}
 
-import scala.collection.mutable
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 
 /**
   * The class is to convert [[StreamGraph]] to plan with metrics.
@@ -64,9 +63,9 @@ class PlanWihMetrics(streamGraph: StreamGraph) {
     val operatorMetrics = extractMetricAccFromResult(jobResult)
     val sw = new StringWriter()
     val pw = new PrintWriter(sw)
-    streamGraph.getSinkIDs.foreach(sinkId => {
+    streamGraph.getSinkIDs.foreach { sinkId =>
       print(sinkId, operatorMetrics, pw)
-    })
+    }
     pw.close()
     val planWithMetrics = sw.toString
     if (LOG.isDebugEnabled) {
@@ -85,12 +84,12 @@ class PlanWihMetrics(streamGraph: StreamGraph) {
   private def extractMetricAccFromResult(
       jobResult: JobExecutionResult): mutable.Map[Integer, AnyRef] =
     jobResult
-        .getAllAccumulatorResults
-        .filter(_._1.startsWith(ACCUMULATOR_PREFIX))
-        .map { case (accName, accValue) =>
-          val nodeID = new Integer(accName.drop(ACCUMULATOR_PREFIX.length))
-          (nodeID, accValue)
-        }
+      .getAllAccumulatorResults
+      .filter(_._1.startsWith(ACCUMULATOR_PREFIX))
+      .map { case (accName, accValue) =>
+        val nodeID = new Integer(accName.drop(ACCUMULATOR_PREFIX.length))
+        (nodeID, accValue)
+      }
 
   private def print(
       vertexID: Int,
@@ -98,7 +97,7 @@ class PlanWihMetrics(streamGraph: StreamGraph) {
       pw: PrintWriter,
       lastChildren: Seq[Boolean] = Nil): Unit = {
     val s = new StringBuilder
-    if (lastChildren.length > 0) {
+    if (lastChildren.nonEmpty) {
       lastChildren.init.foreach { isLast =>
         s.append(if (isLast) "   " else ":  ")
       }
@@ -124,7 +123,7 @@ class PlanWihMetrics(streamGraph: StreamGraph) {
     s.append(")")
     pw.println(s)
     val inputNodes = streamNode.getInEdges.map(_.getSourceId)
-    if (inputNodes.length > 1) {
+    if (inputNodes.size() > 1) {
       inputNodes.init.foreach { n =>
         print(n, operatorMetrics, pw, lastChildren :+ false)
       }
@@ -142,20 +141,20 @@ object PlanUtil extends Logging {
     new PlanWihMetrics(streamGraph)
 
   /**
-    * Dump RelNode into file.
+    * Dump ExecNodes into file.
     *
-    * @param relNode      RelNode to dump
+    * @param nodes        ExecNodes to dump
     * @param dumpFilePath file path to write
     */
-  def dumpRelNode(relNode: RelNode, dumpFilePath: String): Unit = {
-    val relNodeStr = FlinkRelOptUtil.toString(
-      relNode,
+  def dumpExecNodes(nodes: Seq[ExecNode[_, _]], dumpFilePath: String): Unit = {
+    val nodeStr = FlinkNodeOptUtil.dagToString(
+      nodes,
       SqlExplainLevel.ALL_ATTRIBUTES,
       withRelNodeId = true,
       withMemCost = true)
-    writeContentToFile(relNodeStr, dumpFilePath)
+    writeContentToFile(nodeStr, dumpFilePath)
     if (LOG.isDebugEnabled) {
-      LOG.debug(s"dump RelNode: \n $relNodeStr")
+      LOG.debug(s"dump ExecNode: \n $nodeStr")
     }
   }
 
@@ -182,10 +181,12 @@ object PlanUtil extends Logging {
 
   /**
     * Converting an StreamGraph to a human-readable string.
+    *
     * @param graph stream graph
     */
   def explainPlan(graph: StreamGraph): String = {
     def isSource(id: Int): Boolean = graph.getSourceIDs.contains(id)
+
     def isSink(id: Int): Boolean = graph.getSinkIDs.contains(id)
 
     // can not convert to single abstract method because it will throw compile error

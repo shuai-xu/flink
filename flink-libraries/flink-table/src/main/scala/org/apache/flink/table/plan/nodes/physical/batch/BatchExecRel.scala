@@ -73,6 +73,8 @@ trait BatchExecRel[T] extends FlinkPhysicalRel with BatchExecNode[T] with Loggin
     require(ordinalInParent >= 0 && ordinalInParent < getInputs.size())
     replaceInput(ordinalInParent, newInputNode.asInstanceOf[BatchExecRel[T]])
   }
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 }
 
 trait RowBatchExecRel extends BatchExecRel[BaseRow]

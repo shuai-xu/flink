@@ -65,6 +65,8 @@ trait StreamExecRel[T] extends FlinkPhysicalRel with StreamExecNode[T] {
     require(ordinalInParent >= 0 && ordinalInParent < getInputs.size())
     replaceInput(ordinalInParent, newInputNode.asInstanceOf[StreamExecRel[T]])
   }
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 }
 
 trait RowStreamExecRel extends StreamExecRel[BaseRow]

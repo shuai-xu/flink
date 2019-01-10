@@ -18,8 +18,6 @@
 
 package org.apache.flink.table.util
 
-import org.apache.calcite.sql.SqlExplainLevel
-import org.apache.commons.lang3.SystemUtils
 import org.apache.flink.api.common.typeinfo.{AtomicType, TypeInformation}
 import org.apache.flink.api.java.typeutils.TupleTypeInfo
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
@@ -31,30 +29,30 @@ import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, 
 import org.apache.flink.table.api.scala.BatchTableEnvironment
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.{Table, TableException, _}
+import org.apache.flink.table.api.java.{BatchTableEnvironment => JBatchTableEnvironment}
 import org.apache.flink.table.calcite.CalciteConfig
+import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.Expression
-import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExecSink}
+import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.plan.subplan.BatchDAGOptimizer
-import org.apache.flink.table.plan.util.FlinkRelOptUtil
+import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil}
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSource}
 import org.apache.flink.types.Row
 
 import org.apache.calcite.sql.SqlExplainLevel
-
 import org.apache.commons.lang3.SystemUtils
-
-import _root_.scala.collection.mutable
-import _root_.scala.collection.JavaConversions._
-import _root_.scala.collection.JavaConverters._
-
 import org.junit.Assert._
 import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
+
+import _root_.scala.collection.JavaConversions._
+import _root_.scala.collection.JavaConverters._
+import _root_.scala.collection.mutable
 
 /**
   * Test batch exec base for testing Table API / SQL plans.
@@ -145,15 +143,15 @@ abstract class TableTestBatchExecUtil {
 }
 
 case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTestBatchExecUtil {
-  def answer[T](f: InvocationOnMock => T) = new Answer[T] {
+  def answer[T](f: InvocationOnMock => T): Answer[T] = new Answer[T] {
     override def answer(i: InvocationOnMock): T = f(i)
   }
 
   private lazy val diffRepository = DiffRepository.lookup(test.getClass)
   val javaEnv = new LocalStreamEnvironment()
-  val javaTableEnv = TableEnvironment.getBatchTableEnvironment(javaEnv)
+  val javaTableEnv: JBatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(javaEnv)
   val env = new StreamExecutionEnvironment(javaEnv)
-  val tableEnv = TableEnvironment.getBatchTableEnvironment(env)
+  val tableEnv: BatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(env)
   tableEnv.getConfig.setCalciteConfig(CalciteConfig.createBuilder().build())
   tableEnv.getConfig.setSubsectionOptimization(true)
 
@@ -227,7 +225,7 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
     val fieldTypes = fieldIdxs.map(physicalSchema.getType)
     val tableSchema = new TableSchema(fieldNames, fieldTypes)
     val mapping = fieldNames.zipWithIndex.map {
-      case (name:String, idx:Int) =>
+      case (name: String, idx: Int) =>
         (name, physicalSchema.getColumnName(fieldIdxs.apply(idx)))
     }.toMap
     val ts = new TestTableSourceWithTime(tableSchema, typeInfo, Seq(), mapping = mapping)
@@ -244,7 +242,14 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
   def verifyTableNotExpected(resultTable: Table, notExpected: String*): Unit = {
     val relNode = resultTable.getRelNode
     val optimized = tableEnv.optimize(relNode)
-    val actual = FlinkRelOptUtil.toString(optimized)
+    val actual = optimized match {
+      case rel: BatchExecRel[_] =>
+        val optimizedNodes = tableEnv.translateToExecNodeDag(Seq(rel))
+        require(optimizedNodes.length == 1)
+        FlinkNodeOptUtil.treeToString(optimizedNodes.head)
+      case _ =>
+        FlinkRelOptUtil.toString(optimized)
+    }
     val result = notExpected.forall(!actual.contains(_))
     assertTrue(s"\n actual: \n$actual \n not expected: \n${notExpected.mkString(", ")}", result)
   }
@@ -276,9 +281,9 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
   }
 
   override def verifyPlan(
-    resultTable: Table,
-    explainLevel: SqlExplainLevel,
-    printPlanBefore: Boolean): Unit = {
+      resultTable: Table,
+      explainLevel: SqlExplainLevel,
+      printPlanBefore: Boolean): Unit = {
     doVerifyPlan(resultTable, explainLevel = explainLevel, printPlanBefore = printPlanBefore)
   }
 
@@ -322,33 +327,39 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
       printPlanBefore: Boolean = true,
       printRunningUnit: Boolean = false): Unit = {
     val relNode = resultTable.getRelNode
-    val optimized = tableEnv.optimize(relNode)
-
-    val ruKeeper = new RunningUnitKeeper(tableEnv)
-    optimized match {
-      case batchExecRel: BatchExecRel[_] => ruKeeper.buildRUs(batchExecRel)
-      case _ => Unit
-    }
-
-    if (printResource) {
-      ruKeeper.calculateRelResource(optimized.asInstanceOf[BatchExecRel[_]])
-    }
-
     if (printPlanBefore) {
-      val planBefore = SystemUtils.LINE_SEPARATOR + FlinkRelOptUtil.toString(
-        relNode, SqlExplainLevel.EXPPLAN_ATTRIBUTES, false)
+      val planBefore = SystemUtils.LINE_SEPARATOR +
+        FlinkRelOptUtil.toString(relNode, SqlExplainLevel.EXPPLAN_ATTRIBUTES)
       assertEqualsOrExpand("planBefore", planBefore)
     }
 
-    if (printRunningUnit) {
-      val ruList = ruKeeper.getRunningUnits.map(x => x.toString)
-      ruList.sorted
-      val ruString = SystemUtils.LINE_SEPARATOR + String.join("\n", ruList)
-      assertEqualsOrExpand("runningUnit", ruString)
+    val optimized = tableEnv.optimize(relNode)
+
+    val ruKeeper = new RunningUnitKeeper(tableEnv)
+    val actual = optimized match {
+      case batchExecRel: BatchExecRel[_] =>
+        val optimizedNodes = tableEnv.translateToExecNodeDag(Seq(batchExecRel))
+        require(optimizedNodes.length == 1)
+        val optimizedNode = optimizedNodes.head
+        // TODO refactor
+        ruKeeper.buildRUs(batchExecRel)
+        if (printResource) {
+          ruKeeper.calculateRelResource(optimized.asInstanceOf[BatchExecRel[_]])
+        }
+        if (printRunningUnit) {
+          val ruList = ruKeeper.getRunningUnits.map(x => x.toString)
+          ruList.sorted
+          val ruString = SystemUtils.LINE_SEPARATOR + String.join("\n", ruList)
+          assertEqualsOrExpand("runningUnit", ruString)
+        }
+
+        SystemUtils.LINE_SEPARATOR +
+          FlinkNodeOptUtil.treeToString(optimizedNode, explainLevel, withResource = printResource)
+      case _ =>
+        SystemUtils.LINE_SEPARATOR +
+          FlinkRelOptUtil.toString(optimized, explainLevel)
     }
 
-    val actual = SystemUtils.LINE_SEPARATOR + FlinkRelOptUtil.toString(
-      optimized, explainLevel, printResource)
     assertEqualsOrExpand("planAfter", actual.toString, expand = false)
   }
 
@@ -360,25 +371,23 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
       throw new TableException(
         "subsection optimization is false, please use other method to verify result.")
     }
-
     if (tableEnv.sinkNodes.isEmpty) {
-      throw new TableException("No table sinks have been created yet. " +
-                                 "A program needs at least one sink that consumes data. ")
+      throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
     }
+
     if (printPlanBefore) {
       val planBefore = new StringBuilder
       tableEnv.sinkNodes.foreach { sink =>
         val table = new Table(tableEnv, sink.children.head)
         val ast = table.getRelNode
         planBefore.append(System.lineSeparator)
-        planBefore.append(FlinkRelOptUtil.toString(
-          ast, SqlExplainLevel.EXPPLAN_ATTRIBUTES, false))
+        planBefore.append(FlinkRelOptUtil.toString(ast, SqlExplainLevel.EXPPLAN_ATTRIBUTES))
       }
       assertEqualsOrExpand("planBefore", planBefore.toString())
     }
 
-    val optSinkNodes = tableEnv.tableServiceManager.cachePlanBuilder.
-                       buildPlanIfNeeded(tableEnv.sinkNodes)
+    val optSinkNodes = tableEnv.tableServiceManager.cachePlanBuilder
+      .buildPlanIfNeeded(tableEnv.sinkNodes)
 
 
     val dagOptimizer = new BatchDAGOptimizer(optSinkNodes, tableEnv)
@@ -390,6 +399,7 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
     val planAfter = if (printResultPartitionCount) {
       val planWithResource = new StringBuilder()
       val ruKeeper = new RunningUnitKeeper(tableEnv)
+      // TODO refactor
       sinks.map {
         case node: BatchExecSink[_] =>
           ruKeeper.buildRUs(node)
@@ -397,10 +407,10 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
           planWithResource.append(System.lineSeparator)
           planWithResource.append("[[Sink]]")
           planWithResource.append(System.lineSeparator)
-          planWithResource.append(FlinkRelOptUtil.toString(
+          planWithResource.append(FlinkNodeOptUtil.treeToString(
             node,
             detailLevel = explainLevel,
-            printResultPartitionCount))
+            withResource = true))
           planWithResource.append(System.lineSeparator)
         case _ => // ignore
       }
@@ -433,7 +443,16 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
       explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES): Unit = {
     val relNode = resultTable.getRelNode
     val optimized = tableEnv.optimize(relNode)
-    println(FlinkRelOptUtil.toString(optimized, detailLevel = explainLevel))
+    val str = optimized match {
+      case batchExecRel: BatchExecRel[_] =>
+        val optimizedNodes = tableEnv.translateToExecNodeDag(Seq(batchExecRel))
+        require(optimizedNodes.length == 1)
+        val optimizedNode = optimizedNodes.head
+        FlinkNodeOptUtil.treeToString(optimizedNode, detailLevel = explainLevel)
+      case _ =>
+        FlinkRelOptUtil.toString(optimized, detailLevel = explainLevel)
+    }
+    println(str)
   }
 
   def printSql(
@@ -446,7 +465,7 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
 class TestBatchTableSource(tableSchema: TableSchema,
     limitPushDown: Boolean = false,
     stats: TableStats = null)
-    extends BatchTableSource[Row] with LimitableTableSource {
+  extends BatchTableSource[Row] with LimitableTableSource {
 
   override def getReturnType: DataType =
     DataTypes.createRowType(
@@ -454,7 +473,7 @@ class TestBatchTableSource(tableSchema: TableSchema,
       tableSchema.getColumnNames)
 
   override def getTableStats: TableStats = if (stats == null) {
-    new TableStats(10L, new mutable.HashMap[String, ColumnStats]())
+    TableStats(10L, new mutable.HashMap[String, ColumnStats]())
   } else {
     stats
   }
@@ -492,7 +511,7 @@ class TestBatchTableSource(tableSchema: TableSchema,
     * Return the flag to indicate whether limit push down has been tried. Must return true on
     * the returned instance of [[applyLimit]].
     */
-  override def isLimitPushedDown = limitPushDown
+  override def isLimitPushedDown: Boolean = limitPushDown
 }
 
 class NullableBatchExecTableTestUtil(fieldsNullable: Boolean, test: TableTestBatchExecBase)
