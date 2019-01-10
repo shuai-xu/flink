@@ -370,8 +370,8 @@ public class JobUpdateTest extends TestLogger {
 			ExecutionGraph eg2 = jobMaster.getExecutionGraph();
 			List<ExecutionJobVertex> ejvs2 = new ArrayList(eg2.getAllVertices().values());
 			assertEquals(ejvs2.size(), 1);
-			assertEquals(ejvs.get(0).getJobVertex().getPreferredResources().getCpuCores(), 2, 0.00001);
-			assertEquals(ejvs.get(0).getJobVertex().getPreferredResources().getHeapMemory(), 200);
+			assertEquals(ejvs2.get(0).getJobVertex().getPreferredResources().getCpuCores(), 2, 0.00001);
+			assertEquals(ejvs2.get(0).getJobVertex().getPreferredResources().getHeapMemory(), 200);
 			assertEquals(ejvs2.get(0).getJobVertexId(), source.getID());
 
 			// check if a concurrent error occurred

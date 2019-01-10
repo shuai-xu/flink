@@ -506,20 +506,26 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	}
 
 	@Override
+	public CompletableFuture<JobGraph> requestJobGraph(Time timeout) {
+		return CompletableFuture.completedFuture(jobGraph);
+	}
+
+	@Override
 	public CompletableFuture<Acknowledge> updateJob(JobUpdateRequest request, Time timeout) {
 		// generate a new JobGraph with the job update request
-		JobGraph jobGraph = null;
+		JobGraph newJobGraph;
 		try {
-			jobGraph = submittedJobGraphStore.recoverJobGraph(this.jobGraph.getJobID()).getJobGraph();
+			// Make a deep copy of current JobGraph to avoid racing
+			newJobGraph = InstantiationUtil.clone(jobGraph);
 		} catch (Exception e) {
 			return FutureUtils.completedExceptionally(
-				new JobModificationException("Failed to retrieve job graph of job " + jobGraph.getJobID(), e));
+				new JobModificationException("Failed to make a copy of current job graph " + jobGraph.getJobID(), e));
 		}
 		for (JobUpdateAction action : request.getJobUpdateActions()) {
 			if (action instanceof JobGraphUpdateAction) {
-				((JobGraphUpdateAction) action).updateJobGraph(jobGraph);
+				((JobGraphUpdateAction) action).updateJobGraph(newJobGraph);
 			} else if (action instanceof JobGraphReplaceAction) {
-				jobGraph = ((JobGraphReplaceAction) action).getNewJobGraph();
+				newJobGraph = ((JobGraphReplaceAction) action).getNewJobGraph();
 			} else {
 				return FutureUtils.completedExceptionally(
 					new IllegalArgumentException("Unknown job update action: " + action));
@@ -527,7 +533,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		}
 
 		// update the job with the new JobGraph
-		return updateJob(jobGraph);
+		return updateJob(newJobGraph);
 	}
 
 	@Override

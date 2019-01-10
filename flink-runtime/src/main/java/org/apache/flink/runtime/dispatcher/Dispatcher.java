@@ -369,12 +369,10 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 
 	@Override
 	public CompletableFuture<JobGraph> requestJobGraph(JobID jobId, Time timeout) {
-		try {
-			return CompletableFuture.completedFuture(submittedJobGraphStore.recoverJobGraph(jobId).getJobGraph());
-		} catch (Exception e) {
-			return FutureUtils.completedExceptionally(
-				new FlinkException("Fail to retrieve job graph for job " + jobId + ".", e));
-		}
+		final CompletableFuture<JobMasterGateway> jobMasterGatewayFuture = getJobMasterGatewayFuture(jobId);
+
+		return jobMasterGatewayFuture.thenCompose(
+				(JobMasterGateway jobMasterGateway) -> jobMasterGateway.requestJobGraph(timeout));
 	}
 
 	@Override

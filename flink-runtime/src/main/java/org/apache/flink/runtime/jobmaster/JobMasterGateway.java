@@ -31,6 +31,7 @@ import org.apache.flink.runtime.executiongraph.ExecutionVertex;
 import org.apache.flink.runtime.io.network.partition.ResultPartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
+import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
@@ -82,6 +83,13 @@ public interface JobMasterGateway extends
 	 * @return Future acknowledge if the cancellation was successful
 	 */
 	CompletableFuture<Acknowledge> stop(@RpcTimeout Time timeout);
+
+	/**
+	 * Request the current JobGraph.
+	 *
+	 * @return A Future to current {@link JobGraph}
+	 */
+	CompletableFuture<JobGraph> requestJobGraph(Time timeout);
 
 	/**
 	 * Trigger update of the executed job.
