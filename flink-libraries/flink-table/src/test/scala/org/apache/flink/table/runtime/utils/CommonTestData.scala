@@ -265,6 +265,10 @@ object CommonTestData {
   }
 
   def getTestFlinkInMemoryCatalog: ReadableCatalog = {
+    getTestFlinkInMemoryCatalog(true)
+  }
+
+  def getTestFlinkInMemoryCatalog(isStreaming: Boolean): ReadableCatalog = {
     val csvRecord1 = Seq(
       "1#1#Hi",
       "2#2#Hello",
@@ -298,7 +302,8 @@ object CommonTestData {
       null,
       -1,
       System.currentTimeMillis(),
-      System.currentTimeMillis()
+      System.currentTimeMillis(),
+      isStreaming
     )
 
     val csvRecord2 = Seq(
@@ -352,7 +357,8 @@ object CommonTestData {
       null,
       -1,
       System.currentTimeMillis(),
-      System.currentTimeMillis()
+      System.currentTimeMillis(),
+      isStreaming
     )
     val catalog = new FlinkInMemoryCatalog("test")
     val db1 = new CatalogDatabase()
@@ -361,7 +367,7 @@ object CommonTestData {
     catalog.createDatabase("db2", db2, false)
 
     // Register the table with both catalogs
-    catalog.createTable(new ObjectPath("db1", "tb1"), catalogTable1, false);
+    catalog.createTable(new ObjectPath("db1", "tb1"), catalogTable1, false)
     catalog.createTable(new ObjectPath("db2", "tb2"), catalogTable2, false)
     catalog
   }

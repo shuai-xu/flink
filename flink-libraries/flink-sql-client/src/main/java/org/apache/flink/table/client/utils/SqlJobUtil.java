@@ -29,6 +29,7 @@ import org.apache.flink.sql.parser.plan.FlinkPlannerImpl;
 import org.apache.flink.sql.parser.plan.SqlParseException;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.api.Column;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.Table;
@@ -127,6 +128,11 @@ public class SqlJobUtil {
 			}
 		}
 
+		boolean isStreaming = true;
+		if (tableEnv instanceof BatchTableEnvironment) {
+			isStreaming = false;
+		}
+
 		long now = System.currentTimeMillis();
 		CatalogTable catalogTable = new CatalogTable(
 				tableType,
@@ -141,7 +147,8 @@ public class SqlJobUtil {
 				rowtimeField,
 				offset,
 				now,
-				now);
+				now,
+				isStreaming);
 
 		ReadableWritableCatalog catalog = (ReadableWritableCatalog) tableEnv.getCatalog(tableEnv.getDefaultCatalogName());
 		// TODO: need to consider if a default db doesn't exist

@@ -51,12 +51,10 @@ public class CatalogCalciteSchema implements Schema {
 
 	private final String catalogName;
 	private final ReadableCatalog catalog;
-	private final boolean isStreaming;
 
-	public CatalogCalciteSchema(String catalogName, ReadableCatalog catalog, boolean isStreaming) {
+	public CatalogCalciteSchema(String catalogName, ReadableCatalog catalog) {
 		this.catalogName = catalogName;
 		this.catalog = catalog;
-		this.isStreaming = isStreaming;
 	}
 
 	/**
@@ -68,7 +66,7 @@ public class CatalogCalciteSchema implements Schema {
 	@Override
 	public Schema getSubSchema(String schemaName) {
 		try {
-			return new DatabaseCalciteSchema(schemaName, catalog, isStreaming);
+			return new DatabaseCalciteSchema(schemaName, catalog);
 		} catch (DatabaseNotExistException e) {
 			LOGGER.warn(String.format("Schema %s does not exist in catalog %s", schemaName, catalogName));
 			return null;
@@ -133,15 +131,14 @@ public class CatalogCalciteSchema implements Schema {
 	public static void registerCatalog(
 		SchemaPlus parentSchema,
 		String catalogName,
-		ReadableCatalog catalog,
-		boolean isStreaming) {
+		ReadableCatalog catalog) {
 
 		SchemaPlus catalogSchema = parentSchema.getSubSchema(catalogName);
 
 		if (catalogSchema != null) {
 			throw new CatalogAlreadyExistException(catalogName);
 		} else {
-			CatalogCalciteSchema newCatalog = new CatalogCalciteSchema(catalogName, catalog, isStreaming);
+			CatalogCalciteSchema newCatalog = new CatalogCalciteSchema(catalogName, catalog);
 			SchemaPlus schemaPlusOfNewCatalog = parentSchema.add(catalogName, newCatalog);
 			newCatalog.registerSubSchemas(schemaPlusOfNewCatalog);
 		}
@@ -161,12 +158,10 @@ public class CatalogCalciteSchema implements Schema {
 
 		private final String dbName;
 		private final ReadableCatalog catalog;
-		private final boolean isStreaming;
 
-		public DatabaseCalciteSchema(String dbName, ReadableCatalog catalog, boolean isStreaming) {
+		public DatabaseCalciteSchema(String dbName, ReadableCatalog catalog) {
 			this.dbName = dbName;
 			this.catalog = catalog;
-			this.isStreaming = isStreaming;
 		}
 
 		@Override
@@ -177,7 +172,7 @@ public class CatalogCalciteSchema implements Schema {
 				if (table instanceof FlinkTempTable) {
 					return ((FlinkTempTable) table).getAbstractTable();
 				} else {
-					return new org.apache.flink.table.plan.schema.CatalogTable(tableName, table, isStreaming);
+					return new org.apache.flink.table.plan.schema.CatalogTable(tableName, table, table.isStreaming());
 				}
 			} catch (TableNotExistException e) {
 				LOGGER.warn(

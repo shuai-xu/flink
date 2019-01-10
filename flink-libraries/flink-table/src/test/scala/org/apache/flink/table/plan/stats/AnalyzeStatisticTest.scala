@@ -137,7 +137,9 @@ class AnalyzeStatisticTest extends QueryTest {
 
   @Test
   def testGenerateTableStats_NestTablePath(): Unit = {
-    tEnv.registerCatalog("test", CommonTestData.getTestFlinkInMemoryCatalog)
+    tEnv.registerCatalog(
+      "test",
+      CommonTestData.getTestFlinkInMemoryCatalog(tEnv.isInstanceOf[StreamTableEnvironment]))
 
     val tableStats = AnalyzeStatistic.generateTableStats(
       tEnv, Array("test", "db1", "tb1"), Array.empty[String])

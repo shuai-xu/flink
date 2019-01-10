@@ -245,7 +245,9 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     * @param name            The name under which the catalog will be registered
     * @param catalog         The catalog to register
     */
-  def registerCatalog(name: String, catalog: ReadableCatalog): Unit = ???
+  def registerCatalog(name: String, catalog: ReadableCatalog): Unit = {
+    registerCatalogInternal(name, catalog)
+  }
 
   /**
     * Registers an [[ReadableCatalog]] under a unique name in the TableEnvironment's schema.
@@ -258,10 +260,9 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
   @throws[CatalogAlreadyExistException]
   def registerCatalogInternal(
     name: String,
-    catalog: ReadableCatalog,
-    isStreaming: Boolean): Unit = {
+    catalog: ReadableCatalog): Unit = {
 
-    catalogManager.registerCatalog(name, catalog, isStreaming)
+    catalogManager.registerCatalog(name, catalog)
   }
 
   /**

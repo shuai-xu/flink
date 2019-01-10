@@ -1137,8 +1137,4 @@ abstract class StreamTableEnvironment(
       registerTableWithPk(name, scan(tempTable), tableSchema.getPrimaryKeys.toList)
     }
   }
-
-  override def registerCatalog(name: String, catalog: ReadableCatalog): Unit = {
-    registerCatalogInternal(name, catalog, true)
-  }
 }

@@ -51,7 +51,7 @@ public class CatalogManagerTest {
 		assertFalse(manager.getCatalogs().contains(TEST_CATALOG_NAME));
 		assertFalse(rootSchema.getSubSchemaNames().contains(TEST_CATALOG_NAME));
 
-		manager.registerCatalog(TEST_CATALOG_NAME, CommonTestData.getTestFlinkInMemoryCatalog(), true);
+		manager.registerCatalog(TEST_CATALOG_NAME, CommonTestData.getTestFlinkInMemoryCatalog());
 
 		assertEquals(2, manager.getCatalogs().size());
 		assertTrue(manager.getCatalogs().contains(TEST_CATALOG_NAME));
@@ -60,7 +60,7 @@ public class CatalogManagerTest {
 
 	@Test
 	public void testSetDefaultCatalog() {
-		manager.registerCatalog(TEST_CATALOG_NAME, CommonTestData.getTestFlinkInMemoryCatalog(), true);
+		manager.registerCatalog(TEST_CATALOG_NAME, CommonTestData.getTestFlinkInMemoryCatalog());
 
 		assertEquals(manager.getCatalog(CatalogManager.DEFAULT_CATALOG_NAME), manager.getDefaultCatalog());
 

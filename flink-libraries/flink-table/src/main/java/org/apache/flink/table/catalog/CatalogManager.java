@@ -71,8 +71,7 @@ public class CatalogManager {
 		defaultCatalog = DEFAULT_CATALOG_NAME;
 		defaultDb = DEFAULT_DATABASE_NAME;
 
-		// TODO: re-evaluate isStreaming
-		CatalogCalciteSchema.registerCatalog(rootSchema, DEFAULT_CATALOG_NAME, inMemoryCatalog, true);
+		CatalogCalciteSchema.registerCatalog(rootSchema, DEFAULT_CATALOG_NAME, inMemoryCatalog);
 	}
 
 	/**
@@ -87,13 +86,12 @@ public class CatalogManager {
 
 		this.defaultCatalog = defaultCatalog;
 
-		// TODO: re-evaluate isStreaming
 		for (Map.Entry<String, ReadableCatalog> e : catalogs.entrySet()) {
-			CatalogCalciteSchema.registerCatalog(rootSchema, e.getKey(), e.getValue(), true);
+			CatalogCalciteSchema.registerCatalog(rootSchema, e.getKey(), e.getValue());
 		}
 	}
 
-	public void registerCatalog(String catalogName, ReadableCatalog catalog, boolean isStreaming) throws CatalogAlreadyExistException {
+	public void registerCatalog(String catalogName, ReadableCatalog catalog) throws CatalogAlreadyExistException {
 		checkArgument(!StringUtils.isNullOrWhitespaceOnly(catalogName), "catalogName cannot be null or empty");
 		checkNotNull(catalog, "catalog cannot be null");
 
@@ -104,7 +102,7 @@ public class CatalogManager {
 		catalog.open();
 		catalogs.put(catalogName, catalog);
 		catalog.open();
-		CatalogCalciteSchema.registerCatalog(rootSchema, catalogName, catalog, isStreaming);
+		CatalogCalciteSchema.registerCatalog(rootSchema, catalogName, catalog);
 	}
 
 	public ReadableCatalog getCatalog(String catalogName) throws CatalogNotExistException {

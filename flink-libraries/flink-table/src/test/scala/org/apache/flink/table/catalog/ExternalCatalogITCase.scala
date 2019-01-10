@@ -113,7 +113,8 @@ class ExternalCatalogITCase {
         null,
         -1,
         0,
-        0
+        0,
+        false
       ),
       false)
     tableEnv.sqlUpdate("" +
@@ -183,7 +184,8 @@ class ExternalCatalogITCase {
         null,
         -1,
         0,
-        0
+        0,
+        true
       ),
       false)
     tableEnv.sqlUpdate("" +
@@ -253,7 +255,8 @@ class ExternalCatalogITCase {
         "c",
         1L,
         0,
-        0
+        0,
+        true
       ),
       false)
     tableEnv.sqlUpdate("" +
@@ -321,7 +324,8 @@ class ExternalCatalogITCase {
         null,
         1,
         0,
-        0
+        0,
+        false
       ),
       false)
     tableEnv.sqlUpdate("" +
@@ -390,7 +394,8 @@ class ExternalCatalogITCase {
         "c",
         1L,
         0,
-        0
+        0,
+        false
       ),
       false)
     tableEnv.sqlUpdate("" +

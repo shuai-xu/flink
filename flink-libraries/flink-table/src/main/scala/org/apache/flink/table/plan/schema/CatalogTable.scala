@@ -79,7 +79,8 @@ class CatalogTable(
       table.getRowTimeField,
       table.getWatermarkOffset,
       table.getCreateTime,
-      table.getLastAccessTime)
+      table.getLastAccessTime,
+      isStreaming)
     new CatalogTable(name, newTable, isStreaming)
   }
 

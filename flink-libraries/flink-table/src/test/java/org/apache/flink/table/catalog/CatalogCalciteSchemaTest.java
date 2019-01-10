@@ -70,9 +70,9 @@ public class CatalogCalciteSchemaTest {
 	@Before
 	public void setup() {
 		rootSchemaPlus = CalciteSchema.createRootSchema(true, false).plus();
-		final ReadableCatalog catalog = CommonTestData.getTestFlinkInMemoryCatalog();
+		final ReadableCatalog catalog = CommonTestData.getTestFlinkInMemoryCatalog(false);
 
-		CatalogCalciteSchema.registerCatalog(rootSchemaPlus, catalogName, catalog, false);
+		CatalogCalciteSchema.registerCatalog(rootSchemaPlus, catalogName, catalog);
 		catalogSchema = rootSchemaPlus.getSubSchema("test");
 
 		FlinkTypeFactory typeFactory = new FlinkTypeFactory(new FlinkTypeSystem());
@@ -93,8 +93,8 @@ public class CatalogCalciteSchemaTest {
 	public void testDuplicatedRegisterCatalog() {
 		SchemaPlus rootSchemaPlus = CalciteSchema.createRootSchema(true, false).plus();
 		ReadableCatalog catalog = CommonTestData.getTestFlinkInMemoryCatalog();
-		CatalogCalciteSchema.registerCatalog(rootSchemaPlus, catalogName, catalog, true);
-		CatalogCalciteSchema.registerCatalog(rootSchemaPlus, catalogName, catalog, true);
+		CatalogCalciteSchema.registerCatalog(rootSchemaPlus, catalogName, catalog);
+		CatalogCalciteSchema.registerCatalog(rootSchemaPlus, catalogName, catalog);
 	}
 
 	@Test

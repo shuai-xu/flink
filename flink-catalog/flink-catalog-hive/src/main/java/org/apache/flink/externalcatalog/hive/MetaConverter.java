@@ -225,7 +225,8 @@ public class MetaConverter {
 				null,
 				-1,
 				table.getCreateTime() * 1000L,
-				table.getLastAccessTime() * 1000L);
+				table.getLastAccessTime() * 1000L,
+				false);
 	}
 
 	static ExternalCatalogTablePartition convertToExternalCatalogPartition(

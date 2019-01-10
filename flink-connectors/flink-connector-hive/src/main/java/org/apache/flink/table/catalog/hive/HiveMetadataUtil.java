@@ -205,7 +205,8 @@ public class HiveMetadataUtil {
 			null,
 			-1L,
 			(long) hiveTable.getCreateTime(),
-			(long) hiveTable.getLastAccessTime());
+			(long) hiveTable.getLastAccessTime(),
+			false);
 	}
 
 	/**

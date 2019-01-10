@@ -49,10 +49,14 @@ public class CatalogTestUtil {
 	}
 
 	public static CatalogTable createCatalogTable() {
-		return createCatalogTable(getTestData());
+		return createCatalogTable(getTestData(), true);
 	}
 
-	public static CatalogTable createCatalogTable(List<Row> data) {
+	public static CatalogTable createCatalogTable(boolean isStreaming) {
+		return createCatalogTable(getTestData(), isStreaming);
+	}
+
+	public static CatalogTable createCatalogTable(List<Row> data, boolean isStreaming) {
 		TableSchema tableSchema = TableSchemaUtil.fromDataType(DataTypes.of(getRowTypeInfo()), Option.empty());
 
 		RichTableSchema richTableSchema = new RichTableSchema(tableSchema.getFieldNames(), tableSchema.getFieldTypes());
@@ -73,7 +77,8 @@ public class CatalogTestUtil {
 			null,
 			-1L,
 			System.currentTimeMillis(),
-			-1L
+			-1L,
+			isStreaming
 		);
 	}
 
@@ -111,7 +116,8 @@ public class CatalogTestUtil {
 			null,
 			-1L,
 			0L,
-			-1L);
+			-1L,
+			true);
 	}
 
 	public static CatalogTable createCatalogTable(
@@ -133,7 +139,8 @@ public class CatalogTestUtil {
 			null,
 			-1L,
 			0L,
-			-1L);
+			-1L,
+			true);
 	}
 
 }

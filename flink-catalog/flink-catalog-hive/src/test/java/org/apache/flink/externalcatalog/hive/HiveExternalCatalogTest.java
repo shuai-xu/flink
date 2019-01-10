@@ -121,7 +121,8 @@ public class HiveExternalCatalogTest {
 				null,
 				-1,
 				table.getCreateTime(),
-				table.getLastAccessTime());
+				table.getLastAccessTime(),
+				false);
 
 		catalog.createTable(
 				"src",
@@ -186,7 +187,8 @@ public class HiveExternalCatalogTest {
 				null,
 				-1,
 				table.getCreateTime(),
-				table.getLastAccessTime());
+				table.getLastAccessTime(),
+				false);
 
 		catalog.createTable(
 				"src",
@@ -460,7 +462,8 @@ public class HiveExternalCatalogTest {
 			null,
 			-1,
 			System.currentTimeMillis(),
-			System.currentTimeMillis());
+			System.currentTimeMillis(),
+			false);
 	}
 
 	private CatalogTable createPartitionedTableInstance()  {
@@ -485,7 +488,8 @@ public class HiveExternalCatalogTest {
 				null,
 				-1,
 				System.currentTimeMillis(),
-				System.currentTimeMillis());
+				System.currentTimeMillis(),
+				false);
 	}
 
 	@After

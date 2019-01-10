@@ -659,6 +659,50 @@ public class LocalExecutorITCase extends TestLogger {
 		}
 	}
 
+	@Test(timeout = 30_000L)
+	public void testBatchQueryExecutionFromDDLTable() throws Exception {
+		final URL url = getClass().getClassLoader().getResource("test-data.csv");
+		Objects.requireNonNull(url);
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "batch");
+		replaceVars.put("$VAR_RESULT_MODE", "table");
+		replaceVars.put("$VAR_UPDATE_MODE", "");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
+
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		// Create a table with DDL, which has the same schema of TableNumber1
+		executor.createTable(
+			session,
+			"CREATE TABLE TableFromDDL(IntegerField1 INT, StringField1 VARCHAR)" +
+				" WITH (" +
+				"  type = 'CSV'" +
+				", path = '" + url.getPath() + "'" +
+				", commentsPrefix = '#')");
+
+		try {
+			final ResultDescriptor desc = executor.executeQuery(session, "SELECT scalarUDF(IntegerField1) FROM TableFromDDL");
+
+			assertTrue(desc.isMaterialized());
+
+			final List<String> actualResults = retrieveTableResult(executor, session, desc.getResultId());
+
+			final List<String> expectedResults = new ArrayList<>();
+			expectedResults.add("47");
+			expectedResults.add("27");
+			expectedResults.add("37");
+			expectedResults.add("37");
+			expectedResults.add("47");
+			expectedResults.add("57");
+
+			TestBaseUtils.compareResultCollections(expectedResults, actualResults, Comparator.naturalOrder());
+		} finally {
+			executor.stop(session);
+		}
+	}
+
 	private void executeStreamQueryTable(
 			Map<String, String> replaceVars,
 			String query,

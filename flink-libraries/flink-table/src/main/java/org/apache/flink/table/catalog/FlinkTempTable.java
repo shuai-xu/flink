@@ -63,7 +63,8 @@ public class FlinkTempTable extends CatalogTable {
 			rowTimeField,
 			watermarkOffset,
 			createTime,
-			lastAccessTime);
+			lastAccessTime,
+			true);
 
 		this.abstractTable = table;
 	}
