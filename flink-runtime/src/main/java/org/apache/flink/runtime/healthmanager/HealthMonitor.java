@@ -110,11 +110,15 @@ public class HealthMonitor {
 			this.config.setString(key , getJobConfig().getConfig().getString(key, null));
 		}
 
-		loadDetectors();
-		loadResolvers();
-		loadActionSelector();
-		timedTaskHandler = executorService.scheduleAtFixedRate(
-				new HealthChecker(), 0, config.getLong(HEALTH_CHECK_INTERNAL), TimeUnit.MILLISECONDS);
+		long checkInterval = config.getLong(HEALTH_CHECK_INTERNAL);
+
+		if (checkInterval > 0) {
+			loadDetectors();
+			loadResolvers();
+			loadActionSelector();
+			timedTaskHandler = executorService.scheduleAtFixedRate(
+					new HealthChecker(), 0, checkInterval, TimeUnit.MILLISECONDS);
+		}
 	}
 
 	public void stop() {

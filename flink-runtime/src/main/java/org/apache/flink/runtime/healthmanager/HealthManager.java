@@ -82,8 +82,10 @@ public class HealthManager {
 	public void start() {
 		LOGGER.info("Starting health manager.");
 		long interval = config.getLong(JOB_CHECK_INTERNAL);
-		timedTaskHandler = executorService.scheduleAtFixedRate(
-				new RunningJobListChecker(), 0, interval, TimeUnit.MILLISECONDS);
+		if (interval > 0) {
+			timedTaskHandler = executorService.scheduleAtFixedRate(
+					new RunningJobListChecker(), 0, interval, TimeUnit.MILLISECONDS);
+		}
 	}
 
 	public void stop() {
