@@ -178,7 +178,7 @@ class BatchTableEnvironment(
     * [[DataStream]].
     *
     * @param name The name under which the [[DataStream]] is registered in the catalog.
-    * @param dataSet The [[DataStream]] to register.
+    * @param boundedStream The [[DataStream]] to register.
     * @tparam T The type of the [[DataStream]] to register.
     */
   def registerOrReplaceBoundedStream[T](name: String, boundedStream: DataStream[T]): Unit = {

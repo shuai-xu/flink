@@ -113,9 +113,13 @@ public class RunningUnitGraphManagerPlugin implements GraphManagerPlugin {
 			// jobVertex runningUnit input depend.
 			for (BatchExecRelStage stage : relRunningUnit.getAllRelStages()) {
 				for (BatchExecRelStage dependStage : stage.getDependStageList(BatchExecRelStage.DependType.DATA_TRIGGER)) {
-					JobVertexID inputJobVertexID = streamNodeIdToVertex.get(dependStage.getTransformationIDList().get(0));
-					inputRunningUnitMap.computeIfAbsent(inputJobVertexID, k -> new LinkedHashSet<>()).add(jobVertexRunningUnit);
-					jobVertexRunningUnit.addInputDepend(inputJobVertexID);
+					for (int id : dependStage.getTransformationIDList()) {
+						JobVertexID inputJobVertexID = streamNodeIdToVertex.get(id);
+						if (inputJobVertexID != null) {
+							inputRunningUnitMap.computeIfAbsent(inputJobVertexID, k -> new LinkedHashSet<>()).add(jobVertexRunningUnit);
+							jobVertexRunningUnit.addInputDepend(inputJobVertexID);
+						}
+					}
 				}
 			}
 			runningUnitMap.put(relRunningUnit, jobVertexRunningUnit);

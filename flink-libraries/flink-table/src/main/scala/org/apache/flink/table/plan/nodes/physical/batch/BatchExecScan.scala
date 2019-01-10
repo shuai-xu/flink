@@ -30,6 +30,8 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 
+import scala.collection.JavaConversions._
+
 trait BatchExecScan extends CommonScan[BinaryRow] with RowBatchExecRel with Logging {
 
   private[flink] var sourceResSpec: ResourceSpec = _
@@ -58,7 +60,7 @@ trait BatchExecScan extends CommonScan[BinaryRow] with RowBatchExecRel with Logg
 
     input.setParallelism(resultPartitionCount)
     input.setResources(sourceResSpec, sourceResSpec)
-    tableEnv.getRUKeeper.addTransformation(this, input)
+    input.getTransitivePredecessors.foreach(t => tableEnv.getRUKeeper.addTransformation(this, t))
   }
 
   def convertToInternalRow(
