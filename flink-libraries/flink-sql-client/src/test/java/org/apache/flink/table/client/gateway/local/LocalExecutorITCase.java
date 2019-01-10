@@ -572,7 +572,8 @@ public class LocalExecutorITCase extends TestLogger {
 			session,
 			"CREATE TABLE SinkTableFromDDL(IntegerField INT, StringField VARCHAR)" +
 				" WITH (" +
-				"  type = 'UPSERTCSV'" +
+				"  type = 'CSV'" +
+				", updateMode = 'UPSERT'" +
 				", path = '" + csvOutputPath + "')");
 
 		try {
@@ -629,7 +630,8 @@ public class LocalExecutorITCase extends TestLogger {
 			session,
 			"CREATE TABLE SinkTableFromDDL(IntegerField INT, StringField VARCHAR)" +
 				" WITH (" +
-				"  type = 'RETRACTCSV'" +
+				"  type = 'CSV'" +
+				", updateMode = 'RETRACT'" +
 				", path = '" + csvOutputPath + "')");
 
 		try {
