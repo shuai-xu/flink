@@ -458,15 +458,8 @@ object RankUtil {
             // we can utilize unary rank function to speed up processing
             UnaryUpdateRank(uniqueKeys.iterator().next().toArray)
           } else {
-            if (tableConfig.getConf.getBoolean(
-              TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_ENABLED)) {
-              // if enabled in config, we can use approximate rank function in this scenario.
-              // It is accurate in most situations, and faster than retract rank
-              ApproxUpdateRank(uniqueKeys.iterator().next().toArray)
-            } else {
-              // no other choices, have to use retract rank
-              RetractRank
-            }
+            // no other choices, have to use retract rank
+            RetractRank
           }
         }
       }
@@ -484,12 +477,6 @@ object RankUtil {
   case class UpdateFastRank(primaryKeys: Array[Int]) extends RankStrategy {
     override def toString: String = {
       "UpdateFastRank" + primaryKeys.mkString("[", ",", "]")
-    }
-  }
-
-  case class ApproxUpdateRank(primaryKeys: Array[Int]) extends RankStrategy {
-    override def toString: String = {
-      "ApproxUpdateRank" + primaryKeys.mkString("[", ",", "]")
     }
   }
 

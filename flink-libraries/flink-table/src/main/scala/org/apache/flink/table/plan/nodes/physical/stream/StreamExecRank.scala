@@ -179,28 +179,6 @@ class StreamExecRank(
           generateRetraction,
           tableConfig)
 
-      case ApproxUpdateRank(primaryKeys) =>
-        val approxBufferMultiplier = tableConfig.getConf.getLong(
-          TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_MULTIPLIER)
-        val approxBufferMinSize = tableConfig.getConf.getLong(
-          TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_SIZE_MIN)
-        val rowKeyType = createRowKeyType(primaryKeys, inputSchema)
-        val rowKeySelector = createKeySelector(primaryKeys, inputSchema)
-        new ApproxUpdateRankFunction(
-          inputRowTypeInfo,
-          rowKeyType,
-          rowKeySelector,
-          sorter,
-          sortKeySelector.asInstanceOf[KeySelector[BaseRow, BaseRow]],
-          schema.arity,
-          rankKind,
-          rankRange,
-          cacheSize,
-          approxBufferMultiplier,
-          approxBufferMinSize,
-          generateRetraction,
-          tableConfig)
-
       case UnaryUpdateRank(primaryKeys) =>
         // unary update rank requires a key selector that returns key of other types rather
         // than BaseRow

@@ -353,33 +353,6 @@ class RankTest extends TableTestBase {
   }
 
   @Test
-  def testTopNWithGroupByTwoAgg(): Unit = {
-    val subquery =
-      """
-        |SELECT a, b, SUM(c) as sum_c, COUNT(c) as cnt
-        |FROM MyTable
-        |GROUP BY a, b
-      """.stripMargin
-
-    val sql =
-      s"""
-         |SELECT *
-         |FROM (
-         |  SELECT a, b, sum_c, cnt,
-         |      ROW_NUMBER() OVER (PARTITION BY b ORDER BY sum_c DESC, cnt ASC) as rank_num
-         |  FROM ($subquery))
-         |WHERE rank_num <= 10
-      """.stripMargin
-
-      streamUtil.tableEnv.getConfig.getConf.setBoolean(
-        TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_ENABLED, true)
-    streamUtil.tableEnv.getConfig.getConf.setLong(
-      TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_SIZE_MIN, 20L)
-
-    streamUtil.verifyPlanAndTrait(sql)
-  }
-
-  @Test
   def testTopNWithGroupByConstantKey(): Unit = {
     val subquery =
       """

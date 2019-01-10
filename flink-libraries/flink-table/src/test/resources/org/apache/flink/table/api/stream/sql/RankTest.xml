@@ -210,17 +210,6 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[count_c DESC
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testTopNWithGroupByTwoAgg">
-    <Resource name="plan">
-      <![CDATA[
-StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC, cnt ASC], rankRange=[rankStart=1, rankEnd=10], strategy=[ApproxUpdateRank[0,1]], select=[*, rowNum], retract=[false], accMode=[Acc])
-+- StreamExecExchange(distribution=[hash[b]], retract=[false], accMode=[Acc])
-   +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) AS sum_c, COUNT(c) AS cnt], retract=[false], accMode=[Acc])
-      +- StreamExecExchange(distribution=[hash[a, b]], retract=[true], accMode=[Acc])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
-]]>
-    </Resource>
-  </TestCase>
   <TestCase name="testTopNWithKeyChanged">
     <Resource name="plan">
       <![CDATA[

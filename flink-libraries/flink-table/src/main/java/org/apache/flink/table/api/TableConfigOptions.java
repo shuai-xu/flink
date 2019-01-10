@@ -224,29 +224,10 @@ public class TableConfigOptions {
 	//  topN Options
 	// ------------------------------------------------------------------------
 
-	public static final ConfigOption<Boolean> SQL_EXEC_TOPN_APPROXIMATE_ENABLED =
-			key("sql.exec.topn.approximate.enabled")
-			.defaultValue(false)
-			.withDescription("Switch on/off topn approximate update rank operator.");
-
 	public static final ConfigOption<Long> SQL_EXEC_TOPN_CACHE_SIZE =
 			key("sql.exec.topn.cache.size")
 			.defaultValue(10000L)
 			.withDescription("Cache size of every topn task.");
-
-	public static final ConfigOption<Long> SQL_EXEC_TOPN_APPROXIMATE_BUFFER_MULTIPLIER =
-			key("sql.exec.topn.approximate.buffer.multiplier")
-			.defaultValue(2L)
-			.withDescription("In-memory sort map size multiplier (x2, for example) for topn update" +
-				" rank. When approximation is enabled, default is 2. NOTE, We should make sure " +
-				"sort map size limit * sql.exec.topn.approximate.buffer.multiplier < " + SQL_EXEC_TOPN_CACHE_SIZE);
-
-	public static final ConfigOption<Long> SQL_EXEC_TOPN_APPROXIMATE_BUFFER_SIZE_MIN =
-			key("sql.exec.topn.approximate.buffer.size.min")
-			.defaultValue(400L)
-			.withDescription("In-memory sort map size low minimal size. default is 400, " +
-				"and 0 meaning no low limit for each topn job, if" +
-				" buffer.multiplier * topn < buffer.minsize, then buffer is set to buffer.minsize.");
 
 	// ------------------------------------------------------------------------
 	//  Runtime Filter Options

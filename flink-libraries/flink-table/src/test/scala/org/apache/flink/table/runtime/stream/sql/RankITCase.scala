@@ -216,67 +216,6 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
   }
 
   @Test
-  def testTopNWithApprox(): Unit = {
-    val data = List(
-      ("book", 11, 100),
-      ("book", 11, 200),
-      ("book", 12, 400),
-      ("book", 12, 500),
-      ("book", 10, 600),
-      ("book", 10, 700),
-      ("book", 9, 800),
-      ("book", 9, 900),
-      ("book", 10, 500),
-      ("book", 8, 110),
-      ("book", 8, 120),
-      ("book", 7, 1800),
-      ("book", 9, 300),
-      ("book", 6, 1900),
-      ("book", 7, 50),
-      ("book", 11, 1800),
-      ("book", 7, 50),
-      ("book", 8, 2000),
-      ("book", 6, 700),
-      ("book", 5, 800),
-      ("book", 4, 910),
-      ("book", 3, 1000),
-      ("book", 2, 1100),
-      ("book", 1, 1200)
-    )
-
-    val ds = failingDataSource(data).toTable(tEnv, 'category, 'shopId, 'num)
-    tEnv.registerTable("T", ds)
-
-    val sql =
-      """
-        |SELECT *
-        |FROM (
-        |  SELECT category, shopId, num,
-        |      ROW_NUMBER() OVER (PARTITION BY category ORDER BY num ASC, cnt DESC) as rank_num
-        |  FROM (
-        |     SELECT category, shopId, sum(num) as num, count(num) as cnt
-        |     FROM T
-        |     GROUP BY category, shopId
-        |  ))
-        |WHERE rank_num <= 3
-      """.stripMargin
-
-      tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_ENABLED, true)
-    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_SIZE_MIN, 20)
-
-    val sink = new TestingUpsertTableSink(Array(0, 3))
-    tEnv.sqlQuery(sql).writeToSink(sink)
-    env.execute()
-
-    val updatedExpected = List(
-      "book,5,800,1",
-      "book,12,900,2",
-      "book,4,910,3")
-
-    assertEquals(updatedExpected.sorted, sink.getUpsertResults.sorted)
-  }
-
-  @Test
   def testTopNWithUnary(): Unit = {
     val data = List(
       ("book", 11, 100),
@@ -565,50 +504,6 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
   }
 
   @Test
-  def testTopNWithGroupByAndApprox(): Unit = {
-    val data = List(
-      ("book", 1, 11),
-      ("book", 2, 19),
-      ("book", 4, 13),
-      ("book", 1, 11),
-      ("fruit", 4, 33),
-      ("fruit", 5, 12),
-      ("fruit", 3, 44),
-      ("fruit", 5, 22))
-
-    val ds = failingDataSource(data).toTable(tEnv, 'category, 'shopId, 'num)
-    tEnv.registerTable("T", ds)
-
-    val sql =
-      """
-        |SELECT *
-        |FROM (
-        |  SELECT category, shopId, num, cnt,
-        |      ROW_NUMBER() OVER (PARTITION BY category ORDER BY num DESC, cnt ASC) as rank_num
-        |  FROM (
-        |     SELECT category, shopId, sum(num) as num, count(num) as cnt
-        |     FROM T
-        |     GROUP BY category, shopId
-        |  ))
-        |WHERE rank_num <= 2
-      """.stripMargin
-
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_ENABLED, true)
-    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_SIZE_MIN, 20)
-
-    val tableSink = new TestingUpsertTableSink(Array(0, 4))
-    tEnv.sqlQuery(sql).writeToSink(tableSink)
-    env.execute()
-
-    val updatedExpected = List(
-      "book,1,22,2,1",
-      "book,2,19,1,2",
-      "fruit,3,44,1,1",
-      "fruit,5,34,2,2")
-    assertEquals(updatedExpected.sorted, tableSink.getUpsertResults.sorted)
-  }
-
-  @Test
   def testTopNthWithGroupByAndRetract(): Unit = {
     val data = List(
       ("book", 1, 11),
@@ -645,56 +540,6 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       "book,2,19,1,2",
       "fruit,5,34,2,2")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
-  }
-
-  @Test
-  def testTopNthWithGroupByAndApprox(): Unit = {
-    val data = List(
-      ("book", 1, 11),
-      ("book", 2, 19),
-      ("book", 4, 13),
-      ("book", 1, 11),
-      ("book", 4, 1),
-      ("book", 4, 8),
-      ("book", 1, 0),
-      ("book", 1, 0),
-      ("book", 2, 3),
-      ("fruit", 4, 33),
-      ("fruit", 5, 12),
-      ("fruit", 3, 44),
-      ("fruit", 5, 22),
-      ("fruit", 4, 1),
-      ("fruit", 5, 0)
-    )
-
-    val ds = failingDataSource(data).toTable(tEnv, 'category, 'shopId, 'num)
-    tEnv.registerTable("T", ds)
-
-    val sql =
-      """
-        |SELECT *
-        |FROM (
-        |  SELECT category, shopId, num, cnt,
-        |      ROW_NUMBER() OVER (PARTITION BY category ORDER BY num DESC, cnt ASC) as rank_num
-        |  FROM (
-        |     SELECT category, shopId, sum(num) as num, count(num) as cnt
-        |     FROM T
-        |     GROUP BY category, shopId
-        |  ))
-        |WHERE rank_num = 2
-      """.stripMargin
-
-     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_ENABLED, true)
-    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_SIZE_MIN, 20)
-
-    val tableSink = new TestingUpsertTableSink(Array(0, 4))
-    tEnv.sqlQuery(sql).writeToSink(tableSink)
-    env.execute()
-
-    val updatedExpected = List(
-      "book,4,22,3,2",
-      "fruit,4,34,2,2")
-    assertEquals(updatedExpected.sorted, tableSink.getUpsertResults.sorted)
   }
 
   @Test
@@ -985,86 +830,6 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
   }
 
   @Test
-  def testTopNApproxComplexScenario(): Unit = {
-    val data = List(
-      ("book", 1, 11),
-      ("book", 2, 22),
-      ("book", 3, 33),
-      ("book", 4, 44),
-      ("book", 4, -24),  // k1, k2, k3, k4  =forward update=> k1, k4, k2, k3
-      ("book", 1, 12),   // k1, k4, k2, k3  =backward update=> k4, k2, k1, k3
-      ("book", 5, 26),   // k4, k2, k1, k3  =insert=> k4,k2,k1,k5 | k3
-      ("book", 6, 66),
-      ("book", 7, 77),
-      ("book", 1, 35),   // k4,k2,k1,k5 | k3,k6,k7  =backward update=> k4,k2,k5,k3 | k1,k6,k7
-      ("book", 6, -42),  // k4,k2,k5,k3 | k1,k6,k7  =forward update=> k4,k2,k6,k5 | k3,k1,k7
-      ("book", 8, 88),
-      ("book", 9, 23),   // k4,k2,k6,k5 | k3,k1,k7,k8  =insert=> k4,k2,k9,k6 | k5,k3,k1,k7
-      ("book", 10, 100)  // insert out of range while buffer's full
-    )
-
-    env.setParallelism(1)
-    val ds = failingDataSource(data).toTable(tEnv, 'category, 'shopId, 'sellId)
-    tEnv.registerTable("T", ds)
-
-    val sql =
-      """
-        |SELECT *
-        |FROM (
-        |  SELECT category, shopId, sellSums, cnt,
-        |      ROW_NUMBER() OVER (PARTITION BY category ORDER BY sellSums ASC, cnt DESC) as rank_num
-        |  FROM (
-        |     SELECT category, shopId, SUM(sellId) as sellSums, COUNT(sellId) as cnt
-        |     FROM T
-        |     GROUP BY category, shopId
-        |  ))
-        |WHERE rank_num <= 4
-      """.stripMargin
-
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_ENABLED, true)
-    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_SIZE_MIN, 0)
-
-    val tableSink = new TestingUpsertTableSink(Array(0, 4))
-    tEnv.sqlQuery(sql).writeToSink(tableSink)
-    env.execute()
-
-    val expected = List(
-      "(true,book,1,11,1,1)",
-      "(true,book,2,22,1,2)",
-      "(true,book,3,33,1,3)",
-      "(true,book,4,44,1,4)",
-
-      "(true,book,4,20,2,2)",  // forward update of k4
-      "(true,book,2,22,1,3)",
-      "(true,book,3,33,1,4)",
-
-      "(true,book,4,20,2,1)",  // backward update of k1
-      "(true,book,2,22,1,2)",
-      "(true,book,1,23,2,3)",
-
-      "(true,book,5,26,1,4)",  // insert k5
-
-      "(true,book,5,26,1,3)",  // backward update of k1
-      "(true,book,3,33,1,4)",
-
-      "(true,book,6,24,2,3)",  // forward update of k6
-      "(true,book,5,26,1,4)",
-
-      "(true,book,9,23,1,3)",  // insert k9
-      "(true,book,6,24,2,4)")
-
-    assertEquals(expected, tableSink.getRawResults)
-
-    val updatedExpected = List(
-      "book,4,20,2,1",
-      "book,2,22,1,2",
-      "book,9,23,1,3",
-      "book,6,24,2,4")
-
-    assertEquals(updatedExpected.sorted, tableSink.getUpsertResults.sorted)
-  }
-
-  @Test
   def testTopNUnaryComplexScenario(): Unit = {
     val data = List(
       ("book", 1, 11),
@@ -1147,69 +912,6 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       "book,2,9,1",
       "book,7,10,2",
       "book,12,10,3")
-
-    assertEquals(updatedExpected.sorted, tableSink.getUpsertResults.sorted)
-  }
-
-  @Test
-  def testTopNWithTwoSortFieldsWithoutRowNumber(): Unit = {
-    val data = List(
-      ("book", 1, 100),
-      ("book", 3, 110),
-      ("book", 4, 120),
-      ("book", 1, 200),
-      ("book", 1, 200),
-      ("book", 2, 300),
-      ("book", 2, 400),
-      ("book", 4, 500),
-      ("book", 1, 400),
-      ("fruit", 5, 100))
-
-    env.setParallelism(1)
-
-    val ds = failingDataSource(data).toTable(tEnv, 'category, 'shopId, 'sellId)
-    tEnv.registerTable("T", ds)
-
-    val sql =
-      """
-        |SELECT category, shopId, avgSellId, cnt
-        |FROM (
-        |  SELECT category, shopId, avgSellId, cnt,
-        |    ROW_NUMBER() OVER (PARTITION BY category ORDER BY avgSellId DESC, cnt ASC) as rank_num
-        |  FROM (
-        |     SELECT category, shopId, AVG(sellId) as avgSellId, COUNT(sellId) as cnt
-        |     FROM T
-        |     GROUP BY category, shopId
-        |  ))
-        |WHERE rank_num <= 3
-      """.stripMargin
-
-    val tableSink = new TestingUpsertTableSink(Array(0, 1))
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_ENABLED, true)
-    tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_TOPN_APPROXIMATE_BUFFER_SIZE_MIN, 0)
-    tEnv.sqlQuery(sql).writeToSink(tableSink)
-    env.execute()
-
-    val expected = List(
-      "(true,book,1,100.0,1)",
-      "(true,book,3,110.0,1)",
-      "(true,book,4,120.0,1)",
-      "(true,book,1,150.0,2)",
-      "(true,book,1,166.66666666666666,3)",
-      "(true,book,2,300.0,1)",
-      "(false,book,3,110.0,1)",
-      "(true,book,2,350.0,2)",
-      "(true,book,4,310.0,2)",
-      "(true,book,1,225.0,4)",
-      "(true,fruit,5,100.0,1)")
-
-    assertEquals(expected, tableSink.getRawResults)
-
-    val updatedExpected = List(
-      "book,1,225.0,4",
-      "book,4,310.0,2",
-      "book,2,350.0,2",
-      "fruit,5,100.0,1")
 
     assertEquals(updatedExpected.sorted, tableSink.getUpsertResults.sorted)
   }
