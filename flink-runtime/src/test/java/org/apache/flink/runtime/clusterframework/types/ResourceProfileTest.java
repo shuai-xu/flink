@@ -281,4 +281,71 @@ public class ResourceProfileTest {
 			}})
 		);
 	}
+
+	@Test
+	public void testAddTo() {
+		ResourceProfile rs1 = new ResourceProfile(
+			3,
+			300,
+			301,
+			302,
+			303,
+			new HashMap<String, Resource>() {{
+				this.put("extend_1", new GPUResource(305));
+				this.put("extend_2", new GPUResource(306));
+			}});
+
+		ResourceProfile rs2 = new ResourceProfile(
+			2,
+			200,
+			201,
+			202,
+			203,
+			new HashMap<String, Resource>() {{
+				this.put("extend_1", new GPUResource(225));
+				this.put("extend_3", new GPUResource(321));
+			}}
+		);
+
+		rs1.addTo(rs2);
+		assertEquals(new ResourceProfile(
+			5,
+			500,
+			502,
+			504,
+			506,
+			new HashMap<String, Resource>() {{
+				this.put("extend_1", new GPUResource(530));
+				this.put("extend_2", new GPUResource(306));
+				this.put("extend_3", new GPUResource(321));
+			}}), rs1
+		);
+	}
+
+	@Test
+	public void testMultiply() {
+		ResourceProfile rs1 = new ResourceProfile(
+			3,
+			300,
+			301,
+			302,
+			303,
+			new HashMap<String, Resource>() {{
+				this.put("extend_1", new GPUResource(305));
+				this.put("extend_2", new GPUResource(306));
+			}});
+
+		ResourceProfile result = rs1.multiply(4);
+		assertEquals(new ResourceProfile(
+			3 * 4,
+			300 * 4,
+			301 * 4,
+			302 * 4,
+			303 * 4,
+			new HashMap<String, Resource>() {{
+				this.put("extend_1", new GPUResource(305 * 4));
+				this.put("extend_2", new GPUResource(306 * 4));
+			}}), result
+		);
+	}
 }

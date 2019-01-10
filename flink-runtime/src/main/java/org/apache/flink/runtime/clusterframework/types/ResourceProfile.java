@@ -50,25 +50,27 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 
 	public static final ResourceProfile UNKNOWN = new ResourceProfile(-1.0, -1);
 
+	public static final ResourceProfile EMTPY = new ResourceProfile(0, 0);
+
 	// ------------------------------------------------------------------------
 
 	/** How many cpu cores are needed, use double so we can specify cpu like 0.1. */
-	private final double cpuCores;
+	private double cpuCores;
 
 	/** How many heap memory in mb are needed. */
-	private final int heapMemoryInMB;
+	private int heapMemoryInMB;
 
 	/** How many direct memory in mb are needed. */
-	private final int directMemoryInMB;
+	private int directMemoryInMB;
 
 	/** How many native memory in mb are needed. */
-	private final int nativeMemoryInMB;
+	private int nativeMemoryInMB;
 
 	/** Memory used for the task in the slot to communicate with its upstreams. Set by job master. */
-	private final int networkMemoryInMB;
+	private int networkMemoryInMB;
 
 	/** A extensible field for user specified resources from {@link ResourceSpec}. */
-	private final Map<String, Resource> extendedResources = new HashMap<>(1);
+	private Map<String, Resource> extendedResources = new HashMap<>(1);
 
 	// ------------------------------------------------------------------------
 
@@ -321,25 +323,43 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 	}
 
 	public ResourceProfile merge(ResourceProfile another) {
-		Map<String, Resource> newExtendedResoures = Collections.emptyMap();
+		ResourceProfile resourceProfile = new ResourceProfile(this);
+		resourceProfile.addTo(another);
+		return resourceProfile;
+	}
+
+	public void addTo(ResourceProfile another) {
+		this.cpuCores += another.getCpuCores();
+		this.heapMemoryInMB += another.getHeapMemoryInMB();
+		this.directMemoryInMB += another.getDirectMemoryInMB();
+		this.nativeMemoryInMB += another.getNativeMemoryInMB();
+		this.networkMemoryInMB += another.getNetworkMemoryInMB();
 		if (!extendedResources.isEmpty() || !another.extendedResources.isEmpty()) {
-			newExtendedResoures = new HashMap<>();
-			newExtendedResoures.putAll(extendedResources);
 			for (Map.Entry<String, Resource> extendResource : another.extendedResources.entrySet()) {
-				Resource rfValue = newExtendedResoures.get(extendResource.getKey());
+				Resource rfValue = extendedResources.get(extendResource.getKey());
 				if (rfValue != null) {
-					newExtendedResoures.put(extendResource.getKey(), extendResource.getValue().merge(rfValue));
+					extendedResources.put(extendResource.getKey(), extendResource.getValue().merge(rfValue));
 				} else {
-					newExtendedResoures.put(extendResource.getKey(), extendResource.getValue());
+					extendedResources.put(extendResource.getKey(), extendResource.getValue());
 				}
 			}
 		}
-		return new ResourceProfile(this.getCpuCores() + another.getCpuCores(),
-			this.getHeapMemoryInMB() + another.getHeapMemoryInMB(),
-			this.getDirectMemoryInMB() + another.getDirectMemoryInMB(),
-			this.getNativeMemoryInMB() + another.getNativeMemoryInMB(),
-			this.getNetworkMemoryInMB() + another.getNetworkMemoryInMB(),
-			newExtendedResoures);
+	}
+
+	public ResourceProfile multiply(int multiplier) {
+		Map<String, Resource> newExtendedResource = new HashMap<>(extendedResources.size());
+
+		for (Map.Entry<String, Resource> entry : extendedResources.entrySet()) {
+			newExtendedResource.put(entry.getKey(), entry.getValue().multiply(multiplier));
+		}
+
+		return new ResourceProfile(
+			this.getCpuCores() * multiplier,
+			this.getHeapMemoryInMB() * multiplier,
+			this.getDirectMemoryInMB() * multiplier,
+			this.getNativeMemoryInMB() * multiplier,
+			this.getNetworkMemoryInMB() * multiplier,
+			newExtendedResource);
 	}
 
 	// ------------------------------------------------------------------------

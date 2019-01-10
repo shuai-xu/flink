@@ -99,6 +99,10 @@ public abstract class Resource implements Serializable {
 		return create(aggregatedValue, resourceAggregateType);
 	}
 
+	public Resource multiply(int multiplier) {
+		return create(this.getValue() * multiplier, resourceAggregateType);
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {

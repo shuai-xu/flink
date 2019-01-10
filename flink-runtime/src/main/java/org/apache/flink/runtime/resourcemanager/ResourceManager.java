@@ -39,6 +39,7 @@ import org.apache.flink.runtime.heartbeat.HeartbeatTarget;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
 import org.apache.flink.runtime.instance.HardwareDescription;
 import org.apache.flink.runtime.instance.InstanceID;
+import org.apache.flink.runtime.instance.TaskManagerResourceDescription;
 import org.apache.flink.runtime.jobmaster.JobMaster;
 import org.apache.flink.runtime.jobmaster.JobMasterGateway;
 import org.apache.flink.runtime.jobmaster.JobMasterId;
@@ -547,7 +548,9 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 					taskManagerHeartbeatManager.getLastHeartbeatFrom(resourceId),
 					slotManager.getNumberRegisteredSlotsOf(taskExecutor.getInstanceID()),
 					slotManager.getNumberFreeSlotsOf(taskExecutor.getInstanceID()),
-					taskExecutor.getHardwareDescription()));
+					taskExecutor.getHardwareDescription(),
+					TaskManagerResourceDescription.fromResourceProfile(slotManager.getTotalResourceOf(resourceId)),
+					TaskManagerResourceDescription.fromResourceProfile(slotManager.getAvailableResourceOf(resourceId))));
 		}
 
 		return CompletableFuture.completedFuture(taskManagerInfos);
@@ -569,7 +572,9 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 				taskManagerHeartbeatManager.getLastHeartbeatFrom(resourceId),
 				slotManager.getNumberRegisteredSlotsOf(instanceId),
 				slotManager.getNumberFreeSlotsOf(instanceId),
-				taskExecutor.getHardwareDescription());
+				taskExecutor.getHardwareDescription(),
+				TaskManagerResourceDescription.fromResourceProfile(slotManager.getTotalResourceOf(resourceId)),
+				TaskManagerResourceDescription.fromResourceProfile(slotManager.getAvailableResourceOf(resourceId)));
 
 			return CompletableFuture.completedFuture(taskManagerInfo);
 		}
@@ -584,7 +589,9 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 			new ResourceOverview(
 				taskExecutors.size(),
 				numberSlots,
-				numberFreeSlots));
+				numberFreeSlots,
+				slotManager.getTotalResource(),
+				slotManager.getAvailableResource()));
 	}
 
 	@Override

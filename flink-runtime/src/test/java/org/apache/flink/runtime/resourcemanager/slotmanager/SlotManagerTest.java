@@ -1898,6 +1898,51 @@ public class SlotManagerTest extends TestLogger {
 		}
 	}
 
+	/**
+	 * Test that get total and available resources of cluster or task manager.
+	 */
+	@Test
+	public void testGetTotalAndAvailableResources() {
+		ResourceProfile resourceProfile = new ResourceProfile(0.3, 512);
+
+		final ResourceManagerId resourceManagerId = ResourceManagerId.generate();
+		final ResourceActions resourceManagerActions = mock(ResourceActions.class);
+		final JobID jobId = new JobID();
+		final TaskExecutorGateway taskExecutorGateway = mock(TaskExecutorGateway.class);
+		when(taskExecutorGateway.requestSlot(
+			any(SlotID.class),
+			eq(jobId),
+			any(AllocationID.class),
+			any(ResourceProfile.class),
+			anyString(),
+			any(List.class),
+			eq(resourceManagerId),
+			anyLong(),
+			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
+
+		ResourceID resourceId1 = ResourceID.generate();
+		TaskExecutorConnection taskExecutorConnection1 = new TaskExecutorConnection(resourceId1, taskExecutorGateway);
+
+		SlotStatus slotStatus1 = new SlotStatus(new SlotID(resourceId1, 0), resourceProfile, jobId, new AllocationID(), resourceProfile, 1L);
+
+		SlotReport slotReport1 = new SlotReport(Collections.singletonList(slotStatus1));
+
+		SlotManager slotManager = createSlotManager(resourceManagerId, resourceManagerActions);
+
+		slotManager.registerTaskManager(taskExecutorConnection1, slotReport1);
+
+		assertEquals(resourceProfile, slotManager.getTotalResource());
+		assertEquals(new ResourceProfile(0, 0), slotManager.getAvailableResource());
+		assertEquals(resourceProfile, slotManager.getTotalResourceOf(resourceId1));
+		assertEquals(new ResourceProfile(0, 0), slotManager.getAvailableResourceOf(resourceId1));
+
+		slotManager.freeSlot(slotStatus1.getSlotID(), slotStatus1.getAllocationID());
+		assertEquals(resourceProfile, slotManager.getTotalResource());
+		assertEquals(resourceProfile, slotManager.getAvailableResource());
+		assertEquals(resourceProfile, slotManager.getTotalResourceOf(resourceId1));
+		assertEquals(resourceProfile, slotManager.getAvailableResourceOf(resourceId1));
+	}
+
 	private Set<AllocationID> extractFailedAllocationsForJob(JobID jobId2, Map<JobID, List<Tuple2<JobID, AllocationID>>> job2AndJob3FailedAllocationInfo) {
 		return job2AndJob3FailedAllocationInfo.get(jobId2).stream().map(t -> t.f1).collect(Collectors.toSet());
 	}

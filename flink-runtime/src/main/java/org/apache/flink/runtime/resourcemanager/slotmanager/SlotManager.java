@@ -101,7 +101,7 @@ public class SlotManager implements AutoCloseable {
 	protected final LinkedHashMap<SlotID, TaskManagerSlot> freeSlots;
 
 	/** All currently registered task managers. */
-	private final HashMap<InstanceID, TaskManagerRegistration> taskManagerRegistrations;
+	protected final HashMap<InstanceID, TaskManagerRegistration> taskManagerRegistrations;
 
 	/** Map of fulfilled and active allocations for request deduplication purposes. */
 	private final HashMap<AllocationID, SlotID> fulfilledSlotRequests;
@@ -199,6 +199,50 @@ public class SlotManager implements AutoCloseable {
 		} else {
 			return 0;
 		}
+	}
+
+	public ResourceProfile getTotalResource() {
+		ResourceProfile totalResources = new ResourceProfile(ResourceProfile.EMTPY);
+		for (Map.Entry<SlotID, TaskManagerSlot> entry : slots.entrySet()) {
+			if (!entry.getValue().getResourceProfile().equals(ResourceProfile.UNKNOWN)) {
+				totalResources.addTo(entry.getValue().getResourceProfile());
+			}
+		}
+		return totalResources;
+	}
+
+	public ResourceProfile getAvailableResource() {
+		ResourceProfile availableResources = new ResourceProfile(ResourceProfile.EMTPY);
+		for (Map.Entry<SlotID, TaskManagerSlot> entry : slots.entrySet()) {
+			if (entry.getValue().getState() == TaskManagerSlot.State.FREE &&
+				!entry.getValue().getResourceProfile().equals(ResourceProfile.UNKNOWN)) {
+				availableResources.addTo(entry.getValue().getResourceProfile());
+			}
+		}
+		return availableResources;
+	}
+
+	public ResourceProfile getTotalResourceOf(ResourceID resourceID) {
+		ResourceProfile totalResources = new ResourceProfile(ResourceProfile.EMTPY);
+		for (Map.Entry<SlotID, TaskManagerSlot> entry : slots.entrySet()) {
+			if (entry.getKey().getResourceID().equals(resourceID) &&
+				!entry.getValue().getResourceProfile().equals(ResourceProfile.UNKNOWN)) {
+				totalResources.addTo(entry.getValue().getResourceProfile());
+			}
+		}
+		return totalResources;
+	}
+
+	public ResourceProfile getAvailableResourceOf(ResourceID resourceID) {
+		ResourceProfile availableResources = new ResourceProfile(ResourceProfile.EMTPY);
+		for (Map.Entry<SlotID, TaskManagerSlot> entry : slots.entrySet()) {
+			if (entry.getValue().getState() == TaskManagerSlot.State.FREE &&
+				entry.getKey().getResourceID().equals(resourceID) &&
+				!entry.getValue().getResourceProfile().equals(ResourceProfile.UNKNOWN)) {
+				availableResources.addTo(entry.getValue().getResourceProfile());
+			}
+		}
+		return availableResources;
 	}
 
 	public int getNumberPendingSlotRequests() {return pendingSlotRequests.size(); }

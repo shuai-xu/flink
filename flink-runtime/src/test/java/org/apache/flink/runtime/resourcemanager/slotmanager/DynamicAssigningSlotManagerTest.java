@@ -134,10 +134,11 @@ public class DynamicAssigningSlotManagerTest {
 			DEFAULT_TESTING_PROFILE,
 			"localhost");
 
+		ResourceProfile resourceProfile2 = DEFAULT_TESTING_PROFILE.merge(new ResourceProfile(0.1, 0));
 		final SlotRequest slotRequest2 = new SlotRequest(
 			jobId,
 			new AllocationID(),
-			DEFAULT_TESTING_PROFILE,
+			resourceProfile2,
 			"localhost");
 
 		final ResourceActions resourceManagerActions = mock(ResourceActions.class);
@@ -167,7 +168,7 @@ public class DynamicAssigningSlotManagerTest {
 
 			slotManager.registerSlotRequest(slotRequest2);
 			assertEquals(1, slotManager.getNumberFreeSlots());
-			verify(resourceManagerActions, times(1)).allocateResource(eq(DEFAULT_TESTING_PROFILE));
+			verify(resourceManagerActions, times(1)).allocateResource(eq(resourceProfile2));
 		}
 	}
 
@@ -195,10 +196,11 @@ public class DynamicAssigningSlotManagerTest {
 			allocationID1,
 			DEFAULT_TESTING_PROFILE,
 			"localhost");
+		ResourceProfile resourceProfile2 = DEFAULT_TESTING_PROFILE.merge(new ResourceProfile(0.1, 0));
 		final SlotRequest slotRequest2 = new SlotRequest(
 			jobId,
 			allocationID2,
-			DEFAULT_TESTING_PROFILE,
+			resourceProfile2,
 			"localhost");
 
 		final ResourceActions resourceManagerActions = mock(ResourceActions.class);
@@ -220,7 +222,8 @@ public class DynamicAssigningSlotManagerTest {
 			slotManager.registerSlotRequest(slotRequest1);
 			slotManager.registerSlotRequest(slotRequest2);
 
-			verify(resourceManagerActions, times(2)).allocateResource(DEFAULT_TESTING_PROFILE);
+			verify(resourceManagerActions, times(1)).allocateResource(DEFAULT_TESTING_PROFILE);
+			verify(resourceManagerActions, times(1)).allocateResource(resourceProfile2);
 
 			slotManager.registerTaskManager(
 				taskExecutorConnection,
@@ -282,7 +285,6 @@ public class DynamicAssigningSlotManagerTest {
 		final TaskExecutorConnection taskExecutorConnection = new TaskExecutorConnection(resourceID, taskExecutorGateway);
 
 		try (DynamicAssigningSlotManager slotManager = createSlotManager(resourceManagerId, resourceManagerActions)) {
-			slotManager.setTotalResourceOfTaskExecutor(DEFAULT_TESTING_BIG_PROFILE);
 
 			slotManager.registerSlotRequest(slotRequest);
 
@@ -482,6 +484,50 @@ public class DynamicAssigningSlotManagerTest {
 		assertEquals(3, allocatedSlotsResource.get(resourceId2).f0.size());
 	}
 
+	@Test
+	public void testGetTotalAndAvailableResources() {
+		ResourceProfile resourceProfile = new ResourceProfile(0.3, 512);
+
+		final ResourceManagerId resourceManagerId = ResourceManagerId.generate();
+		final ResourceActions resourceManagerActions = mock(ResourceActions.class);
+		final JobID jobId = new JobID();
+		final TaskExecutorGateway taskExecutorGateway = mock(TaskExecutorGateway.class);
+		when(taskExecutorGateway.requestSlot(
+			any(SlotID.class),
+			eq(jobId),
+			any(AllocationID.class),
+			any(ResourceProfile.class),
+			anyString(),
+			any(List.class),
+			eq(resourceManagerId),
+			anyLong(),
+			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
+
+		ResourceID resourceId1 = ResourceID.generate();
+		TaskExecutorConnection taskExecutorConnection1 = new TaskExecutorConnection(resourceId1, taskExecutorGateway);
+
+		SlotStatus slotStatus1 = new SlotStatus(new SlotID(resourceId1, 0), DEFAULT_TESTING_BIG_PROFILE, jobId, new AllocationID(), resourceProfile, 1L);
+		SlotStatus slotStatus2 = new SlotStatus(new SlotID(resourceId1, 1), DEFAULT_TESTING_BIG_PROFILE, jobId, new AllocationID(), ResourceProfile.UNKNOWN, 1L);
+
+		SlotReport slotReport1 = new SlotReport(Arrays.asList(slotStatus1, slotStatus2));
+
+		DynamicAssigningSlotManager slotManager = createSlotManager(resourceManagerId, resourceManagerActions);
+
+		slotManager.registerTaskManager(taskExecutorConnection1, slotReport1);
+
+		ResourceProfile remain = DEFAULT_TESTING_BIG_PROFILE.minus(resourceProfile);
+		assertEquals(DEFAULT_TESTING_BIG_PROFILE, slotManager.getTotalResource());
+		assertEquals(remain, slotManager.getAvailableResource());
+		assertEquals(DEFAULT_TESTING_BIG_PROFILE, slotManager.getTotalResourceOf(resourceId1));
+		assertEquals(remain, slotManager.getAvailableResourceOf(resourceId1));
+
+		slotManager.freeSlot(slotStatus1.getSlotID(), slotStatus1.getAllocationID());
+		assertEquals(DEFAULT_TESTING_BIG_PROFILE, slotManager.getTotalResource());
+		assertEquals(DEFAULT_TESTING_BIG_PROFILE, slotManager.getAvailableResource());
+		assertEquals(DEFAULT_TESTING_BIG_PROFILE, slotManager.getTotalResourceOf(resourceId1));
+		assertEquals(DEFAULT_TESTING_BIG_PROFILE, slotManager.getAvailableResourceOf(resourceId1));
+	}
+
 	private DynamicAssigningSlotManager createSlotManager(ResourceManagerId resourceManagerId, ResourceActions resourceManagerActions) {
 		return createSlotManager(resourceManagerId, resourceManagerActions, DynamicAssigningSlotManager.SlotPlacementPolicy.RANDOM);
 	}
@@ -498,7 +544,7 @@ public class DynamicAssigningSlotManagerTest {
 			TestingUtils.infiniteTime(),
 			slotPlacementPolicy);
 
-		slotManager.setTotalResourceOfTaskExecutor(new ResourceProfile(2, 1000));
+		slotManager.setTotalResourceOfTaskExecutor(DEFAULT_TESTING_BIG_PROFILE);
 		slotManager.start(resourceManagerId, Executors.directExecutor(), resourceManagerActions);
 
 		return slotManager;

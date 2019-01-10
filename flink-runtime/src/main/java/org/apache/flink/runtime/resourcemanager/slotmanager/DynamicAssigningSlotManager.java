@@ -51,6 +51,11 @@ public class DynamicAssigningSlotManager extends SlotManager {
 
 	/**
 	 * All allocated slots's resource profile.
+	 * If the task manager has no allocated slots(all slots are free), it does not exist in this map.
+	 * ResourceID : The id of each task manager
+	 * Tuple2 : The allocated slots and resources of the task manager
+	 *    f0 : The allocated slots map, keyed by slotId and value is resource profile of the slot
+	 *    f1 : The remaining resource of the task manager identified by resourceId
 	 */
 	private final Map<ResourceID, Tuple2<Map<SlotID, ResourceProfile>, ResourceProfile>> allocatedSlotsResource;
 
@@ -197,6 +202,37 @@ public class DynamicAssigningSlotManager extends SlotManager {
 		return null;
 	}
 
+	@Override
+	public ResourceProfile getTotalResource() {
+		return totalResourceOfTaskExecutor.multiply(taskManagerRegistrations.size());
+	}
+
+	@Override
+	public ResourceProfile getAvailableResource() {
+		// AvailableResource = (remaining resources of non-empty task managers) + (all empty task managers)
+		ResourceProfile availableResource = new ResourceProfile(0, 0);
+		for (Tuple2<Map<SlotID, ResourceProfile>, ResourceProfile> allocated : allocatedSlotsResource.values()) {
+			availableResource.addTo(allocated.f1);
+		}
+		int emptyTaskManagerNum = taskManagerRegistrations.size() - allocatedSlotsResource.size();
+		availableResource.addTo(totalResourceOfTaskExecutor.multiply(emptyTaskManagerNum));
+		return availableResource;
+	}
+
+	@Override
+	public ResourceProfile getTotalResourceOf(ResourceID resourceID) {
+		return totalResourceOfTaskExecutor;
+	}
+
+	@Override
+	public ResourceProfile getAvailableResourceOf(ResourceID resourceID) {
+		if (allocatedSlotsResource.containsKey(resourceID)) {
+			return allocatedSlotsResource.get(resourceID).f1;
+		} else {
+			return totalResourceOfTaskExecutor;
+		}
+	}
+
 	/**
 	 * Set the total resource of a task executor.
 	 * @param resourceOfTaskExecutor The available resource for task in a task executor.
@@ -206,14 +242,18 @@ public class DynamicAssigningSlotManager extends SlotManager {
 	}
 
 	private void recordAllocatedSlotAndResource(SlotID slotID, ResourceProfile resourceProfile) {
+		// Use EMPTY instead of UNKNOWN to make resource calculation correctly.
+		if (resourceProfile.equals(ResourceProfile.UNKNOWN)) {
+			resourceProfile = new ResourceProfile(ResourceProfile.EMTPY);
+		}
 		Tuple2<Map<SlotID, ResourceProfile>, ResourceProfile> slotToResource = allocatedSlotsResource.get(slotID.getResourceID());
 		if (slotToResource != null) {
 			slotToResource.f0.put(slotID, resourceProfile);
 			slotToResource.f1 = slotToResource.f1.minus(resourceProfile);
 		} else {
-			Map<SlotID, ResourceProfile> remain = new HashMap<>();
-			remain.put(slotID, resourceProfile);
-			slotToResource = new Tuple2<>(remain, totalResourceOfTaskExecutor.minus(resourceProfile));
+			Map<SlotID, ResourceProfile> allocated = new HashMap<>();
+			allocated.put(slotID, resourceProfile);
+			slotToResource = new Tuple2<>(allocated, totalResourceOfTaskExecutor.minus(resourceProfile));
 			allocatedSlotsResource.put(slotID.getResourceID(), slotToResource);
 		}
 	}
