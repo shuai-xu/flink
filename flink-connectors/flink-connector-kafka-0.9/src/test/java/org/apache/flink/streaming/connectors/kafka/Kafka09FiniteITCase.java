@@ -18,19 +18,33 @@
 
 package org.apache.flink.streaming.connectors.kafka;
 
-/**
- * IT cases for the {@link FlinkKafkaProducer010}.
- */
-@SuppressWarnings("serial")
-public class Kafka010ProducerITCase extends KafkaProducerTestBase {
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-	@Override
-	public void testExactlyOnceRegularSink() throws Exception {
-		// Kafka010 does not support exactly once semantic
+/**
+ * Kafka finite source tests.
+ */
+public class Kafka09FiniteITCase extends KafkaConsumerTestBase {
+
+	@BeforeClass
+	public static void prepare() throws ClassNotFoundException {
+		// Somehow KafkaConsumer 0.8 doesn't handle broker failures if they are behind a proxy
+		prepare(false);
 	}
 
-	@Override
-	public void testExactlyOnceCustomOperator() throws Exception {
-		// Kafka010 does not support exactly once semantic
+	@Test
+	public void testOneToOneFiniteSources() throws Exception {
+		runOneToOneTest(true);
+	}
+
+	@Test
+	public void testOneToMultiFiniteSources() throws Exception {
+		runOneSourceMultiplePartitionsFiniteTest();
+	}
+
+	@Test
+	public void testMultiToOneFiniteSources() throws Exception {
+		runMultipleSourcesOnePartitionFiniteTest();
+
 	}
 }

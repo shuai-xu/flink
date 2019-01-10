@@ -32,7 +32,6 @@ import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunctio
 import org.apache.flink.streaming.util.serialization.KeyedDeserializationSchema;
 import org.apache.flink.streaming.util.serialization.KeyedSerializationSchemaWrapper;
 import org.apache.flink.test.util.MiniClusterResource;
-import org.apache.flink.test.util.MiniClusterResourceConfiguration;
 import org.apache.flink.util.InstantiationUtil;
 
 import org.junit.AfterClass;
@@ -71,11 +70,10 @@ public class KafkaShortRetentionTestBase implements Serializable {
 
 	@ClassRule
 	public static MiniClusterResource flink = new MiniClusterResource(
-		new MiniClusterResourceConfiguration.Builder()
-			.setConfiguration(getConfiguration())
-			.setNumberTaskManagers(NUM_TMS)
-			.setNumberSlotsPerTaskManager(TM_SLOTS)
-			.build());
+		new MiniClusterResource.MiniClusterResourceConfiguration(
+			getConfiguration(),
+			NUM_TMS,
+			TM_SLOTS));
 
 	@ClassRule
 	public static TemporaryFolder tempFolder = new TemporaryFolder();
@@ -84,7 +82,7 @@ public class KafkaShortRetentionTestBase implements Serializable {
 
 	private static Configuration getConfiguration() {
 		Configuration flinkConfig = new Configuration();
-		flinkConfig.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, 16);
+		flinkConfig.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, 16L);
 		flinkConfig.setString(ConfigConstants.RESTART_STRATEGY_FIXED_DELAY_DELAY, "0 s");
 		return flinkConfig;
 	}
@@ -226,6 +224,7 @@ public class KafkaShortRetentionTestBase implements Serializable {
 
 	/**
 	 * Ensure that the consumer is properly failing if "auto.offset.reset" is set to "none".
+	 * @throws Exception
 	 */
 	public void runFailOnAutoOffsetResetNone() throws Exception {
 		final String topic = "auto-offset-reset-none-test";

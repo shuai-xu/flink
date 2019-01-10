@@ -46,6 +46,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -73,8 +74,8 @@ import static org.powermock.api.mockito.PowerMockito.when;
  * <p>For regenerating the binary snapshot files run {@link #writeSnapshot()} on the corresponding
  * Flink release-* branch.
  */
-@Ignore // TODO: should fix this when default
 @RunWith(Parameterized.class)
+@Ignore
 public class FlinkKafkaConsumerBaseMigrationTest {
 
 	/**
@@ -128,7 +129,7 @@ public class FlinkKafkaConsumerBaseMigrationTest {
 				latch.trigger();
 				return null;
 			}
-		}).when(fetcher).runFetchLoop();
+		}).when(fetcher).runFetchLoop(Mockito.anyBoolean());
 
 		when(fetcher.snapshotCurrentState()).thenReturn(state);
 
@@ -393,6 +394,7 @@ public class FlinkKafkaConsumerBaseMigrationTest {
 		protected AbstractFetcher<T, ?> createFetcher(
 				SourceContext<T> sourceContext,
 				Map<KafkaTopicPartition, Long> thisSubtaskPartitionsWithStartOffsets,
+				Map<KafkaTopicPartition, Long> thisSubtaskPartitionsWithStopOffsets,
 				SerializedValue<AssignerWithPeriodicWatermarks<T>> watermarksPeriodic,
 				SerializedValue<AssignerWithPunctuatedWatermarks<T>> watermarksPunctuated,
 				StreamingRuntimeContext runtimeContext,

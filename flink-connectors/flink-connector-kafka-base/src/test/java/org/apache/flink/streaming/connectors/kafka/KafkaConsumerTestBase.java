@@ -46,6 +46,7 @@ import org.apache.flink.runtime.client.JobExecutionException;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.state.CheckpointListener;
+import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.checkpoint.ListCheckpointed;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
@@ -111,6 +112,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumerBase.KEY_PARTITION_DISCOVERY_INTERVAL_MILLIS;
 import static org.apache.flink.streaming.connectors.kafka.testutils.ClusterCommunicationUtils.getRunningJobs;
 import static org.apache.flink.streaming.connectors.kafka.testutils.ClusterCommunicationUtils.waitUntilJobIsRunning;
 import static org.apache.flink.streaming.connectors.kafka.testutils.ClusterCommunicationUtils.waitUntilNoJobIsRunning;
@@ -213,10 +215,14 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.getConfig().disableSysoutLogging();
 		env.getConfig().setRestartStrategy(RestartStrategies.noRestart());
-		env.setParallelism(parallelism);
-		env.enableCheckpointing(200);
+		env.enableCheckpointing(200, CheckpointingMode.EXACTLY_ONCE);
 
-		DataStream<String> stream = env.addSource(kafkaServer.getConsumer(topicName, new SimpleStringSchema(), standardProps));
+		Properties props = new Properties();
+		props.putAll(standardProps);
+		// We need to turn on the partition dynamic discovery so that the source task won't exit after reaching the
+		// log end.
+		props.setProperty(KEY_PARTITION_DISCOVERY_INTERVAL_MILLIS, "10000");
+		DataStream<String> stream = env.addSource(kafkaServer.getConsumer(topicName, new SimpleStringSchema(), props));
 		stream.addSink(new DiscardingSink<String>());
 
 		final AtomicReference<Throwable> errorRef = new AtomicReference<>();
@@ -717,12 +723,11 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 		final StreamExecutionEnvironment env =
 				StreamExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(parallelism);
-		env.enableCheckpointing(500);
+//		env.enableCheckpointing(500);
 		env.setRestartStrategy(RestartStrategies.noRestart()); // fail immediately
 		env.getConfig().disableSysoutLogging();
 
-		TypeInformation<Tuple2<Long, String>> longStringType =
-				TypeInformation.of(new TypeHint<Tuple2<Long, String>>(){});
+		TypeInformation<Tuple2<Long, String>> longStringType = TypeInformation.of(new TypeHint<Tuple2<Long, String>>(){});
 
 		TypeInformationSerializationSchema<Tuple2<Long, String>> sourceSchema =
 				new TypeInformationSerializationSchema<>(longStringType, env.getConfig());
@@ -879,6 +884,55 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 	}
 
 	/**
+	 * Tests the proper consumption when having a 1:1 correspondence between kafka partitions and
+	 * Flink sources.
+	 */
+	public void runOneToOneTest(boolean isFinite) throws Exception {
+
+		final String topic = "oneToOneTopic";
+		final int parallelism = 5;
+		final int numElementsPerPartition = 1000;
+		final int totalElements = parallelism * numElementsPerPartition;
+
+		createTestTopic(topic, parallelism, 1);
+
+		DataGenerators.generateRandomizedIntegerSequence(
+				StreamExecutionEnvironment.getExecutionEnvironment(),
+				kafkaServer,
+				topic,
+				parallelism,
+				numElementsPerPartition,
+				true);
+
+		// run the topology that fails and recovers
+
+		DeserializationSchema<Integer> schema =
+				new TypeInformationSerializationSchema<>(BasicTypeInfo.INT_TYPE_INFO, new ExecutionConfig());
+
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.enableCheckpointing(5000);
+		env.setParallelism(parallelism);
+		env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, 0));
+		env.getConfig().disableSysoutLogging();
+
+		Properties props = new Properties();
+		props.putAll(standardProps);
+		props.putAll(secureProps);
+
+		FlinkKafkaConsumerBase<Integer> kafkaSource = kafkaServer.getConsumer(topic, schema, props);
+
+		kafkaSource.setStopAtLatest(isFinite);
+
+		env
+				.addSource(kafkaSource)
+				.addSink(new ValidatingExactlyOnceSink(totalElements, false)).setParallelism(1);
+
+		env.execute();
+
+		deleteTestTopic(topic);
+	}
+
+	/**
 	 * Tests the proper consumption when having fewer Flink sources than Kafka partitions, so
 	 * one Flink source will read multiple Kafka partitions.
 	 */
@@ -925,6 +979,53 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 
 		FailingIdentityMapper.failedBefore = false;
 		tryExecute(env, "One-source-multi-partitions exactly once test");
+
+		deleteTestTopic(topic);
+	}
+
+	/**
+	 * Tests the proper consumption when having fewer Flink sources than Kafka partitions, so
+	 * one Flink source will read multiple Kafka partitions.
+	 */
+	public void runOneSourceMultiplePartitionsFiniteTest() throws Exception {
+		final String topic = "oneToManyTopic";
+		final int numPartitions = 5;
+		final int numElementsPerPartition = 1000;
+		final int totalElements = numPartitions * numElementsPerPartition;
+
+		final int parallelism = 2;
+
+		createTestTopic(topic, numPartitions, 1);
+
+		DataGenerators.generateRandomizedIntegerSequence(
+				StreamExecutionEnvironment.getExecutionEnvironment(),
+				kafkaServer,
+				topic,
+				numPartitions,
+				numElementsPerPartition,
+				true);
+
+		// run the topology that fails and recovers
+
+		DeserializationSchema<Integer> schema =
+				new TypeInformationSerializationSchema<>(BasicTypeInfo.INT_TYPE_INFO, new ExecutionConfig());
+
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.enableCheckpointing(500);
+		env.setParallelism(parallelism);
+		env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, 0));
+		env.getConfig().disableSysoutLogging();
+
+		Properties props = new Properties();
+		props.putAll(standardProps);
+		props.putAll(secureProps);
+		FlinkKafkaConsumerBase<Integer> kafkaSource = kafkaServer.getConsumer(topic, schema, props);
+		kafkaSource.setStopAtLatest(true);
+		env
+				.addSource(kafkaSource)
+				.addSink(new ValidatingExactlyOnceSink(totalElements, false)).setParallelism(1);
+
+		env.execute("One-source-multi-partitions exactly once test");
 
 		deleteTestTopic(topic);
 	}
@@ -978,6 +1079,55 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 
 		FailingIdentityMapper.failedBefore = false;
 		tryExecute(env, "multi-source-one-partitions exactly once test");
+
+		deleteTestTopic(topic);
+	}
+
+	/**
+	 * Tests the proper consumption when having more Flink sources than Kafka partitions, which means
+	 * that some Flink sources will read no partitions.
+	 */
+	public void runMultipleSourcesOnePartitionFiniteTest() throws Exception {
+		final String topic = "manyToOneTopic";
+		final int numPartitions = 5;
+		final int numElementsPerPartition = 1000;
+		final int totalElements = numPartitions * numElementsPerPartition;
+
+		final int parallelism = 8;
+
+		createTestTopic(topic, numPartitions, 1);
+
+		DataGenerators.generateRandomizedIntegerSequence(
+				StreamExecutionEnvironment.getExecutionEnvironment(),
+				kafkaServer,
+				topic,
+				numPartitions,
+				numElementsPerPartition,
+				true);
+
+		// run the topology that fails and recovers
+
+		DeserializationSchema<Integer> schema =
+				new TypeInformationSerializationSchema<>(BasicTypeInfo.INT_TYPE_INFO, new ExecutionConfig());
+
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.enableCheckpointing(500);
+		env.setParallelism(parallelism);
+		// set the number of restarts to one. The failing mapper will fail once, then it's only success exceptions.
+		env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, 0));
+		env.getConfig().disableSysoutLogging();
+		env.setBufferTimeout(0);
+
+		Properties props = new Properties();
+		props.putAll(standardProps);
+		props.putAll(secureProps);
+		FlinkKafkaConsumerBase<Integer> kafkaSource = kafkaServer.getConsumer(topic, schema, props);
+		kafkaSource.setStopAtLatest(true);
+		env
+			.addSource(kafkaSource)
+			.addSink(new ValidatingExactlyOnceSink(totalElements, false)).setParallelism(1);
+
+		env.execute();
 
 		deleteTestTopic(topic);
 	}

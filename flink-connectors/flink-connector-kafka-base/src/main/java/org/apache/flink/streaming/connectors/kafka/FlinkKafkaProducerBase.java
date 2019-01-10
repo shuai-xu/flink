@@ -295,16 +295,12 @@ public abstract class FlinkKafkaProducerBase<IN> extends RichSinkFunction<IN> im
 			this.topicPartitionsMap.put(targetTopic, partitions);
 		}
 
-		ProducerRecord<byte[], byte[]> record;
-		if (flinkKafkaPartitioner == null) {
-			record = new ProducerRecord<>(targetTopic, serializedKey, serializedValue);
-		} else {
-			record = new ProducerRecord<>(
-					targetTopic,
-					flinkKafkaPartitioner.partition(next, serializedKey, serializedValue, targetTopic, partitions),
-					serializedKey,
-					serializedValue);
-		}
+		Integer partition = flinkKafkaPartitioner == null ?
+			null : flinkKafkaPartitioner.partition(next, serializedKey, serializedValue, targetTopic, partitions);
+
+		ProducerRecord<byte[], byte[]> record =
+			buildProducerRecord(context, targetTopic, partition, serializedKey, serializedValue);
+
 		if (flushOnCheckpoint) {
 			synchronized (pendingRecordsLock) {
 				pendingRecords++;
@@ -321,6 +317,20 @@ public abstract class FlinkKafkaProducerBase<IN> extends RichSinkFunction<IN> im
 
 		// make sure we propagate pending errors
 		checkErroneous();
+	}
+
+	/**
+	 * A protected method to allow subclass build the producer records based on different Kafka versions.
+	 * @param context the sink function context.
+	 * @param topic the topic the producer record sent to.
+	 * @param partition the partition the producer record sent to.
+	 * @param keyBytes the serialized key.
+	 * @param valueBytes the serialized value.
+	 * @return A {@link ProducerRecord} that is ready to send.
+	 */
+	protected ProducerRecord<byte[], byte[]> buildProducerRecord(
+		Context context, String topic, Integer partition, byte[] keyBytes, byte[] valueBytes) {
+		return new ProducerRecord<>(topic, partition, keyBytes, valueBytes);
 	}
 
 	// ------------------- Logic for handling checkpoint flushing -------------------------- //

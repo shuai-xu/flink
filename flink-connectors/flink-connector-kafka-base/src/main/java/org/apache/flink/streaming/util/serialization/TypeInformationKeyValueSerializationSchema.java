@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,7 +28,6 @@ import org.apache.flink.core.memory.DataInputDeserializer;
 import org.apache.flink.core.memory.DataOutputSerializer;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 /**
  * A serialization and deserialization schema for Key Value Pairs that uses Flink's serialization stack to
@@ -102,11 +100,11 @@ public class TypeInformationKeyValueSerializationSchema<K, V> implements KeyedDe
 		V value = null;
 
 		if (messageKey != null) {
-			inputDeserializer.setBuffer(ByteBuffer.wrap(messageKey));
+			inputDeserializer.setBuffer(messageKey, 0, messageKey.length);
 			key = keySerializer.deserialize(inputDeserializer);
 		}
 		if (message != null) {
-			inputDeserializer.setBuffer(ByteBuffer.wrap(message));
+			inputDeserializer.setBuffer(message, 0, message.length);
 			value = valueSerializer.deserialize(inputDeserializer);
 		}
 		return new Tuple2<>(key, value);
