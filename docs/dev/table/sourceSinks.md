@@ -48,6 +48,7 @@ A custom `TableSource` can be defined by implementing the `BatchTableSource` or 
 | `Kafka08JsonTableSource` | `flink-connector-kafka-0.8` | N | Y | A `TableSource` for flat Json-encoded Kafka 0.8 topics.
 | `CsvTableSource` | `flink-table` | Y | Y | A simple `TableSource` for CSV files.
 | `OrcTableSource` | `flink-orc` | Y | N | A `TableSource` for ORC files.
+| `HiveTableSource`(beta) | `flink-connector-hive_2.11` | Y | N | A `TableSource` for hive table
 
 All sources that come with the `flink-table` dependency are directly available for Table API or SQL programs. For all other table sources, you have to add the respective dependency in addition to the `flink-table` dependency.
 
@@ -579,6 +580,40 @@ val orcTableSource = OrcTableSource.builder()
 </div>
 
 **Note:** The `OrcTableSource` does not support ORC's `Union` type yet.
+
+{% top %}
+
+### HiveTableSource（beta）
+
+The `HiveTableSource` reads [Hive table](https://hive.apache.org/). Apache Hive is a data warehouse software project built on top of Apache Hadoop for providing data query and analysis.
+
+An `HiveTableSource` is created as shown below:
+
+<div class="codetabs" markdown="1">
+<div data-lang="java" markdown="1">
+{% highlight java %}
+    // use hive catalog to obtain necessary hive table properties
+    HiveCatalog hiveCatalog = new HiveCatalog("myHive","thrift://xxxx:9083");
+    hiveCatalog.open();
+    Map<String, String> properties = hiveCatalog.getTable(
+                new ObjectPath("default", "products")).getProperties();
+    BatchTableSource hiveTableSource = new HiveTableFactory().createBatchTableSource(properties);
+{% endhighlight %}
+</div>
+
+<div data-lang="scala" markdown="1">
+{% highlight scala %}
+    // use hive catalog to obtain necessary hive table properties
+    val hiveCatalog = new HiveCatalog("myHive", "thrift://xxxx:9083")
+    hiveCatalog.open()
+    val properties: util.Map[String, String] = hiveCatalog
+      .getTable(new ObjectPath("default", "products")).getProperties
+    val hiveTableSource: BatchTableSource[_] = new HiveTableFactory()
+      .createBatchTableSource(properties)
+{% endhighlight %}
+</div>
+</div>
+
 
 {% top %}
 
