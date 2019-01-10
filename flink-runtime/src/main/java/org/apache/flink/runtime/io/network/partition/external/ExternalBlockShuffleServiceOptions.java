@@ -32,7 +32,7 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Integer> FLINK_SHUFFLE_SERVICE_PORT_KEY =
 		key("flink.shuffle-service.port")
-		.defaultValue(13572)
+		.defaultValue(14572)
 		.withDescription("The port of the shuffle service.");
 
 	/**
@@ -41,11 +41,12 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Integer> FLINK_SHUFFLE_SERVICE_DIRECT_MEMORY_LIMIT_IN_MB =
 		key("flink.shuffle-service.direct-memory-limit-in-mb")
-			.defaultValue(960)
+			.defaultValue(300)
 			.withDescription("The direct memory consumed by the yarn shuffle service.");
 
 	/**
 	 * Heap memory limit for flink shuffle service, in MB.
+	 * TODO Will be used in the future.
 	 */
 	public static final ConfigOption<Integer> FLINK_SHUFFLE_SERVICE_HEAP_MEMORY_LIMIT_IN_MB =
 		key("flink.shuffle-service.heap-memory-limit-in-mb")
@@ -102,20 +103,23 @@ public class ExternalBlockShuffleServiceOptions {
 
 	/**
 	 * Netty thread number for handling requests, used to set NettyConfig.NUM_THREADS_SERVER in netty.
-	 * If it's not configured, use overall IO thread number as netty thread number.
+	 * If it's not positive, use overall IO thread number as netty thread number.
 	 */
 	public static final ConfigOption<Integer> SERVER_THREAD_NUM =
 		key("flink.shuffle-service.server-thread-number")
 		.defaultValue(0)
-		.withDescription("The number of netty IO threads.");
+		.withDescription("The number of netty IO threads. If it's not positive, " +
+			"the thread number is equal to the overall IO thread number");
 
 	/**
-	 * The number of buffers for I/O in flink shuffle service.
+	 * The size of direct memory allocated for Netty threads.
 	 */
-	public static final ConfigOption<Integer> MIN_BUFFER_NUMBER =
-		key("flink.shuffle-service.min-buffer-num")
-		.defaultValue(1000)
-		.withDescription("");
+	public static final ConfigOption<Integer> NETTY_MEMORY_IN_MB =
+		key("flink.shuffle-service.netty-memory-in-mb")
+			.defaultValue(0)
+			.withDescription("The preferred number of netty IO threads. If it's positive, the netty memory size will be " +
+				"min(configured value, 4M * flink.shuffle-service.server-thread-number), otherwise the netty memory size will be " +
+				"min(1/2 * flink.shuffle-service.direct-memory-limit-in-mb, 4M * flink.shuffle-service.server-thread-number).");
 
 	/**
 	 * The memory size of one buffer, in bytes.

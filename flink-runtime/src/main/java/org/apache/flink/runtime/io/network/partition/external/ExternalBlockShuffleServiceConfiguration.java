@@ -49,6 +49,8 @@ public class ExternalBlockShuffleServiceConfiguration {
 
 	public static final String DEFAULT_DISK_TYPE = "HDD";
 
+	private static final int MIN_BUFFER_NUMBER = 16;
+
 	private static final Pattern DISK_TYPE_REGEX = Pattern.compile("^(\\[(\\w*)\\])?(.+)$");
 
 	/** Flink configurations. */
@@ -239,24 +241,39 @@ public class ExternalBlockShuffleServiceConfiguration {
 		final long directMemoryLimitInBytes = ((long) configuration.getInteger(
 			ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_DIRECT_MEMORY_LIMIT_IN_MB)) << 20;
 
-		// 3.1 Check whether direct memory is enough for buffers.
-		final int memorySizePerBufferInBytes = configuration.getInteger(
-			ExternalBlockShuffleServiceOptions.MEMORY_SIZE_PER_BUFFER_IN_BYTES);
-		final int minBufferNum = configuration.getInteger(ExternalBlockShuffleServiceOptions.MIN_BUFFER_NUMBER);
-		// Make sure that each disk IO thread has at least 2 buffers.
-		final int bufferNum = Math.max(diskIOThreadNum * 2, minBufferNum);
+		// 3.1 check the direct memory allocated for Netty
+		long nettyMemorySizeInBytes = ((long) configuration.getInteger(
+			ExternalBlockShuffleServiceOptions.NETTY_MEMORY_IN_MB)) << 20;
 
-		checkArgument(directMemoryLimitInBytes >= (long) memorySizePerBufferInBytes * bufferNum,
-			"Direct memory configured is not enough, total direct memory: "
-				+ (directMemoryLimitInBytes >> 20) + " MB, segmentSize: " + memorySizePerBufferInBytes
-				+ " Bytes, minBufferNum: " + minBufferNum + ", bufferNum: " + bufferNum);
+		NettyConfig nettyConfigWithoutTotalMemory = createNettyConfig(configuration);
+		long maxNettyMemorySizeInBytes = (nettyConfigWithoutTotalMemory.getServerNumThreads() + 1) * (long) nettyConfigWithoutTotalMemory.getChunkSize();
 
-		// We don't use up all the memory in case of OOM. Notice that we have reserved a chunk for Netty arenas before.
-		int nettyDirectMemorySize = (int) (0.8 * (directMemoryLimitInBytes - (long) memorySizePerBufferInBytes * bufferNum) / (1024.0 * 1024.0));
-		configuration.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY, nettyDirectMemorySize);
-		LOG.info("Auto-configure netty direct memory to " + nettyDirectMemorySize);
+		if (nettyMemorySizeInBytes > 0) {
+			 nettyMemorySizeInBytes = Math.min(nettyMemorySizeInBytes, maxNettyMemorySizeInBytes);
+		} else {
+			nettyMemorySizeInBytes = Math.min(directMemoryLimitInBytes / 2, maxNettyMemorySizeInBytes);
+		}
+
+		checkArgument(nettyMemorySizeInBytes < directMemoryLimitInBytes,
+			"The configured Netty memory size is less than the total direct memory size, netty size is " +
+				(nettyMemorySizeInBytes >> 20) + "MB, total direct memory size is " + (directMemoryLimitInBytes >> 20) + "MB");
+
+		int nettyDirectMemorySizeInMB = (int) (nettyMemorySizeInBytes >> 20);
+		configuration.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY, nettyDirectMemorySizeInMB);
 
 		NettyConfig nettyConfig = createNettyConfig(configuration);
+		checkArgument(nettyConfig.getNumberOfArenas() >= 1,
+			"Direct memory left for netty (" + nettyDirectMemorySizeInMB + "MB) is not enough " +
+				"at least one arena, please increase the total direct memory size or both the total direct memory size" +
+				"and netty memory size if netty memory size is configured explicitly.");
+
+		// 3.2 Configure the number of send buffers.
+		final int memorySizePerBufferInBytes = configuration.getInteger(
+			ExternalBlockShuffleServiceOptions.MEMORY_SIZE_PER_BUFFER_IN_BYTES);
+		final int bufferNum = (int) ((directMemoryLimitInBytes - nettyMemorySizeInBytes) / memorySizePerBufferInBytes);
+		checkArgument(bufferNum >= MIN_BUFFER_NUMBER,
+			"Direct memory left for the send buffer pool is less than the minimal value (" + MIN_BUFFER_NUMBER + "), " +
+				"please increase the total direct memory size or decrease the netty memory size.");
 
 		// 4. Parse and validate TTLs used for result partition recycling.
 		long consumedPartitionTTL = configuration.getInteger(

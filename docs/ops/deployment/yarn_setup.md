@@ -457,7 +457,7 @@ YARN shuffle service acts as a plugin of the NodeManager and you first need to s
     </property>
     
     <property>
-      <name>yarn.nodemanager.aux-services.flink_yarn_shuffle.class</name>
+      <name>yarn.nodemanager.aux-services.yarn_shuffle_service_for_flink.class</name>
       <value>org.apache.flink.network.yarn.YarnShuffleService</value>
     </property>
     ```

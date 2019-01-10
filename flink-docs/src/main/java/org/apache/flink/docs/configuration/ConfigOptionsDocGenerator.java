@@ -226,11 +226,15 @@ public class ConfigOptionsDocGenerator {
 	}
 
 	private static String addWordBreakOpportunities(String value) {
-		return value
-			// allow breaking of semicolon separated lists
-			.replace(";", ";<wbr>")
-			// allow breaking of dot separated items, but the decimal numbers are ignored
-			.replace("(?<![0-9])\\.(?![0-9])", ".<wbr>");
+		if (value.contains(";")) {
+			return value
+				// allow breaking of semicolon separated lists
+				.replace(";", ";<wbr>");
+		} else {
+			return value
+				// allow breaking of dot separated items, but the decimal numbers are ignored
+				.replaceAll("(?<![0-9])\\.(?![0-9])", ".<wbr>");
+		}
 	}
 
 	private static void sortOptions(List<OptionWithMetaInfo> configOptions) {

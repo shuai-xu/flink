@@ -43,9 +43,9 @@ public class MockYarnShuffleService {
 		this.port = port;
 
 		hadoopConf.setStrings(ExternalBlockShuffleServiceOptions.LOCAL_DIRS.key(), "[test]" + externalDir);
+		hadoopConf.setLong(ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_DIRECT_MEMORY_LIMIT_IN_MB.key(), 200);
 		hadoopConf.setInt(ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_PORT_KEY.key(), port);
 		hadoopConf.setStrings(ExternalBlockShuffleServiceOptions.IO_THREAD_NUM_FOR_DISK_TYPE.key(), "test: " + threadNum);
-		hadoopConf.setInt(ExternalBlockShuffleServiceOptions.MIN_BUFFER_NUMBER.key(), 20);
 		hadoopConf.setLong(ExternalBlockShuffleServiceOptions.DISK_SCAN_INTERVAL_IN_MS.key(), 100);
 	}
 

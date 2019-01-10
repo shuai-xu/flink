@@ -181,8 +181,8 @@ public class NettyConfig {
 		final int maxNumberOfArenas = (int) (nettyMemory * 1024L * 1024L / chunkSize) - 1;
 
 		checkState(maxNumberOfArenas >= 1,
-			"The configured nettyMemory is {} and cannot support for even one chunk with size {}",
-			nettyMemory, chunkSize);
+			"The configured nettyMemory is %s MB and cannot support for even one chunk with size %s MB",
+			nettyMemory, chunkSize >> 20);
 
 		return Math.min(numberOfSlots, maxNumberOfArenas);
 	}

@@ -19,7 +19,7 @@
         </tr>
         <tr>
             <td><h5>flink.shuffle-service.direct-memory-limit-in-mb</h5></td>
-            <td style="word-wrap: break-word;">960</td>
+            <td style="word-wrap: break-word;">300</td>
             <td>The direct memory consumed by the yarn shuffle service.</td>
         </tr>
         <tr>
@@ -53,9 +53,9 @@
             <td></td>
         </tr>
         <tr>
-            <td><h5>flink.shuffle-service.min-buffer-num</h5></td>
-            <td style="word-wrap: break-word;">1000</td>
-            <td></td>
+            <td><h5>flink.shuffle-service.netty-memory-in-mb</h5></td>
+            <td style="word-wrap: break-word;">0</td>
+            <td>The preferred number of netty IO threads. If it's positive, the netty memory size will be min(configured value, 4M * flink.shuffle-service.server-thread-number), otherwise the netty memory size will be min(1/2 * flink.shuffle-service.direct-memory-limit-in-mb, 4M * flink.shuffle-service.server-thread-number).</td>
         </tr>
         <tr>
             <td><h5>flink.shuffle-service.partial-consumed-partition-ttl-in-seconds</h5></td>
@@ -64,17 +64,17 @@
         </tr>
         <tr>
             <td><h5>flink.shuffle-service.port</h5></td>
-            <td style="word-wrap: break-word;">13572</td>
+            <td style="word-wrap: break-word;">14572</td>
             <td>The port of the shuffle service.</td>
         </tr>
         <tr>
             <td><h5>flink.shuffle-service.server-thread-number</h5></td>
             <td style="word-wrap: break-word;">0</td>
-            <td>The number of netty IO threads.</td>
+            <td>The number of netty IO threads. If it's not positive, the thread number is equal to the overall IO thread number</td>
         </tr>
         <tr>
             <td><h5>flink.shuffle-service.subpartition-request-comparator-class</h5></td>
-            <td style="word-wrap: break-word;">"org.apache.flink.runtime.io.network.partition.external.CreditBasedSubpartitionViewComparator"</td>
+            <td style="word-wrap: break-word;">"org.<wbr>apache.<wbr>flink.<wbr>runtime.<wbr>io.<wbr>network.<wbr>partition.<wbr>external.<wbr>CreditBasedSubpartitionViewComparator"</td>
             <td>The comparator to decide the next subpartition to serve.</td>
         </tr>
         <tr>

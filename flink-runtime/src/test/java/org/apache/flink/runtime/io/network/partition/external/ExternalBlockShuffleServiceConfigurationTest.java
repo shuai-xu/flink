@@ -19,7 +19,6 @@
 package org.apache.flink.runtime.io.network.partition.external;
 
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.runtime.io.network.netty.NettyConfig;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -107,6 +106,76 @@ public class ExternalBlockShuffleServiceConfigurationTest {
 	}
 
 	@Test
+	public void testMemoryAllocation() throws Exception {
+		Configuration configuration = new Configuration();
+
+		{
+			configuration.setString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS,
+				"/dump1/local-dir/");
+			configuration.setInteger(ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_DIRECT_MEMORY_LIMIT_IN_MB, 200);
+			configuration.setInteger(ExternalBlockShuffleServiceOptions.SERVER_THREAD_NUM, 20);
+			configuration.setInteger(ExternalBlockShuffleServiceOptions.NETTY_MEMORY_IN_MB, 60);
+			configuration.setInteger(ExternalBlockShuffleServiceOptions.MEMORY_SIZE_PER_BUFFER_IN_BYTES, 4096);
+
+			ExternalBlockShuffleServiceConfiguration externalBlockShuffleServiceConfiguration
+				= ExternalBlockShuffleServiceConfiguration.fromConfiguration(configuration);
+
+			assertEquals(20, externalBlockShuffleServiceConfiguration.getNettyConfig().getServerNumThreads());
+			assertEquals(14, externalBlockShuffleServiceConfiguration.getNettyConfig().getNumberOfArenas());
+			assertEquals(35840, externalBlockShuffleServiceConfiguration.getBufferNumber().intValue());
+		}
+
+		{
+			configuration.setString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS,
+				"/dump1/local-dir/");
+			configuration.setInteger(ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_DIRECT_MEMORY_LIMIT_IN_MB, 200);
+			configuration.setInteger(ExternalBlockShuffleServiceOptions.SERVER_THREAD_NUM, 20);
+			configuration.setInteger(ExternalBlockShuffleServiceOptions.NETTY_MEMORY_IN_MB, 120);
+			configuration.setInteger(ExternalBlockShuffleServiceOptions.MEMORY_SIZE_PER_BUFFER_IN_BYTES, 4096);
+
+			ExternalBlockShuffleServiceConfiguration externalBlockShuffleServiceConfiguration
+				= ExternalBlockShuffleServiceConfiguration.fromConfiguration(configuration);
+
+			assertEquals(20, externalBlockShuffleServiceConfiguration.getNettyConfig().getServerNumThreads());
+			assertEquals(20, externalBlockShuffleServiceConfiguration.getNettyConfig().getNumberOfArenas());
+			assertEquals(29696, externalBlockShuffleServiceConfiguration.getBufferNumber().intValue());
+		}
+
+		{
+			configuration.setString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS,
+				"/dump1/local-dir/");
+			configuration.setInteger(ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_DIRECT_MEMORY_LIMIT_IN_MB, 200);
+			configuration.setInteger(ExternalBlockShuffleServiceOptions.SERVER_THREAD_NUM, 100);
+			configuration.setInteger(ExternalBlockShuffleServiceOptions.NETTY_MEMORY_IN_MB, 0);
+			configuration.setInteger(ExternalBlockShuffleServiceOptions.MEMORY_SIZE_PER_BUFFER_IN_BYTES, 4096);
+
+			ExternalBlockShuffleServiceConfiguration externalBlockShuffleServiceConfiguration
+				= ExternalBlockShuffleServiceConfiguration.fromConfiguration(configuration);
+
+			assertEquals(100, externalBlockShuffleServiceConfiguration.getNettyConfig().getServerNumThreads());
+			assertEquals(24, externalBlockShuffleServiceConfiguration.getNettyConfig().getNumberOfArenas());
+			assertEquals(25600, externalBlockShuffleServiceConfiguration.getBufferNumber().intValue());
+		}
+
+		{
+			configuration.setString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS,
+				"/dump1/local-dir/");
+			configuration.setInteger(ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_DIRECT_MEMORY_LIMIT_IN_MB, 200);
+			configuration.setInteger(ExternalBlockShuffleServiceOptions.SERVER_THREAD_NUM, 100);
+			configuration.setInteger(ExternalBlockShuffleServiceOptions.NETTY_MEMORY_IN_MB, 1);
+			configuration.setInteger(ExternalBlockShuffleServiceOptions.MEMORY_SIZE_PER_BUFFER_IN_BYTES, 4096);
+
+			try {
+				ExternalBlockShuffleServiceConfiguration externalBlockShuffleServiceConfiguration
+					= ExternalBlockShuffleServiceConfiguration.fromConfiguration(configuration);
+				fail("Expected to fail due to too less netty memory.");
+			} catch (IllegalStateException ex) {
+				// Do nothing.
+			}
+		}
+	}
+
+	@Test
 	public void testFromConfiguration() throws Exception {
 		Configuration configuration = new Configuration();
 
@@ -116,7 +185,6 @@ public class ExternalBlockShuffleServiceConfigurationTest {
 		configuration.setString(ExternalBlockShuffleServiceOptions.IO_THREAD_NUM_FOR_DISK_TYPE, "SSD: 13, NEW_DISK: 4");
 		configuration.setInteger(ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_DIRECT_MEMORY_LIMIT_IN_MB, 256);
 		configuration.setInteger(ExternalBlockShuffleServiceOptions.MEMORY_SIZE_PER_BUFFER_IN_BYTES, 4096);
-		configuration.setInteger(ExternalBlockShuffleServiceOptions.MIN_BUFFER_NUMBER, 999);
 		configuration.setInteger(ExternalBlockShuffleServiceOptions.CONSUMED_PARTITION_TTL_IN_SECONDS, 41);
 		configuration.setInteger(ExternalBlockShuffleServiceOptions.PARTIAL_CONSUMED_PARTITION_TTL_IN_SECONDS, 42);
 		configuration.setInteger(ExternalBlockShuffleServiceOptions.UNCONSUMED_PARTITION_TTL_IN_SECONDS, 43);
@@ -143,11 +211,11 @@ public class ExternalBlockShuffleServiceConfigurationTest {
 							 put("NEW_DISK", 4);
 						 }},
 			externalBlockShuffleServiceConfiguration.getDiskTypeToIOThreadNum());
-		assertEquals(new Integer(999), externalBlockShuffleServiceConfiguration.getBufferNumber());
+		assertEquals(new Integer(32768), externalBlockShuffleServiceConfiguration.getBufferNumber());
 		assertEquals(new Integer(4096), externalBlockShuffleServiceConfiguration.getMemorySizePerBufferInBytes());
 		assertEquals(new Integer(50), externalBlockShuffleServiceConfiguration.getTotalIOThreadNum());
 		assertEquals(50, externalBlockShuffleServiceConfiguration.getNettyConfig().getServerNumThreads());
-		assertEquals(49, externalBlockShuffleServiceConfiguration.getNettyConfig().getNumberOfArenas());
+		assertEquals(31, externalBlockShuffleServiceConfiguration.getNettyConfig().getNumberOfArenas());
 		assertEquals(new Long(41000), externalBlockShuffleServiceConfiguration.getConsumedPartitionTTL());
 		assertEquals(new Long(42000), externalBlockShuffleServiceConfiguration.getPartialConsumedPartitionTTL());
 		assertEquals(new Long(43000), externalBlockShuffleServiceConfiguration.getUnconsumedPartitionTTL());
