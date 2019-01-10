@@ -18,31 +18,50 @@
 
 package org.apache.flink.table.util
 
-import java.util
-import java.util.{ArrayList => JArrayList}
-
-import org.apache.calcite.plan.hep.HepMatchOrder
-import org.apache.calcite.tools.RuleSet
-import org.apache.calcite.util.ImmutableBitSet
-import org.apache.commons.lang3.SystemUtils
-import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.api.common.typeinfo.{AtomicType, TypeInformation}
+import org.apache.flink.api.java.typeutils.TupleTypeInfo
+import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.streaming.api.environment.LocalStreamEnvironment
+import org.apache.flink.streaming.api.datastream.{DataStream => JDataStream}
+import org.apache.flink.streaming.api.environment.{LocalStreamEnvironment, StreamExecutionEnvironment => JStreamExecutionEnvironment}
 import org.apache.flink.streaming.api.functions.source.SourceFunction
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
+import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
+import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
-import org.apache.flink.table.api.java.{StreamTableEnvironment => JStreamTableEnvironment}
-import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.InternalType
-import org.apache.flink.table.api.{Table, TableEnvironment, TableSchema}
+import org.apache.flink.table.api.java.{BatchTableEnvironment => JBatchTableEnvironment, StreamTableEnvironment => JStreamTableEnvironment}
+import org.apache.flink.table.api.scala.{BatchTableEnvironment, StreamTableEnvironment, _}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
+import org.apache.flink.table.errorcode.TableErrors
+
+import java.util.{ArrayList => JArrayList, HashSet => JHashSet}
+import org.apache.flink.table.api.{Table, TableEnvironment, TableException, TableSchema, _}
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExecSink}
 import org.apache.flink.table.plan.optimize._
-import org.apache.flink.table.plan.util.FlinkRelOptUtil
-import org.junit.Assert.assertEquals
+import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
+import org.apache.flink.table.plan.subplan.BatchDAGOptimizer
+import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil}
+import org.apache.flink.table.resource.batch.RunningUnitKeeper
+import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSource}
+import org.apache.flink.types.Row
+
+import org.apache.calcite.plan.hep.HepMatchOrder
+import org.apache.calcite.sql.SqlExplainLevel
+import org.apache.calcite.tools.RuleSet
+import org.apache.calcite.util.ImmutableBitSet
+import org.apache.commons.lang3.SystemUtils
+import org.junit.Assert.{assertEquals, _}
 import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}
+import org.mockito.Mockito.{mock, when}
+import org.mockito.invocation.InvocationOnMock
+import org.mockito.stubbing.Answer
+
+import _root_.scala.collection.JavaConversions._
+import _root_.scala.collection.JavaConverters._
+import _root_.scala.collection.mutable
 
 /**
   * Test base for testing Table API / SQL plans.
@@ -55,13 +74,19 @@ abstract class TableTestBase {
   // used for get test case method name
   val testName: TestName = new TestName
 
-  def streamTestUtil(): StreamTableTestUtil = StreamTableTestUtil(this)
-
   @Rule
   def thrown: ExpectedException = expectedException
 
   @Rule
   def name: TestName = testName
+
+  def streamTestUtil(): StreamTableTestUtil = StreamTableTestUtil(this)
+
+  def batchTestUtil(): BatchTableTestUtil = BatchTableTestUtil(this)
+
+  def nullableBatchTestUtil(fieldsNullable: Boolean): BatchTableTestUtil = {
+    new NullableBatchTableTestUtil(fieldsNullable, this)
+  }
 
   def verifyTableEquals(expected: Table, actual: Table): Unit = {
     assertEquals(
@@ -112,20 +137,6 @@ abstract class TableTestUtil {
   def verifyPlan(sql: String): Unit
 
   def verifyPlan(table: Table): Unit
-
-  def verifyPlanAndTrait(sql: String): Unit
-
-  def verifyPlanAndTrait(table: Table): Unit
-
-  def explainSql(query: String): String
-
-  def explain(resultTable: Table): String
-
-  def verifySchema(resultTable: Table, fields: Seq[(String, InternalType)]): Unit = {
-    val actual = resultTable.getSchema
-    val expected = new TableSchema(fields.map(_._1).toArray, fields.map(_._2).toArray)
-    assertEquals(expected, actual)
-  }
 }
 
 case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
@@ -209,7 +220,7 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
     val node = tableEnv.optimize(table.getRelNode, updatesAsRetraction = false)
     val mq: FlinkRelMetadataQuery = FlinkRelMetadataQuery.instance()
     val actual = mq.getUniqueKeys(node)
-    val expectSet = new util.HashSet[ImmutableBitSet]
+    val expectSet = new JHashSet[ImmutableBitSet]
     expect.filter(_.nonEmpty).foreach { array =>
       val keys = new JArrayList[Integer]()
       array.foreach(keys.add(_))
@@ -245,6 +256,12 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
     tableEnv.explain(resultTable)
   }
 
+  def verifySchema(resultTable: Table, fields: Seq[(String, InternalType)]): Unit = {
+    val actual = resultTable.getSchema
+    val expected = new TableSchema(fields.map(_._1).toArray, fields.map(_._2).toArray)
+    assertEquals(expected, actual)
+  }
+
   private def assertEqualsOrExpand(tag: String, actual: String, expand: Boolean = true): Unit = {
     val expected = s"$${$tag}"
     if (!expand) {
@@ -260,6 +277,399 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
       diffRepository.expand(test.name.getMethodName, tag, actual)
     }
   }
+}
+
+case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
+
+  def answer[T](f: InvocationOnMock => T): Answer[T] = new Answer[T] {
+    override def answer(i: InvocationOnMock): T = f(i)
+  }
+
+  private lazy val diffRepository = DiffRepository.lookup(test.getClass)
+  val javaEnv = new LocalStreamEnvironment()
+  val javaTableEnv: JBatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(javaEnv)
+  val env = new StreamExecutionEnvironment(javaEnv)
+  val tableEnv: BatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(env)
+  tableEnv.getConfig.setCalciteConfig(CalciteConfig.createBuilder().build())
+  tableEnv.getConfig.setSubsectionOptimization(true)
+
+  def disableBroadcastHashJoin(): Unit = {
+    tableEnv.getConfig.getConf.setLong(
+      TableConfigOptions.SQL_EXEC_HASH_JOIN_BROADCAST_THRESHOLD, -1)
+  }
+
+  def setJoinReorderEnabled(joinReorderEnabled: Boolean): Unit = {
+    tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED, joinReorderEnabled)
+  }
+
+  def addFunction[T: TypeInformation](
+      name: String,
+      function: TableFunction[T])
+  : TableFunction[T] = {
+    tableEnv.registerFunction(name, function)
+    function
+  }
+
+  def addFunction(name: String, function: ScalarFunction): Unit = {
+    tableEnv.registerFunction(name, function)
+  }
+
+  def addFunction[T: TypeInformation, ACC: TypeInformation](
+      name: String,
+      function: AggregateFunction[T, ACC]): Unit = {
+    tableEnv.registerFunction(name, function)
+  }
+
+  def addTable[T: TypeInformation](
+      name: String,
+      fields: Expression*): Table = {
+
+    val bs = env.fromElements()
+    val t = tableEnv.fromBoundedStream(bs, fields: _*)
+    tableEnv.registerTable(name, t)
+    t
+  }
+
+  def addTableSource(
+      name: String,
+      tableSchema: TableSchema,
+      limitPushDown: Boolean = false,
+      stats: TableStats = null): TableSource = {
+
+    val table = new TestBatchTableSource(tableSchema, limitPushDown, stats)
+    addTable(name, table)
+    table
+  }
+
+  def addJavaTable[T](typeInfo: TypeInformation[T], name: String, fields: Expression*): Table = {
+    val stream = javaEnv.addSource(new EmptySource[T], typeInfo)
+    val t = tableEnv.fromBoundedStream(new DataStream[T](stream), fields: _*)
+    tableEnv.registerTable(name, t)
+    t
+  }
+
+  def addTable(name: String, t: TableSource): Unit = {
+    tableEnv.registerTableSource(name, t)
+  }
+
+  def addTable[T: TypeInformation](
+      name: String,
+      uniqueKeys: Set[Set[String]],
+      fields: Expression*): Table = {
+    val typeInfo: TypeInformation[T] = implicitly[TypeInformation[T]]
+    val physicalSchema = TableSchemaUtil.fromDataType(DataTypes.of(typeInfo))
+    val (fieldNames, fieldIdxs) =
+      tableEnv.getFieldInfo(DataTypes.of(typeInfo), fields.toArray)
+    val fieldTypes = fieldIdxs.map(physicalSchema.getType)
+    val tableSchema = new TableSchema(fieldNames, fieldTypes)
+    val mapping = fieldNames.zipWithIndex.map {
+      case (name: String, idx: Int) =>
+        (name, physicalSchema.getColumnName(fieldIdxs.apply(idx)))
+    }.toMap
+    val ts = new TestTableSourceWithTime(tableSchema, typeInfo, Seq(), mapping = mapping)
+    tableEnv.registerTableSource(name, ts, uniqueKeys.map(_.asJava).asJava)
+    tableEnv.scan(name)
+  }
+
+  def getTableEnv: BatchTableEnvironment = tableEnv
+
+  def verifySqlNotExpected(query: String, notExpected: String*): Unit = {
+    verifyTableNotExpected(tableEnv.sqlQuery(query), notExpected: _*)
+  }
+
+  def verifyTableNotExpected(resultTable: Table, notExpected: String*): Unit = {
+    val relNode = resultTable.getRelNode
+    val optimized = tableEnv.optimize(relNode)
+    val actual = optimized match {
+      case rel: BatchExecRel[_] =>
+        val optimizedNodes = tableEnv.translateToExecNodeDag(Seq(rel))
+        require(optimizedNodes.length == 1)
+        FlinkNodeOptUtil.treeToString(optimizedNodes.head)
+      case _ =>
+        FlinkRelOptUtil.toString(optimized)
+    }
+    val result = notExpected.forall(!actual.contains(_))
+    assertTrue(s"\n actual: \n$actual \n not expected: \n${notExpected.mkString(", ")}", result)
+  }
+
+  def verifyPlan(): Unit = {
+    doVerifyPlanWithSubsectionOptimization(explainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES)
+  }
+
+  override def verifyPlan(sql: String): Unit = {
+    verifyPlan(sql, SqlExplainLevel.EXPPLAN_ATTRIBUTES)
+  }
+
+  def verifyPlan(sql: String, explainLevel: SqlExplainLevel): Unit = {
+    verifyPlan(sql, explainLevel, printPlanBefore = true)
+  }
+
+  def verifyPlan(sql: String, explainLevel: SqlExplainLevel, printPlanBefore: Boolean): Unit = {
+    val resultTable = tableEnv.sqlQuery(sql)
+    assertEqualsOrExpand("sql", sql)
+    verifyPlan(resultTable, explainLevel = explainLevel, printPlanBefore = printPlanBefore)
+  }
+
+  override def verifyPlan(resultTable: Table): Unit = {
+    verifyPlan(resultTable, SqlExplainLevel.EXPPLAN_ATTRIBUTES)
+  }
+
+  def verifyPlan(resultTable: Table, explainLevel: SqlExplainLevel): Unit = {
+    doVerifyPlan(resultTable, explainLevel = explainLevel)
+  }
+
+  def verifyPlan(
+      resultTable: Table,
+      explainLevel: SqlExplainLevel,
+      printPlanBefore: Boolean): Unit = {
+    doVerifyPlan(resultTable, explainLevel = explainLevel, printPlanBefore = printPlanBefore)
+  }
+
+  def verifyResultPartitionCount(): Unit = {
+    doVerifyPlanWithSubsectionOptimization(
+      explainLevel = SqlExplainLevel.NO_ATTRIBUTES,
+      printResultPartitionCount = true,
+      printPlanBefore = false)
+  }
+
+  def verifyResource(sql: String): Unit = {
+    assertEqualsOrExpand("sql", sql)
+    doVerifyPlan(
+      tableEnv.sqlQuery(sql),
+      explainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
+      printResource = true,
+      printPlanBefore = false)
+  }
+
+  def verifyResultPartitionCount(resultTable: Table): Unit = {
+    doVerifyPlan(
+      resultTable,
+      explainLevel = SqlExplainLevel.NO_ATTRIBUTES,
+      printResource = true,
+      printPlanBefore = false)
+  }
+
+  def verifyPlanWithRunningUnit(sql: String): Unit = {
+    assertEqualsOrExpand("sql", sql)
+    doVerifyPlan(
+      tableEnv.sqlQuery(sql),
+      explainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
+      printPlanBefore = false,
+      printRunningUnit = true)
+  }
+
+  private def doVerifyPlan(
+      resultTable: Table,
+      explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
+      printResource: Boolean = false,
+      printPlanBefore: Boolean = true,
+      printRunningUnit: Boolean = false): Unit = {
+    val relNode = resultTable.getRelNode
+    if (printPlanBefore) {
+      val planBefore = SystemUtils.LINE_SEPARATOR +
+        FlinkRelOptUtil.toString(relNode, SqlExplainLevel.EXPPLAN_ATTRIBUTES)
+      assertEqualsOrExpand("planBefore", planBefore)
+    }
+
+    val optimized = tableEnv.optimize(relNode)
+
+    val ruKeeper = new RunningUnitKeeper(tableEnv)
+    val actual = optimized match {
+      case batchExecRel: BatchExecRel[_] =>
+        val optimizedNodes = tableEnv.translateToExecNodeDag(Seq(batchExecRel))
+        require(optimizedNodes.length == 1)
+        val optimizedNode = optimizedNodes.head
+        // TODO refactor
+        ruKeeper.buildRUs(batchExecRel)
+        if (printResource) {
+          ruKeeper.calculateRelResource(optimized.asInstanceOf[BatchExecRel[_]])
+        }
+        if (printRunningUnit) {
+          val ruList = ruKeeper.getRunningUnits.map(x => x.toString)
+          ruList.sorted
+          val ruString = SystemUtils.LINE_SEPARATOR + String.join("\n", ruList)
+          assertEqualsOrExpand("runningUnit", ruString)
+        }
+
+        SystemUtils.LINE_SEPARATOR +
+          FlinkNodeOptUtil.treeToString(optimizedNode, explainLevel, withResource = printResource)
+      case _ =>
+        SystemUtils.LINE_SEPARATOR +
+          FlinkRelOptUtil.toString(optimized, explainLevel)
+    }
+
+    assertEqualsOrExpand("planAfter", actual.toString, expand = false)
+  }
+
+  private def doVerifyPlanWithSubsectionOptimization(
+      explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
+      printResultPartitionCount: Boolean = false,
+      printPlanBefore: Boolean = true): Unit = {
+    if (!tableEnv.getConfig.getSubsectionOptimization) {
+      throw new TableException(
+        "subsection optimization is false, please use other method to verify result.")
+    }
+    if (tableEnv.sinkNodes.isEmpty) {
+      throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
+    }
+
+    if (printPlanBefore) {
+      val planBefore = new StringBuilder
+      tableEnv.sinkNodes.foreach { sink =>
+        val table = new Table(tableEnv, sink.children.head)
+        val ast = table.getRelNode
+        planBefore.append(System.lineSeparator)
+        planBefore.append(FlinkRelOptUtil.toString(ast, SqlExplainLevel.EXPPLAN_ATTRIBUTES))
+      }
+      assertEqualsOrExpand("planBefore", planBefore.toString())
+    }
+
+    val optSinkNodes = tableEnv.tableServiceManager.cachePlanBuilder
+      .buildPlanIfNeeded(tableEnv.sinkNodes)
+
+
+    val dagOptimizer = new BatchDAGOptimizer(optSinkNodes, tableEnv)
+    // optimize dag
+    val sinks = dagOptimizer.getOptimizedDag()
+    tableEnv.sinkNodes.clear()
+
+    // set resource
+    val planAfter = if (printResultPartitionCount) {
+      val planWithResource = new StringBuilder()
+      val ruKeeper = new RunningUnitKeeper(tableEnv)
+      // TODO refactor
+      sinks.map {
+        case node: BatchExecSink[_] =>
+          ruKeeper.buildRUs(node)
+          ruKeeper.calculateRelResource(node)
+          planWithResource.append(System.lineSeparator)
+          planWithResource.append("[[Sink]]")
+          planWithResource.append(System.lineSeparator)
+          planWithResource.append(FlinkNodeOptUtil.treeToString(
+            node,
+            detailLevel = explainLevel,
+            withResource = true))
+          planWithResource.append(System.lineSeparator)
+        case _ => // ignore
+      }
+      planWithResource.deleteCharAt(planWithResource.length - 1)
+      planWithResource.toString
+    } else {
+      dagOptimizer.explain()
+    }
+    assertEqualsOrExpand("planAfter", planAfter, expand = false)
+  }
+
+  private def assertEqualsOrExpand(tag: String, actual: String, expand: Boolean = true): Unit = {
+    val expected = s"$${$tag}"
+    if (!expand) {
+      diffRepository.assertEquals(test.name.getMethodName, tag, expected, actual)
+      return
+    }
+    val expanded = diffRepository.expand(test.name.getMethodName, tag, expected)
+    if (expanded != null && !expanded.equals(expected)) {
+      // expected does exist, check result
+      diffRepository.assertEquals(test.name.getMethodName, tag, expected, actual)
+    } else {
+      // expected does not exist, update
+      diffRepository.expand(test.name.getMethodName, tag, actual)
+    }
+  }
+
+  def printTable(
+      resultTable: Table,
+      explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES): Unit = {
+    val relNode = resultTable.getRelNode
+    val optimized = tableEnv.optimize(relNode)
+    val str = optimized match {
+      case batchExecRel: BatchExecRel[_] =>
+        val optimizedNodes = tableEnv.translateToExecNodeDag(Seq(batchExecRel))
+        require(optimizedNodes.length == 1)
+        val optimizedNode = optimizedNodes.head
+        FlinkNodeOptUtil.treeToString(optimizedNode, detailLevel = explainLevel)
+      case _ =>
+        FlinkRelOptUtil.toString(optimized, detailLevel = explainLevel)
+    }
+    println(str)
+  }
+
+  def printSql(
+      query: String,
+      explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES): Unit = {
+    printTable(tableEnv.sqlQuery(query), explainLevel)
+  }
+}
+
+class NullableBatchTableTestUtil(fieldsNullable: Boolean, test: TableTestBase)
+  extends BatchTableTestUtil(test) {
+
+  override def addTable[T: TypeInformation](name: String, fields: Expression*): Table = {
+    val typeInfo: TypeInformation[T] = implicitly[TypeInformation[T]]
+    val fieldTypes = typeInfo match {
+      case tt: TupleTypeInfo[_] => tt.getGenericParameters.values().asScala.toArray
+      case ct: CaseClassTypeInfo[_] => ct.getGenericParameters.values().asScala.toArray
+      case bt: AtomicType[_] => Array[TypeInformation[_]](bt)
+      case _ => throw new TableException(s"Unsupported type info: $typeInfo")
+    }
+    val fieldNullables = Array.fill(fields.size)(fieldsNullable)
+    val (fieldNames, _) = tableEnv.getFieldInfo(DataTypes.of(typeInfo), fields.toArray)
+    val ts = new TestTableSourceWithFieldNullables(fieldNames, fieldTypes, fieldNullables)
+    tableEnv.registerTableSource(name, ts)
+    tableEnv.scan(name)
+  }
+}
+
+class TestBatchTableSource(tableSchema: TableSchema,
+                           limitPushDown: Boolean = false,
+                           stats: TableStats = null)
+  extends BatchTableSource[Row] with LimitableTableSource {
+
+  override def getReturnType: DataType =
+    DataTypes.createRowType(
+      tableSchema.getTypes.asInstanceOf[Array[DataType]],
+      tableSchema.getColumnNames)
+
+  override def getTableStats: TableStats = if (stats == null) {
+    TableStats(10L, new mutable.HashMap[String, ColumnStats]())
+  } else {
+    stats
+  }
+
+  /** Returns the table schema of the table source */
+  override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
+
+  override def explainSource(): String = ""
+
+  /**
+    * Returns the data of the table as a [[JDataStream]].
+    *
+    * NOTE: This method is for internal use only for defining a [[TableSource]].
+    * Do not use it in Table API programs.
+    */
+  override def getBoundedStream(javaEnv: JStreamExecutionEnvironment): JDataStream[Row] = {
+    val transformation = mock(classOf[StreamTransformation[Row]])
+    when(transformation.getMaxParallelism).thenReturn(-1)
+    val bs = mock(classOf[JDataStream[Row]])
+    when(bs.getTransformation).thenReturn(transformation)
+    when(transformation.getOutputType).thenReturn(
+      DataTypes.toTypeInfo(getReturnType).asInstanceOf[TypeInformation[Row]])
+    bs
+  }
+
+  /**
+    * Check and push down the limit to the table source.
+    *
+    * @param limit the value which limit the number of records.
+    * @return A new cloned instance of [[TableSource]]
+    */
+  override def applyLimit(limit: Long): TableSource = this
+
+  /**
+    * Return the flag to indicate whether limit push down has been tried. Must return true on
+    * the returned instance of [[applyLimit]].
+    */
+  override def isLimitPushedDown: Boolean = limitPushDown
 }
 
 class EmptySource[T]() extends SourceFunction[T] {

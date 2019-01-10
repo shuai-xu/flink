@@ -28,10 +28,10 @@ import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.expressions.Null
 import org.apache.flink.table.runtime.utils.CommonTestData.NonPojo
 import org.apache.flink.table.util.DateTimeTestUtil.UTCTimestamp
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.{Ignore, Test}
 
-class SetOperatorsTest extends TableTestBatchExecBase {
+class SetOperatorsTest extends TableTestBase {
 
   @Test
   def testInWithFilter(): Unit = {

@@ -22,7 +22,7 @@ import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -31,8 +31,8 @@ import org.junit.{Before, Test}
 import java.util.Random
 
 @RunWith(classOf[Parameterized])
-class FlinkFilterJoinRuleTest(fieldsNullable: Boolean) extends TableTestBatchExecBase {
-  private val util = nullableBatchExecTestUtil(fieldsNullable)
+class FlinkFilterJoinRuleTest(fieldsNullable: Boolean) extends TableTestBase {
+  private val util = nullableBatchTestUtil(fieldsNullable)
 
   @Before
   def setup(): Unit = {

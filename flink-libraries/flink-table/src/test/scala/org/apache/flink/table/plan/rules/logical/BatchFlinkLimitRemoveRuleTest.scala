@@ -20,10 +20,10 @@ package org.apache.flink.table.plan.rules.logical
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
-class BatchFlinkLimitRemoveRuleTest extends TableTestBatchExecBase {
+class BatchFlinkLimitRemoveRuleTest extends TableTestBase {
   private val batchUtil = batchTestUtil()
   batchUtil.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
 

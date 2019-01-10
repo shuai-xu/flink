@@ -27,14 +27,14 @@ import org.apache.flink.streaming.api.operators.StreamSource
 import org.apache.flink.streaming.api.transformations.SourceTransformation
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Assert._
 import org.junit.Test
 import org.mockito.Mockito
 
-class ScanBatchExecTest extends TableTestBatchExecBase  {
+class ScanBatchExecTest extends TableTestBase  {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
 
   @Test
   def testSetDefaultResourceAndParallelism(): Unit = {

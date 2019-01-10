@@ -22,10 +22,10 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes}
-import org.apache.flink.table.util.{MemoryTableSourceSinkUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{MemoryTableSourceSinkUtil, TableTestBase}
 import org.junit._
 
-class InsertIntoValidationTest extends TableTestBatchExecBase {
+class InsertIntoValidationTest extends TableTestBase {
 
   @Test(expected = classOf[ValidationException])
   def testInconsistentLengthInsert(): Unit = {

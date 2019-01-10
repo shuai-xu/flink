@@ -24,18 +24,18 @@ import org.apache.flink.table.api.functions.TableFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.util.{BatchExecTableTestUtil, TableFunc1, TableTestBatchExecBase}
+import org.apache.flink.table.util.{BatchTableTestUtil, TableFunc1, TableTestBase}
 
 import org.apache.commons.lang3.StringUtils
 import org.junit.{Before, Test}
 
-class RemoveCollationTest extends TableTestBatchExecBase {
+class RemoveCollationTest extends TableTestBase {
 
-  private var util: BatchExecTableTestUtil = _
+  private var util: BatchTableTestUtil = _
 
   @Before
   def before(): Unit = {
-    util = batchExecTestUtil()
+    util = batchTestUtil()
     util.addTable("x", CommonTestData.get3Source(Array("a", "b", "c")))
     util.addTable("y", CommonTestData.get3Source(Array("d", "e", "f")))
     util.addTable("t1", CommonTestData.get3Source(Array("a1", "b1", "c1")))

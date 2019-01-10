@@ -19,12 +19,12 @@ package org.apache.flink.table.plan.rules.logical
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.{BatchExecTableTestUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{BatchTableTestUtil, TableTestBase}
 
 import org.junit.{Before, Test}
 
-abstract class PruneAggregateCallRuleTest() extends TableTestBatchExecBase {
-  protected val util: BatchExecTableTestUtil = batchExecTestUtil()
+abstract class PruneAggregateCallRuleTest() extends TableTestBase {
+  protected val util: BatchTableTestUtil = batchTestUtil()
 
   @Before
   def setup(): Unit = {

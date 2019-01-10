@@ -25,7 +25,7 @@ import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.tpc.{STATS_MODE, TpcHSchemaProvider, TpchTableStatsProvider}
-import org.apache.flink.table.util.{ExecResourceUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{ExecResourceUtil, TableTestBase}
 
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -34,9 +34,9 @@ import org.junit.{Before, Test}
 import _root_.scala.collection.JavaConversions._
 
 @RunWith(classOf[Parameterized])
-class BatchExecResourceTest(inferMode: String) extends TableTestBatchExecBase {
+class BatchExecResourceTest(inferMode: String) extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
 
   @Before
   def before(): Unit = {

@@ -27,7 +27,7 @@ import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.plan.util.FlinkNodeOptUtil
 import org.apache.flink.table.sources.parquet.{ParquetTableSource, ParquetVectorizedColumnRowTableSource}
 import org.apache.flink.table.tpc.STATS_MODE.STATS_MODE
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 
 import org.apache.calcite.sql.SqlExplainLevel
 import org.junit.{Before, Test}
@@ -46,9 +46,9 @@ abstract class TpcHBatchExecPlanTest(
     statsMode: STATS_MODE,
     explainLevel: SqlExplainLevel,
     joinReorderEnabled: Boolean,
-    printOptimizedResult: Boolean) extends TableTestBatchExecBase with PropertyChecks {
+    printOptimizedResult: Boolean) extends TableTestBase with PropertyChecks {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
   private val tEnv = util.tableEnv
 
   @Before

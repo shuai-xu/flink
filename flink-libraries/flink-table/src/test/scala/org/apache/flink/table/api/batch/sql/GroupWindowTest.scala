@@ -23,10 +23,10 @@ import java.sql.Timestamp
 import org.apache.flink.api.scala._
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithMerge
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.{Ignore, Test}
 
-class GroupWindowTest extends TableTestBatchExecBase {
+class GroupWindowTest extends TableTestBase {
 
   @Test
   def testNonPartitionedTumbleWindow(): Unit = {

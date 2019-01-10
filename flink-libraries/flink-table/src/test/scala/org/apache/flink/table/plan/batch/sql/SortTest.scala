@@ -21,12 +21,12 @@ package org.apache.flink.table.plan.batch.sql
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.{BatchExecTableTestUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{BatchTableTestUtil, TableTestBase}
 import org.junit.{Before, Test}
 
-class SortTest extends TableTestBatchExecBase {
+class SortTest extends TableTestBase {
 
-  val util: BatchExecTableTestUtil = batchExecTestUtil()
+  val util: BatchTableTestUtil = batchTestUtil()
   val tableConfig: TableConfig = util.tableEnv.getConfig
 
   @Before

@@ -20,12 +20,12 @@ package org.apache.flink.table.api.batch.sql
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.{BatchExecTableTestUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{BatchTableTestUtil, TableTestBase}
 import org.junit.Test
 
-class TableRefConversionTest extends TableTestBatchExecBase {
+class TableRefConversionTest extends TableTestBase {
 
-  val util: BatchExecTableTestUtil = batchTestUtil()
+  val util: BatchTableTestUtil = batchTestUtil()
   util.addTable[(Int, Long, String)]("MyTable1", 'a, 'b, 'c)
   util.addTable[(Int, Long, String)]("MyTable2", 'c, 'd, 'e)
 

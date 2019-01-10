@@ -21,10 +21,10 @@ package org.apache.flink.table.api.batch.sql
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
-class SortTest extends TableTestBatchExecBase {
+class SortTest extends TableTestBase {
 
   @Test
   def testLimitWithoutOrder(): Unit = {

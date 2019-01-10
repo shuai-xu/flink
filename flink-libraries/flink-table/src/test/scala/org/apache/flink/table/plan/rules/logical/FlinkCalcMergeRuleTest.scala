@@ -24,15 +24,15 @@ import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalCalc, FlinkLogicalNativeTableScan}
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.rel.rules._
 import org.apache.calcite.tools.RuleSets
 import org.junit.{Before, Test}
 
-class FlinkCalcMergeRuleTest extends TableTestBatchExecBase {
-  private val util = batchExecTestUtil()
+class FlinkCalcMergeRuleTest extends TableTestBase {
+  private val util = batchTestUtil()
 
   @Before
   def setup(): Unit = {

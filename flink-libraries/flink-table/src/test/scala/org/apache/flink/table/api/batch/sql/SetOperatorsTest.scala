@@ -23,11 +23,11 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.CommonTestData.NonPojo
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.apache.flink.types.Row
 import org.junit.{Ignore, Test}
 
-class SetOperatorsTest extends TableTestBatchExecBase {
+class SetOperatorsTest extends TableTestBase {
 
   @Test
   def testMinusWithNestedTypes(): Unit = {

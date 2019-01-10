@@ -25,8 +25,8 @@ import org.apache.flink.table.util._
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.sql2rel.SqlToRelConverter
 
-class SubQueryTestBase(fieldsNullable: Boolean) extends TableTestBatchExecBase {
-  val util: NullableBatchExecTableTestUtil = nullableBatchExecTestUtil(fieldsNullable)
+class SubQueryTestBase(fieldsNullable: Boolean) extends TableTestBase {
+  val util: BatchTableTestUtil = nullableBatchTestUtil(fieldsNullable)
 
   def buildPrograms(): FlinkChainedPrograms[BatchOptimizeContext] = {
     val programs = new FlinkChainedPrograms[BatchOptimizeContext]()

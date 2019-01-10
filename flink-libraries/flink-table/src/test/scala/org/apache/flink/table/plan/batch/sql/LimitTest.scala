@@ -24,13 +24,13 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.{TableTestBatchExecBase, TestLimitableTableSource}
+import org.apache.flink.table.util.{TableTestBase, TestLimitableTableSource}
 import org.junit.Test
 
 
-class LimitTest extends TableTestBatchExecBase {
+class LimitTest extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
   private val typeInfos: Array[TypeInformation[_]] = Array(
     INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO)
   private val names = Array("a", "b", "c")

@@ -25,7 +25,7 @@ import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalAggregate, FlinkLo
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms.SUBQUERY_REWRITE
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
-import org.apache.flink.table.util.{NullableBatchExecTableTestUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{BatchTableTestUtil, TableTestBase}
 
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.rel.rules.{FilterCalcMergeRule, FilterToCalcRule, ProjectCalcMergeRule, ProjectToCalcRule, ReduceExpressionsRule}
@@ -35,8 +35,8 @@ import org.junit.runners.Parameterized
 import org.junit.{Before, Test}
 
 @RunWith(classOf[Parameterized])
-class FlinkAggregateRemoveRuleTest(fieldsNullable: Boolean) extends TableTestBatchExecBase {
-  val util: NullableBatchExecTableTestUtil = nullableBatchExecTestUtil(fieldsNullable)
+class FlinkAggregateRemoveRuleTest(fieldsNullable: Boolean) extends TableTestBase {
+  val util: BatchTableTestUtil = nullableBatchTestUtil(fieldsNullable)
 
   @Before
   def setup(): Unit = {

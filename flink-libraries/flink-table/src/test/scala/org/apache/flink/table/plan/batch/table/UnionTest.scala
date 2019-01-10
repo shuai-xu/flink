@@ -22,14 +22,14 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
 import scala.collection.JavaConversions._
 
-class UnionTest extends TableTestBatchExecBase {
+class UnionTest extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
 
   @Test
   def testUnionAll(): Unit = {

@@ -35,7 +35,6 @@ class TableDescriptorTest extends TableTestBase {
     testTableSourceDescriptor(true)
   }
 
-  @Ignore
   @Test
   def testBatchTableSourceDescriptor(): Unit = {
     testTableSourceDescriptor(false)
@@ -74,12 +73,10 @@ class TableDescriptorTest extends TableTestBase {
         .withSchema(schema)
         .inAppendMode()
     } else {
-      //batchTestUtil().tableEnv
-      //  .connect(connector)
-      //  .withFormat(format)
-      //  .withSchema(schema)
-      // TODO: merge TableTestBase & TableTestBatchExecBase
-      throw new RuntimeException("batchTestUtil is not accessible.")
+      batchTestUtil().tableEnv
+        .connect(connector)
+        .withFormat(format)
+        .withSchema(schema)
     }
 
     // tests the table factory discovery and thus validates the result automatically

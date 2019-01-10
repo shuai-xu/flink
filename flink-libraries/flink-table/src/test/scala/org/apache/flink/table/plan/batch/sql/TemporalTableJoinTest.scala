@@ -28,13 +28,13 @@ import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.sources._
-import org.apache.flink.table.util.{TableSchemaUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{TableSchemaUtil, TableTestBase}
 
 import org.junit.Assert.{assertTrue, fail}
 import org.junit.{Before, Test}
 
-class TemporalTableJoinTest extends TableTestBatchExecBase {
-  private val testUtil = batchExecTestUtil()
+class TemporalTableJoinTest extends TableTestBase {
+  private val testUtil = batchTestUtil()
 
   @Before
   def before(): Unit = {
@@ -67,7 +67,7 @@ class TemporalTableJoinTest extends TableTestBatchExecBase {
          |FROM ($sql2) AS T
          |GROUP BY b
       """.stripMargin
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, String, Long)]("MyTable", 'a, 'b, 'c)
     util.addTable[(Int, String, Long, Double)]("T1", 'a, 'b, 'c, 'd)
     util.tableEnv.registerTableSource("temporalTest", new TestTemporalTable)
@@ -82,7 +82,7 @@ class TemporalTableJoinTest extends TableTestBatchExecBase {
 
   @Test
   def testLogicalPlanWithImplicitTypeCast(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, String, Long)]("MyTable", 'a, 'b, 'c)
     util.addTable[(Int, String, Long, Double)]("T1", 'a, 'b, 'c, 'd)
     util.tableEnv.registerTableSource("temporalTest", new TestTemporalTable)

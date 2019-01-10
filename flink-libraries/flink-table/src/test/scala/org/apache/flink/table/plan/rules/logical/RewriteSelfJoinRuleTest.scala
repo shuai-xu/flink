@@ -26,14 +26,14 @@ import org.apache.flink.table.plan.optimize.FlinkBatchPrograms._
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 import org.apache.flink.table.plan.util.FlinkRelOptUtil
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.junit.{Before, Ignore, Test}
 import org.scalatest.prop.PropertyChecks
 
-class RewriteSelfJoinRuleTest extends TableTestBatchExecBase with PropertyChecks {
-  private val util = nullableBatchExecTestUtil(false)
+class RewriteSelfJoinRuleTest extends TableTestBase with PropertyChecks {
+  private val util = nullableBatchTestUtil(false)
   private val tEnv = util.tableEnv
 
   @Before

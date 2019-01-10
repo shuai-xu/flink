@@ -21,12 +21,12 @@ package org.apache.flink.table.api.batch.table.validation
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableException, ValidationException}
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.apache.flink.types.Row
 import org.junit.Assert._
 import org.junit._
 
-class CalcValidationTest extends TableTestBatchExecBase {
+class CalcValidationTest extends TableTestBase {
 
   @Test(expected = classOf[ValidationException])
   def testSelectInvalidFieldFields(): Unit = {

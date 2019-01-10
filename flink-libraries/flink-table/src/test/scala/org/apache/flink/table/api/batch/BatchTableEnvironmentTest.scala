@@ -20,10 +20,10 @@ package org.apache.flink.table.api.batch
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
-class BatchTableEnvironmentTest extends TableTestBatchExecBase {
+class BatchTableEnvironmentTest extends TableTestBase {
 
   @Test
   def testSqlWithoutRegistering(): Unit = {

@@ -20,10 +20,10 @@ package org.apache.flink.table.api.batch.table
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.{TableFunc0, TableFunc1, TableTestBatchExecBase}
+import org.apache.flink.table.util.{TableFunc0, TableFunc1, TableTestBase}
 import org.junit.{Ignore, Test}
 
-class CorrelateTest extends TableTestBatchExecBase {
+class CorrelateTest extends TableTestBase {
 
   @Test
   def testCrossJoin(): Unit = {

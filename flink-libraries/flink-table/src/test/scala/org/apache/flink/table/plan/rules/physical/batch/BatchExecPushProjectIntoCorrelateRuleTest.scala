@@ -19,15 +19,15 @@ package org.apache.flink.table.plan.rules.physical.batch
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.{TableFunc1, TableTestBatchExecBase}
+import org.apache.flink.table.util.{TableFunc1, TableTestBase}
 
 import org.junit.Test
 
-class BatchExecPushProjectIntoCorrelateRuleTest extends TableTestBatchExecBase {
+class BatchExecPushProjectIntoCorrelateRuleTest extends TableTestBase {
 
   @Test
   def testRemoveCalc(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val tEnv = util.tableEnv
     util.addTable[(String, String)]("MyTable", 'a, 'b)
     tEnv.registerFunction("split", new TableFunc1)

@@ -19,12 +19,12 @@
 package org.apache.flink.table.plan.batch.sql
 
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
-import org.apache.flink.table.util.{TableTestBatchExecBase, TestTableSourceWithFieldNullables}
+import org.apache.flink.table.util.{TableTestBase, TestTableSourceWithFieldNullables}
 import org.junit.{Before, Test}
 
-class TableSourceWithFieldNullablesTest extends TableTestBatchExecBase {
+class TableSourceWithFieldNullablesTest extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
 
   @Before
   def before(): Unit = {

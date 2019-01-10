@@ -22,12 +22,12 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.sinks.csv.CsvTableSink
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.{Before, Test}
 
-class SubsectionOptimizationTest extends TableTestBatchExecBase {
+class SubsectionOptimizationTest extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
 
   @Before
   def setup(): Unit = {

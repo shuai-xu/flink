@@ -21,12 +21,12 @@ package org.apache.flink.table.plan.batch.sql
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableConfigOptions, TableException}
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.{Before, Test}
 
-class SetOperatorsTest extends TableTestBatchExecBase {
+class SetOperatorsTest extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
 
   @Before
   def before(): Unit = {

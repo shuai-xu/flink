@@ -21,12 +21,12 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.java.{Over => JOver}
 import org.apache.flink.table.api.scala.{Over => SOver, _}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
-class OverWindowAggregateTest extends TableTestBatchExecBase {
+class OverWindowAggregateTest extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
   private val t = util.addTable[(Int, Long, String, Long)]("Table3", 'a, 'b, 'c)
 
   @Test

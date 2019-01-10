@@ -28,7 +28,7 @@ import org.apache.flink.table.functions.aggregate.CountAggFunction
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.VarSum1AggFunction
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.{Before, Test}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -42,9 +42,9 @@ import scala.collection.JavaConversions._
 class SortAggregateTest(
     aggStrategy: AggPhaseEnforcer,
     withNdv: Boolean)
-  extends TableTestBatchExecBase {
+  extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
 
   @Before
   def before(): Unit = {

@@ -22,10 +22,10 @@ import java.sql.Timestamp
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.{Ignore, Test}
 
-class SetOperatorsTest extends TableTestBatchExecBase {
+class SetOperatorsTest extends TableTestBase {
 
   @Test
   def testInWithFilter(): Unit = {

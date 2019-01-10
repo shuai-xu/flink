@@ -22,14 +22,14 @@ import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.InsertRuntimeFilterRule
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.{Before, Test}
 
 import scala.collection.JavaConversions._
 
-class RuntimeFilterTest extends TableTestBatchExecBase {
+class RuntimeFilterTest extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
 
   @Before
   def before(): Unit = {

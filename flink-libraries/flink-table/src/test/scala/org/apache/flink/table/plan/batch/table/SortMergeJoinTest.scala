@@ -21,12 +21,12 @@ package org.apache.flink.table.plan.batch.table
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.{BatchExecTableTestUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{BatchTableTestUtil, TableTestBase}
 import org.junit.{Before, Test}
 
-class SortMergeJoinTest extends TableTestBatchExecBase {
+class SortMergeJoinTest extends TableTestBase {
 
-  private val util: BatchExecTableTestUtil = batchExecTestUtil()
+  private val util: BatchTableTestUtil = batchTestUtil()
 
   @Before
   def before(): Unit = {

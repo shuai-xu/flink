@@ -18,12 +18,12 @@
 
 package org.apache.flink.table.sources.parquet
 
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
-class ParquetTableSourceTest extends TableTestBatchExecBase {
+class ParquetTableSourceTest extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
   val vectorColumnRowTable = CommonParquetTestData.getParquetVectorizedColumnRowTableSource
   util.addTable("vectorColumnRowTable", vectorColumnRowTable)
 

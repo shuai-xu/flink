@@ -25,10 +25,10 @@ import org.apache.flink.api.scala.util.CollectionDataSets.CustomType
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes._
 import org.apache.flink.table.expressions.Literal
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit._
 
-class CalcStringExpressionTest extends TableTestBatchExecBase {
+class CalcStringExpressionTest extends TableTestBase {
 
   @Test
   def testSimpleSelectAllWithAs(): Unit = {

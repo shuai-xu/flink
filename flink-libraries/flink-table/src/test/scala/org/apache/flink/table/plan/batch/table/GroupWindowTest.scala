@@ -24,10 +24,10 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.
   JavaUserDefinedAggFunctions.WeightedAvgWithMerge
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
-class GroupWindowTest extends TableTestBatchExecBase {
+class GroupWindowTest extends TableTestBase {
 
   //===============================================================================================
   // Common test
@@ -35,7 +35,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[RuntimeException])
   def testEventTimeTumblingGroupWindowOverCount(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String)]('long, 'int, 'string)
 
     val windowedTable = table
@@ -48,7 +48,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testEventTimeTumblingGroupWindowOverTimeWithUdAgg(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String)]('long, 'int, 'string)
 
     val myWeightedAvg = new WeightedAvgWithMerge
@@ -63,7 +63,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testEventTimeTumblingGroupWindowOverTime(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String)]('long, 'int, 'string)
 
     val windowedTable = table
@@ -76,7 +76,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testAllEventTimeTumblingGroupWindowOverTime(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String)]('long, 'int, 'string)
 
     val windowedTable = table
@@ -89,7 +89,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[RuntimeException])
   def testAllEventTimeTumblingGroupWindowOverCount(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String)]('long, 'int, 'string)
 
     val windowedTable = table
@@ -102,7 +102,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testLongEventTimeTumblingGroupWindowWithProperties(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String)]('ts, 'int, 'string)
 
     val windowedTable = table
@@ -115,7 +115,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testTimestampEventTimeTumblingGroupWindowWithProperties(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Timestamp, Int, String)]('ts, 'int, 'string)
 
     val windowedTable = table
@@ -132,7 +132,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testEventTimeSlidingGroupWindowOverTime(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String)]('long, 'int, 'string)
 
     val windowedTable = table
@@ -145,7 +145,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[RuntimeException])
   def testEventTimeSlidingGroupWindowOverCount(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String)]('long, 'int, 'string)
 
     val windowedTable = table
@@ -158,7 +158,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testEventTimeSlidingGroupWindowOverTimeWithUdAgg(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String)]('long, 'int, 'string)
 
     val myWeightedAvg = new WeightedAvgWithMerge
@@ -173,7 +173,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testAllEventTimeSlidingGroupWindowOverTime(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String)]('long, 'int, 'string)
 
     val windowedTable = table
@@ -186,7 +186,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[RuntimeException])
   def testAllEventTimeSlidingGroupWindowOverCount(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String)]('long, 'int, 'string)
 
     val windowedTable = table
@@ -199,7 +199,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testLongEventTimeSlidingGroupWindowWithProperties(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String)]('ts, 'int, 'string)
 
     val windowedTable = table
@@ -212,7 +212,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testTimestampEventTimeSlidingGroupWindowWithProperties(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Timestamp, Int, String)]('ts, 'int, 'string)
 
     val windowedTable = table
@@ -229,7 +229,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[RuntimeException])
   def testEventTimeSessionGroupWindowOverTime(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String)]('long, 'int, 'string)
 
     val windowedTable = table
@@ -242,7 +242,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[RuntimeException])
   def testEventTimeSessionGroupWindowOverTimeWithUdAgg(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String)]('long, 'int, 'string)
 
     val myWeightedAvg = new WeightedAvgWithMerge
@@ -257,7 +257,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[RuntimeException])
   def testLongEventTimeSessionGroupWindowWithProperties(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String)]('ts, 'int, 'string)
 
     val windowedTable = table
@@ -270,7 +270,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[RuntimeException])
   def testTimestampEventTimeSessionGroupWindowWithProperties(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Timestamp, Int, String)]('ts, 'int, 'string)
 
     val windowedTable = table
@@ -283,7 +283,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testDecomposableAggFunctions(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String, Long)]('rowtime, 'a, 'b, 'c)
 
     val windowedTable = table

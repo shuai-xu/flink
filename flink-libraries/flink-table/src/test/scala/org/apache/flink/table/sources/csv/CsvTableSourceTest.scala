@@ -21,13 +21,13 @@ package org.apache.flink.table.sources.csv
 import java.io.File
 
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.{Assert, Test}
 import org.powermock.reflect.Whitebox
 
-class CsvTableSourceTest extends TableTestBatchExecBase {
+class CsvTableSourceTest extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
   private val csvSource = CsvTableSource.builder()
       .quoteCharacter('"')
       .path(createTmpCsvFile("test"))

@@ -21,16 +21,16 @@ package org.apache.flink.table.plan.batch.table.validation
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableException, ValidationException}
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 
 import org.junit.Assert._
 import org.junit._
 
-class CalcValidationTest extends TableTestBatchExecBase {
+class CalcValidationTest extends TableTestBase {
 
   @Test(expected = classOf[ValidationException])
   def testSelectInvalidFieldFields(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String)]("Table3", 'a, 'b, 'c)
       // must fail. Field 'foo does not exist
       .select('a, 'foo)
@@ -38,7 +38,7 @@ class CalcValidationTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[ValidationException])
   def testSelectAmbiguousRenaming(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String)]("Table3", 'a, 'b, 'c)
       // must fail. 'a and 'b are both renamed to 'foo
       .select('a + 1 as 'foo, 'b + 2 as 'foo).collect()
@@ -46,7 +46,7 @@ class CalcValidationTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[ValidationException])
   def testSelectAmbiguousRenaming2(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String)]("Table3", 'a, 'b, 'c)
       // must fail. 'a and 'b are both renamed to 'a
       .select('a, 'b as 'a).collect()
@@ -54,7 +54,7 @@ class CalcValidationTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[ValidationException])
   def testFilterInvalidFieldName(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val t = util.addTable[(Int, Long, String)]("Table3", 'a, 'b, 'c)
 
     // must fail. Field 'foo does not exist
@@ -63,7 +63,7 @@ class CalcValidationTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[ValidationException])
   def testSelectInvalidField() {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val t = util.addTable[(Int, Long, String)]("Table3", 'a, 'b, 'c)
 
     // Must fail. Field foo does not exist
@@ -72,7 +72,7 @@ class CalcValidationTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[ValidationException])
   def testSelectAmbiguousFieldNames() {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val t = util.addTable[(Int, Long, String)]("Table3", 'a, 'b, 'c)
 
     // Must fail. Field foo does not exist
@@ -81,7 +81,7 @@ class CalcValidationTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[ValidationException])
   def testFilterInvalidField() {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val t = util.addTable[(Int, Long, String)]("Table3", 'a, 'b, 'c)
 
     // Must fail. Field foo does not exist.
@@ -90,7 +90,7 @@ class CalcValidationTest extends TableTestBatchExecBase {
 
   @Test
   def testAliasStarException(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
 
     try {
       util.addTable[(Int, Long, String)]("Table1", '*, 'b, 'c)
@@ -123,7 +123,7 @@ class CalcValidationTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[ValidationException])
   def testDuplicateFlattening(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[((Int, Long), (String, Boolean), String)]("MyTable", 'a, 'b, 'c)
 
     table.select('a.flatten(), 'a.flatten())

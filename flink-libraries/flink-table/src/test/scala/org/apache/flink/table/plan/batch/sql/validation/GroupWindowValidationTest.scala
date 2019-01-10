@@ -25,14 +25,14 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableException, ValidationException}
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions
   .WeightedAvgWithMerge
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
-class GroupWindowValidationTest extends TableTestBatchExecBase {
+class GroupWindowValidationTest extends TableTestBase {
 
   @Test(expected = classOf[TableException])
   def testHopWindowNoOffset(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String, Timestamp)]("T", 'a, 'b, 'c, 'ts)
 
     val sqlQuery =
@@ -45,7 +45,7 @@ class GroupWindowValidationTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[TableException])
   def testSessionWindowNoOffset(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String, Timestamp)]("T", 'a, 'b, 'c, 'ts)
 
     val sqlQuery =
@@ -58,7 +58,7 @@ class GroupWindowValidationTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[TableException])
   def testVariableWindowSize() = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String, Timestamp)]("T", 'a, 'b, 'c, 'ts)
 
     val sql = "SELECT COUNT(*) " +
@@ -69,7 +69,7 @@ class GroupWindowValidationTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[ValidationException])
   def testTumbleWindowWithInvalidUdAggArgs() = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String, Timestamp)]("T", 'a, 'b, 'c, 'ts)
 
     val weightedAvg = new WeightedAvgWithMerge
@@ -83,7 +83,7 @@ class GroupWindowValidationTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[ValidationException])
   def testWindowProctime(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String, Timestamp)]("T", 'a, 'b, 'c, 'ts)
 
     val sqlQuery =

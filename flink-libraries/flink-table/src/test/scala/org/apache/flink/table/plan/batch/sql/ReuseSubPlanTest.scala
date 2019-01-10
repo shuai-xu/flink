@@ -28,7 +28,7 @@ import org.apache.flink.table.plan.rules.logical.PushLimitIntoTableSourceScanRul
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.functions.aggfunctions.{IntFirstValueAggFunction, LongLastValueAggFunction}
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.util.{BatchExecTableTestUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{BatchTableTestUtil, TableTestBase}
 
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.tools.RuleSets
@@ -36,13 +36,13 @@ import org.junit.{Before, Ignore, Test}
 
 import java.util.Random
 
-class ReuseSubPlanTest extends TableTestBatchExecBase {
+class ReuseSubPlanTest extends TableTestBase {
 
-  private var util: BatchExecTableTestUtil = _
+  private var util: BatchTableTestUtil = _
 
   @Before
   def before(): Unit = {
-    util = batchExecTestUtil()
+    util = batchTestUtil()
     val programs = FlinkBatchPrograms.buildPrograms(util.tableEnv.getConfig.getConf)
     programs.getFlinkRuleSetProgram(FlinkBatchPrograms.LOGICAL)
       .get.remove(RuleSets.ofList(PushLimitIntoTableSourceScanRule.INSTANCE))

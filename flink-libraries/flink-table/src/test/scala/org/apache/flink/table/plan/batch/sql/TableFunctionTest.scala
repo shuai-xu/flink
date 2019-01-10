@@ -26,8 +26,8 @@ import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.util._
 import org.junit.{Before, Test}
 
-class TableFunctionTest extends TableTestBatchExecBase {
-  private val util = batchExecTestUtil()
+class TableFunctionTest extends TableTestBase {
+  private val util = batchTestUtil()
 
   @Before
   def setup(): Unit = {

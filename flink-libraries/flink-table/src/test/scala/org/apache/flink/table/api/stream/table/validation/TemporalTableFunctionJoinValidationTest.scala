@@ -19,16 +19,16 @@
 package org.apache.flink.table.api.stream.table.validation
 
 import java.sql.Timestamp
-
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.{TableException, ValidationException}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.{TableTestBase, TableTestUtil}
+import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
+
 import org.junit.Test
 
 class TemporalTableFunctionJoinValidationTest extends TableTestBase {
 
-  val util: TableTestUtil = streamTestUtil()
+  val util: StreamTableTestUtil = streamTestUtil()
 
   val orders = util.addTable[(Long, String, Timestamp)](
     "Orders", 'o_amount, 'o_currency, 'o_rowtime.rowtime)

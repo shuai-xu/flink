@@ -25,7 +25,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.util._
 import org.junit.Test
 
-class CorrelateStringExpressionTest extends TableTestBatchExecBase {
+class CorrelateStringExpressionTest extends TableTestBase {
 
   private val util = batchTestUtil()
   private val typeInfo = new RowTypeInfo(Seq(Types.INT, Types.LONG, Types.STRING): _*)

@@ -21,14 +21,14 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 
 import org.junit.{Before, Test}
 
 import scala.collection.JavaConversions._
 
-class FlinkLogicalConstantRankRuleTest extends TableTestBatchExecBase {
-  private val util = batchExecTestUtil()
+class FlinkLogicalConstantRankRuleTest extends TableTestBase {
+  private val util = batchTestUtil()
 
   @Before
   def setup(): Unit = {

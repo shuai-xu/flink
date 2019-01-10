@@ -28,9 +28,9 @@ import org.junit.{Before, Test}
 
 import scala.collection.JavaConversions._
 
-class DescribeTableColumnTest extends TableTestBatchExecBase {
+class DescribeTableColumnTest extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
 
   @Before
   def before(): Unit = {

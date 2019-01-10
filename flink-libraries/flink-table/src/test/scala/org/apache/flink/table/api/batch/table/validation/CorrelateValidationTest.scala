@@ -21,10 +21,10 @@ package org.apache.flink.table.api.batch.table.validation
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.{TableFunc1, TableTestBatchExecBase}
+import org.apache.flink.table.util.{TableFunc1, TableTestBase}
 import org.junit.{Ignore, Test}
 
-class CorrelateValidationTest extends TableTestBatchExecBase {
+class CorrelateValidationTest extends TableTestBase {
 
   /**
     * Due to the improper translation of TableFunction left outer join (see CALCITE-2004), the

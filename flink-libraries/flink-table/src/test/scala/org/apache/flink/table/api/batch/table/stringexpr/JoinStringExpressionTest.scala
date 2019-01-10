@@ -21,10 +21,10 @@ package org.apache.flink.table.api.batch.table.stringexpr
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.Literal
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit._
 
-class JoinStringExpressionTest extends TableTestBatchExecBase {
+class JoinStringExpressionTest extends TableTestBase {
 
   @Test
   def testJoin(): Unit = {

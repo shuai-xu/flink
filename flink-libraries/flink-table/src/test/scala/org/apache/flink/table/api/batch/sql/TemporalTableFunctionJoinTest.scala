@@ -22,13 +22,13 @@ import java.sql.Timestamp
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.{BatchExecTableTestUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{BatchTableTestUtil, TableTestBase}
 import org.hamcrest.Matchers.containsString
 import org.junit.Test
 
-class TemporalTableFunctionJoinTest extends TableTestBatchExecBase {
+class TemporalTableFunctionJoinTest extends TableTestBase {
 
-  val util: BatchExecTableTestUtil = batchTestUtil()
+  val util: BatchTableTestUtil = batchTestUtil()
 
   val orders = util.addTable[(Long, String, Timestamp)](
     "Orders", 'o_amount, 'o_currency, 'o_rowtime)

@@ -23,7 +23,7 @@ import org.apache.flink.table.api.{TableConfigOptions, TableSchema}
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.sources.BatchTableSource
-import org.apache.flink.table.util.{TableSchemaUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{TableSchemaUtil, TableTestBase}
 import org.apache.flink.types.Row
 import org.junit.{Before, Test}
 
@@ -32,9 +32,9 @@ import scala.collection.JavaConversions._
 /**
   * Test for testing aggregate type based on cbo
   */
-class AggregateTest extends TableTestBatchExecBase {
+class AggregateTest extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
 
   @Before
   def before(): Unit = {

@@ -21,14 +21,14 @@ package org.apache.flink.table.plan.batch.sql.validation
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
-class CalcValidationTest extends TableTestBatchExecBase {
+class CalcValidationTest extends TableTestBase {
 
   @Test(expected = classOf[ValidationException])
   def testInvalidFields(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
     val sqlQuery = "SELECT a, foo FROM MyTable"
     util.tableEnv.sqlQuery(sqlQuery)
@@ -36,7 +36,7 @@ class CalcValidationTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[ValidationException])
   def testIfFirstOperandNotBoolean(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
     val sqlQuery = "SELECT if(c, a, b) FROM MyTable"
     util.tableEnv.sqlQuery(sqlQuery)

@@ -24,13 +24,13 @@ import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
-import org.apache.flink.table.util.{TableTestBatchExecBase, TestTableSourceWithFieldNullables}
+import org.apache.flink.table.util.{TableTestBase, TestTableSourceWithFieldNullables}
 
 import org.junit.{Before, Test}
 
-class GroupingSetsTest extends TableTestBatchExecBase {
+class GroupingSetsTest extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
 
   @Before
   def before(): Unit = {

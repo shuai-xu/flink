@@ -25,7 +25,7 @@ import org.apache.flink.table.runtime.utils.JavaUserDefinedTableFunctions.JavaVa
 import org.apache.flink.table.util._
 import org.junit.Test
 
-class CorrelateTest extends TableTestBatchExecBase {
+class CorrelateTest extends TableTestBase {
 
   @Test
   def testCrossJoin(): Unit = {

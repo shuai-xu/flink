@@ -22,10 +22,10 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithMergeAndReset
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.functions.aggregate.CountAggFunction
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit._
 
-class AggregateStringExpressionTest extends TableTestBatchExecBase {
+class AggregateStringExpressionTest extends TableTestBase {
 
   @Test
   def testDistinctAggregationTypes(): Unit = {

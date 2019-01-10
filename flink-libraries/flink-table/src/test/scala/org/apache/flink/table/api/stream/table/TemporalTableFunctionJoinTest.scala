@@ -18,20 +18,20 @@
 package org.apache.flink.table.api.stream.table
 
 import java.sql.Timestamp
-
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.functions.TemporalTableFunction
 import org.apache.flink.table.api.{TableException, TableSchema, ValidationException}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.ResolvedFieldReference
-import org.apache.flink.table.util.{TableTestBase, TableTestUtil}
+import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
+
 import org.hamcrest.Matchers.containsString
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.Test
 
 class TemporalTableFunctionJoinTest extends TableTestBase {
 
-  val util: TableTestUtil = streamTestUtil()
+  val util: StreamTableTestUtil = streamTestUtil()
 
   val orders = util.addTable[(Long, String, Timestamp)](
     "Orders", 'o_amount, 'o_currency, 'o_rowtime.rowtime)

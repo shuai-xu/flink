@@ -21,17 +21,17 @@ package org.apache.flink.table.resource.batch.autoconf
 import org.apache.flink.table.api.{TableConfigOptions, TableSchema}
 import org.apache.flink.table.resource.batch.BatchExecResourceTest
 import org.apache.flink.table.tpc.{STATS_MODE, TpcHSchemaProvider, TpchTableStatsProvider}
-import org.apache.flink.table.util.{BatchExecTableTestUtil, ExecResourceUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{BatchTableTestUtil, ExecResourceUtil, TableTestBase}
 
 import org.junit.{Before, Test}
 
-class BatchExecResourceAdjustTest extends TableTestBatchExecBase {
+class BatchExecResourceAdjustTest extends TableTestBase {
 
-  private var util: BatchExecTableTestUtil = _
+  private var util: BatchTableTestUtil = _
 
   @Before
   def before(): Unit = {
-    util = batchExecTestUtil()
+    util = batchTestUtil()
     util.getTableEnv.getConfig.setSubsectionOptimization(false)
     util.getTableEnv.getConfig.getConf.setString(
       TableConfigOptions.SQL_RESOURCE_INFER_MODE,
@@ -52,7 +52,7 @@ class BatchExecResourceAdjustTest extends TableTestBatchExecBase {
     testResource(util)
   }
 
-  private def testResource(util: BatchExecTableTestUtil): Unit = {
+  private def testResource(util: BatchTableTestUtil): Unit = {
     val customerSchema = TpcHSchemaProvider.getSchema("customer")
     val colStatsOfCustomer =
       TpchTableStatsProvider.getTableStatsMap(1000, STATS_MODE.FULL).get("customer")
@@ -87,7 +87,7 @@ class BatchExecResourceAdjustTest extends TableTestBatchExecBase {
   }
 
   private def setAdjustResource(
-      util: BatchExecTableTestUtil,
+      util: BatchTableTestUtil,
       cpu: Double): Unit = {
     util.getTableEnv.getConfig.getConf.setDouble(
       TableConfigOptions.SQL_RESOURCE_RUNNING_UNIT_CPU_TOTAL,

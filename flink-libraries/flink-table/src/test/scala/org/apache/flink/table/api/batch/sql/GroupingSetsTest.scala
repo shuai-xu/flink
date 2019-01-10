@@ -20,10 +20,10 @@ package org.apache.flink.table.api.batch.sql
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
-class GroupingSetsTest extends TableTestBatchExecBase {
+class GroupingSetsTest extends TableTestBase {
 
   @Test
   def testGroupingSets(): Unit = {

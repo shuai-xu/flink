@@ -24,15 +24,15 @@ import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms.{DECORRELATE, DEFAULT_REWRITE, SUBQUERY_REWRITE}
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.junit.{Before, Test}
 
 import java.sql.Date
 
-class FlinkRewriteCoalesceRuleTest extends TableTestBatchExecBase {
-  private val util = batchExecTestUtil()
+class FlinkRewriteCoalesceRuleTest extends TableTestBase {
+  private val util = batchTestUtil()
 
   @Before
   def setup(): Unit = {

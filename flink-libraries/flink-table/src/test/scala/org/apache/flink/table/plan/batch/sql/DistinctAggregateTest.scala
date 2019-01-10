@@ -24,16 +24,16 @@ import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
-import org.apache.flink.table.util.{TableTestBatchExecBase, TestTableSourceWithFieldNullables}
+import org.apache.flink.table.util.{TableTestBase, TestTableSourceWithFieldNullables}
 
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Before, Test}
 
 @RunWith(classOf[Parameterized])
-class DistinctAggregateTest(fieldsNullable: Boolean) extends TableTestBatchExecBase {
+class DistinctAggregateTest(fieldsNullable: Boolean) extends TableTestBase {
 
-  private val util = nullableBatchExecTestUtil(fieldsNullable)
+  private val util = nullableBatchTestUtil(fieldsNullable)
 
   @Before
   def before(): Unit = {

@@ -28,15 +28,15 @@ import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.functions.aggregate.CountAggFunction
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.sources.BatchTableSource
-import org.apache.flink.table.util.{TableSchemaUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{TableSchemaUtil, TableTestBase}
 import org.apache.flink.types.Row
 import org.junit.{Before, Test}
 
 import scala.collection.JavaConversions._
 
-class WindowAggregateTest extends TableTestBatchExecBase {
+class WindowAggregateTest extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
 
   @Before
   def before(): Unit = {

@@ -41,12 +41,12 @@ import scala.collection.JavaConversions._
 class OrcTableSinkITCase(configMode: TableConfigMode)
   extends TableProgramsCollectionTestBase(configMode) {
 
+  val conf: TableConfig = config
+  val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+  val tEnv: BatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(env, conf)
+
   @Test
   def testOrcTableSinkOverwrite(): Unit = {
-    val conf: TableConfig = config
-    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv: BatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(env, conf)
-
     // write
     val orcTable1 = CommonOrcTestData.getOrcVectorizedColumnRowTableSource(false)
     tEnv.registerTableSource("orcTable1", orcTable1)
@@ -69,10 +69,6 @@ class OrcTableSinkITCase(configMode: TableConfigMode)
 
   @Test
   def testOrcTableSink(): Unit = {
-    val conf: TableConfig = config
-    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv: BatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(env, conf)
-
     // write
     val orcTable1 = CommonOrcTestData.getOrcVectorizedColumnRowTableSource(false)
     tEnv.registerTableSource("orcTable1", orcTable1)

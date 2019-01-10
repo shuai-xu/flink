@@ -20,13 +20,13 @@ package org.apache.flink.table.api.batch.sql
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
 /**
   * Test for testing aggregate plans.
   */
-class AggregateTest extends TableTestBatchExecBase {
+class AggregateTest extends TableTestBase {
 
   @Test
   def testAggregate(): Unit = {

@@ -24,6 +24,11 @@ import java.util
 import org.apache.flink.table.runtime.functions.aggfunctions.ApproximateCountDistinct.HllBuffer
 import org.apache.flink.table.runtime.functions.aggfunctions.hyperloglog.HyperLogLogPlusPlus._
 
+/**
+  * The implement of HyperLogLogPlusPlus is referred from Apache Spark.
+  *
+  * @param relativeSD the maximum estimation error allowed.
+  */
 class HyperLogLogPlusPlus(relativeSD: Double) extends Serializable {
 
   /**
@@ -74,7 +79,7 @@ class HyperLogLogPlusPlus(relativeSD: Double) extends Serializable {
 
   /**
     * The number of words used to store the registers. We use Longs for storage because this is the
-    * most compact way of storage; Spark aligns to 8-byte words or uses Long wrappers.
+    * most compact way of storage.
     *
     * We only store whole registers per word in order to prevent overly complex bitwise operations.
     * In practice this means we only use 60 out of 64 bits.

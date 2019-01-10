@@ -21,14 +21,14 @@ package org.apache.flink.table.plan
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
-class ExpressionReductionRulesBatchExecTest extends TableTestBatchExecBase {
+class ExpressionReductionRulesBatchExecTest extends TableTestBase {
 
   @Test
   def testReduceCalcExpressionForBatchSQL(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
 
     val sqlQuery = "SELECT " +
@@ -52,7 +52,7 @@ class ExpressionReductionRulesBatchExecTest extends TableTestBatchExecBase {
 
   @Test
   def testReduceProjectExpressionForBatchSQL(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
 
     val sqlQuery = "SELECT " +
@@ -76,7 +76,7 @@ class ExpressionReductionRulesBatchExecTest extends TableTestBatchExecBase {
 
   @Test
   def testReduceFilterExpressionForBatchSQL(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
 
     val sqlQuery = "SELECT * FROM MyTable WHERE a>(1+7)"
@@ -86,7 +86,7 @@ class ExpressionReductionRulesBatchExecTest extends TableTestBatchExecBase {
 
   @Test
   def testReduceConstantUdfForBatchSQL(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
     val func = new ConstantFunc
     util.tableEnv.registerFunction("constant_fun", func)
@@ -100,7 +100,7 @@ class ExpressionReductionRulesBatchExecTest extends TableTestBatchExecBase {
 
   @Test
   def testReduceIllegalConstantUdfForBatchSQL(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
     util.tableEnv.registerFunction("constant_fun", new IllegalConstantFunc)
 
@@ -123,7 +123,7 @@ class ExpressionReductionRulesBatchExecTest extends TableTestBatchExecBase {
 
   @Test
   def testReduceCalcExpressionForBatchTableAPI(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
 
     val result = table
@@ -143,7 +143,7 @@ class ExpressionReductionRulesBatchExecTest extends TableTestBatchExecBase {
 
   @Test
   def testReduceProjectExpressionForBatchTableAPI(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
 
     val result = table
@@ -162,7 +162,7 @@ class ExpressionReductionRulesBatchExecTest extends TableTestBatchExecBase {
 
   @Test
   def testReduceFilterExpressionForBatchTableAPI(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
 
     val result = table
@@ -173,7 +173,7 @@ class ExpressionReductionRulesBatchExecTest extends TableTestBatchExecBase {
 
   @Test
   def testReduceConstantUdfForBatchTableAPI(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
     val func = new ConstantFunc
     util.tableEnv.getConfig.getConf.setString(func.BASE_VALUE_KEY, "1000")
@@ -187,7 +187,7 @@ class ExpressionReductionRulesBatchExecTest extends TableTestBatchExecBase {
 
   @Test
   def testReduceIllegalConstantUdfForBatchTableAPI(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     val table = util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
     val func = new IllegalConstantFunc
 
@@ -207,7 +207,7 @@ class ExpressionReductionRulesBatchExecTest extends TableTestBatchExecBase {
 
   @Test
   def testNestedTablesReductionBatch(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
 
     util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
 

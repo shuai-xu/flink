@@ -23,10 +23,10 @@ import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.OverAgg0
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit._
 
-class OverWindowValidationTest extends TableTestBatchExecBase {
+class OverWindowValidationTest extends TableTestBase {
 
   /**
     * OVER clause is necessary for [[OverAgg0]] window function.

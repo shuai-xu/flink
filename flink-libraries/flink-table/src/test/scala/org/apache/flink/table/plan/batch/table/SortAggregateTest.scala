@@ -21,15 +21,15 @@ package org.apache.flink.table.plan.batch.table
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.{Before, Test}
 
 /**
   * Test for testing aggregate plans.
   */
-class SortAggregateTest extends TableTestBatchExecBase {
+class SortAggregateTest extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
 
   @Before
   def before(): Unit = {

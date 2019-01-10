@@ -22,10 +22,10 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.batch.table.JoinTest.Merger
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.{Ignore, Test}
 
-class JoinTest extends TableTestBatchExecBase {
+class JoinTest extends TableTestBase {
 
   @Test
   def testLeftOuterJoinEquiPred(): Unit = {

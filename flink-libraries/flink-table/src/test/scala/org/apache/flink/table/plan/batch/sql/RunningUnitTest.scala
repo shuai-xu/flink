@@ -23,18 +23,18 @@ import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.util.{BatchExecTableTestUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{BatchTableTestUtil, TableTestBase}
 import org.junit.{Before, Test}
 
 /**
   * Test for RelRunningUnit.
   */
-class RunningUnitTest extends TableTestBatchExecBase {
-  private var util: BatchExecTableTestUtil = _
+class RunningUnitTest extends TableTestBase {
+  private var util: BatchTableTestUtil = _
 
   @Before
   def before(): Unit = {
-    util = batchExecTestUtil()
+    util = batchTestUtil()
     util.addTable[(Int, Long, String)]("t", 'a, 'b, 'c)
     util.addTable("x", CommonTestData.get3Source(Array("a", "b", "c")))
     util.addTable("y", CommonTestData.get3Source(Array("d", "e", "f")))

@@ -24,14 +24,14 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils
   .JavaUserDefinedAggFunctions.WeightedAvgWithMerge
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
-class GroupWindowTest extends TableTestBatchExecBase {
+class GroupWindowTest extends TableTestBase {
 
   @Test
   def testNonPartitionedTumbleWindow(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String, Timestamp)]("T", 'a, 'b, 'c, 'ts)
 
     val sqlQuery =
@@ -42,7 +42,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testPartitionedTumbleWindow(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String, Timestamp)]("T", 'a, 'b, 'c, 'ts)
 
     val sqlQuery =
@@ -61,7 +61,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testTumbleWindowWithUdAgg(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String, Timestamp)]("T", 'a, 'b, 'c, 'ts)
 
     val weightedAvg = new WeightedAvgWithMerge
@@ -76,7 +76,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testNonPartitionedHopWindow(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String, Timestamp)]("T", 'a, 'b, 'c, 'ts)
 
     val sqlQuery =
@@ -89,7 +89,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testPartitionedHopWindow(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String, Long, Timestamp)]("T", 'a, 'b, 'c, 'd, 'ts)
 
     val sqlQuery =
@@ -108,7 +108,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[RuntimeException])
   def testNonPartitionedSessionWindow(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String, Timestamp)]("T", 'a, 'b, 'c, 'ts)
 
     val sqlQuery =
@@ -119,7 +119,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[RuntimeException])
   def testPartitionedSessionWindow(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String, Int, Timestamp)]("T", 'a, 'b, 'c, 'd, 'ts)
 
     val sqlQuery =
@@ -138,7 +138,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testWindowEndOnly(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String, Timestamp)]("T", 'a, 'b, 'c, 'ts)
 
     val sqlQuery =
@@ -152,7 +152,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testExpressionOnWindowHavingFunction(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, Long, String, Timestamp)]("T", 'a, 'b, 'c, 'ts)
 
     val sql =
@@ -170,7 +170,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testDecomposableAggFunctions(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, String, Long, Timestamp)]("MyTable", 'a, 'b, 'c, 'rowtime)
 
     val sql =
@@ -186,7 +186,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
 
   @Test
   def testMultiHopWindowsJoin(): Unit = {
-    val util = batchExecTestUtil()
+    val util = batchTestUtil()
     util.addTable[(Int, String, Long, Timestamp)]("MyTable", 'a, 'b, 'c, 'rowtime)
 
     val sql =

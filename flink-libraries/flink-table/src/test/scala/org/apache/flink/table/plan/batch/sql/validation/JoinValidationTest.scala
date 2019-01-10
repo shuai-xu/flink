@@ -21,12 +21,12 @@ package org.apache.flink.table.plan.batch.sql.validation
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableException, ValidationException}
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
-class JoinValidationTest extends TableTestBatchExecBase {
+class JoinValidationTest extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
 
   @Test(expected = classOf[ValidationException])
   def testJoinNonExistingKey(): Unit = {

@@ -19,16 +19,16 @@ package org.apache.flink.table.plan.rules.physical.batch
 
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.util.{BatchExecTableTestUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{BatchTableTestUtil, TableTestBase}
 import org.junit.{Before, Test}
 
-class RemoveRedundantLocalSortAggRuleTest extends TableTestBatchExecBase {
+class RemoveRedundantLocalSortAggRuleTest extends TableTestBase {
 
-  private var util: BatchExecTableTestUtil = _
+  private var util: BatchTableTestUtil = _
 
   @Before
   def before(): Unit = {
-    util = batchExecTestUtil()
+    util = batchTestUtil()
     util.addTable("x", CommonTestData.get3Source(Array("a", "b", "c")))
     util.addTable("y", CommonTestData.get3Source(Array("d", "e", "f")))  }
 

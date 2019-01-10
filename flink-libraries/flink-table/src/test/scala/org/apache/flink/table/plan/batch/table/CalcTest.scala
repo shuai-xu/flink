@@ -24,12 +24,12 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.expressions.Upper
 import org.apache.flink.table.plan.batch.table.CalcTest._
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
-class CalcTest extends TableTestBatchExecBase {
+class CalcTest extends TableTestBase {
 
-  private val util = batchExecTestUtil()
+  private val util = batchTestUtil()
 
   @Test
   def testMultipleFlatteningsTable(): Unit = {

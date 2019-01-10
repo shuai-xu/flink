@@ -23,15 +23,15 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
-import org.apache.flink.table.util.TableTestBatchExecBase
+import org.apache.flink.table.util.TableTestBase
 
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.rel.rules.{FilterMultiJoinMergeRule, ProjectMultiJoinMergeRule, _}
 import org.apache.calcite.tools.RuleSets
 import org.junit.{Before, Test}
 
-class RewriteMultiJoinConditionRuleTest extends TableTestBatchExecBase {
-  private val util = batchExecTestUtil()
+class RewriteMultiJoinConditionRuleTest extends TableTestBase {
+  private val util = batchTestUtil()
 
   @Test
   def testMultiJoin_InnerJoin1(): Unit = {
