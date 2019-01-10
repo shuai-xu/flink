@@ -23,7 +23,6 @@ import org.apache.flink.api.common.typeinfo.BigDecimalTypeInfo
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo._
 import org.apache.flink.table.api.{BatchTableEnvironment, TableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.catalog.ExternalCatalog
 import org.apache.flink.table.plan.metadata.FlinkRelMdSize
 import org.apache.flink.table.util.Logging
 
@@ -64,7 +63,7 @@ object AnalyzeStatistic extends Logging {
     *                  tablePath can be a single name(e.g. Array("MyTable")) associated with a table
     *                  registered as Table, or can be a nest names
     *                  (e.g. Array("MyCatalog", "MyDb", "MyTable")) associated with a table
-    *                  registered as member of an [[ExternalCatalog]].
+    *                  registered as member of a [[org.apache.flink.table.catalog.ReadableCatalog]].
     * @param columnNames Column names of the given table to generate [[ColumnStats]].
     *                    columnNames can be either '*'(all columns will be analyzed)
     *                    or some partial columns. If empty, no column will be analyzed.

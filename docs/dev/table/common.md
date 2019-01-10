@@ -45,7 +45,7 @@ StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
 // register a Table
 tableEnv.registerTable("table1", ...)            // or
 tableEnv.registerTableSource("table2", ...);     // or
-tableEnv.registerExternalCatalog("extCat", ...);
+tableEnv.registerCatalog("extCat", ...);
 
 // create a Table from a Table API query
 Table tapiResult = tableEnv.scan("table1").select(...);
@@ -72,7 +72,7 @@ val tableEnv = TableEnvironment.getTableEnvironment(env)
 // register a Table
 tableEnv.registerTable("table1", ...)           // or
 tableEnv.registerTableSource("table2", ...)     // or
-tableEnv.registerExternalCatalog("extCat", ...) 
+tableEnv.registerCatalog("extCat", ...) 
 
 // create a Table from a Table API query
 val tapiResult = tableEnv.scan("table1").select(...)
@@ -99,7 +99,7 @@ Create a TableEnvironment
 The `TableEnvironment` is a central concept of the Table API and SQL integration. It is responsible for:
 
 * Registering a `Table` in the internal catalog
-* Registering an external catalog 
+* Registering a catalog 
 * Executing SQL queries
 * Registering a user-defined (scalar, table, or aggregation) function
 * Converting a `DataStream` into a `Table`
@@ -149,10 +149,14 @@ val bTableEnv = TableEnvironment.getBatchTableEnvironment(sEnv)
 
 {% top %}
 
-Register Tables in the Catalog
--------------------------------
+Register Flink Tables in TableEnvironment
+-----------------------------------
 
-A `TableEnvironment` maintains a catalog of tables which are registered by name. There are two types of tables, *input tables* and *output tables*. Input tables can be referenced in Table API and SQL queries and provide input data. Output tables can be used to emit the result of a Table API or SQL query to an external system.
+Tables registered via `TableEnvironment` will actually be registered to the default catalog and database in `CatalogManager`. Flink provides a built-in `FlinkInMemoryCatalog`, which implements `ReadableWritableCatalog`, as the default catalog. Users can also change the default catalog and database through both Table API or Flink SQL.
+
+Note that Flink tables may not be registered to all `ReadableWritableCatalog`. Currently Flink only supports registering tables in `FlinkInMemoryCatalog`.
+
+There are two types of Flink tables, *input tables* and *output tables*. Input tables can be referenced in Table API and SQL queries and provide input data. Output tables can be used to emit the result of a Table API or SQL query to an external system.
 
 An input table can be registered from various sources:
 
@@ -175,7 +179,7 @@ StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
 // Table is the result of a simple projection query 
 Table projTable = tableEnv.scan("X").select(...);
 
-// register the Table projTable as table "projectedX"
+// register the Table projTable as table "projectedX" to the default catalog and database of CatalogManager
 tableEnv.registerTable("projectedTable", projTable);
 {% endhighlight %}
 </div>
@@ -188,7 +192,7 @@ val tableEnv = TableEnvironment.getTableEnvironment(env)
 // Table is the result of a simple projection query 
 val projTable: Table = tableEnv.scan("X").select(...)
 
-// register the Table projTable as table "projectedX"
+// register the Table projTable as table "projectedX" to the default catalog and database of CatalogManager
 tableEnv.registerTable("projectedTable", projTable)
 {% endhighlight %}
 </div>
@@ -215,7 +219,7 @@ StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
 // create a TableSource
 TableSource csvSource = new CsvTableSource("/path/to/file", ...);
 
-// register the TableSource as table "CsvTable"
+// register the TableSource as table "CsvTable" to the default catalog and database of CatalogManager
 tableEnv.registerTableSource("CsvTable", csvSource);
 {% endhighlight %}
 </div>
@@ -228,7 +232,7 @@ val tableEnv = TableEnvironment.getTableEnvironment(env)
 // create a TableSource
 val csvSource: TableSource = new CsvTableSource("/path/to/file", ...)
 
-// register the TableSource as table "CsvTable"
+// register the TableSource as table "CsvTable" to the default catalog and database of CatalogManager
 tableEnv.registerTableSource("CsvTable", csvSource)
 {% endhighlight %}
 </div>
@@ -257,7 +261,7 @@ TableSink csvSink = new CsvTableSink("/path/to/file", ...);
 String[] fieldNames = {"a", "b", "c"};
 DataType[] fieldTypes = {DataTypes.INT, DataTypes.STRING, DataTypes.LONG};
 
-// register the TableSink as table "CsvSinkTable"
+// register the TableSink as table "CsvSinkTable" to the default catalog and database of CatalogManager
 tableEnv.registerTableSink("CsvSinkTable", fieldNames, fieldTypes, csvSink);
 {% endhighlight %}
 </div>
@@ -274,7 +278,7 @@ val csvSink: TableSink = new CsvTableSink("/path/to/file", ...)
 val fieldNames: Array[String] = Array("a", "b", "c")
 val fieldTypes: Array[DataType] = Array(DataTypes.INT, DataTypes.STRING, DataTypes.LONG)
 
-// register the TableSink as table "CsvSinkTable"
+// register the TableSink as table "CsvSinkTable" to the default catalog and database of CatalogManager
 tableEnv.registerTableSink("CsvSinkTable", fieldNames, fieldTypes, csvSink)
 {% endhighlight %}
 </div>
@@ -282,46 +286,10 @@ tableEnv.registerTableSink("CsvSinkTable", fieldNames, fieldTypes, csvSink)
 
 {% top %}
 
-Register an External Catalog
+Catalogs
 ----------------------------
 
-An external catalog can provide information about external databases and tables such as their name, schema, statistics, and information for how to access data stored in an external database, table, or file.
-
-An external catalog can be created by implementing the `ExternalCatalog` interface and is registered in a `TableEnvironment` as follows:
-
-<div class="codetabs" markdown="1">
-<div data-lang="java" markdown="1">
-{% highlight java %}
-// get a StreamTableEnvironment, works for BatchTableEnvironment equivalently
-StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
-
-// create an external catalog
-ExternalCatalog catalog = new InMemoryExternalCatalog();
-
-// register the ExternalCatalog catalog
-tableEnv.registerExternalCatalog("InMemCatalog", catalog);
-{% endhighlight %}
-</div>
-
-<div data-lang="scala" markdown="1">
-{% highlight scala %}
-// get a TableEnvironment
-val tableEnv = TableEnvironment.getTableEnvironment(env)
-
-// create an external catalog
-val catalog: ExternalCatalog = new InMemoryExternalCatalog
-
-// register the ExternalCatalog catalog
-tableEnv.registerExternalCatalog("InMemCatalog", catalog)
-{% endhighlight %}
-</div>
-</div>
-
-Once registered in a `TableEnvironment`, all tables defined in a `ExternalCatalog` can be accessed from Table API or SQL queries by specifying their full path, such as `catalog.database.table`.
-
-Currently, Flink provides an `InMemoryExternalCatalog` for demo and testing purposes. However, the `ExternalCatalog` interface can also be used to connect catalogs like HCatalog or Metastore to the Table API.
-
-{% top %}
+For catalogs, see [Catalog]({{ site.baseurl }}/dev/table/catalog.html)
 
 Query a Table 
 -------------

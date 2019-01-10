@@ -44,26 +44,6 @@ under the License.
 			<version>${project.version}</version>
 		</dependency>
 
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-catalog-hive</artifactId>
-			<version>${project.version}</version>
-			<exclusions>
-				<exclusion>
-					<groupId>org.datanucleus</groupId>
-					<artifactId>datanucleus-api-jdo</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.datanucleus</groupId>
-					<artifactId>datanucleus-core</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.datanucleus</groupId>
-					<artifactId>datanucleus-rdbms</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-
 		<!-- Flink project binaries -->
 
 		<dependency>

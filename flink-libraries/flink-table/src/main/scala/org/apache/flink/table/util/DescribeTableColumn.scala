@@ -19,7 +19,6 @@
 package org.apache.flink.table.util
 
 import org.apache.flink.table.api.{TableEnvironment, TableException}
-import org.apache.flink.table.catalog.ExternalCatalog
 import org.apache.flink.types.Row
 
 import java.util
@@ -41,7 +40,7 @@ object DescribeTableColumn extends Logging {
     *                  tablePath can be a single name(e.g. Array("MyTable")) associated with a table
     *                  registered as Table, or can be a nest names
     *                  (e.g. Array("MyCatalog", "MyDb", "MyTable")) associated with a table
-    *                  registered as member of an [[ExternalCatalog]].
+    *                  registered as member of a [[org.apache.flink.table.catalog.ReadableCatalog]].
     * @param isRich    Whether need more information except for basic table info or not.
     * @return tableSchema if isRich is false, else return more info such as
     *         table statistics.
@@ -81,7 +80,7 @@ object DescribeTableColumn extends Logging {
     *                  tablePath can be a single name(e.g. Array("MyTable")) associated with a table
     *                  registered as Table, or can be a nest names
     *                  (e.g. Array("MyCatalog", "MyDb", "MyTable")) associated with a table
-    *                  registered as member of an [[ExternalCatalog]].
+    *                  registered as member of a [[org.apache.flink.table.catalog.ReadableCatalog]].
     * @param column    The column to describe.
     * @param isRich    Whether need more information except for column  or not.
     * @return column basic info if isRich is false, else return more info such as column statistics.

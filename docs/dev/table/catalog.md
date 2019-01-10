@@ -23,7 +23,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-Flink now supports external catalogs, making it easier for users to re-use their favorite catalogs with Flink.
+A catalog can provide information about databases and tables such as their name, schema, statistics, and information for how to access data stored in a database, table, or file. Once registered to a `TableEnvironment`, all tables defined the catalog can be accessed from Table API or SQL queries.
 
 Flink's catalogs uses a strict two-level strcture, that is, catalogs contain databases, and databases contain meta-objects. Thus, the full name of a meta-object is always structured as `catalogName`.`databaseName`.`objectName`.
 
@@ -33,7 +33,7 @@ All registered catalogs are managed by a `CatalogManager` instance in a `TableEn
 
 For example, a previous query as `select * from mycatalog.mydb.myTable` can be shortened as `select * from myTable`. Querying tables in a different databases under the default catalog would be `select * from mydb2.myTable`.
 
-`CatalogManager` always has a built-in `FlinkInMemoryCatalog` with name of `default_catalog` and a built-in default database `default_db`. If no catalog is explicitly set as default catalog, this built-in one will be the default catalog. All temp meta-objects will be registered in this catalog. Users can set default catalog and database via `TableEnvironment.setDefaultDatabase()` in programming API or `use catalog.db` in Flink SQL Cli.
+`CatalogManager` always has a built-in `FlinkInMemoryCatalog` with name of `default_catalog` and a built-in default database `default_db`. If no catalog is explicitly set as default catalog, this built-in one will be the default catalog. All temp meta-objects will be registered in this catalog. Users can set default catalog and database via `TableEnvironment.setDefaultDatabase()` in Table API or `use catalog.db` in Flink SQL Cli.
 
 * This will be replaced by the TOC
 {:toc}
@@ -56,11 +56,11 @@ The ultimate goal for `HiveCatalog` is that:
 
 2. meta-objects created by `HiveCatalog` can be written back to Hive metastore such that Hive and other Hive-compatibile applications can consume.
 
-To query Hive data with `HiveCatalog`, users have to use Flink's batch mode by either using `BatchTableEnvironment` in Java/Scala programming APIs or setting `execution.type` as `batch` in Flink SQL Cli.
+To query Hive data with `HiveCatalog`, users have to use Flink's batch mode by either using `BatchTableEnvironment` in Table APIs or setting `execution.type` as `batch` in Flink SQL Cli.
 
 Note that currently `HiveCatalog` only offers capabilities of reading Hive metastore metadata, including databases, tables, table partitions, simple data types, table stats, and table columns stats. Other meta-objects read and write capabilities are under either experiment or active development.
 
-Also note that currently only registering `HiveCatalog` thru programming APIs allows users to customize their `HiveConf` with additional Hive connection parameters. Users need to make sure Flink can connect to their Hive metastore within the network.
+Also note that currently only registering `HiveCatalog` thru Table APIs allows users to customize their `HiveConf` with additional Hive connection parameters. Users need to make sure Flink can connect to their Hive metastore within the network.
  
 ## GenericHiveMetastoreCatalog
 
@@ -75,9 +75,8 @@ For Hive compatibility, see [Hive Compatibility]({{ site.baseurl }}/dev/batch/hi
 
 {% top %}
 
-
-Use Catalogs
-------------
+Catalog Module
+--------------
 
 `FlinkInMemoryCatalog` is built in `flink-table` module.
 
@@ -92,12 +91,16 @@ In order to use Hive-metastore-backed catalogs in Flink, users need to put the e
 {% endhighlight %}
 
 
+Use Catalog
+-----------
+
 We will use `HiveCatalog` for example in the following content. 
 
+## Use HiveCatalog in Table API
 
-## Use HiveCatalog in Programming API
-
-```java
+<div class="codetabs" markdown="1">
+<div data-lang="java" markdown="1">
+{% highlight java %}
 //  ------ Register HiveCatalog ------
 BatchTableEnvironment tEnv = ...
 
@@ -130,8 +133,49 @@ myHive1.listPartitions(myTablePath);
 
 ......
 
+{% endhighlight %}
+</div>
 
-```
+<div data-lang="scala" markdown="1">
+{% highlight scala %}
+//  ------ Register HiveCatalog ------
+val tEnv = ...
+
+// Option 1: Register with Hive metastore thrift URIs
+tEnv.registerCatalog(new HiveCatalog("myHive1", "thrift:<myip1>:<myport1>,thrift:<myip2>:<myport2>"));
+
+// Option 2: Register with HiveConf
+val hiveConf = ...
+tEnv.registerCatalog(new HiveCatalog("myHive2", hiveConf));
+
+
+// ------ Set default catalog and database ------
+
+tEnv.setDefaultDatabase("myHive1", "myDb");
+
+
+// ------ Access Hive meta-objects ------
+
+// First get the catalog
+val myHive1 = tEnv.getCatalog("myHive1");
+
+// Then read Hive meta-objects
+myHive1.listDatabases();
+myHive1.listAllTables();
+myHive1.listTables("myDb");
+
+val myTablePath = ew ObjectPath("myDb", "myTable");
+myHive1.getTable(myTablePath);
+myHive1.listPartitions(myTablePath);
+
+......
+
+
+{% endhighlight %}
+</div>
+</div>
+
+
 
 ## Use HiveCatalog in Flink SQL Cli
 

@@ -19,8 +19,8 @@
 package org.apache.flink.table.catalog;
 
 import org.apache.flink.table.api.DatabaseNotExistException;
-import org.apache.flink.table.api.PartitionNotExistException;
 import org.apache.flink.table.api.TableNotExistException;
+import org.apache.flink.table.api.exceptions.PartitionNotExistException;
 import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
 
 import java.io.Closeable;

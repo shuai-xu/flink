@@ -26,7 +26,7 @@ import org.apache.flink.table.util.TableTestBase;
 import org.junit.Test;
 
 /**
- * Test for ReadableCatalog. This is migrated from ExternalCatalogTest.
+ * Test for ReadableCatalog.
  */
 public class ReadableCatalogTest extends TableTestBase {
 	@Test

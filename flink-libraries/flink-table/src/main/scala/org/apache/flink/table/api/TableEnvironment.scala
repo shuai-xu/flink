@@ -648,7 +648,7 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     * @param tablePath The table name under which the table is registered in [[TableEnvironment]].
     *                  tablePath can be a single name(e.g. Array("MyTable")) associated with a
     *                  table , or can be a nest names (e.g. Array("MyCatalog", "MyDb", "MyTable"))
-    *                  associated with a table registered as member of an [[ExternalCatalog]].
+    *                  associated with a table registered as member of a [[ReadableCatalog]].
     * @return Statistics of a table if the statistics is available, else return null.
     * @Experimental
     */
@@ -696,7 +696,7 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     * @param tablePath The table name under which the table is registered in [[TableEnvironment]].
     *                  tablePath can be a single name(e.g. Array("MyTable")) associated with a
     *                  table , or can be a nest names (e.g. Array("MyCatalog", "MyDb", "MyTable"))
-    *                  associated with a table registered as member of an [[ExternalCatalog]].
+    *                  associated with a table registered as member of a [[ReadableCatalog]].
     * @param tableStats The [[TableStats]] to update.
     */
   def alterTableStats(tablePath: Array[String], tableStats: TableStats): Unit = {
@@ -723,7 +723,7 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     * @param tablePath The table name under which the table is registered in [[TableEnvironment]].
     *                  tablePath can be a single name(e.g. Array("MyTable")) associated with a
     *                  table , or can be a nest names (e.g. Array("MyCatalog", "MyDb", "MyTable"))
-    *                  associated with a table registered as member of an [[ExternalCatalog]].
+    *                  associated with a table registered as member of a [[ReadableCatalog]].
     * @param tableStats The [[TableStats]] to update.
     * @Experimental
     */

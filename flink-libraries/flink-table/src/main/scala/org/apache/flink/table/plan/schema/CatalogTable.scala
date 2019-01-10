@@ -130,7 +130,7 @@ class CatalogTable(
       .asInstanceOf[TableSink[Any]]
 
   /**
-   * Create a streaming table source from external catalog table.
+   * Create a streaming table source from a catalog table.
    * @return the stream table source
    */
   def streamTableSource: StreamTableSource[Any] =
@@ -144,13 +144,13 @@ class CatalogTable(
     }
 
   /**
-   * Create a table parser for external catalog table.
+   * Create a table parser for a catalog table.
    * @return
    */
   def tableSourceParser: TableSourceParser = ExternalTableUtil.toParser(name, table, isStreaming)
 
   /**
-   * Create a batch table source from external catalog table.
+   * Create a batch table source from a catalog table.
    * @return the batch table source
    */
   def batchTableSource: BatchTableSource[Any] =

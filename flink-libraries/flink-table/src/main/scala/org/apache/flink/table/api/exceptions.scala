@@ -18,8 +18,7 @@
 
 package org.apache.flink.table.api
 
-import com.google.common.base.Joiner
-import org.apache.flink.table.catalog.ExternalCatalogTypes.PartitionSpec
+import org.apache.flink.table.catalog.CatalogPartition
 import org.apache.flink.table.descriptors.DescriptorProperties
 import org.apache.flink.table.factories.{TableFactory => JTableFactory}
 
@@ -46,50 +45,6 @@ case class SqlParserException(
   * Exception for unwanted method calling on unresolved expression.
   */
 case class UnresolvedException(msg: String) extends RuntimeException(msg)
-
-/**
-  * Exception for operation on a nonexistent partition
-  *
-  * @param catalog       catalog name
-  * @param table         table name
-  * @param partitionSpec partition spec
-  * @param cause         the cause
-  */
-case class PartitionNotExistException(
-    catalog: String,
-    table: String,
-    partitionSpec: PartitionSpec,
-    cause: Throwable)
-    extends RuntimeException(
-      s"partition [${Joiner.on(",").withKeyValueSeparator("=").join(partitionSpec)}] " +
-          s"does not exist in table $catalog.$table!", cause) {
-
-  def this(catalog: String, table: String, partitionSpec: PartitionSpec) =
-    this(catalog, table, partitionSpec, null)
-
-}
-
-/**
-  * Exception for adding an already existed partition
-  *
-  * @param catalog       catalog name
-  * @param table         table name
-  * @param partitionSpec partition spec
-  * @param cause         the cause
-  */
-case class PartitionAlreadyExistException(
-    catalog: String,
-    table: String,
-    partitionSpec: PartitionSpec,
-    cause: Throwable)
-    extends RuntimeException(
-      s"partition [${Joiner.on(",").withKeyValueSeparator("=").join(partitionSpec)}] " +
-          s"already exists in table $catalog.$table!", cause) {
-
-  def this(catalog: String, table: String, partitionSpec: PartitionSpec) =
-    this(catalog, table, partitionSpec, null)
-
-}
 
 /**
   * Exception for an operation on a nonexistent table.
@@ -309,32 +264,4 @@ case class AmbiguousTableFactoryException(
     properties: Map[String, String]) = {
     this(matchingFactories, factoryClass, factories, properties, null)
   }
-}
-
-/**
-  * Exception for operation on a nonexistent external catalog
-  *
-  * @param catalogName external catalog name
-  * @param cause the cause
-  */
-case class ExternalCatalogNotExistException(
-    catalogName: String,
-    cause: Throwable)
-    extends RuntimeException(s"External catalog $catalogName does not exist.", cause) {
-
-  def this(catalogName: String) = this(catalogName, null)
-}
-
-/**
-  * Exception for adding an already existent external catalog
-  *
-  * @param catalogName external catalog name
-  * @param cause the cause
-  */
-case class ExternalCatalogAlreadyExistException(
-    catalogName: String,
-    cause: Throwable)
-    extends RuntimeException(s"External catalog $catalogName already exists.", cause) {
-
-  def this(catalogName: String) = this(catalogName, null)
 }

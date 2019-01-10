@@ -20,10 +20,10 @@ package org.apache.flink.table.catalog;
 
 import org.apache.flink.table.api.DatabaseAlreadyExistException;
 import org.apache.flink.table.api.DatabaseNotExistException;
-import org.apache.flink.table.api.PartitionAlreadyExistException;
-import org.apache.flink.table.api.PartitionNotExistException;
 import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
+import org.apache.flink.table.api.exceptions.PartitionAlreadyExistException;
+import org.apache.flink.table.api.exceptions.PartitionNotExistException;
 import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
 
 /**
