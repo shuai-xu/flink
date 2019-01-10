@@ -33,6 +33,8 @@ import org.apache.flink.runtime.rest.messages.EmptyMessageParameters;
 import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
 import org.apache.flink.runtime.rest.messages.JobExceptionsHeaders;
 import org.apache.flink.runtime.rest.messages.JobExceptionsInfo;
+import org.apache.flink.runtime.rest.messages.JobGraphOverviewHeaders;
+import org.apache.flink.runtime.rest.messages.JobGraphOverviewInfo;
 import org.apache.flink.runtime.rest.messages.JobMessageParameters;
 import org.apache.flink.runtime.rest.messages.JobsOverviewHeaders;
 import org.apache.flink.runtime.rest.messages.MessageHeaders;
@@ -110,7 +112,26 @@ public class RestServerClientImpl implements RestServerClient {
 	//依赖 jobGraph， 可以先用伪接口实现
 	@Override
 	public JobConfig getJobConfig(JobID jobId) {
-		return null;
+		final JobGraphOverviewHeaders header = JobGraphOverviewHeaders.getInstance();
+		final JobMessageParameters parameters = header.getUnresolvedMessageParameters();
+		parameters.jobPathParameter.resolve(jobId);
+		try {
+			return sendRequest(header, parameters, EmptyRequestBody.getInstance()).thenApply(
+				(JobGraphOverviewInfo jobGraphOverviewInfo) -> {
+					Map<JobVertexID, VertexConfig> vertexConfigs = new HashMap<>();
+					Map<JobVertexID, List<JobVertexID>> inputNodes = jobGraphOverviewInfo.getInputNodes();
+					for (Map.Entry<JobVertexID, JobGraphOverviewInfo.VertexConfigInfo> vertexId2Config: jobGraphOverviewInfo.getVertexConfigs().entrySet()) {
+						JobGraphOverviewInfo.VertexConfigInfo jobGraphVertexConfig = vertexId2Config.getValue();
+						VertexConfig vertexConfig = new VertexConfig(jobGraphVertexConfig.getParallelism(), jobGraphVertexConfig.getMaxParallelism(),
+							jobGraphVertexConfig.getResourceSpec(), jobGraphVertexConfig.getOperatorIds());
+						vertexConfigs.put(vertexId2Config.getKey(), vertexConfig);
+					}
+					return new JobConfig(jobGraphOverviewInfo.getConfig(), vertexConfigs, inputNodes);
+				}
+			).get();
+		} catch (Exception ignore) {
+			return null;
+		}
 	}
 
 	//JobAllSubtaskCurrentAttemptsHandler

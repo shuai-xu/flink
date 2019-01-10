@@ -42,6 +42,7 @@ import org.apache.flink.runtime.rest.handler.job.JobConfigHandler;
 import org.apache.flink.runtime.rest.handler.job.JobDetailsHandler;
 import org.apache.flink.runtime.rest.handler.job.JobExceptionsHandler;
 import org.apache.flink.runtime.rest.handler.job.JobExecutionResultHandler;
+import org.apache.flink.runtime.rest.handler.job.JobGraphOverviewHandler;
 import org.apache.flink.runtime.rest.handler.job.JobIdsHandler;
 import org.apache.flink.runtime.rest.handler.job.JobPendingSlotRequestsHandler;
 import org.apache.flink.runtime.rest.handler.job.JobPlanHandler;
@@ -98,6 +99,7 @@ import org.apache.flink.runtime.rest.messages.DashboardConfigurationHeaders;
 import org.apache.flink.runtime.rest.messages.JobAccumulatorsHeaders;
 import org.apache.flink.runtime.rest.messages.JobConfigHeaders;
 import org.apache.flink.runtime.rest.messages.JobExceptionsHeaders;
+import org.apache.flink.runtime.rest.messages.JobGraphOverviewHeaders;
 import org.apache.flink.runtime.rest.messages.JobIdsWithStatusesOverviewHeaders;
 import org.apache.flink.runtime.rest.messages.JobPendingSlotRequestsHeaders;
 import org.apache.flink.runtime.rest.messages.JobPlanHeaders;
@@ -269,6 +271,14 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 			JobConfigHeaders.getInstance(),
 			executionGraphCache,
 			executor);
+
+		JobGraphOverviewHandler jobGraphOverviewHandler = new JobGraphOverviewHandler(
+			restAddressFuture,
+			leaderRetriever,
+			timeout,
+			responseHeaders,
+			JobGraphOverviewHeaders.getInstance()
+		);
 
 		CheckpointConfigHandler checkpointConfigHandler = new CheckpointConfigHandler(
 			restAddressFuture,
@@ -682,6 +692,7 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 		handlers.add(Tuple2.of(jobIdsHandler.getMessageHeaders(), jobIdsHandler));
 		handlers.add(Tuple2.of(jobsOverviewHandler.getMessageHeaders(), jobsOverviewHandler));
 		handlers.add(Tuple2.of(jobConfigHandler.getMessageHeaders(), jobConfigHandler));
+		handlers.add(Tuple2.of(jobGraphOverviewHandler.getMessageHeaders(), jobGraphOverviewHandler));
 		handlers.add(Tuple2.of(checkpointConfigHandler.getMessageHeaders(), checkpointConfigHandler));
 		handlers.add(Tuple2.of(checkpointStatisticsHandler.getMessageHeaders(), checkpointStatisticsHandler));
 		handlers.add(Tuple2.of(checkpointStatisticDetailsHandler.getMessageHeaders(), checkpointStatisticDetailsHandler));

@@ -129,7 +129,7 @@ public interface RestServerClient {
 		/**
 		 * transformation id of operator in the vertex.
 		 */
-		private int[] operatorIds;
+		private List<String> operatorIds;
 
 		@VisibleForTesting
 		public VertexConfig(
@@ -141,7 +141,7 @@ public interface RestServerClient {
 		}
 
 		public VertexConfig(
-				int parallelism, int maxParallelism, ResourceSpec resourceSpec, int[] operatorIds) {
+				int parallelism, int maxParallelism, ResourceSpec resourceSpec, List<String> operatorIds) {
 			this.parallelism = parallelism;
 			this.maxParallelism = maxParallelism;
 			this.resourceSpec = resourceSpec;
@@ -160,7 +160,7 @@ public interface RestServerClient {
 			return resourceSpec;
 		}
 
-		public int[] getOperatorIds() {
+		public List<String> getOperatorIds() {
 			return operatorIds;
 		}
 	}
