@@ -398,8 +398,6 @@ public class YARNSessionITCase extends YarnTestBase {
 		File tmpInFile = tmp.newFile();
 		FileUtils.writeStringToFile(tmpInFile, WordCountData.TEXT);
 
-		// Previously parameter "--input" of WordCount example don't support setResources API because of bug
-		// https://aone.alibaba-inc.com/project/768768/issue/16441721
 		Runner jobRunner = startWithArgs(new String[]{"run",
 				exampleJarLocation.getAbsolutePath(),
 				//"--input", tmpInFile.getAbsoluteFile().toString(),
@@ -517,8 +515,6 @@ public class YARNSessionITCase extends YarnTestBase {
 		File tmpInFile = tmp.newFile();
 		FileUtils.writeStringToFile(tmpInFile, WordCountData.TEXT);
 
-		// Previously parameter "--input" of WordCount example don't support setResources API because of bug
-		// https://aone.alibaba-inc.com/project/768768/issue/16441721
 		try {
 			Runner jobRunner = startWithArgs(new String[]{"run",
 					exampleJarLocation.getAbsolutePath(),
