@@ -54,6 +54,10 @@ To speed up the build you can skip tests, checkstyle, and JavaDocs: `mvn clean i
 
 The default build adds a Flink-specific JAR for Hadoop 2, to allow using Flink with HDFS and YARN.
 
+After the build is complete, you can see the compressed package **.tar.gz** and the corresponding unzipped package in the **flink-dist/target** directory.
+
+If you are building on a Linux-like system, you will see a soft link called **build-target** in the flink source root directory that links to the unzipped package of build result in the **flink-dist/target** directory.
+
 ## Dependency Shading
 
 Flink [shades away](https://maven.apache.org/plugins/maven-shade-plugin/) some of the libraries it uses, in order to avoid version clashes with user programs that use different versions of these libraries. Among the shaded libraries are *Google Guava*, *Asm*, *Apache Curator*, *Apache HTTP Components*, *Netty*, and others.
