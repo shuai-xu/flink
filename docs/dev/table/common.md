@@ -255,7 +255,7 @@ TableSink csvSink = new CsvTableSink("/path/to/file", ...);
 
 // define the field names and types
 String[] fieldNames = {"a", "b", "c"};
-TypeInformation[] fieldTypes = {Types.INT, Types.STRING, Types.LONG};
+DataType[] fieldTypes = {DataTypes.INT, DataTypes.STRING, DataTypes.LONG};
 
 // register the TableSink as table "CsvSinkTable"
 tableEnv.registerTableSink("CsvSinkTable", fieldNames, fieldTypes, csvSink);
@@ -272,7 +272,7 @@ val csvSink: TableSink = new CsvTableSink("/path/to/file", ...)
 
 // define the field names and types
 val fieldNames: Array[String] = Array("a", "b", "c")
-val fieldTypes: Array[TypeInformation[_]] = Array(Types.INT, Types.STRING, Types.LONG)
+val fieldTypes: Array[DataType] = Array(DataTypes.INT, DataTypes.STRING, DataTypes.LONG)
 
 // register the TableSink as table "CsvSinkTable"
 tableEnv.registerTableSink("CsvSinkTable", fieldNames, fieldTypes, csvSink)
@@ -526,7 +526,7 @@ result.writeToSink(sink);
 // METHOD 2:
 //   Register the TableSink with a specific schema
 String[] fieldNames = {"a", "b", "c"};
-TypeInformation[] fieldTypes = {Types.INT, Types.STRING, Types.LONG};
+DataType[] fieldTypes = {DataTypes.INT, DataTypes.STRING, DataTypes.LONG};
 tableEnv.registerTableSink("CsvSinkTable", fieldNames, fieldTypes, sink);
 //   Emit the result Table to the registered TableSink via the insertInto() method
 result.insertInto("CsvSinkTable");
@@ -553,7 +553,7 @@ result.writeToSink(sink)
 // METHOD 2:
 //   Register the TableSink with a specific schema
 val fieldNames: Array[String] = Array("a", "b", "c")
-val fieldTypes: Array[TypeInformation] = Array(Types.INT, Types.STRING, Types.LONG)
+val fieldTypes: Array[DataType] = Array(DataTypes.INT, DataTypes.STRING, DataTypes.LONG)
 tableEnv.registerTableSink("CsvSinkTable", fieldNames, fieldTypes, sink)
 //   Emit the result Table to the registered TableSink via the insertInto() method
 result.insertInto("CsvSinkTable")
@@ -1120,9 +1120,9 @@ The following code example shows the physical plan when reuse sub-plan is enable
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
 {% highlight java %}
-ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 // create a BatchTableEnvironment
-BatchTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
+BatchTableEnvironment tableEnv = TableEnvironment.getBatchTableEnvironment(env);
 
 // register Orders table
 
@@ -1145,7 +1145,7 @@ System.out.println(plan);
 {% highlight scala %}
 val env = StreamExecutionEnvironment.getExecutionEnvironment
 // create a BatchTableEnvironment
-val tEnv = TableEnvironment.getTableEnvironment(env)
+val tEnv = TableEnvironment.getBatchTableEnvironment(env)
 
 val table = tEnv.scan("Orders")
     .groupBy('cID, 'cName)

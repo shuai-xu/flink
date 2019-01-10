@@ -218,7 +218,7 @@ Table result2 = tableEnv.sqlQuery(
 // create and register a TableSink
 TableSink csvSink = new CsvTableSink("/path/to/file", ...);
 String[] fieldNames = {"product", "amount"};
-TypeInformation[] fieldTypes = {Types.STRING, Types.INT};
+DataType[] fieldTypes = {DataTypes.STRING, DataTypes.INT};
 tableEnv.registerTableSink("RubberOrders", fieldNames, fieldTypes, csvSink);
 // run a SQL update query on the Table and emit the result to the TableSink
 tableEnv.sqlUpdate(
@@ -250,7 +250,7 @@ val result2 = tableEnv.sqlQuery(
 // create and register a TableSink
 TableSink csvSink = new CsvTableSink("/path/to/file", ...)
 val fieldNames: Array[String] = Array("product", "amount")
-val fieldTypes: Array[TypeInformation[_]] = Array(Types.STRING, Types.INT)
+val fieldTypes: Array[DataType[_]] = Array(DataTypes.STRING, DataTypes.INT)
 tableEnv.registerTableSink("RubberOrders", fieldNames, fieldTypes, csvSink)
 // run a SQL update query on the Table and emit the result to the TableSink
 tableEnv.sqlUpdate(
