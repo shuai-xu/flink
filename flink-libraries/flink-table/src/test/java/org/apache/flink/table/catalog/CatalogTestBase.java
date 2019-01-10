@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -200,7 +199,7 @@ public abstract class CatalogTestBase {
 	public void testCreateDb() {
 		catalog.createDatabase(db2, createDb(), false);
 
-		assertEquals(1, filterBuiltInDb(catalog.listDatabases()).size());
+		assertEquals(2, catalog.listDatabases().size());
 	}
 
 	@Test(expected = DatabaseAlreadyExistException.class)
@@ -216,14 +215,14 @@ public abstract class CatalogTestBase {
 		List<String> dbs = catalog.listDatabases();
 
 		assertTrue(catalog.getDatabase(db1).getProperties().entrySet().containsAll(cd1.getProperties().entrySet()));
-		assertEquals(1, filterBuiltInDb(dbs).size());
-		assertEquals(db1, filterBuiltInDb(dbs).get(0));
+		assertEquals(2, dbs.size());
+		assertEquals(Arrays.asList(db1, catalog.getDefaultDatabaseName()), dbs);
 
 		catalog.createDatabase(db1, createAnotherDb(), true);
 
 		assertTrue(catalog.getDatabase(db1).getProperties().entrySet().containsAll(cd1.getProperties().entrySet()));
-		assertEquals(1, filterBuiltInDb(dbs).size());
-		assertEquals(db1, filterBuiltInDb(dbs).get(0));
+		assertEquals(2, dbs.size());
+		assertEquals(Arrays.asList(db1, catalog.getDefaultDatabaseName()), dbs);
 	}
 
 	@Test(expected = DatabaseNotExistException.class)
@@ -508,12 +507,6 @@ public abstract class CatalogTestBase {
 			createTableSchema(),
 			getTableProperties(),
 			createPartitionCols());
-	}
-
-	private List<String> filterBuiltInDb(List<String> dbs) {
-		return dbs.stream()
-			.filter(db -> !db.equals("default"))
-			.collect(Collectors.toList());
 	}
 
 	protected CatalogDatabase createDb() {

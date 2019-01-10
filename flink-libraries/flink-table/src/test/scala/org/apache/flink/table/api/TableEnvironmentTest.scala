@@ -38,28 +38,30 @@ import org.junit.Test
 
 class TableEnvironmentTest extends TableTestBase {
 
+  private val TEST_DB_NAME = FlinkInMemoryCatalog.DEFAULT_DB
+
   @Test
   def testListCatalogsAndDatabasesAndTables(): Unit = {
     var tEnv = streamTestUtil().tableEnv
     var testDb = "test"
     tEnv.registerCatalog(testDb, CommonTestData.getTestFlinkInMemoryCatalog)
 
-    assert(tEnv.listCatalogs().sameElements(Array(testDb, CatalogManager.DEFAULT_CATALOG_NAME)))
+    assert(tEnv.listCatalogs().sameElements(Array(testDb, CatalogManager.BUILTIN_CATALOG_NAME)))
 
     tEnv.setDefaultDatabase(testDb, "db2")
 
-    assert(tEnv.listDatabases().sameElements(Array("db1", "db2")))
+    assert(tEnv.listDatabases().sameElements(Array("db1", "db2", TEST_DB_NAME)))
     assert(tEnv.listTables().sameElements(Array("tb2")))
 
     tEnv.setDefaultDatabase("db2")
 
-    assert(tEnv.listDatabases().sameElements(Array("db1", "db2")))
+    assert(tEnv.listDatabases().sameElements(Array("db1", "db2", TEST_DB_NAME)))
     assert(tEnv.listTables().sameElements(Array("tb2")))
 
     tEnv.setDefaultDatabase(
-      CatalogManager.DEFAULT_CATALOG_NAME, CatalogManager.DEFAULT_DATABASE_NAME)
+      CatalogManager.BUILTIN_CATALOG_NAME, TEST_DB_NAME)
 
-    assert(tEnv.listDatabases().sameElements(Array(CatalogManager.DEFAULT_DATABASE_NAME)))
+    assert(tEnv.listDatabases().sameElements(Array(TEST_DB_NAME)))
     assert(tEnv.listTables().sameElements(Array.empty[String]))
   }
 
@@ -86,7 +88,7 @@ class TableEnvironmentTest extends TableTestBase {
   @Test(expected = classOf[IllegalArgumentException])
   def testNonExistDb(): Unit = {
     streamTestUtil().tableEnv.setDefaultDatabase(
-      String.format("%s.%s", CatalogManager.DEFAULT_CATALOG_NAME, "nonexistdb"))
+      String.format("%s.%s", CatalogManager.BUILTIN_CATALOG_NAME, "nonexistdb"))
   }
 
   @Test
@@ -113,7 +115,7 @@ class TableEnvironmentTest extends TableTestBase {
     registerTestTable(tEnv)
 
     var tableSchema = tEnv.scan(
-      CatalogManager.DEFAULT_CATALOG_NAME, CatalogManager.DEFAULT_DATABASE_NAME, "t1").getSchema
+      CatalogManager.BUILTIN_CATALOG_NAME, TEST_DB_NAME, "t1").getSchema
 
     assert(tableSchema.getColumnNames.sameElements(Array("a", "b")))
     assert(TableSchemaUtil.toRowType(tableSchema) ==
@@ -132,14 +134,14 @@ class TableEnvironmentTest extends TableTestBase {
     var tEnv = streamTestUtil().tableEnv
     registerTestTable(tEnv)
     var tableSchema = tEnv.scan(
-      "nonexist", CatalogManager.DEFAULT_DATABASE_NAME, "t1").getSchema
+      "nonexist", TEST_DB_NAME, "t1").getSchema
   }
 
   @Test(expected = classOf[TableException])
   def testScanNonExistDb(): Unit = {
     var tEnv = streamTestUtil().tableEnv
     registerTestTable(tEnv)
-    var tableSchema = tEnv.scan(CatalogManager.DEFAULT_CATALOG_NAME, "nonexist", "t1").getSchema
+    var tableSchema = tEnv.scan(CatalogManager.BUILTIN_CATALOG_NAME, "nonexist", "t1").getSchema
   }
 
   @Test(expected = classOf[TableException])
@@ -147,7 +149,7 @@ class TableEnvironmentTest extends TableTestBase {
     var tEnv = streamTestUtil().tableEnv
     registerTestTable(tEnv)
     var tableSchema = tEnv.scan(
-      CatalogManager.DEFAULT_CATALOG_NAME, CatalogManager.DEFAULT_DATABASE_NAME, "nonexist")
+      CatalogManager.BUILTIN_CATALOG_NAME, TEST_DB_NAME, "nonexist")
       .getSchema
   }
 

@@ -50,7 +50,7 @@ catalogs:
       hive.metastore.uris: "thrift://host1:10000,thrift://host2:10000"
       hive.metastore.username: "flink"
     is-default: true
-    default-db: "mydb"
+    default-database: "mydb"
 - name: myinmemory
   catalog:
     type: flink_in_memory

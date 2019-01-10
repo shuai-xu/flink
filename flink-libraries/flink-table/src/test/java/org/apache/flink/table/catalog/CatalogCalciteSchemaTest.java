@@ -61,6 +61,7 @@ public class CatalogCalciteSchemaTest {
 	private final String table1 = "tb1";
 	private final String db2 = "db2";
 	private final String table2 = "tb2";
+	private final String builtindb = FlinkInMemoryCatalog.DEFAULT_DB;
 
 	private SchemaPlus catalogSchema;
 	private CalciteCatalogReader calciteCatalogReader;
@@ -106,8 +107,8 @@ public class CatalogCalciteSchemaTest {
 
 		SchemaPlus schema = rootSchemaPlus.getSubSchema(catalogName);
 		assertTrue(schema.getTableNames().isEmpty());
-		assertEquals(2, schema.getSubSchemaNames().size());
-		assertEquals(new HashSet<>(Arrays.asList(db1, db2)), schema.getSubSchemaNames());
+		assertEquals(3, schema.getSubSchemaNames().size());
+		assertEquals(new HashSet<>(Arrays.asList(db1, db2, builtindb)), schema.getSubSchemaNames());
 
 		SchemaPlus s1 = schema.getSubSchema(db1);
 		assertTrue(s1.getSubSchemaNames().isEmpty());
@@ -134,6 +135,7 @@ public class CatalogCalciteSchemaTest {
 				add(Arrays.asList(catalogName));
 				add(Arrays.asList(catalogName, "db1"));
 				add(Arrays.asList(catalogName, "db2"));
+				add(Arrays.asList(catalogName, builtindb));
 			}},
 			subSchemas
 		);

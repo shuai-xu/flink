@@ -33,6 +33,21 @@ import java.util.List;
 public interface ReadableCatalog extends Closeable {
 
 	/**
+	 * Gets the default database of this type of catalog. This is used when users only set a default catalog
+	 * without a default db. For example, the default db in Hive metastore is always 'default'.
+	 *
+	 * @return Name of the default database.
+	 */
+	String getDefaultDatabaseName();
+
+	/**
+	 * Set the default database name to be used when users only set a default catalog without a default db.
+	 *
+	 * @param databaseName	The database name to be set.
+	 */
+	void setDefaultDatabaseName(String databaseName);
+
+	/**
 	 * Called when init a ReadableCatalog. Used for any required preparation in initialization phase.
 	 */
 	void open();

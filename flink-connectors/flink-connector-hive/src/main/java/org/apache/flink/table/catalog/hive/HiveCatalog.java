@@ -61,8 +61,11 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  */
 public class HiveCatalog implements ReadableWritableCatalog {
 
+	private static final String DEFAULT_DB = "default";
+
 	private final String catalogName;
 
+	private String defaultDatabaseName = DEFAULT_DB;
 	private HiveConf hiveConf;
 	private IMetaStoreClient client;
 
@@ -96,6 +99,18 @@ public class HiveCatalog implements ReadableWritableCatalog {
 		} catch (MetaException e) {
 			throw new FlinkHiveException("Failed creating Hive metastore client", e);
 		}
+	}
+
+	@Override
+	public String getDefaultDatabaseName() {
+		return defaultDatabaseName;
+	}
+
+	@Override
+	public void setDefaultDatabaseName(String databaseName) {
+		checkArgument(!StringUtils.isNullOrWhitespaceOnly(databaseName));
+
+		defaultDatabaseName = databaseName;
 	}
 
 	@Override

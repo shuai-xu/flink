@@ -42,8 +42,11 @@ import static org.apache.flink.util.Preconditions.checkArgument;
  */
 public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 
-	private String catalogName;
+	public static final String DEFAULT_DB = "default_db";
 
+	private String defaultDatabaseName = DEFAULT_DB;
+
+	private final String catalogName;
 	private final Map<String, CatalogDatabase> databases;
 	private final Map<ObjectPath, CatalogTable> tables;
 	private final Map<ObjectPath, Map<CatalogPartition.PartitionSpec, CatalogPartition>> partitions;
@@ -53,8 +56,21 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 
 		this.catalogName = name;
 		this.databases = new HashMap<>();
+		this.databases.put(DEFAULT_DB, new CatalogDatabase());
 		this.tables = new HashMap<>();
 		this.partitions = new HashMap<>();
+	}
+
+	@Override
+	public String getDefaultDatabaseName() {
+		return defaultDatabaseName;
+	}
+
+	@Override
+	public void setDefaultDatabaseName(String databaseName) {
+		checkArgument(!StringUtils.isNullOrWhitespaceOnly(databaseName));
+
+		defaultDatabaseName = databaseName;
 	}
 
 	@Override

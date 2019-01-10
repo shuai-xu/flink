@@ -47,6 +47,7 @@ import org.apache.flink.table.api.functions.TableFunction;
 import org.apache.flink.table.api.functions.UserDefinedFunction;
 import org.apache.flink.table.api.java.BatchTableEnvironment;
 import org.apache.flink.table.api.java.StreamTableEnvironment;
+import org.apache.flink.table.catalog.ReadableCatalog;
 import org.apache.flink.table.client.catalog.ClientCatalogFactory;
 import org.apache.flink.table.client.config.Environment;
 import org.apache.flink.table.client.config.entries.CatalogEntry;
@@ -76,8 +77,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
-
-import static org.apache.flink.util.Preconditions.checkArgument;
+import java.util.stream.Collectors;
 
 /**
  * Context for executing table programs. This class caches everything that can be cached across
@@ -302,9 +302,14 @@ public class ExecutionContext<T> {
 			registerFunctions();
 
 			// register catalogs
-			mergedEnv.getCatalogs().forEach((name, catalog) ->
-				tableEnv.registerCatalog(name, ClientCatalogFactory.createCatalog(catalog))
-			);
+			mergedEnv.getCatalogs().forEach((name, catalog) -> {
+					ReadableCatalog readableCatalog = ClientCatalogFactory.createCatalog(catalog);
+
+					if (catalog.getDefaultDatabase().isPresent()) {
+						readableCatalog.setDefaultDatabaseName(catalog.getDefaultDatabase().get());
+					}
+					tableEnv.registerCatalog(name, readableCatalog);
+				});
 
 			// register views and temporal tables in specified order
 			mergedEnv.getTables().forEach((name, entry) -> {
@@ -332,28 +337,17 @@ public class ExecutionContext<T> {
 		}
 
 		private void setDefaultCatalog(Map<String, CatalogEntry> catalogs) {
-			long count = catalogs.values().stream().filter(c -> c.isDefaultCatalog()).count();
+			List<CatalogEntry> defaultCatalog = catalogs.values().stream().filter(c -> c.isDefaultCatalog()).collect(Collectors.toList());
 
-			checkArgument(count <= 1,
-				String.format("Only one catalog can be set as default catalog, but currently are %d", count));
+			if (defaultCatalog.size() > 1) {
+				throw new IllegalArgumentException(String.format("Only one catalog can be set as default catalog, but currently there are %d", defaultCatalog.size()));
+			}
 
-			if (count == 0) {
+			if (defaultCatalog.size() == 0) {
 				return;
 			}
 
-			Map.Entry<String, CatalogEntry> entry = catalogs.entrySet().stream()
-				.filter(e -> e.getValue().isDefaultCatalog())
-				.findFirst()
-				.get();
-
-			String name = entry.getKey();
-			CatalogEntry defaultCatalog = entry.getValue();
-
-			if (defaultCatalog.getDefaultDatabase().isPresent()) {
-				tableEnv.setDefaultDatabase(name, defaultCatalog.getDefaultDatabase().get());
-			} else {
-				tableEnv.setDefaultCatalog(name);
-			}
+			tableEnv.setDefaultCatalog(defaultCatalog.get(0).getName());
 		}
 
 		public QueryConfig getQueryConfig() {

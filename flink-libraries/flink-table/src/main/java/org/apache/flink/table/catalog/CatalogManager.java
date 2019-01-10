@@ -46,9 +46,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * query parsing and analysis.)
  */
 public class CatalogManager {
-	// Cannot use 'default' here because 'default' is a reserved keyword in Calcite query parser
-	public static final String DEFAULT_CATALOG_NAME = "default_catalog";
-	public static final String DEFAULT_DATABASE_NAME = "default_db";
+	public static final String BUILTIN_CATALOG_NAME = "default_catalog";
 
 	// The catalog to hold all registered and translated tables
 	// We disable caching here to prevent side effects
@@ -59,36 +57,18 @@ public class CatalogManager {
 	private Map<String, ReadableCatalog> catalogs;
 
 	// The name of the default catalog and schema
-	private String defaultCatalog;
-	private String defaultDb;
+	private String defaultCatalogName;
+	private String defaultDbName;
 
 	public CatalogManager() {
 		catalogs = new HashMap<>();
 
-		FlinkInMemoryCatalog inMemoryCatalog = new FlinkInMemoryCatalog(DEFAULT_CATALOG_NAME);
-		inMemoryCatalog.createDatabase(DEFAULT_DATABASE_NAME, new CatalogDatabase(), false);
-		catalogs.put(DEFAULT_CATALOG_NAME, inMemoryCatalog);
-		defaultCatalog = DEFAULT_CATALOG_NAME;
-		defaultDb = DEFAULT_DATABASE_NAME;
+		FlinkInMemoryCatalog inMemoryCatalog = new FlinkInMemoryCatalog(BUILTIN_CATALOG_NAME);
+		catalogs.put(BUILTIN_CATALOG_NAME, inMemoryCatalog);
+		defaultCatalogName = BUILTIN_CATALOG_NAME;
+		defaultDbName = inMemoryCatalog.getDefaultDatabaseName();
 
-		CatalogCalciteSchema.registerCatalog(rootSchema, DEFAULT_CATALOG_NAME, inMemoryCatalog);
-	}
-
-	/**
-	 * Currently in design doc but not used. May be used in the future when TableEnvironment is initialized with
-	 * multiple catalogs
-	 */
-	public CatalogManager(Map<String, ReadableCatalog> catalogs, String defaultCatalog) {
-		this.catalogs = checkNotNull(catalogs, "catalogs cannot be null");
-
-		checkArgument(!StringUtils.isNullOrWhitespaceOnly(defaultCatalog), "defaultCatalog cannot be null or empty");
-		checkArgument(catalogs.keySet().contains(defaultCatalog), "defaultCatalog must be in catalogs");
-
-		this.defaultCatalog = defaultCatalog;
-
-		for (Map.Entry<String, ReadableCatalog> e : catalogs.entrySet()) {
-			CatalogCalciteSchema.registerCatalog(rootSchema, e.getKey(), e.getValue());
-		}
+		CatalogCalciteSchema.registerCatalog(rootSchema, BUILTIN_CATALOG_NAME, inMemoryCatalog);
 	}
 
 	public void registerCatalog(String catalogName, ReadableCatalog catalog) throws CatalogAlreadyExistException {
@@ -99,7 +79,6 @@ public class CatalogManager {
 			throw new CatalogAlreadyExistException(catalogName);
 		}
 
-		catalog.open();
 		catalogs.put(catalogName, catalog);
 		catalog.open();
 		CatalogCalciteSchema.registerCatalog(rootSchema, catalogName, catalog);
@@ -122,18 +101,18 @@ public class CatalogManager {
 		checkArgument(catalogs.keySet().contains(catalogName),
 			String.format("Cannot find registered catalog %s", catalogName));
 
-		if (!defaultCatalog.equals(catalogName)) {
-			defaultCatalog = catalogName;
-			defaultDb = null;
+		if (!defaultCatalogName.equals(catalogName)) {
+			defaultCatalogName = catalogName;
+			defaultDbName = catalogs.get(catalogName).getDefaultDatabaseName();
 		}
 	}
 
 	public ReadableCatalog getDefaultCatalog() {
-		return catalogs.get(defaultCatalog);
+		return catalogs.get(defaultCatalogName);
 	}
 
 	public String getDefaultCatalogName() {
-		return defaultCatalog;
+		return defaultCatalogName;
 	}
 
 	public void setDefaultDatabase(String catalogName, String dbName) {
@@ -144,12 +123,12 @@ public class CatalogManager {
 		checkArgument(catalogs.get(catalogName).listDatabases().contains(dbName),
 			String.format("Cannot find registered database %s", dbName));
 
-		defaultCatalog = catalogName;
-		defaultDb = dbName;
+		defaultCatalogName = catalogName;
+		defaultDbName = dbName;
 	}
 
 	public String getDefaultDatabaseName() {
-		return defaultDb;
+		return defaultDbName;
 	}
 
 	public SchemaPlus getRootSchema() {
@@ -207,21 +186,6 @@ public class CatalogManager {
 	 */
 	public String resolveTableNameAsString(String[] paths) {
 		return String.join(".", resolveTableName(paths));
-	}
-
-	/**
-	 * Checks if a table is registered under the given name.
-	 *
-	 * @param tableName The table name to check.
-	 * @return true, if a table is registered under the name, false otherwise.
-	 */
-	public boolean isRegistered(String tableName) {
-		// TODO: need to consider if there's no default database
-		return getCatalog(getDefaultCatalogName())
-			.listTables(getDefaultDatabaseName())
-			.stream()
-			.map(op -> op.getObjectName())
-			.anyMatch(o -> o.equals(tableName));
 	}
 
 	public List<List<String>> getCalciteReaderDefaultPaths(SchemaPlus defaultSchema) {

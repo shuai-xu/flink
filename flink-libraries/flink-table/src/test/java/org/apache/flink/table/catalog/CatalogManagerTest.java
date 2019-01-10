@@ -62,7 +62,7 @@ public class CatalogManagerTest {
 	public void testSetDefaultCatalog() {
 		manager.registerCatalog(TEST_CATALOG_NAME, CommonTestData.getTestFlinkInMemoryCatalog());
 
-		assertEquals(manager.getCatalog(CatalogManager.DEFAULT_CATALOG_NAME), manager.getDefaultCatalog());
+		assertEquals(manager.getCatalog(CatalogManager.BUILTIN_CATALOG_NAME), manager.getDefaultCatalog());
 
 		manager.setDefaultCatalog(TEST_CATALOG_NAME);
 
@@ -76,18 +76,18 @@ public class CatalogManagerTest {
 
 	@Test
 	public void testSetDefaultDatabase() {
-		assertEquals(CatalogManager.DEFAULT_DATABASE_NAME, manager.getDefaultDatabaseName());
+		assertEquals(FlinkInMemoryCatalog.DEFAULT_DB, manager.getDefaultDatabaseName());
 
 		String testDb = "test";
 		((ReadableWritableCatalog) manager.getDefaultCatalog()).createDatabase(testDb, new CatalogDatabase(), false);
-		manager.setDefaultDatabase(CatalogManager.DEFAULT_CATALOG_NAME, testDb);
+		manager.setDefaultDatabase(CatalogManager.BUILTIN_CATALOG_NAME, testDb);
 
 		assertEquals(testDb, manager.getDefaultDatabaseName());
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testSetNonExistDefaultDatabase() {
-		manager.setDefaultDatabase(CatalogManager.DEFAULT_CATALOG_NAME, "nonexist");
+		manager.setDefaultDatabase(CatalogManager.BUILTIN_CATALOG_NAME, "nonexist");
 	}
 
 	@Test
@@ -95,10 +95,10 @@ public class CatalogManagerTest {
 		assertTrue(Arrays.equals(
 			new String[] {"1", "2" , "3"} , manager.resolveTableName(new String[] {"1", "2", "3"})));
 		assertTrue(Arrays.equals(
-			new String[] {CatalogManager.DEFAULT_CATALOG_NAME, "1", "2"},
+			new String[] {CatalogManager.BUILTIN_CATALOG_NAME, "1", "2"},
 			manager.resolveTableName(new String[] {"1", "2"})));
 		assertTrue(Arrays.equals(
-			new String[] {CatalogManager.DEFAULT_CATALOG_NAME, CatalogManager.DEFAULT_DATABASE_NAME, "1"},
+			new String[] {CatalogManager.BUILTIN_CATALOG_NAME, manager.getDefaultDatabaseName(), "1"},
 			manager.resolveTableName(new String[] {"1"})));
 	}
 

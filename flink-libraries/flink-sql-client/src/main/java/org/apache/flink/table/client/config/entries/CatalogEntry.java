@@ -36,7 +36,7 @@ public class CatalogEntry extends ConfigEntry {
 	public static final String CATALOG_CONNECTOR_PREFIX = "catalog.connector";
 	public static final String CATALOG_TYPE = "catalog.type";
 	public static final String CATALOG_IS_DEFAULT = "catalog.is-default";
-	public static final String CATALOG_DEFAULT_DB = "catalog.default-db";
+	public static final String CATALOG_DEFAULT_DB = "catalog.default-database";
 	// Hive-specific
 	public static final String CATALOG_CONNECTOR_HIVE_METASTORE_URIS =
 		CATALOG_CONNECTOR_PREFIX + "." + HiveCatalogConfig.HIVE_METASTORE_URIS;
@@ -83,7 +83,7 @@ public class CatalogEntry extends ConfigEntry {
 			return Optional.empty();
 		} else {
 			String s = properties.getString(CATALOG_DEFAULT_DB);
-			return Optional.of(s);
+			return Optional.ofNullable(s);
 		}
 	}
 

@@ -310,11 +310,11 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
   }
 
   /**
-    * Set the default  database. If a catalog is not specified, the database is resolved relative
-    * to the current catalog.
+    * Set the default database. If a catalog is not specified, the database is resolved relative
+    * to the current default catalog.
     * Note! This method does not support setting default catalog only.
     *
-    * @param dbPath         name or path of the database
+    * @param dbPath         Name or path of the database
     */
   @varargs
   def setDefaultDatabase(dbPath: String*): Unit = {
@@ -1261,7 +1261,8 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
       throw new TableException(TableErrors.INST.sqlInvalidSinkTblName())
     }
 
-    if (!catalogManager.isRegistered(sinkTableName)) {
+    if (!catalogManager.getDefaultCatalog()
+        .tableExists(new ObjectPath(catalogManager.getDefaultDatabaseName, sinkTableName))) {
       // if the target table still in table meta, we should register it first.
       if (tableMetas.contains(sinkTableName)) {
         val tableMeta = tableMetas.remove(sinkTableName)
