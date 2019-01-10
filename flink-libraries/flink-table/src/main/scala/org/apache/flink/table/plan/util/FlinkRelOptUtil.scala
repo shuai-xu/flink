@@ -223,106 +223,104 @@ object FlinkRelOptUtil {
   }
 
   /**
-    * Tries to decompose the RexNode into two parts based on splitterVisitor.
-    * The first part is interested part of the input expression,
-    * the second part is rest part of the input expression.
+    * Partitions the [[RexNode]] in two [[RexNode]] according to a predicate.
+    * The result is a pair of RexNode: the first RexNode consists of RexNode that satisfy the
+    * predicate and the second RexNode consists of RexNode that don't.
     *
-    * For simple condition which is not AND, OR, NOT, it is completely interested or not based on
-    * whether it matches the input splitterVisitor or not.
+    * For simple condition which is not AND, OR, NOT, it is completely satisfy the predicate or not.
     *
-    * For complex condition is Ands, decompose each operands of ANDS recursively, then
-    * merge the interested parts of each operand as the interested part of the input condition,
-    * merge the rest parts of each operands as the rest parts of the input condition.
+    * For complex condition Ands, partition each operands of ANDS recursively, then
+    * merge the RexNode which satisfy the predicate as the first part, merge the rest parts as the
+    * second part.
     *
     * For complex condition ORs, try to pull up common factors among ORs first, if the common
-    * factors is not A ORs, then simplify the question to decompose the common factors expression;
-    * else the input condition is completely interested or not based on whether all its operands
-    * matches the splitterVisitor or not.
+    * factors is not A ORs, then simplify the question to partition the common factors expression;
+    * else the input condition is completely satisfy the predicate or not based on whether all
+    * its operands satisfy the predicate or not.
     *
-    * For complex condition NOT, it is completely interested or not based on whether its operand
-    * matches the splitterVisitor or not.
+    * For complex condition NOT, it is completely satisfy the predicate or not based on whether its
+    * operand satisfy the predicate or not.
     *
-    * @param expr            the expression to decompose
+    * @param expr            the expression to partition
     * @param rexBuilder      rexBuilder
-    * @param splitterVisitor the RexVisitor to check if a RexNode is interested or not
-    * @return the decompose result of the RexNode based on splitterVisitor,
-    *         which is (interested parts, rest parts)
+    * @param predicate       the specified predicate on which to partition
+    * @return a pair of RexNode: the first RexNode consists of RexNode that satisfy the predicate
+    *         and the second RexNode consists of RexNode that don't
     */
-  def decompose(
+  def partition(
       expr: RexNode,
       rexBuilder: RexBuilder,
-      splitterVisitor: RexVisitor[JBool]): (Option[RexNode], Option[RexNode]) = {
+      predicate: RexNode => JBool): (Option[RexNode], Option[RexNode]) = {
     val condition = pushNotToLeaf(expr, rexBuilder)
-    val (interested: Option[RexNode], rest: Option[RexNode]) = condition.getKind match {
+    val (left: Option[RexNode], right: Option[RexNode]) = condition.getKind match {
       case AND =>
-        val (interestedLists, restLists) = decompose(
-          condition.asInstanceOf[RexCall].operands, rexBuilder, splitterVisitor)
-        if (interestedLists.isEmpty) {
+        val (leftExprs, rightExprs) = partition(
+          condition.asInstanceOf[RexCall].operands, rexBuilder, predicate)
+        if (leftExprs.isEmpty) {
           (None, Option(condition))
         } else {
-          val interestedPart = RexUtil.composeConjunction(rexBuilder, interestedLists.asJava, false)
-          if (restLists.isEmpty) {
-            (Option(interestedPart), None)
+          val l = RexUtil.composeConjunction(rexBuilder, leftExprs.asJava, false)
+          if (rightExprs.isEmpty) {
+            (Option(l), None)
           } else {
-            val restPart = RexUtil.composeConjunction(rexBuilder, restLists.asJava, false)
-            (Option(interestedPart), Option(restPart))
+            val r = RexUtil.composeConjunction(rexBuilder, rightExprs.asJava, false)
+            (Option(l), Option(r))
           }
         }
       case OR =>
-        val factor = RexUtil.pullFactors(rexBuilder, condition)
-        factor.getKind match {
+        val e = RexUtil.pullFactors(rexBuilder, condition)
+        e.getKind match {
           case OR =>
-            val (interestedLists, restLists) = decompose(
-              condition.asInstanceOf[RexCall].operands, rexBuilder, splitterVisitor)
-            if (interestedLists.isEmpty || restLists.nonEmpty) {
+            val (leftExprs, rightExprs) = partition(
+              condition.asInstanceOf[RexCall].operands, rexBuilder, predicate)
+            if (leftExprs.isEmpty || rightExprs.nonEmpty) {
               (None, Option(condition))
             } else {
-              (Option(RexUtil.composeDisjunction(rexBuilder, interestedLists.asJava, false)), None)
+              val l = RexUtil.composeDisjunction(rexBuilder, leftExprs.asJava, false)
+              (Option(l), None)
             }
           case _ =>
-            decompose(factor, rexBuilder, splitterVisitor)
+            partition(e, rexBuilder, predicate)
         }
       case NOT =>
         val operand = condition.asInstanceOf[RexCall].operands.head
-        decompose(operand, rexBuilder, splitterVisitor) match {
+        partition(operand, rexBuilder, predicate) match {
           case (Some(_), None) => (Option(condition), None)
           case (_, _) => (None, Option(condition))
         }
       case IS_TRUE =>
         val operand = condition.asInstanceOf[RexCall].operands.head
-        decompose(operand, rexBuilder, splitterVisitor)
+        partition(operand, rexBuilder, predicate)
       case IS_FALSE =>
         val operand = condition.asInstanceOf[RexCall].operands.head
         val newCondition = pushNotToLeaf(operand, rexBuilder, needReverse = true)
-        decompose(newCondition, rexBuilder, splitterVisitor)
+        partition(newCondition, rexBuilder, predicate)
       case _ =>
-        if (condition.accept(splitterVisitor)) {
+        if (predicate(condition)) {
           (Option(condition), None)
         } else {
           (None, Option(condition))
         }
     }
-    (convertRexNodeIfAlwaysTrue(interested), convertRexNodeIfAlwaysTrue(rest))
+    (convertRexNodeIfAlwaysTrue(left), convertRexNodeIfAlwaysTrue(right))
   }
 
-  private def decompose(
+  private def partition(
       exprs: Iterable[RexNode],
       rexBuilder: RexBuilder,
-      splitterVisitor: RexVisitor[JBool]): (Iterable[RexNode], Iterable[RexNode]) = {
-    val interestedLists = mutable.ListBuffer[RexNode]()
-    val restLists = mutable.ListBuffer[RexNode]()
-    exprs.foreach(expr => {
-      decompose(expr, rexBuilder, splitterVisitor) match {
-        case (Some(interested), Some(rest)) =>
-          interestedLists += interested
-          restLists += rest
-        case (None, Some(rest)) =>
-          restLists += rest
-        case (Some(interested), None) =>
-          interestedLists += interested
-      }
+      predicate: RexNode => JBool): (Iterable[RexNode], Iterable[RexNode]) = {
+    val leftExprs = mutable.ListBuffer[RexNode]()
+    val rightExprs = mutable.ListBuffer[RexNode]()
+    exprs.foreach(expr => partition(expr, rexBuilder, predicate) match {
+      case (Some(first), Some(second)) =>
+        leftExprs += first
+        rightExprs += second
+      case (None, Some(rest)) =>
+        rightExprs += rest
+      case (Some(interested), None) =>
+        leftExprs += interested
     })
-    (interestedLists, restLists)
+    (leftExprs, rightExprs)
   }
 
   private def convertRexNodeIfAlwaysTrue(expr: Option[RexNode]): Option[RexNode] = {
@@ -334,30 +332,29 @@ object FlinkRelOptUtil {
 
   private def pushNotToLeaf(expr: RexNode,
       rexBuilder: RexBuilder,
-      needReverse: Boolean = false): RexNode =
-    (expr.getKind, needReverse) match {
-      case (AND, true) | (OR, false) =>
-        val convertedExprs = expr.asInstanceOf[RexCall].operands
-            .map(pushNotToLeaf(_, rexBuilder, needReverse))
-        RexUtil.composeDisjunction(rexBuilder, convertedExprs, false)
-      case (AND, false) | (OR, true) =>
-        val convertedExprs = expr.asInstanceOf[RexCall].operands
-            .map(pushNotToLeaf(_, rexBuilder, needReverse))
-        RexUtil.composeConjunction(rexBuilder, convertedExprs, false)
-      case (NOT, _) =>
-        val child = expr.asInstanceOf[RexCall].operands.head
-        pushNotToLeaf(child, rexBuilder, !needReverse)
-      case (_, true) if expr.isInstanceOf[RexCall] =>
-        val negateExpr = RexUtil.negate(rexBuilder, expr.asInstanceOf[RexCall])
-        if (negateExpr != null) negateExpr else RexUtil.not(expr)
-      case (_, true) => RexUtil.not(expr)
-      case (_, false) => expr
-    }
+      needReverse: Boolean = false): RexNode = (expr.getKind, needReverse) match {
+    case (AND, true) | (OR, false) => 
+      val convertedExprs = expr.asInstanceOf[RexCall].operands
+                           .map(pushNotToLeaf(_, rexBuilder, needReverse))
+      RexUtil.composeDisjunction(rexBuilder,  convertedExprs, false)
+    case (AND, false) | (OR, true) =>
+      val convertedExprs = expr.asInstanceOf[RexCall].operands
+                           .map(pushNotToLeaf(_, rexBuilder, needReverse))
+      RexUtil.composeConjunction(rexBuilder, convertedExprs, false)
+    case (NOT, _) =>
+      val child = expr.asInstanceOf[RexCall].operands.head
+      pushNotToLeaf(child, rexBuilder, !needReverse)
+    case (_, true) if expr.isInstanceOf[RexCall] =>
+      val negatedExpr = RexUtil.negate(rexBuilder, expr.asInstanceOf[RexCall])
+      if (negatedExpr != null) negatedExpr else RexUtil.not(expr)
+    case (_, true) => RexUtil.not(expr)
+    case (_, false) => expr
+  }
 
   /**
     * An RexVisitor to judge whether the RexNode is related to the specified index InputRef
     */
-  class InputRefVisitor(index: Int) extends RexVisitorImpl[JBool](true) {
+  class ColumnRelatedVisitor(index: Int) extends RexVisitorImpl[JBool](true) {
 
     override def visitInputRef(inputRef: RexInputRef): JBool = inputRef.getIndex == index
 
@@ -370,4 +367,5 @@ object FlinkRelOptUtil {
       })
     }
   }
+
 }

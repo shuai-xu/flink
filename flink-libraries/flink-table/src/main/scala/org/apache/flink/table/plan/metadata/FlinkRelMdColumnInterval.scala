@@ -41,6 +41,8 @@ import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.sql.{SqlBinaryOperator, SqlKind}
 import org.apache.calcite.util.Util
 
+import java.lang.{Boolean => JBool}
+
 import scala.collection.JavaConversions._
 
 /**
@@ -703,12 +705,14 @@ object FlinkRelMdColumnInterval {
     predicate: RexNode,
     inputRef: Int,
     rexBuilder: RexBuilder): ValueInterval = {
+
+    val isRelated = (r: RexNode)=> r.accept(new ColumnRelatedVisitor(inputRef))
+    val relatedSubRexNode = partition(predicate, rexBuilder, isRelated)._1
     val beginInterval = originInterval match {
       case Some(interval) => interval
       case _ => ValueInterval.infinite
     }
-    val splitter = new InputRefVisitor(inputRef)
-    decompose(predicate, rexBuilder, splitter)._1 match {
+    relatedSubRexNode match {
       case Some(rexNode) =>
         val orParts = RexUtil.flattenOr(Vector(RexUtil.toDnf(rexBuilder, rexNode)))
         val interval = orParts.map(or => {
@@ -720,6 +724,7 @@ object FlinkRelMdColumnInterval {
         if (interval == ValueInterval.infinite) null else interval
       case None => beginInterval
     }
+
   }
 
   private def columnIntervalOfSinglePredicate(condition: RexNode): ValueInterval = {
