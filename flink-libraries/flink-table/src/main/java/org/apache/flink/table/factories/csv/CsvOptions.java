@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.factories;
+package org.apache.flink.table.factories.csv;
 
 import org.apache.flink.configuration.ConfigOption;
 
@@ -62,9 +62,15 @@ public class CsvOptions {
 	public static final ConfigOption<Integer> PARALLELISM = key("parallelism".toLowerCase())
 		.defaultValue(-1);
 
-	public static final ConfigOption<String> TIME_ZONE = key("timeZone".toLowerCase()).noDefaultValue();
+	public static final ConfigOption<String> OPTIONAL_TIME_ZONE = key("timeZone".toLowerCase()).noDefaultValue();
 
 	public static final ConfigOption<String> OPTIONAL_COMMENTS_PREFIX = key("commentsPrefix".toLowerCase()).noDefaultValue();
+
+	// update mode for the CSV sink, enum: append/upsert/retract, default to be append mode.
+	// Notes:
+	// 1. append mode can be used for both batch and stream env
+	// 2. retract and upsert mode can only used in stream env
+	public static final ConfigOption<String> OPTIONAL_UPDATE_MODE = key("updateMode".toLowerCase()).defaultValue("append");
 
 	public static final List<String> SUPPORTED_KEYS = Arrays.asList(
 		PATH.key(),
@@ -78,7 +84,9 @@ public class CsvOptions {
 		OPTIONAL_QUOTE_CHARACTER.key(),
 		OPTIONAL_FIRST_LINE_AS_HEADER.key(),
 		PARALLELISM.key(),
-		OPTIONAL_COMMENTS_PREFIX.key());
+		OPTIONAL_TIME_ZONE.key(),
+		OPTIONAL_COMMENTS_PREFIX.key(),
+		OPTIONAL_UPDATE_MODE.key());
 
 	public static final String PARAMS_HELP_MSG = String.format("required params:%s", PATH);
 }

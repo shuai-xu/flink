@@ -59,6 +59,10 @@ public class CassandraSink<IN> {
 		useDataStreamSink = false;
 	}
 
+	public DataStreamSink<IN> getSink1() {
+		return sink1;
+	}
+
 	private SinkTransformation<IN> getSinkTransformation() {
 		return sink1.getTransformation();
 	}

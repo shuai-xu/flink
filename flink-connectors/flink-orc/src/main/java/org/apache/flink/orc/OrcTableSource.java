@@ -53,8 +53,8 @@ import org.apache.flink.util.Preconditions;
 
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hive.ql.io.sarg.PredicateLeaf;
 import org.apache.orc.TypeDescription;
+import org.apache.orc.storage.ql.io.sarg.PredicateLeaf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,6 +82,9 @@ import java.util.List;
  * }
  * </pre>
  */
+// Deprecate for OrcVectorizedColumnRowTableSource, please use
+// OrcVectorizedColumnRowTableSource instead.
+@Deprecated
 public class OrcTableSource
 	implements BatchTableSource<Row>, ProjectableTableSource, FilterableTableSource {
 

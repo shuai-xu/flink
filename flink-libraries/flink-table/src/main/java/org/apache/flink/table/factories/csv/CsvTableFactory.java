@@ -16,14 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.factories;
+package org.apache.flink.table.factories.csv;
 
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.factories.BatchTableSinkFactory;
+import org.apache.flink.table.factories.BatchTableSourceFactory;
+import org.apache.flink.table.factories.StreamTableSinkFactory;
+import org.apache.flink.table.factories.StreamTableSourceFactory;
 import org.apache.flink.table.sinks.BatchTableSink;
 import org.apache.flink.table.sinks.StreamTableSink;
+import org.apache.flink.table.sinks.TableSink;
 import org.apache.flink.table.sinks.csv.CsvTableSink;
+import org.apache.flink.table.sinks.csv.RetractCsvTableSink;
+import org.apache.flink.table.sinks.csv.UpsertCsvTableSink;
 import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.StreamTableSource;
 import org.apache.flink.table.sources.csv.CsvTableSource;
@@ -53,15 +60,15 @@ import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CO
  * A CSV table factory.
  */
 public class CsvTableFactory implements
-		StreamTableSourceFactory<BaseRow>,
-		BatchTableSourceFactory<BaseRow>,
-		StreamTableSinkFactory<BaseRow>,
-		BatchTableSinkFactory<BaseRow> {
+	StreamTableSourceFactory<BaseRow>,
+	BatchTableSourceFactory<BaseRow>,
+	StreamTableSinkFactory<Object>,
+	BatchTableSinkFactory<BaseRow> {
 	private static final Logger LOG = LoggerFactory.getLogger(CsvTableFactory.class);
 
 	@Override
 	public BatchTableSink<BaseRow> createBatchTableSink(Map<String, String> properties) {
-		return createCsvTableSink(properties);
+		return (BatchTableSink<BaseRow>) createCsvTableSink(properties, false);
 	}
 
 	@Override
@@ -70,8 +77,8 @@ public class CsvTableFactory implements
 	}
 
 	@Override
-	public StreamTableSink<BaseRow> createStreamTableSink(Map<String, String> properties) {
-		return createCsvTableSink(properties);
+	public StreamTableSink<Object> createStreamTableSink(Map<String, String> properties) {
+		return (StreamTableSink<Object>) createCsvTableSink(properties, true);
 	}
 
 	@Override
@@ -81,6 +88,8 @@ public class CsvTableFactory implements
 
 	@Override
 	public Map<String, String> requiredContext() {
+		// The connector type should be filesystem and format be CSV, we use CSV as connector type
+		// to distinguish between Other Csv factories, these factories should be merged.
 		Map<String, String> context = new HashMap<>();
 		context.put(CONNECTOR_TYPE, "CSV");
 		context.put(CONNECTOR_PROPERTY_VERSION, "1");
@@ -106,7 +115,7 @@ public class CsvTableFactory implements
 		final String lineDelim = getJavaEscapedDelim(properties.getString(CsvOptions.OPTIONAL_LINE_DELIM));
 		final String charset = properties.getString(CsvOptions.OPTIONAL_CHARSET);
 		final boolean emptyColumnAsNull = properties.getBoolean(CsvOptions.EMPTY_COLUMN_AS_NULL);
-		final String timeZone = properties.getString(CsvOptions.TIME_ZONE);
+		final String timeZone = properties.getString(CsvOptions.OPTIONAL_TIME_ZONE);
 		final TimeZone tz = (timeZone == null) ? TimeZone.getTimeZone("UTC") : TimeZone.getTimeZone(timeZone);
 		final boolean enumerateNestedFiles = properties.getBoolean(CsvOptions.OPTIONAL_ENUMERATE_NESTED_FILES);
 
@@ -165,7 +174,7 @@ public class CsvTableFactory implements
 		return builder.build();
 	}
 
-	private CsvTableSink createCsvTableSink(Map<String, String> props) {
+	private TableSink createCsvTableSink(Map<String, String> props, boolean isStreaming) {
 		TableProperties properties = new TableProperties();
 		properties.putProperties(props);
 		RichTableSchema schema = properties.readSchemaFromProperties(null);
@@ -188,11 +197,44 @@ public class CsvTableFactory implements
 		}
 		final int parallelism = properties.getInteger(CsvOptions.PARALLELISM, -1);
 		Option numFiles = parallelism == -1 ? Option.apply(null) : new Some(parallelism);
-		final String timeZone = properties.getString(CsvOptions.TIME_ZONE);
+		final String timeZone = properties.getString(CsvOptions.OPTIONAL_TIME_ZONE);
 		final TimeZone tz = (timeZone == null) ? TimeZone.getTimeZone("UTC") : TimeZone.getTimeZone(timeZone);
 
-		return (CsvTableSink) (
-			new CsvTableSink(
+		final String updateMode = properties.getString(CsvOptions.OPTIONAL_UPDATE_MODE);
+		// validation
+		if (updateMode.toLowerCase().equals("upsert") || updateMode.toLowerCase().equals("retract")) {
+			if (!isStreaming) {
+				throw new RuntimeException("Unsupported update mode " + updateMode + " for batch env.");
+			}
+		}
+
+		switch (updateMode.toLowerCase()) {
+		case "append":
+			return
+				new CsvTableSink(
+					path,
+					Option.apply(fieldDelim),
+					Option.apply(lineDelim),
+					Option.apply(quoteCharacter),
+					numFiles,
+					Option.apply(writeMode),
+					Option.empty(),
+					Option.apply(tz)
+				).configure(schema.getColumnNames(), schema.getColumnTypes());
+		case "retract":
+			return
+				new RetractCsvTableSink(
+					path,
+					Option.apply(fieldDelim),
+					Option.apply(lineDelim),
+					Option.apply(quoteCharacter),
+					numFiles,
+					Option.apply(writeMode),
+					Option.empty(),
+					Option.apply(tz)
+				).configure(schema.getColumnNames(), schema.getColumnTypes());
+		case "upsert":
+			return new UpsertCsvTableSink(
 				path,
 				Option.apply(fieldDelim),
 				Option.apply(lineDelim),
@@ -201,8 +243,11 @@ public class CsvTableFactory implements
 				Option.apply(writeMode),
 				Option.empty(),
 				Option.apply(tz)
-			).configure(schema.getColumnNames(), schema.getColumnTypes())
-		);
+			).configure(schema.getColumnNames(), schema.getColumnTypes());
+		default:
+			throw new RuntimeException("Unsupported updateMode: " + updateMode + " for CSV sink.");
+		}
+
 	}
 
 	public static String getJavaEscapedDelim(String fieldDelim) {

@@ -31,10 +31,10 @@ import org.apache.flink.types.Row;
 import org.apache.flink.util.InstantiationUtil;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hive.ql.io.sarg.PredicateLeaf;
-import org.apache.hadoop.hive.ql.io.sarg.SearchArgument;
 import org.apache.orc.Reader;
 import org.apache.orc.StripeInformation;
+import org.apache.orc.storage.ql.io.sarg.PredicateLeaf;
+import org.apache.orc.storage.ql.io.sarg.SearchArgument;
 import org.junit.After;
 import org.junit.Test;
 

@@ -34,7 +34,7 @@ import java.util.Optional;
 import java.util.Properties;
 
 /**
- * Test for {@link Kafka09TableSource} and {@link Kafka09TableSink} created
+ * Test for {@link Kafka09TableSource} and {@link org.apache.flink.streaming.connectors.kafka.v2.sink.Kafka09TableSink} created
  * by {@link Kafka09TableSourceSinkFactory}.
  */
 public class Kafka09TableSourceSinkFactoryTest extends KafkaTableSourceSinkFactoryTestBase {

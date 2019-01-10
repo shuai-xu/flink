@@ -17,6 +17,6 @@ org.apache.flink.table.sources.csv.CsvBatchTableSourceFactory
 org.apache.flink.table.sources.csv.CsvAppendTableSourceFactory
 org.apache.flink.table.sinks.csv.CsvBatchTableSinkFactory
 org.apache.flink.table.sinks.csv.CsvAppendTableSinkFactory
-org.apache.flink.table.factories.CsvTableFactory
-org.apache.flink.table.factories.RetractCsvTableFactory
-org.apache.flink.table.factories.UpsertCsvTableFactory
+org.apache.flink.table.factories.csv.CsvTableFactory
+org.apache.flink.table.factories.orc.OrcTableFactory
+org.apache.flink.table.factories.parquet.ParquetTableFactory
