@@ -136,9 +136,9 @@ public class ZookeeperRegistry implements ServiceRegistry, Watcher {
 	}
 
 	@Override
-	public void open(Configuration parameters) {
-		this.zkQuorum = parameters.getString(ZOOKEEPER_REGISTRY_QUORUM, ZOOKEEPER_REGISTRY_DEFAULT_QUORUM_VALUE);
-		this.zkRootPath = parameters.getString(ZOOKEEPER_REGISTRY_PATH, ZOOKEEPER_REGISTRY_DEFAULT_PATH_VALUE);
+	public void open(Configuration config) {
+		this.zkQuorum = config.getString(ZOOKEEPER_REGISTRY_QUORUM, ZOOKEEPER_REGISTRY_DEFAULT_QUORUM_VALUE);
+		this.zkRootPath = config.getString(ZOOKEEPER_REGISTRY_PATH, ZOOKEEPER_REGISTRY_DEFAULT_PATH_VALUE);
 		try {
 			zooKeeper = new ZooKeeper(zkQuorum, 3000, this);
 			countDownLatch.await();

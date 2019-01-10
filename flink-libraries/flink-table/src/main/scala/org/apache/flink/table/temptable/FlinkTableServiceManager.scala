@@ -46,36 +46,17 @@ class FlinkTableServiceManager(tEnv: TableEnvironment) {
 
   private var tableServiceEnv: StreamExecutionEnvironment = _
 
-  private[flink] var tableServiceFactoryDescriptor:
-    Option[FlinkTableServiceFactoryDescriptor] = None
-
-  def setTableService(tableFactory: TableFactory,
-                      properties: TableProperties): Unit = {
-    if (tableServiceDescriptor.isDefined) {
-      throw new IllegalStateException("Table Service is already specified.")
-    }
-    tableServiceFactoryDescriptor = Some(
-      new FlinkTableServiceFactoryDescriptor(tableFactory, properties)
-    )
-  }
-
   def getTableServiceFactory(): Option[TableFactory] = {
-    if(tableServiceFactoryDescriptor == None){
-      tableServiceFactoryDescriptor = Some(TableServiceUtil.getDefaultTableServiceFactoryDescriptor)
-    }
-    Some(tableServiceFactoryDescriptor.get.getTableFactory)
+    Option(tEnv.getConfig.getTableServiceFactoryDescriptor().getTableFactory)
   }
 
   def getTableServiceFactoryProperties(): Option[TableProperties] = {
-    if(tableServiceFactoryDescriptor == None){
-      tableServiceFactoryDescriptor = Some(TableServiceUtil.getDefaultTableServiceFactoryDescriptor)
-    }
-    Some(tableServiceFactoryDescriptor.get.getTableProperties)
+    Option(tEnv.getConfig.getTableServiceFactoryDescriptor().getTableProperties)
   }
 
-  private[flink] var tableServiceDescriptor: Option[ServiceDescriptor] = None
-
-  def getTableServiceDescriptor(): Option[ServiceDescriptor] = tableServiceDescriptor
+  def getTableServiceDescriptor(): Option[ServiceDescriptor] = {
+    Option(tEnv.getConfig.getTableServiceDescriptor)
+  }
 
   private[flink] val cachePlanBuilder: CacheAwareRelNodePlanBuilder =
     new CacheAwareRelNodePlanBuilder(tEnv)
@@ -129,10 +110,7 @@ class FlinkTableServiceManager(tEnv: TableEnvironment) {
       val executionEnv = StreamExecutionEnvironment.getExecutionEnvironment
       executionEnv.setRestartStrategy(
         RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE, 500L))
-      if(tableServiceDescriptor.isEmpty) {
-        tableServiceDescriptor = Some(TableServiceUtil.getDefaultFlinkTableServiceDescriptor)
-      }
-      val descriptor = tableServiceDescriptor.get
+      val descriptor = getTableServiceDescriptor().get
       TableServiceUtil.createTableServiceJob(executionEnv, descriptor)
       submitResult = executionEnv.submit("FlinkTableServiceJob")
       tableServiceEnv = executionEnv

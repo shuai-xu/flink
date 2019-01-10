@@ -21,12 +21,10 @@ package org.apache.flink.table.temptable;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.service.LifeCycleAware;
 import org.apache.flink.service.ServiceContext;
-import org.apache.flink.util.StringUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.util.List;
 
 /**
@@ -35,8 +33,6 @@ import java.util.List;
 public class TableServiceImpl implements LifeCycleAware, TableService {
 
 	private TableStorage tableStorage;
-
-	private String rootPath;
 
 	private static final Logger logger = LoggerFactory.getLogger(TableServiceImpl.class);
 
@@ -49,16 +45,10 @@ public class TableServiceImpl implements LifeCycleAware, TableService {
 	}
 
 	@Override
-	public void open(Configuration parameters) {
+	public void open(Configuration config) {
 		logger.info("FlinkTableService begin open.");
-		String tableServiceId = parameters.getString(FlinkTableServiceFactory.TABLE_SERVICE_ID(), "");
-		if (StringUtils.isNullOrWhitespaceOnly(tableServiceId)) {
-			throw new IllegalArgumentException("table service id is empty");
-		}
-		String parentDir = System.getProperty("user.dir");
-		rootPath = parentDir + File.separator + "table_service" + File.separator + tableServiceId;
-		tableStorage = new TableStorage(rootPath);
-		tableStorage.open(parameters);
+		tableStorage = new TableStorage();
+		tableStorage.open(config);
 		tableServiceMetrics = new TableServiceMetrics(serviceContext.getMetricGroup());
 		logger.info("FlinkTableService end open.");
 	}

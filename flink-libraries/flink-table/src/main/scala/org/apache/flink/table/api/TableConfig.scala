@@ -26,6 +26,10 @@ import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.util.Preconditions
 import _root_.java.util.TimeZone
 
+import org.apache.flink.service.ServiceDescriptor
+import org.apache.flink.table.temptable.FlinkTableServiceFactoryDescriptor
+import org.apache.flink.table.temptable.util.TableServiceUtil
+
 /**
   * A config to define the runtime behavior of the Table API.
   */
@@ -274,6 +278,37 @@ class TableConfig {
 
   def getAggFunctionByQueryableStateName(queryableName: String): JTuple2[String,
       AggregateFunction[_, _]] = queryableState2AggFunctionMap.get(queryableName).orNull
+
+  /**
+    * Defines the ServiceDescriptor for TableService.
+    */
+  private var tableServiceDescriptor: ServiceDescriptor = _
+
+  def getTableServiceDescriptor(): ServiceDescriptor = {
+    if (tableServiceDescriptor == null) {
+      TableServiceUtil.createTableServiceDescriptor(this.conf)
+    } else {
+      tableServiceDescriptor
+    }
+  }
+
+  def setTableServiceDescriptor(descriptor: ServiceDescriptor): Unit = {
+    tableServiceDescriptor = descriptor
+  }
+
+  /**
+    * Defines the FlinkTableServiceFactoryDescriptor for TableService.
+    */
+  private var tableServiceFactoryDescriptor: FlinkTableServiceFactoryDescriptor =
+    TableServiceUtil.getDefaultTableServiceFactoryDescriptor
+
+  def getTableServiceFactoryDescriptor(): FlinkTableServiceFactoryDescriptor =
+    tableServiceFactoryDescriptor
+
+  def setTableServiceFactoryDescriptor(descriptor: FlinkTableServiceFactoryDescriptor): Unit = {
+    tableServiceFactoryDescriptor = descriptor
+  }
+
 }
 
 object OperatorType extends Enumeration {

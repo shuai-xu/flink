@@ -27,7 +27,6 @@ import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.types.{RowType, DataType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks.{AppendStreamTableSink, BatchTableSink, TableSinkBase}
-import org.apache.flink.table.temptable.FlinkTableServiceFactory.{TABLE_SERVICE_DEFAULT_READY_GAP_MS_VALUE, TABLE_SERVICE_DEFAULT_READY_RETRYTIMES_VALUE, TABLE_SERVICE_READY_RETRY_BACKOFF_MS, TABLE_SERVICE_READY_RETRY_TIMES}
 import org.apache.flink.table.temptable.rpc.TableServiceClient
 import org.apache.flink.table.temptable.util.TableServiceUtil
 import org.apache.flink.table.typeutils.BaseRowSerializer
@@ -39,7 +38,6 @@ import org.apache.flink.table.util.TableProperties
   * This sink will write data to TableService.
   */
 class FlinkTableServiceSink(
-  clientClassName: String,
   tableProperties: TableProperties,
   tableName: String,
   resultType: RowType) extends TableSinkBase[BaseRow]
@@ -47,14 +45,14 @@ class FlinkTableServiceSink(
   with AppendStreamTableSink[BaseRow] {
 
   override protected def copy: TableSinkBase[BaseRow] =
-    new FlinkTableServiceSink(clientClassName, tableProperties, tableName, resultType)
+    new FlinkTableServiceSink(tableProperties, tableName, resultType)
 
   override def emitBoundedStream(
     boundedStream: DataStream[BaseRow],
     tableConfig: TableConfig,
     executionConfig: ExecutionConfig): DataStreamSink[_] = {
     boundedStream.addSink(
-      new FlinkTableServiceSinkFunction(clientClassName, tableProperties, tableName, resultType))
+      new FlinkTableServiceSinkFunction(tableProperties, tableName, resultType))
   }
 
   override def getOutputType: DataType = resultType
@@ -63,7 +61,6 @@ class FlinkTableServiceSink(
   override def emitDataStream(dataStream: DataStream[BaseRow]): DataStreamSink[_] = {
     dataStream.addSink(
       new FlinkTableServiceSinkFunction(
-        clientClassName,
         tableProperties,
         tableName,
         resultType)
@@ -80,7 +77,6 @@ class FlinkTableServiceSink(
   * Built-in SinkFunction for FlinkTableServiceSink.
   */
 class FlinkTableServiceSinkFunction(
-  clientClassName: String,
   tableProperties: TableProperties,
   tableName: String,
   resultType: RowType)
@@ -94,17 +90,16 @@ class FlinkTableServiceSinkFunction(
 
   override def open(parameters: Configuration): Unit = {
     partitionId = getRuntimeContext.getIndexOfThisSubtask
-    flinkTableServiceClient = Class.forName(clientClassName)
-      .newInstance().asInstanceOf[TableServiceClient]
+    flinkTableServiceClient = new TableServiceClient
     flinkTableServiceClient.setRegistry(ServiceRegistryFactory.getRegistry)
     flinkTableServiceClient.open(tableProperties)
     baseRowSerializer =
       TypeUtils.createSerializer(resultType).asInstanceOf[BaseRowSerializer[BaseRow]]
     val maxRetry = parameters
-      .getInteger(TABLE_SERVICE_READY_RETRY_TIMES, TABLE_SERVICE_DEFAULT_READY_RETRYTIMES_VALUE)
-    val retryGap = parameters
-      .getLong(TABLE_SERVICE_READY_RETRY_BACKOFF_MS, TABLE_SERVICE_DEFAULT_READY_GAP_MS_VALUE)
-    TableServiceUtil.checkTableServiceReady(flinkTableServiceClient, maxRetry, retryGap)
+      .getInteger(TableServiceOptions.TABLE_SERVICE_READY_RETRY_TIMES)
+    val backOffMs = parameters
+      .getLong(TableServiceOptions.TABLE_SERVICE_READY_RETRY_BACKOFF_MS)
+    TableServiceUtil.checkTableServiceReady(flinkTableServiceClient, maxRetry, backOffMs)
     // send initialize Partition request to delete existing data.
     flinkTableServiceClient.initializePartition(tableName, partitionId)
   }

@@ -32,7 +32,7 @@ class TableServiceExceptionTest {
   @Test
   def testTableServiceUnavailable(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setRestartStrategy(RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE, 1000))
+    env.setRestartStrategy(RestartStrategies.fixedDelayRestart(3, 1000))
     val tEnv = TableEnvironment.getBatchTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
 

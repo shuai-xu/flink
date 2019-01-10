@@ -28,7 +28,6 @@ import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.api.types.{RowType, DataType, DataTypes}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sources.{BatchTableSource, StreamTableSource}
-import org.apache.flink.table.temptable.FlinkTableServiceFactory.{TABLE_SERVICE_DEFAULT_READY_GAP_MS_VALUE, TABLE_SERVICE_DEFAULT_READY_RETRYTIMES_VALUE, TABLE_SERVICE_READY_RETRY_BACKOFF_MS, TABLE_SERVICE_READY_RETRY_TIMES}
 import org.apache.flink.table.temptable.rpc.TableServiceClient
 import org.apache.flink.table.temptable.util.TableServiceUtil
 import org.apache.flink.table.typeutils.{BaseRowSerializer, TypeUtils}
@@ -38,7 +37,6 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
 class FlinkTableServiceSource(
-  clientClassName: String,
   tableProperties: TableProperties,
   tableName: String,
   resultType: RowType) extends BatchTableSource[BaseRow] with StreamTableSource[BaseRow] {
@@ -46,7 +44,6 @@ class FlinkTableServiceSource(
   override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[BaseRow] = {
     streamEnv.addSource(
       new FlinkTableServiceSourceFunction(
-        clientClassName,
         tableProperties,
         tableName,
         resultType)
@@ -57,7 +54,6 @@ class FlinkTableServiceSource(
 
   override def getDataStream(execEnv: StreamExecutionEnvironment): DataStream[BaseRow] = {
     execEnv.addSource(new FlinkTableServiceSourceFunction(
-      clientClassName,
       tableProperties,
       tableName,
       resultType)
@@ -75,7 +71,6 @@ class FlinkTableServiceSource(
   * Built-in SourceFunction for FlinkTableServiceSource.
   */
 class FlinkTableServiceSourceFunction(
-  clientClassName: String,
   tableProperties: TableProperties,
   tableName: String,
   resultType: RowType) extends RichParallelSourceFunction[BaseRow] {
@@ -87,17 +82,16 @@ class FlinkTableServiceSourceFunction(
   private var baseRowSerializer: BaseRowSerializer[_ <: BaseRow] = _
 
   override def open(parameters: Configuration): Unit = {
-    flinkTableServiceClient = Class.forName(clientClassName)
-      .newInstance().asInstanceOf[TableServiceClient]
+    flinkTableServiceClient = new TableServiceClient
     flinkTableServiceClient.setRegistry(ServiceRegistryFactory.getRegistry)
     flinkTableServiceClient.open(tableProperties)
     baseRowSerializer =
       TypeUtils.createSerializer(resultType).asInstanceOf[BaseRowSerializer[BaseRow]]
     val maxRetry = parameters
-      .getInteger(TABLE_SERVICE_READY_RETRY_TIMES, TABLE_SERVICE_DEFAULT_READY_RETRYTIMES_VALUE)
-    val retryGap = parameters
-      .getLong(TABLE_SERVICE_READY_RETRY_BACKOFF_MS, TABLE_SERVICE_DEFAULT_READY_GAP_MS_VALUE)
-    TableServiceUtil.checkTableServiceReady(flinkTableServiceClient, maxRetry, retryGap)
+      .getInteger(TableServiceOptions.TABLE_SERVICE_READY_RETRY_TIMES)
+    val backOffMs = parameters
+      .getLong(TableServiceOptions.TABLE_SERVICE_READY_RETRY_BACKOFF_MS)
+    TableServiceUtil.checkTableServiceReady(flinkTableServiceClient, maxRetry, backOffMs)
     assignReadRange()
   }
 

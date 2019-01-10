@@ -26,6 +26,7 @@ import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.temptable.FlinkTableService;
 import org.apache.flink.table.temptable.TableServiceException;
+import org.apache.flink.table.temptable.TableServiceOptions;
 import org.apache.flink.table.temptable.util.BytesUtil;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
 
@@ -77,7 +78,9 @@ public class TableServiceClient implements LifeCycleAware {
 
 	private volatile TableServiceBuffer readBuffer;
 
-	private static final int BUFFER_READ_SIZE = 1024;
+	private int readBufferSize;
+
+	private int writeBufferSize;
 
 	private ServiceRegistry registry;
 
@@ -139,7 +142,7 @@ public class TableServiceClient implements LifeCycleAware {
 	public void write(String tableName, int partitionIndex, BaseRow row, BaseRowSerializer baseRowSerializer) throws Exception {
 		ensureConnected(tableName, partitionIndex);
 		if (writeBuffer == null) {
-			writeBuffer = new TableServiceBuffer(tableName, partitionIndex, 32000);
+			writeBuffer = new TableServiceBuffer(tableName, partitionIndex, writeBufferSize);
 		}
 		byte[] serialized = BytesUtil.serialize(row, baseRowSerializer);
 		if (writeBuffer.getByteBuffer().remaining() >= serialized.length) {
@@ -158,7 +161,7 @@ public class TableServiceClient implements LifeCycleAware {
 	public BaseRow readNext(String tableName, int partitionIndex, BaseRowSerializer baseRowSerializer) throws Exception {
 		ensureConnected(tableName, partitionIndex);
 		if (readBuffer == null) {
-			readBuffer = new TableServiceBuffer(tableName, partitionIndex, BUFFER_READ_SIZE);
+			readBuffer = new TableServiceBuffer(tableName, partitionIndex, readBufferSize);
 		}
 
 		byte[] buffer = readFromBuffer(Integer.BYTES);
@@ -184,11 +187,14 @@ public class TableServiceClient implements LifeCycleAware {
 	}
 
 	@Override
-	public void open(Configuration parameters) throws Exception{
+	public void open(Configuration config) throws Exception{
 
 		if (getRegistry() != null) {
-			getRegistry().open(parameters);
+			getRegistry().open(config);
 		}
+
+		readBufferSize = config.getInteger(TableServiceOptions.TABLE_SERVICE_CLIENT_READ_BUFFER_SIZE);
+		writeBufferSize = config.getInteger(TableServiceOptions.TABLE_SERVICE_CLIENT_WRITE_BUFFER_SIZE);
 
 		eventLoopGroup = new NioEventLoopGroup();
 	}
@@ -361,7 +367,7 @@ public class TableServiceClient implements LifeCycleAware {
 
 	private boolean fillReadBufferFromClient() throws Exception {
 		byte[] buffer;
-		buffer = clientHandler.read(lastTableName, lastPartitionIndex, lastTablePartitionOffset, BUFFER_READ_SIZE);
+		buffer = clientHandler.read(lastTableName, lastPartitionIndex, lastTablePartitionOffset, readBufferSize);
 
 		if (buffer != null && buffer.length > 0) {
 			lastTablePartitionOffset += buffer.length;

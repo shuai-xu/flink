@@ -29,9 +29,9 @@ public interface LifeCycleAware {
 	/**
 	 * Invoked right after the object of this class is created.
 	 *
-	 * @param parameters The {@link Configuration} defined in the context.
+	 * @param config The {@link Configuration} defined in the context.
 	 */
-	void open(Configuration parameters) throws Exception;
+	void open(Configuration config) throws Exception;
 
 	/**
 	 * Invoked when this object is no long used. The implementation should do the cleanup.

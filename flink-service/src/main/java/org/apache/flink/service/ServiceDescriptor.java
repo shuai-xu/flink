@@ -31,7 +31,7 @@ public class ServiceDescriptor implements Serializable {
 	/**
 	 * Service class must have a default constructor.
 	 */
-	private final String serviceClassName;
+	private String serviceClassName;
 
 	/**
 	 * Number of service instance.
@@ -56,15 +56,16 @@ public class ServiceDescriptor implements Serializable {
 	/**
 	 * Vcore for one instance.
 	 */
-	private double serviceVcore;
+	private double serviceCpuCores;
 
 	/**
-	 * parameters can be accessed in {@link LifeCycleAware}'s open method.
+	 * configuration can be accessed in {@link LifeCycleAware}'s open method.
 	 */
-	private Configuration parameters = new Configuration();
+	private Configuration configuration = new Configuration();
 
-	public ServiceDescriptor(String serviceClassName) {
+	public ServiceDescriptor setServiceClassName(String serviceClassName) {
 		this.serviceClassName = serviceClassName;
+		return this;
 	}
 
 	public String getServiceClassName() {
@@ -107,21 +108,21 @@ public class ServiceDescriptor implements Serializable {
 		return this;
 	}
 
-	public double getServiceVcore() {
-		return serviceVcore;
+	public double getServiceCpuCores() {
+		return serviceCpuCores;
 	}
 
-	public ServiceDescriptor setServiceVcore(double serviceVcore) {
-		this.serviceVcore = serviceVcore;
+	public ServiceDescriptor setServiceCpuCores(double serviceCpuCores) {
+		this.serviceCpuCores = serviceCpuCores;
 		return this;
 	}
 
-	public Configuration getParameters() {
-		return parameters;
+	public Configuration getConfiguration() {
+		return configuration;
 	}
 
-	public ServiceDescriptor setParameters(Configuration parameters) {
-		this.parameters = parameters;
+	public ServiceDescriptor setConfiguration(Configuration configuration) {
+		this.configuration = configuration;
 		return this;
 	}
 

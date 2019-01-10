@@ -37,6 +37,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -47,33 +48,27 @@ public class TableStorage implements LifeCycleAware {
 
 	private static final Logger logger = LoggerFactory.getLogger(TableStorage.class);
 
-	public static final int DEFAULT_MAX_SEGMENT_LENGTH = 128 * 1024 * 1024;
+	private int maxSegmentSize;
 
-	private final int maxSegmentLength;
-
-	private final String fileRootPath;
+	private String storagePath;
 
 	private Map<String, NavigableMap<Long, File>> partitionSegmentTracker;
 
-	public TableStorage(String fileRootPath) {
-		this(fileRootPath, DEFAULT_MAX_SEGMENT_LENGTH);
-	}
-
-	public TableStorage(String fileRootPath, int maxSegmentLength) {
-		this.fileRootPath = fileRootPath;
-		this.maxSegmentLength = maxSegmentLength;
-	}
-
 	@Override
-	public void open(Configuration parameters) {
-		deleteAll(fileRootPath);
+	public void open(Configuration config) {
+		String tableServiceId = config.getString(TableServiceOptions.TABLE_SERVICE_ID, UUID.randomUUID().toString());
+		String rootPath = config.getString(TableServiceOptions.TABLE_SERVICE_STORAGE_ROOT_PATH, System.getProperty("user.dir"));
+		storagePath = rootPath + File.separator + "table_service" + File.separator + tableServiceId;
+		maxSegmentSize = config.getInteger(TableServiceOptions.TABLE_SERVICE_STORAGE_SEGMENT_MAX_SIZE);
+		deleteAll(storagePath);
 		partitionSegmentTracker = new ConcurrentHashMap<>();
+		logger.info("TableStorage opened with storage path: " + storagePath);
 	}
 
 	@Override
 	public void close() {
 		partitionSegmentTracker.clear();
-		deleteAll(fileRootPath);
+		deleteAll(storagePath);
 	}
 
 	private void deleteAll(String root) {
@@ -96,7 +91,7 @@ public class TableStorage implements LifeCycleAware {
 	}
 
 	public List<Integer> getTablePartitions(String tableName) {
-		String path = fileRootPath + File.separator + tableName;
+		String path = storagePath + File.separator + tableName;
 		File file = new File(path);
 		if (!file.exists()) {
 			return Collections.emptyList();
@@ -144,11 +139,11 @@ public class TableStorage implements LifeCycleAware {
 			lastFileOffset = lastEntry.getKey();
 		}
 		while (offset < content.length) {
-			int writeBytes = (int) Math.min(maxSegmentLength - lastFile.length(), content.length - offset);
+			int writeBytes = (int) Math.min(maxSegmentSize - lastFile.length(), content.length - offset);
 			writeFile(lastFile, content, offset, writeBytes);
 			offset += writeBytes;
 			if (offset < content.length) {
-				lastFileOffset += maxSegmentLength;
+				lastFileOffset += maxSegmentSize;
 				lastFile = new File(baseDirPath + File.separator + lastFileOffset);
 				offsetMap.put(lastFileOffset, lastFile);
 			}
@@ -196,7 +191,7 @@ public class TableStorage implements LifeCycleAware {
 		while (segmentEntry != null && totalRead < readCount) {
 			Long segmentFileOffset = segmentEntry.getKey();
 			File segmentFile = segmentEntry.getValue();
-			long readLimit = segmentFileOffset + maxSegmentLength - offset;
+			long readLimit = segmentFileOffset + maxSegmentSize - offset;
 			long readBytes = readLimit >= readCount - totalRead ? readCount - totalRead : readLimit;
 			int nRead = readFile(segmentFile, offset - segmentFileOffset, readBytes, buffer, totalRead);
 			totalRead += nRead;
@@ -256,6 +251,6 @@ public class TableStorage implements LifeCycleAware {
 
 	@VisibleForTesting
 	String getPartitionDirPath(String tableName, int partitionId) {
-		return fileRootPath + File.separator + tableName + File.separator + partitionId;
+		return storagePath + File.separator + tableName + File.separator + partitionId;
 	}
 }

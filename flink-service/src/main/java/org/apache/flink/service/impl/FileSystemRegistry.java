@@ -148,8 +148,8 @@ public class FileSystemRegistry implements ServiceRegistry {
 	}
 
 	@Override
-	public void open(Configuration parameters) {
-		this.rootPath = parameters.getString(FILESYSTEM_REGISTRY_PATH, FILESYSTEM_REGISTRY_DEFAULT_PATH_VALUE);
+	public void open(Configuration config) {
+		this.rootPath = config.getString(FILESYSTEM_REGISTRY_PATH, FILESYSTEM_REGISTRY_DEFAULT_PATH_VALUE);
 	}
 
 	@Override

@@ -63,9 +63,11 @@ public class TableStorageTest {
 
 	@Test
 	public void testWriteAndRead() throws Exception {
-		File dir = createTempDir("flink_table_storage_t1");
-		TableStorage tableStorage = new TableStorage(dir.getAbsolutePath());
-		tableStorage.open(new Configuration());
+		File dir = createTempDir("flink_table_storage");
+		Configuration config = new Configuration();
+		config.setString(TableServiceOptions.TABLE_SERVICE_STORAGE_ROOT_PATH, dir.getAbsolutePath());
+		TableStorage tableStorage = new TableStorage();
+		tableStorage.open(config);
 
 		tableStorage.write("table1", 0, writeBytes);
 		byte[] readBytes = new byte[writeBytes.length];
@@ -78,10 +80,12 @@ public class TableStorageTest {
 
 	@Test
 	public void testMultiSegments() throws Exception {
-		File dir = createTempDir("flink_table_storage_t2");
-
-		TableStorage tableStorage = new TableStorage(dir.getAbsolutePath(), 30);
-		tableStorage.open(new Configuration());
+		File dir = createTempDir("flink_table_storage");
+		Configuration config = new Configuration();
+		config.setString(TableServiceOptions.TABLE_SERVICE_STORAGE_ROOT_PATH, dir.getAbsolutePath());
+		config.setInteger(TableServiceOptions.TABLE_SERVICE_STORAGE_SEGMENT_MAX_SIZE, 30);
+		TableStorage tableStorage = new TableStorage();
+		tableStorage.open(config);
 
 		tableStorage.write("table1", 0, writeBytes);
 
@@ -113,9 +117,12 @@ public class TableStorageTest {
 
 	@Test
 	public void testWriteBytesToEmptySegmentWithCreatingSingleSegment() throws Exception {
-		File dir = createTempDir("flink_table_storage_t3");
-		TableStorage tableStorage = new TableStorage(dir.getAbsolutePath(), 10);
-		tableStorage.open(new Configuration());
+		File dir = createTempDir("flink_table_storage");
+		Configuration config = new Configuration();
+		config.setString(TableServiceOptions.TABLE_SERVICE_STORAGE_ROOT_PATH, dir.getAbsolutePath());
+		config.setInteger(TableServiceOptions.TABLE_SERVICE_STORAGE_SEGMENT_MAX_SIZE, 10);
+		TableStorage tableStorage = new TableStorage();
+		tableStorage.open(config);
 		byte[] writeBytes = new byte[4];
 		tableStorage.write("table1", 0, writeBytes);
 		Map<String, NavigableMap<Long, File>> partitionOffsetTracker = tableStorage.getPartitionSegmentTracker();
@@ -136,9 +143,12 @@ public class TableStorageTest {
 
 	@Test
 	public void testWriteBytesToEmptySegmentWithCreatingMultiSegments() throws Exception {
-		File dir = createTempDir("flink_table_storage_t4");
-		TableStorage tableStorage = new TableStorage(dir.getAbsolutePath(), 10);
-		tableStorage.open(new Configuration());
+		File dir = createTempDir("flink_table_storage");
+		Configuration config = new Configuration();
+		config.setString(TableServiceOptions.TABLE_SERVICE_STORAGE_ROOT_PATH, dir.getAbsolutePath());
+		config.setInteger(TableServiceOptions.TABLE_SERVICE_STORAGE_SEGMENT_MAX_SIZE, 10);
+		TableStorage tableStorage = new TableStorage();
+		tableStorage.open(config);
 		byte[] writeBytes = new byte[21];
 		tableStorage.write("table1", 0, writeBytes);
 		Map<String, NavigableMap<Long, File>> partitionOffsetTracker = tableStorage.getPartitionSegmentTracker();
@@ -169,9 +179,12 @@ public class TableStorageTest {
 
 	@Test
 	public void testWriteBytesToSegmentWithCreatingSingleSegment() throws Exception {
-		File dir = createTempDir("flink_table_storage_t5");
-		TableStorage tableStorage = new TableStorage(dir.getAbsolutePath(), 10);
-		tableStorage.open(new Configuration());
+		File dir = createTempDir("flink_table_storage");
+		Configuration config = new Configuration();
+		config.setString(TableServiceOptions.TABLE_SERVICE_STORAGE_ROOT_PATH, dir.getAbsolutePath());
+		config.setInteger(TableServiceOptions.TABLE_SERVICE_STORAGE_SEGMENT_MAX_SIZE, 10);
+		TableStorage tableStorage = new TableStorage();
+		tableStorage.open(config);
 
 		tableStorage.write("table1", 0, new byte[4]);
 		tableStorage.write("table1", 0, new byte[6]);
@@ -194,9 +207,12 @@ public class TableStorageTest {
 
 	@Test
 	public void testWriteBytesToSegmentWithCreatingMultiSegments() throws Exception {
-		File dir = createTempDir("flink_table_storage_t6");
-		TableStorage tableStorage = new TableStorage(dir.getAbsolutePath(), 10);
-		tableStorage.open(new Configuration());
+		File dir = createTempDir("flink_table_storage");
+		Configuration config = new Configuration();
+		config.setString(TableServiceOptions.TABLE_SERVICE_STORAGE_ROOT_PATH, dir.getAbsolutePath());
+		config.setInteger(TableServiceOptions.TABLE_SERVICE_STORAGE_SEGMENT_MAX_SIZE, 10);
+		TableStorage tableStorage = new TableStorage();
+		tableStorage.open(config);
 
 		tableStorage.write("table1", 0, new byte[9]);
 		tableStorage.write("table1", 0, new byte[12]);
@@ -229,9 +245,12 @@ public class TableStorageTest {
 
 	@Test
 	public void testInitializePartitionAfterWriteBytes() throws Exception {
-		File dir = createTempDir("flink_table_storage_t7");
-		TableStorage tableStorage = new TableStorage(dir.getAbsolutePath(), 10);
-		tableStorage.open(new Configuration());
+		File dir = createTempDir("flink_table_storage");
+		Configuration config = new Configuration();
+		config.setString(TableServiceOptions.TABLE_SERVICE_STORAGE_ROOT_PATH, dir.getAbsolutePath());
+		config.setInteger(TableServiceOptions.TABLE_SERVICE_STORAGE_SEGMENT_MAX_SIZE, 10);
+		TableStorage tableStorage = new TableStorage();
+		tableStorage.open(config);
 		tableStorage.write("table1", 0, new byte[21]);
 		tableStorage.initializePartition("table1", 0);
 		Map<String, NavigableMap<Long, File>> partitionOffsetTracker = tableStorage.getPartitionSegmentTracker();
@@ -243,9 +262,12 @@ public class TableStorageTest {
 
 	@Test
 	public void testReadFromSingleSegment() throws Exception {
-		File dir = createTempDir("flink_table_storage_t8");
-		TableStorage tableStorage = new TableStorage(dir.getAbsolutePath(), 10);
-		tableStorage.open(new Configuration());
+		File dir = createTempDir("flink_table_storage");
+		Configuration config = new Configuration();
+		config.setString(TableServiceOptions.TABLE_SERVICE_STORAGE_ROOT_PATH, dir.getAbsolutePath());
+		config.setInteger(TableServiceOptions.TABLE_SERVICE_STORAGE_SEGMENT_MAX_SIZE, 10);
+		TableStorage tableStorage = new TableStorage();
+		tableStorage.open(config);
 		byte[] writeBytes = new byte[]{1, 2, 3, 4, 5, 6};
 		tableStorage.write("table1", 0, writeBytes);
 		byte[] readBuffer = new byte[3];
@@ -258,9 +280,12 @@ public class TableStorageTest {
 
 	@Test
 	public void testReadFromMultiSegments() throws Exception {
-		File dir = createTempDir("flink_table_storage_t9");
-		TableStorage tableStorage = new TableStorage(dir.getAbsolutePath(), 10);
-		tableStorage.open(new Configuration());
+		File dir = createTempDir("flink_table_storage");
+		Configuration config = new Configuration();
+		config.setString(TableServiceOptions.TABLE_SERVICE_STORAGE_ROOT_PATH, dir.getAbsolutePath());
+		config.setInteger(TableServiceOptions.TABLE_SERVICE_STORAGE_SEGMENT_MAX_SIZE, 10);
+		TableStorage tableStorage = new TableStorage();
+		tableStorage.open(config);
 		byte[] writeBytes = new byte[30];
 		for (int i = 0; i < writeBytes.length; i++) {
 			writeBytes[i] = (byte) i;
@@ -278,9 +303,12 @@ public class TableStorageTest {
 
 	@Test
 	public void testClose() throws Exception {
-		File dir = createTempDir("flink_table_storage_t10");
-		TableStorage tableStorage = new TableStorage(dir.getAbsolutePath(), 10);
-		tableStorage.open(new Configuration());
+		File dir = createTempDir("flink_table_storage");
+		Configuration config = new Configuration();
+		config.setString(TableServiceOptions.TABLE_SERVICE_STORAGE_ROOT_PATH, dir.getAbsolutePath());
+		config.setInteger(TableServiceOptions.TABLE_SERVICE_STORAGE_SEGMENT_MAX_SIZE, 10);
+		TableStorage tableStorage = new TableStorage();
+		tableStorage.open(config);
 
 		tableStorage.write("table1", 0, new byte[21]);
 

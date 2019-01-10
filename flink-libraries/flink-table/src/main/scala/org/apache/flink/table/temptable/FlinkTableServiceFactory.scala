@@ -36,9 +36,8 @@ class FlinkTableServiceFactory extends BatchTableSinkFactory[BaseRow]
     tableProperties.putProperties(properties)
     val tableName = tableProperties.readTableNameFromProperties()
     val schema = tableProperties
-      .readSchemaFromProperties(FlinkTableServiceFactory.getClass.getClassLoader)
+      .readSchemaFromProperties(classOf[FlinkTableServiceFactory].getClassLoader)
     new FlinkTableServiceSink(
-      FlinkTableServiceFactory.CLIENT_NAME,
       tableProperties,
       tableName,
       new RowType(
@@ -52,9 +51,8 @@ class FlinkTableServiceFactory extends BatchTableSinkFactory[BaseRow]
     tableProperties.putProperties(properties)
     val tableName = tableProperties.readTableNameFromProperties()
     val schema = tableProperties
-      .readSchemaFromProperties(FlinkTableServiceFactory.getClass.getClassLoader)
+      .readSchemaFromProperties(classOf[FlinkTableServiceFactory].getClassLoader)
     new FlinkTableServiceSource(
-      FlinkTableServiceFactory.CLIENT_NAME,
       tableProperties,
       tableName,
       DataTypes.createBaseRowType(schema.getColumnTypes, schema.getColumnNames)
@@ -66,13 +64,4 @@ class FlinkTableServiceFactory extends BatchTableSinkFactory[BaseRow]
 
   override def supportedProperties(): java.util.List[String] =
     Collections.emptyList()
-}
-
-object FlinkTableServiceFactory {
-  val CLIENT_NAME = classOf[TableServiceClient].getCanonicalName
-  val TABLE_SERVICE_READY_RETRY_TIMES: String = "flink.service.tableservice.ready.retry.times"
-  val TABLE_SERVICE_READY_RETRY_BACKOFF_MS: String = "flink.service.tableservice.ready.backoff.ms"
-  val TABLE_SERVICE_ID: String = "flink.service.tableservice.id"
-  val TABLE_SERVICE_DEFAULT_READY_RETRYTIMES_VALUE: Int = 3
-  val TABLE_SERVICE_DEFAULT_READY_GAP_MS_VALUE: Long = 10000L
 }
