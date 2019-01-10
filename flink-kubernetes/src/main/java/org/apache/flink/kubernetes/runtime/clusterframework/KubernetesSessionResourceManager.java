@@ -23,7 +23,7 @@ import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.kubernetes.configuration.Constants;
 import org.apache.flink.kubernetes.configuration.KubernetesConfigOptions;
-import org.apache.flink.kubernetes.utils.KubernetesClientFactory;
+import org.apache.flink.kubernetes.utils.KubernetesConnectionManager;
 import org.apache.flink.kubernetes.utils.KubernetesRMUtils;
 import org.apache.flink.runtime.clusterframework.ApplicationStatus;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
@@ -52,8 +52,6 @@ import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.Service;
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import org.apache.commons.lang3.StringUtils;
@@ -70,6 +68,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -89,9 +89,9 @@ public class KubernetesSessionResourceManager extends
 	private ConfigMap tmConfigMap;
 
 	/**
-	 * Client to communicate with the Resource Manager (Kubernetes's master).
+	 * Connection manager to communicate with Kubernetes.
 	 */
-	private KubernetesClient resourceManagerClient;
+	private KubernetesConnectionManager kubernetesConnectionManager;
 
 	/** The number of containers requested. **/
 	private final int workerNum;
@@ -123,9 +123,11 @@ public class KubernetesSessionResourceManager extends
 
 	private final AtomicInteger workerNodeFailedAttempts = new AtomicInteger(0);
 
-	private final FatalErrorHandler fatalErrorHandler;
-
 	private OwnerReference ownerReference;
+
+	private BiConsumer<Watcher.Action, Pod> podEventHandler;
+
+	private Consumer<Exception> watcherCloseHandler;
 
 	public KubernetesSessionResourceManager(
 		RpcService rpcService,
@@ -153,7 +155,6 @@ public class KubernetesSessionResourceManager extends
 			clusterInformation,
 			fatalErrorHandler);
 		this.flinkConfig = flinkConfig;
-		this.fatalErrorHandler = fatalErrorHandler;
 		this.workerNodeMap = new ConcurrentHashMap<>();
 		this.pendingWorkerNodes = new HashSet<>();
 		this.confDir = flinkConfig.getString(KubernetesConfigOptions.CONF_DIR);
@@ -190,14 +191,13 @@ public class KubernetesSessionResourceManager extends
 	}
 
 	@VisibleForTesting
-	protected void getWorkerNodesFromPreviousAttempts() {
-		PodList podList =
-			resourceManagerClient.pods()
-				.withLabels(taskManagerPodLabels)
-				.list();
+	protected void getWorkerNodesFromPreviousAttempts() throws ResourceManagerException {
+		PodList podList = kubernetesConnectionManager.getPods(taskManagerPodLabels);
 		if (podList != null && podList.getItems().size() > 0) {
 			// add worker nodes
-			podList.getItems().forEach(e -> addWorkerNode(e, false));
+			for (Pod pod : podList.getItems()) {
+				addWorkerNode(pod, false);
+			}
 			if (!workerNodeMap.isEmpty()) {
 				long maxId = workerNodeMap.values().stream()
 					.mapToLong(KubernetesWorkerNode::getPodId).max().getAsLong();
@@ -209,13 +209,14 @@ public class KubernetesSessionResourceManager extends
 		}
 	}
 
-	private synchronized KubernetesWorkerNode addWorkerNode(Pod pod, boolean checkPending) {
+	private synchronized KubernetesWorkerNode addWorkerNode(Pod pod, boolean checkPending)
+		throws ResourceManagerException {
 		String podName = pod.getMetadata().getName();
 		ResourceID resourceId = new ResourceID(podName);
 		boolean pendingRemoved = pendingWorkerNodes.remove(resourceId);
 		if (!pendingRemoved && checkPending) {
 			log.warn("Skip adding worker node {} since it's no longer pending!", resourceId);
-			removePod(pod);
+			kubernetesConnectionManager.removePod(pod);
 			return null;
 		}
 		if (workerNodeMap.containsKey(resourceId)) {
@@ -225,7 +226,7 @@ public class KubernetesSessionResourceManager extends
 		if (workerNodeMap.size() >= workerNum) {
 			log.error("Skip adding worker node {} since the number of worker nodes ({}) is equal with "
 				+ "or beyond required ({})", workerNodeMap.size(), workerNum);
-			removePod(pod);
+			kubernetesConnectionManager.removePod(pod);
 			return null;
 		}
 		if (podName.startsWith(taskManagerPodNamePrefix)) {
@@ -241,33 +242,37 @@ public class KubernetesSessionResourceManager extends
 					workerNode.getResourceID(), workerNodeMap.size(), pendingWorkerNodes.size(), pendingWorkerNodes);
 				return workerNode;
 			} else {
-				log.warn("Skip invalid pod whose name is {} "
+				log.warn("Skip adding invalid pod whose name is {} "
 					+ "and the last part is not a number.", podName);
-				removePod(pod);
+				kubernetesConnectionManager.removePod(pod);
 			}
 		} else {
-			log.warn("Skip invalid pod whose name is {} and prefix is not {}.",
+			log.warn("Skip adding invalid pod whose name is {} and prefix is not {}.",
 				podName, taskManagerPodNamePrefix);
-			removePod(pod);
+			kubernetesConnectionManager.removePod(pod);
 		}
 		return null;
 	}
 
 	private synchronized boolean removeWorkerNode(ResourceID resourceID, String diagnostics, boolean increaseFailedAttempt) {
 		if (!workerNodeMap.containsKey(resourceID)) {
-			log.warn("Failed to remove non-exist worker node {}.", resourceID);
+			log.info("Skip removing non-exist worker node {}.", resourceID);
 			return false;
 		}
-		if (increaseFailedAttempt) {
-			increaseWorkerNodeFailedAttempts();
-		}
 		log.info("Try to remove worker node: {}, diagnostics: {}", resourceID, diagnostics);
-		closeTaskManagerConnection(resourceID, new Exception(diagnostics));
-
 		// If a worker terminated exceptionally, start a new one;
 		KubernetesWorkerNode node = workerNodeMap.remove(resourceID);
 		if (node != null) {
-			removePod(node.getPod());
+			try {
+				if (increaseFailedAttempt) {
+					increaseWorkerNodeFailedAttempts();
+				}
+				closeTaskManagerConnection(resourceID, new Exception(diagnostics));
+				kubernetesConnectionManager.removePod(node.getPod());
+			} catch (Exception e) {
+				String fatalMsg = "Failed to remove worker node. Exiting, bye...";
+				onFatalError(new ResourceManagerException(fatalMsg, e));
+			}
 			checkWorkerNodeFailedAttempts();
 			requestWorkerNodes();
 			log.info("Removed worker node: {}, left worker nodes: {}", resourceID, workerNodeMap.size());
@@ -276,34 +281,15 @@ public class KubernetesSessionResourceManager extends
 		return false;
 	}
 
-	private void requestPod(Pod pod) {
-		resourceManagerClient.pods().create(pod);
-		log.info("Requested pod: {}", pod.getMetadata().getName());
-	}
-
-	private void removePod(Pod pod) {
-		resourceManagerClient.pods().delete(pod);
-		log.info("Removed pod: {}", pod.getMetadata().getName());
-	}
-
-	private void removeTMPods() {
-		resourceManagerClient.pods().withLabels(taskManagerPodLabels).delete();
-		log.info("Removed TM pods with labels: {}, left pods: {}", taskManagerPodLabels);
-		PodList leftPods = resourceManagerClient.pods().withLabels(taskManagerPodLabels).list();
-		if (leftPods.getItems() != null && leftPods.getItems().size() > 0) {
-			log.error("After removed TM pods, should not have left pods: {}", leftPods.getItems());
-		}
-	}
-
-	protected KubernetesClient createKubernetesClient() {
-		return KubernetesClientFactory.create(flinkConfig);
+	protected KubernetesConnectionManager createKubernetesConnectionManager() {
+		return new KubernetesConnectionManager(flinkConfig);
 	}
 
 	@Override
 	protected void initialize() throws ResourceManagerException {
 		isStopped = false;
 		try {
-			resourceManagerClient = createKubernetesClient();
+			kubernetesConnectionManager = createKubernetesConnectionManager();
 		} catch (Exception e) {
 			throw new ResourceManagerException("Could not start resource manager client.", e);
 		}
@@ -323,6 +309,17 @@ public class KubernetesSessionResourceManager extends
 			throw new ResourceManagerException("Could not upload TaskManager config map.", e);
 		}
 		try {
+			podEventHandler = (action, pod) -> runAsync(() -> handlePodMessage(action, pod));
+			watcherCloseHandler = (exception) -> {
+				while (true) {
+					try {
+						watcher = createAndStartWatcher();
+						break;
+					} catch (Exception e) {
+						log.error("Can't create and start watcher, should try it again.", e);
+					}
+				}
+			};
 			watcher = createAndStartWatcher();
 		} catch (Exception e) {
 			throw new ResourceManagerException(
@@ -336,9 +333,8 @@ public class KubernetesSessionResourceManager extends
 		}
 	}
 
-	protected void setupOwnerReference() {
-		Service service = resourceManagerClient.services()
-			.withName(clusterId + Constants.SERVICE_NAME_SUFFIX).get();
+	protected void setupOwnerReference() throws ResourceManagerException {
+		Service service = kubernetesConnectionManager.getService(clusterId + Constants.SERVICE_NAME_SUFFIX);
 		if (service != null) {
 			ownerReference = KubernetesRMUtils.createOwnerReference(service);
 		} else {
@@ -346,29 +342,15 @@ public class KubernetesSessionResourceManager extends
 		}
 	}
 
-	protected void setupTaskManagerConfigMap() {
+	protected void setupTaskManagerConfigMap() throws ResourceManagerException {
 		tmConfigMap = KubernetesRMUtils.createTaskManagerConfigMap(flinkConfig, confDir,
 			ownerReference, taskManagerConfigMapName);
-		resourceManagerClient.configMaps().createOrReplace(tmConfigMap);
+		kubernetesConnectionManager.createOrReplaceConfigMap(tmConfigMap);
 	}
 
-	protected Watch createAndStartWatcher() {
-		return resourceManagerClient.pods()
-			.withLabels(taskManagerPodLabels)
-			.watch(new Watcher<Pod>() {
-				@Override
-				public void eventReceived(Action action, Pod pod) {
-					runAsync(() -> handlePodMessage(action, pod));
-				}
-
-				@Override
-				public void onClose(KubernetesClientException e) {
-					log.debug("Watcher onClose");
-					if (e != null) {
-						log.error(e.getMessage(), e);
-					}
-				}
-			});
+	protected Watch createAndStartWatcher() throws ResourceManagerException {
+		return kubernetesConnectionManager.createAndStartPodsWatcher(
+			taskManagerPodLabels, podEventHandler, watcherCloseHandler);
 	}
 
 	protected void handlePodMessage(Watcher.Action action, Pod pod) {
@@ -382,7 +364,12 @@ public class KubernetesSessionResourceManager extends
 			if (workerNodeMap.containsKey(resourceId)) {
 				log.info("Skip adding worker node {} since it's already exist!", resourceId);
 			} else {
-				addWorkerNode(pod, true);
+				try {
+					addWorkerNode(pod, true);
+				} catch (Exception e) {
+					String fatalMsg = "Failed to add work node. Exiting, bye...";
+					onFatalError(new ResourceManagerException(fatalMsg));
+				}
 			}
 			break;
 		case MODIFIED:
@@ -431,12 +418,9 @@ public class KubernetesSessionResourceManager extends
 		if (workerNodeFailedAttempts.get()
 			>= workerNodeMaxFailedAttempts) {
 			isStopped = true;
-			String fatalMsg = "Worker node failed attempts (" + workerNodeFailedAttempts.get()
-				+ ") beyond the max failed attempts ("
+			String fatalMsg = "Worker node failures have reached the maximum failed attempts ("
 				+ workerNodeMaxFailedAttempts + "). Exiting, bye...";
-			log.error(fatalMsg);
-			shutDown();
-			fatalErrorHandler.onFatalError(new RuntimeException(fatalMsg));
+			onFatalError(new ResourceManagerException(fatalMsg));
 		}
 	}
 
@@ -444,7 +428,7 @@ public class KubernetesSessionResourceManager extends
 		return maxPodId.addAndGet(1);
 	}
 
-	protected ResourceID requestNewWorkerNode() {
+	protected ResourceID requestNewWorkerNode() throws ResourceManagerException {
 		String taskManagerPodName = taskManagerPodNamePrefix + generateNewPodId();
 		Container container = KubernetesRMUtils.createTaskManagerContainer(
 			flinkConfig, taskManagerResource, confDir, taskManagerPodName, null, null, null);
@@ -452,7 +436,7 @@ public class KubernetesSessionResourceManager extends
 		Pod taskManagerPod = KubernetesRMUtils
 			.createTaskManagerPod(taskManagerPodLabels, taskManagerPodName,
 				taskManagerConfigMapName, ownerReference, container, tmConfigMap);
-		requestPod(taskManagerPod);
+		kubernetesConnectionManager.createPod(taskManagerPod);
 		return new ResourceID(taskManagerPodName);
 	}
 
@@ -461,9 +445,9 @@ public class KubernetesSessionResourceManager extends
 		// shut down all components
 		Throwable firstException = null;
 
-		if (resourceManagerClient != null) {
+		if (kubernetesConnectionManager != null) {
 			try {
-				resourceManagerClient.close();
+				kubernetesConnectionManager.close();
 			} catch (Throwable t) {
 				firstException = ExceptionUtils
 					.firstOrSuppressed(t, firstException);
@@ -490,12 +474,12 @@ public class KubernetesSessionResourceManager extends
 	@Override
 	protected synchronized void internalDeregisterApplication(
 		ApplicationStatus finalStatus,
-		@Nullable String diagnostics) {
+		@Nullable String diagnostics) throws ResourceManagerException {
 		log.info("Unregister application from the Kubernetes Resource Manager, "
 			+ "finalStatus: {}, diagnostics: {}", finalStatus, diagnostics);
 		isStopped = true;
 		// remove all TM pods
-		removeTMPods();
+		kubernetesConnectionManager.removePods(taskManagerPodLabels);
 	}
 
 	@Override
@@ -546,10 +530,15 @@ public class KubernetesSessionResourceManager extends
 			return;
 		}
 
-		for (int i = 0; i < requiredWorkerNum; ++i) {
-			ResourceID newResourceId = requestNewWorkerNode();
-			pendingWorkerNodes.add(newResourceId);
-			log.info("Add pending worker node: {}", newResourceId);
+		try {
+			for (int i = 0; i < requiredWorkerNum; ++i) {
+				ResourceID newResourceId = requestNewWorkerNode();
+				pendingWorkerNodes.add(newResourceId);
+				log.info("Add pending worker node: {}", newResourceId);
+			}
+		} catch (Exception e) {
+			String fatalMsg = "Failed to request new worker node. Exiting, bye...";
+			onFatalError(new ResourceManagerException(fatalMsg, e));
 		}
 
 		log.info("Number pending requests {}. Requesting new container with resources {}. ",

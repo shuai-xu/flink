@@ -66,6 +66,7 @@ import java.util.stream.Collectors;
 import static org.apache.flink.configuration.ConfigConstants.ENV_FLINK_CONF_DIR;
 import static org.apache.flink.configuration.GlobalConfiguration.FLINK_CONF_FILENAME;
 import static org.apache.flink.kubernetes.configuration.Constants.CONFIG_FILE_LOG4J_NAME;
+import static org.apache.flink.kubernetes.configuration.Constants.ENV_FLINK_CLASSPATH;
 import static org.apache.flink.kubernetes.configuration.Constants.FILES_SEPARATOR;
 import static org.apache.flink.kubernetes.configuration.Constants.FLINK_CONF_VOLUME;
 import static org.apache.flink.kubernetes.configuration.Constants.POD_RESTART_POLICY;
@@ -255,9 +256,10 @@ public class KubernetesRMUtils {
 		boolean hasLog4j,
 		Class<?> mainClass) {
 
+		String confDir = flinkConfig.getString(KubernetesConfigOptions.CONF_DIR);
 		final Map<String, String> startCommandValues = new HashMap<>();
 		startCommandValues.put("java", "$JAVA_HOME/bin/java");
-		startCommandValues.put("classpath", "-classpath $FLINK_CLASSPATH");
+		startCommandValues.put("classpath", "-classpath " + confDir + File.pathSeparator + "$" + ENV_FLINK_CLASSPATH);
 		startCommandValues.put("class", mainClass.getName());
 
 		ArrayList<String> params = new ArrayList<>();

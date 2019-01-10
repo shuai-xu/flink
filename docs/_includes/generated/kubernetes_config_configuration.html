@@ -13,6 +13,16 @@
             <td>The custom name for the Flink cluster on Kubernetes. It could be specified by -nm argument. If it's not set, the client will generate a random UUID name</td>
         </tr>
         <tr>
+            <td><h5>kubernetes.connection.retry.interval.ms</h5></td>
+            <td style="word-wrap: break-word;">1000</td>
+            <td>The retry interval in milliseconds for RM talking to kubernetes.</td>
+        </tr>
+        <tr>
+            <td><h5>kubernetes.connection.retry.times</h5></td>
+            <td style="word-wrap: break-word;">120</td>
+            <td>The max retry attempts for RM talking to kubernetes.</td>
+        </tr>
+        <tr>
             <td><h5>kubernetes.container-start-command-template</h5></td>
             <td style="word-wrap: break-word;">"%java% %classpath% %jvmmem% %jvmopts% %logging% %class%"</td>
             <td>Template for the kubernetes container start invocation</td>

@@ -142,6 +142,16 @@ public class KubernetesConfigOptions {
 			.withDescription("Whether to kill perjob-cluster on kubernetes after job finished." +
 				"If you want to check logs and view dashboard after job finished, set this to false.");
 
+	public static final ConfigOption<Integer> KUBERNETES_CONNECTION_RETRY_TIMES =
+		key("kubernetes.connection.retry.times")
+			.defaultValue(120)
+			.withDescription("The max retry attempts for RM talking to kubernetes.");
+
+	public static final ConfigOption<Long> KUBERNETES_CONNECTION_RETRY_INTERVAL_MS =
+		key("kubernetes.connection.retry.interval.ms")
+			.defaultValue(1000L)
+			.withDescription("The retry interval in milliseconds for RM talking to kubernetes.");
+
 	/**
 	 * Service exposed type on kubernetes cluster.
 	 */

@@ -21,12 +21,10 @@ package org.apache.flink.kubernetes.runtime.clusterframework;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.JobManagerOptions;
-import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.kubernetes.configuration.Constants;
-import org.apache.flink.kubernetes.configuration.KubernetesConfigOptions;
 import org.apache.flink.kubernetes.utils.KubernetesClientFactory;
+import org.apache.flink.kubernetes.utils.KubernetesConnectionManager;
 import org.apache.flink.runtime.blob.BlobCacheService;
 import org.apache.flink.runtime.blob.VoidBlobStore;
 import org.apache.flink.runtime.clusterframework.FlinkResourceManager;
@@ -68,34 +66,23 @@ import org.apache.flink.runtime.taskexecutor.slot.TimerService;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.testingUtils.TestingUtils;
 import org.apache.flink.runtime.util.TestingFatalErrorHandler;
-import org.apache.flink.types.Pair;
 import org.apache.flink.util.Preconditions;
-import org.apache.flink.util.TestLogger;
 
-import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
-import io.fabric8.kubernetes.api.model.DoneablePod;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
-import io.fabric8.kubernetes.client.dsl.MixedOperation;
-import io.fabric8.kubernetes.client.dsl.PodResource;
-import io.fabric8.kubernetes.client.dsl.internal.PodOperationsImpl;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import java.io.File;
 import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -123,23 +110,11 @@ import static org.mockito.Mockito.when;
 /**
  * IT case for the Flink Kubernetes resource manager component.
  */
-public class KubernetesResourceManagerITCase extends TestLogger {
+public class KubernetesResourceManagerITCase extends KubernetesRMTestBase {
 
 	private final Time timeout = Time.seconds(10000L);
 
 	protected static final boolean USE_MOCK_K8S_CLIENT = true;
-
-	protected static final String APP_ID = "k8s-cluster-1234";
-
-	protected static final String CONTAINER_IMAGE = "flink-k8s:latest";
-
-	protected static final String MASTER_URL = "http://127.0.0.1:49359";
-
-	protected static final String RPC_PORT = "11111";
-
-	protected static final String HOSTNAME = "127.0.0.1";
-
-	protected Configuration flinkConf;
 
 	protected static final String RM_ADDRESS = "RM";
 	protected static final String JM_ADDRESS = "JM";
@@ -154,20 +129,7 @@ public class KubernetesResourceManagerITCase extends TestLogger {
 
 	@Before
 	public void setup() {
-		flinkConf = new Configuration();
-		flinkConf.setString(KubernetesConfigOptions.CLUSTER_ID, APP_ID);
-		flinkConf.setString(KubernetesConfigOptions.MASTER_URL, MASTER_URL);
-		flinkConf.setString(KubernetesConfigOptions.CONTAINER_IMAGE, CONTAINER_IMAGE);
-		flinkConf.setString(TaskManagerOptions.RPC_PORT, RPC_PORT);
-		flinkConf.setString(RestOptions.ADDRESS, HOSTNAME);
-		flinkConf.setString(JobManagerOptions.ADDRESS, HOSTNAME);
-		flinkConf.setInteger(TaskManagerOptions.TASK_MANAGER_HEAP_MEMORY, 128);
-		flinkConf.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, 128);
-		flinkConf.setLong(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE, 10);
-		flinkConf.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX, 64 << 20);
-		flinkConf.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY, 10);
-		flinkConf.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NATIVE_MEMORY, 10);
-		flinkConf.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_HEAP_MEMORY, 10);
+		super.setup();
 		flinkConf.setDouble(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MIN_CORE, 0.01);
 		flinkConf.setDouble(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_CORE, 0.01);
 		if (!USE_MOCK_K8S_CLIENT) {
@@ -219,8 +181,8 @@ public class KubernetesResourceManagerITCase extends TestLogger {
 				clusterInformation, fatalErrorHandler);
 		}
 
-		protected KubernetesClient createKubernetesClient() {
-			return createMockKubernetesClient(null);
+		protected KubernetesConnectionManager createKubernetesConnectionManager() {
+			return new TestingKubernetesConnectionManager(flinkConf);
 		}
 
 		protected void setupTaskManagerConfigMap() {
@@ -231,33 +193,6 @@ public class KubernetesResourceManagerITCase extends TestLogger {
 			this.setOwnerReference(new OwnerReferenceBuilder().build());
 		}
 
-		private KubernetesClient createMockKubernetesClient(List<Pair<Integer, Integer>> podPriorityIdLists) {
-			KubernetesClient client = Mockito.mock(KubernetesClient.class);
-			MixedOperation<Pod, PodList, DoneablePod, PodResource<Pod, DoneablePod>> pods = Mockito.mock(MixedOperation.class);
-
-			PodList podList = new PodList();
-			List<Pod> podListItems = new ArrayList<>();
-			if (podPriorityIdLists != null) {
-				podPriorityIdLists.stream().forEach(e -> podListItems.add(createPod(e.getKey(), e.getValue())));
-			}
-			podList.setItems(podListItems);
-			Mockito.when(pods.create()).thenReturn(null);
-			Mockito.when(pods.delete(Mockito.any(Pod.class))).thenReturn(true);
-			FilterWatchListDeletable filter = Mockito.mock(PodOperationsImpl.class);
-			Mockito.when(pods.withLabels(org.mockito.Matchers.anyMap())).thenReturn(filter);
-			Mockito.when(filter.list()).thenReturn(podList);
-			Mockito.when(filter.delete()).thenReturn(true);
-			PodResource podResource = Mockito.mock(PodResource.class);
-			Mockito.when(podResource.delete()).thenReturn(true);
-			Mockito.when(pods.withName(Mockito.anyString())).thenReturn(podResource);
-			Mockito.when(client.pods()).thenReturn(pods);
-
-			MixedOperation configMaps = Mockito.mock(MixedOperation.class);
-			ConfigMap configMap = new ConfigMap();
-			Mockito.when(configMaps.createOrReplace()).thenReturn(configMap);
-			Mockito.when(client.configMaps()).thenReturn(configMaps);
-			return client;
-		}
 	}
 
 	protected String createPodName(int podId) {
@@ -300,7 +235,7 @@ public class KubernetesResourceManagerITCase extends TestLogger {
 			rpcService.getScheduledExecutor(),
 			Time.minutes(5L));
 		MetricRegistry metricRegistry = NoOpMetricRegistry.INSTANCE;
-		HeartbeatServices heartbeatServices = new HeartbeatServices(1000L, 1000L);
+		HeartbeatServices heartbeatServices = new HeartbeatServices(60000L, 60000L);
 
 		final TaskManagerConfiguration taskManagerConfiguration = TaskManagerConfiguration.fromConfiguration(flinkConf);
 		final TaskManagerLocation taskManagerLocation = new TaskManagerLocation(taskManagerResourceId, InetAddress.getLocalHost(), 1234);
@@ -416,6 +351,7 @@ public class KubernetesResourceManagerITCase extends TestLogger {
 		final AllocationID allocationId = new AllocationID();
 		final SlotRequest slotRequest = new SlotRequest(JOB_ID, allocationId, RESOURCE_PROFILE, JM_ADDRESS);
 		CompletableFuture<Acknowledge> slotAck = rmGateway.requestSlot(JOB_MASTER_ID, slotRequest, timeout);
+		slotAck.get();
 		// add worker node
 		if (USE_MOCK_K8S_CLIENT) {
 			resourceManager.handlePodMessage(Watcher.Action.ADDED, createPod(0, 1));

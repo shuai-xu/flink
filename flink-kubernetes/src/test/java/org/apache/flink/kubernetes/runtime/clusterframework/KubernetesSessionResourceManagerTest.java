@@ -20,11 +20,10 @@ package org.apache.flink.kubernetes.runtime.clusterframework;
 
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.JobManagerOptions;
-import org.apache.flink.configuration.RestOptions;
-import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.kubernetes.configuration.Constants;
 import org.apache.flink.kubernetes.configuration.KubernetesConfigOptions;
+import org.apache.flink.kubernetes.utils.KubernetesConnectionManager;
+import org.apache.flink.kubernetes.utils.KubernetesRMUtils;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.concurrent.ScheduledExecutor;
 import org.apache.flink.runtime.entrypoint.ClusterInformation;
@@ -36,73 +35,53 @@ import org.apache.flink.runtime.leaderelection.LeaderElectionService;
 import org.apache.flink.runtime.metrics.MetricRegistry;
 import org.apache.flink.runtime.resourcemanager.JobLeaderIdService;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerConfiguration;
+import org.apache.flink.runtime.resourcemanager.exceptions.ResourceManagerException;
 import org.apache.flink.runtime.resourcemanager.slotmanager.SlotManager;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.TestingRpcService;
-import org.apache.flink.util.TestLogger;
 
-import io.fabric8.kubernetes.api.model.ConfigMap;
-import io.fabric8.kubernetes.api.model.DoneablePod;
+import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodList;
-import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
-import io.fabric8.kubernetes.client.dsl.MixedOperation;
-import io.fabric8.kubernetes.client.dsl.PodResource;
-import io.fabric8.kubernetes.client.dsl.internal.PodOperationsImpl;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * General tests for the Flink Kubernetes session resource manager component.
  */
-public class KubernetesSessionResourceManagerTest extends TestLogger {
+public class KubernetesSessionResourceManagerTest extends KubernetesRMTestBase {
 
 	protected static final int TASK_MANAGER_COUNT = 3;
 
-	protected static final String APP_ID = "k8s-cluster-1234";
+	protected Map<String, String> taskManagerPodLabels;
 
-	protected static final String CONTAINER_IMAGE = "flink-k8s:latest";
+	protected String taskManagerPodNamePrefix;
 
-	protected static final String MASTER_URL = "http://127.0.0.1:49359";
-
-	protected static final String RPC_PORT = "11111";
-
-	protected static final String HOSTNAME = "127.0.0.1";
-
-	protected Configuration flinkConf;
+	protected String taskManagerConfigMapName;
 
 	@Before
 	public void setup() {
-		flinkConf = new Configuration();
-		flinkConf.setString(KubernetesConfigOptions.CLUSTER_ID, APP_ID);
-		flinkConf.setString(KubernetesConfigOptions.MASTER_URL, MASTER_URL);
-		flinkConf.setString(KubernetesConfigOptions.CONTAINER_IMAGE, CONTAINER_IMAGE);
-		flinkConf.setString(TaskManagerOptions.RPC_PORT, RPC_PORT);
-		flinkConf.setString(RestOptions.ADDRESS, HOSTNAME);
-		flinkConf.setString(JobManagerOptions.ADDRESS, HOSTNAME);
-		flinkConf.setInteger(TaskManagerOptions.TASK_MANAGER_HEAP_MEMORY, 128);
-		flinkConf.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, 128);
-		flinkConf.setLong(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE, 10);
-		flinkConf.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX, 64 << 20);
-		flinkConf.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY, 10);
-		flinkConf.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NATIVE_MEMORY, 10);
-		flinkConf.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_HEAP_MEMORY, 10);
+		super.setup();
 		flinkConf.setInteger(KubernetesConfigOptions.TASK_MANAGER_COUNT, TASK_MANAGER_COUNT);
+		taskManagerPodLabels = new HashMap<>();
+		taskManagerPodLabels.put(Constants.LABEL_APP_KEY, APP_ID);
+		taskManagerPodLabels.put(Constants.LABEL_COMPONENT_KEY, Constants.LABEL_COMPONENT_TASK_MANAGER);
+		taskManagerPodNamePrefix =
+			APP_ID + Constants.TASK_MANAGER_LABEL_SUFFIX + Constants.NAME_SEPARATOR;
+		taskManagerConfigMapName =
+			APP_ID + Constants.TASK_MANAGER_CONFIG_MAP_SUFFIX;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -128,37 +107,6 @@ public class KubernetesSessionResourceManagerTest extends TestLogger {
 			Mockito.mock(FatalErrorHandler.class));
 	}
 
-	private KubernetesClient createMockKubernetesClient(List<Integer> podIdLists) {
-		KubernetesClient client = Mockito.mock(KubernetesClient.class);
-		MixedOperation<Pod, PodList, DoneablePod, PodResource<Pod, DoneablePod>> pods = Mockito.mock(MixedOperation.class);
-
-		PodList podList = new PodList();
-		List<Pod> podListItems = new ArrayList<>();
-		if (podIdLists != null) {
-			podIdLists.stream().forEach(e -> podListItems.add(createPod(e)));
-		}
-		podList.setItems(podListItems);
-		Mockito.when(pods.delete()).thenAnswer(new Answer<Object>() {
-			@Override
-			public Object answer(InvocationOnMock invocation) throws Throwable {
-				Pod pod = (Pod) invocation.getArguments()[0];
-				podIdLists.remove(pod);
-				return null;
-			}
-		});
-		Mockito.when(pods.create()).thenReturn(null);
-		FilterWatchListDeletable filter = Mockito.mock(PodOperationsImpl.class);
-		Mockito.when(pods.withLabels(Matchers.anyMap())).thenReturn(filter);
-		Mockito.when(filter.list()).thenReturn(podList);
-		Mockito.when(client.pods()).thenReturn(pods);
-
-		MixedOperation configMaps = Mockito.mock(MixedOperation.class);
-		ConfigMap configMap = new ConfigMap();
-		Mockito.when(configMaps.createOrReplace()).thenReturn(configMap);
-		Mockito.when(client.configMaps()).thenReturn(configMaps);
-		return client;
-	}
-
 	protected Pod createPod(int podId) {
 		ObjectMeta meta = new ObjectMeta();
 		meta.setName(APP_ID + Constants.TASK_MANAGER_LABEL_SUFFIX + Constants.NAME_SEPARATOR + podId);
@@ -167,22 +115,27 @@ public class KubernetesSessionResourceManagerTest extends TestLogger {
 		return pod;
 	}
 
-	protected KubernetesSessionResourceManager mockSpyKubernetesSessionRM(
-		Configuration flinkConf, KubernetesClient kubernetesClient) {
+	public KubernetesSessionResourceManager mockResourceManager(
+		Configuration flinkConf, KubernetesConnectionManager kubernetesConnectionManager) {
 		KubernetesSessionResourceManager kubernetesSessionRM =
 			createKubernetesSessionResourceManager(flinkConf);
 		KubernetesSessionResourceManager spyKubernetesSessionRM = Mockito.spy(kubernetesSessionRM);
-		Mockito.doNothing().when(spyKubernetesSessionRM).setupOwnerReference();
 		spyKubernetesSessionRM.setOwnerReference(new OwnerReferenceBuilder().build());
-		Mockito.doReturn(kubernetesClient).when(spyKubernetesSessionRM).createKubernetesClient();
+		Mockito.doReturn(kubernetesConnectionManager).when(spyKubernetesSessionRM).createKubernetesConnectionManager();
+		try {
+			Mockito.doNothing().when(spyKubernetesSessionRM).setupOwnerReference();
+		} catch (ResourceManagerException e) {
+			throw new RuntimeException(e);
+		}
 		return spyKubernetesSessionRM;
 	}
 
 	@Test
 	public void testNormalProcess() throws Exception {
-		KubernetesClient mockKubernetesClient = createMockKubernetesClient(null);
+		KubernetesConnectionManager kubernetesConnectionManager =
+			new KubernetesRMTestBase.TestingKubernetesConnectionManager(flinkConf);
 		KubernetesSessionResourceManager spyKubernetesSessionRM =
-			mockSpyKubernetesSessionRM(flinkConf, mockKubernetesClient);
+			mockResourceManager(flinkConf, kubernetesConnectionManager);
 		// TM register check always return true
 		Mockito.doNothing().when(spyKubernetesSessionRM).checkTMRegistered(Matchers.any());
 
@@ -210,9 +163,21 @@ public class KubernetesSessionResourceManagerTest extends TestLogger {
 
 	@Test
 	public void testGetPreviousWorkerNodes() throws Exception {
-		KubernetesClient mockKubernetesClient = createMockKubernetesClient(IntStream.of(1, 2).boxed().collect(Collectors.toList()));
+		KubernetesConnectionManager kubernetesConnectionManager =
+			new KubernetesRMTestBase.TestingKubernetesConnectionManager(flinkConf);
+		// add 2 pods as previous worker nodes
+		OwnerReference ownerReference = new OwnerReferenceBuilder().build();
+		Container container = new ContainerBuilder().build();
+		Pod pod1 = KubernetesRMUtils
+			.createTaskManagerPod(taskManagerPodLabels, taskManagerPodNamePrefix + "1",
+				taskManagerConfigMapName, ownerReference, container, new ConfigMapBuilder().build());
+		Pod pod2 = KubernetesRMUtils
+			.createTaskManagerPod(taskManagerPodLabels, taskManagerPodNamePrefix + "2",
+				taskManagerConfigMapName, ownerReference, container, new ConfigMapBuilder().build());
+		kubernetesConnectionManager.createPod(pod1);
+		kubernetesConnectionManager.createPod(pod2);
 		KubernetesSessionResourceManager spyKubernetesSessionRM =
-			mockSpyKubernetesSessionRM(flinkConf, mockKubernetesClient);
+			mockResourceManager(flinkConf, kubernetesConnectionManager);
 		// TM register check always return true
 		Mockito.doNothing().when(spyKubernetesSessionRM).checkTMRegistered(Matchers.any());
 
@@ -240,9 +205,10 @@ public class KubernetesSessionResourceManagerTest extends TestLogger {
 
 	@Test
 	public void testTaskManagerRegisterTimeout() throws Exception {
-		KubernetesClient mockKubernetesClient = createMockKubernetesClient(null);
+		KubernetesConnectionManager kubernetesConnectionManager =
+			new KubernetesRMTestBase.TestingKubernetesConnectionManager(flinkConf);
 		KubernetesSessionResourceManager spyKubernetesSessionRM =
-			mockSpyKubernetesSessionRM(flinkConf, mockKubernetesClient);
+			mockResourceManager(flinkConf, kubernetesConnectionManager);
 
 		// start session RM
 		spyKubernetesSessionRM.start();
@@ -287,9 +253,10 @@ public class KubernetesSessionResourceManagerTest extends TestLogger {
 		int maxFailedAttempts = TASK_MANAGER_COUNT - 1;
 		Configuration newFlinkConf = new Configuration(flinkConf);
 		newFlinkConf.setInteger(KubernetesConfigOptions.WORKER_NODE_MAX_FAILED_ATTEMPTS, maxFailedAttempts);
-		KubernetesClient mockKubernetesClient = createMockKubernetesClient(null);
+		KubernetesConnectionManager kubernetesConnectionManager =
+			new KubernetesRMTestBase.TestingKubernetesConnectionManager(newFlinkConf);
 		KubernetesSessionResourceManager spyKubernetesSessionRM =
-			mockSpyKubernetesSessionRM(newFlinkConf, mockKubernetesClient);
+			mockResourceManager(newFlinkConf, kubernetesConnectionManager);
 
 		// start session RM
 		spyKubernetesSessionRM.start();
@@ -312,5 +279,15 @@ public class KubernetesSessionResourceManagerTest extends TestLogger {
 		Assert.assertEquals(maxFailedAttempts - 1, spyKubernetesSessionRM.getPendingWorkerNodes().size());
 
 		Assert.assertTrue(spyKubernetesSessionRM.isStopped());
+	}
+
+	@Test
+	public void testConnectionLostButNotReachMaxRetryTimes() throws ResourceManagerException {
+		super.testConnectionLostButNotReachMaxRetryTimes();
+	}
+
+	@Test
+	public void testConnectionLostAndReachMaxRetryTimes() throws ResourceManagerException {
+		super.testConnectionLostAndReachMaxRetryTimes();
 	}
 }
