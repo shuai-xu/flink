@@ -21,6 +21,7 @@ package org.apache.flink.table.catalog;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.plan.stats.TableStats;
+import org.apache.flink.util.StringUtils;
 
 import org.apache.calcite.rex.RexNode;
 
@@ -28,6 +29,9 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
+
+import static org.apache.flink.util.Preconditions.checkArgument;
+import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
  * Represents a table in catalog.
@@ -46,7 +50,7 @@ public class CatalogTable {
 	// Comment of the table
 	private String comment;
 	// Partitioned columns
-	private LinkedHashSet<String> partitionColumnNames;
+	private LinkedHashSet<String> partitionColumnNames = new LinkedHashSet<>();
 	// Whether the table is partitioned
 	private boolean isPartitioned = false;
 	// Computed columns expression
@@ -61,6 +65,20 @@ public class CatalogTable {
 	private long lastAccessTime = -1L;
 	// Flag whether this external table is intended for streaming or batch environments
 	private final boolean isStreaming;
+
+	public CatalogTable(
+		String tableType,
+		TableSchema tableSchema,
+		TableStats tableStats,
+		Map<String, String> properties,
+		boolean isStreaming) {
+
+		this.tableType = tableType;
+		this.tableSchema = tableSchema;
+		this.tableStats = tableStats;
+		this.properties = properties;
+		this.isStreaming = isStreaming;
+	}
 
 	public CatalogTable(
 		String tableType,
@@ -197,5 +215,47 @@ public class CatalogTable {
 			", lastAccessTime=" + lastAccessTime +
 			", isStreaming=" + isStreaming +
 			'}';
+	}
+
+	/**
+	 * Builder class of CatalogTable.
+	 * Note: do not add any additional fields to builder class.
+	 */
+	public static class Builder {
+		private final String tableType;
+		private final TableSchema tableSchema;
+		private final boolean isStreaming;
+
+		private TableStats tableStats = new TableStats();
+		private Map<String, String> properties = new HashMap<>();
+
+		public Builder(String tableType, TableSchema tableSchema, boolean isStreaming) {
+			checkArgument(!StringUtils.isNullOrWhitespaceOnly(tableType), "tableType cannot be null or empty");
+			checkNotNull(tableSchema, "tableSchema cannot be null or empty");
+
+			this.tableType = tableType;
+			this.tableSchema = tableSchema;
+			this.isStreaming = isStreaming;
+		}
+
+		public Builder withTableStats(TableStats tableStats) {
+			this.tableStats = checkNotNull(tableStats);
+			return this;
+		}
+
+		public Builder withProperties(Map<String, String> properties) {
+			this.properties = checkNotNull(properties);
+			return this;
+		}
+
+		public CatalogTable build() {
+			return new CatalogTable(
+				tableType,
+				tableSchema,
+				tableStats,
+				properties,
+				isStreaming
+			);
+		}
 	}
 }
