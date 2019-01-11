@@ -16,9 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.flink.cep.nfa.aftermatch;
+package org.apache.flink.cep.nfa;
 
-import org.apache.flink.cep.nfa.ComputationState;
+import org.apache.flink.cep.nfa.aftermatch.NoSkipStrategy;
+import org.apache.flink.cep.nfa.aftermatch.SkipPastLastStrategy;
+import org.apache.flink.cep.nfa.aftermatch.SkipToFirstStrategy;
+import org.apache.flink.cep.nfa.aftermatch.SkipToLastStrategy;
+import org.apache.flink.cep.nfa.aftermatch.SkipToNextStrategy;
 import org.apache.flink.cep.nfa.sharedbuffer.EventId;
 import org.apache.flink.cep.nfa.sharedbuffer.SharedBufferAccessor;
 
@@ -142,7 +146,7 @@ public abstract class AfterMatchSkipStrategy implements Serializable {
 		return Optional.empty();
 	}
 
-	static EventId max(EventId o1, EventId o2) {
+	public static EventId max(EventId o1, EventId o2) {
 		if (o2 == null) {
 			return o1;
 		}
@@ -158,7 +162,7 @@ public abstract class AfterMatchSkipStrategy implements Serializable {
 		}
 	}
 
-	static EventId min(EventId o1, EventId o2) {
+	public static EventId min(EventId o1, EventId o2) {
 		if (o2 == null) {
 			return o1;
 		}
@@ -175,6 +179,6 @@ public abstract class AfterMatchSkipStrategy implements Serializable {
 	}
 
 	/** Forbid further extending. */
-	AfterMatchSkipStrategy() {
+	public AfterMatchSkipStrategy() {
 	}
 }

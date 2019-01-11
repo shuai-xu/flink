@@ -18,13 +18,12 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import java.lang.{Long => JLong, Boolean => JBoolean}
+import java.lang.{Boolean => JBoolean, Long => JLong}
 import java.util
 import java.util.UUID
 
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.cep._
-import org.apache.flink.cep.nfa.aftermatch.AfterMatchSkipStrategy
 import org.apache.flink.cep.nfa.compiler.NFACompiler
 import org.apache.flink.cep.operator.{FlatSelectCepOperator, FlatSelectTimeoutCepOperator, SelectCepOperator, SelectTimeoutCepOperator}
 import org.apache.flink.cep.pattern.Pattern
@@ -57,6 +56,7 @@ import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.sql.`type`.SqlTypeFamily
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.cep.nfa.AfterMatchSkipStrategy
 import org.apache.flink.cep.pattern.conditions.BooleanConditions
 
 import _root_.scala.collection.JavaConversions._
