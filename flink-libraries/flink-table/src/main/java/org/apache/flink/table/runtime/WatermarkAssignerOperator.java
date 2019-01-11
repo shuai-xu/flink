@@ -122,7 +122,7 @@ public class WatermarkAssignerOperator
 
 	@Override
 	public void endInput() throws Exception {
-
+		processWatermark(Watermark.MAX_WATERMARK);
 	}
 
 	@Override

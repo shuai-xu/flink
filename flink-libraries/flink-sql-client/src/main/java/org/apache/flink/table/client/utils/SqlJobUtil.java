@@ -122,6 +122,7 @@ public class SqlJobUtil {
 		long offset = -1;
 		if (sqlCreateTable.getWatermark() != null) {
 			try {
+				rowtimeField = sqlCreateTable.getWatermark().getColumnName().toString();
 				offset = sqlCreateTable.getWatermark().getWatermarkOffset();
 			} catch (SqlParseException e) {
 				throw new SqlExecutionException(e.getMessage(), e);

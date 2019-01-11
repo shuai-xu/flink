@@ -662,6 +662,73 @@ public class LocalExecutorITCase extends TestLogger {
 	}
 
 	@Test(timeout = 30_000L)
+	public void testStreamWindowQueryExecutionFromDDL() throws Exception {
+		final String csvOutputPath = new File(tempFolder.newFolder().getAbsolutePath(), "test-out.csv").toURI().toString();
+		final URL url = getClass().getClassLoader().getResource("test-data2.csv");
+		Objects.requireNonNull(url);
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "streaming");
+		replaceVars.put("$VAR_SOURCE_SINK_PATH", csvOutputPath);
+		replaceVars.put("$VAR_UPDATE_MODE", "update-mode: append");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
+
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		executor.createTable(
+			session,
+			"CREATE TABLE SourceTableFromDDL(IntegerField1 INT, StringField1 VARCHAR, " +
+			"TsField TIMESTAMP, WATERMARK FOR TsField AS withOffset(TsField, 1000))" +
+			" WITH (" +
+			"  type = 'CSV'" +
+			", path = '" + url.getPath() + "'" +
+			", commentsPrefix = '#')");
+
+		executor.createTable(
+			session,
+			"CREATE TABLE SinkTableFromDDL(StringField VARCHAR, WindowStart BIGINT, IntegerField INT)" +
+			" WITH (" +
+			"  type = 'CSV'" +
+			", updateMode = 'APPEND'" +
+			", path = '" + csvOutputPath + "')");
+
+		try {
+			final ProgramTargetDescriptor targetDescriptor = executor.executeUpdate(
+				session,
+				"INSERT INTO SinkTableFromDDL " +
+				"SELECT StringField1, CAST(TUMBLE_START(TsField, INTERVAL '1' MINUTE) as BIGINT), SUM(IntegerField1) " +
+				"FROM SourceTableFromDDL " +
+				"GROUP BY StringField1, TUMBLE(TsField, INTERVAL '1' MINUTE)");
+
+			// wait for job completion and verify result
+			boolean isRunning = true;
+			while (isRunning) {
+				Thread.sleep(50); // slow the processing down
+				final JobStatus jobStatus = clusterClient.getJobStatus(JobID.fromHexString(targetDescriptor.getJobId())).get();
+				switch (jobStatus) {
+					case CREATED:
+					case RUNNING:
+						continue;
+					case FINISHED:
+						isRunning = false;
+						final List<String> actualResults = new ArrayList<>();
+						TestBaseUtils.readAllResultLines(actualResults, csvOutputPath);
+						final List<String> expectedResults = new ArrayList<>();
+						expectedResults.add("Hello World,0,170");
+						expectedResults.add("Hello World!!!!,0,52");
+						TestBaseUtils.compareResultCollections(expectedResults, actualResults, Comparator.naturalOrder());
+						break;
+					default:
+						fail("Unexpected job status.");
+				}
+			}
+		} finally {
+			executor.stop(session);
+		}
+	}
+
+	@Test(timeout = 30_000L)
 	public void testBatchQueryExecutionFromDDLTable() throws Exception {
 		final URL url = getClass().getClassLoader().getResource("test-data.csv");
 		Objects.requireNonNull(url);

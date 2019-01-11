@@ -21,7 +21,7 @@ package org.apache.flink.table.plan.optimize
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.rules.{FlinkBatchExecRuleSets, FlinkStreamExecRuleSets}
+import org.apache.flink.table.plan.rules.FlinkStreamExecRuleSets
 
 import org.apache.calcite.plan.hep.HepMatchOrder
 
@@ -54,12 +54,12 @@ object FlinkStreamPrograms {
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-          .add(FlinkBatchExecRuleSets.TABLE_REF_RULES)
+          .add(FlinkStreamExecRuleSets.TABLE_REF_RULES)
           .build(), "convert table references before rewriting sub-queries to semi-join")
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-          .add(FlinkBatchExecRuleSets.SEMI_JOIN_RULES)
+          .add(FlinkStreamExecRuleSets.SEMI_JOIN_RULES)
           .build(), "rewrite sub-queries to semi-join")
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)

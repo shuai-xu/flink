@@ -67,6 +67,8 @@ object FlinkStreamExecRuleSets {
     * Convert table references before query decorrelation.
     */
   val TABLE_REF_RULES: RuleSet = RuleSets.ofList(
+    // rules to convert catalog table to normal table.
+    CatalogTableRules.STREAM_TABLE_SCAN_RULE,
     TableScanRule.INSTANCE,
     EnumerableToLogicalTableScan.INSTANCE)
 
@@ -270,9 +272,6 @@ object FlinkStreamExecRuleSets {
           new CoerceInputsRule(classOf[LogicalMinus], false),
           // optimize limit 0
           FlinkLimitRemoveRule.INSTANCE,
-
-          // rules to convert catalog table to normal table.
-          CatalogTableRules.STREAM_TABLE_SCAN_RULE,
 
           MergeMultiEqualsToInRule.INSTANCE,
           MergeMultiNotEqualsToNotInRule.INSTANCE

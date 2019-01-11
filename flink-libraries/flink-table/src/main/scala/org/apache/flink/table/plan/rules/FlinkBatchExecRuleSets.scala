@@ -69,6 +69,8 @@ object FlinkBatchExecRuleSets {
     * Convert table references before query decorrelation.
     */
   val TABLE_REF_RULES: RuleSet = RuleSets.ofList(
+    // rules to convert catalog table to normal table.
+    CatalogTableRules.BATCH_TABLE_SCAN_RULE,
     TableScanRule.INSTANCE,
     EnumerableToLogicalTableScan.INSTANCE)
 
@@ -296,9 +298,6 @@ object FlinkBatchExecRuleSets {
             MergeMultiNotEqualsToNotInRule.INSTANCE,
             // optimize limit 0
             FlinkLimitRemoveRule.INSTANCE,
-
-            // rules to convert catalog table to normal table.
-            CatalogTableRules.BATCH_TABLE_SCAN_RULE,
 
             // unnest rule
             LogicalUnnestRule.INSTANCE
