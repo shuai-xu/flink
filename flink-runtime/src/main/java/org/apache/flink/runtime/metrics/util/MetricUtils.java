@@ -25,6 +25,7 @@ import org.apache.flink.runtime.metrics.MetricRegistry;
 import org.apache.flink.runtime.metrics.groups.JobManagerMetricGroup;
 import org.apache.flink.runtime.metrics.groups.TaskManagerMetricGroup;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
+import org.apache.flink.util.OperatingSystem;
 import org.apache.flink.util.Preconditions;
 
 import org.slf4j.Logger;
@@ -54,6 +55,7 @@ import java.util.List;
 public class MetricUtils {
 	private static final Logger LOG = LoggerFactory.getLogger(MetricUtils.class);
 	private static final String METRIC_GROUP_STATUS_NAME = "Status";
+	private static final boolean IS_PROC_FS_AVAILABLE = OperatingSystem.isLinux();
 
 	private MetricUtils() {
 	}
@@ -208,19 +210,11 @@ public class MetricUtils {
 			}
 		});
 
-		MetricGroup process = metrics.addGroup("Process");
-		process.gauge("rss", new Gauge<Double>() {
-			@Override
-			public Double getValue() {
-				return ProcessMemCollector.getRssMem();
-			}
-		});
-		process.gauge("total", new Gauge<Double>() {
-			@Override
-			public Double getValue() {
-				return ProcessMemCollector.getTotalMem();
-			}
-		});
+		if (IS_PROC_FS_AVAILABLE) {
+			MetricGroup process = metrics.addGroup("Process");
+			process.gauge("RSS", ProcessMemCollector::getRssMem);
+			process.gauge("Total", ProcessMemCollector::getTotalMem);
+		}
 
 		final MBeanServer con = ManagementFactory.getPlatformMBeanServer();
 
@@ -280,12 +274,14 @@ public class MetricUtils {
 					return mxBean.getProcessCpuTime();
 				}
 			});
-			metrics.gauge("Usage", new Gauge<Double>() {
-				@Override
-				public Double getValue() {
-					return ProcessCpuCollector.getUsage();
-				}
-			});
+			if (IS_PROC_FS_AVAILABLE) {
+				metrics.gauge("Usage", new Gauge<Double>() {
+					@Override
+					public Double getValue() {
+						return ProcessCpuCollector.getUsage();
+					}
+				});
+			}
 		} catch (Exception e) {
 			LOG.warn("Cannot access com.sun.management.OperatingSystemMXBean.getProcessCpuLoad()" +
 				" - CPU load metrics will not be available.", e);
@@ -443,7 +439,7 @@ public class MetricUtils {
 			return 0.0;
 		}
 
-		public static double getRssMem() {
+		public static long getRssMem() {
 			BufferedReader br = null;
 			try {
 				br = new BufferedReader(new FileReader(MEM_STAT_FILE));
@@ -466,14 +462,15 @@ public class MetricUtils {
 					}
 				}
 			}
-			return 0.0;
+			return 0L;
 		}
 
-		private static double getNumber(String line) {
+		private static long getNumber(String line) {
 			int beginIndex = line.indexOf(":") + 1;
 			int endIndex = line.indexOf("kB") - 1;
 			String memSize = line.substring(beginIndex, endIndex).trim();
-			return Double.parseDouble(memSize);
+			// Convert KB to Byte
+			return 1024L * Long.parseLong(memSize);
 		}
 	}
 }
