@@ -106,9 +106,12 @@ public final class TaskManagerResourceDescription implements Serializable {
 	}
 
 	public static TaskManagerResourceDescription fromResourceProfile(ResourceProfile resourceProfile) {
-		return new TaskManagerResourceDescription(resourceProfile.getCpuCores(), resourceProfile.getDirectMemoryInMB(),
-			resourceProfile.getHeapMemoryInMB(), resourceProfile.getNativeMemoryInMB(),
-			resourceProfile.getManagedMemoryInMB(), resourceProfile.getNetworkMemoryInMB());
+		return new TaskManagerResourceDescription(resourceProfile.getCpuCores(),
+			((long) resourceProfile.getDirectMemoryInMB()) << 20,
+			((long) resourceProfile.getHeapMemoryInMB()) << 20,
+			((long) resourceProfile.getNativeMemoryInMB()) << 20,
+			((long) resourceProfile.getManagedMemoryInMB()) << 20,
+			((long) resourceProfile.getNetworkMemoryInMB()) << 20);
 	}
 
 	// --------------------------------------------------------------------------------------------
