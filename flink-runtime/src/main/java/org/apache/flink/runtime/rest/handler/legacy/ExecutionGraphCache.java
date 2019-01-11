@@ -26,6 +26,9 @@ import org.apache.flink.runtime.webmonitor.RestfulGateway;
 import org.apache.flink.util.Preconditions;
 
 import java.io.Closeable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -69,6 +72,17 @@ public class ExecutionGraphCache implements Closeable {
 	 */
 	public int size() {
 		return cachedExecutionGraphs.size();
+	}
+
+	/**
+	 * Gets jobids in cache entris.
+	 */
+	public List<JobID> getJobIds() {
+		if (this.size() > 0) {
+			return Collections.list(cachedExecutionGraphs.keys());
+		} else {
+			return new ArrayList<>();
+		}
 	}
 
 	/**

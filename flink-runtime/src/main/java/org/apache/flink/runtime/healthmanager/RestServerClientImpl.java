@@ -24,6 +24,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.client.JobStatusMessage;
+import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -53,6 +54,9 @@ import org.apache.flink.runtime.rest.messages.job.metrics.JobVertexSubtasksCompo
 import org.apache.flink.runtime.rest.messages.job.metrics.Metric;
 import org.apache.flink.runtime.rest.messages.job.metrics.TaskManagersComponentMetricsHeaders;
 import org.apache.flink.runtime.rest.messages.job.metrics.TaskManagersComponentMetricsMessageParameters;
+import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExecutionVertexIdsInfo;
+import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerMessageParameters;
+import org.apache.flink.runtime.rest.messages.taskmanager.TaskmanagerAllSubtaskCurrentAttemptsInfoHeaders;
 
 import java.io.IOException;
 import java.net.URI;
@@ -123,7 +127,7 @@ public class RestServerClientImpl implements RestServerClient {
 					for (Map.Entry<JobVertexID, JobGraphOverviewInfo.VertexConfigInfo> vertexId2Config: jobGraphOverviewInfo.getVertexConfigs().entrySet()) {
 						JobGraphOverviewInfo.VertexConfigInfo jobGraphVertexConfig = vertexId2Config.getValue();
 						VertexConfig vertexConfig = new VertexConfig(jobGraphVertexConfig.getParallelism(), jobGraphVertexConfig.getMaxParallelism(),
-							jobGraphVertexConfig.getResourceSpec(), jobGraphVertexConfig.getOperatorIds());
+							jobGraphVertexConfig.getResourceSpec(), jobGraphVertexConfig.getNodeIds());
 						vertexConfigs.put(vertexId2Config.getKey(), vertexConfig);
 					}
 					return new JobConfig(jobGraphOverviewInfo.getConfig(), vertexConfigs, inputNodes);
@@ -191,7 +195,21 @@ public class RestServerClientImpl implements RestServerClient {
 
 	@Override
 	public List<ExecutionVertexID> getTaskManagerTasks(String tmId) {
-		return null;
+		final TaskmanagerAllSubtaskCurrentAttemptsInfoHeaders header = new TaskmanagerAllSubtaskCurrentAttemptsInfoHeaders();
+		final TaskManagerMessageParameters parameters = header.getUnresolvedMessageParameters();
+		final ResourceID  resourceId = new ResourceID(tmId);
+		parameters.taskManagerIdParameter.resolve(resourceId);
+		List<ExecutionVertexID> executionVertexIDs = new ArrayList<>();
+		try {
+			sendRequest(header, parameters, EmptyRequestBody.getInstance()).thenApply(
+				(TaskManagerExecutionVertexIdsInfo taskManagerExecutionVertexIdsInfo) -> {
+					executionVertexIDs.addAll(taskManagerExecutionVertexIdsInfo.getExecutionVertexIds());
+					return executionVertexIDs;
+				}
+			).get();
+		} catch (Exception ignore) {
+		}
+		return executionVertexIDs;
 	}
 
 	//需要获取 vertex 的所有 metrics

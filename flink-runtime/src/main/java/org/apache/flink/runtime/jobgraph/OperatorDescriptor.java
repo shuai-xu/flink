@@ -40,6 +40,8 @@ public class OperatorDescriptor implements Serializable {
 
 	private final String operatorMetricsName;
 
+	private final Integer nodeId;
+
 	private final List<OperatorEdgeDescriptor> inputs = new ArrayList<>();
 
 	/**
@@ -48,10 +50,11 @@ public class OperatorDescriptor implements Serializable {
 	 * @param operatorName the operator name
 	 * @param operatorID   the operator id
 	 */
-	public OperatorDescriptor(String operatorName, OperatorID operatorID) {
+	public OperatorDescriptor(String operatorName, OperatorID operatorID, Integer nodeId) {
 		this.operatorName = checkNotNull(operatorName);
 		this.operatorID = checkNotNull(operatorID);
 		this.operatorMetricsName = name2MetricName(operatorName);
+		this.nodeId = checkNotNull(nodeId);
 	}
 
 	private String name2MetricName(String name){
@@ -107,6 +110,10 @@ public class OperatorDescriptor implements Serializable {
 		return inputs;
 	}
 
+	public Integer getNodeId() {
+		return nodeId;
+	}
+
 	@Override
 	public String toString() {
 		return new ToStringBuilder(this).
@@ -114,6 +121,7 @@ public class OperatorDescriptor implements Serializable {
 			append("operatorID", operatorID).
 			append("inputs", inputs).
 			append("metricName", operatorMetricsName).
+			append("nodeId", nodeId).
 			toString();
 	}
 }

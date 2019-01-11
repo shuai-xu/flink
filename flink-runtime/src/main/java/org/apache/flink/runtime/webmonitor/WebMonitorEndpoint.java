@@ -80,6 +80,7 @@ import org.apache.flink.runtime.rest.handler.job.savepoints.SavepointDisposalHan
 import org.apache.flink.runtime.rest.handler.job.savepoints.SavepointHandlers;
 import org.apache.flink.runtime.rest.handler.legacy.ConstantTextHandler;
 import org.apache.flink.runtime.rest.handler.legacy.ExecutionGraphCache;
+import org.apache.flink.runtime.rest.handler.legacy.TaskManagerExecutionVertexCache;
 import org.apache.flink.runtime.rest.handler.legacy.files.LogFileHandlerSpecification;
 import org.apache.flink.runtime.rest.handler.legacy.files.StaticFileServerHandler;
 import org.apache.flink.runtime.rest.handler.legacy.files.StdoutFileHandlerSpecification;
@@ -93,6 +94,7 @@ import org.apache.flink.runtime.rest.handler.taskmanager.TaskManagerLogFileRange
 import org.apache.flink.runtime.rest.handler.taskmanager.TaskManagerLogsHandler;
 import org.apache.flink.runtime.rest.handler.taskmanager.TaskManagerStdoutFileHandler;
 import org.apache.flink.runtime.rest.handler.taskmanager.TaskManagersHandler;
+import org.apache.flink.runtime.rest.handler.taskmanager.TaskmanagerAllSubtaskCurrentAttemptsHandler;
 import org.apache.flink.runtime.rest.messages.ClusterConfigurationInfoHeaders;
 import org.apache.flink.runtime.rest.messages.ClusterOverviewHeaders;
 import org.apache.flink.runtime.rest.messages.DashboardConfigurationHeaders;
@@ -134,6 +136,7 @@ import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerLogFileRang
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerLogsHeaders;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerStdoutFileHeaders;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagersHeaders;
+import org.apache.flink.runtime.rest.messages.taskmanager.TaskmanagerAllSubtaskCurrentAttemptsInfoHeaders;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.webmonitor.history.ArchivedJson;
 import org.apache.flink.runtime.webmonitor.history.JsonArchivist;
@@ -173,6 +176,7 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 
 	private final ExecutionGraphCache executionGraphCache;
 	private final CheckpointStatsCache checkpointStatsCache;
+	private final TaskManagerExecutionVertexCache taskManagerExecutionVertexCache;
 
 	private final MetricFetcher<? extends T> metricFetcher;
 
@@ -204,6 +208,10 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 		this.executor = Preconditions.checkNotNull(executor);
 
 		this.executionGraphCache = new ExecutionGraphCache(
+			restConfiguration.getTimeout(),
+			Time.milliseconds(restConfiguration.getRefreshInterval()));
+
+		this.taskManagerExecutionVertexCache = new TaskManagerExecutionVertexCache(
 			restConfiguration.getTimeout(),
 			Time.milliseconds(restConfiguration.getRefreshInterval()));
 
@@ -594,6 +602,16 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 			executor
 		);
 
+		final TaskmanagerAllSubtaskCurrentAttemptsHandler taskmanagerAllSubtaskCurrentAttemptsHandler = new TaskmanagerAllSubtaskCurrentAttemptsHandler(
+			restAddressFuture,
+			leaderRetriever,
+			timeout,
+			responseHeaders,
+			TaskmanagerAllSubtaskCurrentAttemptsInfoHeaders.getInstance(),
+			taskManagerExecutionVertexCache,
+			executionGraphCache
+		);
+
 		final RescalingHandlers rescalingHandlers = new RescalingHandlers();
 
 		final RescalingHandlers.RescalingTriggerHandler rescalingTriggerHandler = rescalingHandlers.new RescalingTriggerHandler(
@@ -728,6 +746,7 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 		handlers.add(Tuple2.of(subtaskCurrentAttemptDetailsHandler.getMessageHeaders(), subtaskCurrentAttemptDetailsHandler));
 		handlers.add(Tuple2.of(subtaskAllExecutionAttemptDetailsHandler.getMessageHeaders(), subtaskAllExecutionAttemptDetailsHandler));
 		handlers.add(Tuple2.of(jobAllSubtaskCurrentAttemptsHandler.getMessageHeaders(), jobAllSubtaskCurrentAttemptsHandler));
+		handlers.add(Tuple2.of(taskmanagerAllSubtaskCurrentAttemptsHandler.getMessageHeaders(), taskmanagerAllSubtaskCurrentAttemptsHandler));
 		handlers.add(Tuple2.of(jobVertexTaskManagersHandler.getMessageHeaders(), jobVertexTaskManagersHandler));
 		handlers.add(Tuple2.of(jobVertexBackPressureHandler.getMessageHeaders(), jobVertexBackPressureHandler));
 		handlers.add(Tuple2.of(jobCancelTerminationHandler.getMessageHeaders(), jobCancelTerminationHandler));

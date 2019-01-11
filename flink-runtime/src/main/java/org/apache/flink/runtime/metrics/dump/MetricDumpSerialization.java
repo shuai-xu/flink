@@ -311,7 +311,7 @@ public class MetricDumpSerialization {
 		 * @param data serialized metrics
 		 * @return A list containing the deserialized metrics.
 		 */
-		public List<MetricDump> deserialize(MetricDumpSerialization.MetricSerializationResult data) {
+		public Tuple2<Long, List<MetricDump>> deserialize(MetricDumpSerialization.MetricSerializationResult data) {
 			DataInputView in = new DataInputDeserializer(data.serializedMetrics, 0, data.serializedMetrics.length);
 
 			List<MetricDump> metrics = new ArrayList<>(data.numCounters + data.numGauges + data.numHistograms + data.numMeters);
@@ -348,7 +348,7 @@ public class MetricDumpSerialization {
 				}
 			}
 
-			return metrics;
+			return Tuple2.of(data.timestamp, metrics);
 		}
 	}
 

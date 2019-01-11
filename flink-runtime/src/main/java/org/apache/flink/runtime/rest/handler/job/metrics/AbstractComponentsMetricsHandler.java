@@ -83,9 +83,10 @@ public abstract class AbstractComponentsMetricsHandler<M extends MessageParamete
 			return CompletableFuture.completedFuture(
 				new ComponentsMetricCollectionResponseBody(Collections.emptyList()));
 		} else {
+			final MetricStore metricStore = metricFetcher.getMetricStore();
 			final Map<String, MetricStore.ComponentMetricStore> componentId2MetricStores = getComponentId2MetricStores(
 				request,
-				metricFetcher.getMetricStore(),
+				metricStore,
 				requestedComponenets);
 
 			if (componentId2MetricStores == null) {
@@ -106,8 +107,7 @@ public abstract class AbstractComponentsMetricsHandler<M extends MessageParamete
 					} else {
 						metrics = getRequestedMetrics(componentMetricStore, requestedMetrics);
 					}
-					//todo add timestamp
-					ComponentMetric componentMetric = new ComponentMetric(componentId, -1L, metrics);
+					ComponentMetric componentMetric = new ComponentMetric(componentId, metricStore.getTimestamp(), metrics);
 					componentMetricList.add(componentMetric);
 				}
 				return CompletableFuture.completedFuture(new ComponentsMetricCollectionResponseBody(componentMetricList));

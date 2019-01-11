@@ -113,7 +113,7 @@ public class JobGraphOverviewInfo implements ResponseBody {
 		public static final String FIELD_NAME_PARALLELISM = "parallelism";
 		public static final String FIELD_NAME_MAX_PARALLELISM = "max-parallelism";
 		public static final String FIELD_NAME_RESOURCE_SPEC = "resource-spec";
-		public static final String FIELD_NAME_OPERATORS = "operators";
+		public static final String FIELD_NAME_NODE_IDS = "nodeIds";
 
 		@JsonProperty(FIELD_NAME_VERTEX_ID)
 		@JsonSerialize(using = JobVertexIDSerializer.class)
@@ -131,8 +131,8 @@ public class JobGraphOverviewInfo implements ResponseBody {
 		@JsonProperty(FIELD_NAME_RESOURCE_SPEC)
 		private final ResourceSpec resourceSpec;
 
-		@JsonProperty(FIELD_NAME_OPERATORS)
-		private final List<String> operatorIds;
+		@JsonProperty(FIELD_NAME_NODE_IDS)
+		private final List<Integer> nodeIds;
 
 		@JsonCreator
 		public VertexConfigInfo(
@@ -141,13 +141,13 @@ public class JobGraphOverviewInfo implements ResponseBody {
 			@JsonProperty(FIELD_NAME_PARALLELISM) int parallelism,
 			@JsonProperty(FIELD_NAME_MAX_PARALLELISM) int maxParallelism,
 			@JsonProperty(FIELD_NAME_RESOURCE_SPEC) ResourceSpec resourceSpec,
-			@JsonProperty(FIELD_NAME_OPERATORS) List<String> operatorIds) {
+			@JsonProperty(FIELD_NAME_NODE_IDS) List<Integer> nodeIds) {
 			this.id = checkNotNull(id);
 			this.name = checkNotNull(name);
 			this.parallelism = parallelism;
 			this.maxParallelism = maxParallelism;
 			this.resourceSpec = resourceSpec;
-			this.operatorIds = operatorIds;
+			this.nodeIds = nodeIds;
 		}
 
 		@JsonIgnore
@@ -176,8 +176,8 @@ public class JobGraphOverviewInfo implements ResponseBody {
 		}
 
 		@JsonIgnore
-		public List<String> getOperatorIds() {
-			return operatorIds;
+		public List<Integer> getNodeIds() {
+			return nodeIds;
 		}
 
 		@Override
@@ -195,12 +195,12 @@ public class JobGraphOverviewInfo implements ResponseBody {
 				Objects.equals(name, that.name) &&
 				parallelism == that.parallelism &&
 				Objects.equals(resourceSpec, that.resourceSpec) &&
-				Objects.equals(operatorIds, that.operatorIds);
+				Objects.equals(nodeIds, that.nodeIds);
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(id, name, parallelism, resourceSpec, operatorIds);
+			return Objects.hash(id, name, parallelism, resourceSpec, nodeIds);
 		}
 	}
 }

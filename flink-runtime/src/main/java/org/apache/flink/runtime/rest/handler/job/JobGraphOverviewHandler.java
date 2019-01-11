@@ -72,12 +72,12 @@ public class JobGraphOverviewHandler extends AbstractRestHandler<RestfulGateway,
 				Map<JobVertexID, JobGraphOverviewInfo.VertexConfigInfo> vertexConfigs = new HashMap<>();
 				Map<JobVertexID, List<JobVertexID>> inputNodes = new HashMap<>();
 				for (JobVertex vertex : jobGraph.getVertices()) {
-					List<String> operatorIds;
+					List<Integer> nodeIds;
 					JobVertexID vertexID = vertex.getID();
 					if (vertex.getOperatorDescriptors() != null) {
-						operatorIds = vertex.getOperatorDescriptors().stream().map(op -> op.getOperatorID().toString()).collect(Collectors.toList());
+						nodeIds = vertex.getOperatorDescriptors().stream().map(op -> op.getNodeId()).collect(Collectors.toList());
 					} else {
-						operatorIds = new ArrayList<>();
+						nodeIds = new ArrayList<>();
 					}
 					List<JobVertexID> inputVertexId;
 					if (vertex.getInputs() != null) {
@@ -86,7 +86,7 @@ public class JobGraphOverviewHandler extends AbstractRestHandler<RestfulGateway,
 						inputVertexId = new ArrayList<>();
 					}
 					JobGraphOverviewInfo.VertexConfigInfo vertexConfigInfo = new JobGraphOverviewInfo.VertexConfigInfo(vertexID, vertex.getName(),
-						vertex.getParallelism(), vertex.getMaxParallelism(), vertex.getMinResources(), operatorIds
+						vertex.getParallelism(), vertex.getMaxParallelism(), vertex.getMinResources(), nodeIds
 						);
 					vertexConfigs.put(vertexID, vertexConfigInfo);
 					inputNodes.put(vertexID, inputVertexId);

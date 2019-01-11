@@ -1046,7 +1046,7 @@ public class StreamingJobGraphGenerator {
 			final byte[] hash = hashes.get(nodeId);
 			final StreamNode node = streamGraph.getStreamNode(nodeId);
 			final OperatorID operatorID = new OperatorID(hash);
-			final OperatorDescriptor operatorDescriptor = new OperatorDescriptor(node.getOperatorName(), operatorID);
+			final OperatorDescriptor operatorDescriptor = new OperatorDescriptor(node.getOperatorName(), operatorID, nodeId);
 
 			int inEdgesNumInChain = 0;
 			for (StreamEdge streamEdge : node.getInEdges()) {

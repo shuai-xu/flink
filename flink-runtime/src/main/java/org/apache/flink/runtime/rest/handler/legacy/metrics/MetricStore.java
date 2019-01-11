@@ -19,7 +19,7 @@
 package org.apache.flink.runtime.rest.handler.legacy.metrics;
 
 import org.apache.flink.annotation.VisibleForTesting;
-import org.apache.flink.runtime.metrics.MetricNames;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.metrics.dump.MetricDump;
 import org.apache.flink.runtime.metrics.dump.QueryScopeInfo;
 
@@ -57,6 +57,7 @@ public class MetricStore {
 	private final ComponentMetricStore jobManager = new ComponentMetricStore();
 	private final Map<String, TaskManagerMetricStore> taskManagers = new ConcurrentHashMap<>();
 	private final Map<String, JobMetricStore> jobs = new ConcurrentHashMap<>();
+	private long timestamp;
 
 	/**
 	 * Remove inactive task managers.
@@ -79,10 +80,11 @@ public class MetricStore {
 	/**
 	 * Add metric dumps to the store.
 	 *
-	 * @param metricDumps to add.
+	 * @param timestamp2Metrics to add.
 	 */
-	synchronized void addAll(List<MetricDump> metricDumps) {
-		for (MetricDump metric : metricDumps) {
+	synchronized void addAll(Tuple2<Long, List<MetricDump>> timestamp2Metrics) {
+		this.timestamp = timestamp2Metrics.f0;
+		for (MetricDump metric : timestamp2Metrics.f1) {
 			add(metric);
 		}
 	}
@@ -161,6 +163,10 @@ public class MetricStore {
 
 	public synchronized Map<String, TaskManagerMetricStore> getTaskManagers() {
 		return unmodifiableMap(taskManagers);
+	}
+
+	public long getTimestamp() {
+		return timestamp;
 	}
 
 	/**
