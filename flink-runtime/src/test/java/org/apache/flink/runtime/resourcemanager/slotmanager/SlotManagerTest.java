@@ -37,7 +37,12 @@ import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
 import org.apache.flink.runtime.resourcemanager.SlotRequest;
 import org.apache.flink.runtime.resourcemanager.exceptions.ResourceManagerException;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.InterSlotPlacementConstraint;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.PlacementConstraint;
 import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTagScope;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.TaggedSlot;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.TaggedSlotContext;
 import org.apache.flink.runtime.resourcemanager.registration.TaskExecutorConnection;
 import org.apache.flink.runtime.taskexecutor.SlotReport;
 import org.apache.flink.runtime.taskexecutor.SlotStatus;
@@ -1941,6 +1946,97 @@ public class SlotManagerTest extends TestLogger {
 		assertEquals(resourceProfile, slotManager.getAvailableResource());
 		assertEquals(resourceProfile, slotManager.getTotalResourceOf(resourceId1));
 		assertEquals(resourceProfile, slotManager.getAvailableResourceOf(resourceId1));
+	}
+
+	/**
+	 * Tests that placement constraint check consider slot tags of assigned pending slots
+	 */
+	@Test
+	public void testCheckSlotAssignedRequestTags() throws Exception {
+		final ResourceManagerId resourceManagerId = ResourceManagerId.generate();
+		final ResourceID resourceID = ResourceID.generate();
+		final JobID jobId = new JobID();
+		final String targetAddress = "localhost";
+		final ResourceProfile resourceProfile = new ResourceProfile(1.0, 1);
+		final SlotTag slotTag = new SlotTag("tag", jobId);
+		final List<SlotTag> taglist = Arrays.asList(slotTag);
+
+		final SlotID slotId1 = new SlotID(resourceID, 0);
+		final SlotID slotId2 = new SlotID(resourceID, 1);
+		final AllocationID allocationId1 = new AllocationID();
+		final AllocationID allocationId2 = new AllocationID();
+		final SlotRequest slotRequest1 = new SlotRequest(
+			jobId,
+			allocationId1,
+			resourceProfile,
+			targetAddress,
+			taglist);
+		final SlotRequest slotRequest2 = new SlotRequest(
+			jobId,
+			allocationId2,
+			resourceProfile,
+			targetAddress,
+			taglist);
+
+		TaggedSlot slotWithTag = new TaggedSlot(true, taglist, SlotTagScope.JOB);
+		TaggedSlotContext contextNotContainSlotWithTag = new TaggedSlotContext(false, slotWithTag);
+		InterSlotPlacementConstraint constraint = new InterSlotPlacementConstraint(slotWithTag, contextNotContainSlotWithTag);
+		List<PlacementConstraint> placementConstraints = Arrays.asList(constraint);
+
+		ResourceActions resourceManagerActions = mock(ResourceActions.class);
+
+		try (SlotManager slotManager = createSlotManager(resourceManagerId, resourceManagerActions)) {
+
+			// accept an incoming slot request
+			final TaskExecutorGateway taskExecutorGateway = mock(TaskExecutorGateway.class);
+			when(taskExecutorGateway.requestSlot(
+				any(SlotID.class),
+				any(JobID.class),
+				any(AllocationID.class),
+				any(ResourceProfile.class),
+				anyString(),
+				any(List.class),
+				any(ResourceManagerId.class),
+				anyLong(),
+				any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
+
+			final TaskExecutorConnection taskExecutorConnection = new TaskExecutorConnection(resourceID, taskExecutorGateway);
+
+			final SlotStatus slotStatus1 = new SlotStatus(slotId1, resourceProfile);
+			final SlotStatus slotStatus2 = new SlotStatus(slotId2, resourceProfile);
+			final SlotReport slotReport = new SlotReport(Arrays.asList(slotStatus1, slotStatus2));
+
+			slotManager.registerTaskManager(
+				taskExecutorConnection,
+				slotReport);
+
+			slotManager.setJobConstraints(jobId, placementConstraints);
+
+			slotManager.registerSlotRequest(slotRequest1);
+			slotManager.registerSlotRequest(slotRequest2);
+
+			verify(taskExecutorGateway, times(1)).requestSlot(
+				eq(slotId1),
+				eq(jobId),
+				eq(allocationId1),
+				eq(resourceProfile),
+				eq(targetAddress),
+				eq(taglist),
+				eq(resourceManagerId),
+				anyLong(),
+				any(Time.class));
+
+			verify(taskExecutorGateway, times(0)).requestSlot(
+				eq(slotId2),
+				eq(jobId),
+				eq(allocationId2),
+				eq(resourceProfile),
+				eq(targetAddress),
+				eq(taglist),
+				eq(resourceManagerId),
+				anyLong(),
+				any(Time.class));
+		}
 	}
 
 	private Set<AllocationID> extractFailedAllocationsForJob(JobID jobId2, Map<JobID, List<Tuple2<JobID, AllocationID>>> job2AndJob3FailedAllocationInfo) {

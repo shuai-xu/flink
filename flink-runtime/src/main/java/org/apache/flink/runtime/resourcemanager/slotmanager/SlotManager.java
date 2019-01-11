@@ -1196,7 +1196,10 @@ public class SlotManager implements AutoCloseable {
 				if (slot == null) {
 					return;
 				}
-				AllocationID allocationId = slots.get(taskExecutorSlotId).getAllocationId();
+				AllocationID allocationId = slot.getAllocationId();
+				if (allocationId == null && slot.getAssignedSlotRequest() != null) {
+					allocationId = slot.getAssignedSlotRequest().getAllocationId();
+				}
 				if (allocationId == null || !allocationIdTags.containsKey(allocationId)) {
 					return;
 				}
