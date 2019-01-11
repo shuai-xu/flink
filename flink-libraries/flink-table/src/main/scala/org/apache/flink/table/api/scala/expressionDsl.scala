@@ -177,6 +177,13 @@ trait ImplicitExpressionOperations {
   def sum0 = Sum0(expr)
 
   /**
+    * Returns the sum of the numeric field across all input values.
+    * If all values are null, null is returned.
+    * And its modified monotonicity is increasing.
+    */
+  def incr_sum = IncrSum(expr)
+
+  /**
     * Returns the a string that stitching all of the input values.
     * If all values are null, null is returned.
     */

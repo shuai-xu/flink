@@ -52,8 +52,8 @@ import org.apache.flink.table.util._
 import org.apache.flink.util.Preconditions
 
 import org.apache.calcite.plan._
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
+import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFieldImpl}
 import org.apache.calcite.rex.RexBuilder
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.sql2rel.SqlToRelConverter
@@ -63,6 +63,8 @@ import _root_.java.util
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable.ArrayBuffer
+import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.`type`.RelDataType
 
 
 /**
@@ -99,6 +101,7 @@ abstract class StreamTableEnvironment(
     Array(
       ConventionTraitDef.INSTANCE,
       FlinkRelDistributionTraitDef.INSTANCE,
+      RelCollationTraitDef.INSTANCE,
       UpdateAsRetractionTraitDef.INSTANCE,
       AccModeTraitDef.INSTANCE),
     catalogManager

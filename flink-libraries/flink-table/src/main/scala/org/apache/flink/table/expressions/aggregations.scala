@@ -145,6 +145,32 @@ case class Sum0(child: Expression) extends Aggregation {
     logicalExprVisitor.visit(this)
 }
 
+case class IncrSum(child: Expression) extends Aggregation {
+  override private[flink] def children: Seq[Expression] = Seq(child)
+  override def toString = s"incr_sum($child)"
+
+  override private[flink] def toAggCall(
+      name: String, isDistinct: Boolean = false)(implicit relBuilder: RelBuilder): AggCall =
+    relBuilder.aggregateCall(
+      AggSqlFunctions.INCR_SUM,
+      isDistinct,
+      false,
+      null,
+      name,
+      child.toRexNode)
+
+  override private[flink] def resultType = FlinkTypeSystem.deriveSumType(child.resultType)
+
+  override private[flink] def validateInput() =
+    TypeCheckUtils.assertNumericExpr(child.resultType, "incr_sum")
+
+  override private[flink] def getSqlAggFunction()(implicit relBuilder: RelBuilder) =
+    AggSqlFunctions.INCR_SUM
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
+
 case class Min(child: Expression) extends Aggregation {
   override private[flink] def children: Seq[Expression] = Seq(child)
   override def toString = s"min($child)"

@@ -111,7 +111,7 @@ StreamExecGroupAggregate(select=[MAX_RETRACT(a) AS EXPR$0], retract=[false], acc
 StreamExecCalc(select=[CONCAT(seller_id, venture, stat_date, sku_id) AS rowkey, seller_id, sku_id, venture, stat_date, amt_dtr, byr_cnt_dtr, pv_dtr, uv_dtr], retract=[false], accMode=[Acc])
 +- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[seller_id, venture, stat_date], orderBy=[amt_dtr DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[UpdateFastRank[0,1,2,3]], select=[*], retract=[false], accMode=[Acc])
    +- StreamExecExchange(distribution=[hash[seller_id, venture, stat_date]], retract=[false], accMode=[Acc])
-      +- StreamExecGroupAggregate(groupBy=[seller_id, sku_id, venture, stat_date], select=[seller_id, sku_id, venture, stat_date, increasing_sum(trd_amt) AS amt_dtr, COUNT(DISTINCT trd_buyer_id) AS byr_cnt_dtr, SUM(log_pv) AS pv_dtr, COUNT(DISTINCT log_visitor_id) AS uv_dtr], retract=[false], accMode=[Acc])
+      +- StreamExecGroupAggregate(groupBy=[seller_id, sku_id, venture, stat_date], select=[seller_id, sku_id, venture, stat_date, INCR_SUM(trd_amt) AS amt_dtr, COUNT(DISTINCT trd_buyer_id) AS byr_cnt_dtr, SUM(log_pv) AS pv_dtr, COUNT(DISTINCT log_visitor_id) AS uv_dtr], retract=[false], accMode=[Acc])
          +- StreamExecExchange(distribution=[hash[seller_id, sku_id, venture, stat_date]], retract=[true], accMode=[Acc])
             +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
 ]]>
@@ -120,7 +120,7 @@ StreamExecCalc(select=[CONCAT(seller_id, venture, stat_date, sku_id) AS rowkey, 
   <TestCase name="testTopNForVariableSize">
     <Resource name="plan">
       <![CDATA[
-StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], rankRange=[rankEnd=a], strategy=[UpdateFastRank[1]], select=[*, rowNum], retract=[false], accMode=[Acc])
+StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], rankRange=[rankEnd=a], strategy=[UnaryUpdateRank[1]], select=[*, rowNum], retract=[false], accMode=[Acc])
 +- StreamExecExchange(distribution=[hash[b]], retract=[false], accMode=[Acc])
    +- StreamExecCalc(select=[a, b, add(max_c) AS c], retract=[false], accMode=[Acc])
       +- StreamExecGroupAggregate(groupBy=[b], select=[b, MAX(a) AS a, MAX(c) AS max_c], retract=[false], accMode=[Acc])
@@ -161,6 +161,18 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
    +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) FILTER $f3 AS sum_c])
       +- StreamExecExchange(distribution=[hash[a, b]])
          +- StreamExecCalc(select=[a, b, c, IS TRUE(AND(>=(c, 0), <(a, 0))) AS $f3])
+            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testTopNOrderBySumWithFilterClause2">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c ASC], rankRange=[rankStart=1, rankEnd=10], strategy=[UpdateFastRank[0,1]], select=[*, rowNum])
++- StreamExecExchange(distribution=[hash[b]])
+   +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) FILTER $f3 AS sum_c])
+      +- StreamExecExchange(distribution=[hash[a, b]])
+         +- StreamExecCalc(select=[a, b, c, IS TRUE(AND(<=(c, 0), <(a, 0))) AS $f3])
             +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
 ]]>
     </Resource>

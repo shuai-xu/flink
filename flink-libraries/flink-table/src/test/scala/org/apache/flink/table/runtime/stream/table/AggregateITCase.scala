@@ -19,7 +19,6 @@
 package org.apache.flink.table.runtime.stream.table
 
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.functions.{Monotonicity, ScalarFunction}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.expressions.Null
@@ -146,7 +145,7 @@ class AggregateITCase(
   @Test
   def testNonKeyedGroupAggregate(): Unit = {
     val t = failingDataSource(StreamTestData.get3TupleData).toTable(tEnv, 'a, 'b, 'c)
-            .select('a.sum, 'b.sum)
+            .select('a.incr_sum, 'b.sum)
 
     val sink = new TestingRetractSink
     t.toRetractStream[Row].addSink(sink).setParallelism(1)
@@ -160,7 +159,7 @@ class AggregateITCase(
   def testGroupAggregate(): Unit = {
     val t = failingDataSource(StreamTestData.get3TupleData).toTable(tEnv, 'a, 'b, 'c)
       .groupBy('b)
-      .select('b, Func0('a.max))
+      .select('b, 'a.max)
 
     val sink = new TestingRetractSink
     t.toRetractStream[Row].addSink(sink)
@@ -292,13 +291,5 @@ class AggregateITCase(
 
     val expected = mutable.MutableList("1,1", "2,3", "3,6", "4,10", "5,15", "6,21")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
-  }
-
-  object Func0 extends ScalarFunction {
-    def eval(index: Int): Int = {
-      index
-    }
-
-    override def getMonotonicity: Monotonicity = Monotonicity.INCREASING
   }
 }

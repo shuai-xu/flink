@@ -173,6 +173,7 @@ object BuiltInFunctionCatalog {
     "min" -> classOf[Min],
     "sum" -> classOf[Sum],
     "sum0" -> classOf[Sum0],
+    "incr_sum" -> classOf[IncrSum],
     "stddevPop" -> classOf[StddevPop],
     "stddevSamp" -> classOf[StddevSamp],
     "stddev" -> classOf[Stddev],
@@ -400,6 +401,7 @@ class BasicOperatorTable extends ReflectiveSqlOperatorTable {
     // AGGREGATE OPERATORS
     SqlStdOperatorTable.SUM,
     SqlStdOperatorTable.SUM0,
+    AggSqlFunctions.INCR_SUM,
     SqlStdOperatorTable.COUNT,
     SqlStdOperatorTable.APPROX_COUNT_DISTINCT,
     AggSqlFunctions.CARDINALITY_COUNT,

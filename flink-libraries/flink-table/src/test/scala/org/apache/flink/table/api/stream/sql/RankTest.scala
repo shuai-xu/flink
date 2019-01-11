@@ -19,12 +19,12 @@ package org.apache.flink.table.api.stream.sql
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.functions.{Monotonicity, ScalarFunction}
+import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableEnvironment, TableException}
-import org.apache.flink.table.functions.aggregate.LongSumAggFunction
 import org.apache.flink.table.runtime.utils.TestingRetractTableSink
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
+
 import org.junit.Assert.assertEquals
 import org.junit.{Before, Test}
 
@@ -331,6 +331,28 @@ class RankTest extends TableTestBase {
   }
 
   @Test
+  def testTopNOrderBySumWithFilterClause2(): Unit = {
+    val subquery =
+      """
+        |SELECT a, b, SUM(c) filter (where c <= 0 and a < 0) as sum_c
+        |FROM MyTable
+        |GROUP BY a, b
+      """.stripMargin
+
+    val sql =
+      s"""
+         |SELECT *
+         |FROM (
+         |  SELECT a, b, sum_c,
+         |      ROW_NUMBER() OVER (PARTITION BY b ORDER BY sum_c ASC) as rank_num
+         |  FROM ($subquery))
+         |WHERE rank_num <= 10
+      """.stripMargin
+
+    streamUtil.verifyPlan(sql)
+  }
+
+  @Test
   def testTopNOrderByCountAndOtherField(): Unit = {
     val subquery =
       """
@@ -378,12 +400,10 @@ class RankTest extends TableTestBase {
   }
 
   @Test
-  def testTopNOrderByUDAG(): Unit = {
-    streamUtil.addFunction("increasing_sum", new IncreasingSumAggFunction)
-
+  def testTopNOrderByIncrSum(): Unit = {
     val subquery =
       """
-        |SELECT a, b, increasing_sum(c) as sum_c
+        |SELECT a, b, incr_sum(c) as sum_c
         |FROM MyTable
         |GROUP BY a, b
       """.stripMargin
@@ -494,7 +514,6 @@ class RankTest extends TableTestBase {
 
   @Test
   def testTopNWithoutRowNumber2(): Unit = {
-    streamUtil.tableEnv.registerFunction("increasing_sum", new IncreasingSumAggFunction)
     streamUtil.addTable[(String, String, String, String, Long, String, Long, String)](
       "stream_source",
       'seller_id, 'sku_id, 'venture, 'stat_date, 'trd_amt, 'trd_buyer_id, 'log_pv, 'log_visitor_id)
@@ -506,7 +525,7 @@ class RankTest extends TableTestBase {
         |    ,sku_id
         |    ,venture
         |    ,stat_date
-        |    ,increasing_sum(trd_amt) AS amt_dtr
+        |    ,incr_sum(trd_amt) AS amt_dtr
         |    ,COUNT(DISTINCT trd_buyer_id) AS byr_cnt_dtr
         |    ,SUM(log_pv) AS pv_dtr
         |    ,COUNT(DISTINCT log_visitor_id) AS uv_dtr
@@ -664,12 +683,7 @@ class RankTest extends TableTestBase {
   }
 }
 
-class IncreasingSumAggFunction extends LongSumAggFunction {
-  override def getMonotonicity: Monotonicity = Monotonicity.INCREASING
-}
-
 class AddUdf extends ScalarFunction {
-  override def getMonotonicity: Monotonicity = Monotonicity.INCREASING
   def eval(a: Int): Int = a + 1
   def eval(a: Long): Long = a + 1
 }

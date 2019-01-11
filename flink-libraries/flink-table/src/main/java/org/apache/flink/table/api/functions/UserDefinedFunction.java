@@ -56,13 +56,6 @@ public abstract class UserDefinedFunction implements Serializable {
 		return true;
 	}
 
-	/**
-	 * @return the monotonicity of this function.
-	 */
-	public Monotonicity getMonotonicity() {
-		return Monotonicity.NOT_MONOTONIC;
-	}
-
 	public final String functionIdentifier() throws Exception {
 		String md5 = DigestUtils.md5Hex(UserDefinedFunctionUtils.serialize(this));
 		return getClass().getCanonicalName().replace('.', '$').concat("$").concat(md5);

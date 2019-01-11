@@ -28,4 +28,5 @@ object AggSqlFunctions {
  val FIRST_VALUE = new SqlFirstLastValueAggFunction(SqlKind.FIRST_VALUE)
  val LAST_VALUE = new SqlFirstLastValueAggFunction(SqlKind.LAST_VALUE)
  val CONCAT_AGG = new SqlConcatAggFunction
+ val INCR_SUM = new SqlIncrSumAggFunction
 }

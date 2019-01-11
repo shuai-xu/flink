@@ -27,6 +27,7 @@ trait LogicalExprVisitor[T] {
   def visit(expression: Expression): T
   def visit(sum: Sum): T
   def visit(sum0: Sum0): T
+  def visit(incr_sum: IncrSum): T
   def visit(min: Min): T
   def visit(max: Max): T
   def visit(count: Count): T

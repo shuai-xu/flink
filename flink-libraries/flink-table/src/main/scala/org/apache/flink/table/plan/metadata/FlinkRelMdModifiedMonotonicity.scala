@@ -18,9 +18,9 @@
 
 package org.apache.flink.table.plan.metadata
 
-import org.apache.flink.table.api.functions.Monotonicity
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.functions.utils.{AggSqlFunction, ScalarSqlFunction}
+import org.apache.flink.table.functions.sql.SqlIncrSumAggFunction
+import org.apache.flink.table.functions.utils.ScalarSqlFunction
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
 import org.apache.flink.table.plan.metadata.FlinkMetadata.ModifiedMonotonicityMeta
@@ -28,15 +28,15 @@ import org.apache.flink.table.plan.nodes.logical._
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecGroupAggregateBase
 import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.schema.{DataStreamTable, IntermediateRelNodeTable}
-import org.apache.flink.table.plan.stats.WithLower
+import org.apache.flink.table.plan.stats.{WithLower, WithUpper}
 
 import org.apache.calcite.plan.hep.HepRelVertex
 import org.apache.calcite.plan.volcano.RelSubset
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata._
 import org.apache.calcite.rel.{AbstractRelNode, RelCollation, RelFieldCollation, RelNode}
-import org.apache.calcite.rex.{RexCall, RexInputRef, RexNode}
-import org.apache.calcite.sql.SqlKind
+import org.apache.calcite.rex.{RexCall, RexCallBinding, RexInputRef, RexNode}
+import org.apache.calcite.sql.{SqlKind, SqlOperatorBinding}
 import org.apache.calcite.sql.fun.{SqlCountAggFunction, SqlMinMaxAggFunction, SqlSumAggFunction, SqlSumEmptyIsZeroAggFunction}
 import org.apache.calcite.sql.validate.SqlMonotonicity
 import org.apache.calcite.sql.validate.SqlMonotonicity._
@@ -476,7 +476,11 @@ class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMon
               c.getOperator match {
                 case ssf: ScalarSqlFunction =>
                   val inputIndex = getInputFieldIndex(c.getOperands.get(0))
-                  val udfMono = getUdfMonotonicity(ssf)
+                  val inputCollations = mq.collations(input)
+                  val binding = RexCallBinding.create(
+                    input.getCluster.getTypeFactory, c, inputCollations)
+                  val udfMono = getUdfMonotonicity(ssf, binding)
+
                   val inputMono = if (inputIndex > -1) {
                     childMono(inputIndex)
                   } else {
@@ -585,12 +589,9 @@ class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMon
       fmq.getRelModifiedMonotonicity(node).fieldMonotonicities.forall(_ == CONSTANT)
   }
 
-  def getUdfMonotonicity(udf: ScalarSqlFunction): SqlMonotonicity = {
-    udf.getScalarFunction.getMonotonicity match {
-      case Monotonicity.INCREASING => INCREASING
-      case Monotonicity.DECREASING => DECREASING
-      case _ => NOT_MONOTONIC
-    }
+  def getUdfMonotonicity(udf: ScalarSqlFunction, binding: SqlOperatorBinding): SqlMonotonicity = {
+    // get monotonicity info from ScalarSqlFunction directly.
+    udf.getMonotonicity(binding)
   }
 
   def getAggMonotonicity(
@@ -608,12 +609,9 @@ class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMon
           case SqlKind.MIN => DECREASING
           case _ => NOT_MONOTONIC
         }
-      case udaf: AggSqlFunction =>
-        udaf.getFunction.getMonotonicity match {
-          case Monotonicity.INCREASING => INCREASING
-          case Monotonicity.DECREASING => DECREASING
-          case _ => NOT_MONOTONIC
-        }
+
+      case _: SqlIncrSumAggFunction => INCREASING
+
       case _: SqlSumAggFunction | _: SqlSumEmptyIsZeroAggFunction =>
         val valueInterval = fmq.getFilteredColumnInterval(
           input, aggCall.getArgList.head, aggCall.filterArg)
@@ -625,6 +623,13 @@ class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMon
               val compare = isValueGreaterThanZero(n1.lower)
               if (compare >= 0) {
                 INCREASING
+              } else {
+                NOT_MONOTONIC
+              }
+            case n2: WithUpper =>
+              val compare = isValueGreaterThanZero(n2.upper)
+              if (compare <= 0) {
+                DECREASING
               } else {
                 NOT_MONOTONIC
               }

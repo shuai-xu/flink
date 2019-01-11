@@ -55,7 +55,7 @@ class StreamExecGroupAggregateRule extends ConverterRule(classOf[FlinkLogicalAgg
     } else {
       FlinkRelDistribution.SINGLETON
     }
-    val requiredTraitSet = agg.getInput.getTraitSet.replace(
+    val requiredTraitSet = rel.getCluster.getPlanner.emptyTraitSet().replace(
       FlinkConventions.STREAMEXEC).replace(requiredDistribution)
     val providedTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
     val convInput: RelNode = RelOptRule.convert(agg.getInput, requiredTraitSet)

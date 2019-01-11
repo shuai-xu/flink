@@ -309,6 +309,48 @@ class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
   }
 
   @Test
+  def testIncrSum(): Unit = {
+    val getSumAggColumnExprSeq = {
+      Seq('f1.incr_sum, 'f2.incr_sum, 'f3.incr_sum, 'f4.incr_sum, 'f5.incr_sum, 'f6.incr_sum)
+    }
+
+    val resultType = new BaseRowTypeInfo(classOf[BinaryRow],
+                                         Types.BYTE,
+                                         Types.SHORT,
+                                         Types.INT,
+                                         Types.LONG,
+                                         Types.DOUBLE,
+                                         BigDecimalTypeInfo.of(38, 0))
+
+    testAggregateFunctions(
+      normalData,
+      testDataType,
+      getSumAggColumnExprSeq,
+      resultType,
+      row(resultType, 1.toByte, 2.toShort, 3, 4L, 5.0, new JBigDecimal(8)),
+      resultType
+    )
+
+    testAggregateFunctions(
+      nullData,
+      testDataType,
+      getSumAggColumnExprSeq,
+      resultType,
+      row(resultType, null, null, null, null, null, null),
+      resultType
+    )
+
+    testAggregateFunctions(
+      emptyData,
+      testDataType,
+      getSumAggColumnExprSeq,
+      resultType,
+      row(resultType, null, null, null, null, null, null),
+      resultType
+    )
+  }
+
+  @Test
   def testAvg(): Unit = {
     val localResultType = new BaseRowTypeInfo(classOf[BinaryRow],
                                               Types.LONG,

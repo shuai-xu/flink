@@ -25,8 +25,9 @@ import org.apache.calcite.rel.{RelCollation, RelCollationTraitDef, RelCollations
 import org.apache.flink.table.plan.`trait`.{AccModeTraitDef, FlinkRelDistribution, FlinkRelDistributionTraitDef, UpdateAsRetractionTraitDef}
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecExchange, BatchExecRel, BatchExecSort}
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecExchange
+import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecExchange, StreamExecSort}
 import org.apache.flink.table.plan.rules.physical.FlinkExpandConversionRule._
+import org.apache.flink.table.plan.schema.BaseRowSchema
 
 class FlinkExpandConversionRule(flinkConvention: Convention)
   extends RelOptRule(
@@ -151,11 +152,22 @@ object FlinkExpandConversionRule {
       requiredCollation: RelCollation): RelNode = {
     val fromCollation = node.getTraitSet.getTrait(RelCollationTraitDef.INSTANCE)
     if (!fromCollation.satisfies(requiredCollation)) {
-      new BatchExecSort(
-        node.getCluster,
-        node.getTraitSet.replace(requiredCollation).replace(flinkConvention),
-        node,
-        RelCollationTraitDef.INSTANCE.canonize(requiredCollation))
+      if (flinkConvention.equals(FlinkConventions.BATCHEXEC)) {
+        new BatchExecSort(
+          node.getCluster,
+          node.getTraitSet.replace(requiredCollation).replace(flinkConvention),
+          node,
+          RelCollationTraitDef.INSTANCE.canonize(requiredCollation))
+      } else {
+        new StreamExecSort(
+          node.getCluster,
+          node.getTraitSet.replace(requiredCollation).replace(flinkConvention),
+          node,
+          new BaseRowSchema(node.getRowType),
+          new BaseRowSchema(node.getRowType),
+          RelCollationTraitDef.INSTANCE.canonize(requiredCollation),
+          "SortCollation")
+      }
     } else {
       node
     }

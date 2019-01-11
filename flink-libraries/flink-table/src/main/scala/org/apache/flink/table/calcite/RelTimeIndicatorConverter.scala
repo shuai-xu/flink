@@ -28,7 +28,7 @@ import org.apache.flink.table.validate.BasicOperatorTable
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.logical._
-import org.apache.calcite.rel.{RelNode, RelShuttle}
+import org.apache.calcite.rel.{RelCollations, RelNode, RelShuttle}
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.flink.table.plan.util.TemporalJoinUtil
@@ -503,10 +503,14 @@ object RelTimeIndicatorConverter {
 
     // add final conversion if necessary
     if (needsConversion) {
-      LogicalProject.create(
+      val logicalProject = LogicalProject.create(
       convertedRoot,
       projects,
       convertedRoot.getRowType.getFieldNames)
+      // logicalProject here carries collation trait, because proctime's monotonicity
+      // is increasing, and we do not need collations in stream.
+      val rmCollationTraitSet = logicalProject.getTraitSet.replace(RelCollations.EMPTY)
+      logicalProject.copy(rmCollationTraitSet, logicalProject.getInputs)
     } else {
       convertedRoot
     }

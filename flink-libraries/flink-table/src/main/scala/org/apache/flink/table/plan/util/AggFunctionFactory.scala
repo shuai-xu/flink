@@ -31,7 +31,7 @@ import org.apache.flink.table.runtime.functions.aggfunctions.ApproximateCountDis
 import org.apache.flink.table.runtime.functions.aggfunctions.CountDistinct._
 import org.apache.flink.table.runtime.functions.aggfunctions._
 import org.apache.flink.table.codegen.expr.RowNumberFunction
-import org.apache.flink.table.functions.sql.{SqlCardinalityCountAggFunction, SqlConcatAggFunction, SqlFirstLastValueAggFunction, SqlMax2ndAggFunction}
+import org.apache.flink.table.functions.sql.{SqlCardinalityCountAggFunction, SqlConcatAggFunction, SqlFirstLastValueAggFunction, SqlIncrSumAggFunction, SqlMax2ndAggFunction}
 import org.apache.flink.table.functions.utils.AggSqlFunction
 import org.apache.flink.table.runtime.functions.aggfunctions.CardinalityCountAggFunction
 import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, DecimalTypeInfo}
@@ -67,6 +67,8 @@ class AggFunctionFactory(
       case _: SqlSumAggFunction => createSumAggFunction(argTypes, index)
 
       case _: SqlSumEmptyIsZeroAggFunction => createSum0AggFunction(argTypes)
+
+      case _: SqlIncrSumAggFunction => createIncrSumAggFunction(argTypes, index)
 
       case a: SqlMinMaxAggFunction if a.getKind == SqlKind.MIN =>
         createMinAggFunction(argTypes, index)
@@ -182,6 +184,51 @@ class AggFunctionFactory(
         case t: DataType =>
           throw new TableException(
             TableErrors.INST.sqlAggFunctionDataTypeNotSupported("Sum", t.toString))
+      }
+    }
+  }
+
+  private def createIncrSumAggFunction(argTypes: Array[DataType], index: Int)
+    : UserDefinedFunction = {
+    if (needRetraction(index)) {
+       argTypes(0).toInternalType match {
+         case BYTE =>
+           new org.apache.flink.table.codegen.expr.ByteIncrSumWithRetractAggFunction
+         case SHORT =>
+           new org.apache.flink.table.codegen.expr.ShortIncrSumWithRetractAggFunction
+         case INT =>
+           new org.apache.flink.table.codegen.expr.IntIncrSumWithRetractAggFunction
+         case LONG =>
+           new org.apache.flink.table.codegen.expr.LongIncrSumWithRetractAggFunction
+         case FLOAT =>
+           new org.apache.flink.table.codegen.expr.FloatIncrSumWithRetractAggFunction
+         case DOUBLE =>
+           new org.apache.flink.table.codegen.expr.DoubleIncrSumWithRetractAggFunction
+         case d: DecimalType =>
+           new org.apache.flink.table.codegen.expr.DecimalIncrSumWithRetractAggFunction(d)
+         case t: DataType =>
+           throw new TableException(
+             TableErrors.INST.sqlAggFunctionDataTypeNotSupported("IncrSum", t.toString))
+       }
+    } else {
+       argTypes(0).toInternalType match {
+        case BYTE =>
+          new org.apache.flink.table.codegen.expr.ByteIncrSumAggFunction
+        case SHORT =>
+          new org.apache.flink.table.codegen.expr.ShortIncrSumAggFunction
+        case INT =>
+          new org.apache.flink.table.codegen.expr.IntIncrSumAggFunction
+        case LONG =>
+          new org.apache.flink.table.codegen.expr.LongIncrSumAggFunction
+        case FLOAT =>
+          new org.apache.flink.table.codegen.expr.FloatIncrSumAggFunction
+        case DOUBLE =>
+          new org.apache.flink.table.codegen.expr.DoubleIncrSumAggFunction
+        case d: DecimalType =>
+          new org.apache.flink.table.codegen.expr.DecimalIncrSumAggFunction(d)
+        case t: DataType =>
+          throw new TableException(
+            TableErrors.INST.sqlAggFunctionDataTypeNotSupported("IncrSum", t.toString))
       }
     }
   }

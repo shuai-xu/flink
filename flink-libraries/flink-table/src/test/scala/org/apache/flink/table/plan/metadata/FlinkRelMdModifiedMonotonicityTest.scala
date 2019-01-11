@@ -18,14 +18,9 @@
 
 package org.apache.flink.table.plan.metadata
 
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo
-import org.apache.flink.table.api.functions.{AggregateFunction, Monotonicity, ScalarFunction}
-import org.apache.flink.table.api.stream.sql.MyAccumulator
-import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.functions.utils.{AggSqlFunction, ScalarSqlFunction}
+import org.apache.flink.table.api.functions.ScalarFunction
+import org.apache.flink.table.functions.sql.AggSqlFunctions
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.apache.calcite.rel.core.JoinRelType
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
@@ -96,19 +91,14 @@ class FlinkRelMdModifiedMonotonicityTest extends FlinkRelMdHandlerTestBase {
       mq.getRelModifiedMonotonicity(agg2).toString
     )
 
-    // udaf
-    val rowType = new BaseRowTypeInfo(classOf[BaseRow], BasicTypeInfo.LONG_TYPE_INFO)
-    val dataType = DataTypes.of(rowType)
-    val udaf = new MyAgg
-    val aggSqlFunction =
-      new AggSqlFunction("udaf", "udaf", udaf, dataType, dataType, typeFactory, false)
-    val udagg = relBuilder.scan("t1").aggregate(
+    // incr_sum agg
+    val incr_sumagg = relBuilder.scan("t1").aggregate(
       relBuilder.groupKey(relBuilder.field("id")),
-      relBuilder.aggregateCall(
-        aggSqlFunction, false, null, "avg_score", relBuilder.field("score"))).build()
+      relBuilder.aggregateCall(AggSqlFunctions.INCR_SUM, false, null,
+        "avg_score", relBuilder.field("score"))).build()
     assertEquals(
       new RelModifiedMonotonicity(Array(CONSTANT, INCREASING)).toString,
-      mq.getRelModifiedMonotonicity(udagg).toString
+      mq.getRelModifiedMonotonicity(incr_sumagg).toString
     )
   }
 
@@ -214,39 +204,6 @@ class FlinkRelMdModifiedMonotonicityTest extends FlinkRelMdHandlerTestBase {
       new RelModifiedMonotonicity(Array(CONSTANT, NOT_MONOTONIC)).toString,
       mq.getRelModifiedMonotonicity(maxagg3).toString
     )
-
-    // test udf and pass monotonicity
-    val func0 = new Func0
-    val scalarSqlFunction =
-      new ScalarSqlFunction("udf", "udf", func0, typeFactory)
-    val maxagg4 = relBuilder.scan("student")
-      .aggregate(
-        relBuilder.groupKey(relBuilder.field("id"), relBuilder.field("score")),
-        relBuilder.max("c", relBuilder.field("age")),
-        relBuilder.sum(false, "d", relBuilder.field("height")))
-      .project(relBuilder.call(scalarSqlFunction, relBuilder.field(2)),
-               relBuilder.field(1))
-      .build()
-
-    assertEquals(
-      new RelModifiedMonotonicity(Array(INCREASING, CONSTANT)).toString,
-      mq.getRelModifiedMonotonicity(maxagg4).toString
-    )
-
-    // test udf lost monotonicity
-    val maxagg5 = relBuilder.scan("student")
-      .aggregate(
-        relBuilder.groupKey(relBuilder.field("id"), relBuilder.field("score")),
-        relBuilder.min("c", relBuilder.field("age")),
-        relBuilder.sum(false, "d", relBuilder.field("height")))
-      .project(relBuilder.call(scalarSqlFunction, relBuilder.field(2)),
-               relBuilder.field(1))
-      .build()
-
-    assertEquals(
-      new RelModifiedMonotonicity(Array(NOT_MONOTONIC, CONSTANT)).toString,
-      mq.getRelModifiedMonotonicity(maxagg5).toString
-    )
   }
 
   @Test
@@ -300,22 +257,9 @@ class FlinkRelMdModifiedMonotonicityTest extends FlinkRelMdHandlerTestBase {
   }
 }
 
-class MyAgg extends AggregateFunction[Long, MyAccumulator] {
-  //Overloaded accumulate method
-  def accumulate(acc: MyAccumulator, value: Long): Unit = {}
-
-  override def createAccumulator(): MyAccumulator = MyAccumulator(0, 0)
-
-  override def getValue(accumulator: MyAccumulator): Long = 1L
-
-  override def getMonotonicity: Monotonicity = Monotonicity.INCREASING
-}
-
 class Func0 extends ScalarFunction {
 
   def eval(index: Int): Int = {
     index
   }
-
-  override def getMonotonicity: Monotonicity = Monotonicity.INCREASING
 }
