@@ -33,7 +33,6 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.sql.parser.ddl.SqlCreateTable;
 import org.apache.flink.sql.parser.ddl.SqlNodeInfo;
-import org.apache.flink.sql.parser.plan.SqlParseException;
 import org.apache.flink.table.api.QueryConfig;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
@@ -362,8 +361,8 @@ public class LocalExecutor implements Executor {
 				.stream()
 				.filter((node) -> node.getSqlNode() instanceof SqlCreateTable)
 				.forEach((node) -> SqlJobUtil.registerExternalTable(tEnv, node));
-		} catch (SqlParseException e) {
-			throw new SqlExecutionException(e.getMessage(), e);
+		} catch (Exception e) {
+			throw new SqlExecutionException("Could not create a table from ddl: " + ddl, e);
 		}
 	}
 
