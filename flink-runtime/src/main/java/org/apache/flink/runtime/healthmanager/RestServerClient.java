@@ -30,6 +30,7 @@ import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.util.AbstractID;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -106,7 +107,7 @@ public interface RestServerClient {
 	 * @param jobId job id of the job.
 	 * @param vertexParallelismResource new parallelism and resource spec of the job vertices.
 	 */
-	void rescale(JobID jobId, Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource);
+	void rescale(JobID jobId, Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource) throws IOException;
 
 	/**
 	 * Configuration of a vertex.

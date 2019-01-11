@@ -76,6 +76,7 @@ import org.apache.flink.runtime.rest.handler.job.metrics.SubtaskMetricsHandler;
 import org.apache.flink.runtime.rest.handler.job.metrics.TaskManagerMetricsHandler;
 import org.apache.flink.runtime.rest.handler.job.metrics.TaskManagersComponentMetricsHandler;
 import org.apache.flink.runtime.rest.handler.job.rescaling.RescalingHandlers;
+import org.apache.flink.runtime.rest.handler.job.rescaling.UpdatingJobHandlers;
 import org.apache.flink.runtime.rest.handler.job.savepoints.SavepointDisposalHandlers;
 import org.apache.flink.runtime.rest.handler.job.savepoints.SavepointHandlers;
 import org.apache.flink.runtime.rest.handler.legacy.ConstantTextHandler;
@@ -626,6 +627,15 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 			timeout,
 			responseHeaders);
 
+		final UpdatingJobHandlers updatingJobHandlers = new UpdatingJobHandlers();
+
+		final UpdatingJobHandlers.UpdatingTriggerHandler updatingTriggerHandler = updatingJobHandlers.new UpdatingTriggerHandler(
+			restAddressFuture,
+			leaderRetriever,
+			timeout,
+			responseHeaders
+		);
+
 		JobVertexBackPressureHandler jobVertexBackPressureHandler = new JobVertexBackPressureHandler(
 			restAddressFuture,
 			leaderRetriever,
@@ -754,6 +764,7 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 		handlers.add(Tuple2.of(jobPendingSlotRequestsHandler.getMessageHeaders(), jobPendingSlotRequestsHandler));
 		handlers.add(Tuple2.of(rescalingTriggerHandler.getMessageHeaders(), rescalingTriggerHandler));
 		handlers.add(Tuple2.of(rescalingStatusHandler.getMessageHeaders(), rescalingStatusHandler));
+		handlers.add(Tuple2.of(updatingTriggerHandler.getMessageHeaders(), updatingTriggerHandler));
 		handlers.add(Tuple2.of(savepointDisposalTriggerHandler.getMessageHeaders(), savepointDisposalTriggerHandler));
 		handlers.add(Tuple2.of(savepointDisposalStatusHandler.getMessageHeaders(), savepointDisposalStatusHandler));
 

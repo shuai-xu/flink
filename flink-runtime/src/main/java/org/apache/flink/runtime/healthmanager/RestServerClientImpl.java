@@ -30,6 +30,7 @@ import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.rest.RestClient;
 import org.apache.flink.runtime.rest.RestClientConfiguration;
+import org.apache.flink.runtime.rest.handler.job.rescaling.UpdatingTriggerHeaders;
 import org.apache.flink.runtime.rest.messages.EmptyMessageParameters;
 import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
 import org.apache.flink.runtime.rest.messages.JobExceptionsHeaders;
@@ -45,6 +46,7 @@ import org.apache.flink.runtime.rest.messages.ResponseBody;
 import org.apache.flink.runtime.rest.messages.job.JobAllSubtaskCurrentAttemptsInfoHeaders;
 import org.apache.flink.runtime.rest.messages.job.JobSubtaskCurrentAttemptsInfo;
 import org.apache.flink.runtime.rest.messages.job.SubtaskExecutionAttemptInfo;
+import org.apache.flink.runtime.rest.messages.job.UpdatingJobRequest;
 import org.apache.flink.runtime.rest.messages.job.metrics.ComponentMetric;
 import org.apache.flink.runtime.rest.messages.job.metrics.ComponentsMetricCollectionResponseBody;
 import org.apache.flink.runtime.rest.messages.job.metrics.JobTaskManagersComponentMetricsHeaders;
@@ -296,8 +298,13 @@ public class RestServerClientImpl implements RestServerClient {
 	}
 
 	@Override
-	public void rescale(JobID jobId, Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource) {
+	public void rescale(JobID jobId, Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource) throws IOException {
 
+		final UpdatingTriggerHeaders header = UpdatingTriggerHeaders.getInstance();
+		final JobMessageParameters parameters = header.getUnresolvedMessageParameters();
+		final UpdatingJobRequest updatingJobRequest = new UpdatingJobRequest(vertexParallelismResource);
+		parameters.jobPathParameter.resolve(jobId);
+		sendRequest(header, parameters, updatingJobRequest);
 	}
 
 	private Map<String, Map<String, Tuple2<Long, Double>>> updateMetricFromComponentsMetricCollection(ComponentsMetricCollectionResponseBody cmc,

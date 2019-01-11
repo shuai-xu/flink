@@ -78,7 +78,7 @@ public class AdjustJobConfig implements Action {
 	}
 
 	@Override
-	public void execute(RestServerClient restServerClient) throws InterruptedException {
+	public void execute(RestServerClient restServerClient) throws Exception {
 		Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource = new HashMap<>();
 		for (JobVertexID jvId : currentParallelism.keySet()) {
 			vertexParallelismResource.put(jvId, new Tuple2<>(targetParallelism.get(jvId), targetResource.get(jvId)));

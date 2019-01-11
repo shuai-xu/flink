@@ -30,7 +30,7 @@ public interface Action {
 	 * Execute the action.
 	 * @param restServerClient
 	 */
-	void execute(RestServerClient restServerClient) throws InterruptedException;
+	void execute(RestServerClient restServerClient) throws Exception;
 
 	/**
 	 * Validate the result of the execution of action.
