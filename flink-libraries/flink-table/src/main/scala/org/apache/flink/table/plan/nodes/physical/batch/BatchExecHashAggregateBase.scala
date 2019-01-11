@@ -87,11 +87,7 @@ abstract class BatchExecHashAggregateBase(
           BytesHashMap.RECORD_EXTRA_LENGTH)
       bucketSize + recordSize
     }
-    // Punish One-phase aggregate if it's input data is skew on groupKeys.
-    var cpuCost = hashCpuCost + aggFunctionCpuCost
-    if (isFinal && !isMerge && isSkewOnGroupKeys(mq)) {
-      cpuCost = cpuCost * getSkewPunishFactor
-    }
+    val cpuCost = hashCpuCost + aggFunctionCpuCost
     val costFactory = planner.getCostFactory.asInstanceOf[FlinkCostFactory]
     costFactory.makeCost(mq.getRowCount(this), cpuCost, 0, 0, memCost)
   }

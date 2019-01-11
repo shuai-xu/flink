@@ -164,6 +164,11 @@ object FlinkBatchExecRuleSets {
     SkewedJoinRule.INSTANCE
   )
 
+  val SKEW_AGGREGATE_REWRITE_RULES: RuleSet = RuleSets.ofList(
+    SplitCompleteHashAggRule.INSTANCE,
+    SplitCompleteSortAggRule.INSTANCE
+  )
+
   val JOIN_COND_EQUAL_TRANSFER_RULES: RuleSet = RuleSets.ofList((
       RuleSets.ofList(JoinCondEqualityTransferRule.INSTANCE).asScala ++
           PREDICATE_SIMPLIFY_EXPRESSION_RULES.asScala ++

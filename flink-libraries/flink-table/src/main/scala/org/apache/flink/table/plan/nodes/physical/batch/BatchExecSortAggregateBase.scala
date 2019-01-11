@@ -66,11 +66,7 @@ abstract class BatchExecSortAggregateBase(
       return null
     }
     // sort is not done here
-    var cpuCost = FUNC_CPU_COST * inputRows * aggCallToAggFunction.size
-    // Punish One-phase aggregate if it's input data is skew on groupKeys.
-    if (isFinal && !isMerge && isSkewOnGroupKeys(mq)) {
-      cpuCost = cpuCost * getSkewPunishFactor
-    }
+    val cpuCost = FUNC_CPU_COST * inputRows * aggCallToAggFunction.size
     val averageRowSize: Double = mq.getAverageRowSize(this)
     val memCost = averageRowSize
     val costFactory = planner.getCostFactory.asInstanceOf[FlinkCostFactory]

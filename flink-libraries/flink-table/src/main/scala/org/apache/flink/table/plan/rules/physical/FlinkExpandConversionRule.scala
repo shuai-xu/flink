@@ -155,9 +155,7 @@ object FlinkExpandConversionRule {
         node.getCluster,
         node.getTraitSet.replace(requiredCollation).replace(flinkConvention),
         node,
-        RelCollationTraitDef.INSTANCE.canonize(requiredCollation),
-        "SortCollation"
-      )
+        RelCollationTraitDef.INSTANCE.canonize(requiredCollation))
     } else {
       node
     }

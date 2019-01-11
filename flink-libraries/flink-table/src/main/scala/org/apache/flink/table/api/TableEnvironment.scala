@@ -773,7 +773,14 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
   }
 
   /**
-    * Alter skew info to a table, optimizer will pick the skewed values to join separately.
+    * Alter skew info to a table, optimizer will try to choose better plan on skewed data.
+    * 1. pick the skewed values to join separately
+    * 2. prefer to choose add local-combine aggregate before global aggregate which group by
+    * skewed data
+    *
+    * TODO: Add skewInfo on a specified set of columns later. Now only support to specify skewInfo
+    * on a singleKey, it is not enough to determines whether a specified set of columns from a
+    * specified relational expression is skew or not.
     *
     * @param tableName table name to alter.
     * @param skewInfo statistics of skewedColNames and skewedColValues.

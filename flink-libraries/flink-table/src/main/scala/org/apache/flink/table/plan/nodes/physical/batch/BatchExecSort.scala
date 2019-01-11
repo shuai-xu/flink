@@ -46,8 +46,7 @@ class BatchExecSort(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     inp: RelNode,
-    collations: RelCollation,
-    ruleDescription: String)
+    collations: RelCollation)
   extends Sort(cluster, traitSet, inp, collations)
   with RowBatchExecRel {
 
@@ -59,7 +58,7 @@ class BatchExecSort(
       newCollation: RelCollation,
       offset: RexNode,
       fetch: RexNode): Sort =
-    new BatchExecSort(cluster, traitSet, newInput, newCollation, ruleDescription)
+    new BatchExecSort(cluster, traitSet, newInput, newCollation)
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)

@@ -17,9 +17,6 @@
  */
 package org.apache.flink.table.plan.rules.physical.batch
 
-import org.apache.calcite.plan.RelOptRule.{any, operand}
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
-import org.apache.calcite.rel.RelNode
 import org.apache.flink.table.api.{OperatorType, TableConfig}
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
@@ -28,13 +25,18 @@ import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashAggregate,
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalAggregate
 import org.apache.flink.table.plan.util.{AggregateUtil, FlinkRelOptUtil}
 
+import org.apache.calcite.plan.RelOptRule.{any, operand}
+import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
+import org.apache.calcite.rel.RelNode
+
 import scala.collection.JavaConversions._
 
 class BatchExecHashAggRule
-    extends RelOptRule(
-      operand(
-        classOf[FlinkLogicalAggregate],
-        operand(classOf[RelNode], any)), "BatchExecHashAggRule") with BatchExecAggRuleBase {
+  extends RelOptRule(
+    operand(classOf[FlinkLogicalAggregate],
+      operand(classOf[RelNode], any)),
+    "BatchExecHashAggRule")
+  with BaseBatchExecAggRule {
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])

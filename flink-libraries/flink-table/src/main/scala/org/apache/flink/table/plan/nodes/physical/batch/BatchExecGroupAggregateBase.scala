@@ -27,14 +27,12 @@ import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCo
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedOperator}
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
-import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.util.{AggregateNameUtil, AggregateUtil, FlinkRelOptUtil}
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.tools.RelBuilder
 
@@ -196,35 +194,6 @@ abstract class BatchExecGroupAggregateBase(
     val baseClass = classOf[AbstractStreamOperatorWithMetrics[_]].getName
     generateOperator(
       ctx, className, baseClass, processCode, endInputCode, inputRelDataType, config)
-  }
-
-  /**
-    * Check whether input data of current agg is skew on group keys.
-    *
-    * @param mq metadata query instance.
-    * @return True if input data of current agg is skew on group keys, else false.
-    */
-  protected def isSkewOnGroupKeys(mq: RelMetadataQuery): Boolean = {
-    if (grouping.isEmpty) {
-      return false
-    }
-    val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
-    val skewInfo = fmq.getSkewInfo(this.getInput)
-    if (skewInfo == null) {
-      return false
-    }
-    val skewMap = skewInfo.skewInfo
-    grouping exists { k =>
-      skewMap.get(k) match {
-        case Some(skewValues) => skewValues.nonEmpty
-        case _ => false
-      }
-    }
-  }
-
-  protected def getSkewPunishFactor: Int = {
-    val tableConfig = FlinkRelOptUtil.getTableConfig(this)
-    tableConfig.getConf.getInteger(TableConfigOptions.SQL_OPTIMIZER_AGG_SKEW_PUNISH_FACTOR)
   }
 
   protected def isEnforceTwoStageAgg: Boolean = {

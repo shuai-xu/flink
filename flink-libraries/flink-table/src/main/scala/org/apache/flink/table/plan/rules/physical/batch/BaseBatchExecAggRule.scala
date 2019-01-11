@@ -17,25 +17,27 @@
  */
 package org.apache.flink.table.plan.rules.physical.batch
 
-import java.util.{ArrayList => JArrayList}
-
-import org.apache.calcite.plan.RelOptRuleCall
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.Aggregate
-import org.apache.calcite.rel.{RelCollations, RelFieldCollation}
 import org.apache.flink.table.api.{AggPhaseEnforcer, TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
-import org.apache.flink.table.api.types.{DataTypes, InternalType}
+import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.util.{AggregateUtil, FlinkRelOptUtil}
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 
+import org.apache.calcite.plan.RelOptRuleCall
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.Aggregate
+import org.apache.calcite.rel.{RelCollations, RelFieldCollation}
+import org.apache.calcite.util.Util
+
+import java.util.{ArrayList => JArrayList}
+
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 
-trait BatchExecAggRuleBase {
+trait BaseBatchExecAggRule {
 
   protected def inferLocalAggType(
       inputType: RelDataType,
@@ -45,26 +47,39 @@ trait BatchExecAggRuleBase {
       aggregates: Array[UserDefinedFunction],
       aggBufferTypes: Array[Array[InternalType]]): RelDataType = {
 
-    val aggNames = agg.getNamedAggCalls.map(_.right)
+    val typeFactory = agg.getCluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
+    val aggCallNames = Util.skip(
+      agg.getRowType.getFieldNames, groupSet.length + auxGroupSet.length).toList.toArray[String]
+    inferLocalAggType(inputType, typeFactory, aggCallNames, groupSet, auxGroupSet, aggregates,
+                      aggBufferTypes)
+  }
+
+  protected def inferLocalAggType(
+    inputType: RelDataType,
+    typeFactory: FlinkTypeFactory,
+    aggCallNames: Array[String],
+    groupSet: Array[Int],
+    auxGroupSet: Array[Int],
+    aggregates: Array[UserDefinedFunction],
+    aggBufferTypes: Array[Array[InternalType]]): RelDataType = {
 
     val aggBufferFieldNames = new Array[Array[String]](aggregates.length)
     var index = -1
     aggregates.zipWithIndex.foreach{ case (udf, aggIndex) =>
       aggBufferFieldNames(aggIndex) = udf match {
-          case _: AggregateFunction[_, _] =>
-            Array(aggNames(aggIndex))
-          case agf: DeclarativeAggregateFunction =>
-            agf.aggBufferAttributes.map { attr =>
-              index += 1
-              s"${attr.name}$$$index"}.toArray
-          case _: UserDefinedFunction =>
-            throw new TableException(s"Don't get localAgg merge name")
-        }
+        case _: AggregateFunction[_, _] =>
+          Array(aggCallNames(aggIndex))
+        case agf: DeclarativeAggregateFunction =>
+          agf.aggBufferAttributes.map { attr =>
+            index += 1
+            s"${attr.name}$$$index"}.toArray
+        case _: UserDefinedFunction =>
+          throw new TableException(s"Don't get localAgg merge name")
+      }
     }
 
     //localAggType
     // local agg output order: groupSet + auxGroupSet + aggCalls
-    val typeFactory = agg.getCluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
     val aggBufferSqlTypes = aggBufferTypes.flatten.map { t =>
       val nullable = !FlinkTypeFactory.isTimeIndicatorType(t)
       typeFactory.createTypeFromInternalType(t, nullable)
@@ -137,7 +152,7 @@ trait BatchExecAggRuleBase {
   }
 
   protected def isTwoPhaseAggWorkable(
-    aggregateList: Array[UserDefinedFunction],
+    aggregateList: Seq[UserDefinedFunction],
     call: RelOptRuleCall): Boolean = {
     getAggEnforceStrategy(call) match {
       case AggPhaseEnforcer.ONE_PHASE => false
@@ -166,7 +181,7 @@ trait BatchExecAggRuleBase {
   }
 
   protected def doAllSupportMerge(
-      aggregateList: Array[UserDefinedFunction]): Boolean = {
+      aggregateList: Seq[UserDefinedFunction]): Boolean = {
     val supportLocalAgg = aggregateList.forall {
       case _: DeclarativeAggregateFunction => true
       case a => ifMethodExistInFunction("merge", a)

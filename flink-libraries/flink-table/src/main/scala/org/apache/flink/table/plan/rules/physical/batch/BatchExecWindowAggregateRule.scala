@@ -40,10 +40,11 @@ import org.apache.flink.table.plan.util.AggregateUtil._
 import scala.collection.JavaConversions._
 
 class BatchExecWindowAggregateRule
-    extends RelOptRule(
-      operand(
-        classOf[FlinkLogicalWindowAggregate],
-        operand(classOf[RelNode], any)), "BatchExecWindowAggregateRule") with BatchExecAggRuleBase {
+  extends RelOptRule(
+    operand(classOf[FlinkLogicalWindowAggregate],
+      operand(classOf[RelNode], any)),
+    "BatchExecWindowAggregateRule")
+  with BaseBatchExecAggRule {
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val agg: FlinkLogicalWindowAggregate = call.rel(0).asInstanceOf[FlinkLogicalWindowAggregate]

@@ -54,8 +54,7 @@ class BatchExecSortRule extends RelOptRule(
       sort.getCluster,
       providedTraitSet,
       newInput,
-      sort.getCollation,
-      description))
+      sort.getCollation))
   }
 }
 

@@ -17,24 +17,25 @@
  */
 package org.apache.flink.table.plan.rules.physical.batch
 
-import org.apache.calcite.plan.RelOptRule.{any, operand}
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
-import org.apache.calcite.rel._
 import org.apache.flink.table.api.{OperatorType, TableConfig}
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecLocalSortAggregate, BatchExecSortAggregate}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalAggregate
 import org.apache.flink.table.plan.util.{AggregateUtil, FlinkRelOptUtil}
 
+import org.apache.calcite.plan.RelOptRule.{any, operand}
+import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
+import org.apache.calcite.rel._
+
 import scala.collection.JavaConversions._
 
 class BatchExecSortAggRule
-    extends RelOptRule(
-      operand(
-        classOf[FlinkLogicalAggregate],
-        operand(classOf[RelNode], any)), "BatchExecSortAggRule") with BatchExecAggRuleBase {
+  extends RelOptRule(
+    operand(classOf[FlinkLogicalAggregate],
+      operand(classOf[RelNode], any)),
+    "BatchExecSortAggRule")
+  with BaseBatchExecAggRule {
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])

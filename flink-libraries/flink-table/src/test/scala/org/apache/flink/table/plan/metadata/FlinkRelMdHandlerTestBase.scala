@@ -882,8 +882,7 @@ class FlinkRelMdHandlerTestBase {
       cluster,
       scanOfT1.getTraitSet.replace(FlinkRelDistribution.SINGLETON).replace(sortCollation),
       scanOfT1,
-      sortCollation,
-      "")
+      sortCollation)
   }
 
   // equivalent SQL is

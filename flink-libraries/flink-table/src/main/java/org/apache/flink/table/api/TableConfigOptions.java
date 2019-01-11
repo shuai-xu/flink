@@ -46,12 +46,6 @@ public class TableConfigOptions {
 					"NOTE: If aggregate call does not support split into two phase, still use one stage aggregate.\n" +
 				"ONE_PHASE: Enforce to use one stage aggregate which only has CompleteGlobalAggregate.");
 
-	public static final ConfigOption<Integer> SQL_OPTIMIZER_AGG_SKEW_PUNISH_FACTOR =
-			key("sql.optimizer.agg.skew.punish.factor")
-			.defaultValue(100)
-			.withDescription("Factor to punish operator which is processing skew data. The greater the punish factor, " +
-				"the more the system tends to choose add local-combine aggregate.");
-
 	public static final ConfigOption<Integer> SQL_OPTIMIZER_CNF_NODES_LIMIT =
 			key("sql.optimizer.cnf.nodes.limit")
 			.defaultValue(-1)
