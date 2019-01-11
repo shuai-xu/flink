@@ -618,6 +618,57 @@ public abstract class SubKeyedListStateTestBase {
 		}
 	}
 
+	@Test
+	public void testKeys() throws Exception {
+		SubKeyedListStateDescriptor<Integer, String, Long> descriptor =
+			new SubKeyedListStateDescriptor<>("test",
+				IntSerializer.INSTANCE, StringSerializer.INSTANCE,
+				LongSerializer.INSTANCE);
+		SubKeyedListState<Integer, String, Long> state = backend.getSubKeyedState(descriptor);
+		assertNotNull(state);
+
+		String noExistNamespace = "unkonw";
+		assertNull(state.keys(noExistNamespace));
+
+		String namespace = "ns";
+		String namespace2 = "ns2";
+
+		int keyCount = 10;
+		Set<Integer> keys = new HashSet<>(keyCount);
+
+		ThreadLocalRandom random = ThreadLocalRandom.current();
+
+		for (int i = 0; i < keyCount; ++i) {
+			Integer key = random.nextInt(keyCount);
+			state.put(key, namespace, key + 1L);
+			state.put(key, namespace2, key + 2L);
+			keys.add(key);
+		}
+
+		validateKeysEquals(keys, state.keys(namespace));
+		validateKeysEquals(keys, state.keys(namespace2));
+
+		for (Integer key : keys) {
+			state.remove(key, namespace);
+		}
+
+		validateKeysEquals(keys, state.keys(namespace2));
+		assertNull(state.keys(namespace));
+	}
+
+	private void validateKeysEquals(Set<Integer> expected, Iterable<Integer> actual) {
+		Iterator<Integer> actualKeys = actual.iterator();
+		int count = 0;
+
+		while (actualKeys.hasNext()) {
+			assertTrue(expected.contains(actualKeys.next()));
+			count++;
+		}
+
+		assertEquals(expected.size(), count);
+		assertFalse(actualKeys.hasNext());
+	}
+
 	private void populateState(
 		Map<Integer, Map<String, List<Float>>> keyMap,
 		SubKeyedListState<Integer, String, Float> state,

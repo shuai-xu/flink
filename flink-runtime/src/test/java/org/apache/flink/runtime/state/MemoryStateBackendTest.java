@@ -55,7 +55,7 @@ import static org.junit.Assert.fail;
 public class MemoryStateBackendTest extends StateBackendTestBase<MemoryStateBackend> {
 
 	@Override
-	protected MemoryStateBackend getStateBackend() throws Exception {
+	protected MemoryStateBackend getStateBackend() {
 		return new MemoryStateBackend(useAsyncMode());
 	}
 
@@ -78,12 +78,6 @@ public class MemoryStateBackendTest extends StateBackendTestBase<MemoryStateBack
 		keyedStateBackendWrapper.restore(new StateObjectCollection<>(state));
 
 		return keyedStateBackendWrapper;
-	}
-
-	// TODO support getKeys on subKeyedState
-	@Ignore
-	@Override
-	public void testGetKeys() throws Exception {
 	}
 
 	// internal state-backend would check key-serializer compatibility when registering state.

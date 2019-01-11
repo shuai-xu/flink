@@ -34,6 +34,7 @@ import org.apache.flink.runtime.state.StateSerializerUtil;
 import org.apache.flink.runtime.state.StateStorage;
 import org.apache.flink.runtime.state.StorageIterator;
 import org.apache.flink.runtime.state.heap.HeapStateStorage;
+import org.apache.flink.runtime.state.heap.internal.StateTable;
 import org.apache.flink.types.Pair;
 import org.apache.flink.util.Preconditions;
 
@@ -44,9 +45,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static org.apache.flink.runtime.state.StateSerializerUtil.serializeGroupPrefix;
 
 /**
  * An implementation of {@link SubKeyedListState} backed by a state storage.
@@ -98,6 +104,8 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 
 	private final byte[] stateNameForSerialize;
 
+	private final int serializedStateNameLength;
+
 	private ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
 
 	private DataOutputView outputView = new DataOutputViewStreamWrapper(outputStream);
@@ -130,6 +138,7 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 			throw new SerializationException(e);
 		}
 		this.stateNameForSerialize = stateStorage.supportMultiColumnFamilies() ? null : stateNameByte;
+		this.serializedStateNameLength = stateNameForSerialize == null ? 0 : stateNameForSerialize.length;
 	}
 
 	@Override
@@ -615,6 +624,43 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 		} catch (Exception e) {
 			throw new StateAccessException(e);
 		}
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public Iterable<K> keys(N namespace) {
+		Preconditions.checkNotNull(namespace);
+
+		Set<K> keys = new HashSet<>();
+		if (stateStorage.lazySerde()) {
+			StateTable stateTable = ((HeapStateStorage) stateStorage).getStateTable();
+
+			keys = (Set<K>) stateTable.getKeys(namespace).collect(Collectors.toSet());
+		} else {
+			try {
+				for (int group : internalStateBackend.getKeyGroupRange()) {
+					outputStream.reset();
+					serializeGroupPrefix(outputStream, group, stateNameForSerialize);
+					StorageIterator<byte[], byte[]> iterator = stateStorage.prefixIterator(outputStream.toByteArray());
+					while (iterator.hasNext()) {
+						Pair<byte[], byte[]> pair = iterator.next();
+
+						Pair<K, N> keyAndNamespace =
+							StateSerializerUtil.getDeserializedKeyAndNamespace(
+								pair.getKey(),
+								keySerializer,
+								namespaceSerializer,
+								serializedStateNameLength);
+						if (namespace.equals(keyAndNamespace.getValue())) {
+							keys.add(keyAndNamespace.getKey());
+						}
+					}
+				}
+			} catch (Exception e) {
+				throw new StateAccessException(e);
+			}
+		}
+		return keys.isEmpty() ? null : keys;
 	}
 
 	@Override

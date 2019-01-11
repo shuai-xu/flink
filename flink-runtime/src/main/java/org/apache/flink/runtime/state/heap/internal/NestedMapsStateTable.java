@@ -36,10 +36,12 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -359,10 +361,17 @@ public class NestedMapsStateTable<K, N, S> extends StateTable<K, N, S> {
 	@Override
 	public Stream<K> getKeys(N namespace) {
 		if (usingNamespace) {
-			return Arrays.stream(state)
-				.filter(Objects::nonNull)
-				.map(namespaces -> (Map) namespaces.getOrDefault(namespace, Collections.emptyMap()))
-				.flatMap(namespaceSate -> namespaceSate.keySet().stream());
+			Set<K> keys = new HashSet<>();
+			for (Map<K, Map<N, S>> map : state) {
+				if (map != null) {
+					for (K key : map.keySet()) {
+						if (map.getOrDefault(key, Collections.emptyMap()).containsKey(namespace)) {
+							keys.add(key);
+						}
+					}
+				}
+			}
+			return keys.stream();
 		} else {
 			return Arrays.stream(state)
 				.filter(Objects::nonNull)

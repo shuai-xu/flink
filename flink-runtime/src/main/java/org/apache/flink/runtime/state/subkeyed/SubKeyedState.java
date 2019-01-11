@@ -108,6 +108,15 @@ public interface SubKeyedState<K, N, V> {
 	Iterator<N> iterator(K key);
 
 	/**
+	 * Return all the keys which are in the specified namespace.
+	 *
+	 * @param namespace The namespace which the keys will be retrieved.
+	 *
+	 * @return All the keys associated with the specified namespace.
+	 */
+	Iterable<K> keys(N namespace);
+
+	/**
 	 * Returns the state storage within this keyed state.
 	 *
 	 * @return The state storage within this keyed state.

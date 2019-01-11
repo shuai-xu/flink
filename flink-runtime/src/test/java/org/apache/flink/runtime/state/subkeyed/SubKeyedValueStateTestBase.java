@@ -414,6 +414,57 @@ public abstract class SubKeyedValueStateTestBase {
 		}
 	}
 
+	@Test
+	public void testKeys() throws Exception {
+		SubKeyedValueStateDescriptor<Integer, String, Float> descriptor =
+			new SubKeyedValueStateDescriptor<>("test",
+				IntSerializer.INSTANCE, StringSerializer.INSTANCE,
+				FloatSerializer.INSTANCE);
+		SubKeyedValueState<Integer, String, Float> state = backend.getSubKeyedState(descriptor);
+		assertNotNull(state);
+
+		String noExistNamespace = "unkonw";
+		assertNull(state.keys(noExistNamespace));
+
+		String namespace = "ns";
+		String namespace2 = "ns2";
+
+		int keyCount = 10;
+		Set<Integer> keys = new HashSet<>(keyCount);
+
+		ThreadLocalRandom random = ThreadLocalRandom.current();
+
+		for (int i = 0; i < keyCount; ++i) {
+			Integer key = random.nextInt(keyCount);
+			state.put(key, namespace, key + 1.1f);
+			state.put(key, namespace2, key + 1.2f);
+			keys.add(key);
+		}
+
+		validateKeysEquals(keys, state.keys(namespace));
+		validateKeysEquals(keys, state.keys(namespace2));
+
+		for (Integer key : keys) {
+			state.remove(key, namespace);
+		}
+
+		validateKeysEquals(keys, state.keys(namespace2));
+		assertNull(state.keys(namespace));
+	}
+
+	private void validateKeysEquals(Set<Integer> expected, Iterable<Integer> actual) {
+		Iterator<Integer> actualKeys = actual.iterator();
+		int count = 0;
+
+		while (actualKeys.hasNext()) {
+			assertTrue(expected.contains(actualKeys.next()));
+			count++;
+		}
+
+		assertEquals(expected.size(), count);
+		assertFalse(actualKeys.hasNext());
+	}
+
 	private KeyGroupRange getGroupsForSubtask(int maxParallelism, int parallelism, int subtaskIndex) {
 		return KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(maxParallelism, parallelism, subtaskIndex);
 	}

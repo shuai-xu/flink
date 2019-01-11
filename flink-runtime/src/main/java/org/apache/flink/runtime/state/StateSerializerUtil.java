@@ -23,6 +23,8 @@ import org.apache.flink.core.memory.ByteArrayInputStreamWithPos;
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.core.memory.DataOutputView;
+import org.apache.flink.types.DefaultPair;
+import org.apache.flink.types.Pair;
 import org.apache.flink.util.Preconditions;
 
 import javax.annotation.Nullable;
@@ -200,6 +202,22 @@ public class StateSerializerUtil {
 		ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(serializedBytes);
 		DataInputViewStreamWrapper inputView = new DataInputViewStreamWrapper(inputStream);
 		return getDeserializedSecondKey(inputView, keySerializer, namespaceSerializer, serializedStateNameLength);
+	}
+
+	public static <K, N> Pair<K, N> getDeserializedKeyAndNamespace(
+		byte[] serializedBytes,
+		TypeSerializer<K> keySerializer,
+		TypeSerializer<N> namespaceSerializer,
+		int serializedStateNameLenght) throws IOException {
+
+		ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(serializedBytes);
+		DataInputViewStreamWrapper inputView = new DataInputViewStreamWrapper(inputStream);
+
+		K key = getDeserializedSingleKey(inputView, keySerializer, serializedStateNameLenght);
+
+		inputView.skipBytesToRead(KEY_PREFIX_BYTE_LENGTH);
+		N namespace = namespaceSerializer.deserialize(inputView);
+		return new DefaultPair<>(key, namespace);
 	}
 
 	public static <K, N> byte[] getSerializedKeyForSubKeyedValueState(

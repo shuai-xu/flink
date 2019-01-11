@@ -248,7 +248,7 @@ public class KeyedStateBackendWrapper<K> extends AbstractKeyedStateBackend<K> {
 
 		SubKeyedState subKeyedState = internalStateBackend.getSubKeyedStates().get(state);
 		if (subKeyedState != null) {
-			throw new UnsupportedOperationException("getKeys is not supported on subKeyedState.");
+			return StreamSupport.stream(subKeyedState.keys(namespace).spliterator(), false);
 		}
 
 		return Stream.empty();
