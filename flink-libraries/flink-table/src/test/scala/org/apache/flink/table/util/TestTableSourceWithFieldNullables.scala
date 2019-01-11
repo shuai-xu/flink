@@ -22,8 +22,9 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableException, TableSchema}
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources.BatchTableSource
 import org.apache.flink.types.Row
@@ -42,8 +43,7 @@ class TestTableSourceWithFieldNullables(
     throw new TableException("Number of field names and field nullables must be equal.")
   }
 
-  override def getReturnType: DataType =
-    DataTypes.of(new RowTypeInfo(fieldTypes, fieldNames))
+  override def getReturnType: DataType = new RowTypeInfo(fieldTypes, fieldNames)
 
   override def getTableStats: TableStats = null
 
@@ -51,8 +51,8 @@ class TestTableSourceWithFieldNullables(
 
   override def getTableSchema: TableSchema = {
     val builder = TableSchema.builder()
-    fieldNames.zip(fieldTypes.map(DataTypes.internal)).zip(fieldNullables) foreach {
-      case ((name, tpe), nullable) => builder.field(name, tpe, nullable)
+    fieldNames.zip(fieldTypes).zip(fieldNullables) foreach {
+      case ((name, tpe), nullable) => builder.field(name, tpe.toInternalType, nullable)
     }
     builder.build()
   }

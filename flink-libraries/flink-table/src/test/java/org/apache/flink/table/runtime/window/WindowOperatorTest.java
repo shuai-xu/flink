@@ -27,6 +27,7 @@ import org.apache.flink.streaming.util.OneInputStreamOperatorTestHarness;
 import org.apache.flink.table.api.Types;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.api.window.CountWindow;
 import org.apache.flink.table.api.window.TimeWindow;
 import org.apache.flink.table.api.window.Window;
@@ -73,7 +74,7 @@ public class WindowOperatorTest {
 
 	private InternalType[] inputFieldTypes = new InternalType[]{DataTypes.STRING, DataTypes.INT, DataTypes.LONG};
 	private BaseRowTypeInfo<BaseRow> inputType = new BaseRowTypeInfo<>(BaseRow.class,
-			DataTypes.toTypeInfos(inputFieldTypes));
+			TypeConverters.createExternalTypeInfoFromDataTypes(inputFieldTypes));
 	private BaseRowTypeInfo<BaseRow> outputType = new BaseRowTypeInfo<>(BaseRow.class,
 		Types.STRING(), Types.LONG(), Types.LONG(), Types.LONG(), Types.LONG(), Types.LONG());
 	private InternalType[] aggResultTypes = new InternalType[]{DataTypes.LONG, DataTypes.LONG};

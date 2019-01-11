@@ -21,8 +21,8 @@ package org.apache.flink.table.sources.parquet;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.types.Row;
 
 import org.apache.hadoop.mapreduce.RecordReader;
@@ -46,7 +46,7 @@ public class VectorizedRowInputParquetFormat extends ParquetInputFormat<Row, Row
 
 	@Override
 	public RowTypeInfo getProducedType() {
-		return new RowTypeInfo(DataTypes.toTypeInfos(fieldTypes));
+		return new RowTypeInfo(TypeConverters.createExternalTypeInfoFromDataTypes(fieldTypes));
 	}
 
 	@Override

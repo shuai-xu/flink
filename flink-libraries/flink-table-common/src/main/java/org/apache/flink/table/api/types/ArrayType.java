@@ -26,13 +26,13 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 public class ArrayType extends InternalType {
 
 	private boolean isPrimitive;
-	private InternalType elementType;
+	private DataType elementType;
 
-	public ArrayType(InternalType elementType) {
+	public ArrayType(DataType elementType) {
 		this(elementType, false);
 	}
 
-	public ArrayType(InternalType elementType, boolean isPrimitive) {
+	public ArrayType(DataType elementType, boolean isPrimitive) {
 		this.elementType = checkNotNull(elementType);
 		this.isPrimitive = isPrimitive;
 	}
@@ -41,8 +41,12 @@ public class ArrayType extends InternalType {
 		return isPrimitive;
 	}
 
-	public InternalType getElementType() {
+	public DataType getElementType() {
 		return elementType;
+	}
+
+	public InternalType getElementInternalType() {
+		return elementType.toInternalType();
 	}
 
 	@Override
@@ -57,13 +61,13 @@ public class ArrayType extends InternalType {
 		ArrayType arrayType = (ArrayType) o;
 
 		return isPrimitive == arrayType.isPrimitive &&
-				elementType.equals(arrayType.elementType);
+				getElementInternalType().equals(arrayType.getElementInternalType());
 	}
 
 	@Override
 	public int hashCode() {
 		int result = (isPrimitive ? 1 : 0);
-		result = 31 * result + elementType.hashCode();
+		result = 31 * result + getElementInternalType().hashCode();
 		return result;
 	}
 }

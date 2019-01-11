@@ -28,13 +28,13 @@ import org.apache.flink.api.java.typeutils.{ListTypeInfo, RowTypeInfo, TypeExtra
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes, TypeInfoWrappedDataType}
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.{TableConfigOptions, Types, ValidationException}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString, Decimal}
 import org.apache.flink.table.expressions.utils.{RichFunc1, RichFunc2, RichFunc3, SplitUDF}
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters
+import org.apache.flink.table.runtime.conversion.DataStructureConverters
 import org.apache.flink.table.runtime.utils.UserDefinedFunctionTestUtils
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.test.util.TestBaseUtils
@@ -50,7 +50,7 @@ class CalcITCase extends QueryTest {
   @Before
   def before(): Unit = {
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
-    InternalTypeConverters.createToExternalConverter(DataTypes.createRowType())
+    DataStructureConverters.createToExternalConverter(DataTypes.createRowType())
     registerCollection("Table3", data3, type3, nullablesOfData3, 'a, 'b, 'c)
     registerCollection("SmallTable3", smallData3, type3, nullablesOfData3, 'a, 'b, 'c)
   }
@@ -754,7 +754,7 @@ object DateFunction extends ScalarFunction {
 object RowFunc extends ScalarFunction {
   def eval(s: String): Row = Row.of(s)
   override def getResultType(arguments: Array[AnyRef], signature: Array[Class[_]]) =
-    new TypeInfoWrappedDataType(new RowTypeInfo(Types.STRING))
+    new RowTypeInfo(Types.STRING)
 }
 
 object RowToStrFunc extends ScalarFunction {
@@ -765,14 +765,14 @@ object RowToStrFunc extends ScalarFunction {
 object ListFunc extends ScalarFunction {
   def eval(s: String): java.util.List[String] = util.Arrays.asList(s)
   override def getResultType(arguments: Array[AnyRef], signature: Array[Class[_]]) =
-    new TypeInfoWrappedDataType(new ListTypeInfo(Types.STRING))
+    new ListTypeInfo(Types.STRING)
 }
 
 // internal but wrapped as TypeInfoWrappedDataType.
 object StringFunc extends ScalarFunction {
   def eval(s: String): String = s
   override def getResultType(arguments: Array[AnyRef], signature: Array[Class[_]]) =
-    new TypeInfoWrappedDataType(Types.STRING)
+    Types.STRING
 }
 
 class MyPojo() {

@@ -35,7 +35,7 @@ import org.apache.flink.table.api.TableSourceParser;
 import org.apache.flink.table.api.functions.AsyncTableFunction;
 import org.apache.flink.table.api.functions.TableFunction;
 import org.apache.flink.table.api.types.DataType;
-import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
 import org.apache.flink.table.descriptors.SchemaValidator;
 import org.apache.flink.table.factories.BatchTableSinkFactory;
 import org.apache.flink.table.factories.BatchTableSourceFactory;
@@ -59,6 +59,7 @@ import org.apache.flink.util.Preconditions;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -260,7 +261,7 @@ public class CollectionTableFactory<T1> implements StreamTableSourceFactory<T1>,
 
 		@Override
 		public DataType getReturnType() {
-			return DataTypes.of(rowType);
+			return new TypeInfoWrappedDataType(rowType);
 		}
 
 		@Override
@@ -344,7 +345,7 @@ public class CollectionTableFactory<T1> implements StreamTableSourceFactory<T1>,
 
 		@Override
 		public DataType getOutputType() {
-			return DataTypes.of(sinkType);
+			return new TypeInfoWrappedDataType(sinkType);
 		}
 
 		@Override
@@ -354,7 +355,10 @@ public class CollectionTableFactory<T1> implements StreamTableSourceFactory<T1>,
 
 		@Override
 		public DataType[] getFieldTypes() {
-			return DataTypes.dataTypes(sinkType.getFieldTypes());
+			TypeInformation<?>[] typeInfos = sinkType.getFieldTypes();
+			DataType[] types = new DataType[typeInfos.length];
+			Arrays.setAll(types, i -> new TypeInfoWrappedDataType(typeInfos[i]));
+			return types;
 		}
 
 		@Override

@@ -22,7 +22,7 @@ import java.util.{ArrayList => JArrayList, LinkedList => JLinkedList, List => JL
 import org.apache.flink.api.common.state.{MapStateDescriptor, ValueStateDescriptor}
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.runtime.state.keyed.{KeyedMapState, KeyedValueState}
-import org.apache.flink.table.api.types.{InternalType, RowType}
+import org.apache.flink.table.api.types.{InternalType, RowType, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, Types}
 import org.apache.flink.table.codegen.GeneratedAggsHandleFunction
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
@@ -73,12 +73,12 @@ abstract class RowTimeUnboundedOver(
     // initialize accumulator state
     val accStateDesc = new ValueStateDescriptor[BaseRow](
       "accState",
-      TypeUtils.toBaseRowTypeInfo(new RowType(classOf[BaseRow], accTypes: _*)))
+      TypeConverters.toBaseRowTypeInfo(new RowType(classOf[BaseRow], accTypes: _*)))
     accState = ctx.getKeyedValueState(accStateDesc)
 
     // input element are all binary row as they are came from network
     val rowListTypeInfo = new ListTypeInfo[BaseRow](
-      TypeUtils.toBaseRowTypeInfo(new RowType(classOf[BaseRow], inputFieldTypes: _*)))
+      TypeConverters.toBaseRowTypeInfo(new RowType(classOf[BaseRow], inputFieldTypes: _*)))
     val inputStateDesc = new MapStateDescriptor[JLong, JList[BaseRow]](
       "inputState",
       Types.LONG,

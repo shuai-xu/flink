@@ -150,9 +150,9 @@ abstract class BatchExecWindowAggregateBase(
 
   def getOutputType: RowType = {
     if (namedProperties.isEmpty && grouping.isEmpty) {
-      FlinkTypeFactory.toInternalBaseRowType(getRowType, classOf[GenericRow])
+      FlinkTypeFactory.toInternalRowType(getRowType, classOf[GenericRow])
     } else {
-      FlinkTypeFactory.toInternalBaseRowType(getRowType, classOf[JoinedRow])
+      FlinkTypeFactory.toInternalRowType(getRowType, classOf[JoinedRow])
     }
   }
 
@@ -168,7 +168,7 @@ abstract class BatchExecWindowAggregateBase(
         (groupKeyTypes :+ timestampInternalType) ++ aggBuffTypes,
         (groupKeyNames :+ "assignedTs$") ++ aggBuffNames)
     } else {
-      FlinkTypeFactory.toInternalBaseRowType(inputRelDataType, classOf[BinaryRow])
+      FlinkTypeFactory.toInternalRowType(inputRelDataType, classOf[BinaryRow])
     }
   }
 

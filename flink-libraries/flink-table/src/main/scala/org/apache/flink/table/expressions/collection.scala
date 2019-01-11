@@ -21,7 +21,7 @@ package org.apache.flink.table.expressions
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.api.types.{ArrayType, DataTypes, InternalType, MapType}
+import org.apache.flink.table.api.types.{ArrayType, DataType, DataTypes, InternalType, MapType}
 import org.apache.flink.table.calcite.FlinkRelBuilder
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
 import org.apache.flink.table.typeutils.TypeCheckUtils.{isArray, isMap}
@@ -46,8 +46,8 @@ case class RowConstructor(elements: Seq[Expression]) extends Expression {
 
   override def toString = s"row(${elements.mkString(", ")})"
 
-  override private[flink] def resultType: InternalType = DataTypes.createBaseRowType(
-    elements.map(e => e.resultType).toArray,
+  override private[flink] def resultType: InternalType = DataTypes.createRowType(
+    elements.map(e => e.resultType).toArray[DataType],
     Array.range(0, elements.length).map(e => s"f$e"))
 
   override private[flink] def validateInput(): ValidationResult = {
@@ -151,7 +151,8 @@ case class ArrayElement(array: Expression) extends Expression {
 
   override def toString = s"($array).element()"
 
-  override private[flink] def resultType = array.resultType.asInstanceOf[ArrayType].getElementType
+  override private[flink] def resultType =
+    array.resultType.asInstanceOf[ArrayType].getElementInternalType
 
   override private[flink] def validateInput(): ValidationResult = {
     array.resultType match {
@@ -201,8 +202,8 @@ case class ItemAt(container: Expression, index: Expression) extends Expression {
   override def toString = s"($container).at($index)"
 
   override private[flink] def resultType = container.resultType match {
-    case mt: MapType => mt.getValueType
-    case at: ArrayType => at.getElementType
+    case mt: MapType => mt.getValueInternalType
+    case at: ArrayType => at.getElementInternalType
   }
 
   override private[flink] def validateInput(): ValidationResult = {
@@ -223,12 +224,12 @@ case class ItemAt(container: Expression, index: Expression) extends Expression {
         }
 
       case mt: MapType  =>
-        if (index.resultType == mt.getKeyType) {
+        if (index.resultType == mt.getKeyInternalType) {
           ValidationSuccess
         } else {
           ValidationFailure(
             s"Map entry access needs a valid key of type " +
-              s"'${mt.getKeyType}', found '${index.resultType}'.")
+              s"'${mt.getKeyInternalType}', found '${index.resultType}'.")
         }
 
       case other@_ => ValidationFailure(s"Array or map expected but was '$other'.")

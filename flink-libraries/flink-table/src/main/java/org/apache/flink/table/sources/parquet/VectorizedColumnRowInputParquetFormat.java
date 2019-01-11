@@ -20,8 +20,8 @@ package org.apache.flink.table.sources.parquet;
 
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.dataformat.ColumnarRow;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 
@@ -52,7 +52,7 @@ public class VectorizedColumnRowInputParquetFormat extends ParquetInputFormat<Co
 
 	@Override
 	public BaseRowTypeInfo<ColumnarRow> getProducedType() {
-		return new BaseRowTypeInfo<>(ColumnarRow.class, DataTypes.toTypeInfos(fieldTypes));
+		return new BaseRowTypeInfo<>(ColumnarRow.class, TypeConverters.createExternalTypeInfoFromDataTypes(fieldTypes));
 	}
 
 	@Override

@@ -20,18 +20,19 @@ package org.apache.flink.table.sources.parquet
 
 import java.io.File
 import java.sql.Timestamp
-
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.core.fs.Path
 import org.apache.flink.table.api.TableEnvironment
-import org.apache.flink.table.api.types.{DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType, TypeInfoWrappedDataType}
 import org.apache.flink.table.dataformat.GenericRow
 import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters
+import org.apache.flink.table.runtime.conversion.DataStructureConverters
 import org.apache.flink.table.runtime.functions.BuildInScalarFunctions.toLong
 import org.apache.flink.table.sinks.parquet.RowParquetOutputFormat
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.DateTimeTestUtil.UTCTimestamp
 import org.apache.flink.types.Row
+
 import org.junit.Test
 
 // tests we borrowed from spark
@@ -167,8 +168,7 @@ class ParquetTableSourceITCase2 extends QueryTest {
     val results = tEnv.sqlQuery(sqlQuery).collect()
 
     val types = if (resultTypes == null) colTypes else resultTypes
-    val converter = InternalTypeConverters.createToExternalConverter(
-      DataTypes.of(new RowTypeInfo(types.map(DataTypes.toTypeInfo): _*)))
+    val converter = DataStructureConverters.createToExternalConverter(new RowType(types: _*))
     org.junit.Assert.assertTrue(expected.map(toRow).map(converter) == results)
   }
 

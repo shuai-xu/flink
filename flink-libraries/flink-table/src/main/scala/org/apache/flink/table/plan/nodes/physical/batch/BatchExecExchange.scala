@@ -26,7 +26,7 @@ import org.apache.flink.runtime.io.network.DataExchangeMode
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, PartitionTransformation, StreamTransformation, TwoInputTransformation}
 import org.apache.flink.streaming.runtime.partitioner._
-import org.apache.flink.table.api.types.{DataTypes, RowType}
+import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
@@ -281,14 +281,14 @@ class BatchExecExchange(
       case Some(transformation) => transformation
       case None =>
         // 1. Fixed size sample in each partitions.
-        val localSampleOutRowType = DataTypes.internal(
+        val localSampleOutRowType = TypeConverters.createInternalTypeFromTypeInfo(
           new BaseRowTypeInfo(classOf[GenericRow], keys.map(types(_)): _ *))
             .asInstanceOf[RowType]
 
         val localSampleProjection = ProjectionCodeGenerator.generateProjection(
           CodeGeneratorContext(tableEnv.getConfig),
           "LocalSample",
-          DataTypes.internal(inputType).asInstanceOf[RowType],
+          TypeConverters.createInternalTypeFromTypeInfo(inputType).asInstanceOf[RowType],
           localSampleOutRowType,
           keys,
           reusedOutRecord = false)
@@ -305,7 +305,7 @@ class BatchExecExchange(
 
         // 2. Fixed size sample in a single coordinator
         // and use sampled data to build range boundaries.
-        val sampleType = DataTypes.internal(
+        val sampleType = TypeConverters.createInternalTypeFromTypeInfo(
           new BaseRowTypeInfo(classOf[BinaryRow], keys.map(types(_)): _*))
             .asInstanceOf[RowType]
         val ctx = CodeGeneratorContext(tableEnv.getConfig)
@@ -339,7 +339,7 @@ class BatchExecExchange(
             new KeyExtractor(
               newKeyIndexes,
               orders,
-              keys.map((i) => DataTypes.internal(types(i))),
+              keys.map((i) => TypeConverters.createInternalTypeFromTypeInfo(types(i))),
               comparators),
             TOTAL_RANGES_NUM),
           boundariesType,
@@ -374,7 +374,8 @@ class BatchExecExchange(
         batchExchange,
         ARI_NAME,
         new AssignRangeIndexOperator(new KeyExtractor(keys, orders,
-          binaryType.getFieldTypes.map(DataTypes.internal), comparators)),
+          binaryType.getFieldTypes.map(
+            TypeConverters.createInternalTypeFromTypeInfo), comparators)),
         new TupleTypeInfo(BasicTypeInfo.INT_TYPE_INFO, binaryType),
         input.getParallelism)
     }

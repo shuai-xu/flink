@@ -22,8 +22,9 @@ import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.sql.fun._
 import org.apache.calcite.sql.{SqlAggFunction, SqlKind, SqlRankFunction}
 import org.apache.flink.table.api.functions.UserDefinedFunction
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes._
-import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, InternalType}
+import org.apache.flink.table.api.types.{DataType, DecimalType, InternalType}
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.errorcode.TableErrors
@@ -712,9 +713,9 @@ class AggFunctionFactory(
   private def createCollectAggFunction(argTypes: Array[DataType]): UserDefinedFunction = {
     argTypes(0).toInternalType match {
       case STRING =>
-        new CollectAggFunction(DataTypes.of(BinaryStringTypeInfo.INSTANCE))
+        new CollectAggFunction(BinaryStringTypeInfo.INSTANCE)
       case d: DecimalType =>
-        new CollectAggFunction(DataTypes.of(DecimalTypeInfo.of(d.precision(), d.scale())))
+        new CollectAggFunction(DecimalTypeInfo.of(d.precision(), d.scale()))
       case t: DataType =>
         new CollectAggFunction(t)
     }

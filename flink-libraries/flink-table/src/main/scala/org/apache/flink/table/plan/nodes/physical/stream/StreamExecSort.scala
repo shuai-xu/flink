@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.schema.BaseRowSchema
@@ -125,7 +125,7 @@ class StreamExecSort(
       val (sortFields, sortDirections, nullsIsLast) = SortUtil.getKeysAndOrders(
         sortCollation.getFieldCollations.asScala)
       val generatedSorter = SorterHelper.createSorter(
-        inputTypeInfo.getFieldTypes.map(DataTypes.internal),
+        inputTypeInfo.getFieldTypes.map(TypeConverters.createInternalTypeFromTypeInfo),
         sortFields,
         sortDirections,
         nullsIsLast)

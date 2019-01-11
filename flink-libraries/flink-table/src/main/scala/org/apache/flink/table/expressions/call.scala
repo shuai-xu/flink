@@ -38,6 +38,7 @@ import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.logical.{LogicalExprVisitor, LogicalNode, LogicalTableFunctionCall}
 import org.apache.flink.table.api.types._
 import org.apache.flink.table.typeutils.TypeCheckUtils.isTimeInterval
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
 
 import _root_.scala.collection.JavaConverters._
@@ -265,7 +266,8 @@ case class OverCall(
 
     // check partitionBy expression keys are resolved field reference
     partitionBy.foreach {
-      case r: ResolvedFieldReference if DataTypes.toTypeInfo(r.resultType).isKeyType  =>
+      case r: ResolvedFieldReference
+        if TypeConverters.createExternalTypeInfoFromDataType(r.resultType).isKeyType  =>
         ValidationSuccess
       case r: ResolvedFieldReference =>
         return ValidationFailure(s"Invalid PartitionBy expression: $r. " +

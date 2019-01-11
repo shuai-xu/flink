@@ -63,7 +63,7 @@ public abstract class CollectStreamResult<C> extends BasicResult<C> implements D
 		// create socket stream iterator
 		final DataType socketType = DataTypes.createTupleType(DataTypes.BOOLEAN, outputType);
 		final TypeSerializer<Tuple2<Boolean, Row>> serializer =
-			DataTypes.toTypeInfo(socketType).createSerializer(config);
+				DataTypes.createExternalSerializer(socketType);
 		try {
 			// pass gateway port and address such that iterator knows where to bind to
 			iterator = new SocketStreamIterator<>(gatewayPort, gatewayAddress, serializer);

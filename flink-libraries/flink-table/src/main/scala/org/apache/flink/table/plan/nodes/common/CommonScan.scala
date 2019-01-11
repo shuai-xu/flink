@@ -18,10 +18,14 @@
 
 package org.apache.flink.table.plan.nodes.common
 
+import org.apache.flink.api.common.functions.InvalidTypesException
+import org.apache.flink.api.java.typeutils.TypeExtractor
+
 import java.util.{List => JList}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
+import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite.FlinkTypeFactory
@@ -32,7 +36,8 @@ import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.{ELEMENT, STREAM_RECORD, generatorCollect}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToInternal
+import org.apache.flink.table.runtime.conversion.DataStructureConverters.genToInternal
+import org.apache.flink.table.sources.{BatchTableSource, LookupableTableSource, StreamTableSource, TableSource}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 
 import scala.collection.JavaConversions._
@@ -42,10 +47,31 @@ import scala.collection.JavaConversions._
   */
 trait CommonScan[T] {
 
-  private[flink] def needsConversion(dataType: DataType): Boolean = dataType match {
+  private[flink] def needsConversion(dataType: DataType, clz: Class[_]): Boolean = dataType match {
     case bt: RowType => !bt.isUseBaseRow
+//    case r: RowType => !CodeGenUtils.isInternalClass(clz, r)
     case t: TypeInfoWrappedDataType if t.getTypeInfo.isInstanceOf[BaseRowTypeInfo[_]] => false
     case _ => true
+  }
+
+  private[flink] def extractTableSourceTypeClass(source: TableSource): Class[_] = {
+    try {
+      source match {
+        case s: BatchTableSource[_] =>
+          TypeExtractor.createTypeInfo(source, classOf[BatchTableSource[_]], source.getClass, 0)
+              .getTypeClass.asInstanceOf[Class[_]]
+        case s: StreamTableSource[_] =>
+          TypeExtractor.createTypeInfo(source, classOf[StreamTableSource[_]], source.getClass, 0)
+              .getTypeClass.asInstanceOf[Class[_]]
+        case s: LookupableTableSource[_] =>
+          TypeExtractor.createTypeInfo(
+            source, classOf[LookupableTableSource[_]], source.getClass, 0)
+              .getTypeClass.asInstanceOf[Class[_]]
+      }
+    } catch {
+      case _: InvalidTypesException =>
+        classOf[Object]
+    }
   }
 
   /**
@@ -74,7 +100,7 @@ trait CommonScan[T] {
       config: TableConfig,
       rowtimeExpr: Option[RexNode] = None): StreamTransformation[BaseRow] = {
 
-    val outputRowType = FlinkTypeFactory.toInternalBaseRowType(outRowType, classOf[GenericRow])
+    val outputRowType = FlinkTypeFactory.toInternalRowType(outRowType, classOf[GenericRow])
 
     // conversion
     val convertName = "SourceConversion"
@@ -174,7 +200,7 @@ trait CommonScan[T] {
       input,
       getOperatorName(qualifiedName, outRowType),
       substituteStreamOperator,
-      TypeUtils.toBaseRowTypeInfo(outputRowType),
+      TypeConverters.toBaseRowTypeInfo(outputRowType),
       input.getParallelism)
   }
 }

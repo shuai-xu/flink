@@ -35,7 +35,7 @@ import org.apache.flink.table.api.types.{RowType, DataType, DataTypes}
 import org.apache.flink.table.connector.DefinedDistribution
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters
+import org.apache.flink.table.runtime.conversion.DataStructureConverters
 import org.apache.flink.table.runtime.utils.JavaPojos.Pojo1
 import org.apache.flink.table.sinks.{RetractStreamTableSink, TableSink, _}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -270,7 +270,7 @@ final class TestingUpsertSink(keys: Array[Int])
     val wrapRow = new GenericRow(2)
     wrapRow.update(0, BaseRowUtil.isAccumulateMsg(row))
     wrapRow.update(1, row)
-    val converter = InternalTypeConverters.createToExternalConverter(
+    val converter = DataStructureConverters.createToExternalConverter(
       DataTypes.createTupleType(DataTypes.BOOLEAN, DataTypes.createRowType(fieldTypes: _*)))
     val v = converter.apply(wrapRow).asInstanceOf[JTuple2[Boolean, Row]]
 

@@ -20,14 +20,13 @@ package org.apache.flink.streaming.connectors.kafka;
 
 import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.api.common.serialization.SerializationSchema;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.streaming.connectors.kafka.config.StartupMode;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition;
 import org.apache.flink.streaming.connectors.kafka.partitioner.FlinkFixedPartitioner;
 import org.apache.flink.streaming.connectors.kafka.partitioner.FlinkKafkaPartitioner;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.descriptors.KafkaValidator;
 import org.apache.flink.table.descriptors.SchemaValidator;
@@ -351,7 +350,7 @@ public abstract class KafkaTableSourceSinkFactoryBase implements
 		final Map<String, String> fieldMapping = SchemaValidator.deriveFieldMapping(
 			descriptorProperties,
 			// until FLINK-9870 is fixed we assume that the table schema is the output type
-			Optional.of((TypeInformation<?>) DataTypes.toTypeInfo(TableSchemaUtil.toRowType(schema))));
+			Optional.of(TypeConverters.createExternalTypeInfoFromDataType(TableSchemaUtil.toRowType(schema))));
 		return fieldMapping.size() != schema.getColumnNames().length ||
 			!fieldMapping.entrySet().stream().allMatch(mapping -> mapping.getKey().equals(mapping.getValue()));
 	}

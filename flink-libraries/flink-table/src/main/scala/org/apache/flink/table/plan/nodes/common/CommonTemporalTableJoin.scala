@@ -20,7 +20,6 @@ package org.apache.flink.table.plan.nodes.common
 import java.lang.reflect.{Method, Modifier}
 import java.util
 import java.util.Collections
-
 import com.google.common.primitives.Primitives
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
@@ -41,7 +40,7 @@ import org.apache.flink.streaming.api.operators.ProcessOperator
 import org.apache.flink.streaming.api.operators.async.AsyncWaitOperator
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.functions.{AsyncTableFunction, TableFunction, UserDefinedFunction}
-import org.apache.flink.table.api.types.{DataType, InternalType}
+import org.apache.flink.table.api.types.{DataType, InternalType, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.TemporalJoinCodeGenerator._
@@ -146,7 +145,8 @@ abstract class CommonTemporalTableJoin(
     val tableBaseRowType = tableSchema.internalType(classOf[GenericRow])
     val resultBaseRowType = resultSchema.internalType(classOf[JoinedRow])
     val resultBaseRowTypeInfo = resultSchema.typeInfo(classOf[JoinedRow])
-    val tableReturnTypeInfo = TypeUtils.createTypeInfoFromDataType(tableSource.getReturnType)
+    val tableReturnTypeInfo =
+      TypeConverters.createExternalTypeInfoFromDataType(tableSource.getReturnType)
 
     // validate whether the node is valid and supported.
     validate(
@@ -378,7 +378,7 @@ abstract class CommonTemporalTableJoin(
       inputTransformation,
       operatorName,
       operator,
-      TypeUtils.toBaseRowTypeInfo(resultBaseRowType),
+      TypeConverters.toBaseRowTypeInfo(resultBaseRowType),
       inputTransformation.getParallelism)
   }
   
@@ -392,6 +392,8 @@ abstract class CommonTemporalTableJoin(
         val clazz = actual.getTypeClass
         actual.isInstanceOf[RowTypeInfo] || clazz == classOf[Row]
     }
+//    TypeConverters.createInternalTypeFromTypeInfo(expected) ==
+//        TypeConverters.createInternalTypeFromTypeInfo(actual)
   }
 
   private def getSignatureMatchedEvalMethod(
@@ -723,7 +725,8 @@ abstract class CommonTemporalTableJoin(
           "but was " + joinType.toString + " JOIN")
     }
 
-    val tableReturnType = TypeUtils.createTypeInfoFromDataType(tableSource.getReturnType)
+    val tableReturnType = TypeConverters.createExternalTypeInfoFromDataType(
+      tableSource.getReturnType)
     if (!tableReturnType.isInstanceOf[BaseRowTypeInfo[_]] &&
       !tableReturnType.isInstanceOf[RowTypeInfo]) {
       throw new TableException(
@@ -771,7 +774,7 @@ abstract class CommonTemporalTableJoin(
             s"currently only Row and BaseRow are supported.")
       }
     } else {
-      val udtfReturnTypeInfo = TypeUtils.createTypeInfoFromDataType(udtfReturnType)
+      val udtfReturnTypeInfo = TypeConverters.createExternalTypeInfoFromDataType(udtfReturnType)
       if (!rowTypeEquals(tableReturnTypeInfo, udtfReturnTypeInfo)) {
         throw new TableException(
           s"The TableSource [$tableDesc] return type $tableReturnTypeInfo " +

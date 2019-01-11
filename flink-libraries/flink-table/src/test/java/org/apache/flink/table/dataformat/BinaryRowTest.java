@@ -41,7 +41,6 @@ import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -63,10 +62,6 @@ import static org.junit.Assert.assertTrue;
  * Test of {@link BinaryRow} and {@link BinaryRowWriter}.
  */
 public class BinaryRowTest {
-
-	public static void main(String[] args) {
-		System.out.println(Array.newInstance(int[].class, 10));
-	}
 
 	@Test
 	public void testBasic() {

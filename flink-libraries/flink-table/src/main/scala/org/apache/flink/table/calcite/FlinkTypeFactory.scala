@@ -32,6 +32,7 @@ import org.apache.flink.api.common.typeinfo._
 import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.api.java.typeutils.ValueTypeInfo._
 import org.apache.flink.api.java.typeutils.{MapTypeInfo, MultisetTypeInfo, ObjectArrayTypeInfo, RowTypeInfo, PojoField => _}
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types._
 import org.apache.flink.table.api.{TableException, TableSchema}
 import org.apache.flink.table.calcite.FlinkTypeFactory.typeInfoToSqlTypeName
@@ -67,7 +68,7 @@ class FlinkTypeFactory(typeSystem: RelDataTypeSystem) extends JavaTypeFactoryImp
       t: InternalType,
       isNullable: Boolean)
   : RelDataType = {
-    createTypeFromTypeInfo(DataTypes.toTypeInfo(t), isNullable)
+    createTypeFromTypeInfo(t, isNullable)
   }
 
   def createTypeFromTypeInfo(
@@ -512,7 +513,7 @@ object FlinkTypeFactory {
     new BaseRowTypeInfo(referType, logicalFieldTypes.toArray, logicalFieldNames.toArray)
   }
 
-  def toInternalBaseRowType[T <: BaseRow](
+  def toInternalRowType[T <: BaseRow](
       logicalRowType: RelDataType, referType: Class[T]): RowType = {
     // convert to type information
     val logicalFieldTypes = logicalRowType.getFieldList.asScala map { relDataType =>
@@ -546,7 +547,7 @@ object FlinkTypeFactory {
   }
 
   def isProctimeIndicatorType(dataType: DataType): Boolean = {
-    isProctimeIndicatorType(DataTypes.to(dataType))
+    isProctimeIndicatorType(TypeConverters.createExternalTypeInfoFromDataType(dataType))
   }
 
   def isRowtimeIndicatorType(relDataType: RelDataType): Boolean = relDataType match {
@@ -560,7 +561,7 @@ object FlinkTypeFactory {
   }
 
   def isRowtimeIndicatorType(dataType: DataType): Boolean = {
-    isRowtimeIndicatorType(DataTypes.to(dataType))
+    isRowtimeIndicatorType(dataType)
   }
 
   def isTimeIndicatorType(relDataType: RelDataType): Boolean = relDataType match {
@@ -648,8 +649,7 @@ object FlinkTypeFactory {
   }
 
   def toInternalType(relDataType: RelDataType): InternalType =
-    DataTypes.internal(FlinkTypeFactory.toTypeInfo(relDataType))
+    TypeConverters.createInternalTypeFromTypeInfo(FlinkTypeFactory.toTypeInfo(relDataType))
 
-  def toDataType(relDataType: RelDataType): DataType =
-    DataTypes.of(FlinkTypeFactory.toTypeInfo(relDataType))
+  def toDataType(relDataType: RelDataType): DataType = FlinkTypeFactory.toTypeInfo(relDataType)
 }

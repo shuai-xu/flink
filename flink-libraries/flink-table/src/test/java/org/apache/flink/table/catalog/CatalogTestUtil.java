@@ -23,7 +23,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.types.Row;
@@ -57,7 +57,7 @@ public class CatalogTestUtil {
 	}
 
 	public static CatalogTable createCatalogTable(List<Row> data, boolean isStreaming) {
-		TableSchema tableSchema = TableSchemaUtil.fromDataType(DataTypes.of(getRowTypeInfo()), Option.empty());
+		TableSchema tableSchema = TableSchemaUtil.fromDataType(new TypeInfoWrappedDataType(getRowTypeInfo()), Option.empty());
 
 		RichTableSchema richTableSchema = new RichTableSchema(tableSchema.getFieldNames(), tableSchema.getFieldTypes());
 		richTableSchema.setPrimaryKey("a");

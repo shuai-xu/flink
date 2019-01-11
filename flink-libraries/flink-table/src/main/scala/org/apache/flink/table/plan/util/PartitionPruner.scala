@@ -20,14 +20,13 @@ package org.apache.flink.table.plan.util
 
 import java.math.{BigInteger => JBigInteger}
 import java.util.{ArrayList => JArrayList, List => JList}
-
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.common.functions.FlatMapFunction
 import org.apache.flink.api.common.functions.util.ListCollector
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, BigDecimalTypeInfo, TypeInformation}
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, Compiler, ExprCodeGenerator, FunctionCodeGenerator}
@@ -83,7 +82,7 @@ abstract class PartitionPruner extends Compiler[FlatMapFunction[GenericRow, Bool
     val collectorTerm = CodeGeneratorContext.DEFAULT_COLLECTOR_TERM
 
     val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck)
-        .bindInput(DataTypes.internal(rowType))
+        .bindInput(TypeConverters.createInternalTypeFromTypeInfo(rowType))
 
     val filterExpression = exprGenerator.generateExpression(predicateRexNode)
 
@@ -102,8 +101,8 @@ abstract class PartitionPruner extends Compiler[FlatMapFunction[GenericRow, Bool
       "PartitionPruner",
       classOf[FlatMapFunction[GenericRow, Boolean]],
       filterFunctionBody,
-      DataTypes.internal(returnType),
-      DataTypes.internal(rowType),
+      TypeConverters.createInternalTypeFromTypeInfo(returnType),
+      TypeConverters.createInternalTypeFromTypeInfo(rowType),
       config,
       collectorTerm = collectorTerm)
 

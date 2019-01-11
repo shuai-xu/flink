@@ -19,6 +19,7 @@ package org.apache.flink.table.plan.util
 
 import org.apache.flink.streaming.api.bundle.CountBundleTrigger
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes._
 import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, RowType}
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException, Types}
@@ -330,7 +331,7 @@ object AggregateUtil extends Enumeration {
       }
 
       val accTypeInfo = new MapViewTypeInfo(
-        TypeUtils.createTypeInfoFromDataType(d.keyType),
+        d.keyType,
         valueType,
         isStateBackedDataViews,
         // the mapview serializer should handle null keys
@@ -371,7 +372,7 @@ object AggregateUtil extends Enumeration {
         case BOOLEAN => BOOLEAN
         case DATE | TIME => INT
         case TIMESTAMP => LONG
-        case STRING => DataTypes.of(BinaryStringTypeInfo.INSTANCE)
+        case STRING => BinaryStringTypeInfo.INSTANCE
         case d: DecimalType => d
         case t =>
           throw new TableException(

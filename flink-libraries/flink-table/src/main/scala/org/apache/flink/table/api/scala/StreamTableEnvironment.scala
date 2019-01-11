@@ -24,7 +24,6 @@ import org.apache.flink.table.expressions.Expression
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.streaming.api.scala.asScalaStream
 import org.apache.flink.table.api.functions.{AggregateFunction, TableFunction}
-import org.apache.flink.table.api.types.DataTypes
 
 /**
   * The [[TableEnvironment]] for a Scala [[StreamExecutionEnvironment]].
@@ -206,7 +205,7 @@ class StreamTableEnvironment(
       table,
       updatesAsRetraction = false,
       withChangeFlag = false,
-      DataTypes.of(returnType)))
+      returnType))
   }
 
   /**
@@ -249,7 +248,7 @@ class StreamTableEnvironment(
       table,
       updatesAsRetraction = true,
       withChangeFlag = true,
-      DataTypes.of(returnType)))
+      returnType))
   }
 
   /**

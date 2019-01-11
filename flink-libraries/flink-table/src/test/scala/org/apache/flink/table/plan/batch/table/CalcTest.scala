@@ -21,10 +21,11 @@ package org.apache.flink.table.plan.batch.table
 import org.apache.flink.api.scala.createTypeInformation
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.expressions.Upper
 import org.apache.flink.table.plan.batch.table.CalcTest._
 import org.apache.flink.table.util.TableTestBase
+
 import org.junit.Test
 
 class CalcTest extends TableTestBase {
@@ -133,7 +134,7 @@ object CalcTest {
     }
 
     override def getResultType(arguments: Array[AnyRef], signature: Array[Class[_]]): DataType = {
-      DataTypes.of(createTypeInformation[TestCaseClass])
+      createTypeInformation[TestCaseClass]
     }
   }
 

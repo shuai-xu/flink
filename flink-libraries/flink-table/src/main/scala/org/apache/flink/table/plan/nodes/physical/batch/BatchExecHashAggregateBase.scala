@@ -94,9 +94,9 @@ abstract class BatchExecHashAggregateBase(
 
   override def getOutputRowType: RowType = {
     if (grouping.isEmpty) {
-      FlinkTypeFactory.toInternalBaseRowType(getRowType, classOf[GenericRow])
+      FlinkTypeFactory.toInternalRowType(getRowType, classOf[GenericRow])
     } else {
-      FlinkTypeFactory.toInternalBaseRowType(getRowType, classOf[JoinedRow])
+      FlinkTypeFactory.toInternalRowType(getRowType, classOf[JoinedRow])
     }
   }
 

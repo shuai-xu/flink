@@ -24,7 +24,7 @@ import org.apache.flink.service.ServiceRegistryFactory
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.functions.sink.{RichSinkFunction, SinkFunction}
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.{RowType, DataType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks.{AppendStreamTableSink, BatchTableSink, TableSinkBase}
 import org.apache.flink.table.temptable.rpc.TableServiceClient
@@ -94,7 +94,7 @@ class FlinkTableServiceSinkFunction(
     flinkTableServiceClient.setRegistry(ServiceRegistryFactory.getRegistry)
     flinkTableServiceClient.open(tableProperties)
     baseRowSerializer =
-      TypeUtils.createSerializer(resultType).asInstanceOf[BaseRowSerializer[BaseRow]]
+      DataTypes.createInternalSerializer(resultType).asInstanceOf[BaseRowSerializer[BaseRow]]
     val maxRetry = parameters
       .getInteger(TableServiceOptions.TABLE_SERVICE_READY_RETRY_TIMES)
     val backOffMs = parameters

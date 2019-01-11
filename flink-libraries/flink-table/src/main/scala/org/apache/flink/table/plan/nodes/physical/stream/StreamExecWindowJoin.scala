@@ -24,6 +24,7 @@ import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.operators.co.KeyedCoProcessOperator
 import org.apache.flink.streaming.api.operators.{StreamFlatMap, StreamMap, TwoInputStreamOperator}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation, TwoInputTransformation, UnionTransformation}
+import org.apache.flink.table.api.types.TypeConverters
 import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.errorcode.TableErrors
@@ -167,7 +168,7 @@ class StreamExecWindowJoin(
             rightDataStream,
             leftRowSchema.arity,
             rightRowSchema.arity,
-            TypeUtils.toBaseRowTypeInfo(returnType))
+            TypeConverters.toBaseRowTypeInfo(returnType))
         } else {
           if (isRowTime) {
             createRowTimeJoin(
@@ -175,7 +176,7 @@ class StreamExecWindowJoin(
               flinkJoinType,
               leftDataStream,
               rightDataStream,
-              TypeUtils.toBaseRowTypeInfo(returnType),
+              TypeConverters.toBaseRowTypeInfo(returnType),
               joinFunction.name,
               joinFunction.code,
               leftKeys,
@@ -186,7 +187,7 @@ class StreamExecWindowJoin(
               flinkJoinType,
               leftDataStream,
               rightDataStream,
-              TypeUtils.toBaseRowTypeInfo(returnType),
+              TypeConverters.toBaseRowTypeInfo(returnType),
               joinFunction.name,
               joinFunction.code,
               leftKeys,
@@ -296,8 +297,8 @@ class StreamExecWindowJoin(
 
     val leftType = leftRowSchema.internalType(classOf[BaseRow])
     val rightType = rightRowSchema.internalType(classOf[BaseRow])
-    val leftTypeInfo = TypeUtils.toBaseRowTypeInfo(leftType)
-    val rightTypeInfo = TypeUtils.toBaseRowTypeInfo(rightType)
+    val leftTypeInfo = TypeConverters.toBaseRowTypeInfo(leftType)
+    val rightTypeInfo = TypeConverters.toBaseRowTypeInfo(rightType)
     val procJoinFunc = new ProcTimeBoundedStreamJoin(
       joinType,
       leftLowerBound,
@@ -344,8 +345,8 @@ class StreamExecWindowJoin(
   ): StreamTransformation[BaseRow] = {
     val leftType = leftRowSchema.internalType(classOf[BaseRow])
     val rightType = rightRowSchema.internalType(classOf[BaseRow])
-    val leftTypeInfo = TypeUtils.toBaseRowTypeInfo(leftType)
-    val rightTypeInfo = TypeUtils.toBaseRowTypeInfo(rightType)
+    val leftTypeInfo = TypeConverters.toBaseRowTypeInfo(leftType)
+    val rightTypeInfo = TypeConverters.toBaseRowTypeInfo(rightType)
     val rowJoinFunc = new RowTimeBoundedStreamJoin(
       joinType,
       leftLowerBound,

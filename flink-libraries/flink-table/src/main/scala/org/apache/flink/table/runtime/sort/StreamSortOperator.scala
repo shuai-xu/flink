@@ -21,7 +21,6 @@ package org.apache.flink.table.runtime.sort
 import java.lang.{Long => JLong}
 import java.util
 import org.apache.flink.api.common.state.{ListState, ListStateDescriptor}
-import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.api.java.tuple.Tuple2
 import org.apache.flink.api.java.typeutils.TupleTypeInfo
 import org.apache.flink.runtime.operators.sort.{IndexedSorter, QuickSort}
@@ -33,7 +32,7 @@ import org.apache.flink.table.codegen.{CodeGenUtils, GeneratedSorter}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.runtime.util.StreamRecordCollector
-import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowSerializer, BaseRowTypeInfo, BinaryRowSerializer, TypeUtils}
+import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowSerializer, BaseRowTypeInfo, BinaryRowSerializer}
 import org.apache.flink.table.util.Logging
 
 import scala.collection.mutable
@@ -90,8 +89,7 @@ class StreamSortOperator(
   override def open() {
     super.open()
 
-    val recordSerializer = TypeUtils.createSerializer(
-      inputRowType).asInstanceOf[TypeSerializer[BaseRow]]
+    val recordSerializer = inputRowType.createSerializer()
 
     binarySerializer = new BinaryRowSerializer(
       recordSerializer.asInstanceOf[AbstractRowSerializer[_ <: BaseRow]].getTypes: _*)

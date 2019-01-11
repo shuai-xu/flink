@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
-import org.apache.flink.table.api.types.{DataTypes, RowType}
+import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
@@ -189,8 +189,10 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     val leftInput = getLeft.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
     val rightInput = getRight.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
 
-    val leftType = DataTypes.internal(leftInput.getOutputType).asInstanceOf[RowType]
-    val rightType = DataTypes.internal(rightInput.getOutputType).asInstanceOf[RowType]
+    val leftType = TypeConverters.createInternalTypeFromTypeInfo(
+      leftInput.getOutputType).asInstanceOf[RowType]
+    val rightType = TypeConverters.createInternalTypeFromTypeInfo(
+      rightInput.getOutputType).asInstanceOf[RowType]
 
     val keyType = new RowType(
       classOf[BinaryRow], leftAllKey.map(leftType.getFieldTypes()(_)): _*)
@@ -330,7 +332,8 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
 
     val types = keys.map(t.getFieldInternalTypes()(_))
     val compAndSers = types.zip(orders).map { case (internalType, order) =>
-      (TypeUtils.createComparator(internalType, order), TypeUtils.createSerializer(internalType))
+      (TypeUtils.createInternalComparator(internalType, order),
+          DataTypes.createInternalSerializer(internalType))
     }
     val comps = compAndSers.map(_._1)
     val sers = compAndSers.map(_._2)

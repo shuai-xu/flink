@@ -19,7 +19,6 @@
 package org.apache.flink.table.api.functions;
 
 import org.apache.flink.api.common.functions.InvalidTypesException;
-import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
@@ -45,7 +44,7 @@ public abstract class CustomTypeDefinedFunction extends UserDefinedFunction {
 		DataType[] types = new DataType[signature.length];
 		try {
 			for (int i = 0; i < signature.length; i++) {
-				types[i] = DataTypes.of(TypeExtractor.getForClass(signature[i]));
+				types[i] = DataTypes.extractDataType(signature[i]);
 			}
 		} catch (InvalidTypesException e) {
 			throw new ValidationException("Parameter types of scalar function '" +

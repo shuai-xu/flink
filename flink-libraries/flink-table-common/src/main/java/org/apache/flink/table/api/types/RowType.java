@@ -71,6 +71,7 @@ public class RowType extends InternalType {
 		this.internalTypeClass = internalTypeClass;
 		this.types = types;
 		this.fieldNames = fieldNames;
+//		this.useBaseRow = false;
 		this.useBaseRow = useBaseRow;
 	}
 
@@ -147,7 +148,7 @@ public class RowType extends InternalType {
 	public String toString() {
 		return "RowType{" +
 				"internalTypeClass=" + internalTypeClass +
-				", types=" + Arrays.toString(types) +
+				", types=" + Arrays.toString(getFieldInternalTypes()) +
 				", fieldNames=" + Arrays.toString(fieldNames) +
 				", useBaseRow=" + useBaseRow +
 				'}';

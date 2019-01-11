@@ -31,7 +31,7 @@ import org.apache.flink.streaming.api.operators.TwoInputStreamOperator
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.KeyedTwoInputStreamOperatorTestHarness
-import org.apache.flink.table.api.types.{DataTypes, RowType}
+import org.apache.flink.table.api.types.{DataType, RowType, TypeInfoWrappedDataType}
 import org.apache.flink.table.api.{TableConfig, Types, ValidationException}
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.dataformat.BinaryString.fromString
@@ -594,7 +594,8 @@ class TemporalJoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mo
     val rightType = joinInfo.rightRowType
     val joinType = new RowType(
       classOf[GenericRow],
-      (leftType.getFieldTypes ++ rightType.getFieldTypes).map(DataTypes.of),
+      (leftType.getFieldTypes ++ rightType.getFieldTypes)
+          .map(new TypeInfoWrappedDataType(_)).toArray[DataType],
       leftType.getFieldNames ++ rightType.getFieldNames)
 
     val joinTranslator = StreamExecTemporalJoinToCoProcessTranslator.create(

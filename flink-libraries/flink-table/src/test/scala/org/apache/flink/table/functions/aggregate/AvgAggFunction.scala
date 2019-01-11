@@ -19,10 +19,10 @@ package org.apache.flink.table.functions.aggregate
 
 import java.lang.{Iterable => JIterable}
 import java.math.{BigDecimal, BigInteger, MathContext}
-
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType}
 import org.apache.flink.table.dataformat.Decimal
 
@@ -179,7 +179,7 @@ abstract class BigIntegralAvgAggFunction[T]
   override def getAccumulatorType: DataType = {
     DataTypes.createTupleType(
       classOf[BigIntegralAvgAccumulator],
-      DataTypes.of(BasicTypeInfo.BIG_INT_TYPE_INFO),
+      BasicTypeInfo.BIG_INT_TYPE_INFO,
       DataTypes.LONG)
   }
 

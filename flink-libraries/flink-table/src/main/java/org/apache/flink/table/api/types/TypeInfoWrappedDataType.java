@@ -19,6 +19,7 @@
 package org.apache.flink.table.api.types;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.table.utils.TypeStringUtils;
 
 /**
  * External type to wrap {@link TypeInformation}, may be it is a internally known
@@ -31,7 +32,7 @@ public class TypeInfoWrappedDataType implements ExternalType {
 
 	public TypeInfoWrappedDataType(TypeInformation typeInfo) {
 		this.typeInfo = typeInfo;
-		this.internalType = DataTypes.internal(typeInfo);
+		this.internalType = TypeConverters.createInternalTypeFromTypeInfo(typeInfo);
 	}
 
 	public TypeInformation getTypeInfo() {
@@ -60,5 +61,10 @@ public class TypeInfoWrappedDataType implements ExternalType {
 	@Override
 	public int hashCode() {
 		return typeInfo.hashCode();
+	}
+
+	@Override
+	public String toString() {
+		return TypeStringUtils.writeTypeInfo(typeInfo);
 	}
 }

@@ -19,7 +19,6 @@ package org.apache.flink.table.runtime.join.stream;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.ExecutionConfig;
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.ByteSerializer;
@@ -37,6 +36,7 @@ import org.apache.flink.streaming.api.operators.InternalTimerService;
 import org.apache.flink.streaming.api.operators.TimestampedCollector;
 import org.apache.flink.streaming.api.operators.Triggerable;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.codegen.CodeGenUtils;
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction;
 import org.apache.flink.table.codegen.GeneratedProjection;
@@ -57,7 +57,6 @@ import org.apache.flink.table.runtime.join.stream.state.match.JoinMatchStateHand
 import org.apache.flink.table.runtime.join.stream.state.match.NonBatchOnlyEqualityConditionMatchStateHandler;
 import org.apache.flink.table.runtime.join.stream.state.match.WithoutPrimaryKeyMatchStateHandler;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
-import org.apache.flink.table.typeutils.TypeUtils;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -194,9 +193,8 @@ public abstract class JoinStreamOperator extends AbstractStreamOperator<BaseRow>
 
 		JoinStateHandler state;
 
-		TypeSerializer<BaseRow> joinKeySer = (TypeSerializer<BaseRow>) TypeUtils.createSerializer(keyType);
-
-		TypeSerializer<BaseRow> recordSer = (TypeSerializer<BaseRow>) TypeUtils.createSerializer(recordType);
+		TypeSerializer<BaseRow> joinKeySer = keyType.createSerializer();
+		TypeSerializer<BaseRow> recordSer = recordType.createSerializer();
 
 		switch (type) {
 			case JOIN_KEY_CONTAIN_PRIMARY_KEY:
@@ -210,7 +208,7 @@ public abstract class JoinStreamOperator extends AbstractStreamOperator<BaseRow>
 				Class<Projection> pkProj = CodeGenUtils.compile(
 						getContainingTask().getUserCodeClassLoader(), pkProjectCode.name(), pkProjectCode.code());
 				Projection<BaseRow, BaseRow> pkProjection = pkProj.newInstance();
-				TypeSerializer<BaseRow> leftPkSer = (TypeSerializer<BaseRow>) TypeUtils.createSerializer(
+				TypeSerializer<BaseRow> leftPkSer = (TypeSerializer<BaseRow>) DataTypes.createInternalSerializer(
 						pkProjectCode.expr().resultType());
 
 				TypeSerializer<Tuple2<BaseRow, Long>> record2TimeSer =
@@ -251,10 +249,9 @@ public abstract class JoinStreamOperator extends AbstractStreamOperator<BaseRow>
 
 		JoinMatchStateHandler state;
 
-		TypeSerializer<BaseRow> recordSer = (TypeSerializer<BaseRow>) TypeUtils.createSerializer(recordType);
-		TypeSerializer<BaseRow> joinKeySer = (TypeSerializer<BaseRow>) TypeUtils.createSerializer(keyType);
-		TypeSerializer<Long> joinCntSer = (TypeSerializer<Long>) TypeUtils.createSerializer(
-				BasicTypeInfo.LONG_TYPE_INFO);
+		TypeSerializer<BaseRow> recordSer = recordType.createSerializer();
+		TypeSerializer<BaseRow> joinKeySer = keyType.createSerializer();
+		TypeSerializer<Long> joinCntSer = LongSerializer.INSTANCE;
 
 		switch (type) {
 			case WITHOUT_PRIMARY_KEY_MATCH:
@@ -267,7 +264,7 @@ public abstract class JoinStreamOperator extends AbstractStreamOperator<BaseRow>
 				state = new WithoutPrimaryKeyMatchStateHandler(getKeyedState(mapStateDescriptor));
 				break;
 			case JOIN_KEY_NOT_CONTAIN_PRIMARY_KEY_MATCH:
-				TypeSerializer<BaseRow> pkSer = (TypeSerializer<BaseRow>) TypeUtils.createSerializer(
+				TypeSerializer<BaseRow> pkSer = (TypeSerializer<BaseRow>) DataTypes.createInternalSerializer(
 						pkProjectCode.expr().resultType());
 				Class<Projection> pkProj = CodeGenUtils.compile(
 						getContainingTask().getUserCodeClassLoader(), pkProjectCode.name(), pkProjectCode.code());
@@ -311,8 +308,7 @@ public abstract class JoinStreamOperator extends AbstractStreamOperator<BaseRow>
 	}
 
 	protected KeyedValueState<BaseRow, Long> createCleanupTimeState(String timeStateName) throws Exception {
-		TypeSerializer<BaseRow> joinKeySer = (TypeSerializer<BaseRow>) TypeUtils.createSerializer(
-				leftKeyType);
+		TypeSerializer<BaseRow> joinKeySer = leftKeyType.createSerializer();
 		TypeSerializer<Long> timeSer = LongSerializer.INSTANCE;
 		KeyedValueStateDescriptor<BaseRow, Long> valueStateDescriptor = new KeyedValueStateDescriptor(
 				"left-" + timeStateName,

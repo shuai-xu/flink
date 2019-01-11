@@ -22,7 +22,7 @@ import org.apache.flink.api.java.io.AbstractCsvOutputFormat;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters;
+import org.apache.flink.table.runtime.conversion.DataStructureConverters;
 
 /**
  * BaseRow csv output format.
@@ -40,7 +40,7 @@ public class BaseRowCsvOutputFormat extends AbstractCsvOutputFormat<BaseRow> {
 	@Override
 	protected Object getSpecificField(BaseRow record, int n) {
 		InternalType type = fieldTypes[n];
-		return InternalTypeConverters.getConverterForType(type).toExternal(record, n);
+		return DataStructureConverters.getConverterForType(type).toExternal(record, n);
 	}
 
 	@Override

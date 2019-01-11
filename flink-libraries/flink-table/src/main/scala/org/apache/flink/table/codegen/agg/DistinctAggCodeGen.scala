@@ -19,11 +19,11 @@
 package org.apache.flink.table.codegen.agg
 
 import java.lang.{Long => JLong}
-
 import org.apache.calcite.tools.RelBuilder
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.dataview.MapView
-import org.apache.flink.table.api.types.{RowType, DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataType, InternalType, TypeConverters}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
 import org.apache.flink.table.codegen.CodeGenUtils.newName
@@ -33,7 +33,6 @@ import org.apache.flink.table.dataformat.GenericRow
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.util.DistinctInfo
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.typeutils.TypeUtils.createTypeInfoFromDataType
 import org.apache.flink.util.Preconditions
 import org.apache.flink.util.Preconditions.checkArgument
 
@@ -80,7 +79,7 @@ class DistinctAggCodeGen(
   val aggCount: Int = innerAggCodeGens.length
   val externalAccType: DataType = distinctInfo.accType
   val keyType: DataType = distinctInfo.keyType
-  val keyTypeTerm: String = createTypeInfoFromDataType(keyType).getTypeClass.getCanonicalName
+  val keyTypeTerm: String = keyType.getTypeClass.getCanonicalName
   val distinctAccTerm: String = s"distinct_view_$distinctIndex"
   val distinctBackupAccTerm: String = s"distinct_backup_view_$distinctIndex"
 
@@ -367,12 +366,12 @@ class DistinctAggCodeGen(
       val keyTerm = newName(DISTINCT_KEY_TERM)
       val valueType = new BaseRowTypeInfo(
         classOf[GenericRow],
-        fieldExprs.map(_.resultType).map(DataTypes.toTypeInfo): _*)
+        fieldExprs.map(_.resultType).map(TypeConverters.createExternalTypeInfoFromDataType): _*)
 
       // always create a new result row
       generator.generateResultExpression(
         fieldExprs,
-        DataTypes.internal(valueType).asInstanceOf[RowType],
+        valueType.toInternalType,
         outRow = keyTerm,
         reusedOutRow = false)
     } else {

@@ -29,12 +29,14 @@ import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironm
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JBatchTableEnvironment, StreamTableEnvironment => JStreamTableEnvironment}
-import org.apache.flink.table.api.scala.{BatchTableEnvironment, StreamTableEnvironment, _}
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.scala.{StreamTableEnvironment, _}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, TypeConverters}
 import org.apache.flink.table.errorcode.TableErrors
 
 import java.util.{ArrayList => JArrayList, HashSet => JHashSet}
-import org.apache.flink.table.api.{Table, TableEnvironment, TableException, TableSchema, _}
+import org.apache.flink.table.api.{TableEnvironment, TableSchema, _}
+import org.apache.flink.table.api.scala.BatchTableEnvironment
+import org.apache.flink.table.api.{Table, TableException, _}
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
@@ -51,8 +53,9 @@ import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.tools.RuleSet
 import org.apache.calcite.util.ImmutableBitSet
-import org.apache.commons.lang3.SystemUtils
 import org.junit.Assert.{assertEquals, _}
+import org.apache.commons.lang3.SystemUtils
+import org.junit.Assert._
 import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}
 import org.mockito.Mockito.{mock, when}
@@ -358,9 +361,9 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
       uniqueKeys: Set[Set[String]],
       fields: Expression*): Table = {
     val typeInfo: TypeInformation[T] = implicitly[TypeInformation[T]]
-    val physicalSchema = TableSchemaUtil.fromDataType(DataTypes.of(typeInfo))
+    val physicalSchema = TableSchemaUtil.fromDataType(typeInfo)
     val (fieldNames, fieldIdxs) =
-      tableEnv.getFieldInfo(DataTypes.of(typeInfo), fields.toArray)
+      tableEnv.getFieldInfo(typeInfo, fields.toArray)
     val fieldTypes = fieldIdxs.map(physicalSchema.getType)
     val tableSchema = new TableSchema(fieldNames, fieldTypes)
     val mapping = fieldNames.zipWithIndex.map {
@@ -613,7 +616,7 @@ class NullableBatchTableTestUtil(fieldsNullable: Boolean, test: TableTestBase)
       case _ => throw new TableException(s"Unsupported type info: $typeInfo")
     }
     val fieldNullables = Array.fill(fields.size)(fieldsNullable)
-    val (fieldNames, _) = tableEnv.getFieldInfo(DataTypes.of(typeInfo), fields.toArray)
+    val (fieldNames, _) = tableEnv.getFieldInfo(typeInfo, fields.toArray)
     val ts = new TestTableSourceWithFieldNullables(fieldNames, fieldTypes, fieldNullables)
     tableEnv.registerTableSource(name, ts)
     tableEnv.scan(name)
@@ -653,7 +656,8 @@ class TestBatchTableSource(tableSchema: TableSchema,
     val bs = mock(classOf[JDataStream[Row]])
     when(bs.getTransformation).thenReturn(transformation)
     when(transformation.getOutputType).thenReturn(
-      DataTypes.toTypeInfo(getReturnType).asInstanceOf[TypeInformation[Row]])
+      TypeConverters.createExternalTypeInfoFromDataType(getReturnType)
+          .asInstanceOf[TypeInformation[Row]])
     bs
   }
 

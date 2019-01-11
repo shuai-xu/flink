@@ -34,7 +34,8 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.functions.ScalarFunction
-import org.apache.flink.table.api.types.{DataTypes, RowType}
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, TableEnvironment}
 import org.apache.flink.table.calcite.FlinkPlannerImpl
 import org.apache.flink.table.catalog.CatalogManager
@@ -44,7 +45,7 @@ import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCalc, BatchExecScan}
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters.createToInternalConverter
+import org.apache.flink.table.runtime.conversion.DataStructureConverters.createToInternalConverter
 import org.apache.flink.types.Row
 
 import org.junit.Assert._
@@ -94,7 +95,7 @@ abstract class ExpressionTestBase {
 
     val env = StreamExecutionEnvironment.createLocalEnvironment(4)
     val tEnv = TableEnvironment.getBatchTableEnvironment(env, config)
-    tEnv.registerCollection(tableName, Seq(), DataTypes.toTypeInfo(t))
+    tEnv.registerCollection(tableName, Seq(), TypeConverters.createExternalTypeInfoFromDataType(t))
     functions.foreach(f => tEnv.registerFunction(f._1, f._2))
 
     // prepare RelBuilder
@@ -109,14 +110,16 @@ abstract class ExpressionTestBase {
   }
 
   def rowToBaseRow(row: Row): BaseRow = {
-    createToInternalConverter(DataTypes.of(rowType)).apply(row).asInstanceOf[BaseRow]
+    createToInternalConverter(rowType).apply(row).asInstanceOf[BaseRow]
   }
 
   def baseRowTestData: BaseRow = rowToBaseRow(rowTestData)
 
   def rowTestData: Row
 
-  def baseRowType: RowType = DataTypes.internal(rowType).asInstanceOf[RowType]
+  def getDataType: DataType = rowType
+
+  def baseRowType: RowType = getDataType.toInternalType.asInstanceOf[RowType]
 
   def rowType: RowTypeInfo
 

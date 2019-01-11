@@ -23,20 +23,34 @@ package org.apache.flink.table.api.types;
  */
 public class MapType extends InternalType {
 
-	private final InternalType keyType;
-	private final InternalType valueType;
+	private final DataType keyType;
+	private final DataType valueType;
 
-	public MapType(InternalType keyType, InternalType valueType) {
+	public MapType(DataType keyType, DataType valueType) {
+		if (keyType == null) {
+			throw new IllegalArgumentException("keyType should not be null.");
+		}
+		if (valueType == null) {
+			throw new IllegalArgumentException("valueType should not be null.");
+		}
 		this.keyType = keyType;
 		this.valueType = valueType;
 	}
 
-	public InternalType getKeyType() {
+	public DataType getKeyType() {
 		return keyType;
 	}
 
-	public InternalType getValueType() {
+	public DataType getValueType() {
 		return valueType;
+	}
+
+	public InternalType getKeyInternalType() {
+		return keyType.toInternalType();
+	}
+
+	public InternalType getValueInternalType() {
+		return valueType.toInternalType();
 	}
 
 	@Override
@@ -50,14 +64,14 @@ public class MapType extends InternalType {
 
 		MapType mapType = (MapType) o;
 
-		return keyType.equals(mapType.keyType) &&
-				valueType.equals(mapType.valueType);
+		return getKeyInternalType().equals(mapType.getKeyInternalType()) &&
+				getValueInternalType().equals(mapType.getValueInternalType());
 	}
 
 	@Override
 	public int hashCode() {
-		int result = keyType.hashCode();
-		result = 31 * result + valueType.hashCode();
+		int result = getKeyInternalType().hashCode();
+		result = 31 * result + getValueInternalType().hashCode();
 		return result;
 	}
 }

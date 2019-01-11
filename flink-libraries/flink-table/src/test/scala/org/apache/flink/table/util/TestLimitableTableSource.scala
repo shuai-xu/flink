@@ -24,7 +24,8 @@ import org.apache.flink.api.java.io.CollectionInputFormat
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.sources._
 import org.apache.flink.types.Row
 
@@ -74,7 +75,7 @@ class TestLimitableTableSource(
   override def isLimitPushedDown: Boolean = limitablePushedDown
 
   /** Returns the [[TypeInformation]] for the return type of the [[TableSource]]. */
-  override def getReturnType: DataType = DataTypes.of(rowType)
+  override def getReturnType: DataType = rowType
 
   /** Describes the table source, it will be used for computing qualified names of
    * [[org.apache.flink.table.plan.schema.FlinkRelOptTable]].

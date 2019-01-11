@@ -34,6 +34,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.api.java.tuple.Tuple
 import org.apache.flink.api.java.typeutils._
 import org.apache.flink.api.scala.typeutils.{CaseClassSerializer, CaseClassTypeInfo}
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.types.{DataTypes, _}
 import org.apache.flink.table.codegen.CodeGenUtils._
@@ -51,9 +52,9 @@ import org.apache.flink.util.InstantiationUtil
 /**
  * Functions to convert Scala types to internal types.
  */
-object InternalTypeConverters {
+object DataStructureConverters {
 
-  def getConverterForType(t: DataType): InternalTypeConverter[Any, Any, Any] = {
+  def getConverterForType(t: DataType): DataStructureConverter[Any, Any, Any] = {
     val converter = t match {
       case DataTypes.STRING => StringConverter
       case DataTypes.INTERVAL_MILLIS => LongConverter
@@ -87,17 +88,16 @@ object InternalTypeConverters {
       case tw: TypeInfoWrappedDataType =>
         tw.getTypeInfo match {
           case pa: PrimitiveArrayTypeInfo[_] if pa != BYTE_PRIMITIVE_ARRAY_TYPE_INFO =>
-            PrimitiveArrayConverter(DataTypes.of(pa.getComponentType))
+            PrimitiveArrayConverter(pa.getComponentType)
           case ba: BasicArrayTypeInfo[_, _] =>
-            ObjectArrayConverter(ba.getTypeClass, DataTypes.of(ba.getComponentInfo))
+            ObjectArrayConverter(ba.getTypeClass, ba.getComponentInfo)
           case oa: ObjectArrayTypeInfo[_, _] =>
-            ObjectArrayConverter(oa.getTypeClass, DataTypes.of(oa.getComponentInfo))
+            ObjectArrayConverter(oa.getTypeClass, oa.getComponentInfo)
           case mt: MapTypeInfo[_, _]
             if isPrimitive(mt.getKeyTypeInfo) && isPrimitive(mt.getValueTypeInfo) =>
-            PrimitiveMapConverter(
-              DataTypes.of(mt.getKeyTypeInfo), DataTypes.of(mt.getValueTypeInfo))
+            PrimitiveMapConverter(mt.getKeyTypeInfo, mt.getValueTypeInfo)
           case mt: MapTypeInfo[_, _] =>
-            ObjectMapConverter(DataTypes.of(mt.getKeyTypeInfo), DataTypes.of(mt.getValueTypeInfo))
+            ObjectMapConverter(mt.getKeyTypeInfo, mt.getValueTypeInfo)
           case pj: PojoTypeInfo[_] => PojoConverter(pj)
           case tt: TupleTypeInfo[_] => TupleConverter(tt)
           case cc: CaseClassTypeInfo[Product] => CaseClassConverter(cc)
@@ -106,10 +106,10 @@ object InternalTypeConverters {
           case _ => getConverterForType(tw.toInternalType)
         }
     }
-    converter.asInstanceOf[InternalTypeConverter[Any, Any, Any]]
+    converter.asInstanceOf[DataStructureConverter[Any, Any, Any]]
   }
 
-  abstract class InternalTypeConverter[ScalaInputType, ExternalOutputType, InternalType]
+  abstract class DataStructureConverter[ScalaInputType, ExternalOutputType, InternalType]
     extends Serializable {
 
     /**
@@ -123,7 +123,8 @@ object InternalTypeConverters {
       }
 
     /**
-      * Convert a internal value to its Java/Scala equivalent while automatically handling nulls.
+      * Convert a internalType value to its Java/Scala equivalent while
+      * automatically handling nulls.
       */
     final def toExternal(@Nullable internalValue: InternalType): ExternalOutputType =
       if (internalValue == null) {
@@ -153,14 +154,14 @@ object InternalTypeConverters {
     def toExternalImpl(internalValue: InternalType): ExternalOutputType
 
     /**
-      * Given a internal row, convert the value at column `column` to its Java/Scala equivalent.
+      * Given a internalType row, convert the value at column `column` to its Java/Scala equivalent.
       * This method will only be called on non-null columns.
       */
     protected def toExternalImpl(row: BaseRow, column: Int): ExternalOutputType
   }
 
   abstract class AbstractBaseRowConverter[T](numField: Int)
-      extends InternalTypeConverter[T, T, BaseRow] {
+      extends DataStructureConverter[T, T, BaseRow] {
     override def toExternalImpl(row: BaseRow, column: Int): T =
       toExternalImpl(row.getBaseRow(column, numField))
   }
@@ -202,8 +203,8 @@ object InternalTypeConverters {
   case class TupleConverter(t: TupleTypeInfo[_])
       extends AbstractBaseRowConverter[Tuple](t.getArity) {
 
-    private[this] val converters =
-      (0 until t.getArity).map(t.getTypeAt).map(DataTypes.of).map(getConverterForType)
+    private[this] val converters = (0 until t.getArity).map(t.getTypeAt)
+        .map(new TypeInfoWrappedDataType(_)).map(getConverterForType)
 
     override def toInternalImpl(tuple: Tuple): BaseRow = {
       val genericRow = new GenericRow(t.getArity)
@@ -229,8 +230,8 @@ object InternalTypeConverters {
   case class CaseClassConverter(t: CaseClassTypeInfo[Product])
       extends AbstractBaseRowConverter[Product](t.getArity) {
 
-    private[this] val converters =
-      (0 until t.getArity).map(t.getTypeAt).map(DataTypes.of).map(getConverterForType)
+    private[this] val converters = (0 until t.getArity).map(t.getTypeAt)
+        .map(new TypeInfoWrappedDataType(_)).map(getConverterForType)
     private val serializer = t.createSerializer(new ExecutionConfig)
         .asInstanceOf[CaseClassSerializer[_]]
 
@@ -259,8 +260,8 @@ object InternalTypeConverters {
   case class PojoConverter(t: PojoTypeInfo[_])
       extends AbstractBaseRowConverter[Any](t.getArity) {
 
-    private[this] val converters =
-      (0 until t.getArity).map(t.getTypeAt).map(DataTypes.of).map(getConverterForType)
+    private[this] val converters = (0 until t.getArity).map(t.getTypeAt)
+        .map(new TypeInfoWrappedDataType(_)).map(getConverterForType)
     private val fields = (0 until t.getArity).map {idx =>
       val field = t.getPojoFieldAt(idx)
       field.getField.setAccessible(true)
@@ -290,7 +291,7 @@ object InternalTypeConverters {
   }
 
   case class PrimitiveArrayConverter(eleType: DataType)
-      extends InternalTypeConverter[Any, Any, BaseArray] {
+      extends DataStructureConverter[Any, Any, BaseArray] {
 
     val internalEleT: InternalType = eleType.toInternalType
 
@@ -314,11 +315,11 @@ object InternalTypeConverters {
 
   case class ObjectArrayConverter(
       typeClass: Class[_],
-      eleType: DataType) extends InternalTypeConverter[Any, Any, BaseArray] {
+      eleType: DataType) extends DataStructureConverter[Any, Any, BaseArray] {
 
     val internalEleT: InternalType = eleType.toInternalType
-    val elementConverter: InternalTypeConverter[Any, Any, Any] = getConverterForType(eleType)
-    val internalEleSer: TypeSerializer[_] = TypeUtils.createSerializer(internalEleT)
+    val elementConverter: DataStructureConverter[Any, Any, Any] = getConverterForType(eleType)
+    val internalEleSer: TypeSerializer[_] = DataTypes.createInternalSerializer(internalEleT)
     private val elementSize = calculateElementSize(internalEleT)
 
     override protected def toInternalImpl(scalaValue: Any): BaseArray = {
@@ -363,7 +364,7 @@ object InternalTypeConverters {
   }
 
   case class PrimitiveMapConverter(keyType: DataType, valueType: DataType)
-      extends InternalTypeConverter[Any, Any, BaseMap] {
+      extends DataStructureConverter[Any, Any, BaseMap] {
 
     private val internalKeyT = keyType.toInternalType
     private val internalValueT = valueType.toInternalType
@@ -375,7 +376,7 @@ object InternalTypeConverters {
       }
 
     override def toExternalImpl(internalValue: BaseMap): Any = {
-      // note that the internal type and the external type for primitive type data are the same,
+      // note that the internalType type and the external type for primitive type data are the same,
       // so we can use `toJavaMap` directly here.
       internalValue.toJavaMap(internalKeyT, internalValueT)
     }
@@ -385,13 +386,13 @@ object InternalTypeConverters {
   }
 
   case class ObjectMapConverter(keyType: DataType, valueType: DataType)
-      extends InternalTypeConverter[Any, Any, BaseMap] {
+      extends DataStructureConverter[Any, Any, BaseMap] {
 
     private val internalKeyT = keyType.toInternalType
     private val internalValueT = valueType.toInternalType
 
-    private val internalKeySer = TypeUtils.createSerializer(internalKeyT)
-    private val internalValueSer = TypeUtils.createSerializer(internalValueT)
+    private val internalKeySer = DataTypes.createInternalSerializer(internalKeyT)
+    private val internalValueSer = DataTypes.createInternalSerializer(internalValueT)
 
     private val keyConverter = getConverterForType(keyType)
     private val valueConverter = getConverterForType(valueType)
@@ -404,7 +405,7 @@ object InternalTypeConverters {
         elementSize: Int,
         elementType: InternalType,
         elementSerializer: TypeSerializer[_],
-        elementConverter: InternalTypeConverter[_, _, _]) = {
+        elementConverter: DataStructureConverter[_, _, _]) = {
 
       val array = new BinaryArray
       val arrayWriter = new BinaryArrayWriter(array, a.length, elementSize)
@@ -472,7 +473,7 @@ object InternalTypeConverters {
       toExternalImpl(row.getBaseMap(column))
   }
 
-  object StringConverter extends InternalTypeConverter[Any, String, BinaryString] {
+  object StringConverter extends DataStructureConverter[Any, String, BinaryString] {
     override def toInternalImpl(scalaValue: Any): BinaryString = scalaValue match {
       case str: String => BinaryString.fromString(str)
       case utf8: BinaryString => utf8
@@ -482,7 +483,7 @@ object InternalTypeConverters {
       row.getBinaryString(column).toString
   }
 
-  object TimestampConverter extends InternalTypeConverter[Timestamp, Timestamp, Any] {
+  object TimestampConverter extends DataStructureConverter[Timestamp, Timestamp, Any] {
     override def toInternalImpl(scalaValue: Timestamp): Long =
       BuildInScalarFunctions.toLong(scalaValue)
     override def toExternalImpl(internalValue: Any): Timestamp =
@@ -491,7 +492,7 @@ object InternalTypeConverters {
       BuildInScalarFunctions.internalToTimestamp(row.getLong(column))
   }
 
-  object DateConverter extends InternalTypeConverter[Date, Date, Any] {
+  object DateConverter extends DataStructureConverter[Date, Date, Any] {
     override def toInternalImpl(scalaValue: Date): Int = BuildInScalarFunctions.toInt(scalaValue)
     override def toExternalImpl(internalValue: Any): Date =
       BuildInScalarFunctions.internalToDate(internalValue.asInstanceOf[Int])
@@ -499,7 +500,7 @@ object InternalTypeConverters {
       BuildInScalarFunctions.internalToDate(row.getInt(column))
   }
 
-  object TimeConverter extends InternalTypeConverter[Time, Time, Any] {
+  object TimeConverter extends DataStructureConverter[Time, Time, Any] {
     override def toInternalImpl(scalaValue: Time): Int = BuildInScalarFunctions.toInt(scalaValue)
     override def toExternalImpl(internalValue: Any): Time =
       BuildInScalarFunctions.internalToTime(internalValue.asInstanceOf[Int])
@@ -507,7 +508,7 @@ object InternalTypeConverters {
       BuildInScalarFunctions.internalToTime(row.getInt(column))
   }
 
-  abstract class IdentityConverter[T] extends InternalTypeConverter[T, Any, Any] {
+  abstract class IdentityConverter[T] extends DataStructureConverter[T, Any, Any] {
     final override def toExternalImpl(internalValue: Any): Any = internalValue
     final override def toInternalImpl(scalaValue: T): Any = scalaValue
   }
@@ -559,7 +560,7 @@ object InternalTypeConverters {
   }
 
   case class DecimalConverter(dt: DecimalType)
-    extends InternalTypeConverter[Any, JBigDecimal, Decimal] {
+    extends DataStructureConverter[Any, JBigDecimal, Decimal] {
     override def toInternalImpl(scalaValue: Any): Decimal = scalaValue match {
       case bd: JBigDecimal => Decimal.fromBigDecimal(bd, dt.precision(), dt.scale())
       case sd: Decimal => sd
@@ -623,7 +624,7 @@ object InternalTypeConverters {
       s"($eTerm) $term"
     } else {
       val scalarFuncTerm = classOf[BuildInScalarFunctions].getCanonicalName
-      DataTypes.to(t) match {
+      TypeConverters.createExternalTypeInfoFromDataType(t) match {
         case Types.STRING => s"$BINARY_STRING.safeToString(($iTerm) $term)"
         case Types.SQL_DATE => s"$scalarFuncTerm.safeInternalToDate(($iTerm) $term)"
         case Types.SQL_TIME => s"$scalarFuncTerm.safeInternalToTime(($iTerm) $term)"
@@ -644,7 +645,7 @@ object InternalTypeConverters {
       term => s"($iTerm) $term"
     } else {
       val scalarFuncTerm = classOf[BuildInScalarFunctions].getCanonicalName
-      DataTypes.to(t) match {
+      TypeConverters.createExternalTypeInfoFromDataType(t) match {
         case Types.STRING => term => s"$BINARY_STRING.fromString($term)"
         case Types.SQL_DATE | Types.SQL_TIME =>
           term => s"$scalarFuncTerm.safeToInt(($eTerm) $term)"

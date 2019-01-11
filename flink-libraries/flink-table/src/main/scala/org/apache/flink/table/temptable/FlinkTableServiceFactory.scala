@@ -18,8 +18,10 @@
 
 package org.apache.flink.table.temptable
 
+import org.apache.flink.table.api.RichTableSchema
+
 import java.util.Collections
-import org.apache.flink.table.api.types.{RowType, DataType, DataTypes}
+import org.apache.flink.table.api.types.{DataType, RowType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.factories.{BatchTableSinkFactory, BatchTableSourceFactory}
 import org.apache.flink.table.sinks.BatchTableSink
@@ -40,10 +42,12 @@ class FlinkTableServiceFactory extends BatchTableSinkFactory[BaseRow]
     new FlinkTableServiceSink(
       tableProperties,
       tableName,
-      new RowType(
-        classOf[BaseRow], schema.getColumnTypes.toArray[DataType], schema.getColumnNames, true)
+      toRowType(schema)
     )
   }
+
+  private def toRowType(schema: RichTableSchema): RowType = new RowType(
+    classOf[BaseRow], schema.getColumnTypes.toArray[DataType], schema.getColumnNames, true)
 
   override def createBatchTableSource(
     properties: java.util.Map[String, String]): BatchTableSource[BaseRow] = {
@@ -55,7 +59,7 @@ class FlinkTableServiceFactory extends BatchTableSinkFactory[BaseRow]
     new FlinkTableServiceSource(
       tableProperties,
       tableName,
-      DataTypes.createBaseRowType(schema.getColumnTypes, schema.getColumnNames)
+      toRowType(schema)
     )
   }
 

@@ -267,7 +267,7 @@ class BatchExecOverAggregate(
     //The generated sort is used for generating the comparator among partitions.
     //So here not care the ASC or DESC for the grouping fields.
     val collation = grouping.map(_ => (true, false))
-    val inputRowType = FlinkTypeFactory.toInternalBaseRowType(inputRelDataType, classOf[BaseRow])
+    val inputRowType = FlinkTypeFactory.toInternalRowType(inputRelDataType, classOf[BaseRow])
     val (comparators, serializers) = TypeUtils.flattenComparatorAndSerializer(
       inputRowType.getArity, grouping, collation.map(_._1),
       inputRowType.getFieldTypes.map(_.toInternalType))
@@ -288,7 +288,8 @@ class BatchExecOverAggregate(
       val inputTypeNamesWithConstants =
         inputRowType.getFieldNames ++ constants.indices.map(i => "TMP" + i)
       val inputTypesWithConstants =
-        inputRowType.getFieldTypes.map(DataTypes.toTypeInfo) ++ constantTypes
+        inputRowType.getFieldTypes.map(
+          TypeConverters.createExternalTypeInfoFromDataType) ++ constantTypes
       val inputTypeWithConstants = logicWindow.getCluster.getTypeFactory
           .asInstanceOf[FlinkTypeFactory]
           .buildLogicalRowType(inputTypeNamesWithConstants, inputTypesWithConstants)
@@ -342,7 +343,8 @@ class BatchExecOverAggregate(
     val constants = logicWindow.constants
     val constantTypes = constants.map(c => FlinkTypeFactory.toTypeInfo(c.getType))
     val inputTypeNamesWithConstants = inType.getFieldNames ++ constants.indices.map(i => "TMP" + i)
-    val inputTypesWithConstants = inType.getFieldTypes.map(DataTypes.toTypeInfo) ++ constantTypes
+    val inputTypesWithConstants = inType.getFieldTypes.map(
+      TypeConverters.createExternalTypeInfoFromDataType) ++ constantTypes
     val inputTypeWithConstants = logicWindow.getCluster.getTypeFactory
         .asInstanceOf[FlinkTypeFactory]
         .buildLogicalRowType(inputTypeNamesWithConstants, inputTypesWithConstants)

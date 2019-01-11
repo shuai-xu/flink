@@ -23,10 +23,11 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.{TableConfig, Types}
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.codegen.CodeGenUtils.{compile, generateCallExpression, newName}
 import org.apache.flink.table.codegen.CodeGeneratorContext.BINARY_STRING
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
+
 import org.junit.Assert._
 import org.junit.{Ignore, Test}
 
@@ -38,7 +39,8 @@ class BinaryStringCallGenTest {
     val ctx = new CodeGeneratorContext(config, true)
     compileAndInvoke(ctx,
       generateCallExpression(
-        ctx, operator, operands, DataTypes.internal(resultType), nullCheck = true))
+        ctx, operator, operands,
+        TypeConverters.createInternalTypeFromTypeInfo(resultType), nullCheck = true))
   }
 
   def compileAndInvoke(ctx: CodeGeneratorContext, expr: GeneratedExpression): Any = {
@@ -76,7 +78,8 @@ class BinaryStringCallGenTest {
     newOperand(term, Types.INT)
 
   def newOperand(resultTerm: String, resultType: TypeInformation[_]): GeneratedExpression =
-    GeneratedExpression(resultTerm, "false", "", DataTypes.internal(resultType))
+    GeneratedExpression(resultTerm, "false", "",
+      TypeConverters.createInternalTypeFromTypeInfo(resultType))
 
   @Test
   def testEquals(): Unit = {

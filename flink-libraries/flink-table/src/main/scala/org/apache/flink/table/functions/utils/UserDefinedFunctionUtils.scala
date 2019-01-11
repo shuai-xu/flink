@@ -32,6 +32,7 @@ import org.apache.flink.api.common.functions.InvalidTypesException
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils._
 import org.apache.flink.table.api.functions._
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableEnvironment, TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.expressions._
@@ -168,7 +169,7 @@ object UserDefinedFunctionUtils {
       signature: Array[Class[_]]): Array[InternalType] = {
     signature.map { c =>
       try {
-        DataTypes.internal(TypeExtractor.getForClass(c))
+        TypeExtractor.getForClass(c).toInternalType
       } catch {
         case ite: InvalidTypesException =>
           throw new ValidationException(
@@ -520,7 +521,7 @@ object UserDefinedFunctionUtils {
       aggregateFunction: AggregateFunction[_, _],
       parameterTypePos: Int): DataType = {
 
-    DataTypes.of(TypeExtractor.createTypeInfo(
+    new TypeInfoWrappedDataType(TypeExtractor.createTypeInfo(
       aggregateFunction,
       classOf[AggregateFunction[_, _]],
       aggregateFunction.getClass,
@@ -543,9 +544,8 @@ object UserDefinedFunctionUtils {
   private[flink] def extractTypeFromScalarFunc(
       function: ScalarFunction,
       argTypes: Array[InternalType]): DataType = {
-    try {
-      DataTypes.of(TypeExtractor.getForClass(
-        getResultTypeClassOfScalarFunction(function, argTypes)))
+    try {TypeExtractor.getForClass(
+        getResultTypeClassOfScalarFunction(function, argTypes))
     } catch {
       case _: InvalidTypesException =>
         throw new ValidationException(
@@ -670,9 +670,7 @@ object UserDefinedFunctionUtils {
 
   private def parameterDataTypeEquals(internal: InternalType, parameterType: DataType): Boolean =
     // There is a special equal to GenericType. We need rewrite type extract to BaseRow etc...
-    parameterType.toInternalType == internal ||
-        DataTypes.toTypeInfo(internal).getTypeClass ==
-            DataTypes.toTypeInfo(parameterType).getTypeClass
+    parameterType.toInternalType == internal || internal.getTypeClass == parameterType.getTypeClass
 
   @throws[Exception]
   def serialize(function: UserDefinedFunction): String = {
@@ -889,8 +887,7 @@ object UserDefinedFunctionUtils {
 
   def getImplicitResultType[T](tf: TableFunction[T]) = {
     val implicitResultType = try {
-      DataTypes.of(TypeExtractor
-        .createTypeInfo(tf, classOf[TableFunction[_]], tf.getClass, 0))
+      TypeExtractor.createTypeInfo(tf, classOf[TableFunction[_]], tf.getClass, 0)
     } catch {
       case e: InvalidTypesException =>
         // may be we should get type from getResultType
@@ -907,8 +904,7 @@ object UserDefinedFunctionUtils {
     */
   def getImplicitResultTypeInfo[T](tf: TableFunction[T]): TypeInformation[T] = {
     val implicitResultType = try {
-      TypeExtractor
-        .createTypeInfo(tf, classOf[TableFunction[_]], tf.getClass, 0)
+      TypeExtractor.createTypeInfo(tf, classOf[TableFunction[_]], tf.getClass, 0)
     } catch {
       case _: InvalidTypesException =>
         new GenericTypeInfo(classOf[AnyRef])

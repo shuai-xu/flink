@@ -19,12 +19,12 @@
 package org.apache.flink.table.util
 
 import java.util.{Set => JSet}
-
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableSchema
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.sources._
 
 import scala.collection.JavaConversions._
@@ -45,7 +45,7 @@ class TestTableSourceWithUniqueKeys[T](
     execEnv.fromCollection(rows.asJava, rowType)
   }
 
-  override def getReturnType: DataType = DataTypes.of(rowType)
+  override def getReturnType: DataType = rowType
 
   override def getTableSchema: TableSchema = {
     val builder = TableSchema.builder()

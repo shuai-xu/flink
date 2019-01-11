@@ -23,8 +23,8 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.io.AbstractRowCsvInputFormat;
 import org.apache.flink.core.fs.FileInputSplit;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryString;
 import org.apache.flink.table.dataformat.Decimal;
@@ -60,7 +60,7 @@ public class BaseRowCsvInputFormat extends AbstractRowCsvInputFormat<BaseRow> {
 	public BaseRowCsvInputFormat(
 			Path filePath, InternalType[] fieldTypes, String lineDelimiter,
 			String fieldDelimiter, int[] selectedFields, boolean emptyColumnAsNull, long limit) {
-		super(filePath, DataTypes.toTypeInfos(fieldTypes), lineDelimiter, fieldDelimiter,
+		super(filePath, TypeConverters.createExternalTypeInfoFromDataTypes(fieldTypes), lineDelimiter, fieldDelimiter,
 				selectedFields, emptyColumnAsNull, limit);
 	}
 

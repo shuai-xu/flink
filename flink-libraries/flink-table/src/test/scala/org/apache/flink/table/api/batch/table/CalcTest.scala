@@ -22,9 +22,10 @@ import org.apache.flink.api.scala.createTypeInformation
 import org.apache.flink.table.api.batch.table.CalcTest.{MyHashCode, TestCaseClass, WC, giveMeCaseClass}
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.expressions.Upper
 import org.apache.flink.table.util.TableTestBase
+
 import org.junit.Test
 
 class CalcTest extends TableTestBase {
@@ -189,7 +190,7 @@ object CalcTest {
     }
 
     override def getResultType(arguments: Array[AnyRef], argTypes: Array[Class[_]]): DataType = {
-      DataTypes.of(createTypeInformation[TestCaseClass])
+      createTypeInformation[TestCaseClass]
     }
   }
 

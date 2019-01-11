@@ -29,16 +29,16 @@ import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableException, TableSchema}
 import org.apache.flink.table.sources.StreamTableSource
-import org.apache.flink.table.api.types.{DataType, InternalType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, TypeConverters}
 import org.apache.flink.table.util._
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.runtime.utils.{CommonTestData, StreamingTestBase, TestingAppendSink}
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sources.wmstrategies.PunctuatedWatermarkAssigner
 import org.apache.flink.table.util.{TestFilterableTableSource, TestPartitionableTableSource, TestTableSourceWithTime}
 import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
+
 import org.junit.Assert._
 import org.junit.Test
 
@@ -62,7 +62,8 @@ class TableSourceITCase extends StreamingTestBase {
         // return DataStream[Row] with GenericTypeInfo
         execEnv.fromCollection(data, new GenericTypeInfo[Row](classOf[Row]))
       }
-      override def getReturnType: DataType = DataTypes.createRowType(fieldTypes, fieldNames)
+      override def getReturnType: DataType =
+        DataTypes.createRowType(fieldTypes.toArray[DataType], fieldNames)
       override def getTableSchema: TableSchema = new TableSchema(fieldNames, fieldTypes)
     }
     tEnv.registerTableSource("T", tableSource)
@@ -737,8 +738,8 @@ class TableSourceITCase extends StreamingTestBase {
     )
     val tableSchema = new TableSchema(
       Array("id", "deepNested", "nested", "name"),
-      Array(DataTypes.LONG, DataTypes.internal(deepNested),
-        DataTypes.internal(nested1), DataTypes.STRING))
+      Array(DataTypes.LONG, TypeConverters.createInternalTypeFromTypeInfo(deepNested),
+        TypeConverters.createInternalTypeFromTypeInfo(nested1), DataTypes.STRING))
 
     val returnType = new RowTypeInfo(
       Array(Types.LONG, deepNested, nested1, Types.STRING).asInstanceOf[Array[TypeInformation[_]]],

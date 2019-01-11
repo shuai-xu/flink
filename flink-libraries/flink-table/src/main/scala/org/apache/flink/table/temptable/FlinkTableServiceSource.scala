@@ -18,19 +18,18 @@
 
 package org.apache.flink.table.temptable
 
-import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.service.ServiceRegistryFactory
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.source.{RichParallelSourceFunction, SourceFunction}
 import org.apache.flink.table.api.TableSchema
-import org.apache.flink.table.api.types.{RowType, DataType, DataTypes}
+import org.apache.flink.table.api.types.{DataType, DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sources.{BatchTableSource, StreamTableSource}
 import org.apache.flink.table.temptable.rpc.TableServiceClient
 import org.apache.flink.table.temptable.util.TableServiceUtil
-import org.apache.flink.table.typeutils.{BaseRowSerializer, TypeUtils}
+import org.apache.flink.table.typeutils.BaseRowSerializer
 import org.apache.flink.table.util.{TableProperties, TableSchemaUtil}
 
 import scala.collection.JavaConverters._
@@ -48,7 +47,7 @@ class FlinkTableServiceSource(
         tableName,
         resultType)
     ).returns(
-      DataTypes.to(resultType).asInstanceOf[TypeInformation[BaseRow]]
+      TypeConverters.toBaseRowTypeInfo(resultType)
     )
   }
 
@@ -58,7 +57,7 @@ class FlinkTableServiceSource(
       tableName,
       resultType)
     ).returns(
-      DataTypes.to(resultType).asInstanceOf[TypeInformation[BaseRow]]
+      TypeConverters.toBaseRowTypeInfo(resultType)
     )
   }
 
@@ -86,7 +85,7 @@ class FlinkTableServiceSourceFunction(
     flinkTableServiceClient.setRegistry(ServiceRegistryFactory.getRegistry)
     flinkTableServiceClient.open(tableProperties)
     baseRowSerializer =
-      TypeUtils.createSerializer(resultType).asInstanceOf[BaseRowSerializer[BaseRow]]
+      DataTypes.createInternalSerializer(resultType).asInstanceOf[BaseRowSerializer[BaseRow]]
     val maxRetry = parameters
       .getInteger(TableServiceOptions.TABLE_SERVICE_READY_RETRY_TIMES)
     val backOffMs = parameters

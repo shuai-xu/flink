@@ -23,7 +23,7 @@ import org.apache.flink.formats.avro.generated.DifferentSchemaRecord;
 import org.apache.flink.formats.avro.generated.SchemaRecord;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.Types;
-import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.TypeConverters;
 
 import org.junit.Test;
 
@@ -57,7 +57,7 @@ public abstract class KafkaAvroTableSourceTestBase extends KafkaTableSourceBuild
 		KafkaAvroTableSource source = (KafkaAvroTableSource) b.build();
 
 		// check return type
-		RowTypeInfo returnType = (RowTypeInfo) DataTypes.toTypeInfo(source.getReturnType());
+		RowTypeInfo returnType = (RowTypeInfo) TypeConverters.createExternalTypeInfoFromDataType(source.getReturnType());
 		assertNotNull(returnType);
 		assertEquals(5, returnType.getArity());
 		// check field names
@@ -77,7 +77,7 @@ public abstract class KafkaAvroTableSourceTestBase extends KafkaTableSourceBuild
 		assertNull(source.getFieldMapping());
 
 		// check if DataStream type matches with TableSource.getReturnType()
-		assertEquals(DataTypes.toTypeInfo(source.getReturnType()),
+		assertEquals(TypeConverters.createExternalTypeInfoFromDataType(source.getReturnType()),
 			source.getDataStream(StreamExecutionEnvironment.getExecutionEnvironment()).getType());
 	}
 
@@ -99,7 +99,7 @@ public abstract class KafkaAvroTableSourceTestBase extends KafkaTableSourceBuild
 		KafkaAvroTableSource source = (KafkaAvroTableSource) b.build();
 
 		// check return type
-		RowTypeInfo returnType = (RowTypeInfo) DataTypes.toTypeInfo(source.getReturnType());
+		RowTypeInfo returnType = (RowTypeInfo) TypeConverters.createExternalTypeInfoFromDataType(source.getReturnType());
 		assertNotNull(returnType);
 		assertEquals(6, returnType.getArity());
 		// check field names
@@ -126,7 +126,7 @@ public abstract class KafkaAvroTableSourceTestBase extends KafkaTableSourceBuild
 		assertEquals("otherField3", fieldMapping.get("field3"));
 
 		// check if DataStream type matches with TableSource.getReturnType()
-		assertEquals(DataTypes.toTypeInfo(source.getReturnType()),
+		assertEquals(TypeConverters.createExternalTypeInfoFromDataType(source.getReturnType()),
 			source.getDataStream(StreamExecutionEnvironment.getExecutionEnvironment()).getType());
 	}
 }

@@ -25,6 +25,7 @@ import org.apache.flink.streaming.api.operators.StreamSink;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.types.Row;
 
 import org.junit.Test;
@@ -46,7 +47,7 @@ public class JDBCAppendTableSinkTest {
 		DataTypes.STRING
 	};
 	private static final TypeInformation ROW_TYPE =
-			DataTypes.to(DataTypes.createRowType(FIELD_TYPES, FIELD_NAMES));
+			TypeConverters.createExternalTypeInfoFromDataType(DataTypes.createRowType(FIELD_TYPES, FIELD_NAMES));
 
 	@Test
 	public void testAppendTableSink() throws IOException {

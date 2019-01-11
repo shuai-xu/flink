@@ -24,6 +24,7 @@ import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.GenericType;
+import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
 import org.apache.flink.table.runtime.functions.aggfunctions.hyperloglog.HyperLogLogPlusPlus;
 import org.apache.flink.table.typeutils.BinaryStringTypeInfo;
 
@@ -234,7 +235,7 @@ public class ApproximateCountDistinct {
 
 		@Override
 		public DataType getValueTypeInfo() {
-			return DataTypes.of(BinaryStringTypeInfo.INSTANCE);
+			return new TypeInfoWrappedDataType(BinaryStringTypeInfo.INSTANCE);
 		}
 	}
 }

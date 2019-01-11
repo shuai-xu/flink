@@ -149,7 +149,8 @@ class BatchExecSink[T](
             "BoundedStreamSinkConversion",
             withChangeFlag,
             resultType,
-            tableEnv.getConfig)
+            tableEnv.getConfig,
+            sink)
         new DataStream(tableEnv.streamEnv, convertTransformation)
       case _ =>
         throw new TableException("Cannot generate BoundedStream due to an invalid logical plan. " +
@@ -176,7 +177,8 @@ class BatchExecSink[T](
     name: String,
     withChangeFlag: Boolean,
     resultType: DataType,
-    config: TableConfig): StreamTransformation[OUT] = {
+    config: TableConfig,
+    sink: TableSink[_]): StreamTransformation[OUT] = {
     val (converterOperator, outputTypeInfo) = generateRowConverterOperator[IN, OUT](
       config,
       CodeGeneratorContext(config, supportReference = true),
@@ -185,7 +187,8 @@ class BatchExecSink[T](
       name,
       None,
       withChangeFlag,
-      resultType)
+      resultType,
+      sink)
     converterOperator match {
       case None => input.asInstanceOf[StreamTransformation[OUT]]
       case Some(operator) =>

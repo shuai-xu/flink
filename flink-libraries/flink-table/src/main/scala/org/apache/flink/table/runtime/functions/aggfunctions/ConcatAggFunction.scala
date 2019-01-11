@@ -21,7 +21,8 @@ import java.lang.{Iterable => JIterable}
 import java.util.{List => JList}
 import org.apache.flink.table.api.dataview.ListView
 import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.api.types.{RowType, DataType, DataTypes}
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.runtime.functions.aggfunctions.ConcatAggFunction._
 import org.apache.flink.table.dataformat.{BinaryString, GenericRow}
 import org.apache.flink.table.typeutils.BinaryStringTypeInfo
@@ -104,9 +105,9 @@ class ConcatAggFunction extends AggregateFunction[BinaryString, GenericRow] {
   override def createAccumulator(): GenericRow = {
     val acc = new GenericRow(2)
     // list
-    acc.update(0, new ListView[BinaryString](DataTypes.of(BinaryStringTypeInfo.INSTANCE)))
+    acc.update(0, new ListView[BinaryString](BinaryStringTypeInfo.INSTANCE))
     // retractList
-    acc.update(1, new ListView[BinaryString](DataTypes.of(BinaryStringTypeInfo.INSTANCE)))
+    acc.update(1, new ListView[BinaryString](BinaryStringTypeInfo.INSTANCE))
     acc
   }
 

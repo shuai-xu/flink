@@ -95,7 +95,7 @@ object BatchExecRel {
   }
 
   private[flink] def binaryRowAverageSize(rel: RelNode): Double = {
-    val binaryType = FlinkTypeFactory.toInternalBaseRowType(rel.getRowType, classOf[BinaryRow])
+    val binaryType = FlinkTypeFactory.toInternalRowType(rel.getRowType, classOf[BinaryRow])
     val mq = FlinkRelMetadataQuery.reuseOrCreate(rel.getCluster.getMetadataQuery)
     val columnSizes = mq.getAverageColumnSizes(rel)
     var length = 0d

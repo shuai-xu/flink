@@ -35,7 +35,7 @@ import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, 
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
+import org.apache.flink.table.runtime.conversion.DataStructureConverters._
 import org.apache.flink.table.typeutils.TypeUtils
 
 import scala.collection.JavaConverters._
@@ -275,7 +275,7 @@ trait BatchExecAggregateCodeGen {
       case (aggBufVar, initExpr) =>
         val resultCode = aggBufVar.resultType match {
           case _: StringType | _: RowType | _: ArrayType | _: MapType =>
-            val serializer = TypeUtils.createSerializer(aggBufVar.resultType)
+            val serializer = DataTypes.createInternalSerializer(aggBufVar.resultType)
             val term = ctx.addReusableObject(
               serializer, "serializer", serializer.getClass.getCanonicalName)
             s"$term.copy(${initExpr.resultTerm})"
@@ -583,7 +583,7 @@ trait BatchExecAggregateCodeGen {
       name,
       processCode,
       endInputCode,
-      FlinkTypeFactory.toInternalBaseRowType(inputRelDataType, classOf[BaseRow]),
+      FlinkTypeFactory.toInternalRowType(inputRelDataType, classOf[BaseRow]),
       config,
       lazyInputUnboxingCode = true)
   }

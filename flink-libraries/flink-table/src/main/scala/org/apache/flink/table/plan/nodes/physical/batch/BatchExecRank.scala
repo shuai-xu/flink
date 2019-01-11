@@ -242,7 +242,7 @@ class BatchExecRank(
     // (order[is_asc], null_is_last)
     val partitionBySortCollation = partitionBySortingKeys.map(_ => (true, true))
 
-    val inputRowType = FlinkTypeFactory.toInternalBaseRowType(getInput.getRowType, classOf[BaseRow])
+    val inputRowType = FlinkTypeFactory.toInternalRowType(getInput.getRowType, classOf[BaseRow])
     val (partitionByComparators, partitionBySerializers) = TypeUtils.flattenComparatorAndSerializer(
       inputRowType.getArity,
       partitionBySortingKeys,

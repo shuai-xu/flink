@@ -19,7 +19,6 @@
 package org.apache.flink.table.codegen.calls
 
 import java.lang.reflect.Method
-
 import org.apache.calcite.avatica.util.{TimeUnit, TimeUnitRange}
 import org.apache.calcite.sql.SqlOperator
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
@@ -28,6 +27,7 @@ import org.apache.flink.table.api.types._
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions.{COSH, _}
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.functions.utils.{ScalarSqlFunction, TableSqlFunction}
+import org.apache.flink.table.typeutils.TypeUtils
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -1202,7 +1202,7 @@ object FunctionGenerator {
           && entry._1._2.length == operandTypes.length
           && entry._1._2.zip(operandTypes).forall {
           case (x: DecimalType, y: DecimalType) => true
-          case (x: PrimitiveType, y: PrimitiveType) => DataTypes.shouldAutoCastTo(y, x) || x == y
+          case (x: PrimitiveType, y: PrimitiveType) => TypeUtils.shouldAutoCastTo(y, x) || x == y
           case (x: InternalType, y: InternalType) => x == y
           case _ => false
         }).map(_._2))

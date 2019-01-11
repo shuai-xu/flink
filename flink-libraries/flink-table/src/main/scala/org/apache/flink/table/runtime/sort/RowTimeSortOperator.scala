@@ -20,7 +20,6 @@ package org.apache.flink.table.runtime.sort
 
 import java.lang.{Long => JLong}
 
-import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.api.common.typeutils.base.LongSerializer
 import org.apache.flink.runtime.operators.sort.{IndexedSorter, QuickSort}
 import org.apache.flink.runtime.state.keyed.{KeyedListState, KeyedListStateDescriptor, KeyedValueState, KeyedValueStateDescriptor}
@@ -29,8 +28,7 @@ import org.apache.flink.streaming.api.operators._
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.table.codegen.GeneratedSorter
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.sort.BinaryInMemorySortBuffer
-import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowTypeInfo, BinaryRowSerializer, TypeUtils}
+import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowTypeInfo, BinaryRowSerializer}
 
 /**
   * Sort based on event-time and possibly additional secondary sort attributes.
@@ -60,8 +58,7 @@ class RowTimeSortOperator(
   override def open() {
     super.open()
 
-    val recordSerializer = TypeUtils.createSerializer(
-      inputRowType).asInstanceOf[TypeSerializer[BaseRow]]
+    val recordSerializer = inputRowType.createSerializer()
     val dataStateDescriptor = new KeyedListStateDescriptor(
       "dataState",
       LongSerializer.INSTANCE,

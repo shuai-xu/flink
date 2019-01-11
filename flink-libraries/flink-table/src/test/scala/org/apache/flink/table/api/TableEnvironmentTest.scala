@@ -24,7 +24,7 @@ import org.apache.flink.api.java.tuple.{Tuple3 => JTuple3}
 import org.apache.flink.api.scala.typeutils.UnitTypeInfo
 import org.apache.flink.table.api.TableEnvironmentTest._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.types.{DataType, DataTypes, TypeConverters}
 import org.apache.flink.table.api.types.DataTypes.{PROCTIME_INDICATOR => PROCTIME}
 import org.apache.flink.table.api.types.DataTypes.{ROWTIME_INDICATOR => ROWTIME}
 import org.apache.flink.table.api.types.DataTypes._
@@ -34,6 +34,7 @@ import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.MemoryTableSourceSinkUtil.UnsafeMemoryAppendTableSink
 import org.apache.flink.table.util.{TableSchemaUtil, TableTestBase}
 import org.apache.flink.types.Row
+
 import org.junit.Test
 
 class TableEnvironmentTest extends TableTestBase {
@@ -119,14 +120,14 @@ class TableEnvironmentTest extends TableTestBase {
 
     assert(tableSchema.getColumnNames.sameElements(Array("a", "b")))
     assert(TableSchemaUtil.toRowType(tableSchema) ==
-        DataTypes.internal(CatalogTestUtil.getRowTypeInfo))
+        TypeConverters.createInternalTypeFromTypeInfo(CatalogTestUtil.getRowTypeInfo))
 
     // test table inference
     tableSchema = tEnv.scan("t1").getSchema
 
     assert(tableSchema.getColumnNames.sameElements(Array("a", "b")))
     assert(TableSchemaUtil.toRowType(tableSchema) ==
-        DataTypes.internal(CatalogTestUtil.getRowTypeInfo))
+        TypeConverters.createInternalTypeFromTypeInfo(CatalogTestUtil.getRowTypeInfo))
   }
 
   @Test(expected = classOf[TableException])
@@ -388,11 +389,11 @@ class TableEnvironmentTest extends TableTestBase {
       // any type info
       util.verifySchema(
         util.addTable[Unit](),
-        Seq("f0" -> DataTypes.internal(new UnitTypeInfo())))
+        Seq("f0" -> TypeConverters.createInternalTypeFromTypeInfo(new UnitTypeInfo())))
 
       util.verifySchema(
         util.addTable[Unit]('unit),
-        Seq("unit" -> DataTypes.internal(new UnitTypeInfo())))
+        Seq("unit" -> TypeConverters.createInternalTypeFromTypeInfo(new UnitTypeInfo())))
     }
   }
 
@@ -543,19 +544,23 @@ class TableEnvironmentTest extends TableTestBase {
     // any type info
     util.verifySchema(
       util.addTable[Unit]('proctime.proctime, 'unit),
-      Seq("proctime" -> PROCTIME, "unit" -> DataTypes.internal(new UnitTypeInfo())))
+      Seq("proctime" -> PROCTIME,
+        "unit" -> TypeConverters.createInternalTypeFromTypeInfo(new UnitTypeInfo())))
 
     util.verifySchema(
       util.addTable[Unit]('rowtime.rowtime, 'unit),
-      Seq("rowtime" -> ROWTIME, "unit" -> DataTypes.internal(new UnitTypeInfo())))
+      Seq("rowtime" -> ROWTIME,
+        "unit" -> TypeConverters.createInternalTypeFromTypeInfo(new UnitTypeInfo())))
 
     util.verifySchema(
       util.addTable[Unit]('unit, 'proctime.proctime),
-      Seq("unit" -> DataTypes.internal(new UnitTypeInfo()), "proctime" -> PROCTIME))
+      Seq("unit" -> TypeConverters.createInternalTypeFromTypeInfo(
+        new UnitTypeInfo()), "proctime" -> PROCTIME))
 
     util.verifySchema(
       util.addTable[Unit]('unit, 'rowtime.rowtime),
-      Seq("unit" -> DataTypes.internal(new UnitTypeInfo()), "rowtime" -> ROWTIME))
+      Seq("unit" -> TypeConverters.createInternalTypeFromTypeInfo
+      (new UnitTypeInfo()), "rowtime" -> ROWTIME))
   }
 
   @Test

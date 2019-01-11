@@ -24,13 +24,13 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.RowType;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.ProjectableTableSource;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
-import org.apache.flink.table.typeutils.TypeUtils;
 import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.util.Preconditions;
 
@@ -145,7 +145,7 @@ public class HBaseTableSource implements BatchTableSource<GenericRow>, Projectab
 	public DataStream<GenericRow> getBoundedStream(StreamExecutionEnvironment streamEnv) {
 		return streamEnv.createInput(
 			new HBaseRowInputFormat(conf, tableName, hBaseSchema),
-				(BaseRowTypeInfo) TypeUtils.toBaseRowTypeInfo(getReturnType()),
+				(BaseRowTypeInfo) TypeConverters.toBaseRowTypeInfo(getReturnType()),
 			explainSource());
 	}
 

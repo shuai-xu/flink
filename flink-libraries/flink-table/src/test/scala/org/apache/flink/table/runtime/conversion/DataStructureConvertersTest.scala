@@ -21,12 +21,12 @@ package org.apache.flink.table.runtime.conversion
 import java.util.{Map => JavaMap}
 import org.apache.flink.api.java.typeutils.TypeExtractor
 import org.apache.flink.api.scala.createTypeInformation
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types._
 import org.apache.flink.table.dataformat.BinaryString.fromString
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.dataformat.util.BaseRowUtil
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
-import org.apache.flink.table.typeutils.TypeUtils
+import org.apache.flink.table.runtime.conversion.DataStructureConverters._
 import org.apache.flink.types.Row
 
 import org.junit.Assert.{assertEquals, assertTrue}
@@ -34,7 +34,7 @@ import org.junit.Test
 
 import scala.collection.JavaConverters._
 
-class InternalTypeConvertersTest {
+class DataStructureConvertersTest {
 
   private val simpleTypes: Seq[DataType] = Seq(
     DataTypes.STRING,
@@ -91,7 +91,8 @@ class InternalTypeConvertersTest {
       javaArray.zipWithIndex.foreach { case (field, index) =>
         if (field == null) {
           writer.setNullAt(index, t)
-        } else BaseRowUtil.write(writer, index, field, t, TypeUtils.createSerializer(t))
+        } else BaseRowUtil.write(writer, index, field, t,
+          DataTypes.createInternalSerializer(t))
       }
       writer.complete()
       array
@@ -126,7 +127,7 @@ class InternalTypeConvertersTest {
   @Test
   def testCaseClass(): Unit = {
     val value = MyCaseClass(5, 10)
-    val t = DataTypes.of(createTypeInformation[MyCaseClass])
+    val t: DataType = createTypeInformation[MyCaseClass]
     val internal = createToInternalConverter(t)(value).asInstanceOf[GenericRow]
     assertEquals(5, internal.getField(0))
     assertEquals(10, internal.getField(1))
@@ -146,7 +147,7 @@ class InternalTypeConvertersTest {
   @Test
   def testPojo(): Unit = {
     val value = new MyPojo(5, 10)
-    val t = DataTypes.of(TypeExtractor.createTypeInfo(value.getClass))
+    val t: DataType = TypeExtractor.createTypeInfo(value.getClass)
     val internal = createToInternalConverter(t)(value).asInstanceOf[GenericRow]
     assertEquals(5, internal.getField(0))
     assertEquals(10, internal.getField(1))

@@ -25,9 +25,9 @@ import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.memory.AbstractPagedInputView;
 import org.apache.flink.runtime.memory.AbstractPagedOutputView;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.RowType;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.codegen.CodeGenUtils;
 import org.apache.flink.table.codegen.CodeGeneratorContext;
 import org.apache.flink.table.codegen.GeneratedProjection;
@@ -70,7 +70,7 @@ public class BaseRowSerializer<T extends BaseRow> extends AbstractRowSerializer<
 	private static TypeInformation[] toTypeInfos(InternalType... types) {
 		TypeInformation[] typeInfos = new TypeInformation[types.length];
 		for (int i = 0; i < typeInfos.length; i++) {
-			typeInfos[i] = DataTypes.toTypeInfo(types[i]);
+			typeInfos[i] = TypeConverters.createExternalTypeInfoFromDataType(types[i]);
 		}
 		return typeInfos;
 	}
@@ -93,8 +93,8 @@ public class BaseRowSerializer<T extends BaseRow> extends AbstractRowSerializer<
 		}
 		return ProjectionCodeGenerator.generateProjection(
 				CodeGeneratorContext.apply(null, false), "BaseRowSerializerProjection",
-				(RowType) DataTypes.internal(baseType),
-				(RowType) DataTypes.internal(new BaseRowTypeInfo<>(BinaryRow.class, types)),
+				(RowType) TypeConverters.createInternalTypeFromTypeInfo(baseType),
+				(RowType) TypeConverters.createInternalTypeFromTypeInfo(new BaseRowTypeInfo<>(BinaryRow.class, types)),
 				mapping);
 	}
 

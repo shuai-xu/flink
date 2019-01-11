@@ -28,6 +28,7 @@ import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.GeneratedExpression.{NEVER_NULL, NO_CODE}
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.functions.sql.{ProctimeSqlFunction, StreamRecordTimestampSqlFunction}
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.util.Preconditions.checkArgument
 
 import scala.collection.JavaConversions._
@@ -92,13 +93,13 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
 
   protected lazy val input1Mapping: Array[Int] = input1FieldMapping match {
     case Some(mapping) => mapping
-    case _ => (0 until DataTypes.getArity(input1Type)).toArray
+    case _ => (0 until TypeUtils.getArity(input1Type)).toArray
   }
 
   protected lazy val input2Mapping: Array[Int] = input2FieldMapping match {
     case Some(mapping) => mapping
     case _ => input2Type match {
-      case Some(input) => (0 until DataTypes.getArity(input)).toArray
+      case Some(input) => (0 until TypeUtils.getArity(input)).toArray
       case _ => Array[Int]()
     }
   }
@@ -389,7 +390,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
 
   override def visitInputRef(inputRef: RexInputRef): GeneratedExpression = {
     // if inputRef index is within size of input1 we work with input1, input2 otherwise
-    val input = if (inputRef.getIndex < DataTypes.getArity(input1Type)) {
+    val input = if (inputRef.getIndex < TypeUtils.getArity(input1Type)) {
       (input1Type, input1Term)
     } else {
       (input2Type.getOrElse(throw new CodeGenException("Invalid input access.")),
@@ -399,7 +400,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
     val index = if (input._2 == input1Term) {
       inputRef.getIndex
     } else {
-      inputRef.getIndex - DataTypes.getArity(input1Type)
+      inputRef.getIndex - TypeUtils.getArity(input1Type)
     }
 
     generateInputAccess(ctx, input._1, input._2, index, nullableInput, nullCheck)

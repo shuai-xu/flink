@@ -24,7 +24,7 @@ import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters
+import org.apache.flink.table.runtime.conversion.DataStructureConverters
 import org.junit._
 
 import scala.collection.Seq
@@ -34,7 +34,7 @@ class SubQueryITCase extends QueryTest {
   @Before
   def before(): Unit = {
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
-    InternalTypeConverters.createToExternalConverter(DataTypes.createRowType())
+    DataStructureConverters.createToExternalConverter(DataTypes.createRowType())
     registerCollection("t1", Seq(row(1, 2, 3)),
       new RowTypeInfo(INT_TYPE_INFO, INT_TYPE_INFO, INT_TYPE_INFO), "t1a, t1b, t1c")
     registerCollection("t2", Seq(row(1, 0, 1)),

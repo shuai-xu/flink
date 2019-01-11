@@ -19,7 +19,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
 import org.apache.flink.table.codegen.{GeneratedSorter, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
@@ -158,7 +158,8 @@ class BatchExecSortLimit(
     val (comparators, serializers) = TypeUtils.flattenComparatorAndSerializer(
       binaryType.getArity, keys, orders, types)
     val generator = new SortCodeGenerator(
-      keys, keys.map((key) => types(key)).map(DataTypes.internal), comparators, orders, nullsIsLast)
+      keys, keys.map((key) => types(key)).map(TypeConverters.createInternalTypeFromTypeInfo),
+      comparators, orders, nullsIsLast)
 
     // TODO If input is ordered, there is no need to use the heap.
     val operator = new SortLimitOperator(

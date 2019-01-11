@@ -25,6 +25,7 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.RowType;
+import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.typeutils.BinaryStringTypeInfo;
 
@@ -304,7 +305,7 @@ public class CountDistinct {
 
 		@Override
 		public DataType getValueTypeInfo() {
-			return DataTypes.of(BinaryStringTypeInfo.INSTANCE);
+			return new TypeInfoWrappedDataType(BinaryStringTypeInfo.INSTANCE);
 		}
 	}
 

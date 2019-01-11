@@ -24,6 +24,7 @@ import org.apache.flink.api.common.functions.FlatMapFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.functions.async.{AsyncFunction, ResultFuture}
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.functions.{AsyncTableFunction, TableFunction}
 import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
@@ -32,7 +33,7 @@ import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.runtime.collector.TableFunctionCollector
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters.RowConverter
+import org.apache.flink.table.runtime.conversion.DataStructureConverters.RowConverter
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.types.Row
 import org.apache.flink.util.{Collector, Preconditions}
@@ -435,7 +436,7 @@ object TemporalJoinCodeGenerator {
     CalcCodeGenerator.generateFunction(
       tableSourceSchema.internalType(classOf[BaseRow]),
       "TableCalcMapFunction",
-      FlinkTypeFactory.toInternalBaseRowType(program.getOutputRowType, classOf[GenericRow]),
+      FlinkTypeFactory.toInternalRowType(program.getOutputRowType, classOf[GenericRow]),
       program,
       condition,
       config,
@@ -451,7 +452,7 @@ object TemporalJoinCodeGenerator {
     extends TableFunctionCollector[Row] with Serializable {
 
     private val converter =
-      RowConverter(DataTypes.internal(rowTypeInfo).asInstanceOf[RowType])
+      RowConverter(rowTypeInfo.toInternalType.asInstanceOf[RowType])
 
     override def collect(record: Row): Unit = {
       super.collect(record)
@@ -471,7 +472,7 @@ object TemporalJoinCodeGenerator {
     extends ResultFuture[Row] with Serializable {
 
     private val converter =
-      RowConverter(DataTypes.internal(rowTypeInfo).asInstanceOf[RowType])
+      RowConverter(rowTypeInfo.toInternalType.asInstanceOf[RowType])
     private var future: ResultFuture[BaseRow] = _
 
     def setFuture(future: ResultFuture[BaseRow]): Unit = {

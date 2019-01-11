@@ -23,7 +23,7 @@ import org.apache.flink.api.common.operators.base.JoinOperatorBase.JoinHint
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
-import org.apache.flink.table.api.types.{DataTypes, RowType}
+import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
@@ -478,8 +478,8 @@ class StreamExecJoin(
       generateProjection(
         CodeGeneratorContext(config),
         "PkProjection",
-        DataTypes.internal(inputType).asInstanceOf[RowType],
-        DataTypes.internal(pkType).asInstanceOf[RowType],
+        TypeConverters.createInternalTypeFromTypeInfo(inputType).asInstanceOf[RowType],
+        TypeConverters.createInternalTypeFromTypeInfo(pkType).asInstanceOf[RowType],
         pk.get,
         reusedOutRecord = false)
     } else {
@@ -494,8 +494,8 @@ class StreamExecJoin(
     val ctx = CodeGeneratorContext(config)
     // should consider null fields
     val exprGenerator = new ExprCodeGenerator(ctx, false, true)
-        .bindInput(DataTypes.internal(leftType))
-        .bindSecondInput(DataTypes.internal(rightType))
+        .bindInput(TypeConverters.createInternalTypeFromTypeInfo(leftType))
+        .bindSecondInput(TypeConverters.createInternalTypeFromTypeInfo(rightType))
 
     val body = if (joinInfo.isEqui) {
       // only equality condition

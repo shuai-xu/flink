@@ -33,6 +33,7 @@ import org.apache.flink.streaming.api.transformations.{OneInputTransformation, S
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.{KeyedOneInputStreamOperatorTestHarness, KeyedTwoInputStreamOperatorTestHarness, TestHarnessUtil}
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.runtime.utils.StreamingTestBase
@@ -179,7 +180,8 @@ class HarnessTestBase(mode: StateBackendMode) extends StreamingTestBase {
   : ConcurrentLinkedQueue[Object] = {
     val outputList = new ConcurrentLinkedQueue[Object]
     val iter = output.iterator()
-    val typeSerializers = joinTypes.getFieldTypes.map(TypeUtils.createSerializer)
+    val typeSerializers = joinTypes.getFieldTypes
+        .map(TypeConverters.createInternalTypeFromTypeInfo).map(DataTypes.createInternalSerializer)
     while (iter.hasNext) {
       val element = iter.next()
       if (element.isInstanceOf[StreamRecord[BaseRow]]) {

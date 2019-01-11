@@ -32,7 +32,7 @@ import org.apache.flink.table.dataformat._
 import org.apache.flink.table.dataformat.util.BinaryRowUtil
 import org.apache.flink.table.dataformat.{BinaryArray, BinaryArrayWriter, BinaryMap, Decimal}
 import org.apache.flink.table.functions.sql.internal.{SqlRuntimeFilterBuilderFunction, SqlRuntimeFilterFunction}
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToExternal
+import org.apache.flink.table.runtime.conversion.DataStructureConverters.genToExternal
 import org.apache.flink.table.runtime.util.{BloomFilter, BloomFilterAcc, RuntimeFilterUtils}
 import org.apache.flink.table.typeutils.TypeCheckUtils._
 import org.apache.flink.table.typeutils._
@@ -402,7 +402,7 @@ object ScalarOperators {
         val resultTerm = newName("compareResult")
         val binaryArrayCls = classOf[BinaryArray].getCanonicalName
 
-        val elementType = left.resultType.asInstanceOf[ArrayType].getElementType
+        val elementType = left.resultType.asInstanceOf[ArrayType].getElementInternalType
         val elementCls = primitiveTypeTermForType(elementType)
         val elementDefault = primitiveDefaultValue(elementType)
 
@@ -471,21 +471,21 @@ object ScalarOperators {
 
         val mapType = left.resultType.asInstanceOf[MapType]
         val mapCls = classOf[java.util.Map[AnyRef, AnyRef]].getCanonicalName
-        val keyCls = boxedTypeTermForType(mapType.getKeyType)
-        val valueCls = boxedTypeTermForType(mapType.getValueType)
+        val keyCls = boxedTypeTermForType(mapType.getKeyInternalType)
+        val valueCls = boxedTypeTermForType(mapType.getValueInternalType)
 
         val leftMapTerm = newName("leftMap")
         val leftKeyTerm = newName("leftKey")
         val leftValueTerm = newName("leftValue")
         val leftValueNullTerm = newName("leftValueIsNull")
         val leftValueExpr =
-          GeneratedExpression(leftValueTerm, leftValueNullTerm, "", mapType.getValueType)
+          GeneratedExpression(leftValueTerm, leftValueNullTerm, "", mapType.getValueInternalType)
 
         val rightMapTerm = newName("rightMap")
         val rightValueTerm = newName("rightValue")
         val rightValueNullTerm = newName("rightValueIsNull")
         val rightValueExpr =
-          GeneratedExpression(rightValueTerm, rightValueNullTerm, "", mapType.getValueType)
+          GeneratedExpression(rightValueTerm, rightValueNullTerm, "", mapType.getValueInternalType)
 
         val entryTerm = newName("entry")
         val entryCls = classOf[java.util.Map.Entry[AnyRef, AnyRef]].getCanonicalName
@@ -493,9 +493,9 @@ object ScalarOperators {
 
         val internalTypeCls = classOf[InternalType].getCanonicalName
         val keyTypeTerm =
-          ctx.addReusableObject(mapType.getKeyType, "keyType", internalTypeCls)
+          ctx.addReusableObject(mapType.getKeyInternalType, "keyType", internalTypeCls)
         val valueTypeTerm =
-          ctx.addReusableObject(mapType.getValueType, "valueType", internalTypeCls)
+          ctx.addReusableObject(mapType.getValueInternalType, "valueType", internalTypeCls)
 
         val stmt =
           s"""
@@ -852,7 +852,7 @@ object ScalarOperators {
           val indexTerm = newName("i")
           val numTerm = newName("num")
 
-          val elementType = at.getElementType
+          val elementType = at.getElementInternalType
           val elementCls = primitiveTypeTermForType(elementType)
           val elementTerm = newName("element")
           val elementExpr = GeneratedExpression(
@@ -916,7 +916,7 @@ object ScalarOperators {
           val indexTerm = newName("i")
           val numTerm = newName("num")
 
-          val keyType = mt.getKeyType
+          val keyType = mt.getKeyInternalType
           val keyCls = primitiveTypeTermForType(keyType)
           val keyTerm = newName("key")
           val keyExpr = GeneratedExpression(
@@ -925,7 +925,7 @@ object ScalarOperators {
               ctx, indexTerm, keyArrayTerm, keyType)};", keyType)
           val keyCastExpr = generateCast(ctx, nullCheck, keyExpr, DataTypes.STRING)
 
-          val valueType = mt.getValueType
+          val valueType = mt.getValueInternalType
           val valueCls = primitiveTypeTermForType(valueType)
           val valueTerm = newName("value")
           val valueExpr = GeneratedExpression(
@@ -1527,7 +1527,7 @@ object ScalarOperators {
       elements: Seq[GeneratedExpression],
       nullCheck: Boolean,
       initArray: Boolean): GeneratedExpression = {
-    val elementType = resultType.getElementType
+    val elementType = resultType.getElementInternalType
     val arrayTerm = newName("array")
     val writerTerm = newName("writer")
     val arrayCls = classOf[BinaryArray].getCanonicalName
@@ -1568,7 +1568,7 @@ object ScalarOperators {
       elements: Seq[GeneratedExpression],
       nullCheck: Boolean): GeneratedExpression = {
     val arrayType = resultType.asInstanceOf[ArrayType]
-    val elementType = arrayType.getElementType
+    val elementType = arrayType.getElementInternalType
 
     def getLiteralArray: GeneratedExpression =
       makeReusableArray(ctx, arrayType, elements, nullCheck, initArray = true)
@@ -1630,7 +1630,7 @@ object ScalarOperators {
       index: GeneratedExpression,
       nullCheck: Boolean): GeneratedExpression = {
     val Seq(resultTerm, nullTerm) = newNames(Seq("result", "isNull"))
-    val componentInfo = array.resultType.asInstanceOf[ArrayType].getElementType
+    val componentInfo = array.resultType.asInstanceOf[ArrayType].getElementInternalType
     val resultTypeTerm = primitiveTypeTermForType(componentInfo)
     val defaultTerm = primitiveDefaultValue(componentInfo)
 
@@ -1655,7 +1655,7 @@ object ScalarOperators {
       array: GeneratedExpression,
       nullCheck: Boolean): GeneratedExpression = {
     val Seq(resultTerm, nullTerm) = newNames(Seq("result", "isNull"))
-    val resultType = array.resultType.asInstanceOf[ArrayType].getElementType
+    val resultType = array.resultType.asInstanceOf[ArrayType].getElementInternalType
     val resultTypeTerm = primitiveTypeTermForType(resultType)
     val defaultValue = primitiveDefaultValue(resultType)
 
@@ -1758,7 +1758,7 @@ object ScalarOperators {
 
     // Prepare map key array
     val keyElements = elements.grouped(2).map { case Seq(key, _) => key }.toSeq
-    val keyType = mapType.getKeyType
+    val keyType = mapType.getKeyInternalType
     val (keyArr, keyUpdate, keyNeedsRefill) =
       (keyType, keyElements.forall(_.literal)) match {
         case (_, true) =>
@@ -1775,7 +1775,7 @@ object ScalarOperators {
 
     // Prepare map value array
     val valueElements = elements.grouped(2).map { case Seq(_, value) => value }.toSeq
-    val valueType = mapType.getValueType
+    val valueType = mapType.getValueInternalType
     val (valueArr, valueUpdate, valueNeedsRefill) =
       (valueType, valueElements.forall(_.literal)) match {
         case (_, true) =>
@@ -1838,8 +1838,8 @@ object ScalarOperators {
     val found = newName("found")
 
     val ty = map.resultType.asInstanceOf[MapType]
-    val keyType = ty.getKeyType
-    val valueType = ty.getValueType
+    val keyType = ty.getKeyInternalType
+    val valueType = ty.getValueInternalType
 
     val keyTypeTerm = primitiveTypeTermForType(keyType)
     val valueTypeTerm = primitiveTypeTermForType(valueType)

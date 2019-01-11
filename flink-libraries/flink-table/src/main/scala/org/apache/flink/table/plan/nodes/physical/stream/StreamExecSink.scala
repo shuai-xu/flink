@@ -191,7 +191,8 @@ class StreamExecSink[T](
       "DataStreamSinkConversion",
       optionRowTimeField,
       withChangeFlag,
-      resultType)
+      resultType,
+      sink)
 
     val convertTransformation = converterOperator match {
       case None => parTransformation

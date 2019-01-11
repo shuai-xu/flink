@@ -19,9 +19,8 @@
 package org.apache.flink.table.descriptors
 
 import java.util
-
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableSchema, ValidationException}
 import org.apache.flink.table.descriptors.SchemaValidator._
 import org.apache.flink.table.utils.TypeStringUtils
@@ -52,7 +51,7 @@ class Schema extends Descriptor {
     tableSchema.clear()
     lastField = None
     schema.getFieldNames.zip(schema.getFieldTypes).foreach { case (n, t) =>
-      field(n, DataTypes.to(t))
+      field(n, t)
     }
     this
   }

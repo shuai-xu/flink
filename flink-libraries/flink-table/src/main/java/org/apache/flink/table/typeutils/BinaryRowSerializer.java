@@ -26,8 +26,8 @@ import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.memory.AbstractPagedInputView;
 import org.apache.flink.runtime.memory.AbstractPagedOutputView;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.dataformat.BinaryRow;
 
 import java.io.IOException;
@@ -50,7 +50,7 @@ public class BinaryRowSerializer extends AbstractRowSerializer<BinaryRow> {
 	}
 
 	public BinaryRowSerializer(InternalType... types) {
-		this(DataTypes.toTypeInfos(types));
+		this(TypeConverters.createExternalTypeInfoFromDataTypes(types));
 	}
 
 	public BinaryRowSerializer(TypeInformation<?>... types) {
@@ -308,7 +308,7 @@ public class BinaryRowSerializer extends AbstractRowSerializer<BinaryRow> {
 	 */
 	public boolean isRowFixedLength() {
 		for (TypeInformation type : getTypes()) {
-			if (!BinaryRow.isFixedLength(DataTypes.internal(type))) {
+			if (!BinaryRow.isFixedLength(TypeConverters.createInternalTypeFromTypeInfo(type))) {
 				return false;
 			}
 		}

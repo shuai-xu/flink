@@ -19,14 +19,14 @@
 package org.apache.flink.table.runtime.batch.table
 
 import java.util
-
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.types.{DataType, DataTypes, TypeInfoWrappedDataType}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.utils.TableProgramsTestBase
 import org.apache.flink.table.util.{CollectionBatchExecTable, MemoryTableSourceSinkUtil}
 import org.apache.flink.test.util.TestBaseUtils
+
 import org.junit.Assert.assertEquals
 import org.junit._
 import org.junit.runners.Parameterized
@@ -119,7 +119,7 @@ class TableEnvironmentITCase extends QueryTest {
       "SomeCaseClass(Peter,28,4000.0,Sales)\n" +
       "SomeCaseClass(Anna,56,10000.0,Engineering)\n" +
       "SomeCaseClass(Lucy,42,6000.0,HR)\n"
-    val results = t.collectAsT(DataTypes.of(createTypeInformation[SomeCaseClass]))
+    val results = t.collectAsT(createTypeInformation[SomeCaseClass])
     TestBaseUtils.compareResultAsText(results.asJava, expected)
   }
 

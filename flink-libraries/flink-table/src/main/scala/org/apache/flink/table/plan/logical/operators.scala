@@ -19,7 +19,6 @@ package org.apache.flink.table.plan.logical
 
 import java.lang.reflect.Method
 import java.util
-
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.{CorrelationId, JoinRelType}
@@ -28,7 +27,7 @@ import org.apache.calcite.rex.{RexInputRef, RexNode}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.java.operators.join.JoinType
 import org.apache.flink.table.api.functions.TableFunction
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, TypeConverters}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableEnvironment, UnresolvedException}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.expressions.ExpressionUtils.isRowCountLiteral
@@ -37,6 +36,7 @@ import org.apache.flink.table.functions.utils.{TableSqlFunction, UserDefinedFunc
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.schema.TypedFlinkTableFunction
 import org.apache.flink.table.sinks.TableSink
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.validate.{ValidationFailure, ValidationSuccess}
 
 import scala.collection.JavaConverters._
@@ -265,7 +265,7 @@ case class Aggregate(
     }
 
     def validateGroupingExpression(expr: Expression): Unit = {
-      if (!DataTypes.toTypeInfo(expr.resultType).isKeyType) {
+      if (!TypeConverters.createExternalTypeInfoFromDataType(expr.resultType).isKeyType) {
         failValidation(
           s"expression $expr cannot be used as a grouping expression " +
             "because it's not a valid key type which must be hashable and comparable")
@@ -682,7 +682,7 @@ case class WindowAggregate(
     }
 
     def validateGroupingExpression(expr: Expression): Unit = {
-      if (!DataTypes.toTypeInfo(expr.resultType).isKeyType) {
+      if (!TypeConverters.createExternalTypeInfoFromDataType(expr.resultType).isKeyType) {
         failValidation(
           s"Expression $expr cannot be used as a grouping expression " +
             "because it's not a valid key type which must be hashable and comparable")

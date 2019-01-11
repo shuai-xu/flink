@@ -119,6 +119,6 @@ class StreamExecDataStreamScan(
     // when there is row time extraction expression, we need internal conversion
     // when the physical type of the input date stream is not BaseRow, we need internal conversion.
     getRowtimeExpression().isDefined ||
-      needsConversion(dataStreamTable.dataType)
+      needsConversion(dataStreamTable.dataType, dataStreamTable.dataStream.getType.getTypeClass)
   }
 }

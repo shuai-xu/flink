@@ -26,9 +26,9 @@ import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.{StreamGraph, StreamGraphGenerator}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
 import org.apache.flink.table.calcite.{FlinkChainContext, FlinkRelBuilder, FlinkTypeFactory}
-import org.apache.flink.table.catalog.ReadableCatalog
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescriptor}
 import org.apache.flink.table.errorcode.TableErrors
@@ -65,7 +65,6 @@ import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable.ArrayBuffer
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
-
 
 /**
   * The base class for stream TableEnvironments.
@@ -442,9 +441,8 @@ abstract class StreamTableEnvironment(
     name: String,
     dataStream: DataStream[T]): Unit = {
 
-    val streamType = DataTypes.of(dataStream.getType)
     // get field names and types for all non-replaced fields
-    val (fieldNames, fieldIndexes) = getFieldInfo(streamType)
+    val (fieldNames, fieldIndexes) = getFieldInfo(dataStream.getType)
 
     val dataStreamTable = new DataStreamTable[T](dataStream, false, false, fieldIndexes, fieldNames)
     registerTableInternal(name, dataStreamTable)
@@ -470,8 +468,6 @@ abstract class StreamTableEnvironment(
       uniqueKeys: util.Set[_ <: util.Set[String]],
       monotonicity: RelModifiedMonotonicity): Unit = {
 
-    val streamType = DataTypes.of(dataStream.getType)
-
     if (fields.exists(_.isInstanceOf[RowtimeAttribute])
         && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
       throw new TableException(
@@ -480,10 +476,10 @@ abstract class StreamTableEnvironment(
     }
 
 
-    val (fieldNames, fieldIndexes) = getFieldInfo(streamType, fields)
+    val (fieldNames, fieldIndexes) = getFieldInfo(dataStream.getType, fields)
 
     // validate and extract time attributes
-    val (rowtime, proctime) = validateAndExtractTimeAttributes(streamType, fields)
+    val (rowtime, proctime) = validateAndExtractTimeAttributes(dataStream.getType, fields)
 
     // check if event-time is enabled
     if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
@@ -530,7 +526,7 @@ abstract class StreamTableEnvironment(
     val inputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(rowType, classOf[BaseRow])
 
     // validate and extract time attributes
-    val (rowtime, proctime) = validateAndExtractTimeAttributes(DataTypes.of(inputType), fields)
+    val (rowtime, proctime) = validateAndExtractTimeAttributes(inputType, fields)
     if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
       throw new TableException(
         s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
@@ -538,7 +534,7 @@ abstract class StreamTableEnvironment(
     }
 
 
-    val (fieldNames, fieldIndexes) = getFieldInfo(DataTypes.of(inputType), fields)
+    val (fieldNames, fieldIndexes) = getFieldInfo(inputType, fields)
     // adjust field indexes and field names
     val indexesWithIndicatorFields = adjustFieldIndexes(fieldIndexes, rowtime, proctime)
     val namesWithIndicatorFields = adjustFieldNames(fieldNames, rowtime, proctime)
@@ -564,9 +560,8 @@ abstract class StreamTableEnvironment(
     dataStream: DataStream[T],
     replace: Boolean): Unit = {
 
-    val streamType = DataTypes.of(dataStream.getType)
     // get field names and types for all non-replaced fields
-    val (fieldNames, fieldIndexes) = getFieldInfo(streamType)
+    val (fieldNames, fieldIndexes) = getFieldInfo(dataStream.getType)
     val dataStreamTable = new DataStreamTable[T](
       dataStream,
       fieldIndexes,
@@ -591,9 +586,6 @@ abstract class StreamTableEnvironment(
       replace: Boolean)
     : Unit = {
 
-
-    val streamType = DataTypes.of(dataStream.getType)
-
     if (fields.exists(_.isInstanceOf[RowtimeAttribute])
         && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
       throw new TableException(
@@ -602,10 +594,10 @@ abstract class StreamTableEnvironment(
     }
 
 
-    val (fieldNames, fieldIndexes) = getFieldInfo(streamType, fields)
+    val (fieldNames, fieldIndexes) = getFieldInfo(dataStream.getType, fields)
 
     // validate and extract time attributes
-    val (rowtime, proctime) = validateAndExtractTimeAttributes(streamType, fields)
+    val (rowtime, proctime) = validateAndExtractTimeAttributes(dataStream.getType, fields)
 
     // check if event-time is enabled
     if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {

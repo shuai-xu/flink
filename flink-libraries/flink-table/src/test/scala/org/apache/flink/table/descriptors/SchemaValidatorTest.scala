@@ -19,15 +19,15 @@
 package org.apache.flink.table.descriptors
 
 import java.util.Optional
-
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataType, DataTypes, TypeConverters, Types => InternalTypes}
 import org.apache.flink.table.api.{TableException, TableSchema, Types}
-import org.apache.flink.table.api.types.{Types => InternalTypes}
 import org.apache.flink.table.descriptors.RowtimeTest.CustomExtractor
 import org.apache.flink.table.sources.tsextractors.{ExistingField, StreamRecordTimestamp}
 import org.apache.flink.table.sources.wmstrategies.{BoundedOutOfOrderTimestamps, PreserveWatermarks}
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.types.Row
+
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 
@@ -74,8 +74,9 @@ class SchemaValidatorTest {
     assertEquals(
       expectedMapping,
       SchemaValidator.deriveFieldMapping(props, Optional.of(
-        DataTypes.to(
-          DataTypes.createRowType(inputSchema.getFieldTypes, inputSchema.getFieldNames)
+        TypeConverters.createExternalTypeInfoFromDataType(
+          DataTypes.createRowType(
+            inputSchema.getFieldTypes.toArray[DataType], inputSchema.getFieldNames)
         ).asInstanceOf[TypeInformation[Row]]
       )))
   }
@@ -152,8 +153,9 @@ class SchemaValidatorTest {
     assertEquals(
       expectedMapping,
       SchemaValidator.deriveFieldMapping(props, Optional.of(
-        DataTypes.to(
-          DataTypes.createRowType(inputSchema.getFieldTypes, inputSchema.getFieldNames)
+        TypeConverters.createExternalTypeInfoFromDataType(
+          DataTypes.createRowType(
+            inputSchema.getFieldTypes.toArray[DataType], inputSchema.getFieldNames)
         ).asInstanceOf[TypeInformation[Row]]
       )))
   }

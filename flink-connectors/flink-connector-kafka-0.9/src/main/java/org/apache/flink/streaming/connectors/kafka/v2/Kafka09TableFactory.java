@@ -25,7 +25,7 @@ import org.apache.flink.streaming.connectors.kafka.v2.input.Kafka09TableSource;
 import org.apache.flink.streaming.connectors.kafka.v2.sink.Kafka09OutputFormat;
 import org.apache.flink.streaming.connectors.kafka.v2.sink.Kafka09TableSink;
 import org.apache.flink.table.api.RichTableSchema;
-import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.factories.BatchCompatibleTableSinkFactory;
 import org.apache.flink.table.factories.BatchTableSourceFactory;
@@ -35,7 +35,6 @@ import org.apache.flink.table.sinks.BatchCompatibleStreamTableSink;
 import org.apache.flink.table.sinks.StreamTableSink;
 import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.StreamTableSource;
-import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 import org.apache.flink.table.util.TableProperties;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.StringUtils;
@@ -73,10 +72,10 @@ public class Kafka09TableFactory extends KafkaBaseTableFactory implements
 		if (!StringUtils.isNullOrWhitespaceOnly(topicStr)) {
 			List<String> topics = Arrays.asList(topicStr.split(","));
 			return new Kafka09TableSource(topics, null, prop, getStartupMode(properties), -1, isBatchMode,
-					(BaseRowTypeInfo) DataTypes.to(schema.getResultType(GenericRow.class)));
+					TypeConverters.toBaseRowTypeInfo(schema.getResultType(GenericRow.class)));
 		} else if (!StringUtils.isNullOrWhitespaceOnly(topicPatternStr)) {
 			return new Kafka09TableSource(null, topicPatternStr, prop, getStartupMode(properties), -1, isBatchMode,
-					(BaseRowTypeInfo) DataTypes.to(schema.getResultType(GenericRow.class)));
+					TypeConverters.toBaseRowTypeInfo(schema.getResultType(GenericRow.class)));
 		} else {
 			throw new RuntimeException("No sufficient parameters for Kafka09." +
 				"topic or topic pattern needed.");

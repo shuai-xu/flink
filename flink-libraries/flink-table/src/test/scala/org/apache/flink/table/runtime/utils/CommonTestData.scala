@@ -22,16 +22,16 @@ import java.io.{File, FileOutputStream, OutputStreamWriter}
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.{lang, util}
-
 import org.apache.calcite.avatica.util.DateTimeUtils
 import org.apache.flink.api.java.io.CsvInputFormat
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
+import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType, TypeConverters}
 import org.apache.flink.table.api.{RichTableSchema, TableSchema}
 import org.apache.flink.table.catalog._
 import org.apache.flink.table.dataformat.Decimal
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources.csv.CsvTableSource
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.types.Row
 
 import scala.collection.mutable
@@ -88,7 +88,7 @@ object CommonTestData {
         row.setField(1, f1)
         row.setField(2, f2)
         row
-    }, DataTypes.toTypeInfo(DataTypes.createRowType(
+    }, TypeConverters.createExternalTypeInfoFromDataType(DataTypes.createRowType(
       DataTypes.INT, DataTypes.LONG, DataTypes.STRING))
         .asInstanceOf[RowTypeInfo])
   }
@@ -219,7 +219,7 @@ object CommonTestData {
         row.setField(3, f3)
         row.setField(4, f4)
         row
-    }, DataTypes.toTypeInfo(DataTypes.createRowType(
+    }, TypeConverters.createExternalTypeInfoFromDataType(DataTypes.createRowType(
       DataTypes.INT, DataTypes.LONG, DataTypes.INT, DataTypes.STRING, DataTypes.LONG))
         .asInstanceOf[RowTypeInfo])
   }

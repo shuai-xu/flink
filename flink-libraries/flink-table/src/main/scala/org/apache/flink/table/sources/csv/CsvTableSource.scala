@@ -27,7 +27,7 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.functions.{AsyncTableFunction, TableFunction}
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType, TypeConverters}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
@@ -89,7 +89,7 @@ class CsvTableSource(
 
   private val returnType = new RowType(
     classOf[GenericRow], fieldTypes.toArray[DataType], fieldNames, true)
-  private val returnTypeInfo = TypeUtils.toBaseRowTypeInfo(returnType)
+  private val returnTypeInfo = TypeConverters.toBaseRowTypeInfo(returnType)
 
   private var selectedFields: Array[Int] = fieldTypes.indices.toArray
 
@@ -424,7 +424,7 @@ object CsvTableSource {
       if (schema.contains(fieldName)) {
         throw new IllegalArgumentException(s"Duplicate field name $fieldName.")
       }
-      val internalType = DataTypes.internal(fieldType)
+      val internalType = TypeConverters.createInternalTypeFromTypeInfo(fieldType)
       schema += (fieldName ->(internalType, !FlinkTypeFactory.isTimeIndicatorType(internalType)))
       this
     }

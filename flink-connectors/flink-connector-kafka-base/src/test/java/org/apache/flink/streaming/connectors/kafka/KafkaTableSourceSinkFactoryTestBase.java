@@ -40,6 +40,7 @@ import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.Types;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.descriptors.Kafka;
 import org.apache.flink.table.descriptors.Rowtime;
 import org.apache.flink.table.descriptors.Schema;
@@ -129,12 +130,12 @@ public abstract class KafkaTableSourceSinkFactoryTestBase extends TestLogger {
 		specificOffsets.put(new KafkaTopicPartition(TOPIC, PARTITION_1), OFFSET_1);
 
 		final TestDeserializationSchema deserializationSchema = new TestDeserializationSchema(
-			DataTypes.toTypeInfo(TableSchemaUtil.toRowType(
-				TableSchema.builder()
-				.field(NAME, DataTypes.STRING)
-				.field(COUNT, DecimalType.SYSTEM_DEFAULT)
-				.field(TIME, DataTypes.TIMESTAMP)
-				.build()))
+				(TypeInformation<Row>) TypeConverters.createExternalTypeInfoFromDataType(TableSchemaUtil.toRowType(
+					TableSchema.builder()
+					.field(NAME, DataTypes.STRING)
+					.field(COUNT, DecimalType.SYSTEM_DEFAULT)
+					.field(TIME, DataTypes.TIMESTAMP)
+					.build()))
 		);
 
 		final KafkaTableSource expected = getExpectedKafkaTableSource(
@@ -200,7 +201,8 @@ public abstract class KafkaTableSourceSinkFactoryTestBase extends TestLogger {
 			TOPIC,
 			KAFKA_PROPERTIES,
 			Optional.of(new FlinkFixedPartitioner<>()),
-			new TestSerializationSchema(DataTypes.toTypeInfo(TableSchemaUtil.toRowType(schema))));
+			new TestSerializationSchema((TypeInformation<Row>) TypeConverters.createExternalTypeInfoFromDataType(
+					TableSchemaUtil.toRowType(schema))));
 
 		// construct table sink using descriptors and table sink factory
 
@@ -228,7 +230,8 @@ public abstract class KafkaTableSourceSinkFactoryTestBase extends TestLogger {
 		// test Kafka producer
 		final KafkaTableSink actualKafkaSink = (KafkaTableSink) actualSink;
 		final DataStreamMock streamMock = new DataStreamMock(new StreamExecutionEnvironmentMock(),
-			DataTypes.toTypeInfo(TableSchemaUtil.toRowType(schema)));
+				(TypeInformation<Row>) TypeConverters.createExternalTypeInfoFromDataType(
+						TableSchemaUtil.toRowType(schema)));
 		actualKafkaSink.emitDataStream(streamMock);
 		assertTrue(getExpectedFlinkKafkaProducer().isAssignableFrom(streamMock.sinkFunction.getClass()));
 	}

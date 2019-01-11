@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.stream
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
@@ -171,7 +171,7 @@ class StreamExecGroupAggregate(
     val generator = new AggsHandlerCodeGenerator(
       CodeGeneratorContext(tableConfig, supportReference = true),
       tableEnv.getRelBuilder,
-      inputRowType.getFieldTypes.map(DataTypes.internal),
+      inputRowType.getFieldTypes.map(TypeConverters.createInternalTypeFromTypeInfo),
       needRetraction,
       needMerge = false,
       tableConfig.getNullCheck,

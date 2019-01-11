@@ -19,7 +19,7 @@
 package org.apache.flink.table.runtime.overagg
 
 import java.util
-import org.apache.flink.table.api.types.{RowType}
+import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.codegen.{CodeGenUtils, GeneratedAggsHandleFunction, GeneratedBoundComparator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
@@ -124,7 +124,7 @@ class UnboundedFollowingOverWindowFrame(
     valueType: RowType)
   extends OverWindowFrame(aggsHandleFunction) {
 
-  private val valueSer = TypeUtils.createSerializer(valueType)
+  private val valueSer = DataTypes.createInternalSerializer(valueType)
       .asInstanceOf[AbstractRowSerializer[BaseRow]]
 
   private[this] var processor: AggsHandleFunction = _
@@ -202,7 +202,7 @@ class UnboundedOverWindowFrame(
   private[this] var processor: AggsHandleFunction = _
   private[this] var accValue: BaseRow = _
 
-  private val valueSer = TypeUtils.createSerializer(valueType)
+  private val valueSer = DataTypes.createInternalSerializer(valueType)
       .asInstanceOf[AbstractRowSerializer[BaseRow]]
 
   override def open(ctx: ExecutionContext): Unit = {
@@ -242,9 +242,9 @@ class SlidingOverWindowFrame(
     var rboundComparator: GeneratedBoundComparator)
   extends OverWindowFrame(aggsHandleFunction) {
 
-  private val inputSer = TypeUtils.createSerializer(inputType)
+  private val inputSer = DataTypes.createInternalSerializer(inputType)
       .asInstanceOf[AbstractRowSerializer[BaseRow]]
-  private val valueSer = TypeUtils.createSerializer(valueType)
+  private val valueSer = DataTypes.createInternalSerializer(valueType)
       .asInstanceOf[AbstractRowSerializer[BaseRow]]
 
   private[this] var processor: AggsHandleFunction = _

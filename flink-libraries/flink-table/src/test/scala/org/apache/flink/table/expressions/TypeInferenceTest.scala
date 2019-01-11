@@ -21,9 +21,11 @@ package org.apache.flink.table.expressions
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.Types
-import org.apache.flink.table.api.types.{DataTypes, DecimalType}
+import org.apache.flink.table.api.types.{DataTypes, DecimalType, TypeConverters}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.types.Row
+
 import org.junit.{Assert, Before, Test}
 
 import scala.collection.Seq
@@ -60,7 +62,7 @@ class TypeInferenceTest extends QueryTest {
     // in these tests, we do not care about detailed precision/scale of decimals.
     val compareTypes = returnTypes.map {
       case _: DecimalType => BasicTypeInfo.BIG_DEC_TYPE_INFO
-      case t => DataTypes.toTypeInfo(t)
+      case t => TypeConverters.createExternalTypeInfoFromDataType(t)
     }
     Assert.assertEquals(expectedType.toSeq, compareTypes.toSeq)
   }

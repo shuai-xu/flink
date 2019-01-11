@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.aggregate
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Map => JMap}
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
-import org.apache.flink.table.api.types.{RowType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType, TypeConverters}
 import org.apache.flink.table.codegen.{EqualiserCodeGenerator, GeneratedAggsHandleFunction}
 import org.apache.flink.table.dataformat.util.{BaseRowUtil, BinaryRowUtil}
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
@@ -67,7 +67,7 @@ class MiniBatchGroupAggFunction(
   @transient
   private var equaliser: RecordEqualiser = _
 
-  private val inputSer = TypeUtils.createSerializer(inputType)
+  private val inputSer = DataTypes.createInternalSerializer(inputType)
       .asInstanceOf[AbstractRowSerializer[BaseRow]]
 
   override def open(ctx: ExecutionContext): Unit = {
@@ -78,7 +78,8 @@ class MiniBatchGroupAggFunction(
     function.open(ctx)
 
     // serialize as GenericRow, deserialize as BinaryRow
-    val accTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], accTypes.map(DataTypes.toTypeInfo): _*)
+    val accTypeInfo = new BaseRowTypeInfo(classOf[BaseRow],
+      accTypes.map(TypeConverters.createExternalTypeInfoFromDataType): _*)
     val accDesc = new ValueStateDescriptor("accState", accTypeInfo)
     accState = ctx.getKeyedValueState(accDesc)
 

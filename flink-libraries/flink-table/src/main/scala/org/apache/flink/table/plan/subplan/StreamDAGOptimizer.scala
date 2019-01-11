@@ -19,7 +19,6 @@
 package org.apache.flink.table.plan.subplan
 
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
@@ -200,8 +199,7 @@ object StreamDAGOptimizer extends AbstractDAGOptimizer[StreamTableEnvironment] {
       isAccRetract: Boolean,
       fields: Array[Expression]): Unit = {
     val rowType = relNode.getRowType
-    val streamType = DataTypes.of(
-      FlinkTypeFactory.toInternalBaseRowTypeInfo(rowType, classOf[BaseRow]))
+    val streamType = FlinkTypeFactory.toInternalRowType(rowType, classOf[BaseRow])
 
     // validate and extract time attributes
     val (rowtime, _) = tEnv.validateAndExtractTimeAttributes(streamType, fields)

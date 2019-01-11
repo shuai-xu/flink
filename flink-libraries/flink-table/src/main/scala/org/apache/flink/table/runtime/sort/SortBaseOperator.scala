@@ -22,7 +22,6 @@ import org.apache.flink.streaming.api.operators._
 import org.apache.flink.streaming.api.{SimpleTimerService, TimerService}
 import org.apache.flink.table.codegen.{CodeGenUtils, GeneratedSorter}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.sort.{NormalizedKeyComputer, RecordComparator}
 import org.apache.flink.table.util.Logging
 
 abstract class SortBaseOperator

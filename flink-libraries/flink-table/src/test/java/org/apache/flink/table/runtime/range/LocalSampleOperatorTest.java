@@ -28,6 +28,7 @@ import org.apache.flink.streaming.runtime.tasks.OneInputStreamTaskTestHarness;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.RowType;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.codegen.CodeGeneratorContext;
 import org.apache.flink.table.codegen.GeneratedProjection;
 import org.apache.flink.table.codegen.ProjectionCodeGenerator;
@@ -59,7 +60,8 @@ public class LocalSampleOperatorTest {
 		TableConfig config = new TableConfig();
 		BaseRowTypeInfo inTypeInfo = new BaseRowTypeInfo<>(BinaryRow.class, STRING_TYPE_INFO, STRING_TYPE_INFO);
 		GeneratedProjection generatedProjection = ProjectionCodeGenerator.generateProjection(
-				CodeGeneratorContext.apply(config, false), "localSample", (RowType) DataTypes.internal(inTypeInfo),
+				CodeGeneratorContext.apply(config, false), "localSample",
+				(RowType) TypeConverters.createInternalTypeFromTypeInfo(inTypeInfo),
 				new RowType(BinaryRow.class, DataTypes.STRING, DataTypes.STRING), new int[]{1, 0},
 				CodeGeneratorContext.DEFAULT_INPUT1_TERM(),
 				CodeGeneratorContext.DEFAULT_OUT_RECORD_TERM(),

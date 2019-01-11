@@ -19,7 +19,7 @@
 package org.apache.flink.table.codegen
 
 import org.apache.flink.table.api.TableEnvironment
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.io.ValuesInputFormat
@@ -39,7 +39,7 @@ object ValuesCodeGenerator {
       tuples: ImmutableList[ImmutableList[RexLiteral]],
       description: String): ValuesInputFormat = {
     val config = tableEnv.getConfig
-    val outputType = FlinkTypeFactory.toInternalBaseRowType(rowType, classOf[GenericRow])
+    val outputType = FlinkTypeFactory.toInternalRowType(rowType, classOf[GenericRow])
 
     val ctx = CodeGeneratorContext(config)
     val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck)
@@ -58,7 +58,7 @@ object ValuesCodeGenerator {
     new ValuesInputFormat(
       generatedFunction.name,
       generatedFunction.code,
-      TypeUtils.toBaseRowTypeInfo(outputType)
+      TypeConverters.toBaseRowTypeInfo(outputType)
     )
   }
 

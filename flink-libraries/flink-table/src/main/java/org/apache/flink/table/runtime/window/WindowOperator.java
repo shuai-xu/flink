@@ -45,6 +45,7 @@ import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.operators.TimestampedCollector;
 import org.apache.flink.streaming.api.operators.Triggerable;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.api.window.Window;
@@ -65,7 +66,6 @@ import org.apache.flink.table.runtime.window.internal.InternalWindowProcessFunct
 import org.apache.flink.table.runtime.window.internal.MergingWindowProcessFunction;
 import org.apache.flink.table.runtime.window.internal.PanedWindowProcessFunction;
 import org.apache.flink.table.runtime.window.triggers.Trigger;
-import org.apache.flink.table.typeutils.TypeUtils;
 
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -276,7 +276,7 @@ public class WindowOperator<K, W extends Window>
 			"window-aggs",
 			keySerializer,
 			windowSerializer,
-			(TypeSerializer<BaseRow>) TypeUtils.createSerializer(accTypeInfo));
+			(TypeSerializer<BaseRow>) DataTypes.createInternalSerializer(accTypeInfo));
 
 		this.windowState = getSubKeyedState(windowStateDescriptor);
 
@@ -287,7 +287,7 @@ public class WindowOperator<K, W extends Window>
 				"previous-aggs",
 				keySerializer,
 				windowSerializer,
-				(TypeSerializer<BaseRow>) TypeUtils.createSerializer(prevAggResultType));
+				(TypeSerializer<BaseRow>) DataTypes.createInternalSerializer(prevAggResultType));
 			this.previousState = getSubKeyedState(previousStateDescriptor);
 		}
 

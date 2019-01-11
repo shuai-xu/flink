@@ -29,6 +29,7 @@ import org.apache.flink.api.java.typeutils.runtime.DataInputViewStream;
 import org.apache.flink.api.java.typeutils.runtime.DataOutputViewStream;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseArray;
 import org.apache.flink.table.dataformat.BinaryArray;
@@ -58,7 +59,7 @@ public class BaseArraySerializer extends TypeSerializer<BaseArray> {
 		this.isPrimitive = isPrimitive;
 		this.eleType = eleType;
 
-		this.elementSerializer = TypeUtils.createSerializer(eleType);
+		this.elementSerializer = DataTypes.createInternalSerializer(eleType);
 		this.binarySerializer = BinaryArraySerializer.INSTANCE;
 	}
 

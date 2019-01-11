@@ -19,7 +19,6 @@ package org.apache.flink.table.runtime.sort
 
 import java.lang.{Long => JLong}
 
-import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.api.common.typeutils.base.LongSerializer
 import org.apache.flink.runtime.state.keyed.{KeyedListState, KeyedListStateDescriptor, KeyedValueState, KeyedValueStateDescriptor}
 import org.apache.flink.runtime.state.{VoidNamespace, VoidNamespaceSerializer}
@@ -46,8 +45,7 @@ class OnlyRowTimeSortOperator(
   override def open() {
     super.open()
 
-    val recordSerializer = TypeUtils.createSerializer(
-      inputRowType).asInstanceOf[TypeSerializer[BaseRow]]
+    val recordSerializer =inputRowType.createSerializer()
     val timeListStateDescriptor = new KeyedListStateDescriptor(
       "timeListState",
       LongSerializer.INSTANCE,

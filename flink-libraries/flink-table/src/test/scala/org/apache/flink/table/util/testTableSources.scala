@@ -24,8 +24,9 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableSchema
-import org.apache.flink.table.api.types.{DataType, DataTypes, RowType}
+import org.apache.flink.table.api.types.{DataType, RowType}
 import org.apache.flink.table.runtime.utils.TimeTestUtil.EventTimeSourceFunction
 import org.apache.flink.table.sources._
 import org.apache.flink.table.sources.tsextractors.ExistingField
@@ -69,7 +70,7 @@ class TestTableSourceWithTime[T](
 
   override def getProctimeAttribute: String = proctime
 
-  override def getReturnType: DataType = DataTypes.of(returnType)
+  override def getReturnType: DataType = returnType
 
   override def getTableSchema: TableSchema = tableSchema
 
@@ -222,7 +223,7 @@ class TestPreserveWMTableSource[T](
     execEnv.addSource(new EventTimeSourceFunction[T](values)).setParallelism(1).returns(returnType)
   }
 
-  override def getReturnType: DataType = DataTypes.of(returnType)
+  override def getReturnType: DataType = returnType
 
   override def getTableSchema: TableSchema = tableSchema
 
@@ -250,7 +251,7 @@ class TestDefinedWMTableSource[T](
     execEnv.fromCollection(values.asJava, returnType)
   }
 
-  override def getReturnType: DataType = DataTypes.of(returnType)
+  override def getReturnType: DataType = returnType
 
   override def getTableSchema: TableSchema = tableSchema
 

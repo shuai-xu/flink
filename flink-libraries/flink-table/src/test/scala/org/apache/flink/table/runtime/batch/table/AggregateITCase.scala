@@ -19,23 +19,22 @@
 package org.apache.flink.table.runtime.batch.table
 
 import java.math.BigDecimal
-
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes}
-import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.api.types.{DataType, DataTypes, TypeInfoWrappedDataType}
 import org.apache.flink.table.functions.aggregate.CountAggFunction
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{CountDistinctWithMergeAndReset, WeightedAvgWithMergeAndReset}
 import org.apache.flink.table.util.CollectionBatchExecTable
 import org.apache.flink.test.util.TestBaseUtils
-import java.lang.{Double => JDouble, Float => JFloat, Integer => JInt}
 
+import java.lang.{Double => JDouble, Float => JFloat, Integer => JInt}
 import org.apache.flink.api.java.typeutils.{ObjectArrayTypeInfo, TupleTypeInfo}
 import org.apache.flink.types.Row
+
 import org.junit._
 
 import scala.collection.JavaConverters._
@@ -354,9 +353,9 @@ class AggregationITCase extends QueryTest {
 
     val ret = t.collect()
     val results = ret.map { row =>
-      val arr = row.getField(1).asInstanceOf[Array[Row]].map {
+      val arr = row.getField(1).asInstanceOf[Array[JTuple2[Boolean, Row]]].map {
         case null => null
-        case baseRow => new JTuple2(baseRow.getField(0), baseRow.getField(1))
+        case tuple => new JTuple2(tuple.getField(0), tuple.getField(1))
       }
       Row.of(row.getField(0), arr)
     }
@@ -471,12 +470,12 @@ class Top10 extends AggregateFunction[Array[JTuple2[JInt, JFloat]], Array[JTuple
   }
 
   override def getAccumulatorType: DataType = {
-    DataTypes.of(ObjectArrayTypeInfo.getInfoFor(
+    new TypeInfoWrappedDataType(ObjectArrayTypeInfo.getInfoFor(
       new TupleTypeInfo[JTuple2[JInt, JFloat]](Types.INT, Types.FLOAT)))
   }
 
   override def getResultType: DataType = {
-    DataTypes.of(ObjectArrayTypeInfo.getInfoFor(
+    new TypeInfoWrappedDataType(ObjectArrayTypeInfo.getInfoFor(
       new TupleTypeInfo[JTuple2[JInt, JFloat]](Types.INT, Types.FLOAT)))
   }
 }

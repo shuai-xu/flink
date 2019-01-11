@@ -20,14 +20,13 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSourceUtil}
-import org.apache.flink.table.typeutils.TypeUtils
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
@@ -87,7 +86,8 @@ class BatchExecTableSourceScan(
     assignSourceResourceAndParallelism(tableEnv, input)
 
     // check that declared and actual type of table source DataSet are identical
-    if (input.getOutputType != TypeUtils.createTypeInfoFromDataType(tableSource.getReturnType)) {
+    if (input.getOutputType !=
+        TypeConverters.createExternalTypeInfoFromDataType(tableSource.getReturnType)) {
       throw new TableException(s"TableSource of type ${tableSource.getClass.getCanonicalName} " +
           s"returned a DataSet of type ${input.getOutputType} that does not match with the " +
           s"type ${tableSource.getReturnType} declared by the TableSource.getReturnType() " +
@@ -116,7 +116,8 @@ class BatchExecTableSourceScan(
       tableSource,
       isStreamTable = false,
       None)
-    hasTimeAttributeField(fieldIndexes) || needsConversion(tableSource.getReturnType)
+    hasTimeAttributeField(fieldIndexes) ||
+        needsConversion(tableSource.getReturnType, extractTableSourceTypeClass(tableSource))
   }
 
   override private[flink] def getSourceTransformation(

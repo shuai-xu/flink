@@ -23,12 +23,16 @@ package org.apache.flink.table.api.types;
  */
 public class MultisetType extends MapType {
 
-	public MultisetType(InternalType elementType) {
+	public MultisetType(DataType elementType) {
 		super(elementType, Types.INT);
 	}
 
-	public InternalType getElementType() {
+	public DataType getElementType() {
 		return getKeyType();
+	}
+
+	public InternalType getElementInternalType() {
+		return getKeyType().toInternalType();
 	}
 
 	@Override
@@ -37,7 +41,7 @@ public class MultisetType extends MapType {
 			return true;
 		} else if (obj instanceof MultisetType) {
 			final MultisetType other = (MultisetType) obj;
-			return getElementType().equals(other.getElementType());
+			return getElementInternalType().equals(other.getElementInternalType());
 		} else {
 			return false;
 		}
@@ -45,7 +49,7 @@ public class MultisetType extends MapType {
 
 	@Override
 	public int hashCode() {
-		return 31 * getElementType().hashCode() + 1;
+		return 31 * getElementInternalType().hashCode() + 1;
 	}
 
 	@Override

@@ -332,17 +332,26 @@ class CodeGeneratorContext(val tableConfig: TableConfig, val supportReference: B
       case Some(expr) => expr
 
       case None =>
-        val typeSerializerTerm = newName("typeSerializer")
+        val term = newName("typeSerializer")
         val declareCode =
-          s"org.apache.flink.api.common.typeutils.TypeSerializer $typeSerializerTerm;"
-        val fieldTypeTerm = addReusableGenericType(t)
-        val initCode = s"$typeSerializerTerm = " +
-            s"org.apache.flink.table.typeutils.TypeUtils.createSerializer($fieldTypeTerm);"
-
+          s"org.apache.flink.api.common.typeutils.TypeSerializer $term;"
+        val ser = DataTypes.createInternalSerializer(t)
+        val initCode = if (supportReference) {
+          s"$term = ${addReferenceObj(ser)};"
+        } else {
+          val byteArray = InstantiationUtil.serializeObject(ser)
+          val serializedData = Base64.encodeBase64URLSafeString(byteArray)
+          s"""
+             |$term = (org.apache.flink.api.common.typeutils.TypeSerializer)
+             | org.apache.flink.util.InstantiationUtil.deserializeObject(
+             |  org.apache.commons.codec.binary.Base64.decodeBase64("$serializedData"),
+             |    Thread.currentThread().getContextClassLoader());
+           """.stripMargin
+        }
         addReusableMember(declareCode, initCode)
 
-        reusableTypeSerializerExprs(t) = typeSerializerTerm
-        typeSerializerTerm
+        reusableTypeSerializerExprs(t) = term
+        term
     }
   }
 

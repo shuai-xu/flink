@@ -19,7 +19,6 @@
 package org.apache.flink.table.util
 
 import java.util
-
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.io.RichOutputFormat
 import org.apache.flink.api.common.typeinfo.TypeInformation
@@ -29,11 +28,12 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
 import org.apache.flink.streaming.api.functions.source.SourceFunction
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.types.{DataType, DataTypes, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, TableSchema}
 import org.apache.flink.table.connector.DefinedDistribution
 import org.apache.flink.table.sinks.{AppendStreamTableSink, BatchTableSink, TableSinkBase}
 import org.apache.flink.table.sources._
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.types.Row
 
 import scala.collection.JavaConverters._
@@ -64,7 +64,8 @@ object MemoryTableSourceSinkUtil {
 
     override def getBoundedStream(execEnv: StreamExecutionEnvironment): DataStream[Row] = {
       execEnv.fromCollection(tableData.asJava,
-        DataTypes.toTypeInfo(returnType).asInstanceOf[TypeInformation[Row]])
+        TypeConverters.createExternalTypeInfoFromDataType(returnType)
+            .asInstanceOf[TypeInformation[Row]])
     }
 
     final class InMemorySourceFunction(var count: Int = terminationCount)
@@ -87,7 +88,8 @@ object MemoryTableSourceSinkUtil {
 
     override def getDataStream(execEnv: StreamExecutionEnvironment): DataStream[Row] = {
       execEnv.addSource(new InMemorySourceFunction,
-        DataTypes.toTypeInfo(returnType).asInstanceOf[TypeInformation[Row]])
+        TypeConverters.createExternalTypeInfoFromDataType(returnType)
+            .asInstanceOf[TypeInformation[Row]])
     }
 
     override def getProctimeAttribute: String = proctime

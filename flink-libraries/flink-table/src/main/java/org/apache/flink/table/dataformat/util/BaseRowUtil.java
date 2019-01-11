@@ -213,7 +213,7 @@ public final class BaseRowUtil {
 		} else if (type instanceof GenericType) {
 			return row.getGeneric(ordinal, (GenericType) type);
 		} else if (type instanceof TypeInfoWrappedDataType) {
-			return row.get(ordinal, ((TypeInfoWrappedDataType) type).toInternalType());
+			return row.get(ordinal, type.toInternalType());
 		} else {
 			throw new RuntimeException("Not support type: " + type);
 		}

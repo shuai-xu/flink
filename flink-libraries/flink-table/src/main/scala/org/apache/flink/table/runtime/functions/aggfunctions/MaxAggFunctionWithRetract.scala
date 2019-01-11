@@ -20,6 +20,7 @@ package org.apache.flink.table.runtime.functions.aggfunctions
 import java.lang.{Boolean => JBoolean, Byte => JByte, Double => JDouble, Float => JFloat, Integer => JInt, Iterable => JIterable, Long => JLong, Short => JShort}
 import org.apache.flink.table.api.dataview.{MapView, Order, SortedMapView}
 import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, InternalType, RowType}
 import org.apache.flink.table.dataformat.{BinaryString, Decimal, GenericRow}
 import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, DecimalTypeInfo}
@@ -321,8 +322,8 @@ class DecimalMaxWithRetractAggFunction(decimalType: DecimalType)
   override def getInitValue: Decimal = Decimal.zero(decimalType.precision(), decimalType.scale())
   override def getInternalValueType: InternalType = DataTypes.createGenericType(
     DecimalTypeInfo.of(decimalType.precision(), decimalType.scale()))
-  override def getValueType: DataType = DataTypes.of(
-    DecimalTypeInfo.of(decimalType.precision(), decimalType.scale()))
+  override def getValueType: DataType =
+    DecimalTypeInfo.of(decimalType.precision(), decimalType.scale())
 }
 
 /**
@@ -332,6 +333,5 @@ class StringMaxWithRetractAggFunction extends MaxWithRetractAggFunction[BinarySt
   override def getInitValue: BinaryString = BinaryString.fromString("")
   override def getInternalValueType: InternalType = DataTypes.createGenericType(
     BinaryStringTypeInfo.INSTANCE)
-  override def getValueType: DataType = DataTypes.of(
-    BinaryStringTypeInfo.INSTANCE)
+  override def getValueType: DataType = BinaryStringTypeInfo.INSTANCE
 }

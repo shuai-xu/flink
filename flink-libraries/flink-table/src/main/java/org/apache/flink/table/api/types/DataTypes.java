@@ -17,53 +17,96 @@
 
 package org.apache.flink.table.api.types;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.java.typeutils.MapTypeInfo;
-import org.apache.flink.api.java.typeutils.ObjectArrayTypeInfo;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.java.tuple.Tuple;
 import org.apache.flink.api.java.typeutils.PojoField;
 import org.apache.flink.api.java.typeutils.PojoTypeInfo;
 import org.apache.flink.api.java.typeutils.TupleTypeInfo;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
-import org.apache.flink.table.typeutils.TypeUtils;
+import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.dataformat.BinaryString;
+import org.apache.flink.table.dataformat.Decimal;
+import org.apache.flink.types.Row;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Utils for types.
  */
 public class DataTypes {
 
+	/**
+	 * External: we use jdk {@link String}.
+	 * SQL engine internal data structure: we use {@link BinaryString} to compute.
+	 */
 	public static final StringType STRING = StringType.INSTANCE;
 
+	/**
+	 * We use java {@code boolean} to compute both internal and external.
+	 */
 	public static final BooleanType BOOLEAN = BooleanType.INSTANCE;
 
+	/**
+	 * We use java {@code double} to compute both internal and external.
+	 */
 	public static final DoubleType DOUBLE = DoubleType.INSTANCE;
 
+	/**
+	 * We use java {@code float} to compute both internal and external.
+	 */
 	public static final FloatType FLOAT = FloatType.INSTANCE;
 
+	/**
+	 * We use java {@code byte} to compute both internal and external.
+	 */
 	public static final ByteType BYTE = ByteType.INSTANCE;
 
+	/**
+	 * We use java {@code int} to compute both internal and external.
+	 */
 	public static final IntType INT = IntType.INSTANCE;
 
+	/**
+	 * We use java {@code long} to compute both internal and external.
+	 */
 	public static final LongType LONG = LongType.INSTANCE;
 
+	/**
+	 * We use java {@code short} to compute both internal and external.
+	 */
 	public static final ShortType SHORT = ShortType.INSTANCE;
 
+	/**
+	 * We use java {@code char} to compute both internal and external.
+	 */
 	public static final CharType CHAR = CharType.INSTANCE;
 
+	/**
+	 * We use java {@code byte[]} to compute both internal and external.
+	 */
 	public static final ByteArrayType BYTE_ARRAY = ByteArrayType.INSTANCE;
 
+	/**
+	 * External: we use jdk {@link java.sql.Date}.
+	 * SQL engine internal data structure: we use {@code int} to compute.
+	 */
 	public static final DateType DATE = DateType.DATE;
 
+	/**
+	 * External: we use jdk {@link java.sql.Timestamp}.
+	 * SQL engine internal data structure: we use {@code long} to compute.
+	 */
 	public static final TimestampType TIMESTAMP = TimestampType.TIMESTAMP;
 
+	/**
+	 * External: we use jdk {@link java.sql.Time}.
+	 * SQL engine internal data structure: we use {@code int} to compute.
+	 */
 	public static final TimeType TIME = TimeType.INSTANCE;
 
 	public static final DateType INTERVAL_MONTHS = DateType.INTERVAL_MONTHS;
@@ -102,11 +145,11 @@ public class DataTypes {
 	 */
 	public static final int PROCTIME_BATCH_MARKER = -4;
 
-	public static ArrayType createArrayType(InternalType elementType) {
+	public static ArrayType createArrayType(DataType elementType) {
 		return new ArrayType(elementType);
 	}
 
-	public static ArrayType createPrimitiveArrayType(InternalType elementType) {
+	public static ArrayType createPrimitiveArrayType(DataType elementType) {
 		return new ArrayType(elementType, true);
 	}
 
@@ -114,24 +157,8 @@ public class DataTypes {
 		return new DecimalType(precision, scale);
 	}
 
-	public static MapType createMapType(InternalType keyType, InternalType valueType) {
-		if (keyType == null) {
-			throw new IllegalArgumentException("keyType should not be null.");
-		}
-		if (valueType == null) {
-			throw new IllegalArgumentException("valueType should not be null.");
-		}
+	public static MapType createMapType(DataType keyType, DataType valueType) {
 		return new MapType(keyType, valueType);
-	}
-
-	public static DataType createArrayType(DataType elementType) {
-		return of(ObjectArrayTypeInfo.getInfoFor(TypeUtils.createTypeInfoFromDataType(elementType)));
-	}
-
-	public static DataType createMapType(DataType keyType, DataType valueType) {
-		return DataTypes.of(new MapTypeInfo<>(
-				TypeUtils.createTypeInfoFromDataType(keyType),
-				TypeUtils.createTypeInfoFromDataType(valueType)));
 	}
 
 	public static <T> GenericType<T> createGenericType(Class<T> cls) {
@@ -142,90 +169,27 @@ public class DataTypes {
 		return new GenericType<>(typeInfo);
 	}
 
-	public static MultisetType createMultisetType(InternalType elementType) {
-		if (elementType == null) {
-			throw new IllegalArgumentException("elementType should not be null.");
-		}
+	public static MultisetType createMultisetType(DataType elementType) {
 		return new MultisetType(elementType);
 	}
 
-	public static DataType of(TypeInformation typeInfo) {
+	public static RowType createRowType(DataType[] types, String[] fieldNames) {
+		return new RowType(types, fieldNames);
+	}
+
+	public static RowType createRowType(DataType... types) {
+		return new RowType(types);
+	}
+
+	public static <T extends Tuple> DataType createTupleType(Class<T> cls, DataType... types) {
+		TupleTypeInfo<T> typeInfo = new TupleTypeInfo<>(cls, TypeConverters.createExternalTypeInfoFromDataTypes(types));
 		return new TypeInfoWrappedDataType(typeInfo);
-	}
-
-	public static TypeInformation to(DataType type) {
-		return TypeUtils.createTypeInfoFromDataType(type);
-	}
-
-	public static InternalType internal(TypeInformation typeInfo) {
-		if (typeInfo == null) {
-			return null;
-		}
-		return TypeUtils.internalTypeFromTypeInfo(typeInfo);
-	}
-
-	public static TypeInformation toTypeInfo(DataType t) {
-		if (t == null) {
-			return null;
-		}
-		return TypeUtils.createTypeInfoFromDataType(t);
-	}
-
-	public static TypeInformation[] toTypeInfos(DataType[] types) {
-		TypeInformation<?>[] typeInfos = new TypeInformation[types.length];
-		for (int i = 0; i < types.length; i++) {
-			typeInfos[i] = DataTypes.toTypeInfo(types[i]);
-		}
-		return typeInfos;
-	}
-
-	public static InternalType[] internalTypes(TypeInformation[] typeInfos) {
-		InternalType[] types = new InternalType[typeInfos.length];
-		for (int i = 0; i < types.length; i++) {
-			types[i] = DataTypes.internal(typeInfos[i]);
-		}
-		return types;
-	}
-
-	public static DataType[] dataTypes(TypeInformation[] typeInfos) {
-		DataType[] types = new DataType[typeInfos.length];
-		for (int i = 0; i < types.length; i++) {
-			types[i] = DataTypes.of(typeInfos[i]);
-		}
-		return types;
-	}
-
-	public static RowType createBaseRowType(InternalType[] types) {
-		return new RowType(types);
-	}
-
-	public static RowType createBaseRowType(
-			InternalType[] types, String[] fieldNames) {
-		return new RowType(types, fieldNames);
-	}
-
-	public static DataType createRowType(DataType[] types, String[] fieldNames) {
-		return new RowType(types, fieldNames);
-	}
-
-	public static DataType createRowType(InternalType[] types, String[] fieldNames) {
-		return new RowType(types, fieldNames);
-	}
-
-	public static DataType createRowType(DataType... types) {
-		return new RowType(types);
-	}
-
-	@SuppressWarnings("unchecked")
-	public static DataType createTupleType(Class cls, DataType... types) {
-		TupleTypeInfo typeInfo = new TupleTypeInfo(cls, typeInfos(types));
-		return of(typeInfo);
 	}
 
 	@SuppressWarnings("unchecked")
 	public static DataType createTupleType(DataType... types) {
-		TupleTypeInfo typeInfo = new TupleTypeInfo(typeInfos(types));
-		return of(typeInfo);
+		TupleTypeInfo typeInfo = new TupleTypeInfo(TypeConverters.createExternalTypeInfoFromDataTypes(types));
+		return new TypeInfoWrappedDataType(typeInfo);
 	}
 
 	public static <T> PojoBuilder pojoBuilder(Class<T> typeClass) {
@@ -246,7 +210,8 @@ public class DataTypes {
 		}
 
 		public PojoBuilder field(String name, DataType type) throws NoSuchFieldException {
-			fields.add(new PojoField(typeClass.getDeclaredField(name), toTypeInfo(type)));
+			fields.add(new PojoField(typeClass.getDeclaredField(name),
+					TypeConverters.createExternalTypeInfoFromDataType(type)));
 			return this;
 		}
 
@@ -256,46 +221,37 @@ public class DataTypes {
 		}
 	}
 
-	private static TypeInformation[] typeInfos(DataType... types) {
-		return Arrays.stream(types).<TypeInformation>map(TypeUtils::createTypeInfoFromDataType)
-				.toArray(TypeInformation[]::new);
+	/**
+	 * We can extract the correct Type from most Classes, such as Pojo.
+	 * But if it is a Row, we can only extract the GenericType because we don't have the
+	 * information of the fields.
+	 */
+	public static DataType extractDataType(Class<?> cls) {
+		return new TypeInfoWrappedDataType(TypeExtractor.createTypeInfo(cls));
 	}
 
-	public static int getArity(DataType t) {
-		return getArity(t.toInternalType());
+	/**
+	 * Create a external serializer.
+	 *
+	 * <p>Eg:
+	 * {@code DataTypes.String} => Serializer for {@link String}.
+	 * {@link DecimalType} => Serializer for {@link BigDecimal}.
+	 * {@link RowType} => Serializer for {@link Row}.
+	 * {@link RowType} with {@link RowType#useBaseRow} => Serializer for {@link BaseRow}.
+	 */
+	public static TypeSerializer createExternalSerializer(DataType type) {
+		return TypeConverters.createExternalTypeInfoFromDataType(type).createSerializer(new ExecutionConfig());
 	}
 
-	public static int getArity(InternalType t) {
-		if (t instanceof RowType) {
-			return ((RowType) t).getArity();
-		}
-		return 1;
-	}
-
-	private static final Map<PrimitiveType, Set<PrimitiveType>> AUTO_CAST_MAP;
-	static {
-		Map<PrimitiveType, Set<PrimitiveType>> map = new HashMap<>();
-		map.put(DataTypes.BYTE, Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-				DataTypes.SHORT, DataTypes.INT, DataTypes.LONG,
-				DataTypes.FLOAT, DataTypes.DOUBLE, DataTypes.CHAR))));
-		map.put(DataTypes.SHORT, Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-				DataTypes.INT, DataTypes.LONG, DataTypes.FLOAT,
-				DataTypes.DOUBLE, DataTypes.CHAR))));
-		map.put(DataTypes.INT, Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-				DataTypes.LONG, DataTypes.FLOAT, DataTypes.DOUBLE, DataTypes.CHAR))));
-		map.put(DataTypes.LONG, Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-				DataTypes.FLOAT, DataTypes.DOUBLE, DataTypes.CHAR))));
-		map.put(DataTypes.FLOAT, Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-				DataTypes.DOUBLE))));
-		AUTO_CAST_MAP = Collections.unmodifiableMap(map);
-	}
-
-	public static boolean shouldAutoCastTo(PrimitiveType t, PrimitiveType castTo) {
-		Set<PrimitiveType> set = AUTO_CAST_MAP.get(t);
-		return set != null && set.contains(castTo);
-	}
-
-	public static DataType extractType(Class cls) {
-		return of(TypeExtractor.createTypeInfo(cls));
+	/**
+	 * Create a internal serializer. In the SQL execution engine, we use internal data structures.
+	 *
+	 * <p>Eg:
+	 * {@code DataTypes.String} => Serializer for {@link BinaryString}.
+	 * {@link DecimalType} => Serializer for {@link Decimal}.
+	 * {@link RowType} => Serializer for {@link BaseRow}.
+	 */
+	public static TypeSerializer createInternalSerializer(DataType type) {
+		return TypeConverters.createInternalTypeInfoFromDataType(type).createSerializer(new ExecutionConfig());
 	}
 }

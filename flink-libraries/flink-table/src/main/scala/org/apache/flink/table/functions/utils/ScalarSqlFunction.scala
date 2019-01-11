@@ -25,7 +25,7 @@ import org.apache.calcite.sql.`type`._
 import org.apache.calcite.sql.parser.SqlParserPos
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.api.functions.{CustomTypeDefinedFunction, ScalarFunction}
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.functions.utils.ScalarSqlFunction._
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{getOperandType, _}
@@ -102,7 +102,7 @@ object ScalarSqlFunction {
       throwValidationException(name, func, parameters)
     }
     func.getParameterTypes(getEvalMethodSignature(func, parameters))
-        .map(DataTypes.toTypeInfo)
+        .map(TypeConverters.createExternalTypeInfoFromDataType)
         .map(typeFactory.createTypeFromTypeInfo(_, isNullable = true))
         .zipWithIndex
         .foreach {

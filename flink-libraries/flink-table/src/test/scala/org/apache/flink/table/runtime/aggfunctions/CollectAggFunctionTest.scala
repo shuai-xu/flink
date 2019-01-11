@@ -20,8 +20,8 @@ package org.apache.flink.table.runtime.aggfunctions
 
 import java.math.{BigDecimal => JBigDecimal}
 import java.util
-
 import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataTypes, GenericType}
 import org.apache.flink.table.dataformat.{BinaryString, Decimal}
 import org.apache.flink.table.runtime.functions.aggfunctions.{CollectAccumulator, CollectAggFunction}
@@ -62,7 +62,7 @@ class StringCollectAggFunctionTest
 
   override def aggregator: AggregateFunction[
     util.Map[BinaryString, Integer], CollectAccumulator[BinaryString]] =
-    new CollectAggFunction(DataTypes.of(BinaryStringTypeInfo.INSTANCE))
+    new CollectAggFunction(BinaryStringTypeInfo.INSTANCE)
 
   override def retractFunc = aggregator.getClass.getMethod("retract", accType, classOf[Any])
 }
@@ -263,7 +263,7 @@ class DecimalCollectAggFunctionTest
 
   override def aggregator: AggregateFunction[util.Map[Decimal, Integer],
     CollectAccumulator[Decimal]] =
-    new CollectAggFunction(DataTypes.of(DecimalTypeInfo.of(7, 2)))
+    new CollectAggFunction(DecimalTypeInfo.of(7, 2))
 
   override def retractFunc = aggregator.getClass.getMethod("retract", accType, classOf[Any])
 }

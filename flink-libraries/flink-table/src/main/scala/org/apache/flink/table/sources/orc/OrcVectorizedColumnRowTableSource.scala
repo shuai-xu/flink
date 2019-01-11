@@ -21,7 +21,8 @@ package org.apache.flink.table.sources.orc
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, InternalType, TypeConverters}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.ColumnarRow
 import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch
@@ -54,7 +55,7 @@ class OrcVectorizedColumnRowTableSource(
       filePath,
       fieldTypes,
       fieldNames,
-      fieldTypes.map(x => !FlinkTypeFactory.isTimeIndicatorType(DataTypes.to(x))),
+      fieldTypes.map(x => !FlinkTypeFactory.isTimeIndicatorType(x)),
       enumerateNestedFiles,
       false
     )
@@ -69,7 +70,7 @@ class OrcVectorizedColumnRowTableSource(
       filePath,
       fieldTypes,
       fieldNames,
-      fieldTypes.map(x => !FlinkTypeFactory.isTimeIndicatorType(DataTypes.to(x))),
+      fieldTypes.map(x => !FlinkTypeFactory.isTimeIndicatorType(x)),
       enumerateNestedFiles,
       copyToFlink)
   }
@@ -112,10 +113,10 @@ class OrcVectorizedColumnRowTableSource(
     execEnv.createInputV2(inputFormat, getPhysicalType)
   }
 
-  override def getReturnType: DataType = DataTypes.internal(getPhysicalType)
+  override def getReturnType: DataType = getPhysicalType
 
   def getPhysicalType = {
-    val typeInfos = this.fieldTypes.map(x => DataTypes.to(x))
+    val typeInfos = this.fieldTypes.map(x => TypeConverters.createExternalTypeInfoFromDataType(x))
     new BaseRowTypeInfo[ColumnarRow](
       classOf[ColumnarRow], typeInfos, this.fieldNames)
   }

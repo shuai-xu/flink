@@ -28,6 +28,7 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.{StreamGraph, StreamGraphGenerator}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.dataformat.BinaryRow
@@ -66,7 +67,6 @@ import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable
 import _root_.scala.collection.mutable.ArrayBuffer
 import _root_.scala.util.{Failure, Success, Try}
-
 
 /**
  *  A session to construct between [[Table]] and [[DataStream]], its main function is:
@@ -152,7 +152,7 @@ class BatchTableEnvironment(
       sink: CollectTableSink[T],
       jobName: Option[String]): Seq[T] = {
     val outType = sink.getOutputType
-    val typeSerializer = DataTypes.toTypeInfo(outType).createSerializer(streamEnv.getConfig)
+    val typeSerializer = DataTypes.createExternalSerializer(outType)
         .asInstanceOf[TypeSerializer[T]]
     val id = new AbstractID().toString
     sink.init(typeSerializer, id)
@@ -287,8 +287,7 @@ class BatchTableEnvironment(
    */
   protected def registerBoundedStreamInternal[T](
       name: String, boundedStream: DataStream[T], replace: Boolean): Unit = {
-    val (fieldNames, fieldIdxs) = getFieldInfo(
-      DataTypes.of(boundedStream.getTransformation.getOutputType))
+    val (fieldNames, fieldIdxs) = getFieldInfo(boundedStream.getTransformation.getOutputType)
     val boundedStreamTable = new DataStreamTable[T](boundedStream, fieldIdxs, fieldNames)
     registerTableInternal(name, boundedStreamTable, replace)
   }
@@ -307,8 +306,7 @@ class BatchTableEnvironment(
       boundedStream: DataStream[T],
       fieldNullables: Array[Boolean],
       replace: Boolean): Unit = {
-    val dataType =
-      DataTypes.of(boundedStream.getTransformation.getOutputType)
+    val dataType = boundedStream.getTransformation.getOutputType
     val (fieldNames, fieldIndexes) = getFieldInfo(dataType)
     val fieldTypes = TableEnvironment.getFieldTypes(dataType)
     val relDataType = getTypeFactory.buildRelDataType(fieldNames, fieldTypes, fieldNullables)
@@ -335,7 +333,7 @@ class BatchTableEnvironment(
         ".rowtime and .proctime time indicators are not allowed in a batch exec environment.")
     }
 
-    val dataType = DataTypes.of(boundedStream.getTransformation.getOutputType)
+    val dataType = boundedStream.getTransformation.getOutputType
     val (fieldNames, fieldIndexes) = getFieldInfo[T](dataType, fields)
     val boundedStreamTable = new DataStreamTable[T](boundedStream, fieldIndexes, fieldNames)
     registerTableInternal(name, boundedStreamTable, replace)
@@ -362,10 +360,10 @@ class BatchTableEnvironment(
       throw new ValidationException(
         ".rowtime and .proctime time indicators are not allowed in a batch exec environment.")
     }
-    val dataType = DataTypes.of(boundedStream.getTransformation.getOutputType)
+    val dataType = boundedStream.getTransformation.getOutputType
     val (fieldNames, fieldIndexes) = getFieldInfo(dataType, fields)
     val physicalFieldTypes = TableEnvironment.getFieldTypes(dataType)
-    val fieldTypes = fieldIndexes.map(physicalFieldTypes.apply(_))
+    val fieldTypes = fieldIndexes.map(physicalFieldTypes.apply)
     val relDataType = getTypeFactory.buildRelDataType(fieldNames, fieldTypes, fieldNullables)
     val boundedStreamTable = new IntermediateBoundedStreamTable[T](
       relDataType, boundedStream, fieldIndexes, fieldNames)

@@ -19,7 +19,6 @@
 package org.apache.flink.table.util
 
 import java.util.{ArrayList => JArrayList, List => JList}
-
 import org.apache.flink.api.common.io.statistics.BaseStatistics
 import org.apache.flink.api.common.io.{DefaultInputSplitAssigner, InputFormat}
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
@@ -29,8 +28,8 @@ import org.apache.flink.configuration.Configuration
 import org.apache.flink.core.io.{GenericInputSplit, InputSplit, InputSplitAssigner}
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.api.TableSchema
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources._
@@ -102,8 +101,7 @@ class TestPartitionableTableSource(
       .setParallelism(1)
   }
 
-  override def getReturnType: DataType =
-    DataTypes.of(returnType)
+  override def getReturnType: DataType = returnType
 
   override def getAllPartitions: JList[Partition] = {
     allPartitions.map(p => new TestPartition(p).asInstanceOf[Partition]).toList.asJava

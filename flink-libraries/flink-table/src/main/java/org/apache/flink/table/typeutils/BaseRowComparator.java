@@ -24,8 +24,8 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.MemorySegment;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.codegen.CodeGenUtils;
 import org.apache.flink.table.codegen.GeneratedRecordComparator;
 import org.apache.flink.table.codegen.SortCodeGenerator;
@@ -63,7 +63,7 @@ public class BaseRowComparator extends TypeComparator<BaseRow> {
 				keys.length, keys, orders, types);
 		this.genComparator = new SortCodeGenerator(
 				keys,
-				Arrays.stream(types).map(DataTypes::internal).toArray(InternalType[]::new),
+				Arrays.stream(types).map(TypeConverters::createInternalTypeFromTypeInfo).toArray(InternalType[]::new),
 				comAndSers._1,
 				orders,
 				SortUtil$.MODULE$.getNullDefaultOrders(orders)

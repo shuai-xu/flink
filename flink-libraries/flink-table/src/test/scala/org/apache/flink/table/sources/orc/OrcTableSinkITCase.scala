@@ -19,18 +19,18 @@
 package org.apache.flink.table.sources.orc
 
 import java.nio.file.Files
-
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.java.BatchTableEnvironment
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, TableEnvironment}
 import org.apache.flink.table.runtime.utils.TableProgramsCollectionTestBase
 import org.apache.flink.table.runtime.utils.TableProgramsTestBase.TableConfigMode
 import org.apache.flink.table.sinks.orc.OrcTableSink
 import org.apache.flink.test.util.TestBaseUtils
+
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Assert, Test}
@@ -88,7 +88,7 @@ class OrcTableSinkITCase(configMode: TableConfigMode)
     )
     val orcTable2 = new OrcVectorizedColumnRowTableSource(
       new Path(tempFile.toFile.getAbsolutePath),
-      types.map(DataTypes.internal(_)),
+      types.map(TypeConverters.createInternalTypeFromTypeInfo(_)),
       names,
       true
     )

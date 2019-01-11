@@ -22,6 +22,7 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.Types;
 import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.sources.tsextractors.ExistingField;
 import org.apache.flink.table.sources.wmstrategies.AscendingTimestamps;
 
@@ -51,7 +52,7 @@ public abstract class KafkaJsonTableSourceTestBase extends KafkaTableSourceBuild
 		KafkaJsonTableSource source = (KafkaJsonTableSource) b.build();
 
 		// check return type
-		RowTypeInfo returnType = (RowTypeInfo) DataTypes.toTypeInfo(source.getReturnType());
+		RowTypeInfo returnType = (RowTypeInfo) TypeConverters.createExternalTypeInfoFromDataType(source.getReturnType());
 		assertNotNull(returnType);
 		assertEquals(5, returnType.getArity());
 		// check field names
@@ -96,7 +97,7 @@ public abstract class KafkaJsonTableSourceTestBase extends KafkaTableSourceBuild
 		KafkaJsonTableSource source = (KafkaJsonTableSource) b.build();
 
 		// check return type
-		RowTypeInfo returnType = (RowTypeInfo) DataTypes.toTypeInfo(source.getReturnType());
+		RowTypeInfo returnType = (RowTypeInfo) TypeConverters.createExternalTypeInfoFromDataType(source.getReturnType());
 		assertNotNull(returnType);
 		assertEquals(6, returnType.getArity());
 		// check field names

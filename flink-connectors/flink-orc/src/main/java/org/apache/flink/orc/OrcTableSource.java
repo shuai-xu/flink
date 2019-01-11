@@ -28,6 +28,7 @@ import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.expressions.Attribute;
 import org.apache.flink.table.expressions.BinaryComparison;
 import org.apache.flink.table.expressions.EqualTo;
@@ -154,7 +155,9 @@ public class OrcTableSource
 		// create a TableSchema that corresponds to the ORC schema
 		this.tableSchema = new TableSchema(
 			typeInfoFromSchema.getFieldNames(),
-			DataTypes.internalTypes(typeInfoFromSchema.getFieldTypes())
+			Arrays.stream(typeInfoFromSchema.getFieldTypes())
+					.map(TypeConverters::createInternalTypeFromTypeInfo)
+					.toArray(InternalType[]::new)
 		);
 	}
 
@@ -180,7 +183,7 @@ public class OrcTableSource
 
 	@Override
 	public DataType getReturnType() {
-		return DataTypes.internal(typeInfo);
+		return TypeConverters.createInternalTypeFromTypeInfo(typeInfo);
 	}
 
 	@Override

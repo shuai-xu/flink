@@ -27,6 +27,7 @@ import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment =>
 import org.apache.flink.streaming.api.graph.StreamGraph
 import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => ScalaStreamExecEnv}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnvironment, StreamTableEnvironment => JavaStreamTableEnv}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnvironment, StreamTableEnvironment => ScalaStreamTableEnv}
@@ -430,12 +431,12 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     checkNotSingleton(function.getClass)
     // check if class could be instantiated
     checkForInstantiation(function.getClass)
-    val implicitResultType =
+    val implicitResultType: DataType =
       // we may use arguments types to infer later on.
       if (UserDefinedFunctionUtils.getResultTypeIgnoreException(function) != null) {
       function.getResultType(null, null)
     } else {
-      DataTypes.of(implicitly[TypeInformation[T]])
+      implicitly[TypeInformation[T]]
     }
 
     // register in Table API
@@ -458,11 +459,9 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     checkNotSingleton(function.getClass)
     // check if class could be instantiated
     checkForInstantiation(function.getClass)
-    val implicitResultType: DataType = DataTypes.of(implicitly[TypeInformation[T]])
-    val implicitAccType: DataType = DataTypes.of(implicitly[TypeInformation[ACC]])
 
-    val resultType = getResultTypeOfAggregateFunction(function, implicitResultType)
-    val accType = getAccumulatorTypeOfAggregateFunction(function, implicitAccType)
+    val resultType = getResultTypeOfAggregateFunction(function, implicitly[TypeInformation[T]])
+    val accType = getAccumulatorTypeOfAggregateFunction(function, implicitly[TypeInformation[ACC]])
 
     // register in Table API
     functionCatalog.registerFunction(name, function.getClass)

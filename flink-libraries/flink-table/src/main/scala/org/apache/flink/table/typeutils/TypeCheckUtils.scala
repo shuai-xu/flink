@@ -126,7 +126,7 @@ object TypeCheckUtils {
   }
 
   def assertOrderableExpr(dataType: InternalType, caller: String): ValidationResult = {
-    if (DataTypes.toTypeInfo(dataType).isSortKeyType) {
+    if (TypeConverters.createExternalTypeInfoFromDataType(dataType).isSortKeyType) {
       ValidationSuccess
     } else {
       ValidationFailure(s"$caller requires orderable types, get $dataType here")

@@ -19,7 +19,6 @@
 package org.apache.flink.table.api.functions;
 
 import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.expressions.Expression;
@@ -81,7 +80,7 @@ public class TemporalTableFunction extends TableFunction<BaseRow> {
 			table,
 			timeAttribute,
 			primaryKey,
-			DataTypes.createBaseRowType(
+			new RowType(
 				table.getSchema().getTypes(),
 				table.getSchema().getColumnNames()));
 	}

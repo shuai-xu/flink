@@ -21,7 +21,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.{DataTypes, RowType}
+import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
@@ -111,7 +111,8 @@ class BatchExecLocalHashWindowAggregate(
     val windowStart = 0L
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
     val generatedOperator = codegen(ctx, tableEnv,
-      DataTypes.internal(input.getOutputType).asInstanceOf[RowType], outputRowType,
+      TypeConverters.createInternalTypeFromTypeInfo(
+        input.getOutputType).asInstanceOf[RowType], outputRowType,
       groupBufferLimitSize, resource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB,
       resource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB,
       windowStart, windowSize, slideSize)
@@ -124,7 +125,7 @@ class BatchExecLocalHashWindowAggregate(
       input,
       getOperatorName,
       operator,
-      TypeUtils.toBaseRowTypeInfo(outputRowType),
+      TypeConverters.toBaseRowTypeInfo(outputRowType),
       resultPartitionCount)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)

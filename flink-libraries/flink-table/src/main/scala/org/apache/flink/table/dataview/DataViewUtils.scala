@@ -22,9 +22,10 @@ import org.apache.flink.api.common.functions.Comparator
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.api.java.typeutils.{PojoField, PojoTypeInfo}
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.dataview._
-import org.apache.flink.table.api.types.{DataType, DataTypes, RowType}
+import org.apache.flink.table.api.types.{DataType, RowType, TypeConverters}
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.dataformat.GenericRow
 import org.apache.flink.table.typeutils._
@@ -50,7 +51,7 @@ object DataViewUtils {
     isStateBackedDataViews: Boolean)
   : (DataType, Array[DataViewSpec]) = {
 
-    val externalAccTypeInfo = TypeUtils.createTypeInfoFromDataType(externalAccType)
+    val externalAccTypeInfo = TypeConverters.createExternalTypeInfoFromDataType(externalAccType)
     val acc = aggFun.createAccumulator()
     val accumulatorSpecs = new mutable.ArrayBuffer[DataViewSpec]
 
@@ -79,8 +80,8 @@ object DataViewUtils {
             accumulatorSpecs += spec.get
           }
         }
-        (DataTypes.of(new PojoTypeInfo(externalAccTypeInfo.getTypeClass, newPojoFields)),
-          accumulatorSpecs.toArray)
+        (new PojoTypeInfo(externalAccTypeInfo.getTypeClass, newPojoFields),
+            accumulatorSpecs.toArray)
 
       case bt: BaseRowTypeInfo[_] if acc.isInstanceOf[GenericRow] =>
         val accInstance = acc.asInstanceOf[GenericRow]
@@ -104,12 +105,7 @@ object DataViewUtils {
           newTypeInfo
         }
 
-        val newType = new RowType(
-          bt.getTypeClass,
-          newFieldTypes.map(DataTypes.of).toArray,
-          bt.getFieldNames,
-          true)
-
+        val newType = new RowType(bt.getTypeClass, newFieldTypes, bt.getFieldNames, true)
         (newType, accumulatorSpecs.toArray)
       case ct: CompositeType[_] if includesDataView(ct) =>
         throw new TableException(
@@ -151,9 +147,7 @@ object DataViewUtils {
         val newTypeInfo = if (mapView != null && mapView.keyType != null &&
           mapView.valueType != null) {
 
-          new MapViewTypeInfo(
-            TypeUtils.createTypeInfoFromDataType(mapView.keyType),
-            TypeUtils.createTypeInfoFromDataType(mapView.valueType))
+          new MapViewTypeInfo(mapView.keyType, mapView.valueType)
         } else {
           map
         }
@@ -180,8 +174,8 @@ object DataViewUtils {
           && sortedMapView.valueType != null) {
           (sortedMapView.keyType, sortedMapView.valueType)
         } else {
-          (TypeUtils.internalTypeFromTypeInfo(map.keyType),
-            TypeUtils.internalTypeFromTypeInfo(map.valueType))
+          (TypeConverters.createInternalTypeFromTypeInfo(map.keyType),
+              TypeConverters.createInternalTypeFromTypeInfo(map.valueType))
         }
         val newTypeInfo = if (isStateBackedDataViews) {
           new SortedMapViewTypeInfo(
@@ -189,13 +183,10 @@ object DataViewUtils {
               keyType, sortedMapView.ord).asInstanceOf[Comparator[Any]],
             OrderedTypeUtils.createOrderedTypeInfoFromDataType(
               keyType, sortedMapView.ord).asInstanceOf[TypeInformation[Any]],
-            TypeUtils.createTypeInfoFromDataType(valueType))
+            valueType)
         } else {
           new SortedMapViewTypeInfo(
-            new SortedMapViewTypeInfo.ComparableComparator(),
-            TypeUtils.createTypeInfoFromDataType(
-              keyType).asInstanceOf[TypeInformation[Any]],
-            TypeUtils.createTypeInfoFromDataType(valueType))
+            new SortedMapViewTypeInfo.ComparableComparator(), keyType, valueType)
         }
 
         if (!isStateBackedDataViews) {
@@ -216,7 +207,8 @@ object DataViewUtils {
       case list: ListViewTypeInfo[_] =>
         val listView = instance.asInstanceOf[ListView[_]]
         val newTypeInfo = if (listView != null && listView.elementType != null) {
-          new ListViewTypeInfo(TypeUtils.createTypeInfoFromDataType(listView.elementType))
+          new ListViewTypeInfo(
+            TypeConverters.createExternalTypeInfoFromDataType(listView.elementType))
         } else {
           list
         }

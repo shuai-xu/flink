@@ -28,8 +28,8 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.tasks.OneInputStreamTask;
 import org.apache.flink.streaming.runtime.tasks.OneInputStreamTaskTestHarness;
 import org.apache.flink.table.api.TableConfig;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.RowType;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.codegen.CodeGeneratorContext;
 import org.apache.flink.table.codegen.GeneratedProjection;
 import org.apache.flink.table.codegen.GeneratedSorter;
@@ -83,10 +83,10 @@ public class SampleAndHistogramOperatorTest {
 		//sort fields:
 		// ddd, efg, gfi,hkl, jkl, mkl, njk, oji, sdf, xyz
 		BaseRowTypeInfo typeInfo = new BaseRowTypeInfo<>(BinaryRow.class, STRING_TYPE_INFO, STRING_TYPE_INFO);
-		RowType type = (RowType) DataTypes.internal(typeInfo);
+		RowType type = (RowType) TypeConverters.createInternalTypeFromTypeInfo(typeInfo);
 		int[] keys = new int[]{0};
 		boolean[] orders = new boolean[]{true};
-		RowType dataType = (RowType) DataTypes.internal(typeInfo);
+		RowType dataType = (RowType) TypeConverters.createInternalTypeFromTypeInfo(typeInfo);
 		GeneratedProjection copyToBinaryRow = ProjectionCodeGenerator.generateProjection(
 				CodeGeneratorContext.apply(config, false), "copyToBinaryRow", dataType,
 				dataType, new int[]{0, 1}, CodeGeneratorContext.DEFAULT_INPUT1_TERM(),

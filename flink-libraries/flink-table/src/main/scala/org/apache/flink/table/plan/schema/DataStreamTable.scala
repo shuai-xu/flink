@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.schema
 
 import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
 
 class DataStreamTable[T](
@@ -29,7 +29,7 @@ class DataStreamTable[T](
     override val fieldIndexes: Array[Int],
     override val fieldNames: Array[String],
     statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)
-  extends InlineTable(DataTypes.of(dataStream.getType), fieldIndexes, fieldNames, statistic) {
+  extends InlineTable(dataStream.getType, fieldIndexes, fieldNames, statistic) {
 
   // This is only used for boundedStream now, we supply default statistic.
   def this(

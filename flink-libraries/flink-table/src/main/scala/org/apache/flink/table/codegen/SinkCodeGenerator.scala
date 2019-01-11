@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.codegen
 
+import org.apache.flink.api.common.functions.InvalidTypesException
 import org.apache.flink.api.common.typeinfo.{AtomicType, TypeInformation}
 import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
@@ -25,7 +26,8 @@ import org.apache.flink.api.java.typeutils.{GenericTypeInfo, PojoTypeInfo, RowTy
 import org.apache.flink.api.scala.createTuple2TypeInformation
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.table.api.types.{DataType, DataTypes, RowType}
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, RowType, TypeConverters}
 import org.apache.flink.table.api.{Table, TableConfig, TableException, Types}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
@@ -33,7 +35,8 @@ import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCo
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToExternal
+import org.apache.flink.table.runtime.conversion.DataStructureConverters.genToExternal
+import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.typeutils.TypeUtils.getCompositeTypes
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TimeIndicatorTypeInfo}
 import org.apache.flink.types.Row
@@ -44,6 +47,16 @@ import scala.collection.JavaConversions._
 
 object SinkCodeGenerator {
 
+  private[flink] def extractTableSinkTypeClass(sink: TableSink[_]): Class[_] = {
+    try {
+      TypeExtractor.createTypeInfo(sink, classOf[TableSink[_]], sink.getClass, 0)
+          .getTypeClass.asInstanceOf[Class[_]]
+    } catch {
+      case _: InvalidTypesException =>
+        classOf[Object]
+    }
+  }
+
   /** Code gen a operator to convert internal type rows to external type. **/
   def generateRowConverterOperator[IN, OUT](
       config: TableConfig,
@@ -53,15 +66,20 @@ object SinkCodeGenerator {
       operatorName: String,
       rowtimeField: Option[Int],
       withChangeFlag: Boolean,
-      dataType: DataType)
+      dataType: DataType,
+      sink: TableSink[_])
   : (Option[OneInputSubstituteStreamOperator[IN, OUT]], TypeInformation[OUT]) = {
 
-    val resultType = DataTypes.toTypeInfo(dataType).asInstanceOf[TypeInformation[OUT]]
+    val resultType = TypeConverters.createExternalTypeInfoFromDataType(dataType)
+        .asInstanceOf[TypeInformation[OUT]]
+
+    val typeClass = extractTableSinkTypeClass(sink)
 
     //row needs no conversion
-    if (resultType.isInstanceOf[BaseRowTypeInfo[_]]
-        || (resultType.isInstanceOf[GenericTypeInfo[_]]
-        && resultType.getTypeClass == classOf[BaseRow])) {
+    if (resultType.isInstanceOf[BaseRowTypeInfo[_]] ||
+        (resultType.isInstanceOf[GenericTypeInfo[_]] &&
+            resultType.getTypeClass == classOf[BaseRow])) {
+//    if (CodeGenUtils.isInternalClass(typeClass, dataType.toInternalType)) {
       return (None, resultType)
     }
 
@@ -135,13 +153,13 @@ object SinkCodeGenerator {
         }
 
         val resultGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck).bindInput(
-          DataTypes.internal(inputTypeInfo),
+          TypeConverters.createInternalTypeFromTypeInfo(inputTypeInfo),
           inputTerm,
           inputFieldMapping = Option(mapping))
         val outputBaseRowType = new BaseRowTypeInfo(
           classOf[GenericRow], getCompositeTypes(convertOutputType): _*)
         val conversion = resultGenerator.generateConverterResultExpression(
-          DataTypes.internal(outputBaseRowType).asInstanceOf[RowType])
+          TypeConverters.createInternalTypeFromTypeInfo(outputBaseRowType).asInstanceOf[RowType])
         afterIndexModify = CodeGenUtils.newName("afterIndexModify")
         s"""
            |${conversion.code}
@@ -150,7 +168,7 @@ object SinkCodeGenerator {
       }
 
     val retractProcessCode = if (!withChangeFlag) {
-      generatorCollect(genToExternal(ctx, DataTypes.of(outputTypeInfo), afterIndexModify))
+      generatorCollect(genToExternal(ctx, outputTypeInfo, afterIndexModify))
     } else {
       val flagResultTerm =
         s"${classOf[BaseRowUtil].getCanonicalName}.isAccumulateMsg($afterIndexModify)"
@@ -160,7 +178,8 @@ object SinkCodeGenerator {
          |$genericRowField $resultTerm = new $genericRowField(2);
          |$resultTerm.update(0, $flagResultTerm);
          |$resultTerm.update(1, $afterIndexModify);
-         |${generatorCollect(genToExternal(ctx, DataTypes.of(outputTypeInfo), resultTerm))}
+         |${generatorCollect(genToExternal(
+        ctx, outputTypeInfo, resultTerm))}
           """.stripMargin
     }
 
@@ -173,7 +192,7 @@ object SinkCodeGenerator {
          |$retractProcessCode
          |""".stripMargin,
       endInputCode,
-      DataTypes.internal(inputTypeInfo),
+      TypeConverters.createInternalTypeFromTypeInfo(inputTypeInfo),
       config)
     val substituteStreamOperator = new OneInputSubstituteStreamOperator[IN, OUT](
       generated.name,

@@ -21,8 +21,9 @@ package org.apache.flink.table.client.gateway.local.result;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.accumulators.SerializedListAccumulator;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.table.api.types.DataType;
-import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.client.gateway.SqlExecutionException;
 import org.apache.flink.table.client.gateway.TypedResult;
 import org.apache.flink.table.client.gateway.local.CollectBatchTableSink;
@@ -59,7 +60,8 @@ public class MaterializedCollectBatchResult<C> extends BasicResult<C> implements
 
 		accumulatorName = new AbstractID().toString();
 		tableSink = new CollectBatchTableSink(accumulatorName,
-			DataTypes.toTypeInfo(outputType).createSerializer(config));
+				(TypeSerializer<Row>) TypeConverters.createExternalTypeInfoFromDataType(outputType)
+						.createSerializer(config));
 		resultLock = new Object();
 		retrievalThread = new ResultRetrievalThread();
 

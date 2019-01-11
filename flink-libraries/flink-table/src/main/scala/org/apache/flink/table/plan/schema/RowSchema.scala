@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.schema
 
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.types.{RowType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 
 import scala.collection.JavaConversions._
@@ -35,8 +35,8 @@ class RowSchema(private val logicalRowType: RelDataType) {
       f => FlinkTypeFactory.toDataType(f.getType).toInternalType
     }
 
-  private lazy val physicalRowType: InternalType = DataTypes.createBaseRowType(
-    physicalRowFieldTypes.toArray, fieldNames.toArray)
+  private lazy val physicalRowType: InternalType = DataTypes.createRowType(
+    physicalRowFieldTypes.toArray[DataType], fieldNames.toArray)
 
   /**
     * Returns the arity of the schema.
@@ -69,6 +69,6 @@ class RowSchema(private val logicalRowType: RelDataType) {
   def projectedTypeInfo(fields: Array[Int]): RowType = {
     val projectedTypes = fields.map(fieldTypeInfos(_))
     val projectedNames = fields.map(fieldNames(_))
-    DataTypes.createBaseRowType(projectedTypes, projectedNames)
+    DataTypes.createRowType(projectedTypes.toArray[DataType], projectedNames)
   }
 }

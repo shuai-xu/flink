@@ -216,20 +216,20 @@ public class TypeStringUtils {
 		} else if (dataType instanceof org.apache.flink.table.api.types.GenericType) {
 			String clazzName = ((org.apache.flink.table.api.types.GenericType) dataType).getTypeClass().getName();
 			return ANY + '<' + clazzName + '>';
-		} else if (dataType instanceof org.apache.flink.table.api.types.MapType) {
-			final InternalType keyType = ((org.apache.flink.table.api.types.MapType) dataType).getKeyType();
-			final InternalType valueType = ((org.apache.flink.table.api.types.MapType) dataType).getValueType();
+		} else if (dataType instanceof org.apache.flink.table.api.types.MultisetType) {
+			final DataType elementType = ((org.apache.flink.table.api.types.MultisetType) dataType).getElementType();
+			return MULTISET + '<' + writeDataType(elementType) + '>';
+		}  else if (dataType instanceof org.apache.flink.table.api.types.MapType) {
+			final DataType keyType = ((org.apache.flink.table.api.types.MapType) dataType).getKeyType();
+			final DataType valueType = ((org.apache.flink.table.api.types.MapType) dataType).getValueType();
 			return MAP + '<' + writeDataType(keyType) + ", " + writeDataType(valueType) + '>';
 		} else if (dataType instanceof org.apache.flink.table.api.types.ArrayType) {
 			final boolean isPrimitive = ((org.apache.flink.table.api.types.ArrayType) dataType).isPrimitive();
-			final InternalType elementType = ((org.apache.flink.table.api.types.ArrayType) dataType).getElementType();
+			final DataType elementType = ((org.apache.flink.table.api.types.ArrayType) dataType).getElementType();
 			final String result = isPrimitive ? PRIMITIVE_ARRAY : OBJECT_ARRAY;
 			return result + '<' + writeDataType(elementType) + '>';
-		} else if (dataType instanceof org.apache.flink.table.api.types.MultisetType) {
-			final InternalType elementType = ((org.apache.flink.table.api.types.MultisetType) dataType).getElementType();
-			return MULTISET + '<' + writeDataType(elementType) + '>';
 		} else {
-			throw new ValidationException("Unsupported type: " + dataType);
+			return dataType.toString();
 		}
 	}
 

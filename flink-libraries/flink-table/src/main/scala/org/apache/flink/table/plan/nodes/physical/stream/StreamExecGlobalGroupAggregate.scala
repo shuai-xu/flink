@@ -19,7 +19,7 @@ package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.types.{DataType, DataTypes, TypeConverters}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
@@ -30,7 +30,7 @@ import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRul
 import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateNameUtil, AggregateUtil, FlinkRexUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.aggregate.MiniBatchGlobalGroupAggFunction
 import org.apache.flink.table.runtime.bundle.KeyedBundleOperator
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.Logging
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
@@ -191,7 +191,8 @@ class StreamExecGlobalGroupAggregate(
         generateRetraction,
         groupings.isEmpty)
 
-      val localAccTypes = localAggInfoList.getAccTypes.map(DataTypes.toTypeInfo)
+      val localAccTypes = localAggInfoList.getAccTypes.map(
+        TypeConverters.createExternalTypeInfoFromDataType)
       // the bundle buffer value type is local acc type which contains mapview type
       val valueTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], localAccTypes: _*)
       new KeyedBundleOperator(

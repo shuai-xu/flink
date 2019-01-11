@@ -23,7 +23,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator.Context
 import org.apache.flink.table.api.java.BatchTableEnvironment
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.types.{DataType, DataTypes, TypeConverters}
 import org.apache.flink.table.api.{Table, TableConfig, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
@@ -32,6 +32,7 @@ import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData._
 import org.apache.flink.table.sinks.{CollectRowTableSink, CollectTableSink}
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.ExecResourceUtil.InferMode
 import org.apache.flink.table.util.PlanUtil.toPlanWihMetrics
 import org.apache.flink.test.util.AbstractTestBase
@@ -125,7 +126,8 @@ class PlanUtilTest extends AbstractTestBase {
     val originSink = new CollectRowTableSink()
     val sink = originSink.configure(fieldNames, fieldTypes).asInstanceOf[CollectTableSink[Row]]
     val sinkTyp = sink.getOutputType
-    val typeSerializer = DataTypes.to(sinkTyp).createSerializer(env.getConfig)
+    val typeSerializer =
+      TypeConverters.createExternalTypeInfoFromDataType(sinkTyp).createSerializer(env.getConfig)
       .asInstanceOf[TypeSerializer[Row]]
     sink.init(typeSerializer, new AbstractID().toString)
     sink

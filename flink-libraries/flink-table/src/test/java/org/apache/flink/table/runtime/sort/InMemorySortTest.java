@@ -41,6 +41,7 @@ import org.apache.flink.runtime.operators.sort.QuickSort;
 import org.apache.flink.runtime.operators.testutils.UniformIntTupleGenerator;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.codegen.GeneratedNormalizedKeyComputer;
 import org.apache.flink.table.codegen.GeneratedRecordComparator;
 import org.apache.flink.table.codegen.SortCodeGenerator;
@@ -287,8 +288,8 @@ public class InMemorySortTest {
 	public void testBaseRow() throws IOException, InstantiationException, IllegalAccessException {
 
 		TypeInformation type = new TupleTypeInfo(Types.INT, Types.INT);
-		BaseRowSerializer serializer = (BaseRowSerializer) TypeUtils.createSerializer(type);
-		TypeComparator comparator = TypeUtils.createComparator(type, order);
+		BaseRowSerializer serializer = new BaseRowSerializer(DataTypes.INT, DataTypes.INT);
+		TypeComparator comparator = TypeUtils.createInternalComparator(type, order);
 
 		Tuple2<NormalizedKeyComputer, RecordComparator> tuple2 = getGenericSortBase(
 				"testGenericTuple2", new TupleTypeInfo(Types.INT, Types.INT),
@@ -695,7 +696,8 @@ public class InMemorySortTest {
 			InstantiationException {
 		SortCodeGenerator generator = new SortCodeGenerator(
 				keys,
-				Arrays.stream(types).map(DataTypes::internal).toArray(InternalType[]::new),
+				Arrays.stream(types).map(TypeConverters::createInternalTypeFromTypeInfo)
+						.toArray(InternalType[]::new),
 				comparators, orders, nullsIsLast);
 		GeneratedNormalizedKeyComputer computer = generator.generateNormalizedKeyComputer(namePrefix + "Computer");
 		GeneratedRecordComparator comparator = generator.generateRecordComparator(namePrefix + "Comparator");

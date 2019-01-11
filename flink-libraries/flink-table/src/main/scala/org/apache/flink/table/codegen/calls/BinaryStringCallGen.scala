@@ -32,7 +32,7 @@ import org.apache.flink.table.codegen.calls.ScalarOperators.generateNot
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedExpression}
 import org.apache.flink.table.dataformat.BinaryMap
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToInternal
+import org.apache.flink.table.runtime.conversion.DataStructureConverters.genToInternal
 import org.apache.flink.table.runtime.functions.{BuildInScalarFunctions, ScalarFunctions}
 
 /**

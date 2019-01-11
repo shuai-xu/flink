@@ -22,7 +22,7 @@ import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.runtime.operators.sort.QuickSort
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType, TypeConverters}
 import org.apache.flink.table.api.window.TimeWindow
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, Types}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
@@ -211,8 +211,8 @@ abstract class BatchExecHashWindowAggregateBase(
                |${prepareCodes.mkString("\n").trim}
                """.stripMargin
           val assignTimestampExpr =
-            new GeneratedExpression(
-              assignedWindows, "false", code, DataTypes.internal(new ListTypeInfo(Types.LONG)))
+            new GeneratedExpression(assignedWindows, "false", code,
+              TypeConverters.createInternalTypeFromTypeInfo(new ListTypeInfo(Types.LONG)))
 
           // gen code to filter invalid overlapping windows
           val assignedTimestamp = newName("assignedTimestamp")

@@ -19,7 +19,7 @@ package org.apache.flink.table.runtime.functions.tablefunctions
 
 import org.apache.commons.lang3.StringUtils
 import org.apache.flink.table.api.functions.TableFunction
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString, GenericRow}
 
 import scala.annotation.varargs
@@ -112,8 +112,8 @@ class MultiKeyValue extends TableFunction[BaseRow] {
     if (canUseFastMode) {
       fieldToIndex = immutable.Map(fieldArgToIndex.map(f => (f._1 -> f._2.toArray)).toList: _*)
     }
-    val keyFieldsValueType = (0 until keyFieldsNum).map(i => DataTypes.STRING).toArray[InternalType]
-    DataTypes.createBaseRowType(keyFieldsValueType)
+    val keyFieldsValueType = (0 until keyFieldsNum).map(i => DataTypes.STRING).toArray[DataType]
+    new RowType(keyFieldsValueType: _*)
   }
 
 }

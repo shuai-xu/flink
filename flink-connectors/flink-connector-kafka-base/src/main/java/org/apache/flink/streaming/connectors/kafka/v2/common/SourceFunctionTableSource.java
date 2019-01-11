@@ -29,7 +29,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.DataType;
-import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.StreamTableSource;
@@ -134,7 +134,7 @@ public class SourceFunctionTableSource<OUT>
 
 	@Override
 	public DataType getReturnType() {
-		return DataTypes.of(getProducedType());
+		return new TypeInfoWrappedDataType(getProducedType());
 	}
 
 	public TypeInformation<OUT> getProducedType() {

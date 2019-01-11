@@ -19,9 +19,9 @@
 package org.apache.flink.table.plan.util
 
 import java.util
-
 import org.apache.flink.api.common.typeinfo.{BasicArrayTypeInfo, BasicTypeInfo, PrimitiveArrayTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.{MultisetTypeInfo, ObjectArrayTypeInfo}
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.functions.TableFunction
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 
@@ -38,10 +38,14 @@ class ObjectExplodeTableFunc(componentType: TypeInformation[_]) extends TableFun
 
   override def getParameterTypes(signature: Array[Class[_]]): Array[DataType] = {
     if (signature.head == classOf[Array[Object]]) {
-      Array(DataTypes.createArrayType(DataTypes.of(componentType)))
+      Array(DataTypes.createArrayType(componentType))
     } else {
-      Array(DataTypes.createMapType(DataTypes.of(componentType), DataTypes.INT))
+      Array(DataTypes.createMapType(componentType, DataTypes.INT))
     }
+  }
+
+  override def getResultType(arguments: Array[AnyRef], argTypes: Array[Class[_]]): DataType = {
+    componentType
   }
 }
 

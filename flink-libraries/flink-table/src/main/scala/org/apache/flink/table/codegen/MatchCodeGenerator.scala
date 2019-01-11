@@ -19,7 +19,6 @@
 package org.apache.flink.table.codegen
 
 import java.lang.{Long => JLong}
-
 import org.apache.calcite.rel.RelCollation
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
@@ -31,6 +30,7 @@ import org.apache.flink.api.common.functions.Function
 import org.apache.flink.cep.pattern.conditions.{IterativeCondition, RichIterativeCondition}
 import org.apache.flink.cep._
 import org.apache.flink.configuration.Configuration
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite.FlinkTypeFactory
@@ -44,8 +44,9 @@ import org.apache.flink.table.plan.util.AggregateUtil
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.functions.sql.ProctimeSqlFunction
 import org.apache.flink.table.plan.util.MatchUtil.AggregationPatternVariableFinder
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToInternal
+import org.apache.flink.table.runtime.conversion.DataStructureConverters.genToInternal
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContextImpl}
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.utils.EncodingUtils
 import org.apache.flink.util.Collector
 import org.apache.flink.util.MathUtils.checkedDownCast
@@ -416,7 +417,7 @@ class MatchCodeGenerator(
       resultExprs,
       new RowType(
         classOf[GenericRow],
-        returnSchema.fieldTypeInfos.map(new TypeInfoWrappedDataType(_)).toArray[DataType],
+        returnSchema.fieldTypeInfos,
         returnSchema.fieldNames.toArray))
 
     aggregatesPerVariable.values.foreach(_.generateAggFunction())
@@ -450,7 +451,7 @@ class MatchCodeGenerator(
       } ++ orderKeys.getFieldCollations.asScala.map { fieldCollation =>
         fieldsAccessed += fieldCollation.getFieldIndex
         generateFieldAccess(ctx, input1Type, eventNameTerm, fieldCollation.getFieldIndex, nullCheck)
-      } ++ (0 until DataTypes.getArity(input1Type)).filterNot(fieldsAccessed.contains).map { idx =>
+      } ++ (0 until TypeUtils.getArity(input1Type)).filterNot(fieldsAccessed.contains).map { idx =>
         generateFieldAccess(ctx, input1Type, eventNameTerm, idx, nullCheck)
       } ++ returnSchema.fieldNames.filter(measures.containsKey(_)).map { fieldName =>
         generateExpression(measures.get(fieldName))
@@ -462,7 +463,7 @@ class MatchCodeGenerator(
       resultExprs,
       new RowType(
         classOf[GenericRow],
-        returnSchema.fieldTypeInfos.map(DataTypes.of).toArray,
+        returnSchema.fieldTypeInfos,
         returnSchema.fieldNames.toArray))
 
     val resultCode = {
@@ -951,7 +952,7 @@ class MatchCodeGenerator(
     private def generateAggAccess(aggCall: RexCall): GeneratedExpression = {
       val singleAggResultTerm = newName("result")
       val singleAggNullTerm = newName("nullTerm")
-      val singleAggResultType = DataTypes.internal(FlinkTypeFactory.toTypeInfo(aggCall.`type`))
+      val singleAggResultType = FlinkTypeFactory.toTypeInfo(aggCall.`type`).toInternalType
       val primitiveSingleAggResultTypeTerm = primitiveTypeTermForType(singleAggResultType)
       val boxedSingleAggResultTypeTerm = boxedTypeTermForType(singleAggResultType)
 

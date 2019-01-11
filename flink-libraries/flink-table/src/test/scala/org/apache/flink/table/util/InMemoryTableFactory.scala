@@ -92,7 +92,7 @@ class InMemoryTableFactory(terminationCount: Int)
     val rowtimeDescriptors = SchemaValidator.deriveRowtimeAttributes(params)
     new MemoryTableSourceSinkUtil.UnsafeMemoryTableSource(
       tableSchema,
-      DataTypes.createRowType(types, names),
+      DataTypes.createRowType(types.toArray[DataType], names),
       rowtimeDescriptors,
       proctimeAttributeOpt.get(),
       terminationCount)

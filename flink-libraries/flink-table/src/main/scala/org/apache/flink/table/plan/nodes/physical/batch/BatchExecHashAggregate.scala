@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.{DataTypes, RowType}
+import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
@@ -30,7 +30,6 @@ import org.apache.flink.table.plan.util.{AggregateNameUtil, FlinkRelOptUtil}
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{BatchExecRelVisitor, ExecResourceUtil}
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.ExecResourceUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
@@ -152,7 +151,8 @@ class BatchExecHashAggregate(
     val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
     val outputRowType = getOutputRowType
-    val inputType = DataTypes.internal(input.getOutputType).asInstanceOf[RowType]
+    val inputType = TypeConverters.createInternalTypeFromTypeInfo(
+      input.getOutputType).asInstanceOf[RowType]
     val generatedOperator = if (grouping.isEmpty) {
       codegenWithoutKeys(isMerge, isFinal, ctx, tableEnv, inputType, outputRowType, "NoGrouping")
     } else {
@@ -176,7 +176,7 @@ class BatchExecHashAggregate(
       input,
       getOperatorName,
       operator,
-      TypeUtils.toBaseRowTypeInfo(outputRowType),
+      TypeConverters.toBaseRowTypeInfo(outputRowType),
       resultPartitionCount)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setDamBehavior(DamBehavior.FULL_DAM)

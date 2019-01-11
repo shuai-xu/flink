@@ -88,9 +88,10 @@ object CodeGenUtils {
     case _ => false
   }
 
-  def needCloneRefForDataType(t: DataType): Boolean = DataTypes.toTypeInfo(t) match {
-    case BinaryStringTypeInfo.INSTANCE => true
-    case _ => false
+  def needCloneRefForDataType(t: DataType): Boolean =
+    TypeConverters.createExternalTypeInfoFromDataType(t) match {
+      case BinaryStringTypeInfo.INSTANCE => true
+      case _ => false
   }
 
   // when casting we first need to unbox Primitives, for example,
@@ -127,7 +128,8 @@ object CodeGenUtils {
   def externalBoxedTermForType(t: DataType): String = t match {
     case DataTypes.STRING => classOf[String].getCanonicalName
     case _: DecimalType => classOf[JBigDecimal].getCanonicalName
-    case at: ArrayType if at.isPrimitive => s"${primitiveTypeTermForType(at.getElementType)}[]"
+    case at: ArrayType if at.isPrimitive =>
+      s"${primitiveTypeTermForType(at.getElementInternalType)}[]"
     case at: ArrayType => s"${externalBoxedTermForType(at.getElementType)}[]"
     case bt: RowType =>
       if (bt.isUseBaseRow) bt.getInternalTypeClass.getCanonicalName
@@ -200,7 +202,7 @@ object CodeGenUtils {
 
     case _: ArrayType => clazz == classOf[BaseArray]
     case _: MapType => clazz == classOf[BaseMap]
-    case _: RowType => clazz == classOf[BaseRow]
+    case _: RowType => classOf[BaseRow].isAssignableFrom(clazz)
     case _: GenericType[_] => true
     case _: ExternalType => false
     case _ => true // internal equalTo external class.

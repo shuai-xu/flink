@@ -30,6 +30,7 @@ import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
 import org.apache.flink.table.descriptors.ConnectorDescriptor;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.sources.DefinedFieldMapping;
@@ -173,7 +174,7 @@ public abstract class KafkaTableSource implements
 
 	@Override
 	public DataType getReturnType() {
-		return DataTypes.of(deserializationSchema.getProducedType());
+		return new TypeInfoWrappedDataType(deserializationSchema.getProducedType());
 	}
 
 	@Override

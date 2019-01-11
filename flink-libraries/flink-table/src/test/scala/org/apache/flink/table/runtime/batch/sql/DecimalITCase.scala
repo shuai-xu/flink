@@ -19,12 +19,13 @@
 package org.apache.flink.table.runtime.batch.sql
 
 import java.math.{BigDecimal => JBigDecimal}
-
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, BigDecimalTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.types.Row
+
 import org.junit.{Assert, Test}
 
 import scala.collection.Seq
@@ -62,7 +63,7 @@ class DecimalITCase extends QueryTest {
     val resultTable = parseQuery(queryX)
     Assert.assertEquals(
       expected.colTypes,
-      resultTable.getSchema.getTypes.map(DataTypes.toTypeInfo).toSeq)
+      resultTable.getSchema.getTypes.map(TypeConverters.createExternalTypeInfoFromDataType).toSeq)
 
     def prepareResult(isSorted: Boolean, seq: Seq[Row]) = {
       if (!isSorted) seq.map(_.toString).sortBy(s => s) else seq.map(_.toString)

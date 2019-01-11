@@ -23,7 +23,7 @@ import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.dataformat._
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToExternal
+import org.apache.flink.table.runtime.conversion.DataStructureConverters.genToExternal
 
 /**
   * CodeGenerator for single field access of BaseRow

@@ -26,7 +26,7 @@ import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => Scala
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnv}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv}
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{SqlParserException, Table, TableConfig, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.dataformat.{BinaryRow, BinaryRowWriter}
@@ -470,7 +470,7 @@ object QueryTest {
       val typeInfo = tpe.getTypeAt(index)
       if (field == null) writer.setNullAt(index)
       else BaseRowUtil.write(writer, index, field,
-        DataTypes.internal(typeInfo), typeInfo.createSerializer(null))
+        TypeConverters.createInternalTypeFromTypeInfo(typeInfo), typeInfo.createSerializer(null))
     }
     writer.complete()
     row

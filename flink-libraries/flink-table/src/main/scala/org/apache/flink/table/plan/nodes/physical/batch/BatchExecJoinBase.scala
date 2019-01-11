@@ -87,9 +87,9 @@ trait BatchExecJoinBase extends Join with RowBatchExecRel {
 
   def getOutputRowType: RowType =
     if (flinkJoinType.equals(SEMI) || flinkJoinType.equals(ANTI)) {
-      FlinkTypeFactory.toInternalBaseRowType(getRowType, classOf[BaseRow])
+      FlinkTypeFactory.toInternalRowType(getRowType, classOf[BaseRow])
     } else {
-      FlinkTypeFactory.toInternalBaseRowType(getRowType, classOf[JoinedRow])
+      FlinkTypeFactory.toInternalRowType(getRowType, classOf[JoinedRow])
     }
 
   /**

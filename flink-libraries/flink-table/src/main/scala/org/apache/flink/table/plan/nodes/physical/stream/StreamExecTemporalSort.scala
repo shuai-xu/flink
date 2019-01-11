@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
@@ -131,7 +131,7 @@ class StreamExecTemporalSort(
         sortCollation.getFieldCollations.asScala.tail)
 
       val generatedSorter = SorterHelper.createSorter(
-        inputTypeInfo.getFieldTypes.map(DataTypes.internal),
+        inputTypeInfo.getFieldTypes.map(TypeConverters.createInternalTypeFromTypeInfo),
         sortFields,
         sortDirections,
         nullsIsLast)
@@ -167,7 +167,7 @@ class StreamExecTemporalSort(
       val (sortFields, sortDirections, nullsIsLast) = SortUtil.getKeysAndOrders(
         sortCollation.getFieldCollations.asScala.tail)
       val generatedSorter = SorterHelper.createSorter(
-        inputTypeInfo.getFieldTypes.map(DataTypes.internal),
+        inputTypeInfo.getFieldTypes.map(TypeConverters.createInternalTypeFromTypeInfo),
         sortFields,
         sortDirections,
         nullsIsLast)

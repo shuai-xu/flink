@@ -21,7 +21,7 @@ package org.apache.flink.table.codegen
 import org.apache.flink.api.common.functions.Function
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, TableEnvironment, TableException, TableSchema}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils._
@@ -33,7 +33,7 @@ import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
 import org.apache.flink.table.plan.schema.FlinkTableFunction
 import org.apache.flink.table.plan.util.CorrelateUtil
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
+import org.apache.flink.table.runtime.conversion.DataStructureConverters._
 import org.apache.flink.table.runtime.util.StreamRecordCollector
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 
@@ -77,7 +77,7 @@ object CorrelateCodeGenerator {
         .asInstanceOf[FlinkTableFunction]
         .getExternalResultType(arguments, argTypes)
     val pojoFieldMapping = Some(UserDefinedFunctionUtils.getFieldInfo(udtfExternalType)._2)
-    val inputType = FlinkTypeFactory.toInternalBaseRowType(inputRelType, classOf[BaseRow])
+    val inputType = FlinkTypeFactory.toInternalRowType(inputRelType, classOf[BaseRow])
     val (returnType, swallowInputOnly ) = if (projectProgram.isDefined) {
       val program = projectProgram.get
       val selects = program.getProjectList.map(_.getIndex)
@@ -85,10 +85,10 @@ object CorrelateCodeGenerator {
       val swallowInputOnly = selects(0) > inputFieldCnt &&
         (inputFieldCnt - outDataType.getFieldCount == inputRelType.getFieldCount)
       // partial output or output right only
-      (FlinkTypeFactory.toInternalBaseRowType(outDataType, classOf[GenericRow]), swallowInputOnly)
+      (FlinkTypeFactory.toInternalRowType(outDataType, classOf[GenericRow]), swallowInputOnly)
     } else {
       // completely output left input + right
-      (FlinkTypeFactory.toInternalBaseRowType(outDataType, classOf[JoinedRow]), false)
+      (FlinkTypeFactory.toInternalRowType(outDataType, classOf[JoinedRow]), false)
     }
     // adjust indicies of InputRefs to adhere to schema expected by generator
     val changeInputRefIndexShuttle = new RexShuttle {
@@ -136,7 +136,7 @@ object CorrelateCodeGenerator {
         outDataType,
         expression),
       substituteStreamOperator,
-      TypeUtils.toBaseRowTypeInfo(returnType),
+      TypeConverters.toBaseRowTypeInfo(returnType),
       parallelism)
   }
 
@@ -194,7 +194,7 @@ object CorrelateCodeGenerator {
         // and the returned row table function is empty, collect a null
         val nullRowTerm = CodeGenUtils.newName("nullRow")
         ctx.addOutputRecord(toGenericRowType(udtfType), nullRowTerm)
-        ctx.addReusableNullRow(nullRowTerm, DataTypes.getArity(udtfType))
+        ctx.addReusableNullRow(nullRowTerm, TypeUtils.getArity(udtfType))
         val header = if (retainHeader) {
           s"$nullRowTerm.setHeader(${exprGenerator.input1Term}.getHeader());"
         } else {
@@ -246,7 +246,7 @@ object CorrelateCodeGenerator {
         val joinedRowTerm = CodeGenUtils.newName("joinedRow")
         val nullRowTerm = CodeGenUtils.newName("nullRow")
         ctx.addOutputRecord(returnType, joinedRowTerm)
-        ctx.addReusableNullRow(nullRowTerm, DataTypes.getArity(udtfType))
+        ctx.addReusableNullRow(nullRowTerm, TypeUtils.getArity(udtfType))
         val header = if (retainHeader) {
           s"$joinedRowTerm.setHeader(${exprGenerator.input1Term}.getHeader());"
         } else {
@@ -301,7 +301,7 @@ object CorrelateCodeGenerator {
       .bindInput(input1Type, CodeGeneratorContext.DEFAULT_INPUT1_TERM)
     if (udtfAlwaysNull) {
       val udtfNullRow = CodeGenUtils.newName("udtfNullRow")
-      ctx.addReusableNullRow(udtfNullRow, DataTypes.getArity(udtfType))
+      ctx.addReusableNullRow(udtfNullRow, TypeUtils.getArity(udtfType))
 
       projectExprGenerator.bindSecondInput(
         toGenericRowType(udtfType),

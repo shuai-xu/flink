@@ -22,8 +22,8 @@ import java.util.Comparator
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.metrics.{Counter, Gauge}
 import org.apache.flink.runtime.state.keyed.KeyedValueState
+import org.apache.flink.table.api.types.TypeConverters
 import org.apache.flink.table.api.{TableConfig, Types}
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.codegen.{EqualiserCodeGenerator, GeneratedRecordEqualiser}
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
@@ -258,7 +258,7 @@ abstract class AbstractRankFunction(
   protected def getMaxSortMapSize: Long
 
   private def createEqualiser(inputRowType: BaseRowTypeInfo[_]): GeneratedRecordEqualiser = {
-    val inputTypes = inputRowType.getFieldTypes.map(DataTypes.internal)
+    val inputTypes = inputRowType.getFieldTypes.map(TypeConverters.createInternalTypeFromTypeInfo)
     val generator = new EqualiserCodeGenerator(inputTypes)
     generator.generateRecordEqualiser("RankValueEqualiser")
   }

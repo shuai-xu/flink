@@ -22,7 +22,7 @@ import java.util.{Map => JMap}
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.codegen.EqualiserCodeGenerator
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.functions.{BundleFunction, ExecutionContext}
@@ -59,7 +59,8 @@ class MiniBatchLastRowFunction(
     val rowStateDesc = new ValueStateDescriptor("rowState", rowTypeInfo)
     pkRow = ctx.getKeyedValueState(rowStateDesc)
 
-    val generator = new EqualiserCodeGenerator(rowTypeInfo.getFieldTypes.map(DataTypes.internal))
+    val generator = new EqualiserCodeGenerator(
+      rowTypeInfo.getFieldTypes.map(TypeConverters.createInternalTypeFromTypeInfo))
     val generatedEqualiser = generator.generateRecordEqualiser("LastRowValueEqualiser")
     equaliser = generatedEqualiser.newInstance(ctx.getRuntimeContext.getUserCodeClassLoader)
   }

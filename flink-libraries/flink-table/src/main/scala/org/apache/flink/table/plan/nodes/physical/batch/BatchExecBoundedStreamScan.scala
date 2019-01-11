@@ -91,7 +91,8 @@ class BatchExecBoundedStreamScan(
 
   override def needInternalConversion: Boolean = {
     hasTimeAttributeField(boundedStreamTable.fieldIndexes) ||
-        needsConversion(boundedStreamTable.dataType)
+        needsConversion(boundedStreamTable.dataType,
+          boundedStreamTable.dataStream.getType.getTypeClass)
   }
 
   override private[flink] def getSourceTransformation(streamEnv: StreamExecutionEnvironment) =

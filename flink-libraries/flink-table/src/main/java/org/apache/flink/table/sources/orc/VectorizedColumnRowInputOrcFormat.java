@@ -22,8 +22,8 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.core.fs.FileInputSplit;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.dataformat.ColumnarRow;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 
@@ -67,7 +67,7 @@ public class VectorizedColumnRowInputOrcFormat extends OrcInputFormat<ColumnarRo
 	public TypeInformation<ColumnarRow> getProducedType() {
 		TypeInformation[] typeInfos =
 			Arrays.stream(this.fieldTypes)
-				.map(x -> DataTypes.to(x))
+				.map(TypeConverters::createExternalTypeInfoFromDataType)
 				.toArray(TypeInformation[]::new);
 		return new BaseRowTypeInfo<ColumnarRow>(ColumnarRow.class, typeInfos);
 	}

@@ -24,7 +24,6 @@ import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{TableEnvironment, Types}
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
@@ -135,7 +134,7 @@ class LastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
         .asInstanceOf[Array[TypeInformation[_]]],
       Array("a", "pk", "c", "d"))
 
-    val schema = TableSchemaUtil.builderFromDataType(DataTypes.of(rowType))
+    val schema = TableSchemaUtil.builderFromDataType(rowType)
           .primaryKey("pk").build()
 
     tEnv.registerTableSource(tableName, new TestTableSourceWithTime(
@@ -183,7 +182,7 @@ class LastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
       Array(Types.SQL_TIMESTAMP, Types.LONG, Types.STRING, Types.INT)
         .asInstanceOf[Array[TypeInformation[_]]],
       Array("a", "pk", "c", "d"))
-    val schema = TableSchemaUtil.builderFromDataType(DataTypes.of(rowType))
+    val schema = TableSchemaUtil.builderFromDataType(rowType)
           .primaryKey("pk").build()
 
     tEnv.registerTableSource(tableName, new TestTableSourceWithTime(

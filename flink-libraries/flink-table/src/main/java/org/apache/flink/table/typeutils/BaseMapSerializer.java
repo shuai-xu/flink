@@ -26,6 +26,7 @@ import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseMap;
 import org.apache.flink.table.dataformat.BinaryArray;
@@ -59,8 +60,8 @@ public class BaseMapSerializer extends TypeSerializer<BaseMap> {
 		this.keyType = keyType;
 		this.valueType = valueType;
 
-		this.keySerializer = TypeUtils.createSerializer(keyType);
-		this.valueSerializer = TypeUtils.createSerializer(valueType);
+		this.keySerializer = DataTypes.createInternalSerializer(keyType);
+		this.valueSerializer = DataTypes.createInternalSerializer(valueType);
 		this.binarySerializer = BinaryMapSerializer.INSTANCE;
 	}
 

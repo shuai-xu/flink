@@ -24,7 +24,6 @@ import org.apache.flink.core.fs.FileInputSplit;
 import org.apache.flink.table.api.types.BooleanType;
 import org.apache.flink.table.api.types.ByteType;
 import org.apache.flink.table.api.types.DataType;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DateType;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.DoubleType;
@@ -35,11 +34,13 @@ import org.apache.flink.table.api.types.LongType;
 import org.apache.flink.table.api.types.ShortType;
 import org.apache.flink.table.api.types.StringType;
 import org.apache.flink.table.api.types.TimestampType;
+import org.apache.flink.table.api.types.TypeConverters;
+import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.ColumnarRow;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch;
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters;
+import org.apache.flink.table.runtime.conversion.DataStructureConverters;
 import org.apache.flink.table.sinks.orc.RowOrcOutputFormat;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.TimeConvertUtils;
@@ -114,12 +115,12 @@ public class OrcTestUtil {
 		// read from orc file
 		readOrc(inputFormat, split, new Row2Row(actualRows));
 
-		Function1<BaseRow, Row> converter = (Function1) InternalTypeConverters
+		Function1<BaseRow, Row> converter = (Function1) DataStructureConverters
 			.createToExternalConverter(
-				DataTypes.of(
+				new TypeInfoWrappedDataType(
 					new RowTypeInfo(
 						Arrays.stream(requestFieldTypes)
-							.map(x -> DataTypes.to(x))
+							.map(x -> TypeConverters.createExternalTypeInfoFromDataType(x))
 							.toArray(TypeInformation[]::new))));
 
 		// verify
@@ -149,12 +150,12 @@ public class OrcTestUtil {
 		// read from orc file
 		readOrc(inputFormat, split, new ConvertColumnarRow2Row(actualRows, requestFieldTypes));
 
-		Function1<BaseRow, Row> converter = (Function1) InternalTypeConverters
+		Function1<BaseRow, Row> converter = (Function1) DataStructureConverters
 			.createToExternalConverter(
-				DataTypes.of(
+				new TypeInfoWrappedDataType(
 					new RowTypeInfo(
 						Arrays.stream(requestFieldTypes)
-							.map(x -> DataTypes.to(x))
+							.map(x -> TypeConverters.createExternalTypeInfoFromDataType(x))
 							.toArray(TypeInformation[]::new))));
 
 		// verify

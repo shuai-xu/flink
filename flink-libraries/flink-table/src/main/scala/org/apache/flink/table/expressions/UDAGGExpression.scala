@@ -19,7 +19,7 @@ package org.apache.flink.table.expressions
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{getAccumulatorTypeOfAggregateFunction, getResultTypeOfAggregateFunction}
 
 /**
@@ -36,12 +36,10 @@ case class UDAGGExpression[T: TypeInformation, ACC: TypeInformation](
     */
   def apply(params: Expression*): AggFunctionCall = {
     val resultType = getResultTypeOfAggregateFunction(
-      aggregateFunction,
-      DataTypes.of(implicitly[TypeInformation[T]]))
+      aggregateFunction, implicitly[TypeInformation[T]])
 
     val accType = getAccumulatorTypeOfAggregateFunction(
-      aggregateFunction,
-      DataTypes.of(implicitly[TypeInformation[ACC]]))
+      aggregateFunction, implicitly[TypeInformation[ACC]])
 
     AggFunctionCall(aggregateFunction, resultType, accType, params)
   }

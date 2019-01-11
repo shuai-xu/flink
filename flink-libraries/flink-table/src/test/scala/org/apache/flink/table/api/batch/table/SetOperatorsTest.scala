@@ -19,16 +19,16 @@
 package org.apache.flink.table.api.batch.table
 
 import java.sql.Timestamp
-
 import org.apache.flink.api.java.typeutils.GenericTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.expressions.Null
 import org.apache.flink.table.runtime.utils.CommonTestData.NonPojo
 import org.apache.flink.table.util.DateTimeTestUtil.UTCTimestamp
 import org.apache.flink.table.util.TableTestBase
+
 import org.junit.{Ignore, Test}
 
 class SetOperatorsTest extends TableTestBase {
@@ -61,7 +61,8 @@ class SetOperatorsTest extends TableTestBase {
 
     val in = t.select('a)
       .unionAll(
-        t.select(('c > 0) ? ('b, Null(DataTypes.internal(createTypeInformation[(Int, String)])))))
+        t.select(('c > 0) ? ('b, Null(
+          TypeConverters.createInternalTypeFromTypeInfo(createTypeInformation[(Int, String)])))))
 
     util.verifyPlan(in)
   }

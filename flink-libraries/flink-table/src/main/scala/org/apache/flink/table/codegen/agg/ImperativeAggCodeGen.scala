@@ -33,7 +33,7 @@ import org.apache.flink.table.dataview.DataViewSpec
 import org.apache.flink.table.expressions.{Expression, ResolvedAggInputReference}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.util.AggregateInfo
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters.{genToExternal, genToInternal}
+import org.apache.flink.table.runtime.conversion.DataStructureConverters.{genToExternal, genToInternal}
 import org.apache.flink.table.typeutils.TypeUtils
 
 import scala.collection.mutable.ArrayBuffer
@@ -380,7 +380,7 @@ class ImperativeAggCodeGen(
                    |$fieldTerm = null;
                    |if (!${newExpr.nullTerm}) {
                    |  $fieldTerm = new $UPDATABLE_ROW(${newExpr.resultTerm}, ${
-                        DataTypes.getArity(fieldType)});
+                        TypeUtils.getArity(fieldType)});
                    |  ${generateDataViewFieldSetter(fieldTerm, viewSpecs, useBackupDataView)}
                    |}
                 """.stripMargin
@@ -468,7 +468,7 @@ class ImperativeAggCodeGen(
     }
 
     if (needMerge) {
-      val iterType = DataTypes.extractType(classOf[JIterable[Any]])
+      val iterType = DataTypes.extractDataType(classOf[JIterable[Any]])
       val methods =
         getUserDefinedMethod(function, "merge", Array(externalAccType, iterType))
           .getOrElse(

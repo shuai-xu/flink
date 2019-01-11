@@ -20,12 +20,14 @@ package org.apache.flink.streaming.connectors.kafka;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.serialization.DeserializationSchema;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.formats.json.JsonRowDeserializationSchema;
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.descriptors.ConnectorDescriptor;
 import org.apache.flink.table.sources.StreamTableSource;
 import org.apache.flink.table.util.TableSchemaUtil;
+import org.apache.flink.types.Row;
 
 import java.util.Map;
 import java.util.Properties;
@@ -67,7 +69,9 @@ public abstract class KafkaJsonTableSource extends KafkaTableSource {
 			tableSchema,
 			topic,
 			properties,
-			new JsonRowDeserializationSchema(DataTypes.toTypeInfo(TableSchemaUtil.toRowType(jsonSchema))));
+			new JsonRowDeserializationSchema(
+					(TypeInformation<Row>) TypeConverters.createExternalTypeInfoFromDataType(
+							TableSchemaUtil.toRowType(jsonSchema))));
 	}
 
 	@Override

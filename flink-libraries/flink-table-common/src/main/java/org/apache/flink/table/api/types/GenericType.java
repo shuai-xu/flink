@@ -21,7 +21,7 @@ package org.apache.flink.table.api.types;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.java.typeutils.TypeExtractor;
+import org.apache.flink.api.java.typeutils.GenericTypeInfo;
 
 /**
  * Generic type.
@@ -32,7 +32,7 @@ public class GenericType<T> extends AtomicType {
 	private TypeSerializer<T> serializer;
 
 	public GenericType(Class<T> typeClass) {
-		this(TypeExtractor.createTypeInfo(typeClass));
+		this(new GenericTypeInfo<>(typeClass));
 	}
 
 	public GenericType(TypeInformation<T> typeInfo) {

@@ -20,7 +20,6 @@ package org.apache.flink.table.runtime.harness
 
 import java.lang.{Integer => JInt, Long => JLong}
 import java.util.concurrent.ConcurrentLinkedQueue
-
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.common.typeutils.TypeSerializer
@@ -29,7 +28,7 @@ import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.TestHarnessUtil
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BinaryRowWriter, GenericRow}
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.aggregate.SorterHelper
@@ -37,6 +36,7 @@ import org.apache.flink.table.runtime.harness.SortProcessOperatorHarnessTest._
 import org.apache.flink.table.runtime.sort.{ProcTimeSortOperator, RowTimeSortOperator}
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.typeutils._
+
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -64,7 +64,8 @@ class SortProcessOperatorHarnessTest(mode: StateBackendMode) extends HarnessTest
     val nullsIsLast = SortUtil.getNullDefaultOrders(booleanOrders)
 
     val generatedSorter = SorterHelper.createSorter(
-      rT.getFieldTypes.map(DataTypes.internal), indexes, booleanOrders, nullsIsLast)
+      rT.getFieldTypes.map(
+        TypeConverters.createInternalTypeFromTypeInfo), indexes, booleanOrders, nullsIsLast)
 
     val sortOperator = new ProcTimeSortOperator(
       rT.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -158,7 +159,8 @@ class SortProcessOperatorHarnessTest(mode: StateBackendMode) extends HarnessTest
     val nullsIsLast = SortUtil.getNullDefaultOrders(booleanOrders)
 
     val generatedSorter = SorterHelper.createSorter(
-      rT.getFieldTypes.map(DataTypes.internal), indexes, booleanOrders, nullsIsLast)
+      rT.getFieldTypes.map(
+        TypeConverters.createInternalTypeFromTypeInfo), indexes, booleanOrders, nullsIsLast)
 
     val processOperator = new RowTimeSortOperator(
       rT.asInstanceOf[BaseRowTypeInfo[BaseRow]],

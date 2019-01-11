@@ -31,6 +31,8 @@ import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.operators.sort.QuickSort;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.TypeConverters;
+import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.dataformat.BinaryString;
@@ -69,7 +71,7 @@ import static org.apache.flink.api.common.typeinfo.BasicTypeInfo.SHORT_TYPE_INFO
 import static org.apache.flink.api.common.typeinfo.BasicTypeInfo.STRING_TYPE_INFO;
 import static org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_PRIMITIVE_ARRAY_TYPE_INFO;
 import static org.apache.flink.table.dataformat.util.BaseRowUtil.toOriginString;
-import static org.apache.flink.table.runtime.conversion.InternalTypeConverters.createToInternalConverter;
+import static org.apache.flink.table.runtime.conversion.DataStructureConverters.createToInternalConverter;
 
 /**
  * Random codegen sort test.
@@ -98,12 +100,13 @@ public class RandomCodegenSortTest {
 			new BigDecimalTypeInfo(18, 2),
 			BIG_DEC_TYPE_INFO
 	};
-	private final InternalType[] internalTypes = Arrays.stream(types).map(DataTypes::internal)
+	private final InternalType[] internalTypes = Arrays.stream(types)
+			.map(TypeConverters::createInternalTypeFromTypeInfo)
 			.toArray(InternalType[]::new);
 	private final TypeSerializer[] serializers = new TypeSerializer[types.length];
 	{
 		for (int i = 0; i < types.length; i++) {
-			serializers[i] = TypeUtils.createSerializer(types[i]);
+			serializers[i] = DataTypes.createInternalSerializer(internalTypes[i]);
 		}
 	}
 
@@ -184,7 +187,7 @@ public class RandomCodegenSortTest {
 		seeds[1] = value1(type, rnd);
 		seeds[2] = value2(type, rnd);
 		seeds[3] = value3(type, rnd);
-		Function1<Object, Object> converter = createToInternalConverter(DataTypes.of(type));
+		Function1<Object, Object> converter = createToInternalConverter(new TypeInfoWrappedDataType(type));
 		for (int i = 4; i < seeds.length; i++) {
 			if (type.equals(BOOLEAN_TYPE_INFO)) {
 				seeds[i] = rnd.nextBoolean();
@@ -245,7 +248,7 @@ public class RandomCodegenSortTest {
 	}
 
 	private Object value1(TypeInformation type, Random rnd) {
-		Function1<Object, Object> converter = createToInternalConverter(DataTypes.of(type));
+		Function1<Object, Object> converter = createToInternalConverter(new TypeInfoWrappedDataType(type));
 		if (type.equals(BOOLEAN_TYPE_INFO)) {
 			return false;
 		} else if (type.equals(BYTE_TYPE_INFO)) {
@@ -284,7 +287,7 @@ public class RandomCodegenSortTest {
 	}
 
 	private Object value2(TypeInformation type, Random rnd) {
-		Function1<Object, Object> converter = createToInternalConverter(DataTypes.of(type));
+		Function1<Object, Object> converter = createToInternalConverter(new TypeInfoWrappedDataType(type));
 		if (type.equals(BOOLEAN_TYPE_INFO)) {
 			return false;
 		} else if (type.equals(BYTE_TYPE_INFO)) {
@@ -323,7 +326,7 @@ public class RandomCodegenSortTest {
 	}
 
 	private Object value3(TypeInformation type, Random rnd) {
-		Function1<Object, Object> converter = createToInternalConverter(DataTypes.of(type));
+		Function1<Object, Object> converter = createToInternalConverter(new TypeInfoWrappedDataType(type));
 		if (type.equals(BOOLEAN_TYPE_INFO)) {
 			return true;
 		} else if (type.equals(BYTE_TYPE_INFO)) {
@@ -396,7 +399,7 @@ public class RandomCodegenSortTest {
 	private TypeComparator[] getComparators() {
 		TypeComparator[] result = new TypeComparator[keys.length];
 		for (int i = 0; i < keys.length; i++) {
-			result[i] = TypeUtils.createComparator(types[fields[keys[i]]], orders[i]);
+			result[i] = TypeUtils.createInternalComparator(types[fields[keys[i]]], orders[i]);
 		}
 		return result;
 	}

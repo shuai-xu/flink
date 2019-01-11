@@ -257,7 +257,7 @@ public class ParquetSchemaConverter {
 	}
 
 	private static GroupType convertListType(final String name, final ArrayType arrayType) {
-		final InternalType subType = arrayType.getElementType();
+		final InternalType subType = arrayType.getElementInternalType();
 
 		return Types
 			.buildGroup(Type.Repetition.OPTIONAL).as(OriginalType.LIST)

@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.{RowType, DataTypes}
+import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
@@ -161,7 +161,8 @@ class BatchExecSortAggregate(
     val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
     val outputRowType = getOutputRowType
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
-    val inputType = DataTypes.internal(input.getOutputType).asInstanceOf[RowType]
+    val inputType = TypeConverters.createInternalTypeFromTypeInfo(
+      input.getOutputType).asInstanceOf[RowType]
     val generatedOperator = if (grouping.isEmpty) {
       codegenWithoutKeys(
         isMerge, isFinal = true, ctx, tableEnv, inputType, outputRowType, "NoGrouping")
@@ -176,7 +177,7 @@ class BatchExecSortAggregate(
       input,
       getOperatorName,
       operator,
-      TypeUtils.toBaseRowTypeInfo(outputRowType),
+      TypeConverters.toBaseRowTypeInfo(outputRowType),
       resultPartitionCount)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     if (grouping.length == 0) {

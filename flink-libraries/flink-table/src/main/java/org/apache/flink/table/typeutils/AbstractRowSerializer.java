@@ -26,6 +26,8 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 
@@ -50,7 +52,8 @@ public abstract class AbstractRowSerializer<T extends BaseRow> extends TypeSeria
 		this.numFields = types.length;
 		TypeSerializer[] fieldSerializers = new TypeSerializer[types.length];
 		for (int i = 0; i < types.length; i++) {
-			fieldSerializers[i] = TypeUtils.createSerializer(types[i]);
+			fieldSerializers[i] = DataTypes.createInternalSerializer(
+					TypeConverters.createInternalTypeFromTypeInfo(types[i]));
 		}
 		this.serializers = fieldSerializers;
 	}

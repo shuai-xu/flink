@@ -19,7 +19,7 @@ package org.apache.flink.table.plan.util
 
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.table.api.dataview.Order
-import org.apache.flink.table.api.types.{DataTypes, RowType}
+import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.BaseRow
@@ -339,7 +339,7 @@ object RankUtil {
     val logicalKeyFields = fieldTypes.indices.toArray
 
     val sorter = SorterHelper.createSorter(
-      sortKeyTypeInfo.getFieldTypes.map(DataTypes.internal),
+      sortKeyTypeInfo.getFieldTypes.map(TypeConverters.createInternalTypeFromTypeInfo),
       logicalKeyFields,
       sortDirections,
       nullsIsLast)
@@ -373,7 +373,7 @@ object RankUtil {
     FieldAccessCodeGenerator.generateRowFieldExtractor(
       CodeGeneratorContext.apply(new TableConfig, supportReference = false),
       "SimpleFieldExtractor",
-      DataTypes.internal(inputType).asInstanceOf[RowType],
+      TypeConverters.createInternalTypeFromTypeInfo(inputType).asInstanceOf[RowType],
       sortFields.head)
   }
 

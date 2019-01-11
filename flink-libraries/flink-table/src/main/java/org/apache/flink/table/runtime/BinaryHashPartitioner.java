@@ -21,7 +21,7 @@ package org.apache.flink.table.runtime;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.table.api.TableConfig;
-import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.codegen.CodeGenUtils;
 import org.apache.flink.table.codegen.CodeGeneratorContext;
 import org.apache.flink.table.codegen.GeneratedHashFunc;
@@ -46,7 +46,8 @@ public class BinaryHashPartitioner extends StreamPartitioner<BaseRow> {
 
 	public BinaryHashPartitioner(BaseRowTypeInfo info, int[] hashFields) {
 		this.genHashFunc = HashCodeGenerator.generateRowHash(
-				CodeGeneratorContext.apply(new TableConfig(), false), DataTypes.internal(info),
+				CodeGeneratorContext.apply(new TableConfig(), false),
+				TypeConverters.createInternalTypeFromTypeInfo(info),
 				"HashPartitioner", hashFields);
 		this.hashFieldNames = new String[hashFields.length];
 		String[] fieldNames = info.getFieldNames();

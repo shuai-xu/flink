@@ -22,7 +22,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.cep.pattern.conditions.{IterativeCondition, RichIterativeCondition}
 import org.apache.flink.cep._
 import org.apache.flink.table.api.{TableConfig, ValidationException}
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, Compiler, GeneratedSorter, MatchCodeGenerator}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.logical.MatchRecognize
@@ -31,13 +31,14 @@ import org.apache.flink.table.runtime.`match`._
 import org.apache.flink.table.runtime.aggregate.{CollectionBaseRowComparator, SorterHelper}
 import org.apache.flink.table.runtime.sort.RecordComparator
 import org.apache.flink.table.util.Logging
+
 import org.apache.calcite.rel.RelCollation
 import org.apache.calcite.rel.core.Match
 import org.apache.calcite.rex.{RexCall, RexNode, RexPatternFieldRef}
 import org.apache.calcite.tools.RelBuilder
+
 import java.util
 import java.util.Comparator
-
 import org.apache.flink.table.codegen.MatchCodeGenerator.ALL_PATTERN_VARIABLE
 
 import _root_.scala.collection.JavaConversions._
@@ -82,7 +83,7 @@ object MatchUtil {
       config.getNullCheck,
       patternNames,
       Some(patternName))
-        .bindInput(DataTypes.internal(inputTypeInfo))
+        .bindInput(TypeConverters.createInternalTypeFromTypeInfo(inputTypeInfo))
         .asInstanceOf[MatchCodeGenerator]
     val condition = generator.generateCondition(patternDefinition)
     val body =
@@ -115,7 +116,7 @@ object MatchUtil {
       false,
       config.getNullCheck,
       patternNames)
-        .bindInput(DataTypes.internal(inputTypeInfo))
+        .bindInput(TypeConverters.createInternalTypeFromTypeInfo(inputTypeInfo))
         .asInstanceOf[MatchCodeGenerator]
 
     val resultExpression = generator.generateOneRowPerMatchExpression(
@@ -152,7 +153,7 @@ object MatchUtil {
       false,
       config.getNullCheck,
       patternNames)
-        .bindInput(DataTypes.internal(inputTypeInfo))
+        .bindInput(TypeConverters.createInternalTypeFromTypeInfo(inputTypeInfo))
         .asInstanceOf[MatchCodeGenerator]
 
     val resultExpression = generator.generateOneRowPerMatchExpression(
@@ -190,7 +191,7 @@ object MatchUtil {
       false,
       config.getNullCheck,
       patternNames)
-        .bindInput(DataTypes.internal(inputTypeInfo))
+        .bindInput(TypeConverters.createInternalTypeFromTypeInfo(inputTypeInfo))
         .asInstanceOf[MatchCodeGenerator]
 
     val resultExpression = generator.generateAllRowsPerMatchExpression(
@@ -228,7 +229,7 @@ object MatchUtil {
       false,
       config.getNullCheck,
       patternNames)
-        .bindInput(DataTypes.internal(inputTypeInfo))
+        .bindInput(TypeConverters.createInternalTypeFromTypeInfo(inputTypeInfo))
         .asInstanceOf[MatchCodeGenerator]
 
     val resultExpression = generator.generateAllRowsPerMatchExpression(

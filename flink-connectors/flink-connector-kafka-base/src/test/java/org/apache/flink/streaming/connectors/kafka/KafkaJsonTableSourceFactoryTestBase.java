@@ -24,6 +24,7 @@ import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
+import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
 import org.apache.flink.table.descriptors.FormatDescriptor;
 import org.apache.flink.table.descriptors.Json;
 import org.apache.flink.table.descriptors.Kafka;
@@ -119,7 +120,7 @@ public abstract class KafkaJsonTableSourceFactoryTestBase {
 		specificOffsets.put(new KafkaTopicPartition(TOPIC, 1), 123L);
 
 		final KafkaTableSource builderSource = builder()
-				.forJsonSchema(TableSchemaUtil.fromDataType(DataTypes.of(
+				.forJsonSchema(TableSchemaUtil.fromDataType(new TypeInfoWrappedDataType(
 					JsonRowSchemaConverter.convert(JSON_SCHEMA)), Option.empty()))
 				.failOnMissingField(true)
 				.withTableToJsonMapping(tableJsonMapping)
@@ -156,9 +157,9 @@ public abstract class KafkaJsonTableSourceFactoryTestBase {
 				new Schema()
 						.field("fruit-name", Types.STRING).from("name")
 						.field("count", Types.BIG_DEC) // no from so it must match with the input
-						.field("event-time", DataTypes.toTypeInfo(DataTypes.TIMESTAMP)).rowtime(
+						.field("event-time", Types.SQL_TIMESTAMP).rowtime(
 							new Rowtime().timestampsFromField("time").watermarksPeriodicAscending())
-						.field("proc-time", DataTypes.toTypeInfo(DataTypes.TIMESTAMP)).proctime())
+						.field("proc-time", Types.SQL_TIMESTAMP).proctime())
 			.inAppendMode();
 
 		final Map<String, String> properties = testDesc.toProperties();

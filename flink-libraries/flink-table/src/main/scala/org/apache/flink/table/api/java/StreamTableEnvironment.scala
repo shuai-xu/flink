@@ -18,13 +18,12 @@
 package org.apache.flink.table.api.java
 
 import _root_.java.lang.{Boolean => JBool}
-
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import org.apache.flink.api.java.typeutils.{TupleTypeInfo, TypeExtractor}
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api._
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.expressions.ExpressionParser
 
@@ -180,7 +179,7 @@ class StreamTableEnvironment(
     * @return The converted [[DataStream]].
     */
   def toAppendStream[T](table: Table, clazz: Class[T]): DataStream[T] = {
-    val t = DataTypes.extractType(clazz)
+    val t = DataTypes.extractDataType(clazz)
     TableEnvironment.validateType(t)
     translateToDataStream[T](table, updatesAsRetraction = false, withChangeFlag = false, t)
   }
@@ -202,9 +201,8 @@ class StreamTableEnvironment(
     * @return The converted [[DataStream]].
     */
   def toAppendStream[T](table: Table, typeInfo: TypeInformation[T]): DataStream[T] = {
-    val t = DataTypes.of(typeInfo)
-    TableEnvironment.validateType(t)
-    translateToDataStream[T](table, updatesAsRetraction = false, withChangeFlag = false, t)
+    TableEnvironment.validateType(typeInfo)
+    translateToDataStream[T](table, updatesAsRetraction = false, withChangeFlag = false, typeInfo)
   }
 
   /**
@@ -276,14 +274,13 @@ class StreamTableEnvironment(
   def toRetractStream[T](
       table: Table,
       clazz: Class[T]): DataStream[JTuple2[JBool, T]] = {
-    val typeInfo = TypeExtractor.createTypeInfo(clazz)
-    TableEnvironment.validateType(DataTypes.of(typeInfo))
-    val resultType = new TupleTypeInfo[JTuple2[JBool, T]](Types.BOOLEAN, typeInfo)
+    val tp = DataTypes.extractDataType(clazz)
+    TableEnvironment.validateType(tp)
     translateToDataStream[JTuple2[JBool, T]](
       table,
       updatesAsRetraction = true,
       withChangeFlag = true,
-      DataTypes.of(resultType))
+      DataTypes.createTupleType(DataTypes.BOOLEAN, tp))
   }
 
   /**
@@ -306,16 +303,12 @@ class StreamTableEnvironment(
   def toRetractStream[T](
       table: Table,
       typeInfo: TypeInformation[T]): DataStream[JTuple2[JBool, T]] = {
-    TableEnvironment.validateType(DataTypes.of(typeInfo))
-    val resultTypeInfo = new TupleTypeInfo[JTuple2[JBool, T]](
-      Types.BOOLEAN,
-      typeInfo
-    )
+    TableEnvironment.validateType(typeInfo)
     translateToDataStream[JTuple2[JBool, T]](
       table,
       updatesAsRetraction = true,
       withChangeFlag = true,
-      DataTypes.of(resultTypeInfo))
+      DataTypes.createTupleType(DataTypes.BOOLEAN, typeInfo))
   }
 
   /**

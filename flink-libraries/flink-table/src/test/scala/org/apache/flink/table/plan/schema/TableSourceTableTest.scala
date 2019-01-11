@@ -20,12 +20,15 @@ package org.apache.flink.table.plan.schema
 
 import org.apache.flink.api.common.typeinfo.{TypeInformation, Types}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
+
 import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.util.{TableSchemaUtil, TestTableSourceTable}
+
 import org.junit.Test
 import org.junit.Assert._
 
@@ -52,8 +55,7 @@ class TableSourceTableTest {
   class TestTableSource extends TableSource {
     /** Returns the [[TypeInformation]] for the return type of the [[TableSource]]. */
     override def getReturnType: DataType =
-      DataTypes.of(
-        new RowTypeInfo(Array[TypeInformation[_]](Types.LONG, Types.STRING), Array("a", "b")))
+      new RowTypeInfo(Array[TypeInformation[_]](Types.LONG, Types.STRING), Array("a", "b"))
 
     /** Returns the table schema of the table source */
     override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
@@ -62,8 +64,7 @@ class TableSourceTableTest {
   class TestTableSourceWithSchema extends TableSource {
     /** Returns the [[TypeInformation]] for the return type of the [[TableSource]]. */
     override def getReturnType: DataType =
-      DataTypes.of(
-        new RowTypeInfo(Array[TypeInformation[_]](Types.LONG, Types.STRING), Array("a", "b")))
+      new RowTypeInfo(Array[TypeInformation[_]](Types.LONG, Types.STRING), Array("a", "b"))
 
     override def getTableSchema: TableSchema = {
       TableSchema.builder()

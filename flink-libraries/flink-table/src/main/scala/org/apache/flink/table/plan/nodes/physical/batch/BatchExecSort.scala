@@ -129,11 +129,12 @@ class BatchExecSort(
 
   private def getSortInfo(tableConfig: TableConfig)
     : (Array[TypeComparator[_]], Array[TypeSerializer[_]], SortCodeGenerator) = {
-    val inputRowType = FlinkTypeFactory.toInternalBaseRowType(input.getRowType, classOf[BaseRow])
+    val inputRowType = FlinkTypeFactory.toInternalRowType(input.getRowType, classOf[BaseRow])
     // sort code gen
     val keyTypes = keys.map(inputRowType.getFieldInternalTypes()(_))
     val compAndSers = keyTypes.zip(orders).map { case (internalType, order) =>
-      (TypeUtils.createComparator(internalType, order), TypeUtils.createSerializer(internalType))
+      (TypeUtils.createInternalComparator(internalType, order),
+          DataTypes.createInternalSerializer(internalType))
     }
     val comps = compAndSers.map(_._1)
     val sers = compAndSers.map(_._2)

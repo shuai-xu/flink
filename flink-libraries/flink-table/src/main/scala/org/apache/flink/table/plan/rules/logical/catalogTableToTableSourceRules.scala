@@ -19,7 +19,6 @@
 package org.apache.flink.table.plan.rules.logical
 
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, Map => JMap}
-
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
@@ -31,9 +30,11 @@ import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.util.ImmutableBitSet
 import org.apache.flink.api.common.functions.InvalidTypesException
 import org.apache.flink.api.java.typeutils.TypeExtractor
+
 import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableList
 import org.apache.flink.table.api.functions.TableFunction
 import org.apache.flink.table.api.{Column, TableException, TableSchema}
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
@@ -41,7 +42,7 @@ import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.plan.nodes.calcite.{LogicalLastRow, LogicalWatermarkAssigner}
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.sources.TableSourceUtil
-import org.apache.flink.table.api.types.{DataTypes, GenericType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, GenericType, TypeInfoWrappedDataType}
 
 import scala.collection.JavaConversions._
 
@@ -202,9 +203,9 @@ object CatalogTableRules {
 
       val tf = parser.getParser
 
-      val implicitResultType = try {
-        DataTypes.of(TypeExtractor
-            .createTypeInfo(tf, classOf[TableFunction[_]], tf.getClass, 0))
+      val implicitResultType: DataType = try {
+        new TypeInfoWrappedDataType(
+          TypeExtractor.createTypeInfo(tf, classOf[TableFunction[_]], tf.getClass, 0))
       } catch {
         case _: InvalidTypesException =>
           // may be we should get type from getResultType

@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
@@ -83,7 +83,7 @@ class StreamExecTableSourceScan(
 
     // check that declared and actual type of table source DataStream are identical
     if (!tableSource.getReturnType.toInternalType.equals(
-        DataTypes.internal(inputDataStream.getType))) {
+        TypeConverters.createInternalTypeFromTypeInfo(inputDataStream.getType))) {
       throw new TableException(s"TableSource of type ${tableSource.getClass.getCanonicalName} " +
         s"returned a DataStream of type ${inputDataStream.getType} that does not match with the " +
         s"type ${tableSource.getReturnType} declared by the TableSource.getReturnType() method. " +
@@ -140,7 +140,8 @@ class StreamExecTableSourceScan(
       tableSource,
       isStreamTable = false,
       None)
-    hasTimeAttributeField(fieldIndexes) || needsConversion(tableSource.getReturnType)
+    hasTimeAttributeField(fieldIndexes) ||
+        needsConversion(tableSource.getReturnType, extractTableSourceTypeClass(tableSource))
   }
 }
 

@@ -20,12 +20,13 @@ package org.apache.flink.table.runtime.functions.aggfunctions
 import java.lang.{Boolean => JBoolean, Byte => JByte, Double => JDouble, Float => JFloat, Integer => JInt, Long => JLong, Short => JShort}
 import java.util.{ArrayList => JArrayList, List => JList}
 import org.apache.flink.api.java.typeutils.ListTypeInfo
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.dataview.{MapView, Order, SortedMapView}
 import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, InternalType, RowType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, InternalType, RowType, TypeConverters}
 import org.apache.flink.table.dataformat.{BinaryString, Decimal, GenericRow}
-import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, DecimalTypeInfo, TypeUtils}
+import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, DecimalTypeInfo}
 
 /**
   * Base class for built-in first value with retraction aggregate function
@@ -143,7 +144,7 @@ abstract class FirstValueWithRetractAggFunction[T]
   }
 
   def initDataMap: MapView[T, JList[JLong]] = {
-    new MapView[T, JList[JLong]](getInternalValueType, DataTypes.of(new ListTypeInfo(Types.LONG)))
+    new MapView[T, JList[JLong]](getInternalValueType, new ListTypeInfo(Types.LONG))
   }
 
   /**
@@ -173,13 +174,12 @@ abstract class FirstValueWithRetractAggFunction[T]
     // dataMap: MapView[T, JList[JLong]]
     // sortedDataMap: SortedMapView[JLong, JList[T]]
     val acc = new GenericRow(4)
-    val valueTypeInfo = TypeUtils.createTypeInfoFromDataType(getValueType)
     // field_0 is firstValue, field_1 is firstOrder, default are null
     acc.update(2, initDataMap)
     acc.update(3, new SortedMapView(
       Order.ASCENDING,
       DataTypes.LONG,
-      DataTypes.of(new ListTypeInfo(valueTypeInfo))
+      new ListTypeInfo(TypeConverters.createExternalTypeInfoFromDataType(getValueType))
     ))
     acc
   }
@@ -229,14 +229,13 @@ class DecimalFirstValueWithRetractAggFunction(decimalType: DecimalType)
   extends FirstValueWithRetractAggFunction[Decimal] {
   override def getInternalValueType: InternalType = DataTypes.createGenericType(
     DecimalTypeInfo.of(decimalType.precision(), decimalType.scale()))
-  override def getValueType: DataType = DataTypes.of(
-    DecimalTypeInfo.of(decimalType.precision(), decimalType.scale()))
+  override def getValueType: DataType =
+    DecimalTypeInfo.of(decimalType.precision(), decimalType.scale())
 }
 
 class StringFirstValueWithRetractAggFunction
   extends FirstValueWithRetractAggFunction[BinaryString] {
   override def getInternalValueType: InternalType = DataTypes.createGenericType(
     BinaryStringTypeInfo.INSTANCE)
-  override def getValueType: DataType = DataTypes.of(
-    BinaryStringTypeInfo.INSTANCE)
+  override def getValueType: DataType = BinaryStringTypeInfo.INSTANCE
 }

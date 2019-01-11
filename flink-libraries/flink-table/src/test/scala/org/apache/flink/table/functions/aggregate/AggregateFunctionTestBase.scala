@@ -33,7 +33,7 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.runtime.tasks.{OneInputStreamTask, OneInputStreamTaskTestHarness}
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.{DataTypes, RowType}
+import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkRelOptClusterFactory, FlinkTypeFactory}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat._
@@ -137,7 +137,7 @@ abstract class AggregateFunctionTestBase {
         } else {
           field
         },
-        DataTypes.internal(typeInfo),
+        TypeConverters.createInternalTypeFromTypeInfo(typeInfo),
         typeInfo.createSerializer(null))
     }
     writer.complete()
@@ -225,8 +225,8 @@ abstract class AggregateFunctionTestBase {
       isFinal = true,
       ctx,
       tableEnv,
-      DataTypes.internal(inputDataType).asInstanceOf[RowType],
-      DataTypes.internal(outputRowType).asInstanceOf[RowType],
+      TypeConverters.createInternalTypeFromTypeInfo(inputDataType).asInstanceOf[RowType],
+      TypeConverters.createInternalTypeFromTypeInfo(outputRowType).asInstanceOf[RowType],
       "Sort")
     val operator = new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
       generatedOperator.name,
@@ -277,8 +277,8 @@ abstract class AggregateFunctionTestBase {
         isFinal = false,
         ctx,
         tableEnv,
-        DataTypes.internal(inputDataType).asInstanceOf[RowType],
-        DataTypes.internal(localOutputRowType).asInstanceOf[RowType],
+        TypeConverters.createInternalTypeFromTypeInfo(inputDataType).asInstanceOf[RowType],
+        TypeConverters.createInternalTypeFromTypeInfo(localOutputRowType).asInstanceOf[RowType],
         "Sort")
       new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
         generatedLocalOperator.name,
@@ -318,8 +318,8 @@ abstract class AggregateFunctionTestBase {
       isFinal = true,
       ctx,
       tableEnv,
-      DataTypes.internal(localOutputRowType).asInstanceOf[RowType],
-      DataTypes.internal(gloablOutRowType).asInstanceOf[RowType],
+      TypeConverters.createInternalTypeFromTypeInfo(localOutputRowType).asInstanceOf[RowType],
+      TypeConverters.createInternalTypeFromTypeInfo(gloablOutRowType).asInstanceOf[RowType],
       "Sort")
     val globalOperator = new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
       generatedGlobalOperator.name,

@@ -20,8 +20,8 @@ package org.apache.flink.table.sources.parquet;
 
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch;
 
 import org.apache.hadoop.mapreduce.RecordReader;
@@ -47,7 +47,7 @@ public class VectorizedBatchParquetInputFormat extends ParquetInputFormat<Vector
 
 	@Override
 	public VectorizedColumnBatchTypeInfo getProducedType() {
-		return new VectorizedColumnBatchTypeInfo(fieldNames, DataTypes.toTypeInfos(fieldTypes));
+		return new VectorizedColumnBatchTypeInfo(fieldNames, TypeConverters.createExternalTypeInfoFromDataTypes(fieldTypes));
 	}
 
 	@Override

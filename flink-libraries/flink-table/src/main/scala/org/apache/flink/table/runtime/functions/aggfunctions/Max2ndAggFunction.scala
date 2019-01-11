@@ -19,10 +19,10 @@ package org.apache.flink.table.runtime.functions.aggfunctions
 
 import java.lang.{Iterable => JIterable}
 import java.math.BigDecimal
-
 import org.apache.flink.api.java.tuple.{Tuple3 => JTuple3}
 import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, InternalType}
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType}
 import org.apache.flink.table.dataformat.BinaryString
 import org.apache.flink.table.typeutils.BinaryStringTypeInfo
 
@@ -168,8 +168,7 @@ class DecimalMax2ndAggFunction(decimalType: DecimalType)
   */
 class StringMax2ndAggFunction extends Max2ndAggFunction[BinaryString] {
 
-  override def getValueTypeInfo: DataType = DataTypes.of(
-    BinaryStringTypeInfo.INSTANCE)
+  override def getValueTypeInfo: DataType = BinaryStringTypeInfo.INSTANCE
   override def getInitValue = BinaryString.EMPTY_UTF8
 
   override def accumulate(acc: Max2ndAccumulator[BinaryString], value: Any): Unit = {
