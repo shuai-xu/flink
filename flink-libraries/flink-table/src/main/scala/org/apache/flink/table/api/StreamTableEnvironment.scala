@@ -135,6 +135,7 @@ abstract class StreamTableEnvironment(
       case Some(jn) => context.setJobName(jn)
       case None => context.setJobName(DEFAULT_JOB_NAME)
     }
+    setTransformationsUid(streamingTransformations, "stream-table-")
     val streamGraph = StreamGraphGenerator.generate(context, streamingTransformations)
 
     streamingTransformations.clear()
