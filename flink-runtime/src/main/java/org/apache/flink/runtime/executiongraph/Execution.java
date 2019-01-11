@@ -21,13 +21,9 @@ package org.apache.flink.runtime.executiongraph;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.Archiveable;
 import org.apache.flink.api.common.accumulators.Accumulator;
-import org.apache.flink.api.common.operators.ResourceSpec;
-import org.apache.flink.api.common.resources.CommonExtendedResource;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.JobManagerOptions;
-import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.accumulators.StringifiedAccumulatorResult;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
@@ -40,7 +36,6 @@ import org.apache.flink.runtime.deployment.PartialInputChannelDeploymentDescript
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.instance.SlotSharingGroupId;
-import org.apache.flink.runtime.io.network.partition.BlockingShuffleType;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.LocationPreferenceConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.ScheduledUnit;
@@ -48,7 +43,6 @@ import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.runtime.jobmanager.slots.TaskManagerGateway;
 import org.apache.flink.runtime.jobmaster.LogicalSlot;
 import org.apache.flink.runtime.jobmaster.SlotRequestId;
-import org.apache.flink.runtime.jobmaster.TaskNetworkMemoryUtil;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.StackTraceSampleResponse;
@@ -501,7 +495,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 			final Collection<TaskManagerLocation> preferredLocations =
 					locationFuture == null ? Collections.EMPTY_LIST : FutureUtils.combineAll(locationFuture).join();
 			return new Tuple2(toSchedule, new SlotProfile(
-					generateResourceProfileForTask(toSchedule),
+					computeResource(sharingGroup),
 					preferredLocations,
 					previousAllocationIDs));
 		} else {
@@ -568,7 +562,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 							toSchedule,
 							queued,
 							new SlotProfile(
-								generateResourceProfileForTask(toSchedule),
+								computeResource(sharingGroup),
 								preferredLocations,
 								previousAllocationIDs),
 							allocationTimeout));
@@ -603,93 +597,12 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 		}
 	}
 
-	private ResourceProfile generateResourceProfileForTask(ScheduledUnit task) {
-		ExecutionVertex executionVertex = task.getTaskToExecute().getVertex();
-		if (executionVertex.getJobVertex().getJobVertex().getMinResources().equals(ResourceSpec.DEFAULT)) {
-			return ResourceProfile.UNKNOWN;
+	private ResourceProfile computeResource(SlotSharingGroup slotSharingGroup) {
+		if (slotSharingGroup != null && slotSharingGroup.getResourceProfile() != null) {
+			return slotSharingGroup.getResourceProfile();
+		} else {
+			return getVertex().calculateResourceProfile();
 		}
-
-		int networkMemory = calculateTaskNetworkMemory(executionVertex);
-
-		int additionalManagedMemory = calculateTaskExtraManagedMemory(executionVertex);
-		ResourceSpec additionalResourceSpec = ResourceSpec.newBuilder().addExtendedResource(
-			new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, additionalManagedMemory))
-			.build();
-
-		return ResourceProfile.fromResourceSpec(
-			executionVertex.getJobVertex().getJobVertex().getMinResources()
-				.merge(additionalResourceSpec), networkMemory);
-	}
-
-	@VisibleForTesting
-	int calculateTaskNetworkMemory(ExecutionVertex executionVertex) {
-
-		Configuration config = getVertex().getJobVertex().getGraph().getJobManagerConfiguration();
-
-		BlockingShuffleType shuffleType =
-			BlockingShuffleType.getBlockingShuffleTypeFromConfiguration(config, LOG);
-		int numSubpartitions = 0;
-		for (IntermediateResultPartition irp : executionVertex.getProducedPartitions().values()) {
-			if (!(shuffleType == BlockingShuffleType.YARN && irp.getIntermediateResult().getResultType().isBlocking())) {
-				for (List<ExecutionEdge> consumer : irp.getConsumers()) {
-					numSubpartitions += consumer.size();
-				}
-			}
-		}
-
-		final int maxBlockingRequestsInFlight = config.getInteger(TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_MAX_CONCURRENT_REQUESTS);
-
-		int numPipelineChannels = 0;
-		int numPipelineGates = 0;
-		int numExternalBlockingChannels = 0;
-		int numExternalBlockingGates = 0;
-		for (int j = 0; j < executionVertex.getNumberOfInputs(); ++j) {
-			ExecutionEdge[] edges = executionVertex.getInputEdges(j);
-
-			checkState(edges.length > 0, "There should be at least on edge for each input");
-
-			// Check the result type by viewing the first edge
-			boolean isExternalBlocking = edges[0].getSource().getIntermediateResult().getResultType().isBlocking()
-				&& shuffleType == BlockingShuffleType.YARN;
-
-			if (isExternalBlocking) {
-				numExternalBlockingChannels += edges.length;
-				numExternalBlockingGates++;
-			} else {
-				numPipelineChannels += edges.length;
-				numPipelineGates++;
-			}
-		}
-
-		if (maxBlockingRequestsInFlight > 0) {
-			numExternalBlockingChannels = Math.min(numExternalBlockingChannels, maxBlockingRequestsInFlight);
-			// each blocking input gate should monopolize at least one piece of resource to
-			// support input selection by operator
-			numExternalBlockingChannels = Math.max(numExternalBlockingChannels, numExternalBlockingGates);
-		}
-
-		final int networkMemory =
-			TaskNetworkMemoryUtil.calculateTaskNetworkMemory(config, numSubpartitions, numPipelineChannels, numPipelineGates,
-				numExternalBlockingChannels, numExternalBlockingGates);
-
-		return networkMemory;
-	}
-
-	@VisibleForTesting
-	int calculateTaskExtraManagedMemory(ExecutionVertex executionVertex) {
-		Configuration config = getVertex().getJobVertex().getGraph().getJobManagerConfiguration();
-
-		// Calculates managed memory for external result partition.
-		BlockingShuffleType shuffleType =
-			BlockingShuffleType.getBlockingShuffleTypeFromConfiguration(config, LOG);
-		int numExternalResultPartitions = 0;
-		for (IntermediateResultPartition irp : executionVertex.getProducedPartitions().values()) {
-			if (shuffleType == BlockingShuffleType.YARN && irp.getIntermediateResult().getResultType().isBlocking()) {
-				numExternalResultPartitions++;
-			}
-		}
-		int mapOutputMemoryInMB = config.getInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MEMORY_MB);
-		return mapOutputMemoryInMB * numExternalResultPartitions;
 	}
 
 	/**

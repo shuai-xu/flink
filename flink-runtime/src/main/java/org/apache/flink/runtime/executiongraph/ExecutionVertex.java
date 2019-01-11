@@ -21,13 +21,18 @@ package org.apache.flink.runtime.executiongraph;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.Archiveable;
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.CommonExtendedResource;
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.JobManagerOptions;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.core.io.InputSplit;
 import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.blob.PermanentBlobKey;
 import org.apache.flink.runtime.checkpoint.JobManagerTaskRestore;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
+import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.deployment.InputChannelDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.InputGateDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.PartialInputChannelDeploymentDescriptor;
@@ -36,6 +41,7 @@ import org.apache.flink.runtime.deployment.ResultPartitionLocationTrackerProxy;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.instance.SimpleSlot;
+import org.apache.flink.runtime.io.network.partition.BlockingShuffleType;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
@@ -47,6 +53,7 @@ import org.apache.flink.runtime.jobmanager.scheduler.CoLocationConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
 import org.apache.flink.runtime.jobmanager.scheduler.LocationPreferenceConstraint;
 import org.apache.flink.runtime.jobmaster.LogicalSlot;
+import org.apache.flink.runtime.jobmaster.TaskNetworkMemoryUtil;
 import org.apache.flink.runtime.jobmaster.failover.ResultDescriptor;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.schedule.ExecutionVertexStatus;
@@ -78,6 +85,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static org.apache.flink.runtime.execution.ExecutionState.FINISHED;
+import static org.apache.flink.util.Preconditions.checkState;
 
 /**
  * The ExecutionVertex is a parallel subtask of the execution. It may be executed once, or several times, each of
@@ -474,6 +482,93 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 
 			return locations.isEmpty() ? Collections.emptyList() : locations;
 		}
+	}
+
+	// --------------------------------------------------------------------------------------------
+	//   Resources
+	// --------------------------------------------------------------------------------------------
+
+	public ResourceProfile calculateResourceProfile() {
+		if (jobVertex.getJobVertex().getMinResources().equals(ResourceSpec.DEFAULT)) {
+			return ResourceProfile.UNKNOWN;
+		} else {
+			int networkMemory = calculateTaskNetworkMemory();
+
+			int additionalManagedMemory = calculateTaskExtraManagedMemory();
+			ResourceSpec additionalResourceSpec = ResourceSpec.newBuilder().addExtendedResource(
+				new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, additionalManagedMemory))
+				.build();
+
+			return ResourceProfile.fromResourceSpec(
+				getJobVertex().getJobVertex().getMinResources()
+					.merge(additionalResourceSpec), networkMemory);
+		}
+	}
+
+	@VisibleForTesting
+	int calculateTaskNetworkMemory() {
+		Configuration config = jobVertex.getGraph().getJobManagerConfiguration();
+
+		BlockingShuffleType shuffleType =
+			BlockingShuffleType.getBlockingShuffleTypeFromConfiguration(config, LOG);
+		int numSubpartitions = 0;
+		for (IntermediateResultPartition irp : getProducedPartitions().values()) {
+			if (!(shuffleType == BlockingShuffleType.YARN && irp.getIntermediateResult().getResultType().isBlocking())) {
+				for (List<ExecutionEdge> consumer : irp.getConsumers()) {
+					numSubpartitions += consumer.size();
+				}
+			}
+		}
+
+		final int maxBlockingRequestsInFlight = config.getInteger(TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_MAX_CONCURRENT_REQUESTS);
+
+		int numPipelineChannels = 0;
+		int numPipelineGates = 0;
+		int numExternalBlockingChannels = 0;
+		int numExternalBlockingGates = 0;
+		for (int j = 0; j < getNumberOfInputs(); ++j) {
+			ExecutionEdge[] edges = getInputEdges(j);
+
+			checkState(edges.length > 0, "There should be at least on edge for each input");
+
+			// Check the result type by viewing the first edge
+			boolean isExternalBlocking = edges[0].getSource().getIntermediateResult().getResultType().isBlocking()
+				&& shuffleType == BlockingShuffleType.YARN;
+
+			if (isExternalBlocking) {
+				numExternalBlockingChannels += edges.length;
+				numExternalBlockingGates++;
+			} else {
+				numPipelineChannels += edges.length;
+				numPipelineGates++;
+			}
+		}
+
+		if (maxBlockingRequestsInFlight > 0) {
+			numExternalBlockingChannels = Math.min(numExternalBlockingChannels, maxBlockingRequestsInFlight);
+			// each blocking input gate should monopolize at least one piece of resource to
+			// support input selection by operator
+			numExternalBlockingChannels = Math.max(numExternalBlockingChannels, numExternalBlockingGates);
+		}
+
+		return TaskNetworkMemoryUtil.calculateTaskNetworkMemory(config, numSubpartitions, numPipelineChannels, numPipelineGates,
+			numExternalBlockingChannels, numExternalBlockingGates);
+	}
+
+	private int calculateTaskExtraManagedMemory() {
+		Configuration config = getJobVertex().getGraph().getJobManagerConfiguration();
+
+		// Calculates managed memory for external result partition.
+		BlockingShuffleType shuffleType =
+			BlockingShuffleType.getBlockingShuffleTypeFromConfiguration(config, LOG);
+		int numExternalResultPartitions = 0;
+		for (IntermediateResultPartition irp : getProducedPartitions().values()) {
+			if (shuffleType == BlockingShuffleType.YARN && irp.getIntermediateResult().getResultType().isBlocking()) {
+				numExternalResultPartitions++;
+			}
+		}
+		int mapOutputMemoryInMB = config.getInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MEMORY_MB);
+		return mapOutputMemoryInMB * numExternalResultPartitions;
 	}
 
 	// --------------------------------------------------------------------------------------------

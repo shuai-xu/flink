@@ -128,6 +128,7 @@ class TypeCoercionITCase extends QueryTest {
       Seq(true)
     )
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
+    env.setParallelism(Math.min(env.getParallelism, 8))
   }
 
   @Test

@@ -401,7 +401,7 @@ public class YARNSessionITCase extends YarnTestBase {
 		Runner jobRunner = startWithArgs(new String[]{"run",
 				exampleJarLocation.getAbsolutePath(),
 				//"--input", tmpInFile.getAbsoluteFile().toString(),
-				"--resource", "vcores:1,memory:100",
+				"--resource", "vcores:0.3,memory:50",
 				"--parallelism", "2"},
 			"Job Runtime: ", RunTypes.CLI_FRONTEND);
 

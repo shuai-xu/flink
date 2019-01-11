@@ -20,9 +20,11 @@ package org.apache.flink.runtime.executiongraph;
 
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.time.Deadline;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.metrics.groups.UnregisteredMetricsGroup;
 import org.apache.flink.runtime.akka.AkkaUtils;
@@ -49,12 +51,15 @@ import org.apache.flink.runtime.instance.Instance;
 import org.apache.flink.runtime.instance.InstanceID;
 import org.apache.flink.runtime.instance.SimpleSlot;
 import org.apache.flink.runtime.instance.SimpleSlotContext;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
+import org.apache.flink.runtime.jobgraph.DistributionPattern;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.jobmanager.scheduler.Scheduler;
+import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.runtime.jobmanager.slots.TaskManagerGateway;
 import org.apache.flink.runtime.jobmaster.GraphManager;
 import org.apache.flink.runtime.jobmaster.JobMasterGateway;
@@ -729,6 +734,42 @@ public class ExecutionGraphTestUtils {
 		eg.setGraphManager(graphManager);
 
 		return eg;
+	}
+
+	public static ExecutionGraph createExecutionGraphWithSharingSlots(
+			Configuration jobManagerConfiguration,
+			String graphManagerPluginType,
+			SlotProvider slotProvider,
+			int[] parallelism,
+			ResourceSpec[] resources,
+			DistributionPattern[] distributionPatterns) throws Exception {
+
+		SlotSharingGroup slotSharingGroup = new SlotSharingGroup();
+
+		JobVertex[] vertices = new JobVertex[parallelism.length];
+		for (int i = 0; i < parallelism.length; ++i) {
+			vertices[i] = new JobVertex("vertex " + i);
+			vertices[i].setInvokableClass(NoOpInvokable.class);
+			vertices[i].setParallelism(parallelism[i]);
+			vertices[i].setResources(resources[i], resources[i]);
+
+			vertices[i].setSlotSharingGroup(slotSharingGroup);
+
+			if (i >= 1) {
+				vertices[i].connectNewDataSetAsInput(vertices[i - 1], distributionPatterns[i - 1], ResultPartitionType.PIPELINED);
+			}
+		}
+
+		JobGraph jobGraph = new JobGraph(vertices);
+		jobGraph.getSchedulingConfiguration().setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, graphManagerPluginType);
+
+		return ExecutionGraphTestUtils.createExecutionGraph(
+			jobGraph,
+			jobManagerConfiguration,
+			slotProvider,
+			new NoRestartStrategy(),
+			TestingUtils.defaultExecutor(),
+			Time.seconds(10));
 	}
 
 	public static JobVertex createNoOpVertex(int parallelism) {

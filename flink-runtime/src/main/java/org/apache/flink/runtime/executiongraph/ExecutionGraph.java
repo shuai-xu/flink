@@ -28,6 +28,7 @@ import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
+import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.metrics.Histogram;
 import org.apache.flink.metrics.Meter;
 import org.apache.flink.metrics.MeterView;
@@ -46,6 +47,7 @@ import org.apache.flink.runtime.checkpoint.CheckpointStatsSnapshot;
 import org.apache.flink.runtime.checkpoint.CheckpointStatsTracker;
 import org.apache.flink.runtime.checkpoint.CompletedCheckpointStore;
 import org.apache.flink.runtime.checkpoint.MasterTriggerRestoreHook;
+import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.clusterframework.types.SlotProfile;
 import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.concurrent.FutureUtils.ConjunctFuture;
@@ -66,12 +68,15 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.tasks.CheckpointCoordinatorConfiguration;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
 import org.apache.flink.runtime.jobmanager.scheduler.ScheduledUnit;
+import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.runtime.jobmaster.GraphManager;
 import org.apache.flink.runtime.jobmaster.LogicalSlot;
 import org.apache.flink.runtime.jobmaster.SlotRequestId;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.metrics.SimpleHistogram;
 import org.apache.flink.runtime.query.KvStateLocationRegistry;
+import org.apache.flink.runtime.schedule.SlotSharingResourceCalculator;
+import org.apache.flink.runtime.schedule.SummationSlotSharingResourceCalculator;
 import org.apache.flink.runtime.state.SharedStateRegistry;
 import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.runtime.taskmanager.TaskExecutionState;
@@ -251,6 +256,9 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	/** The result partition location tracker proxy to get result partition location from. */
 	private final ResultPartitionLocationTrackerProxy resultPartitionLocationTrackerProxy;
 
+	/** The resource calculator for the sharing groups. */
+	private final SlotSharingResourceCalculator slotSharingResourceCalculator;
+
 	/** The total number of vertices currently in the execution graph. */
 	private int numVerticesTotal;
 
@@ -416,6 +424,13 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		this.taskDeployMetrics = metricGroup.histogram("task_deploy_cost", new SimpleHistogram());
 
 		this.jobManagerConfiguration = checkNotNull(jobManagerConfiguration);
+
+		final boolean enableSharedSlot = jobManagerConfiguration.getBoolean(JobManagerOptions.SLOT_ENABLE_SHARED_SLOT);
+		if (enableSharedSlot) {
+			this.slotSharingResourceCalculator = new SummationSlotSharingResourceCalculator();
+		} else {
+			this.slotSharingResourceCalculator = null;
+		}
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -921,11 +936,28 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		for (ExecutionJobVertex ejv : getAllVertices().values()) {
 			ejv.setUpInputSplits(null);
 		}
+
+		final boolean enableSharedSlot = jobManagerConfiguration.getBoolean(JobManagerOptions.SLOT_ENABLE_SHARED_SLOT);
+		if (enableSharedSlot) {
+			updateSharedSlotResources();
+		}
+
 		if (transitionState(JobStatus.CREATED, JobStatus.RUNNING)) {
 			graphManager.startScheduling();
 		}
 		else {
 			throw new IllegalStateException("Job may only be scheduled from state " + JobStatus.CREATED);
+		}
+	}
+
+	private void updateSharedSlotResources() {
+		for (ExecutionJobVertex jobVertex : getVerticesTopologically()) {
+			SlotSharingGroup sharingGroup = jobVertex.getJobVertex().getSlotSharingGroup();
+
+			if (sharingGroup != null && sharingGroup.getResourceProfile() == null) {
+				ResourceProfile sharingGroupResources = slotSharingResourceCalculator.calculateSharedGroupResource(sharingGroup, this);
+				sharingGroup.setResourceProfile(sharingGroupResources);
+			}
 		}
 	}
 
