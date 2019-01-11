@@ -32,7 +32,7 @@ import org.junit.Test;
 
 /**
  * Test.
- * todo(terry.wg@alibaba-inc.com): complete e2e test case and test joining, projection and other case.
+ * todo: complete e2e test case and test joining, projection and other case.
  */
 @Ignore
 public class HiveTableSourceTest {
