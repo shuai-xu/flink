@@ -28,9 +28,89 @@ under the License.
 
 ## SQL Client Examples
 
-TODO: depend on SQL Client to be ready. (青陆)
+Start local cluster first:
 
-For more information see the [SQL]({{ site.baseurl }}/dev/table/sql.html) and [SQL Client]({{ site.baseurl }}/dev/table/sqlClient.html).
+{% highlight bash %}
+$ ./bin/start-cluster.sh
+{% endhighlight %}
+
+Check the web at http://localhost:8081 and make sure everything is up and running. The web frontend should report a single available TaskManager instance.
+
+Prepare the input data:
+{% highlight bash %}
+$ cat /tmp/input.csv
+hello
+flink
+hello
+sql
+hello
+world
+{% endhighlight %}
+
+Then start SQL Client shell:
+
+{% highlight bash %}
+$ ./bin/sql-client.sh embedded
+{% endhighlight %}
+
+You can see the welcome message for flink sql client.
+
+Paste the following sql text into the shell.
+
+{% highlight bash %}
+create table csv_source (
+  a varchar
+) with (
+  type = 'csv',
+  path = 'file:///tmp/input.csv'
+);
+
+create table csv_sink (
+  a varchar,
+  c bigint
+) with (
+  type = 'csv',
+  updatemode = 'upsert',
+  path = 'file:///tmp/output.csv'
+);
+
+insert into csv_sink
+select
+  a,
+  count(*)
+from csv_source
+group by a;
+{% endhighlight %}
+
+After press 'Enter' the sql will be submitted to the standalone cluster. The log will print on the shell.
+
+{% highlight bash %}
+[INFO] Submitting SQL update statement to the cluster...
+[INFO] Table update statement has been successfully submitted to the cluster:
+Cluster ID: StandaloneClusterId
+Job ID: 8dd216ca2cd64df4976c828ad473bee7
+Web interface: http://localhost:8081
+{% endhighlight %}
+
+Open http://localhost:8081 and you can see the job information.
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-sqlclient-wordcount.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-sqlclient-wordcount.png" alt="SQL Example: WordCount"/></a>
+
+And the result will output to file.
+
+{% highlight bash %}
+$ cat /tmp/output.csv
+Add,hello,1
+Add,flink,1
+Add,hello,2
+Add,sql,1
+Add,hello,3
+Add,world,1
+{% endhighlight %}
+
+This example also support read and write from Hadoop, just change `path` of source and sink table to hdfs://host:port/tmp/input.csv.
+
+For more information please refer to [SQL]({{ site.baseurl }}/dev/table/sql.html) and [SQL Client]({{ site.baseurl }}/dev/table/sqlClient.html).
 
 ## Submit SQL Query Programmatically
 SQL queries can be submitted using the `sqlQuery()` method of the TableEnvironment programmatically. 
