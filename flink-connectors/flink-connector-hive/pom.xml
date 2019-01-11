@@ -166,6 +166,7 @@ under the License.
 									<include>org.apache.hive.hcatalog:*</include>
 									<include>org.apache.hadoop.hive:*</include>
 									<include>org.apache.hive.shims:*</include>
+									<include>org.apache.thrift:*</include>
 								</includes>
 							</artifactSet>
 							<filters>
