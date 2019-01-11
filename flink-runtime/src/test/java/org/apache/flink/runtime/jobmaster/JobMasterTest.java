@@ -21,6 +21,7 @@ package org.apache.flink.runtime.jobmaster;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
+import org.apache.flink.api.common.time.Deadline;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.BlobServerOptions;
@@ -45,6 +46,8 @@ import org.apache.flink.runtime.checkpoint.savepoint.SavepointV2;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
+import org.apache.flink.runtime.concurrent.FutureUtils;
+import org.apache.flink.runtime.concurrent.ScheduledExecutorServiceAdapter;
 import org.apache.flink.runtime.deployment.ResultPartitionDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.execution.ExecutionState;
@@ -75,6 +78,7 @@ import org.apache.flink.runtime.jobgraph.tasks.CheckpointCoordinatorConfiguratio
 import org.apache.flink.runtime.jobgraph.tasks.JobCheckpointingSettings;
 import org.apache.flink.runtime.jobmanager.OnCompletionActions;
 import org.apache.flink.runtime.jobmanager.StandaloneSubmittedJobGraphStore;
+import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
 import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.runtime.jobmaster.factories.UnregisteredJobManagerJobMetricGroupFactory;
 import org.apache.flink.runtime.jobmaster.slotpool.DefaultSlotPoolFactory;
@@ -84,6 +88,7 @@ import org.apache.flink.runtime.registration.RegistrationResponse;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
 import org.apache.flink.runtime.resourcemanager.SlotRequest;
 import org.apache.flink.runtime.resourcemanager.utils.TestingResourceManagerGateway;
+import org.apache.flink.runtime.rest.messages.job.JobPendingSlotRequestDetail;
 import org.apache.flink.runtime.rpc.RpcUtils;
 import org.apache.flink.runtime.rpc.TestingRpcService;
 import org.apache.flink.runtime.state.CompletedCheckpointStorageLocation;
@@ -95,6 +100,7 @@ import org.apache.flink.runtime.taskmanager.LocalTaskManagerLocation;
 import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.testtasks.NoOpInvokable;
+import org.apache.flink.runtime.util.ExecutorThreadFactory;
 import org.apache.flink.runtime.util.TestingFatalErrorHandler;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
@@ -116,18 +122,25 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -136,6 +149,8 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -1186,7 +1201,7 @@ public class JobMasterTest extends TestLogger {
 
 			List<SlotOffer> slotOffers = new ArrayList<>(parallelism / 2);
 			// Fulfill the last half allocations.
-			for (int i = parallelism / 2; i< parallelism; i++) {
+			for (int i = parallelism / 2; i < parallelism; i++) {
 				slotOffers.add(new SlotOffer(slotAllocationIds.get(i), i, new ResourceProfile(1, 100)));
 			}
 			jobMasterGateway.offerSlots(taskManagerLocation.getResourceID(), slotOffers, testingTimeout).get();
@@ -1431,6 +1446,169 @@ public class JobMasterTest extends TestLogger {
 		}
 	}
 
+	@Test
+	public void testRequestPendingSlotRequestDetails() throws Exception {
+		final JobGraph jobGraph = createJobGraphWithSlotSharingGroup();
+		jobGraph.setAllowQueuedScheduling(true);
+		jobGraph.setScheduleMode(ScheduleMode.EAGER);
+
+		final int expectedSlotRequestNum = 6;
+
+		// create the resource manager
+		final String resourceManagerAddress = "rm";
+		final TestingResourceManagerGateway resourceManagerGateway = new TestingResourceManagerGateway(
+				ResourceManagerId.generate(),
+				new ResourceID(resourceManagerAddress),
+				fastHeartbeatInterval,
+				resourceManagerAddress,
+				"localhost");
+
+		CompletableFuture<Acknowledge> requestSlotFuture = new CompletableFuture<>();
+		final ArrayBlockingQueue<SlotRequest> blockingQueue = new ArrayBlockingQueue<>(expectedSlotRequestNum);
+		resourceManagerGateway.setRequestSlotConsumer(blockingQueue::offer);
+		resourceManagerGateway.setRequestSlotFuture(requestSlotFuture);
+		rpcService.registerGateway(resourceManagerAddress, resourceManagerGateway);
+
+		// create a task manager
+		final String taskExecutorAddress = "tm";
+		rpcService.registerGateway(taskExecutorAddress, new TestingTaskExecutorGatewayBuilder().createTestingTaskExecutorGateway());
+
+		// create the job master
+		configuration.setString(JobManagerOptions.EXECUTION_FAILOVER_STRATEGY, "region");
+		final JobMaster jobMaster = createJobMaster(
+				configuration,
+				jobGraph,
+				haServices,
+				new TestingJobManagerSharedServicesBuilder().setRestartStrategyFactory(
+						new FixedDelayRestartStrategy.FixedDelayRestartStrategyFactory(1, 0)).build(),
+				new TestingHeartbeatServices(10000, 60000, rpcService.getScheduledExecutor()));
+
+		// start the job master
+		CompletableFuture<Acknowledge> startFuture = jobMaster.start(jobMasterId, testingTimeout);
+
+		try {
+			ScheduledExecutorService retryExecutorService = Executors.newSingleThreadScheduledExecutor(
+					new ExecutorThreadFactory("Flink-Test-Retry"));
+
+			// wait for the start to complete and verify the results
+			startFuture.get(testingTimeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+			final JobMasterGateway jobMasterGateway = jobMaster.getSelfGateway(JobMasterGateway.class);
+
+			Collection<JobPendingSlotRequestDetail> result = retrySuccesfulWithDelay(
+					() -> jobMasterGateway.requestPendingSlotRequestDetails(testingTimeout),
+					(collection) -> collection.size() == expectedSlotRequestNum,
+					retryExecutorService).get(testingTimeout.toMilliseconds() + 4, TimeUnit.MILLISECONDS);
+
+			verifyPendingSlotRequestDetails(result);
+
+			// grant leader to the resource manager
+			rmLeaderRetrievalService.notifyListener(resourceManagerGateway.getAddress(), resourceManagerGateway.getFencingToken().toUUID());
+
+			TaskManagerLocation taskManagerLocation = new LocalTaskManagerLocation();
+			jobMasterGateway.registerTaskManager(taskExecutorAddress, taskManagerLocation, testingTimeout).get();
+
+			// wait for all slot requests to arrive at the resource manager and verify the results
+			retrySuccesfulWithDelay(
+					() -> CompletableFuture.completedFuture(blockingQueue.size()),
+					(size) -> size == expectedSlotRequestNum,
+					retryExecutorService).get(testingTimeout.toMilliseconds() + 4, TimeUnit.MILLISECONDS);
+
+			result = retrySuccesfulWithDelay(
+					() -> jobMasterGateway.requestPendingSlotRequestDetails(testingTimeout),
+					(collection) -> collection.size() == expectedSlotRequestNum,
+					retryExecutorService).get(testingTimeout.toMilliseconds() + 4, TimeUnit.MILLISECONDS);
+
+			verifyPendingSlotRequestDetails(result);
+
+			// reply to the slot poll that resources allocated is completed and verify the results
+			requestSlotFuture.complete(Acknowledge.get());
+
+			List<SlotOffer> slotOffers = new ArrayList<>();
+			Iterator<SlotRequest> iterator = blockingQueue.iterator();
+			while (iterator.hasNext()) {
+				slotOffers.add(new SlotOffer(iterator.next().getAllocationId(), 0, ResourceProfile.UNKNOWN));
+			}
+			jobMasterGateway.offerSlots(taskManagerLocation.getResourceID(), slotOffers, testingTimeout);
+
+			retrySuccesfulWithDelay(
+					() -> jobMasterGateway.requestPendingSlotRequestDetails(testingTimeout),
+					(collection) -> collection.size() == 0,
+					retryExecutorService).get(testingTimeout.toMilliseconds() + 4, TimeUnit.MILLISECONDS);
+
+		} finally {
+			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
+		}
+	}
+
+	private static <T> CompletableFuture<T> retrySuccesfulWithDelay(
+			Supplier<CompletableFuture<T>> operation,
+			Predicate<T> acceptancePredicate,
+			ScheduledExecutorService retryExecutorService) {
+
+		return FutureUtils.retrySuccesfulWithDelay(
+				operation,
+				Time.milliseconds(1),
+				Deadline.now().plus(Duration.ofMillis(testingTimeout.toMilliseconds())),
+				acceptancePredicate,
+				new ScheduledExecutorServiceAdapter(retryExecutorService));
+	}
+
+	private void verifyPendingSlotRequestDetails(Collection<JobPendingSlotRequestDetail> result) {
+		Map<String, JobPendingSlotRequestDetail> pendingSlotRequestDetailMap = new HashMap<>();
+		for (JobPendingSlotRequestDetail detail : result) {
+			for (JobPendingSlotRequestDetail.VertexTaskInfo taskInfo : detail.getVertexTaskInfos()) {
+				pendingSlotRequestDetailMap.put(taskInfo.getTaskName() + "-" + taskInfo.getSubtaskIndex(), detail);
+			}
+		}
+
+		{
+			JobPendingSlotRequestDetail detail = pendingSlotRequestDetailMap.get("source1-0");
+			assertEquals(1, detail.getVertexTaskInfos().size());
+			assertTrue(detail.getStartTime() > 0);
+			assertNull(detail.getSlotSharingGroupId());
+			assertNull(detail.getCoLocationGroupId());
+		}
+
+		{
+			JobPendingSlotRequestDetail detail = pendingSlotRequestDetailMap.get("slotSharingGroup1Vertex1-0");
+			assertEquals(2, detail.getVertexTaskInfos().size());
+			assertEquals(detail, pendingSlotRequestDetailMap.get("slotSharingGroup1Vertex2-0"));
+			assertNotNull(detail.getSlotSharingGroupId());
+			assertNull(detail.getCoLocationGroupId());
+		}
+
+		{
+			JobPendingSlotRequestDetail detail = pendingSlotRequestDetailMap.get("slotSharingGroup1Vertex2-1");
+			assertEquals(1, detail.getVertexTaskInfos().size());
+			assertNotNull(detail.getSlotSharingGroupId());
+			assertNull(detail.getCoLocationGroupId());
+		}
+
+		{
+			JobPendingSlotRequestDetail detail = pendingSlotRequestDetailMap.get("coLocationGroupId1Vertex1-0");
+			assertEquals(2, detail.getVertexTaskInfos().size());
+			assertEquals(detail, pendingSlotRequestDetailMap.get("coLocationGroupId1Vertex2-0"));
+			assertNotNull(detail.getSlotSharingGroupId());
+			assertNotNull(detail.getCoLocationGroupId());
+		}
+
+		{
+			JobPendingSlotRequestDetail detail = pendingSlotRequestDetailMap.get("coLocationGroupId1Vertex1-1");
+			assertEquals(2, detail.getVertexTaskInfos().size());
+			assertEquals(detail, pendingSlotRequestDetailMap.get("coLocationGroupId1Vertex2-1"));
+			assertNotNull(detail.getSlotSharingGroupId());
+			assertNotNull(detail.getCoLocationGroupId());
+		}
+
+		{
+			JobPendingSlotRequestDetail detail = pendingSlotRequestDetailMap.get("sink1-0");
+			assertEquals(1, detail.getVertexTaskInfos().size());
+			assertTrue(detail.getStartTime() > 0);
+			assertNotNull(detail.getSlotSharingGroupId());
+			assertNull(detail.getCoLocationGroupId());
+		}
+	}
+
 	private void verifyGetNextInputSplit(int expectedSplitNumber,
 			final JobMasterGateway jobMasterGateway,
 			final JobVertex jobVertex,
@@ -1547,6 +1725,69 @@ public class JobMasterTest extends TestLogger {
 			null);
 		jobGraph.setSnapshotSettings(checkpointingSettings);
 		jobGraph.setSavepointRestoreSettings(savepointRestoreSettings);
+
+		return jobGraph;
+	}
+
+	@Nonnull
+	private JobGraph createJobGraphWithSlotSharingGroup() {
+		// create vertex without SlotSharingGroup
+		final JobVertex source1 = new JobVertex("source1");
+		source1.setInvokableClass(NoOpInvokable.class);
+		source1.setParallelism(1);
+		source1.setSlotSharingGroup(null);
+		source1.updateCoLocationGroup(null);
+
+		// create vertices with the same SlotSharingGroup
+		SlotSharingGroup slotSharingGroup1 = new SlotSharingGroup();
+		final JobVertex slotSharingGroup1Vertex1 = new JobVertex("slotSharingGroup1Vertex1");
+		final JobVertex slotSharingGroup1Vertex2 = new JobVertex("slotSharingGroup1Vertex2");
+		{
+			slotSharingGroup1Vertex1.setInvokableClass(NoOpInvokable.class);
+			slotSharingGroup1Vertex1.setParallelism(1);
+			slotSharingGroup1Vertex1.setSlotSharingGroup(slotSharingGroup1);
+
+			slotSharingGroup1Vertex2.setInvokableClass(NoOpInvokable.class);
+			slotSharingGroup1Vertex2.setParallelism(2);
+			slotSharingGroup1Vertex2.setSlotSharingGroup(slotSharingGroup1);
+		}
+
+		// create vertices with the same CoLocationGroup
+		SlotSharingGroup slotSharingGroup2 = new SlotSharingGroup();
+		CoLocationGroup coLocationGroup1 = new CoLocationGroup();
+		final JobVertex coLocationGroupId1Vertex1 = new JobVertex("coLocationGroupId1Vertex1");
+		final JobVertex coLocationGroupId1Vertex2 = new JobVertex("coLocationGroupId1Vertex2");
+		{
+			coLocationGroupId1Vertex1.setInvokableClass(NoOpInvokable.class);
+			coLocationGroupId1Vertex1.setParallelism(2);
+			coLocationGroupId1Vertex1.setSlotSharingGroup(slotSharingGroup2);
+			coLocationGroupId1Vertex1.updateCoLocationGroup(coLocationGroup1);
+
+			coLocationGroupId1Vertex2.setInvokableClass(NoOpInvokable.class);
+			coLocationGroupId1Vertex2.setParallelism(2);
+			coLocationGroupId1Vertex2.setSlotSharingGroup(slotSharingGroup2);
+			coLocationGroupId1Vertex2.updateCoLocationGroup(coLocationGroup1);
+		}
+
+		// create vertex with SlotSharingGroup
+		SlotSharingGroup slotSharingGroup3 = new SlotSharingGroup();
+		final JobVertex sink1 = new JobVertex("sink1");
+		sink1.setInvokableClass(NoOpInvokable.class);
+		sink1.setParallelism(1);
+		sink1.setSlotSharingGroup(slotSharingGroup3);
+		sink1.updateCoLocationGroup(null);
+
+		// connect edges
+		slotSharingGroup1Vertex1.connectNewDataSetAsInput(source1, DistributionPattern.POINTWISE, ResultPartitionType.PIPELINED);
+		slotSharingGroup1Vertex2.connectNewDataSetAsInput(slotSharingGroup1Vertex1, DistributionPattern.POINTWISE, ResultPartitionType.PIPELINED);
+		coLocationGroupId1Vertex1.connectNewDataSetAsInput(slotSharingGroup1Vertex2, DistributionPattern.POINTWISE, ResultPartitionType.PIPELINED);
+		coLocationGroupId1Vertex2.connectNewDataSetAsInput(coLocationGroupId1Vertex1, DistributionPattern.POINTWISE, ResultPartitionType.PIPELINED);
+		sink1.connectNewDataSetAsInput(coLocationGroupId1Vertex2, DistributionPattern.POINTWISE, ResultPartitionType.PIPELINED);
+
+		final JobGraph jobGraph = new JobGraph(source1,
+				slotSharingGroup1Vertex1, slotSharingGroup1Vertex2,
+				coLocationGroupId1Vertex1, coLocationGroupId1Vertex2,
+				sink1);
 
 		return jobGraph;
 	}

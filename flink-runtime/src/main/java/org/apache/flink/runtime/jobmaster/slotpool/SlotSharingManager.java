@@ -23,6 +23,7 @@ import org.apache.flink.runtime.clusterframework.types.SlotProfile;
 import org.apache.flink.runtime.instance.SlotSharingGroupId;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.Locality;
+import org.apache.flink.runtime.jobmanager.scheduler.ScheduledUnit;
 import org.apache.flink.runtime.jobmaster.LogicalSlot;
 import org.apache.flink.runtime.jobmaster.SlotContext;
 import org.apache.flink.runtime.jobmaster.SlotOwner;
@@ -94,6 +95,8 @@ public class SlotSharingManager {
 	/** Root nodes which have not been completed because the allocated slot is still pending. */
 	@GuardedBy("lock")
 	private final Map<SlotRequestId, MultiTaskSlot> unresolvedRootSlots;
+	@GuardedBy("lock")
+	private final Map<SlotRequestId, Set<ScheduledUnit>> unresolvedScheduledUnits;
 
 	/** Root nodes which have been completed (the underlying allocated slot has been assigned). */
 	@GuardedBy("lock")
@@ -109,6 +112,7 @@ public class SlotSharingManager {
 
 		allTaskSlots = new HashMap<>(16);
 		unresolvedRootSlots = new HashMap<>(16);
+		unresolvedScheduledUnits = new HashMap<>(16);
 		resolvedRootSlots = new HashMap<>(16);
 	}
 
@@ -148,6 +152,7 @@ public class SlotSharingManager {
 
 		synchronized (lock) {
 			unresolvedRootSlots.put(slotRequestId, rootMultiTaskSlot);
+			unresolvedScheduledUnits.put(slotRequestId, new HashSet<>());
 		}
 
 		// add the root node to the set of resolved root nodes once the SlotContext future has
@@ -157,6 +162,7 @@ public class SlotSharingManager {
 				if (slotContext != null) {
 					synchronized (lock) {
 						final MultiTaskSlot resolvedRootNode = unresolvedRootSlots.remove(slotRequestId);
+						unresolvedScheduledUnits.remove(slotRequestId);
 
 						if (resolvedRootNode != null) {
 							final Set<MultiTaskSlot> innerCollection = resolvedRootSlots.computeIfAbsent(
@@ -214,6 +220,41 @@ public class SlotSharingManager {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Gets all {@link ScheduledUnit}(s) that's slot have not been allocated yet.
+	 *
+	 * @return all unresolved {@link ScheduledUnit}(s)
+	 */
+	Map<SlotRequestId, ScheduledUnit[]> getAllUnresolvedScheduledUnits() {
+		Map<SlotRequestId, ScheduledUnit[]> resultMap = new HashMap<>();
+
+		synchronized (lock) {
+			for (Map.Entry<SlotRequestId, Set<ScheduledUnit>> entry : unresolvedScheduledUnits.entrySet()) {
+				SlotRequestId rootSlotRequestId = entry.getKey();
+				TaskSlot taskSlot = allTaskSlots.get(rootSlotRequestId);
+				if (taskSlot instanceof MultiTaskSlot) {
+					resultMap.put(((MultiTaskSlot) taskSlot).getAllocatedSlotRequestId(), entry.getValue().toArray(new ScheduledUnit[0]));
+				}
+			}
+		}
+
+		return resultMap;
+	}
+
+	/**
+	 * Adds a {@link ScheduledUnit} to the unresolved list.
+	 *
+	 * @param rootSlotRequestId The id of the root slot request
+	 * @param task is a {@link ScheduledUnit}
+	 */
+	void addUnresolvedScheduledUnit(SlotRequestId rootSlotRequestId, ScheduledUnit task) {
+		synchronized (lock) {
+			if (unresolvedScheduledUnits.containsKey(rootSlotRequestId)) {
+				unresolvedScheduledUnits.get(rootSlotRequestId).add(task);
+			}
+		}
 	}
 
 	@Override
@@ -293,6 +334,8 @@ public class SlotSharingManager {
 		public boolean contains(AbstractID groupId) {
 			return Objects.equals(this.groupId, groupId);
 		}
+
+		public abstract MultiTaskSlot getParent();
 
 		/**
 		 * Release the task slot.
@@ -447,6 +490,16 @@ public class SlotSharingManager {
 			return leaf;
 		}
 
+		@Override
+		public MultiTaskSlot getParent() {
+			return parent;
+		}
+
+		@Nullable
+		public SlotRequestId getAllocatedSlotRequestId() {
+			return allocatedSlotRequestId;
+		}
+
 		/**
 		 * Checks whether this slot or any of its children contains the given groupId.
 		 *
@@ -491,7 +544,9 @@ public class SlotSharingManager {
 				if (!slotContextFuture.isDone() || slotContextFuture.isCompletedExceptionally()) {
 					synchronized (lock) {
 						// the root node should still be unresolved
-						unresolvedRootSlots.remove(getSlotRequestId());
+						SlotRequestId slotRequestId = getSlotRequestId();
+						unresolvedRootSlots.remove(slotRequestId);
+						unresolvedScheduledUnits.remove(slotRequestId);
 					}
 				} else {
 					// the root node should be resolved --> we can access the slot context
@@ -591,6 +646,11 @@ public class SlotSharingManager {
 
 		CompletableFuture<LogicalSlot> getLogicalSlotFuture() {
 			return singleLogicalSlotFuture.thenApply(Function.identity());
+		}
+
+		@Override
+		public MultiTaskSlot getParent() {
+			return parent;
 		}
 
 		@Override

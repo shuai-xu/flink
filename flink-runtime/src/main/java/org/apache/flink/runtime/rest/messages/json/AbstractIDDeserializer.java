@@ -16,27 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.instance;
+package org.apache.flink.runtime.rest.messages.json;
 
 import org.apache.flink.util.AbstractID;
 
-import javax.xml.bind.DatatypeConverter;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonParser;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.DeserializationContext;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 
-public class SlotSharingGroupId extends AbstractID {
-	private static final long serialVersionUID = 8837647978345422042L;
+import java.io.IOException;
 
-	public SlotSharingGroupId(long lowerPart, long upperPart) {
-		super(lowerPart, upperPart);
+/**
+ * Jackson deserializer for {@link AbstractID}.
+ */
+public class AbstractIDDeserializer extends StdDeserializer<AbstractID> {
+
+	private static final long serialVersionUID = -7096303286038003835L;
+
+	protected AbstractIDDeserializer() {
+		super(AbstractID.class);
 	}
 
-	public SlotSharingGroupId() {
-	}
-
-	public SlotSharingGroupId(byte[] bytes) {
-		super(bytes);
-	}
-
-	public static SlotSharingGroupId fromHexString(String hexString) {
-		return new SlotSharingGroupId(DatatypeConverter.parseHexBinary(hexString));
+	@Override
+	public AbstractID deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+		return AbstractID.fromHexString(jsonParser.getValueAsString());
 	}
 }

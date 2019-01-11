@@ -41,11 +41,13 @@ import org.apache.flink.runtime.jobmaster.LogicalSlot;
 import org.apache.flink.runtime.jobmaster.SlotContext;
 import org.apache.flink.runtime.jobmaster.SlotOwner;
 import org.apache.flink.runtime.jobmaster.SlotRequestId;
+import org.apache.flink.runtime.jobmaster.message.PendingSlotRequest;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.resourcemanager.SlotRequest;
 import org.apache.flink.runtime.rpc.RpcEndpoint;
 import org.apache.flink.runtime.rpc.RpcService;
+import org.apache.flink.runtime.rpc.RpcTimeout;
 import org.apache.flink.runtime.taskexecutor.slot.SlotNotFoundException;
 import org.apache.flink.runtime.taskexecutor.slot.SlotOffer;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
@@ -505,6 +507,8 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 				multiTaskSlotLocality.getLocality(),
 				coLocationConstraint);
 
+			setPendingScheduledUnit(slotRequestId, task);
+
 			return leaf.getLogicalSlotFuture();
 		} else {
 			// request an allocated slot to assign a single logical slot to
@@ -513,6 +517,8 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 				slotProfile,
 				allowQueuedScheduling,
 				allocationTimeout);
+
+			setPendingScheduledUnit(slotRequestId, task);
 
 			return slotAndLocalityFuture.thenApply(
 				(SlotAndLocality slotAndLocality) -> {
@@ -593,6 +599,10 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 				allowQueuedScheduling,
 				allocationTimeout);
 
+		for (int i = 0; i < batchSlotRequestIds.size(); i++) {
+			setPendingScheduledUnit(batchSlotRequestIds.get(i), tasks.get(indexInOriginList.get(i)));
+		}
+
 		for (int i = 0; i < slotAndLocalityFuture.size(); i++) {
 			final int index = i;
 			returnFutures.set(indexInOriginList.get(i), slotAndLocalityFuture.get(i).thenApply(
@@ -618,6 +628,62 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			);
 		}
 		return returnFutures;
+	}
+
+	@Override
+	public CompletableFuture<Collection<PendingSlotRequest>> requestPendingSlotRequests(@RpcTimeout Time timeout) {
+		List<PendingSlotRequest> pendingSlotRequests = new ArrayList<>();
+
+		Map<SlotRequestId, ScheduledUnit[]> allUnresolvedScheduledUnits = new HashMap<>();
+		Set<SlotRequestId> addedSet = new HashSet<>();
+		for (SlotRequestId allocatedSlotRequestId : waitingForResourceManager.keySet()) {
+			if (!addedSet.contains(allocatedSlotRequestId)) {
+				requestPendingSlotRequests(allocatedSlotRequestId,
+						waitingForResourceManager.get(allocatedSlotRequestId),
+						allUnresolvedScheduledUnits,
+						pendingSlotRequests);
+			}
+		}
+		for (SlotRequestId allocatedSlotRequestId : pendingRequests.keySetA()) {
+			if (!addedSet.contains(allocatedSlotRequestId)) {
+				requestPendingSlotRequests(allocatedSlotRequestId,
+						pendingRequests.getKeyA(allocatedSlotRequestId),
+						allUnresolvedScheduledUnits,
+						pendingSlotRequests);
+			}
+		}
+
+		return CompletableFuture.completedFuture(pendingSlotRequests);
+	}
+
+	private void requestPendingSlotRequests(
+			SlotRequestId allocatedSlotRequestId,
+			PendingRequest pendingRequest,
+			Map<SlotRequestId, ScheduledUnit[]> allUnresolvedScheduledUnits,
+			List<PendingSlotRequest> pendingSlotRequests) {
+
+		if (!allUnresolvedScheduledUnits.containsKey(allocatedSlotRequestId)) {
+			ScheduledUnit task = pendingRequest.getScheduledUnit();
+			if (task != null) {
+				SlotSharingGroupId slotSharingGroupId = task.getSlotSharingGroupId();
+				if (slotSharingManagers.containsKey(slotSharingGroupId)) {
+					SlotSharingManager slotSharingManager = slotSharingManagers.get(slotSharingGroupId);
+					allUnresolvedScheduledUnits.putAll(slotSharingManager.getAllUnresolvedScheduledUnits());
+				}
+			}
+		}
+
+		final List<PendingSlotRequest.PendingScheduledUnit> pendingTasks = new ArrayList<>();
+		if (allUnresolvedScheduledUnits.containsKey(allocatedSlotRequestId)) {
+			for (ScheduledUnit task : allUnresolvedScheduledUnits.get(allocatedSlotRequestId)) {
+				pendingTasks.add(PendingSlotRequest.PendingScheduledUnit.of(task));
+			}
+		} else {
+			pendingTasks.add(PendingSlotRequest.PendingScheduledUnit.of(pendingRequest.getScheduledUnit()));
+		}
+
+		pendingSlotRequests.add(new PendingSlotRequest(
+				allocatedSlotRequestId, pendingRequest.getResourceProfile(), pendingRequest.getTimestamp(), pendingTasks));
 	}
 
 	/**
@@ -999,6 +1065,53 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 				"Adding as pending request {}",  pendingRequest.getSlotRequestId());
 
 		waitingForResourceManager.put(pendingRequest.getSlotRequestId(), pendingRequest);
+	}
+
+	private void setPendingScheduledUnit(final SlotRequestId slotRequestId, ScheduledUnit task) {
+		SlotRequestId allocatedSlotRequestId = null;
+
+		// get the slot request id of the allocated slot, and add the unresolved
+		// schedule-unit to SlotSharingManager if the slot is sharing
+		SlotSharingGroupId slotSharingGroupId = task.getSlotSharingGroupId();
+		if (slotSharingManagers.containsKey(slotSharingGroupId)) {
+			SlotSharingManager slotSharingManager = slotSharingManagers.get(slotSharingGroupId);
+
+			CoLocationConstraint coLocationConstraint = task.getCoLocationConstraint();
+			SlotSharingManager.TaskSlot taskSlot = slotSharingManager.getTaskSlot(
+					(coLocationConstraint != null) ? coLocationConstraint.getSlotRequestId() : slotRequestId);
+
+			SlotRequestId rootSlotRequestId = null;
+			while (taskSlot != null) {
+				SlotSharingManager.TaskSlot nextSlot = taskSlot.getParent();
+				if (nextSlot == null) {
+					if (taskSlot instanceof SlotSharingManager.MultiTaskSlot) {
+						SlotSharingManager.MultiTaskSlot rootTaskSlot = (SlotSharingManager.MultiTaskSlot) taskSlot;
+						allocatedSlotRequestId = rootTaskSlot.getAllocatedSlotRequestId();
+						rootSlotRequestId = rootTaskSlot.getSlotRequestId();
+					}
+					break;
+				}
+				taskSlot = nextSlot;
+			}
+
+			if (pendingRequests.containsKeyA(allocatedSlotRequestId) || waitingForResourceManager.containsKey(allocatedSlotRequestId)) {
+				slotSharingManager.addUnresolvedScheduledUnit(rootSlotRequestId, task);
+			}
+		} else {
+			allocatedSlotRequestId = slotRequestId;
+		}
+
+		// set the pending schedule-unit for the pending request
+		if (allocatedSlotRequestId != null) {
+			PendingRequest pendingRequest = waitingForResourceManager.get(allocatedSlotRequestId);
+			if (pendingRequest == null) {
+				pendingRequest = pendingRequests.getKeyA(allocatedSlotRequestId);
+			}
+			if (pendingRequest != null && pendingRequest.getScheduledUnit() == null) {
+				pendingRequest.setScheduledUnit(task);
+				pendingRequest.setTimestamp(clock.absoluteTimeMillis());
+			}
+		}
 	}
 
 	// ------------------------------------------------------------------------
@@ -1774,7 +1887,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 		 * Batch poll slots which match the required resource profiles. The polling first tries to satisfy the
 		 * location preferences, by TaskManager and by host.
 		 *
-		 * If location preferences can not be satisfied and there are slots available, it will try to allocate
+		 * <p>If location preferences can not be satisfied and there are slots available, it will try to allocate
 		 * slots by resource preferences.
 		 *
 		 * @param slotProfiles slot profiles that specifies the requirements for the slots
@@ -1998,6 +2111,10 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 
 		private final CompletableFuture<AllocatedSlot> allocatedSlotFuture;
 
+		private ScheduledUnit scheduledUnit;
+
+		private long timestamp;
+
 		PendingRequest(
 				SlotRequestId slotRequestId,
 				ResourceProfile resourceProfile) {
@@ -2017,6 +2134,22 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 
 		public ResourceProfile getResourceProfile() {
 			return resourceProfile;
+		}
+
+		public ScheduledUnit getScheduledUnit() {
+			return scheduledUnit;
+		}
+
+		public void setScheduledUnit(ScheduledUnit scheduledUnit) {
+			this.scheduledUnit = scheduledUnit;
+		}
+
+		public long getTimestamp() {
+			return timestamp;
+		}
+
+		public void setTimestamp(long timestamp) {
+			this.timestamp = timestamp;
 		}
 
 		@Override

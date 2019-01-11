@@ -107,6 +107,7 @@ import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
 import org.apache.flink.runtime.rest.handler.legacy.backpressure.BackPressureStatsTracker;
 import org.apache.flink.runtime.rest.handler.legacy.backpressure.OperatorBackPressureStats;
 import org.apache.flink.runtime.rest.handler.legacy.backpressure.OperatorBackPressureStatsResponse;
+import org.apache.flink.runtime.rest.messages.job.JobPendingSlotRequestDetail;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.FencedRpcEndpoint;
 import org.apache.flink.runtime.rpc.RpcService;
@@ -1170,6 +1171,18 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	@Override
 	public CompletableFuture<ArchivedExecutionGraph> requestJob(Time timeout) {
 		return CompletableFuture.completedFuture(ArchivedExecutionGraph.createFrom(executionGraph));
+	}
+
+	@Override
+	public CompletableFuture<Collection<JobPendingSlotRequestDetail>> requestPendingSlotRequestDetails(@RpcTimeout Time timeout) {
+		return CompletableFuture.supplyAsync(() -> {
+			try {
+				return WebMonitorUtils.createPendingSlotRequestDetailsForJob(slotPoolGateway, timeout);
+			} catch (Throwable throwable) {
+				throw new CompletionException("Could not get pending slot-request details.",
+						ExceptionUtils.stripCompletionException(throwable));
+			}
+		});
 	}
 
 	@Override

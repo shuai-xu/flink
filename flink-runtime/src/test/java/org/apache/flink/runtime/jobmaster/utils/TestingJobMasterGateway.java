@@ -47,6 +47,7 @@ import org.apache.flink.runtime.query.KvStateLocation;
 import org.apache.flink.runtime.registration.RegistrationResponse;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
 import org.apache.flink.runtime.rest.handler.legacy.backpressure.OperatorBackPressureStatsResponse;
+import org.apache.flink.runtime.rest.messages.job.JobPendingSlotRequestDetail;
 import org.apache.flink.runtime.rpc.RpcTimeout;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.taskexecutor.AccumulatorReport;
@@ -180,6 +181,11 @@ public class TestingJobMasterGateway implements JobMasterGateway {
 
 	@Override
 	public CompletableFuture<ArchivedExecutionGraph> requestJob(Time timeout) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public CompletableFuture<Collection<JobPendingSlotRequestDetail>> requestPendingSlotRequestDetails(Time timeout) {
 		throw new UnsupportedOperationException();
 	}
 

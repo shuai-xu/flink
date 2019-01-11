@@ -22,6 +22,8 @@ import org.apache.flink.runtime.jobmaster.slotpool.SlotPool;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.util.AbstractID;
 
+import javax.xml.bind.DatatypeConverter;
+
 /**
  * This ID identifies the request for a logical slot from the Execution to the {@link SlotPool}
  * oe {@link SlotProvider}. The logical slot may be a physical slot or a sub-slot thereof, in
@@ -40,4 +42,12 @@ public final class SlotRequestId extends AbstractID {
 	}
 
 	public SlotRequestId() {}
+
+	public SlotRequestId(byte[] bytes) {
+		super(bytes);
+	}
+
+	public static SlotRequestId fromHexString(String hexString) {
+		return new SlotRequestId(DatatypeConverter.parseHexBinary(hexString));
+	}
 }

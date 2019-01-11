@@ -42,6 +42,7 @@ import org.apache.flink.runtime.preaggregatedaccumulators.CommitAccumulator;
 import org.apache.flink.runtime.registration.RegistrationResponse;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
 import org.apache.flink.runtime.rest.handler.legacy.backpressure.OperatorBackPressureStatsResponse;
+import org.apache.flink.runtime.rest.messages.job.JobPendingSlotRequestDetail;
 import org.apache.flink.runtime.rpc.FencedRpcGateway;
 import org.apache.flink.runtime.rpc.RpcTimeout;
 import org.apache.flink.runtime.taskexecutor.AccumulatorReport;
@@ -296,6 +297,14 @@ public interface JobMasterGateway extends
 	 * @return Future which is completed with the {@link ArchivedExecutionGraph} of the executed job
 	 */
 	CompletableFuture<ArchivedExecutionGraph> requestJob(@RpcTimeout Time timeout);
+
+	/**
+	 * Request the details of pending slot requests of the current job.
+	 *
+	 * @param timeout for the rpc call
+	 * @return the list of pending slot requests.
+	 */
+	CompletableFuture<Collection<JobPendingSlotRequestDetail>> requestPendingSlotRequestDetails(@RpcTimeout Time timeout);
 
 	/**
 	 * Triggers taking a savepoint of the executed job.

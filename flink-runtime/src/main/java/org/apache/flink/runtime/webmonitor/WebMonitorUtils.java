@@ -31,9 +31,13 @@ import org.apache.flink.runtime.executiongraph.AccessExecutionVertex;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobmaster.JobManagerGateway;
+import org.apache.flink.runtime.jobmaster.message.PendingSlotRequest;
+import org.apache.flink.runtime.jobmaster.message.PendingSlotRequest.PendingScheduledUnit;
+import org.apache.flink.runtime.jobmaster.slotpool.SlotPoolGateway;
 import org.apache.flink.runtime.leaderretrieval.LeaderRetrievalService;
 import org.apache.flink.runtime.messages.webmonitor.JobDetails;
 import org.apache.flink.runtime.rest.handler.legacy.files.StaticFileServerHandler;
+import org.apache.flink.runtime.rest.messages.job.JobPendingSlotRequestDetail;
 import org.apache.flink.runtime.webmonitor.history.JsonArchivist;
 import org.apache.flink.runtime.webmonitor.retriever.GatewayRetriever;
 import org.apache.flink.runtime.webmonitor.retriever.LeaderGatewayRetriever;
@@ -53,12 +57,18 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+
+import static org.apache.flink.util.Preconditions.checkState;
 
 /**
  * Utilities for the web runtime monitor. This class contains for example methods to build
@@ -329,6 +339,38 @@ public final class WebMonitorUtils {
 			lastChanged,
 			countsPerStatus,
 			numTotalTasks);
+	}
+
+	public static Collection<JobPendingSlotRequestDetail> createPendingSlotRequestDetailsForJob(
+			SlotPoolGateway slotPoolGateway, Time timeout) throws ExecutionException, InterruptedException {
+
+		List<JobPendingSlotRequestDetail> pendingSlotRequestDetailList = new ArrayList<>();
+
+		Collection<PendingSlotRequest> pendingSlotRequests = slotPoolGateway.requestPendingSlotRequests(timeout).get();
+		for (PendingSlotRequest pendingSlotRequest : pendingSlotRequests) {
+			List<PendingScheduledUnit> scheduledUnits = pendingSlotRequest.getPendingScheduledUnits();
+			checkState(scheduledUnits.size() > 0);
+
+			List<JobPendingSlotRequestDetail.VertexTaskInfo> vertexTaskInfos = new ArrayList<>();
+			for (PendingScheduledUnit scheduledUnit : scheduledUnits) {
+				vertexTaskInfos.add(new JobPendingSlotRequestDetail.VertexTaskInfo(
+						scheduledUnit.getJobVertexId(),
+						scheduledUnit.getTaskName(),
+						scheduledUnit.getSubTaskIndex(),
+						scheduledUnit.getSubTaskAttempt()));
+			}
+
+			PendingScheduledUnit anyScheduledUnit = scheduledUnits.iterator().next();
+			pendingSlotRequestDetailList.add(new JobPendingSlotRequestDetail(
+					pendingSlotRequest.getSlotRequestId(),
+					pendingSlotRequest.getResourceProfile(),
+					pendingSlotRequest.getStartTimestamp(),
+					anyScheduledUnit.getSlotSharingGroupId(),
+					anyScheduledUnit.getCoLocationGroupId(),
+					vertexTaskInfos));
+		}
+
+		return pendingSlotRequestDetailList;
 	}
 
 	/**

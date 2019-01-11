@@ -20,6 +20,8 @@ package org.apache.flink.util;
 
 import org.apache.flink.annotation.PublicEvolving;
 
+import javax.xml.bind.DatatypeConverter;
+
 import java.util.Random;
 
 /**
@@ -93,6 +95,10 @@ public class AbstractID implements Comparable<AbstractID>, java.io.Serializable 
 	public AbstractID() {
 		this.lowerPart = RND.nextLong();
 		this.upperPart = RND.nextLong();
+	}
+
+	public static AbstractID fromHexString(String hexString) {
+		return new AbstractID(DatatypeConverter.parseHexBinary(hexString));
 	}
 
 	// --------------------------------------------------------------------------------------------

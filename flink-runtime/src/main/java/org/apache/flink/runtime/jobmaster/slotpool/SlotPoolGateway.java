@@ -28,6 +28,7 @@ import org.apache.flink.runtime.jobmanager.scheduler.ScheduledUnit;
 import org.apache.flink.runtime.jobmanager.slots.TaskManagerGateway;
 import org.apache.flink.runtime.jobmaster.LogicalSlot;
 import org.apache.flink.runtime.jobmaster.SlotRequestId;
+import org.apache.flink.runtime.jobmaster.message.PendingSlotRequest;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.rpc.RpcGateway;
@@ -181,4 +182,12 @@ public interface SlotPoolGateway extends AllocatedSlotActions, RpcGateway {
 			List<SlotProfile> slotProfiles,
 			boolean allowQueuedScheduling,
 			@RpcTimeout Time timeout);
+
+	/**
+	 * Requests the pending slot requests.
+	 *
+	 * @param timeout for the operation
+	 * @return the list of pending slot requests.
+	 */
+	CompletableFuture<Collection<PendingSlotRequest>> requestPendingSlotRequests(@RpcTimeout Time timeout);
 }
