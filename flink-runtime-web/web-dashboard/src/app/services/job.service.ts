@@ -21,7 +21,7 @@ import { forkJoin, ReplaySubject } from 'rxjs';
 import { flatMap, map } from 'rxjs/operators';
 import {
   JobBackpressureInterface, JobMetricsStatus,
-  JobOverviewInterface,
+  JobOverviewInterface, JobPendingSlotsInterface,
   JobsItemInterface,
   NodesItemCorrectInterface,
   VerticesDetailInterface
@@ -197,6 +197,21 @@ export class JobService {
     );
   }
 
+  loadPendingSlots(jobId) {
+    return this.httpClient.get<JobPendingSlotsInterface>(
+      `${this.configService.BASE_URL}/${this.jobPrefix}/${jobId}/pendingslotrequest`
+    ).pipe(map(data => {
+      if (data[ 'pending-slot-requests' ]) {
+        data[ 'pending-slot-requests' ].forEach(item => {
+          if (item.resource_profile) {
+            this.setMetricNull(item.resource_profile);
+          }
+        });
+      }
+      return data;
+    }));
+  }
+
   convertJob(job: JobDetailInterface): JobDetailCorrectInterface {
     const links = [];
     if (job.vertices) {
@@ -233,7 +248,7 @@ export class JobService {
     }
   }
 
-  private setMetricNull(metrics: JobMetricsStatus) {
+  private setMetricNull(metrics) {
     for (const key in metrics) {
       if (metrics[ key ] === -1) {
         metrics[ key ] = null;

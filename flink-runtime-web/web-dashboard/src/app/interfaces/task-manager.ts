@@ -32,6 +32,22 @@ export interface TaskManagerDetailInterface {
   freeSlots: number;
   hardware: Hardware;
   metrics: Metrics;
+  'totalResources': {
+    'cpuCores': number;
+    'userDirectMemory': number;
+    'userHeapMemory': number;
+    'userNativeMemory': number;
+    'managedMemory': number;
+    'networkMemory': number;
+  };
+  'availableResources': {
+    'cpuCores': number;
+    'userDirectMemory': number;
+    'userHeapMemory': number;
+    'userNativeMemory': number;
+    'managedMemory': number;
+    'networkMemory': number;
+  };
 }
 
 interface TaskmanagersItem {

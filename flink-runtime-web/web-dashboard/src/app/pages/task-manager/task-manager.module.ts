@@ -19,6 +19,7 @@ import { CommonModule } from '@angular/common';
 import { NgZorroPlusModule } from '@ng-zorro/ng-plus';
 import { NgZorroAntdModule } from 'ng-zorro-antd';
 import { ShareModule } from 'flink-share/share.module';
+import { TaskManagerResourceComponent } from './resource/task-manager-resource.component';
 
 import { TaskManagerRoutingModule } from './task-manager-routing.module';
 import { TaskManagerListComponent } from './list/task-manager-list.component';
@@ -39,6 +40,7 @@ import { TaskManagerLogDetailComponent } from './log-detail/task-manager-log-det
   declarations: [
     TaskManagerListComponent,
     TaskManagerMetricsComponent,
+    TaskManagerResourceComponent,
     TaskManagerComponent,
     TaskManagerStatusComponent,
     TaskManagerLogListComponent,

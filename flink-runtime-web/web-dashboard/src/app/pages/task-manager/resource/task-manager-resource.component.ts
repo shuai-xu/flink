@@ -14,30 +14,24 @@
  *   limitations under the License.
  */
 
-export interface OverviewInterface {
-  taskmanagers: number;
-  'slots-total': number;
-  'slots-available': number;
-  'jobs-running': number;
-  'jobs-finished': number;
-  'jobs-cancelled': number;
-  'jobs-failed': number;
-  'flink-version': string;
-  'flink-commit': string;
-  'total-resources': {
-    'cpuCores': number;
-    'userDirectMemory': number;
-    'userHeapMemory': number;
-    'userNativeMemory': number;
-    'managedMemory': number;
-    'networkMemory': number;
-  };
-  'available-resources': {
-    'cpuCores': number;
-    'userDirectMemory': number;
-    'userHeapMemory': number;
-    'userNativeMemory': number;
-    'managedMemory': number;
-    'networkMemory': number;
-  };
+import { Component, OnInit } from '@angular/core';
+import { TaskManagerService } from 'flink-services';
+
+@Component({
+  selector   : 'flink-task-manager-resource',
+  templateUrl: './task-manager-resource.component.html',
+  styleUrls  : [ './task-manager-resource.component.less' ]
+})
+export class TaskManagerResourceComponent implements OnInit {
+
+  get detail() {
+    return this.taskManagerService.taskManagerDetail;
+  }
+
+  constructor(private taskManagerService: TaskManagerService) {
+  }
+
+  ngOnInit() {
+  }
+
 }

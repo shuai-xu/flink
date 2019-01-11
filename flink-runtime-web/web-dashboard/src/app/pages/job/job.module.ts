@@ -23,6 +23,7 @@ import { ShareModule } from 'flink-share/share.module';
 
 import { JobRoutingModule } from './job-routing.module';
 import { JobOverviewModule } from './overview/job-overview.module';
+import { JobPendingSlotsComponent } from './pending-slots/job-pending-slots.component';
 import { JobStatusComponent } from './status/job-status.component';
 import { JobComponent } from './job.component';
 import { JobTimelineComponent } from './timeline/job-timeline.component';
@@ -51,6 +52,7 @@ import { JobCheckpointsSubtaskComponent } from './checkpoints/subtask/job-checkp
     JobCheckpointsComponent,
     JobCheckpointsDetailComponent,
     JobCheckpointsSubtaskComponent,
+    JobPendingSlotsComponent
   ],
 })
 export class JobModule {

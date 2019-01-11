@@ -16,6 +16,7 @@
 
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { NgZorroPlusModule } from '@ng-zorro/ng-plus';
 import { NgZorroAntdModule } from 'ng-zorro-antd';
 import { ShareModule } from 'flink-share/share.module';
 
@@ -27,6 +28,7 @@ import { OverviewStatisticComponent } from './statistic/overview-statistic.compo
   imports     : [
     CommonModule,
     NgZorroAntdModule,
+    NgZorroPlusModule,
     ShareModule,
     OverviewRoutingModule
   ],

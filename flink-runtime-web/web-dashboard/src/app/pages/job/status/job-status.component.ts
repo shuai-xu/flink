@@ -31,24 +31,28 @@ export class JobStatusComponent implements OnInit, OnDestroy {
   destroy$ = new Subject();
   listOfNavigation = [
     {
-      pathOrParam : 'overview',
-      title: 'Overview'
+      pathOrParam: 'overview',
+      title      : 'Overview'
     },
     {
-      pathOrParam : 'exceptions',
-      title: 'Exceptions'
+      pathOrParam: 'exceptions',
+      title      : 'Exceptions'
     },
     {
-      pathOrParam : 'timeline',
-      title: 'TimeLine'
+      pathOrParam: 'timeline',
+      title      : 'TimeLine'
     },
     {
-      pathOrParam : 'checkpoints',
-      title: 'Checkpoints'
+      pathOrParam: 'checkpoints',
+      title      : 'Checkpoints'
     },
     {
-      pathOrParam : 'configuration',
-      title: 'Configuration'
+      pathOrParam: 'configuration',
+      title      : 'Configuration'
+    },
+    {
+      pathOrParam: 'pending-slots',
+      title      : 'Pending Slots'
     }
   ];
 

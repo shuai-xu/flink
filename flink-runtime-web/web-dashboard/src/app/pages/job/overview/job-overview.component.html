@@ -32,4 +32,4 @@
   <router-outlet></router-outlet>
 </div>
 <flink-job-overview-list (nodeClick)="onListNodeClick($event)" [nodes]="nodes" [selectedNode]="selectedNode"></flink-job-overview-list>
-<nz-resize [nzTop]="top" [nzMode]="'horizontal'" [nzBaseElement]="elementRef.nativeElement" [nzMin]="280" (resizeChange)="top = $event.top"></nz-resize>
+<nz-resize [nzTop]="top" [nzMode]="'horizontal'" [nzBaseElement]="elementRef.nativeElement" [nzMin]="280" (nzResizeChange)="top = $event.top"></nz-resize>

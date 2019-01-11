@@ -14,30 +14,30 @@
  *   limitations under the License.
  */
 
-export interface OverviewInterface {
-  taskmanagers: number;
-  'slots-total': number;
-  'slots-available': number;
-  'jobs-running': number;
-  'jobs-finished': number;
-  'jobs-cancelled': number;
-  'jobs-failed': number;
-  'flink-version': string;
-  'flink-commit': string;
-  'total-resources': {
-    'cpuCores': number;
-    'userDirectMemory': number;
-    'userHeapMemory': number;
-    'userNativeMemory': number;
-    'managedMemory': number;
-    'networkMemory': number;
-  };
-  'available-resources': {
-    'cpuCores': number;
-    'userDirectMemory': number;
-    'userHeapMemory': number;
-    'userNativeMemory': number;
-    'managedMemory': number;
-    'networkMemory': number;
-  };
+export interface ResourceProfile {
+  cpu_cores: number;
+  heap_memory: number;
+  direct_memory: number;
+  native_memory: number;
+  network_memory: number;
+}
+
+export interface Task {
+  vertex_id: string;
+  task_name: string;
+  subtask: number;
+  attempt: number;
+}
+
+export interface PendingSlotRequest {
+  id: string;
+  resource_profile: ResourceProfile;
+  start_time: any;
+  sharing_id: string;
+  'co-location_id'?: string;
+  tasks: Task[];
+}
+
+export interface JobPendingSlotsInterface {
+  'pending-slot-requests': PendingSlotRequest[];
 }

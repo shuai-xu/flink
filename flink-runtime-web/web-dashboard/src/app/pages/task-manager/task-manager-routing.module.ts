@@ -16,6 +16,7 @@
 
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
+import { TaskManagerResourceComponent } from './resource/task-manager-resource.component';
 import { TaskManagerComponent } from './task-manager.component';
 import { TaskManagerListComponent } from './list/task-manager-list.component';
 import { TaskManagerMetricsComponent } from './metrics/task-manager-metrics.component';
@@ -39,6 +40,13 @@ const routes: Routes = [
         }
       },
       {
+        path     : 'resource',
+        component: TaskManagerResourceComponent,
+        data     : {
+          path: 'resource'
+        }
+      },
+      {
         path     : 'log',
         component: TaskManagerLogListComponent,
         data     : {
@@ -54,7 +62,7 @@ const routes: Routes = [
       },
       {
         path      : '**',
-        redirectTo: 'metrics',
+        redirectTo: 'resource',
         pathMatch : 'full'
       }
     ]

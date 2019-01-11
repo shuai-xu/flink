@@ -16,41 +16,73 @@
 
 <nz-card [nzBordered]="false" [nzTitle]="'Task Managers'" [nzLoading]="isLoading">
   <nz-table
-    class="no-border small"
+    class="small"
+    [nzBordered]="true"
     [nzSize]="'small'"
-    [nzScroll]="{x:'1380px',y:'calc(100vh - 260px)'}"
+    [nzScroll]="{x:'1870px',y:'calc(100vh - 330px)'}"
+    [nzWidthConfig]="['300px','80px','80px','80px','80px','100px','100px','100px','100px','100px','100px','100px','100px','100px','100px','100px','150px']"
     [nzData]="listOfTaskManager"
     [nzFrontPagination]="false"
     [nzShowPagination]="false">
-    <thead>
+    <thead (nzSortChange)="sort($event)" nzSingleSort>
       <tr>
-        <th nzLeft="0px" [nzWidth]="'500px'">Path, ID</th>
-        <th [nzWidth]="'80px'">Data Port</th>
-        <th [nzWidth]="'150px'">Last Heartbeat</th>
-        <th [nzWidth]="'70px'">All Slots</th>
-        <th [nzWidth]="'80px'">Free Slots</th>
-        <th [nzWidth]="'80px'">CPU Cores</th>
-        <th [nzWidth]="'130px'">Physical Memory</th>
-        <th [nzWidth]="'130px'">JVM Heap Size</th>
-        <th nzRight="0px" [nzWidth]="'160px'">Flink Managed Memory</th>
+        <th rowspan="4" nzLeft="0px">Path, ID</th>
+        <th colspan="2">Slot</th>
+        <th colspan="2">CPU</th>
+        <th colspan="10">MEM</th>
+        <th rowspan="4" nzShowSort nzSortKey="timeSinceLastHeartbeat">Data Port</th>
+        <th rowspan="4" nzRight="0" nzShowSort nzSortKey="dataPort">Last Heartbeat</th>
+      </tr>
+      <tr>
+        <th rowspan="2" nzShowSort nzSortKey="freeSlots">Avail</th>
+        <th rowspan="2" nzShowSort nzSortKey="slotsNumber">Total</th>
+        <th rowspan="2" nzShowSort nzSortKey="availableResources.cpuCores">Avail</th>
+        <th rowspan="2" nzShowSort nzSortKey="totalResources.cpuCores">Total</th>
+        <th colspan="2">UserHeap</th>
+        <th colspan="2">UserDirect</th>
+        <th colspan="2">UserNative</th>
+        <th colspan="2">Managed</th>
+        <th colspan="2">Network</th>
+      </tr>
+      <tr>
+        <th nzShowSort nzSortKey="availableResources.userHeapMemory">Avail</th>
+        <th nzShowSort nzSortKey="totalResources.userHeapMemory">Total</th>
+        <th nzShowSort nzSortKey="availableResources.userDirectMemory">Avail</th>
+        <th nzShowSort nzSortKey="totalResources.userDirectMemory">Total</th>
+        <th nzShowSort nzSortKey="availableResources.userNativeMemory">Avail</th>
+        <th nzShowSort nzSortKey="totalResources.userNativeMemory">Total</th>
+        <th nzShowSort nzSortKey="availableResources.managedMemory">Avail</th>
+        <th nzShowSort nzSortKey="totalResources.managedMemory">Total</th>
+        <th nzShowSort nzSortKey="availableResources.networkMemory">Avail</th>
+        <th nzShowSort nzSortKey="totalResources.networkMemory">Total</th>
       </tr>
     </thead>
     <tbody>
       <ng-container *ngFor="let manager of listOfTaskManager; trackBy:trackManagerBy;">
         <tr class="clickable" (click)="navigateTo(manager)">
           <td nzLeft="0px">
-            <a>{{ manager.id }}</a>
-            <br>
-            <em>{{ manager.path }}</em>
+            <div class="name">
+              <a>{{ manager.id }}</a>
+              <br>
+              <em>{{ manager.path }}</em>
+            </div>
           </td>
-          <td>{{ manager.dataPort }}</td>
-          <td>{{ manager.timeSinceLastHeartbeat | date:'yyyy-MM-dd HH:mm:ss' }}</td>
-          <td>{{ manager.slotsNumber }}</td>
           <td>{{ manager.freeSlots }}</td>
-          <td>{{ manager.hardware.cpuCores }}</td>
-          <td>{{ manager.hardware.physicalMemory | nzHumanizeBytes }}</td>
-          <td>{{ manager.hardware.freeMemory | nzHumanizeBytes }}</td>
-          <td nzRight="0px">{{ manager.hardware.managedMemory | nzHumanizeBytes }}</td>
+          <td>{{ manager.slotsNumber }}</td>
+          <td>{{ manager.availableResources.cpuCores  | number:'1.0-0' }}</td>
+          <td>{{ manager.totalResources.cpuCores  | number:'1.0-0' }}</td>
+          <td>{{ manager.availableResources.userHeapMemory | nzHumanizeBytes }}</td>
+          <td>{{ manager.totalResources.userHeapMemory | nzHumanizeBytes }}</td>
+          <td>{{ manager.availableResources.userDirectMemory | nzHumanizeBytes }}</td>
+          <td>{{ manager.totalResources.userDirectMemory | nzHumanizeBytes }}</td>
+          <td>{{ manager.availableResources.userNativeMemory | nzHumanizeBytes }}</td>
+          <td>{{ manager.totalResources.userNativeMemory | nzHumanizeBytes }}</td>
+          <td>{{ manager.availableResources.managedMemory | nzHumanizeBytes }}</td>
+          <td>{{ manager.totalResources.managedMemory | nzHumanizeBytes }}</td>
+          <td>{{ manager.availableResources.networkMemory | nzHumanizeBytes }}</td>
+          <td>{{ manager.totalResources.networkMemory | nzHumanizeBytes }}</td>
+          <td>{{ manager.dataPort }}</td>
+          <td nzRight="0px">{{ manager.timeSinceLastHeartbeat | date:'yyyy-MM-dd HH:mm:ss' }}</td>
         </tr>
       </ng-container>
     </tbody>

@@ -16,6 +16,7 @@
 
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { deepFind } from 'flink-core';
 import { Subject } from 'rxjs';
 import { first, flatMap, takeUntil } from 'rxjs/operators';
 import { StatusService, TaskManagerService } from 'flink-services';
@@ -29,13 +30,34 @@ export class TaskManagerListComponent implements OnInit, OnDestroy {
   listOfTaskManager = [];
   isLoading = true;
   destroy$ = new Subject();
+  sortName = null;
+  sortValue = null;
+
+  sort(sort: { key: string, value: string }) {
+    this.sortName = sort.key;
+    this.sortValue = sort.value;
+    this.search();
+  }
+
+  search() {
+    if (this.sortName) {
+      this.listOfTaskManager = [ ...this.listOfTaskManager.sort(
+        (pre, next) => {
+          if (this.sortValue === 'ascend') {
+            return (deepFind(pre, this.sortName) > deepFind(next, this.sortName) ? 1 : -1);
+          } else {
+            return (deepFind(next, this.sortName) > deepFind(pre, this.sortName) ? 1 : -1);
+          }
+        }) ];
+    }
+  }
 
   trackManagerBy(index, node) {
     return node.id;
   }
 
   navigateTo(taskManager) {
-    this.router.navigate([ taskManager.id, 'metrics' ], { relativeTo: this.activatedRoute }).then();
+    this.router.navigate([ taskManager.id, 'resource' ], { relativeTo: this.activatedRoute }).then();
   }
 
   constructor(

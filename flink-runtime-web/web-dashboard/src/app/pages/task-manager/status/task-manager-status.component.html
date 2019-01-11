@@ -45,11 +45,6 @@
       <span>JVM Heap Size:</span>
       <span>{{ detail.hardware.freeMemory | nzHumanizeBytes }}</span>
     </div>
-    <nz-divider [nzType]="'vertical'"></nz-divider>
-    <div class="field">
-      <span>Flink Managed Memory:</span>
-      <span>{{ detail.hardware.managedMemory | nzHumanizeBytes }}</span>
-    </div>
   </div>
   <nz-navigation-tab [nzNavigationItems]="listOfNavigation"></nz-navigation-tab>
 </div>

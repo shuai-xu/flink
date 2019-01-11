@@ -25,6 +25,7 @@ export * from './job-vertex-task-manager';
 export * from './job-checkpoint';
 export * from './job-subtask';
 export * from './job-backpressure';
+export * from './job-slots';
 export * from './plan';
 export * from './overview';
 export * from './task-manager';

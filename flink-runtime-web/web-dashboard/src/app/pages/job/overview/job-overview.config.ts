@@ -26,7 +26,7 @@ export interface JobOverviewConfig {
 export const JOB_OVERVIEW_DEFAULT_CONFIG: JobOverviewConfig = {
   verticesNodeComponent      : VerticesNodeComponent,
   taskManagersLogRouterGetter: task => [ '/task-manager', task[ 'resource-id' ], 'log' ],
-  subTasksLogRouterGetter    : task => [ '/task-manager', task[ 'resource-id' ], 'log', task[ 'stdout-file-name' ] ]
+  subTasksLogRouterGetter    : task => [ '/task-manager', task[ 'resource-id' ], 'log', task[ 'log-file-name' ] ]
 };
 export const JOB_OVERVIEW_CONFIG = new InjectionToken<JobOverviewConfig>('flink-overview-config', {
   providedIn: 'root',

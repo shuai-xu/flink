@@ -14,42 +14,112 @@
   ~   limitations under the License.
   -->
 
-<div nz-row [nzGutter]="24">
-  <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12" class="col">
-    <nz-card class="no-head-bottom" [nzBordered]="false" nzTitle="Available Task Slots" [nzLoading]="isLoading">
-      <div class="total">{{ statistic['slots-available'] | number:'1.0-0' }}</div>
-      <div class="footer">
-        <div class="field">
-          <span>Total Task Slots</span>
-          <span>{{ statistic['slots-total'] | number:'1.0-0' }}</span>
+<ng-container *ngIf="statistic">
+  <div nz-row [nzGutter]="24">
+    <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="6" [nzXl]="6" class="col">
+      <nz-card class="no-head-bottom" [nzBordered]="false" nzTitle="Available Task Slots" [nzLoading]="isLoading">
+        <div class="total">{{ statistic['slots-available'] | number:'1.0-0' }}</div>
+        <div class="footer">
+          <div class="field">
+            <span>Total Task Slots</span>
+            <span>{{ statistic['slots-total'] | number:'1.0-0' }}</span>
+          </div>
+          <nz-divider nzType="vertical"></nz-divider>
+          <div class="field">
+            <span>Task Managers</span>
+            <span>{{ statistic['taskmanagers'] | number:'1.0-0' }}</span>
+          </div>
         </div>
-        <nz-divider nzType="vertical"></nz-divider>
-        <div class="field">
-          <span>Task Managers</span>
-          <span>{{ statistic['taskmanagers'] | number:'1.0-0' }}</span>
+      </nz-card>
+    </div>
+    <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="6" [nzXl]="6" class="col">
+      <nz-card class="no-head-bottom" [nzBordered]="false" nzTitle="Running Jobs" [nzLoading]="isLoading">
+        <div class="total">{{ statistic['jobs-running'] | number:'1.0-0' }}</div>
+        <div class="footer">
+          <div class="field">
+            <span>Finished</span>
+            <span>{{ statistic['jobs-finished'] | number:'1.0-0' }}</span>
+          </div>
+          <nz-divider nzType="vertical"></nz-divider>
+          <div class="field">
+            <span>Canceled</span>
+            <span>{{ statistic['jobs-cancelled'] | number:'1.0-0' }}</span>
+          </div>
+          <nz-divider nzType="vertical"></nz-divider>
+          <div class="field">
+            <span>Failed</span>
+            <span>{{ statistic['jobs-failed'] | number:'1.0-0' }}</span>
+          </div>
         </div>
-      </div>
-    </nz-card>
+      </nz-card>
+    </div>
+    <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="6" [nzXl]="6" class="col">
+      <nz-card class="no-head-bottom" [nzBordered]="false" nzTitle="Available CPU Cores" [nzLoading]="isLoading">
+        <div class="total">{{ statistic['available-resources'].cpuCores | number:'1.0-0' }}</div>
+        <div class="footer">
+          <div class="field">
+            <span>Total CPU Cores</span>
+            <span>{{ statistic['total-resources'].cpuCores | number:'1.0-0' }}</span>
+          </div>
+        </div>
+      </nz-card>
+    </div>
+    <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="6" [nzXl]="6" class="col">
+      <nz-card class="no-head-bottom" [nzBordered]="false" nzTitle="Available UserHeap MEM" [nzLoading]="isLoading">
+        <div class="total">{{ statistic['available-resources'].userHeapMemory | nzHumanizeBytes }}</div>
+        <div class="footer">
+          <div class="field">
+            <span>Total UserHeapMemory</span>
+            <span>{{ statistic['total-resources'].userHeapMemory | nzHumanizeBytes }}</span>
+          </div>
+        </div>
+      </nz-card>
+    </div>
   </div>
-  <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12" class="col">
-    <nz-card class="no-head-bottom" [nzBordered]="false" nzTitle="Running Jobs" [nzLoading]="isLoading">
-      <div class="total">{{ statistic['jobs-running'] | number:'1.0-0' }}</div>
-      <div class="footer">
-        <div class="field">
-          <span>Finished</span>
-          <span>{{ statistic['jobs-finished'] | number:'1.0-0' }}</span>
+  <div nz-row [nzGutter]="24">
+    <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="6" [nzXl]="6" class="col">
+      <nz-card class="no-head-bottom" [nzBordered]="false" nzTitle="Available UserDirect MEM" [nzLoading]="isLoading">
+        <div class="total">{{ statistic['available-resources'].userDirectMemory | nzHumanizeBytes }}</div>
+        <div class="footer">
+          <div class="field">
+            <span>Total UserDirectMemory</span>
+            <span>{{ statistic['total-resources'].userDirectMemory | nzHumanizeBytes }}</span>
+          </div>
         </div>
-        <nz-divider nzType="vertical"></nz-divider>
-        <div class="field">
-          <span>Canceled</span>
-          <span>{{ statistic['jobs-cancelled'] | number:'1.0-0' }}</span>
+      </nz-card>
+    </div>
+    <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="6" [nzXl]="6" class="col">
+      <nz-card class="no-head-bottom" [nzBordered]="false" nzTitle="Available UserNative MEM" [nzLoading]="isLoading">
+        <div class="total">{{ statistic['available-resources'].userNativeMemory | nzHumanizeBytes }}</div>
+        <div class="footer">
+          <div class="field">
+            <span>Total UserNativeMemory</span>
+            <span>{{ statistic['total-resources'].userNativeMemory | nzHumanizeBytes }}</span>
+          </div>
         </div>
-        <nz-divider nzType="vertical"></nz-divider>
-        <div class="field">
-          <span>Failed</span>
-          <span>{{ statistic['jobs-failed'] | number:'1.0-0' }}</span>
+      </nz-card>
+    </div>
+    <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="6" [nzXl]="6" class="col">
+      <nz-card class="no-head-bottom" [nzBordered]="false" nzTitle="Available Managed MEM" [nzLoading]="isLoading">
+        <div class="total">{{ statistic['available-resources'].managedMemory | nzHumanizeBytes }}</div>
+        <div class="footer">
+          <div class="field">
+            <span>Total ManagedMemory</span>
+            <span>{{ statistic['total-resources'].managedMemory | nzHumanizeBytes }}</span>
+          </div>
         </div>
-      </div>
-    </nz-card>
+      </nz-card>
+    </div>
+    <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="6" [nzXl]="6" class="col">
+      <nz-card class="no-head-bottom" [nzBordered]="false" nzTitle="Available Network MEM" [nzLoading]="isLoading">
+        <div class="total">{{ statistic['available-resources'].networkMemory | nzHumanizeBytes }}</div>
+        <div class="footer">
+          <div class="field">
+            <span>Total NetworkMemory</span>
+            <span>{{ statistic['total-resources'].networkMemory | nzHumanizeBytes }}</span>
+          </div>
+        </div>
+      </nz-card>
+    </div>
   </div>
-</div>
+</ng-container>

@@ -26,7 +26,7 @@ import { OverviewService, StatusService } from 'flink-services';
   styleUrls  : [ './overview-statistic.component.less' ]
 })
 export class OverviewStatisticComponent implements OnInit, OnDestroy {
-  statistic = <OverviewInterface>{};
+  statistic: OverviewInterface;
   destroy$ = new Subject();
   isLoading = true;
 

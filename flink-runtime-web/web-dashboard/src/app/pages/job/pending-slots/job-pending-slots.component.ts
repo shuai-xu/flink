@@ -14,30 +14,28 @@
  *   limitations under the License.
  */
 
-export interface OverviewInterface {
-  taskmanagers: number;
-  'slots-total': number;
-  'slots-available': number;
-  'jobs-running': number;
-  'jobs-finished': number;
-  'jobs-cancelled': number;
-  'jobs-failed': number;
-  'flink-version': string;
-  'flink-commit': string;
-  'total-resources': {
-    'cpuCores': number;
-    'userDirectMemory': number;
-    'userHeapMemory': number;
-    'userNativeMemory': number;
-    'managedMemory': number;
-    'networkMemory': number;
-  };
-  'available-resources': {
-    'cpuCores': number;
-    'userDirectMemory': number;
-    'userHeapMemory': number;
-    'userNativeMemory': number;
-    'managedMemory': number;
-    'networkMemory': number;
-  };
+import { Component, OnInit } from '@angular/core';
+import { first, flatMap } from 'rxjs/operators';
+import { JobService } from 'flink-services';
+
+@Component({
+  selector   : 'flink-job-pending-slots',
+  templateUrl: './job-pending-slots.component.html',
+  styleUrls  : [ './job-pending-slots.component.less' ]
+})
+export class JobPendingSlotsComponent implements OnInit {
+  listOfPendingSlots = [];
+
+  constructor(private jobService: JobService) {
+  }
+
+  ngOnInit() {
+    this.jobService.jobDetail$.pipe(
+      first(),
+      flatMap(() => this.jobService.loadPendingSlots(this.jobService.jobDetail.jid))
+    ).subscribe(data => {
+      this.listOfPendingSlots = data && data[ 'pending-slot-requests' ] || [];
+    });
+  }
+
 }

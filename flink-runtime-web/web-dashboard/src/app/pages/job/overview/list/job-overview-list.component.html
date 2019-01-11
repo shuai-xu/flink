@@ -98,7 +98,7 @@
     </tr>
   </tbody>
 </nz-table>
-<nz-resize [nzLeft]="left" [nzShowBorder]="true" [nzBaseElement]="elementRef.nativeElement" [nzMin]="390" (resizeChange)="left = $event.left"></nz-resize>
+<nz-resize [nzLeft]="left" [nzShowBorder]="true" [nzBaseElement]="elementRef.nativeElement" [nzMin]="390" (nzResizeChange)="left = $event.left"></nz-resize>
 <ng-template #loadingTemplate>
   <i nz-icon type="loading"></i>
 </ng-template>
