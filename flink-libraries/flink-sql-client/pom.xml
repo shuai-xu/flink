@@ -173,8 +173,6 @@ under the License.
 						<configuration>
 							<artifactSet>
 								<includes combine.children="append">
-									<include>org.apache.flink:flink-table_${scala.binary.version}</include>
-									<include>org.apache.flink:flink-cep_${scala.binary.version}</include>
 									<include>org.jline:*</include>
 								</includes>
 							</artifactSet>

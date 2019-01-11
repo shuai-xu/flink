@@ -325,13 +325,16 @@ public class ExecutionContext<T> {
 			});
 
 			// TODO: sql client should parse and set job's TableConfig from execution configs from yaml config file.
-			// https://aone.alibaba-inc.com/issue/18280385
 			tableEnv.getConfig().getConf().setInteger(
 				TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM,
 				mergedEnv.getExecution().getParallelism());
 
 			// always enable subsection optimization
 			tableEnv.getConfig().setSubsectionOptimization(true);
+
+			tableEnv.getConfig().getConf().setBoolean(
+				TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED,
+				true);
 
 			setDefaultCatalog(mergedEnv.getCatalogs());
 		}
