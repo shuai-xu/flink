@@ -83,6 +83,7 @@ import org.apache.flink.runtime.jobmaster.failover.OperationLogManager;
 import org.apache.flink.runtime.jobmaster.failover.OperationLogStoreLoader;
 import org.apache.flink.runtime.jobmaster.failover.OperationLogType;
 import org.apache.flink.runtime.jobmaster.message.ClassloadingProps;
+import org.apache.flink.runtime.jobmaster.message.PendingSlotRequest;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotPool;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotPoolFactory;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotPoolGateway;
@@ -1175,14 +1176,36 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 	@Override
 	public CompletableFuture<Collection<JobPendingSlotRequestDetail>> requestPendingSlotRequestDetails(@RpcTimeout Time timeout) {
-		return CompletableFuture.supplyAsync(() -> {
-			try {
-				return WebMonitorUtils.createPendingSlotRequestDetailsForJob(slotPoolGateway, timeout);
-			} catch (Throwable throwable) {
-				throw new CompletionException("Could not get pending slot-request details.",
-						ExceptionUtils.stripCompletionException(throwable));
-			}
-		});
+
+		return slotPoolGateway.requestPendingSlotRequests(timeout)
+				.thenApply((pendingSlotRequests) -> {
+					Collection<JobPendingSlotRequestDetail> pendingSlotRequestDetailList = new ArrayList<>();
+
+					for (PendingSlotRequest pendingSlotRequest : pendingSlotRequests) {
+						List<PendingSlotRequest.PendingScheduledUnit> scheduledUnits = pendingSlotRequest.getPendingScheduledUnits();
+						checkState(scheduledUnits.size() > 0);
+
+						List<JobPendingSlotRequestDetail.VertexTaskInfo> vertexTaskInfos = new ArrayList<>();
+						for (PendingSlotRequest.PendingScheduledUnit scheduledUnit : scheduledUnits) {
+							vertexTaskInfos.add(new JobPendingSlotRequestDetail.VertexTaskInfo(
+									scheduledUnit.getJobVertexId(),
+									scheduledUnit.getTaskName(),
+									scheduledUnit.getSubTaskIndex(),
+									scheduledUnit.getSubTaskAttempt()));
+						}
+
+						PendingSlotRequest.PendingScheduledUnit anyScheduledUnit = scheduledUnits.iterator().next();
+						pendingSlotRequestDetailList.add(new JobPendingSlotRequestDetail(
+								pendingSlotRequest.getSlotRequestId(),
+								pendingSlotRequest.getResourceProfile(),
+								pendingSlotRequest.getStartTimestamp(),
+								anyScheduledUnit.getSlotSharingGroupId(),
+								anyScheduledUnit.getCoLocationGroupId(),
+								vertexTaskInfos));
+					}
+
+					return pendingSlotRequestDetailList;
+				});
 	}
 
 	@Override
