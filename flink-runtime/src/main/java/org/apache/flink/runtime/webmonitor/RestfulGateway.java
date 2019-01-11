@@ -35,6 +35,7 @@ import org.apache.flink.runtime.messages.webmonitor.ClusterOverview;
 import org.apache.flink.runtime.messages.webmonitor.MultipleJobsDetails;
 import org.apache.flink.runtime.metrics.dump.MetricQueryService;
 import org.apache.flink.runtime.rest.handler.legacy.backpressure.OperatorBackPressureStatsResponse;
+import org.apache.flink.runtime.rest.messages.job.JobPendingSlotRequestDetail;
 import org.apache.flink.runtime.rpc.RpcEndpoint;
 import org.apache.flink.runtime.rpc.RpcGateway;
 import org.apache.flink.runtime.rpc.RpcTimeout;
@@ -229,6 +230,16 @@ public interface RestfulGateway extends RpcGateway {
 	}
 
 	default CompletableFuture<Acknowledge> shutDownCluster() {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * Request the details of pending slot requests of the current job.
+	 * @param jobId job for which the pending slot requests are requested.
+	 * @param timeout of this operation
+	 * @return the list of pending slot requests.
+	 */
+	default CompletableFuture<Collection<JobPendingSlotRequestDetail>> requestPendingSlotRequestDetails(JobID jobId, @RpcTimeout Time timeout) {
 		throw new UnsupportedOperationException();
 	}
 }

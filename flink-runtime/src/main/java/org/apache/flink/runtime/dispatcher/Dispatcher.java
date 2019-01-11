@@ -57,6 +57,7 @@ import org.apache.flink.runtime.metrics.groups.JobManagerMetricGroup;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.resourcemanager.ResourceOverview;
 import org.apache.flink.runtime.rest.handler.legacy.backpressure.OperatorBackPressureStatsResponse;
+import org.apache.flink.runtime.rest.messages.job.JobPendingSlotRequestDetail;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.FencedRpcEndpoint;
 import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
@@ -493,6 +494,13 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 					return serializableExecutionGraph;
 				}
 			});
+	}
+
+	@Override
+	public CompletableFuture<Collection<JobPendingSlotRequestDetail>> requestPendingSlotRequestDetails(JobID jobId, Time timeout) {
+		final CompletableFuture<JobMasterGateway> jobMasterGatewayFuture = getJobMasterGatewayFuture(jobId);
+		return jobMasterGatewayFuture.thenCompose(
+			(JobMasterGateway jobMasterGateway) -> jobMasterGateway.requestPendingSlotRequestDetails(timeout));
 	}
 
 	@Override
