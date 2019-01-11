@@ -29,6 +29,7 @@ import org.apache.flink.api.common.state.ReducingStateDescriptor;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.runtime.state.StateBackend;
+import org.apache.flink.runtime.state.context.ContextStateHelper;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
@@ -50,7 +51,7 @@ public abstract class ContextStateTestBase {
 
 	protected IdleOperator<String, String> testOperator;
 
-	protected ContextStateBinder stateBinder;
+	protected ContextStateHelper stateBinder;
 
 	protected abstract StateBackend getStateBackend();
 
@@ -62,7 +63,8 @@ public abstract class ContextStateTestBase {
 		testHarness.setStateBackend(getStateBackend());
 		testHarness.open();
 
-		stateBinder = new ContextStateBinder(testOperator);
+		stateBinder = new ContextStateHelper(
+			testOperator.getKeyContext(), testOperator.getExecutionConfig(), testOperator.getInternalStateBackend());
 	}
 
 	@After

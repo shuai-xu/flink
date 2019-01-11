@@ -23,7 +23,6 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.state.KeyedStateStore;
 import org.apache.flink.api.common.state.State;
-import org.apache.flink.api.common.state.StateBinder;
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.functions.KeySelector;
@@ -40,11 +39,14 @@ import org.apache.flink.runtime.metrics.groups.OperatorMetricGroup;
 import org.apache.flink.runtime.metrics.groups.TaskManagerJobMetricGroup;
 import org.apache.flink.runtime.metrics.groups.UnregisteredMetricGroups;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
+import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.DefaultKeyedStateStore;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupStatePartitionStreamProvider;
 import org.apache.flink.runtime.state.KeyGroupsList;
+import org.apache.flink.runtime.state.KeyedStateBackend;
+import org.apache.flink.runtime.state.KeyedStateBackendWrapper;
 import org.apache.flink.runtime.state.KeyedStateCheckpointOutputStream;
 import org.apache.flink.runtime.state.OperatorStateBackend;
 import org.apache.flink.runtime.state.StateInitializationContext;
@@ -52,14 +54,15 @@ import org.apache.flink.runtime.state.StateInitializationContextImpl;
 import org.apache.flink.runtime.state.StatePartitionStreamProvider;
 import org.apache.flink.runtime.state.StateSnapshotContext;
 import org.apache.flink.runtime.state.StateSnapshotContextSynchronousImpl;
+import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.context.ContextStateHelper;
+import org.apache.flink.runtime.state.heap.KeyContextImpl;
 import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.streaming.api.graph.StreamConfig;
-import org.apache.flink.streaming.api.operators.state.ContextStateBinder;
-import org.apache.flink.streaming.api.operators.state.ContextSubKeyedStateBinder;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
@@ -142,14 +145,17 @@ public abstract class AbstractStreamOperator<OUT>
 	/** Backend for keyed state. This might be empty if we're not on a keyed stream. */
 	private transient KeyContextImpl<?> keyContext;
 
+	/** Backend for keyed state. This might be empty if we're not on a keyed stream. */
+	@Deprecated
+	private transient AbstractKeyedStateBackend<?> keyedStateBackend;
+
 	/** Keyed state store view on the keyed backend. */
 	private transient DefaultKeyedStateStore keyedStateStore;
 
 	/** The binder to create user-facing states. */
-	protected transient StateBinder contextStateBinder;
+//	protected transient StateBinder contextStateBinder;
 
-	/** The binder to create sub keyed states. */
-	protected transient ContextSubKeyedStateBinder contextSubKeyedStateBinder;
+	protected transient ContextStateHelper contextStateHelper;
 
 	// ---------------- operator state ------------------
 
@@ -220,9 +226,6 @@ public abstract class AbstractStreamOperator<OUT>
 
 		stateKeySelector1 = config.getStatePartitioner(0, getUserCodeClassloader());
 		stateKeySelector2 = config.getStatePartitioner(1, getUserCodeClassloader());
-
-		contextStateBinder = new ContextStateBinder(this);
-		contextSubKeyedStateBinder = new ContextSubKeyedStateBinder(this);
 	}
 
 	@Override
@@ -253,9 +256,11 @@ public abstract class AbstractStreamOperator<OUT>
 		this.operatorStateBackend = context.operatorStateBackend();
 		this.internalStateBackend = context.internalStateBackend();
 		this.keyContext = context.keyContext();
+		contextStateHelper = new ContextStateHelper(keyContext, getExecutionConfig(), internalStateBackend);
 
 		if (keyContext != null) {
-			this.keyedStateStore = new DefaultKeyedStateStore(contextStateBinder, getExecutionConfig());
+			this.keyedStateBackend = new KeyedStateBackendWrapper(contextStateHelper);
+			this.keyedStateStore = new DefaultKeyedStateStore(contextStateHelper, getExecutionConfig());
 		}
 
 		timeServiceManager = context.internalTimerServiceManager();
@@ -359,6 +364,10 @@ public abstract class AbstractStreamOperator<OUT>
 			}
 		} catch (Exception e) {
 			exception = ExceptionUtils.firstOrSuppressed(e, exception);
+		}
+
+		if (contextStateHelper != null) {
+			contextStateHelper.dispose();
 		}
 
 		if (exception != null) {
@@ -470,13 +479,8 @@ public abstract class AbstractStreamOperator<OUT>
 		}
 	}
 
-	@VisibleForTesting
-	public ContextSubKeyedStateBinder getContextSubKeyedStateBinder() {
-		return contextSubKeyedStateBinder;
-	}
-
-	public StateBinder getContextStateBinder() {
-		return contextStateBinder;
+	public ContextStateHelper getContextStateHelper() {
+		return contextStateHelper;
 	}
 
 	// ------------------------------------------------------------------------
@@ -529,6 +533,77 @@ public abstract class AbstractStreamOperator<OUT>
 		return runtimeContext;
 	}
 
+	@SuppressWarnings("unchecked")
+	public <K> KeyedStateBackend<K> getKeyedStateBackend() {
+		return (KeyedStateBackend<K>) keyedStateBackend;
+	}
+
+	public OperatorStateBackend getOperatorStateBackend() {
+		return operatorStateBackend;
+	}
+
+	/**
+	 * Returns the {@link ProcessingTimeService} responsible for getting  the current
+	 * processing time and registering timers.
+	 */
+	protected ProcessingTimeService getProcessingTimeService() {
+		return container.getProcessingTimeService();
+	}
+
+	/**
+	 * Creates a partitioned state handle, using the state backend configured for this task.
+	 *
+	 * @throws IllegalStateException Thrown, if the key/value state was already initialized.
+	 * @throws Exception Thrown, if the state backend cannot create the key/value state.
+	 */
+	protected <S extends State> S getPartitionedState(StateDescriptor<S, ?> stateDescriptor) throws Exception {
+		return getPartitionedState(VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, stateDescriptor);
+	}
+
+	protected <N, S extends State, T> S getOrCreateKeyedState(
+		TypeSerializer<N> namespaceSerializer,
+		StateDescriptor<S, T> stateDescriptor) throws Exception {
+
+		if (keyedStateStore != null) {
+			if (VoidNamespaceSerializer.INSTANCE.equals(namespaceSerializer)) {
+				return stateDescriptor.bind(contextStateHelper);
+			} else {
+				return (S) contextStateHelper.getOrCreateKeyedState(namespaceSerializer, stateDescriptor);
+			}
+		}
+		else {
+			throw new IllegalStateException("Cannot create partitioned state. " +
+				"The keyed state backend has not been set." +
+				"This indicates that the operator is not partitioned/keyed.");
+		}
+	}
+
+	/**
+	 * Creates a partitioned state handle, using the state backend configured for this task.
+	 *
+	 * @throws IllegalStateException Thrown, if the key/value state was already initialized.
+	 * @throws Exception Thrown, if the state backend cannot create the key/value state.
+	 */
+	protected <S extends State, N> S getPartitionedState(
+		N namespace,
+		TypeSerializer<N> namespaceSerializer,
+		StateDescriptor<S, ?> stateDescriptor) throws Exception {
+
+		/*
+	    TODO: NOTE: This method does a lot of work caching / retrieving states just to update the namespace.
+	    This method should be removed for the sake of namespaces being lazily fetched from the keyed
+	    state backend, or being set on the state directly.
+	    */
+
+		if (keyedStateStore != null) {
+			return contextStateHelper.getPartitionedState(namespace, namespaceSerializer, stateDescriptor);
+		} else {
+			throw new RuntimeException("Cannot create partitioned state. The keyed state " +
+				"backend has not been set. This indicates that the operator is not " +
+				"partitioned/keyed.");
+		}
+	}
+
 	/**
 	 * Creates a keyed state described by the given descriptor.
 	 *
@@ -560,40 +635,6 @@ public abstract class AbstractStreamOperator<OUT>
 		return internalStateBackend.getSubKeyedState(descriptor);
 	}
 
-	/**
-	 * Creates a user-facing state described by the given descriptor.
-	 *
-	 * @param stateDescriptor The descriptor of the user-facing state to be created.
-	 * @param <S> Type of the state to be created.
-	 * @param <T> Type of the values in the state.
-	 * @return The state described by the given descriptor.
-	 */
-	protected <S extends State, T> S getState(
-		final StateDescriptor<S, T> stateDescriptor
-	) {
-		Preconditions.checkNotNull(stateDescriptor);
-		try {
-			return stateDescriptor.bind(contextStateBinder);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	protected <S extends State, T, N> S getSubKeyedStateWithNamespace(
-		final StateDescriptor<S, T> stateDescriptor,
-		final N namespace,
-		final TypeSerializer<N> namespaceSerializer
-	) {
-		Preconditions.checkNotNull(stateDescriptor);
-		Preconditions.checkNotNull(namespace);
-		Preconditions.checkNotNull(namespaceSerializer);
-		try {
-			return contextSubKeyedStateBinder.getSubKeyedStateWithNamespace(stateDescriptor, namespace, namespaceSerializer);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-
 	@SuppressWarnings("unchecked")
 	public <K> KeyContextImpl<K> getKeyContext() {
 		return (KeyContextImpl<K>) keyContext;
@@ -601,18 +642,6 @@ public abstract class AbstractStreamOperator<OUT>
 
 	public AbstractInternalStateBackend getInternalStateBackend() {
 		return internalStateBackend;
-	}
-
-	public OperatorStateBackend getOperatorStateBackend() {
-		return operatorStateBackend;
-	}
-
-	/**
-	 * Returns the {@link ProcessingTimeService} responsible for getting  the current
-	 * processing time and registering timers.
-	 */
-	protected ProcessingTimeService getProcessingTimeService() {
-		return container.getProcessingTimeService();
 	}
 
 	@Override

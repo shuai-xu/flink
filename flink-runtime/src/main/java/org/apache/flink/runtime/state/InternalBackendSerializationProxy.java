@@ -145,10 +145,10 @@ public class InternalBackendSerializationProxy extends VersionedIOReadableWritab
 					stateName,
 					keySerializerInfo.f0,
 					valueSerializerInfo.f0,
-					null,
+					VoidNamespaceSerializer.INSTANCE,
 					keySerializerInfo.f1,
 					valueSerializerInfo.f1,
-					null));
+					VoidNamespaceSerializer.SNAPSHOT));
 			} else {
 				Preconditions.checkState(serializersAndConfigs.size() == 3,
 					"Expected serialized serializer and config size as 3 for subKeyed state.");

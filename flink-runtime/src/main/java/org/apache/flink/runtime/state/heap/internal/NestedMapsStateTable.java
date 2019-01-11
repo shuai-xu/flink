@@ -24,6 +24,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
+import org.apache.flink.runtime.state.RegisteredStateMetaInfo;
 import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.util.Preconditions;
@@ -81,12 +82,10 @@ public class NestedMapsStateTable<K, N, S> extends StateTable<K, N, S> {
 	 */
 	public NestedMapsStateTable(
 		AbstractInternalStateBackend internalStateBackend,
-		TypeSerializer<K> keySerializer,
-		TypeSerializer<N> namespaceSerializer,
-		TypeSerializer<S> stateSerializer,
+		RegisteredStateMetaInfo stateMetaInfo,
 		boolean usingNamespace
 	) {
-		super(internalStateBackend, keySerializer, namespaceSerializer, stateSerializer, usingNamespace);
+		super(internalStateBackend, stateMetaInfo, usingNamespace);
 
 		KeyGroupRange groups = internalStateBackend.getKeyGroupRange();
 		this.keyGroupOffset = groups.getStartKeyGroup();

@@ -21,6 +21,7 @@ package org.apache.flink.cep.operator;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.runtime.kryo.KryoSerializer;
@@ -1388,8 +1389,8 @@ public class CEPOperatorTest extends TestLogger {
 		}
 
 		@Override
-		public byte[] getSerializedValue(byte[] serializedKey) throws Exception {
-			return keyedValueState.getSerializedValue(serializedKey);
+		public byte[] getSerializedValue(byte[] serializedKeyAndNamespace, TypeSerializer safeKeySerializer, TypeSerializer safeValueSerializer) throws Exception {
+			return keyedValueState.getSerializedValue(serializedKeyAndNamespace, safeKeySerializer, safeValueSerializer);
 		}
 
 		@Override

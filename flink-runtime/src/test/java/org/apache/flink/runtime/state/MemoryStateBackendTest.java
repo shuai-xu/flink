@@ -23,12 +23,15 @@ import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.StateObjectCollection;
+import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.operators.testutils.DummyEnvironment;
-import org.apache.flink.runtime.state.heap.HeapKeyedStateBackend;
+import org.apache.flink.runtime.state.context.ContextStateHelper;
+import org.apache.flink.runtime.state.heap.KeyContextImpl;
 import org.apache.flink.runtime.state.memory.MemCheckpointStreamFactory;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.testutils.ArtificialCNFExceptionThrowingClassLoader;
@@ -40,6 +43,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.RunnableFuture;
 
 import static org.junit.Assert.assertEquals;
@@ -53,6 +57,39 @@ public class MemoryStateBackendTest extends StateBackendTestBase<MemoryStateBack
 	@Override
 	protected MemoryStateBackend getStateBackend() throws Exception {
 		return new MemoryStateBackend(useAsyncMode());
+	}
+
+	@Override
+	protected <K> AbstractKeyedStateBackend<K> createKeyedBackend(TypeSerializer<K> keySerializer, int numberOfKeyGroups, KeyGroupRange keyGroupRange, Environment env) throws Exception {
+		AbstractInternalStateBackend internalStateBackend =
+			getStateBackend().createInternalStateBackend(env, "test-op", numberOfKeyGroups, keyGroupRange);
+		ContextStateHelper contextStateHelper =
+			new ContextStateHelper(new KeyContextImpl(keySerializer, numberOfKeyGroups, keyGroupRange), env.getExecutionConfig(), internalStateBackend);
+		return new KeyedStateBackendWrapper<>(contextStateHelper);
+	}
+
+	@Override
+	protected <K> AbstractKeyedStateBackend<K> restoreKeyedBackend(TypeSerializer<K> keySerializer, int numberOfKeyGroups, KeyGroupRange keyGroupRange, List<KeyedStateHandle> state, Environment env) throws Exception {
+		AbstractInternalStateBackend internalStateBackend =
+			getStateBackend().createInternalStateBackend(env, "test-op", numberOfKeyGroups, keyGroupRange);
+		ContextStateHelper contextStateHelper =
+			new ContextStateHelper(new KeyContextImpl(keySerializer, numberOfKeyGroups, keyGroupRange), env.getExecutionConfig(), internalStateBackend);
+		KeyedStateBackendWrapper<K> keyedStateBackendWrapper = new KeyedStateBackendWrapper<>(contextStateHelper);
+		keyedStateBackendWrapper.restore(new StateObjectCollection<>(state));
+
+		return keyedStateBackendWrapper;
+	}
+
+	// TODO support getKeys on subKeyedState
+	@Ignore
+	@Override
+	public void testGetKeys() throws Exception {
+	}
+
+	// internal state-backend would check key-serializer compatibility when registering state.
+	@Ignore
+	@Override
+	public void testRestoreWithWrongKeySerializer() throws Exception {
 	}
 
 	protected boolean useAsyncMode() {
@@ -154,14 +191,12 @@ public class MemoryStateBackendTest extends StateBackendTestBase<MemoryStateBack
 	@Test
 	public void testKeyedStateRestoreFailsIfSerializerDeserializationFails() throws Exception {
 		CheckpointStreamFactory streamFactory = createStreamFactory();
-		KeyedStateBackend<Integer> backend = createKeyedBackend(IntSerializer.INSTANCE);
+		AbstractKeyedStateBackend<Integer> backend = createKeyedBackend(IntSerializer.INSTANCE);
 
 		ValueStateDescriptor<String> kvId = new ValueStateDescriptor<>("id", String.class, null);
 		kvId.initializeSerializerUnlessSet(new ExecutionConfig());
 
-		HeapKeyedStateBackend<Integer> heapBackend = (HeapKeyedStateBackend<Integer>) backend;
-
-		assertEquals(0, heapBackend.numStateEntries());
+		assertEquals(0, backend.numStateEntries());
 
 		ValueState<String> state = backend.getPartitionedState(VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, kvId);
 
@@ -170,7 +205,7 @@ public class MemoryStateBackendTest extends StateBackendTestBase<MemoryStateBack
 		state.update("hello");
 		state.update("ciao");
 
-		KeyedStateHandle snapshot = runSnapshot(((HeapKeyedStateBackend<Integer>) backend).snapshot(
+		KeyedStateHandle snapshot = runSnapshot(backend.snapshot(
 			682375462378L,
 			2,
 			streamFactory,

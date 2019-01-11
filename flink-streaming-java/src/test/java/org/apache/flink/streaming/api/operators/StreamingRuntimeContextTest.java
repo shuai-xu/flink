@@ -30,6 +30,8 @@ import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.ReducingStateDescriptor;
+import org.apache.flink.api.common.state.State;
+import org.apache.flink.api.common.state.StateBinder;
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
@@ -39,19 +41,16 @@ import org.apache.flink.api.java.typeutils.runtime.kryo.KryoSerializer;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.jobgraph.OperatorID;
+import org.apache.flink.runtime.operators.testutils.DummyEnvironment;
 import org.apache.flink.runtime.operators.testutils.MockEnvironment;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
+import org.apache.flink.runtime.state.DefaultKeyedStateStore;
 import org.apache.flink.runtime.state.KeyGroupRange;
-import org.apache.flink.runtime.state.keyed.KeyedListState;
-import org.apache.flink.runtime.state.keyed.KeyedListStateDescriptor;
-import org.apache.flink.runtime.state.keyed.KeyedMapState;
-import org.apache.flink.runtime.state.keyed.KeyedMapStateDescriptor;
-import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
-import org.apache.flink.runtime.state.keyed.KeyedValueState;
+import org.apache.flink.runtime.state.VoidNamespace;
+import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.context.ContextStateHelper;
+import org.apache.flink.runtime.state.heap.KeyContextImpl;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
-import org.apache.flink.streaming.api.operators.state.ContextListState;
-import org.apache.flink.streaming.api.operators.state.ContextMapState;
-import org.apache.flink.streaming.api.operators.state.ContextStateBinder;
 
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -66,6 +65,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 /**
@@ -81,12 +81,11 @@ public class StreamingRuntimeContextTest {
 
 		final AtomicReference<Object> descriptorCapture = new AtomicReference<>();
 
-		ValueStateDescriptor<TaskInfo> descr = new ValueStateDescriptor<>("name", TaskInfo.class);
-
 		StreamingRuntimeContext context = new StreamingRuntimeContext(
-				createDescriptorCapturingMockOp(descriptorCapture, config, descr),
-				createMockEnvironment());
+			createDescriptorCapturingMockOp(descriptorCapture, config),
+			createMockEnvironment());
 
+		ValueStateDescriptor<TaskInfo> descr = new ValueStateDescriptor<>("name", TaskInfo.class);
 		context.getState(descr);
 
 		StateDescriptor<?, ?> descrIntercepted = (StateDescriptor<?, ?>) descriptorCapture.get();
@@ -105,15 +104,15 @@ public class StreamingRuntimeContextTest {
 
 		final AtomicReference<Object> descriptorCapture = new AtomicReference<>();
 
+		StreamingRuntimeContext context = new StreamingRuntimeContext(
+			createDescriptorCapturingMockOp(descriptorCapture, config),
+			createMockEnvironment());
+
 		@SuppressWarnings("unchecked")
 		ReduceFunction<TaskInfo> reducer = (ReduceFunction<TaskInfo>) mock(ReduceFunction.class);
 
 		ReducingStateDescriptor<TaskInfo> descr =
-				new ReducingStateDescriptor<>("name", reducer, TaskInfo.class);
-
-		StreamingRuntimeContext context = new StreamingRuntimeContext(
-			createDescriptorCapturingMockOp(descriptorCapture, config, descr),
-			createMockEnvironment());
+			new ReducingStateDescriptor<>("name", reducer, TaskInfo.class);
 
 		context.getReducingState(descr);
 
@@ -133,15 +132,15 @@ public class StreamingRuntimeContextTest {
 
 		final AtomicReference<Object> descriptorCapture = new AtomicReference<>();
 
+		StreamingRuntimeContext context = new StreamingRuntimeContext(
+			createDescriptorCapturingMockOp(descriptorCapture, config),
+			createMockEnvironment());
+
 		@SuppressWarnings("unchecked")
 		AggregateFunction<String, TaskInfo, String> aggregate = (AggregateFunction<String, TaskInfo, String>) mock(AggregateFunction.class);
 
 		AggregatingStateDescriptor<String, TaskInfo, String> descr =
-				new AggregatingStateDescriptor<>("name", aggregate, TaskInfo.class);
-
-		StreamingRuntimeContext context = new StreamingRuntimeContext(
-			createDescriptorCapturingMockOp(descriptorCapture, config, descr),
-			createMockEnvironment());
+			new AggregatingStateDescriptor<>("name", aggregate, TaskInfo.class);
 
 		context.getAggregatingState(descr);
 
@@ -161,15 +160,15 @@ public class StreamingRuntimeContextTest {
 
 		final AtomicReference<Object> descriptorCapture = new AtomicReference<>();
 
+		StreamingRuntimeContext context = new StreamingRuntimeContext(
+			createDescriptorCapturingMockOp(descriptorCapture, config),
+			createMockEnvironment());
+
 		@SuppressWarnings("unchecked")
 		FoldFunction<String, TaskInfo> folder = (FoldFunction<String, TaskInfo>) mock(FoldFunction.class);
 
 		FoldingStateDescriptor<String, TaskInfo> descr =
-				new FoldingStateDescriptor<>("name", null, folder, TaskInfo.class);
-
-		StreamingRuntimeContext context = new StreamingRuntimeContext(
-			createDescriptorCapturingMockOp(descriptorCapture, config, descr),
-			createMockEnvironment());
+			new FoldingStateDescriptor<>("name", null, folder, TaskInfo.class);
 
 		context.getFoldingState(descr);
 
@@ -189,12 +188,11 @@ public class StreamingRuntimeContextTest {
 
 		final AtomicReference<Object> descriptorCapture = new AtomicReference<>();
 
-		ListStateDescriptor<TaskInfo> descr = new ListStateDescriptor<>("name", TaskInfo.class);
-
 		StreamingRuntimeContext context = new StreamingRuntimeContext(
-				createDescriptorCapturingMockOp(descriptorCapture, config, descr),
-				createMockEnvironment());
+			createDescriptorCapturingMockOp(descriptorCapture, config),
+			createMockEnvironment());
 
+		ListStateDescriptor<TaskInfo> descr = new ListStateDescriptor<>("name", TaskInfo.class);
 		context.getListState(descr);
 
 		ListStateDescriptor<?> descrIntercepted = (ListStateDescriptor<?>) descriptorCapture.get();
@@ -231,12 +229,12 @@ public class StreamingRuntimeContextTest {
 
 		final AtomicReference<Object> descriptorCapture = new AtomicReference<>();
 
-		MapStateDescriptor<String, TaskInfo> descr =
-				new MapStateDescriptor<>("name", String.class, TaskInfo.class);
-
 		StreamingRuntimeContext context = new StreamingRuntimeContext(
-			createDescriptorCapturingMockOp(descriptorCapture, config, descr),
+			createDescriptorCapturingMockOp(descriptorCapture, config),
 			createMockEnvironment());
+
+		MapStateDescriptor<String, TaskInfo> descr =
+			new MapStateDescriptor<>("name", String.class, TaskInfo.class);
 
 		context.getMapState(descr);
 
@@ -252,8 +250,8 @@ public class StreamingRuntimeContextTest {
 	public void testMapStateReturnsEmptyMapByDefault() throws Exception {
 
 		StreamingRuntimeContext context = new StreamingRuntimeContext(
-				createMapPlainMockOp(),
-				createMockEnvironment());
+			createMapPlainMockOp(),
+			createMockEnvironment());
 
 		MapStateDescriptor<Integer, String> descr = new MapStateDescriptor<>("name", Integer.class, String.class);
 		MapState<Integer, String> state = context.getMapState(descr);
@@ -269,11 +267,21 @@ public class StreamingRuntimeContextTest {
 
 	@SuppressWarnings("unchecked")
 	private static AbstractStreamOperator<?> createDescriptorCapturingMockOp(
-		final AtomicReference<Object> ref, final ExecutionConfig config, StateDescriptor descriptor) throws Exception {
+		final AtomicReference<Object> ref, final ExecutionConfig config) throws Exception {
 
 		AbstractStreamOperator<?> operatorMock = mock(AbstractStreamOperator.class);
 
-		ContextStateBinder stateBinder = new ContextStateBinder(operatorMock);
+		AbstractInternalStateBackend internalStateBackend = new MemoryStateBackend().createInternalStateBackend(
+			new DummyEnvironment("test_task", 1, 0),
+			"test_op",
+			1,
+			new KeyGroupRange(0, 0));
+		KeyContextImpl keyContext = new KeyContextImpl(IntSerializer.INSTANCE, 1, new KeyGroupRange(0, 0));
+
+		ContextStateHelper contextStateHelper =
+			new ContextStateHelper(keyContext, config, internalStateBackend);
+
+		MockKeyedStateStore keyedStateStore = spy(new MockKeyedStateStore(contextStateHelper, config));
 
 		when(operatorMock.getExecutionConfig()).thenReturn(config);
 
@@ -281,40 +289,12 @@ public class StreamingRuntimeContextTest {
 
 			@Override
 			public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
-
-				if (descriptor instanceof AggregatingStateDescriptor) {
-					stateBinder.createAggregatingState((AggregatingStateDescriptor) descriptor);
-				} else if (descriptor instanceof ListStateDescriptor) {
-					stateBinder.createListState((ListStateDescriptor) descriptor);
-				} else if (descriptor instanceof FoldingStateDescriptor) {
-					stateBinder.createFoldingState((FoldingStateDescriptor) descriptor);
-				} else if (descriptor instanceof MapStateDescriptor) {
-					stateBinder.createMapState((MapStateDescriptor) descriptor);
-				} else if (descriptor instanceof ReducingStateDescriptor) {
-					stateBinder.createReducingState((ReducingStateDescriptor) descriptor);
-				} else if (descriptor instanceof ValueStateDescriptor) {
-					stateBinder.createValueState((ValueStateDescriptor) descriptor);
-				}
 				ref.set(invocationOnMock.getArguments()[0]);
 				return null;
 			}
-		}).when(operatorMock).getState(any(StateDescriptor.class));
+		}).when(keyedStateStore).getPartitionedState(any(StateDescriptor.class));
 
-		when(operatorMock.getKeySerializer()).thenReturn(mock(TypeSerializer.class));
-		switch (descriptor.getType()) {
-			case MAP:
-				when(operatorMock.getKeyedState(any(KeyedStateDescriptor.class))).thenReturn(mock(KeyedMapState.class));
-				break;
-			case LIST:
-				when(operatorMock.getKeyedState(any(KeyedStateDescriptor.class))).thenReturn(mock(KeyedListState.class));
-				break;
-			case VALUE:
-			case FOLDING:
-			case REDUCING:
-			case AGGREGATING:
-				when(operatorMock.getKeyedState(any(KeyedStateDescriptor.class))).thenReturn(mock(KeyedValueState.class));
-				break;
-		}
+		when(operatorMock.getKeyedStateStore()).thenReturn(keyedStateStore);
 		when(operatorMock.getOperatorID()).thenReturn(new OperatorID());
 
 		return operatorMock;
@@ -328,6 +308,20 @@ public class StreamingRuntimeContextTest {
 
 		when(operatorMock.getExecutionConfig()).thenReturn(config);
 
+		AbstractInternalStateBackend internalStateBackend = new MemoryStateBackend().createInternalStateBackend(
+			new DummyEnvironment("test_task", 1, 0),
+			"test_op",
+			1,
+			new KeyGroupRange(0, 0));
+		KeyContextImpl keyContext = new KeyContextImpl(IntSerializer.INSTANCE, 1, new KeyGroupRange(0, 0));
+
+		ContextStateHelper contextStateHelper =
+			new ContextStateHelper(keyContext, config, internalStateBackend);
+
+		MockKeyedStateStore keyedStateStore = spy(new MockKeyedStateStore(contextStateHelper, config));
+
+		when(operatorMock.getExecutionConfig()).thenReturn(config);
+
 		doAnswer(new Answer<ListState<String>>() {
 
 			@Override
@@ -335,18 +329,13 @@ public class StreamingRuntimeContextTest {
 				ListStateDescriptor<String> descr =
 					(ListStateDescriptor<String>) invocationOnMock.getArguments()[0];
 
-				descr.initializeSerializerUnlessSet(operatorMock.getExecutionConfig());
-				KeyedListStateDescriptor<Integer, String> keyedDescr = new KeyedListStateDescriptor<>(descr.getName(), IntSerializer.INSTANCE, descr.getElementSerializer());
-				AbstractInternalStateBackend backend = new MemoryStateBackend()
-					.createInternalStateBackend(createMockEnvironment(), "test", 1, new KeyGroupRange(0, 0));
-				KeyedListState <Integer, String> state = backend.createKeyedListState(keyedDescr);
-
-				return new ContextListState(operatorMock, state);
+				keyContext.setCurrentKey(0);
+				return contextStateHelper.getPartitionedState(VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, descr);
 			}
-		}).when(operatorMock).getState(any(ListStateDescriptor.class));
+		}).when(keyedStateStore).getPartitionedState(any(ListStateDescriptor.class));
 
+		when(operatorMock.getKeyedStateStore()).thenReturn(keyedStateStore);
 		when(operatorMock.getOperatorID()).thenReturn(new OperatorID());
-		when(operatorMock.getCurrentKey()).thenReturn(0);
 		return operatorMock;
 	}
 
@@ -356,6 +345,18 @@ public class StreamingRuntimeContextTest {
 		AbstractStreamOperator<?> operatorMock = mock(AbstractStreamOperator.class);
 		ExecutionConfig config = new ExecutionConfig();
 
+		AbstractInternalStateBackend internalStateBackend = new MemoryStateBackend().createInternalStateBackend(
+			new DummyEnvironment("test_task", 1, 0),
+			"test_op",
+			1,
+			new KeyGroupRange(0, 0));
+		KeyContextImpl keyContext = new KeyContextImpl(IntSerializer.INSTANCE, 1, new KeyGroupRange(0, 0));
+
+		ContextStateHelper contextStateHelper =
+			new ContextStateHelper(keyContext, config, internalStateBackend);
+
+		MockKeyedStateStore keyedStateStore = spy(new MockKeyedStateStore(contextStateHelper, config));
+
 		when(operatorMock.getExecutionConfig()).thenReturn(config);
 
 		doAnswer(new Answer<MapState<Integer, String>>() {
@@ -363,24 +364,14 @@ public class StreamingRuntimeContextTest {
 			@Override
 			public MapState<Integer, String> answer(InvocationOnMock invocationOnMock) throws Throwable {
 				MapStateDescriptor<Integer, String> descr =
-						(MapStateDescriptor<Integer, String>) invocationOnMock.getArguments()[0];
-
-				descr.initializeSerializerUnlessSet(operatorMock.getExecutionConfig());
-				KeyedMapStateDescriptor<Integer, Integer, String> stateDescriptor =
-					new KeyedMapStateDescriptor<Integer, Integer, String>(
-						descr.getName(), IntSerializer.INSTANCE, descr.getKeySerializer(), descr.getValueSerializer());
-
-				descr.initializeSerializerUnlessSet(operatorMock.getExecutionConfig());
-				AbstractInternalStateBackend backend = new MemoryStateBackend()
-					.createInternalStateBackend(createMockEnvironment(), "test", 1, new KeyGroupRange(0, 0));
-				KeyedMapState<Integer, Integer, String> state = backend.createKeyedMapState(stateDescriptor);
-
-				return new ContextMapState(operatorMock, state);
+					(MapStateDescriptor<Integer, String>) invocationOnMock.getArguments()[0];
+				keyContext.setCurrentKey(0);
+				return contextStateHelper.getPartitionedState(VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, descr);
 			}
-		}).when(operatorMock).getState(any(MapStateDescriptor.class));
+		}).when(keyedStateStore).getPartitionedState(any(MapStateDescriptor.class));
 
+		when(operatorMock.getKeyedStateStore()).thenReturn(keyedStateStore);
 		when(operatorMock.getOperatorID()).thenReturn(new OperatorID());
-		when(operatorMock.getCurrentKey()).thenReturn(0);
 		return operatorMock;
 	}
 
@@ -388,5 +379,17 @@ public class StreamingRuntimeContextTest {
 		return MockEnvironment.builder()
 			.setTaskName("test task")
 			.build();
+	}
+
+	private static class MockKeyedStateStore extends DefaultKeyedStateStore {
+
+		public MockKeyedStateStore(StateBinder contextStateBinder, ExecutionConfig executionConfig) {
+			super(contextStateBinder, executionConfig);
+		}
+
+		@Override
+		protected <S extends State> S getPartitionedState(StateDescriptor<S, ?> stateDescriptor) throws Exception {
+			return super.getPartitionedState(stateDescriptor);
+		}
 	}
 }

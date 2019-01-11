@@ -21,6 +21,7 @@ package org.apache.flink.runtime.state.keyed;
 import org.apache.flink.api.common.functions.HashPartitioner;
 import org.apache.flink.api.common.typeutils.SerializationException;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.base.ListSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
 import org.apache.flink.core.memory.DataOutputView;
@@ -33,6 +34,7 @@ import org.apache.flink.runtime.state.StateIteratorUtil;
 import org.apache.flink.runtime.state.StateSerializerUtil;
 import org.apache.flink.runtime.state.StateStorage;
 import org.apache.flink.runtime.state.StorageIterator;
+import org.apache.flink.runtime.state.VoidNamespaceSerializer;
 import org.apache.flink.runtime.state.heap.HeapStateStorage;
 import org.apache.flink.types.Pair;
 import org.apache.flink.util.Preconditions;
@@ -163,16 +165,7 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 				List<E> value = (List<E>) stateStorage.get(key);
 				return value == null ? defaultValue : value;
 			} else {
-				outputStream.reset();
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
-					outputStream,
-					outputView,
-					key,
-					keySerializer,
-					getKeyGroup(key),
-					stateNameForSerialize);
-
-				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
+				byte[] serializedValue = getSerializedValue(key, outputStream, outputView, keySerializer);
 				if (serializedValue == null) {
 					return defaultValue;
 				}
@@ -276,7 +269,11 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 				stateStorage.merge(serializedKey, preMergedValue);
 			}
 		} catch (Exception e) {
-			throw new StateAccessException(e);
+			if (e instanceof NullPointerException) {
+				throw (NullPointerException) e;
+			} else {
+				throw new StateAccessException(e);
+			}
 		}
 	}
 
@@ -348,7 +345,11 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 				stateStorage.put(serializedKey, preMergedValue);
 			}
 		} catch (Exception e) {
-			throw new StateAccessException(e);
+			if (e instanceof NullPointerException) {
+				throw (NullPointerException) e;
+			} else {
+				throw new StateAccessException(e);
+			}
 		}
 	}
 
@@ -702,31 +703,59 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 	}
 
 	@Override
-	public byte[] getSerializedValue(byte[] serializedKey) throws Exception {
-		K key = KvStateSerializer.deserializeValue(serializedKey, descriptor.getKeySerializer());
+	public byte[] getSerializedValue(
+		final byte[] serializedKeyAndNamespace,
+		final TypeSerializer<K> safeKeySerializer,
+		final TypeSerializer<List<E>> safeValueSerializer) throws Exception {
 
-		List<E> value = get(key);
-		if (value == null) {
-			return null;
-		}
+		K key = KvStateSerializer.deserializeKeyAndNamespace(serializedKeyAndNamespace, safeKeySerializer, VoidNamespaceSerializer.INSTANCE).f0;
 
-		final TypeSerializer<E> dupSerializer = descriptor.getElementSerializer();
-
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		ByteArrayOutputStreamWithPos baos = new ByteArrayOutputStreamWithPos();
 		DataOutputViewStreamWrapper view = new DataOutputViewStreamWrapper(baos);
 
-		for (int i = 0; i < value.size(); i++) {
-			dupSerializer.serialize(value.get(i), view);
-			if (i < value.size() -1) {
-				view.writeByte(',');
+		if (stateStorage.lazySerde()) {
+			List<E> value = get(key);
+			if (value == null) {
+				return null;
 			}
-		}
-		view.flush();
 
-		return baos.toByteArray();
+			final TypeSerializer<E> dupSerializer = ((ListSerializer<E>) safeValueSerializer).getElementSerializer();
+
+			for (int i = 0; i < value.size(); i++) {
+				dupSerializer.serialize(value.get(i), view);
+				if (i < value.size() -1) {
+					view.writeByte(',');
+				}
+			}
+			view.flush();
+
+			return baos.toByteArray();
+		} else {
+
+			return getSerializedValue(key, baos, view, safeKeySerializer);
+		}
+
 	}
 
 	private <K> int getKeyGroup(K key) {
 		return partitioner.partition(key, internalStateBackend.getNumGroups());
+	}
+
+	private byte[] getSerializedValue(
+		K key,
+		ByteArrayOutputStreamWithPos outputStream,
+		DataOutputView outputView,
+		TypeSerializer<K> safeKeySerializer) throws Exception {
+
+		outputStream.reset();
+		byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedListState(
+			outputStream,
+			outputView,
+			key,
+			safeKeySerializer,
+			getKeyGroup(key),
+			stateNameForSerialize);
+
+		return (byte[]) stateStorage.get(serializedKey);
 	}
 }

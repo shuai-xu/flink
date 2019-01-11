@@ -35,8 +35,6 @@ import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedValueStateDescriptor;
 import org.apache.flink.util.Preconditions;
 
-import javax.annotation.Nullable;
-
 import java.util.Objects;
 
 public class StateMetaInfoSnapshot {
@@ -44,30 +42,30 @@ public class StateMetaInfoSnapshot {
 	private final String name;
 	private final TypeSerializer keySerializer;
 	private final TypeSerializer valueSerializer;
-	@Nullable protected final TypeSerializer namespaceSerializer;
+	protected final TypeSerializer namespaceSerializer;
 
 	private final TypeSerializerConfigSnapshot keySerializerConfigSnapshot;
 	private final TypeSerializerConfigSnapshot valueSerializerConfigSnapshot;
-	@Nullable private final TypeSerializerConfigSnapshot namespaceSerializerConfigSnapshot;
+	private final TypeSerializerConfigSnapshot namespaceSerializerConfigSnapshot;
 
 	public StateMetaInfoSnapshot(
 		InternalStateType stateType,
 		String name,
 		TypeSerializer keySerializer,
 		TypeSerializer valueSerializer,
-		@Nullable TypeSerializer namespaceSerializer,
+		TypeSerializer namespaceSerializer,
 		TypeSerializerConfigSnapshot keySerializerConfigSnapshot,
 		TypeSerializerConfigSnapshot valueSerializerConfigSnapshot,
-		@Nullable TypeSerializerConfigSnapshot namespaceSerializerConfigSnapshot) {
+		TypeSerializerConfigSnapshot namespaceSerializerConfigSnapshot) {
 
 		this.stateType = Preconditions.checkNotNull(stateType);
 		this.name = Preconditions.checkNotNull(name);
 		this.keySerializer = Preconditions.checkNotNull(keySerializer);
 		this.valueSerializer = Preconditions.checkNotNull(valueSerializer);
-		this.namespaceSerializer = namespaceSerializer;
+		this.namespaceSerializer = Preconditions.checkNotNull(namespaceSerializer);
 		this.keySerializerConfigSnapshot = Preconditions.checkNotNull(keySerializerConfigSnapshot);
 		this.valueSerializerConfigSnapshot = Preconditions.checkNotNull(valueSerializerConfigSnapshot);
-		this.namespaceSerializerConfigSnapshot = namespaceSerializerConfigSnapshot;
+		this.namespaceSerializerConfigSnapshot = Preconditions.checkNotNull(namespaceSerializerConfigSnapshot);
 	}
 
 	public InternalStateType getStateType() {
@@ -94,12 +92,10 @@ public class StateMetaInfoSnapshot {
 		return valueSerializerConfigSnapshot;
 	}
 
-	@Nullable
 	public TypeSerializer getNamespaceSerializer() {
 		return namespaceSerializer;
 	}
 
-	@Nullable
 	public TypeSerializerConfigSnapshot getNamespaceSerializerConfigSnapshot() {
 		return namespaceSerializerConfigSnapshot;
 	}
@@ -110,10 +106,10 @@ public class StateMetaInfoSnapshot {
 		result = 31 * result + getStateType().hashCode();
 		result = 31 * result + getKeySerializer().hashCode();
 		result = 31 * result + getValueSerializer().hashCode();
-		result = 31 * result + (getNamespaceSerializer() == null ? 0 : getNamespaceSerializer().hashCode());
+		result = 31 * result + getNamespaceSerializer().hashCode();
 		result = 31 * result + getKeySerializerConfigSnapshot().hashCode();
 		result = 31 * result + getValueSerializerConfigSnapshot().hashCode();
-		result = 31 * result + (getNamespaceSerializerConfigSnapshot() == null ? 0 : getNamespaceSerializerConfigSnapshot().hashCode());
+		result = 31 * result + getNamespaceSerializerConfigSnapshot().hashCode();
 		return result;
 	}
 

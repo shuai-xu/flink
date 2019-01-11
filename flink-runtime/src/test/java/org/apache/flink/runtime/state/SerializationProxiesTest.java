@@ -220,7 +220,8 @@ public class SerializationProxiesTest {
 			Assert.assertTrue(meta.getValueSerializer() instanceof UnloadableDummyTypeSerializer);
 			Assert.assertEquals(keySerializer.snapshotConfiguration(), meta.getKeySerializerConfigSnapshot());
 			Assert.assertEquals(stateSerializer.snapshotConfiguration(), meta.getValueSerializerConfigSnapshot());
-			Assert.assertNull(meta.getNamespaceSerializer());
+			Assert.assertEquals(VoidNamespaceSerializer.INSTANCE, meta.getNamespaceSerializer());
+			Assert.assertEquals(VoidNamespaceSerializer.SNAPSHOT, meta.getNamespaceSerializerConfigSnapshot());
 		}
 
 		for (StateMetaInfoSnapshot meta : serializationProxy.getSubKeyedStateMetaSnapshots()) {

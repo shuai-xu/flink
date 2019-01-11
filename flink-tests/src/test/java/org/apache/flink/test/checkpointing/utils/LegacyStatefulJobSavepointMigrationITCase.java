@@ -558,7 +558,7 @@ public class LegacyStatefulJobSavepointMigrationITCase extends SavepointMigratio
 		@Override
 		public void processElement(StreamRecord<Tuple2<Long, Long>> element) throws Exception {
 			ValueState<Long> state =
-				getSubKeyedStateWithNamespace(stateDescriptor, element.getValue().f0, LongSerializer.INSTANCE);
+				getPartitionedState(element.getValue().f0, LongSerializer.INSTANCE, stateDescriptor);
 
 			state.update(element.getValue().f1);
 
@@ -620,7 +620,7 @@ public class LegacyStatefulJobSavepointMigrationITCase extends SavepointMigratio
 		@Override
 		public void processElement(StreamRecord<Tuple2<Long, Long>> element) throws Exception {
 			ValueState<Long> state =
-				getSubKeyedStateWithNamespace(stateDescriptor, element.getValue().f0, LongSerializer.INSTANCE);
+				getPartitionedState(element.getValue().f0, LongSerializer.INSTANCE, stateDescriptor);
 
 			assertEquals(state.value(), element.getValue().f1);
 			getRuntimeContext().getAccumulator(SUCCESSFUL_PROCESS_CHECK_ACCUMULATOR).add(1);
@@ -636,7 +636,7 @@ public class LegacyStatefulJobSavepointMigrationITCase extends SavepointMigratio
 		@Override
 		public void onEventTime(InternalTimer<Long, Long> timer) throws Exception {
 			ValueState<Long> state =
-				getSubKeyedStateWithNamespace(stateDescriptor, timer.getNamespace(), LongSerializer.INSTANCE);
+				getPartitionedState(timer.getNamespace(), LongSerializer.INSTANCE, stateDescriptor);
 
 			assertEquals(state.value(), timer.getNamespace());
 			getRuntimeContext().getAccumulator(SUCCESSFUL_EVENT_TIME_CHECK_ACCUMULATOR).add(1);
@@ -645,7 +645,7 @@ public class LegacyStatefulJobSavepointMigrationITCase extends SavepointMigratio
 		@Override
 		public void onProcessingTime(InternalTimer<Long, Long> timer) throws Exception {
 			ValueState<Long> state =
-				getSubKeyedStateWithNamespace(stateDescriptor, timer.getNamespace(), LongSerializer.INSTANCE);
+				getPartitionedState(timer.getNamespace(), LongSerializer.INSTANCE, stateDescriptor);
 
 			assertEquals(state.value(), timer.getNamespace());
 			getRuntimeContext().getAccumulator(SUCCESSFUL_PROCESSING_TIME_CHECK_ACCUMULATOR).add(1);

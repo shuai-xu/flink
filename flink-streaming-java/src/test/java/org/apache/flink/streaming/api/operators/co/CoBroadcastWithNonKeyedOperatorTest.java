@@ -467,10 +467,9 @@ public class CoBroadcastWithNonKeyedOperatorTest {
 			testHarness.processWatermark1(new Watermark(10L));
 			testHarness.processWatermark2(new Watermark(10L));
 			testHarness.processElement2(new StreamRecord<>(5, 12L));
-		} catch (RuntimeException e) {
-			if (e.getCause() instanceof NullPointerException) {
-				exceptionThrown = true;
-			}
+		} catch (NullPointerException e) {
+			Assert.assertEquals("Keyed state can only be used on a 'keyed stream', i.e., after a 'keyBy()' operation.", e.getMessage());
+			exceptionThrown = true;
 		}
 
 		if (!exceptionThrown) {
@@ -505,10 +504,9 @@ public class CoBroadcastWithNonKeyedOperatorTest {
 			testHarness.processWatermark1(new Watermark(10L));
 			testHarness.processWatermark2(new Watermark(10L));
 			testHarness.processElement1(new StreamRecord<>("5", 12L));
-		} catch (RuntimeException e) {
-			if (e.getCause() instanceof NullPointerException) {
-				exceptionThrown = true;
-			}
+		} catch (NullPointerException e) {
+			Assert.assertEquals("Keyed state can only be used on a 'keyed stream', i.e., after a 'keyBy()' operation.", e.getMessage());
+			exceptionThrown = true;
 		}
 
 		if (!exceptionThrown) {

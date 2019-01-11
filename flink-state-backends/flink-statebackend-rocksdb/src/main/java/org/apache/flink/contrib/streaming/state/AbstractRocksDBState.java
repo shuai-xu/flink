@@ -45,6 +45,7 @@ import java.io.IOException;
  * @param <V> The type of values kept internally in state.
  * @param <S> The type of {@link State}.
  */
+@Deprecated
 public abstract class AbstractRocksDBState<K, N, V, S extends State> implements InternalKvState<K, N, V>, State {
 
 	/** Serializer for the namespace. */

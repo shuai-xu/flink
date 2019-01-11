@@ -16,14 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.api.operators.state;
+package org.apache.flink.runtime.state.context;
 
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
-import org.apache.flink.runtime.state.keyed.ContextKeyedState;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.runtime.state.VoidNamespace;
+import org.apache.flink.runtime.state.internal.InternalValueState;
 import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedValueState;
-import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
+import org.apache.flink.runtime.state.heap.KeyContextImpl;
 import org.apache.flink.util.Preconditions;
 
 import java.io.IOException;
@@ -31,57 +33,82 @@ import java.io.IOException;
 /**
  * An implementation of {@link ValueState} which is backed by a
  * {@link KeyedValueState}. The values of the states depend on the current key
- * of the operator. That is, when the current key of the operator changes, the
+ * of the keyContext. That is, when the current key of the keyContext changes, the
  * values accessed will be changed as well.
  *
- * @param <T> The type of the values in the state.
+ * @param <V> The type of the values in the state.
  */
-public class ContextValueState<T> implements ValueState<T>, ContextKeyedState {
+public class ContextValueState<K, V> implements ContextKeyedState<K, V>, InternalValueState<K, VoidNamespace, V> {
 
-	/** The operator to which the state belongs. */
-	private final AbstractStreamOperator<?> operator;
+	/** The keyContext to which the state belongs. */
+	private final KeyContextImpl<K> keyContext;
 
 	/** The keyed state backing the state. */
-	private final KeyedValueState<Object, T> keyedState;
+	private final KeyedValueState<Object, V> keyedState;
 
 	/** The descriptor of the state. */
-	private final ValueStateDescriptor<T> stateDescriptor;
+	private final ValueStateDescriptor<V> stateDescriptor;
 
 	public ContextValueState(
-		final AbstractStreamOperator<?> operator,
-		final KeyedValueState<Object, T> keyedState,
-		final ValueStateDescriptor<T> stateDescriptor
+		final KeyContextImpl<K> operator,
+		final KeyedValueState<Object, V> keyedState,
+		final ValueStateDescriptor<V> stateDescriptor
 	) {
 		Preconditions.checkNotNull(operator);
 		Preconditions.checkNotNull(keyedState);
 		Preconditions.checkNotNull(stateDescriptor);
 
-		this.operator = operator;
+		this.keyContext = operator;
 		this.keyedState = keyedState;
 		this.stateDescriptor = stateDescriptor;
 	}
 
 	@Override
-	public T value() throws IOException {
-		Object key = operator.getCurrentKey();
+	public V value() throws IOException {
+		Object key = keyContext.getCurrentKey();
 		Preconditions.checkNotNull(key, "No key set. This method should not be called outside of a keyed context.");
 
-		T value = keyedState.get(key);
+		V value = keyedState.get(key);
 		return value == null ? stateDescriptor.getDefaultValue() : value;
 	}
 
 	@Override
-	public void update(T value) throws IOException {
-		keyedState.put(operator.getCurrentKey(), value);
+	public void update(V value) throws IOException {
+		if (value == null) {
+			clear();
+		} else {
+			keyedState.put(keyContext.getCurrentKey(), value);
+		}
 	}
 
 	@Override
 	public void clear() {
-		keyedState.remove(operator.getCurrentKey());
+		keyedState.remove(keyContext.getCurrentKey());
 	}
 
 	@Override
 	public KeyedState getKeyedState() {
 		return keyedState;
 	}
+
+	@Override
+	public TypeSerializer<K> getKeySerializer() {
+		return keyContext.getKeySerializer();
+	}
+
+	@Override
+	public TypeSerializer<V> getValueSerializer() {
+		return keyedState.getDescriptor().getValueSerializer();
+	}
+
+	@Override
+	public byte[] getSerializedValue(
+		byte[] serializedKeyAndNamespace,
+		TypeSerializer safeKeySerializer,
+		TypeSerializer safeNamespaceSerializer,
+		TypeSerializer safeValueSerializer) throws Exception {
+
+		return keyedState.getSerializedValue(serializedKeyAndNamespace, safeKeySerializer, safeValueSerializer);
+	}
+
 }

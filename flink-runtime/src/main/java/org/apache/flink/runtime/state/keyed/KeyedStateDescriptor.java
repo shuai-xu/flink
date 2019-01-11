@@ -46,12 +46,12 @@ public abstract class KeyedStateDescriptor<K, V, S extends KeyedState<K, V>> imp
 	/**
 	 * The serializer for the keys in the state.
 	 */
-	private final TypeSerializer<K> keySerializer;
+	private TypeSerializer<K> keySerializer;
 
 	/**
 	 * The serializer for the values in the state.
 	 */
-	private final TypeSerializer<V> valueSerializer;
+	private TypeSerializer<V> valueSerializer;
 
 	/**
 	 * The stateType of the values in the state.
@@ -133,31 +133,12 @@ public abstract class KeyedStateDescriptor<K, V, S extends KeyedState<K, V>> imp
 		return valueSerializer;
 	}
 
-	/**
-	 * Sets the name for queries of state created from this descriptor.
-	 *
-	 * <p>If a name is set, the created state will be published for queries
-	 * during runtime. The name needs to be unique per job. If there is another
-	 * state instance published under the same name, the job will fail during runtime.
-	 *
-	 * @param queryableStateName State name for queries (unique name per job)
-	 * @throws IllegalStateException If queryable state name already set
-	 */
-	public void setQueryable(String queryableStateName) {
-		if (this.queryableStateName == null) {
-			this.queryableStateName = Preconditions.checkNotNull(queryableStateName, "Registration name");
-		} else {
-			throw new IllegalStateException("Queryable state name already set");
-		}
+	public void setKeySerializer(TypeSerializer<K> keySerializer) {
+		this.keySerializer = keySerializer;
 	}
 
-	/**
-	 * Returns the queryable state name.
-	 *
-	 * @return Queryable state name or <code>null</code> if not set.
-	 */
-	public String getQueryableStateName() {
-		return queryableStateName;
+	public void setValueSerializer(TypeSerializer<V> valueSerializer) {
+		this.valueSerializer = valueSerializer;
 	}
 
 	/**

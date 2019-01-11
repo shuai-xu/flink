@@ -43,7 +43,6 @@ import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateMetaInfoSnapshot;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.VoidNamespace;
-import org.apache.flink.runtime.state.VoidNamespaceSerializer;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.StateStorage;
 import org.apache.flink.runtime.state.heap.internal.StateTable;
@@ -121,42 +120,40 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	protected StateStorage getOrCreateStateStorageForKeyedState(KeyedStateDescriptor descriptor) {
-		StateStorage stateStorage = stateStorages.get(descriptor.getName());
+	protected StateStorage getOrCreateStateStorageForKeyedState(RegisteredStateMetaInfo stateMetaInfo) {
+		HeapStateStorage stateStorage = (HeapStateStorage) stateStorages.get(stateMetaInfo.getName());
 
 		if (stateStorage == null) {
 			stateStorage = new HeapStateStorage<>(
 				this,
-				descriptor.getKeySerializer(),
-				VoidNamespaceSerializer.INSTANCE,
-				descriptor.getValueSerializer(),
+				stateMetaInfo,
 				VoidNamespace.INSTANCE,
 				false,
 				asynchronousSnapshot
 			);
-			stateStorages.put(descriptor.getName(), stateStorage);
+			stateStorages.put(stateMetaInfo.getName(), stateStorage);
 		}
+		stateStorage.setStateMetaInfo(stateMetaInfo);
 
 		return stateStorage;
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
-	protected StateStorage getOrCreateStateStorageForSubKeyedState(SubKeyedStateDescriptor descriptor) {
-		StateStorage stateStorage = stateStorages.get(descriptor.getName());
+	protected StateStorage getOrCreateStateStorageForSubKeyedState(RegisteredStateMetaInfo stateMetaInfo) {
+		HeapStateStorage stateStorage = (HeapStateStorage) stateStorages.get(stateMetaInfo.getName());
 
 		if (stateStorage == null) {
 			stateStorage = new HeapStateStorage<>(
 				this,
-				descriptor.getKeySerializer(),
-				descriptor.getNamespaceSerializer(),
-				descriptor.getValueSerializer(),
+				stateMetaInfo,
 				null,
 				true,
 				asynchronousSnapshot
 			);
-			stateStorages.put(descriptor.getName(), stateStorage);
+			stateStorages.put(stateMetaInfo.getName(), stateStorage);
 		}
+		stateStorage.setStateMetaInfo(stateMetaInfo);
 
 		return stateStorage;
 	}
@@ -376,6 +373,10 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 		LOG.info("Initializing heap internal state backend from snapshot.");
 
 		for (KeyedStateHandle rawSnapshot : restoredSnapshots) {
+			if (rawSnapshot == null) {
+				continue;
+			}
+
 			Preconditions.checkState(rawSnapshot instanceof KeyGroupsStateSnapshot);
 			KeyGroupsStateSnapshot snapshot =
 				(KeyGroupsStateSnapshot) rawSnapshot;
@@ -409,7 +410,7 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 					RegisteredStateMetaInfo keyedStateMetaInfo = RegisteredStateMetaInfo.createKeyedStateMetaInfo(keyedStateMetaSnapshot);
 					registeredStateMetaInfos.put(stateName, keyedStateMetaInfo);
 					KeyedStateDescriptor keyedStateDescriptor = keyedStateMetaSnapshot.createKeyedStateDescriptor();
-					StateStorage stateStorage = getOrCreateStateStorageForKeyedState(keyedStateDescriptor);
+					StateStorage stateStorage = getOrCreateStateStorageForKeyedState(keyedStateMetaInfo);
 					stateStorages.put(stateName, stateStorage);
 					keyedStatesById.put(i, keyedStateDescriptor);
 				}
@@ -424,7 +425,7 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 					registeredStateMetaInfos.put(stateName, subKeyedStateMetaInfo);
 					restoredKvStateMetaInfos.put(stateName, subKeyedStateMetaSnapshot);
 					SubKeyedStateDescriptor subKeyedStateDescriptor = subKeyedStateMetaSnapshot.createSubKeyedStateDescriptor();
-					StateStorage stateStorage = getOrCreateStateStorageForSubKeyedState(subKeyedStateDescriptor);
+					StateStorage stateStorage = getOrCreateStateStorageForSubKeyedState(subKeyedStateMetaInfo);
 					stateStorages.put(stateName, stateStorage);
 					subKeyedStatesById.put(i, subKeyedStateDescriptor);
 				}

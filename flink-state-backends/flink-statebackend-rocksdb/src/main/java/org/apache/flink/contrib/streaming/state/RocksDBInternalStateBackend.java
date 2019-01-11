@@ -35,10 +35,10 @@ import org.apache.flink.runtime.state.DoneFuture;
 import org.apache.flink.runtime.state.IncrementalKeyedStateSnapshot;
 import org.apache.flink.runtime.state.IncrementalLocalKeyedStateSnapshot;
 import org.apache.flink.runtime.state.KeyGroupRange;
-import org.apache.flink.runtime.state.KeyGroupsStateSnapshot;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.LocalRecoveryDirectoryProvider;
+import org.apache.flink.runtime.state.RegisteredStateMetaInfo;
 import org.apache.flink.runtime.state.SnapshotDirectory;
 import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.SnapshotStrategy;
@@ -48,9 +48,7 @@ import org.apache.flink.runtime.state.StateStorage;
 import org.apache.flink.runtime.state.StorageIterator;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.keyed.KeyedState;
-import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
-import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
@@ -234,7 +232,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend {
 	}
 
 	@Override
-	protected StateStorage getOrCreateStateStorageForKeyedState(KeyedStateDescriptor descriptor) {
+	protected StateStorage getOrCreateStateStorageForKeyedState(RegisteredStateMetaInfo descriptor) {
 		StateStorage stateStorage = stateStorages.get(descriptor.getName());
 
 		if (stateStorage == null) {
@@ -280,20 +278,20 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend {
 	}
 
 	@Override
-	protected StateStorage getOrCreateStateStorageForSubKeyedState(SubKeyedStateDescriptor descriptor) {
-		StateStorage stateStorage = stateStorages.get(descriptor.getName());
+	protected StateStorage getOrCreateStateStorageForSubKeyedState(RegisteredStateMetaInfo stateMetaInfo) {
+		StateStorage stateStorage = stateStorages.get(stateMetaInfo.getName());
 
 		if (stateStorage == null) {
 			try {
 				stateStorage = new RocksDBStateStorage(
 					new RocksDBStorageInstance(
 						db,
-						getOrCreateColumnFamily(descriptor.getName()),
+						getOrCreateColumnFamily(stateMetaInfo.getName()),
 						writeOptions));
 			} catch (IOException e) {
 				throw new StateAccessException(e);
 			}
-			stateStorages.put(descriptor.getName(), stateStorage);
+			stateStorages.put(stateMetaInfo.getName(), stateStorage);
 		}
 
 		return stateStorage;
@@ -389,14 +387,12 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend {
 				long startMillis = System.currentTimeMillis();
 
 				KeyedStateHandle stateSnapshot = restoredSnapshots.iterator().next();
-				if (stateSnapshot instanceof KeyGroupsStateSnapshot) {
-					RocksDBFullRestoreOperation restoreOperation = new RocksDBFullRestoreOperation(this);
-					restoreOperation.restore(restoredSnapshots);
-				} else if (stateSnapshot instanceof IncrementalKeyedStateSnapshot || stateSnapshot instanceof IncrementalLocalKeyedStateSnapshot) {
+				if (stateSnapshot instanceof IncrementalKeyedStateSnapshot || stateSnapshot instanceof IncrementalLocalKeyedStateSnapshot) {
 					RocksDBIncrementalRestoreOperation restoreOperation = new RocksDBIncrementalRestoreOperation(this);
 					restoreOperation.restore(restoredSnapshots);
 				} else {
-					throw new UnsupportedOperationException("Unknown keyedStateHandle for RocksDB internal state-backend to restore.");
+					RocksDBFullRestoreOperation restoreOperation = new RocksDBFullRestoreOperation(this);
+					restoreOperation.restore(restoredSnapshots);
 				}
 
 				long endMillis = System.currentTimeMillis();
@@ -714,14 +710,13 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend {
 		return columnFamilyHandles;
 	}
 
-	void registerAllStates(
-		List<KeyedStateDescriptor> keyedStateDescriptors,
-		List<SubKeyedStateDescriptor> subKeyedStateDescriptors) {
-		for (KeyedStateDescriptor descriptor : keyedStateDescriptors) {
-			getOrCreateStateStorageForKeyedState(descriptor);
-		}
-		for (SubKeyedStateDescriptor descriptor : subKeyedStateDescriptors) {
-			getOrCreateStateStorageForSubKeyedState(descriptor);
+	void registerAllStates() {
+		for (RegisteredStateMetaInfo stateMetaInfo : registeredStateMetaInfos.values()) {
+			if (stateMetaInfo.getStateType().isKeyedState()) {
+				getOrCreateStateStorageForKeyedState(stateMetaInfo);
+			} else {
+				getOrCreateStateStorageForSubKeyedState(stateMetaInfo);
+			}
 		}
 	}
 

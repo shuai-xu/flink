@@ -16,15 +16,33 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.state.keyed;
+package org.apache.flink.runtime.state.context;
+
+import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.runtime.state.VoidNamespace;
+import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.internal.InternalKvState;
+import org.apache.flink.runtime.state.keyed.KeyedState;
 
 /**
  * Interface for user-facing state which is backed by {@link KeyedState}.
  */
-public interface ContextKeyedState {
+public interface ContextKeyedState<K, V> extends InternalKvState<K, VoidNamespace, V> {
 
 	/**
 	 * Returns the backed {@link KeyedState}.
 	 */
 	KeyedState getKeyedState();
+
+	@Override
+	default void setCurrentNamespace(VoidNamespace namespace) {
+		if (!VoidNamespace.INSTANCE.equals(namespace)) {
+			throw new UnsupportedOperationException("setCurrentNamespace should not be called within keyed state.");
+		}
+	}
+
+	@Override
+	default TypeSerializer<VoidNamespace> getNamespaceSerializer() {
+		return VoidNamespaceSerializer.INSTANCE;
+	}
 }

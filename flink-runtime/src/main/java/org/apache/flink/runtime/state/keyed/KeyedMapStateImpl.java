@@ -19,10 +19,8 @@
 package org.apache.flink.runtime.state.keyed;
 
 import org.apache.flink.api.common.typeutils.SerializationException;
-import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
-import org.apache.flink.queryablestate.client.state.serialization.KvStateSerializer;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.StateStorage;
 import org.apache.flink.util.Preconditions;
@@ -84,22 +82,6 @@ public final class KeyedMapStateImpl<K, MK, MV>
 	@Override
 	Map<MK, MV> createMap() {
 		return new HashMap<>();
-	}
-
-	@SuppressWarnings("unchecked")
-	@Override
-	public byte[] getSerializedValue(byte[] serializedKey) throws Exception {
-		K key = KvStateSerializer.deserializeValue(serializedKey, stateDescriptor.getKeySerializer());
-
-		Map<MK, MV> value = get(key);
-		if (value == null) {
-			return null;
-		}
-
-		final TypeSerializer<MK> dupUserKeySerializer = stateDescriptor.getMapKeySerializer();
-		final TypeSerializer<MV> dupUserValueSerializer = stateDescriptor.getMapValueSerializer();
-
-		return KvStateSerializer.serializeMap(value.entrySet(), dupUserKeySerializer, dupUserValueSerializer);
 	}
 
 }

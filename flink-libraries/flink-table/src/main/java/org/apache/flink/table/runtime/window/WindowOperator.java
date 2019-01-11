@@ -540,8 +540,8 @@ public class WindowOperator<K, W extends Window>
 	private class WindowContext implements InternalWindowProcessFunction.Context<K, W> {
 
 		@Override
-		public <S extends State> S getKeyedState(StateDescriptor<S, ?> stateDescriptor) {
-			return WindowOperator.this.getState(stateDescriptor);
+		public <S extends State> S getKeyedState(StateDescriptor<S, ?> stateDescriptor) throws Exception {
+			return WindowOperator.this.getPartitionedState(stateDescriptor);
 		}
 
 		@Override

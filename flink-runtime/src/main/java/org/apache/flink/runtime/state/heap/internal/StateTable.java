@@ -20,6 +20,7 @@ package org.apache.flink.runtime.state.heap.internal;
 
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.runtime.state.RegisteredStateMetaInfo;
 import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.util.Preconditions;
@@ -47,32 +48,15 @@ public abstract class StateTable<K, N, S> {
 	 */
 	protected final boolean usingNamespace;
 
-	/**
-	 * Serializer for key.
-	 */
-	protected final TypeSerializer<K> keySerializer;
-
-	/**
-	 * Serializer for namespace.
-	 */
-	protected final TypeSerializer<N> namespaceSerializer;
-
-	/**
-	 * Serializer for state.
-	 */
-	protected final TypeSerializer<S> stateSerializer;
+	protected RegisteredStateMetaInfo stateMetaInfo;
 
 	public StateTable(
 		AbstractInternalStateBackend internalStateBackend,
-		TypeSerializer<K> keySerializer,
-		TypeSerializer<N> namespaceSerializer,
-		TypeSerializer<S> stateSerializer,
+		RegisteredStateMetaInfo stateMetaInfo,
 		boolean usingNamespace
 		) {
 		this.internalStateBackend = Preconditions.checkNotNull(internalStateBackend);
-		this.keySerializer = Preconditions.checkNotNull(keySerializer);
-		this.namespaceSerializer = Preconditions.checkNotNull(namespaceSerializer);
-		this.stateSerializer = Preconditions.checkNotNull(stateSerializer);
+		this.stateMetaInfo = stateMetaInfo;
 		this.usingNamespace = usingNamespace;
 	}
 
@@ -225,15 +209,19 @@ public abstract class StateTable<K, N, S> {
 	}
 
 	public TypeSerializer<K> getKeySerializer() {
-		return keySerializer;
+		return stateMetaInfo.getKeySerializer();
 	}
 
 	public TypeSerializer<N> getNamespaceSerializer() {
-		return namespaceSerializer;
+		return stateMetaInfo.getNamespaceSerializer();
 	}
 
 	public TypeSerializer<S> getStateSerializer() {
-		return stateSerializer;
+		return stateMetaInfo.getValueSerializer();
+	}
+
+	public void setStateMetaInfo(RegisteredStateMetaInfo stateMetaInfo) {
+		this.stateMetaInfo = stateMetaInfo;
 	}
 
 	public boolean isUsingNamespace() {

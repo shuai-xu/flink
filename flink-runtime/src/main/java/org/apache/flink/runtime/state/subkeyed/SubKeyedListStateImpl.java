@@ -21,10 +21,13 @@ package org.apache.flink.runtime.state.subkeyed;
 import org.apache.flink.api.common.functions.HashPartitioner;
 import org.apache.flink.api.common.typeutils.SerializationException;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.base.ListSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
+import org.apache.flink.queryablestate.client.state.serialization.KvStateSerializer;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.StateAccessException;
 import org.apache.flink.runtime.state.StateSerializerUtil;
@@ -182,17 +185,7 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 				List<E> value = (List<E>) heapStateStorage.get(key);
 				return value == null ? defaultList : value;
 			} else {
-				outputStream.reset();
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedListState(
-					outputStream,
-					outputView,
-					key,
-					keySerializer,
-					namespace,
-					namespaceSerializer,
-					getKeyGroup(key),
-					stateNameForSerialize);
-				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
+				byte[] serializedValue = getSerializedValue(key, namespace, outputStream, outputView, keySerializer, namespaceSerializer);
 				if (serializedValue == null) {
 					return defaultList;
 				} else {
@@ -627,6 +620,64 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 	@Override
 	public StateStorage<K, List<E>> getStateStorage() {
 		return stateStorage;
+	}
+
+	@Override
+	public byte[] getSerializedValue(
+		final byte[] serializedKeyAndNamespace,
+		final TypeSerializer<K> safeKeySerializer,
+		final TypeSerializer<N> safeNamespaceSerializer,
+		final TypeSerializer<List<E>> safeValueSerializer) throws Exception {
+
+		Tuple2<K, N> tuple = KvStateSerializer.deserializeKeyAndNamespace(serializedKeyAndNamespace, safeKeySerializer, safeNamespaceSerializer);
+
+		K key = tuple.f0;
+		N namespace = tuple.f1;
+		ByteArrayOutputStreamWithPos baos = new ByteArrayOutputStreamWithPos();
+		DataOutputViewStreamWrapper view = new DataOutputViewStreamWrapper(baos);
+
+		if (stateStorage.lazySerde()) {
+			List<E> value = get(key, namespace);
+			if (value == null) {
+				return null;
+			}
+
+			final TypeSerializer<E> dupSerializer = ((ListSerializer<E>) safeValueSerializer).getElementSerializer();
+
+			for (int i = 0; i < value.size(); i++) {
+				dupSerializer.serialize(value.get(i), view);
+				if (i < value.size() -1) {
+					view.writeByte(',');
+				}
+			}
+			view.flush();
+
+			return baos.toByteArray();
+		} else {
+
+			return getSerializedValue(key, namespace, baos, view, safeKeySerializer, safeNamespaceSerializer);
+		}
+	}
+
+	private byte[] getSerializedValue(
+		K key,
+		N namespace,
+		ByteArrayOutputStreamWithPos outputStream,
+		DataOutputView outputView,
+		TypeSerializer<K> keySerializer,
+		TypeSerializer<N> namespaceSerializer) throws Exception {
+
+		outputStream.reset();
+		byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedListState(
+			outputStream,
+			outputView,
+			key,
+			keySerializer,
+			namespace,
+			namespaceSerializer,
+			getKeyGroup(key),
+			stateNameForSerialize);
+		return (byte[]) stateStorage.get(serializedKey);
 	}
 
 	@Override

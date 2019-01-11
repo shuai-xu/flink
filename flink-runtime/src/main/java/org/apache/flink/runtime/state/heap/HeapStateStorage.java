@@ -18,7 +18,7 @@
 
 package org.apache.flink.runtime.state.heap;
 
-import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.runtime.state.RegisteredStateMetaInfo;
 import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.StateStorage;
@@ -44,31 +44,24 @@ public class HeapStateStorage<K, N, S> implements StateStorage<K, S>{
 
 	public HeapStateStorage(
 		AbstractInternalStateBackend stateBackend,
-		TypeSerializer<K> keySerializer,
-		TypeSerializer<N> namespaceSerializer,
-		TypeSerializer<S> stateSerializer,
+		RegisteredStateMetaInfo stateMetaInfo,
 		N defaultNamespace,
 		boolean usingNamespace,
 		boolean asynchronous
 	) {
 		Preconditions.checkNotNull(stateBackend);
-		Preconditions.checkNotNull(keySerializer);
-		Preconditions.checkNotNull(stateSerializer);
+		Preconditions.checkNotNull(stateMetaInfo);
 
 		this.currentNamespace = defaultNamespace;
 
 		this.stateTable = asynchronous ?
 			new CopyOnWriteStateTable<>(
 				stateBackend,
-				keySerializer,
-				namespaceSerializer,
-				stateSerializer,
+				stateMetaInfo,
 				usingNamespace) :
 			new NestedMapsStateTable<>(
 				stateBackend,
-				keySerializer,
-				namespaceSerializer,
-				stateSerializer,
+				stateMetaInfo,
 				usingNamespace);
 	}
 
@@ -180,6 +173,10 @@ public class HeapStateStorage<K, N, S> implements StateStorage<K, S>{
 	 */
 	public void setCurrentNamespace(N namespace) {
 		currentNamespace = Preconditions.checkNotNull(namespace);
+	}
+
+	public void setStateMetaInfo(RegisteredStateMetaInfo stateMetaInfo) {
+		stateTable.setStateMetaInfo(stateMetaInfo);
 	}
 
 	/**

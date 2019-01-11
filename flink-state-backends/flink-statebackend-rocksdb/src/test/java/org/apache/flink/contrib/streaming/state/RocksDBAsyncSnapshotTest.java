@@ -508,7 +508,7 @@ public class RocksDBAsyncSnapshotTest extends TestLogger {
 			// also get the state in open, this way we are sure that it was created before
 			// we trigger the test checkpoint
 			ValueState<String> state =
-				getState(new ValueStateDescriptor<>("count", StringSerializer.INSTANCE));
+				getPartitionedState(new ValueStateDescriptor<>("count", StringSerializer.INSTANCE));
 		}
 
 		@Override
@@ -516,7 +516,7 @@ public class RocksDBAsyncSnapshotTest extends TestLogger {
 			// we also don't care
 
 			ValueState<String> state =
-				getState(new ValueStateDescriptor<>("count", StringSerializer.INSTANCE));
+				getPartitionedState(new ValueStateDescriptor<>("count", StringSerializer.INSTANCE));
 
 			state.update(element.getValue());
 		}

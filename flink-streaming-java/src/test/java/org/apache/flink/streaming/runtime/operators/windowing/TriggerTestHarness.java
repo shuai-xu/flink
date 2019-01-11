@@ -32,6 +32,7 @@ import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.runtime.operators.testutils.DummyEnvironment;
 import org.apache.flink.runtime.state.heap.HeapInternalStateBackend;
+import org.apache.flink.runtime.state.internal.InternalMergingState;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.InternalTimerService;
@@ -39,8 +40,6 @@ import org.apache.flink.streaming.api.operators.KeyContext;
 import org.apache.flink.streaming.api.operators.Output;
 import org.apache.flink.streaming.api.operators.StreamTaskStateInitializerImpl;
 import org.apache.flink.streaming.api.operators.TestInternalTimerService;
-import org.apache.flink.streaming.api.operators.state.ContextMergingState;
-import org.apache.flink.streaming.api.operators.state.ContextSubKeyedAppendingState;
 import org.apache.flink.streaming.api.windowing.triggers.Trigger;
 import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
 import org.apache.flink.streaming.api.windowing.windows.Window;
@@ -339,8 +338,8 @@ public class TriggerTestHarness<T, W extends Window> {
 		@Override
 		public <S extends State> S getPartitionedState(StateDescriptor<S, ?> stateDescriptor) {
 			try {
-				return operator.getContextSubKeyedStateBinder()
-					.getSubKeyedStateWithNamespace(stateDescriptor, window, windowSerializer);
+				return operator.getContextStateHelper()
+					.getPartitionedState(window, windowSerializer, stateDescriptor);
 			} catch (Exception e) {
 				throw new RuntimeException("Error getting state", e);
 			}
@@ -378,10 +377,11 @@ public class TriggerTestHarness<T, W extends Window> {
 		@Override
 		public <S extends MergingState<?, ?>> void mergePartitionedState(StateDescriptor<S, ?> stateDescriptor) {
 			try {
-				ContextSubKeyedAppendingState<W, ?, ?> state =
-					operator.getContextSubKeyedStateBinder().getContextSubKeyedAppendingState(stateDescriptor, windowSerializer);
-				if (state instanceof ContextMergingState) {
-					((ContextMergingState<W>) state).mergeNamespaces(window, mergedWindows);
+				S rawState = operator.getContextStateHelper().getOrCreateKeyedState(windowSerializer, stateDescriptor);
+				if (rawState instanceof InternalMergingState) {
+					@SuppressWarnings("unchecked")
+					InternalMergingState<K, W, ?, ?, ?> mergingState = (InternalMergingState<K, W, ?, ?, ?>) rawState;
+					mergingState.mergeNamespaces(window, mergedWindows);
 				} else {
 					throw new IllegalArgumentException(
 						"The given state descriptor does not refer to a mergeable state (MergingState)");

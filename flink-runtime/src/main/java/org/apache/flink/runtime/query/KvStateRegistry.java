@@ -24,7 +24,6 @@ import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.internal.InternalKvState;
-import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.runtime.taskmanager.Task;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -82,11 +81,11 @@ public class KvStateRegistry {
 	 * @return Assigned KvStateID
 	 */
 	public KvStateID registerKvState(
-			JobID jobId,
-			JobVertexID jobVertexId,
-			KeyGroupRange keyGroupRange,
-			String registrationName,
-			KeyedState<?, ?> kvState) {
+		JobID jobId,
+		JobVertexID jobVertexId,
+		KeyGroupRange keyGroupRange,
+		String registrationName,
+		InternalKvState<?, ?, ?> kvState) {
 
 		KvStateID kvStateId = new KvStateID();
 
@@ -105,7 +104,7 @@ public class KvStateRegistry {
 			return kvStateId;
 		} else {
 			throw new IllegalStateException(
-					"State \"" + registrationName + " \"(id=" + kvStateId + ") appears registered although it should not.");
+				"State \"" + registrationName + " \"(id=" + kvStateId + ") appears registered although it should not.");
 		}
 	}
 

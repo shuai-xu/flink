@@ -571,5 +571,7 @@ public interface RuntimeContext {
 	 *                                       function (function is not part of a KeyedStream).
 	 */
 	@PublicEvolving
-	<UK, UV> SortedMapState<UK, UV> getSortedMapState(SortedMapStateDescriptor<UK, UV> stateProperties);
+	default <UK, UV> SortedMapState<UK, UV> getSortedMapState(SortedMapStateDescriptor<UK, UV> stateProperties) {
+		throw new UnsupportedOperationException("This state is only accessible by functions executed on a KeyedStream");
+	}
 }

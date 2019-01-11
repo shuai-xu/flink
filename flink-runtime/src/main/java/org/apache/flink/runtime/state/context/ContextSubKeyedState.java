@@ -16,15 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.api.operators.state;
+package org.apache.flink.runtime.state.context;
 
-import org.apache.flink.api.common.state.AppendingState;
+import org.apache.flink.runtime.state.internal.InternalKvState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
 
 /**
- * used for appending state.
+ * used to get current key and namespace.
  * @param <N>
- * @param <IN>
- * @param <OUT>
  */
-public interface ContextSubKeyedAppendingState<N, IN, OUT> extends ContextSubKeyedState<N>, AppendingState<IN, OUT> {
+public interface ContextSubKeyedState<K, N, V> extends InternalKvState<K, N, V> {
+
+	/**
+	 * Returns the backed {@link SubKeyedState}.
+	 */
+	SubKeyedState<K, N, V> getSubKeyedState();
 }

@@ -131,18 +131,18 @@ public abstract class AbstractInternalStateBackend implements
 	/**
 	 * Creates the state storage described by the given keyed descriptor.
 	 *
-	 * @param descriptor The descriptor of the state storage to be created.
+	 * @param stateMetaInfo The descriptor of the state storage to be created.
 	 * @return The state storage described by the given descriptor.
 	 */
-	protected abstract StateStorage getOrCreateStateStorageForKeyedState(KeyedStateDescriptor descriptor);
+	protected abstract StateStorage getOrCreateStateStorageForKeyedState(RegisteredStateMetaInfo stateMetaInfo);
 
 	/**
 	 * Creates the state storage described by the given sub-keyed descriptor.
 	 *
-	 * @param descriptor The descriptor of the state storage to be created.
+	 * @param stateMetaInfo The descriptor of the state storage to be created.
 	 * @return The state storage described by the given descriptor.
 	 */
-	protected abstract StateStorage getOrCreateStateStorageForSubKeyedState(SubKeyedStateDescriptor descriptor);
+	protected abstract StateStorage getOrCreateStateStorageForSubKeyedState(RegisteredStateMetaInfo stateMetaInfo);
 
 	//--------------------------------------------------------------------------
 
@@ -197,6 +197,10 @@ public abstract class AbstractInternalStateBackend implements
 
 	public Map<String, RegisteredStateMetaInfo> getRegisteredStateMetaInfos() {
 		return registeredStateMetaInfos;
+	}
+
+	public TaskKvStateRegistry getKvStateRegistry() {
+		return kvStateRegistry;
 	}
 
 	@Override
@@ -255,12 +259,10 @@ public abstract class AbstractInternalStateBackend implements
 		KeyedValueState<K, V> keyedState = (KeyedValueState<K, V>) keyedStates.get(stateName);
 
 		if (keyedState == null) {
-			tryRegisterStateMetaInfo(keyedStateDescriptor);
-			StateStorage stateStorage = getOrCreateStateStorageForKeyedState(keyedStateDescriptor);
+			RegisteredStateMetaInfo newStateMetaInfo = tryRegisterStateMetaInfo(keyedStateDescriptor);
+			StateStorage stateStorage = getOrCreateStateStorageForKeyedState(newStateMetaInfo);
 			keyedState = new KeyedValueStateImpl<>(this, keyedStateDescriptor, stateStorage);
 			keyedStates.put(stateName, keyedState);
-
-			registerQueryableStateIfNeeded(keyedStateDescriptor, keyedState);
 		}
 
 		return keyedState;
@@ -272,12 +274,10 @@ public abstract class AbstractInternalStateBackend implements
 		KeyedListState<K, E> keyedState = (KeyedListState<K, E>) keyedStates.get(stateName);
 
 		if (keyedState == null) {
-			tryRegisterStateMetaInfo(keyedStateDescriptor);
-			StateStorage stateStorage = getOrCreateStateStorageForKeyedState(keyedStateDescriptor);
+			RegisteredStateMetaInfo newStateMetaInfo = tryRegisterStateMetaInfo(keyedStateDescriptor);
+			StateStorage stateStorage = getOrCreateStateStorageForKeyedState(newStateMetaInfo);
 			keyedState = new KeyedListStateImpl<>(this, keyedStateDescriptor, stateStorage);
 			keyedStates.put(stateName, keyedState);
-
-			registerQueryableStateIfNeeded(keyedStateDescriptor, keyedState);
 		}
 
 		return keyedState;
@@ -289,12 +289,10 @@ public abstract class AbstractInternalStateBackend implements
 		KeyedMapState<K, MK, MV> keyedState = (KeyedMapState<K, MK, MV>) keyedStates.get(stateName);
 
 		if (keyedState == null) {
-			tryRegisterStateMetaInfo(keyedStateDescriptor);
-			StateStorage stateStorage = getOrCreateStateStorageForKeyedState(keyedStateDescriptor);
+			RegisteredStateMetaInfo newStateMetaInfo = tryRegisterStateMetaInfo(keyedStateDescriptor);
+			StateStorage stateStorage = getOrCreateStateStorageForKeyedState(newStateMetaInfo);
 			keyedState = new KeyedMapStateImpl<>(this, keyedStateDescriptor, stateStorage);
 			keyedStates.put(stateName, keyedState);
-
-			registerQueryableStateIfNeeded(keyedStateDescriptor, keyedState);
 		}
 
 		return keyedState;
@@ -306,12 +304,10 @@ public abstract class AbstractInternalStateBackend implements
 		KeyedSortedMapState<K, MK, MV> keyedState = (KeyedSortedMapState<K, MK, MV>) keyedStates.get(stateName);
 
 		if (keyedState == null) {
-			tryRegisterStateMetaInfo(keyedStateDescriptor);
-			StateStorage stateStorage = getOrCreateStateStorageForKeyedState(keyedStateDescriptor);
+			RegisteredStateMetaInfo newStateMetaInfo = tryRegisterStateMetaInfo(keyedStateDescriptor);
+			StateStorage stateStorage = getOrCreateStateStorageForKeyedState(newStateMetaInfo);
 			keyedState = new KeyedSortedMapStateImpl<>(this, keyedStateDescriptor, stateStorage);
 			keyedStates.put(stateName, keyedState);
-
-			registerQueryableStateIfNeeded(keyedStateDescriptor, keyedState);
 		}
 
 		return keyedState;
@@ -323,8 +319,8 @@ public abstract class AbstractInternalStateBackend implements
 		SubKeyedValueState<K, N, V> subKeyedState = (SubKeyedValueState<K, N, V>) subKeyedStates.get(stateName);
 
 		if (subKeyedState == null) {
-			tryRegisterStateMetaInfo(subKeyedStateDescriptor);
-			StateStorage stateStorage = getOrCreateStateStorageForSubKeyedState(subKeyedStateDescriptor);
+			RegisteredStateMetaInfo newStateMetaInfo = tryRegisterStateMetaInfo(subKeyedStateDescriptor);
+			StateStorage stateStorage = getOrCreateStateStorageForSubKeyedState(newStateMetaInfo);
 			subKeyedState = new SubKeyedValueStateImpl<>(this, subKeyedStateDescriptor, stateStorage);
 			subKeyedStates.put(stateName, subKeyedState);
 		}
@@ -338,8 +334,8 @@ public abstract class AbstractInternalStateBackend implements
 		SubKeyedListState<K, N, E> subKeyedState = (SubKeyedListState<K, N, E>) subKeyedStates.get(stateName);
 
 		if (subKeyedState == null) {
-			tryRegisterStateMetaInfo(subKeyedStateDescriptor);
-			StateStorage stateStorage = getOrCreateStateStorageForSubKeyedState(subKeyedStateDescriptor);
+			RegisteredStateMetaInfo newStateMetaInfo = tryRegisterStateMetaInfo(subKeyedStateDescriptor);
+			StateStorage stateStorage = getOrCreateStateStorageForSubKeyedState(newStateMetaInfo);
 			subKeyedState = new SubKeyedListStateImpl<>(this, subKeyedStateDescriptor, stateStorage);
 			subKeyedStates.put(stateName, subKeyedState);
 		}
@@ -353,8 +349,8 @@ public abstract class AbstractInternalStateBackend implements
 		SubKeyedMapState<K, N, MK, MV> subKeyedState = (SubKeyedMapState<K, N, MK, MV>) subKeyedStates.get(stateName);
 
 		if (subKeyedState == null) {
-			tryRegisterStateMetaInfo(subKeyedStateDescriptor);
-			StateStorage stateStorage = getOrCreateStateStorageForSubKeyedState(subKeyedStateDescriptor);
+			RegisteredStateMetaInfo newStateMetaInfo = tryRegisterStateMetaInfo(subKeyedStateDescriptor);
+			StateStorage stateStorage = getOrCreateStateStorageForSubKeyedState(newStateMetaInfo);
 			subKeyedState = new SubKeyedMapStateImpl<>(this, subKeyedStateDescriptor, stateStorage);
 			subKeyedStates.put(stateName, subKeyedState);
 		}
@@ -368,8 +364,8 @@ public abstract class AbstractInternalStateBackend implements
 		SubKeyedSortedMapState<K, N, MK, MV> subKeyedState = (SubKeyedSortedMapState<K, N, MK, MV>) subKeyedStates.get(stateName);
 
 		if (subKeyedState == null) {
-			tryRegisterStateMetaInfo(subKeyedStateDescriptor);
-			StateStorage stateStorage = getOrCreateStateStorageForSubKeyedState(subKeyedStateDescriptor);
+			RegisteredStateMetaInfo newStateMetaInfo = tryRegisterStateMetaInfo(subKeyedStateDescriptor);
+			StateStorage stateStorage = getOrCreateStateStorageForSubKeyedState(newStateMetaInfo);
 			subKeyedState = new SubKeyedSortedMapStateImpl<>(this, subKeyedStateDescriptor, stateStorage);
 			subKeyedStates.put(stateName, subKeyedState);
 		}
@@ -379,7 +375,7 @@ public abstract class AbstractInternalStateBackend implements
 
 	//--------------------------------------------------------------------------
 
-	private void tryRegisterStateMetaInfo(KeyedStateDescriptor stateDescriptor) throws StateMigrationException {
+	private RegisteredStateMetaInfo tryRegisterStateMetaInfo(KeyedStateDescriptor stateDescriptor) throws StateMigrationException {
 		Preconditions.checkNotNull(stateDescriptor);
 
 		String stateName = stateDescriptor.getName();
@@ -398,10 +394,13 @@ public abstract class AbstractInternalStateBackend implements
 				stateDescriptor.getStateType(), stateName, stateDescriptor.getKeySerializer(), stateDescriptor.getValueSerializer());
 		}
 
+		stateDescriptor.setKeySerializer(stateInfo.getKeySerializer());
+		stateDescriptor.setValueSerializer(stateInfo.getValueSerializer());
 		registeredStateMetaInfos.put(stateName, stateInfo);
+		return stateInfo;
 	}
 
-	private void tryRegisterStateMetaInfo(SubKeyedStateDescriptor stateDescriptor) throws StateMigrationException {
+	private RegisteredStateMetaInfo tryRegisterStateMetaInfo(SubKeyedStateDescriptor stateDescriptor) throws StateMigrationException {
 		Preconditions.checkNotNull(stateDescriptor);
 
 		String stateName = stateDescriptor.getName();
@@ -421,15 +420,7 @@ public abstract class AbstractInternalStateBackend implements
 		}
 
 		registeredStateMetaInfos.put(stateName, stateInfo);
-	}
-
-	private void registerQueryableStateIfNeeded(KeyedStateDescriptor descriptor, KeyedState state) {
-		if (descriptor.isQueryable()) {
-			if (kvStateRegistry == null) {
-				throw new IllegalStateException("State backend has not been initialized for job.");
-			}
-			this.kvStateRegistry.registerKvState(keyGroupRange, descriptor.getQueryableStateName(), state);
-		}
+		return stateInfo;
 	}
 
 	@Override

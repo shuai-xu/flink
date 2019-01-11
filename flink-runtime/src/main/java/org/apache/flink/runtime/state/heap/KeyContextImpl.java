@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.api.operators;
+package org.apache.flink.runtime.state.heap;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.state.KeyGroupRange;
@@ -79,7 +79,7 @@ public class KeyContextImpl<K> implements InternalKeyContext {
 	}
 
 	@Override
-	public TypeSerializer getKeySerializer() {
+	public TypeSerializer<K> getKeySerializer() {
 		return keySerializer;
 	}
 }

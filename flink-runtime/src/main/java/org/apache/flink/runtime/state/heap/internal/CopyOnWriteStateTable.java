@@ -19,7 +19,7 @@
 package org.apache.flink.runtime.state.heap.internal;
 
 import org.apache.flink.annotation.VisibleForTesting;
-import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.runtime.state.RegisteredStateMetaInfo;
 import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.util.MathUtils;
@@ -198,12 +198,13 @@ public class CopyOnWriteStateTable<K, N, S> extends StateTable<K, N, S> implemen
 	 */
 	public CopyOnWriteStateTable(
 		AbstractInternalStateBackend internalStateBackend,
-		TypeSerializer<K> keySerializer,
-		TypeSerializer<N> namespaceSerializer,
-		TypeSerializer<S> stateSerializer,
+		RegisteredStateMetaInfo stateMetaInfo,
 		boolean usingNamespace
 	) {
-		this(internalStateBackend, keySerializer, namespaceSerializer, stateSerializer, usingNamespace, 1024);
+		this(internalStateBackend,
+			stateMetaInfo,
+			usingNamespace,
+			1024);
 	}
 
 	/**
@@ -215,13 +216,11 @@ public class CopyOnWriteStateTable<K, N, S> extends StateTable<K, N, S> implemen
 	@SuppressWarnings("unchecked")
 	private CopyOnWriteStateTable(
 		AbstractInternalStateBackend internalStateBackend,
-		TypeSerializer<K> keySerializer,
-		TypeSerializer<N> namespaceSerializer,
-		TypeSerializer<S> stateSerializer,
+		RegisteredStateMetaInfo stateMetaInfo,
 		boolean usingNamespace,
 		int capacity
 	) {
-		super(internalStateBackend, keySerializer, namespaceSerializer, stateSerializer, usingNamespace);
+		super(internalStateBackend, stateMetaInfo, usingNamespace);
 
 		// initialized tables to EMPTY_TABLE.
 		this.primaryTable = (StateTableEntry<K, N, S>[]) EMPTY_TABLE;

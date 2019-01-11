@@ -16,15 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.api.operators.state;
+package org.apache.flink.runtime.state.context;
 
-import java.util.Collection;
+import org.apache.flink.api.common.state.AppendingState;
 
 /**
- * for namespace merging.
+ * used for appending state.
  * @param <N>
+ * @param <IN>
+ * @param <OUT>
  */
-public interface ContextMergingState<N> {
-
-	void mergeNamespaces(N target, Collection<N> sources) throws Exception;
+public interface ContextSubKeyedAppendingState<K, N, IN, SV, OUT> extends ContextSubKeyedState<K, N, SV>, AppendingState<IN, OUT> {
 }

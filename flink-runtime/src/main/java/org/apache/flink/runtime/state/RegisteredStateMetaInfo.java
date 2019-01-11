@@ -32,8 +32,6 @@ import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.StateMigrationException;
 
-import javax.annotation.Nullable;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Objects;
@@ -50,7 +48,6 @@ public class RegisteredStateMetaInfo {
 	private final String name;
 	private final TypeSerializer keySerializer;
 	private final TypeSerializer valueSerializer;
-	@Nullable
 	private final TypeSerializer namespaceSerializer;
 
 	private RegisteredStateMetaInfo(
@@ -81,7 +78,7 @@ public class RegisteredStateMetaInfo {
 		this.keySerializer = checkNotNull(keySerializer);
 		this.valueSerializer = checkNotNull(valueSerializer);
 		checkValueSerializerType(internalStateType, valueSerializer);
-		this.namespaceSerializer = null;
+		this.namespaceSerializer = VoidNamespaceSerializer.INSTANCE;
 	}
 
 	private void checkValueSerializerType(InternalStateType internalStateType, TypeSerializer valueSerializer) {
@@ -111,10 +108,10 @@ public class RegisteredStateMetaInfo {
 			name,
 			keySerializer.duplicate(),
 			valueSerializer.duplicate(),
-			namespaceSerializer == null ? null : namespaceSerializer.duplicate(),
+			namespaceSerializer.duplicate(),
 			keySerializer.snapshotConfiguration(),
 			valueSerializer.snapshotConfiguration(),
-			namespaceSerializer == null ? null : namespaceSerializer.snapshotConfiguration());
+			namespaceSerializer.snapshotConfiguration());
 	}
 
 	public InternalStateType getStateType() {
@@ -133,7 +130,7 @@ public class RegisteredStateMetaInfo {
 		return valueSerializer;
 	}
 
-	@Nullable public TypeSerializer getNamespaceSerializer() {
+	public TypeSerializer getNamespaceSerializer() {
 		return namespaceSerializer;
 	}
 
@@ -183,9 +180,7 @@ public class RegisteredStateMetaInfo {
 		result = 31 * result + getStateType().hashCode();
 		result = 31 * result + getKeySerializer().hashCode();
 		result = 31 * result + getValueSerializer().hashCode();
-		if (getNamespaceSerializer() != null) {
-			result = 31 * result + getNamespaceSerializer().hashCode();
-		}
+		result = 31 * result + getNamespaceSerializer().hashCode();
 		return result;
 	}
 
@@ -250,7 +245,7 @@ public class RegisteredStateMetaInfo {
 		StateMetaInfoSnapshot restoreStateMetaInfoSnapshot,
 		KeyedStateDescriptor newKeyedStateDescriptor) throws StateMigrationException {
 
-		if (restoreStateMetaInfoSnapshot.getNamespaceSerializer() != null) {
+		if (!VoidNamespaceSerializer.INSTANCE.equals(restoreStateMetaInfoSnapshot.getNamespaceSerializer())) {
 			throw new IllegalStateException("Expected Keyed state's meta info snapshot.");
 		}
 

@@ -23,43 +23,128 @@ import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
-import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.queryablestate.KvStateID;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.state.KeyGroupRange;
-import org.apache.flink.runtime.state.TestLocalRecoveryConfig;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
-import org.apache.flink.runtime.state.heap.HeapInternalStateBackend;
 import org.apache.flink.runtime.state.internal.InternalKvState;
-import org.apache.flink.runtime.state.keyed.KeyedValueState;
-import org.apache.flink.runtime.state.keyed.KeyedValueStateDescriptor;
 import org.apache.flink.util.TestLogger;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 /**
  * Tests for the {@link KvStateRegistry}.
  */
 public class KvStateRegistryTest extends TestLogger {
 
+	@Test
+	public void testKvStateEntry() throws InterruptedException {
+		final int threads = 10;
+
+		final CountDownLatch latch1 = new CountDownLatch(threads);
+		final CountDownLatch latch2 = new CountDownLatch(1);
+
+		final List<KvStateInfo<?, ?, ?>> infos = Collections.synchronizedList(new ArrayList<>());
+
+		final JobID jobID = new JobID();
+
+		final JobVertexID jobVertexId = new JobVertexID();
+		final KeyGroupRange keyGroupRange = new KeyGroupRange(0, 1);
+		final String registrationName = "foobar";
+
+		final KvStateRegistry kvStateRegistry = new KvStateRegistry();
+		final KvStateID stateID = kvStateRegistry.registerKvState(
+			jobID,
+			jobVertexId,
+			keyGroupRange,
+			registrationName,
+			new DummyKvState()
+		);
+
+		final AtomicReference<Throwable> exceptionHolder = new AtomicReference<>();
+
+		for (int i = 0; i < threads; i++) {
+			new Thread(() -> {
+				final KvStateEntry<?, ?, ?> kvState = kvStateRegistry.getKvState(stateID);
+				final KvStateInfo<?, ?, ?> stateInfo = kvState.getInfoForCurrentThread();
+				infos.add(stateInfo);
+
+				latch1.countDown();
+				try {
+					latch2.await();
+				} catch (InterruptedException e) {
+					// compare and set, so that we do not overwrite an exception
+					// that was (potentially) already encountered.
+					exceptionHolder.compareAndSet(null, e);
+				}
+
+			}).start();
+		}
+
+		latch1.await();
+
+		final KvStateEntry<?, ?, ?> kvState = kvStateRegistry.getKvState(stateID);
+
+		// verify that all the threads are done correctly.
+		Assert.assertEquals(threads, infos.size());
+		Assert.assertEquals(threads, kvState.getCacheSize());
+
+		latch2.countDown();
+
+		for (KvStateInfo<?, ?, ?> infoA: infos) {
+			boolean instanceAlreadyFound = false;
+			for (KvStateInfo<?, ?, ?> infoB: infos) {
+				if (infoA == infoB) {
+					if (instanceAlreadyFound) {
+						Assert.fail("More than one thread sharing the same serializer instance.");
+					}
+					instanceAlreadyFound = true;
+				} else {
+					Assert.assertEquals(infoA, infoB);
+				}
+			}
+		}
+
+		kvStateRegistry.unregisterKvState(
+			jobID,
+			jobVertexId,
+			keyGroupRange,
+			registrationName,
+			stateID);
+
+		Assert.assertEquals(0L, kvState.getCacheSize());
+
+		Throwable t = exceptionHolder.get();
+		if (t != null) {
+			fail(t.getMessage());
+		}
+	}
+
 	/**
 	 * Tests that {@link KvStateRegistryListener} only receive the notifications which
 	 * are destined for them.
 	 */
 	@Test
-	public void testKvStateRegistryListenerNotification() throws Exception {
+	public void testKvStateRegistryListenerNotification() {
 		final JobID jobId1 = new JobID();
 		final JobID jobId2 = new JobID();
 
@@ -83,22 +168,12 @@ public class KvStateRegistryTest extends TestLogger {
 		final JobVertexID jobVertexId = new JobVertexID();
 		final KeyGroupRange keyGroupRange = new KeyGroupRange(0, 1);
 		final String registrationName = "foobar";
-		HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
-			2,
-			keyGroupRange,
-			Thread.currentThread().getContextClassLoader(),
-			TestLocalRecoveryConfig.disabled(),
-			kvStateRegistry.createTaskRegistry(new JobID(), new JobVertexID()));
-		KeyedValueStateDescriptor<Integer, String> desc = new KeyedValueStateDescriptor<>("any", IntSerializer.INSTANCE, StringSerializer.INSTANCE);
-		desc.setQueryable("foobar");
-		KeyedValueState<Integer, String> state = heapBackend.getKeyedState(desc);
-
 		final KvStateID kvStateID = kvStateRegistry.registerKvState(
 			jobId1,
 			jobVertexId,
 			keyGroupRange,
 			registrationName,
-			state);
+			new DummyKvState());
 
 		assertThat(registeredNotifications1.poll(), equalTo(jobId1));
 		assertThat(registeredNotifications2.isEmpty(), is(true));
@@ -111,7 +186,7 @@ public class KvStateRegistryTest extends TestLogger {
 			jobVertexId2,
 			keyGroupRange2,
 			registrationName2,
-			state);
+			new DummyKvState());
 
 		assertThat(registeredNotifications2.poll(), equalTo(jobId2));
 		assertThat(registeredNotifications1.isEmpty(), is(true));
@@ -142,7 +217,7 @@ public class KvStateRegistryTest extends TestLogger {
 	 * will be used for all notifications.
 	 */
 	@Test
-	public void testLegacyCodePathPreference() throws Exception {
+	public void testLegacyCodePathPreference() {
 		final KvStateRegistry kvStateRegistry = new KvStateRegistry();
 		final ArrayDeque<JobID> stateRegistrationNotifications = new ArrayDeque<>(2);
 		final ArrayDeque<JobID> stateDeregistrationNotifications = new ArrayDeque<>(2);
@@ -164,24 +239,12 @@ public class KvStateRegistryTest extends TestLogger {
 
 		final KeyGroupRange keyGroupRange = new KeyGroupRange(0, 1);
 		final String registrationName = "registrationName";
-
-		HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
-			2,
-			keyGroupRange,
-			Thread.currentThread().getContextClassLoader(),
-			TestLocalRecoveryConfig.disabled(),
-			kvStateRegistry.createTaskRegistry(jobId, new JobVertexID()));
-
-		KeyedValueStateDescriptor<Integer, String> desc = new KeyedValueStateDescriptor<>("any", IntSerializer.INSTANCE, StringSerializer.INSTANCE);
-		desc.setQueryable(registrationName);
-		KeyedValueState<Integer, String> state = heapBackend.getKeyedState(desc);
-
 		final KvStateID kvStateID = kvStateRegistry.registerKvState(
 			jobId,
 			jobVertexId,
 			keyGroupRange,
 			registrationName,
-			state);
+			new DummyKvState());
 
 		assertThat(stateRegistrationNotifications.poll(), equalTo(jobId));
 		// another listener should not have received any notifications
@@ -208,8 +271,8 @@ public class KvStateRegistryTest extends TestLogger {
 		private final Queue<JobID> stateDeregisteredNotifications;
 
 		private TestingKvStateRegistryListener(
-				Queue<JobID> stateRegisteredNotifications,
-				Queue<JobID> stateDeregisteredNotifications) {
+			Queue<JobID> stateRegisteredNotifications,
+			Queue<JobID> stateDeregisteredNotifications) {
 			this.stateRegisteredNotifications = stateRegisteredNotifications;
 			this.stateDeregisteredNotifications = stateDeregisteredNotifications;
 		}

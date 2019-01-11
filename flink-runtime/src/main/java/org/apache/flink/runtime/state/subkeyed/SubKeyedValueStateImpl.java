@@ -22,9 +22,11 @@ import org.apache.flink.api.common.functions.HashPartitioner;
 import org.apache.flink.api.common.typeutils.SerializationException;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
+import org.apache.flink.queryablestate.client.state.serialization.KvStateSerializer;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.StateAccessException;
 import org.apache.flink.runtime.state.StateSerializerUtil;
@@ -178,17 +180,8 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 				V value = (V) heapStateStorage.get(key);
 				return value == null ? defaultValue : value;
 			} else {
-				outputStream.reset();
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedValueState(
-					outputStream,
-					outputView,
-					key,
-					keySerializer,
-					namespace,
-					namespaceSerializer,
-					getKeyGroup(key),
-					stateNameForSerialize);
-				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
+				byte[] serializedValue = getSerializedValue(key, namespace, outputStream, outputView, keySerializer, namespaceSerializer);
+
 				if (serializedValue == null) {
 					return defaultValue;
 				} else {
@@ -427,6 +420,50 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 	@Override
 	public StateStorage<K, V> getStateStorage() {
 		return stateStorage;
+	}
+
+	@Override
+	public byte[] getSerializedValue(
+		byte[] serializedKeyAndNamespace,
+		TypeSerializer<K> safeKeySerializer,
+		TypeSerializer<N> safeNamespaceSerializer,
+		TypeSerializer<V> safeValueSerializer) throws Exception {
+
+		Tuple2<K, N> keyAndNamespace = KvStateSerializer.deserializeKeyAndNamespace(serializedKeyAndNamespace, safeKeySerializer, safeNamespaceSerializer);
+
+		if (stateStorage.lazySerde()) {
+			V value = get(keyAndNamespace.f0, keyAndNamespace.f1);
+			if (value == null) {
+				return null;
+			}
+			return KvStateSerializer.serializeValue(value, safeValueSerializer);
+		} else {
+			ByteArrayOutputStreamWithPos baos = new ByteArrayOutputStreamWithPos();
+			DataOutputViewStreamWrapper view = new DataOutputViewStreamWrapper(baos);
+
+			return getSerializedValue(keyAndNamespace.f0, keyAndNamespace.f1, baos, view, safeKeySerializer, safeNamespaceSerializer);
+		}
+	}
+
+	private byte[] getSerializedValue(
+		K key,
+		N namespace,
+		ByteArrayOutputStreamWithPos outputStream,
+		DataOutputView outputView,
+		TypeSerializer<K> keySerializer,
+		TypeSerializer<N> safeNamespaceSerializer) throws Exception {
+
+		outputStream.reset();
+		byte[] serializedKey = StateSerializerUtil.getSerializedKeyForSubKeyedValueState(
+			outputStream,
+			outputView,
+			key,
+			keySerializer,
+			namespace,
+			safeNamespaceSerializer,
+			getKeyGroup(key),
+			stateNameForSerialize);
+		return (byte[]) stateStorage.get(serializedKey);
 	}
 
 	@Override

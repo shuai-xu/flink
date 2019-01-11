@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.state.keyed;
 
+import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.state.StateStorage;
 
 import java.util.Collection;
@@ -114,11 +115,20 @@ public interface KeyedState<K, V> {
 	 *
 	 * <p>If no value is associated with key, <code>null</code> is returned.
 	 *
-	 * @param serializedKey Serialized key
+	 * <p><b>TO IMPLEMENTERS:</b> This method is called by multiple threads. Anything
+	 * stateful (e.g. serializers) should be either duplicated or protected from undesired
+	 * consequences of concurrent invocations.
+	 *
+	 * @param serializedKeyAndNamespace Serialized key and namespace
+	 * @param safeKeySerializer A key serializer which is safe to be used even in multi-threaded context
+	 * @param safeValueSerializer A value serializer which is safe to be used even in multi-threaded context
 	 * @return Serialized value or <code>null</code> if no value is associated with the key.
 	 * @throws Exception Exceptions during serialization are forwarded
 	 */
-	byte[] getSerializedValue(byte[] serializedKey) throws Exception;
+	byte[] getSerializedValue(
+		final byte[] serializedKeyAndNamespace,
+		final TypeSerializer<K> safeKeySerializer,
+		final TypeSerializer<V> safeValueSerializer) throws Exception;
 
 	/**
 	 * Returns the state storage within this keyed state.

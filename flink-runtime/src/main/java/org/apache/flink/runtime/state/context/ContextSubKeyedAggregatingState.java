@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.api.operators.state;
+package org.apache.flink.runtime.state.context;
 
 import org.apache.flink.api.common.functions.AggregateFunction;
-import org.apache.flink.api.common.state.AggregatingState;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.state.StateTransformationFunction;
+import org.apache.flink.runtime.state.heap.KeyContextImpl;
+import org.apache.flink.runtime.state.internal.InternalAggregatingState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedValueState;
-import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.util.Preconditions;
 
 import java.util.Collection;
@@ -34,12 +36,12 @@ import java.util.Collection;
  * @param <ACC>
  * @param <OUT>
  */
-public class ContextSubKeyedAggregatingState<N, IN, ACC, OUT>
-	implements ContextSubKeyedAppendingState<N, IN, OUT>, ContextMergingState<N>, AggregatingState<IN, OUT> {
+public class ContextSubKeyedAggregatingState<K, N, IN, ACC, OUT>
+	implements ContextSubKeyedAppendingState<K, N, IN, ACC, OUT>, InternalAggregatingState<K, N, IN, ACC, OUT> {
 
 	private N namespace;
 
-	private final AbstractStreamOperator<?> operator;
+	private final KeyContextImpl<K> operator;
 
 	private final SubKeyedValueState<Object, N, ACC> subKeyedValueState;
 
@@ -48,7 +50,7 @@ public class ContextSubKeyedAggregatingState<N, IN, ACC, OUT>
 	private final MergeTransformation mergeTransformation;
 
 	public ContextSubKeyedAggregatingState(
-		AbstractStreamOperator<?> operator,
+		KeyContextImpl<K> operator,
 		SubKeyedValueState<Object, N, ACC> subKeyedValueState,
 		AggregateFunction<IN, ACC, OUT> aggregateFunction) {
 		Preconditions.checkNotNull(operator);
@@ -62,33 +64,18 @@ public class ContextSubKeyedAggregatingState<N, IN, ACC, OUT>
 
 	@Override
 	public OUT get() {
-		ACC accumulator = subKeyedValueState.get(getCurrentKey(), getNamespace());
+		ACC accumulator = subKeyedValueState.get(operator.getCurrentKey(), namespace);
 		return accumulator == null ? null : aggregateTransformation.aggregateFunction.getResult(accumulator);
 	}
 
 	@Override
 	public void add(IN value) {
-		subKeyedValueState.transform(getCurrentKey(), getNamespace(), value, aggregateTransformation);
+		subKeyedValueState.transform(operator.getCurrentKey(), namespace, value, aggregateTransformation);
 	}
 
 	@Override
 	public void clear() {
-		subKeyedValueState.remove(getCurrentKey(), getNamespace());
-	}
-
-	@Override
-	public Object getCurrentKey() {
-		return operator.getCurrentKey();
-	}
-
-	@Override
-	public N getNamespace() {
-		return namespace;
-	}
-
-	@Override
-	public void setNamespace(N namespace) {
-		this.namespace = namespace;
+		subKeyedValueState.remove(operator.getCurrentKey(), namespace);
 	}
 
 	@Override
@@ -97,7 +84,7 @@ public class ContextSubKeyedAggregatingState<N, IN, ACC, OUT>
 			return; // nothing to do
 		}
 
-		Object currentKey = getCurrentKey();
+		Object currentKey = operator.getCurrentKey();
 		ACC merged = null;
 
 		// merge the sources
@@ -117,6 +104,41 @@ public class ContextSubKeyedAggregatingState<N, IN, ACC, OUT>
 		if (merged != null) {
 			subKeyedValueState.transform(currentKey, target, merged, mergeTransformation);
 		}
+	}
+
+	@Override
+	public TypeSerializer<K> getKeySerializer() {
+		return operator.getKeySerializer();
+	}
+
+	@Override
+	public TypeSerializer<N> getNamespaceSerializer() {
+		return subKeyedValueState.getDescriptor().getNamespaceSerializer();
+	}
+
+	@Override
+	public TypeSerializer<ACC> getValueSerializer() {
+		return subKeyedValueState.getDescriptor().getValueSerializer();
+	}
+
+	@Override
+	public void setCurrentNamespace(N namespace) {
+		this.namespace = namespace;
+	}
+
+	@Override
+	public byte[] getSerializedValue(
+		byte[] serializedKeyAndNamespace,
+		TypeSerializer safeKeySerializer,
+		TypeSerializer safeNamespaceSerializer,
+		TypeSerializer safeValueSerializer) throws Exception {
+
+		return subKeyedValueState.getSerializedValue(serializedKeyAndNamespace, safeKeySerializer, safeNamespaceSerializer, safeValueSerializer);
+	}
+
+	@Override
+	public SubKeyedState<K, N, ACC> getSubKeyedState() {
+		return (SubKeyedState<K, N, ACC>) subKeyedValueState;
 	}
 
 	private class AggregateTransformation implements StateTransformationFunction<ACC, IN> {

@@ -163,7 +163,7 @@ public class ImmutableSortedMapState<K, V> extends ImmutableState implements Sor
 	}
 
 	@Override
-	public void putAll(Map<? extends K, ? extends V> map) {
+	public void putAll(Map<K, V> map) {
 		throw MODIFICATION_ATTEMPT_ERROR;
 	}
 

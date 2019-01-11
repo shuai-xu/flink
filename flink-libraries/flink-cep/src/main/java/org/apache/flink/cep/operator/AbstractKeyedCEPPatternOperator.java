@@ -44,7 +44,7 @@ import org.apache.flink.runtime.state.KeyedStateFunction;
 import org.apache.flink.runtime.state.StateInitializationContext;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
-import org.apache.flink.runtime.state.keyed.ContextKeyedState;
+import org.apache.flink.runtime.state.context.ContextKeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedMapState;
 import org.apache.flink.runtime.state.keyed.KeyedMapStateDescriptor;
 import org.apache.flink.runtime.state.keyed.KeyedValueState;
@@ -170,7 +170,7 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 		ValueStateDescriptor<MigratedNFA<IN>> stateDescriptor = new ValueStateDescriptor<>(
 			"nfaOperatorStateName",
 			new NFA.NFASerializer<>(inputSerializer));
-		ValueState<MigratedNFA<IN>> state = stateDescriptor.bind(contextStateBinder);
+		ValueState<MigratedNFA<IN>> state = stateDescriptor.bind(contextStateHelper);
 		Preconditions.checkState(state instanceof ContextKeyedState, "Only apply to state warps on top of KeyedState");
 
 		KeyedStateFunction<Object, ValueState<MigratedNFA<IN>>> function = new KeyedStateFunction<Object, ValueState<MigratedNFA<IN>>>() {

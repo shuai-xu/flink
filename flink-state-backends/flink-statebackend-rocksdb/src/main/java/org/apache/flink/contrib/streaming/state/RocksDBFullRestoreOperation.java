@@ -31,8 +31,6 @@ import org.apache.flink.runtime.state.RegisteredStateMetaInfo;
 import org.apache.flink.runtime.state.StateAccessException;
 import org.apache.flink.runtime.state.StateMetaInfoSnapshot;
 import org.apache.flink.runtime.state.StreamStateHandle;
-import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
-import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.Preconditions;
 
@@ -42,7 +40,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -75,6 +72,9 @@ public class RocksDBFullRestoreOperation {
 
 		stateBackend.createDB();
 		for (KeyedStateHandle rawSnapshot : restoredSnapshots) {
+			if (rawSnapshot == null) {
+				continue;
+			}
 			Preconditions.checkState(rawSnapshot instanceof KeyGroupsStateSnapshot);
 			KeyGroupsStateSnapshot snapshot =
 				(KeyGroupsStateSnapshot) rawSnapshot;
@@ -98,22 +98,18 @@ public class RocksDBFullRestoreOperation {
 				serializationProxy.read(inputView);
 
 				List<StateMetaInfoSnapshot> keyedStateMetaInfos = serializationProxy.getKeyedStateMetaSnapshots();
-				List<KeyedStateDescriptor> keyedStateDescriptors = new ArrayList<>(keyedStateMetaInfos.size());
 				for (StateMetaInfoSnapshot keyedStateMetaSnapshot : keyedStateMetaInfos) {
 					String stateName = keyedStateMetaSnapshot.getName();
 					stateBackend.getRestoredKvStateMetaInfos().put(stateName, keyedStateMetaSnapshot);
-					keyedStateDescriptors.add(keyedStateMetaSnapshot.createKeyedStateDescriptor());
 
 					RegisteredStateMetaInfo keyedStateMetaInfo = RegisteredStateMetaInfo.createKeyedStateMetaInfo(keyedStateMetaSnapshot);
 					stateBackend.getRegisteredStateMetaInfos().put(stateName, keyedStateMetaInfo);
 				}
 
 				List<StateMetaInfoSnapshot> subKeyedStateMetaInfos = serializationProxy.getSubKeyedStateMetaSnapshots();
-				List<SubKeyedStateDescriptor> subKeyedStateDescriptors = new ArrayList<>(subKeyedStateMetaInfos.size());
 				for (StateMetaInfoSnapshot subKeyedStateMetaSnapshot : subKeyedStateMetaInfos) {
 					String stateName = subKeyedStateMetaSnapshot.getName();
 					stateBackend.getRestoredKvStateMetaInfos().put(stateName, subKeyedStateMetaSnapshot);
-					subKeyedStateDescriptors.add(subKeyedStateMetaSnapshot.createSubKeyedStateDescriptor());
 
 					RegisteredStateMetaInfo subKeyedStateMetaInfo = RegisteredStateMetaInfo.createSubKeyedStateMetaInfo(subKeyedStateMetaSnapshot);
 					stateBackend.getRegisteredStateMetaInfos().put(stateName, subKeyedStateMetaInfo);
@@ -128,7 +124,7 @@ public class RocksDBFullRestoreOperation {
 					id2StateName.put(id, stateName);
 				}
 
-				stateBackend.registerAllStates(keyedStateDescriptors, subKeyedStateDescriptors);
+				stateBackend.registerAllStates();
 				Map<Integer, Tuple2<Long, Integer>> metaInfos = snapshot.getMetaInfos();
 				restoreData(metaInfos, inputStream, inputView);
 			} finally {

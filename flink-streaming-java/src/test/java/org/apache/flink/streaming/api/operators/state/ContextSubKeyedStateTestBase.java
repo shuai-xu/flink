@@ -26,6 +26,9 @@ import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.runtime.state.StateBackend;
+import org.apache.flink.runtime.state.context.ContextStateHelper;
+import org.apache.flink.runtime.state.internal.InternalAggregatingState;
+import org.apache.flink.runtime.state.internal.InternalReducingState;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
@@ -48,7 +51,7 @@ public abstract class ContextSubKeyedStateTestBase {
 
 	protected IdleOperator<String, String> testOperator;
 
-	protected ContextSubKeyedStateBinder stateBinder;
+	protected ContextStateHelper stateBinder;
 
 	protected abstract StateBackend getStateBackend();
 
@@ -60,7 +63,8 @@ public abstract class ContextSubKeyedStateTestBase {
 		testHarness.setStateBackend(getStateBackend());
 		testHarness.open();
 
-		stateBinder = new ContextSubKeyedStateBinder(testOperator);
+		stateBinder = new ContextStateHelper(
+			testOperator.getKeyContext(), testOperator.getExecutionConfig(), testOperator.getInternalStateBackend());
 	}
 
 	@After
@@ -73,8 +77,8 @@ public abstract class ContextSubKeyedStateTestBase {
 		final ReducingStateDescriptor<Long> stateDescr =
 			new ReducingStateDescriptor<>("my-state", (a, b) -> a + b, Long.class);
 
-		ContextSubKeyedReducingState<Integer, Long> state =
-			(ContextSubKeyedReducingState) stateBinder.getContextSubKeyedAppendingState(stateDescr, IntSerializer.INSTANCE);
+		InternalReducingState<Object, Integer, Long> state =
+			(InternalReducingState<Object, Integer, Long>) stateBinder.getOrCreateKeyedState(IntSerializer.INSTANCE, stateDescr);
 
 		final Integer namespace1 = 1;
 		final Integer namespace2 = 2;
@@ -90,29 +94,29 @@ public abstract class ContextSubKeyedStateTestBase {
 		//  - mno has all elements already in one source namespace
 
 		testOperator.setCurrentKey("abc");
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		state.add(33L);
 		state.add(55L);
 
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		state.add(22L);
 		state.add(11L);
 
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		state.add(44L);
 
 		testOperator.setCurrentKey("def");
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		state.add(11L);
 		state.add(44L);
 
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		state.add(22L);
 		state.add(55L);
 		state.add(33L);
 
 		testOperator.setCurrentKey("jkl");
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		state.add(11L);
 		state.add(22L);
 		state.add(33L);
@@ -120,7 +124,7 @@ public abstract class ContextSubKeyedStateTestBase {
 		state.add(55L);
 
 		testOperator.setCurrentKey("mno");
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		state.add(11L);
 		state.add(22L);
 		state.add(33L);
@@ -129,47 +133,47 @@ public abstract class ContextSubKeyedStateTestBase {
 
 		testOperator.setCurrentKey("abc");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		assertNull(state.get());
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		assertNull(state.get());
 
 		testOperator.setCurrentKey("def");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		assertNull(state.get());
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		assertNull(state.get());
 
 		testOperator.setCurrentKey("ghi");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		assertNull(state.get());
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		assertNull(state.get());
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		assertNull(state.get());
 
 		testOperator.setCurrentKey("jkl");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		assertNull(state.get());
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		assertNull(state.get());
 
 		testOperator.setCurrentKey("mno");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		assertNull(state.get());
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		assertNull(state.get());
 	}
 
@@ -184,8 +188,8 @@ public abstract class ContextSubKeyedStateTestBase {
 
 		final Long expectedResult = 165L;
 
-		ContextSubKeyedAggregatingState<Integer, Long, Long, Long> state =
-			(ContextSubKeyedAggregatingState) stateBinder.getContextSubKeyedAppendingState(stateDescr, IntSerializer.INSTANCE);
+		InternalAggregatingState<Object, Integer, Long, Long, Long> state =
+			(InternalAggregatingState<Object, Integer, Long, Long, Long>) stateBinder.getOrCreateKeyedState(IntSerializer.INSTANCE, stateDescr);
 
 		// populate the different namespaces
 		//  - abc spreads the values over three namespaces
@@ -195,29 +199,29 @@ public abstract class ContextSubKeyedStateTestBase {
 		//  - mno has all elements already in one source namespace
 
 		testOperator.setCurrentKey("abc");
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		state.add(33L);
 		state.add(55L);
 
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		state.add(22L);
 		state.add(11L);
 
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		state.add(44L);
 
 		testOperator.setCurrentKey("def");
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		state.add(11L);
 		state.add(44L);
 
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		state.add(22L);
 		state.add(55L);
 		state.add(33L);
 
 		testOperator.setCurrentKey("jkl");
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		state.add(11L);
 		state.add(22L);
 		state.add(33L);
@@ -225,7 +229,7 @@ public abstract class ContextSubKeyedStateTestBase {
 		state.add(55L);
 
 		testOperator.setCurrentKey("mno");
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		state.add(11L);
 		state.add(22L);
 		state.add(33L);
@@ -234,47 +238,47 @@ public abstract class ContextSubKeyedStateTestBase {
 
 		testOperator.setCurrentKey("abc");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		assertNull(state.get());
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		assertNull(state.get());
 
 		testOperator.setCurrentKey("def");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		assertNull(state.get());
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		assertNull(state.get());
 
 		testOperator.setCurrentKey("ghi");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		assertNull(state.get());
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		assertNull(state.get());
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		assertNull(state.get());
 
 		testOperator.setCurrentKey("jkl");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		assertNull(state.get());
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		assertNull(state.get());
 
 		testOperator.setCurrentKey("mno");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		assertNull(state.get());
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		assertNull(state.get());
 	}
 
@@ -290,8 +294,8 @@ public abstract class ContextSubKeyedStateTestBase {
 
 		final Long expectedResult = 165L;
 
-		ContextSubKeyedAggregatingState<Integer, Long, Long, Long> state =
-			(ContextSubKeyedAggregatingState) stateBinder.getContextSubKeyedAppendingState(stateDescr, IntSerializer.INSTANCE);
+		InternalAggregatingState<Object, Integer, Long, Long, Long> state =
+			(InternalAggregatingState<Object, Integer, Long, Long, Long>) stateBinder.getOrCreateKeyedState(IntSerializer.INSTANCE, stateDescr);
 
 		// populate the different namespaces
 		//  - abc spreads the values over three namespaces
@@ -301,29 +305,29 @@ public abstract class ContextSubKeyedStateTestBase {
 		//  - mno has all elements already in one source namespace
 
 		testOperator.setCurrentKey("abc");
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		state.add(33L);
 		state.add(55L);
 
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		state.add(22L);
 		state.add(11L);
 
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		state.add(44L);
 
 		testOperator.setCurrentKey("def");
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		state.add(11L);
 		state.add(44L);
 
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		state.add(22L);
 		state.add(55L);
 		state.add(33L);
 
 		testOperator.setCurrentKey("jkl");
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		state.add(11L);
 		state.add(22L);
 		state.add(33L);
@@ -331,7 +335,7 @@ public abstract class ContextSubKeyedStateTestBase {
 		state.add(55L);
 
 		testOperator.setCurrentKey("mno");
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		state.add(11L);
 		state.add(22L);
 		state.add(33L);
@@ -340,47 +344,47 @@ public abstract class ContextSubKeyedStateTestBase {
 
 		testOperator.setCurrentKey("abc");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		assertNull(state.get());
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		assertNull(state.get());
 
 		testOperator.setCurrentKey("def");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		assertNull(state.get());
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		assertNull(state.get());
 
 		testOperator.setCurrentKey("ghi");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		assertNull(state.get());
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		assertNull(state.get());
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		assertNull(state.get());
 
 		testOperator.setCurrentKey("jkl");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		assertNull(state.get());
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		assertNull(state.get());
 
 		testOperator.setCurrentKey("mno");
 		state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
-		state.setNamespace(namespace1);
+		state.setCurrentNamespace(namespace1);
 		assertEquals(expectedResult, state.get());
-		state.setNamespace(namespace2);
+		state.setCurrentNamespace(namespace2);
 		assertNull(state.get());
-		state.setNamespace(namespace3);
+		state.setCurrentNamespace(namespace3);
 		assertNull(state.get());
 	}
 

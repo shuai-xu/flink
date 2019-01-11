@@ -20,9 +20,11 @@ package org.apache.flink.runtime.state.keyed;
 
 import org.apache.flink.api.common.functions.HashPartitioner;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.base.MapSerializer;
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
+import org.apache.flink.queryablestate.client.state.serialization.KvStateSerializer;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.BatchPutWrapper;
 import org.apache.flink.runtime.state.GroupIterator;
@@ -32,6 +34,7 @@ import org.apache.flink.runtime.state.StateSerializerUtil;
 import org.apache.flink.runtime.state.StateStorage;
 import org.apache.flink.runtime.state.StorageInstance;
 import org.apache.flink.runtime.state.StorageIterator;
+import org.apache.flink.runtime.state.VoidNamespaceSerializer;
 import org.apache.flink.runtime.state.heap.HeapStateStorage;
 import org.apache.flink.types.Pair;
 import org.apache.flink.util.Preconditions;
@@ -549,74 +552,85 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			return map == null ? Collections.emptyIterator() : map.entrySet().iterator();
 		} else {
 			try {
-				outputStream.reset();
-				byte[] keyPrefix = StateSerializerUtil.getSerializedPrefixKeyForKeyedMapState(
-					outputStream,
-					outputView,
-					key,
-					keySerializer,
-					getKeyGroup(key),
-					stateNameForSerialize);
-
-				StorageIterator<byte[], byte[]> iterator = stateStorage.prefixIterator(keyPrefix);
-
-				return new Iterator<Map.Entry<MK, MV>>() {
-					Pair<byte[], byte[]> pair = null;
-
-					@Override
-					public boolean hasNext() {
-						return iterator.hasNext();
-					}
-
-					@Override
-					public Map.Entry<MK, MV> next() {
-						pair = iterator.next();
-						return new Map.Entry<MK, MV>() {
-							@Override
-							public MK getKey() {
-								try {
-									return StateSerializerUtil.getDeserializedMapKeyForKeyedMapState(
-										pair.getKey(),
-										keySerializer,
-										mapKeySerializer,
-										serializedStateNameLength);
-								} catch (Exception e) {
-									throw new StateAccessException(e);
-								}
-							}
-
-							@Override
-							public MV getValue() {
-								try {
-									return StateSerializerUtil.getDeserializeSingleValue(pair.getValue(), mapValueSerializer);
-								} catch (Exception e) {
-									throw new StateAccessException(e);
-								}
-							}
-
-							@Override
-							public MV setValue(MV value) {
-								try {
-									ByteArrayOutputStreamWithPos valueOutputStream = new ByteArrayOutputStreamWithPos();
-									DataOutputView valueOutputView = new DataOutputViewStreamWrapper(valueOutputStream);
-									mapValueSerializer.serialize(value, valueOutputView);
-									return StateSerializerUtil.getDeserializeSingleValue(pair.setValue(valueOutputStream.toByteArray()), mapValueSerializer);
-								} catch (Exception e) {
-									throw new StateAccessException(e);
-								}
-							}
-						};
-					}
-
-					@Override
-					public void remove() {
-						iterator.remove();
-					}
-				};
+				return getDeSerializedIterator(key, outputStream, outputView, keySerializer, mapKeySerializer, mapValueSerializer);
 			} catch (Exception e) {
 				throw new StateAccessException(e);
 			}
 		}
+	}
+
+	private Iterator<Map.Entry<MK, MV>> getDeSerializedIterator(
+		K key,
+		ByteArrayOutputStreamWithPos outputStream,
+		DataOutputView outputView,
+		TypeSerializer<K> safeKeySerializer,
+		TypeSerializer<MK> safeMapKeySerializer,
+		TypeSerializer<MV> safeMapValueSerializer) throws Exception {
+
+		outputStream.reset();
+		byte[] keyPrefix = StateSerializerUtil.getSerializedPrefixKeyForKeyedMapState(
+			outputStream,
+			outputView,
+			key,
+			safeKeySerializer,
+			getKeyGroup(key),
+			stateNameForSerialize);
+
+		StorageIterator<byte[], byte[]> iterator = stateStorage.prefixIterator(keyPrefix);
+
+		return new Iterator<Map.Entry<MK, MV>>() {
+			Pair<byte[], byte[]> pair = null;
+
+			@Override
+			public boolean hasNext() {
+				return iterator.hasNext();
+			}
+
+			@Override
+			public Map.Entry<MK, MV> next() {
+				pair = iterator.next();
+				return new Map.Entry<MK, MV>() {
+					@Override
+					public MK getKey() {
+						try {
+							return StateSerializerUtil.getDeserializedMapKeyForKeyedMapState(
+								pair.getKey(),
+								safeKeySerializer,
+								safeMapKeySerializer,
+								serializedStateNameLength);
+						} catch (Exception e) {
+							throw new StateAccessException(e);
+						}
+					}
+
+					@Override
+					public MV getValue() {
+						try {
+							return StateSerializerUtil.getDeserializeSingleValue(pair.getValue(), safeMapValueSerializer);
+						} catch (Exception e) {
+							throw new StateAccessException(e);
+						}
+					}
+
+					@Override
+					public MV setValue(MV value) {
+						try {
+							ByteArrayOutputStreamWithPos valueOutputStream = new ByteArrayOutputStreamWithPos();
+							DataOutputView valueOutputView = new DataOutputViewStreamWrapper(valueOutputStream);
+							safeMapValueSerializer.serialize(value, valueOutputView);
+							return StateSerializerUtil.getDeserializeSingleValue(pair.setValue(valueOutputStream.toByteArray()), safeMapValueSerializer);
+						} catch (Exception e) {
+							throw new StateAccessException(e);
+						}
+					}
+				};
+			}
+
+			@Override
+			public void remove() {
+				iterator.remove();
+			}
+		};
 	}
 
 	@Override
@@ -835,6 +849,51 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 				}
 			}
 		};
+	}
+
+	@Override
+	public byte[] getSerializedValue(
+		final byte[] serializedKeyAndNamespace,
+		final TypeSerializer<K> safeKeySerializer,
+		final TypeSerializer<M> safeValueSerializer) throws Exception {
+
+		K key = KvStateSerializer.deserializeKeyAndNamespace(serializedKeyAndNamespace, safeKeySerializer, VoidNamespaceSerializer.INSTANCE).f0;
+
+		MapSerializer<MK, MV> mapSerializer = (MapSerializer<MK, MV>) safeValueSerializer;
+		final TypeSerializer<MK> dupUserKeySerializer = mapSerializer.getKeySerializer();
+		final TypeSerializer<MV> dupUserValueSerializer = mapSerializer.getValueSerializer();
+
+		M result;
+		if (stateStorage.lazySerde()) {
+			result = get(key);
+			if (result == null) {
+				return null;
+			}
+		} else {
+			ByteArrayOutputStreamWithPos baos = new ByteArrayOutputStreamWithPos();
+			DataOutputViewStreamWrapper view = new DataOutputViewStreamWrapper(baos);
+
+			Iterator<Map.Entry<MK, MV>> iterator = getDeSerializedIterator(
+				key,
+				baos,
+				view,
+				safeKeySerializer,
+				dupUserKeySerializer,
+				dupUserValueSerializer);
+
+			result = createMap();
+			while (iterator.hasNext()) {
+				Map.Entry<MK, MV> entry = iterator.next();
+				if (entry.getKey() != null && entry.getValue() != null) {
+					result.put(entry.getKey(), entry.getValue());
+				}
+			}
+			if (result.isEmpty()) {
+				return null;
+			}
+		}
+
+		return KvStateSerializer.serializeMap(result.entrySet(), dupUserKeySerializer, dupUserValueSerializer);
 	}
 
 	@Override

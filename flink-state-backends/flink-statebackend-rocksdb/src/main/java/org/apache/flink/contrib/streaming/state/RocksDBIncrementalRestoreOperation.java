@@ -207,7 +207,7 @@ public class RocksDBIncrementalRestoreOperation {
 
 		stateBackend.createDBWithColumnFamily(columnFamilyDescriptors, descriptorNames);
 
-		stateBackend.registerAllStates(keyedStateDescriptors, subKeyedStateDescriptors);
+		stateBackend.registerAllStates();
 
 		synchronized (stateBackend.materializedSstFiles) {
 			stateBackend.materializedSstFiles.put(checkpointID, sstFiles);

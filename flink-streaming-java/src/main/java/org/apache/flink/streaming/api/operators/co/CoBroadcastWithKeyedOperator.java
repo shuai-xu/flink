@@ -28,7 +28,7 @@ import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.runtime.state.KeyedStateFunction;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
-import org.apache.flink.runtime.state.keyed.ContextKeyedState;
+import org.apache.flink.runtime.state.context.ContextKeyedState;
 import org.apache.flink.streaming.api.SimpleTimerService;
 import org.apache.flink.streaming.api.TimeDomain;
 import org.apache.flink.streaming.api.TimerService;
@@ -229,7 +229,7 @@ public class CoBroadcastWithKeyedOperator<KS, IN1, IN2, OUT>
 				final StateDescriptor<S, VS> stateDescriptor,
 				final KeyedStateFunction<KS, S> function) throws Exception {
 
-			S state = stateDescriptor.bind(contextStateBinder);
+			S state = getOrCreateKeyedState(VoidNamespaceSerializer.INSTANCE, stateDescriptor);
 			Preconditions.checkState(state instanceof ContextKeyedState, "Only apply to state warps on top of KeyedState");
 			Iterator<KS> keys = ((ContextKeyedState) state).getKeyedState().keys().iterator();
 			while (keys.hasNext()) {

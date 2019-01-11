@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.api.operators.state;
+package org.apache.flink.runtime.state.context;
 
 import org.apache.flink.api.common.functions.ReduceFunction;
-import org.apache.flink.api.common.state.ReducingState;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.state.StateTransformationFunction;
+import org.apache.flink.runtime.state.heap.KeyContextImpl;
+import org.apache.flink.runtime.state.internal.InternalReducingState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedValueState;
-import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.util.Preconditions;
 
 import java.util.Collection;
@@ -32,19 +34,19 @@ import java.util.Collection;
  * @param <N>
  * @param <T>
  */
-public class ContextSubKeyedReducingState<N, T>
-	implements ContextSubKeyedAppendingState<N, T, T>, ContextMergingState<N>, ReducingState<T> {
+public class ContextSubKeyedReducingState<K, N, T>
+	implements ContextSubKeyedAppendingState<K, N, T, T, T>, InternalReducingState<K, N, T> {
 
 	private N namespace;
 
-	private final AbstractStreamOperator<?> operator;
+	private final KeyContextImpl<K> operator;
 
 	private final SubKeyedValueState<Object, N, T> subKeyedValueState;
 
 	private final ReduceTransformation transformation;
 
 	public ContextSubKeyedReducingState(
-		AbstractStreamOperator<?> operator,
+		KeyContextImpl<K> operator,
 		SubKeyedValueState<Object, N, T> subKeyedValueState,
 		ReduceFunction<T> reduceFunction) {
 		Preconditions.checkNotNull(operator);
@@ -57,32 +59,21 @@ public class ContextSubKeyedReducingState<N, T>
 
 	@Override
 	public T get() {
-		return subKeyedValueState.get(getCurrentKey(), getNamespace());
+		return subKeyedValueState.get(getCurrentKey(), namespace);
 	}
 
 	@Override
 	public void add(T value) {
-		subKeyedValueState.transform(operator.getCurrentKey(), getNamespace(), value, transformation);
+		subKeyedValueState.transform(operator.getCurrentKey(), namespace, value, transformation);
 	}
 
 	@Override
 	public void clear() {
-		subKeyedValueState.remove(getCurrentKey(), getNamespace());
+		subKeyedValueState.remove(getCurrentKey(), namespace);
 	}
 
-	@Override
-	public Object getCurrentKey() {
+	private Object getCurrentKey() {
 		return operator.getCurrentKey();
-	}
-
-	@Override
-	public N getNamespace() {
-		return namespace;
-	}
-
-	@Override
-	public void setNamespace(N namespace) {
-		this.namespace = namespace;
 	}
 
 	@Override
@@ -111,6 +102,36 @@ public class ContextSubKeyedReducingState<N, T>
 		if (merged != null) {
 			subKeyedValueState.transform(currentKey, target, merged, transformation);
 		}
+	}
+
+	@Override
+	public SubKeyedState getSubKeyedState() {
+		return subKeyedValueState;
+	}
+
+	@Override
+	public TypeSerializer<K> getKeySerializer() {
+		return operator.getKeySerializer();
+	}
+
+	@Override
+	public TypeSerializer<N> getNamespaceSerializer() {
+		return subKeyedValueState.getDescriptor().getNamespaceSerializer();
+	}
+
+	@Override
+	public TypeSerializer getValueSerializer() {
+		return subKeyedValueState.getDescriptor().getValueSerializer();
+	}
+
+	@Override
+	public void setCurrentNamespace(N namespace) {
+		this.namespace = namespace;
+	}
+
+	@Override
+	public byte[] getSerializedValue(byte[] serializedKeyAndNamespace, TypeSerializer<K> safeKeySerializer, TypeSerializer<N> safeNamespaceSerializer, TypeSerializer<T> safeValueSerializer) throws Exception {
+		return new byte[0];
 	}
 
 	private class ReduceTransformation implements StateTransformationFunction<T, T> {

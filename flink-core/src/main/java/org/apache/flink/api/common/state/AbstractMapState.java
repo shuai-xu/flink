@@ -89,7 +89,7 @@ public interface AbstractMapState<K, V, M extends Map<K, V>> extends State {
 	 *
 	 * @param map The mappings to be stored in the map state.
 	 */
-	void putAll(Map<? extends K, ? extends V> map);
+	void putAll(Map<K, V> map);
 
 	/**
 	 * Deletes the mapping of the given key.

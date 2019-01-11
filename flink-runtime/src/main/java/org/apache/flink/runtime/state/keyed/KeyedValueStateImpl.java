@@ -36,6 +36,7 @@ import org.apache.flink.runtime.state.StateStorage;
 import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.StorageInstance;
 import org.apache.flink.runtime.state.StorageIterator;
+import org.apache.flink.runtime.state.VoidNamespaceSerializer;
 import org.apache.flink.runtime.state.heap.HeapStateStorage;
 import org.apache.flink.types.Pair;
 import org.apache.flink.util.Preconditions;
@@ -175,15 +176,7 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 				V value = (V) stateStorage.get(key);
 				return value == null ? defaultValue : value;
 			} else {
-				outputStream.reset();
-				byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(
-					outputStream,
-					outputView,
-					key,
-					keySerializer,
-					getKeyGroup(key),
-					stateNameForSerializer);
-				byte[] serializedValue = (byte[]) stateStorage.get(serializedKey);
+				byte[] serializedValue = getSerializedValue(key, outputStream, outputView, keySerializer);
 				if (serializedValue == null) {
 					return defaultValue;
 				} else {
@@ -513,15 +506,25 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 	}
 
 	@Override
-	public byte[] getSerializedValue(byte[] serializedKey) throws Exception {
-		K key = KvStateSerializer.deserializeValue(serializedKey, descriptor.getKeySerializer());
+	public byte[] getSerializedValue(
+		final byte[] serializedKeyAndNamespace,
+		final TypeSerializer<K> safeKeySerializer,
+		final TypeSerializer<V> safeValueSerializer) throws Exception {
+		K key = KvStateSerializer.deserializeKeyAndNamespace(serializedKeyAndNamespace, safeKeySerializer, VoidNamespaceSerializer.INSTANCE).f0;
 
-		V value = get(key);
-		if (value == null) {
-			return null;
+		if (stateStorage.lazySerde()) {
+			V value = get(key);
+			if (value == null) {
+				return null;
+			}
+
+			return KvStateSerializer.serializeValue(value, safeValueSerializer);
+		} else {
+			ByteArrayOutputStreamWithPos baos = new ByteArrayOutputStreamWithPos();
+			DataOutputViewStreamWrapper view = new DataOutputViewStreamWrapper(baos);
+
+			return getSerializedValue(key, baos, view, safeKeySerializer);
 		}
-
-		return KvStateSerializer.serializeValue(value, descriptor.getValueSerializer());
 	}
 
 	@Override
@@ -531,5 +534,22 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 
 	private <K> int getKeyGroup(K key) {
 		return partitioner.partition(key, internalStateBackend.getNumGroups());
+	}
+
+	private byte[] getSerializedValue(
+		K key,
+		ByteArrayOutputStreamWithPos outputStream,
+		DataOutputView outputView,
+		TypeSerializer<K> keySerializer) throws Exception {
+
+		outputStream.reset();
+		byte[] serializedKey = StateSerializerUtil.getSerializedKeyForKeyedValueState(
+			outputStream,
+			outputView,
+			key,
+			keySerializer,
+			getKeyGroup(key),
+			stateNameForSerializer);
+		return (byte[]) stateStorage.get(serializedKey);
 	}
 }

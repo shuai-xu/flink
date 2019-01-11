@@ -16,68 +16,63 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.api.operators.state;
+package org.apache.flink.runtime.state.context;
 
 import org.apache.flink.api.common.functions.FoldFunction;
-import org.apache.flink.api.common.state.FoldingState;
 import org.apache.flink.api.common.state.FoldingStateDescriptor;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.state.StateTransformationFunction;
-import org.apache.flink.runtime.state.keyed.ContextKeyedState;
-import org.apache.flink.runtime.state.keyed.KeyedState;
-import org.apache.flink.runtime.state.keyed.KeyedValueState;
-import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
+import org.apache.flink.runtime.state.heap.KeyContextImpl;
+import org.apache.flink.runtime.state.internal.InternalFoldingState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedValueState;
 import org.apache.flink.util.Preconditions;
 
 /**
- * An implementation of {@link FoldingState} which is backed by a
- * {@link KeyedValueState}. The values of the states depend on the current key
- * of the operator. That is, when the current key of the operator changes, the
- * values accessed will be changed as well.
- *
- * @param <T> The type of the values in the state.
+ * used for folding state.
+ * @param <N>
+ * @param <T>
+ * @param <ACC>
  */
-public class ContextFoldingState<T, ACC> implements FoldingState<T, ACC>, ContextKeyedState {
+public class ContextSubKeyedFoldingState<K, N, T, ACC>
+	implements ContextSubKeyedAppendingState<K, N, T, ACC, ACC>, InternalFoldingState<K, N, T, ACC> {
 
-	/** The operator to which the state belongs. */
-	private final AbstractStreamOperator<?> operator;
+	private N namespace;
 
-	/** The keyed state backing the state. */
-	private final KeyedValueState<Object, ACC> keyedState;
+	private final KeyContextImpl<K> operator;
 
-	/** The descriptor of the state. */
+	private final SubKeyedValueState<Object, N, ACC> subKeyedValueState;
+
 	private final FoldingStateDescriptor<T, ACC> stateDescriptor;
 
-	/** The transformation for the state. */
 	private final FoldTransformation foldTransformation;
 
-	public ContextFoldingState(
-		final AbstractStreamOperator<?> operator,
-		final KeyedValueState<Object, ACC> keyedState,
-		final FoldingStateDescriptor<T, ACC> stateDescriptor
-	) {
+	public ContextSubKeyedFoldingState(
+		KeyContextImpl<K> operator,
+		SubKeyedValueState<Object, N, ACC> subKeyedValueState,
+		FoldingStateDescriptor<T, ACC> stateDescriptor) {
 		Preconditions.checkNotNull(operator);
-		Preconditions.checkNotNull(keyedState);
+		Preconditions.checkNotNull(subKeyedValueState);
 		Preconditions.checkNotNull(stateDescriptor);
-
 		this.operator = operator;
-		this.keyedState = keyedState;
+		this.subKeyedValueState = subKeyedValueState;
 		this.stateDescriptor = stateDescriptor;
 		this.foldTransformation = new FoldTransformation(stateDescriptor.getFoldFunction());
 	}
 
 	@Override
 	public ACC get() {
-		return keyedState.get(operator.getCurrentKey());
+		return subKeyedValueState.get(operator.getCurrentKey(), namespace);
 	}
 
 	@Override
 	public void add(T value) {
-		keyedState.transform(operator.getCurrentKey(), value, foldTransformation);
+		subKeyedValueState.transform(operator.getCurrentKey(), namespace, value, foldTransformation);
 	}
 
 	@Override
 	public void clear() {
-		keyedState.remove(operator.getCurrentKey());
+		subKeyedValueState.remove(operator.getCurrentKey(), namespace);
 	}
 
 	private ACC getInitialValue() {
@@ -85,8 +80,33 @@ public class ContextFoldingState<T, ACC> implements FoldingState<T, ACC>, Contex
 	}
 
 	@Override
-	public KeyedState getKeyedState() {
-		return keyedState;
+	public SubKeyedState getSubKeyedState() {
+		return subKeyedValueState;
+	}
+
+	@Override
+	public TypeSerializer<K> getKeySerializer() {
+		return operator.getKeySerializer();
+	}
+
+	@Override
+	public TypeSerializer<N> getNamespaceSerializer() {
+		return subKeyedValueState.getDescriptor().getNamespaceSerializer();
+	}
+
+	@Override
+	public TypeSerializer<ACC> getValueSerializer() {
+		return subKeyedValueState.getDescriptor().getValueSerializer();
+	}
+
+	@Override
+	public void setCurrentNamespace(N namespace) {
+		this.namespace = namespace;
+	}
+
+	@Override
+	public byte[] getSerializedValue(byte[] serializedKeyAndNamespace, TypeSerializer<K> safeKeySerializer, TypeSerializer<N> safeNamespaceSerializer, TypeSerializer<ACC> safeValueSerializer) throws Exception {
+		return new byte[0];
 	}
 
 	private final class FoldTransformation implements StateTransformationFunction<ACC, T> {

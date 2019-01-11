@@ -29,7 +29,9 @@ import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.state.ArrayListSerializer;
+import org.apache.flink.runtime.state.InternalStateType;
 import org.apache.flink.runtime.state.KeyGroupRange;
+import org.apache.flink.runtime.state.RegisteredStateMetaInfo;
 import org.apache.flink.runtime.state.StateTransformationFunction;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.util.TestLogger;
@@ -52,6 +54,12 @@ import static org.mockito.Mockito.when;
  * Unit tests for {@link CopyOnWriteStateTable}.
  */
 public class CopyOnWriteStateTableTest extends TestLogger {
+	private final RegisteredStateMetaInfo stateMetaInfo = RegisteredStateMetaInfo.createSubKeyedStateMetaInfo(
+		InternalStateType.SUBKEYED_VALUE,
+		"test",
+		IntSerializer.INSTANCE,
+		new ArrayListSerializer<>(IntSerializer.INSTANCE),
+		IntSerializer.INSTANCE);
 
 	/**
 	 * Testing the basic map operations.
@@ -64,9 +72,7 @@ public class CopyOnWriteStateTableTest extends TestLogger {
 		final CopyOnWriteStateTable<Integer, Integer, ArrayList<Integer>> stateTable =
 			new CopyOnWriteStateTable<>(
 				stateBackend,
-				IntSerializer.INSTANCE,
-				IntSerializer.INSTANCE,
-				new ArrayListSerializer<>(IntSerializer.INSTANCE),
+				stateMetaInfo,
 				true
 			);
 
@@ -136,9 +142,7 @@ public class CopyOnWriteStateTableTest extends TestLogger {
 		final CopyOnWriteStateTable<Integer, Integer, ArrayList<Integer>> stateTable =
 			new CopyOnWriteStateTable<>(
 				stateBackend,
-				IntSerializer.INSTANCE,
-				IntSerializer.INSTANCE,
-				new ArrayListSerializer<>(IntSerializer.INSTANCE),
+				stateMetaInfo,
 				true
 			);
 
@@ -180,9 +184,7 @@ public class CopyOnWriteStateTableTest extends TestLogger {
 		final CopyOnWriteStateTable<Integer, Integer, ArrayList<Integer>> stateTable =
 			new CopyOnWriteStateTable<>(
 				stateBackend,
-				IntSerializer.INSTANCE,
-				IntSerializer.INSTANCE,
-				new ArrayListSerializer<>(IntSerializer.INSTANCE),
+				stateMetaInfo,
 				true
 			);
 
@@ -332,9 +334,7 @@ public class CopyOnWriteStateTableTest extends TestLogger {
 		final CopyOnWriteStateTable<Integer, Integer, ArrayList<Integer>> stateTable =
 			new CopyOnWriteStateTable<>(
 				stateBackend,
-				IntSerializer.INSTANCE,
-				IntSerializer.INSTANCE,
-				new ArrayListSerializer<>(IntSerializer.INSTANCE),
+				stateMetaInfo,
 				true
 			);
 
@@ -401,6 +401,13 @@ public class CopyOnWriteStateTableTest extends TestLogger {
 		final TestDuplicateSerializer stateSerializer = new TestDuplicateSerializer();
 		final TestDuplicateSerializer keySerializer = new TestDuplicateSerializer();
 
+		RegisteredStateMetaInfo stateMetaInfo = RegisteredStateMetaInfo.createSubKeyedStateMetaInfo(
+			InternalStateType.SUBKEYED_VALUE,
+			"test",
+			keySerializer,
+			namespaceSerializer,
+			stateSerializer);
+
 		AbstractInternalStateBackend stateBackend = mock(AbstractInternalStateBackend.class);
 		when(stateBackend.getNumGroups()).thenReturn(1);
 		when(stateBackend.getKeyGroupRange()).thenReturn(new KeyGroupRange(0, 0));
@@ -408,9 +415,7 @@ public class CopyOnWriteStateTableTest extends TestLogger {
 		final CopyOnWriteStateTable<Integer, Integer, Integer> table =
 			new CopyOnWriteStateTable<>(
 				stateBackend,
-				keySerializer,
-				namespaceSerializer,
-				stateSerializer,
+				stateMetaInfo,
 				true
 			);
 

@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.api.operators.state;
+package org.apache.flink.runtime.state.context;
 
-import org.apache.flink.api.common.state.ListState;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.runtime.state.heap.KeyContextImpl;
+import org.apache.flink.runtime.state.internal.InternalListState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedListState;
-import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
 
 import java.util.Collection;
 import java.util.List;
@@ -30,48 +32,37 @@ import java.util.List;
  * @param <N>
  * @param <E>
  */
-public class ContextSubKeyedListState<N, E>
-	implements ContextSubKeyedAppendingState<N, E, Iterable<E>>, ContextMergingState<N>, ListState<E> {
+public class ContextSubKeyedListState<K, N, E>
+	implements ContextSubKeyedAppendingState<K, N, E, List<E>, Iterable<E>>, InternalListState<K, N, E> {
 
 	private N namespace;
 
-	private final AbstractStreamOperator<?> operator;
+	private final KeyContextImpl<K> keyContext;
 
 	private final SubKeyedListState<Object, N, E> subKeyedListState;
 
-	public ContextSubKeyedListState(AbstractStreamOperator<?> operator, SubKeyedListState<Object, N, E> subKeyedListState) {
-		this.operator = operator;
+	public ContextSubKeyedListState(KeyContextImpl<K> keyContext, SubKeyedListState<Object, N, E> subKeyedListState) {
+		this.keyContext = keyContext;
 		this.subKeyedListState = subKeyedListState;
 	}
 
 	@Override
 	public Iterable<E> get() throws Exception {
-		return subKeyedListState.get(getCurrentKey(), getNamespace());
+		return subKeyedListState.get(getCurrentKey(), namespace);
 	}
 
 	@Override
 	public void add(E value) throws Exception {
-		subKeyedListState.add(getCurrentKey(), getNamespace(), value);
+		subKeyedListState.add(getCurrentKey(), namespace, value);
 	}
 
 	@Override
 	public void clear() {
-		subKeyedListState.remove(getCurrentKey(), getNamespace());
+		subKeyedListState.remove(getCurrentKey(), namespace);
 	}
 
-	@Override
-	public Object getCurrentKey() {
-		return operator.getCurrentKey();
-	}
-
-	@Override
-	public N getNamespace() {
-		return this.namespace;
-	}
-
-	@Override
-	public void setNamespace(N namespace) {
-		this.namespace = namespace;
+	private Object getCurrentKey() {
+		return keyContext.getCurrentKey();
 	}
 
 	@Override
@@ -90,16 +81,46 @@ public class ContextSubKeyedListState<N, E>
 	@Override
 	public void update(List<E> values) {
 		if (values == null || values.isEmpty()) {
-			subKeyedListState.remove(getCurrentKey(), getNamespace());
+			subKeyedListState.remove(getCurrentKey(), namespace);
 		} else {
-			subKeyedListState.putAll(getCurrentKey(), getNamespace(), values);
+			subKeyedListState.putAll(getCurrentKey(), namespace, values);
 		}
 	}
 
 	@Override
 	public void addAll(List<E> values) {
 		if (values != null && !values.isEmpty()) {
-			subKeyedListState.addAll(getCurrentKey(), getNamespace(), values);
+			subKeyedListState.addAll(getCurrentKey(), namespace, values);
 		}
+	}
+
+	@Override
+	public TypeSerializer<K> getKeySerializer() {
+		return keyContext.getKeySerializer();
+	}
+
+	@Override
+	public TypeSerializer<N> getNamespaceSerializer() {
+		return subKeyedListState.getDescriptor().getNamespaceSerializer();
+	}
+
+	@Override
+	public TypeSerializer<List<E>> getValueSerializer() {
+		return subKeyedListState.getDescriptor().getValueSerializer();
+	}
+
+	@Override
+	public void setCurrentNamespace(N namespace) {
+		this.namespace = namespace;
+	}
+
+	@Override
+	public byte[] getSerializedValue(byte[] serializedKeyAndNamespace, TypeSerializer<K> safeKeySerializer, TypeSerializer<N> safeNamespaceSerializer, TypeSerializer<List<E>> safeValueSerializer) throws Exception {
+		return new byte[0];
+	}
+
+	@Override
+	public SubKeyedState getSubKeyedState() {
+		return subKeyedListState;
 	}
 }
