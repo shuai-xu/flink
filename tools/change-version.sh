@@ -17,8 +17,8 @@
 # limitations under the License.
 ################################################################################
 
-OLD="blink-3.0-SNAPSHOT"
-NEW="blink-3.1-SNAPSHOT"
+OLD="blink-3.1-SNAPSHOT"
+NEW="blink-3.2-SNAPSHOT"
 
 
 HERE=` basename "$PWD"`
