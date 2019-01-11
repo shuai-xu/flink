@@ -203,6 +203,20 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     }
   }
 
+  // set uid to identify transformations
+  protected def setTransformationsUid(
+      rootTransformations: ArrayBuffer[StreamTransformation[_]], prefix: String): Unit = {
+    val id = new AtomicInteger(0)
+    rootTransformations.foreach(
+      rootTransformation => {
+        rootTransformation.getTransitivePredecessors.foreach(transformation => {
+          if (transformation.getUid == null) {
+            transformation.setUid(prefix + id.getAndIncrement())
+          }
+        })
+      })
+  }
+
   /**
     * Returns the SQL parser config for this environment including a custom Calcite configuration.
     */
