@@ -84,7 +84,7 @@ public class LegacyTaskCancelAsyncProducerConsumerITCase extends TestLogger {
 			config.setInteger(ConfigConstants.LOCAL_NUMBER_TASK_MANAGER, 1);
 			config.setInteger(ConfigConstants.TASK_MANAGER_NUM_TASK_SLOTS, 1);
 			config.setInteger(TaskManagerOptions.MEMORY_SEGMENT_SIZE, 4096);
-			config.setInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS, 9);
+			config.setInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS, 11);
 
 			flink = new TestingCluster(config, true);
 			flink.start();

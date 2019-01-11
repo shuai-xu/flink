@@ -222,7 +222,10 @@ public class NetworkEnvironment {
 		BufferPool bufferPool = null;
 
 		try {
-			int numberOfMemorySegments = partition.getNumberOfSubpartitions() * networkBuffersPerSubpartition;
+			int extraNetworkBufferThisPartition = extraNetworkBuffersPerGate >= 0 ?
+				extraNetworkBuffersPerGate : partition.getNumberOfSubpartitions() * networkBuffersPerSubpartition;
+			int numberOfMemorySegments = partition.getNumberOfSubpartitions() * networkBuffersPerSubpartition
+				+ extraNetworkBufferThisPartition;
 			bufferPool = networkBufferPool.createBufferPool(numberOfMemorySegments, numberOfMemorySegments);
 			partition.registerBufferPool(bufferPool);
 
@@ -246,19 +249,25 @@ public class NetworkEnvironment {
 	public void setupInputGate(SingleInputGate gate) throws IOException {
 		BufferPool bufferPool = null;
 		int maxNumberOfMemorySegments;
+		int extraNetworkBufferThisGate;
 		try {
 			if (enableCreditBased) {
 				if (gate.isPartitionRequestRestricted()) {
-					gate.setNetworkProperties(networkBufferPool, networkBuffersPerExternalBlockingChannel);
+					extraNetworkBufferThisGate = Math.max(extraNetworkBuffersPerExternalBlockingGate, 0);
+						gate.setNetworkProperties(networkBufferPool, networkBuffersPerExternalBlockingChannel);
 					// for external shuffle, extra buffer is not used currently
-					bufferPool = networkBufferPool.createBufferPool(0, extraNetworkBuffersPerExternalBlockingGate);
+					bufferPool = networkBufferPool.createBufferPool(0, extraNetworkBufferThisGate);
 				} else {
+					extraNetworkBufferThisGate = extraNetworkBuffersPerGate >= 0 ?
+						extraNetworkBuffersPerGate : gate.getNumberOfInputChannels() * networkBuffersPerChannel;
 					gate.setNetworkProperties(networkBufferPool, networkBuffersPerChannel);
-					bufferPool = networkBufferPool.createBufferPool(0, extraNetworkBuffersPerGate);
+					bufferPool = networkBufferPool.createBufferPool(0, extraNetworkBufferThisGate);
 				}
 			} else {
+				extraNetworkBufferThisGate = extraNetworkBuffersPerGate >= 0 ?
+					extraNetworkBuffersPerGate : gate.getNumberOfInputChannels() * networkBuffersPerChannel;
 				maxNumberOfMemorySegments = gate.getNumberOfInputChannels() * networkBuffersPerChannel
-					+ extraNetworkBuffersPerGate;
+					+ extraNetworkBufferThisGate;
 
 				bufferPool = networkBufferPool.createBufferPool(gate.getNumberOfInputChannels(),
 					maxNumberOfMemorySegments);

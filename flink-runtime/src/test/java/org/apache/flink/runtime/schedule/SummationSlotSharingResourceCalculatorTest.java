@@ -173,7 +173,7 @@ public class SummationSlotSharingResourceCalculatorTest {
 			TEST_RESOURCE_SPECS[0].getHeapMemory() + TEST_RESOURCE_SPECS[1].getHeapMemory() + TEST_RESOURCE_SPECS[2].getHeapMemory(),
 			TEST_RESOURCE_SPECS[0].getDirectMemory() + TEST_RESOURCE_SPECS[1].getDirectMemory() + TEST_RESOURCE_SPECS[2].getDirectMemory(),
 			TEST_RESOURCE_SPECS[0].getNativeMemory() + TEST_RESOURCE_SPECS[1].getNativeMemory() + TEST_RESOURCE_SPECS[2].getNativeMemory(),
-			19,
+			35,
 			new HashMap<String, Resource>() {{
 				put("extend", new CommonExtendedResource("extend", 60));
 				put(ResourceSpec.GPU_NAME, new CommonExtendedResource(ResourceSpec.GPU_NAME, 12));

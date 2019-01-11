@@ -60,7 +60,7 @@ public class SuccessAfterNetworkBuffersFailureITCase extends TestLogger {
 	private static Configuration getConfiguration() {
 		Configuration config = new Configuration();
 		config.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, 80L);
-		config.setInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS, 800);
+		config.setInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS, 900);
 		config.setInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_SUBPARTITION, 1);
 		return config;
 	}

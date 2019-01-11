@@ -34,6 +34,7 @@ public class TaskNetworkMemoryUtil {
 	 *
 	 * @param configuration Configuration for the parameters.
 	 * @param subPartitionNum The sub partition number of a task.
+	 * @param internalResultPartitionNum The internal result partition number of a task.
 	 * @param pipelineInputChannelNum The pipeline input channel number of a task.
 	 * @param pipelineInputGateNum The pipeline input gate of a task.
 	 * @param blockingInputChannelNum The blocking input channel number of a task.
@@ -43,6 +44,7 @@ public class TaskNetworkMemoryUtil {
 	public static int calculateTaskNetworkMemory(
 		Configuration configuration,
 		int subPartitionNum,
+		int internalResultPartitionNum,
 		int pipelineInputChannelNum,
 		int pipelineInputGateNum,
 		int blockingInputChannelNum,
@@ -63,15 +65,20 @@ public class TaskNetworkMemoryUtil {
 			extraBuffersAllPipelineGates = buffersPerPipelineChannel * pipelineInputChannelNum;
 		}
 
-		int extraBuffersAllBlockingGates;
-		if (extraBuffersPerBlockingGate >= 0) {
-			extraBuffersAllBlockingGates = extraBuffersPerBlockingGate * blockingInputGateNum;
+		int extraBuffersAllBlockingGates = Math.max(extraBuffersPerBlockingGate, 0) * blockingInputGateNum;
+
+		// only internal result partitions need extra buffers, the system does not offer an
+		// independent config option for that, num of extra buffers per pipeline gate is used.
+		int extraBuffersAllResultPartitions;
+		if (extraBuffersPerPipelineGate >= 0) {
+			extraBuffersAllResultPartitions = extraBuffersPerPipelineGate * internalResultPartitionNum;
 		} else {
-			extraBuffersAllBlockingGates = buffersPerBlockingChannel * blockingInputChannelNum;
+			extraBuffersAllResultPartitions = buffersPerSubpartition * subPartitionNum;
 		}
 
-		final long totalBuffers = pipelineInputChannelNum * buffersPerPipelineChannel + extraBuffersAllPipelineGates +
-			blockingInputChannelNum * buffersPerBlockingChannel + extraBuffersAllBlockingGates + subPartitionNum * buffersPerSubpartition;
+		final long totalBuffers = pipelineInputChannelNum * buffersPerPipelineChannel +
+			extraBuffersAllPipelineGates + blockingInputChannelNum * buffersPerBlockingChannel +
+			extraBuffersAllBlockingGates + subPartitionNum * buffersPerSubpartition + extraBuffersAllResultPartitions;
 
 		long memoryInMbLong = (long) Math.ceil(((double) (pageSize * totalBuffers)) / (1024 * 1024));
 		return MathUtils.checkedDownCast(memoryInMbLong);

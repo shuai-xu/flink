@@ -511,12 +511,14 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 
 		BlockingShuffleType shuffleType =
 			BlockingShuffleType.getBlockingShuffleTypeFromConfiguration(config, LOG);
-		int numSubpartitions = 0;
+		int numInternalSubpartitions = 0;
+		int numInternalResultPartitions = 0;
 		for (IntermediateResultPartition irp : getProducedPartitions().values()) {
 			if (!(shuffleType == BlockingShuffleType.YARN && irp.getIntermediateResult().getResultType().isBlocking())) {
 				for (List<ExecutionEdge> consumer : irp.getConsumers()) {
-					numSubpartitions += consumer.size();
+					numInternalSubpartitions += consumer.size();
 				}
+				++numInternalResultPartitions;
 			}
 		}
 
@@ -551,8 +553,9 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 			numExternalBlockingChannels = Math.max(numExternalBlockingChannels, numExternalBlockingGates);
 		}
 
-		return TaskNetworkMemoryUtil.calculateTaskNetworkMemory(config, numSubpartitions, numPipelineChannels, numPipelineGates,
-			numExternalBlockingChannels, numExternalBlockingGates);
+		return TaskNetworkMemoryUtil.calculateTaskNetworkMemory(config,
+			numInternalSubpartitions, numInternalResultPartitions, numPipelineChannels,
+			numPipelineGates, numExternalBlockingChannels, numExternalBlockingGates);
 	}
 
 	private int calculateTaskExtraManagedMemory() {
@@ -589,7 +592,7 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	 *             The creation timestamp for the new Execution
 	 * @param originatingGlobalModVersion
 	 *             The
-	 * @return Returns the new created Execution. 
+	 * @return Returns the new created Execution.
 	 *
 	 * @throws GlobalModVersionMismatch Thrown, if the execution graph has a new global mod
 	 *                                  version than the one passed to this message.
