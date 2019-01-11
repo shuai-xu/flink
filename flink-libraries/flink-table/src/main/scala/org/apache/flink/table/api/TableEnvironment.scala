@@ -121,7 +121,6 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
 
   private[flink] val transformations = new ArrayBuffer[StreamTransformation[_]]
 
-  protected val tableMetas = new mutable.HashMap[String, TableMeta]
   protected var userClassloader: ClassLoader = null
 
   // a manager for table service
@@ -353,27 +352,17 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
 
     val catalogSchema = catalogManager.getRootSchema.getSubSchema(catalogName)
 
-    val result =
-      if (catalogSchema == null) {
-        Option.empty
+    if (catalogSchema == null) {
+      return Option.empty
+    } else {
+      val dbSchema = catalogSchema.getSubSchema(dbName)
+
+      if (dbSchema == null) {
+        return Option.empty
       } else {
-        val dbSchema = catalogSchema.getSubSchema(dbName)
-
-        if (dbSchema == null) {
-          Option.empty
-        } else {
-          Option(dbSchema.getTable(tableName))
-        }
-      }
-
-    if (result.isEmpty) {
-      if (tableMetas.contains(tableName)) {
-        val tableMeta = tableMetas.remove(tableName)
-        registerTableSourceFromTableMetas(tableName, tableMeta.get)
-        return getTable(paths)
+        return Option(dbSchema.getTable(tableName))
       }
     }
-    return result
   }
 
   /**
@@ -1269,15 +1258,8 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     }
 
     if (!catalogManager.getDefaultCatalog()
-        .tableExists(new ObjectPath(catalogManager.getDefaultDatabaseName, sinkTableName))) {
-      // if the target table still in table meta, we should register it first.
-      if (tableMetas.contains(sinkTableName)) {
-        val tableMeta = tableMetas.remove(sinkTableName)
-        registerTableSinkFromTableMetas(sinkTableName, tableMeta.get)
-
-      } else {
-        throw new TableException(TableErrors.INST.sqlTableNotRegistered(sinkTableName))
-      }
+      .tableExists(new ObjectPath(catalogManager.getDefaultDatabaseName, sinkTableName))) {
+      throw new TableException(TableErrors.INST.sqlTableNotRegistered(sinkTableName))
     }
     val targetTable = getTable(sinkTableName).get
 
@@ -1597,58 +1579,22 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
   }
 
   /**
-    * Lazy register table. This function only return a TableMeta which can store table infos.
-    * Table will be truly registered when calling scan.
-    *
-    * Example:
-    *
-    * {{{
-    *   tEnv.registerTable(sourceTable)
-    *       .withSchema(
-    *         new TableSchema.Builder()
-    *         .field("a", DataTypes.INT)
-    *         .field("b", DataTypes.STRING).build())
-    *       .withProperties(
-    *         new TableProperties()
-    *         .property("type", "csv")
-    *         .property("path", inputFilePath)
-    *         .property("fieldDelim", " "));
-    *
-    *   tEnv.scan(sourceTable).select("a, b").insertInto(sinkTable)
-    * }}}
-    *
+    * Register a table source with table infos.
     */
-  def registerTable(name: String): TableMeta = {
-    if (tableMetas.get(name.trim.toLowerCase).nonEmpty) {
-      throw new TableException(s"Table \'$name\' already exists. " +
-        s"Please, choose a different name.")
-    }
-
-    val tableMeta = new TableMeta()
-    tableMetas.put(name, tableMeta)
-    tableMeta
-  }
+  private[flink] def registerTableSource(name: String, tableInfo: TableInfo): Unit
 
   /**
-    * Register a table source from table metas. This is used in TableApi.
+    * Register a table sink with table infos.
     */
-  private[flink] def registerTableSourceFromTableMetas(name: String, tableMeta: TableMeta): Unit
-
-  /**
-    * Register a table sink from table metas. This is used in TableApi.
-    */
-  def registerTableSinkFromTableMetas(name: String, tableMeta: TableMeta): Unit = {
+  private[flink] def registerTableSink(name: String, tableInfo: TableInfo): Unit = {
 
     // table schema
-    val tableSchema = new RichTableSchema(
-      tableMeta.getSchema.getColumnNames,
-      tableMeta.getSchema.getTypes)
+    val richTableSchema = new RichTableSchema(
+      tableInfo.getSchema.getFieldNames,
+      tableInfo.getSchema.getFieldTypes)
 
     // table properties
-    val tableProperties: TableProperties = tableMeta.getProperties.toKeyLowerCase
-    val richTableSchema = new RichTableSchema(
-      tableMeta.getSchema.getColumnNames,
-      tableMeta.getSchema.getTypes)
+    val tableProperties: TableProperties = tableInfo.getProperties.toKeyLowerCase
     tableProperties.putSchemaIntoProperties(richTableSchema)
 
     val simpleDiscriptor = TableFactoryUtil.getDiscriptorFromTableProperties(tableProperties)
@@ -1657,8 +1603,8 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
 
     registerTableSink(
       name,
-      tableSchema.getColumnNames,
-      tableSchema.getColumnTypes.asInstanceOf[Array[DataType]],
+      richTableSchema.getColumnNames,
+      richTableSchema.getColumnTypes.asInstanceOf[Array[DataType]],
       tableSink)
   }
 }

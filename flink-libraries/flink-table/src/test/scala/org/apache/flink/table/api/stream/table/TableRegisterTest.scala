@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.api.stream.table
 
-import org.apache.flink.table.api.TableSchema
+import org.apache.flink.table.api.{TableInfo, TableSchema}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.util.{TableProperties, TableTestBase}
@@ -31,7 +31,7 @@ class TableRegisterTest extends TableTestBase {
     val util = streamTestUtil()
 
     val tableSource = "tableSource"
-    util.tableEnv.registerTable(tableSource)
+    TableInfo.create(util.tableEnv)
       .withSchema(
         new TableSchema.Builder()
           .column("a", DataTypes.INT)
@@ -42,8 +42,8 @@ class TableRegisterTest extends TableTestBase {
           .primaryKey("c").build())
       .withProperties(
         new TableProperties()
-          .property("connector.type", "test")
-      )
+          .property("connector.type", "test"))
+      .registerTableSource(tableSource)
 
     val resultTable = util.tableEnv.scan(tableSource)
       .where('a > 9)

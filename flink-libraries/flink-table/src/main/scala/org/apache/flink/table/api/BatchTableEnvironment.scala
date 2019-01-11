@@ -836,8 +836,8 @@ class BatchTableEnvironment(
     }
   }
 
-  override def registerTableSourceFromTableMetas(name: String, tableMeta: TableMeta): Unit = {
-    throw new TableException("Currently, registerTable(name: String) is not supported in Batch, " +
-      "user registerTable(name: String, table: Table) instead.")
+  override private[flink] def registerTableSource(name: String, tableInfo: TableInfo): Unit = {
+    throw new TableException("Currently, createTableWithName(name: String) is not supported in " +
+      "Batch, use registerTable(name: String, table: Table) instead.")
   }
 }

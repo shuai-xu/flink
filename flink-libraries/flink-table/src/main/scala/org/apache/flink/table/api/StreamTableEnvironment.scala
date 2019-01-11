@@ -1049,11 +1049,11 @@ abstract class StreamTableEnvironment(
       ))))
   }
 
-  override def registerTableSourceFromTableMetas(name: String, tableMeta: TableMeta): Unit = {
+  override private[flink] def registerTableSource(name: String, tableInfo: TableInfo): Unit = {
     // table schema
-    val tableSchema: TableSchema = tableMeta.getSchema
+    val tableSchema: TableSchema = tableInfo.getSchema
     // table properties
-    val tableProperties: TableProperties = tableMeta.getProperties.toKeyLowerCase
+    val tableProperties: TableProperties = tableInfo.getProperties.toKeyLowerCase
 
     if (tableSchema == null || tableProperties == null) {
       throw new TableException("TableSchema or TableProperties should not be null! " +
@@ -1062,8 +1062,8 @@ abstract class StreamTableEnvironment(
 
     // table schema
     val richTableSchema = new RichTableSchema(
-      tableMeta.getSchema.getColumnNames,
-      tableMeta.getSchema.getTypes)
+      tableInfo.getSchema.getFieldNames,
+      tableInfo.getSchema.getFieldTypes)
     tableProperties.putSchemaIntoProperties(richTableSchema)
 
     // table source
