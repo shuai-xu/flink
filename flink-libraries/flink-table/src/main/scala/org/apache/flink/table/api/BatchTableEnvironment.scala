@@ -184,7 +184,6 @@ class BatchTableEnvironment(
       case Some(jn) => context.setJobName(jn)
       case None => context.setJobName(DEFAULT_JOB_NAME)
     }
-    setTransformationsUid(streamingTransformations, "batch-table-")
     val streamGraph = StreamGraphGenerator.generate(context, streamingTransformations)
 
     setupOperatorMetricCollect()
