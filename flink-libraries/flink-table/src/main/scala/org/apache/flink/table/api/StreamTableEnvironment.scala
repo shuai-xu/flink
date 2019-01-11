@@ -148,9 +148,8 @@ abstract class StreamTableEnvironment(
       if (sinkNodes.isEmpty) {
         throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
       }
-      val dagOptimizer = new StreamDAGOptimizer(sinkNodes, this)
       // optimize dag
-      val sinks = dagOptimizer.getOptimizedDag()
+      val sinks = StreamDAGOptimizer.optimize(sinkNodes, this)
       // convert to node dag
       val nodeDag = translateToExecNodeDag(sinks)
       // translate to transformation
@@ -967,9 +966,8 @@ abstract class StreamTableEnvironment(
       sb.append(System.lineSeparator)
     }
 
-    val dagOptimizer = new StreamDAGOptimizer(sinkNodes, this)
     // optimize dag
-    val sinkRelNodes = dagOptimizer.getOptimizedDag()
+    val sinkRelNodes = StreamDAGOptimizer.optimize(sinkNodes, this)
     val sinkExecNodes = translateToExecNodeDag(sinkRelNodes)
 
     sb.append("== Optimized Logical Plan ==")

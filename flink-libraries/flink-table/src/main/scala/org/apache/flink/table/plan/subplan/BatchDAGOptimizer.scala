@@ -22,52 +22,28 @@ import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.plan.logical.LogicalNode
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink
 import org.apache.flink.table.plan.schema.IntermediateRelNodeTable
-import org.apache.flink.table.plan.util.FlinkRelOptUtil
 
 import org.apache.calcite.rel.RelNode
 
-import scala.collection.mutable
+/**
+  * DAG optimizer for Batch.
+  */
+object BatchDAGOptimizer extends AbstractDAGOptimizer[BatchTableEnvironment] {
 
-class BatchDAGOptimizer(sinks: Seq[LogicalNode], tEnv: BatchTableEnvironment)
-  extends DAGOptimizer(sinks, tEnv) {
-
-  protected lazy val blockPlan: Seq[RelNodeBlock] = {
+  override protected def doOptimize(
+      sinks: Seq[LogicalNode],
+      tEnv: BatchTableEnvironment): Seq[RelNodeBlock] = {
     // build RelNodeBlock plan
     val relNodeBlocks = RelNodeBlockPlanBuilder.buildRelNodeBlockPlan(sinks, tEnv)
     // optimize recursively RelNodeBlock
-    relNodeBlocks.foreach(optimize)
+    relNodeBlocks.foreach(block => optimizeBlock(block, tEnv))
     relNodeBlocks
   }
 
-  override def getOptimizedRelNodeBlock(): Seq[RelNodeBlock] = blockPlan
-
-  override def explain(): String = {
-    val sb = new StringBuilder
-    val visitedBlocks = mutable.Set[RelNodeBlock]()
-
-    def visitBlock(block: RelNodeBlock, isSinkBlock: Boolean): Unit = {
-      if (!visitedBlocks.contains(block)) {
-        block.children.foreach(visitBlock(_, isSinkBlock = false))
-        if (isSinkBlock) {
-          sb.append("[[Sink]]")
-        } else {
-          sb.append(s"[[IntermediateTable=${block.getOutputTableName}]]")
-        }
-        sb.append(System.lineSeparator)
-        sb.append(FlinkRelOptUtil.toString(block.getOptimizedPlan))
-        sb.append(System.lineSeparator)
-        visitedBlocks += block
-      }
-    }
-
-    blockPlan.foreach(visitBlock(_, isSinkBlock = true))
-    sb.toString
-  }
-
-  private def optimize(block: RelNodeBlock): Unit = {
+  private def optimizeBlock(block: RelNodeBlock, tEnv: BatchTableEnvironment): Unit = {
     block.children.foreach { child =>
       if (child.getNewOutputNode.isEmpty) {
-        optimize(child)
+        optimizeBlock(child, tEnv)
       }
     }
 
@@ -79,7 +55,7 @@ class BatchDAGOptimizer(sinks: Seq[LogicalNode], tEnv: BatchTableEnvironment)
       case n: BatchExecSink[_] => // ignore
       case _ =>
         val name = tEnv.createUniqueTableName()
-        registerIntermediateTable(name, optimizedTree)
+        registerIntermediateTable(tEnv, name, optimizedTree)
         val newTable = tEnv.scan(name)
         block.setNewOutputNode(newTable.getRelNode)
         block.setOutputTableName(name)
@@ -87,7 +63,10 @@ class BatchDAGOptimizer(sinks: Seq[LogicalNode], tEnv: BatchTableEnvironment)
     block.setOptimizedPlan(optimizedTree)
   }
 
-  private def registerIntermediateTable(name: String, relNode: RelNode): Unit = {
+  private def registerIntermediateTable(
+      tEnv: BatchTableEnvironment,
+      name: String,
+      relNode: RelNode): Unit = {
     val table = new IntermediateRelNodeTable(relNode)
     tEnv.registerTableInternal(name, table)
   }

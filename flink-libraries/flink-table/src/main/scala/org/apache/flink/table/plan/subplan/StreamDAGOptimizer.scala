@@ -19,8 +19,8 @@
 package org.apache.flink.table.plan.subplan
 
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.expressions._
@@ -42,10 +42,14 @@ import java.util
 
 import scala.collection.JavaConversions._
 
-class StreamDAGOptimizer(sinks: Seq[LogicalNode], tEnv: StreamTableEnvironment)
-  extends DAGOptimizer(sinks, tEnv) {
+/**
+  * DAG optimizer for Stream.
+  */
+object StreamDAGOptimizer extends AbstractDAGOptimizer[StreamTableEnvironment] {
 
-  protected lazy val blockPlan: Seq[RelNodeBlock]  = {
+  override protected def doOptimize(
+      sinks: Seq[LogicalNode],
+      tEnv: StreamTableEnvironment): Seq[RelNodeBlock] = {
     // build RelNodeBlock plan
     val relNodeBlocks = RelNodeBlockPlanBuilder.buildRelNodeBlockPlan(sinks, tEnv)
     // infer updateAsRetraction property for each block
@@ -56,7 +60,7 @@ class StreamDAGOptimizer(sinks: Seq[LogicalNode], tEnv: StreamTableEnvironment)
           case _ => false
         }
         sinkBlock.setUpdateAsRetraction(retractionFromSink)
-        inferUpdateAsRetraction(sinkBlock, retractionFromSink)
+        inferUpdateAsRetraction(tEnv, sinkBlock, retractionFromSink)
     }
 
     // propagate updateAsRetraction property to all input blocks
@@ -64,18 +68,16 @@ class StreamDAGOptimizer(sinks: Seq[LogicalNode], tEnv: StreamTableEnvironment)
     // clear the intermediate result
     relNodeBlocks.foreach(resetIntermediateResult)
     // optimize recursively RelNodeBlock
-    relNodeBlocks.foreach(optimize)
+    relNodeBlocks.foreach(block => optimizeBlock(block, tEnv))
     relNodeBlocks
   }
 
-  override def getOptimizedRelNodeBlock(): Seq[RelNodeBlock] = blockPlan
-
-  private def optimize(block: RelNodeBlock): Unit = {
-
+  private def optimizeBlock(block: RelNodeBlock, tEnv: StreamTableEnvironment): Unit = {
     block.children.foreach {
-      child => if (child.getNewOutputNode.isEmpty) {
-        optimize(child)
-      }
+      child =>
+        if (child.getNewOutputNode.isEmpty) {
+          optimizeBlock(child, tEnv)
+        }
     }
 
     val blockLogicalPlan = block.getPlan
@@ -90,11 +92,11 @@ class StreamDAGOptimizer(sinks: Seq[LogicalNode], tEnv: StreamTableEnvironment)
           updatesAsRetraction = block.isUpdateAsRetraction,
           isSinkBlock = false)
         val isAccRetract = optimizedPlan.getTraitSet
-                           .getTrait(AccModeTraitDef.INSTANCE).getAccMode == AccMode.AccRetract
+          .getTrait(AccModeTraitDef.INSTANCE).getAccMode == AccMode.AccRetract
         val rowType = optimizedPlan.getRowType
         val fieldExpressions = getExprsWithTimeAttribute(o.getRowType, rowType)
         val name = tEnv.createUniqueTableName()
-        registerIntermediateTable(name, optimizedPlan, isAccRetract, fieldExpressions)
+        registerIntermediateTable(tEnv, name, optimizedPlan, isAccRetract, fieldExpressions)
         val newTable = tEnv.scan(name)
         block.setNewOutputNode(newTable.getRelNode)
         block.setOutputTableName(name)
@@ -109,13 +111,14 @@ class StreamDAGOptimizer(sinks: Seq[LogicalNode], tEnv: StreamTableEnvironment)
     * @param retractionFromSink Whether the sink need update as retraction messages.
     */
   private def inferUpdateAsRetraction(
-    block: RelNodeBlock,
-    retractionFromSink: Boolean): Unit = {
+      tEnv: StreamTableEnvironment,
+      block: RelNodeBlock,
+      retractionFromSink: Boolean): Unit = {
 
     block.children.foreach {
       child =>
         if (child.getNewOutputNode.isEmpty) {
-          inferUpdateAsRetraction(child, retractionFromSink = false)
+          inferUpdateAsRetraction(tEnv, child, retractionFromSink = false)
         }
     }
 
@@ -129,7 +132,7 @@ class StreamDAGOptimizer(sinks: Seq[LogicalNode], tEnv: StreamTableEnvironment)
         val rowType = optimizedPlan.getRowType
         val fieldExpressions = getExprsWithTimeAttribute(o.getRowType, rowType)
         val name = tEnv.createUniqueTableName()
-        registerIntermediateTable(name, optimizedPlan, isAccRetract = false, fieldExpressions)
+        registerIntermediateTable(tEnv, name, optimizedPlan, isAccRetract = false, fieldExpressions)
         val newTable = tEnv.scan(name)
         block.setNewOutputNode(newTable.getRelNode)
         block.setOutputTableName(name)
@@ -183,17 +186,19 @@ class StreamDAGOptimizer(sinks: Seq[LogicalNode], tEnv: StreamTableEnvironment)
     block.setOutputTableName(null)
 
     block.children.foreach {
-      child => if (child.getNewOutputNode.nonEmpty) {
-        resetIntermediateResult(child)
-      }
+      child =>
+        if (child.getNewOutputNode.nonEmpty) {
+          resetIntermediateResult(child)
+        }
     }
   }
 
   private def registerIntermediateTable(
-    name: String,
-    relNode: RelNode,
-    isAccRetract: Boolean,
-    fields: Array[Expression]): Unit = {
+      tEnv: StreamTableEnvironment,
+      name: String,
+      relNode: RelNode,
+      isAccRetract: Boolean,
+      fields: Array[Expression]): Unit = {
     val rowType = relNode.getRowType
     val streamType = DataTypes.of(
       FlinkTypeFactory.toInternalBaseRowTypeInfo(rowType, classOf[BaseRow]))
@@ -209,10 +214,10 @@ class StreamDAGOptimizer(sinks: Seq[LogicalNode], tEnv: StreamTableEnvironment)
           s"But is: ${tEnv.execEnv.getStreamTimeCharacteristic}")
     }
 
-    val uniqueKeys = getUniqueKeys(relNode)
+    val uniqueKeys = getUniqueKeys(tEnv, relNode)
     val monotonicity = FlinkRelMetadataQuery
-                       .reuseOrCreate(tEnv.getRelBuilder.getCluster.getMetadataQuery)
-                       .getRelModifiedMonotonicity(relNode)
+      .reuseOrCreate(tEnv.getRelBuilder.getCluster.getMetadataQuery)
+      .getRelModifiedMonotonicity(relNode)
     val statistic = FlinkStatistic.of(uniqueKeys, monotonicity)
 
     val table = new IntermediateRelNodeTable(
@@ -226,8 +231,8 @@ class StreamDAGOptimizer(sinks: Seq[LogicalNode], tEnv: StreamTableEnvironment)
     * Mark Expression to RowtimeAttribute or ProctimeAttribute for time indicators
     */
   private def getExprsWithTimeAttribute(
-    preRowType: RelDataType,
-    postRowType: RelDataType): Array[Expression] = {
+      preRowType: RelDataType,
+      postRowType: RelDataType): Array[Expression] = {
 
     preRowType.getFieldNames.zipWithIndex.map {
       case (name, index) =>
@@ -246,11 +251,12 @@ class StreamDAGOptimizer(sinks: Seq[LogicalNode], tEnv: StreamTableEnvironment)
     }.toArray[Expression]
   }
 
-  private def getUniqueKeys(relNode: RelNode): util.Set[_ <: util.Set[String]] = {
+  private def getUniqueKeys(
+      tEnv: StreamTableEnvironment,
+      relNode: RelNode): util.Set[_ <: util.Set[String]] = {
     val rowType = relNode.getRowType
-    val uniqueKeys = FlinkRelMetadataQuery
-                     .reuseOrCreate(tEnv.getRelBuilder.getCluster.getMetadataQuery)
-                     .getUniqueKeys(relNode)
+    val fmq = FlinkRelMetadataQuery.reuseOrCreate(tEnv.getRelBuilder.getCluster.getMetadataQuery)
+    val uniqueKeys = fmq.getUniqueKeys(relNode)
     if (uniqueKeys != null) {
       uniqueKeys.map { uniqueKey =>
         val keys = new util.HashSet[String]()

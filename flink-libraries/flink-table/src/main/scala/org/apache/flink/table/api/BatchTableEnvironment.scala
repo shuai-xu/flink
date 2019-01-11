@@ -30,7 +30,6 @@ import org.apache.flink.streaming.api.graph.{StreamGraph, StreamGraphGenerator}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
-import org.apache.flink.table.catalog.ReadableCatalog
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescriptor}
 import org.apache.flink.table.errorcode.TableErrors
@@ -259,9 +258,8 @@ class BatchTableEnvironment(
       }
 
       val optSinkNodes = tableServiceManager.cachePlanBuilder.buildPlanIfNeeded(sinkNodes)
-      val dagOptimizer = new BatchDAGOptimizer(optSinkNodes, this)
       // optimize dag
-      val sinks = dagOptimizer.getOptimizedDag()
+      val sinks = BatchDAGOptimizer.optimize(optSinkNodes, this)
       // convert to node dag
       val nodeDag = translateToExecNodeDag(sinks)
       // translate to transformation
@@ -784,9 +782,8 @@ class BatchTableEnvironment(
     }
 
     val optSinkNodes = tableServiceManager.cachePlanBuilder.buildPlanIfNeeded(sinkNodes)
-    val dagOptimizer = new BatchDAGOptimizer(optSinkNodes, this)
     // optimize dag
-    val sinkRelNodes = dagOptimizer.getOptimizedDag()
+    val sinkRelNodes = BatchDAGOptimizer.optimize(optSinkNodes, this)
     val sinkExecNodes = translateToExecNodeDag(sinkRelNodes)
 
     sb.append("== Optimized Logical Plan ==")

@@ -528,10 +528,10 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
     val optSinkNodes = tableEnv.tableServiceManager.cachePlanBuilder
       .buildPlanIfNeeded(tableEnv.sinkNodes)
 
-
-    val dagOptimizer = new BatchDAGOptimizer(optSinkNodes, tableEnv)
     // optimize dag
-    val sinks = dagOptimizer.getOptimizedDag()
+    val sinks = BatchDAGOptimizer.optimize(optSinkNodes, tableEnv)
+    val sinkExecNodes = tableEnv.translateToExecNodeDag(sinks)
+
     tableEnv.sinkNodes.clear()
 
     // set resource
@@ -539,7 +539,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
       val planWithResource = new StringBuilder()
       val ruKeeper = new RunningUnitKeeper(tableEnv)
       // TODO refactor
-      sinks.map {
+      sinkExecNodes.map {
         case node: BatchExecSink[_] =>
           ruKeeper.buildRUs(node)
           ruKeeper.calculateRelResource(node)
@@ -556,7 +556,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
       planWithResource.deleteCharAt(planWithResource.length - 1)
       planWithResource.toString
     } else {
-      dagOptimizer.explain()
+      FlinkNodeOptUtil.dagToString(sinkExecNodes, detailLevel = explainLevel)
     }
     assertEqualsOrExpand("planAfter", planAfter, expand = false)
   }
