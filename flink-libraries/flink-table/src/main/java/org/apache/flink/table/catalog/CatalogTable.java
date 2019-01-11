@@ -25,6 +25,7 @@ import org.apache.flink.util.StringUtils;
 
 import org.apache.calcite.rex.RexNode;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -96,6 +97,10 @@ public class CatalogTable {
 		long lastAccessTime,
 		boolean isStreaming) {
 
+		if (tableSchema != null && partitionColumnNames != null) {
+			checkPartitionKeys(tableSchema, partitionColumnNames);
+		}
+
 		this.tableType = tableType;
 		this.tableSchema = tableSchema;
 		this.properties = properties;
@@ -110,6 +115,23 @@ public class CatalogTable {
 		this.createTime = createTime;
 		this.lastAccessTime = lastAccessTime;
 		this.isStreaming = isStreaming;
+	}
+
+	private void checkPartitionKeys(TableSchema schema, LinkedHashSet<String> partitionColumnNames) {
+		if (!partitionColumnNames.isEmpty()) {
+			String[] colNames = schema.getFieldNames();
+			String[] expectedPartitionCols = Arrays.copyOfRange(colNames, colNames.length - partitionColumnNames.size(), colNames.length);
+
+			String[] partitionCols = new String[partitionColumnNames.size()];
+			partitionColumnNames.toArray(partitionCols);
+
+			if (!Arrays.equals(expectedPartitionCols, partitionCols)) {
+				throw new IllegalArgumentException(
+					String.format("Partition columns %s does not match the last %d columns of TableSchema %s",
+						partitionColumnNames, partitionColumnNames.size(), tableSchema.getFieldNames())
+				);
+			}
+		}
 	}
 
 	public String getTableType() {
