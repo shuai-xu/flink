@@ -28,7 +28,7 @@ import org.apache.flink.runtime.healthmanager.plugins.Action;
 import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobHeapMemory;
-import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFullGC;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequentFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHeapOOM;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -38,6 +38,7 @@ import java.util.Set;
 
 /**
  * Heap Memory adjuster which can resolve vertex heap oom and full gc.
+ * If heap oom or frequent full gc detected, increase heap memory of corresponding vertices by given ratio.
  */
 public class HeapMemoryAdjuster implements Resolver {
 
@@ -76,9 +77,9 @@ public class HeapMemoryAdjuster implements Resolver {
 				continue;
 			}
 
-			if (symptom instanceof JobVertexFullGC) {
-				JobVertexFullGC jobVertexFullGC = (JobVertexFullGC) symptom;
-				jobVertexIDs.addAll(jobVertexFullGC.getJobVertexIDs());
+			if (symptom instanceof JobVertexFrequentFullGC) {
+				JobVertexFrequentFullGC jobVertexFrequentFullGC = (JobVertexFrequentFullGC) symptom;
+				jobVertexIDs.addAll(jobVertexFrequentFullGC.getJobVertexIDs());
 			}
 		}
 

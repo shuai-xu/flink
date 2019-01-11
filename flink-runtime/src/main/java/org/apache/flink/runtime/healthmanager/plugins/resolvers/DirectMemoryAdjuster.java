@@ -37,6 +37,7 @@ import java.util.Set;
 
 /**
  * Direct Memory adjuster which can resolve vertex direct oom.
+ * If direct oom detected, increase direct memory of corresponding vertices by given ratio.
  */
 public class DirectMemoryAdjuster implements Resolver {
 

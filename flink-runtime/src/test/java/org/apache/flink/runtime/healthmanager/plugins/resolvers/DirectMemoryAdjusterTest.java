@@ -35,6 +35,7 @@ import org.apache.flink.runtime.util.ExecutorThreadFactory;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -89,6 +90,8 @@ public class DirectMemoryAdjusterTest {
 		vertexConfigs2.put(vertex2, vertex2Config2);
 
 		Map<JobVertexID, List<JobVertexID>> inputNodes = new HashMap<>();
+		inputNodes.put(vertex1, Collections.emptyList());
+		inputNodes.put(vertex2, Collections.emptyList());
 
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))

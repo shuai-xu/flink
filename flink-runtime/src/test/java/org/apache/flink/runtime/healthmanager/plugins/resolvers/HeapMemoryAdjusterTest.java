@@ -29,7 +29,7 @@ import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.JobTMMetricSubscription;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.FullGCDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.FrequentFullGCDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.HeapOOMDetector;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -39,6 +39,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -93,6 +94,8 @@ public class HeapMemoryAdjusterTest {
 		vertexConfigs2.put(vertex2, vertex2Config2);
 
 		Map<JobVertexID, List<JobVertexID>> inputNodes = new HashMap<>();
+		inputNodes.put(vertex1, Collections.emptyList());
+		inputNodes.put(vertex2, Collections.emptyList());
 
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
@@ -180,7 +183,7 @@ public class HeapMemoryAdjusterTest {
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
 		config.setString("heap.memory.scale.timeout.ms", "10000");
 		config.setString("heap.memory.scale.ratio", "1");
-		config.setString(HealthMonitor.DETECTOR_CLASSES, FullGCDetector.class.getCanonicalName());
+		config.setString(HealthMonitor.DETECTOR_CLASSES, FrequentFullGCDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, HeapMemoryAdjuster.class.getCanonicalName());
 
 		// initial job vertex config.
@@ -202,6 +205,8 @@ public class HeapMemoryAdjusterTest {
 		vertexConfigs2.put(vertex2, vertex2Config2);
 
 		Map<JobVertexID, List<JobVertexID>> inputNodes = new HashMap<>();
+		inputNodes.put(vertex1, Collections.emptyList());
+		inputNodes.put(vertex2, Collections.emptyList());
 
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))

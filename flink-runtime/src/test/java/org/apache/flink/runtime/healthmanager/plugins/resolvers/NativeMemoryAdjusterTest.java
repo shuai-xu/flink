@@ -37,6 +37,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +62,6 @@ public class NativeMemoryAdjusterTest {
 		JobVertexID vertex1 = new JobVertexID();
 		JobVertexID vertex2 = new JobVertexID();
 		ExecutionVertexID executionVertexID1 = new ExecutionVertexID(vertex1, 0);
-		ExecutionVertexID executionVertexID12 = new ExecutionVertexID(vertex2, 0);
 
 		// job level configuration.
 		Configuration config = new Configuration();
@@ -90,6 +90,8 @@ public class NativeMemoryAdjusterTest {
 		vertexConfigs2.put(vertex2, vertex2Config2);
 
 		Map<JobVertexID, List<JobVertexID>> inputNodes = new HashMap<>();
+		inputNodes.put(vertex1, Collections.emptyList());
+		inputNodes.put(vertex2, Collections.emptyList());
 
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))

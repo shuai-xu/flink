@@ -28,6 +28,7 @@ import org.apache.flink.runtime.client.JobStatusMessage;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.util.AbstractID;
 
 import java.util.List;
 import java.util.Map;
@@ -122,6 +123,11 @@ public interface RestServerClient {
 		private int maxParallelism;
 
 		/**
+		 * colocation group id.
+		 */
+		private AbstractID colocationGroupId;
+
+		/**
 		 * current resource request.
 		 */
 		private ResourceSpec resourceSpec;
@@ -134,18 +140,21 @@ public interface RestServerClient {
 		@VisibleForTesting
 		public VertexConfig(
 				int parallelism, int maxParallelism, ResourceSpec resourceSpec) {
-			this.parallelism = parallelism;
-			this.maxParallelism = maxParallelism;
-			this.resourceSpec = resourceSpec;
-			this.operatorIds = null;
+			this(parallelism, maxParallelism, resourceSpec, null, null);
 		}
 
 		public VertexConfig(
 				int parallelism, int maxParallelism, ResourceSpec resourceSpec, List<Integer> operatorIds) {
+			this(parallelism, maxParallelism, resourceSpec, operatorIds, null);
+		}
+
+		public VertexConfig(
+				int parallelism, int maxParallelism, ResourceSpec resourceSpec, List<Integer> operatorIds, AbstractID colocationGroupId) {
 			this.parallelism = parallelism;
 			this.maxParallelism = maxParallelism;
 			this.resourceSpec = resourceSpec;
 			this.operatorIds = operatorIds;
+			this.colocationGroupId = colocationGroupId;
 		}
 
 		public int getParallelism() {
@@ -162,6 +171,10 @@ public interface RestServerClient {
 
 		public List<Integer> getOperatorIds() {
 			return operatorIds;
+		}
+
+		public AbstractID getColocationGroupId() {
+			return colocationGroupId;
 		}
 	}
 
@@ -185,9 +198,9 @@ public interface RestServerClient {
 		private Map<JobVertexID, List<JobVertexID>> inputNodes;
 
 		public JobConfig(
-				Configuration config,
-				Map<JobVertexID, VertexConfig> vertexConfigs,
-				Map<JobVertexID, List<JobVertexID>> inputNodes) {
+			Configuration config,
+			Map<JobVertexID, VertexConfig> vertexConfigs,
+			Map<JobVertexID, List<JobVertexID>> inputNodes) {
 			this.config = config;
 			this.vertexConfigs = vertexConfigs;
 			this.inputNodes = inputNodes;
@@ -204,7 +217,6 @@ public interface RestServerClient {
 		public Map<JobVertexID, List<JobVertexID>> getInputNodes() {
 			return inputNodes;
 		}
-
 	}
 
 	/**

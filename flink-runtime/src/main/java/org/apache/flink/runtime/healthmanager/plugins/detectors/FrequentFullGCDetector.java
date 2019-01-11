@@ -29,7 +29,7 @@ import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
-import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFullGC;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequentFullGC;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -41,9 +41,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * FullGCDetector detects full GCs a job.
+ * FrequentFullGCDetector detects full GCs a job.
+ * Detects {@link JobVertexFrequentFullGC} on locating TaskManager of any task of the vertex,
+ * full gc occur count is higher than the threshold within the interval.
  */
-public class FullGCDetector implements Detector {
+public class FrequentFullGCDetector implements Detector {
 
 	private static final String FULL_GC_COUNT_METRIC = "Status.JVM.GarbageCollector.ConcurrentMarkSweep.Count";
 
@@ -116,7 +118,7 @@ public class FullGCDetector implements Detector {
 		}
 
 		if (jobVertexIDs != null && !jobVertexIDs.isEmpty()) {
-			return new JobVertexFullGC(jobID, new ArrayList<>(jobVertexIDs));
+			return new JobVertexFrequentFullGC(jobID, new ArrayList<>(jobVertexIDs));
 		}
 		return null;
 	}

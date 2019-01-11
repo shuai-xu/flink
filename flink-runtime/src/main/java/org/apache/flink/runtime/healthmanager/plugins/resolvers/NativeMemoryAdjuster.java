@@ -37,6 +37,8 @@ import java.util.Map;
 
 /**
  * Native Memory adjuster which can resolve vertex native memory overuse.
+ * If memory overuse detected:
+ *   new_direct_memory = max_among_tasks_of_same_vertex { tm_memory_overuse / num_of_tasks } * ratio + original_direct_memory
  */
 public class NativeMemoryAdjuster implements Resolver {
 

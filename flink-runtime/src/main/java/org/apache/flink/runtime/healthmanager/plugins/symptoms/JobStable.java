@@ -20,28 +20,18 @@ package org.apache.flink.runtime.healthmanager.plugins.symptoms;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
-import org.apache.flink.runtime.jobgraph.JobVertexID;
-
-import java.util.List;
 
 /**
- * Symptom indicating job vertices direct oom.
+ * Symptom indicating job stable.
  */
-public class JobVertexFullGC implements Symptom {
+public class JobStable implements Symptom {
+	private JobID jobId;
 
-	private JobID jobID;
-	private List<JobVertexID> jobVertexIDs;
-
-	public JobVertexFullGC(JobID jobID, List<JobVertexID> jobVertexIDs) {
-		this.jobID = jobID;
-		this.jobVertexIDs = jobVertexIDs;
+	public JobStable(JobID jobId) {
+		this.jobId = jobId;
 	}
 
-	public JobID getJobID() {
-		return jobID;
-	}
-
-	public List<JobVertexID> getJobVertexIDs() {
-		return jobVertexIDs;
+	public JobID getJobId() {
+		return jobId;
 	}
 }

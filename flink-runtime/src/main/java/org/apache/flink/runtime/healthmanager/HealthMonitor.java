@@ -29,13 +29,20 @@ import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actionselectors.FirstValidActionSelector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.BackPressureDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.DelayIncreasingDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.DirectOOMDetector;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.FullGCDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.FailoverDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.FrequentFullGCDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.HeapOOMDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.HighDelayDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.LowDelayDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.MemoryOveruseDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.OverParallelizedDetector;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.DirectMemoryAdjuster;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.HeapMemoryAdjuster;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.NativeMemoryAdjuster;
+import org.apache.flink.runtime.healthmanager.plugins.resolvers.ParallelismScaler;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,14 +72,21 @@ public class HealthMonitor {
 			ConfigOptions.key("healthmonitor.detector.classes")
 					.defaultValue(HeapOOMDetector.class.getCanonicalName() + ","
 						+ DirectOOMDetector.class.getCanonicalName() + ","
-						+ FullGCDetector.class.getCanonicalName() + ","
-						+ MemoryOveruseDetector.class.getCanonicalName());
+						+ FrequentFullGCDetector.class.getCanonicalName() + ","
+						+ MemoryOveruseDetector.class.getCanonicalName() + ","
+						+ HighDelayDetector.class.getCanonicalName() + ","
+						+ LowDelayDetector.class.getCanonicalName() + ","
+						+ DelayIncreasingDetector.class.getCanonicalName() + ","
+						+ OverParallelizedDetector.class.getCanonicalName() + ","
+						+ FailoverDetector.class.getCanonicalName() + ","
+						+ BackPressureDetector.class.getCanonicalName());
 
 	public static final ConfigOption<String> RESOLVER_CLASSES =
 			ConfigOptions.key("healthmonitor.resolver.classes")
 					.defaultValue(HeapMemoryAdjuster.class.getCanonicalName() + ","
 						+ DirectMemoryAdjuster.class.getCanonicalName() + ","
-						+ NativeMemoryAdjuster.class.getCanonicalName());
+						+ NativeMemoryAdjuster.class.getCanonicalName() + " "
+						+ ParallelismScaler.class.getCanonicalName());
 
 	private JobID jobID;
 	private Configuration config;
