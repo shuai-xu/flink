@@ -81,5 +81,24 @@ public class JobPendingSlotRequestDetailTest {
 
 			assertEquals(expected, unmarshalled);
 		}
+
+		// case
+		{
+			final JobPendingSlotRequestDetail expected = new JobPendingSlotRequestDetail(
+					new SlotRequestId(),
+					new ResourceProfile(-1, -1, -1, -1, -1, null),
+					625L,
+					new SlotSharingGroupId(),
+					new AbstractID(),
+					Lists.newArrayList(
+							new JobPendingSlotRequestDetail.VertexTaskInfo(new JobVertexID(), "test_task", 21, 38)
+					));
+
+			final ObjectMapper objectMapper = RestMapperUtils.getStrictObjectMapper();
+			final JsonNode marshalled = objectMapper.valueToTree(expected);
+			final JobPendingSlotRequestDetail unmarshalled = objectMapper.treeToValue(marshalled, JobPendingSlotRequestDetail.class);
+
+			assertEquals(expected, unmarshalled);
+		}
 	}
 }

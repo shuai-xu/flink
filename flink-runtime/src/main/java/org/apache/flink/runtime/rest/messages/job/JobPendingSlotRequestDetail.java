@@ -263,11 +263,23 @@ public class JobPendingSlotRequestDetail implements Serializable {
 				SerializerProvider serializerProvider) throws IOException {
 			jsonGenerator.writeStartObject();
 			jsonGenerator.writeNumberField(FIELD_NAME_RESOURCE_CPU_CORES, resourceProfile.getCpuCores());
-			jsonGenerator.writeNumberField(FIELD_NAME_RESOURCE_HEAP_MEMORY, resourceProfile.getHeapMemoryInMB());
-			jsonGenerator.writeNumberField(FIELD_NAME_RESOURCE_DIRECT_MEMORY, resourceProfile.getDirectMemoryInMB());
-			jsonGenerator.writeNumberField(FIELD_NAME_RESOURCE_NATIVE_MEMORY, resourceProfile.getNativeMemoryInMB());
-			jsonGenerator.writeNumberField(FIELD_NAME_RESOURCE_NETWORK_MEMORY, resourceProfile.getNetworkMemoryInMB());
+			jsonGenerator.writeNumberField(FIELD_NAME_RESOURCE_HEAP_MEMORY, convertMegabyteToByte(resourceProfile.getHeapMemoryInMB()));
+			jsonGenerator.writeNumberField(FIELD_NAME_RESOURCE_DIRECT_MEMORY, convertMegabyteToByte(resourceProfile.getDirectMemoryInMB()));
+			jsonGenerator.writeNumberField(FIELD_NAME_RESOURCE_NATIVE_MEMORY, convertMegabyteToByte(resourceProfile.getNativeMemoryInMB()));
+			jsonGenerator.writeNumberField(FIELD_NAME_RESOURCE_NETWORK_MEMORY, convertMegabyteToByte(resourceProfile.getNetworkMemoryInMB()));
 			jsonGenerator.writeEndObject();
+		}
+
+		private static long convertMegabyteToByte(int value) {
+			final long result;
+
+			if (value > 0) {
+				result = value * 1024 * 1024;
+			} else {
+				result = value;
+			}
+
+			return result;
 		}
 	}
 
@@ -287,13 +299,25 @@ public class JobPendingSlotRequestDetail implements Serializable {
 			JsonNode rootNode = jsonParser.readValueAsTree();
 
 			double cpuCores = rootNode.get(FIELD_NAME_RESOURCE_CPU_CORES).doubleValue();
-			int heapMemoryInMB = rootNode.get(FIELD_NAME_RESOURCE_HEAP_MEMORY).intValue();
-			int directMemoryInMB = rootNode.get(FIELD_NAME_RESOURCE_DIRECT_MEMORY).intValue();
-			int nativeMemoryInMB = rootNode.get(FIELD_NAME_RESOURCE_NATIVE_MEMORY).intValue();
-			int networkMemoryInMB = rootNode.get(FIELD_NAME_RESOURCE_NETWORK_MEMORY).intValue();
+			int heapMemoryInMB = convertByteToMegabyte(rootNode.get(FIELD_NAME_RESOURCE_HEAP_MEMORY).longValue());
+			int directMemoryInMB = convertByteToMegabyte(rootNode.get(FIELD_NAME_RESOURCE_DIRECT_MEMORY).longValue());
+			int nativeMemoryInMB = convertByteToMegabyte(rootNode.get(FIELD_NAME_RESOURCE_NATIVE_MEMORY).longValue());
+			int networkMemoryInMB = convertByteToMegabyte(rootNode.get(FIELD_NAME_RESOURCE_NETWORK_MEMORY).longValue());
 
 			return new ResourceProfile(
 					cpuCores, heapMemoryInMB, directMemoryInMB, nativeMemoryInMB, networkMemoryInMB, null);
+		}
+
+		private static int convertByteToMegabyte(long value) {
+			final long result;
+
+			if (value > 0) {
+				result = value / (1024 * 1024);
+			} else {
+				result = value;
+			}
+
+			return Long.valueOf(result).intValue();
 		}
 	}
 }
