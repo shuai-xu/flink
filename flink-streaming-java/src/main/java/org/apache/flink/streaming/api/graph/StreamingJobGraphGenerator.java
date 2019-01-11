@@ -1193,6 +1193,9 @@ public class StreamingJobGraphGenerator {
 		for (Integer startHeadNodeId : chainedNodeIdsMap.keySet()) {
 			JobVertex vertex = nodeToJobVertexMap.get(startHeadNodeId);
 			String slotSharingGroup = streamGraph.getStreamNode(startHeadNodeId).getSlotSharingGroup();
+			if (slotSharingGroup == null) {
+				continue;
+			}
 
 			SlotSharingGroup group = slotSharingGroups.get(slotSharingGroup);
 			if (group == null) {

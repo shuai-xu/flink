@@ -147,6 +147,18 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
     this
   }
 
+  def enableSlotSharing(): StreamExecutionEnvironment = {
+    javaEnv.enableSlotSharing()
+    this
+  }
+
+  def disableSlotSharing(): StreamExecutionEnvironment = {
+    javaEnv.disableSlotSharing()
+    this
+  }
+
+  def isSlotSharingEnabled = javaEnv.isSlotSharingEnabled
+
   def getDefaultResources: ResourceSpec = javaEnv.getDefaultResources;
 
   def setDefaultResources(resources: ResourceSpec): StreamExecutionEnvironment = {

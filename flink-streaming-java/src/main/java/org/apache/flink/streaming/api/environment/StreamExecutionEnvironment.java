@@ -152,6 +152,8 @@ public abstract class StreamExecutionEnvironment {
 
 	protected boolean isMultiHeadChainMode = false;
 
+	private boolean isSlotSharingEnabled = true;
+
 	private ResourceSpec defaultResources = null;
 
 	/** The state backend used for storing k/v state and state snapshots. */
@@ -326,6 +328,40 @@ public abstract class StreamExecutionEnvironment {
 	 */
 	public boolean isMultiHeadChainMode() {
 		return isMultiHeadChainMode;
+	}
+
+	/**
+	 * Enables slot-sharing for operators. Slot-Sharing allows operators with the
+	 * same name of slot-sharing group to execute in the same shared slot.
+	 *
+	 * @return StreamExecutionEnvironment with slot-sharing enabled.
+	 */
+	@PublicEvolving
+	public StreamExecutionEnvironment enableSlotSharing() {
+		this.isSlotSharingEnabled = true;
+		return this;
+	}
+
+	/**
+	 * Disables slot-sharing for operators. Slot-Sharing allows operators with the
+	 * same name of slot-sharing group to execute in the same shared slot.
+	 *
+	 * @return StreamExecutionEnvironment with slot-sharing disabled.
+	 */
+	@PublicEvolving
+	public StreamExecutionEnvironment disableSlotSharing() {
+		this.isSlotSharingEnabled = false;
+		return this;
+	}
+
+	/**
+	 * Returns whether operator slot-sharing is enabled.
+	 *
+	 * @return {@code true} if slot-sharing is enabled, false otherwise.
+	 */
+	@PublicEvolving
+	public boolean isSlotSharingEnabled() {
+		return isSlotSharingEnabled;
 	}
 
 	/**

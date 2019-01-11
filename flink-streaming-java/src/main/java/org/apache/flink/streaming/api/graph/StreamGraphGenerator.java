@@ -458,7 +458,7 @@ public class StreamGraphGenerator {
 			}
 		}
 
-		String slotSharingGroup = determineSlotSharingGroup(null, allFeedbackIds);
+		String slotSharingGroup = determineSlotSharingGroup(null, allFeedbackIds, true);
 
 		itSink.setSlotSharingGroup(slotSharingGroup);
 		itSource.setSlotSharingGroup(slotSharingGroup);
@@ -521,7 +521,7 @@ public class StreamGraphGenerator {
 			}
 		}
 
-		String slotSharingGroup = determineSlotSharingGroup(null, allFeedbackIds);
+		String slotSharingGroup = determineSlotSharingGroup(null, allFeedbackIds, true);
 
 		itSink.setSlotSharingGroup(slotSharingGroup);
 		itSource.setSlotSharingGroup(slotSharingGroup);
@@ -533,7 +533,7 @@ public class StreamGraphGenerator {
 	 * Transforms a {@code SourceTransformation}.
 	 */
 	private <T> Collection<Integer> transformSource(SourceTransformation<T> source) {
-		String slotSharingGroup = determineSlotSharingGroup(source.getSlotSharingGroup(), new ArrayList<Integer>());
+		String slotSharingGroup = determineSlotSharingGroup(source.getSlotSharingGroup(), new ArrayList<Integer>(), false);
 		streamGraph.addSource(source.getId(),
 				slotSharingGroup,
 				source.getOperator(),
@@ -553,7 +553,7 @@ public class StreamGraphGenerator {
 	 * Transforms a {@code SourceTransformation}.
 	 */
 	private <T> Collection<Integer> transformSourceV2(SourceV2Transformation<T> source) {
-		String slotSharingGroup = determineSlotSharingGroup(source.getSlotSharingGroup(), new ArrayList<Integer>());
+		String slotSharingGroup = determineSlotSharingGroup(source.getSlotSharingGroup(), new ArrayList<Integer>(), false);
 		streamGraph.addSource(source.getId(),
 			slotSharingGroup,
 			source.getOperator(),
@@ -576,7 +576,7 @@ public class StreamGraphGenerator {
 
 		Collection<Integer> inputIds = transform(sink.getInput());
 
-		String slotSharingGroup = determineSlotSharingGroup(sink.getSlotSharingGroup(), inputIds);
+		String slotSharingGroup = determineSlotSharingGroup(sink.getSlotSharingGroup(), inputIds, false);
 
 		streamGraph.addSink(sink.getId(),
 				slotSharingGroup,
@@ -622,7 +622,7 @@ public class StreamGraphGenerator {
 			return alreadyTransformed.get(transform);
 		}
 
-		String slotSharingGroup = determineSlotSharingGroup(transform.getSlotSharingGroup(), inputIds);
+		String slotSharingGroup = determineSlotSharingGroup(transform.getSlotSharingGroup(), inputIds, false);
 
 		streamGraph.addOperator(transform.getId(),
 				slotSharingGroup,
@@ -667,7 +667,7 @@ public class StreamGraphGenerator {
 		allInputIds.addAll(inputIds1);
 		allInputIds.addAll(inputIds2);
 
-		String slotSharingGroup = determineSlotSharingGroup(transform.getSlotSharingGroup(), allInputIds);
+		String slotSharingGroup = determineSlotSharingGroup(transform.getSlotSharingGroup(), allInputIds, false);
 
 		streamGraph.addCoOperator(
 				transform.getId(),
@@ -737,7 +737,11 @@ public class StreamGraphGenerator {
 	 * @param specifiedGroup The group specified by the user.
 	 * @param inputIds The IDs of the input operations.
 	 */
-	private String determineSlotSharingGroup(String specifiedGroup, Collection<Integer> inputIds) {
+	private String determineSlotSharingGroup(String specifiedGroup, Collection<Integer> inputIds, boolean isSlotSharingForced) {
+		if (!context.isSlotSharingEnabled() && !isSlotSharingForced) {
+			return null;
+		}
+
 		if (specifiedGroup != null) {
 			return specifiedGroup;
 		} else {
@@ -763,6 +767,7 @@ public class StreamGraphGenerator {
 		private StateBackend stateBackend;
 		private boolean chainingEnabled;
 		private boolean isMultiHeadChainMode;
+		private boolean isSlotSharingEnabled;
 		private boolean chainEagerlyEnabled;
 		private String jobName = StreamExecutionEnvironment.DEFAULT_JOB_NAME;
 		private List<Tuple2<String, DistributedCache.DistributedCacheEntry>> cacheFile = new ArrayList<>();
@@ -788,6 +793,7 @@ public class StreamGraphGenerator {
 			context.setBufferTimeout(env.getBufferTimeout());
 			context.setDefaultParallelism(env.getParallelism());
 			context.setMultiHeadChainMode(env.isMultiHeadChainMode());
+			context.setSlotSharingEnabled(env.isSlotSharingEnabled());
 
 			// For infinite stream job, by default schedule tasks in eager mode
 			context.setScheduleMode(ScheduleMode.EAGER);
@@ -826,6 +832,7 @@ public class StreamGraphGenerator {
 				context.setCacheFiles(env.getCachedFiles());
 				context.setBufferTimeout(-1L);
 				context.setMultiHeadChainMode(true);
+				context.setSlotSharingEnabled(env.isSlotSharingEnabled());
 
 				// For finite stream job, by default schedule tasks in lazily from sources mode
 				context.setScheduleMode(ScheduleMode.LAZY_FROM_SOURCES);
@@ -961,6 +968,14 @@ public class StreamGraphGenerator {
 
 		public void setMultiHeadChainMode(boolean multiHeadChainMode) {
 			isMultiHeadChainMode = multiHeadChainMode;
+		}
+
+		public boolean isSlotSharingEnabled() {
+			return isSlotSharingEnabled;
+		}
+
+		public void setSlotSharingEnabled(boolean slotSharingEnabled) {
+			isSlotSharingEnabled = slotSharingEnabled;
 		}
 
 		public boolean isChainEagerlyEnabled() {

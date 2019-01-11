@@ -42,6 +42,7 @@ import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.jobgraph.tasks.JobCheckpointingSettings;
+import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.runtime.operators.util.TaskConfig;
 import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.runtime.state.filesystem.FsStateBackend;
@@ -99,6 +100,8 @@ import static org.apache.flink.streaming.api.graph.StreamingJobGraphGenerator.so
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -393,6 +396,13 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				54321L,
 				printConfig, cl, streamGraph);
 		}
+
+		// verify slot-sharing groups
+		SlotSharingGroup slotSharingGroup = verticesSorted.get(0).getSlotSharingGroup();
+		assertNotNull(slotSharingGroup);
+		for (JobVertex vertex : verticesSorted) {
+			assertEquals(slotSharingGroup, vertex.getSlotSharingGroup());
+		}
 	}
 
 	/**
@@ -484,6 +494,58 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			assertEquals(1, sourceVertex.getParallelism());
 			assertEquals(5, mapVertex.getParallelism());
 			assertEquals(5, printVertex.getParallelism());
+		}
+	}
+
+	/**
+	 * Tests source chaining logic with disabled slot-sharing using the following topology.
+	 *
+	 * <pre>
+	 *     CHAIN(addSourceV2 -> Map1) -+
+	 *                                 | -> CHAIN(Map3 -> Print1)
+	 *     CHAIN(addSource -> Map2  ) -+
+	 * </pre>
+	 */
+	@Test
+	public void testChainingWithDisabledSlotSharing() throws Exception {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setParallelism(5);
+
+		// disable slot sharing
+		env.disableSlotSharing();
+
+		ClassLoader cl = getClass().getClassLoader();
+
+		DataStream<Integer> map1 = env.addSourceV2(new NoOpSourceV2Function()).name("source1")
+				.map((MapFunction<Integer, Integer>) value -> value).name("map1");
+
+		DataStream<Integer> map2 = env.addSource(new NoOpSourceFunction()).name("source2")
+				.map((MapFunction<Integer, Integer>) value -> value).name("map2");
+
+		map1.connect(map2)
+				.map(new NoOpCoMapFunction()).name("map3")
+				.print().name("print1");
+
+		JobGraph jobGraph = createJobGraph(env.getStreamGraph());
+
+		List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+		assertEquals(3, verticesSorted.size());
+
+		JobVertex sourceMapVertex = verticesSorted.get(0);
+		assertEquals("Source: source2 -> map2", sourceMapVertex.getName());
+		assertEquals(SourceStreamTask.class, sourceMapVertex.getInvokableClass(cl));
+
+		JobVertex sourceV2MapVertex = verticesSorted.get(1);
+		assertEquals("Source: source1 -> map1", sourceV2MapVertex.getName());
+		assertEquals(SourceStreamTaskV2.class, sourceV2MapVertex.getInvokableClass(cl));
+
+		JobVertex mapPrintVertex = verticesSorted.get(2);
+		assertEquals("map3 -> Sink: print1", mapPrintVertex.getName());
+		assertEquals(TwoInputStreamTask.class, mapPrintVertex.getInvokableClass(cl));
+
+		// verify slot-sharing groups
+		for (JobVertex vertex : verticesSorted) {
+			assertNull(vertex.getSlotSharingGroup());
 		}
 	}
 

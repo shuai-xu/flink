@@ -26,6 +26,7 @@ import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.Configuration;
@@ -36,6 +37,7 @@ import org.apache.flink.runtime.operators.DamBehavior;
 import org.apache.flink.streaming.api.datastream.ConnectedStreams;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
+import org.apache.flink.streaming.api.datastream.IterativeStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.datastream.SplitStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -679,6 +681,120 @@ public class StreamGraphGeneratorTest {
 
 		StreamNode sink1Node = graph.getStreamNode(sink1.getId());
 		assertNull(sink1Node.getReadPriorityHint(graph.getStreamEdges(map5.getId(), sink1.getId()).get(0)));
+	}
+
+	@Test
+	public void testSlotSharingEnabled() {
+		// case: unbounded data stream
+		{
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+			DataStream<Integer> filter1 = source1.filter(new NoOpIntFilter()).slotSharingGroup("slotSharingGroup1");
+			DataStream<Integer> filter2 = source1.filter(new NoOpIntFilter()).slotSharingGroup("slotSharingGroup1");
+			DataStream<Integer> process1 = filter1.connect(filter2).map(new NoOpIntCoMap());
+			DataStream<Integer> map1 = process1.map(new NoOpIntMap()).slotSharingGroup("slotSharingGroup2");
+
+			IterativeStream<Integer> iter1 = map1.iterate();
+			DataStream<Integer> map2 = iter1.map(new NoOpIntMap());
+			iter1.closeWith(map2);
+
+			DataStreamSink<Integer> sink1 = map2.addSink(new NoOpSinkFunction());
+
+			StreamGraph graph = env.getStreamGraph();
+			assertEquals("default", graph.getStreamNode(source1.getId()).getSlotSharingGroup());
+			assertEquals("slotSharingGroup1", graph.getStreamNode(filter1.getId()).getSlotSharingGroup());
+			assertEquals("slotSharingGroup1", graph.getStreamNode(filter2.getId()).getSlotSharingGroup());
+			assertEquals("slotSharingGroup1", graph.getStreamNode(process1.getId()).getSlotSharingGroup());
+			assertEquals("slotSharingGroup2", graph.getStreamNode(map1.getId()).getSlotSharingGroup());
+			assertEquals("default", graph.getStreamNode(map2.getId()).getSlotSharingGroup());
+			assertEquals("default", graph.getStreamNode(sink1.getId()).getSlotSharingGroup());
+
+			for (Tuple2<StreamNode, StreamNode> iterPair : graph.getIterationSourceSinkPairs()) {
+				assertEquals("default", iterPair.f0.getSlotSharingGroup());
+				assertEquals("default", iterPair.f1.getSlotSharingGroup());
+			}
+		}
+
+		// case: bounded data stream
+		{
+			TestStreamEnvironment.setAsContext();
+
+			TestStreamEnvironment env = (TestStreamEnvironment) StreamExecutionEnvironment.getExecutionEnvironment();
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+			DataStream<Integer> filter1 = source1.filter(new NoOpIntFilter()).slotSharingGroup("slotSharingGroup1");
+			DataStream<Integer> filter2 = source1.filter(new NoOpIntFilter()).slotSharingGroup("slotSharingGroup1");
+			DataStream<Integer> process1 = filter1.connect(filter2).map(new NoOpIntCoMap());
+			DataStream<Integer> map1 = process1.map(new NoOpIntMap()).slotSharingGroup("slotSharingGroup2");
+			DataStreamSink<Integer> sink1 = map1.addSink(new NoOpSinkFunction());
+
+			StreamGraph graph = StreamGraphGenerator.generate(StreamGraphGenerator.Context.buildBatchProperties(env),
+					env.getTransformations());
+			assertEquals("default", graph.getStreamNode(source1.getId()).getSlotSharingGroup());
+			assertEquals("slotSharingGroup1", graph.getStreamNode(filter1.getId()).getSlotSharingGroup());
+			assertEquals("slotSharingGroup1", graph.getStreamNode(filter2.getId()).getSlotSharingGroup());
+			assertEquals("slotSharingGroup1", graph.getStreamNode(process1.getId()).getSlotSharingGroup());
+			assertEquals("slotSharingGroup2", graph.getStreamNode(map1.getId()).getSlotSharingGroup());
+			assertEquals("slotSharingGroup2", graph.getStreamNode(sink1.getId()).getSlotSharingGroup());
+		}
+	}
+
+	@Test
+	public void testSlotSharingDisabled() {
+		// case: unbounded data stream
+		{
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+			env.disableSlotSharing();
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+			DataStream<Integer> filter1 = source1.filter(new NoOpIntFilter());
+			DataStream<Integer> filter2 = source1.filter(new NoOpIntFilter());
+			DataStream<Integer> process1 = filter1.connect(filter2).map(new NoOpIntCoMap());
+			DataStream<Integer> map1 = process1.map(new NoOpIntMap());
+
+			IterativeStream<Integer> iter1 = map1.iterate();
+			DataStream<Integer> map2 = iter1.map(new NoOpIntMap());
+			iter1.closeWith(map2);
+
+			DataStreamSink<Integer> sink1 = map2.addSink(new NoOpSinkFunction());
+
+			StreamGraph graph = env.getStreamGraph();
+			assertNull(graph.getStreamNode(source1.getId()).getSlotSharingGroup());
+			assertNull(graph.getStreamNode(filter1.getId()).getSlotSharingGroup());
+			assertNull(graph.getStreamNode(filter2.getId()).getSlotSharingGroup());
+			assertNull(graph.getStreamNode(process1.getId()).getSlotSharingGroup());
+			assertNull(graph.getStreamNode(map1.getId()).getSlotSharingGroup());
+			assertNull(graph.getStreamNode(map2.getId()).getSlotSharingGroup());
+			assertNull(graph.getStreamNode(sink1.getId()).getSlotSharingGroup());
+
+			for (Tuple2<StreamNode, StreamNode> iterPair : graph.getIterationSourceSinkPairs()) {
+				assertEquals("default", iterPair.f0.getSlotSharingGroup());
+				assertEquals("default", iterPair.f1.getSlotSharingGroup());
+			}
+		}
+
+		// case: bounded data stream
+		{
+			TestStreamEnvironment.setAsContext();
+
+			TestStreamEnvironment env = (TestStreamEnvironment) StreamExecutionEnvironment.getExecutionEnvironment();
+			env.disableSlotSharing();
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+			DataStream<Integer> filter1 = source1.filter(new NoOpIntFilter());
+			DataStream<Integer> filter2 = source1.filter(new NoOpIntFilter());
+			DataStream<Integer> process1 = filter1.connect(filter2).map(new NoOpIntCoMap());
+			DataStreamSink<Integer> sink1 = process1.addSink(new NoOpSinkFunction());
+
+			StreamGraph graph = StreamGraphGenerator.generate(StreamGraphGenerator.Context.buildBatchProperties(env),
+					env.getTransformations());
+			assertNull(graph.getStreamNode(source1.getId()).getSlotSharingGroup());
+			assertNull(graph.getStreamNode(filter1.getId()).getSlotSharingGroup());
+			assertNull(graph.getStreamNode(filter2.getId()).getSlotSharingGroup());
+			assertNull(graph.getStreamNode(process1.getId()).getSlotSharingGroup());
+			assertNull(graph.getStreamNode(sink1.getId()).getSlotSharingGroup());
+		}
 	}
 
 	@Test
