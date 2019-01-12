@@ -104,7 +104,8 @@ class BatchExecSortWindowAggregate(
     val (windowSize: Long, slideSize: Long) = getWindowDef(window)
     val windowStart = 0L
 
-    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
+    val input = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
     val outputRowType = getOutputType
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
     val groupBufferLimitSize = ExecResourceUtil.getWindowAggBufferLimitSize(

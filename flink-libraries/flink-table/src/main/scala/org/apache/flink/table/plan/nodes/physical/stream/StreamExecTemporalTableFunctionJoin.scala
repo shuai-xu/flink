@@ -122,10 +122,10 @@ class StreamExecTemporalTableFunctionJoin(
 
     val joinOpName = JoinUtil.joinToString(getRowType, joinCondition, joinType, getExpressionString)
 
-    val leftTransform =
-      left.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
-    val rightTransform =
-      right.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
+    val leftTransform = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
+    val rightTransform = getInputNodes.get(1).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
 
     val ret = new TwoInputTransformation[BaseRow, BaseRow, BaseRow](
       leftTransform,

@@ -56,14 +56,14 @@ trait StreamExecRel[T] extends FlinkPhysicalRel with StreamExecNode[T] {
   //~ ExecNode methods -----------------------------------------------------------
 
   override def getInputNodes: util.List[ExecNode[StreamTableEnvironment, _]] = {
-    getInputs.map(_.asInstanceOf[StreamExecRel[T]])
+    getInputs.map(_.asInstanceOf[StreamExecRel[_]])
   }
 
   override def replaceInputNode(
       ordinalInParent: Int,
       newInputNode: ExecNode[StreamTableEnvironment, _]): Unit = {
     require(ordinalInParent >= 0 && ordinalInParent < getInputs.size())
-    replaceInput(ordinalInParent, newInputNode.asInstanceOf[StreamExecRel[T]])
+    replaceInput(ordinalInParent, newInputNode.asInstanceOf[StreamExecRel[_]])
   }
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this

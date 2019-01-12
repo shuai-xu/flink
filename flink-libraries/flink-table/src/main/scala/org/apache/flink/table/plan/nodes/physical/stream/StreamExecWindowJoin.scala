@@ -131,8 +131,10 @@ class StreamExecWindowJoin(
         TableErrors.INST.sqlWindowJoinUpdateNotSupported())
     }
 
-    val leftDataStream = left.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
-    val rightDataStream = right.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
+    val leftDataStream = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
+    val rightDataStream = getInputNodes.get(1).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
 
     // get the equi-keys and other conditions
     val joinInfo = JoinInfo.of(left, right, joinCondition)

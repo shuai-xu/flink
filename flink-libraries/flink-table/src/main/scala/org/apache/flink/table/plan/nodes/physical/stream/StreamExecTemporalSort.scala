@@ -89,7 +89,8 @@ class StreamExecTemporalSort(
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
-    val inputTransformation = input.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
+    val inputTransformation = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
 
     // need to identify time between others order fields. Time needs to be first sort element
     val timeType = SortUtil.getFirstSortField(sortCollation, outputSchema.relDataType).getType

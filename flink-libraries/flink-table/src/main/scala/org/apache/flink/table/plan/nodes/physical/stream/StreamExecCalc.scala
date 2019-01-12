@@ -78,7 +78,8 @@ class StreamExecCalc(
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val config = tableEnv.getConfig
-    val inputTransform = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
+    val inputTransform = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
     // materialize time attributes in condition
     val condition = if (calcProgram.getCondition != null) {
       val materializedCondition = RelTimeIndicatorConverter.convertExpression(

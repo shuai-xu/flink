@@ -135,7 +135,7 @@ class BatchExecSink[T](
     tableEnv: BatchTableEnvironment): DataStream[T] = {
     val resultType = sink.getOutputType
     TableEnvironment.validateType(resultType)
-    val inputNode = getInput
+    val inputNode = getInputNodes.get(0)
     inputNode match {
       // Sink's input must be RowBatchExecRel now.
       case node: RowBatchExecRel =>
@@ -145,7 +145,7 @@ class BatchExecSink[T](
           getConversionMapper[BaseRow, T](
             parTransformation,
             parTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]],
-            inputNode.getRowType,
+            inputNode.getFlinkPhysicalRel.getRowType,
             "BoundedStreamSinkConversion",
             withChangeFlag,
             resultType,

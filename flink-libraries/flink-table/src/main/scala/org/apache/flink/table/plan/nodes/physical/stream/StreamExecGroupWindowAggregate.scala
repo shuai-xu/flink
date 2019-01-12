@@ -114,7 +114,8 @@ class StreamExecGroupWindowAggregate(
 
     val config = tableEnv.getConfig
 
-    val inputTransform = input.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
+    val inputTransform = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
 
     val inputIsAccRetract = StreamExecRetractionRules.isAccRetract(input)
 

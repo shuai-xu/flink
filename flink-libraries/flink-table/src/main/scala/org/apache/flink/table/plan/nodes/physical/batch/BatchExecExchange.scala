@@ -190,7 +190,8 @@ class BatchExecExchange(
     val input = reusedInput match {
       case Some(transformation) => transformation
       case None =>
-        val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
+        val input = getInputNodes.get(0).translateToPlan(tableEnv)
+          .asInstanceOf[StreamTransformation[BaseRow]]
         reusedInput = Some(input)
         input
     }

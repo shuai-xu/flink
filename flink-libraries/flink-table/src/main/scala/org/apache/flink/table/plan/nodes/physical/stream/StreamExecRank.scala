@@ -139,7 +139,8 @@ class StreamExecRank(
         throw new TableException(s"Streaming tables do not support $k rank function.")
     }
 
-    val inputTransform = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
+    val inputTransform = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
 
     val inputRowTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], inputSchema.fieldTypeInfos: _*)
     val fieldCollation = sortCollation.getFieldCollations.asScala

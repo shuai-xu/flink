@@ -102,7 +102,8 @@ class BatchExecLocalSortWindowAggregate(
   override def translateToPlanInternal(
       tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
 
-    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
+    val input = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
     val outputRowType = getOutputType
 
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)

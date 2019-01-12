@@ -54,7 +54,6 @@ class StreamExecTemporalTableJoin(
     joinType)
   with RowStreamExecRel {
 
-
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
     new StreamExecTemporalTableJoin(
       cluster,
@@ -68,11 +67,19 @@ class StreamExecTemporalTableJoin(
       joinType)
   }
 
+  override def isDeterministic: Boolean = {
+    TemporalJoinUtil.isDeterministic(
+      tableCalcProgram,
+      period,
+      joinInfo.getRemaining(cluster.getRexBuilder))
+  }
+
   //~ ExecNode methods -----------------------------------------------------------
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
-    val inputTransformation = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
+    val inputTransformation = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
     translateToPlanInternal(
       inputTransformation,
       tableEnv.execEnv,
@@ -80,10 +87,4 @@ class StreamExecTemporalTableJoin(
       tableEnv.getRelBuilder)
   }
 
-  override def isDeterministic: Boolean = {
-    TemporalJoinUtil.isDeterministic(
-      tableCalcProgram,
-      period,
-      joinInfo.getRemaining(cluster.getRexBuilder))
-  }
 }

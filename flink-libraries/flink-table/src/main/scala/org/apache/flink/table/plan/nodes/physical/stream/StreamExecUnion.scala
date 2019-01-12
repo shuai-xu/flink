@@ -105,7 +105,9 @@ class StreamExecUnion(
           diffFields.map(_._2).map { case (n, t) => s"$n:$t" }.mkString("[", ", ", "]")))
     }
 
-    val transformations = getInputs.map(_.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv))
+    val transformations = getInputNodes.map {
+      input => input.translateToPlan(tableEnv).asInstanceOf[StreamTransformation[BaseRow]]
+    }
     val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BinaryRow])
     new UnionTransformation(transformations, outputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
   }

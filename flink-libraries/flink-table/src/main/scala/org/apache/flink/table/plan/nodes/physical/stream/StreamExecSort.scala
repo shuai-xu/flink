@@ -102,8 +102,8 @@ class StreamExecSort(
       throw new TableException("Sort on a non-time-attribute field is not supported.")
     }
 
-    val inputTransformation = input.asInstanceOf[RowStreamExecRel].translateToPlan(
-      tableEnv)
+    val inputTransformation = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
 
     val mangedMemorySize =
       ExecResourceUtil.getPerRequestManagedMemory(

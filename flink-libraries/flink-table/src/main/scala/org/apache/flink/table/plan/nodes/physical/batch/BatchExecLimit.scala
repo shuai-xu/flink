@@ -110,7 +110,8 @@ class BatchExecLimit(
     */
   override def translateToPlanInternal(
       tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
-    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
+    val input = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
     val inputType = input.getOutputType
     val operator = new LimitOperator(isGlobal, limitStart, limitEnd)
     val transformation = new OneInputTransformation(

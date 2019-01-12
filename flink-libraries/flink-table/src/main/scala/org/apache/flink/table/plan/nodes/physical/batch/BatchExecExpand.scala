@@ -19,7 +19,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
+import org.apache.flink.table.api.types.TypeConverters
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExpandCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
@@ -79,7 +79,8 @@ class BatchExecExpand(
     tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
 
     val config = tableEnv.getConfig
-    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
+    val input = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
     val inputType = TypeConverters.createInternalTypeFromTypeInfo(input.getOutputType)
     val outputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[GenericRow])
 

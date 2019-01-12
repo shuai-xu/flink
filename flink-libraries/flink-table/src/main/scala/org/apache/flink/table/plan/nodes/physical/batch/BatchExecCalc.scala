@@ -144,7 +144,8 @@ class BatchExecCalc(
       tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
 
     val config = tableEnv.getConfig
-    val inputTransform = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
+    val inputTransform = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
     val condition = if (calcProgram.getCondition != null) {
       Some(calcProgram.expandLocalRef(calcProgram.getCondition))
     } else {

@@ -176,7 +176,8 @@ class BatchExecCorrelate(
     */
   override def translateToPlanInternal(
       tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
-    val inputTransformation = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
+    val inputTransformation = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
     val operatorCtx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
     val transformation = CorrelateCodeGenerator.generateCorrelateTransformation(
       tableEnv,

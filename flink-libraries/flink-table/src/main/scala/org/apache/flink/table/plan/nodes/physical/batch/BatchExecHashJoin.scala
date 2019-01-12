@@ -147,8 +147,10 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
 
     val config = tableEnv.getConfig
 
-    val lInput = getLeft.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
-    val rInput = getRight.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
+    val lInput = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
+    val rInput = getInputNodes.get(1).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
 
     // get type
     val lType = TypeConverters.createInternalTypeFromTypeInfo(

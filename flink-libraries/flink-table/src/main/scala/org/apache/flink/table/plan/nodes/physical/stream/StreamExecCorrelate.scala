@@ -96,7 +96,8 @@ class StreamExecCorrelate(
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
-    val inputTransformation = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
+    val inputTransformation = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
     val operatorCtx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
       .setOperatorBaseClass(classOf[AbstractProcessStreamOperator[_]])
     CorrelateCodeGenerator.generateCorrelateTransformation(

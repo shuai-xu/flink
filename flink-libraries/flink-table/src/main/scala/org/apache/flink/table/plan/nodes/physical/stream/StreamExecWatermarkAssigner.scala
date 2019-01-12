@@ -51,8 +51,8 @@ class StreamExecWatermarkAssigner (
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
-    val in = input.asInstanceOf[RowStreamExecRel]
-    val inputTransformation = in.translateToPlan(tableEnv)
+    val inputTransformation = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
 
     val rowtimeIndex = getRowType.getFieldNames.indexOf(rowtimeField)
     val watermarkOperator = new WatermarkAssignerOperator(rowtimeIndex, watermarkOffset)

@@ -116,8 +116,10 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
       tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
     val config = tableEnv.getConfig
 
-    val leftInput = getLeft.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
-    val rightInput = getRight.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
+    val leftInput = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
+    val rightInput = getInputNodes.get(1).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
 
     val leftType = TypeConverters.createInternalTypeFromTypeInfo(
       leftInput.getOutputType).asInstanceOf[RowType]

@@ -149,7 +149,8 @@ class BatchExecSortLimit(
       throw new TableException("Not support limitEnd is max value now!")
     }
 
-    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
+    val input = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
     val inputType = input.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
     val types = inputType.getFieldTypes
     val binaryType = new BaseRowTypeInfo(classOf[BinaryRow], types: _*)

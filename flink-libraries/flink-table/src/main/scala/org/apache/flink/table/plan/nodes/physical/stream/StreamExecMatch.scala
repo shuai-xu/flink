@@ -140,8 +140,8 @@ class StreamExecMatch(
     val inputTypeInfo =
       inputSchema.typeInfo(classOf[BaseRow]).asInstanceOf[BaseRowTypeInfo[BaseRow]]
 
-    val inputTransform =
-      getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
+    val inputTransform = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
 
     val (timestampedInput, comparator) = translateOrder(
       inputTransform, inputTypeInfo, logicalMatch.orderKeys)

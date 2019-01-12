@@ -90,7 +90,8 @@ class StreamExecLastRow(
 
     val tableConfig = tableEnv.getConfig
 
-    val inputTransform = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
+    val inputTransform = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
 
     val rowTypeInfo = inputTransform.getOutputType.asInstanceOf[BaseRowTypeInfo[BaseRow]]
 

@@ -51,8 +51,8 @@ class StreamExecMiniBatchAssigner(
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
-    val in = input.asInstanceOf[RowStreamExecRel]
-    val inputTransformation = in.translateToPlan(tableEnv)
+    val inputTransformation = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
     val intervalMs = tableEnv.getConfig.getConf.getLong(
       TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
 

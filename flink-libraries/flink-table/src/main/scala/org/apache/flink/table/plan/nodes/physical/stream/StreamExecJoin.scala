@@ -209,8 +209,10 @@ class StreamExecJoin(
     val (leftKeys, rightKeys) =
       JoinUtil.checkAndGetKeys(keyPairs, getLeft, getRight, allowEmpty = true)
 
-    val leftTransform = left.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
-    val rightTransform = right.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
+    val leftTransform = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
+    val rightTransform = getInputNodes.get(1).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
 
     val leftType = leftTransform.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
     val rightType = rightTransform.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]

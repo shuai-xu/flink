@@ -98,7 +98,9 @@ class BatchExecUnion(
     */
   override def translateToPlanInternal(
       tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
-    val transformations = getInputs.map(_.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv))
+    val transformations = getInputNodes.map {
+      input => input.translateToPlan(tableEnv).asInstanceOf[StreamTransformation[BaseRow]]
+    }
     new UnionTransformation(transformations)
   }
 

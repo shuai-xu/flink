@@ -54,14 +54,14 @@ trait BatchExecRel[T] extends FlinkPhysicalRel with BatchExecNode[T] with Loggin
   //~ ExecNode methods -----------------------------------------------------------
 
   override def getInputNodes: util.List[ExecNode[BatchTableEnvironment, _]] = {
-    getInputs.map(_.asInstanceOf[BatchExecRel[T]])
+    getInputs.map(_.asInstanceOf[BatchExecRel[_]])
   }
 
   override def replaceInputNode(
       ordinalInParent: Int,
       newInputNode: ExecNode[BatchTableEnvironment, _]): Unit = {
     require(ordinalInParent >= 0 && ordinalInParent < getInputs.size())
-    replaceInput(ordinalInParent, newInputNode.asInstanceOf[BatchExecRel[T]])
+    replaceInput(ordinalInParent, newInputNode.asInstanceOf[BatchExecRel[_]])
   }
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this

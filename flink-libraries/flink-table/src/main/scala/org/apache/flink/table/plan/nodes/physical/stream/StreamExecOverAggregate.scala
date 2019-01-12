@@ -149,7 +149,8 @@ class StreamExecOverAggregate(
           "The window can only be ordered in ASCENDING mode."))
     }
 
-    val inputDS = input.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
+    val inputDS = getInputNodes.get(0).translateToPlan(tableEnv)
+      .asInstanceOf[StreamTransformation[BaseRow]]
 
     val inputIsAccRetract = StreamExecRetractionRules.isAccRetract(input)
 
