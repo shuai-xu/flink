@@ -69,19 +69,31 @@ for jar in `find "$FLINK_OPT_DIR/sql-client" -name *.jar`; do
     fi
 done
 
+FLINK_CONNECTORS_JARS=''
+FLINK_CONNECTORS_JARS_ARGS=''
+for jar in `find "$FLINK_OPT_DIR/connectors" -name *.jar`; do
+    if [[ -z $FLINK_CONNECTORS_JARS ]]; then
+        FLINK_CONNECTORS_JARS=$jar
+        FLINK_CONNECTORS_JARS_ARGS="--jar $jar"
+    else
+        FLINK_CONNECTORS_JARS="$FLINK_CONNECTORS_JARS":"$jar"
+        FLINK_CONNECTORS_JARS_ARGS="$FLINK_CONNECTORS_JARS_ARGS --jar $jar"
+    fi
+done
+
 FLINK_SQL_CLIENT_JAR=$(find "$FLINK_OPT_DIR/sql-client" -regex ".*flink-sql-client.*.jar")
 
 # check if SQL client is already in classpath and must not be shipped manually
 if [[ "$CC_CLASSPATH" =~ .*flink-sql-client.*.jar ]]; then
 
     # start client without jar
-    exec $JAVA_RUN $JVM_ARGS "${log_setting[@]}" -classpath "`manglePathList "$CC_CLASSPATH:$INTERNAL_HADOOP_CLASSPATHS"`" org.apache.flink.table.client.SqlClient "$@"
+    exec $JAVA_RUN $JVM_ARGS "${log_setting[@]}" -classpath "`manglePathList "$CC_CLASSPATH:$INTERNAL_HADOOP_CLASSPATHS:$FLINK_CONNECTORS_JARS"`" org.apache.flink.table.client.SqlClient "$@" $FLINK_CONNECTORS_JARS_ARGS
 
 # check if SQL client jar is in /opt
 elif [ -n "$FLINK_SQL_CLIENT_JAR" ]; then
 
     # start client with jar
-    exec $JAVA_RUN $JVM_ARGS "${log_setting[@]}" -classpath "`manglePathList "$CC_CLASSPATH:$INTERNAL_HADOOP_CLASSPATHS:$FLINK_SQL_CLIENT_JARS"`" org.apache.flink.table.client.SqlClient "$@" --jar "`manglePath $FLINK_SQL_CLIENT_JAR`"
+    exec $JAVA_RUN $JVM_ARGS "${log_setting[@]}" -classpath "`manglePathList "$CC_CLASSPATH:$INTERNAL_HADOOP_CLASSPATHS:$FLINK_CONNECTORS_JARS:$FLINK_SQL_CLIENT_JARS"`" org.apache.flink.table.client.SqlClient "$@" $FLINK_CONNECTORS_JARS_ARGS --jar "`manglePath $FLINK_SQL_CLIENT_JAR`"
 
 # write error message to stderr
 else

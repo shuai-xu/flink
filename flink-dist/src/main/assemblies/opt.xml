@@ -194,5 +194,37 @@
 			<destName>flink-yarn-shuffle-${project.version}.jar</destName>
 			<fileMode>0644</fileMode>
 		</file>
+
+		<!-- Kafka Connectors -->
+		<file>
+			<source>../flink-connectors/flink-connector-kafka-0.8/target/flink-connector-kafka-0.8_${scala.binary.version}-${project.version}.jar</source>
+			<outputDirectory>opt/connectors/kafka08</outputDirectory>
+			<destName>flink-connector-kafka-0.8_${scala.binary.version}-${project.version}.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
+		<file>
+			<source>../flink-connectors/flink-connector-kafka-0.9/target/flink-connector-kafka-0.9_${scala.binary.version}-${project.version}-sql-jar.jar</source>
+			<outputDirectory>opt/connectors/kafka09</outputDirectory>
+			<destName>flink-connector-kafka-0.9_${scala.binary.version}-${project.version}-sql-jar.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
+		<file>
+			<source>../flink-connectors/flink-connector-kafka-0.10/target/flink-connector-kafka-0.10_${scala.binary.version}-${project.version}-sql-jar.jar</source>
+			<outputDirectory>opt/connectors/kafka010</outputDirectory>
+			<destName>flink-connector-kafka-0.10_${scala.binary.version}-${project.version}-sql-jar.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
+		<file>
+			<source>../flink-connectors/flink-connector-kafka-0.11/target/flink-connector-kafka-0.11_${scala.binary.version}-${project.version}-sql-jar.jar</source>
+			<outputDirectory>opt/connectors/kafka011</outputDirectory>
+			<destName>flink-connector-kafka-0.11_${scala.binary.version}-${project.version}-sql-jar.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
+		<file>
+			<source>../flink-connectors/flink-connector-kafka-base/target/flink-connector-kafka-base_${scala.binary.version}-${project.version}.jar</source>
+			<outputDirectory>opt/connectors/kafkabase</outputDirectory>
+			<destName>flink-connector-kafka-base_${scala.binary.version}-${project.version}.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
 	</files>
 </assembly>
