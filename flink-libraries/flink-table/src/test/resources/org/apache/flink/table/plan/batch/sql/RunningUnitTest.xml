@@ -23,11 +23,11 @@ limitations under the License.
     <Resource name="runningUnit">
       <![CDATA[
 RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d]]]], fields=[d]), stageID=0
+	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d]]]], fields=[d]), stageID=0
 	relStage(batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin], isBroadcast=[true], build=[right]), stageID=0
 }
 RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b]]]], fields=[a, b]), stageID=0
+	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b]]]], fields=[a, b]), stageID=0
 	relStage(batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin], isBroadcast=[true], build=[right]), stageID=1, depend type: PRIORITY =[batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin], isBroadcast=[true], build=[right]), stageID=0;]
 	relStage(batchExecRel=BatchExecCalc(select=[b]), stageID=0
 	relStage(batchExecRel=BatchExecLocalSortAggregate(select=[Partial_SUM(b) AS sum$0]), stageID=0
@@ -47,9 +47,9 @@ SortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0])
    +- LocalSortAggregate(select=[Partial_SUM(b) AS sum$0])
       +- Calc(select=[b])
          +- HashJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-            :- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b]]]], fields=[a, b])
+            :- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b]]]], fields=[a, b])
             +- Exchange(distribution=[broadcast])
-               +- TableSourceScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d]]]], fields=[d])
+               +- TableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d]]]], fields=[d])
 ]]>
     </Resource>
   </TestCase>
@@ -63,7 +63,7 @@ WITH r AS (SELECT c, SUM(a) a, SUM(b) b FROM x GROUP BY c)
     <Resource name="runningUnit">
       <![CDATA[
 RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c]), stageID=0
+	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c]), stageID=0
 	relStage(batchExecRel=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0, Partial_SUM(b) AS sum$1]), stageID=0
 	relStage(batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b]), stageID=0
 }
@@ -87,7 +87,7 @@ Calc(select=[c, a, b, c0, a1 AS a0, b0])
    :     +- HashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b], reuse_id=[1])
    :        +- Exchange(distribution=[hash[c]])
    :           +- LocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0, Partial_SUM(b) AS sum$1])
-   :              +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+   :              +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[c, a, b], where=[>(a, 1)])
          +- Reused(reference_id=[1])
@@ -101,11 +101,11 @@ Calc(select=[c, a, b, c0, a1 AS a0, b0])
     <Resource name="runningUnit">
       <![CDATA[
 RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c]), stageID=0
+	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c]), stageID=0
 	relStage(batchExecRel=BatchExecHashSemiJoin(where=[=(a, d)], join=[a, b, c], joinType=[LeftSemiJoin], build=[left]), stageID=0
 }
 RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d]]]], fields=[d]), stageID=0
+	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d]]]], fields=[d]), stageID=0
 	relStage(batchExecRel=BatchExecHashSemiJoin(where=[=(a, d)], join=[a, b, c], joinType=[LeftSemiJoin], build=[left]), stageID=1, depend type: PRIORITY =[batchExecRel=BatchExecHashSemiJoin(where=[=(a, d)], join=[a, b, c], joinType=[LeftSemiJoin], build=[left]), stageID=0;]
 }
 RelRunningUnit{
@@ -116,9 +116,9 @@ RelRunningUnit{
       <![CDATA[
 HashSemiJoin(where=[=(a, d)], join=[a, b, c], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
-:  +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+:  +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 +- Exchange(distribution=[hash[d]])
-   +- TableSourceScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d]]]], fields=[d])
+   +- TableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d]]]], fields=[d])
 ]]>
     </Resource>
   </TestCase>
@@ -132,14 +132,14 @@ SELECT t1.*, t2.* FROM t t1, t t2 WHERE t1.b = t2.e AND t1.a < 10 AND t2.a > 5
     <Resource name="runningUnit">
       <![CDATA[
 RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b]]]], fields=[a, b]), stageID=0
+	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b]]]], fields=[a, b]), stageID=0
 	relStage(batchExecRel=BatchExecCalc(select=[a, b], where=[<(a, 10)]), stageID=0
 	relStage(batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=0
 	relStage(batchExecRel=BatchExecCalc(select=[a, b], where=[>(a, 5)]), stageID=0
 	relStage(batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=0
 }
 RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d, e]]]], fields=[d, e]), stageID=0
+	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d, e]]]], fields=[d, e]), stageID=0
 	relStage(batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=1, depend type: PRIORITY =[batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=0;]
 	relStage(batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=1, depend type: PRIORITY =[batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=0;]
 	relStage(batchExecRel=BatchExecHashJoin(where=[=(b, e0)], join=[a, b, d, e, a0, b0, d0, e0], joinType=[InnerJoin], build=[left]), stageID=0
@@ -155,9 +155,9 @@ HashJoin(where=[=(b, e0)], join=[a, b, d, e, a0, b0, d0, e0], joinType=[InnerJoi
 :  +- HashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left])
 :     :- Exchange(distribution=[hash[a]])
 :     :  +- Calc(select=[a, b], where=[<(a, 10)])
-:     :     +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b]]]], fields=[a, b], reuse_id=[1])
+:     :     +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b]]]], fields=[a, b], reuse_id=[1])
 :     +- Exchange(distribution=[hash[d]], reuse_id=[2])
-:        +- TableSourceScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d, e]]]], fields=[d, e])
+:        +- TableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d, e]]]], fields=[d, e])
 +- Exchange(distribution=[hash[e]], exchange_mode=[BATCH])
    +- HashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left])
       :- Exchange(distribution=[hash[a]])
@@ -174,11 +174,11 @@ HashJoin(where=[=(b, e0)], join=[a, b, d, e, a0, b0, d0, e0], joinType=[InnerJoi
     <Resource name="runningUnit">
       <![CDATA[
 RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b]]]], fields=[a, b]), stageID=0
+	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b]]]], fields=[a, b]), stageID=0
 	relStage(batchExecRel=BatchExecSortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin]), stageID=0
 }
 RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d]]]], fields=[d]), stageID=0
+	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d]]]], fields=[d]), stageID=0
 	relStage(batchExecRel=BatchExecSortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin]), stageID=1
 }
 RelRunningUnit{
@@ -202,9 +202,9 @@ SortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0])
       +- Calc(select=[b])
          +- SortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin])
             :- Exchange(distribution=[hash[a]])
-            :  +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b]]]], fields=[a, b])
+            :  +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b]]]], fields=[a, b])
             +- Exchange(distribution=[hash[d]])
-               +- TableSourceScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d]]]], fields=[d])
+               +- TableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d]]]], fields=[d])
 ]]>
     </Resource>
   </TestCase>
@@ -215,11 +215,11 @@ SortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0])
     <Resource name="runningUnit">
       <![CDATA[
 RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
+	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
 	relStage(batchExecRel=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0
 }
 RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[default_catalog, default_db, z, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
+	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, z, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
 	relStage(batchExecRel=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0
 }
 RelRunningUnit{
@@ -237,8 +237,8 @@ Calc(select=[EXPR$0])
    +- Exchange(distribution=[hash[c]])
       +- LocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0])
          +- Union(all=[true], union=[a, c])
-            :- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, c]]]], fields=[a, c])
-            +- TableSourceScan(table=[[default_catalog, default_db, z, source: [selectedFields=[a, c]]]], fields=[a, c])
+            :- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, c]]]], fields=[a, c])
+            +- TableSourceScan(table=[[builtin, default, z, source: [selectedFields=[a, c]]]], fields=[a, c])
 ]]>
     </Resource>
   </TestCase>
@@ -249,12 +249,12 @@ Calc(select=[EXPR$0])
     <Resource name="runningUnit">
       <![CDATA[
 RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
+	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
 	relStage(batchExecRel=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0
 	relStage(batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=0
 }
 RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[default_catalog, default_db, z, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
+	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, z, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
 	relStage(batchExecRel=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0
 	relStage(batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=0
 }
@@ -270,8 +270,8 @@ Calc(select=[EXPR$0])
    +- Exchange(distribution=[hash[c]])
       +- LocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0])
          +- Union(all=[true], union=[a, c])
-            :- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, c]]]], fields=[a, c])
-            +- TableSourceScan(table=[[default_catalog, default_db, z, source: [selectedFields=[a, c]]]], fields=[a, c])
+            :- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, c]]]], fields=[a, c])
+            +- TableSourceScan(table=[[builtin, default, z, source: [selectedFields=[a, c]]]], fields=[a, c])
 ]]>
     </Resource>
   </TestCase>

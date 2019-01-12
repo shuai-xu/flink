@@ -1,19 +1,19 @@
 == Abstract Syntax Tree ==
 LogicalProject(id=[$0], num=[$1], text=[$2])
 +- LogicalFilter(condition=[LIKE($2, '%hello%')])
-   +- LogicalTableScan(table=[[default_catalog, default_db, T]])
+   +- LogicalTableScan(table=[[builtin, default, T]])
 
 LogicalProject(num=[$0], cnt=[$1])
 +- LogicalFilter(condition=[<($0, 4)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
+   +- LogicalTableScan(table=[[builtin, default, T3]])
 
 LogicalProject(num=[$0], cnt=[$1])
 +- LogicalFilter(condition=[AND(>=($0, 4), <($0, 6))])
-   +- LogicalTableScan(table=[[default_catalog, default_db, T3]])
+   +- LogicalTableScan(table=[[builtin, default, T3]])
 
 == Optimized Logical Plan ==
 StreamExecCalc(select=[id, num, text], where=[LIKE(text, '%hello%')], retract=[true], accMode=[Acc], reuse_id=[1])
-+- StreamExecDataStreamScan(table=[[default_catalog, default_db, T]], retract=[true], accMode=[Acc])
++- StreamExecDataStreamScan(table=[[builtin, default, T]], retract=[true], accMode=[Acc])
 
 StreamExecSink(fields=[id, num, text], retract=[false], accMode=[Acc])
 +- Reused(reference_id=[1])
@@ -24,7 +24,7 @@ StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS cnt], retract=
       :- StreamExecCalc(select=[num, id], retract=[true], accMode=[Acc])
       :  +- Reused(reference_id=[1])
       +- StreamExecCalc(select=[num, id], where=[LIKE(text, '%world%')], retract=[true], accMode=[Acc])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, T]], retract=[true], accMode=[Acc])
+         +- StreamExecDataStreamScan(table=[[builtin, default, T]], retract=[true], accMode=[Acc])
 
 StreamExecSink(fields=[num, cnt], retract=[false], accMode=[AccRetract])
 +- StreamExecCalc(select=[num, cnt], where=[<(num, 4)], retract=[true], accMode=[AccRetract])
@@ -39,7 +39,7 @@ StreamExecSink(fields=[num, cnt], retract=[false], accMode=[AccRetract])
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[default_catalog, default_db, T], fields:(id, num, text))
+		content : SourceConversion(table:[builtin, default, T], fields:(id, num, text))
 		ship_strategy : FORWARD
 
 		 : Operator
@@ -55,7 +55,7 @@ StreamExecSink(fields=[num, cnt], retract=[false], accMode=[AccRetract])
 					ship_strategy : FORWARD
 
 					 : Operator
-						content : SourceConversion(table:[default_catalog, default_db, T], fields:(id, num, text))
+						content : SourceConversion(table:[builtin, default, T], fields:(id, num, text))
 						ship_strategy : FORWARD
 
 						 : Operator

@@ -24,7 +24,7 @@ limitations under the License.
       <![CDATA[
 LogicalSort(fetch=[10])
 +- LogicalProject(a=[$0], c=[$2])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -33,7 +33,7 @@ Calc(select=[a, c])
 +- Limit(offset=[0], limit=[10], global=[true])
    +- Exchange(distribution=[single])
       +- Limit(offset=[0], limit=[10], global=[false])
-         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -45,13 +45,13 @@ Calc(select=[a, c])
       <![CDATA[
 LogicalSort(fetch=[10])
 +- LogicalProject(a=[$0], c=[$2])
-   +- LogicalTableScan(table=[[default_catalog, default_db, LimitTable]])
+   +- LogicalTableScan(table=[[builtin, default, LimitTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, c])
-+- TableSourceScan(table=[[default_catalog, default_db, LimitTable, source: [limit: 10]]], fields=[a, b, c])
++- TableSourceScan(table=[[builtin, default, LimitTable, source: [limit: 10]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -63,7 +63,7 @@ Calc(select=[a, c])
       <![CDATA[
 LogicalSort(offset=[10], fetch=[10])
 +- LogicalProject(a=[$0], c=[$2])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -72,7 +72,7 @@ Calc(select=[a, c])
 +- Limit(offset=[10], limit=[10], global=[true])
    +- Exchange(distribution=[single])
       +- Limit(offset=[10], limit=[10], global=[false])
-         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -84,7 +84,7 @@ Calc(select=[a, c])
       <![CDATA[
 LogicalSort(offset=[10], fetch=[10])
 +- LogicalProject(a=[$0], c=[$2])
-   +- LogicalTableScan(table=[[default_catalog, default_db, LimitTable]])
+   +- LogicalTableScan(table=[[builtin, default, LimitTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -93,7 +93,7 @@ Calc(select=[a, c])
 +- Limit(offset=[10], limit=[10], global=[true])
    +- Exchange(distribution=[single])
       +- Limit(offset=[10], limit=[10], global=[false])
-         +- TableSourceScan(table=[[default_catalog, default_db, LimitTable]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, LimitTable]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -105,7 +105,7 @@ Calc(select=[a, c])
       <![CDATA[
 LogicalSort(offset=[1], fetch=[10])
 +- LogicalProject(a=[$0], c=[$2])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -114,7 +114,7 @@ Calc(select=[a, c])
 +- Limit(offset=[1], limit=[10], global=[true])
    +- Exchange(distribution=[single])
       +- Limit(offset=[1], limit=[10], global=[false])
-         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -126,7 +126,7 @@ Calc(select=[a, c])
       <![CDATA[
 LogicalSort(fetch=[10])
 +- LogicalProject(a=[$0], c=[$2])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -135,7 +135,7 @@ Calc(select=[a, c])
 +- Limit(offset=[0], limit=[10], global=[true])
    +- Exchange(distribution=[single])
       +- Limit(offset=[0], limit=[10], global=[false])
-         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -147,13 +147,13 @@ Calc(select=[a, c])
       <![CDATA[
 LogicalSort(fetch=[10])
 +- LogicalProject(a=[$0], c=[$2])
-   +- LogicalTableScan(table=[[default_catalog, default_db, LimitTable]])
+   +- LogicalTableScan(table=[[builtin, default, LimitTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, c])
-+- TableSourceScan(table=[[default_catalog, default_db, LimitTable, source: [limit: 10]]], fields=[a, b, c])
++- TableSourceScan(table=[[builtin, default, LimitTable, source: [limit: 10]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -165,7 +165,7 @@ Calc(select=[a, c])
       <![CDATA[
 LogicalSort(offset=[1], fetch=[10])
 +- LogicalProject(a=[$0], c=[$2])
-   +- LogicalTableScan(table=[[default_catalog, default_db, LimitTable]])
+   +- LogicalTableScan(table=[[builtin, default, LimitTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -174,7 +174,7 @@ Calc(select=[a, c])
 +- Limit(offset=[1], limit=[10], global=[true])
    +- Exchange(distribution=[single])
       +- Limit(offset=[1], limit=[10], global=[false])
-         +- TableSourceScan(table=[[default_catalog, default_db, LimitTable]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, LimitTable]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

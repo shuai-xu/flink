@@ -27,7 +27,7 @@ StreamExecCalc(select=[a, b, count_c, w0$o0], retract=[false], accMode=[Acc])
             +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(*) AS count_c], retract=[false], accMode=[Acc])
                +- StreamExecExchange(distribution=[hash[a, b]], retract=[true], accMode=[Acc])
                   +- StreamExecCalc(select=[a, b, 'cn' AS cn], retract=[true], accMode=[Acc])
-                     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+                     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -36,7 +36,7 @@ StreamExecCalc(select=[a, b, count_c, w0$o0], retract=[false], accMode=[Acc])
       <![CDATA[
 StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[a ASC, b DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*], retract=[false], accMode=[Acc])
 +- StreamExecExchange(distribution=[single], retract=[false], accMode=[Acc])
-   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[false], accMode=[Acc])
+   +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[false], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -45,7 +45,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[a ASC, b DESC], rankRange=[ra
       <![CDATA[
 StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[a ASC, b DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*], retract=[false], accMode=[Acc])
 +- StreamExecExchange(distribution=[single], retract=[false], accMode=[Acc])
-   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[false], accMode=[Acc])
+   +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[false], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -54,7 +54,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[a ASC, b DESC], rankRange=[ra
       <![CDATA[
 StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[b DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum], retract=[false], accMode=[Acc])
 +- StreamExecExchange(distribution=[hash[a]], retract=[false], accMode=[Acc])
-   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[false], accMode=[Acc])
+   +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[false], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -63,7 +63,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[b DESC], ran
       <![CDATA[
 StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[b DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum], retract=[false], accMode=[Acc])
 +- StreamExecExchange(distribution=[hash[a]], retract=[false], accMode=[Acc])
-   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[false], accMode=[Acc])
+   +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[false], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -75,7 +75,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[count_c DESC
    +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(*) AS count_c], retract=[false], accMode=[Acc])
       +- StreamExecExchange(distribution=[hash[a, b]], retract=[true], accMode=[Acc])
          +- StreamExecCalc(select=[a, b], retract=[true], accMode=[Acc])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -86,7 +86,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
 +- StreamExecExchange(distribution=[hash[b]], retract=[false], accMode=[Acc])
    +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) AS sum_c], retract=[false], accMode=[Acc])
       +- StreamExecExchange(distribution=[hash[a, b]], retract=[true], accMode=[Acc])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -101,7 +101,7 @@ StreamExecGroupAggregate(select=[MAX_RETRACT(a) AS EXPR$0], retract=[false], acc
             +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(*) AS count_c], retract=[false], accMode=[Acc])
                +- StreamExecExchange(distribution=[hash[a, b]], retract=[true], accMode=[Acc])
                   +- StreamExecCalc(select=[a, b], retract=[true], accMode=[Acc])
-                     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+                     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -113,7 +113,7 @@ StreamExecCalc(select=[CONCAT(seller_id, venture, stat_date, sku_id) AS rowkey, 
    +- StreamExecExchange(distribution=[hash[seller_id, venture, stat_date]], retract=[false], accMode=[Acc])
       +- StreamExecGroupAggregate(groupBy=[seller_id, sku_id, venture, stat_date], select=[seller_id, sku_id, venture, stat_date, INCR_SUM(trd_amt) AS amt_dtr, COUNT(DISTINCT trd_buyer_id) AS byr_cnt_dtr, SUM(log_pv) AS pv_dtr, COUNT(DISTINCT log_visitor_id) AS uv_dtr], retract=[false], accMode=[Acc])
          +- StreamExecExchange(distribution=[hash[seller_id, sku_id, venture, stat_date]], retract=[true], accMode=[Acc])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -125,7 +125,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], ran
    +- StreamExecCalc(select=[a, b, add(max_c) AS c], retract=[false], accMode=[Acc])
       +- StreamExecGroupAggregate(groupBy=[b], select=[b, MAX(a) AS a, MAX(c) AS max_c], retract=[false], accMode=[Acc])
          +- StreamExecExchange(distribution=[hash[b]], retract=[true], accMode=[Acc])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -137,7 +137,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
    +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM($f2) AS sum_c])
       +- StreamExecExchange(distribution=[hash[a, b]])
          +- StreamExecCalc(select=[a, b, CASE(>(c, 10), 1, <(c, 0), 0, null) AS $f2])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -149,7 +149,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
    +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) AS sum_c], retract=[false], accMode=[Acc])
       +- StreamExecExchange(distribution=[hash[a, b]], retract=[true], accMode=[Acc])
          +- StreamExecCalc(select=[a, b, c], where=[>=(c, 0)], retract=[true], accMode=[Acc])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -161,7 +161,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
    +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) FILTER $f3 AS sum_c])
       +- StreamExecExchange(distribution=[hash[a, b]])
          +- StreamExecCalc(select=[a, b, c, IS TRUE(AND(>=(c, 0), <(a, 0))) AS $f3])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -173,7 +173,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c ASC], 
    +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) FILTER $f3 AS sum_c])
       +- StreamExecExchange(distribution=[hash[a, b]])
          +- StreamExecCalc(select=[a, b, c, IS TRUE(AND(<=(c, 0), <(a, 0))) AS $f3])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -185,7 +185,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
    +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM($f2) AS sum_c])
       +- StreamExecExchange(distribution=[hash[a, b]])
          +- StreamExecCalc(select=[a, b, IF(>(c, 10), 1, 0) AS $f2])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -196,7 +196,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
 +- StreamExecExchange(distribution=[hash[b]], retract=[false], accMode=[Acc])
    +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, increasing_sum(c) AS sum_c], retract=[false], accMode=[Acc])
       +- StreamExecExchange(distribution=[hash[a, b]], retract=[true], accMode=[Acc])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -206,7 +206,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
 StreamExecCalc(select=[a, b, c, 10 AS rank_num], retract=[false], accMode=[Acc])
 +- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[b DESC], rankRange=[rankStart=10, rankEnd=10], strategy=[AppendFastRank], select=[*], retract=[false], accMode=[Acc])
    +- StreamExecExchange(distribution=[hash[a]], retract=[false], accMode=[Acc])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[false], accMode=[Acc])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[false], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -218,7 +218,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[count_c DESC
    +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(*) AS count_c], retract=[false], accMode=[Acc])
       +- StreamExecExchange(distribution=[hash[a, b]], retract=[true], accMode=[Acc])
          +- StreamExecCalc(select=[a, b, 'cn' AS cn], retract=[true], accMode=[Acc])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -229,7 +229,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
 +- StreamExecExchange(distribution=[hash[b]], retract=[true], accMode=[AccRetract])
    +- StreamExecGroupAggregate(groupBy=[a], select=[a, LAST_VALUE(b) AS b, SUM(c) AS sum_c], retract=[true], accMode=[AccRetract])
       +- StreamExecExchange(distribution=[hash[a]], retract=[true], accMode=[Acc])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -240,7 +240,7 @@ StreamExecCalc(select=[w0$o0 AS rank_num, a, c], where=[IS NOT NULL(b)], retract
 +- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[b DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum], retract=[false], accMode=[Acc])
    +- StreamExecExchange(distribution=[hash[a]], retract=[false], accMode=[Acc])
       +- StreamExecCalc(select=[a, b, c], where=[>(c, 1000)], retract=[false], accMode=[Acc])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[false], accMode=[Acc])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[false], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -259,7 +259,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[$f3 DESC], r
                         +- StreamExecExpand(projects=[{a, b, c, $f3, 0 AS $e}, {a, b, c, null AS $f3, 1 AS $e}], retract=[true], accMode=[Acc])
                            +- StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(c), 1024) AS $f3], where=[>=(c, 0)], retract=[true], accMode=[Acc])
                               +- StreamExecMiniBatchAssigner(interval=[1000ms], retract=[true], accMode=[Acc])
-                                 +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+                                 +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -270,7 +270,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[max_p
 +- StreamExecExchange(distribution=[hash[category]], retract=[false], accMode=[Acc])
    +- StreamExecGroupAggregate(groupBy=[category, shopId], select=[category, shopId, MAX(price) AS max_price], retract=[false], accMode=[Acc])
       +- StreamExecExchange(distribution=[hash[category, shopId]], retract=[true], accMode=[Acc])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>

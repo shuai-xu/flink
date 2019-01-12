@@ -21,11 +21,11 @@ limitations under the License.
       <![CDATA[
 LogicalProject(a1=[$0], asum=[$2])
 +- LogicalJoin(condition=[true], joinType=[inner])
-   :- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   :- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
    +- LogicalProject(asum=[AS(+($0, $1), 'asum')])
       +- LogicalAggregate(group=[{}], TMP_0=[SUM($0)], TMP_1=[SUM($1)])
          +- LogicalProject(a1=[$0], a2=[$1])
-            +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+            +- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -33,13 +33,13 @@ LogicalProject(a1=[$0], asum=[$2])
 NestedLoopJoin(where=[true], join=[a1, asum], joinType=[InnerJoin], build=[right], singleRowJoin=[true])
 :- Exchange(distribution=[any], exchange_mode=[BATCH])
 :  +- Calc(select=[a1])
-:     +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a1, a2])
+:     +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a1, a2])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[+(TMP_0, TMP_1) AS asum])
       +- HashAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0, Final_SUM(sum$1) AS TMP_1])
          +- Exchange(distribution=[single])
             +- LocalHashAggregate(select=[Partial_SUM(a1) AS sum$0, Partial_SUM(a2) AS sum$1])
-               +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a1, a2])
+               +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a1, a2])
 ]]>
     </Resource>
   </TestCase>

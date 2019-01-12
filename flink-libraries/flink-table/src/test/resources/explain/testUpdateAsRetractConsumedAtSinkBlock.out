@@ -2,14 +2,14 @@
 LogicalProject(a=[$0], b=[$1], c=[$2], rank_num=[$3])
 +- LogicalFilter(condition=[<=($3, 10)])
    +- LogicalProject(a=[$0], b=[$1], c=[$2], rank_num=[ROW_NUMBER() OVER (PARTITION BY $1 ORDER BY $2 DESC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, T]])
+      +- LogicalTableScan(table=[[builtin, default, T]])
 
 LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[<($0, 6)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, T]])
+   +- LogicalTableScan(table=[[builtin, default, T]])
 
 == Optimized Logical Plan ==
-StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[false], accMode=[Acc], reuse_id=[1])
+StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[false], accMode=[Acc], reuse_id=[1])
 
 StreamExecSink(fields=[a, b, c, rank_num], retract=[false], accMode=[AccRetract])
 +- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum], retract=[true], accMode=[AccRetract])
@@ -25,7 +25,7 @@ StreamExecSink(fields=[a, b], retract=[false], accMode=[Acc])
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[default_catalog, default_db, _DataStreamTable_0], fields:(a, b, c))
+		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(a, b, c))
 		ship_strategy : FORWARD
 
 		 : Operator

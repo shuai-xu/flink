@@ -23,13 +23,13 @@ limitations under the License.
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(id=[$1], first=[$0], last=[$3], score=[$2])
-+- LogicalTableScan(table=[[default_catalog, default_db, vectorColumnRowTable, source: [ParquetVectorizedColumnRowTableSource -> selectedFields=[first, id, score, last];filterPredicates=[]]]])
++- LogicalTableScan(table=[[builtin, default, vectorColumnRowTable, source: [ParquetVectorizedColumnRowTableSource -> selectedFields=[first, id, score, last];filterPredicates=[]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[id, first, last, score])
-+- TableSourceScan(table=[[default_catalog, default_db, vectorColumnRowTable, source: [ParquetVectorizedColumnRowTableSource -> selectedFields=[first, id, score, last];filterPredicates=[]]]], fields=[first, id, score, last])
++- TableSourceScan(table=[[builtin, default, vectorColumnRowTable, source: [ParquetVectorizedColumnRowTableSource -> selectedFields=[first, id, score, last];filterPredicates=[]]]], fields=[first, id, score, last])
 ]]>
     </Resource>
   </TestCase>
@@ -41,13 +41,13 @@ Calc(select=[id, first, last, score])
       <![CDATA[
 LogicalSort(fetch=[2])
 +- LogicalProject(id=[$1], first=[$0], last=[$3], score=[$2])
-   +- LogicalTableScan(table=[[default_catalog, default_db, vectorColumnRowTable, source: [ParquetVectorizedColumnRowTableSource -> selectedFields=[first, id, score, last];filterPredicates=[]]]])
+   +- LogicalTableScan(table=[[builtin, default, vectorColumnRowTable, source: [ParquetVectorizedColumnRowTableSource -> selectedFields=[first, id, score, last];filterPredicates=[]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[id, first, last, score])
-+- TableSourceScan(table=[[default_catalog, default_db, vectorColumnRowTable, source: [ParquetVectorizedColumnRowTableSource -> selectedFields=[first, id, score, last];filterPredicates=[]; limit=2]]], fields=[first, id, score, last])
++- TableSourceScan(table=[[builtin, default, vectorColumnRowTable, source: [ParquetVectorizedColumnRowTableSource -> selectedFields=[first, id, score, last];filterPredicates=[]; limit=2]]], fields=[first, id, score, last])
 ]]>
     </Resource>
   </TestCase>

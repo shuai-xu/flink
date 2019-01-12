@@ -21,13 +21,13 @@ limitations under the License.
       <![CDATA[
 LogicalProject(b2=[AS($0, 'b2')])
 +- LogicalProject(_c0=[AS(IN($1, CAST('1972-02-22 07:12:00.333'):TIMESTAMP(3) NOT NULL), '_c0')])
-   +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[IN(b, 1972-02-22 07:12:00.333) AS b2])
-+- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -35,21 +35,21 @@ Calc(select=[IN(b, 1972-02-22 07:12:00.333) AS b2])
     <Resource name="planBefore">
       <![CDATA[
 LogicalFilter(condition=[IN($2, {
-LogicalTableScan(table=[[default_catalog, default_db, UnnamedTable$0]])
+LogicalTableScan(table=[[builtin, default, UnnamedTable$0]])
 })])
 +- LogicalProject(a=[$0], b=[$1], c=[$2])
-   +- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 HashSemiJoin(where=[=(c, a1)], join=[a, b, c], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right], tryDistinctBuildRow=[true])
 :- Exchange(distribution=[hash[c]], exchange_mode=[BATCH])
-:  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+:  +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(groupBy=[a1], select=[a1])
       +- Calc(select=[a AS a1], where=[=(b, 'two')])
-         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

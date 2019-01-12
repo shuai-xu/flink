@@ -41,9 +41,9 @@ LogicalAggregate(group=[{0}], EXPR$1=[COUNT($1)], EXPR$2=[SUM($2)], EXPR$3=[SUM(
       +- LogicalJoin(condition=[=($1, $4)], joinType=[inner])
          :- LogicalProject(b=[$1], a=[$0], c=[$2], d=[$3])
          :  +- LogicalAggregate(group=[{0, 1}], c=[SUM($2)], d=[SUM($3)])
-         :     +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+         :     +- LogicalTableScan(table=[[builtin, default, T1]])
          +- LogicalSnapshot(period=[PROCTIME()])
-            +- LogicalTableScan(table=[[default_catalog, default_db, temporalTest, source: [TestTemporalTable(id, name, age)]]])
+            +- LogicalTableScan(table=[[builtin, default, temporalTest, source: [TestTemporalTable(id, name, age)]]])
 ]]>
 		</Resource>
 		<Resource name="planAfter">
@@ -57,7 +57,7 @@ HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_COUNT(count$0) AS EX
                +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b, Final_SUM(sum$0) AS c, Final_SUM(sum$1) AS d])
                   +- Exchange(distribution=[hash[a, b]])
                      +- LocalHashAggregate(groupBy=[a, b], select=[a, b, Partial_SUM(c) AS sum$0, Partial_SUM(d) AS sum$1])
-                        +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[a, b, c, d])
+                        +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_1]], fields=[a, b, c, d])
 ]]>
 		</Resource>
 	</TestCase>
@@ -69,15 +69,15 @@ HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_COUNT(count$0) AS EX
 			<![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2], id=[$3], name=[$4], age=[$5])
 +- LogicalJoin(condition=[=($0, $3)], joinType=[inner])
-   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   :- LogicalTableScan(table=[[builtin, default, MyTable]])
    +- LogicalSnapshot(period=[PROCTIME()])
-      +- LogicalTableScan(table=[[default_catalog, default_db, temporalTest, source: [TestTemporalTable(id, name, age)]]])
+      +- LogicalTableScan(table=[[builtin, default, temporalTest, source: [TestTemporalTable(id, name, age)]]])
 ]]>
 		</Resource>
 		<Resource name="planAfter">
 			<![CDATA[
 TemporalTableJoin(join=[a, b, c, id, name, age], source=[TestTemporalTable(id, name, age)], on=[a=id], joinType=[InnerJoin], period=[PROCTIME()])
-+- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
 		</Resource>
 	</TestCase>
@@ -95,9 +95,9 @@ WHERE T.c > 1000
 LogicalProject(a=[$0], b=[$1], c=[$2], id=[$3], name=[$4], age=[$5])
 +- LogicalFilter(condition=[>($2, 1000)])
    +- LogicalJoin(condition=[AND(=($0, $3), =($5, 10))], joinType=[inner])
-      :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+      :- LogicalTableScan(table=[[builtin, default, MyTable]])
       +- LogicalSnapshot(period=[PROCTIME()])
-         +- LogicalTableScan(table=[[default_catalog, default_db, temporalTest, source: [TestTemporalTable(id, name, age)]]])
+         +- LogicalTableScan(table=[[builtin, default, temporalTest, source: [TestTemporalTable(id, name, age)]]])
 ]]>
 		</Resource>
 		<Resource name="planAfter">
@@ -105,7 +105,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], id=[$3], name=[$4], age=[$5])
 Calc(select=[a, b, c, id, name, CAST(10) AS age])
 +- TemporalTableJoin(join=[a, b, c, id, name], source=[TestTemporalTable(id, name, age)], on=[a=id], joinType=[InnerJoin], where=[=(age, 10)], period=[PROCTIME()])
    +- Calc(select=[a, b, c], where=[>(c, 1000)])
-      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
 		</Resource>
 	</TestCase>
@@ -119,16 +119,16 @@ LogicalProject(a=[$0], b=[$1], id=[$2], name=[$3], age=[$4])
 +- LogicalJoin(condition=[=($0, $2)], joinType=[inner])
    :- LogicalProject(a=[$0], b=[$1])
    :  +- LogicalFilter(condition=[>($2, 1000)])
-   :     +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   :     +- LogicalTableScan(table=[[builtin, default, MyTable]])
    +- LogicalSnapshot(period=[PROCTIME()])
-      +- LogicalTableScan(table=[[default_catalog, default_db, temporalTest, source: [TestTemporalTable(id, name, age)]]])
+      +- LogicalTableScan(table=[[builtin, default, temporalTest, source: [TestTemporalTable(id, name, age)]]])
 ]]>
 		</Resource>
 		<Resource name="planAfter">
 			<![CDATA[
 TemporalTableJoin(join=[a, b, id, name, age], source=[TestTemporalTable(id, name, age)], on=[a=id], joinType=[InnerJoin], period=[PROCTIME()])
 +- Calc(select=[a, b], where=[>(c, 1000)])
-   +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
 		</Resource>
 	</TestCase>
@@ -140,15 +140,15 @@ TemporalTableJoin(join=[a, b, id, name, age], source=[TestTemporalTable(id, name
 			<![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2], id=[$3], name=[$4], age=[$5])
 +- LogicalJoin(condition=[=($0, $3)], joinType=[left])
-   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   :- LogicalTableScan(table=[[builtin, default, MyTable]])
    +- LogicalSnapshot(period=[PROCTIME()])
-      +- LogicalTableScan(table=[[default_catalog, default_db, temporalTest, source: [TestTemporalTable(id, name, age)]]])
+      +- LogicalTableScan(table=[[builtin, default, temporalTest, source: [TestTemporalTable(id, name, age)]]])
 ]]>
 		</Resource>
 		<Resource name="planAfter">
 			<![CDATA[
 TemporalTableJoin(join=[a, b, c, id, name, age], source=[TestTemporalTable(id, name, age)], on=[a=id], joinType=[LeftOuterJoin], period=[PROCTIME()])
-+- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
 		</Resource>
 	</TestCase>
@@ -165,15 +165,15 @@ ON T.a = D.id
 			<![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2], id=[$3])
 +- LogicalJoin(condition=[=($0, $3)], joinType=[inner])
-   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   :- LogicalTableScan(table=[[builtin, default, MyTable]])
    +- LogicalSnapshot(period=[PROCTIME()])
-      +- LogicalTableScan(table=[[default_catalog, default_db, temporalTest, source: [TestTemporalTable(id, name, age)]]])
+      +- LogicalTableScan(table=[[builtin, default, temporalTest, source: [TestTemporalTable(id, name, age)]]])
 ]]>
 		</Resource>
 		<Resource name="planAfter">
 			<![CDATA[
 TemporalTableJoin(join=[a, b, c, id], source=[TestTemporalTable(id, name, age)], on=[a=id], joinType=[InnerJoin], period=[PROCTIME()])
-+- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
 		</Resource>
 	</TestCase>
@@ -187,9 +187,9 @@ LogicalProject(a=[$0], b=[$1], c=[$2], id=[$3], name=[$4], age=[$5])
 +- LogicalProject(a=[$0], b=[$1], c=[$2], id=[$4], name=[$5], age=[$6])
    +- LogicalJoin(condition=[=($3, $4)], joinType=[inner])
       :- LogicalProject(a=[$0], b=[$1], c=[$2], b0=[CAST($1):INTEGER])
-      :  +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+      :  +- LogicalTableScan(table=[[builtin, default, MyTable]])
       +- LogicalSnapshot(period=[PROCTIME()])
-         +- LogicalTableScan(table=[[default_catalog, default_db, temporalTest, source: [TestTemporalTable(id, name, age)]]])
+         +- LogicalTableScan(table=[[builtin, default, temporalTest, source: [TestTemporalTable(id, name, age)]]])
 ]]>
 		</Resource>
 		<Resource name="planAfter">
@@ -197,9 +197,9 @@ LogicalProject(a=[$0], b=[$1], c=[$2], id=[$3], name=[$4], age=[$5])
 FlinkLogicalCalc(select=[a, b, c, id, name, age])
 +- FlinkLogicalJoin(condition=[=($3, $4)], joinType=[inner])
    :- FlinkLogicalCalc(select=[a, b, c, CAST(b) AS b0])
-   :  +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   :  +- FlinkLogicalNativeTableScan(table=[[builtin, default, _DataStreamTable_0]])
    +- FlinkLogicalSnapshot(period=[PROCTIME()])
-      +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, temporalTest, source: [TestTemporalTable(id, name, age)]]], fields=[id, name, age])
+      +- FlinkLogicalTableSourceScan(table=[[builtin, default, temporalTest, source: [TestTemporalTable(id, name, age)]]], fields=[id, name, age])
 ]]>
 		</Resource>
 	</TestCase>
@@ -228,9 +228,9 @@ LogicalAggregate(group=[{0}], EXPR$1=[COUNT($1)], EXPR$2=[SUM($2)], EXPR$3=[SUM(
       +- LogicalJoin(condition=[=($1, $4)], joinType=[inner])
          :- LogicalProject(b=[$1], a=[$0], c=[$2], d=[$3])
          :  +- LogicalAggregate(group=[{0, 1}], c=[SUM($2)], d=[SUM($3)])
-         :     +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+         :     +- LogicalTableScan(table=[[builtin, default, T1]])
          +- LogicalSnapshot(period=[PROCTIME()])
-            +- LogicalTableScan(table=[[default_catalog, default_db, temporalTest, source: [TestTemporalTable(id, name, age)]]])
+            +- LogicalTableScan(table=[[builtin, default, temporalTest, source: [TestTemporalTable(id, name, age)]]])
 ]]>
 		</Resource>
 		<Resource name="planAfter">
@@ -240,10 +240,10 @@ FlinkLogicalAggregate(group=[{0}], EXPR$1=[COUNT($1)], EXPR$2=[SUM($2)], EXPR$3=
    +- FlinkLogicalJoin(condition=[=($1, $4)], joinType=[inner])
       :- FlinkLogicalCalc(select=[b, a, c, d])
       :  +- FlinkLogicalAggregate(group=[{0, 1}], c=[SUM($2)], d=[SUM($3)])
-      :     +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
+      :     +- FlinkLogicalNativeTableScan(table=[[builtin, default, _DataStreamTable_1]])
       +- FlinkLogicalSnapshot(period=[PROCTIME()])
          +- FlinkLogicalCalc(select=[id], where=[>(age, 10)])
-            +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_db, temporalTest, source: [TestTemporalTable(id, name, age)]]], fields=[id, name, age])
+            +- FlinkLogicalTableSourceScan(table=[[builtin, default, temporalTest, source: [TestTemporalTable(id, name, age)]]], fields=[id, name, age])
 ]]>
 		</Resource>
 	</TestCase>
@@ -288,18 +288,18 @@ LogicalProject(EXPR$0=[$2], EXPR$1=[$3], EXPR$2=[$4])
             :     +- LogicalJoin(condition=[=($1, $4)], joinType=[inner])
             :        :- LogicalProject(b=[$1], a=[$0], c=[$2], d=[$3])
             :        :  +- LogicalAggregate(group=[{0, 1}], c=[SUM($2)], d=[SUM($3)])
-            :        :     +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+            :        :     +- LogicalTableScan(table=[[builtin, default, T1]])
             :        +- LogicalSnapshot(period=[PROCTIME()])
-            :           +- LogicalTableScan(table=[[default_catalog, default_db, temporalTest, source: [TestTemporalTable(id, name, age)]]])
+            :           +- LogicalTableScan(table=[[builtin, default, temporalTest, source: [TestTemporalTable(id, name, age)]]])
             +- LogicalProject(a=[$4], b=[$0])
                +- LogicalProject(b=[$0], a=[$1], c=[$2], d=[$3], id=[$4], name=[$5], age=[$6])
                   +- LogicalFilter(condition=[>($6, 10)])
                      +- LogicalJoin(condition=[=($1, $4)], joinType=[inner])
                         :- LogicalProject(b=[$1], a=[$0], c=[$2], d=[$3])
                         :  +- LogicalAggregate(group=[{0, 1}], c=[SUM($2)], d=[SUM($3)])
-                        :     +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+                        :     +- LogicalTableScan(table=[[builtin, default, T1]])
                         +- LogicalSnapshot(period=[PROCTIME()])
-                           +- LogicalTableScan(table=[[default_catalog, default_db, temporalTest, source: [TestTemporalTable(id, name, age)]]])
+                           +- LogicalTableScan(table=[[builtin, default, temporalTest, source: [TestTemporalTable(id, name, age)]]])
 ]]>
 		</Resource>
 		<Resource name="planAfter">
@@ -315,7 +315,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
             :        +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
             :           +- Exchange(distribution=[hash[a, b]])
             :              +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-            :                 +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[a, b, c, d])
+            :                 +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_1]], fields=[a, b, c, d])
             +- Exchange(distribution=[broadcast])
                +- Calc(select=[id AS a, b])
                   +- TemporalTableJoin(join=[b, a, id], source=[TestTemporalTable(id, name, age)], on=[a=id], joinType=[InnerJoin], where=[>(age, 10)], period=[PROCTIME()])

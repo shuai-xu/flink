@@ -42,7 +42,7 @@ import static org.apache.flink.util.Preconditions.checkArgument;
  */
 public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 
-	public static final String DEFAULT_DB = "default_db";
+	public static final String DEFAULT_DB = "default";
 
 	private String defaultDatabaseName = DEFAULT_DB;
 

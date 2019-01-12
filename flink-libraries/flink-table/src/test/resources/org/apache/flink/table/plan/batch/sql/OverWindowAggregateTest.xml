@@ -23,7 +23,7 @@ limitations under the License.
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(EXPR$0=[COUNT() OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST RANGE BETWEEN -1 PRECEDING AND 10 FOLLOWING)], EXPR$1=[CASE(>(COUNT($0) OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 0), CAST($SUM0($0) OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)):INTEGER, null)], EXPR$2=[RANK() OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST, $2 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)], EXPR$3=[CASE(>(COUNT($0) OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST RANGE BETWEEN 1 PRECEDING AND 10 FOLLOWING), 0), CAST($SUM0($0) OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST RANGE BETWEEN 1 PRECEDING AND 10 FOLLOWING)):INTEGER, null)], EXPR$4=[COUNT() OVER (PARTITION BY $2 ORDER BY $2 NULLS FIRST ROWS BETWEEN 1 PRECEDING AND 10 FOLLOWING)])
-+- LogicalTableScan(table=[[default_catalog, default_db, Table3]])
++- LogicalTableScan(table=[[builtin, default, Table3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -33,7 +33,7 @@ Calc(select=[w0$o0 AS EXPR$0, CASE(>(w1$o0, 0), CAST(w1$o1), null) AS EXPR$1, w2
    +- Sort(orderBy=[c ASC])
       +- Exchange(distribution=[hash[c]])
          +- Calc(select=[a, c])
-            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -44,7 +44,7 @@ Calc(select=[w0$o0 AS EXPR$0, CASE(>(w1$o0, 0), CAST(w1$o1), null) AS EXPR$1, w2
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(c=[$2], EXPR$1=[COUNT() OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST ROWS BETWEEN 0 PRECEDING AND 0 FOLLOWING)])
-+- LogicalTableScan(table=[[default_catalog, default_db, Table3]])
++- LogicalTableScan(table=[[builtin, default, Table3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -54,7 +54,7 @@ Calc(select=[c, w0$o0 AS $1])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
          +- Calc(select=[a, c])
-            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -65,7 +65,7 @@ Calc(select=[c, w0$o0 AS $1])
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(c=[$2], EXPR$1=[COUNT() OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST ROWS BETWEEN 0 PRECEDING AND CURRENT ROW)])
-+- LogicalTableScan(table=[[default_catalog, default_db, Table3]])
++- LogicalTableScan(table=[[builtin, default, Table3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -75,7 +75,7 @@ Calc(select=[c, w0$o0 AS $1])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
          +- Calc(select=[a, c])
-            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -86,7 +86,7 @@ Calc(select=[c, w0$o0 AS $1])
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(c=[$2], EXPR$1=[COUNT() OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST ROWS BETWEEN CURRENT ROW AND 0 FOLLOWING)])
-+- LogicalTableScan(table=[[default_catalog, default_db, Table3]])
++- LogicalTableScan(table=[[builtin, default, Table3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -96,7 +96,7 @@ Calc(select=[c, w0$o0 AS $1])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
          +- Calc(select=[a, c])
-            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -107,7 +107,7 @@ Calc(select=[c, w0$o0 AS $1])
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(EXPR$0=[COUNT() OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST RANGE BETWEEN -1 PRECEDING AND 10 FOLLOWING)])
-+- LogicalTableScan(table=[[default_catalog, default_db, Table3]])
++- LogicalTableScan(table=[[builtin, default, Table3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -117,7 +117,7 @@ Calc(select=[w0$o0 AS $0])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
          +- Calc(select=[a, c])
-            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -128,7 +128,7 @@ Calc(select=[w0$o0 AS $0])
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(c=[$2], EXPR$1=[COUNT() OVER (PARTITION BY $2 RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)])
-+- LogicalTableScan(table=[[default_catalog, default_db, Table3]])
++- LogicalTableScan(table=[[builtin, default, Table3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -137,7 +137,7 @@ Calc(select=[c, w0$o0 AS $1])
 +- OverAggregate(partitionBy=[c], window#0=[COUNT(*) AS w0$o0 RANG BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING], select=[a, b, c, w0$o0])
    +- Sort(orderBy=[c ASC])
       +- Exchange(distribution=[hash[c]])
-         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -148,7 +148,7 @@ Calc(select=[c, w0$o0 AS $1])
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(EXPR$0=[COUNT() OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST RANGE BETWEEN -1 PRECEDING AND 10 FOLLOWING)])
-+- LogicalTableScan(table=[[default_catalog, default_db, Table3]])
++- LogicalTableScan(table=[[builtin, default, Table3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -158,7 +158,7 @@ Calc(select=[w0$o0 AS $0])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
          +- Calc(select=[a, c])
-            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -169,7 +169,7 @@ Calc(select=[w0$o0 AS $0])
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(EXPR$0=[COUNT() OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST RANGE BETWEEN -1 FOLLOWING AND 10 FOLLOWING)])
-+- LogicalTableScan(table=[[default_catalog, default_db, Table3]])
++- LogicalTableScan(table=[[builtin, default, Table3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -179,7 +179,7 @@ Calc(select=[w0$o0 AS $0])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
          +- Calc(select=[a, c])
-            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -190,7 +190,7 @@ Calc(select=[w0$o0 AS $0])
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(EXPR$0=[RANK() OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST, $2 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-+- LogicalTableScan(table=[[default_catalog, default_db, Table3]])
++- LogicalTableScan(table=[[builtin, default, Table3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -199,7 +199,7 @@ Calc(select=[w0$o0 AS $0])
 +- OverAggregate(partitionBy=[c], orderBy=[a ASC, c ASC], window#0=[RANK(*) AS w0$o0 RANG BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, c, w0$o0])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
-         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -210,7 +210,7 @@ Calc(select=[w0$o0 AS $0])
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(EXPR$0=[COUNT(1) OVER (RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)])
-+- LogicalTableScan(table=[[default_catalog, default_db, Table3]])
++- LogicalTableScan(table=[[builtin, default, Table3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -218,7 +218,7 @@ LogicalProject(EXPR$0=[COUNT(1) OVER (RANGE BETWEEN UNBOUNDED PRECEDING AND UNBO
 OverAggregate(window#0=[COUNT(1) AS w0$o0 RANG BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING], select=[w0$o0])
 +- Exchange(distribution=[single])
    +- Calc(select=[])
-      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -229,7 +229,7 @@ OverAggregate(window#0=[COUNT(1) AS w0$o0 RANG BETWEEN UNBOUNDED PRECEDING AND U
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(EXPR$0=[CASE(>(COUNT($0) OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST RANGE BETWEEN -1 FOLLOWING AND 10 FOLLOWING), 0), CAST($SUM0($0) OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST RANGE BETWEEN -1 FOLLOWING AND 10 FOLLOWING)):INTEGER, null)], EXPR$1=[COUNT(1) OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST RANGE BETWEEN -1 FOLLOWING AND 10 FOLLOWING)])
-+- LogicalTableScan(table=[[default_catalog, default_db, Table3]])
++- LogicalTableScan(table=[[builtin, default, Table3]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -239,7 +239,7 @@ Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, w0$o2 AS EXPR$1])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
          +- Calc(select=[a, c])
-            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

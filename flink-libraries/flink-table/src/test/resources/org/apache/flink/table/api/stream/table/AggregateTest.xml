@@ -23,7 +23,7 @@ StreamExecCalc(select=[TMP_0])
 +- StreamExecGroupAggregate(groupBy=[b], select=[b, COUNT(a) AS TMP_0])
    +- StreamExecExchange(distribution=[hash[b]])
       +- StreamExecCalc(select=[a, b])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -33,7 +33,7 @@ StreamExecCalc(select=[TMP_0])
 StreamExecGroupAggregate(groupBy=[b], select=[b, AVG(a0) AS TMP_0])
 +- StreamExecExchange(distribution=[hash[b]])
    +- StreamExecCalc(select=[b, a, CAST(a) AS a0])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -44,7 +44,7 @@ StreamExecCalc(select=[4 AS four, TMP_0])
 +- StreamExecGroupAggregate(groupBy=[a], select=[a, SUM(b) AS TMP_0])
    +- StreamExecExchange(distribution=[hash[a]])
       +- StreamExecCalc(select=[4 AS four, b, a])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -55,7 +55,7 @@ StreamExecCalc(select=[4 AS four, TMP_0])
 +- StreamExecGroupAggregate(groupBy=[b], select=[b, SUM(a) AS TMP_0])
    +- StreamExecExchange(distribution=[hash[b]])
       +- StreamExecCalc(select=[4 AS four, a, b])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -66,7 +66,7 @@ StreamExecCalc(select=[TMP_0, TMP_1])
 +- StreamExecGroupAggregate(groupBy=[d], select=[d, MIN(c) AS TMP_0, AVG(a) AS TMP_1])
    +- StreamExecExchange(distribution=[hash[d]])
       +- StreamExecCalc(select=[c, a, MOD(b, 3) AS d])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -76,7 +76,7 @@ StreamExecCalc(select=[TMP_0, TMP_1])
 StreamExecGroupAggregate(groupBy=[b], select=[b, SUM(a) AS TMP_0])
 +- StreamExecExchange(distribution=[hash[b]])
    +- StreamExecCalc(select=[CAST(2) AS b, a], where=[=(b, 2)])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -86,7 +86,7 @@ StreamExecGroupAggregate(groupBy=[b], select=[b, SUM(a) AS TMP_0])
 StreamExecCalc(select=[TMP_0, TMP_1])
 +- StreamExecGroupAggregate(groupBy=[c], select=[c, WeightedAvg(DISTINCT a, b) AS TMP_0, WeightedAvg(a, b) AS TMP_1])
    +- StreamExecExchange(distribution=[hash[c]])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -96,7 +96,7 @@ StreamExecCalc(select=[TMP_0, TMP_1])
 StreamExecCalc(select=[TMP_0, TMP_1])
 +- StreamExecGroupAggregate(groupBy=[b], select=[b, SUM(DISTINCT a) AS TMP_0, COUNT(DISTINCT c) AS TMP_1])
    +- StreamExecExchange(distribution=[hash[b]])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

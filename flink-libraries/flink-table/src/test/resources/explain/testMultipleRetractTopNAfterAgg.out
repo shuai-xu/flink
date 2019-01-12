@@ -2,18 +2,18 @@
 LogicalProject(category=[$0], shopId=[$1], sum_num=[$2], max_num=[$3], rank_num=[$4])
 +- LogicalFilter(condition=[<=($4, 2)])
    +- LogicalProject(category=[$0], shopId=[$1], sum_num=[$2], max_num=[$3], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0 ORDER BY $2 DESC NULLS LAST, $3 NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyView]])
+      +- LogicalTableScan(table=[[builtin, default, MyView]])
 
 LogicalProject(category=[$0], shopId=[$1], avg_num=[$2], cnt_num=[$3], rank_num=[$4])
 +- LogicalFilter(condition=[<=($4, 2)])
    +- LogicalProject(category=[$0], shopId=[$1], avg_num=[$4], cnt_num=[$5], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0 ORDER BY $4 DESC NULLS LAST, $5 NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyView]])
+      +- LogicalTableScan(table=[[builtin, default, MyView]])
 
 == Optimized Logical Plan ==
 StreamExecCalc(select=[category, shopId, CASE(=($f3, 0), null, sum_num) AS sum_num, max_num, CAST(/(CAST(CASE(=($f3, 0), null, sum_num)), $f3)) AS avg_num, $f3 AS cnt_num], retract=[true], accMode=[AccRetract], reuse_id=[1])
 +- StreamExecGroupAggregate(groupBy=[category, shopId], select=[category, shopId, $SUM0(num) AS sum_num, COUNT(num) AS $f3, MAX(num) AS max_num], retract=[true], accMode=[AccRetract])
    +- StreamExecExchange(distribution=[hash[category, shopId]], retract=[true], accMode=[Acc])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 
 StreamExecSink(fields=[category, shopId, sum_num, max_num, rank_num], retract=[false], accMode=[AccRetract])
 +- StreamExecCalc(select=[category, shopId, sum_num, max_num, w0$o0], retract=[true], accMode=[AccRetract])
@@ -32,7 +32,7 @@ StreamExecSink(fields=[category, shopId, avg_num, cnt_num, rank_num], retract=[f
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[default_catalog, default_db, _DataStreamTable_0], fields:(category, shopId, num))
+		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(category, shopId, num))
 		ship_strategy : FORWARD
 
 		 : Operator

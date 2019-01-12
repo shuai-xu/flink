@@ -21,13 +21,13 @@ limitations under the License.
       <![CDATA[
 LogicalProject(a=[$0], b=[$1], c=[$2])
 +- LogicalFilter(condition=[>($1, 12)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, UnnamedTable$0]])
+   +- LogicalTableScan(table=[[builtin, default, UnnamedTable$0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b, c], where=[>(b, 12)])
-+- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -37,8 +37,8 @@ Calc(select=[a, b, c], where=[>(b, 12)])
 LogicalProject(d=[$3], e=[$4], f=[$5])
 +- LogicalFilter(condition=[=(CAST($2):BIGINT, $3)])
    +- LogicalJoin(condition=[true], joinType=[inner])
-      :- LogicalTableScan(table=[[default_catalog, default_db, UnnamedTable$0]])
-      +- LogicalTableScan(table=[[default_catalog, default_db, UnnamedTable$1]])
+      :- LogicalTableScan(table=[[builtin, default, UnnamedTable$0]])
+      +- LogicalTableScan(table=[[builtin, default, UnnamedTable$1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -47,8 +47,8 @@ Calc(select=[d, e, f])
 +- HashJoin(where=[=(c0, d)], join=[c0, d, e, f], joinType=[InnerJoin], isBroadcast=[true], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- Calc(select=[CAST(c) AS c0])
-   :     +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
-   +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[d, e, f])
+   :     +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_1]], fields=[d, e, f])
 ]]>
     </Resource>
   </TestCase>

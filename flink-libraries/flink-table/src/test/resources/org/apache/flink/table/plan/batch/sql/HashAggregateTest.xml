@@ -24,14 +24,14 @@ limitations under the License.
       <![CDATA[
 LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 +- LogicalProject(b=[$1], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 HashAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
 +- Exchange(distribution=[hash[b]])
-   +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
+   +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
 ]]>
     </Resource>
   </TestCase>
@@ -43,14 +43,14 @@ HashAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
       <![CDATA[
 LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 +- LogicalProject(b=[$1], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 HashAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
 +- Exchange(distribution=[hash[b]])
-   +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
+   +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
 ]]>
     </Resource>
   </TestCase>
@@ -62,14 +62,14 @@ HashAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
       <![CDATA[
 LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 +- LogicalProject(b=[$1], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 HashAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
 +- Exchange(distribution=[hash[b]])
-   +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
+   +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
 ]]>
     </Resource>
   </TestCase>
@@ -81,14 +81,14 @@ HashAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
       <![CDATA[
 LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 +- LogicalProject(b=[$1], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 HashAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
 +- Exchange(distribution=[hash[b]])
-   +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
+   +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
 ]]>
     </Resource>
   </TestCase>
@@ -100,14 +100,14 @@ HashAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
       <![CDATA[
 LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 +- LogicalProject(b=[$1], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 HashAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
 +- Exchange(distribution=[hash[b]])
-   +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
+   +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
 ]]>
     </Resource>
   </TestCase>
@@ -119,14 +119,14 @@ HashAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
       <![CDATA[
 LogicalAggregate(group=[{0}], EXPR$1=[var_sum($1)])
 +- LogicalProject(b=[$1], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 HashAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
 +- Exchange(distribution=[hash[b]])
-   +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
+   +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[b, a]]]], fields=[b, a])
 ]]>
     </Resource>
   </TestCase>
@@ -137,7 +137,7 @@ HashAggregate(isMerge=[false], groupBy=[b], select=[b, var_sum(a) AS EXPR$1])
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-+- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -145,7 +145,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
 HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final_SUM(sum$2) AS EXPR$1, Final_COUNT(count$3) AS EXPR$2])
 +- Exchange(distribution=[single])
    +- LocalHashAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
-      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -156,7 +156,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-+- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -164,7 +164,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
 HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final_SUM(sum$2) AS EXPR$1, Final_COUNT(count$3) AS EXPR$2])
 +- Exchange(distribution=[single])
    +- LocalHashAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
-      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -175,14 +175,14 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-+- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 HashAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
 +- Exchange(distribution=[single])
-   +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+   +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -193,14 +193,14 @@ HashAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-+- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 HashAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
 +- Exchange(distribution=[single])
-   +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+   +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -211,7 +211,7 @@ HashAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-+- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -219,7 +219,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
 HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final_SUM(sum$2) AS EXPR$1, Final_COUNT(count$3) AS EXPR$2])
 +- Exchange(distribution=[single])
    +- LocalHashAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
-      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -230,7 +230,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-+- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
++- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -238,7 +238,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
 HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final_SUM(sum$2) AS EXPR$1, Final_COUNT(count$3) AS EXPR$2])
 +- Exchange(distribution=[single])
    +- LocalHashAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
-      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -250,7 +250,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
 +- LogicalFilter(condition=[=($0, 1)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -259,7 +259,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 +- Exchange(distribution=[single])
    +- LocalHashAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
       +- Calc(select=[a, b, c], where=[=(a, 1)])
-         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -271,7 +271,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
 +- LogicalFilter(condition=[=($0, 1)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -280,7 +280,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 +- Exchange(distribution=[single])
    +- LocalHashAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
       +- Calc(select=[a, b, c], where=[=(a, 1)])
-         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -292,7 +292,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
 +- LogicalFilter(condition=[=($0, 1)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -300,7 +300,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
 HashAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
 +- Exchange(distribution=[single])
    +- Calc(select=[a, b, c], where=[=(a, 1)])
-      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -312,7 +312,7 @@ HashAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
 +- LogicalFilter(condition=[=($0, 1)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -320,7 +320,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
 HashAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
 +- Exchange(distribution=[single])
    +- Calc(select=[a, b, c], where=[=(a, 1)])
-      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -332,7 +332,7 @@ HashAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
 +- LogicalFilter(condition=[=($0, 1)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -341,7 +341,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 +- Exchange(distribution=[single])
    +- LocalHashAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
       +- Calc(select=[a, b, c], where=[=(a, 1)])
-         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -353,7 +353,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
 +- LogicalFilter(condition=[=($0, 1)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -362,7 +362,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 +- Exchange(distribution=[single])
    +- LocalHashAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
       +- Calc(select=[a, b, c], where=[=(a, 1)])
-         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -375,7 +375,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)], EXPR$3=[SUM($3)])
 +- LogicalProject(a=[$0], b=[$1], c=[$2], $f3=[$2._1])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -384,7 +384,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 +- Exchange(distribution=[single])
    +- LocalHashAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3, Partial_SUM($f3) AS sum$4])
       +- Calc(select=[CAST(1) AS a, b, c, c._1 AS $f3], where=[=(a, 1)])
-         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -396,7 +396,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
       <![CDATA[
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -404,7 +404,7 @@ LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 +- HashAggregate(isMerge=[false], groupBy=[a], select=[a, AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
    +- Exchange(distribution=[hash[a]])
-      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -417,7 +417,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)], EXPR$3=[SUM($3)])
 +- LogicalProject(a=[$0], b=[$1], c=[$2], $f3=[$2._1])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -426,7 +426,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 +- Exchange(distribution=[single])
    +- LocalHashAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3, Partial_SUM($f3) AS sum$4])
       +- Calc(select=[CAST(1) AS a, b, c, c._1 AS $f3], where=[=(a, 1)])
-         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -439,7 +439,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)], EXPR$3=[SUM($3)])
 +- LogicalProject(a=[$0], b=[$1], c=[$2], $f3=[$2._1])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -447,7 +447,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
 HashAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2, SUM($f3) AS EXPR$3])
 +- Exchange(distribution=[single])
    +- Calc(select=[CAST(1) AS a, b, c, c._1 AS $f3], where=[=(a, 1)])
-      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -460,7 +460,7 @@ HashAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)], EXPR$3=[SUM($3)])
 +- LogicalProject(a=[$0], b=[$1], c=[$2], $f3=[$2._1])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -468,7 +468,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
 HashAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2, SUM($f3) AS EXPR$3])
 +- Exchange(distribution=[single])
    +- Calc(select=[CAST(1) AS a, b, c, c._1 AS $f3], where=[=(a, 1)])
-      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -481,7 +481,7 @@ HashAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)], EXPR$3=[SUM($3)])
 +- LogicalProject(a=[$0], b=[$1], c=[$2], $f3=[$2._1])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -490,7 +490,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 +- Exchange(distribution=[single])
    +- LocalHashAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3, Partial_SUM($f3) AS sum$4])
       +- Calc(select=[CAST(1) AS a, b, c, c._1 AS $f3], where=[=(a, 1)])
-         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -503,7 +503,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)], EXPR$3=[SUM($3)])
 +- LogicalProject(a=[$0], b=[$1], c=[$2], $f3=[$2._1])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -512,7 +512,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
 +- Exchange(distribution=[single])
    +- LocalHashAggregate(select=[Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3, Partial_SUM($f3) AS sum$4])
       +- Calc(select=[CAST(1) AS a, b, c, c._1 AS $f3], where=[=(a, 1)])
-         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -524,7 +524,7 @@ HashAggregate(isMerge=[true], select=[Final_AVG(sum$0, count$1) AS EXPR$0, Final
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -534,7 +534,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
          +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -546,7 +546,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -556,7 +556,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
          +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -568,7 +568,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -577,7 +577,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
 +- HashAggregate(isMerge=[false], groupBy=[b, c, $e], select=[b, c, $e, AVG(a) AS a])
    +- Exchange(distribution=[hash[b, c, $e]])
       +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -589,7 +589,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -598,7 +598,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
 +- HashAggregate(isMerge=[false], groupBy=[b, c, $e], select=[b, c, $e, AVG(a) AS a])
    +- Exchange(distribution=[hash[b, c, $e]])
       +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -610,7 +610,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -620,7 +620,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
          +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -632,7 +632,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -642,7 +642,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
          +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -654,7 +654,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       <![CDATA[
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -663,7 +663,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 +- HashAggregate(isMerge=[true], groupBy=[a], select=[a, Final_AVG(sum$0, count$1) AS EXPR$0, Final_SUM(sum$2) AS EXPR$1, Final_COUNT(count$3) AS EXPR$2])
    +- Exchange(distribution=[hash[a]])
       +- LocalHashAggregate(groupBy=[a], select=[a, Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
-         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -675,7 +675,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
       <![CDATA[
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -683,7 +683,7 @@ LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 +- HashAggregate(isMerge=[false], groupBy=[a], select=[a, AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
    +- Exchange(distribution=[hash[a]])
-      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -695,7 +695,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
       <![CDATA[
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -703,7 +703,7 @@ LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 +- HashAggregate(isMerge=[false], groupBy=[a], select=[a, AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
    +- Exchange(distribution=[hash[a]])
-      +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+      +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -715,7 +715,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
       <![CDATA[
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -724,7 +724,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 +- HashAggregate(isMerge=[true], groupBy=[a], select=[a, Final_AVG(sum$0, count$1) AS EXPR$0, Final_SUM(sum$2) AS EXPR$1, Final_COUNT(count$3) AS EXPR$2])
    +- Exchange(distribution=[hash[a]])
       +- LocalHashAggregate(groupBy=[a], select=[a, Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
-         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -736,7 +736,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
       <![CDATA[
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -745,7 +745,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 +- HashAggregate(isMerge=[true], groupBy=[a], select=[a, Final_AVG(sum$0, count$1) AS EXPR$0, Final_SUM(sum$2) AS EXPR$1, Final_COUNT(count$3) AS EXPR$2])
    +- Exchange(distribution=[hash[a]])
       +- LocalHashAggregate(groupBy=[a], select=[a, Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
-         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -758,7 +758,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -768,7 +768,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
    +- Exchange(distribution=[hash[a]])
       +- LocalHashAggregate(groupBy=[a], select=[a, Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
          +- Calc(select=[a, b, c], where=[=(a, 1)])
-            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -781,7 +781,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -790,7 +790,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 +- HashAggregate(isMerge=[false], groupBy=[a], select=[a, AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
    +- Exchange(distribution=[hash[a]])
       +- Calc(select=[a, b, c], where=[=(a, 1)])
-         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -803,7 +803,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -812,7 +812,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 +- HashAggregate(isMerge=[false], groupBy=[a], select=[a, AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
    +- Exchange(distribution=[hash[a]])
       +- Calc(select=[a, b, c], where=[=(a, 1)])
-         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -825,7 +825,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -834,7 +834,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 +- HashAggregate(isMerge=[false], groupBy=[a], select=[a, AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
    +- Exchange(distribution=[hash[a]])
       +- Calc(select=[a, b, c], where=[=(a, 1)])
-         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -847,7 +847,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -857,7 +857,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
    +- Exchange(distribution=[hash[a]])
       +- LocalHashAggregate(groupBy=[a], select=[a, Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
          +- Calc(select=[a, b, c], where=[=(a, 1)])
-            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -870,7 +870,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($2)])
    +- LogicalFilter(condition=[=($0, 1)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -880,7 +880,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
    +- Exchange(distribution=[hash[a]])
       +- LocalHashAggregate(groupBy=[a], select=[a, Partial_AVG(a) AS (sum$0, count$1), Partial_SUM(b) AS sum$2, Partial_COUNT(c) AS count$3])
          +- Calc(select=[a, b, c], where=[=(a, 1)])
-            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -892,7 +892,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], a=[AVG($2)], g=[GROUP_ID()])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -902,7 +902,7 @@ Calc(select=[b, c, a, 0 AS g])
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
          +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
-            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -914,7 +914,7 @@ Calc(select=[b, c, a, 0 AS g])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], a=[AVG($2)], g=[GROUP_ID()])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -924,7 +924,7 @@ Calc(select=[b, c, a, 0 AS g])
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
          +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
-            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -936,7 +936,7 @@ Calc(select=[b, c, a, 0 AS g])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], a=[AVG($2)], g=[GROUP_ID()])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -945,7 +945,7 @@ Calc(select=[b, c, a, 0 AS g])
 +- HashAggregate(isMerge=[false], groupBy=[b, c, $e], select=[b, c, $e, AVG(a) AS a])
    +- Exchange(distribution=[hash[b, c, $e]])
       +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
-         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -957,7 +957,7 @@ Calc(select=[b, c, a, 0 AS g])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], a=[AVG($2)], g=[GROUP_ID()])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -966,7 +966,7 @@ Calc(select=[b, c, a, 0 AS g])
 +- HashAggregate(isMerge=[false], groupBy=[b, c, $e], select=[b, c, $e, AVG(a) AS a])
    +- Exchange(distribution=[hash[b, c, $e]])
       +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
-         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -978,7 +978,7 @@ Calc(select=[b, c, a, 0 AS g])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], a=[AVG($2)], g=[GROUP_ID()])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -988,7 +988,7 @@ Calc(select=[b, c, a, 0 AS g])
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
          +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
-            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1000,7 +1000,7 @@ Calc(select=[b, c, a, 0 AS g])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], a=[AVG($2)], g=[GROUP_ID()])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1010,7 +1010,7 @@ Calc(select=[b, c, a, 0 AS g])
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
          +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
-            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1022,7 +1022,7 @@ Calc(select=[b, c, a, 0 AS g])
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1032,7 +1032,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
          +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1044,7 +1044,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1054,7 +1054,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
          +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1066,7 +1066,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1075,7 +1075,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
 +- HashAggregate(isMerge=[false], groupBy=[b, c, $e], select=[b, c, $e, AVG(a) AS a])
    +- Exchange(distribution=[hash[b, c, $e]])
       +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1087,7 +1087,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1096,7 +1096,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
 +- HashAggregate(isMerge=[false], groupBy=[b, c, $e], select=[b, c, $e, AVG(a) AS a])
    +- Exchange(distribution=[hash[b, c, $e]])
       +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-         +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1108,7 +1108,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1118,7 +1118,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
          +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -1130,7 +1130,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
       <![CDATA[
 LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], a=[AVG($2)], g=[GROUP_ID()], gb=[GROUPING($0)], gc=[GROUPING($1)], gib=[GROUPING_ID($0)], gic=[GROUPING_ID($1)], gid=[GROUPING_ID($0, $1)])
 +- LogicalProject(b=[$1], c=[$2], a=[$0])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1140,7 +1140,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
          +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
-            +- TableSourceScan(table=[[default_catalog, default_db, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[builtin, default, MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

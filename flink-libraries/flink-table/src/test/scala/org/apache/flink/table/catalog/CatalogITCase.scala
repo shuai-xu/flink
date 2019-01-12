@@ -44,8 +44,8 @@ import org.mockito.Mockito
   */
 class ExternalCatalogITCase {
 
-  private val default_catalog = "mycatalog"
-  private val default_db = "mydb"
+  private val builtin = "mycatalog"
+  private val default = "mydb"
 
   @Before
   def before(): Unit = {
@@ -65,10 +65,10 @@ class ExternalCatalogITCase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
 
-    var catalog = new FlinkInMemoryCatalog(default_catalog)
-    catalog.createDatabase(default_db, new CatalogDatabase(), false)
-    tableEnv.registerCatalog(default_catalog, catalog)
-    tableEnv.setDefaultDatabase(default_catalog, default_db)
+    var catalog = new FlinkInMemoryCatalog(builtin)
+    catalog.createDatabase(default, new CatalogDatabase(), false)
+    tableEnv.registerCatalog(builtin, catalog)
+    tableEnv.setDefaultDatabase(builtin, default)
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -135,10 +135,10 @@ class ExternalCatalogITCase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tableEnv = TableEnvironment.getTableEnvironment(env, new TableConfig())
 
-    var catalog = new FlinkInMemoryCatalog(default_catalog)
-    catalog.createDatabase(default_db, new CatalogDatabase(), false)
-    tableEnv.registerCatalog(default_catalog, catalog)
-    tableEnv.setDefaultDatabase(default_catalog, default_db)
+    var catalog = new FlinkInMemoryCatalog(builtin)
+    catalog.createDatabase(default, new CatalogDatabase(), false)
+    tableEnv.registerCatalog(builtin, catalog)
+    tableEnv.setDefaultDatabase(builtin, default)
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -203,10 +203,10 @@ class ExternalCatalogITCase {
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tableEnv = TableEnvironment.getTableEnvironment(env, new TableConfig())
 
-    var catalog = new FlinkInMemoryCatalog(default_catalog)
-    catalog.createDatabase(default_db, new CatalogDatabase(), false)
-    tableEnv.registerCatalog(default_catalog, catalog)
-    tableEnv.setDefaultDatabase(default_catalog, default_db)
+    var catalog = new FlinkInMemoryCatalog(builtin)
+    catalog.createDatabase(default, new CatalogDatabase(), false)
+    tableEnv.registerCatalog(builtin, catalog)
+    tableEnv.setDefaultDatabase(builtin, default)
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -275,10 +275,10 @@ class ExternalCatalogITCase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
 
-    var catalog = new FlinkInMemoryCatalog(default_catalog)
-    catalog.createDatabase(default_db, new CatalogDatabase(), false)
-    tableEnv.registerCatalog(default_catalog, catalog)
-    tableEnv.setDefaultDatabase(default_catalog, default_db)
+    var catalog = new FlinkInMemoryCatalog(builtin)
+    catalog.createDatabase(default, new CatalogDatabase(), false)
+    tableEnv.registerCatalog(builtin, catalog)
+    tableEnv.setDefaultDatabase(builtin, default)
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -342,10 +342,10 @@ class ExternalCatalogITCase {
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
 
-    var catalog = new FlinkInMemoryCatalog(default_catalog)
-    catalog.createDatabase(default_db, new CatalogDatabase(), false)
-    tableEnv.registerCatalog(default_catalog, catalog)
-    tableEnv.setDefaultDatabase(default_catalog, default_db)
+    var catalog = new FlinkInMemoryCatalog(builtin)
+    catalog.createDatabase(default, new CatalogDatabase(), false)
+    tableEnv.registerCatalog(builtin, catalog)
+    tableEnv.setDefaultDatabase(builtin, default)
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](

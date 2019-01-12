@@ -30,9 +30,9 @@ LogicalSort(sort0=[$1], dir0=[ASC-nulls-first], fetch=[10])
 +- LogicalProject(deptno=[COALESCE($7, $8)], empno=[$0], ename=[$1], job=[$2], mgr=[$3], hiredate=[$4], sal=[$5], comm=[$6], dname=[$9], loc=[$10])
    +- LogicalJoin(condition=[=($7, $8)], joinType=[left])
       :- LogicalProject(empno=[$0], ename=[$1], job=[$2], mgr=[$3], hiredate=[$4], sal=[$5], comm=[$6], deptno=[$7])
-      :  +- LogicalTableScan(table=[[default_catalog, default_db, scott_emp]])
+      :  +- LogicalTableScan(table=[[builtin, default, scott_emp]])
       +- LogicalProject(deptno=[$0], dname=[$1], loc=[$2])
-         +- LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
+         +- LogicalTableScan(table=[[builtin, default, scott_dept]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -41,9 +41,9 @@ LogicalSort(sort0=[$1], dir0=[ASC-nulls-first], fetch=[10])
 +- LogicalProject($f0=[CASE(IS NOT NULL($7), $7, $8)], empno=[$0], ename=[$1], job=[$2], mgr=[$3], hiredate=[$4], sal=[$5], comm=[$6], dname=[$9], loc=[$10])
    +- LogicalJoin(condition=[=($7, $8)], joinType=[left])
       :- LogicalProject(empno=[$0], ename=[$1], job=[$2], mgr=[$3], hiredate=[$4], sal=[$5], comm=[$6], deptno=[$7])
-      :  +- LogicalTableScan(table=[[default_catalog, default_db, scott_emp]])
+      :  +- LogicalTableScan(table=[[builtin, default, scott_emp]])
       +- LogicalProject(deptno=[$0], dname=[$1], loc=[$2])
-         +- LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
+         +- LogicalTableScan(table=[[builtin, default, scott_dept]])
 ]]>
     </Resource>
   </TestCase>
@@ -68,12 +68,12 @@ LogicalAggregate(group=[{}], EXPR$0=[MAX($0)])
   LogicalProject(sal=[$5])
     LogicalFilter(condition=[=($8, $cor0.deptno0)])
       LogicalJoin(condition=[=($7, $8)], joinType=[inner])
-        LogicalTableScan(table=[[default_catalog, default_db, scott_emp]])
-        LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
+        LogicalTableScan(table=[[builtin, default, scott_emp]])
+        LogicalTableScan(table=[[builtin, default, scott_dept]])
 }))], variablesSet=[[$cor0]])
    +- LogicalJoin(condition=[=($7, $8)], joinType=[inner])
-      :- LogicalTableScan(table=[[default_catalog, default_db, scott_emp]])
-      +- LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
+      :- LogicalTableScan(table=[[builtin, default, scott_emp]])
+      +- LogicalTableScan(table=[[builtin, default, scott_dept]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -83,15 +83,15 @@ LogicalProject($f0=[$7], empno=[$0], ename=[$1], job=[$2], mgr=[$3], hiredate=[$
    +- LogicalProject(empno=[$0], ename=[$1], job=[$2], mgr=[$3], hiredate=[$4], sal=[$5], comm=[$6], deptno=[$7], deptno0=[$8], dname=[$9], loc=[$10], EXPR$0=[$12])
       +- LogicalJoin(condition=[AND(=($8, $11), =($5, $12))], joinType=[inner])
          :- LogicalJoin(condition=[=($7, $8)], joinType=[inner])
-         :  :- LogicalTableScan(table=[[default_catalog, default_db, scott_emp]])
-         :  +- LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
+         :  :- LogicalTableScan(table=[[builtin, default, scott_emp]])
+         :  +- LogicalTableScan(table=[[builtin, default, scott_dept]])
          +- LogicalAggregate(group=[{0}], EXPR$0=[MAX($1)])
             +- LogicalProject(deptno0=[$1], sal=[$0])
                +- LogicalProject(sal=[$5], deptno0=[$8])
                   +- LogicalJoin(condition=[=($7, $8)], joinType=[inner])
-                     :- LogicalTableScan(table=[[default_catalog, default_db, scott_emp]])
+                     :- LogicalTableScan(table=[[builtin, default, scott_emp]])
                      +- LogicalFilter(condition=[IS NOT NULL($0)])
-                        +- LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
+                        +- LogicalTableScan(table=[[builtin, default, scott_dept]])
 ]]>
     </Resource>
   </TestCase>
@@ -114,11 +114,11 @@ LogicalProject(deptno=[COALESCE($7, $8)], empno=[$0], ename=[$1], job=[$2], mgr=
 LogicalAggregate(group=[{}], EXPR$0=[MAX($0)])
   LogicalProject(dname=[$1])
     LogicalFilter(condition=[=($0, $cor0.deptno0)])
-      LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
+      LogicalTableScan(table=[[builtin, default, scott_dept]])
 }))], variablesSet=[[$cor0]])
    +- LogicalJoin(condition=[=($7, $8)], joinType=[inner])
-      :- LogicalTableScan(table=[[default_catalog, default_db, scott_emp]])
-      +- LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
+      :- LogicalTableScan(table=[[builtin, default, scott_emp]])
+      +- LogicalTableScan(table=[[builtin, default, scott_dept]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -128,13 +128,13 @@ LogicalProject($f0=[$7], empno=[$0], ename=[$1], job=[$2], mgr=[$3], hiredate=[$
    +- LogicalProject(empno=[$0], ename=[$1], job=[$2], mgr=[$3], hiredate=[$4], sal=[$5], comm=[$6], deptno=[$7], deptno0=[$8], dname=[$9], loc=[$10], EXPR$0=[$12])
       +- LogicalJoin(condition=[AND(=($8, $11), =($9, $12))], joinType=[inner])
          :- LogicalJoin(condition=[=($7, $8)], joinType=[inner])
-         :  :- LogicalTableScan(table=[[default_catalog, default_db, scott_emp]])
-         :  +- LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
+         :  :- LogicalTableScan(table=[[builtin, default, scott_emp]])
+         :  +- LogicalTableScan(table=[[builtin, default, scott_dept]])
          +- LogicalAggregate(group=[{0}], EXPR$0=[MAX($1)])
             +- LogicalProject(deptno=[$1], dname=[$0])
                +- LogicalProject(dname=[$1], deptno=[$0])
                   +- LogicalFilter(condition=[IS NOT NULL($0)])
-                     +- LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
+                     +- LogicalTableScan(table=[[builtin, default, scott_dept]])
 ]]>
     </Resource>
   </TestCase>
@@ -152,9 +152,9 @@ LogicalProject(deptno=[COALESCE($7, $8)], empno=[$0], ename=[$1], job=[$2], mgr=
 +- LogicalFilter(condition=[=($7, 10)])
    +- LogicalJoin(condition=[=($7, $8)], joinType=[inner])
       :- LogicalProject(empno=[$0], ename=[$1], job=[$2], mgr=[$3], hiredate=[$4], sal=[$5], comm=[$6], deptno=[$7])
-      :  +- LogicalTableScan(table=[[default_catalog, default_db, scott_emp]])
+      :  +- LogicalTableScan(table=[[builtin, default, scott_emp]])
       +- LogicalProject(deptno=[$0], dname=[$1], loc=[$2])
-         +- LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
+         +- LogicalTableScan(table=[[builtin, default, scott_dept]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -163,9 +163,9 @@ LogicalProject($f0=[CAST(10):INTEGER], empno=[$0], ename=[$1], job=[$2], mgr=[$3
 +- LogicalFilter(condition=[=($7, 10)])
    +- LogicalJoin(condition=[=($7, $8)], joinType=[inner])
       :- LogicalProject(empno=[$0], ename=[$1], job=[$2], mgr=[$3], hiredate=[$4], sal=[$5], comm=[$6], deptno=[$7])
-      :  +- LogicalTableScan(table=[[default_catalog, default_db, scott_emp]])
+      :  +- LogicalTableScan(table=[[builtin, default, scott_emp]])
       +- LogicalProject(deptno=[$0], dname=[$1], loc=[$2])
-         +- LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
+         +- LogicalTableScan(table=[[builtin, default, scott_dept]])
 ]]>
     </Resource>
   </TestCase>
@@ -183,8 +183,8 @@ LogicalProject(deptno=[$0], dname=[$1], loc=[$2], empno=[$3], ename=[$4], job=[$
 +- LogicalSort(sort0=[$10], sort1=[$11], dir0=[ASC-nulls-first], dir1=[ASC-nulls-first])
    +- LogicalProject(deptno=[COALESCE($0, $10)], dname=[$1], loc=[$2], empno=[$3], ename=[$4], job=[$5], mgr=[$6], hiredate=[$7], sal=[$8], comm=[$9], deptno0=[$0], deptno1=[$10])
       +- LogicalJoin(condition=[=($0, $10)], joinType=[left])
-         :- LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
-         +- LogicalTableScan(table=[[default_catalog, default_db, scott_emp]])
+         :- LogicalTableScan(table=[[builtin, default, scott_dept]])
+         +- LogicalTableScan(table=[[builtin, default, scott_emp]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -193,8 +193,8 @@ LogicalProject(deptno=[$0], dname=[$1], loc=[$2], empno=[$3], ename=[$4], job=[$
 +- LogicalSort(sort0=[$10], sort1=[$11], dir0=[ASC-nulls-first], dir1=[ASC-nulls-first])
    +- LogicalProject($f0=[CASE(IS NOT NULL($0), $0, $10)], dname=[$1], loc=[$2], empno=[$3], ename=[$4], job=[$5], mgr=[$6], hiredate=[$7], sal=[$8], comm=[$9], deptno=[$0], deptno0=[$10])
       +- LogicalJoin(condition=[=($0, $10)], joinType=[left])
-         :- LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
-         +- LogicalTableScan(table=[[default_catalog, default_db, scott_emp]])
+         :- LogicalTableScan(table=[[builtin, default, scott_dept]])
+         +- LogicalTableScan(table=[[builtin, default, scott_emp]])
 ]]>
     </Resource>
   </TestCase>
@@ -212,8 +212,8 @@ LogicalProject(deptno=[$0], dname=[$1], loc=[$2], empno=[$3], ename=[$4], job=[$
 +- LogicalSort(sort0=[$10], sort1=[$11], dir0=[ASC-nulls-first], dir1=[ASC-nulls-first])
    +- LogicalProject(deptno=[COALESCE($0, $10)], dname=[$1], loc=[$2], empno=[$3], ename=[$4], job=[$5], mgr=[$6], hiredate=[$7], sal=[$8], comm=[$9], deptno0=[$0], deptno1=[$10])
       +- LogicalJoin(condition=[=($0, $10)], joinType=[right])
-         :- LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
-         +- LogicalTableScan(table=[[default_catalog, default_db, scott_emp]])
+         :- LogicalTableScan(table=[[builtin, default, scott_dept]])
+         +- LogicalTableScan(table=[[builtin, default, scott_emp]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -222,8 +222,8 @@ LogicalProject(deptno=[$0], dname=[$1], loc=[$2], empno=[$3], ename=[$4], job=[$
 +- LogicalSort(sort0=[$10], sort1=[$11], dir0=[ASC-nulls-first], dir1=[ASC-nulls-first])
    +- LogicalProject($f0=[CASE(IS NOT NULL($0), $0, $10)], dname=[$1], loc=[$2], empno=[$3], ename=[$4], job=[$5], mgr=[$6], hiredate=[$7], sal=[$8], comm=[$9], deptno=[$0], deptno0=[$10])
       +- LogicalJoin(condition=[=($0, $10)], joinType=[right])
-         :- LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
-         +- LogicalTableScan(table=[[default_catalog, default_db, scott_emp]])
+         :- LogicalTableScan(table=[[builtin, default, scott_dept]])
+         +- LogicalTableScan(table=[[builtin, default, scott_emp]])
 ]]>
     </Resource>
   </TestCase>
@@ -238,8 +238,8 @@ select * from scott_dept natural join scott_emp where empno = 1
 LogicalProject(deptno=[COALESCE($0, $10)], dname=[$1], loc=[$2], empno=[$3], ename=[$4], job=[$5], mgr=[$6], hiredate=[$7], sal=[$8], comm=[$9])
 +- LogicalFilter(condition=[=($3, 1)])
    +- LogicalJoin(condition=[=($0, $10)], joinType=[inner])
-      :- LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
-      +- LogicalTableScan(table=[[default_catalog, default_db, scott_emp]])
+      :- LogicalTableScan(table=[[builtin, default, scott_dept]])
+      +- LogicalTableScan(table=[[builtin, default, scott_emp]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -247,8 +247,8 @@ LogicalProject(deptno=[COALESCE($0, $10)], dname=[$1], loc=[$2], empno=[$3], ena
 LogicalProject($f0=[CASE(IS NOT NULL($0), $0, $10)], dname=[$1], loc=[$2], empno=[CAST(1):INTEGER], ename=[$4], job=[$5], mgr=[$6], hiredate=[$7], sal=[$8], comm=[$9])
 +- LogicalFilter(condition=[=($3, 1)])
    +- LogicalJoin(condition=[=($0, $10)], joinType=[inner])
-      :- LogicalTableScan(table=[[default_catalog, default_db, scott_dept]])
-      +- LogicalTableScan(table=[[default_catalog, default_db, scott_emp]])
+      :- LogicalTableScan(table=[[builtin, default, scott_dept]])
+      +- LogicalTableScan(table=[[builtin, default, scott_emp]])
 ]]>
     </Resource>
   </TestCase>

@@ -1,17 +1,17 @@
 == Abstract Syntax Tree ==
 LogicalProject(num=[$0], cnt=[$1])
 +- LogicalFilter(condition=[<($0, 4)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+   +- LogicalTableScan(table=[[builtin, default, T1]])
 
 LogicalProject(num=[$0], cnt=[$1])
 +- LogicalFilter(condition=[AND(>=($0, 4), <($0, 6))])
-   +- LogicalTableScan(table=[[default_catalog, default_db, T1]])
+   +- LogicalTableScan(table=[[builtin, default, T1]])
 
 == Optimized Logical Plan ==
 StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS cnt], retract=[true], accMode=[AccRetract], reuse_id=[1])
 +- StreamExecExchange(distribution=[hash[num]], retract=[true], accMode=[Acc])
    +- StreamExecCalc(select=[num, id], retract=[true], accMode=[Acc])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, T]], retract=[true], accMode=[Acc])
+      +- StreamExecDataStreamScan(table=[[builtin, default, T]], retract=[true], accMode=[Acc])
 
 StreamExecSink(fields=[num, cnt], retract=[false], accMode=[AccRetract])
 +- StreamExecCalc(select=[num, cnt], where=[<(num, 4)], retract=[true], accMode=[AccRetract])
@@ -26,7 +26,7 @@ StreamExecSink(fields=[num, cnt], retract=[false], accMode=[AccRetract])
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[default_catalog, default_db, T], fields:(id, num, text))
+		content : SourceConversion(table:[builtin, default, T], fields:(id, num, text))
 		ship_strategy : FORWARD
 
 		 : Operator

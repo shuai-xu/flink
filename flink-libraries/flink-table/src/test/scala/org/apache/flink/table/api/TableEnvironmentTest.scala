@@ -44,23 +44,25 @@ class TableEnvironmentTest extends TableTestBase {
   @Test
   def testListCatalogsAndDatabasesAndTables(): Unit = {
     var tEnv = streamTestUtil().tableEnv
-    var testDb = "test"
-    tEnv.registerCatalog(testDb, CommonTestData.getTestFlinkInMemoryCatalog)
 
-    assert(tEnv.listCatalogs().sameElements(Array(testDb, CatalogManager.BUILTIN_CATALOG_NAME)))
+    assert(tEnv.listCatalogs().sameElements(Array(CatalogManager.BUILTIN_CATALOG_NAME)))
 
-    tEnv.setDefaultDatabase(testDb, "db2")
+    var testCatalog = "test"
+    tEnv.registerCatalog(testCatalog, CommonTestData.getTestFlinkInMemoryCatalog)
 
-    assert(tEnv.listDatabases().sameElements(Array("db1", "db2", TEST_DB_NAME)))
+    assert(tEnv.listCatalogs().sameElements(Array("test", CatalogManager.BUILTIN_CATALOG_NAME)))
+
+    tEnv.setDefaultDatabase(testCatalog, "db2")
+
+    assert(tEnv.listDatabases().sameElements(Array(TEST_DB_NAME, "db1", "db2")))
     assert(tEnv.listTables().sameElements(Array("tb2")))
 
     tEnv.setDefaultDatabase("db2")
 
-    assert(tEnv.listDatabases().sameElements(Array("db1", "db2", TEST_DB_NAME)))
+    assert(tEnv.listDatabases().sameElements(Array(TEST_DB_NAME, "db1", "db2")))
     assert(tEnv.listTables().sameElements(Array("tb2")))
 
-    tEnv.setDefaultDatabase(
-      CatalogManager.BUILTIN_CATALOG_NAME, TEST_DB_NAME)
+    tEnv.setDefaultDatabase(CatalogManager.BUILTIN_CATALOG_NAME, TEST_DB_NAME)
 
     assert(tEnv.listDatabases().sameElements(Array(TEST_DB_NAME)))
     assert(tEnv.listTables().sameElements(Array.empty[String]))

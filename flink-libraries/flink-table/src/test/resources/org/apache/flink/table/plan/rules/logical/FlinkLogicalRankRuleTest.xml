@@ -21,7 +21,7 @@ limitations under the License.
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0, w1$o0], where=[<(w0$o0, 10)])
 +- FlinkLogicalOverWindow(window#0=[window(partition {1} order by [0 ASC-nulls-first] range between UNBOUNDED PRECEDING and CURRENT ROW aggs [RANK()])], window#1=[window(partition {1} order by [0 ASC-nulls-first] rows between UNBOUNDED PRECEDING and CURRENT ROW aggs [ROW_NUMBER()])])
-   +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- FlinkLogicalNativeTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -30,7 +30,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0, w1$o0], where=[<(w0$o0, 10)])
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0, w1$o0], where=[<(w0$o0, 10)])
 +- FlinkLogicalOverWindow(window#0=[window(partition {1} order by [0 ASC-nulls-first] range between UNBOUNDED PRECEDING and CURRENT ROW aggs [RANK()])], window#1=[window(partition {2} order by [0 ASC-nulls-first] range between UNBOUNDED PRECEDING and CURRENT ROW aggs [RANK()])])
-   +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- FlinkLogicalNativeTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -39,7 +39,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0, w1$o0], where=[<(w0$o0, 10)])
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0 AS rk1, w0$o0 AS rk2])
 +- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC], rankRange=[rankStart=1, rankEnd=9], select=[a, b, c, rk])
-   +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- FlinkLogicalNativeTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -48,7 +48,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0 AS rk1, w0$o0 AS rk2])
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, 2 AS rk])
 +- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC, c ASC], rankRange=[rankStart=2, rankEnd=2], select=[a, b, c])
-   +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- FlinkLogicalNativeTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -57,7 +57,7 @@ FlinkLogicalCalc(select=[a, b, 2 AS rk])
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0])
 +- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b,c], orderBy=[a ASC], rankRange=[rankStart=-1, rankEnd=2], select=[a, b, c, rk])
-   +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- FlinkLogicalNativeTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -66,7 +66,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0])
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0], where=[>(a, 10)])
 +- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC], rankRange=[rankStart=1, rankEnd=2], select=[a, b, c, rk])
-   +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- FlinkLogicalNativeTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -75,7 +75,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0], where=[>(a, 10)])
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0])
 +- FlinkLogicalRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[a ASC], rankRange=[rankStart=1, rankEnd=2], select=[a, b, c, rk])
-   +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- FlinkLogicalNativeTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -84,7 +84,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0])
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0])
 +- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[c ASC], rankRange=[rankEnd=a], select=[a, b, c, rk])
-   +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- FlinkLogicalNativeTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -93,7 +93,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0])
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0], where=[>(w0$o0, a)])
 +- FlinkLogicalOverWindow(window#0=[window(partition {1} order by [2 ASC-nulls-first] range between UNBOUNDED PRECEDING and CURRENT ROW aggs [RANK()])])
-   +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- FlinkLogicalNativeTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -102,7 +102,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0], where=[>(w0$o0, a)])
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0], where=[>(b, 5)])
 +- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[c ASC], rankRange=[rankEnd=a], select=[a, b, c, rk])
-   +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- FlinkLogicalNativeTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -111,7 +111,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0], where=[>(b, 5)])
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0])
 +- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[a], orderBy=[c ASC], rankRange=[rankEnd=b], select=[a, b, c, rk])
-   +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- FlinkLogicalNativeTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -120,7 +120,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0])
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0])
 +- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[], orderBy=[a ASC], rankRange=[rankStart=1, rankEnd=9], select=[a, b, c, rk])
-   +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- FlinkLogicalNativeTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -129,7 +129,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0])
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0 AS $2])
 +- FlinkLogicalOverWindow(window#0=[window(partition {1} order by [0 ASC-nulls-first] range between UNBOUNDED PRECEDING and CURRENT ROW aggs [RANK()])])
-   +- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+   +- FlinkLogicalNativeTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

@@ -20,7 +20,7 @@ limitations under the License.
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(c=[$2], _c1=[AS(COUNT($0) OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST ROWS BETWEEN CURRENT ROW AND CURRENT ROW), '_c1')])
-+- LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -30,7 +30,7 @@ Calc(select=[c, w0$o0 AS _c1])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
          +- Calc(select=[a, c])
-            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

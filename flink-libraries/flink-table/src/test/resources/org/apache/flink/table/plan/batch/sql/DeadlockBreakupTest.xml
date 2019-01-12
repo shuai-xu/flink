@@ -25,8 +25,8 @@ limitations under the License.
 LogicalProject(a=[$0], b=[$1], c=[$2], a0=[$3], b0=[$4], c0=[$5])
 +- LogicalFilter(condition=[AND(=($0, $3), >($1, 10), LIKE($5, 'Test%'))])
    +- LogicalJoin(condition=[true], joinType=[inner])
-      :- LogicalTableScan(table=[[default_catalog, default_db, t]])
-      +- LogicalTableScan(table=[[default_catalog, default_db, t]])
+      :- LogicalTableScan(table=[[builtin, default, t]])
+      +- LogicalTableScan(table=[[builtin, default, t]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -34,10 +34,10 @@ LogicalProject(a=[$0], b=[$1], c=[$2], a0=[$3], b0=[$4], c0=[$5])
 NestedLoopJoin(where=[=(a, a0)], join=[a, b, c, a0, b0, c0], joinType=[InnerJoin], build=[right])
 :- Exchange(distribution=[any], exchange_mode=[BATCH])
 :  +- Calc(select=[a, b, c], where=[>(b, 10)])
-:     +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+:     +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[a, b, c], where=[LIKE(c, 'Test%')])
-      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -55,10 +55,10 @@ LogicalProject(c=[$0], a=[$1], b=[$2], c0=[$3], a0=[$4], b0=[$5])
    +- LogicalJoin(condition=[true], joinType=[inner])
       :- LogicalAggregate(group=[{0}], a=[SUM($1)], b=[SUM($2)])
       :  +- LogicalProject(c=[$2], a=[$0], b=[$1])
-      :     +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+      :     +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
       +- LogicalAggregate(group=[{0}], a=[SUM($1)], b=[SUM($2)])
          +- LogicalProject(c=[$2], a=[$0], b=[$1])
-            +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+            +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -70,7 +70,7 @@ Calc(select=[c, a, b, c0, a1 AS a0, b0])
    :     +- HashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b], reuse_id=[1])
    :        +- Exchange(distribution=[hash[c]])
    :           +- LocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0, Partial_SUM(b) AS sum$1])
-   :              +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+   :              +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[c, a, b], where=[>(a, 1)])
          +- Reused(reference_id=[1])
@@ -91,19 +91,19 @@ LogicalProject(a=[$0])
    +- LogicalJoin(condition=[true], joinType=[inner])
       :- LogicalSort(fetch=[10])
       :  +- LogicalProject(a=[$0])
-      :     +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+      :     +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
       +- LogicalSort(fetch=[10])
          +- LogicalProject(a=[$0])
-            +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+            +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a])
 +- HashJoin(where=[=(a, a0)], join=[a, a0], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-   :- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a], limit=10]]], fields=[a])
+   :- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a], limit=10]]], fields=[a])
    +- Exchange(distribution=[broadcast])
-      +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a], limit=10]]], fields=[a])
+      +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a], limit=10]]], fields=[a])
 ]]>
     </Resource>
   </TestCase>
@@ -121,10 +121,10 @@ LogicalProject(a=[$0])
    +- LogicalJoin(condition=[true], joinType=[inner])
       :- LogicalSort(fetch=[10])
       :  +- LogicalProject(a=[$0])
-      :     +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+      :     +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
       +- LogicalSort(fetch=[10])
          +- LogicalProject(a=[$0])
-            +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+            +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -132,8 +132,8 @@ LogicalProject(a=[$0])
 Calc(select=[a])
 +- NestedLoopJoin(where=[=(a, a0)], join=[a, a0], joinType=[InnerJoin], build=[left])
    :- Exchange(distribution=[broadcast])
-   :  +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a], limit=10]]], fields=[a])
-   +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a], limit=10]]], fields=[a])
+   :  +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a], limit=10]]], fields=[a])
+   +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a], limit=10]]], fields=[a])
 ]]>
     </Resource>
   </TestCase>
@@ -152,13 +152,13 @@ LogicalProject(a=[$0], b=[$1], d=[$2], e=[$3], a0=[$4], b0=[$5], d0=[$6], e0=[$7
       :- LogicalProject(a=[$0], b=[$1], d=[$3], e=[$4])
       :  +- LogicalFilter(condition=[=($0, $3)])
       :     +- LogicalJoin(condition=[true], joinType=[inner])
-      :        :- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
-      :        +- LogicalTableScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d, e, f]]]])
+      :        :- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
+      :        +- LogicalTableScan(table=[[builtin, default, y, source: [selectedFields=[d, e, f]]]])
       +- LogicalProject(a=[$0], b=[$1], d=[$3], e=[$4])
          +- LogicalFilter(condition=[=($0, $3)])
             +- LogicalJoin(condition=[true], joinType=[inner])
-               :- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
-               +- LogicalTableScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d, e, f]]]])
+               :- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
+               +- LogicalTableScan(table=[[builtin, default, y, source: [selectedFields=[d, e, f]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -168,9 +168,9 @@ HashJoin(where=[=(b, e0)], join=[a, b, d, e, a0, b0, d0, e0], joinType=[InnerJoi
 :  +- HashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left])
 :     :- Exchange(distribution=[hash[a]])
 :     :  +- Calc(select=[a, b], where=[<(a, 10)])
-:     :     +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b]]]], fields=[a, b], reuse_id=[1])
+:     :     +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b]]]], fields=[a, b], reuse_id=[1])
 :     +- Exchange(distribution=[hash[d]], reuse_id=[2])
-:        +- TableSourceScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d, e]]]], fields=[d, e])
+:        +- TableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d, e]]]], fields=[d, e])
 +- Exchange(distribution=[hash[e]], exchange_mode=[BATCH])
    +- HashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left])
       :- Exchange(distribution=[hash[a]])
@@ -199,10 +199,10 @@ LogicalProject(a=[$0], b=[$1], c=[$2], a0=[$3], b0=[$4], c0=[$5])
    +- LogicalJoin(condition=[true], joinType=[inner])
       :- LogicalProject(a=[MAX($0) OVER (PARTITION BY $1 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)], b=[$1], c=[$2])
       :  +- LogicalProject(a=[CASE(>(COUNT($0) OVER (PARTITION BY $1 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 0), CAST($SUM0($0) OVER (PARTITION BY $1 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)):INTEGER, null)], b=[$1], c=[$2])
-      :     +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+      :     +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
       +- LogicalProject(a=[MIN($0) OVER (PARTITION BY $1 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)], b=[$1], c=[$2])
          +- LogicalProject(a=[CASE(>(COUNT($0) OVER (PARTITION BY $1 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 0), CAST($SUM0($0) OVER (PARTITION BY $1 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)):INTEGER, null)], b=[$1], c=[$2])
-            +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+            +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -215,7 +215,7 @@ HashJoin(where=[=(c, c0)], join=[a, b, c, a0, b0, c0], joinType=[InnerJoin], isB
 :           +- OverAggregate(partitionBy=[b], orderBy=[b ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 RANG BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, c, w0$o0, w0$o1])
 :              +- Sort(orderBy=[b ASC])
 :                 +- Exchange(distribution=[hash[b]])
-:                    +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+:                    +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[w0$o0 AS a, b, c])
       +- OverAggregate(partitionBy=[b], orderBy=[b ASC], window#0=[MIN($2) AS w0$o0 RANG BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING], select=[b, c, $2, w0$o0])
@@ -243,16 +243,16 @@ LogicalProject(a=[$0], b=[$1], c=[$2], a0=[$3], b0=[$4], c0=[$5], a1=[$6], b1=[$
       :  +- LogicalFilter(condition=[AND(=($0, $3), >($1, 10))])
       :     +- LogicalJoin(condition=[true], joinType=[inner])
       :        :- LogicalAggregate(group=[{0}], b=[SUM($1)], c=[MAX($2)])
-      :        :  +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+      :        :  +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
       :        +- LogicalAggregate(group=[{0}], b=[SUM($1)], c=[MAX($2)])
-      :           +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+      :           +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
       +- LogicalProject(a=[$0], b=[$1], c=[$2], a0=[$3], b0=[$4], c0=[$5])
          +- LogicalFilter(condition=[AND(=($0, $3), <($1, 5))])
             +- LogicalJoin(condition=[true], joinType=[inner])
                :- LogicalAggregate(group=[{0}], b=[SUM($1)], c=[MAX($2)])
-               :  +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+               :  +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
                +- LogicalAggregate(group=[{0}], b=[SUM($1)], c=[MAX($2)])
-                  +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+                  +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -266,7 +266,7 @@ HashJoin(where=[=(c, c1)], join=[a, b, c, a0, b0, c0, a1, b1, c1, a00, b00, c00]
 :     :        +- Exchange(distribution=[hash[a]])
 :     :           +- LocalSortAggregate(groupBy=[a], select=[a, Partial_SUM(b) AS sum$0, Partial_MAX(c) AS max$1])
 :     :              +- Sort(orderBy=[a ASC])
-:     :                 +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+:     :                 +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 :     +- Reused(reference_id=[1])
 +- Exchange(distribution=[hash[c]], exchange_mode=[BATCH])
    +- SortMergeJoin(where=[=(a, a0)], join=[a, b, c, a0, b0, c0], joinType=[InnerJoin], leftSorted=[true], rightSorted=[true])
@@ -284,9 +284,9 @@ HashJoin(where=[=(c, c1)], join=[a, b, c, a0, b0, c0, a1, b1, c1, a00, b00, c00]
       <![CDATA[
 LogicalIntersect(all=[false])
 :- LogicalProject(a=[$0], b=[$1], c=[$2])
-:  +- LogicalTableScan(table=[[default_catalog, default_db, t]])
+:  +- LogicalTableScan(table=[[builtin, default, t]])
 +- LogicalProject(a=[$0], b=[$1], c=[$2])
-   +- LogicalTableScan(table=[[default_catalog, default_db, t]])
+   +- LogicalTableScan(table=[[builtin, default, t]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -296,9 +296,9 @@ HashAggregate(isMerge=[true], groupBy=[a, b, c], select=[a, b, c])
    +- LocalHashAggregate(groupBy=[a, b, c], select=[a, b, c])
       +- HashSemiJoin(where=[AND(OR(=(a, a0), AND(IS NULL(a), IS NULL(a0))), OR(=(b, b0), AND(IS NULL(b), IS NULL(b0))), OR(=(c, c0), AND(IS NULL(c), IS NULL(c0))))], join=[a, b, c], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
          :- Exchange(distribution=[hash[a, b, c]], exchange_mode=[BATCH])
-         :  +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+         :  +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
          +- Exchange(distribution=[broadcast])
-            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -311,8 +311,8 @@ HashAggregate(isMerge=[true], groupBy=[a, b, c], select=[a, b, c])
 LogicalProject(a=[$0], b=[$1], c=[$2], a0=[$3], b0=[$4], c0=[$5])
 +- LogicalFilter(condition=[=(CAST($0):BIGINT, $4)])
    +- LogicalJoin(condition=[true], joinType=[inner])
-      :- LogicalTableScan(table=[[default_catalog, default_db, t]])
-      +- LogicalTableScan(table=[[default_catalog, default_db, t]])
+      :- LogicalTableScan(table=[[builtin, default, t]])
+      +- LogicalTableScan(table=[[builtin, default, t]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -321,9 +321,9 @@ Calc(select=[a, b, c, a1 AS a0, b0, c0])
 +- HashJoin(where=[=(a0, b0)], join=[a, b, c, a0, a1, b0, c0], joinType=[InnerJoin], isBroadcast=[true], build=[right])
    :- Exchange(distribution=[hash[a0]], exchange_mode=[BATCH])
    :  +- Calc(select=[a, b, c, CAST(a) AS a0])
-   :     +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+   :     +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
-      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -341,16 +341,16 @@ WHERE r1.a = r2.a and r1.b = 5
 LogicalProject(a=[$0], b=[$4])
 +- LogicalFilter(condition=[AND(=($0, $3), =($1, 5))])
    +- LogicalJoin(condition=[true], joinType=[inner])
-      :- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+      :- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
       +- LogicalProject(a=[$0], b=[$1])
          +- LogicalFilter(condition=[IN($0, {
 LogicalProject(a=[$0])
   LogicalFilter(condition=[>($1, 5)])
-    LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+    LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
 })])
             +- LogicalSort(fetch=[10])
                +- LogicalProject(a=[$0], b=[$1])
-                  +- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
+                  +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -359,10 +359,10 @@ Calc(select=[a, b])
 +- HashJoin(where=[=(a, a0)], join=[a, a0, b], joinType=[InnerJoin], build=[right])
    :- Exchange(distribution=[hash[a]], exchange_mode=[BATCH])
    :  +- Calc(select=[a], where=[=(b, 5)])
-   :     +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b]]]], fields=[a, b], reuse_id=[1])
+   :     +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b]]]], fields=[a, b], reuse_id=[1])
    +- HashSemiJoin(where=[=(a, a0)], join=[a, b], joinType=[LeftSemiJoin], build=[left])
       :- Exchange(distribution=[hash[a]])
-      :  +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b], limit=10]]], fields=[a, b])
+      :  +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b], limit=10]]], fields=[a, b])
       +- Exchange(distribution=[hash[a]])
          +- Calc(select=[a], where=[>(b, 5)])
             +- Reused(reference_id=[1])

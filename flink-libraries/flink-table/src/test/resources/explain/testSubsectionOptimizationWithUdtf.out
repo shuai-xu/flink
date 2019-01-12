@@ -4,9 +4,9 @@ LogicalCorrelate(correlation=[$cor1], joinType=[inner], requiredColumns=[{}])
 :  +- LogicalJoin(condition=[true], joinType=[inner])
 :     :- LogicalFilter(condition=[=($1, $4)])
 :     :  +- LogicalJoin(condition=[true], joinType=[inner])
-:     :     :- LogicalTableScan(table=[[default_catalog, default_db, t1]])
-:     :     +- LogicalTableScan(table=[[default_catalog, default_db, t2]])
-:     +- LogicalTableScan(table=[[default_catalog, default_db, t3]])
+:     :     :- LogicalTableScan(table=[[builtin, default, t1]])
+:     :     +- LogicalTableScan(table=[[builtin, default, t2]])
+:     +- LogicalTableScan(table=[[builtin, default, t3]])
 +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc1$4cf19b69e9ec9920db1afce973dac2eb($5)], rowType=[RecordType(VARCHAR(65536) f1)], elementType=[class [Ljava.lang.Object;])
 
 == Optimized Logical Plan ==
@@ -16,11 +16,11 @@ StreamExecSink(fields=[a, b, c, d, e, f, i, j, k, l, m, f1], retract=[false], ac
       :- StreamExecExchange(distribution=[hash[a]], retract=[true], accMode=[Acc])
       :  +- StreamExecJoin(where=[=(b, e)], join=[a, b, c, d, e, f], joinType=[InnerJoin], retract=[true], accMode=[Acc])
       :     :- StreamExecExchange(distribution=[hash[b]], retract=[true], accMode=[Acc])
-      :     :  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, t1]], retract=[true], accMode=[Acc])
+      :     :  +- StreamExecDataStreamScan(table=[[builtin, default, t1]], retract=[true], accMode=[Acc])
       :     +- StreamExecExchange(distribution=[hash[e]], retract=[true], accMode=[Acc])
-      :        +- StreamExecDataStreamScan(table=[[default_catalog, default_db, t2]], retract=[true], accMode=[Acc])
+      :        +- StreamExecDataStreamScan(table=[[builtin, default, t2]], retract=[true], accMode=[Acc])
       +- StreamExecExchange(distribution=[hash[i]], retract=[true], accMode=[Acc])
-         +- StreamExecDataStreamScan(table=[[default_catalog, default_db, t3]], retract=[true], accMode=[Acc])
+         +- StreamExecDataStreamScan(table=[[builtin, default, t3]], retract=[true], accMode=[Acc])
 
 == Physical Execution Plan ==
  : Data Source
@@ -33,11 +33,11 @@ StreamExecSink(fields=[a, b, c, d, e, f, i, j, k, l, m, f1], retract=[false], ac
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[default_catalog, default_db, t1], fields:(a, b, c))
+		content : SourceConversion(table:[builtin, default, t1], fields:(a, b, c))
 		ship_strategy : FORWARD
 
 		 : Operator
-			content : SourceConversion(table:[default_catalog, default_db, t2], fields:(d, e, f))
+			content : SourceConversion(table:[builtin, default, t2], fields:(d, e, f))
 			ship_strategy : FORWARD
 
 			 : Operator
@@ -45,7 +45,7 @@ StreamExecSink(fields=[a, b, c, d, e, f, i, j, k, l, m, f1], retract=[false], ac
 				ship_strategy : HASH
 
 				 : Operator
-					content : SourceConversion(table:[default_catalog, default_db, t3], fields:(i, j, k, l, m))
+					content : SourceConversion(table:[builtin, default, t3], fields:(i, j, k, l, m))
 					ship_strategy : FORWARD
 
 					 : Operator

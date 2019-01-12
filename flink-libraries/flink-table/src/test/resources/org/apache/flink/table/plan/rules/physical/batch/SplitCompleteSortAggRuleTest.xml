@@ -28,7 +28,7 @@ GROUP BY GROUPING SETS ((a), (a, c))
 LogicalProject(a=[$0], c=[$1], a0=[$2])
 +- LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}]], a=[AVG($2)])
    +- LogicalProject(a=[$0], c=[$2], b=[$1])
-      +- LogicalTableScan(table=[[default_catalog, default_db, T1, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[builtin, default, T1, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -40,7 +40,7 @@ Calc(select=[a, c, a_0])
          +- LocalSortAggregate(groupBy=[a, c, $e], select=[a, c, $e, Partial_AVG(b) AS (sum$0, count$1)])
             +- Sort(orderBy=[a ASC, c ASC, $e ASC])
                +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}])
-                  +- TableSourceScan(table=[[default_catalog, default_db, T1, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[builtin, default, T1, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -53,7 +53,7 @@ Calc(select=[a, c, a_0])
 LogicalProject(EXPR$0=[$1])
 +- LogicalAggregate(group=[{0}], EXPR$0=[SUM($1)])
    +- LogicalProject(a=[$0], b=[$1])
-      +- LogicalTableScan(table=[[default_catalog, default_db, T1, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[builtin, default, T1, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -62,7 +62,7 @@ Calc(select=[EXPR$0])
 +- SortAggregate(isMerge=[false], groupBy=[a], select=[a, SUM(b) AS EXPR$0])
    +- Sort(orderBy=[a ASC])
       +- Exchange(distribution=[hash[a]])
-         +- TableSourceScan(table=[[default_catalog, default_db, T1, source: [selectedFields=[a, b]]]], fields=[a, b])
+         +- TableSourceScan(table=[[builtin, default, T1, source: [selectedFields=[a, b]]]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -78,7 +78,7 @@ GROUP BY GROUPING SETS ((a), (a, c))
 LogicalProject(a=[$0], c=[$1], a0=[$2])
 +- LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}]], a=[AVG($2)])
    +- LogicalProject(a=[$0], c=[$2], b=[$1])
-      +- LogicalTableScan(table=[[default_catalog, default_db, T1, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[builtin, default, T1, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -88,7 +88,7 @@ Calc(select=[a, c, a_0])
    +- Sort(orderBy=[a ASC, c ASC, $e ASC])
       +- Exchange(distribution=[hash[a, c, $e]])
          +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}])
-            +- TableSourceScan(table=[[default_catalog, default_db, T1, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            +- TableSourceScan(table=[[builtin, default, T1, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -104,7 +104,7 @@ GROUP BY GROUPING SETS ((a), (a, c))
 LogicalProject(a=[$0], c=[$1], a0=[$2])
 +- LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}]], a=[AVG($2)])
    +- LogicalProject(a=[$0], c=[$2], b=[$1])
-      +- LogicalTableScan(table=[[default_catalog, default_db, T1, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[builtin, default, T1, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -116,7 +116,7 @@ Calc(select=[a, c, a_0])
          +- LocalSortAggregate(groupBy=[a, c, $e], select=[a, c, $e, Partial_AVG(b) AS (sum$0, count$1)])
             +- Sort(orderBy=[a ASC, c ASC, $e ASC])
                +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}])
-                  +- TableSourceScan(table=[[default_catalog, default_db, T1, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+                  +- TableSourceScan(table=[[builtin, default, T1, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -213,7 +213,7 @@ SortAggregate(isMerge=[true], select=[Final_MAX(max$0) AS EXPR$0, Final_SUM(sum$
 LogicalProject(EXPR$0=[$1])
 +- LogicalAggregate(group=[{0}], EXPR$0=[SUM($1)])
    +- LogicalProject(a=[$0], b=[$1])
-      +- LogicalTableScan(table=[[default_catalog, default_db, T2, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[builtin, default, T2, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -222,7 +222,7 @@ Calc(select=[EXPR$0])
 +- SortAggregate(isMerge=[false], groupBy=[a], select=[a, SUM(b) AS EXPR$0])
    +- Sort(orderBy=[a ASC])
       +- Exchange(distribution=[hash[a]])
-         +- TableSourceScan(table=[[default_catalog, default_db, T2, source: [selectedFields=[a, b]]]], fields=[a, b])
+         +- TableSourceScan(table=[[builtin, default, T2, source: [selectedFields=[a, b]]]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -235,7 +235,7 @@ Calc(select=[EXPR$0])
 LogicalProject(EXPR$0=[$1])
 +- LogicalAggregate(group=[{0}], EXPR$0=[SUM($1)])
    +- LogicalProject(a=[$0], b=[$1])
-      +- LogicalTableScan(table=[[default_catalog, default_db, T2, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[builtin, default, T2, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -244,7 +244,7 @@ Calc(select=[EXPR$0])
 +- SortAggregate(isMerge=[false], groupBy=[a], select=[a, SUM(b) AS EXPR$0])
    +- Sort(orderBy=[a ASC])
       +- Exchange(distribution=[hash[a]])
-         +- TableSourceScan(table=[[default_catalog, default_db, T2, source: [selectedFields=[a, b]]]], fields=[a, b])
+         +- TableSourceScan(table=[[builtin, default, T2, source: [selectedFields=[a, b]]]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -257,7 +257,7 @@ Calc(select=[EXPR$0])
 LogicalProject(EXPR$0=[$1])
 +- LogicalAggregate(group=[{0}], EXPR$0=[SUM($1)])
    +- LogicalProject(a=[$0], b=[$1])
-      +- LogicalTableScan(table=[[default_catalog, default_db, T1, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[builtin, default, T1, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -268,7 +268,7 @@ Calc(select=[EXPR$0])
       +- Exchange(distribution=[hash[a]])
          +- LocalSortAggregate(groupBy=[a], select=[a, Partial_SUM(b) AS sum$0])
             +- Sort(orderBy=[a ASC])
-               +- TableSourceScan(table=[[default_catalog, default_db, T1, source: [selectedFields=[a, b]]]], fields=[a, b])
+               +- TableSourceScan(table=[[builtin, default, T1, source: [selectedFields=[a, b]]]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -281,7 +281,7 @@ Calc(select=[EXPR$0])
 LogicalProject(EXPR$0=[$1])
 +- LogicalAggregate(group=[{0}], EXPR$0=[SUM($1)])
    +- LogicalProject(a=[$0], b=[$1])
-      +- LogicalTableScan(table=[[default_catalog, default_db, T1, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[builtin, default, T1, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -292,7 +292,7 @@ Calc(select=[EXPR$0])
       +- Exchange(distribution=[hash[a]])
          +- LocalSortAggregate(groupBy=[a], select=[a, Partial_SUM(b) AS sum$0])
             +- Sort(orderBy=[a ASC])
-               +- TableSourceScan(table=[[default_catalog, default_db, T1, source: [selectedFields=[a, b]]]], fields=[a, b])
+               +- TableSourceScan(table=[[builtin, default, T1, source: [selectedFields=[a, b]]]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -305,7 +305,7 @@ Calc(select=[EXPR$0])
 LogicalProject(EXPR$0=[$1])
 +- LogicalAggregate(group=[{0}], EXPR$0=[SUM($1)])
    +- LogicalProject(a=[$0], b=[$1])
-      +- LogicalTableScan(table=[[default_catalog, default_db, T2, source: [selectedFields=[a, b, c]]]])
+      +- LogicalTableScan(table=[[builtin, default, T2, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -316,7 +316,7 @@ Calc(select=[EXPR$0])
       +- Exchange(distribution=[hash[a]])
          +- LocalSortAggregate(groupBy=[a], select=[a, Partial_SUM(b) AS sum$0])
             +- Sort(orderBy=[a ASC])
-               +- TableSourceScan(table=[[default_catalog, default_db, T2, source: [selectedFields=[a, b]]]], fields=[a, b])
+               +- TableSourceScan(table=[[builtin, default, T2, source: [selectedFields=[a, b]]]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>

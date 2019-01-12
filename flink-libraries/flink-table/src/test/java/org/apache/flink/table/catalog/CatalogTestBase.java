@@ -33,6 +33,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -221,13 +222,13 @@ public abstract class CatalogTestBase {
 
 		assertTrue(catalog.getDatabase(db1).getProperties().entrySet().containsAll(cd1.getProperties().entrySet()));
 		assertEquals(2, dbs.size());
-		assertEquals(Arrays.asList(db1, catalog.getDefaultDatabaseName()), dbs);
+		assertEquals(new HashSet<>(Arrays.asList(db1, catalog.getDefaultDatabaseName())), new HashSet<>(dbs));
 
 		catalog.createDatabase(db1, createAnotherDb(), true);
 
 		assertTrue(catalog.getDatabase(db1).getProperties().entrySet().containsAll(cd1.getProperties().entrySet()));
 		assertEquals(2, dbs.size());
-		assertEquals(Arrays.asList(db1, catalog.getDefaultDatabaseName()), dbs);
+		assertEquals(new HashSet<>(Arrays.asList(db1, catalog.getDefaultDatabaseName())), new HashSet<>(dbs));
 	}
 
 	@Test(expected = DatabaseNotExistException.class)

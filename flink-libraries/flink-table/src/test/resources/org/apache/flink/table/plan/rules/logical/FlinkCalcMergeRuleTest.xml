@@ -26,13 +26,13 @@ LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[=($1, $0)])
    +- LogicalProject(a=[$0], b=[$1], c=[$2])
       +- LogicalFilter(condition=[=($0, $1)])
-         +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+         +- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b], where=[=(a, b)])
-+- FlinkLogicalNativeTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- FlinkLogicalNativeTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

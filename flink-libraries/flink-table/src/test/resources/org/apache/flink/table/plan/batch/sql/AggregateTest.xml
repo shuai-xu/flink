@@ -24,7 +24,7 @@ limitations under the License.
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[COUNT($0)])
 +- LogicalProject(colLarge=[$2])
-   +- LogicalTableScan(table=[[default_catalog, default_db, t1]])
+   +- LogicalTableScan(table=[[builtin, default, t1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -33,7 +33,7 @@ SortAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS EXPR$0])
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_COUNT(colLarge) AS count$0])
       +- Calc(select=[colLarge])
-         +- TableSourceScan(table=[[default_catalog, default_db, t1]], fields=[customerId, productId, colLarge])
+         +- TableSourceScan(table=[[builtin, default, t1]], fields=[customerId, productId, colLarge])
 ]]>
     </Resource>
   </TestCase>
@@ -46,7 +46,7 @@ SortAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS EXPR$0])
 LogicalProject(EXPR$0=[$1])
 +- LogicalAggregate(group=[{0}], EXPR$0=[MAX($1)])
    +- LogicalProject(colLarge=[$2], productId=[$1])
-      +- LogicalTableScan(table=[[default_catalog, default_db, t1]])
+      +- LogicalTableScan(table=[[builtin, default, t1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -56,7 +56,7 @@ Calc(select=[EXPR$0])
    +- Exchange(distribution=[hash[colLarge]])
       +- LocalHashAggregate(groupBy=[colLarge], select=[colLarge, Partial_MAX(productId) AS max$0])
          +- Calc(select=[colLarge, productId])
-            +- TableSourceScan(table=[[default_catalog, default_db, t1]], fields=[customerId, productId, colLarge])
+            +- TableSourceScan(table=[[builtin, default, t1]], fields=[customerId, productId, colLarge])
 ]]>
     </Resource>
   </TestCase>
@@ -69,7 +69,7 @@ Calc(select=[EXPR$0])
 LogicalProject(EXPR$0=[$1])
 +- LogicalAggregate(group=[{0}], EXPR$0=[COUNT($1)])
    +- LogicalProject(productId=[$1], colLarge=[$2])
-      +- LogicalTableScan(table=[[default_catalog, default_db, t1]])
+      +- LogicalTableScan(table=[[builtin, default, t1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -79,7 +79,7 @@ Calc(select=[EXPR$0])
    +- Exchange(distribution=[hash[productId]])
       +- LocalHashAggregate(groupBy=[productId], select=[productId, Partial_COUNT(colLarge) AS count$0])
          +- Calc(select=[productId, colLarge])
-            +- TableSourceScan(table=[[default_catalog, default_db, t1]], fields=[customerId, productId, colLarge])
+            +- TableSourceScan(table=[[builtin, default, t1]], fields=[customerId, productId, colLarge])
 ]]>
     </Resource>
   </TestCase>
@@ -92,7 +92,7 @@ Calc(select=[EXPR$0])
 LogicalProject(EXPR$0=[$1])
 +- LogicalAggregate(group=[{0}], EXPR$0=[MAX($1)])
    +- LogicalProject(customerId=[$0], colLarge=[$2])
-      +- LogicalTableScan(table=[[default_catalog, default_db, t1]])
+      +- LogicalTableScan(table=[[builtin, default, t1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -102,7 +102,7 @@ Calc(select=[EXPR$0])
    +- Sort(orderBy=[customerId ASC])
       +- Exchange(distribution=[hash[customerId]])
          +- Calc(select=[customerId, colLarge])
-            +- TableSourceScan(table=[[default_catalog, default_db, t1]], fields=[customerId, productId, colLarge])
+            +- TableSourceScan(table=[[builtin, default, t1]], fields=[customerId, productId, colLarge])
 ]]>
     </Resource>
   </TestCase>
@@ -114,7 +114,7 @@ Calc(select=[EXPR$0])
       <![CDATA[
 LogicalAggregate(group=[{}], EXPR$0=[MAX($0)])
 +- LogicalProject(colLarge=[$2])
-   +- LogicalTableScan(table=[[default_catalog, default_db, t1]])
+   +- LogicalTableScan(table=[[builtin, default, t1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -123,7 +123,7 @@ SortAggregate(isMerge=[true], select=[Final_MAX(max$0) AS EXPR$0])
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_MAX(colLarge) AS max$0])
       +- Calc(select=[colLarge])
-         +- TableSourceScan(table=[[default_catalog, default_db, t1]], fields=[customerId, productId, colLarge])
+         +- TableSourceScan(table=[[builtin, default, t1]], fields=[customerId, productId, colLarge])
 ]]>
     </Resource>
   </TestCase>

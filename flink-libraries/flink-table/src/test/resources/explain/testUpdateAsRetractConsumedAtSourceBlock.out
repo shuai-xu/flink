@@ -1,16 +1,16 @@
 == Abstract Syntax Tree ==
 LogicalProject(a=[$0])
 +- LogicalFilter(condition=[>($0, 6)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, T]])
+   +- LogicalTableScan(table=[[builtin, default, T]])
 
 LogicalProject(a=[$0], b=[$1])
 +- LogicalFilter(condition=[<($0, 6)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, T]])
+   +- LogicalTableScan(table=[[builtin, default, T]])
 
 == Optimized Logical Plan ==
 StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum], retract=[true], accMode=[AccRetract], reuse_id=[1])
 +- StreamExecExchange(distribution=[hash[b]], retract=[false], accMode=[Acc])
-   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[false], accMode=[Acc])
+   +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[false], accMode=[Acc])
 
 StreamExecSink(fields=[a], retract=[false], accMode=[AccRetract])
 +- StreamExecCalc(select=[a], where=[>(a, 6)], retract=[true], accMode=[AccRetract])
@@ -25,7 +25,7 @@ StreamExecSink(fields=[a, b], retract=[false], accMode=[AccRetract])
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[default_catalog, default_db, _DataStreamTable_0], fields:(a, b, c))
+		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(a, b, c))
 		ship_strategy : FORWARD
 
 		 : Operator

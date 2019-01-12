@@ -25,14 +25,14 @@ limitations under the License.
 LogicalAggregate(group=[{0}], c=[COUNT($1)])
 +- LogicalProject(a=[$0], c=[$2])
    +- LogicalFilter(condition=[>($0, 1)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalAggregate(group=[{0}], c=[COUNT($1)])
 +- LogicalCalc(expr#0..2=[{inputs}], expr#3=[1], expr#4=[>($t0, $t3)], a=[$t0], c=[$t2], $condition=[$t4])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
   </TestCase>
@@ -44,13 +44,13 @@ LogicalAggregate(group=[{0}], c=[COUNT($1)])
       <![CDATA[
 LogicalAggregate(group=[{0}], c=[COUNT($1)])
 +- LogicalProject(a=[$0], c=[$2])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalAggregate(group=[{0}], c=[COUNT($2)])
-+- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
++- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
   </TestCase>
@@ -63,13 +63,13 @@ LogicalAggregate(group=[{0}], c=[COUNT($2)])
 LogicalAggregate(group=[{0}], c=[COUNT($1)])
 +- LogicalProject(a=[$1], c=[$0])
    +- LogicalProject(c=[$2], a=[$0])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalAggregate(group=[{0}], c=[COUNT($2)])
-+- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
++- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
   </TestCase>
@@ -81,14 +81,14 @@ LogicalAggregate(group=[{0}], c=[COUNT($2)])
       <![CDATA[
 LogicalAggregate(group=[{0}], c=[COUNT($1)])
 +- LogicalProject(a=[$0], c=[SUBSTR($2, 1, 5)])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 LogicalAggregate(group=[{0}], c=[COUNT($1)])
 +- LogicalCalc(expr#0..2=[{inputs}], expr#3=[1], expr#4=[5], expr#5=[SUBSTR($t2, $t3, $t4)], a=[$t0], c=[$t5])
-   +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   +- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
   </TestCase>

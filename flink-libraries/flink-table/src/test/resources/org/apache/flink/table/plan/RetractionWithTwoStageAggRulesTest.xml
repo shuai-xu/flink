@@ -29,11 +29,11 @@ StreamExecCalc(select=[count, TMP_1 AS frequency], retract=[false], accMode=[Acc
          :        +- StreamExecExchange(distribution=[hash[word]], retract=[true], accMode=[Acc])
          :           +- StreamExecLocalGroupAggregate(groupBy=[word], select=[word, COUNT(number) AS count$0], retract=[true], accMode=[Acc])
          :              +- StreamExecMiniBatchAssigner(interval=[1000ms], retract=[true], accMode=[Acc])
-         :                 +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+         :                 +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
          +- StreamExecLocalGroupAggregate(groupBy=[count_r], select=[count_r, COUNT_RETRACT(count_r) AS count$0, COUNT_RETRACT(*) AS count$1], retract=[true], accMode=[Acc])
             +- StreamExecCalc(select=[count_r], retract=[true], accMode=[Acc])
                +- StreamExecMiniBatchAssigner(interval=[1000ms], retract=[true], accMode=[Acc])
-                  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
+                  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -49,7 +49,7 @@ StreamExecCalc(select=[count, TMP_1 AS frequency], retract=[false], accMode=[Acc
                +- StreamExecExchange(distribution=[hash[word]], retract=[true], accMode=[Acc])
                   +- StreamExecLocalGroupAggregate(groupBy=[word], select=[word, COUNT(number) AS count$0], retract=[true], accMode=[Acc])
                      +- StreamExecMiniBatchAssigner(interval=[1000ms], retract=[true], accMode=[Acc])
-                        +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+                        +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -61,7 +61,7 @@ StreamExecCalc(select=[TMP_0], retract=[false], accMode=[Acc])
    +- StreamExecExchange(distribution=[hash[word]], retract=[true], accMode=[Acc])
       +- StreamExecLocalGroupAggregate(groupBy=[word], select=[word, COUNT(number) AS count$0], retract=[true], accMode=[Acc])
          +- StreamExecMiniBatchAssigner(interval=[1000ms], retract=[true], accMode=[Acc])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>

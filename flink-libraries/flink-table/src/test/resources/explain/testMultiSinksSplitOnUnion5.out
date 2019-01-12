@@ -5,11 +5,11 @@ LogicalProject(total_sum=[AS($0, 'total_sum')])
       +- LogicalUnion(all=[true])
          :- LogicalUnion(all=[true])
          :  :- LogicalProject(a=[$0], c=[$2])
-         :  :  +- LogicalTableScan(table=[[default_catalog, default_db, t1]])
+         :  :  +- LogicalTableScan(table=[[builtin, default, t1]])
          :  +- LogicalProject(d=[$0], f=[$2])
-         :     +- LogicalTableScan(table=[[default_catalog, default_db, t2]])
+         :     +- LogicalTableScan(table=[[builtin, default, t2]])
          +- LogicalProject(a=[$0], c=[$2])
-            +- LogicalTableScan(table=[[default_catalog, default_db, t3]])
+            +- LogicalTableScan(table=[[builtin, default, t3]])
 
 LogicalProject(total_min=[AS($0, 'total_min')])
 +- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
@@ -17,21 +17,21 @@ LogicalProject(total_min=[AS($0, 'total_min')])
       +- LogicalUnion(all=[true])
          :- LogicalUnion(all=[true])
          :  :- LogicalProject(a=[$0], c=[$2])
-         :  :  +- LogicalTableScan(table=[[default_catalog, default_db, t1]])
+         :  :  +- LogicalTableScan(table=[[builtin, default, t1]])
          :  +- LogicalProject(d=[$0], f=[$2])
-         :     +- LogicalTableScan(table=[[default_catalog, default_db, t2]])
+         :     +- LogicalTableScan(table=[[builtin, default, t2]])
          +- LogicalProject(a=[$0], c=[$2])
-            +- LogicalTableScan(table=[[default_catalog, default_db, t3]])
+            +- LogicalTableScan(table=[[builtin, default, t3]])
 
 == Optimized Logical Plan ==
 StreamExecUnion(all=[true], union=[a], retract=[true], accMode=[Acc], reuse_id=[1])
 :- StreamExecUnion(all=[true], union=[a], retract=[true], accMode=[Acc])
 :  :- StreamExecCalc(select=[a], retract=[true], accMode=[Acc])
-:  :  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, t1]], retract=[true], accMode=[Acc])
+:  :  +- StreamExecDataStreamScan(table=[[builtin, default, t1]], retract=[true], accMode=[Acc])
 :  +- StreamExecCalc(select=[d], retract=[true], accMode=[Acc])
-:     +- StreamExecDataStreamScan(table=[[default_catalog, default_db, t2]], retract=[true], accMode=[Acc])
+:     +- StreamExecDataStreamScan(table=[[builtin, default, t2]], retract=[true], accMode=[Acc])
 +- StreamExecCalc(select=[a], retract=[true], accMode=[Acc])
-   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, t3]], retract=[true], accMode=[Acc])
+   +- StreamExecDataStreamScan(table=[[builtin, default, t3]], retract=[true], accMode=[Acc])
 
 StreamExecSink(fields=[total_sum], retract=[false], accMode=[Acc])
 +- StreamExecCalc(select=[TMP_0 AS total_sum], retract=[false], accMode=[Acc])
@@ -56,7 +56,7 @@ StreamExecSink(fields=[total_min], retract=[false], accMode=[AccRetract])
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[default_catalog, default_db, t1], fields:(a, b, c))
+		content : SourceConversion(table:[builtin, default, t1], fields:(a, b, c))
 		ship_strategy : FORWARD
 
 		 : Operator
@@ -64,7 +64,7 @@ StreamExecSink(fields=[total_min], retract=[false], accMode=[AccRetract])
 			ship_strategy : FORWARD
 
 			 : Operator
-				content : SourceConversion(table:[default_catalog, default_db, t2], fields:(d, e, f))
+				content : SourceConversion(table:[builtin, default, t2], fields:(d, e, f))
 				ship_strategy : FORWARD
 
 				 : Operator
@@ -72,7 +72,7 @@ StreamExecSink(fields=[total_min], retract=[false], accMode=[AccRetract])
 					ship_strategy : FORWARD
 
 					 : Operator
-						content : SourceConversion(table:[default_catalog, default_db, t3], fields:(a, b, c))
+						content : SourceConversion(table:[builtin, default, t3], fields:(a, b, c))
 						ship_strategy : FORWARD
 
 						 : Operator

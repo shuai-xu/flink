@@ -24,9 +24,9 @@ StreamExecGroupAggregate(groupBy=[a], select=[a, CountDistinct_RETRACT(c) AS TMP
    +- StreamExecCalc(select=[a, c], retract=[true], accMode=[AccRetract])
       +- StreamExecJoin(where=[=(b, bb)], join=[a, b, bb, c], joinType=[RightOuterJoin], retract=[true], accMode=[AccRetract])
          :- StreamExecExchange(distribution=[hash[b]], retract=[true], accMode=[Acc])
-         :  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+         :  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
          +- StreamExecExchange(distribution=[hash[bb]], retract=[true], accMode=[Acc])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -38,9 +38,9 @@ StreamExecGroupAggregate(groupBy=[a], select=[a, CountDistinct_RETRACT(c) AS TMP
    +- StreamExecCalc(select=[a, c], retract=[true], accMode=[AccRetract])
       +- StreamExecJoin(where=[=(b, bb)], join=[a, b, bb, c], joinType=[FullOuterJoin], retract=[true], accMode=[AccRetract])
          :- StreamExecExchange(distribution=[hash[b]], retract=[true], accMode=[Acc])
-         :  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+         :  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
          +- StreamExecExchange(distribution=[hash[bb]], retract=[true], accMode=[Acc])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -52,9 +52,9 @@ StreamExecGroupAggregate(groupBy=[a], select=[a, CountDistinct_RETRACT(c) AS TMP
    +- StreamExecCalc(select=[a, c], retract=[true], accMode=[AccRetract])
       +- StreamExecJoin(where=[=(b, bb)], join=[a, b, bb, c], joinType=[LeftOuterJoin], retract=[true], accMode=[AccRetract])
          :- StreamExecExchange(distribution=[hash[b]], retract=[true], accMode=[Acc])
-         :  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+         :  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
          +- StreamExecExchange(distribution=[hash[bb]], retract=[true], accMode=[Acc])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -68,9 +68,9 @@ StreamExecCalc(select=[count, TMP_1 AS frequency], retract=[false], accMode=[Acc
          :- StreamExecCalc(select=[CAST(TMP_0) AS count], retract=[true], accMode=[AccRetract])
          :  +- StreamExecGroupAggregate(groupBy=[word], select=[word, COUNT(number) AS TMP_0], retract=[true], accMode=[AccRetract])
          :     +- StreamExecExchange(distribution=[hash[word]], retract=[true], accMode=[Acc])
-         :        +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+         :        +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
          +- StreamExecCalc(select=[count_r], retract=[true], accMode=[Acc])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -80,9 +80,9 @@ StreamExecCalc(select=[count, TMP_1 AS frequency], retract=[false], accMode=[Acc
 StreamExecCalc(select=[a, b, c], retract=[false], accMode=[AccRetract])
 +- StreamExecJoin(where=[=(b, bb)], join=[a, b, bb, c], joinType=[FullOuterJoin], retract=[false], accMode=[AccRetract])
    :- StreamExecExchange(distribution=[hash[b]], retract=[true], accMode=[Acc])
-   :  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+   :  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
    +- StreamExecExchange(distribution=[hash[bb]], retract=[true], accMode=[Acc])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -92,7 +92,7 @@ StreamExecCalc(select=[a, b, c], retract=[false], accMode=[AccRetract])
 StreamExecCalc(select=[TMP_0], retract=[false], accMode=[Acc])
 +- StreamExecGroupAggregate(groupBy=[word], select=[word, COUNT(number) AS TMP_0], retract=[false], accMode=[Acc])
    +- StreamExecExchange(distribution=[hash[word]], retract=[true], accMode=[Acc])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -102,7 +102,7 @@ StreamExecCalc(select=[TMP_0], retract=[false], accMode=[Acc])
 StreamExecCalc(select=[word, TMP_0 AS count], retract=[false], accMode=[Acc])
 +- StreamExecGroupWindowAggregate(groupBy=[word], window=[TumblingGroupWindow('w, 'rowtime, 50.millis)], select=[word, COUNT(number) AS TMP_0], retract=[false], accMode=[Acc])
    +- StreamExecExchange(distribution=[hash[word]], retract=[true], accMode=[Acc])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -112,9 +112,9 @@ StreamExecCalc(select=[word, TMP_0 AS count], retract=[false], accMode=[Acc])
 StreamExecCalc(select=[a, b, c], retract=[false], accMode=[AccRetract])
 +- StreamExecJoin(where=[=(b, bb)], join=[a, b, bb, c], joinType=[LeftOuterJoin], retract=[false], accMode=[AccRetract])
    :- StreamExecExchange(distribution=[hash[b]], retract=[true], accMode=[Acc])
-   :  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+   :  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
    +- StreamExecExchange(distribution=[hash[bb]], retract=[true], accMode=[Acc])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -124,7 +124,7 @@ StreamExecCalc(select=[a, b, c], retract=[false], accMode=[AccRetract])
 StreamExecCalc(select=[word, TMP_0 AS count], retract=[false], accMode=[Acc])
 +- StreamExecGroupWindowAggregate(groupBy=[word], window=[TumblingGroupWindow('w, 'rowtime, 50.millis)], select=[word, COUNT(number) AS TMP_0], emit=[early delay 10 millisecond, late no delay], retract=[false], accMode=[Acc])
    +- StreamExecExchange(distribution=[hash[word]], retract=[true], accMode=[Acc])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -136,12 +136,12 @@ StreamExecJoin(where=[=(pk_l, a_r)], join=[pk_l, a_l, pk_r, a_r], joinType=[Inne
 :  +- StreamExecCalc(select=[pk_l, TMP_0 AS a_l], retract=[false], accMode=[Acc])
 :     +- StreamExecGroupAggregate(groupBy=[pk_l], select=[pk_l, MAX(a_l) AS TMP_0], retract=[false], accMode=[Acc])
 :        +- StreamExecExchange(distribution=[hash[pk_l]], retract=[true], accMode=[Acc])
-:           +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+:           +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 +- StreamExecExchange(distribution=[hash[a_r]], retract=[true], accMode=[AccRetract])
    +- StreamExecCalc(select=[pk_r, TMP_1 AS a_r], retract=[true], accMode=[AccRetract])
       +- StreamExecGroupAggregate(groupBy=[pk_r], select=[pk_r, MAX(a_r) AS TMP_1], retract=[true], accMode=[AccRetract])
          +- StreamExecExchange(distribution=[hash[pk_r]], retract=[true], accMode=[Acc])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -153,12 +153,12 @@ StreamExecJoin(where=[=(pk_l, pk_r)], join=[pk_l, a_l, pk_r, a_r], joinType=[Inn
 :  +- StreamExecCalc(select=[pk_l, TMP_0 AS a_l], retract=[false], accMode=[Acc])
 :     +- StreamExecGroupAggregate(groupBy=[pk_l], select=[pk_l, MAX(a_l) AS TMP_0], retract=[false], accMode=[Acc])
 :        +- StreamExecExchange(distribution=[hash[pk_l]], retract=[true], accMode=[Acc])
-:           +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+:           +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 +- StreamExecExchange(distribution=[hash[pk_r]], retract=[false], accMode=[Acc])
    +- StreamExecCalc(select=[pk_r, TMP_1 AS a_r], retract=[false], accMode=[Acc])
       +- StreamExecGroupAggregate(groupBy=[pk_r], select=[pk_r, MAX(a_r) AS TMP_1], retract=[false], accMode=[Acc])
          +- StreamExecExchange(distribution=[hash[pk_r]], retract=[true], accMode=[Acc])
-            +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -167,9 +167,9 @@ StreamExecJoin(where=[=(pk_l, pk_r)], join=[pk_l, a_l, pk_r, a_r], joinType=[Inn
       <![CDATA[
 StreamExecJoin(where=[=(pk_l, a_r)], join=[pk_l, a_l, pk_r, a_r], joinType=[InnerJoin], retract=[false], accMode=[Acc])
 :- StreamExecExchange(distribution=[hash[pk_l]], retract=[true], accMode=[Acc])
-:  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+:  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 +- StreamExecExchange(distribution=[hash[a_r]], retract=[true], accMode=[Acc])
-   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
+   +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -179,7 +179,7 @@ StreamExecJoin(where=[=(pk_l, a_r)], join=[pk_l, a_l, pk_r, a_r], joinType=[Inne
 StreamExecCalc(select=[word, w0$o0 AS $1], retract=[false], accMode=[Acc])
 +- StreamExecOverAggregate(partitionBy=[word], orderBy=[proctime ASC], window=[ ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[word, number, proctime, COUNT(number) AS w0$o0], retract=[false], accMode=[Acc])
    +- StreamExecExchange(distribution=[hash[word]], retract=[true], accMode=[Acc])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -189,16 +189,16 @@ StreamExecCalc(select=[word, w0$o0 AS $1], retract=[false], accMode=[Acc])
 StreamExecCalc(select=[a, b, c], retract=[false], accMode=[AccRetract])
 +- StreamExecJoin(where=[=(b, bb)], join=[a, b, bb, c], joinType=[RightOuterJoin], retract=[false], accMode=[AccRetract])
    :- StreamExecExchange(distribution=[hash[b]], retract=[true], accMode=[Acc])
-   :  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+   :  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
    +- StreamExecExchange(distribution=[hash[bb]], retract=[true], accMode=[Acc])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], retract=[true], accMode=[Acc])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
   <TestCase name="testSelect">
     <Resource name="plan">
       <![CDATA[
-StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[false], accMode=[Acc])
+StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[false], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -211,7 +211,7 @@ StreamExecCalc(select=[word, TMP_2 AS sum], retract=[false], accMode=[Acc])
       +- StreamExecCalc(select=[word, TMP_0 AS count, TMP_1 AS w_rowtime], retract=[true], accMode=[Acc])
          +- StreamExecGroupWindowAggregate(groupBy=[word], window=[TumblingGroupWindow('w, 'rowtime, 50.millis)], properties=[TMP_1], select=[word, COUNT(number) AS TMP_0, rowtime('w) AS TMP_1], retract=[true], accMode=[Acc])
             +- StreamExecExchange(distribution=[hash[word]], retract=[true], accMode=[Acc])
-               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+               +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -224,7 +224,7 @@ StreamExecCalc(select=[count, TMP_1 AS frequency], retract=[false], accMode=[Acc
       +- StreamExecCalc(select=[TMP_0 AS count], retract=[true], accMode=[AccRetract])
          +- StreamExecGroupAggregate(groupBy=[word], select=[word, COUNT(number) AS TMP_0], retract=[true], accMode=[AccRetract])
             +- StreamExecExchange(distribution=[hash[word]], retract=[true], accMode=[Acc])
-               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+               +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -237,7 +237,7 @@ StreamExecCalc(select=[word, TMP_2 AS sum], retract=[false], accMode=[Acc])
       +- StreamExecCalc(select=[word, TMP_0 AS count, TMP_1 AS w_rowtime], retract=[true], accMode=[AccRetract])
          +- StreamExecGroupWindowAggregate(groupBy=[word], window=[TumblingGroupWindow('w, 'rowtime, 50.millis)], properties=[TMP_1], select=[word, COUNT(number) AS TMP_0, rowtime('w) AS TMP_1], emit=[early delay 10 millisecond, late no delay], retract=[true], accMode=[AccRetract])
             +- StreamExecExchange(distribution=[hash[word]], retract=[true], accMode=[Acc])
-               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+               +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>

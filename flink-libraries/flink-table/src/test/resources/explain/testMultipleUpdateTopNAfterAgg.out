@@ -2,17 +2,17 @@
 LogicalProject(category=[$0], shopId=[$1], cnt_num=[$2], rank_num=[$3])
 +- LogicalFilter(condition=[<=($3, 2)])
    +- LogicalProject(category=[$0], shopId=[$1], cnt_num=[$2], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0 ORDER BY $2 DESC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyView]])
+      +- LogicalTableScan(table=[[builtin, default, MyView]])
 
 LogicalProject(category=[$0], shopId=[$1], max_num=[$2], rank_num=[$3])
 +- LogicalFilter(condition=[<=($3, 2)])
    +- LogicalProject(category=[$0], shopId=[$1], max_num=[$3], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0 ORDER BY $3 DESC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyView]])
+      +- LogicalTableScan(table=[[builtin, default, MyView]])
 
 == Optimized Logical Plan ==
 StreamExecGroupAggregate(groupBy=[category, shopId], select=[category, shopId, COUNT(num) AS cnt_num, MAX(num) AS max_num], retract=[false], accMode=[Acc], reuse_id=[1])
 +- StreamExecExchange(distribution=[hash[category, shopId]], retract=[true], accMode=[Acc])
-   +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+   +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 
 StreamExecSink(fields=[category, shopId, cnt_num, rank_num], retract=[false], accMode=[AccRetract])
 +- StreamExecCalc(select=[category, shopId, cnt_num, w0$o0], retract=[true], accMode=[AccRetract])
@@ -31,7 +31,7 @@ StreamExecSink(fields=[category, shopId, max_num, rank_num], retract=[false], ac
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[default_catalog, default_db, _DataStreamTable_0], fields:(category, shopId, num))
+		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(category, shopId, num))
 		ship_strategy : FORWARD
 
 		 : Operator

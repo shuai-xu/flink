@@ -46,7 +46,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * query parsing and analysis.)
  */
 public class CatalogManager {
-	public static final String BUILTIN_CATALOG_NAME = "default_catalog";
+	public static final String BUILTIN_CATALOG_NAME = "builtin";
 
 	// The catalog to hold all registered and translated tables
 	// We disable caching here to prevent side effects

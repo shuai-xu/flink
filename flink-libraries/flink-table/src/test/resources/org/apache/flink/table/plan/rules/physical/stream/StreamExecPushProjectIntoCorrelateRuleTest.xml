@@ -20,7 +20,7 @@ limitations under the License.
     <Resource name="plan">
       <![CDATA[
 StreamExecCorrelate(invocation=[split($cor0.a)], correlate=[table(split($cor0.a))], select=[a], rowType=[RecordType(VARCHAR(65536) a)], joinType=[INNER])
-+- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

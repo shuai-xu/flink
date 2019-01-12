@@ -20,7 +20,7 @@ limitations under the License.
     <Resource name="plan">
       <![CDATA[
 StreamExecMatch(orderBy=[proctime ASC], measures=[FINAL(A.a) AS aa], after=[SKIP TO NEXT ROW], pattern=[('A', 'B')], define=[{A==(LAST(*.$0, 0), 1), B==(LAST(*.$1, 0), 'b')}])
-+- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
++- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

@@ -54,7 +54,7 @@ import scala.collection.mutable
   * :  +- Limit(offset=[0], limit=[10], global=[true], reuse_id=[1])
   * :     +- Exchange(distribution=[single])
   * :        +- Limit(offset=[0], limit=[10], global=[false])
-  * :           +- ScanTableSource(table=[[default_catalog, default_db, x,
+  * :           +- ScanTableSource(table=[[builtin, default, x,
   *                 source: [selectedFields=[a, b]]]], fields=[a, b])
   * +- Exchange(distribution=[broadcast])
   *    +- Calc(select=[a, b], where=[<(b, 20)])

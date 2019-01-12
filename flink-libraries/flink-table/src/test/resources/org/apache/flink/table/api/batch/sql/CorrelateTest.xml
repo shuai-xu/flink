@@ -26,7 +26,7 @@ LogicalProject(c=[$0], s=[$1])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{0}])
    :- LogicalAggregate(group=[{}], c=[CONCAT_AGG($0, $1)])
    :  +- LogicalProject(c=[$2], $f1=['#'])
-   :     +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   :     +- LogicalTableScan(table=[[builtin, default, MyTable]])
    +- LogicalTableFunctionScan(invocation=[func1($cor0.c)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
@@ -37,7 +37,7 @@ Correlate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select
    +- Exchange(distribution=[single])
       +- LocalSortAggregate(select=[Partial_CONCAT_AGG(c, $f1) AS (accDelimiter$0, concatAcc$1)])
          +- Calc(select=[c, '#' AS $f1])
-            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -50,7 +50,7 @@ Correlate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select
 LogicalProject(name=[$3], len=[$4], c=[$2])
 +- LogicalFilter(condition=[<>(objHash($0, $4), 0)])
    +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{0}])
-      :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+      :- LogicalTableScan(table=[[builtin, default, MyTable]])
       +- LogicalTableFunctionScan(invocation=[parser($cor0.a)], rowType=[RecordType(VARCHAR(65536) _1, INTEGER _2)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
@@ -58,7 +58,7 @@ LogicalProject(name=[$3], len=[$4], c=[$2])
       <![CDATA[
 Calc(select=[_1 AS name, _2 AS len, c], where=[<>(objHash(a, _2), 0)])
 +- Correlate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[a,c,_1,_2], rowType=[RecordType(VARBINARY a, INTEGER c, VARCHAR(65536) _1, INTEGER _2)], joinType=[INNER])
-   +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -71,7 +71,7 @@ Calc(select=[_1 AS name, _2 AS len, c], where=[<>(objHash(a, _2), 0)])
 LogicalProject(len=[$4], hash=[objHash($2, $4)])
 +- LogicalFilter(condition=[>(objHash($2, $4), 0)])
    +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{0}])
-      :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+      :- LogicalTableScan(table=[[builtin, default, MyTable]])
       +- LogicalTableFunctionScan(invocation=[parser($cor0.a)], rowType=[RecordType(VARCHAR(65536) _1, INTEGER _2)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
@@ -79,7 +79,7 @@ LogicalProject(len=[$4], hash=[objHash($2, $4)])
       <![CDATA[
 Calc(select=[_2 AS len, objHash(c, _2) AS hash], where=[>(objHash(c, _2), 0)])
 +- Correlate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[c,_2], rowType=[RecordType(VARBINARY c, INTEGER _2)], joinType=[INNER])
-   +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -92,7 +92,7 @@ Calc(select=[_2 AS len, objHash(c, _2) AS hash], where=[>(objHash(c, _2), 0)])
 LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
 +- LogicalProject($f0=[0])
    +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{0}])
-      :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+      :- LogicalTableScan(table=[[builtin, default, MyTable]])
       +- LogicalTableFunctionScan(invocation=[parser($cor0.a)], rowType=[RecordType(VARCHAR(65536) _1, INTEGER _2)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
@@ -103,7 +103,7 @@ SortAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS EXPR$0])
    +- LocalSortAggregate(select=[Partial_COUNT(*) AS count$0])
       +- Calc(select=[0 AS $f0])
          +- Correlate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[_2], rowType=[RecordType(INTEGER _2)], joinType=[INNER])
-            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -115,14 +115,14 @@ SortAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS EXPR$0])
       <![CDATA[
 LogicalProject(c=[$2], s=[$3])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
-   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   :- LogicalTableScan(table=[[builtin, default, MyTable]])
    +- LogicalTableFunctionScan(invocation=[func1($cor0.c)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
-+- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -134,14 +134,14 @@ Correlate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select
       <![CDATA[
 LogicalProject(c=[$2], s=[$3])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
-   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   :- LogicalTableScan(table=[[builtin, default, MyTable]])
    +- LogicalTableFunctionScan(invocation=[func1($cor0.c, '$')], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[func1($cor0.c, '$')], correlate=[table(func1($cor0.c,'$'))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
-+- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -153,14 +153,14 @@ Correlate(invocation=[func1($cor0.c, '$')], correlate=[table(func1($cor0.c,'$'))
       <![CDATA[
 LogicalProject(c=[$2], name=[$3], len=[$4])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
-   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   :- LogicalTableScan(table=[[builtin, default, MyTable]])
    +- LogicalTableFunctionScan(invocation=[func2($cor0.c)], rowType=[RecordType(VARCHAR(65536) f0, INTEGER f1)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[func2($cor0.c)], correlate=[table(func2($cor0.c))], select=[c,name,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len)], joinType=[INNER])
-+- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -173,14 +173,14 @@ Correlate(invocation=[func2($cor0.c)], correlate=[table(func2($cor0.c))], select
 LogicalProject(c=[$2], name=[$3], len=[$4])
 +- LogicalFilter(condition=[>($4, 2)])
    +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
-      :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+      :- LogicalTableScan(table=[[builtin, default, MyTable]])
       +- LogicalTableFunctionScan(invocation=[func2($cor0.c)], rowType=[RecordType(VARCHAR(65536) f0, INTEGER f1)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[func2($cor0.c)], correlate=[table(func2($cor0.c))], select=[c,name,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len)], joinType=[INNER], condition=[>($1, 2)])
-+- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -192,14 +192,14 @@ Correlate(invocation=[func2($cor0.c)], correlate=[table(func2($cor0.c))], select
       <![CDATA[
 LogicalProject(c=[$2], name=[$3], adult=[$4], len=[$5])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
-   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   :- LogicalTableScan(table=[[builtin, default, MyTable]])
    +- LogicalTableFunctionScan(invocation=[hierarchy($cor0.c)], rowType=[RecordType(VARCHAR(65536) f0, BOOLEAN f1, INTEGER f2)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[hierarchy($cor0.c)], correlate=[table(hierarchy($cor0.c))], select=[c,name,adult,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, BOOLEAN adult, INTEGER len)], joinType=[INNER])
-+- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -211,14 +211,14 @@ Correlate(invocation=[hierarchy($cor0.c)], correlate=[table(hierarchy($cor0.c))]
       <![CDATA[
 LogicalProject(name=[$1], len=[$2])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{0}])
-   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   :- LogicalTableScan(table=[[builtin, default, MyTable]])
    +- LogicalTableFunctionScan(invocation=[parser($cor0.a)], rowType=[RecordType(VARCHAR(65536) _1, INTEGER _2)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[name,len], rowType=[RecordType(VARCHAR(65536) name, INTEGER len)], joinType=[INNER])
-+- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a])
++- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a])
 ]]>
     </Resource>
   </TestCase>
@@ -231,7 +231,7 @@ Correlate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], sele
 LogicalProject(name=[$1], EXPR$1=[objHash($1)], len=[$2])
 +- LogicalFilter(condition=[>(objHash($1), 0)])
    +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{0}])
-      :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+      :- LogicalTableScan(table=[[builtin, default, MyTable]])
       +- LogicalTableFunctionScan(invocation=[parser($cor0.a)], rowType=[RecordType(VARCHAR(65536) _1, INTEGER _2)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
@@ -239,7 +239,7 @@ LogicalProject(name=[$1], EXPR$1=[objHash($1)], len=[$2])
       <![CDATA[
 Calc(select=[_1 AS name, objHash(_1) AS EXPR$1, _2 AS len])
 +- Correlate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[_1,_2], rowType=[RecordType(VARCHAR(65536) _1, INTEGER _2)], joinType=[INNER], condition=[>(objHash($0), 0)])
-   +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a])
+   +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a])
 ]]>
     </Resource>
   </TestCase>
@@ -251,7 +251,7 @@ Calc(select=[_1 AS name, objHash(_1) AS EXPR$1, _2 AS len])
       <![CDATA[
 LogicalProject(hash_a=[objHash($0)], name=[$1], len=[$2])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{0}])
-   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   :- LogicalTableScan(table=[[builtin, default, MyTable]])
    +- LogicalTableFunctionScan(invocation=[parser($cor0.a)], rowType=[RecordType(VARCHAR(65536) _1, INTEGER _2)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
@@ -259,7 +259,7 @@ LogicalProject(hash_a=[objHash($0)], name=[$1], len=[$2])
       <![CDATA[
 Calc(select=[objHash(a) AS hash_a, _1 AS name, _2 AS len])
 +- Correlate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[a,_1,_2], rowType=[RecordType(VARBINARY a, VARCHAR(65536) _1, INTEGER _2)], joinType=[INNER])
-   +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a])
+   +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a])
 ]]>
     </Resource>
   </TestCase>
@@ -276,20 +276,20 @@ Calc(select=[objHash(a) AS hash_a, _1 AS name, _2 AS len])
       <![CDATA[
 LogicalProject(a2=[$0], b2=[$1], c2=[$2], c=[$3], s=[$4])
 +- LogicalJoin(condition=[=($2, $4)], joinType=[left])
-   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable2]])
+   :- LogicalTableScan(table=[[builtin, default, MyTable2]])
    +- LogicalProject(c=[$2], s=[$3])
       +- LogicalCorrelate(correlation=[$cor0], joinType=[left], requiredColumns=[{2}])
-         :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+         :- LogicalTableScan(table=[[builtin, default, MyTable]])
          +- LogicalTableFunctionScan(invocation=[func1($cor0.c)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 HashJoin(where=[=(c2, s)], join=[a2, b2, c2, c, s], joinType=[LeftOuterJoin], isBroadcast=[true], build=[right])
-:- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[a2, b2, c2])
+:- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_1]], fields=[a2, b2, c2])
 +- Exchange(distribution=[broadcast])
    +- Correlate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[LEFT])
-      +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -301,14 +301,14 @@ HashJoin(where=[=(c2, s)], join=[a2, b2, c2, c, s], joinType=[LeftOuterJoin], is
       <![CDATA[
 LogicalProject(c=[$2], s=[$3])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[left], requiredColumns=[{2}])
-   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   :- LogicalTableScan(table=[[builtin, default, MyTable]])
    +- LogicalTableFunctionScan(invocation=[func1($cor0.c)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[LEFT])
-+- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -320,7 +320,7 @@ Correlate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select
       <![CDATA[
 LogicalProject(c=[$2], name=[$4], age=[$3])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
-   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   :- LogicalTableScan(table=[[builtin, default, MyTable]])
    +- LogicalTableFunctionScan(invocation=[pojo($cor0.c)], rowType=[RecordType(INTEGER age, VARCHAR(65536) name)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
@@ -328,7 +328,7 @@ LogicalProject(c=[$2], name=[$4], age=[$3])
       <![CDATA[
 Calc(select=[c, name, age])
 +- Correlate(invocation=[pojo($cor0.c)], correlate=[table(pojo($cor0.c))], select=[c,age,name], rowType=[RecordType(VARCHAR(65536) c, INTEGER age, VARCHAR(65536) name)], joinType=[INNER])
-   +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -340,14 +340,14 @@ Calc(select=[c, name, age])
       <![CDATA[
 LogicalProject(c=[$2], s=[$3])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
-   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   :- LogicalTableScan(table=[[builtin, default, MyTable]])
    +- LogicalTableFunctionScan(invocation=[func1(SUBSTRING($cor0.c, 2))], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[func1(SUBSTRING($cor0.c, 2))], correlate=[table(func1(SUBSTRING($cor0.c, 2)))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
-+- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -359,14 +359,14 @@ Correlate(invocation=[func1(SUBSTRING($cor0.c, 2))], correlate=[table(func1(SUBS
       <![CDATA[
 LogicalProject(c=[$2], s=[$3])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
-   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   :- LogicalTableScan(table=[[builtin, default, MyTable]])
    +- LogicalTableFunctionScan(invocation=[func2('hello', 'world', $cor0.c)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[func2('hello', 'world', $cor0.c)], correlate=[table(func2('hello','world',$cor0.c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
-+- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -378,14 +378,14 @@ Correlate(invocation=[func2('hello', 'world', $cor0.c)], correlate=[table(func2(
       <![CDATA[
 LogicalProject(c=[$2], s=[$3])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
-   :- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+   :- LogicalTableScan(table=[[builtin, default, MyTable]])
    +- LogicalTableFunctionScan(invocation=[func1('hello', 'world', $cor0.c)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[func1('hello', 'world', $cor0.c)], correlate=[table(func1('hello','world',$cor0.c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
-+- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

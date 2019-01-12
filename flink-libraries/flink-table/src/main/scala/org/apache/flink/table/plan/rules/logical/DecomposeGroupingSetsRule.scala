@@ -84,7 +84,7 @@ import scala.collection.mutable
   * Logical plan:
   * {{{
   * LogicalAggregate(group=[{0}], t1=[SUM(DISTINCT $1)], t2=[COUNT(DISTINCT $2)], t3=[COUNT($3)])
-  *  LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+  *  LogicalTableScan(table=[[builtin, default, MyTable]])
   * }}}
   *
   * Logical plan after `FlinkAggregateExpandDistinctAggregatesRule` applied:
@@ -97,7 +97,7 @@ import scala.collection.mutable
   *      $g_3=[=($4, 3)])
   *     LogicalAggregate(group=[{0, 1, 2}], groups=[[{0, 1}, {0, 2}, {0}]], t3=[COUNT($3)],
   *       $g=[GROUPING($0, $1, $2)])
-  *      LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+  *      LogicalTableScan(table=[[builtin, default, MyTable]])
   * }}}
   *
   * Logical plan after this rule applied:
@@ -110,7 +110,7 @@ import scala.collection.mutable
   *    LogicalAggregate(group=[{0, 1, 2, 4}], groups=[[]], t3=[COUNT($3)])
   *     LogicalExpand(projects=[{a=[$0], b=[$1], c=[null], d=[$3], $e=[1]},
   *       {a=[$0], b=[null], c=[$2], d=[$3], $e=[2]}, {a=[$0], b=[null], c=[null], d=[$3], $e=[3]}])
-  *      LogicalTableSourceScan(table=[[default_catalog, default_db, MyTable]], fields=[a, b, c, d])
+  *      LogicalTableSourceScan(table=[[builtin, default, MyTable]], fields=[a, b, c, d])
   * }}}
   *
   * '$e = 1' is equivalent to 'group by a, b'
@@ -181,7 +181,7 @@ import scala.collection.mutable
   * {{{
   * LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}]], b=[SUM($2)])
   *  LogicalProject(a=[$0], c=[$2], b=[$1])
-  *   LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+  *   LogicalTableScan(table=[[builtin, default, MyTable]])
   * }}}
   *
   * Logical plan after this rule applied:
@@ -190,7 +190,7 @@ import scala.collection.mutable
   *  LogicalAggregate(group=[{0, 2, 3}], groups=[[]], b=[SUM($1)])
   *   LogicalExpand(projects=[{a=[$0], b=[$1], c=[null], $e=[1]},
   *     {a=[null], b=[$1], c=[$2], $e=[2]}])
-  *    LogicalNativeTableScan(table=[[default_catalog, default_db, MyTable]])
+  *    LogicalNativeTableScan(table=[[builtin, default, MyTable]])
   * }}}
   *
   * '$e = 1' is equivalent to 'group by a'

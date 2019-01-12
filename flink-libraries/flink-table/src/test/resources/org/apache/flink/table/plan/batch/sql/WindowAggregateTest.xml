@@ -25,7 +25,7 @@ limitations under the License.
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3], EXPR$3=[$4], EXPR$4=[TUMBLE_START($0)], EXPR$5=[TUMBLE_END($0)])
 +- LogicalAggregate(group=[{0}], EXPR$0=[VAR_POP($1)], EXPR$1=[VAR_SAMP($1)], EXPR$2=[STDDEV_POP($1)], EXPR$3=[STDDEV_SAMP($1)])
    +- LogicalProject($f0=[TUMBLE($3, 900000)], c=[$2])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable1]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -35,7 +35,7 @@ Calc(select=[CAST(/(-($f0, /(*(CAST($f1), CAST($f1)), $f2)), $f2)) AS EXPR$0, CA
    +- Exchange(distribution=[single])
       +- LocalHashWindowAggregate(window=[TumblingGroupWindow('w$, 'rowtime, 900000.millis)], properties=[w$start, w$end, w$rowtime], select=[Partial_SUM($f2) AS sum$0, Partial_SUM(c) AS sum$1, Partial_COUNT(c) AS count$2, Partial_SUM($f3) AS sum$3, Partial_SUM($f4) AS sum$4, Partial_SUM($f5) AS sum$5])
          +- Calc(select=[rowtime, c, *(CAST(c), CAST(c)) AS $f2, *(CAST(c), CAST(c)) AS $f3, *(CAST(c), CAST(c)) AS $f4, *(CAST(c), CAST(c)) AS $f5])
-            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]], fields=[a, b, c, rowtime])
+            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_1]], fields=[a, b, c, rowtime])
 ]]>
     </Resource>
   </TestCase>
@@ -48,7 +48,7 @@ Calc(select=[CAST(/(-($f0, /(*(CAST($f1), CAST($f1)), $f2)), $f2)) AS EXPR$0, CA
 LogicalProject(EXPR$0=[$3], EXPR$1=[$4])
 +- LogicalAggregate(group=[{0, 1, 2}], EXPR$0=[AVG($3)], EXPR$1=[COUNT($0)])
    +- LogicalProject(a=[$0], d=[$3], $f2=[TUMBLE($1, 3000)], c=[$2])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -57,7 +57,7 @@ Calc(select=[EXPR$0, EXPR$1])
 +- HashWindowAggregate(groupBy=[a, d], window=[TumblingGroupWindow('w$, 'b, 3000.millis)], select=[a, d, Final_AVG(sum$0, count$1) AS EXPR$0, Final_COUNT(count$2) AS EXPR$1])
    +- Exchange(distribution=[hash[a, d]])
       +- LocalHashWindowAggregate(groupBy=[a, d], window=[TumblingGroupWindow('w$, 'b, 3000.millis)], select=[a, d, Partial_AVG(c) AS (sum$0, count$1), Partial_COUNT(a) AS count$2])
-         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c, d])
+         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -70,7 +70,7 @@ Calc(select=[EXPR$0, EXPR$1])
 LogicalProject(EXPR$0=[$1], EXPR$1=[HOP_START($0)], EXPR$2=[HOP_END($0)])
 +- LogicalAggregate(group=[{0}], EXPR$0=[SUM($1)])
    +- LogicalProject($f0=[HOP($1, 3000, 3000)], a=[$0])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -80,7 +80,7 @@ Calc(select=[EXPR$0, CAST(w$start) AS EXPR$1, CAST(w$end) AS EXPR$2])
    +- Exchange(distribution=[single])
       +- LocalHashWindowAggregate(window=[SlidingGroupWindow('w$, 'b, 3000.millis, 3000.millis)], properties=[w$start, w$end, w$rowtime], select=[Partial_SUM(a) AS sum$0])
          +- Calc(select=[b, a])
-            +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c, d])
+            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -93,7 +93,7 @@ Calc(select=[EXPR$0, CAST(w$start) AS EXPR$1, CAST(w$end) AS EXPR$2])
 LogicalProject(EXPR$0=[$1], EXPR$1=[$2])
 +- LogicalAggregate(group=[{0}], EXPR$0=[AVG($1)], EXPR$1=[SUM($2)])
    +- LogicalProject($f0=[TUMBLE($1, 3000)], c=[$2], a=[$0])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -102,7 +102,7 @@ HashWindowAggregate(window=[TumblingGroupWindow('w$, 'b, 3000.millis)], select=[
 +- Exchange(distribution=[single])
    +- LocalHashWindowAggregate(window=[TumblingGroupWindow('w$, 'b, 3000.millis)], select=[Partial_AVG(c) AS (sum$0, count$1), Partial_SUM(a) AS sum$2])
       +- Calc(select=[b, c, a])
-         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c, d])
+         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -115,7 +115,7 @@ HashWindowAggregate(window=[TumblingGroupWindow('w$, 'b, 3000.millis)], select=[
 LogicalProject(EXPR$0=[$2])
 +- LogicalAggregate(group=[{0, 1}], EXPR$0=[MAX($2)])
    +- LogicalProject(customerId=[$1], $f1=[HOP($0, 3000, 3600000)], colLarge=[$3])
-      +- LogicalTableScan(table=[[default_catalog, default_db, t1]])
+      +- LogicalTableScan(table=[[builtin, default, t1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -125,7 +125,7 @@ Calc(select=[EXPR$0])
    +- Sort(orderBy=[customerId ASC, ts ASC])
       +- Exchange(distribution=[hash[customerId]])
          +- Calc(select=[customerId, ts, colLarge])
-            +- TableSourceScan(table=[[default_catalog, default_db, t1]], fields=[ts, customerId, productId, colLarge])
+            +- TableSourceScan(table=[[builtin, default, t1]], fields=[ts, customerId, productId, colLarge])
 ]]>
     </Resource>
   </TestCase>
@@ -138,7 +138,7 @@ Calc(select=[EXPR$0])
 LogicalProject(EXPR$0=[$2])
 +- LogicalAggregate(group=[{0, 1}], EXPR$0=[COUNT($2)])
    +- LogicalProject(customerId=[$1], $f1=[HOP($0, 3000, 3600000)], colLarge=[$3])
-      +- LogicalTableScan(table=[[default_catalog, default_db, t1]])
+      +- LogicalTableScan(table=[[builtin, default, t1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -148,7 +148,7 @@ Calc(select=[EXPR$0])
    +- Sort(orderBy=[customerId ASC, ts ASC])
       +- Exchange(distribution=[hash[customerId]])
          +- Calc(select=[customerId, ts, colLarge])
-            +- TableSourceScan(table=[[default_catalog, default_db, t1]], fields=[ts, customerId, productId, colLarge])
+            +- TableSourceScan(table=[[builtin, default, t1]], fields=[ts, customerId, productId, colLarge])
 ]]>
     </Resource>
   </TestCase>
@@ -161,7 +161,7 @@ Calc(select=[EXPR$0])
 LogicalProject(EXPR$0=[$2])
 +- LogicalAggregate(group=[{0, 1}], EXPR$0=[COUNT($2)])
    +- LogicalProject(customerId=[$1], $f1=[TUMBLE($0, 3000)], colLarge=[$3])
-      +- LogicalTableScan(table=[[default_catalog, default_db, t1]])
+      +- LogicalTableScan(table=[[builtin, default, t1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -170,7 +170,7 @@ Calc(select=[EXPR$0])
 +- HashWindowAggregate(groupBy=[customerId], window=[TumblingGroupWindow('w$, 'ts, 3000.millis)], select=[customerId, COUNT(colLarge) AS EXPR$0])
    +- Exchange(distribution=[hash[customerId]])
       +- Calc(select=[customerId, ts, colLarge])
-         +- TableSourceScan(table=[[default_catalog, default_db, t1]], fields=[ts, customerId, productId, colLarge])
+         +- TableSourceScan(table=[[builtin, default, t1]], fields=[ts, customerId, productId, colLarge])
 ]]>
     </Resource>
   </TestCase>
@@ -183,7 +183,7 @@ Calc(select=[EXPR$0])
 LogicalProject(EXPR$0=[$2])
 +- LogicalAggregate(group=[{0, 1}], EXPR$0=[MAX($2)])
    +- LogicalProject(customerId=[$1], $f1=[TUMBLE($0, 3000)], colLarge=[$3])
-      +- LogicalTableScan(table=[[default_catalog, default_db, t1]])
+      +- LogicalTableScan(table=[[builtin, default, t1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -193,7 +193,7 @@ Calc(select=[EXPR$0])
    +- Sort(orderBy=[customerId ASC, ts ASC])
       +- Exchange(distribution=[hash[customerId]])
          +- Calc(select=[customerId, ts, colLarge])
-            +- TableSourceScan(table=[[default_catalog, default_db, t1]], fields=[ts, customerId, productId, colLarge])
+            +- TableSourceScan(table=[[builtin, default, t1]], fields=[ts, customerId, productId, colLarge])
 ]]>
     </Resource>
   </TestCase>
@@ -206,7 +206,7 @@ Calc(select=[EXPR$0])
 LogicalProject(EXPR$0=[$2])
 +- LogicalAggregate(group=[{0, 1}], EXPR$0=[COUNT($2)])
    +- LogicalProject(productId=[$2], $f1=[HOP($0, 3000, 3600000)], colLarge=[$3])
-      +- LogicalTableScan(table=[[default_catalog, default_db, t1]])
+      +- LogicalTableScan(table=[[builtin, default, t1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -216,7 +216,7 @@ Calc(select=[EXPR$0])
    +- Exchange(distribution=[hash[productId]])
       +- LocalHashWindowAggregate(groupBy=[productId], window=[SlidingGroupWindow('w$, 'ts, 3600000.millis, 3000.millis)], select=[productId, Partial_COUNT(colLarge) AS count$0])
          +- Calc(select=[productId, ts, colLarge])
-            +- TableSourceScan(table=[[default_catalog, default_db, t1]], fields=[ts, customerId, productId, colLarge])
+            +- TableSourceScan(table=[[builtin, default, t1]], fields=[ts, customerId, productId, colLarge])
 ]]>
     </Resource>
   </TestCase>
@@ -229,7 +229,7 @@ Calc(select=[EXPR$0])
 LogicalProject(EXPR$0=[$3])
 +- LogicalAggregate(group=[{0, 1, 2}], EXPR$0=[countFun($3)])
    +- LogicalProject(a=[$0], d=[$3], $f2=[HOP($1, 3000, 3600000)], c=[$2])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -238,7 +238,7 @@ Calc(select=[EXPR$0])
 +- SortWindowAggregate(groupBy=[a, d], window=[SlidingGroupWindow('w$, 'b, 3600000.millis, 3000.millis)], select=[a, d, countFun(c) AS EXPR$0])
    +- Sort(orderBy=[a ASC, d ASC, b ASC])
       +- Exchange(distribution=[hash[a, d]])
-         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c, d])
+         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -251,7 +251,7 @@ Calc(select=[EXPR$0])
 LogicalProject(EXPR$0=[$2])
 +- LogicalAggregate(group=[{0, 1}], EXPR$0=[MAX($2)])
    +- LogicalProject(productId=[$2], $f1=[HOP($0, 111, 1000)], colLarge=[$3])
-      +- LogicalTableScan(table=[[default_catalog, default_db, t1]])
+      +- LogicalTableScan(table=[[builtin, default, t1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -261,7 +261,7 @@ Calc(select=[EXPR$0])
    +- Sort(orderBy=[productId ASC, ts ASC])
       +- Exchange(distribution=[hash[productId]])
          +- Calc(select=[productId, ts, colLarge])
-            +- TableSourceScan(table=[[default_catalog, default_db, t1]], fields=[ts, customerId, productId, colLarge])
+            +- TableSourceScan(table=[[builtin, default, t1]], fields=[ts, customerId, productId, colLarge])
 ]]>
     </Resource>
   </TestCase>
@@ -274,7 +274,7 @@ Calc(select=[EXPR$0])
 LogicalProject(EXPR$0=[$3], EXPR$1=[$4])
 +- LogicalAggregate(group=[{0, 1, 2}], EXPR$0=[AVG($3)], EXPR$1=[countFun($0)])
    +- LogicalProject(a=[$0], d=[$3], $f2=[TUMBLE($1, 3000)], c=[$2])
-      +- LogicalTableScan(table=[[default_catalog, default_db, MyTable]])
+      +- LogicalTableScan(table=[[builtin, default, MyTable]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -283,7 +283,7 @@ Calc(select=[EXPR$0, EXPR$1])
 +- SortWindowAggregate(groupBy=[a, d], window=[TumblingGroupWindow('w$, 'b, 3000.millis)], select=[a, d, AVG(c) AS EXPR$0, countFun(a) AS EXPR$1])
    +- Sort(orderBy=[a ASC, d ASC, b ASC])
       +- Exchange(distribution=[hash[a, d]])
-         +- BoundedStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]], fields=[a, b, c, d])
+         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -296,7 +296,7 @@ Calc(select=[EXPR$0, EXPR$1])
 LogicalProject(EXPR$0=[$2])
 +- LogicalAggregate(group=[{0, 1}], EXPR$0=[MAX($2)])
    +- LogicalProject(productId=[$2], $f1=[HOP($0, 100, 1000)], colLarge=[$3])
-      +- LogicalTableScan(table=[[default_catalog, default_db, t1]])
+      +- LogicalTableScan(table=[[builtin, default, t1]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -308,7 +308,7 @@ Calc(select=[EXPR$0])
          +- LocalSortWindowAggregate(groupBy=[productId], window=[SlidingGroupWindow('w$, 'ts, 1000.millis, 100.millis)], select=[productId, Partial_MAX(colLarge) AS max$0])
             +- Sort(orderBy=[productId ASC, ts ASC])
                +- Calc(select=[productId, ts, colLarge])
-                  +- TableSourceScan(table=[[default_catalog, default_db, t1]], fields=[ts, customerId, productId, colLarge])
+                  +- TableSourceScan(table=[[builtin, default, t1]], fields=[ts, customerId, productId, colLarge])
 ]]>
     </Resource>
   </TestCase>

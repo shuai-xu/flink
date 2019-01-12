@@ -4,9 +4,9 @@ LogicalProject(total_sum=[AS($0, 'total_sum')])
    +- LogicalProject(a=[$0])
       +- LogicalUnion(all=[true])
          :- LogicalProject(a=[$0], c=[$2])
-         :  +- LogicalTableScan(table=[[default_catalog, default_db, t1]])
+         :  +- LogicalTableScan(table=[[builtin, default, t1]])
          +- LogicalProject(d=[$0], f=[$2])
-            +- LogicalTableScan(table=[[default_catalog, default_db, t2]])
+            +- LogicalTableScan(table=[[builtin, default, t2]])
 
 == Optimized Logical Plan ==
 StreamExecSink(fields=[total_sum], retract=[false], accMode=[AccRetract])
@@ -15,9 +15,9 @@ StreamExecSink(fields=[total_sum], retract=[false], accMode=[AccRetract])
       +- StreamExecExchange(distribution=[single], retract=[true], accMode=[Acc])
          +- StreamExecUnion(all=[true], union=[a], retract=[true], accMode=[Acc])
             :- StreamExecCalc(select=[a], retract=[true], accMode=[Acc])
-            :  +- StreamExecDataStreamScan(table=[[default_catalog, default_db, t1]], retract=[true], accMode=[Acc])
+            :  +- StreamExecDataStreamScan(table=[[builtin, default, t1]], retract=[true], accMode=[Acc])
             +- StreamExecCalc(select=[d], retract=[true], accMode=[Acc])
-               +- StreamExecDataStreamScan(table=[[default_catalog, default_db, t2]], retract=[true], accMode=[Acc])
+               +- StreamExecDataStreamScan(table=[[builtin, default, t2]], retract=[true], accMode=[Acc])
 
 == Physical Execution Plan ==
  : Data Source
@@ -27,7 +27,7 @@ StreamExecSink(fields=[total_sum], retract=[false], accMode=[AccRetract])
 	content : collect elements with CollectionInputFormat
 
 	 : Operator
-		content : SourceConversion(table:[default_catalog, default_db, t1], fields:(a, b, c))
+		content : SourceConversion(table:[builtin, default, t1], fields:(a, b, c))
 		ship_strategy : FORWARD
 
 		 : Operator
@@ -35,7 +35,7 @@ StreamExecSink(fields=[total_sum], retract=[false], accMode=[AccRetract])
 			ship_strategy : FORWARD
 
 			 : Operator
-				content : SourceConversion(table:[default_catalog, default_db, t2], fields:(d, e, f))
+				content : SourceConversion(table:[builtin, default, t2], fields:(d, e, f))
 				ship_strategy : FORWARD
 
 				 : Operator

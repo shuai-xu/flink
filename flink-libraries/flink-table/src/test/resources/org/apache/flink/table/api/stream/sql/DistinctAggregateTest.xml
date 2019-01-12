@@ -22,7 +22,7 @@ limitations under the License.
 StreamExecGroupAggregate(groupBy=[a, b, c], select=[a, b, c])
 +- StreamExecExchange(distribution=[hash[a, b, c]])
    +- StreamExecCalc(select=[a, b, c])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -32,7 +32,7 @@ StreamExecGroupAggregate(groupBy=[a, b, c], select=[a, b, c])
 StreamExecGroupWindowAggregate(window=[TumblingGroupWindow('w$, 'rowtime, 900000.millis)], select=[COUNT(DISTINCT a) AS EXPR$0, SUM(a) AS EXPR$1])
 +- StreamExecExchange(distribution=[single])
    +- StreamExecCalc(select=[rowtime, a])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -42,7 +42,7 @@ StreamExecGroupWindowAggregate(window=[TumblingGroupWindow('w$, 'rowtime, 900000
 StreamExecGroupAggregate(groupBy=[c], select=[c, SUM(DISTINCT a) AS EXPR$1, SUM(a) AS EXPR$2, COUNT(DISTINCT b) AS EXPR$3])
 +- StreamExecExchange(distribution=[hash[c]])
    +- StreamExecCalc(select=[c, a, b])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -52,7 +52,7 @@ StreamExecGroupAggregate(groupBy=[c], select=[c, SUM(DISTINCT a) AS EXPR$1, SUM(
 StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 3600000.millis, 900000.millis)], select=[COUNT(DISTINCT a) AS EXPR$0, SUM(DISTINCT a) AS EXPR$1, MAX(DISTINCT a) AS EXPR$2])
 +- StreamExecExchange(distribution=[single])
    +- StreamExecCalc(select=[rowtime, a])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -62,7 +62,7 @@ StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 3600000
 StreamExecGroupWindowAggregate(groupBy=[a], window=[SessionGroupWindow('w$, 'rowtime, 900000.millis)], select=[a, COUNT(a) AS EXPR$1, SUM(DISTINCT c) AS EXPR$2])
 +- StreamExecExchange(distribution=[hash[a]])
    +- StreamExecCalc(select=[a, rowtime, c])
-      +- StreamExecDataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

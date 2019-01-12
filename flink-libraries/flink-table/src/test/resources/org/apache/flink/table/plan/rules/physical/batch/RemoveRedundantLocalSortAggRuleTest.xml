@@ -31,8 +31,8 @@ LogicalProject(EXPR$0=[$1])
       +- LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5])
          +- LogicalFilter(condition=[AND(=($0, $3), LIKE($2, 'He%'))])
             +- LogicalJoin(condition=[true], joinType=[inner])
-               :- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
-               +- LogicalTableScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d, e, f]]]])
+               :- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
+               +- LogicalTableScan(table=[[builtin, default, y, source: [selectedFields=[d, e, f]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -44,9 +44,9 @@ Calc(select=[EXPR$0])
          +- HashJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin], build=[left])
             :- Exchange(distribution=[hash[a]])
             :  +- Calc(select=[a, b], where=[LIKE(c, 'He%')])
-            :     +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+            :     +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
             +- Exchange(distribution=[hash[d]])
-               +- TableSourceScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d]]]], fields=[d])
+               +- TableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d]]]], fields=[d])
 ]]>
     </Resource>
   </TestCase>
@@ -65,8 +65,8 @@ LogicalProject(EXPR$0=[$1])
       +- LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5])
          +- LogicalFilter(condition=[AND(=($0, $3), LIKE($2, 'He%'))])
             +- LogicalJoin(condition=[true], joinType=[inner])
-               :- LogicalTableScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]])
-               +- LogicalTableScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d, e, f]]]])
+               :- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
+               +- LogicalTableScan(table=[[builtin, default, y, source: [selectedFields=[d, e, f]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -77,9 +77,9 @@ Calc(select=[EXPR$0])
       +- SortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin])
          :- Exchange(distribution=[hash[a]])
          :  +- Calc(select=[a, b], where=[LIKE(c, 'He%')])
-         :     +- TableSourceScan(table=[[default_catalog, default_db, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+         :     +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
          +- Exchange(distribution=[hash[d]])
-            +- TableSourceScan(table=[[default_catalog, default_db, y, source: [selectedFields=[d]]]], fields=[d])
+            +- TableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d]]]], fields=[d])
 ]]>
     </Resource>
   </TestCase>

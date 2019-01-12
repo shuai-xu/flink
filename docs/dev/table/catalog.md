@@ -33,7 +33,7 @@ All registered catalogs are managed by a `CatalogManager` instance in a `TableEn
 
 For example, a previous query as `select * from mycatalog.mydb.myTable` can be shortened as `select * from myTable`. Querying tables in a different databases under the default catalog would be `select * from mydb2.myTable`.
 
-`CatalogManager` always has a built-in `FlinkInMemoryCatalog` with name of `default_catalog` and a built-in default database `default_db`. If no catalog is explicitly set as default catalog, this built-in one will be the default catalog. All temp meta-objects will be registered in this catalog. Users can set default catalog and database via `TableEnvironment.setDefaultDatabase()` in Table API or `use catalog.db` in Flink SQL Cli.
+`CatalogManager` always has a built-in `FlinkInMemoryCatalog` with name of `builtin` and a built-in default database `default`. If no catalog is explicitly set as default catalog, this built-in one will be the default catalog. All temp meta-objects will be registered in this catalog. Users can set default catalog and database via `TableEnvironment.setDefaultDatabase()` in Table API or `use catalog.db` in Flink SQL Cli.
 
 * This will be replaced by the TOC
 {:toc}

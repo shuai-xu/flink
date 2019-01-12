@@ -25,6 +25,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for FlinkInMemoryCatalog.
@@ -46,11 +48,12 @@ public class FlinkInMemoryCatalogTest extends CatalogTestBase {
 		CatalogDatabase schema = createDb();
 		catalog.createDatabase(db1, schema, false);
 
-		assertEquals(db1, catalog.listDatabases().get(0));
+		assertTrue(catalog.listDatabases().contains(db1));
 
 		catalog.renameDatabase(db1, db2, false);
 
-		assertEquals(db2, catalog.listDatabases().get(0));
+		assertTrue(catalog.listDatabases().contains(db2));
+		assertFalse(catalog.listDatabases().contains(db1));
 	}
 
 	@Test(expected = DatabaseNotExistException.class)

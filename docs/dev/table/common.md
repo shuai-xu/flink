@@ -1137,7 +1137,7 @@ SortMergeJoin(where=[AND(=(revSum, revAvg0), <>(cID, cID0))], join=[cID, cName, 
 :  +- SortAggregate(isMerge=[false], groupBy=[cID, cName], select=[cID, cName, SUM(revenue) AS revSum, AVG(revenue) AS revAvg], reuse_id=[1])
 :     +- Sort(orderBy=[cID ASC, cName ASC])
 :        +- Exchange(distribution=[hash[cID, cName]])
-:           +- TableSourceScan(table=[[default_catalog, default_db, Orders, source: [selectedFields=[cID, cName, revenue]]]], fields=[cID, cName, revenue])
+:           +- TableSourceScan(table=[[builtin, default, Orders, source: [selectedFields=[cID, cName, revenue]]]], fields=[cID, cName, revenue])
 +- Exchange(distribution=[hash[revAvg]])
    +- Reused(reference_id=[1])
 {% endhighlight %}
@@ -1196,14 +1196,14 @@ println(explanation)
 == Abstract Syntax Tree ==
 LogicalUnion(all=[true])
   LogicalFilter(condition=[LIKE($1, 'F%')])
-    LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-  LogicalTableScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
+    LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
+  LogicalTableScan(table=[[builtin, default, _DataStreamTable_1]])
 
 == Optimized Logical Plan ==
 DataStreamUnion(union=[count, word])
   DataStreamCalc(select=[count, word], where=[LIKE(word, 'F%')])
-    DataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_0]])
-  DataStreamScan(table=[[default_catalog, default_db, _DataStreamTable_1]])
+    DataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+  DataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
 
 == Physical Execution Plan ==
 Stage 1 : Data Source
