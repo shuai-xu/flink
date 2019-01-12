@@ -117,15 +117,15 @@ retrieve an `Iterable` over all currently stored mappings. Mappings are added us
 views for mappings, keys and values can be retrieved using `entries()`, `keys()` and `values()` respectively.
 
 * `SortedMapState<UK, UV>`: This keeps a list of sorted mappings. You can put key-value pairs into the state and
-retrieve an `Iterable` over all currently stored mappings. Mappings are add using `put(UK, UV)` or `putAll(Map<UK, UV)`.
+retrieve an `Iterable` over all currently stored mappings. Mappings are added using `put(UK, UV)` or `putAll(Map<UK, UV)`.
 The value associated with a user key can be retrieved using `get(UK)`. The iterable views for mappings, keys
 and values can be retrieved using `entries()`, `keys()`, and `values()` respectively. You can retrieve the first and
 last entry of the stored mappings, using `firstEntry()`, and `lastEntry()`, respectively. The head iterable view for mappings,
 tail iterable view and sub iterable view of the current sorted mappings can be retrieved by `headIterator()`,
 `tailIterator` and `subIterator`. **`Be careful when using SortedMapState. For RocksDBStateBackend, 
-we only support BytewiseComparator. The serialized forms in BytewiseComparator are identical to that of the values
-only when the numbers to compare are both not negative. Serializers under org.apache.flink.table.typeutils.ordered 
-maybe helpful if you want to use SortedMapState.`**
+we only support BytewiseComparator. The comparison of the serialized forms are identical to that of the objects only 
+when the numbers to compare are both not negative. Serializers under org.apache.flink.table.typeutils.ordered 
+would be helpful if you want to use SortedMapState.`**
 
 All types of state also have a method `clear()` that clears the state for the currently
 active key, i.e. the key of the input element.
