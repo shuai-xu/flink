@@ -120,9 +120,5 @@ deployment:
 #      type: hive
 #      connector:
 #        hive.metastore.uris: thrift://localhost:9083
-#      is-default: true
+#      is-default: false
 #      default-database: default
-#  - name: myflink
-#    catalog:
-#      type: flink_in_memory
-#      default-database: mydefault
