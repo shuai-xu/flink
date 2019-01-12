@@ -19,6 +19,7 @@
 package org.apache.flink.table.util
 
 import org.apache.flink.api.common.JobExecutionResult
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.api._
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
@@ -29,7 +30,9 @@ import org.apache.flink.table.sources.TableSource
 
 import _root_.scala.collection.mutable
 
-class MockTableEnvironment extends TableEnvironment(new TableConfig) {
+class MockTableEnvironment extends TableEnvironment(
+  StreamExecutionEnvironment.getExecutionEnvironment,
+  new TableConfig) {
 
   val tableSources = new mutable.HashMap[String, TableSource]()
 

@@ -40,6 +40,7 @@ import org.apache.flink.table.plan.cost.{FlinkBatchCost, FlinkCostFactory}
 import org.apache.flink.table.plan.logical.{LogicalNode, SinkNode}
 import org.apache.flink.table.plan.nodes.exec.BatchExecNode
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExecSink}
+import org.apache.flink.table.plan.nodes.process.DAGProcessContext
 import org.apache.flink.table.plan.optimize.{BatchOptimizeContext, FlinkBatchPrograms}
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
@@ -78,9 +79,9 @@ import _root_.scala.util.{Failure, Success, Try}
  */
 @InterfaceStability.Evolving
 class BatchTableEnvironment(
-    private[flink] val streamEnv: StreamExecutionEnvironment,
+    val streamEnv: StreamExecutionEnvironment,
     config: TableConfig)
-    extends TableEnvironment(config) {
+    extends TableEnvironment(streamEnv, config) {
 
   private val ruKeeper = new RunningUnitKeeper(this)
 
@@ -485,6 +486,10 @@ class BatchTableEnvironment(
     val nodeDag = postOptimizedPlan.map(_.asInstanceOf[BatchExecNode[_]])
 
     // TODO calc resource here
+
+    val dagProcessors = getConfig.getBatchDAGProcessors
+    val context = new DAGProcessContext(this)
+    dagProcessors.process(nodeDag, context)
 
     dumpOptimizedPlanIfNeed(nodeDag)
     nodeDag

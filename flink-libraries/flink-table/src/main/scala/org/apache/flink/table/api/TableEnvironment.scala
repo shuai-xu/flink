@@ -45,7 +45,7 @@ import org.apache.flink.table.plan.logical.{CatalogNode, LogicalNode, LogicalRel
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
 import org.apache.flink.table.sinks._
-import org.apache.flink.table.sources.{LookupableTableSource, TableSource}
+import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, FunctionCatalog}
 
@@ -65,7 +65,6 @@ import org.apache.commons.lang3.StringUtils
 import _root_.java.lang.reflect.Modifier
 import _root_.java.util
 import _root_.java.util.concurrent.atomic.AtomicInteger
-
 import org.apache.flink.table.factories.TableFactoryUtil
 import org.apache.flink.table.temptable.FlinkTableServiceManager
 import org.apache.flink.table.util.TableProperties
@@ -81,7 +80,9 @@ import _root_.scala.collection.mutable.ArrayBuffer
   *
   * @param config The configuration of the TableEnvironment
   */
-abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
+abstract class TableEnvironment(
+    private[flink] val execEnv: JavaStreamExecEnv,
+    val config: TableConfig) extends AutoCloseable {
 
   protected val DEFAULT_JOB_NAME = "Flink Exec Table Job"
 

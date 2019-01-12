@@ -24,9 +24,10 @@ import org.apache.flink.table.api.OperatorType.OperatorType
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.util.Preconditions
-import _root_.java.util.TimeZone
 
+import _root_.java.util.TimeZone
 import org.apache.flink.service.ServiceDescriptor
+import org.apache.flink.table.plan.nodes.process.ChainedDAGProcessors
 import org.apache.flink.table.temptable.FlinkTableServiceFactoryDescriptor
 import org.apache.flink.table.temptable.util.TableServiceUtil
 
@@ -59,6 +60,41 @@ class TableConfig {
     * Defines user-defined configuration
     */
   private var conf = GlobalConfiguration.loadConfiguration()
+
+  /**
+    * Defines user-defined chained batch DAG processors
+    */
+  private var batchDAGProcessors: ChainedDAGProcessors = ChainedDAGProcessors.buildBatchProcessors()
+
+  /**
+    * Defines user-defined chained stream DAG processors
+    */
+  private var streamDAGProcessors: ChainedDAGProcessors =
+    ChainedDAGProcessors.buildStreamProcessors()
+
+  /**
+    * Get chained batch DAG processors
+    */
+  def getBatchDAGProcessors: ChainedDAGProcessors = batchDAGProcessors
+
+  /**
+    * Get chained stream DAG processors
+    */
+  def getStreamDAGProcessors: ChainedDAGProcessors = streamDAGProcessors
+
+  /**
+    * Set chained batch DAG processors
+    */
+  def setBatchDAGProcessors(dagProcessors: ChainedDAGProcessors): Unit = {
+    this.batchDAGProcessors = dagProcessors
+  }
+
+  /**
+    * Set chained stream DAG processors
+    */
+  def setStreamDAGProcessors(dagProcessors: ChainedDAGProcessors): Unit = {
+    this.streamDAGProcessors = dagProcessors
+  }
 
   /**
     * Sets the timezone for date/time/timestamp conversions.

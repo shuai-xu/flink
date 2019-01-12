@@ -40,6 +40,7 @@ import org.apache.flink.table.plan.logical.{LogicalRelNode, SinkNode}
 import org.apache.flink.table.plan.nodes.calcite._
 import org.apache.flink.table.plan.nodes.exec.StreamExecNode
 import org.apache.flink.table.plan.nodes.physical.stream._
+import org.apache.flink.table.plan.nodes.process.DAGProcessContext
 import org.apache.flink.table.plan.optimize.{FlinkStreamPrograms, StreamOptimizeContext}
 import org.apache.flink.table.plan.schema.{TableSourceSinkTable, _}
 import org.apache.flink.table.plan.stats.FlinkStatistic
@@ -83,9 +84,9 @@ import org.apache.calcite.rel.`type`.RelDataType
   */
 @InterfaceStability.Evolving
 abstract class StreamTableEnvironment(
-    val execEnv: StreamExecutionEnvironment,
+    execEnv: StreamExecutionEnvironment,
     config: TableConfig)
-  extends TableEnvironment(config) {
+  extends TableEnvironment(execEnv, config) {
 
   // prefix  for unique table names.
   override private[flink] val tableNamePrefix = "_DataStreamTable_"
@@ -860,6 +861,10 @@ abstract class StreamTableEnvironment(
     val nodeDag = nodes.map(_.asInstanceOf[StreamExecNode[_]])
 
     // TODO calc resource here
+
+    val dagProcessors = getConfig.getStreamDAGProcessors
+    val context = new DAGProcessContext(this)
+    dagProcessors.process(nodeDag, context)
 
     nodeDag
   }

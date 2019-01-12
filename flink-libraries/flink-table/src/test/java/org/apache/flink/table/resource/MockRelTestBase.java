@@ -19,6 +19,8 @@
 package org.apache.flink.table.resource;
 
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
+import org.apache.flink.table.api.BatchTableEnvironment;
+import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
@@ -68,9 +70,15 @@ public class MockRelTestBase {
 
 	protected void connect(int relIndex, int... inputRelIndexes) {
 		List<RelNode> inputs = new ArrayList<>(inputRelIndexes.length);
+		List<ExecNode<BatchTableEnvironment, ?>> inputNodes = new ArrayList<>(inputRelIndexes.length);
 		for (int inputIndex : inputRelIndexes) {
-			inputs.add(relList.get(inputIndex));
+			RelNode input = relList.get(inputIndex);
+			inputs.add(input);
+			if (input instanceof ExecNode) {
+				inputNodes.add((ExecNode) input);
+			}
 		}
+		when(relList.get(relIndex).getInputNodes()).thenReturn(inputNodes);
 		when(relList.get(relIndex).getInputs()).thenReturn(inputs);
 		if (inputRelIndexes.length == 1 && relList.get(relIndex) instanceof SingleRel) {
 			when(((SingleRel) relList.get(relIndex)).getInput()).thenReturn(relList.get(inputRelIndexes[0]));
