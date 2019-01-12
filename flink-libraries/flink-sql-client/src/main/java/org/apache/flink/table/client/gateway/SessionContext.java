@@ -53,10 +53,6 @@ public class SessionContext {
 		sessionProperties.put(key, value);
 	}
 
-	public Map<String, String> getSessionProperties() {
-		return sessionProperties;
-	}
-
 	public void resetSessionProperties() {
 		sessionProperties.clear();
 	}

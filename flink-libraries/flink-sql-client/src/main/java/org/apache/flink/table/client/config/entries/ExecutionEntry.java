@@ -226,7 +226,7 @@ public class ExecutionEntry extends ConfigEntry {
 			.orElseGet(() ->
 				useDefaultValue(
 					EXECUTION_RESTART_STRATEGY_TYPE,
-					null,
+					RestartStrategies.fallBackRestart(),
 					EXECUTION_RESTART_STRATEGY_TYPE_VALUE_FALLBACK));
 	}
 

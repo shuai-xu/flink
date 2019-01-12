@@ -529,12 +529,8 @@ public class LocalExecutor implements Executor {
 	 * Creates or reuses the execution context.
 	 */
 	private synchronized ExecutionContext<?> getOrCreateExecutionContext(SessionContext session) throws SqlExecutionException {
-		if (executionContext == null
-			|| (!executionContext.getSessionContext().equals(session)
-				&& session.getSessionProperties().get("execution.type").equals(
-					executionContext.getSessionContext().getSessionProperties().get("execution.type")))) {
+		if (executionContext == null || !executionContext.getSessionContext().equals(session)) {
 			try {
-				// execution.type changes, we should not share TableEnvironment any more
 				executionContext = new ExecutionContext<>(defaultEnvironment, session, dependencies,
 					flinkConfig, commandLineOptions, commandLines);
 			} catch (Throwable t) {
@@ -542,7 +538,7 @@ public class LocalExecutor implements Executor {
 				throw new SqlExecutionException("Could not create execution context.", t);
 			}
 		}
-		return executionContext.enrich(session);
+		return executionContext;
 	}
 
 	// --------------------------------------------------------------------------------------------
