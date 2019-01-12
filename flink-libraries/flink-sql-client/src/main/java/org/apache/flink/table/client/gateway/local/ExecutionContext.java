@@ -146,6 +146,38 @@ public class ExecutionContext<T> {
 		environmentInstance = new EnvironmentInstance();
 	}
 
+	private ExecutionContext(
+		SessionContext sessionContext,
+		Environment mergedEnv,
+		List<URL> dependencies,
+		ClassLoader classLoader,
+		Map<String, TableSource> tableSources,
+		Map<String, TableSink<?>> tableSinks,
+		Map<String, UserDefinedFunction> functions,
+		Configuration flinkConfig,
+		CommandLine commandLine,
+		CustomCommandLine<T> activeCommandLine,
+		RunOptions runOptions,
+		T clusterId,
+		ClusterSpecification clusterSpec,
+		EnvironmentInstance environmentInstance
+	) {
+		this.sessionContext = sessionContext;
+		this.mergedEnv = mergedEnv;
+		this.dependencies = dependencies;
+		this.classLoader = classLoader;
+		this.tableSources = tableSources;
+		this.tableSinks = tableSinks;
+		this.functions = functions;
+		this.flinkConfig = flinkConfig;
+		this.commandLine = commandLine;
+		this.activeCommandLine = activeCommandLine;
+		this.runOptions = runOptions;
+		this.clusterId = clusterId;
+		this.clusterSpec = clusterSpec;
+		this.environmentInstance = EnvironmentInstance.enrich(environmentInstance, sessionContext);
+	}
+
 	public SessionContext getSessionContext() {
 		return sessionContext;
 	}
@@ -263,6 +295,10 @@ public class ExecutionContext<T> {
 			return factory.createBatchTableSink(sinkProperties);
 		}
 		throw new SqlExecutionException("Unsupported execution type for sinks.");
+	}
+
+	public static EnvironmentInstance enrich(EnvironmentInstance envInst, SessionContext context) {
+
 	}
 
 	// --------------------------------------------------------------------------------------------
