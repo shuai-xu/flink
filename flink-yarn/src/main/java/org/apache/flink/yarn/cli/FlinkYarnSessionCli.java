@@ -480,7 +480,8 @@ public class FlinkYarnSessionCli extends AbstractCustomCommandLine<ApplicationId
 		String jobManagerOption = commandLine.getOptionValue(addressOption.getOpt(), null);
 		boolean yarnJobManager = ID.equals(jobManagerOption);
 		boolean yarnAppId = commandLine.hasOption(applicationId.getOpt());
-		return yarnJobManager || yarnAppId || (isYarnPropertiesFileMode(commandLine) && yarnApplicationIdFromYarnProperties != null);
+		return yarnJobManager || yarnAppId || (isYarnPropertiesFileMode(commandLine) && yarnApplicationIdFromYarnProperties != null &&
+			checkYarnApplicationRunning(yarnApplicationIdFromYarnProperties));
 	}
 
 	@Override
@@ -1074,5 +1075,29 @@ public class FlinkYarnSessionCli extends AbstractCustomCommandLine<ApplicationId
 				yarnClient,
 				false);
 		}
+	}
+
+	private boolean checkYarnApplicationRunning(ApplicationId applicationId) {
+		boolean running = true;
+		final YarnClient yarnClient = YarnClient.createYarnClient();
+		yarnClient.init(yarnConfiguration);
+		yarnClient.start();
+		try {
+			if (!yarnClient.getApplicationReport(applicationId).getYarnApplicationState()
+				.equals(YarnApplicationState.RUNNING)) {
+				running = false;
+			}
+		} catch (YarnException | IOException e) {
+			LOG.warn("Could not get application state for {}." +
+				"The job will not be submitted to YARN session.", applicationId.toString());
+			running = false;
+		}
+		yarnClient.stop();
+
+		// Delete the YARN properties file when the application is not running.
+		if (!running) {
+			deleteYarnPropertiesFile();
+		}
+		return running;
 	}
 }
