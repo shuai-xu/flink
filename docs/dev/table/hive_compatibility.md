@@ -1,7 +1,7 @@
 ---
 title: "Hive Compatibility"
 is_beta: true
-nav-parent_id: batch
+nav-parent_id: tableapi
 nav-pos: 9
 ---
 <!--
@@ -62,8 +62,8 @@ Hive Data Integration
 Please refer to [Connecting to other systems]({{ site.baseurl }}/dev/batch/connectors.html) for how to connect an existing Hive service with Flink. 
 
 
-Quick Example
--------------
+Example
+-------
 
 Here we present a quick example of querying Hive metadata and data in Flink.
 
@@ -128,7 +128,129 @@ Note that, if users are using Flink yarn-session mode, you'll get the sessionId 
 
 If users are using Flink local mode, no other config is required.
 
-### Check Hive
+Make sure all the required jars are in the `/lib` dir, including `flink-connector-hive` jar.
+
+Get Flink SQL Cli running by execute command
+
+```
+$ ./bin/sql-client.sh embedded
+```
+
+### Prepare Hive
+
+Assuming that Hive 2.3.4 has been successfully set up, let's prepare some data in Hive.
+
+First, we locate the current database in Hive, which is `default` in this case, and make sure no table exists in the database at this time.
+
+```
+hive> show databases;
+OK
+default
+Time taken: 0.841 seconds, Fetched: 1 row(s)
+
+hive> show tables;
+OK
+Time taken: 0.087 seconds
+```
+
+Second, we create a simple table with two columns - name as string and value as double - in a textfile format and each row is delimited by ','.
+
+```
+hive> CREATE TABLE mytable(name string, value double) row format delimited fields terminated by ',' stored as textfile;
+OK
+Time taken: 0.127 seconds
+```
+
+This way, we created a table named `mytable` under the `default` database in Hive.
+
+
+Then let's load the data into table `mytable` and make sure it's successful. Here's some data we prepared to load into the table, and assume the file path is '/tmp/data.txt'. 
+
+```txt
+Tom,4.72
+John,8.00
+Tom,24.2
+Bob,3.14
+Bob,4.72
+Tom,34.9
+Mary,4.79
+Tiff,2.72
+Bill,4.33
+Mary,77.7
+```
+
+Load and check data by running: 
+
+```
+hive> load data local inpath '/tmp/data.txt' into table mytable;
+Loading data to table default.mytable
+OK
+Time taken: 0.324 seconds
+
+hive> select * from mytable;
+OK
+Tom	4.72
+John	8.0
+Tom	24.2
+Bob	3.14
+Bob	4.72
+Tom	34.9
+Mary	4.79
+Tiff	2.72
+Bill	4.33
+Mary	77.7
+Time taken: 0.097 seconds, Fetched: 10 row(s)
+```
+
+### Access Hive metadata and data in Flink SQL Cli
+
+In Flink SQL Cli, we can start using Hive.
+
+```
+// See the catalog 'myhive' in the yaml config file is registered successfully and showing up here
+Flink SQL> show catalogs;
+myhive
+builtin
+
+// Set the default catalog and database to be 'myhive' catalog and the 'default' database
+Flink SQL> use myhive.default;
+
+// See the previously registered table 'mytable'
+Flink SQL> show tables;
+mytable
+
+// The table schema that Flink sees are the same that we created in Hive,  two columns - name as string and value as double 
+Flink SQL> describe mytable;
+root
+ |-- name: name
+ |-- type: StringType
+ |-- isNullable: true
+ |-- name: value
+ |-- type: DoubleType
+ |-- isNullable: true
+
+
+Flink SQL> select * from mytable;
+
+______name ______vaue
+
+      Tom        4.72
+      John	     8.0
+      Tom	     24.2
+      Bob	     3.14
+      Bob	     4.72
+      Tom	     34.9
+      Mary	     4.79
+      Tiff	     2.72
+      Bill	     4.33
+      Mary	     77.7
+
+```
+
+
+
+
+## Another Example
 
 We have prepared two tables in Hive, order_details and products, which can be described in Hive SQL Cli:
 
@@ -156,18 +278,9 @@ discontinued          int
 );
 ```
 
-### Access Hive metadata and data in Flink SQL Cli
-
-Let's get Flink SQL Cli running by execute command
-
-```
-$ ./bin/sql-client.sh embedded
-```
-
 We can run a few SQL query to get Hive data
 
 ```sql
-
 Flink SQL> select * from products;
 
 Flink SQL> select count(*) from order_details;
