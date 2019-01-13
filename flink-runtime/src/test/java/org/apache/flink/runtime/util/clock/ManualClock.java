@@ -46,4 +46,8 @@ public class ManualClock extends Clock {
 	public void advanceTime(long duration, TimeUnit timeUnit) {
 		currentTime.addAndGet(timeUnit.toNanos(duration));
 	}
+
+	public void setNanoTime(long time) {
+		currentTime.set(time);
+	}
 }

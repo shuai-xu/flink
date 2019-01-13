@@ -26,10 +26,15 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.metrics.MetricRegistry;
 import org.apache.flink.runtime.metrics.dump.QueryScopeInfo;
 import org.apache.flink.runtime.metrics.scope.ScopeFormat;
+import org.apache.flink.runtime.util.ExecutorThreadFactory;
+import org.apache.flink.util.ExecutorUtils;
 import org.apache.flink.util.Preconditions;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Special {@link org.apache.flink.metrics.MetricGroup} representing a TaskManager.
@@ -45,6 +50,8 @@ public class TaskManagerMetricGroup extends ComponentMetricGroup<TaskManagerMetr
 	private final String hostname;
 
 	private final String taskManagerId;
+
+	private ScheduledExecutorService scheduledExecutorService;
 
 	public TaskManagerMetricGroup(MetricRegistry registry, String hostname, String taskManagerId) {
 		super(registry, registry.getScopeFormats().getTaskManagerFormat().formatScope(hostname, taskManagerId), null);
@@ -135,6 +142,28 @@ public class TaskManagerMetricGroup extends ComponentMetricGroup<TaskManagerMetr
 		return jobs.size();
 	}
 
+	public ScheduledExecutorService getMetricExecutor() {
+		synchronized (this) {
+			if (scheduledExecutorService == null) {
+				scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(
+					new ExecutorThreadFactory("Flink-TaskManager-Metric-Executor"));
+			}
+			return scheduledExecutorService;
+		}
+	}
+
+	@Override
+	public void close() {
+		synchronized (this) {
+			if (scheduledExecutorService != null) {
+				ExecutorUtils.gracefulShutdown(
+					1000L,
+					TimeUnit.MILLISECONDS,
+					scheduledExecutorService);
+			}
+		}
+		super.close();
+	}
 	// ------------------------------------------------------------------------
 	//  Component Metric Group Specifics
 	// ------------------------------------------------------------------------

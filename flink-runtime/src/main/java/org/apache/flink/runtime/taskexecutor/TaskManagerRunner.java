@@ -349,7 +349,8 @@ public class TaskManagerRunner implements FatalErrorHandler, AutoCloseableAsync 
 		TaskManagerMetricGroup taskManagerMetricGroup = MetricUtils.instantiateTaskManagerMetricGroup(
 			metricRegistry,
 			taskManagerServices.getTaskManagerLocation(),
-			taskManagerServices.getNetworkEnvironment());
+			taskManagerServices.getNetworkEnvironment(),
+			configuration);
 
 		TaskManagerConfiguration taskManagerConfiguration = TaskManagerConfiguration.fromConfiguration(configuration);
 

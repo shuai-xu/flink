@@ -68,6 +68,7 @@ import org.apache.flink.runtime.leaderretrieval.LeaderRetrievalListener;
 import org.apache.flink.runtime.leaderretrieval.LeaderRetrievalService;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.StackTraceSampleResponse;
+import org.apache.flink.runtime.metrics.MetricNames;
 import org.apache.flink.runtime.metrics.groups.TaskManagerMetricGroup;
 import org.apache.flink.runtime.metrics.groups.TaskMetricGroup;
 import org.apache.flink.runtime.preaggregatedaccumulators.AccumulatorAggregationManager;
@@ -157,12 +158,6 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
 	public static final String TASK_MANAGER_NAME = "taskmanager";
 
-	@Nullable
-	private final Double capacityCpuCore;
-
-	@Nullable
-	private final Integer capacityMemoryMB;
-
 	/** The access to the leader election and retrieval services. */
 	private final HighAvailabilityServices haServices;
 
@@ -249,12 +244,6 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
 		super(rpcService, AkkaRpcServiceUtils.createRandomName(TASK_MANAGER_NAME));
 
-		double capacityCpu = taskManagerConfiguration.getConfiguration().getDouble(TaskManagerOptions.TASK_MANAGER_CAPACITY_CPU_CORE);
-		int capacityMem = taskManagerConfiguration.getConfiguration().getInteger(TaskManagerOptions.TASK_MANAGER_CAPACITY_MEMORY_MB);
-
-		this.capacityCpuCore = capacityCpu;
-		this.capacityMemoryMB = capacityMem;
-
 		checkArgument(taskManagerConfiguration.getNumberSlots() > 0, "The number of slots has to be larger than 0.");
 
 		this.taskManagerConfiguration = checkNotNull(taskManagerConfiguration);
@@ -297,6 +286,16 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		this.resourceManagerAddress = null;
 		this.resourceManagerConnection = null;
 		this.currentRegistrationTimeoutId = null;
+
+		double capacityCpu = taskManagerConfiguration.getConfiguration().getDouble(TaskManagerOptions.TASK_MANAGER_CAPACITY_CPU_CORE);
+		int capacityMem = taskManagerConfiguration.getConfiguration().getInteger(TaskManagerOptions.TASK_MANAGER_CAPACITY_MEMORY_MB);
+
+		taskManagerMetricGroup.addGroup(MetricNames.PROCESS_TREE)
+			.addGroup(MetricNames.CPU).gauge("Allocated", () -> capacityCpu);
+		// Convert MB to Byte
+		taskManagerMetricGroup.addGroup(MetricNames.PROCESS_TREE)
+			.addGroup(MetricNames.MEMORY)
+			.gauge("Allocated", () -> capacityMem > 0 ? 1024L * 1024L * capacityMem : capacityMem);
 	}
 
 	// ------------------------------------------------------------------------

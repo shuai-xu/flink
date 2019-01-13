@@ -18,13 +18,17 @@
 
 package org.apache.flink.runtime.metrics.util;
 
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.MetricOptions;
 import org.apache.flink.metrics.Gauge;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.runtime.io.network.NetworkEnvironment;
+import org.apache.flink.runtime.metrics.MetricNames;
 import org.apache.flink.runtime.metrics.MetricRegistry;
 import org.apache.flink.runtime.metrics.groups.JobManagerMetricGroup;
 import org.apache.flink.runtime.metrics.groups.TaskManagerMetricGroup;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
+import org.apache.flink.runtime.util.ProcfsBasedProcessTree;
 import org.apache.flink.util.OperatingSystem;
 import org.apache.flink.util.Preconditions;
 
@@ -48,6 +52,8 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.ThreadMXBean;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Utility class to register pre-defined metric sets.
@@ -78,7 +84,9 @@ public class MetricUtils {
 	public static TaskManagerMetricGroup instantiateTaskManagerMetricGroup(
 			MetricRegistry metricRegistry,
 			TaskManagerLocation taskManagerLocation,
-			NetworkEnvironment network) {
+			NetworkEnvironment network,
+			Configuration configuration) throws IOException {
+
 		final TaskManagerMetricGroup taskManagerMetricGroup = new TaskManagerMetricGroup(
 			metricRegistry,
 			taskManagerLocation.getHostname(),
@@ -93,7 +101,41 @@ public class MetricUtils {
 			.addGroup("Network");
 		instantiateNetworkMetrics(networkGroup, network);
 
+		final boolean enableProcessTreeMetrics = configuration.getBoolean(MetricOptions.PROCESS_TREE_TM_METRICS_ENABLED);
+		if (enableProcessTreeMetrics) {
+			instantiateProcessTreeMetrics(taskManagerMetricGroup, statusGroup, configuration);
+		}
+
 		return taskManagerMetricGroup;
+	}
+
+	private static void instantiateProcessTreeMetrics(
+		TaskManagerMetricGroup taskManagerMetricGroup,
+		MetricGroup statusGroup,
+		Configuration configuration) throws IOException {
+
+		// Only linux supported
+		if (!IS_PROC_FS_AVAILABLE) {
+			LOG.info("Only proc filesystem based operating system supports process tree metrics");
+			return;
+		}
+
+		final ScheduledExecutorService scheduledExecutorService = taskManagerMetricGroup.getMetricExecutor();
+		final boolean smapsEnabled = configuration.getBoolean(MetricOptions.PROCESS_TREE_TM_METRICS_SMAPS_BASED_ENABLED);
+		final long updateInterval = configuration.getLong(MetricOptions.PROCESS_TREE_TM_METRICS_UPDATE_INTERVAL);
+
+		final ProcessTreeUpdater updater = new ProcessTreeUpdater(smapsEnabled);
+		scheduledExecutorService.scheduleAtFixedRate(updater, updateInterval, updateInterval, TimeUnit.MILLISECONDS);
+
+		final MetricGroup processTreeMetricGroup = statusGroup.addGroup(MetricNames.PROCESS_TREE);
+		processTreeMetricGroup.gauge("ProcessCount", () -> updater.processCountOfProcessTree);
+
+		final MetricGroup processTreeCPUMetricGroup = processTreeMetricGroup.addGroup(MetricNames.CPU);
+		processTreeCPUMetricGroup.gauge("Usage", () -> updater.processTreeCPUUsage);
+
+		final MetricGroup processTreeMemoryMetricGroup = processTreeMetricGroup.addGroup(MetricNames.MEMORY);
+		processTreeMemoryMetricGroup.gauge("RSS", () -> updater.processTreeMemoryRSS);
+		processTreeMemoryMetricGroup.gauge("VIRT", () -> updater.processTreeMemoryVIRT);
 	}
 
 	public static void instantiateStatusMetrics(
@@ -413,7 +455,7 @@ public class MetricUtils {
 		private static final String MEMORY_RSS_USE_TOKEN = "VmRSS";
 		private static final String MEM_STAT_FILE = "/proc/self/status";
 
-		public static double getTotalMem() {
+		public static long getTotalMem() {
 			BufferedReader br = null;
 			try {
 				br = new BufferedReader(new FileReader(MEM_STAT_FILE));
@@ -436,7 +478,7 @@ public class MetricUtils {
 					}
 				}
 			}
-			return 0.0;
+			return 0L;
 		}
 
 		public static long getRssMem() {
@@ -471,6 +513,39 @@ public class MetricUtils {
 			String memSize = line.substring(beginIndex, endIndex).trim();
 			// Convert KB to Byte
 			return 1024L * Long.parseLong(memSize);
+		}
+	}
+
+	/**
+	 * Updater that update the process-tree metrics periodically.
+	 */
+	private static class ProcessTreeUpdater implements Runnable {
+
+		private ProcfsBasedProcessTree processTree;
+
+		private int processCountOfProcessTree = 0;
+		private float processTreeCPUUsage = 0;
+		private long processTreeMemoryRSS = 0L;
+		private long processTreeMemoryVIRT = 0L;
+
+		public ProcessTreeUpdater(boolean smapsEnabled) throws IOException {
+			processTree = new ProcfsBasedProcessTree(smapsEnabled);
+		}
+
+		@Override
+		public void run() {
+			try {
+				processTree.updateProcessTree();
+
+				processCountOfProcessTree = processTree.getCurrentProcessIDs().size();
+				// Use proportion instead of percent
+				final float cpuUsagePercent = processTree.getCpuUsagePercent();
+				processTreeCPUUsage = cpuUsagePercent > 0 ? cpuUsagePercent / 100 : cpuUsagePercent;
+				processTreeMemoryRSS = processTree.getRssMemorySize();
+				processTreeMemoryVIRT = processTree.getVirtualMemorySize();
+			} catch (Throwable t) {
+				LOG.warn("Updating metric process tree failed", t);
+			}
 		}
 	}
 }

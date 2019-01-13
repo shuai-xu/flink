@@ -115,6 +115,22 @@ public class MetricOptions {
 		key("metrics.tracing.sample.count-interval")
 			.defaultValue(100);
 
+	public static final ConfigOption<Boolean> PROCESS_TREE_TM_METRICS_ENABLED =
+		key("metrics.process-tree.tm.enabled")
+			.defaultValue(false)
+			.withDescription("Enable process-tree metrics of TM.");
+
+	public static final ConfigOption<Long> PROCESS_TREE_TM_METRICS_UPDATE_INTERVAL =
+		key("metrics.process-tree.tm.update-interval")
+			.defaultValue(10000L)
+			.withDescription("Interval of updating process-tree metrics of TM in milliseconds.");
+
+	public static final ConfigOption<Boolean> PROCESS_TREE_TM_METRICS_SMAPS_BASED_ENABLED =
+		key("metrics.process-tree.tm.smaps-based.enabled")
+			.defaultValue(false)
+			.withDescription("Enable smaps based process-tree metrics of TM, only works when " +
+				PROCESS_TREE_TM_METRICS_ENABLED.key() + " is enabled.");
+
 	private MetricOptions() {
 	}
 }

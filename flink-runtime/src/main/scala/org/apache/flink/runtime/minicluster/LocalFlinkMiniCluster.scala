@@ -246,7 +246,8 @@ class LocalFlinkMiniCluster(
     val taskManagerMetricGroup = MetricUtils.instantiateTaskManagerMetricGroup(
       metricRegistryOpt.get,
       taskManagerServices.getTaskManagerLocation(),
-      taskManagerServices.getNetworkEnvironment())
+      taskManagerServices.getNetworkEnvironment(),
+      config)
 
     val props = getTaskManagerProps(
       taskManagerClass,

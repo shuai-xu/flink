@@ -13,6 +13,21 @@
             <td>Defines the number of measured latencies to maintain at each operator.</td>
         </tr>
         <tr>
+            <td><h5>metrics.process-tree.tm.enabled</h5></td>
+            <td style="word-wrap: break-word;">false</td>
+            <td>Enable process-tree metrics of TM.</td>
+        </tr>
+        <tr>
+            <td><h5>metrics.process-tree.tm.smaps-based.enabled</h5></td>
+            <td style="word-wrap: break-word;">false</td>
+            <td>Enable smaps based process-tree metrics of TM, only works when metrics.process-tree.tm.enabled is enabled.</td>
+        </tr>
+        <tr>
+            <td><h5>metrics.process-tree.tm.update-interval</h5></td>
+            <td style="word-wrap: break-word;">10000</td>
+            <td>Interval of updating process-tree metrics of TM in milliseconds.</td>
+        </tr>
+        <tr>
             <td><h5>metrics.reporter.&#60;name&#62;.&#60;parameter&#62;</h5></td>
             <td style="word-wrap: break-word;">(none)</td>
             <td>Configures the parameter &#60;parameter&#62; for the reporter named &#60;name&#62;.</td>

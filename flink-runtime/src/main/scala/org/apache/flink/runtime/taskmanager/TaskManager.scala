@@ -2037,7 +2037,8 @@ object TaskManager {
     val taskManagerMetricGroup = MetricUtils.instantiateTaskManagerMetricGroup(
       metricRegistry,
       taskManagerServices.getTaskManagerLocation(),
-      taskManagerServices.getNetworkEnvironment())
+      taskManagerServices.getNetworkEnvironment(),
+      configuration)
 
     // create the actor properties (which define the actor constructor parameters)
     val tmProps = getTaskManagerProps(
