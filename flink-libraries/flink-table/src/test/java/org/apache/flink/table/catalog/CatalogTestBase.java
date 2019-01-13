@@ -69,11 +69,13 @@ public abstract class CatalogTestBase {
 		assertTrue(catalog.listAllTables().isEmpty());
 		assertFalse(catalog.tableExists(path1));
 
-		CatalogTable nonPartitionedTable = createTable();
 		catalog.createDatabase(db1, createDb(), false);
-		catalog.createTable(path1, nonPartitionedTable, false);
 
-		assertEquals(nonPartitionedTable, catalog.getTable(path1));
+		// Non-partitioned table
+		CatalogTable table = createTable();
+		catalog.createTable(path1, table, false);
+
+		assertEquals(table, catalog.getTable(path1));
 
 		List<ObjectPath> tables = catalog.listAllTables();
 
@@ -84,18 +86,24 @@ public abstract class CatalogTestBase {
 
 		assertEquals(1, s1Tables.size());
 		assertEquals(path1.getFullName(), tables.get(0).getFullName());
-	}
 
-	@Test
-	public void testCreateParitionedTable() {
-		assertTrue(catalog.listAllTables().isEmpty());
-		assertFalse(catalog.tableExists(path1));
+		catalog.dropTable(path1, false);
 
-		CatalogTable partitionedTable = createPartitionedTable();
-		catalog.createDatabase(db1, createDb(), false);
-		catalog.createTable(path1, partitionedTable, false);
+		// Partitioned table
+		table = createPartitionedTable();
+		catalog.createTable(path1, table, false);
 
-		assertEquals(partitionedTable, catalog.getTable(path1));
+		assertEquals(table, catalog.getTable(path1));
+
+		tables = catalog.listAllTables();
+
+		assertEquals(1, tables.size());
+		assertEquals(path1.getFullName(), tables.get(0).getFullName());
+
+		s1Tables = catalog.listTables(db1);
+
+		assertEquals(1, s1Tables.size());
+		assertEquals(path1.getFullName(), tables.get(0).getFullName());
 	}
 
 	@Test(expected = DatabaseNotExistException.class)
@@ -140,7 +148,18 @@ public abstract class CatalogTestBase {
 	@Test
 	public void testDropTable() {
 		catalog.createDatabase(db1, createDb(), false);
+
+		// Non-partitioned table
 		catalog.createTable(path1, createTable(), false);
+
+		assertTrue(catalog.tableExists(path1));
+
+		catalog.dropTable(path1, false);
+
+		assertFalse(catalog.tableExists(path1));
+
+		// Partitioned table
+		catalog.createTable(path1, createPartitionedTable(), false);
 
 		assertTrue(catalog.tableExists(path1));
 
@@ -162,13 +181,29 @@ public abstract class CatalogTestBase {
 
 	@Test
 	public void testAlterTable() {
-		CatalogTable table = createTable();
 		catalog.createDatabase(db1, createDb(), false);
+
+		// Non-partitioned table
+		CatalogTable table = createTable();
 		catalog.createTable(path1, table, false);
 
 		assertEquals(catalog.getTable(path1), table);
 
 		CatalogTable newTable = createAnotherTable();
+		catalog.alterTable(path1, newTable, false);
+
+		assertNotEquals(table, catalog.getTable(path1));
+		assertEquals(newTable, catalog.getTable(path1));
+
+		catalog.dropTable(path1, false);
+
+		// Partitioned table
+		table = createPartitionedTable();
+		catalog.createTable(path1, table, false);
+
+		assertEquals(catalog.getTable(path1), table);
+
+		newTable = createAnotherPartitionedTable();
 		catalog.alterTable(path1, newTable, false);
 
 		assertNotEquals(table, catalog.getTable(path1));
@@ -465,6 +500,36 @@ public abstract class CatalogTestBase {
 
 	// ------ utilities ------
 
+	protected CatalogTable createTable() {
+		return CatalogTestUtil.createCatalogTable(
+			getTableType(),
+			createTableSchema(),
+			getTableProperties());
+	}
+
+	protected CatalogTable createAnotherTable() {
+		return CatalogTestUtil.createCatalogTable(
+			getTableType(),
+			createAnotherTableSchema(),
+			getTableProperties());
+	}
+
+	protected CatalogTable createPartitionedTable() {
+		return CatalogTestUtil.createCatalogTable(
+			getTableType(),
+			createTableSchema(),
+			getTableProperties(),
+			createPartitionCols());
+	}
+
+	protected CatalogTable createAnotherPartitionedTable() {
+		return CatalogTestUtil.createCatalogTable(
+			getTableType(),
+			createAnotherTableSchema(),
+			getTableProperties(),
+			createPartitionCols());
+	}
+
 	private LinkedHashSet<String> createPartitionCols() {
 		return new LinkedHashSet<String>() {{
 			add("name");
@@ -507,14 +572,6 @@ public abstract class CatalogTestBase {
 		return new CatalogPartition(partitionSpec, partitionProperties);
 	}
 
-	protected CatalogTable createPartitionedTable() {
-		return CatalogTestUtil.createCatalogTable(
-			getTableType(),
-			createTableSchema(),
-			getTableProperties(),
-			createPartitionCols());
-	}
-
 	protected CatalogDatabase createDb() {
 		return new CatalogDatabase(new HashMap<String, String>() {{
 			put("k1", "v1");
@@ -525,20 +582,6 @@ public abstract class CatalogTestBase {
 		return new CatalogDatabase(new HashMap<String, String>() {{
 			put("k2", "v2");
 		}});
-	}
-
-	protected CatalogTable createTable() {
-		return CatalogTestUtil.createCatalogTable(
-			getTableType(),
-			createTableSchema(),
-			getTableProperties());
-	}
-
-	protected CatalogTable createAnotherTable() {
-		return CatalogTestUtil.createCatalogTable(
-			getTableType(),
-			createAnotherTableSchema(),
-			getTableProperties());
 	}
 
 	private TableSchema createTableSchema() {
@@ -554,7 +597,7 @@ public abstract class CatalogTestBase {
 
 	private TableSchema createAnotherTableSchema() {
 		return new TableSchema(
-			new String[] {"first", "name", "year"},
+			new String[] {"first2", "name", "year"},
 			new InternalType[]{
 				DataTypes.STRING,
 				DataTypes.STRING,  // different from create table instance.
