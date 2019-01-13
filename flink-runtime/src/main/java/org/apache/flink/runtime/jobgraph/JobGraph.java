@@ -27,6 +27,7 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.blob.PermanentBlobKey;
 import org.apache.flink.runtime.jobgraph.tasks.JobCheckpointingSettings;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.PlacementConstraint;
 import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.SerializedValue;
 
@@ -87,6 +88,9 @@ public class JobGraph implements Serializable {
 
 	/** flag to enable queued scheduling */
 	private boolean allowQueuedScheduling;
+
+	/** Placement constraints of this job. */
+	private List<PlacementConstraint> placementConstraints = new ArrayList<>();
 
 	// --- checkpointing ---
 
@@ -267,6 +271,14 @@ public class JobGraph implements Serializable {
 
 	public boolean getAllowQueuedScheduling() {
 		return allowQueuedScheduling;
+	}
+
+	public List<PlacementConstraint> getPlacementConstraints() {
+		return placementConstraints;
+	}
+
+	public void addPlacementConstraint(PlacementConstraint constraint) {
+		this.placementConstraints.add(constraint);
 	}
 
 	@VisibleForTesting

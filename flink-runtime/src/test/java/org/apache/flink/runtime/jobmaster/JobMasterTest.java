@@ -87,6 +87,8 @@ import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.registration.RegistrationResponse;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
 import org.apache.flink.runtime.resourcemanager.SlotRequest;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.PlacementConstraint;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
 import org.apache.flink.runtime.resourcemanager.utils.TestingResourceManagerGateway;
 import org.apache.flink.runtime.rest.messages.job.JobPendingSlotRequestDetail;
 import org.apache.flink.runtime.rpc.RpcUtils;
@@ -142,6 +144,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.waitUntilJobStatus;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
@@ -450,6 +453,76 @@ public class JobMasterTest extends TestLogger {
 			assertThat(savepointCheckpoint, Matchers.notNullValue());
 
 			assertThat(savepointCheckpoint.getCheckpointID(), is(checkpointId));
+		} finally {
+			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
+		}
+	}
+
+	@Test
+	public void testPlacementConstraintsSentWithSlotRequest() throws Exception {
+		JobVertex source = new JobVertex("vertex1");
+		source.setParallelism(1);
+		source.setInvokableClass(AbstractInvokable.class);
+		final JobGraph jobGraph = new JobGraph(source);
+		jobGraph.setAllowQueuedScheduling(true);
+		jobGraph.getSerializedExecutionConfig().deserializeValue(JobMasterTest.class.getClassLoader()).enableForceTaskExclusivePlacement();
+		jobGraph.addPlacementConstraint(mock(PlacementConstraint.class));
+		source.addTag(new SlotTag(source.getID().toString(), jobGraph.getJobID()));
+
+		final JobMaster jobMaster = createJobMaster(
+				configuration,
+				jobGraph,
+				haServices,
+				new TestingJobManagerSharedServicesBuilder().build(),
+				heartbeatServices);
+
+		final JobMasterGateway jobMasterGateway = jobMaster.getSelfGateway(JobMasterGateway.class);
+
+		try {
+			final long start = System.nanoTime();
+			jobMaster.start(JobMasterId.generate(), testingTimeout).get();
+
+			final TestingResourceManagerGateway resourceManagerGateway = new TestingResourceManagerGateway();
+			final ArrayBlockingQueue<SlotRequest> blockingQueue = new ArrayBlockingQueue<>(2);
+			resourceManagerGateway.setRequestSlotConsumer(blockingQueue::offer);
+
+			rpcService.registerGateway(resourceManagerGateway.getAddress(), resourceManagerGateway);
+			rmLeaderRetrievalService.notifyListener(resourceManagerGateway.getAddress(), resourceManagerGateway.getFencingToken().toUUID());
+
+			// Wait until RM connected
+			Thread.sleep(2000L);
+
+			// Verify set placement constraints
+			List<PlacementConstraint> constraints = resourceManagerGateway.getPlacementConstraints();
+			assertEquals(constraints.size(), 1);
+
+			// wait for the first slot request
+			final SlotRequest slotRequest = blockingQueue.take();
+			slotRequest.getTags().equals(Collections.singletonList(new SlotTag(source.getID().toString(), jobGraph.getJobID())));
+
+			final CompletableFuture<TaskDeploymentDescriptor> submittedTaskFuture = new CompletableFuture<>();
+			final LocalTaskManagerLocation taskManagerLocation = new LocalTaskManagerLocation();
+			final TestingTaskExecutorGateway taskExecutorGateway = new TestingTaskExecutorGatewayBuilder()
+					.setSubmitTaskConsumer((tdd, ignored) -> {
+						submittedTaskFuture.complete(tdd);
+						return CompletableFuture.completedFuture(Acknowledge.get());
+					})
+					.createTestingTaskExecutorGateway();
+			rpcService.registerGateway(taskExecutorGateway.getAddress(), taskExecutorGateway);
+			jobMasterGateway.registerTaskManager(taskExecutorGateway.getAddress(), taskManagerLocation, testingTimeout).get();
+
+			final SlotOffer slotOffer = new SlotOffer(slotRequest.getAllocationId(), 0, ResourceProfile.UNKNOWN,
+					Collections.singletonList(new SlotTag(source.getID().toString(), jobGraph.getJobID())));
+			final CompletableFuture<Collection<SlotOffer>> acceptedSlotsFuture = jobMasterGateway.offerSlots(
+					taskManagerLocation.getResourceID(), Collections.singleton(slotOffer), testingTimeout);
+			final Collection<SlotOffer> acceptedSlots = acceptedSlotsFuture.get();
+			assertThat(acceptedSlots, hasSize(1));
+			final SlotOffer acceptedSlot = acceptedSlots.iterator().next();
+			assertThat(acceptedSlot.getAllocationId(), equalTo(slotRequest.getAllocationId()));
+
+			// wait for the deployed task
+			final TaskDeploymentDescriptor taskDeploymentDescriptor = submittedTaskFuture.get();
+			assertThat(taskDeploymentDescriptor.getAllocationId(), equalTo(slotRequest.getAllocationId()));
 		} finally {
 			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
 		}
@@ -1112,7 +1185,7 @@ public class JobMasterTest extends TestLogger {
 
 			jobMaster.disconnectTaskManager(taskManagerLocation.getResourceID(), new Exception("Test Exception")).get();
 
-			ExecutionGraphTestUtils.waitUntilJobStatus(eg, JobStatus.FAILED, 2000L);
+			waitUntilJobStatus(eg, JobStatus.FAILED, 2000L);
 
 			for (int i = 0; i < slotAllocationIds.size(); i++) {
 				cancelAllocationFutures.get(i).get(2, TimeUnit.SECONDS);
@@ -1210,7 +1283,7 @@ public class JobMasterTest extends TestLogger {
 
 			requestSlotFuture.completeExceptionally(new TimeoutException("Testing timeout"));
 
-			ExecutionGraphTestUtils.waitUntilJobStatus(eg, JobStatus.FAILED, 2000L);
+			waitUntilJobStatus(eg, JobStatus.FAILED, 2000L);
 
 			startTime = System.currentTimeMillis();
 			while (true) {

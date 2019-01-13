@@ -1032,6 +1032,48 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 	}
 
 	/**
+	 * Verifies whether enableForceTaskExclusivePlacement works. Checking the default tags assigned
+	 * and the generated placement constraints .
+	 */
+	@Test
+	public void testGeneratingForceTaskExclusivePlacementConstraints() {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.getConfig().enableForceTaskExclusivePlacement();
+
+		DataStream<Integer> sourceMap = env.fromElements(1, 2, 3).name("source1")
+				.map((value) -> value).name("map1").setParallelism(10);
+
+		DataStream<Integer> filter1 = sourceMap.filter((value) -> false).name("filter1").setParallelism(2);
+		DataStream<Integer> filter2 = sourceMap.filter((value) -> false).name("filter2").setParallelism(3);
+
+		filter1.connect(filter2).map(new CoMapFunction<Integer, Integer, Integer>() {
+			@Override
+			public Integer map1(Integer value) {
+				return value;
+			}
+
+			@Override
+			public Integer map2(Integer value) {
+				return value;
+			}
+		}).name("map2").setParallelism(4).print().name("print1").setParallelism(5);
+		filter2.print().name("print2").setParallelism(6);
+
+		JobGraph jobGraph = env.getStreamGraph().getJobGraph();
+		assertEquals(jobGraph.getPlacementConstraints().size(), jobGraph.getNumberOfVertices() * 2);
+		int topologyID = 0;
+		for (JobVertex vertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
+			assertEquals(vertex.getTags().size(), 7);
+			assertEquals(vertex.getTags(), vertex.getSlotSharingGroup().getTags());
+			assertTrue(jobGraph.getPlacementConstraints().get(topologyID * 2).applyTo(vertex.getTags()));
+			assertTrue(jobGraph.getPlacementConstraints().get(topologyID * 2).check(Collections.singletonList(vertex.getTags())));
+			assertFalse(jobGraph.getPlacementConstraints().get(topologyID * 2 + 1).applyTo(vertex.getTags()));
+			assertFalse(jobGraph.getPlacementConstraints().get(topologyID * 2 + 1).check(Collections.singletonList(vertex.getTags())));
+			topologyID++;
+		}
+	}
+
+	/**
 	 * Verifies whether generated JobEdge ResultPartitionType is as correctly set with configured
 	 * StreamEdge DataExchangeMode and Job ExecutionMode=BATCH.
 	 */

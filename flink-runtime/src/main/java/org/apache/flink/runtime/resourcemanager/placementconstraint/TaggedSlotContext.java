@@ -23,7 +23,7 @@ import java.util.List;
 /**
  * Describes contexts that contain or not contain slots with or without certain tags.
  */
-public class TaggedSlotContext {
+public class TaggedSlotContext implements java.io.Serializable {
 	private final boolean containSlot;
 	private final TaggedSlot slot;
 

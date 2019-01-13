@@ -28,6 +28,7 @@ import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.jobgraph.tasks.StoppableTask;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
 import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
 import org.apache.flink.util.Preconditions;
 
 import java.util.ArrayList;
@@ -117,6 +118,9 @@ public class JobVertex implements java.io.Serializable {
 	/** Optional, the JSON for the optimizer properties of the operator result,
 	 * to be included in the JSON plan */
 	private String resultOptimizerProperties;
+
+	/** Tags of this vertex. This will be used by placement constraints handling. */
+	private List<SlotTag> tags = new ArrayList<>();
 
 	// --------------------------------------------------------------------------------------------
 
@@ -236,6 +240,14 @@ public class JobVertex implements java.io.Serializable {
 
 	public List<OperatorID> getUserDefinedOperatorIDs() {
 		return operatorIdsAlternatives;
+	}
+
+	public void addTag(SlotTag tag) {
+		tags.add(tag);
+	}
+
+	public List<SlotTag> getTags() {
+		return tags;
 	}
 
 	/**
@@ -402,6 +414,7 @@ public class JobVertex implements java.io.Serializable {
 		this.slotSharingGroup = grp;
 		if (grp != null) {
 			grp.addVertexToGroup(id);
+			grp.addTagsToGroup(tags);
 		}
 	}
 

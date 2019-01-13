@@ -24,8 +24,11 @@ import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.clusterframework.types.SlotID;
 import org.apache.flink.runtime.jobmanager.slots.TaskManagerGateway;
 import org.apache.flink.runtime.jobmaster.SlotContext;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -61,6 +64,9 @@ public class AllocatedSlot implements SlotContext {
 
 	private final AtomicReference<Payload> payloadReference;
 
+	/** Tags of the slot for task matching. */
+	private final List<SlotTag> tags;
+
 	// ------------------------------------------------------------------------
 
 	public AllocatedSlot(
@@ -69,10 +75,21 @@ public class AllocatedSlot implements SlotContext {
 			int physicalSlotNumber,
 			ResourceProfile resourceProfile,
 			TaskManagerGateway taskManagerGateway) {
+		this(allocationId, location, physicalSlotNumber, resourceProfile, new ArrayList<>(), taskManagerGateway);
+	}
+
+	public AllocatedSlot(
+			AllocationID allocationId,
+			TaskManagerLocation location,
+			int physicalSlotNumber,
+			ResourceProfile resourceProfile,
+			List<SlotTag> tags,
+			TaskManagerGateway taskManagerGateway) {
 		this.allocationId = checkNotNull(allocationId);
 		this.taskManagerLocation = checkNotNull(location);
 		this.physicalSlotNumber = physicalSlotNumber;
 		this.resourceProfile = checkNotNull(resourceProfile);
+		this.tags = checkNotNull(tags);
 		this.taskManagerGateway = checkNotNull(taskManagerGateway);
 
 		payloadReference = new AtomicReference<>(null);
@@ -114,6 +131,15 @@ public class AllocatedSlot implements SlotContext {
 	 */
 	public ResourceProfile getResourceProfile() {
 		return resourceProfile;
+	}
+
+	/**
+	 * Gets the tags of the slot.
+	 *
+	 * @return The tags of the slot.
+	 */
+	public List<SlotTag> getTags() {
+		return tags;
 	}
 
 	/**

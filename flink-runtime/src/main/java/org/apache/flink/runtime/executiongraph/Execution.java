@@ -497,7 +497,8 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 			return new Tuple2(toSchedule, new SlotProfile(
 					computeResource(sharingGroup),
 					preferredLocations,
-					previousAllocationIDs));
+					previousAllocationIDs,
+					executionVertex.getJobVertex().getJobVertex().getTags()));
 		} else {
 			// call race, already deployed, or already done
 			throw new IllegalExecutionStateException(this, CREATED, state);
@@ -564,7 +565,8 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 							new SlotProfile(
 								computeResource(sharingGroup),
 								preferredLocations,
-								previousAllocationIDs),
+								previousAllocationIDs,
+								getVertex().getJobVertex().getJobVertex().getTags()),
 							allocationTimeout));
 
 			// register call back to cancel slot request in case that the execution gets canceled

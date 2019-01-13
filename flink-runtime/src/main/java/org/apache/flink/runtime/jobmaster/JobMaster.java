@@ -1036,6 +1036,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 						taskManagerLocation,
 						slotOffer.getSlotIndex(),
 						slotOffer.getResourceProfile(),
+						slotOffer.getTags(),
 						rpcTaskManagerGateway);
 			} catch (Exception e) {
 				rejected.add(i);
@@ -1427,6 +1428,13 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 		try {
 			operationLogManager.start();
+
+			if (establishedResourceManagerConnection != null) {
+				// Set job placement constraints before scheduling
+				establishedResourceManagerConnection.getResourceManagerGateway().setPlacementConstraints(
+						jobGraph.getJobID(), jobGraph.getPlacementConstraints(), rpcTimeout);
+			}
+
 			executionGraph.scheduleForExecution();
 		}
 		catch (JobException e) {
@@ -1804,7 +1812,13 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 				resourceManagerGateway,
 				resourceManagerResourceId);
 
-			slotPoolGateway.connectToResourceManager(resourceManagerGateway);
+			// Set job placement constraints to RM before notify slot pool about the RM connection
+			resourceManagerGateway.setPlacementConstraints(
+					jobGraph.getJobID(),
+					jobGraph.getPlacementConstraints(),
+					rpcTimeout).thenAccept((Acknowledge ignored) -> {
+				slotPoolGateway.connectToResourceManager(resourceManagerGateway);
+			});
 
 			resourceManagerHeartbeatManager.monitorTarget(resourceManagerResourceId, new HeartbeatTarget<Void>() {
 				@Override

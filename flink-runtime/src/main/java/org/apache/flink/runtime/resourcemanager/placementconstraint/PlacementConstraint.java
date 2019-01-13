@@ -23,7 +23,7 @@ import java.util.List;
 /**
  * A PlacementConstraint describes a constraint on the context to which certain slots should be placed.
  */
-public abstract class PlacementConstraint {
+public abstract class PlacementConstraint implements java.io.Serializable {
 
 	/** Describes the slots that this constraint applies to.  */
 	protected final TaggedSlot slot;

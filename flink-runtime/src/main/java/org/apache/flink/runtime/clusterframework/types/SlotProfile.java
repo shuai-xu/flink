@@ -19,12 +19,15 @@
 package org.apache.flink.runtime.clusterframework.types;
 
 import org.apache.flink.runtime.jobmaster.SlotContext;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 
 import javax.annotation.Nonnull;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
 /**
  * A slot profile describes the profile of a slot into which a task wants to be scheduled. The profile contains
@@ -49,14 +52,28 @@ public class SlotProfile {
 	@Nonnull
 	private final Collection<AllocationID> priorAllocations;
 
+	/** This specifies the desired tags for the slot. */
+	@Nonnull
+	private final List<SlotTag> tags;
+
 	public SlotProfile(
 		@Nonnull ResourceProfile resourceProfile,
 		@Nonnull Collection<TaskManagerLocation> preferredLocations,
 		@Nonnull Collection<AllocationID> priorAllocations) {
 
+		this(resourceProfile, preferredLocations, priorAllocations, new ArrayList<>());
+	}
+
+	public SlotProfile(
+		@Nonnull ResourceProfile resourceProfile,
+		@Nonnull Collection<TaskManagerLocation> preferredLocations,
+		@Nonnull Collection<AllocationID> priorAllocations,
+		@Nonnull List<SlotTag> tags) {
+
 		this.resourceProfile = resourceProfile;
 		this.preferredLocations = preferredLocations;
 		this.priorAllocations = priorAllocations;
+		this.tags = tags;
 	}
 
 	/**
@@ -81,6 +98,14 @@ public class SlotProfile {
 	@Nonnull
 	public Collection<AllocationID> getPriorAllocations() {
 		return priorAllocations;
+	}
+
+	/**
+	 * Returns the desired tags for the slot.
+	 */
+	@Nonnull
+	public List<SlotTag> getTags() {
+		return tags;
 	}
 
 	/**

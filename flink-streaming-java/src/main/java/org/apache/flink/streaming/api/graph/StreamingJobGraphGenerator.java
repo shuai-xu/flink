@@ -51,6 +51,12 @@ import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
 import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.runtime.operators.DamBehavior;
 import org.apache.flink.runtime.operators.util.TaskConfig;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.InterSlotPlacementConstraint;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.PlacementConstraint;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTagScope;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.TaggedSlot;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.TaggedSlotContext;
 import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.checkpoint.WithMasterCheckpointHook;
@@ -177,6 +183,10 @@ public class StreamingJobGraphGenerator {
 
 		connectEdges();
 
+		setTags();
+
+		setPlacementConstraints();
+
 		setSlotSharing();
 
 		configureCheckpointing();
@@ -208,6 +218,41 @@ public class StreamingJobGraphGenerator {
 
 		setVertexToStreamNodesMap(configuration);
 		configuration.addAll(streamGraph.getCustomConfiguration());
+	}
+
+	/**
+	 * Set tags to vertices.
+	 */
+	private void setTags() {
+		// Add default tags to vertices
+		for (JobVertex vertex : jobGraph.getVertices()) {
+			vertex.addTag(new SlotTag(vertex.getID().toString(), jobGraph.getJobID()));
+		}
+	}
+
+	/**
+	 * Set placement constraints to JobGraph.
+	 */
+	private void setPlacementConstraints() {
+		if (streamGraph.getExecutionConfig().isForceTaskExclusivePlacement()) {
+			// Add constraints to force sub-tasks of the same job vertex
+			// not to be placed with sub-tasks with other job vertices.
+			for (JobVertex vertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
+				SlotTag tag = new SlotTag(vertex.getID().toString(), jobGraph.getJobID());
+				TaggedSlot slotWithGivenTag = new TaggedSlot(true, Collections.singletonList(tag), SlotTagScope.JOB);
+				TaggedSlot slotWithoutGivenTag = new TaggedSlot(false, Collections.singletonList(tag), SlotTagScope.JOB);
+
+				TaggedSlotContext contextWithoutSlotWithoutGivenTag = new TaggedSlotContext(false, slotWithoutGivenTag);
+				PlacementConstraint placementConstraintForTaskWithGivenTag = new InterSlotPlacementConstraint(
+					slotWithGivenTag, contextWithoutSlotWithoutGivenTag);
+				jobGraph.addPlacementConstraint(placementConstraintForTaskWithGivenTag);
+
+				TaggedSlotContext contextWithoutSlotWithGivenTag = new TaggedSlotContext(false, slotWithGivenTag);
+				PlacementConstraint placementConstraintForTaskWithoutGivenTag = new InterSlotPlacementConstraint(
+					slotWithoutGivenTag, contextWithoutSlotWithGivenTag);
+				jobGraph.addPlacementConstraint(placementConstraintForTaskWithoutGivenTag);
+			}
+		}
 	}
 
 	private void setVertexToStreamNodesMap(Configuration configuration) {
@@ -1218,6 +1263,14 @@ public class StreamingJobGraphGenerator {
 			sink.updateCoLocationGroup(ccg);
 		}
 
+		// Replace vertex tags with its shared group tags
+		for (JobVertex vertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
+			SlotSharingGroup group = vertex.getSlotSharingGroup();
+			if (group != null) {
+				vertex.getTags().clear();
+				vertex.getTags().addAll(group.getTags());
+			}
+		}
 	}
 
 	private void configureCheckpointing() {

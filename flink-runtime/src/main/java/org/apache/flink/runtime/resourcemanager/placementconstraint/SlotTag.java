@@ -27,7 +27,7 @@ import static org.apache.flink.runtime.resourcemanager.placementconstraint.SlotT
  *
  * <p>SlotTags can be matched at different {@link SlotTagScope}s.
  */
-public class SlotTag {
+public class SlotTag implements java.io.Serializable {
 	private final String tagName;
 	private final JobID jobId;
 

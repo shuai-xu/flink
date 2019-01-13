@@ -806,6 +806,7 @@ public class SlotPoolTest extends TestLogger {
 					taskManagerLocation,
 					0,
 					DEFAULT_TESTING_PROFILE,
+					Collections.emptyList(),
 					taskManagerGateway);
 			slotWithoutSharing.tryAssignPayload(payload);
 
@@ -826,6 +827,7 @@ public class SlotPoolTest extends TestLogger {
 					taskManagerLocation,
 					1,
 					DEFAULT_TESTING_PROFILE,
+					Collections.emptyList(),
 					taskManagerGateway);
 			slot1WithSharing.tryAssignPayload(payload);
 
@@ -842,6 +844,7 @@ public class SlotPoolTest extends TestLogger {
 					taskManagerLocation,
 					1,
 					DEFAULT_TESTING_PROFILE,
+					Collections.emptyList(),
 					taskManagerGateway);
 			slot2WithSharing.tryAssignPayload(payload);
 
@@ -860,6 +863,7 @@ public class SlotPoolTest extends TestLogger {
 					taskManagerLocation,
 					1,
 					DEFAULT_TESTING_PROFILE,
+					Collections.emptyList(),
 					taskManagerGateway);
 			slot1WithCoLocation.tryAssignPayload(payload);
 
@@ -877,6 +881,7 @@ public class SlotPoolTest extends TestLogger {
 					taskManagerLocation,
 					1,
 					DEFAULT_TESTING_PROFILE,
+					Collections.emptyList(),
 					taskManagerGateway);
 			slot2WithCoLocation.tryAssignPayload(payload);
 
@@ -895,6 +900,7 @@ public class SlotPoolTest extends TestLogger {
 					taskManagerLocation,
 					2,
 					DEFAULT_TESTING_PROFILE,
+					Collections.emptyList(),
 					taskManagerGateway);
 			slot3WithCoLocation.tryAssignPayload(payload);
 
@@ -911,6 +917,7 @@ public class SlotPoolTest extends TestLogger {
 					taskManagerLocation,
 					2,
 					DEFAULT_TESTING_PROFILE,
+					Collections.emptyList(),
 					taskManagerGateway);
 			slot4WithCoLocation.tryAssignPayload(payload);
 

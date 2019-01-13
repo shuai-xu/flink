@@ -24,7 +24,7 @@ import java.util.List;
 /**
  * Describes slots with or without certain tags.
  */
-public class TaggedSlot {
+public class TaggedSlot implements java.io.Serializable {
 	private final boolean withTag;
 	private final List<SlotTag> tags;
 	private final SlotTagScope scope;

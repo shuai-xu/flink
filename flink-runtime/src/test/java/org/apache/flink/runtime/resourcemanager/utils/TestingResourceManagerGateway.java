@@ -94,6 +94,8 @@ public class TestingResourceManagerGateway implements ResourceManagerGateway {
 
 	private volatile Consumer<Tuple3<InstanceID, SlotID, AllocationID>> notifySlotAvailableConsumer;
 
+	private volatile List<PlacementConstraint> placementConstraints;
+
 	public TestingResourceManagerGateway() {
 		this(
 			ResourceManagerId.generate(),
@@ -167,6 +169,10 @@ public class TestingResourceManagerGateway implements ResourceManagerGateway {
 		this.notifySlotAvailableConsumer = notifySlotAvailableConsumer;
 	}
 
+	public List<PlacementConstraint> getPlacementConstraints() {
+		return placementConstraints;
+	}
+
 	@Override
 	public CompletableFuture<RegistrationResponse> registerJobManager(JobMasterId jobMasterId, ResourceID jobMasterResourceId, String jobMasterAddress, JobID jobId, Time timeout) {
 		final Consumer<Tuple4<JobMasterId, ResourceID, String, JobID>> currentConsumer = registerJobManagerConsumer;
@@ -187,6 +193,7 @@ public class TestingResourceManagerGateway implements ResourceManagerGateway {
 		JobID jobId,
 		List<PlacementConstraint> constraints,
 		@RpcTimeout Time timeout) {
+		this.placementConstraints = constraints;
 		return CompletableFuture.completedFuture(Acknowledge.get());
 	}
 

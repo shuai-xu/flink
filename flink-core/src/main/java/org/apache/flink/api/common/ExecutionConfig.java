@@ -126,6 +126,8 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 
 	private boolean forceAvro = false;
 
+	private boolean forceTaskExclusivePlacement = false;
+
 	private CodeAnalysisMode codeAnalysisMode = CodeAnalysisMode.DISABLE;
 
 	/** If set to true, progress updates are printed to System.out during execution */
@@ -608,6 +610,27 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 	}
 
 	/**
+	 * Forces sub-tasks of the same job vertex not to be placed with sub-tasks with other job vertices.
+	 */
+	public void enableForceTaskExclusivePlacement() {
+		forceTaskExclusivePlacement = true;
+	}
+
+	/**
+	 * Disable the force that sub-tasks of the same job vertex not to be placed with sub-tasks with other job vertices.
+	 */
+	public void disableForceTaskExclusivePlacement() {
+		forceTaskExclusivePlacement = false;
+	}
+
+	/**
+	 * Returns whether sub-tasks of the same job vertex must not be placed with sub-tasks with other job vertices.
+	 */
+	public boolean isForceTaskExclusivePlacement() {
+		return forceTaskExclusivePlacement;
+	}
+
+	/**
 	 * Enables reusing objects that Flink internally uses for deserialization and passing
 	 * data to user-code functions. Keep in mind that this can lead to bugs when the
 	 * user-code function of an operation is not aware of this behaviour.
@@ -910,6 +933,7 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 				objectReuse == other.objectReuse &&
 				autoTypeRegistrationEnabled == other.autoTypeRegistrationEnabled &&
 				forceAvro == other.forceAvro &&
+				forceTaskExclusivePlacement == other.forceTaskExclusivePlacement &&
 				Objects.equals(codeAnalysisMode, other.codeAnalysisMode) &&
 				printProgressDuringExecution == other.printProgressDuringExecution &&
 				Objects.equals(globalJobParameters, other.globalJobParameters) &&
@@ -938,6 +962,7 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 			objectReuse,
 			autoTypeRegistrationEnabled,
 			forceAvro,
+			forceTaskExclusivePlacement,
 			codeAnalysisMode,
 			printProgressDuringExecution,
 			globalJobParameters,

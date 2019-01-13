@@ -45,6 +45,7 @@ import org.apache.flink.runtime.jobmaster.message.PendingSlotRequest;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.resourcemanager.SlotRequest;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
 import org.apache.flink.runtime.rpc.RpcEndpoint;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.rpc.RpcTimeout;
@@ -354,6 +355,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			TaskManagerLocation taskManagerLocation,
 			int slotIndex,
 			ResourceProfile resourceProfile,
+			List<SlotTag> tags,
 			TaskManagerGateway taskManagerGateway) throws Exception {
 		SlotRequestId allocatedSlotRequestId = new SlotRequestId();
 		AllocatedSlot allocatedSlot = allocatedSlots.get(allocationId);
@@ -363,6 +365,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 					taskManagerLocation,
 					slotIndex,
 					resourceProfile,
+					tags,
 					taskManagerGateway);
 			allocatedSlots.add(allocatedSlotRequestId, allocatedSlot);
 			log.debug("Recover allocated slot {} with request id {}.", allocatedSlot, allocatedSlotRequestId);
@@ -727,7 +730,8 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			slotProfile = new SlotProfile(
 				slotProfile.getResourceProfile(),
 				Collections.singleton(coLocationConstraint.getLocation()),
-				slotProfile.getPriorAllocations());
+				slotProfile.getPriorAllocations(),
+				slotProfile.getTags());
 		}
 
 		// get a new multi task slot
@@ -855,6 +859,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 				final CompletableFuture<AllocatedSlot> futureSlot = requestNewAllocatedSlot(
 					allocatedSlotRequestId,
 					slotProfile.getResourceProfile(),
+					slotProfile.getTags(),
 					allocationTimeout);
 
 				multiTaskSlotFuture = slotSharingManager.createRootSlot(
@@ -920,6 +925,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			CompletableFuture<AllocatedSlot> allocatedSlotFuture = requestNewAllocatedSlot(
 					slotRequestId,
 					slotProfile.getResourceProfile(),
+					slotProfile.getTags(),
 					allocationTimeout);
 
 			allocatedSlotLocalityFuture = allocatedSlotFuture.thenApply((AllocatedSlot allocatedSlot) -> new SlotAndLocality(allocatedSlot, Locality.UNKNOWN));
@@ -959,6 +965,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 				CompletableFuture<AllocatedSlot> allocatedSlotFuture = requestNewAllocatedSlot(
 						slotRequestIds.get(i),
 						slotProfiles.get(i).getResourceProfile(),
+						slotProfiles.get(i).getTags(),
 						allocationTimeout);
 
 				allocatedSlotLocalityFutures.add(i, allocatedSlotFuture.thenApply((AllocatedSlot allocatedSlot) -> new SlotAndLocality(allocatedSlot, Locality.UNKNOWN)));
@@ -978,17 +985,20 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 	 *
 	 * @param slotRequestId identifying the requested slot
 	 * @param resourceProfile which the requested slot should fulfill
+	 * @param tags which the requested slot should fulfill
 	 * @param allocationTimeout timeout before the slot allocation times out
 	 * @return An {@link AllocatedSlot} future which is completed once the slot is offered to the {@link SlotPool}
 	 */
 	private CompletableFuture<AllocatedSlot> requestNewAllocatedSlot(
 			SlotRequestId slotRequestId,
 			ResourceProfile resourceProfile,
+			List<SlotTag> tags,
 			Time allocationTimeout) {
 
 		final PendingRequest pendingRequest = new PendingRequest(
-			slotRequestId,
-			resourceProfile);
+				slotRequestId,
+				resourceProfile,
+				tags);
 
 		// register request timeout
 		FutureUtils
@@ -1034,7 +1044,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 
 		CompletableFuture<Acknowledge> rmResponse = resourceManagerGateway.requestSlot(
 			jobMasterId,
-			new SlotRequest(jobId, allocationId, pendingRequest.getResourceProfile(), jobManagerAddress),
+			new SlotRequest(jobId, allocationId, pendingRequest.getResourceProfile(), jobManagerAddress, pendingRequest.getTags()),
 			rpcTimeout);
 
 		// on failure, fail the request future
@@ -1242,7 +1252,8 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 
 		// try the requests sent to the resource manager first
 		for (PendingRequest request : pendingRequests.values()) {
-			if (slotResources.isMatching(request.getResourceProfile())) {
+			if (slotResources.isMatching(request.getResourceProfile()) &&
+					slot.getTags().equals(request.getTags())) {
 				pendingRequests.removeKeyA(request.getSlotRequestId());
 				return request;
 			}
@@ -1250,7 +1261,8 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 
 		// try the requests waiting for a resource manager connection next
 		for (PendingRequest request : waitingForResourceManager.values()) {
-			if (slotResources.isMatching(request.getResourceProfile())) {
+			if (slotResources.isMatching(request.getResourceProfile()) &&
+					slot.getTags().equals(request.getTags())) {
 				waitingForResourceManager.remove(request.getSlotRequestId());
 				return request;
 			}
@@ -1350,6 +1362,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			taskManagerLocation,
 			slotOffer.getSlotIndex(),
 			slotOffer.getResourceProfile(),
+			slotOffer.getTags(),
 			taskManagerGateway);
 
 		// check whether we have request waiting for this slot
@@ -1869,7 +1882,10 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 				slotProfile,
 				slotAndTimestamps.stream(),
 				SlotAndTimestamp::slot,
-				(SlotAndTimestamp slot) -> slot.slot().getResourceProfile().isMatching(slotProfile.getResourceProfile()),
+				(SlotAndTimestamp slot) -> {
+					return slot.slot().getResourceProfile().isMatching(slotProfile.getResourceProfile()) &&
+							slot.slot().getTags().equals(slotProfile.getTags());
+				},
 				(SlotAndTimestamp slotAndTimestamp, Locality locality) -> {
 					AllocatedSlot slot = slotAndTimestamp.slot();
 					return new SlotAndLocality(slot, locality);
@@ -2109,6 +2125,8 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 
 		private final ResourceProfile resourceProfile;
 
+		private final List<SlotTag> tags;
+
 		private final CompletableFuture<AllocatedSlot> allocatedSlotFuture;
 
 		private ScheduledUnit scheduledUnit;
@@ -2117,9 +2135,11 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 
 		PendingRequest(
 				SlotRequestId slotRequestId,
-				ResourceProfile resourceProfile) {
+				ResourceProfile resourceProfile,
+				List<SlotTag> tags) {
 			this.slotRequestId = Preconditions.checkNotNull(slotRequestId);
 			this.resourceProfile = Preconditions.checkNotNull(resourceProfile);
+			this.tags = Preconditions.checkNotNull(tags);
 
 			allocatedSlotFuture = new CompletableFuture<>();
 		}
@@ -2152,11 +2172,16 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			this.timestamp = timestamp;
 		}
 
+		public List<SlotTag> getTags() {
+			return tags;
+		}
+
 		@Override
 		public String toString() {
 			return "PendingRequest{" +
 					"slotRequestId=" + slotRequestId +
 					", resourceProfile=" + resourceProfile +
+					", tags=" + tags +
 					", allocatedSlotFuture=" + allocatedSlotFuture +
 					'}';
 		}

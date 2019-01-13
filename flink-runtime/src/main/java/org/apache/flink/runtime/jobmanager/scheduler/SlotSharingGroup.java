@@ -18,7 +18,9 @@
 
 package org.apache.flink.runtime.jobmanager.scheduler;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -26,6 +28,7 @@ import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.instance.SlotSharingGroupAssignment;
 import org.apache.flink.runtime.instance.SlotSharingGroupId;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
 
 /**
  * A slot sharing units defines which different task (from different job vertices) can be
@@ -38,7 +41,9 @@ public class SlotSharingGroup implements java.io.Serializable {
 	
 
 	private final Set<JobVertexID> ids = new TreeSet<JobVertexID>();
-	
+
+	private final List<SlotTag> tags = new ArrayList<>();
+
 	/** Mapping of tasks to subslots. This field is only needed inside the JobManager, and is not RPCed. */
 	private transient SlotSharingGroupAssignment taskAssignment;
 
@@ -59,13 +64,21 @@ public class SlotSharingGroup implements java.io.Serializable {
 	public void addVertexToGroup(JobVertexID id) {
 		this.ids.add(id);
 	}
-	
+
+	public void addTagsToGroup(List<SlotTag> tags) {
+		this.tags.addAll(tags);
+	}
+
 	public void removeVertexFromGroup(JobVertexID id) {
 		this.ids.remove(id);
 	}
-	
+
 	public Set<JobVertexID> getJobVertexIds() {
 		return Collections.unmodifiableSet(ids);
+	}
+
+	public List<SlotTag> getTags() {
+		return tags;
 	}
 
 	public SlotSharingGroupId getSlotSharingGroupId() {
