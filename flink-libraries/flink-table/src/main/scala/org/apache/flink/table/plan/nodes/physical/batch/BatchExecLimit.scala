@@ -119,9 +119,10 @@ class BatchExecLimit(
       getOperatorName,
       operator,
       inputType,
-      resultPartitionCount)
+      getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
-    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
     transformation
   }
 

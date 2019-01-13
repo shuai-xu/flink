@@ -114,8 +114,8 @@ class BatchExecLocalHashWindowAggregate(
     val generatedOperator = codegen(ctx, tableEnv,
       TypeConverters.createInternalTypeFromTypeInfo(
         input.getOutputType).asInstanceOf[RowType], outputRowType,
-      groupBufferLimitSize, resource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB,
-      resource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB,
+      groupBufferLimitSize, getResource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB,
+      getResource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB,
       windowStart, windowSize, slideSize)
 
     val operator = new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
@@ -127,9 +127,10 @@ class BatchExecLocalHashWindowAggregate(
       getOperatorName,
       operator,
       TypeConverters.toBaseRowTypeInfo(outputRowType),
-      resultPartitionCount)
+      getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
-    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
     transformation
   }
 

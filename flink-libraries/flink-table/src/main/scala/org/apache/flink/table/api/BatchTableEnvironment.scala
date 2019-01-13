@@ -430,7 +430,7 @@ class BatchTableEnvironment(
       // TODO refactor
       case node: BatchExecRel[OUT] =>
         ruKeeper.buildRUs(node)
-        ruKeeper.calculateRelResource(node)
+        ruKeeper.calculateNodeResource(node)
         node.translateToPlan(this)
       case _ =>
         throw new TableException("Cannot generate BoundedStream due to an invalid logical plan. " +

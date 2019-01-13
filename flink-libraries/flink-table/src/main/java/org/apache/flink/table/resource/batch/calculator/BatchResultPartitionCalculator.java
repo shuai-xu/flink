@@ -22,6 +22,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.api.TableException;
+import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecJoinBase;
@@ -43,7 +44,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Calculating resultPartitionCount with visiting every [[BatchExecRel]].
  */
-public class BatchResultPartitionCalculator extends ResourceCalculator<BatchExecRel<?>> {
+public class BatchResultPartitionCalculator extends ResourceCalculator<ExecNode<?, ?>> {
 	private static final Logger LOG = LoggerFactory.getLogger(BatchResultPartitionCalculator.class);
 	private final RelMetadataQuery mq;
 	private final int envParallelism;
@@ -54,30 +55,30 @@ public class BatchResultPartitionCalculator extends ResourceCalculator<BatchExec
 		this.envParallelism = tEnv.streamEnv().getParallelism();
 	}
 
-	public static void calculate(BatchTableEnvironment tEnv, RelMetadataQuery mq, BatchExecRel<?> rootExecRel) {
+	public static void calculate(BatchTableEnvironment tEnv, RelMetadataQuery mq, ExecNode<?, ?> rootExecRel) {
 		new BatchResultPartitionCalculator(tEnv, mq).calculate(rootExecRel);
 	}
 
-	public void calculate(BatchExecRel<?> batchExecRel) {
-		if (batchExecRel.resultPartitionCount() > 0) {
+	public void calculate(ExecNode<?, ?> node) {
+		if (node.getResource().getParallelism() > 0) {
 			return;
 		}
-		if (batchExecRel instanceof BatchExecBoundedStreamScan) {
-			calculateBoundedStreamScan((BatchExecBoundedStreamScan) batchExecRel);
-		} else if (batchExecRel instanceof BatchExecTableSourceScan) {
-			calculateTableSourceScan((BatchExecTableSourceScan) batchExecRel);
-		} else if (batchExecRel instanceof BatchExecUnion) {
-			calculateUnion((BatchExecUnion) batchExecRel);
-		} else if (batchExecRel instanceof BatchExecExchange) {
-			calculateExchange((BatchExecExchange) batchExecRel);
-		} else if (batchExecRel instanceof BatchExecJoinBase) {
-			calculateJoin((BatchExecJoinBase) batchExecRel);
-		} else if (batchExecRel instanceof SingleRel) {
-			calculateSingle((SingleRel & BatchExecRel<?>) batchExecRel);
-		} else if (batchExecRel instanceof BatchExecValues) {
-			calculateValues((BatchExecValues) batchExecRel);
+		if (node instanceof BatchExecBoundedStreamScan) {
+			calculateBoundedStreamScan((BatchExecBoundedStreamScan) node);
+		} else if (node instanceof BatchExecTableSourceScan) {
+			calculateTableSourceScan((BatchExecTableSourceScan) node);
+		} else if (node instanceof BatchExecUnion) {
+			calculateUnion((BatchExecUnion) node);
+		} else if (node instanceof BatchExecExchange) {
+			calculateExchange((BatchExecExchange) node);
+		} else if (node instanceof BatchExecJoinBase) {
+			calculateJoin((BatchExecJoinBase) node);
+		} else if (node instanceof SingleRel) {
+			calculateSingle((SingleRel & BatchExecRel<?>) node);
+		} else if (node instanceof BatchExecValues) {
+			calculateValues((BatchExecValues) node);
 		} else {
-			throw new TableException("could not reach here. " + batchExecRel.getClass());
+			throw new TableException("could not reach here. " + node.getClass());
 		}
 	}
 
@@ -87,16 +88,16 @@ public class BatchResultPartitionCalculator extends ResourceCalculator<BatchExec
 		if (parallelism <= 0) {
 			parallelism = StreamExecutionEnvironment.getDefaultLocalParallelism();
 		}
-		boundedStreamScan.setResultPartitionCount(parallelism);
+		boundedStreamScan.getResource().setParallelism(parallelism);
 	}
 
 	private void calculateTableSourceScan(BatchExecTableSourceScan tableSourceScan) {
 		if (tableSourceScan.canLimitPushedDown()) {
-			tableSourceScan.setResultPartitionCount(1);
+			tableSourceScan.getResource().setParallelism(1);
 		} else {
 			StreamTransformation transformation = tableSourceScan.getSourceTransformation(tEnv.streamEnv());
 			if (transformation.getMaxParallelism() > 0) {
-				tableSourceScan.setResultPartitionCount(transformation.getMaxParallelism());
+				tableSourceScan.getResource().setParallelism(transformation.getMaxParallelism());
 				return;
 			}
 			boolean infer = !ExecResourceUtil.getInferMode(tableConf).equals(ExecResourceUtil.InferMode.NONE);
@@ -109,14 +110,14 @@ public class BatchResultPartitionCalculator extends ResourceCalculator<BatchExec
 				long rowsPerPartition = ExecResourceUtil.getRelCountPerPartition(tableConf);
 				long sizePerPartition = ExecResourceUtil.getSourceSizePerPartition(tableConf);
 				int maxNum = ExecResourceUtil.getSourceMaxParallelism(tableConf);
-				tableSourceScan.setResultPartitionCount(Math.min(maxNum,
+				tableSourceScan.getResource().setParallelism(Math.min(maxNum,
 						Math.max(
 								(int) Math.max(
 										io / sizePerPartition / ExecResourceUtil.SIZE_IN_MB,
 										rowCount / rowsPerPartition),
 								1)));
 			} else {
-				tableSourceScan.setResultPartitionCount(ExecResourceUtil
+				tableSourceScan.getResource().setParallelism(ExecResourceUtil
 						.getSourceParallelism(tableConf, envParallelism));
 			}
 
@@ -125,41 +126,41 @@ public class BatchResultPartitionCalculator extends ResourceCalculator<BatchExec
 
 	private void calculateUnion(BatchExecUnion unionBatchExec) {
 		calculateInputs(unionBatchExec);
-		unionBatchExec.setResultPartitionCount(ExecResourceUtil.
+		unionBatchExec.getResource().setParallelism(ExecResourceUtil.
 				getOperatorDefaultParallelism(tableConf, envParallelism));
 	}
 
 	private void calculateExchange(BatchExecExchange exchangeBatchExec) {
 		calculateInputs(exchangeBatchExec);
 		if (exchangeBatchExec.getDistribution().getType() == RelDistribution.Type.SINGLETON) {
-			exchangeBatchExec.setResultPartitionCount(1);
+			exchangeBatchExec.getResource().setParallelism(1);
 		} else {
-			exchangeBatchExec.setResultPartitionCount(ExecResourceUtil.getOperatorDefaultParallelism(tableConf, envParallelism));
+			exchangeBatchExec.getResource().setParallelism(ExecResourceUtil.getOperatorDefaultParallelism(tableConf, envParallelism));
 		}
 	}
 
 	private void calculateJoin(BatchExecJoinBase joinBatchExec) {
 		calculateInputs(joinBatchExec);
 		int rightResultPartitionCount =
-				((BatchExecRel<?>) ((BiRel) joinBatchExec).getRight()).resultPartitionCount();
+				((BatchExecRel<?>) ((BiRel) joinBatchExec).getRight()).getResource().getParallelism();
 		int leftResultPartitionCount =
-				((BatchExecRel<?>) ((BiRel) joinBatchExec).getLeft()).resultPartitionCount();
+				((BatchExecRel<?>) ((BiRel) joinBatchExec).getLeft()).getResource().getParallelism();
 
 		if (((BiRel) joinBatchExec).getRight() instanceof BatchExecExchange &&
 				((BatchExecExchange) ((BiRel) joinBatchExec).getRight()).getDistribution().getType() == RelDistribution.Type.BROADCAST_DISTRIBUTED) {
-			joinBatchExec.setResultPartitionCount(leftResultPartitionCount);
+			joinBatchExec.getResource().setParallelism(leftResultPartitionCount);
 		} else {
-			joinBatchExec.setResultPartitionCount(rightResultPartitionCount);
+			joinBatchExec.getResource().setParallelism(rightResultPartitionCount);
 		}
 	}
 
 	private <T extends SingleRel & BatchExecRel<?>> void calculateSingle(T singleRel) {
 		calculateInputs(singleRel);
 		RelNode inputRel = singleRel.getInput();
-		(singleRel).setResultPartitionCount(((BatchExecRel<?>) inputRel).resultPartitionCount());
+		(singleRel).getResource().setParallelism(((BatchExecRel<?>) inputRel).getResource().getParallelism());
 	}
 
 	private void calculateValues(BatchExecValues valuesBatchExec) {
-		valuesBatchExec.setResultPartitionCount(1);
+		valuesBatchExec.getResource().setParallelism(1);
 	}
 }

@@ -75,6 +75,7 @@ object BatchExecRel {
   //we aim for a 200% utilization of the bucket table.
   val HASH_COLLISION_WEIGHT = 2
 
+  // TODO move this function
   private[flink] def getBatchExecMemCost(relNode: BatchExecRel[_]): Double = {
     val mq = FlinkRelMetadataQuery.reuseOrCreate(relNode.getCluster.getMetadataQuery)
     val relCost = mq.getNonCumulativeCost(relNode)

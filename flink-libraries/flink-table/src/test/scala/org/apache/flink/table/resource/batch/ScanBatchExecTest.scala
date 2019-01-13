@@ -43,7 +43,7 @@ class ScanBatchExecTest extends TableTestBase  {
       RelTraitSet.createEmpty(),
       Mockito.mock(classOf[RelOptTable]),
       Mockito.mock(classOf[RelDataType]));
-    exec.resultPartitionCount = 2
+    exec.getResource.setParallelism(2)
     val defaultResource = newResource(
       TableConfigOptions.SQL_RESOURCE_DEFAULT_CPU.defaultValue(),
       TableConfigOptions.SQL_RESOURCE_SOURCE_DEFAULT_MEM.defaultValue())

@@ -179,12 +179,13 @@ class BatchExecSortAggregate(
       getOperatorName,
       operator,
       TypeConverters.toBaseRowTypeInfo(outputRowType),
-      resultPartitionCount)
+      getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     if (grouping.length == 0) {
       transformation.setDamBehavior(DamBehavior.FULL_DAM)
     }
-    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
     transformation
   }
 

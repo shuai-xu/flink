@@ -30,8 +30,8 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.schedule.GraphManagerPlugin;
 import org.apache.flink.runtime.schedule.SchedulingConfig;
 import org.apache.flink.runtime.schedule.VertexScheduler;
-import org.apache.flink.table.resource.batch.BatchExecRelStage;
-import org.apache.flink.table.resource.batch.RelRunningUnit;
+import org.apache.flink.table.resource.batch.BatchExecNodeStage;
+import org.apache.flink.table.resource.batch.NodeRunningUnit;
 import org.apache.flink.util.InstantiationUtil;
 
 import org.slf4j.Logger;
@@ -62,7 +62,7 @@ public class RunningUnitGraphManagerPlugin implements GraphManagerPlugin {
 	public static final String RUNNING_UNIT_CONF_KEY = "runningUnit.key";
 
 	private Map<JobVertexID, LogicalJobVertex> logicalJobVertices = new LinkedHashMap<>();
-	private Map<RelRunningUnit, LogicalJobVertexRunningUnit> runningUnitMap = new LinkedHashMap<>();
+	private Map<NodeRunningUnit, LogicalJobVertexRunningUnit> runningUnitMap = new LinkedHashMap<>();
 	// for sink who not chain with pre vertex.
 	private LogicalJobVertexRunningUnit leftJobVertexRunningUnit;
 
@@ -82,8 +82,8 @@ public class RunningUnitGraphManagerPlugin implements GraphManagerPlugin {
 	public void open(VertexScheduler scheduler, JobGraph jobGraph, SchedulingConfig schedulingConfig) {
 		try {
 			Map<JobVertexID, ArrayList<Integer>> vertexToStreamNodeIds = InstantiationUtil.readObjectFromConfig(schedulingConfig.getConfiguration(), JOB_VERTEX_TO_STREAM_NODE_MAP, schedulingConfig.getUserClassLoader());
-			List<RelRunningUnit> relRunningUnits = InstantiationUtil.readObjectFromConfig(schedulingConfig.getConfiguration(), RUNNING_UNIT_CONF_KEY, schedulingConfig.getUserClassLoader());
-			open(scheduler, jobGraph,  vertexToStreamNodeIds, relRunningUnits);
+			List<NodeRunningUnit> nodeRunningUnits = InstantiationUtil.readObjectFromConfig(schedulingConfig.getConfiguration(), RUNNING_UNIT_CONF_KEY, schedulingConfig.getUserClassLoader());
+			open(scheduler, jobGraph,  vertexToStreamNodeIds, nodeRunningUnits);
 		} catch (IOException | ClassNotFoundException e) {
 			throw new RuntimeException(e);
 		}
@@ -94,25 +94,25 @@ public class RunningUnitGraphManagerPlugin implements GraphManagerPlugin {
 			JobGraph jobGraph,
 			Map<JobVertexID,
 			ArrayList<Integer>> vertexToStreamNodeIds,
-			List<RelRunningUnit> relRunningUnits) {
+			List<NodeRunningUnit> nodeRunningUnits) {
 		this.scheduler = scheduler;
 		this.jobGraph = jobGraph;
 		Map<Integer, JobVertexID> streamNodeIdToVertex = reverseMap(vertexToStreamNodeIds);
 		buildJobVertices(Arrays.asList(jobGraph.getVerticesAsArray()));
-		buildJobRunningUnits(relRunningUnits, streamNodeIdToVertex);
+		buildJobRunningUnits(nodeRunningUnits, streamNodeIdToVertex);
 	}
 
-	private void buildJobRunningUnits(List<RelRunningUnit> relRunningUnits, Map<Integer, JobVertexID> streamNodeIdToVertex) {
+	private void buildJobRunningUnits(List<NodeRunningUnit> nodeRunningUnits, Map<Integer, JobVertexID> streamNodeIdToVertex) {
 
-		avoidDeadLockDepend(relRunningUnits);
+		avoidDeadLockDepend(nodeRunningUnits);
 
-		for (RelRunningUnit relRunningUnit : relRunningUnits) {
-			LogicalJobVertexRunningUnit jobVertexRunningUnit = transformRunningUnit(relRunningUnit, streamNodeIdToVertex);
+		for (NodeRunningUnit nodeRunningUnit : nodeRunningUnits) {
+			LogicalJobVertexRunningUnit jobVertexRunningUnit = transformRunningUnit(nodeRunningUnit, streamNodeIdToVertex);
 			joinDependRunningUnitMap.computeIfAbsent(jobVertexRunningUnit, k-> new LinkedHashSet<>());
 
 			// jobVertex runningUnit input depend.
-			for (BatchExecRelStage stage : relRunningUnit.getAllRelStages()) {
-				for (BatchExecRelStage dependStage : stage.getDependStageList(BatchExecRelStage.DependType.DATA_TRIGGER)) {
+			for (BatchExecNodeStage stage : nodeRunningUnit.getAllNodeStages()) {
+				for (BatchExecNodeStage dependStage : stage.getDependStageList(BatchExecNodeStage.DependType.DATA_TRIGGER)) {
 					for (int id : dependStage.getTransformationIDList()) {
 						JobVertexID inputJobVertexID = streamNodeIdToVertex.get(id);
 						if (inputJobVertexID != null) {
@@ -122,18 +122,18 @@ public class RunningUnitGraphManagerPlugin implements GraphManagerPlugin {
 					}
 				}
 			}
-			runningUnitMap.put(relRunningUnit, jobVertexRunningUnit);
+			runningUnitMap.put(nodeRunningUnit, jobVertexRunningUnit);
 		}
 
-		for (RelRunningUnit unit : relRunningUnits) {
-			for (BatchExecRelStage stage : unit.getAllRelStages()) {
-				List<BatchExecRelStage> joinDependStageList = stage.getDependStageList(BatchExecRelStage.DependType.PRIORITY);
+		for (NodeRunningUnit unit : nodeRunningUnits) {
+			for (BatchExecNodeStage stage : unit.getAllNodeStages()) {
+				List<BatchExecNodeStage> joinDependStageList = stage.getDependStageList(BatchExecNodeStage.DependType.PRIORITY);
 				if (joinDependStageList.isEmpty()) {
 					continue;
 				}
 				LogicalJobVertexRunningUnit probeRunningUnit = runningUnitMap.get(unit);
-				for (BatchExecRelStage dependStage : joinDependStageList) {
-					for (RelRunningUnit dependUnit : dependStage.getRunningUnitList()) {
+				for (BatchExecNodeStage dependStage : joinDependStageList) {
+					for (NodeRunningUnit dependUnit : dependStage.getRunningUnitList()) {
 						LogicalJobVertexRunningUnit buildRunningUnit = runningUnitMap.get(dependUnit);
 						joinDependRunningUnitMap.get(buildRunningUnit).add(probeRunningUnit);
 						probeRunningUnit.addJoinDepend(buildRunningUnit);
@@ -149,11 +149,11 @@ public class RunningUnitGraphManagerPlugin implements GraphManagerPlugin {
 		leftJobVertexRunningUnit = new LogicalJobVertexRunningUnit(jobVertexSet);
 	}
 
-	private LogicalJobVertexRunningUnit transformRunningUnit(RelRunningUnit relRunningUnit, Map<Integer, JobVertexID> streamNodeIdToVertex) {
-		List<BatchExecRelStage> allStages = relRunningUnit.getAllRelStages();
+	private LogicalJobVertexRunningUnit transformRunningUnit(NodeRunningUnit nodeRunningUnit, Map<Integer, JobVertexID> streamNodeIdToVertex) {
+		List<BatchExecNodeStage> allStages = nodeRunningUnit.getAllNodeStages();
 
 		Set<LogicalJobVertex> jobVertexSet = new LinkedHashSet<>();
-		for (BatchExecRelStage stage : allStages) {
+		for (BatchExecNodeStage stage : allStages) {
 			for (Integer transformationID : stage.getTransformationIDList()) {
 				jobVertexSet.add(logicalJobVertices.get(streamNodeIdToVertex.get(transformationID)));
 			}
@@ -295,26 +295,26 @@ public class RunningUnitGraphManagerPlugin implements GraphManagerPlugin {
 	}
 
 	// if loop depend, remove the stage.
-	private void avoidDeadLockDepend(List<RelRunningUnit> relRunningUnits) {
-		for (RelRunningUnit unit : relRunningUnits) {
-			for (BatchExecRelStage stage : unit.getAllRelStages()) {
-				List<BatchExecRelStage> toRemoveStages = new LinkedList<>();
-				for (BatchExecRelStage dependStage : stage.getAllDependStageList()) {
-					for (RelRunningUnit dependUnit : dependStage.getRunningUnitList()) {
-						Set<RelRunningUnit> visitedRunningUnit = new HashSet<>();
+	private void avoidDeadLockDepend(List<NodeRunningUnit> nodeRunningUnits) {
+		for (NodeRunningUnit unit : nodeRunningUnits) {
+			for (BatchExecNodeStage stage : unit.getAllNodeStages()) {
+				List<BatchExecNodeStage> toRemoveStages = new LinkedList<>();
+				for (BatchExecNodeStage dependStage : stage.getAllDependStageList()) {
+					for (NodeRunningUnit dependUnit : dependStage.getRunningUnitList()) {
+						Set<NodeRunningUnit> visitedRunningUnit = new HashSet<>();
 						if (loopDepend(dependUnit, unit, visitedRunningUnit)) {
 							toRemoveStages.add(dependStage);
 						}
 					}
 				}
-				for (BatchExecRelStage toRemove : toRemoveStages) {
+				for (BatchExecNodeStage toRemove : toRemoveStages) {
 					stage.removeDependStage(toRemove);
 				}
 			}
 		}
 	}
 
-	private boolean loopDepend(RelRunningUnit dependUnit, RelRunningUnit preUnit, Set<RelRunningUnit> visitedRunningUnit) {
+	private boolean loopDepend(NodeRunningUnit dependUnit, NodeRunningUnit preUnit, Set<NodeRunningUnit> visitedRunningUnit) {
 		if (dependUnit == preUnit) {
 			return true;
 		}
@@ -323,9 +323,9 @@ public class RunningUnitGraphManagerPlugin implements GraphManagerPlugin {
 		} else {
 			visitedRunningUnit.add(dependUnit);
 		}
-		for (BatchExecRelStage containStage : dependUnit.getAllRelStages()) {
-			for (BatchExecRelStage dependStage : containStage.getAllDependStageList()) {
-				for (RelRunningUnit unit : dependStage.getRunningUnitList()) {
+		for (BatchExecNodeStage containStage : dependUnit.getAllNodeStages()) {
+			for (BatchExecNodeStage dependStage : containStage.getAllDependStageList()) {
+				for (NodeRunningUnit unit : dependStage.getRunningUnitList()) {
 					if (loopDepend(unit, preUnit, visitedRunningUnit)) {
 						return true;
 					}

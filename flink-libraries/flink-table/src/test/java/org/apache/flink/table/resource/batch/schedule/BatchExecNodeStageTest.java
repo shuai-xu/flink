@@ -19,32 +19,34 @@
 package org.apache.flink.table.resource.batch.schedule;
 
 import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
-import org.apache.flink.table.resource.batch.BatchExecRelStage;
+import org.apache.flink.table.resource.batch.BatchExecNodeStage;
 
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
- * Test for BatchExecRelStage.
+ * Test for BatchExecNodeStage.
  */
-public class BatchExecRelStageTest {
+public class BatchExecNodeStageTest {
 
 	@Test
 	public void testDependStages() {
-		RowBatchExecRel rel = mock(RowBatchExecRel.class);
-		BatchExecRelStage relStage = new BatchExecRelStage(rel, 0);
-		BatchExecRelStage relStage1 = new BatchExecRelStage(rel, 1);
-		relStage.addDependStage(relStage1, BatchExecRelStage.DependType.DATA_TRIGGER);
-		assertEquals(1, relStage.getAllDependStageList().size());
-		BatchExecRelStage relStage2 = new BatchExecRelStage(rel, 2);
-		relStage.addDependStage(relStage2, BatchExecRelStage.DependType.PRIORITY);
-		assertEquals(2, relStage.getAllDependStageList().size());
-		BatchExecRelStage relStage3 = new BatchExecRelStage(rel, 3);
-		relStage.addDependStage(relStage3, BatchExecRelStage.DependType.DATA_TRIGGER);
-		assertEquals(3, relStage.getAllDependStageList().size());
-		relStage.removeDependStage(relStage2);
-		assertEquals(2, relStage.getAllDependStageList().size());
+		RowBatchExecRel node = mock(RowBatchExecRel.class);
+		when(node.getFlinkPhysicalRel()).thenReturn(node);
+		BatchExecNodeStage nodeStage = new BatchExecNodeStage(node, 0);
+		BatchExecNodeStage nodeStage1 = new BatchExecNodeStage(node, 1);
+		nodeStage.addDependStage(nodeStage1, BatchExecNodeStage.DependType.DATA_TRIGGER);
+		assertEquals(1, nodeStage.getAllDependStageList().size());
+		BatchExecNodeStage nodeStage2 = new BatchExecNodeStage(node, 2);
+		nodeStage.addDependStage(nodeStage2, BatchExecNodeStage.DependType.PRIORITY);
+		assertEquals(2, nodeStage.getAllDependStageList().size());
+		BatchExecNodeStage nodeStage3 = new BatchExecNodeStage(node, 3);
+		nodeStage.addDependStage(nodeStage3, BatchExecNodeStage.DependType.DATA_TRIGGER);
+		assertEquals(3, nodeStage.getAllDependStageList().size());
+		nodeStage.removeDependStage(nodeStage2);
+		assertEquals(2, nodeStage.getAllDependStageList().size());
 	}
 }

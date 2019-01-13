@@ -23,28 +23,29 @@ import org.apache.flink.api.common.resources.CommonExtendedResource;
 import org.apache.flink.api.common.resources.Resource;
 
 /**
- * Resource for relNode: cpu, heap memory, reserved managed memory, prefer managed memory and
+ * Resource for node: parallelism, cpu, heap memory, reserved managed memory, prefer managed memory and
  * max managed memory.
  * Reserved managed memory: needed when an operator init.
  * Prefer managed memory: tell the scheduler how much managed memory an operator may use.
  * Max managed memory: max managed memory that an operator can use.
  */
-public class RelResource {
+public class NodeResource {
+
+	private int parallelism = -1;
+
+	private int maxParallelism = -1;
 
 	private double cpu;
 
 	private int heapMem;
 
-	// whether reserved managed memory will change.
-	private boolean isReservedManagedFinal;
-
-	// reserved managed mem for rel.
+	// reserved managed mem for node.
 	private int reservedManagedMem;
 
-	// prefer managed mem for rel.
+	// prefer managed mem for node.
 	private int preferManagedMem;
 
-	// max managed mem for rel.
+	// max managed mem for node.
 	private int maxManagedMem;
 
 	public void setCpu(double cpu) {
@@ -63,15 +64,10 @@ public class RelResource {
 		return reservedManagedMem;
 	}
 
-	public void setManagedMem(int reservedManagedMem, int preferManagedMem, int maxManagedMem, boolean isReservedManagedFinal) {
+	public void setManagedMem(int reservedManagedMem, int preferManagedMem, int maxManagedMem) {
 		this.reservedManagedMem = reservedManagedMem;
 		this.preferManagedMem = preferManagedMem;
 		this.maxManagedMem = maxManagedMem;
-		this.isReservedManagedFinal = isReservedManagedFinal;
-	}
-
-	public void setManagedMem(int reservedManagedMem, int preferManagedMem, int maxManagedMem) {
-		setManagedMem(reservedManagedMem, preferManagedMem, maxManagedMem, false);
 	}
 
 	public int getPreferManagedMem() {
@@ -82,12 +78,25 @@ public class RelResource {
 		return heapMem;
 	}
 
-	public boolean isReservedManagedFinal() {
-		return isReservedManagedFinal;
+	public int getParallelism() {
+		return parallelism;
 	}
 
 	public int getMaxManagedMem() {
 		return maxManagedMem;
+	}
+
+	public void setParallelism(int parallelism, int maxParallelism) {
+		this.parallelism = parallelism;
+		this.maxParallelism = maxParallelism;
+	}
+
+	public void setParallelism(int parallelism) {
+		this.parallelism = parallelism;
+	}
+
+	public boolean isParallelismMax() {
+		return parallelism > 0 && maxParallelism > 0 && parallelism == maxParallelism;
 	}
 
 	public ResourceSpec getReservedResourceSpec() {
@@ -117,6 +126,30 @@ public class RelResource {
 	}
 
 	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder("NodeResource{");
+		if (parallelism > 0) {
+			sb.append("parallelism=").append(parallelism);
+		}
+		if (cpu > 0) {
+			sb.append(", cpu=").append(cpu);
+		}
+		if (heapMem > 0) {
+			sb.append(", heapMem=").append(heapMem);
+		}
+		if (reservedManagedMem > 0) {
+			sb.append(", reservedManagedMem=").append(reservedManagedMem);
+		}
+		if (preferManagedMem > 0) {
+			sb.append(", preferManagedMem=").append(preferManagedMem);
+		}
+		if (maxManagedMem > 0) {
+			sb.append(", maxManagedMem=").append(maxManagedMem);
+		}
+		return sb.toString();
+	}
+
+	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
 			return true;
@@ -125,15 +158,18 @@ public class RelResource {
 			return false;
 		}
 
-		RelResource resource = (RelResource) o;
+		NodeResource resource = (NodeResource) o;
 
+		if (parallelism != resource.parallelism) {
+			return false;
+		}
+		if (maxParallelism != resource.maxParallelism) {
+			return false;
+		}
 		if (Double.compare(resource.cpu, cpu) != 0) {
 			return false;
 		}
 		if (heapMem != resource.heapMem) {
-			return false;
-		}
-		if (isReservedManagedFinal != resource.isReservedManagedFinal) {
 			return false;
 		}
 		if (reservedManagedMem != resource.reservedManagedMem) {
@@ -149,24 +185,14 @@ public class RelResource {
 	public int hashCode() {
 		int result;
 		long temp;
+		result = parallelism;
+		result = 31 * result + maxParallelism;
 		temp = Double.doubleToLongBits(cpu);
-		result = (int) (temp ^ (temp >>> 32));
+		result = 31 * result + (int) (temp ^ (temp >>> 32));
 		result = 31 * result + heapMem;
-		result = 31 * result + (isReservedManagedFinal ? 1 : 0);
 		result = 31 * result + reservedManagedMem;
 		result = 31 * result + preferManagedMem;
 		result = 31 * result + maxManagedMem;
 		return result;
-	}
-
-	@Override
-	public String toString() {
-		return "RelResource{" +
-				"cpu=" + cpu +
-				", heapMem=" + heapMem +
-				", reservedManagedMem=" + reservedManagedMem +
-				", preferManagedMem=" + preferManagedMem +
-				", maxManagedMem=" + maxManagedMem +
-				'}';
 	}
 }

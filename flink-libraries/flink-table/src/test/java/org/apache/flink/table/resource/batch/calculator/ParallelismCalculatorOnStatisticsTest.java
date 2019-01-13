@@ -20,14 +20,13 @@ package org.apache.flink.table.resource.batch.calculator;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.api.TableConfigOptions;
+import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortMergeJoin;
 import org.apache.flink.table.resource.batch.ShuffleStage;
 import org.apache.flink.table.util.ExecResourceUtil;
 
-import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.junit.Before;
 import org.junit.Test;
@@ -81,22 +80,22 @@ public class ParallelismCalculatorOnStatisticsTest {
 	@Test
 	public void testOnlySource() {
 		ShuffleStage shuffleStage0 = mock(ShuffleStage.class);
-		when(shuffleStage0.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(scanParallelism30)));
+		when(shuffleStage0.getExecNodeSet()).thenReturn(getNodeSet(Arrays.asList(scanParallelism30)));
 		new ParallelismCalculatorOnStatistics(mq, tableConf, envParallelism).calculate(shuffleStage0);
 		verify(shuffleStage0).setResultParallelism(30, false);
 
 		ShuffleStage shuffleStage1 = mock(ShuffleStage.class);
-		when(shuffleStage1.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(scanParallelism1)));
+		when(shuffleStage1.getExecNodeSet()).thenReturn(getNodeSet(Arrays.asList(scanParallelism1)));
 		new ParallelismCalculatorOnStatistics(mq, tableConf, envParallelism).calculate(shuffleStage1);
 		verify(shuffleStage1).setResultParallelism(1, false);
 
 		ShuffleStage shuffleStage2 = mock(ShuffleStage.class);
-		when(shuffleStage2.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(scanParallelism42)));
+		when(shuffleStage2.getExecNodeSet()).thenReturn(getNodeSet(Arrays.asList(scanParallelism42)));
 		new ParallelismCalculatorOnStatistics(mq, tableConf, envParallelism).calculate(shuffleStage2);
 		verify(shuffleStage2).setResultParallelism(42, false);
 
 		ShuffleStage shuffleStage3 = mock(ShuffleStage.class);
-		when(shuffleStage3.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(scanParallelismMax)));
+		when(shuffleStage3.getExecNodeSet()).thenReturn(getNodeSet(Arrays.asList(scanParallelismMax)));
 		new ParallelismCalculatorOnStatistics(mq, tableConf, envParallelism).calculate(shuffleStage3);
 		verify(shuffleStage3).setResultParallelism(100, false);
 	}
@@ -104,9 +103,9 @@ public class ParallelismCalculatorOnStatisticsTest {
 	@Test
 	public void testStatics() {
 		ShuffleStage shuffleStage0 = mock(ShuffleStage.class);
-		BatchExecRel<?> singleRel = mockSingleWithInputStatics(4000);
-		BatchExecRel<?> biRel = mockBiWithInputStatics(2000d, 1500d);
-		when(shuffleStage0.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(scanParallelism30, singleRel, biRel)));
+		ExecNode<?, ?> singleNode = mockSingleWithInputStatics(4000);
+		ExecNode<?, ?> biNode = mockBiWithInputStatics(2000d, 1500d);
+		when(shuffleStage0.getExecNodeSet()).thenReturn(getNodeSet(Arrays.asList(scanParallelism30, singleNode, biNode)));
 		new ParallelismCalculatorOnStatistics(mq, tableConf, envParallelism).calculate(shuffleStage0);
 		verify(shuffleStage0).setResultParallelism(30, false);
 		verify(shuffleStage0).setResultParallelism(40, false);
@@ -117,35 +116,37 @@ public class ParallelismCalculatorOnStatisticsTest {
 	public void testShuffleStageFinal() {
 		ShuffleStage shuffleStage0 = mock(ShuffleStage.class);
 		when(shuffleStage0.isParallelismFinal()).thenReturn(true);
-		BatchExecRel<?> singleRel = mockSingleWithInputStatics(4000);
-		BatchExecRel<?> biRel = mockBiWithInputStatics(2000d, 1500d);
-		when(shuffleStage0.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(scanParallelism30, singleRel, biRel)));
+		ExecNode<?, ?> singleNode = mockSingleWithInputStatics(4000);
+		ExecNode<?, ?> biNode = mockBiWithInputStatics(2000d, 1500d);
+		when(shuffleStage0.getExecNodeSet()).thenReturn(getNodeSet(Arrays.asList(scanParallelism30, singleNode, biNode)));
 		new ParallelismCalculatorOnStatistics(mq, tableConf, envParallelism).calculate(shuffleStage0);
 		verify(shuffleStage0, never()).setResultParallelism(anyInt(), anyBoolean());
 	}
 
-	private Set<BatchExecRel<?>> getRelSet(List<BatchExecRel<?>> rowBatchExecRelList) {
-		Set<BatchExecRel<?>> relSet = new HashSet<>();
-		relSet.addAll(rowBatchExecRelList);
-		return relSet;
+	private Set<ExecNode<?, ?>> getNodeSet(List<ExecNode<?, ?>> nodeList) {
+		Set<ExecNode<?, ?>> nodeSet = new HashSet<>();
+		nodeSet.addAll(nodeList);
+		return nodeSet;
 	}
 
-	private BatchExecRel<?> mockSingleWithInputStatics(double inputRowCount) {
-		BatchExecCalc rel = mock(BatchExecCalc.class);
-		RelNode input = mock(RelNode.class);
-		when(rel.getInput()).thenReturn(input);
+	private ExecNode<?, ?> mockSingleWithInputStatics(double inputRowCount) {
+		BatchExecCalc node = mock(BatchExecCalc.class);
+		BatchExecCalc input = mock(BatchExecCalc.class);
+		when(input.getFlinkPhysicalRel()).thenReturn(input);
+		when(node.getInputNodes()).thenReturn(Arrays.asList(input));
 		when(mq.getRowCount(input)).thenReturn(inputRowCount);
-		return rel;
+		return node;
 	}
 
-	private BatchExecRel<?> mockBiWithInputStatics(double leftInputRowCount, double rightInputRowCount) {
-		BatchExecSortMergeJoin rel = mock(BatchExecSortMergeJoin.class);
-		RelNode leftInput = mock(RelNode.class);
-		RelNode rightInput = mock(RelNode.class);
-		when(rel.getLeft()).thenReturn(leftInput);
-		when(rel.getRight()).thenReturn(rightInput);
+	private ExecNode<?, ?> mockBiWithInputStatics(double leftInputRowCount, double rightInputRowCount) {
+		BatchExecSortMergeJoin node = mock(BatchExecSortMergeJoin.class);
+		BatchExecCalc leftInput = mock(BatchExecCalc.class);
+		when(leftInput.getFlinkPhysicalRel()).thenReturn(leftInput);
+		BatchExecCalc rightInput = mock(BatchExecCalc.class);
+		when(rightInput.getFlinkPhysicalRel()).thenReturn(rightInput);
+		when(node.getInputNodes()).thenReturn(Arrays.asList(leftInput, rightInput));
 		when(mq.getRowCount(leftInput)).thenReturn(leftInputRowCount);
 		when(mq.getRowCount(rightInput)).thenReturn(rightInputRowCount);
-		return rel;
+		return node;
 	}
 }

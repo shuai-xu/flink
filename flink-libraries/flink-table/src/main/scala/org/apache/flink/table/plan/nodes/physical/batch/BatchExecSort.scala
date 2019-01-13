@@ -100,9 +100,9 @@ class BatchExecSort(
     // sort code gen
     val (comparators, serializers, codeGen) = getSortInfo(tableEnv.getConfig)
 
-    val reservedMangedMemorySize = resource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB
+    val reservedMangedMemorySize = getResource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB
 
-    val preferMangedMemorySize = resource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB
+    val preferMangedMemorySize = getResource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB
     val perRequestSize =
       ExecResourceUtil.getPerRequestManagedMemory(
         tableEnv.getConfig.getConf)* ExecResourceUtil.SIZE_IN_MB
@@ -121,10 +121,11 @@ class BatchExecSort(
       s"Sort(${SortUtil.sortFieldsToString(collations, getRowType)})",
       operator.asInstanceOf[OneInputStreamOperator[BaseRow, BaseRow]],
       binaryType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
-      resultPartitionCount)
+      getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setDamBehavior(DamBehavior.FULL_DAM)
-    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
     transformation
   }
 

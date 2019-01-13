@@ -29,8 +29,8 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.schedule.VertexScheduler;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
-import org.apache.flink.table.resource.batch.BatchExecRelStage;
-import org.apache.flink.table.resource.batch.RelRunningUnit;
+import org.apache.flink.table.resource.batch.BatchExecNodeStage;
+import org.apache.flink.table.resource.batch.NodeRunningUnit;
 import org.apache.flink.util.TestLogger;
 
 import org.junit.Before;
@@ -55,16 +55,16 @@ import static org.mockito.Mockito.when;
 public class RunningUnitGraphManagerPluginTest extends TestLogger {
 
 	private List<JobVertex> jobVertexList;
-	private List<RelRunningUnit> relRunningUnitList;
-	private List<BatchExecRelStage> relStageList;
+	private List<NodeRunningUnit> nodeRunningUnitList;
+	private List<BatchExecNodeStage> nodeStageList;
 	private VertexScheduler scheduler;
 	private JobGraph jobGraph;
 
 	@Before
 	public void setUp() {
 		jobVertexList = new ArrayList<>();
-		relRunningUnitList = new ArrayList<>();
-		relStageList = new ArrayList<>();
+		nodeRunningUnitList = new ArrayList<>();
+		nodeStageList = new ArrayList<>();
 		scheduler = mock(VertexScheduler.class);
 		jobGraph = mock(JobGraph.class);
 	}
@@ -82,31 +82,31 @@ public class RunningUnitGraphManagerPluginTest extends TestLogger {
 		vertexToStreamNodeIds.computeIfAbsent(jobVertexList.get(4).getID(), k->new ArrayList<>()).add(6);
 		vertexToStreamNodeIds.computeIfAbsent(jobVertexList.get(5).getID(), k->new ArrayList<>()).addAll(Arrays.asList(7, 8, 9));
 
-		createBatchExecRelStages(13);
-		relStageList.get(0).addTransformation(mockTransformation(0));
-		relStageList.get(1).addTransformation(mockTransformation(1));
-		relStageList.get(2).addTransformation(mockTransformation(2));
-		relStageList.get(3).addTransformation(mockTransformation(3));
-		relStageList.get(4).addTransformation(mockTransformation(3));
-		relStageList.get(5).addTransformation(mockTransformation(3));
-		relStageList.get(5).addDependStage(relStageList.get(3), BatchExecRelStage.DependType.DATA_TRIGGER);
-		relStageList.get(5).addDependStage(relStageList.get(4), BatchExecRelStage.DependType.DATA_TRIGGER);
-		relStageList.get(6).addTransformation(mockTransformation(4));
-		relStageList.get(7).addTransformation(mockTransformation(6));
-		relStageList.get(8).addTransformation(mockTransformation(7));
-		relStageList.get(9).addTransformation(mockTransformation(7));
-		relStageList.get(9).addDependStage(relStageList.get(8), BatchExecRelStage.DependType.PRIORITY);
-		relStageList.get(10).addTransformation(mockTransformation(8));
-		relStageList.get(11).addTransformation(mockTransformation(8));
-		relStageList.get(11).addDependStage(relStageList.get(10), BatchExecRelStage.DependType.DATA_TRIGGER);
-		relStageList.get(12).addTransformation(mockTransformation(9));
+		createNodeStages(13);
+		nodeStageList.get(0).addTransformation(mockTransformation(0));
+		nodeStageList.get(1).addTransformation(mockTransformation(1));
+		nodeStageList.get(2).addTransformation(mockTransformation(2));
+		nodeStageList.get(3).addTransformation(mockTransformation(3));
+		nodeStageList.get(4).addTransformation(mockTransformation(3));
+		nodeStageList.get(5).addTransformation(mockTransformation(3));
+		nodeStageList.get(5).addDependStage(nodeStageList.get(3), BatchExecNodeStage.DependType.DATA_TRIGGER);
+		nodeStageList.get(5).addDependStage(nodeStageList.get(4), BatchExecNodeStage.DependType.DATA_TRIGGER);
+		nodeStageList.get(6).addTransformation(mockTransformation(4));
+		nodeStageList.get(7).addTransformation(mockTransformation(6));
+		nodeStageList.get(8).addTransformation(mockTransformation(7));
+		nodeStageList.get(9).addTransformation(mockTransformation(7));
+		nodeStageList.get(9).addDependStage(nodeStageList.get(8), BatchExecNodeStage.DependType.PRIORITY);
+		nodeStageList.get(10).addTransformation(mockTransformation(8));
+		nodeStageList.get(11).addTransformation(mockTransformation(8));
+		nodeStageList.get(11).addDependStage(nodeStageList.get(10), BatchExecNodeStage.DependType.DATA_TRIGGER);
+		nodeStageList.get(12).addTransformation(mockTransformation(9));
 
-		createRelRunningUnits(5);
+		createNodeRunningUnits(5);
 
 		buildRunningUnits(Arrays.asList(0, 1, 3), Arrays.asList(2, 4), Arrays.asList(5, 6, 7, 8), Arrays.asList(9, 10), Arrays.asList(11, 12));
 
 		RunningUnitGraphManagerPlugin plugin = new RunningUnitGraphManagerPlugin();
-		plugin.open(scheduler, jobGraph, vertexToStreamNodeIds, relRunningUnitList);
+		plugin.open(scheduler, jobGraph, vertexToStreamNodeIds, nodeRunningUnitList);
 
 		plugin.onSchedulingStarted();
 		verifyScheduleJobVertex(0, 1, 3);
@@ -120,8 +120,8 @@ public class RunningUnitGraphManagerPluginTest extends TestLogger {
 		verifyScheduleJobVertex(4, 5);
 	}
 
-	private void setRelStage(int relStageIndex, Integer... transformationIDs) {
-		when(relStageList.get(relStageIndex).getTransformationIDList()).thenReturn(Arrays.asList(transformationIDs));
+	private void setNodeStage(int nodeStageIndex, Integer... transformationIDs) {
+		when(nodeStageList.get(nodeStageIndex).getTransformationIDList()).thenReturn(Arrays.asList(transformationIDs));
 	}
 
 	@Test
@@ -135,23 +135,23 @@ public class RunningUnitGraphManagerPluginTest extends TestLogger {
 		vertexToStreamNodeIds.computeIfAbsent(jobVertexList.get(3).getID(), k->new ArrayList<>()).add(4);
 		vertexToStreamNodeIds.computeIfAbsent(jobVertexList.get(4).getID(), k->new ArrayList<>()).add(5);
 
-		createBatchExecRelStages(13);
-		relStageList.get(0).addTransformation(mockTransformation(0));
-		relStageList.get(1).addTransformation(mockTransformation(1));
-		relStageList.get(2).addTransformation(mockTransformation(1));
-		relStageList.get(2).addDependStage(relStageList.get(1), BatchExecRelStage.DependType.DATA_TRIGGER);
-		relStageList.get(3).addTransformation(mockTransformation(2));
-		relStageList.get(4).addTransformation(mockTransformation(2));
-		relStageList.get(4).addDependStage(relStageList.get(3), BatchExecRelStage.DependType.PRIORITY);
-		relStageList.get(5).addTransformation(mockTransformation(3));
-		relStageList.get(6).addTransformation(mockTransformation(4));
+		createNodeStages(13);
+		nodeStageList.get(0).addTransformation(mockTransformation(0));
+		nodeStageList.get(1).addTransformation(mockTransformation(1));
+		nodeStageList.get(2).addTransformation(mockTransformation(1));
+		nodeStageList.get(2).addDependStage(nodeStageList.get(1), BatchExecNodeStage.DependType.DATA_TRIGGER);
+		nodeStageList.get(3).addTransformation(mockTransformation(2));
+		nodeStageList.get(4).addTransformation(mockTransformation(2));
+		nodeStageList.get(4).addDependStage(nodeStageList.get(3), BatchExecNodeStage.DependType.PRIORITY);
+		nodeStageList.get(5).addTransformation(mockTransformation(3));
+		nodeStageList.get(6).addTransformation(mockTransformation(4));
 
-		createRelRunningUnits(5);
+		createNodeRunningUnits(5);
 
 		buildRunningUnits(Arrays.asList(0, 1), Arrays.asList(2, 3), Arrays.asList(4, 5, 6));
 
 		RunningUnitGraphManagerPlugin plugin = new RunningUnitGraphManagerPlugin();
-		plugin.open(scheduler, jobGraph, vertexToStreamNodeIds, relRunningUnitList);
+		plugin.open(scheduler, jobGraph, vertexToStreamNodeIds, nodeRunningUnitList);
 
 		plugin.onSchedulingStarted();
 		verifyScheduleJobVertex(0, 1);
@@ -161,14 +161,14 @@ public class RunningUnitGraphManagerPluginTest extends TestLogger {
 		verifyScheduleJobVertex(4);
 	}
 
-	private void buildRunningUnits(List<Integer>... relStageIndexGroups) {
+	private void buildRunningUnits(List<Integer>... nodeStageIndexGroups) {
 		int runningUnitIndex = 0;
-		for (List<Integer> group : relStageIndexGroups) {
-			RelRunningUnit runningUnit = new RelRunningUnit();
-			relRunningUnitList.add(runningUnitIndex, runningUnit);
-			for (int relStageIndex : group) {
-				runningUnit.addRelStage(relStageList.get(relStageIndex));
-				relStageList.get(relStageIndex).addRunningUnit(runningUnit);
+		for (List<Integer> group : nodeStageIndexGroups) {
+			NodeRunningUnit runningUnit = new NodeRunningUnit();
+			nodeRunningUnitList.add(runningUnitIndex, runningUnit);
+			for (int nodeStageIndex : group) {
+				runningUnit.addNodeStage(nodeStageList.get(nodeStageIndex));
+				nodeStageList.get(nodeStageIndex).addRunningUnit(runningUnit);
 			}
 			runningUnitIndex++;
 		}
@@ -200,9 +200,11 @@ public class RunningUnitGraphManagerPluginTest extends TestLogger {
 		plugin.onExecutionVertexStateChanged(event);
 	}
 
-	private void createBatchExecRelStages(int num) {
+	private void createNodeStages(int num) {
 		for (int i = 0; i < num; i++) {
-			relStageList.add(new BatchExecRelStage(mock(BatchExecRel.class), 0));
+			BatchExecRel batchExecNode = mock(BatchExecRel.class);
+			when(batchExecNode.getFlinkPhysicalRel()).thenReturn(batchExecNode);
+			nodeStageList.add(new BatchExecNodeStage(batchExecNode, 0));
 		}
 	}
 
@@ -212,9 +214,9 @@ public class RunningUnitGraphManagerPluginTest extends TestLogger {
 		return transformation;
 	}
 
-	private void createRelRunningUnits(int num) {
+	private void createNodeRunningUnits(int num) {
 		for (int i = 0; i < num; i++) {
-			relRunningUnitList.add(mock(RelRunningUnit.class));
+			nodeRunningUnitList.add(mock(NodeRunningUnit.class));
 		}
 	}
 

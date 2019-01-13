@@ -120,8 +120,8 @@ class BatchExecHashWindowAggregate(
     val generatedOperator = codegen(ctx, tableEnv,
       inputType, outputRowType,
       groupBufferLimitSize,
-      resource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB,
-      resource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB,
+      getResource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB,
+      getResource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB,
       windowStart,
       windowSize,
       slideSize)
@@ -135,10 +135,11 @@ class BatchExecHashWindowAggregate(
       getOperatorName,
       operator,
       TypeConverters.toBaseRowTypeInfo(outputRowType),
-      resultPartitionCount)
+      getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setDamBehavior(DamBehavior.FULL_DAM)
-    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
     transformation
   }
 

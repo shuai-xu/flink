@@ -83,7 +83,8 @@ class BatchExecValues(
       .createInput(inputFormat, inputFormat.getProducedType, description)
       .getTransformation
     tableEnv.getRUKeeper.addTransformation(this, transformation)
-    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
     transformation
   }
 

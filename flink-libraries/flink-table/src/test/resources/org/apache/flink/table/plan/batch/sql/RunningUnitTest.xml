@@ -22,22 +22,22 @@ limitations under the License.
     </Resource>
     <Resource name="runningUnit">
       <![CDATA[
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d]]]], fields=[d]), stageID=0
-	relStage(batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin], isBroadcast=[true], build=[right]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecTableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d]]]], fields=[d]), stageID=0
+	nodeStage(batchExecNode=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin], isBroadcast=[true], build=[right]), stageID=0
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b]]]], fields=[a, b]), stageID=0
-	relStage(batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin], isBroadcast=[true], build=[right]), stageID=1, depend type: PRIORITY =[batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin], isBroadcast=[true], build=[right]), stageID=0;]
-	relStage(batchExecRel=BatchExecCalc(select=[b]), stageID=0
-	relStage(batchExecRel=BatchExecLocalSortAggregate(select=[Partial_SUM(b) AS sum$0]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b]]]], fields=[a, b]), stageID=0
+	nodeStage(batchExecNode=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin], isBroadcast=[true], build=[right]), stageID=1, depend type: PRIORITY =[batchExecNode=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin], isBroadcast=[true], build=[right]), stageID=0;]
+	nodeStage(batchExecNode=BatchExecCalc(select=[b]), stageID=0
+	nodeStage(batchExecNode=BatchExecLocalSortAggregate(select=[Partial_SUM(b) AS sum$0]), stageID=0
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecLocalSortAggregate(select=[Partial_SUM(b) AS sum$0]), stageID=1, depend type: DATA_TRIGGER =[batchExecRel=BatchExecLocalSortAggregate(select=[Partial_SUM(b) AS sum$0]), stageID=0;]
-	relStage(batchExecRel=BatchExecSortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecLocalSortAggregate(select=[Partial_SUM(b) AS sum$0]), stageID=1, depend type: DATA_TRIGGER =[batchExecNode=BatchExecLocalSortAggregate(select=[Partial_SUM(b) AS sum$0]), stageID=0;]
+	nodeStage(batchExecNode=BatchExecSortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0]), stageID=0
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecSortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0]), stageID=1, depend type: DATA_TRIGGER =[batchExecRel=BatchExecSortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0]), stageID=0;]
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecSortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0]), stageID=1, depend type: DATA_TRIGGER =[batchExecNode=BatchExecSortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0]), stageID=0;]
 }]]>
     </Resource>
     <Resource name="planAfter">
@@ -62,20 +62,20 @@ WITH r AS (SELECT c, SUM(a) a, SUM(b) b FROM x GROUP BY c)
     </Resource>
     <Resource name="runningUnit">
       <![CDATA[
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c]), stageID=0
-	relStage(batchExecRel=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0, Partial_SUM(b) AS sum$1]), stageID=0
-	relStage(batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c]), stageID=0
+	nodeStage(batchExecNode=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0, Partial_SUM(b) AS sum$1]), stageID=0
+	nodeStage(batchExecNode=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b]), stageID=0
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b]), stageID=1, depend type: DATA_TRIGGER =[batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b]), stageID=0;]
-	relStage(batchExecRel=BatchExecCalc(select=[c, a, b], where=[>(a, 1)]), stageID=0
-	relStage(batchExecRel=BatchExecCalc(select=[c, a, b, CAST(a) AS a0]), stageID=0
-	relStage(batchExecRel=BatchExecNestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b]), stageID=1, depend type: DATA_TRIGGER =[batchExecNode=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b]), stageID=0;]
+	nodeStage(batchExecNode=BatchExecCalc(select=[c, a, b], where=[>(a, 1)]), stageID=0
+	nodeStage(batchExecNode=BatchExecCalc(select=[c, a, b, CAST(a) AS a0]), stageID=0
+	nodeStage(batchExecNode=BatchExecNestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right]), stageID=0
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecNestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right]), stageID=1, depend type: PRIORITY =[batchExecRel=BatchExecNestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right]), stageID=0;], depend type: DATA_TRIGGER =[batchExecRel=BatchExecCalc(select=[c, a, b, CAST(a) AS a0]), stageID=0;]
-	relStage(batchExecRel=BatchExecCalc(select=[c, a, b, c0, a1 AS a0, b0]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecNestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right]), stageID=1, depend type: PRIORITY =[batchExecNode=BatchExecNestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right]), stageID=0;], depend type: DATA_TRIGGER =[batchExecNode=BatchExecCalc(select=[c, a, b, CAST(a) AS a0]), stageID=0;]
+	nodeStage(batchExecNode=BatchExecCalc(select=[c, a, b, c0, a1 AS a0, b0]), stageID=0
 }]]>
     </Resource>
     <Resource name="planAfter">
@@ -100,16 +100,16 @@ Calc(select=[c, a, b, c0, a1 AS a0, b0])
     </Resource>
     <Resource name="runningUnit">
       <![CDATA[
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c]), stageID=0
-	relStage(batchExecRel=BatchExecHashSemiJoin(where=[=(a, d)], join=[a, b, c], joinType=[LeftSemiJoin], build=[left]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c]), stageID=0
+	nodeStage(batchExecNode=BatchExecHashSemiJoin(where=[=(a, d)], join=[a, b, c], joinType=[LeftSemiJoin], build=[left]), stageID=0
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d]]]], fields=[d]), stageID=0
-	relStage(batchExecRel=BatchExecHashSemiJoin(where=[=(a, d)], join=[a, b, c], joinType=[LeftSemiJoin], build=[left]), stageID=1, depend type: PRIORITY =[batchExecRel=BatchExecHashSemiJoin(where=[=(a, d)], join=[a, b, c], joinType=[LeftSemiJoin], build=[left]), stageID=0;]
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecTableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d]]]], fields=[d]), stageID=0
+	nodeStage(batchExecNode=BatchExecHashSemiJoin(where=[=(a, d)], join=[a, b, c], joinType=[LeftSemiJoin], build=[left]), stageID=1, depend type: PRIORITY =[batchExecNode=BatchExecHashSemiJoin(where=[=(a, d)], join=[a, b, c], joinType=[LeftSemiJoin], build=[left]), stageID=0;]
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecHashSemiJoin(where=[=(a, d)], join=[a, b, c], joinType=[LeftSemiJoin], build=[left]), stageID=2, depend type: DATA_TRIGGER =[batchExecRel=BatchExecHashSemiJoin(where=[=(a, d)], join=[a, b, c], joinType=[LeftSemiJoin], build=[left]), stageID=1;]
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecHashSemiJoin(where=[=(a, d)], join=[a, b, c], joinType=[LeftSemiJoin], build=[left]), stageID=2, depend type: DATA_TRIGGER =[batchExecNode=BatchExecHashSemiJoin(where=[=(a, d)], join=[a, b, c], joinType=[LeftSemiJoin], build=[left]), stageID=1;]
 }]]>
     </Resource>
     <Resource name="planAfter">
@@ -131,21 +131,21 @@ SELECT t1.*, t2.* FROM t t1, t t2 WHERE t1.b = t2.e AND t1.a < 10 AND t2.a > 5
     </Resource>
     <Resource name="runningUnit">
       <![CDATA[
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b]]]], fields=[a, b]), stageID=0
-	relStage(batchExecRel=BatchExecCalc(select=[a, b], where=[<(a, 10)]), stageID=0
-	relStage(batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=0
-	relStage(batchExecRel=BatchExecCalc(select=[a, b], where=[>(a, 5)]), stageID=0
-	relStage(batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b]]]], fields=[a, b]), stageID=0
+	nodeStage(batchExecNode=BatchExecCalc(select=[a, b], where=[<(a, 10)]), stageID=0
+	nodeStage(batchExecNode=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=0
+	nodeStage(batchExecNode=BatchExecCalc(select=[a, b], where=[>(a, 5)]), stageID=0
+	nodeStage(batchExecNode=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=0
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d, e]]]], fields=[d, e]), stageID=0
-	relStage(batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=1, depend type: PRIORITY =[batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=0;]
-	relStage(batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=1, depend type: PRIORITY =[batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=0;]
-	relStage(batchExecRel=BatchExecHashJoin(where=[=(b, e0)], join=[a, b, d, e, a0, b0, d0, e0], joinType=[InnerJoin], build=[left]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecTableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d, e]]]], fields=[d, e]), stageID=0
+	nodeStage(batchExecNode=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=1, depend type: PRIORITY =[batchExecNode=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=0;]
+	nodeStage(batchExecNode=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=1, depend type: PRIORITY =[batchExecNode=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=0;]
+	nodeStage(batchExecNode=BatchExecHashJoin(where=[=(b, e0)], join=[a, b, d, e, a0, b0, d0, e0], joinType=[InnerJoin], build=[left]), stageID=0
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecHashJoin(where=[=(b, e0)], join=[a, b, d, e, a0, b0, d0, e0], joinType=[InnerJoin], build=[left]), stageID=1, depend type: PRIORITY =[batchExecRel=BatchExecHashJoin(where=[=(b, e0)], join=[a, b, d, e, a0, b0, d0, e0], joinType=[InnerJoin], build=[left]), stageID=0;], depend type: DATA_TRIGGER =[batchExecRel=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=1;]
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecHashJoin(where=[=(b, e0)], join=[a, b, d, e, a0, b0, d0, e0], joinType=[InnerJoin], build=[left]), stageID=1, depend type: PRIORITY =[batchExecNode=BatchExecHashJoin(where=[=(b, e0)], join=[a, b, d, e, a0, b0, d0, e0], joinType=[InnerJoin], build=[left]), stageID=0;], depend type: DATA_TRIGGER =[batchExecNode=BatchExecHashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left]), stageID=1;]
 }]]>
     </Resource>
     <Resource name="planAfter">
@@ -173,25 +173,25 @@ HashJoin(where=[=(b, e0)], join=[a, b, d, e, a0, b0, d0, e0], joinType=[InnerJoi
     </Resource>
     <Resource name="runningUnit">
       <![CDATA[
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b]]]], fields=[a, b]), stageID=0
-	relStage(batchExecRel=BatchExecSortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b]]]], fields=[a, b]), stageID=0
+	nodeStage(batchExecNode=BatchExecSortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin]), stageID=0
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d]]]], fields=[d]), stageID=0
-	relStage(batchExecRel=BatchExecSortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin]), stageID=1
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecTableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d]]]], fields=[d]), stageID=0
+	nodeStage(batchExecNode=BatchExecSortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin]), stageID=1
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecSortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin]), stageID=2, depend type: DATA_TRIGGER =[batchExecRel=BatchExecSortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin]), stageID=0;batchExecRel=BatchExecSortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin]), stageID=1;]
-	relStage(batchExecRel=BatchExecCalc(select=[b]), stageID=0
-	relStage(batchExecRel=BatchExecLocalSortAggregate(select=[Partial_SUM(b) AS sum$0]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecSortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin]), stageID=2, depend type: DATA_TRIGGER =[batchExecNode=BatchExecSortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin]), stageID=0;batchExecNode=BatchExecSortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin]), stageID=1;]
+	nodeStage(batchExecNode=BatchExecCalc(select=[b]), stageID=0
+	nodeStage(batchExecNode=BatchExecLocalSortAggregate(select=[Partial_SUM(b) AS sum$0]), stageID=0
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecLocalSortAggregate(select=[Partial_SUM(b) AS sum$0]), stageID=1, depend type: DATA_TRIGGER =[batchExecRel=BatchExecLocalSortAggregate(select=[Partial_SUM(b) AS sum$0]), stageID=0;]
-	relStage(batchExecRel=BatchExecSortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecLocalSortAggregate(select=[Partial_SUM(b) AS sum$0]), stageID=1, depend type: DATA_TRIGGER =[batchExecNode=BatchExecLocalSortAggregate(select=[Partial_SUM(b) AS sum$0]), stageID=0;]
+	nodeStage(batchExecNode=BatchExecSortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0]), stageID=0
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecSortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0]), stageID=1, depend type: DATA_TRIGGER =[batchExecRel=BatchExecSortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0]), stageID=0;]
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecSortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0]), stageID=1, depend type: DATA_TRIGGER =[batchExecNode=BatchExecSortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0]), stageID=0;]
 }]]>
     </Resource>
     <Resource name="planAfter">
@@ -214,20 +214,20 @@ SortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0])
     </Resource>
     <Resource name="runningUnit">
       <![CDATA[
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
-	relStage(batchExecRel=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
+	nodeStage(batchExecNode=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, z, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
-	relStage(batchExecRel=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecTableSourceScan(table=[[builtin, default, z, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
+	nodeStage(batchExecNode=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=0, depend type: DATA_TRIGGER =[batchExecRel=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0;]
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=0, depend type: DATA_TRIGGER =[batchExecNode=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0;]
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=1, depend type: DATA_TRIGGER =[batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=0;]
-	relStage(batchExecRel=BatchExecCalc(select=[EXPR$0]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=1, depend type: DATA_TRIGGER =[batchExecNode=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=0;]
+	nodeStage(batchExecNode=BatchExecCalc(select=[EXPR$0]), stageID=0
 }]]>
     </Resource>
     <Resource name="planAfter">
@@ -248,19 +248,19 @@ Calc(select=[EXPR$0])
     </Resource>
     <Resource name="runningUnit">
       <![CDATA[
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
-	relStage(batchExecRel=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0
-	relStage(batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecTableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
+	nodeStage(batchExecNode=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0
+	nodeStage(batchExecNode=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=0
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecTableSourceScan(table=[[builtin, default, z, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
-	relStage(batchExecRel=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0
-	relStage(batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecTableSourceScan(table=[[builtin, default, z, source: [selectedFields=[a, c]]]], fields=[a, c]), stageID=0
+	nodeStage(batchExecNode=BatchExecLocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0]), stageID=0
+	nodeStage(batchExecNode=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=0
 }
-RelRunningUnit{
-	relStage(batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=1, depend type: DATA_TRIGGER =[batchExecRel=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=0;]
-	relStage(batchExecRel=BatchExecCalc(select=[EXPR$0]), stageID=0
+NodeRunningUnit{
+	nodeStage(batchExecNode=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=1, depend type: DATA_TRIGGER =[batchExecNode=BatchExecHashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0]), stageID=0;]
+	nodeStage(batchExecNode=BatchExecCalc(select=[EXPR$0]), stageID=0
 }]]>
     </Resource>
     <Resource name="planAfter">

@@ -20,6 +20,8 @@ package org.apache.flink.table.resource.batch.calculator;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.api.TableException;
+import org.apache.flink.table.plan.nodes.exec.BatchExecNode;
+import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
@@ -39,7 +41,6 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecLocalSortWindow
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecNestedLoopJoinBase;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRank;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSort;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortAggregate;
@@ -50,29 +51,22 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTemporalTableJoin;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
-import org.apache.flink.table.resource.RelResource;
 import org.apache.flink.table.util.ExecResourceUtil;
 
-import org.apache.calcite.rel.RelNode;
-
-import java.util.Map;
-
 /**
- * Default managed memory calculator for relNode.
+ * Default managed memory calculator for node.
  */
-public class BatchRelManagedCalculator extends BatchExecNodeVisitor {
+public class BatchNodeManagedCalculator extends BatchExecNodeVisitor {
 
-	private final Map<BatchExecRel<?>, RelResource> relResMap;
 	private final Configuration tableConf;
 
-	public BatchRelManagedCalculator(Configuration tableConf, Map<BatchExecRel<?>, RelResource> relResMap) {
-		this.relResMap = relResMap;
+	public BatchNodeManagedCalculator(Configuration tableConf) {
 		this.tableConf = tableConf;
 	}
 
-	private void calculateNoManagedMem(BatchExecRel<?> batchExecRel) {
-		visitChildren(batchExecRel);
-		relResMap.get(batchExecRel).setManagedMem(0, 0, 0);
+	private void calculateNoManagedMem(BatchExecNode<?> batchExecNode) {
+		visitChildren(batchExecNode);
+		batchExecNode.getResource().setManagedMem(0, 0, 0);
 	}
 
 	@Override
@@ -118,14 +112,14 @@ public class BatchRelManagedCalculator extends BatchExecNodeVisitor {
 		visitChildren(hashAgg);
 		int	reservedMem = ExecResourceUtil.getHashAggManagedMemory(tableConf);
 		int	preferMem = ExecResourceUtil.getHashAggManagedPreferredMemory(tableConf);
-		relResMap.get(hashAgg).setManagedMem(reservedMem, preferMem, preferMem);
+		hashAgg.getResource().setManagedMem(reservedMem, preferMem, preferMem);
 	}
 
 	private void calculateHashWindowAgg(BatchExecHashWindowAggregateBase hashWindowAgg) {
 		visitChildren(hashWindowAgg);
 		int reservedMem = ExecResourceUtil.getHashAggManagedMemory(tableConf);
 		int preferMem = ExecResourceUtil.getHashAggManagedPreferredMemory(tableConf);
-		relResMap.get(hashWindowAgg).setManagedMem(reservedMem, preferMem, preferMem);
+		hashWindowAgg.getResource().setManagedMem(reservedMem, preferMem, preferMem);
 	}
 
 	@Override
@@ -143,7 +137,7 @@ public class BatchRelManagedCalculator extends BatchExecNodeVisitor {
 		visitChildren(hashJoin);
 		int reservedMem = ExecResourceUtil.getHashJoinTableManagedMemory(tableConf);
 		int preferMem = ExecResourceUtil.getHashJoinTableManagedPreferredMemory(tableConf);
-		relResMap.get(hashJoin).setManagedMem(reservedMem, preferMem, preferMem);
+		hashJoin.getResource().setManagedMem(reservedMem, preferMem, preferMem);
 	}
 
 	@Override
@@ -156,7 +150,7 @@ public class BatchRelManagedCalculator extends BatchExecNodeVisitor {
 		int preferSortMemory = ExecResourceUtil.getSortBufferManagedPreferredMemory(
 				tableConf);
 		int preferMemory = preferSortMemory * 2 + externalBufferMemoryMb;
-		relResMap.get(sortMergeJoin).setManagedMem(reservedMemory, preferMemory, preferMemory);
+		sortMergeJoin.getResource().setManagedMem(reservedMemory, preferMemory, preferMemory);
 	}
 
 	@Override
@@ -166,7 +160,7 @@ public class BatchRelManagedCalculator extends BatchExecNodeVisitor {
 		} else {
 			visitChildren(nestedLoopJoin);
 			int externalBufferMemoryMb = ExecResourceUtil.getExternalBufferManagedMemory(tableConf);
-			relResMap.get(nestedLoopJoin).setManagedMem(externalBufferMemoryMb, externalBufferMemoryMb, externalBufferMemoryMb);
+			nestedLoopJoin.getResource().setManagedMem(externalBufferMemoryMb, externalBufferMemoryMb, externalBufferMemoryMb);
 		}
 	}
 
@@ -220,7 +214,7 @@ public class BatchRelManagedCalculator extends BatchExecNodeVisitor {
 		} else {
 			visitChildren(overWindowAgg);
 			int externalBufferMemory = ExecResourceUtil.getExternalBufferManagedMemory(tableConf);
-			relResMap.get(overWindowAgg).setManagedMem(externalBufferMemory, externalBufferMemory, externalBufferMemory);
+			overWindowAgg.getResource().setManagedMem(externalBufferMemory, externalBufferMemory, externalBufferMemory);
 		}
 	}
 
@@ -235,7 +229,7 @@ public class BatchRelManagedCalculator extends BatchExecNodeVisitor {
 		int reservedMemory = ExecResourceUtil.getSortBufferManagedMemory(tableConf);
 		int preferMemory = ExecResourceUtil.getSortBufferManagedPreferredMemory(tableConf);
 		int maxMemory = ExecResourceUtil.getSortBufferManagedMaxMemory(tableConf);
-		relResMap.get(sort).setManagedMem(reservedMemory, preferMemory, maxMemory);
+		sort.getResource().setManagedMem(reservedMemory, preferMemory, maxMemory);
 	}
 
 	@Override
@@ -258,9 +252,9 @@ public class BatchRelManagedCalculator extends BatchExecNodeVisitor {
 		calculateNoManagedMem(joinTable);
 	}
 
-	private void visitChildren(BatchExecRel<?> batchExec) {
-		for (RelNode batchExecRel: batchExec.getInputs()) {
-			((BatchExecRel<?>) batchExecRel).accept(this);
+	private void visitChildren(BatchExecNode<?> batchExec) {
+		for (ExecNode<?, ?> input: batchExec.getInputNodes()) {
+			((BatchExecNode<?>) input).accept(this);
 		}
 	}
 }

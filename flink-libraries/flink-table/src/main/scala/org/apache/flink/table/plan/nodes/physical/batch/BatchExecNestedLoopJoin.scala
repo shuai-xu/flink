@@ -139,7 +139,7 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
     val isFirstRow = newName("isFirstRow")
     val isBinaryRow = newName("isBinaryRow")
 
-    val externalBufferMemorySize = resource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB
+    val externalBufferMemorySize = getResource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB
 
     if (singleRowJoin) {
       ctx.addReusableMember(s"$BASE_ROW $buildRow = null;")
@@ -238,12 +238,13 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
       getOperatorName,
       substituteStreamOperator,
       getOutputType,
-      resultPartitionCount
+      getResource.getParallelism
     )
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setReadOrderHint(
       if (leftIsBuild) ReadOrder.INPUT1_FIRST else ReadOrder.INPUT2_FIRST)
-    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
     transformation
   }
 

@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.resource.batch;
 
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
+import org.apache.flink.table.plan.nodes.exec.BatchExecNode;
 
 import java.io.Serializable;
 import java.util.LinkedHashSet;
@@ -27,34 +27,34 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * RelRunningUnit contains some batchExecRelStages that run at the same time. It can be considered
+ * NodeRunningUnit contains some batchExecNodeStages that run at the same time. It can be considered
  * as schedule unit.
  */
-public class RelRunningUnit implements Serializable {
+public class NodeRunningUnit implements Serializable {
 
-	private final List<BatchExecRelStage> relStageList = new LinkedList<>();
-	private transient Set<BatchExecRel<?>> relSet = new LinkedHashSet<>();
+	private final List<BatchExecNodeStage> nodeStageList = new LinkedList<>();
+	private transient Set<BatchExecNode<?>> nodeSet = new LinkedHashSet<>();
 
-	public void addRelStage(BatchExecRelStage relStage) {
-		this.relStageList.add(relStage);
-		this.relSet.add(relStage.getBatchExecRel());
+	public void addNodeStage(BatchExecNodeStage nodeStage) {
+		this.nodeStageList.add(nodeStage);
+		this.nodeSet.add(nodeStage.getBatchExecNode());
 	}
 
-	public Set<BatchExecRel<?>> getRelSet() {
-		return relSet;
+	public Set<BatchExecNode<?>> getNodeSet() {
+		return nodeSet;
 	}
 
 	@Override
 	public String toString() {
-		StringBuilder sb = new StringBuilder("RelRunningUnit{");
-		for (BatchExecRelStage relStage : relStageList) {
-			sb.append("\n\t").append(relStage);
+		StringBuilder sb = new StringBuilder("NodeRunningUnit{");
+		for (BatchExecNodeStage nodeStage : nodeStageList) {
+			sb.append("\n\t").append(nodeStage);
 		}
 		sb.append("\n}");
 		return sb.toString();
 	}
 
-	public List<BatchExecRelStage> getAllRelStages() {
-		return relStageList;
+	public List<BatchExecNodeStage> getAllNodeStages() {
+		return nodeStageList;
 	}
 }

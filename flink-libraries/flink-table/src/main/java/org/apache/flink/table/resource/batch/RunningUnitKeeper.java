@@ -24,18 +24,18 @@ import org.apache.flink.streaming.api.graph.StreamGraphGenerator;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.api.TableConfigOptions;
+import org.apache.flink.table.plan.nodes.exec.BatchExecNode;
+import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink;
-import org.apache.flink.table.resource.RelResource;
-import org.apache.flink.table.resource.batch.autoconf.RelManagedCalculatorOnStatistics;
-import org.apache.flink.table.resource.batch.autoconf.RelParallelismAdjuster;
+import org.apache.flink.table.resource.batch.autoconf.NodeManagedCalculatorOnStatistics;
+import org.apache.flink.table.resource.batch.autoconf.NodeParallelismAdjuster;
+import org.apache.flink.table.resource.batch.calculator.BatchNodeManagedCalculator;
 import org.apache.flink.table.resource.batch.calculator.BatchParallelismCalculator;
-import org.apache.flink.table.resource.batch.calculator.BatchRelCpuHeapMemCalculator;
-import org.apache.flink.table.resource.batch.calculator.BatchRelManagedCalculator;
 import org.apache.flink.table.resource.batch.calculator.BatchResultPartitionCalculator;
+import org.apache.flink.table.resource.batch.calculator.NodeCpuHeapMemCalculator;
+import org.apache.flink.table.resource.batch.calculator.NodeFinalParallelismSetter;
 import org.apache.flink.table.resource.batch.calculator.ParallelismCalculatorOnStatistics;
-import org.apache.flink.table.resource.batch.calculator.RelFinalParallelismSetter;
 import org.apache.flink.table.resource.batch.calculator.ShuffleStageParallelismCalculator;
 import org.apache.flink.table.resource.batch.schedule.RunningUnitGraphManagerPlugin;
 import org.apache.flink.table.util.ExecResourceUtil;
@@ -57,15 +57,15 @@ import java.util.Set;
 import static org.apache.flink.table.resource.batch.schedule.RunningUnitGraphManagerPlugin.RUNNING_UNIT_CONF_KEY;
 
 /**
- * Assign relNodes to runningUnits.
+ * Assign nodes to runningUnits.
  */
 public class RunningUnitKeeper {
 	private static final Logger LOG = LoggerFactory.getLogger(RunningUnitKeeper.class);
 	private final BatchTableEnvironment tableEnv;
-	private List<RelRunningUnit> runningUnits;
-	private final Map<BatchExecRel<?>, Set<RelRunningUnit>> relRunningUnitMap = new LinkedHashMap<>();
-	// rel --> shuffleStage
-	private final Map<BatchExecRel<?>, Set<BatchExecRelStage>> relStagesMap = new LinkedHashMap<>();
+	private List<NodeRunningUnit> runningUnits;
+	private final Map<BatchExecNode<?>, Set<NodeRunningUnit>> nodeRunningUnitMap = new LinkedHashMap<>();
+	// node --> shuffleStage
+	private final Map<BatchExecNode<?>, Set<BatchExecNodeStage>> nodeStagesMap = new LinkedHashMap<>();
 	private boolean supportRunningUnit = true;
 
 	public RunningUnitKeeper(BatchTableEnvironment tableEnv) {
@@ -76,17 +76,17 @@ public class RunningUnitKeeper {
 		if (runningUnits != null) {
 			runningUnits.clear();
 		}
-		relRunningUnitMap.clear();
-		relStagesMap.clear();
+		nodeRunningUnitMap.clear();
+		nodeStagesMap.clear();
 	}
 
 	private Configuration getTableConf() {
 		return tableEnv.getConfig().getConf();
 	}
 
-	public void buildRUs(BatchExecRel<?> rootNode) {
+	public void buildRUs(BatchExecNode<?> rootNode) {
 		if (rootNode instanceof BatchExecSink<?>) {
-			rootNode = (BatchExecRel<?>) ((BatchExecSink) rootNode).getInput();
+			rootNode = (BatchExecNode<?>) ((BatchExecSink) rootNode).getInput();
 		}
 		// not support subsectionOptimization or external shuffle temporarily
 		if (tableEnv.getConfig().getSubsectionOptimization()
@@ -97,12 +97,12 @@ public class RunningUnitKeeper {
 		RunningUnitGenerator visitor = new RunningUnitGenerator(getTableConf());
 		rootNode.accept(visitor);
 		runningUnits = visitor.getRunningUnits();
-		for (RelRunningUnit runningUnit : runningUnits) {
-			for (BatchExecRel<?> rel : runningUnit.getRelSet()) {
-				relRunningUnitMap.computeIfAbsent(rel, k -> new LinkedHashSet<>()).add(runningUnit);
+		for (NodeRunningUnit runningUnit : runningUnits) {
+			for (BatchExecNode<?> node : runningUnit.getNodeSet()) {
+				nodeRunningUnitMap.computeIfAbsent(node, k -> new LinkedHashSet<>()).add(runningUnit);
 			}
 		}
-		buildRelStagesMap();
+		buildNodeStagesMap();
 	}
 
 	public void setScheduleConfig(StreamGraphGenerator.Context context) {
@@ -118,38 +118,31 @@ public class RunningUnitKeeper {
 		}
 	}
 
-	public void calculateRelResource(BatchExecRel<?> rootNode) {
+	public void calculateNodeResource(BatchExecNode<?> rootNode) {
 		if (rootNode instanceof BatchExecSink<?>) {
-			rootNode = (BatchExecRel<?>) ((BatchExecSink) rootNode).getInput();
+			rootNode = (BatchExecNode<?>) ((BatchExecSink) rootNode).getInput();
 		}
-		RelMetadataQuery mq = rootNode.getCluster().getMetadataQuery();
-		Map<BatchExecRel<?>, RelResource> relResourceMap = new LinkedHashMap<>();
-		BatchRelCpuHeapMemCalculator.calculate(tableEnv, relResourceMap, rootNode);
+		RelMetadataQuery mq = rootNode.getFlinkPhysicalRel().getCluster().getMetadataQuery();
+		NodeCpuHeapMemCalculator.calculate(tableEnv, rootNode);
 		if (!supportRunningUnit) {
 			// if runningUnit cannot be build, or no statics, we set resource according to config.
 			// we are not able to set resource according to statics when runningUnits are not build.
 			BatchResultPartitionCalculator.calculate(tableEnv, mq, rootNode);
-			rootNode.accept(new BatchRelManagedCalculator(getTableConf(), relResourceMap));
-			for (Map.Entry<BatchExecRel<?>, RelResource> entry : relResourceMap.entrySet()) {
-				entry.getKey().setResource(entry.getValue());
-				LOG.info(entry.getKey() + " resource: " + entry.getValue());
-			}
+			rootNode.accept(new BatchNodeManagedCalculator(getTableConf()));
 			return;
 		}
 		InferMode inferMode = ExecResourceUtil.getInferMode(getTableConf());
-		RelFinalParallelismSetter.calculate(tableEnv, rootNode);
-		Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap = ShuffleStageGenerator.generate(rootNode);
-		getShuffleStageParallelismCalculator(mq, getTableConf(), inferMode).calculate(relShuffleStageMap.values());
+		NodeFinalParallelismSetter.calculate(tableEnv, rootNode);
+		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(rootNode);
+		getShuffleStageParallelismCalculator(mq, getTableConf(), inferMode).calculate(nodeShuffleStageMap.values());
 		Double cpuLimit = getTableConf().getDouble(TableConfigOptions.SQL_RESOURCE_RUNNING_UNIT_CPU_TOTAL);
 		if (cpuLimit > 0) {
-			RelParallelismAdjuster.adjustParallelism(cpuLimit, relResourceMap, relRunningUnitMap, relShuffleStageMap);
+			NodeParallelismAdjuster.adjustParallelism(cpuLimit, nodeRunningUnitMap, nodeShuffleStageMap);
 		}
-		rootNode.accept(getRelManagedCalculator(relShuffleStageMap, inferMode, mq, relResourceMap));
-		for (BatchExecRel<?> rel : relShuffleStageMap.keySet()) {
-			rel.setResultPartitionCount(relShuffleStageMap.get(rel).getResultParallelism());
-			rel.setResource(relResourceMap.get(rel));
-			LOG.info(rel + " resource: " + relResourceMap.get(rel));
+		for (ExecNode<?, ?> node : nodeShuffleStageMap.keySet()) {
+			node.getResource().setParallelism(nodeShuffleStageMap.get(node).getResultParallelism());
 		}
+		rootNode.accept(getNodeManagedCalculator(inferMode, mq));
 	}
 
 	private ShuffleStageParallelismCalculator getShuffleStageParallelismCalculator(
@@ -164,35 +157,33 @@ public class RunningUnitKeeper {
 		}
 	}
 
-	private BatchExecNodeVisitor getRelManagedCalculator(
-			Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap,
-			InferMode inferMode, RelMetadataQuery mq,
-			Map<BatchExecRel<?>, RelResource> relResourceMap) {
+	private BatchExecNodeVisitor getNodeManagedCalculator(
+			InferMode inferMode, RelMetadataQuery mq) {
 		if (inferMode.equals(InferMode.ALL)) {
-			return new RelManagedCalculatorOnStatistics(getTableConf(), relShuffleStageMap, mq, relResourceMap);
+			return new NodeManagedCalculatorOnStatistics(getTableConf(), mq);
 		} else {
-			return new BatchRelManagedCalculator(getTableConf(), relResourceMap);
+			return new BatchNodeManagedCalculator(getTableConf());
 		}
 	}
 
-	public void addTransformation(BatchExecRel<?> rel, StreamTransformation<?> transformation) {
-		if (!supportRunningUnit || !relStagesMap.containsKey(rel)) {
+	public void addTransformation(BatchExecNode<?> node, StreamTransformation<?> transformation) {
+		if (!supportRunningUnit || !nodeStagesMap.containsKey(node)) {
 			return;
 		}
-		for (BatchExecRelStage relStage : relStagesMap.get(rel)) {
-			relStage.addTransformation(transformation);
+		for (BatchExecNodeStage nodeStage : nodeStagesMap.get(node)) {
+			nodeStage.addTransformation(transformation);
 		}
 	}
 
-	private void buildRelStagesMap() {
-		for (RelRunningUnit unit : runningUnits) {
-			for (BatchExecRelStage stage : unit.getAllRelStages()) {
-				relStagesMap.computeIfAbsent(stage.getBatchExecRel(), k -> new LinkedHashSet<>()).add(stage);
+	private void buildNodeStagesMap() {
+		for (NodeRunningUnit unit : runningUnits) {
+			for (BatchExecNodeStage stage : unit.getAllNodeStages()) {
+				nodeStagesMap.computeIfAbsent(stage.getBatchExecNode(), k -> new LinkedHashSet<>()).add(stage);
 			}
 		}
 	}
 
-	public List<RelRunningUnit> getRunningUnits() {
+	public List<NodeRunningUnit> getRunningUnits() {
 		return runningUnits;
 	}
 }

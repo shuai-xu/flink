@@ -18,11 +18,9 @@
 
 package org.apache.flink.table.resource.batch;
 
+import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
-
-import org.apache.calcite.rel.RelNode;
 
 import java.util.Comparator;
 import java.util.HashSet;
@@ -40,55 +38,54 @@ import static java.util.stream.Collectors.toList;
  */
 public class ShuffleStageGenerator {
 
-	private final Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap = new LinkedHashMap<>();
+	private final Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = new LinkedHashMap<>();
 
-	public static Map<BatchExecRel<?>, ShuffleStage> generate(BatchExecRel<?> rootRel) {
+	public static Map<ExecNode<?, ?>, ShuffleStage> generate(ExecNode<?, ?> rootNode) {
 		ShuffleStageGenerator generator = new ShuffleStageGenerator();
-		generator.buildShuffleStages(rootRel);
-		Map<BatchExecRel<?>, ShuffleStage> result = generator.getRelShuffleStageMap();
+		generator.buildShuffleStages(rootNode);
+		Map<ExecNode<?, ?>, ShuffleStage> result = generator.getNodeShuffleStageMap();
 		result.values().forEach(s -> {
-			List<BatchExecRel<?>> virtualRelList = s.getBatchExecRelSet().stream().filter(ShuffleStageGenerator::isVirtualRel).collect(toList());
-			virtualRelList.forEach(s::removeRel);
+			List<ExecNode<?, ?>> virtualNodeList = s.getExecNodeSet().stream().filter(ShuffleStageGenerator::isVirtualNode).collect(toList());
+			virtualNodeList.forEach(s::removeNode);
 		});
-		return generator.getRelShuffleStageMap().entrySet().stream()
-				.filter(x -> !isVirtualRel(x.getKey()))
+		return generator.getNodeShuffleStageMap().entrySet().stream()
+				.filter(x -> !isVirtualNode(x.getKey()))
 				.collect(Collectors.toMap(Map.Entry::getKey,
 						Map.Entry::getValue,
 						(e1, e2) -> e1,
 						LinkedHashMap::new));
 	}
 
-	private void buildShuffleStages(BatchExecRel<?> batchExecRel) {
-		if (relShuffleStageMap.containsKey(batchExecRel)) {
+	private void buildShuffleStages(ExecNode<?, ?> execNode) {
+		if (nodeShuffleStageMap.containsKey(execNode)) {
 			return;
 		}
-		List<RelNode> inputs = batchExecRel.getInputs();
-		for (RelNode relNode : inputs) {
-			buildShuffleStages(((BatchExecRel<?>) relNode));
+		for (ExecNode<?, ?> input : execNode.getInputNodes()) {
+			buildShuffleStages((input));
 		}
 
-		if (inputs.isEmpty()) {
-			// source rel
+		if (execNode.getInputNodes().isEmpty()) {
+			// source node
 			ShuffleStage shuffleStage = new ShuffleStage();
-			shuffleStage.addRel(batchExecRel);
-			if (batchExecRel.resultPartitionCount() > 0) {
-				shuffleStage.setResultParallelism(batchExecRel.resultPartitionCount(), true);
+			shuffleStage.addNode(execNode);
+			if (execNode.getResource().isParallelismMax()) {
+				shuffleStage.setResultParallelism(execNode.getResource().getParallelism(), true);
 			}
-			relShuffleStageMap.put(batchExecRel, shuffleStage);
-		} else if (!(batchExecRel instanceof BatchExecExchange)) {
-			Set<ShuffleStage> inputShuffleStages = getInputShuffleStages(batchExecRel);
-			ShuffleStage inputShuffleStage = mergeInputShuffleStages(inputShuffleStages, batchExecRel.resultPartitionCount());
-			inputShuffleStage.addRel(batchExecRel);
-			relShuffleStageMap.put(batchExecRel, inputShuffleStage);
+			nodeShuffleStageMap.put(execNode, shuffleStage);
+		} else if (!(execNode instanceof BatchExecExchange)) {
+			Set<ShuffleStage> inputShuffleStages = getInputShuffleStages(execNode);
+			ShuffleStage inputShuffleStage = mergeInputShuffleStages(inputShuffleStages, execNode.getResource().getParallelism());
+			inputShuffleStage.addNode(execNode);
+			nodeShuffleStageMap.put(execNode, inputShuffleStage);
 		}
 	}
 
-	private ShuffleStage mergeInputShuffleStages(Set<ShuffleStage> shuffleStageSet, int relParallelism) {
-		if (relParallelism > 0) {
+	private ShuffleStage mergeInputShuffleStages(Set<ShuffleStage> shuffleStageSet, int parallelism) {
+		if (parallelism > 0) {
 			ShuffleStage resultShuffleStage = new ShuffleStage();
-			resultShuffleStage.setResultParallelism(relParallelism, true);
+			resultShuffleStage.setResultParallelism(parallelism, true);
 			for (ShuffleStage shuffleStage : shuffleStageSet) {
-				if (!shuffleStage.isParallelismFinal() || shuffleStage.getResultParallelism() == relParallelism) {
+				if (!shuffleStage.isParallelismFinal() || shuffleStage.getResultParallelism() == parallelism) {
 					mergeShuffleStage(resultShuffleStage, shuffleStage);
 				}
 			}
@@ -108,17 +105,17 @@ public class ShuffleStageGenerator {
 	}
 
 	private void mergeShuffleStage(ShuffleStage shuffleStage, ShuffleStage other) {
-		Set<BatchExecRel<?>> relSet = other.getBatchExecRelSet();
-		shuffleStage.addRelSet(relSet);
-		for (BatchExecRel<?> r : relSet) {
-			relShuffleStageMap.put(r, shuffleStage);
+		Set<ExecNode<?, ?>> nodeSet = other.getExecNodeSet();
+		shuffleStage.addNodeSet(nodeSet);
+		for (ExecNode<?, ?> r : nodeSet) {
+			nodeShuffleStageMap.put(r, shuffleStage);
 		}
 	}
 
-	private Set<ShuffleStage> getInputShuffleStages(BatchExecRel<?> rel) {
+	private Set<ShuffleStage> getInputShuffleStages(ExecNode<?, ?> node) {
 		Set<ShuffleStage> shuffleStageList = new HashSet<>();
-		for (RelNode input : rel.getInputs()) {
-			ShuffleStage oneInputShuffleStage = relShuffleStageMap.get((BatchExecRel<?>) input);
+		for (ExecNode<?, ?> input : node.getInputNodes()) {
+			ShuffleStage oneInputShuffleStage = nodeShuffleStageMap.get(input);
 			if (oneInputShuffleStage != null) {
 				shuffleStageList.add(oneInputShuffleStage);
 			}
@@ -126,11 +123,11 @@ public class ShuffleStageGenerator {
 		return shuffleStageList;
 	}
 
-	private static boolean isVirtualRel(BatchExecRel<?> rel) {
-		return rel instanceof BatchExecUnion;
+	private static boolean isVirtualNode(ExecNode<?, ?> node) {
+		return node instanceof BatchExecUnion;
 	}
 
-	private Map<BatchExecRel<?>, ShuffleStage> getRelShuffleStageMap() {
-		return relShuffleStageMap;
+	private Map<ExecNode<?, ?>, ShuffleStage> getNodeShuffleStageMap() {
+		return nodeShuffleStageMap;
 	}
 }

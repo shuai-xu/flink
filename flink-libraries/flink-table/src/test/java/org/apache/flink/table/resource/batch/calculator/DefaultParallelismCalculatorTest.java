@@ -20,8 +20,8 @@ package org.apache.flink.table.resource.batch.calculator;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.api.TableConfigOptions;
+import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan;
 import org.apache.flink.table.resource.batch.ShuffleStage;
 import org.apache.flink.table.util.ExecResourceUtil;
@@ -63,7 +63,7 @@ public class DefaultParallelismCalculatorTest {
 	@Test
 	public void testOnlySource() {
 		ShuffleStage shuffleStage0 = mock(ShuffleStage.class);
-		when(shuffleStage0.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(tableSourceScan)));
+		when(shuffleStage0.getExecNodeSet()).thenReturn(getNodeSet(Arrays.asList(tableSourceScan)));
 		new BatchParallelismCalculator(mq, tableConf, envParallelism).calculate(shuffleStage0);
 		verify(shuffleStage0).setResultParallelism(30, false);
 	}
@@ -72,7 +72,7 @@ public class DefaultParallelismCalculatorTest {
 	public void testSourceAndCalc() {
 		ShuffleStage shuffleStage0 = mock(ShuffleStage.class);
 		BatchExecCalc calc = mock(BatchExecCalc.class);
-		when(shuffleStage0.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(tableSourceScan, calc)));
+		when(shuffleStage0.getExecNodeSet()).thenReturn(getNodeSet(Arrays.asList(tableSourceScan, calc)));
 		new BatchParallelismCalculator(mq, tableConf, envParallelism).calculate(shuffleStage0);
 		verify(shuffleStage0).setResultParallelism(30, false);
 	}
@@ -81,7 +81,7 @@ public class DefaultParallelismCalculatorTest {
 	public void testNoSource() {
 		ShuffleStage shuffleStage0 = mock(ShuffleStage.class);
 		BatchExecCalc calc = mock(BatchExecCalc.class);
-		when(shuffleStage0.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(calc)));
+		when(shuffleStage0.getExecNodeSet()).thenReturn(getNodeSet(Arrays.asList(calc)));
 		new BatchParallelismCalculator(mq, tableConf, envParallelism).calculate(shuffleStage0);
 		verify(shuffleStage0).setResultParallelism(50, false);
 	}
@@ -92,14 +92,14 @@ public class DefaultParallelismCalculatorTest {
 		tableConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, -1);
 		ShuffleStage shuffleStage0 = mock(ShuffleStage.class);
 		BatchExecCalc calc = mock(BatchExecCalc.class);
-		when(shuffleStage0.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(tableSourceScan, calc)));
+		when(shuffleStage0.getExecNodeSet()).thenReturn(getNodeSet(Arrays.asList(tableSourceScan, calc)));
 		new BatchParallelismCalculator(mq, tableConf, envParallelism).calculate(shuffleStage0);
 		verify(shuffleStage0).setResultParallelism(5, false);
 	}
 
-	private Set<BatchExecRel<?>> getRelSet(List<BatchExecRel<?>> rowBatchExecRelList) {
-		Set<BatchExecRel<?>> relSet = new HashSet<>();
-		relSet.addAll(rowBatchExecRelList);
-		return relSet;
+	private Set<ExecNode<?, ?>> getNodeSet(List<ExecNode<?, ?>> nodeList) {
+		Set<ExecNode<?, ?>> nodeSet = new HashSet<>();
+		nodeSet.addAll(nodeList);
+		return nodeSet;
 	}
 }

@@ -486,7 +486,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
         // TODO refactor
         ruKeeper.buildRUs(batchExecRel)
         if (printResource) {
-          ruKeeper.calculateRelResource(optimized.asInstanceOf[BatchExecRel[_]])
+          ruKeeper.calculateNodeResource(optimized.asInstanceOf[BatchExecRel[_]])
         }
         if (printRunningUnit) {
           val ruList = ruKeeper.getRunningUnits.map(x => x.toString)
@@ -545,7 +545,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
       sinkExecNodes.map {
         case node: BatchExecSink[_] =>
           ruKeeper.buildRUs(node)
-          ruKeeper.calculateRelResource(node)
+          ruKeeper.calculateNodeResource(node)
           planWithResource.append(System.lineSeparator)
           planWithResource.append("[[Sink]]")
           planWithResource.append(System.lineSeparator)

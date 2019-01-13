@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.nodes.process;
 
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
-import org.apache.flink.table.resource.batch.calculator.BatchRelCpuHeapMemCalculator;
+import org.apache.flink.table.resource.batch.calculator.NodeCpuHeapMemCalculator;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -38,7 +38,7 @@ public class ChainedDAGProcessors {
 
 	public static ChainedDAGProcessors buildStreamProcessors() {
 		ChainedDAGProcessors processors = new ChainedDAGProcessors();
-		processors.addProcessor(new BatchRelCpuHeapMemCalculator());
+		processors.addProcessor(new NodeCpuHeapMemCalculator());
 		return processors;
 	}
 

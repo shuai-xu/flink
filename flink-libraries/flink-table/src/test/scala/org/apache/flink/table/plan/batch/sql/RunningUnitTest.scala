@@ -27,7 +27,7 @@ import org.apache.flink.table.util.{BatchTableTestUtil, TableTestBase}
 import org.junit.{Before, Test}
 
 /**
-  * Test for RelRunningUnit.
+  * Test for NodeRunningUnit.
   */
 class RunningUnitTest extends TableTestBase {
   private var util: BatchTableTestUtil = _

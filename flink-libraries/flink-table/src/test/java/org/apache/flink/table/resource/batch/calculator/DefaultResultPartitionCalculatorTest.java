@@ -27,7 +27,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
-import org.apache.flink.table.resource.MockRelTestBase;
+import org.apache.flink.table.resource.MockNodeTestBase;
 import org.apache.flink.table.util.ExecResourceUtil;
 
 import org.apache.calcite.rel.RelDistribution;
@@ -36,16 +36,16 @@ import org.junit.Before;
 import org.junit.Test;
 import org.powermock.api.mockito.PowerMockito;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
  * Test for BatchResultPartitionCalculator.
  */
-public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
+public class DefaultResultPartitionCalculatorTest extends MockNodeTestBase {
 	private StreamExecutionEnvironment sEnv = StreamExecutionEnvironment.getExecutionEnvironment();
 	private BatchTableEnvironment tEnv;
 	private RelMetadataQuery mq = mock(RelMetadataQuery.class);
@@ -65,15 +65,16 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, ExecResourceUtil.InferMode.NONE.toString());
 		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_SOURCE_PARALLELISM, 10);
 		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 50);
-		createRelList(3);
-		updateRel(0, mock(BatchExecTableSourceScan.class));
-		updateRel(1, mock(BatchExecTableSourceScan.class));
-		updateRel(2, mock(BatchExecUnion.class));
+		createNodeList(3);
+		updateNode(0, mock(BatchExecTableSourceScan.class));
+		updateNode(1, mock(BatchExecTableSourceScan.class));
+		updateNode(2, mock(BatchExecUnion.class));
 		connect(2, 0, 1);
-		BatchResultPartitionCalculator.calculate(tEnv, mq, relList.get(2));
-		verify(relList.get(0)).setResultPartitionCount(10);
-		verify(relList.get(1)).setResultPartitionCount(10);
-		verify(relList.get(2)).setResultPartitionCount(50);
+		BatchResultPartitionCalculator.calculate(tEnv, mq, nodeList.get(2));
+		assertEquals(10, nodeList.get(0).getResource().getParallelism());
+		assertEquals(10, nodeList.get(1).getResource().getParallelism());
+		assertEquals(50, nodeList.get(2).getResource().getParallelism());
+		assertEquals(10, nodeList.get(0).getResource().getParallelism());
 	}
 
 	@Test
@@ -85,14 +86,14 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		 */
 		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, ExecResourceUtil.InferMode.NONE.toString());
 		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 50);
-		createRelList(2);
-		updateRel(0, mock(BatchExecTableSourceScan.class));
-		updateRel(1, mock(BatchExecExchange.class, RETURNS_DEEP_STUBS));
-		when(((BatchExecExchange) relList.get(1)).getDistribution().getType()).thenReturn(RelDistribution.Type.BROADCAST_DISTRIBUTED);
+		createNodeList(2);
+		updateNode(0, mock(BatchExecTableSourceScan.class));
+		updateNode(1, mock(BatchExecExchange.class, RETURNS_DEEP_STUBS));
+		when(((BatchExecExchange) nodeList.get(1)).getDistribution().getType()).thenReturn(RelDistribution.Type.BROADCAST_DISTRIBUTED);
 		connect(1, 0);
-		BatchResultPartitionCalculator.calculate(tEnv, mq, relList.get(1));
-		verify(relList.get(0)).setResultPartitionCount(50);
-		verify(relList.get(1)).setResultPartitionCount(50);
+		BatchResultPartitionCalculator.calculate(tEnv, mq, nodeList.get(1));
+		assertEquals(50, nodeList.get(0).getResource().getParallelism());
+		assertEquals(50, nodeList.get(1).getResource().getParallelism());
 	}
 
 	@Test
@@ -104,22 +105,22 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		 */
 		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, ExecResourceUtil.InferMode.NONE.toString());
 		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 50);
-		createRelList(4);
-		updateRel(0, mock(BatchExecTableSourceScan.class));
-		updateRel(2, mock(BatchExecBoundedStreamScan.class));
-		updateRel(3, mock(BatchExecBoundedStreamScan.class));
+		createNodeList(4);
+		updateNode(0, mock(BatchExecTableSourceScan.class));
+		updateNode(2, mock(BatchExecBoundedStreamScan.class));
+		updateNode(3, mock(BatchExecBoundedStreamScan.class));
 		BatchExecExchange execExchange = mock(BatchExecExchange.class, RETURNS_DEEP_STUBS);
-		updateRel(1, execExchange);
+		updateNode(1, execExchange);
 		when(execExchange.getDistribution().getType()).thenReturn(RelDistribution.Type.BROADCAST_DISTRIBUTED);
 		connect(1, 0, 2, 3);
-		when(((BatchExecTableSourceScan) relList.get(0)).getSourceTransformation(any()).getMaxParallelism()).thenReturn(30);
-		when(((BatchExecBoundedStreamScan) relList.get(2)).getSourceTransformation(any()).getParallelism()).thenReturn(10);
-		when(((BatchExecBoundedStreamScan) relList.get(3)).getSourceTransformation(any()).getParallelism()).thenReturn(-1);
-		BatchResultPartitionCalculator.calculate(tEnv, mq, relList.get(1));
-		verify(relList.get(0)).setResultPartitionCount(30);
-		verify(relList.get(1)).setResultPartitionCount(50);
-		verify(relList.get(2)).setResultPartitionCount(10);
-		verify(relList.get(3)).setResultPartitionCount(StreamExecutionEnvironment.getDefaultLocalParallelism());
+		when(((BatchExecTableSourceScan) nodeList.get(0)).getSourceTransformation(any()).getMaxParallelism()).thenReturn(30);
+		when(((BatchExecBoundedStreamScan) nodeList.get(2)).getSourceTransformation(any()).getParallelism()).thenReturn(10);
+		when(((BatchExecBoundedStreamScan) nodeList.get(3)).getSourceTransformation(any()).getParallelism()).thenReturn(-1);
+		BatchResultPartitionCalculator.calculate(tEnv, mq, nodeList.get(1));
+		assertEquals(30, nodeList.get(0).getResource().getParallelism());
+		assertEquals(50, nodeList.get(1).getResource().getParallelism());
+		assertEquals(10, nodeList.get(2).getResource().getParallelism());
+		assertEquals(StreamExecutionEnvironment.getDefaultLocalParallelism(), nodeList.get(3).getResource().getParallelism());
 	}
 
 	@Test
@@ -133,18 +134,18 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 50);
 		tEnv.getConfig().getConf().setLong(TableConfigOptions.SQL_RESOURCE_INFER_ROWS_PER_PARTITION, 100);
 		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_MB_PER_PARTITION, 1000);
-		createRelList(2);
+		createNodeList(2);
 		BatchExecTableSourceScan scan = mock(BatchExecTableSourceScan.class, RETURNS_DEEP_STUBS);
 		when(mq.getRowCount(scan)).thenReturn(50d);
 		when(mq.getAverageRowSize(scan)).thenReturn(1.6 * ExecResourceUtil.SIZE_IN_MB);
-		updateRel(0, scan);
+		updateNode(0, scan);
 		BatchExecExchange execExchange = mock(BatchExecExchange.class, RETURNS_DEEP_STUBS);
-		updateRel(1, execExchange);
+		updateNode(1, execExchange);
 		when(execExchange.getDistribution().getType()).thenReturn(RelDistribution.Type.BROADCAST_DISTRIBUTED);
 		connect(1, 0);
-		BatchResultPartitionCalculator.calculate(tEnv, mq, relList.get(1));
-		verify(relList.get(0)).setResultPartitionCount(1);
-		verify(relList.get(1)).setResultPartitionCount(50);
+		BatchResultPartitionCalculator.calculate(tEnv, mq, nodeList.get(1));
+		assertEquals(1, nodeList.get(0).getResource().getParallelism());
+		assertEquals(50, nodeList.get(1).getResource().getParallelism());
 	}
 
 	@Test
@@ -159,19 +160,19 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		tEnv.getConfig().getConf().setLong(TableConfigOptions.SQL_RESOURCE_INFER_ROWS_PER_PARTITION, 100);
 		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_MB_PER_PARTITION, 1000);
 		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_PARALLELISM_MAX, 100);
-		createRelList(2);
+		createNodeList(2);
 
 		BatchExecTableSourceScan scan = PowerMockito.mock(BatchExecTableSourceScan.class);
 		when(mq.getRowCount(scan)).thenReturn(50000d);
 		when(mq.getAverageRowSize(scan)).thenReturn(1d * ExecResourceUtil.SIZE_IN_MB);
-		updateRel(0, scan);
+		updateNode(0, scan);
 		BatchExecExchange execExchange = mock(BatchExecExchange.class, RETURNS_DEEP_STUBS);
-		updateRel(1, execExchange);
+		updateNode(1, execExchange);
 		when(execExchange.getDistribution().getType()).thenReturn(RelDistribution.Type.BROADCAST_DISTRIBUTED);
 		connect(1, 0);
-		BatchResultPartitionCalculator.calculate(tEnv, mq, relList.get(1));
-		verify(relList.get(0)).setResultPartitionCount(100);
-		verify(relList.get(1)).setResultPartitionCount(50);
+		BatchResultPartitionCalculator.calculate(tEnv, mq, nodeList.get(1));
+		assertEquals(100, nodeList.get(0).getResource().getParallelism());
+		assertEquals(50, nodeList.get(1).getResource().getParallelism());
 	}
 
 	@Test
@@ -186,18 +187,18 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		tEnv.getConfig().getConf().setLong(TableConfigOptions.SQL_RESOURCE_INFER_ROWS_PER_PARTITION, 100);
 		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_MB_PER_PARTITION, 1000);
 		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_PARALLELISM_MAX, 100);
-		createRelList(2);
+		createNodeList(2);
 		BatchExecTableSourceScan scan = mock(BatchExecTableSourceScan.class, RETURNS_DEEP_STUBS);
 		when(mq.getRowCount(scan)).thenReturn(5000d);
 		when(mq.getAverageRowSize(scan)).thenReturn(12d * ExecResourceUtil.SIZE_IN_MB);
-		updateRel(0, scan);
+		updateNode(0, scan);
 		BatchExecExchange execExchange = mock(BatchExecExchange.class, RETURNS_DEEP_STUBS);
-		updateRel(1, execExchange);
+		updateNode(1, execExchange);
 		when(execExchange.getDistribution().getType()).thenReturn(RelDistribution.Type.BROADCAST_DISTRIBUTED);
 		connect(1, 0);
-		BatchResultPartitionCalculator.calculate(tEnv, mq, relList.get(1));
-		verify(relList.get(0)).setResultPartitionCount(60);
-		verify(relList.get(1)).setResultPartitionCount(50);
+		BatchResultPartitionCalculator.calculate(tEnv, mq, nodeList.get(1));
+		assertEquals(60, nodeList.get(0).getResource().getParallelism());
+		assertEquals(50, nodeList.get(1).getResource().getParallelism());
 	}
 
 	@Test
@@ -209,14 +210,14 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		 */
 		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, ExecResourceUtil.InferMode.NONE.toString());
 		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 50);
-		createRelList(2);
-		updateRel(0, mock(BatchExecTableSourceScan.class));
-		updateRel(1, mock(BatchExecExchange.class, RETURNS_DEEP_STUBS));
-		when(((BatchExecExchange) relList.get(1)).getDistribution().getType()).thenReturn(RelDistribution.Type.SINGLETON);
+		createNodeList(2);
+		updateNode(0, mock(BatchExecTableSourceScan.class));
+		updateNode(1, mock(BatchExecExchange.class, RETURNS_DEEP_STUBS));
+		when(((BatchExecExchange) nodeList.get(1)).getDistribution().getType()).thenReturn(RelDistribution.Type.SINGLETON);
 		connect(1, 0);
-		BatchResultPartitionCalculator.calculate(tEnv, mq, relList.get(1));
-		verify(relList.get(0)).setResultPartitionCount(50);
-		verify(relList.get(1)).setResultPartitionCount(1);
+		BatchResultPartitionCalculator.calculate(tEnv, mq, nodeList.get(1));
+		assertEquals(50, nodeList.get(0).getResource().getParallelism());
+		assertEquals(1, nodeList.get(1).getResource().getParallelism());
 	}
 
 	@Test
@@ -228,13 +229,13 @@ public class DefaultResultPartitionCalculatorTest extends MockRelTestBase {
 		 */
 		tEnv.getConfig().getConf().setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, ExecResourceUtil.InferMode.NONE.toString());
 		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 50);
-		createRelList(2);
-		updateRel(0, mock(BatchExecValues.class));
-		updateRel(1, mock(BatchExecExchange.class, RETURNS_DEEP_STUBS));
-		when(((BatchExecExchange) relList.get(1)).getDistribution().getType()).thenReturn(RelDistribution.Type.SINGLETON);
+		createNodeList(2);
+		updateNode(0, mock(BatchExecValues.class));
+		updateNode(1, mock(BatchExecExchange.class, RETURNS_DEEP_STUBS));
+		when(((BatchExecExchange) nodeList.get(1)).getDistribution().getType()).thenReturn(RelDistribution.Type.SINGLETON);
 		connect(1, 0);
-		BatchResultPartitionCalculator.calculate(tEnv, mq, relList.get(1));
-		verify(relList.get(0)).setResultPartitionCount(1);
-		verify(relList.get(1)).setResultPartitionCount(1);
+		BatchResultPartitionCalculator.calculate(tEnv, mq, nodeList.get(1));
+		assertEquals(1, nodeList.get(0).getResource().getParallelism());
+		assertEquals(1, nodeList.get(1).getResource().getParallelism());
 	}
 }

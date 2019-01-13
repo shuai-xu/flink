@@ -316,20 +316,22 @@ class BatchExecOverAggregate(
       }.toArray
       val operator = new OverWindowOperator(aggHandlers, needResets, generatorSort)
       val transformation = new OneInputTransformation(input, "OverAggregate", operator,
-        outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]], resultPartitionCount)
+        outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]], getResource.getParallelism)
       tableEnv.getRUKeeper.addTransformation(this, transformation)
-      transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
+      transformation.setResources(getResource.getReservedResourceSpec,
+        getResource.getPreferResourceSpec)
       transformation
     } else {
       val windowFrames = createOverWindowFrames(tableEnv, inputRowType)
       val operator = new BufferDataOverWindowOperator(
-        (resource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB).toInt,
+        (getResource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB).toInt,
         windowFrames,
         generatorSort)
       val transformation = new OneInputTransformation(input, "OverAggregate", operator,
-        outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]], resultPartitionCount)
+        outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]], getResource.getParallelism)
       tableEnv.getRUKeeper.addTransformation(this, transformation)
-      transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
+      transformation.setResources(getResource.getReservedResourceSpec,
+        getResource.getPreferResourceSpec)
       transformation
     }
   }

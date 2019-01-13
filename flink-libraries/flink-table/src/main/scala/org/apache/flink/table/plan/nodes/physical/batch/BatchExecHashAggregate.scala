@@ -158,9 +158,9 @@ class BatchExecHashAggregate(
       codegenWithoutKeys(isMerge, isFinal, ctx, tableEnv, inputType, outputRowType, "NoGrouping")
     } else {
       val reservedManagedMem =
-        resource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB
+        getResource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB
       val maxManagedMem =
-        resource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB
+        getResource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB
       codegenWithKeys(
         ctx,
         tableEnv,
@@ -178,10 +178,11 @@ class BatchExecHashAggregate(
       getOperatorName,
       operator,
       TypeConverters.toBaseRowTypeInfo(outputRowType),
-      resultPartitionCount)
+      getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setDamBehavior(DamBehavior.FULL_DAM)
-    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
 
     transformation
   }

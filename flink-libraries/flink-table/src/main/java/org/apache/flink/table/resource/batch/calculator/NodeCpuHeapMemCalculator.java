@@ -25,42 +25,38 @@ import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.process.DAGProcessContext;
 import org.apache.flink.table.plan.nodes.process.DAGProcessor;
-import org.apache.flink.table.resource.RelResource;
+import org.apache.flink.table.resource.NodeResource;
 import org.apache.flink.table.util.ExecResourceUtil;
 
 import org.apache.calcite.rel.RelDistribution;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
- * Cpu and heap memory calculator for relNode.
+ * Cpu and heap memory calculator for execNode.
  */
-public class BatchRelCpuHeapMemCalculator implements DAGProcessor {
+public class NodeCpuHeapMemCalculator implements DAGProcessor {
 
-	private Map<BatchExecRel<?>, RelResource> relResMap;
-	private final Set<ExecNode> calculatedRelSet = new HashSet<>();
+	private final Set<ExecNode> calculatedNodeSet = new HashSet<>();
 	private TableEnvironment tEnv;
 
-	public static void calculate(BatchTableEnvironment tEnv, Map<BatchExecRel<?>, RelResource> relResMap, BatchExecRel<?> rootExecRel) {
-		new BatchRelCpuHeapMemCalculator(tEnv, relResMap).calculate(rootExecRel);
+	public static void calculate(BatchTableEnvironment tEnv, ExecNode<?, ?> rootNode) {
+		new NodeCpuHeapMemCalculator(tEnv).calculate(rootNode);
 	}
 
-	public BatchRelCpuHeapMemCalculator() {
+	public NodeCpuHeapMemCalculator() {
 	}
 
 	// TODO
-	public BatchRelCpuHeapMemCalculator(BatchTableEnvironment tEnv, Map<BatchExecRel<?>, RelResource> relResMap) {
+	public NodeCpuHeapMemCalculator(BatchTableEnvironment tEnv) {
 		this.tEnv = tEnv;
-		this.relResMap = relResMap;
 	}
 
 	@Override
@@ -73,12 +69,12 @@ public class BatchRelCpuHeapMemCalculator implements DAGProcessor {
 		return sinkNodes;
 	}
 
-	protected void calculateInputs(ExecNode<?, ?> node) {
-		node.getInputNodes().forEach(input -> this.calculate(input));
+	private void calculateInputs(ExecNode<?, ?> node) {
+		node.getInputNodes().forEach(this::calculate);
 	}
 
 	public void calculate(ExecNode execNode) {
-		if (!calculatedRelSet.add(execNode)) {
+		if (!calculatedNodeSet.add(execNode)) {
 			return;
 		}
 		if (execNode instanceof BatchExecBoundedStreamScan) {
@@ -90,7 +86,7 @@ public class BatchRelCpuHeapMemCalculator implements DAGProcessor {
 		} else if (execNode instanceof BatchExecExchange) {
 			calculateExchange((BatchExecExchange) execNode);
 		} else {
-			calculateDefaultRel(execNode);
+			calculateDefaultNode(execNode);
 		}
 	}
 
@@ -115,41 +111,30 @@ public class BatchRelCpuHeapMemCalculator implements DAGProcessor {
 	}
 
 	private void calculateBatchScan(BatchExecScan batchExecScan, ResourceSpec sourceRes) {
-		RelResource relResource = new RelResource();
 		ResourceSpec conversionRes = ResourceSpec.DEFAULT;
 		if (batchExecScan.needInternalConversion()) {
 			conversionRes = ExecResourceUtil.getDefaultResourceSpec(tEnv.getConfig().getConf());
 		}
-		ResourceSpec totalRes = sourceRes.merge(conversionRes);
-		relResource.setCpu(totalRes.getCpuCores());
-		relResource.setHeapMem(totalRes.getHeapMemory());
-		relResMap.put(batchExecScan, relResource);
-		batchExecScan.setResource(relResource);
 		batchExecScan.setResForSourceAndConversion(sourceRes, conversionRes);
 	}
 
-	private void calculateDefaultRel(ExecNode node) {
+	private void calculateDefaultNode(ExecNode node) {
 		calculateInputs(node);
-		RelResource relResource = getDefaultRelResource();
-		relResMap.put((BatchExecRel<?>) node, relResource);
-		node.setResource(relResource);
+		setDefaultRes(node.getResource());
 	}
 
 	// set resource for rangePartition exchange
 	private void calculateExchange(BatchExecExchange execExchange) {
 		calculateInputs(execExchange);
 		if (execExchange.getDistribution().getType() == RelDistribution.Type.RANGE_DISTRIBUTED) {
-			RelResource resource = getDefaultRelResource();
-			execExchange.setResource(resource);
+			setDefaultRes(execExchange.getResource());
 		}
 	}
 
-	private RelResource getDefaultRelResource() {
+	private void setDefaultRes(NodeResource resource) {
 		double cpu = ExecResourceUtil.getDefaultCpu(tEnv.getConfig().getConf());
 		int heap = ExecResourceUtil.getDefaultHeapMem(tEnv.getConfig().getConf());
-		RelResource relResource = new RelResource();
-		relResource.setCpu(cpu);
-		relResource.setHeapMem(heap);
-		return relResource;
+		resource.setCpu(cpu);
+		resource.setHeapMem(heap);
 	}
 }

@@ -275,8 +275,8 @@ class BatchExecExchange(
     val (keys, orders, nullsIsLast) = SortUtil.getKeysAndOrders(fieldCollations.asScala)
     val types = inputType.getFieldTypes
 
-    val reservedResSpec = resource.getReservedResourceSpec
-    val preferResSpec = resource.getPreferResourceSpec
+    val reservedResSpec = getResource.getReservedResourceSpec
+    val preferResSpec = getResource.getPreferResourceSpec
 
     val sampleAndHistogram = reusedSampleAndHistogram match {
       case Some(transformation) => transformation
@@ -396,7 +396,7 @@ class BatchExecExchange(
       PR_NAME,
       new RemoveRangeIndexOperator(),
       binaryType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
-      resultPartitionCount)
+      getResource.getParallelism)
     removeIdTransformation.setResources(reservedResSpec, preferResSpec)
     removeIdTransformation
   }

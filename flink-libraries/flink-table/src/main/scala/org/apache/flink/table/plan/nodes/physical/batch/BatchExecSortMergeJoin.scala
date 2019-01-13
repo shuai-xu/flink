@@ -208,10 +208,10 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       ExecResourceUtil.getPerRequestManagedMemory(config.getConf)* ExecResourceUtil.SIZE_IN_MB
     val infer = ExecResourceUtil.getInferMode(config.getConf).equals(InferMode.ALL)
 
-    val totalReservedSortMemory = (resource.getReservedManagedMem -
+    val totalReservedSortMemory = (getResource.getReservedManagedMem -
       externalBufferMemory * getExternalBufferNum) * ExecResourceUtil.SIZE_IN_MB
 
-    val totalMaxSortMemory = (resource.getMaxManagedMem -
+    val totalMaxSortMemory = (getResource.getMaxManagedMem -
       externalBufferMemory * getExternalBufferNum) * ExecResourceUtil.SIZE_IN_MB
 
     val leftRatio = if (infer) inferLeftRowCountRatio else 0.5d
@@ -286,12 +286,13 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       getOperatorName,
       operator,
       getOutputType,
-      resultPartitionCount)
+      getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     if (!leftSorted && !rightSorted) {
       transformation.setDamBehavior(DamBehavior.FULL_DAM)
     }
-    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
     transformation
   }
 

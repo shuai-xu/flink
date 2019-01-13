@@ -18,9 +18,9 @@
 
 package org.apache.flink.table.resource;
 
+import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.resource.batch.ShuffleStage;
@@ -35,12 +35,11 @@ import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Test for {@link ShuffleStageGenerator}.
  */
-public class ShuffleStageGeneratorTest extends MockRelTestBase {
+public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 
 	@Test
 	public void testGenerateShuffleStags() {
@@ -58,10 +57,10 @@ public class ShuffleStageGeneratorTest extends MockRelTestBase {
 		 *               |
 		 *              8, Calc
 		 */
-		createRelList(9);
-		updateRel(2, mock(BatchExecUnion.class));
-		updateRel(5, mock(BatchExecExchange.class));
-		updateRel(6, mock(BatchExecExchange.class));
+		createNodeList(9);
+		updateNode(2, mock(BatchExecUnion.class));
+		updateNode(5, mock(BatchExecExchange.class));
+		updateNode(6, mock(BatchExecExchange.class));
 		connect(2, 0, 1);
 		connect(3, 2);
 		connect(4, 2);
@@ -70,10 +69,10 @@ public class ShuffleStageGeneratorTest extends MockRelTestBase {
 		connect(7, 5, 6);
 		connect(8, 7);
 
-		Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap = ShuffleStageGenerator.generate(relList.get(8));
+		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(nodeList.get(8));
 
-		assertSameShuffleStage(relShuffleStageMap, 7, 8);
-		assertSameShuffleStage(relShuffleStageMap, 0, 1, 3, 4);
+		assertSameShuffleStage(nodeShuffleStageMap, 7, 8);
+		assertSameShuffleStage(nodeShuffleStageMap, 0, 1, 3, 4);
 	}
 
 	@Test
@@ -94,11 +93,11 @@ public class ShuffleStageGeneratorTest extends MockRelTestBase {
 		 *                           \   /
 		 *                           16, Join
 		 */
-		createRelList(17);
-		updateRel(7, mock(BatchExecExchange.class));
-		updateRel(12, mock(BatchExecExchange.class));
-		updateRel(13, mock(BatchExecUnion.class));
-		updateRel(15, mock(BatchExecExchange.class));
+		createNodeList(17);
+		updateNode(7, mock(BatchExecExchange.class));
+		updateNode(12, mock(BatchExecExchange.class));
+		updateNode(13, mock(BatchExecUnion.class));
+		updateNode(15, mock(BatchExecExchange.class));
 		connect(1, 0);
 		connect(3, 2);
 		connect(5, 4);
@@ -113,10 +112,10 @@ public class ShuffleStageGeneratorTest extends MockRelTestBase {
 		connect(15, 11);
 		connect(16, 15, 14);
 
-		Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap = ShuffleStageGenerator.generate(relList.get(16));
+		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(nodeList.get(16));
 
-		assertSameShuffleStage(relShuffleStageMap, 0, 1, 8, 3, 2, 9, 5, 4, 10, 11, 14, 16);
-		assertSameShuffleStage(relShuffleStageMap, 6);
+		assertSameShuffleStage(nodeShuffleStageMap, 0, 1, 8, 3, 2, 9, 5, 4, 10, 11, 14, 16);
+		assertSameShuffleStage(nodeShuffleStageMap, 6);
 	}
 
 	@Test
@@ -131,25 +130,25 @@ public class ShuffleStageGeneratorTest extends MockRelTestBase {
 		 *                 |
 		 *               5, Calc
 		 */
-		createRelList(7);
-		BatchExecRel<?> scan0 = mock(BatchExecScan.class);
-		when(scan0.resultPartitionCount()).thenReturn(10);
-		BatchExecRel<?> scan1 = mock(BatchExecScan.class);
-		when(scan1.resultPartitionCount()).thenReturn(11);
-		updateRel(0, scan0);
-		updateRel(2, scan1);
-		updateRel(4, mock(BatchExecUnion.class));
-		updateRel(5, mock(BatchExecCalc.class));
-		updateRel(6, mock(BatchExecScan.class));
+		createNodeList(7);
+		ExecNode<?, ?> scan0 = mock(BatchExecScan.class);
+		ExecNode<?, ?>scan1 = mock(BatchExecScan.class);
+		updateNode(0, scan0);
+		scan0.getResource().setParallelism(10, 10);
+		updateNode(2, scan1);
+		scan1.getResource().setParallelism(11, 11);
+		updateNode(4, mock(BatchExecUnion.class));
+		updateNode(5, mock(BatchExecCalc.class));
+		updateNode(6, mock(BatchExecScan.class));
 		connect(1, 0);
 		connect(3, 2);
 		connect(4, 1, 3, 6);
 		connect(5, 4);
 
-		Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap = ShuffleStageGenerator.generate(relList.get(5));
+		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(nodeList.get(5));
 
-		assertSameShuffleStage(relShuffleStageMap, 0, 1);
-		assertSameShuffleStage(relShuffleStageMap, 2, 3, 6, 5);
+		assertSameShuffleStage(nodeShuffleStageMap, 0, 1);
+		assertSameShuffleStage(nodeShuffleStageMap, 2, 3, 6, 5);
 	}
 
 	@Test
@@ -164,27 +163,27 @@ public class ShuffleStageGeneratorTest extends MockRelTestBase {
 		 *                 |
 		 *               5, Calc
 		 */
-		createRelList(7);
-		BatchExecRel<?> scan0 = mock(BatchExecScan.class);
-		when(scan0.resultPartitionCount()).thenReturn(10);
-		BatchExecRel<?> scan1 = mock(BatchExecScan.class);
-		when(scan1.resultPartitionCount()).thenReturn(11);
-		updateRel(0, scan0);
-		updateRel(2, scan1);
-		updateRel(4, mock(BatchExecUnion.class));
-		BatchExecCalc calc = mock(BatchExecCalc.class);
-		when(calc.resultPartitionCount()).thenReturn(12);
-		updateRel(5, calc);
+		createNodeList(7);
+		ExecNode<?, ?> scan0 = mock(BatchExecScan.class);
+		ExecNode<?, ?> scan1 = mock(BatchExecScan.class);
+		updateNode(0, scan0);
+		scan0.getResource().setParallelism(10, 10);
+		updateNode(2, scan1);
+		scan1.getResource().setParallelism(11, 11);
+		updateNode(4, mock(BatchExecUnion.class));
+		ExecNode<?, ?> calc = mock(BatchExecCalc.class);
+		updateNode(5, calc);
+		calc.getResource().setParallelism(12, 12);
 		connect(1, 0);
 		connect(3, 2);
 		connect(4, 1, 3);
 		connect(5, 4);
 
-		Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap = ShuffleStageGenerator.generate(relList.get(5));
+		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(nodeList.get(5));
 
-		assertSameShuffleStage(relShuffleStageMap, 0, 1);
-		assertSameShuffleStage(relShuffleStageMap, 2, 3);
-		assertSameShuffleStage(relShuffleStageMap, 5);
+		assertSameShuffleStage(nodeShuffleStageMap, 0, 1);
+		assertSameShuffleStage(nodeShuffleStageMap, 2, 3);
+		assertSameShuffleStage(nodeShuffleStageMap, 5);
 	}
 
 	@Test
@@ -201,29 +200,29 @@ public class ShuffleStageGeneratorTest extends MockRelTestBase {
 		 *                 |
 		 *               6, Calc
 		 */
-		createRelList(7);
-		BatchExecRel<?> scan0 = mock(BatchExecScan.class);
-		when(scan0.resultPartitionCount()).thenReturn(10);
-		BatchExecRel<?> scan1 = mock(BatchExecScan.class);
-		when(scan1.resultPartitionCount()).thenReturn(11);
-		updateRel(0, scan0);
-		updateRel(2, scan1);
-		updateRel(3, mock(BatchExecExchange.class));
-		BatchExecCalc calc = mock(BatchExecCalc.class);
-		when(calc.resultPartitionCount()).thenReturn(1);
-		updateRel(4, calc);
-		updateRel(5, mock(BatchExecUnion.class));
+		createNodeList(7);
+		ExecNode<?, ?> scan0 = mock(BatchExecScan.class);
+		ExecNode<?, ?> scan1 = mock(BatchExecScan.class);
+		updateNode(0, scan0);
+		scan0.getResource().setParallelism(10, 10);
+		updateNode(2, scan1);
+		scan1.getResource().setParallelism(11, 11);
+		updateNode(3, mock(BatchExecExchange.class));
+		ExecNode<?, ?> calc = mock(BatchExecCalc.class);
+		updateNode(4, calc);
+		calc.getResource().setParallelism(1, 1);
+		updateNode(5, mock(BatchExecUnion.class));
 		connect(1, 0);
 		connect(3, 2);
 		connect(4, 3);
 		connect(5, 1, 4);
 		connect(6, 5);
 
-		Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap = ShuffleStageGenerator.generate(relList.get(6));
+		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(nodeList.get(6));
 
-		assertSameShuffleStage(relShuffleStageMap, 0, 1, 6);
-		assertSameShuffleStage(relShuffleStageMap, 2);
-		assertSameShuffleStage(relShuffleStageMap, 4);
+		assertSameShuffleStage(nodeShuffleStageMap, 0, 1, 6);
+		assertSameShuffleStage(nodeShuffleStageMap, 2);
+		assertSameShuffleStage(nodeShuffleStageMap, 4);
 	}
 
 	@Test
@@ -238,28 +237,28 @@ public class ShuffleStageGeneratorTest extends MockRelTestBase {
 		 *                 |
 		 *               5, Calc
 		 */
-		createRelList(8);
-		BatchExecRel<?> scan0 = mock(BatchExecScan.class);
-		when(scan0.resultPartitionCount()).thenReturn(11);
-		BatchExecRel<?> scan1 = mock(BatchExecScan.class);
-		when(scan1.resultPartitionCount()).thenReturn(5);
-		updateRel(0, scan0);
-		updateRel(2, scan1);
-		BatchExecUnion union4 = mock(BatchExecUnion.class);
-		when(union4.resultPartitionCount()).thenReturn(5);
-		updateRel(4, union4);
-		updateRel(5, mock(BatchExecCalc.class));
-		updateRel(6, mock(BatchExecScan.class));
-		updateRel(7, mock(BatchExecScan.class));
+		createNodeList(8);
+		ExecNode<?, ?> scan0 = mock(BatchExecScan.class);
+		ExecNode<?, ?> scan1 = mock(BatchExecScan.class);
+		updateNode(0, scan0);
+		scan0.getResource().setParallelism(11, 11);
+		updateNode(2, scan1);
+		scan1.getResource().setParallelism(5, 5);
+		ExecNode<?, ?> union4 = mock(BatchExecUnion.class);
+		updateNode(4, union4);
+		union4.getResource().setParallelism(5, 5);
+		updateNode(5, mock(BatchExecCalc.class));
+		updateNode(6, mock(BatchExecScan.class));
+		updateNode(7, mock(BatchExecScan.class));
 		connect(1, 0);
 		connect(3, 2);
 		connect(4, 1, 3, 6, 7);
 		connect(5, 4);
 
-		Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap = ShuffleStageGenerator.generate(relList.get(5));
+		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(nodeList.get(5));
 
-		assertSameShuffleStage(relShuffleStageMap, 0, 1);
-		assertSameShuffleStage(relShuffleStageMap, 2, 3, 6, 5, 7);
+		assertSameShuffleStage(nodeShuffleStageMap, 0, 1);
+		assertSameShuffleStage(nodeShuffleStageMap, 2, 3, 6, 5, 7);
 	}
 
 	@Test
@@ -274,37 +273,37 @@ public class ShuffleStageGeneratorTest extends MockRelTestBase {
 		 *                 |
 		 *               5, Calc
 		 */
-		createRelList(6);
-		BatchExecRel<?> scan0 = mock(BatchExecScan.class);
-		when(scan0.resultPartitionCount()).thenReturn(11);
-		BatchExecRel<?> scan1 = mock(BatchExecScan.class);
-		when(scan1.resultPartitionCount()).thenReturn(5);
-		updateRel(0, scan0);
-		updateRel(2, scan1);
-		BatchExecUnion union4 = mock(BatchExecUnion.class);
-		when(union4.resultPartitionCount()).thenReturn(3);
-		updateRel(4, union4);
-		updateRel(5, mock(BatchExecCalc.class));
+		createNodeList(6);
+		ExecNode<?, ?> scan0 = mock(BatchExecScan.class);
+		ExecNode<?, ?> scan1 = mock(BatchExecScan.class);
+		updateNode(0, scan0);
+		scan0.getResource().setParallelism(11, 11);
+		updateNode(2, scan1);
+		scan1.getResource().setParallelism(5, 5);
+		ExecNode<?, ?> union4 = mock(BatchExecUnion.class);
+		updateNode(4, union4);
+		union4.getResource().setParallelism(3, 3);
+		updateNode(5, mock(BatchExecCalc.class));
 		connect(1, 0);
 		connect(3, 2);
 		connect(4, 1, 3);
 		connect(5, 4);
 
-		Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap = ShuffleStageGenerator.generate(relList.get(5));
+		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(nodeList.get(5));
 
-		assertSameShuffleStage(relShuffleStageMap, 0, 1);
-		assertSameShuffleStage(relShuffleStageMap, 2, 3);
-		assertSameShuffleStage(relShuffleStageMap, 5);
+		assertSameShuffleStage(nodeShuffleStageMap, 0, 1);
+		assertSameShuffleStage(nodeShuffleStageMap, 2, 3);
+		assertSameShuffleStage(nodeShuffleStageMap, 5);
 	}
 
-	private void assertSameShuffleStage(Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap, int ... relIndexes) {
-		Set<BatchExecRel<?>> relSet = new HashSet<>();
-		for (int index : relIndexes) {
-			relSet.add(relList.get(index));
+	private void assertSameShuffleStage(Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap, int ... nodeIndexes) {
+		Set<ExecNode<?, ?>> nodeSet = new HashSet<>();
+		for (int index : nodeIndexes) {
+			nodeSet.add(nodeList.get(index));
 		}
-		for (int index : relIndexes) {
-			assertNotNull("shuffleStage should not be null. rel index: " + index, relShuffleStageMap.get(relList.get(index)));
-			assertEquals("rel index: " + index, relSet, relShuffleStageMap.get(relList.get(index)).getBatchExecRelSet());
+		for (int index : nodeIndexes) {
+			assertNotNull("shuffleStage should not be null. node index: " + index, nodeShuffleStageMap.get(nodeList.get(index)));
+			assertEquals("node index: " + index, nodeSet, nodeShuffleStageMap.get(nodeList.get(index)).getExecNodeSet());
 		}
 	}
 }

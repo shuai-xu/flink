@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.exec
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
-import org.apache.flink.table.resource.RelResource
+import org.apache.flink.table.resource.NodeResource
 
 import java.util
 
@@ -33,16 +33,9 @@ import java.util
 trait ExecNode[E <: TableEnvironment, T] {
 
   /**
-    * Defines how much resource the rel will take.
-    * TODO rename
+    * Defines how much resource the node will take.
     */
-  private[flink] var resource: RelResource = _
-
-  /**
-    * Defines how many partitions the data of the node will output.
-    * TODO rename
-    */
-  private[flink] var resultPartitionCount: Int = -1
+  private val resource: NodeResource = new NodeResource
 
   /**
     * The [[StreamTransformation]] translated from this node.
@@ -50,15 +43,9 @@ trait ExecNode[E <: TableEnvironment, T] {
   private var transformation: StreamTransformation[T] = _
 
   /**
-    * Sets rel resource.
+    * Get node resource.
     */
-  def setResource(resource: RelResource): Unit = {
-    this.resource = resource
-  }
-
-  def setResultPartitionCount(count: Int): Unit = {
-    resultPartitionCount = count
-  }
+  private[flink] def getResource = resource
 
   /**
     * Translates this node into a Flink operator.

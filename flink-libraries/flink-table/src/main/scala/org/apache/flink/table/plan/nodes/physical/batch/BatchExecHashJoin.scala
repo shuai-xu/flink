@@ -160,9 +160,9 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
 
     val keyType = new RowType(
       classOf[BinaryRow], leftKeys.map(lType.getFieldTypes()(_)): _*)
-    val managedMemorySize = resource.getReservedManagedMem *
+    val managedMemorySize = getResource.getReservedManagedMem *
         ExecResourceUtil.SIZE_IN_MB
-    val maxMemorySize = resource.getMaxManagedMem *
+    val maxMemorySize = getResource.getMaxManagedMem *
         ExecResourceUtil.SIZE_IN_MB
     val condFunc = generateConditionFunction(config, lType, rType)
 
@@ -228,12 +228,13 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
       getOperatorName,
       operator,
       getOutputType,
-      resultPartitionCount)
+      getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setDamBehavior(
       if (hashJoinType.buildLeftSemiOrAnti()) DamBehavior.FULL_DAM else DamBehavior.MATERIALIZING)
     transformation.setReadOrderHint(ReadOrder.INPUT1_FIRST)
-    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
     transformation
   }
 

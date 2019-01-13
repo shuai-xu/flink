@@ -189,12 +189,13 @@ class BatchExecCorrelate(
       condition,
       relRowType,
       joinType,
-      resultPartitionCount,
+      getResource.getParallelism,
       retainHeader = false,
       getExpressionString,
       ruleDescription)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
-    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
     transformation
   }
 

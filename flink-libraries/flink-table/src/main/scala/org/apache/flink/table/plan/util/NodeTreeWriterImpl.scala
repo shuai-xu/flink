@@ -21,7 +21,7 @@ import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.table.plan.`trait`.{AccModeTraitDef, UpdateAsRetractionTraitDef}
 import org.apache.flink.table.plan.cost.FlinkBatchCost
 import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode}
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashJoinBase, BatchExecNestedLoopJoinBase, BatchExecRel, BatchExecScan}
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecExchange, BatchExecHashJoinBase, BatchExecNestedLoopJoinBase, BatchExecRel, BatchExecScan, BatchExecUnion}
 import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRel
 import org.apache.flink.table.plan.util.FlinkNodeOptUtil.ReuseInfoBuilder
 
@@ -137,9 +137,6 @@ class NodeTreeWriterImpl(
       if (withResource) {
         node match {
           case batchExecNode: BatchExecNode[_] =>
-            printValues.add(Pair.of(
-              "partition",
-              batchExecNode.resultPartitionCount.asInstanceOf[AnyRef]))
             batchExecNode match {
               case scan: BatchExecScan =>
                 // TODO refactor
@@ -249,9 +246,7 @@ class NodeTreeWriterImpl(
   private def addResourceToPrint(
       batchExecNode: BatchExecNode[_],
       printValues: JArrayList[Pair[String, AnyRef]]): Unit = {
-    if (batchExecNode.resource != null) {
-      printValues.add(Pair.of("resource", batchExecNode.resource.toString))
-    }
+      printValues.add(Pair.of("resource", batchExecNode.getResource.toString))
   }
 
   private def resourceSpecToString(resourceSpec: ResourceSpec): String = {

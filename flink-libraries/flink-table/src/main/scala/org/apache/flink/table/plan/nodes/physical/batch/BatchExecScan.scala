@@ -58,7 +58,7 @@ trait BatchExecScan extends CommonScan[BinaryRow] with RowBatchExecRel with Logg
       tableEnv: BatchTableEnvironment,
       input: StreamTransformation[Any]): Unit = {
 
-    input.setParallelism(resultPartitionCount)
+    input.setParallelism(getResource.getParallelism)
     input.setResources(sourceResSpec, sourceResSpec)
     input.getTransitivePredecessors.foreach(t => tableEnv.getRUKeeper.addTransformation(this, t))
   }
