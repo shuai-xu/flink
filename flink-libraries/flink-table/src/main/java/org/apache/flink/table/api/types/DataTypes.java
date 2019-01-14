@@ -177,7 +177,15 @@ public class DataTypes {
 		return new RowType(types, fieldNames);
 	}
 
+	public static RowType createRowType(InternalType[] types, String[] fieldNames) {
+		return new RowType(types, fieldNames);
+	}
+
 	public static RowType createRowType(DataType... types) {
+		return new RowType(types);
+	}
+
+	public static RowType createRowType(InternalType... types) {
 		return new RowType(types);
 	}
 
