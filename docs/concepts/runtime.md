@@ -113,9 +113,6 @@ job. Allowing this *slot sharing* has two main benefits:
     With slot sharing, increasing the base parallelism in our example from two to six yields full utilization of the
     slotted resources, while making sure that the heavy subtasks are fairly distributed among the TaskManagers.
 
-Note: Sharing of slots with quantitative resource profiles are not yet fully supported.
-Thus, in this version we do not encourage users to enable both features at the same time.
-
 <img src="../fig/slot_sharing.svg" alt="TaskManagers with shared Task Slots" class="offset" width="80%" />
 
 The APIs also include a *[resource group](../dev/stream/operators/#task-chaining-and-resource-groups)* mechanism which can be used to prevent undesirable slot sharing.
