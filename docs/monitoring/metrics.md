@@ -517,7 +517,7 @@ or by assigning unique names to jobs and operators.
 - TaskManager: &lt;host&gt;, &lt;tm_id&gt;
 - Job: &lt;job_id&gt;, &lt;job_name&gt;
 - Task: &lt;task_id&gt;, &lt;task_name&gt;, &lt;task_attempt_id&gt;, &lt;task_attempt_num&gt;, &lt;subtask_index&gt;
-- Operator: &lt;operator_id&gt;,&lt;operator_name&gt;, &lt;subtask_index&gt;
+- Operator: &lt;operator_id&gt;,&lt;operator_name&gt;
 
 **Important:** For the Batch API, &lt;operator_id&gt; is always equal to &lt;task_id&gt;.
 
@@ -1032,41 +1032,6 @@ Thus, in order to infer the metric identifier:
     <tr>
       <td>avgQueueLen</td>
       <td>Average number of queued buffers in all input/output channels.</td>
-      <td>Gauge</td>
-    </tr>
-  </tbody>
-</table>
-
-### Cluster
-<table class="table table-bordered">
-  <thead>
-    <tr>
-      <th class="text-left" style="width: 18%">Scope</th>
-      <th class="text-left" style="width: 26%">Metrics</th>
-      <th class="text-left" style="width: 48%">Description</th>
-      <th class="text-left" style="width: 8%">Type</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th rowspan="4"><strong>JobManager</strong></th>
-      <td>numRegisteredTaskManagers</td>
-      <td>The number of registered taskmanagers.</td>
-      <td>Gauge</td>
-    </tr>
-    <tr>
-      <td>numRunningJobs</td>
-      <td>The number of running jobs.</td>
-      <td>Gauge</td>
-    </tr>
-    <tr>
-      <td>taskSlotsAvailable</td>
-      <td>The number of available task slots.</td>
-      <td>Gauge</td>
-    </tr>
-    <tr>
-      <td>taskSlotsTotal</td>
-      <td>The total number of task slots.</td>
       <td>Gauge</td>
     </tr>
   </tbody>
