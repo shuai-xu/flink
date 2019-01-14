@@ -30,6 +30,8 @@ import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.factories.{BatchTableSinkFactory, BatchTableSourceFactory, TableFactory}
+import org.apache.flink.table.plan.nodes.physical.batch._
+import org.apache.flink.table.plan.subplan.BatchDAGOptimizer
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.sinks.{BatchTableSink, CollectRowTableSink}
@@ -146,9 +148,9 @@ class CacheAwareRelNodePlanBuilderTest(
       })
     }
     Files.createDirectory(path)
+    tableEnv.close()
   }
 
-  @Ignore
   @Test
   def testPersist(): Unit = {
     val ds1 = CollectionBatchExecTable.getSmall3TupleDataSet(tableEnv, "a, b, c")
@@ -176,7 +178,6 @@ class CacheAwareRelNodePlanBuilderTest(
     TestBaseUtils.compareResultAsText(results.asJava, expected)
   }
 
-  @Ignore
   @Test
   def testPersistWithBlockOptimization(): Unit = {
     val join = table1.where('Artist1 !== "The Doors")
@@ -206,7 +207,6 @@ class CacheAwareRelNodePlanBuilderTest(
     tableEnv.execute("write to sink 1/2")
   }
 
-  @Ignore
   @Test
   def testRedundantPersist(): Unit = {
     val join = table1.where('Artist1 !== "The Doors")
@@ -228,244 +228,249 @@ class CacheAwareRelNodePlanBuilderTest(
 
   // FIXME https://aone.alibaba-inc.com/task/18478823
 
-//  // following test cases verify the plans
-//  @Test
-//  def testPlanPersistSimple(): Unit = {
-//    val t = table1.select('Artist1)
-//    t.cache()
-//    writeToCollectSink(t.where('Artist1 === "The Doors"))
-//
-//    // there should be two LogicalNodeBlock
-//    assertTrue(tableEnv.compile().toList.size == 2)
-//
-//    mockExecute(tableEnv)
-//
-//    writeToCollectSink(t.where('Artist1 === "The Doors"))
-//    val plan = tableEnv.compile()
-//
-//    assertTrue(plan.size == 1)
-//
-//    val expectedPre = List(
-//      classOf[LogicalSink],
-//      classOf[LogicalFilter],
-//      classOf[LogicalTableScan]
-//    )
-//
-//    val expectedMid = List(
-//      classOf[LogicalTableScan],
-//      classOf[LogicalFilter],
-//      classOf[LogicalSink]
-//    )
-//    verifyLogicalNodeTree(plan(0).outputNode, expectedPre, expectedMid)
-//  }
-//
-//  @Test
-//  def testPlanRedundantPersist(): Unit = {
-//    val t = table1.select('Artist1)
-//
-//    t.cache()
-//    t.cache()
-//
-//    writeToCollectSink(t.where('Artist1 === "The Doors"))
-//
-//    // there should be two LogicalNodeBlock
-//    assertTrue(tableEnv.compile().toList.size == 2)
-//
-//    mockExecute(tableEnv)
-//
-//    writeToCollectSink(t.where('Artist1 === "The Doors"))
-//    val plan = tableEnv.compile()
-//
-//    assertTrue(plan.size == 1)
-//
-//    val expectedPre = List(
-//      classOf[LogicalSink],
-//      classOf[LogicalFilter],
-//      classOf[LogicalTableScan]
-//    )
-//
-//    val expectedMid = List(
-//      classOf[LogicalTableScan],
-//      classOf[LogicalFilter],
-//      classOf[LogicalSink]
-//    )
-//    verifyLogicalNodeTree(plan(0).outputNode, expectedPre, expectedMid)
-//  }
-//
-//  @Test
-//  def testPlanRedundantPersist2(): Unit = {
-//    var t = table1.select('Artist1, 'Song1)
-//    t.cache()
-//    t = t.select('Artist1)
-//    t.cache()
-//
-//    writeToCollectSink(t.where('Artist1 === "The Doors"))
-//
-//    assertTrue(tableEnv.compile().toList.size == 3)
-//
-//    mockExecute(tableEnv)
-//
-//    writeToCollectSink(t.where('Artist1 === "The Doors"))
-//    val plan = tableEnv.compile()
-//
-//    assertTrue(plan.size == 1)
-//
-//    val expectedPre = List(
-//      classOf[LogicalSink],
-//      classOf[LogicalFilter],
-//      classOf[LogicalTableScan]
-//    )
-//
-//    val expectedMid = List(
-//      classOf[LogicalTableScan],
-//      classOf[LogicalFilter],
-//      classOf[LogicalSink]
-//    )
-//    verifyLogicalNodeTree(plan(0).outputNode, expectedPre, expectedMid)
-//  }
-//
-//  @Test
-//  def testPlanPersistWithoutReference(): Unit = {
-//    val t = table1.select('Artist1)
-//    t.cache()
-//    writeToCollectSink(t.where('Artist1 === "The Doors"))
-//
-//    table2.select('Artist2).cache()
-//
-//    // todo: to be optimized
-//    assertTrue(tableEnv.compile().toList.size == 3)
-//
-//    mockExecute(tableEnv)
-//
-//    writeToCollectSink(t.where('Artist1 === "The Doors"))
-//    val plan = tableEnv.compile()
-//
-//    assertTrue(plan.size == 1)
-//
-//    val expectedPre = List(
-//      classOf[LogicalSink],
-//      classOf[LogicalFilter],
-//      classOf[LogicalTableScan]
-//    )
-//
-//    val expectedMid = List(
-//      classOf[LogicalTableScan],
-//      classOf[LogicalFilter],
-//      classOf[LogicalSink]
-//    )
-//    verifyLogicalNodeTree(plan(0).outputNode, expectedPre, expectedMid)
-//  }
-//
-//  @Test
-//  def testPlanPersistWithBlockOptimization(): Unit = {
-//    val t1 = table1
-//      .join(table2)
-//      .where('Artist1 === 'Artist2)
-//      .select('Artist1, 'Album2, 'Song1)
-//    t1.cache()
-//
-//    writeToCollectSink(t1.where('Artist1 === "The Doors"))
-//
-//    mockExecute(tableEnv)
-//
-//    val t2 = t1
-//      .join(table3)
-//      .where('Album2 ==='Album3)
-//
-//    writeToCollectSink(t2.where('Artist1 === "The Doors"))
-//    writeToCollectSink(t2.where('Artist1 === "Levon Helm"))
-//
-//    val plan = tableEnv.compile()
-//
-//    // Block optimization should be OK.
-//    assertTrue(plan.size == 2)
-//    assertTrue(plan(0).children(0) == plan(1).children(0))
-//
-//    // cached table is expected to be used
-//    val expectedPre = List(
-//      classOf[LogicalSink],
-//      classOf[LogicalFilter],
-//      classOf[LogicalFilter],
-//      classOf[LogicalJoin],
-//      classOf[LogicalTableScan],
-//      classOf[LogicalTableScan]
-//    )
-//
-//    val expectedMid = List(
-//      classOf[LogicalTableScan],
-//      classOf[LogicalJoin],
-//      classOf[LogicalTableScan],
-//      classOf[LogicalFilter],
-//      classOf[LogicalFilter],
-//      classOf[LogicalSink]
-//    )
-//
-//    verifyLogicalNodeTree(plan(0).outputNode, expectedPre, expectedMid)
-//  }
+  // following test cases verify the plans
+  @Test
+  def testPlanPersistSimple(): Unit = {
+    val t = table1.select('Artist1)
+    t.cache()
+    writeToCollectSink(t.where('Artist1 === "The Doors"))
 
-//  @Test
-//  def testInvalidateCache(): Unit = {
-//    val t1 = table1
-//      .join(table2)
-//      .where('Artist1 === 'Artist2)
-//      .select('Artist1, 'Album2, 'Song1)
-//    t1.cache()
-//
-//    writeToCollectSink(t1.where('Artist1 === "The Doors"))
-//
-//    mockExecute(tableEnv)
-//
-//    val t2 = t1
-//      .join(table3)
-//      .where('Album2 ==='Album3)
-//
-//    writeToCollectSink(t2.where('Artist1 === "The Doors"))
-//    var plan = tableEnv.compile()
-//
-//    // only collect sink
-//    assertTrue(plan.size == 1)
-//
-//    tableEnv.tableServiceManager.invalidateCachedTable()
-//    plan = tableEnv.compile()
-//
-//    // collect sink and table service sink
-//    assertTrue(plan.size == 2)
-//
-//    // plan without cache is expected to be used
-//    val expectedPre = List(
-//      classOf[LogicalSink],
-//      classOf[LogicalProject],
-//      classOf[LogicalFilter],
-//      classOf[LogicalJoin],
-//      classOf[LogicalTableScan],
-//      classOf[LogicalTableScan]
-//    )
-//
-//    val expectedMid = List(
-//      classOf[LogicalTableScan],
-//      classOf[LogicalJoin],
-//      classOf[LogicalTableScan],
-//      classOf[LogicalFilter],
-//      classOf[LogicalProject],
-//      classOf[LogicalSink]
-//    )
-//
-//    // plan(1).outputNode refers to the branch of TableServiceSink
-//    verifyLogicalNodeTree(plan(1).outputNode, expectedPre, expectedMid)
-//
-//  }
+    // there should be two LogicalNodeBlock
+    val sinks = compile()
+    assertTrue(sinks.size == 2)
+
+    mockExecute(tableEnv)
+
+    writeToCollectSink(t.where('Artist1 === "The Doors"))
+    val plan = compile()
+
+    assertTrue(plan.size == 1)
+
+    val expectedPre = List(
+      classOf[BatchExecSink[_]],
+      classOf[BatchExecCalc],
+      classOf[BatchExecTableSourceScan]
+    )
+
+    val expectedMid = List(
+      classOf[BatchExecTableSourceScan],
+      classOf[BatchExecCalc],
+      classOf[BatchExecSink[_]]
+    )
+    verifyLogicalNodeTree(plan(0), expectedPre, expectedMid)
+  }
+
+  @Test
+  def testPlanRedundantPersist(): Unit = {
+    val t = table1.select('Artist1)
+
+    t.cache()
+    t.cache()
+
+    writeToCollectSink(t.where('Artist1 === "The Doors"))
+
+    // there should be two LogicalNodeBlock
+    assertTrue(compile().size == 2)
+
+    mockExecute(tableEnv)
+
+    writeToCollectSink(t.where('Artist1 === "The Doors"))
+    val plan = compile()
+
+    assertTrue(plan.size == 1)
+
+    val expectedPre = List(
+      classOf[BatchExecSink[_]],
+      classOf[BatchExecCalc],
+      classOf[BatchExecTableSourceScan]
+    )
+
+    val expectedMid = List(
+      classOf[BatchExecTableSourceScan],
+      classOf[BatchExecCalc],
+      classOf[BatchExecSink[_]]
+    )
+    verifyLogicalNodeTree(plan(0), expectedPre, expectedMid)
+  }
+
+  @Test
+  def testPlanRedundantPersist2(): Unit = {
+    var t = table1.select('Artist1, 'Song1)
+    t.cache()
+    t = t.select('Artist1)
+    t.cache()
+
+    writeToCollectSink(t.where('Artist1 === "The Doors"))
+
+    assertTrue(compile().size == 3)
+
+    mockExecute(tableEnv)
+
+    writeToCollectSink(t.where('Artist1 === "The Doors"))
+    val plan = compile()
+
+    assertTrue(plan.size == 1)
+
+    val expectedPre = List(
+      classOf[BatchExecSink[_]],
+      classOf[BatchExecCalc],
+      classOf[BatchExecTableSourceScan]
+    )
+
+    val expectedMid = List(
+      classOf[BatchExecTableSourceScan],
+      classOf[BatchExecCalc],
+      classOf[BatchExecSink[_]]
+    )
+    verifyLogicalNodeTree(plan(0), expectedPre, expectedMid)
+  }
+
+  @Test
+  def testPlanPersistWithoutReference(): Unit = {
+    val t = table1.select('Artist1)
+    t.cache()
+    writeToCollectSink(t.where('Artist1 === "The Doors"))
+
+    table2.select('Artist2).cache()
+
+    // todo: to be optimized
+    assertTrue(compile().size == 3)
+
+    mockExecute(tableEnv)
+
+    writeToCollectSink(t.where('Artist1 === "The Doors"))
+    val plan = compile()
+
+    assertTrue(plan.size == 1)
+
+    val expectedPre = List(
+      classOf[BatchExecSink[_]],
+      classOf[BatchExecCalc],
+      classOf[BatchExecTableSourceScan]
+    )
+
+    val expectedMid = List(
+      classOf[BatchExecTableSourceScan],
+      classOf[BatchExecCalc],
+      classOf[BatchExecSink[_]]
+    )
+    verifyLogicalNodeTree(plan(0), expectedPre, expectedMid)
+  }
+
+  @Test
+  def testPlanPersistWithBlockOptimization(): Unit = {
+    val t1 = table1
+      .join(table2)
+      .where('Artist1 === 'Artist2)
+      .select('Artist1, 'Album2, 'Song1)
+    t1.cache()
+
+    writeToCollectSink(t1.where('Artist1 === "The Doors"))
+
+    mockExecute(tableEnv)
+
+    val t2 = t1
+      .join(table3)
+      .where('Album2 ==='Album3)
+
+    writeToCollectSink(t2.where('Artist1 === "The Doors"))
+    writeToCollectSink(t2.where('Artist1 === "Levon Helm"))
+
+    val plan = compile()
+
+    // Block optimization should be OK.
+    assertTrue(plan.size == 2)
+    assertTrue(plan(0).getInput(0).getInput(0) == plan(1).getInput(0).getInput(0))
+
+    // cached table is expected to be used
+    val expectedPre = List(
+      classOf[BatchExecSink[_]],
+      classOf[BatchExecCalc],
+      classOf[BatchExecJoinBase],
+      classOf[BatchExecScan],
+      classOf[BatchExecExchange],
+      classOf[BatchExecScan]
+    )
+
+    val expectedMid = List(
+      classOf[BatchExecScan],
+      classOf[BatchExecJoinBase],
+      classOf[BatchExecScan],
+      classOf[BatchExecExchange],
+      classOf[BatchExecCalc],
+      classOf[BatchExecSink[_]]
+    )
+
+    verifyLogicalNodeTree(plan(0), expectedPre, expectedMid)
+  }
+
+  @Test
+  def testInvalidateCache(): Unit = {
+    val t1 = table1
+      .join(table2)
+      .where('Artist1 === 'Artist2)
+      .select('Artist1, 'Album2, 'Song1)
+    t1.cache()
+
+    writeToCollectSink(t1.where('Artist1 === "The Doors"))
+
+    mockExecute(tableEnv)
+
+    val t2 = t1
+      .join(table3)
+      .where('Album2 ==='Album3)
+
+    writeToCollectSink(t2.where('Artist1 === "The Doors"))
+    var plan = compile()
+
+    // only collect sink
+    assertTrue(plan.size == 1)
+
+    tableEnv.tableServiceManager.invalidateCachedTable()
+    plan = compile()
+
+    // collect sink and table service sink
+    assertTrue(plan.size == 2)
+
+    // plan without cache is expected to be used
+    val expectedPre = List(
+      classOf[BatchExecSink[_]],
+      classOf[BatchExecCalc],
+      classOf[BatchExecJoinBase],
+      classOf[BatchExecScan],
+      classOf[BatchExecExchange],
+      classOf[BatchExecScan]
+    )
+
+    val expectedMid = List(
+      classOf[BatchExecScan],
+      classOf[BatchExecJoinBase],
+      classOf[BatchExecScan],
+      classOf[BatchExecExchange],
+      classOf[BatchExecCalc],
+      classOf[BatchExecSink[_]]
+    )
+
+    // plan(1).outputNode refers to the branch of TableServiceSink
+    verifyLogicalNodeTree(plan(1), expectedPre, expectedMid)
+
+  }
 
   private def verifyLogicalNodeTree(r: RelNode,
                                     expectedPreOrder: List[Class[_]],
                                     expectedMidOrder: List[Class[_]]) = {
     val preOrder = getPreOrderClazz(r)
-    (preOrder zip expectedPreOrder).foreach { t =>
-      assertTrue((t._1.getName) == t._2.getName)
+    assertTrue(preOrder.size == expectedPreOrder.size)
+    (preOrder zip expectedPreOrder).foreach {
+      case (c1, c2) =>
+      assertTrue(c1 == c2 || c2.isAssignableFrom(c1))
     }
 
     val midOrder = getMidOrderClazz(r)
-    (midOrder zip expectedMidOrder).foreach { t =>
-      assertTrue((t._1.getName) == t._2.getName)
+    assertTrue(midOrder.size == expectedMidOrder.size)
+    (midOrder zip expectedMidOrder).foreach {
+      case (c1, c2) =>
+        assertTrue(c1 == c2 || c2.isAssignableFrom(c1))
     }
   }
 
@@ -499,6 +504,11 @@ class CacheAwareRelNodePlanBuilderTest(
     sink.configure(fieldNames, fieldTypes)
 
     t.writeToSink(sink)
+  }
+
+  private def compile(): Seq[RelNode] = {
+    val sinks = tableEnv.tableServiceManager.cachePlanBuilder.buildPlanIfNeeded(tableEnv.sinkNodes)
+    BatchDAGOptimizer.optimize(sinks, tableEnv)
   }
 
 }
