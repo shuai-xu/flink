@@ -792,7 +792,7 @@ Here's a list of properties that could be configured to customize Flink interpre
   <tr>
     <td>flink.execution.mode</td>
     <td>local</td>
-    <td>execution mode flink. It could be local, yarn or remote</td>
+    <td>execution mode of flink. It could be local, yarn or remote</td>
   </tr>
   <tr>
     <td>flink.execution.remote.host</td>
@@ -842,7 +842,7 @@ Here's a list of properties that could be configured to customize Flink interpre
   <tr>
     <td>zeppelin.flink.maxResult</td>
     <td>1000</td>
-    <td>Max rows of result for Sql output</td>
+    <td>Max rows of result for batch Sql output</td>
   </tr> 
   <tr>
     <td>zeppelin.flink.concurrentBatchSql</td>
@@ -862,7 +862,7 @@ Here's a list of properties that could be configured to customize Flink interpre
 </table>
 
 Besides these properties, you can also configure any flink properties that will override the value in `flink-conf.yaml`.
-For more information about Flink configuration, you can find it [here](https://ci.apache.org/projects/flink/flink-docs-release-1.7/ops/config.html).
+For more information about Flink configuration, you can find it [here](config.html).
 
 ### Run Flink in local mode
 
@@ -887,7 +887,7 @@ You can also customize the yarn mode via the following properties:
 * `flink.yarn.tm.slot` Slot number per TaskManager
 * `flink.yarn.queue` Queue name of yarn app
 
-You have to set `query.proxy.ports` and `query.server.ports` to be a port range because it is possible to launch multiple TaskManager in one machine.
+You have to set `query.proxy.ports` and `query.server.ports` to be a port range otherwise it is impossible to launch multiple TaskManager in one machine.
 
 ### Run Flink in standalone mode
 
@@ -901,9 +901,9 @@ If you want to run Flink in standalone mode, you have to set the following prope
 
 Zeppelin's Flink interpreter support 3 kinds of interpreter:
 
-* %flink (FlinkScalaInterpreter, Run scala code)
-* %flink.bsql (FlinkBatchSqlInterpreter, Run flink batch sql)
-* %flink.ssql (FlinkStreamSqlInterpreter, Run flink stream sql)
+* `%flink` (FlinkScalaInterpreter, Run scala code)
+* `%flink.bsql` (FlinkBatchSqlInterpreter, Run flink batch sql)
+* `%flink.ssql` (FlinkStreamSqlInterpreter, Run flink stream sql)
 
 ### FlinkScalaInterpreter(`%flink`)
 
@@ -981,11 +981,10 @@ Overall there're 3 kinds of streaming sql supported by `%flink.ssql`:
 * Retract
 * TimeSeries
 
-And not only user can run 
 #### SingleRow
 
 This kind of sql only return one row of data, but this row will be updated continually. Usually this is used for tracking the aggregation result of some metrics. e.g.
-total page view, total transactions and etc. Regarding this kind of sql, you can visualize it via html. Here's one example which calculate the total page view.
+total page view, total transactions and etc. Regarding this kind of sql, you can visualize it via html. Here's one example which calculate the total page view and visualize it via html.
 
 ```sql
 
@@ -998,12 +997,12 @@ select max(rowtime), count(1) from log
 
 #### Retract
 
-This kind of sql will return fixed number of rows, but will updated continually. Usually this is used for tracking the aggregation result of some metrics by some dimensions.
+This kind of sql will return a fixed number of rows, but will be updated continually. Usually this is used for tracking the aggregation result of some metrics by some dimensions.
 e.g. total page view per page, total transaction per country and etc. Regarding this kind of sql, you can visualize it via the built-in visualization charts of Zeppelin, such as barchart, linechart and etc.
 Here's one example which calculate the total page view per page and visualize it via barchart.
 
 ```sql
-%flink.ssql(refreshInterval=2000, parallelism=2, enableSavePoint=true, runWithSavePoint=true)
+%flink.ssql(type=retract, refreshInterval=2000, parallelism=2, enableSavePoint=true, runWithSavePoint=true)
 
 select 
     url, 
@@ -1016,18 +1015,17 @@ from log
 
 #### TimeSeries
 
-This kind of sql will return fixed number of rows regularly, but will updated continually. This is usually used for tracking metrics by window.
+This kind of sql will return a fixed number of rows regularly in timeseries. This is usually used for tracking metrics by time window.
 e.g. Here's one example which calculate the page view for each 5 seconds window.
 
 ```sql
 %flink.ssql(type=ts, refreshInterval=2000, enableSavePoint=false, runWithSavePoint=false, threshold=60000)
 
 select
-    url,
     TUMBLE_START(rowtime, INTERVAL '5' SECOND) as start_time,
- 
+    url,
     count(1) as pv
-from log 
+from log
     group by TUMBLE(rowtime, INTERVAL '5' SECOND), url
 ```
 <img src="{{BASE_PATH}}/page/img/zeppelin/flink_pv_ts.png" />
@@ -1056,7 +1054,7 @@ Here's a list of properties that you can use to customize Flink stream sql
     <tr>
       <td>template</td>
       <td>{0}</td>
-      <td>This is used for display the result of type singlerow. `{i}` represent the placehold of the ith field. You can also use html in the template, such as &lt;h1&gt;{0}&lt;/h1&gt;</td>
+      <td>This is used for display the result of type singlerow. `{i}` represent the placehold of the `ith` field. You can also use html in the template, such as &lt;h1&gt;{0}&lt;/h1&gt;</td>
     </tr>
   <tr>
     <td>parallelism</td>
@@ -1086,13 +1084,13 @@ Here's a list of properties that you can use to customize Flink stream sql
 * Job Canceling
     - User can cancel job via the job cancel button
 * Flink Job url association
-    - User can link to the Flink job url in JM dashboard 
+    - Zeppelin will display the job url in paragraph
 * Code completion
-    - As other interpreters, user can use `tab` for code completion
+    - Like other interpreters, user can use `tab` for code completion
 * ZeppelinContext
-    - Flink interpreter also integrate ZeppelinContext. For how to use ZeppelinContext, please refer this [link](http://zeppelin.apache.org/docs/0.8.0/usage/other_features/zeppelin_context.html).
+    - Flink interpreter also integrates ZeppelinContext. For how to use ZeppelinContext, please refer this [link](http://zeppelin.apache.org/docs/0.8.0/usage/other_features/zeppelin_context.html).
    
 ## FAQ
 
-* Most of time, you will get clear error message when some unexpected happens. But you can still check the interpreter in case the error message in frontend is not clear to you.
+* Most of time, you will get clear error message when some unexpected happens. But you can still check the interpreter log in case the error message in frontend is not clear to you.
   The flink interpreter log is located in `ZEPPELIN_HOME/logs`
