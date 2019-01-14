@@ -479,7 +479,8 @@ public class RocksDBStateBackend extends AbstractStateBackend implements Configu
 			keyGroupRange,
 			isIncrementalCheckpointsEnabled(),
 			localRecoveryConfig,
-			env.getTaskKvStateRegistry());
+			env.getTaskKvStateRegistry(),
+			env.getExecutionConfig());
 	}
 
 	// ------------------------------------------------------------------------

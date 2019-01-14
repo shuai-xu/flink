@@ -509,7 +509,8 @@ public class FsStateBackend extends AbstractFileStateBackend implements Configur
 				env.getUserClassLoader(),
 				env.getTaskStateManager().createLocalRecoveryConfig(),
 				env.getTaskKvStateRegistry(),
-				isUsingAsynchronousSnapshots()
+				isUsingAsynchronousSnapshots(),
+				env.getExecutionConfig()
 			);
 	}
 

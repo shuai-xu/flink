@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.state.heap;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.FSDataInputStream;
@@ -39,9 +40,12 @@ import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.RegisteredStateMetaInfo;
+import org.apache.flink.runtime.state.SnappyStreamCompressionDecorator;
 import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateMetaInfoSnapshot;
+import org.apache.flink.runtime.state.StreamCompressionDecorator;
 import org.apache.flink.runtime.state.StreamStateHandle;
+import org.apache.flink.runtime.state.UncompressedStreamCompressionDecorator;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.StateStorage;
@@ -61,11 +65,14 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.RunnableFuture;
 import java.util.stream.Collectors;
 
@@ -92,20 +99,11 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 		KeyGroupRange keyGroupRange,
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig,
-		TaskKvStateRegistry kvStateRegistry
-	) {
-		this(numberOfGroups, keyGroupRange, userClassLoader, localRecoveryConfig, kvStateRegistry, true);
-	}
-
-	public HeapInternalStateBackend(
-		int numberOfGroups,
-		KeyGroupRange keyGroupRange,
-		ClassLoader userClassLoader,
-		LocalRecoveryConfig localRecoveryConfig,
 		TaskKvStateRegistry kvStateRegistry,
-		boolean asynchronousSnapshot
+		boolean asynchronousSnapshot,
+		ExecutionConfig executionConfig
 	) {
-		super(numberOfGroups, keyGroupRange, userClassLoader, kvStateRegistry);
+		super(numberOfGroups, keyGroupRange, userClassLoader, kvStateRegistry, executionConfig);
 
 		this.localRecoveryConfig = Preconditions.checkNotNull(localRecoveryConfig);
 		this.asynchronousSnapshot = asynchronousSnapshot;
@@ -287,7 +285,8 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 					final InternalBackendSerializationProxy serializationProxy =
 						new InternalBackendSerializationProxy(
 							keyedStateMetaSnapshots,
-							subKeyedStateMetaSnapshots);
+							subKeyedStateMetaSnapshots,
+							!Objects.equals(UncompressedStreamCompressionDecorator.INSTANCE, keyGroupCompressionDecorator));
 					serializationProxy.write(outView);
 
 					Map<Integer, Tuple2<Long, Integer>> metaInfos = new HashMap<>();
@@ -302,17 +301,13 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 						outView.writeInt(group);
 
 						// write keyed state
-						for (Map.Entry<String, org.apache.flink.runtime.state.heap.internal.StateTableSnapshot> entry : keyedStateStableSnapshots.entrySet()) {
-							String stateName = entry.getKey();
-							outView.writeInt(keyedStateToId.get(stateName));
-							numEntries += entry.getValue().writeMappingsInKeyGroup(outView, group);
+						for (Map.Entry<String, StateTableSnapshot> entry : keyedStateStableSnapshots.entrySet()) {
+							numEntries += writeGroupStates(localStream, entry.getValue(), keyedStateToId.get(entry.getKey()), group);
 						}
 
 						// write sub-keyed state
 						for (Map.Entry<String, StateTableSnapshot> entry : subKeyedStateStableSnapshots.entrySet()) {
-							String stateName = entry.getKey();
-							outView.writeInt(subKeyedStateToId.get(stateName));
-							numEntries += entry.getValue().writeMappingsInKeyGroup(outView, group);
+							numEntries += writeGroupStates(localStream, entry.getValue(), subKeyedStateToId.get(entry.getKey()), group);
 						}
 
 						if (numEntries != 0) {
@@ -360,6 +355,21 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 			Thread.currentThread() + " took " + (System.currentTimeMillis() - syncStartTime) + " ms.");
 
 		return task;
+	}
+
+	private int writeGroupStates(
+		CheckpointStreamFactory.CheckpointStateOutputStream localStream,
+		StateTableSnapshot stateTableSnapshot,
+		int stateId,
+		int group) throws IOException {
+
+		int numEntries = 0;
+		try (OutputStream kgCompressionOut = keyGroupCompressionDecorator.decorateWithCompression(localStream)) {
+			DataOutputViewStreamWrapper kgCompressionView = new DataOutputViewStreamWrapper(kgCompressionOut);
+			kgCompressionView.writeInt(stateId);
+			numEntries += stateTableSnapshot.writeMappingsInKeyGroup(kgCompressionView, group);
+		}
+		return numEntries;
 	}
 
 	@Override
@@ -432,6 +442,9 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 
 				Map<Integer, Tuple2<Long, Integer>> metaInfos = snapshot.getMetaInfos();
 
+				final StreamCompressionDecorator streamCompressionDecorator = serializationProxy.isUsingKeyGroupCompression() ?
+					SnappyStreamCompressionDecorator.INSTANCE : UncompressedStreamCompressionDecorator.INSTANCE;
+
 				for (int group : getKeyGroupRange()) {
 					Tuple2<Long, Integer> tuple = metaInfos.get(group);
 
@@ -449,23 +462,30 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 
 					int numEntries = 0;
 
-					// restore keyed states
-					for (int i = 0; i < keyedStateMetaInfos.size(); i++) {
-						int stateId = inputView.readInt();
-						KeyedStateDescriptor descriptor = keyedStatesById.get(stateId);
-						HeapStateStorage stateStorage = (HeapStateStorage) stateStorages.get(descriptor.getName());
-						numEntries += readMappingsInKeyGroupForKeyedState(inputView, descriptor, stateStorage);
+					try (InputStream kgCompressionInStream =
+							 streamCompressionDecorator.decorateWithCompression(inputStream)) {
+						DataInputViewStreamWrapper kgCompressionInView =
+							new DataInputViewStreamWrapper(kgCompressionInStream);
+
+						// restore keyed states
+						for (int i = 0; i < keyedStateMetaInfos.size(); i++) {
+							int stateId = kgCompressionInView.readInt();
+							KeyedStateDescriptor descriptor = keyedStatesById.get(stateId);
+							HeapStateStorage stateStorage = (HeapStateStorage) stateStorages.get(descriptor.getName());
+							numEntries += readMappingsInKeyGroupForKeyedState(kgCompressionInView, descriptor, stateStorage);
+						}
+
+						// restore sub-keyed states
+						for (int i = 0; i < subKeyedStateMetaSnapshots.size(); i++) {
+							int stateId = kgCompressionInView.readInt();
+							SubKeyedStateDescriptor descriptor = subKeyedStatesById.get(stateId);
+							HeapStateStorage stateStorage = (HeapStateStorage) stateStorages.get(descriptor.getName());
+							numEntries += readMappingsInKeyGroupForSubKeyedState(kgCompressionInView, descriptor, stateStorage);
+						}
+
+						Preconditions.checkState(totalEntries == numEntries, "Unexpected number of entries");
 					}
 
-					// restore sub-keyed states
-					for (int i = 0; i < subKeyedStateMetaSnapshots.size(); i++) {
-						int stateId = inputView.readInt();
-						SubKeyedStateDescriptor descriptor = subKeyedStatesById.get(stateId);
-						HeapStateStorage stateStorage = (HeapStateStorage) stateStorages.get(descriptor.getName());
-						numEntries += readMappingsInKeyGroupForSubKeyedState(inputView, descriptor, stateStorage);
-					}
-
-					Preconditions.checkState(totalEntries == numEntries, "Unexpected number of entries");
 				}
 			} finally {
 				if (cancelStreamRegistry.unregisterCloseable(inputStream)) {

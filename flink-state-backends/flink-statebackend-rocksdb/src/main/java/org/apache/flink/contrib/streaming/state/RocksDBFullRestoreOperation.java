@@ -22,7 +22,6 @@ import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.common.typeutils.base.array.BytePrimitiveArraySerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.FSDataInputStream;
-import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.runtime.state.InternalBackendSerializationProxy;
 import org.apache.flink.runtime.state.KeyGroupsStateSnapshot;
@@ -40,6 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -126,7 +126,7 @@ public class RocksDBFullRestoreOperation {
 
 				stateBackend.registerAllStates();
 				Map<Integer, Tuple2<Long, Integer>> metaInfos = snapshot.getMetaInfos();
-				restoreData(metaInfos, inputStream, inputView);
+				restoreData(metaInfos, inputStream);
 			} finally {
 				if (inputStream != null) {
 					try {
@@ -150,14 +150,12 @@ public class RocksDBFullRestoreOperation {
 	 * @param metaInfos The offsets and the number of entries of the groups
 	 *                  in the snapshot.
 	 * @param inputStream The input stream where the snapshot is read.
-	 * @param inputView The input view of the input stream.
 	 * @throws IOException Thrown when the backend fails to read the snapshot or
 	 *                     to deserialize the state data from the snapshot.
 	 */
 	private void restoreData(
 		Map<Integer, Tuple2<Long, Integer>> metaInfos,
-		FSDataInputStream inputStream,
-		DataInputView inputView) throws IOException {
+		FSDataInputStream inputStream) throws IOException {
 		for (int group : stateBackend.getKeyGroupRange()) {
 			Tuple2<Long, Integer> metaInfo = metaInfos.get(group);
 			if (metaInfo == null) {
@@ -169,16 +167,22 @@ public class RocksDBFullRestoreOperation {
 
 			inputStream.seek(offset);
 
-			for (int i = 0; i < numEntries; ++i) {
-				Integer id = IntSerializer.INSTANCE.deserialize(inputView);
-				String cfNameStr = id2StateName.get(id);
-				ColumnFamilyHandle columnFamilyHandle = stateBackend.getOrCreateColumnFamily(cfNameStr);
-				byte[] key = BytePrimitiveArraySerializer.INSTANCE.deserialize(inputView);
-				byte[] value = BytePrimitiveArraySerializer.INSTANCE.deserialize(inputView);
-				try {
-					stateBackend.getDbInstance().put(columnFamilyHandle, key, value);
-				} catch (RocksDBException e) {
-					throw new StateAccessException(e);
+			if (numEntries != 0) {
+				try (InputStream compressedKgIn = stateBackend.getKeyGroupCompressionDecorator().decorateWithCompression(inputStream)) {
+					DataInputViewStreamWrapper compressedKgInputView = new DataInputViewStreamWrapper(compressedKgIn);
+					for (int i = 0; i < numEntries; ++i) {
+						Integer id = IntSerializer.INSTANCE.deserialize(compressedKgInputView);
+						String cfNameStr = id2StateName.get(id);
+						Preconditions.checkNotNull(cfNameStr, "Unexpected state name for the id: " + id);
+						ColumnFamilyHandle columnFamilyHandle = stateBackend.getOrCreateColumnFamily(cfNameStr);
+						byte[] key = BytePrimitiveArraySerializer.INSTANCE.deserialize(compressedKgInputView);
+						byte[] value = BytePrimitiveArraySerializer.INSTANCE.deserialize(compressedKgInputView);
+						try {
+							stateBackend.getDbInstance().put(columnFamilyHandle, key, value);
+						} catch (RocksDBException e) {
+							throw new StateAccessException(e);
+						}
+					}
 				}
 			}
 		}

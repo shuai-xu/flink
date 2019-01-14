@@ -43,6 +43,7 @@ import org.apache.flink.runtime.state.StateMetaInfoSnapshot;
 import org.apache.flink.runtime.state.StateObject;
 import org.apache.flink.runtime.state.StateUtil;
 import org.apache.flink.runtime.state.StreamStateHandle;
+import org.apache.flink.runtime.state.UncompressedStreamCompressionDecorator;
 import org.apache.flink.runtime.state.filesystem.FileStateHandle;
 import org.apache.flink.runtime.state.memory.ByteStreamStateHandle;
 import org.apache.flink.util.ExceptionUtils;
@@ -61,6 +62,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static org.apache.flink.contrib.streaming.state.RocksDBStorageInstance.SST_FILE_SUFFIX;
@@ -385,7 +387,10 @@ public class RocksDBIncrementalSnapshotOperation {
 
 			InternalBackendSerializationProxy backendSerializationProxy = new InternalBackendSerializationProxy(
 				keyedStateMetaInfos,
-				subKeyedStateMetaInfos);
+				subKeyedStateMetaInfos,
+				!Objects.equals(
+					UncompressedStreamCompressionDecorator.INSTANCE,
+					stateBackend.getKeyGroupCompressionDecorator()));
 
 			backendSerializationProxy.write(outputView);
 

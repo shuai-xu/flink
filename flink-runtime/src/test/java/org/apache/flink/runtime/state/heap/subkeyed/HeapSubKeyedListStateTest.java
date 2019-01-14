@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.state.heap.subkeyed;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
@@ -58,6 +59,7 @@ public class HeapSubKeyedListStateTest extends SubKeyedListStateTestBase {
 			userClassLoader,
 			localRecoveryConfig,
 			null,
-			asyncSnapshot);
+			asyncSnapshot,
+			new ExecutionConfig());
 	}
 }

@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.state.heap;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.runtime.checkpoint.CheckpointType;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
@@ -58,14 +59,16 @@ public class HeapInternalStateCheckpointTest extends InternalStateCheckpointTest
 		int numberOfGroups,
 		KeyGroupRange keyGroupRange,
 		ClassLoader userClassLoader,
-		LocalRecoveryConfig localRecoveryConfig) {
+		LocalRecoveryConfig localRecoveryConfig,
+		ExecutionConfig executionConfig) {
 		return new HeapInternalStateBackend(
 			numberOfGroups,
 			keyGroupRange,
 			userClassLoader,
 			localRecoveryConfig,
 			null,
-			asyncSnapshot);
+			asyncSnapshot,
+			executionConfig);
 	}
 
 	@Override

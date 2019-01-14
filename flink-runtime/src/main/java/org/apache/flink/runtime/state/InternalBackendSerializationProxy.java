@@ -41,6 +41,10 @@ public class InternalBackendSerializationProxy extends VersionedIOReadableWritab
 
 	public static final int VERSION = 1;
 
+	//TODO allow for more (user defined) compression formats + backward compatibility story.
+	/** This specifies if we use a compressed format write the key-groups */
+	private boolean usingKeyGroupCompression;
+
 	/** This specifies whether or not to use dummy {@link UnloadableDummyTypeSerializer} when serializers cannot be read. */
 	private boolean isSerializerPresenceRequired;
 
@@ -57,10 +61,12 @@ public class InternalBackendSerializationProxy extends VersionedIOReadableWritab
 
 	public InternalBackendSerializationProxy(
 		List<StateMetaInfoSnapshot> keyedStateMetaSnapshots,
-		List<StateMetaInfoSnapshot> subKeyedStateMetaSnapshots) {
+		List<StateMetaInfoSnapshot> subKeyedStateMetaSnapshots,
+		boolean compression) {
 
-		this.keyedStateMetaInfoSnapshots = keyedStateMetaSnapshots;
-		this.subKeyedStateMetaInfoSnapshots = subKeyedStateMetaSnapshots;
+		this.keyedStateMetaInfoSnapshots = Preconditions.checkNotNull(keyedStateMetaSnapshots);
+		this.subKeyedStateMetaInfoSnapshots = Preconditions.checkNotNull(subKeyedStateMetaSnapshots);
+		this.usingKeyGroupCompression = compression;
 	}
 
 	public List<StateMetaInfoSnapshot> getKeyedStateMetaSnapshots() {
@@ -71,6 +77,10 @@ public class InternalBackendSerializationProxy extends VersionedIOReadableWritab
 		return subKeyedStateMetaInfoSnapshots;
 	}
 
+	public boolean isUsingKeyGroupCompression() {
+		return usingKeyGroupCompression;
+	}
+
 	@Override
 	public int getVersion() {
 		return VERSION;
@@ -79,6 +89,9 @@ public class InternalBackendSerializationProxy extends VersionedIOReadableWritab
 	@Override
 	public void write(DataOutputView out) throws IOException {
 		super.write(out);
+
+		// write the compression format used to write each key-group
+		out.writeBoolean(usingKeyGroupCompression);
 
 		writeStateMetaInfoSnapshot(out, keyedStateMetaInfoSnapshots, true);
 		writeStateMetaInfoSnapshot(out, subKeyedStateMetaInfoSnapshots, false);
@@ -115,6 +128,8 @@ public class InternalBackendSerializationProxy extends VersionedIOReadableWritab
 	@Override
 	public void read(DataInputView in) throws IOException {
 		super.read(in);
+
+		usingKeyGroupCompression = in.readBoolean();
 
 		keyedStateMetaInfoSnapshots = readStateMetaInfoSnapshot(in, true);
 		subKeyedStateMetaInfoSnapshots = readStateMetaInfoSnapshot(in, false);

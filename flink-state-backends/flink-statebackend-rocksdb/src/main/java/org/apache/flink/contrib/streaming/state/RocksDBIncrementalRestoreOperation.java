@@ -37,8 +37,6 @@ import org.apache.flink.runtime.state.StateHandleID;
 import org.apache.flink.runtime.state.StateMetaInfoSnapshot;
 import org.apache.flink.runtime.state.StateSerializerUtil;
 import org.apache.flink.runtime.state.StreamStateHandle;
-import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
-import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
 
@@ -187,22 +185,18 @@ public class RocksDBIncrementalRestoreOperation {
 		}
 
 		// restore the state descriptors
-		List<KeyedStateDescriptor> keyedStateDescriptors = new ArrayList<>();
-		List<SubKeyedStateDescriptor> subKeyedStateDescriptors = new ArrayList<>();
-		restoreMetaData(metaStateHandle, keyedStateDescriptors, subKeyedStateDescriptors);
+		restoreMetaData(metaStateHandle);
 
-		int cfLength = 1 + keyedStateDescriptors.size() + subKeyedStateDescriptors.size();
+		int cfLength = 1 + stateBackend.getRegisteredStateMetaInfos().size();
 		List<ColumnFamilyDescriptor> columnFamilyDescriptors = new ArrayList<>(cfLength);
 		List<String> descriptorNames = new ArrayList<>(cfLength);
 		columnFamilyDescriptors.add(stateBackend.getDefaultColumnFamilyDescriptor());
 		descriptorNames.add(stateBackend.getDefaultColumnFamilyName());
-		for (KeyedStateDescriptor descriptor : keyedStateDescriptors) {
-			columnFamilyDescriptors.add(stateBackend.createColumnFamilyDescriptor(descriptor.getName()));
-			descriptorNames.add(descriptor.getName());
-		}
-		for (SubKeyedStateDescriptor descriptor : subKeyedStateDescriptors) {
-			columnFamilyDescriptors.add(stateBackend.createColumnFamilyDescriptor(descriptor.getName()));
-			descriptorNames.add(descriptor.getName());
+
+		for (Map.Entry<String, RegisteredStateMetaInfo> stateMetaInfoEntry : stateBackend.getRegisteredStateMetaInfos().entrySet()) {
+			String stateName = stateMetaInfoEntry.getKey();
+			columnFamilyDescriptors.add(stateBackend.createColumnFamilyDescriptor(stateName));
+			descriptorNames.add(stateName);
 		}
 
 		stateBackend.createDBWithColumnFamily(columnFamilyDescriptors, descriptorNames);
@@ -270,10 +264,8 @@ public class RocksDBIncrementalRestoreOperation {
 		}
 	}
 
-	private void restoreMetaData(
-		StreamStateHandle metaStateDatum,
-		List<KeyedStateDescriptor> keyedStateDescriptors,
-		List<SubKeyedStateDescriptor> subKeyedStateDescriptors) throws Exception {
+	private void restoreMetaData(StreamStateHandle metaStateDatum) throws Exception {
+
 		FSDataInputStream inputStream = null;
 
 		try {
@@ -294,7 +286,6 @@ public class RocksDBIncrementalRestoreOperation {
 			for (StateMetaInfoSnapshot keyedStateMetaSnapshot : keyedStateMetaInfos) {
 				String stateName = keyedStateMetaSnapshot.getName();
 				stateBackend.getRestoredKvStateMetaInfos().put(stateName, keyedStateMetaSnapshot);
-				keyedStateDescriptors.add(keyedStateMetaSnapshot.createKeyedStateDescriptor());
 
 				RegisteredStateMetaInfo keyedStateMetaInfo = RegisteredStateMetaInfo.createKeyedStateMetaInfo(keyedStateMetaSnapshot);
 				stateBackend.getRegisteredStateMetaInfos().put(stateName, keyedStateMetaInfo);
@@ -304,7 +295,6 @@ public class RocksDBIncrementalRestoreOperation {
 			for (StateMetaInfoSnapshot subKeyedStateMetaSnapshot : subKeyedStateMetaInfos) {
 				String stateName = subKeyedStateMetaSnapshot.getName();
 				stateBackend.getRestoredKvStateMetaInfos().put(subKeyedStateMetaSnapshot.getName(), subKeyedStateMetaSnapshot);
-				subKeyedStateDescriptors.add(subKeyedStateMetaSnapshot.createSubKeyedStateDescriptor());
 
 				RegisteredStateMetaInfo subKeyedStateMetaInfo = RegisteredStateMetaInfo.createSubKeyedStateMetaInfo(subKeyedStateMetaSnapshot);
 				stateBackend.getRegisteredStateMetaInfos().put(stateName, subKeyedStateMetaInfo);
@@ -333,22 +323,17 @@ public class RocksDBIncrementalRestoreOperation {
 
 		try {
 			transferAllStateDataToDirectory(stateSnapshot, localRestorePath);
-			List<KeyedStateDescriptor> keyedStateDescriptors = new ArrayList<>();
-			List<SubKeyedStateDescriptor> subKeyedStateDescriptors = new ArrayList<>();
-			restoreMetaData(stateSnapshot.getMetaStateHandle(), keyedStateDescriptors, subKeyedStateDescriptors);
+			restoreMetaData(stateSnapshot.getMetaStateHandle());
 
-			int cfSize = 1 + keyedStateDescriptors.size() + subKeyedStateDescriptors.size();
+			int cfSize = 1 + stateBackend.getRegisteredStateMetaInfos().size();
 			List<String> cfName = new ArrayList<>(cfSize);
 			List<ColumnFamilyDescriptor> columnFamilyDescriptors = new ArrayList<>(cfSize);
 			columnFamilyDescriptors.add(stateBackend.getDefaultColumnFamilyDescriptor());
 			cfName.add(stateBackend.getDefaultColumnFamilyName());
-			for (KeyedStateDescriptor descriptor : keyedStateDescriptors) {
-				columnFamilyDescriptors.add(stateBackend.createColumnFamilyDescriptor(descriptor.getName()));
-				cfName.add(descriptor.getName());
-			}
-			for (SubKeyedStateDescriptor descriptor : subKeyedStateDescriptors) {
-				columnFamilyDescriptors.add(stateBackend.createColumnFamilyDescriptor(descriptor.getName()));
-				cfName.add(descriptor.getName());
+			for (Map.Entry<String, RegisteredStateMetaInfo> stateMetaInfoEntry : stateBackend.getRegisteredStateMetaInfos().entrySet()) {
+				String stateName = stateMetaInfoEntry.getKey();
+				columnFamilyDescriptors.add(stateBackend.createColumnFamilyDescriptor(stateName));
+				cfName.add(stateName);
 			}
 
 			List<ColumnFamilyHandle> columnFamilyHandles = new ArrayList<>(cfSize);

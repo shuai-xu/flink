@@ -18,6 +18,7 @@
 
 package org.apache.flink.contrib.streaming.state;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.core.fs.CloseableRegistry;
@@ -172,9 +173,10 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend {
 		KeyGroupRange keyGroupRange,
 		boolean enableIncrementalCheckpointing,
 		LocalRecoveryConfig localRecoveryConfig,
-		TaskKvStateRegistry kvStateRegistry) throws IOException {
+		TaskKvStateRegistry kvStateRegistry,
+		ExecutionConfig executionConfig) throws IOException {
 
-		super(numberOfGroups, keyGroupRange, userClassLoader, kvStateRegistry);
+		super(numberOfGroups, keyGroupRange, userClassLoader, kvStateRegistry, executionConfig);
 
 		this.dbOptions = Preconditions.checkNotNull(dbOptions);
 		// ensure that we use the right merge operator, because other code relies on this

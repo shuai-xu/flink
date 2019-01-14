@@ -18,6 +18,7 @@
 
 package org.apache.flink.contrib.streaming.state;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.runtime.checkpoint.CheckpointType;
 import org.apache.flink.runtime.state.InternalStateBackend;
 import org.apache.flink.runtime.state.InternalStateCheckpointTestBase;
@@ -55,8 +56,10 @@ public class RocksDBInternalStateCheckpointTest extends InternalStateCheckpointT
 		int numberOfGroups,
 		KeyGroupRange keyGroupRange,
 		ClassLoader userClassLoader,
-		LocalRecoveryConfig localRecoveryConfig) throws Exception {
-		InternalStateBackend backend = new RocksDBInternalStateBackend(
+		LocalRecoveryConfig localRecoveryConfig,
+		ExecutionConfig executionConfig) throws Exception {
+
+		return new RocksDBInternalStateBackend(
 			Thread.currentThread().getContextClassLoader(),
 			temporaryFolder.newFolder().getAbsoluteFile(),
 			new DBOptions().setCreateIfMissing(true),
@@ -65,8 +68,8 @@ public class RocksDBInternalStateCheckpointTest extends InternalStateCheckpointT
 			keyGroupRange,
 			true,
 			localRecoveryConfig,
-			null);
-		return backend;
+			null,
+			executionConfig);
 	}
 
 	@Override

@@ -24,7 +24,9 @@ import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.StateObjectCollection;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
-import org.apache.flink.runtime.state.heap.HeapKeyedStateBackend;
+import org.apache.flink.runtime.state.context.ContextStateHelper;
+import org.apache.flink.runtime.state.heap.HeapInternalStateBackend;
+import org.apache.flink.runtime.state.heap.KeyContextImpl;
 import org.apache.flink.runtime.state.internal.InternalValueState;
 import org.apache.flink.runtime.state.memory.MemCheckpointStreamFactory;
 import org.apache.flink.util.TestLogger;
@@ -45,19 +47,17 @@ public class StateSnapshotCompressionTest extends TestLogger {
 		ExecutionConfig executionConfig = new ExecutionConfig();
 		executionConfig.setUseSnapshotCompression(true);
 
-		AbstractKeyedStateBackend<String> stateBackend = new HeapKeyedStateBackend<>(
-			mock(TaskKvStateRegistry.class),
-			StringSerializer.INSTANCE,
-			StateSnapshotCompressionTest.class.getClassLoader(),
+		HeapInternalStateBackend stateBackend = new HeapInternalStateBackend(
 			16,
 			new KeyGroupRange(0, 15),
+			StateSnapshotCompressionTest.class.getClassLoader(),
+			TestLocalRecoveryConfig.disabled(),
+			mock(TaskKvStateRegistry.class),
 			true,
-			executionConfig,
-			TestLocalRecoveryConfig.disabled());
+			executionConfig);
 
 		try {
-			Assert.assertTrue(
-				SnappyStreamCompressionDecorator.INSTANCE.equals(stateBackend.getKeyGroupCompressionDecorator()));
+			Assert.assertEquals(SnappyStreamCompressionDecorator.INSTANCE, stateBackend.getKeyGroupCompressionDecorator());
 
 		} finally {
 			IOUtils.closeQuietly(stateBackend);
@@ -67,19 +67,17 @@ public class StateSnapshotCompressionTest extends TestLogger {
 		executionConfig = new ExecutionConfig();
 		executionConfig.setUseSnapshotCompression(false);
 
-		stateBackend = new HeapKeyedStateBackend<>(
-			mock(TaskKvStateRegistry.class),
-			StringSerializer.INSTANCE,
-			StateSnapshotCompressionTest.class.getClassLoader(),
+		stateBackend = new HeapInternalStateBackend(
 			16,
 			new KeyGroupRange(0, 15),
+			StateSnapshotCompressionTest.class.getClassLoader(),
+			TestLocalRecoveryConfig.disabled(),
+			mock(TaskKvStateRegistry.class),
 			true,
-			executionConfig,
-			TestLocalRecoveryConfig.disabled());
+			executionConfig);
 
 		try {
-			Assert.assertTrue(
-				UncompressedStreamCompressionDecorator.INSTANCE.equals(stateBackend.getKeyGroupCompressionDecorator()));
+			Assert.assertEquals(UncompressedStreamCompressionDecorator.INSTANCE, stateBackend.getKeyGroupCompressionDecorator());
 
 		} finally {
 			IOUtils.closeQuietly(stateBackend);
@@ -107,15 +105,19 @@ public class StateSnapshotCompressionTest extends TestLogger {
 		ValueStateDescriptor<String> stateDescriptor = new ValueStateDescriptor<>("test", String.class);
 		stateDescriptor.initializeSerializerUnlessSet(executionConfig);
 
-		AbstractKeyedStateBackend<String> stateBackend = new HeapKeyedStateBackend<>(
-			mock(TaskKvStateRegistry.class),
-			StringSerializer.INSTANCE,
-			StateSnapshotCompressionTest.class.getClassLoader(),
+		HeapInternalStateBackend internalStateBackend = new HeapInternalStateBackend(
 			16,
 			new KeyGroupRange(0, 15),
+			StateSnapshotCompressionTest.class.getClassLoader(),
+			TestLocalRecoveryConfig.disabled(),
+			mock(TaskKvStateRegistry.class),
 			true,
+			executionConfig);
+		ContextStateHelper contextStateHelper = new ContextStateHelper(
+			new KeyContextImpl(StringSerializer.INSTANCE, 16, new KeyGroupRange(0, 15)),
 			executionConfig,
-			TestLocalRecoveryConfig.disabled());
+			internalStateBackend);
+		KeyedStateBackendWrapper<String> stateBackend = new KeyedStateBackendWrapper<>(contextStateHelper);
 
 		try {
 
@@ -150,15 +152,20 @@ public class StateSnapshotCompressionTest extends TestLogger {
 
 		executionConfig = new ExecutionConfig();
 
-		stateBackend = new HeapKeyedStateBackend<>(
-			mock(TaskKvStateRegistry.class),
-			StringSerializer.INSTANCE,
-			StateSnapshotCompressionTest.class.getClassLoader(),
+		internalStateBackend = new HeapInternalStateBackend(
 			16,
 			new KeyGroupRange(0, 15),
+			StateSnapshotCompressionTest.class.getClassLoader(),
+			TestLocalRecoveryConfig.disabled(),
+			mock(TaskKvStateRegistry.class),
 			true,
+			executionConfig);
+		contextStateHelper = new ContextStateHelper(
+			new KeyContextImpl(StringSerializer.INSTANCE, 16, new KeyGroupRange(0, 15)),
 			executionConfig,
-			TestLocalRecoveryConfig.disabled());
+			internalStateBackend);
+		stateBackend = new KeyedStateBackendWrapper<>(contextStateHelper);
+
 		try {
 
 			stateBackend.restore(StateObjectCollection.singleton(stateHandle));

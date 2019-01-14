@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.state.heap.keyed;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
@@ -58,6 +59,7 @@ public class HeapKeyedValueStateTest extends KeyedValueStateTestBase {
 			userClassLoader,
 			localRecoveryConfig,
 			null,
-			asyncSnapshot);
+			asyncSnapshot,
+			new ExecutionConfig());
 	}
 }

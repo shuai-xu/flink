@@ -18,6 +18,7 @@
 
 package org.apache.flink.contrib.streaming.state.keyed;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.contrib.streaming.state.RocksDBInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.KeyGroupRange;
@@ -52,8 +53,9 @@ public class RocksDBKeyedSortedMapStateTest extends KeyedSortedMapStateTestBase 
 			keyGroupRange,
 			true,
 			localRecoveryConfig,
-			null
-		);
+			null,
+			new ExecutionConfig()
+			);
 	}
 
 }

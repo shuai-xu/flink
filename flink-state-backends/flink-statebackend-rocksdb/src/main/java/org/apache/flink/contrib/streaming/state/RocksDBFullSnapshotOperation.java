@@ -38,6 +38,7 @@ import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateMetaInfoSnapshot;
 import org.apache.flink.runtime.state.StateSerializerUtil;
 import org.apache.flink.runtime.state.StreamStateHandle;
+import org.apache.flink.runtime.state.UncompressedStreamCompressionDecorator;
 import org.apache.flink.types.Pair;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.InstantiationUtil;
@@ -56,10 +57,12 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.apache.flink.runtime.state.StateSerializerUtil.GROUP_WRITE_BYTES;
 
@@ -247,7 +250,10 @@ public class RocksDBFullSnapshotOperation {
 	private void materializeMetaData() throws Exception {
 		InternalBackendSerializationProxy backendSerializationProxy = new InternalBackendSerializationProxy(
 			keyedStateMetaInfos,
-			subKeyedStateMetaInfos);
+			subKeyedStateMetaInfos,
+			!Objects.equals(
+				UncompressedStreamCompressionDecorator.INSTANCE,
+				stateBackend.getKeyGroupCompressionDecorator()));
 
 		backendSerializationProxy.write(outputView);
 
@@ -273,19 +279,22 @@ public class RocksDBFullSnapshotOperation {
 				long offset = outputStream.getPos();
 				int numEntries = 0;
 
-				ByteArrayOutputStreamWithPos innerStream = new ByteArrayOutputStreamWithPos(GROUP_WRITE_BYTES + 1);
-				StateSerializerUtil.writeGroup(innerStream, group);
-				byte[] groupPrefix = innerStream.toByteArray();
+				byte[] groupPrefix = getGroupPrefix(group);
 
-				for (int i = 1; i < columnFamilyHandles.size(); ++i) {
+				try (OutputStream kgOutStream = stateBackend.getKeyGroupCompressionDecorator().decorateWithCompression(outputStream)) {
+					DataOutputView kgOutView = new DataOutputViewStreamWrapper(kgOutStream);
+
+					for (int i = 1; i < columnFamilyHandles.size(); ++i) {
 					RocksDBStorageInstance storageInstance = new RocksDBStorageInstance(db, columnFamilyHandles.get(i), writeOptions);
 					RocksDBStoragePrefixIterator iterator = new RocksDBStoragePrefixIterator(storageInstance, groupPrefix);
-					while (iterator.hasNext()) {
-						Pair<byte[], byte[]> pair = iterator.next();
-						IntSerializer.INSTANCE.serialize(i, outputView);
-						BytePrimitiveArraySerializer.INSTANCE.serialize(pair.getKey(), outputView);
-						BytePrimitiveArraySerializer.INSTANCE.serialize(pair.getValue(), outputView);
-						numEntries++;
+
+						while (iterator.hasNext()) {
+							Pair<byte[], byte[]> pair = iterator.next();
+							IntSerializer.INSTANCE.serialize(i, kgOutView);
+							BytePrimitiveArraySerializer.INSTANCE.serialize(pair.getKey(), kgOutView);
+							BytePrimitiveArraySerializer.INSTANCE.serialize(pair.getValue(), kgOutView);
+							numEntries++;
+						}
 					}
 				}
 
@@ -299,6 +308,13 @@ public class RocksDBFullSnapshotOperation {
 				IOUtils.closeQuietly(handle);
 			}
 			IOUtils.closeQuietly(db);
+		}
+	}
+
+	private byte[] getGroupPrefix(int group) throws IOException {
+		try (ByteArrayOutputStreamWithPos innerStream = new ByteArrayOutputStreamWithPos(GROUP_WRITE_BYTES + 1)) {
+			StateSerializerUtil.writeGroup(innerStream, group);
+			return innerStream.toByteArray();
 		}
 	}
 }

@@ -98,7 +98,7 @@ public class SerializationProxiesTest {
 		);
 
 		InternalBackendSerializationProxy serializationProxy =
-			new InternalBackendSerializationProxy(keyedStateMetaSnapshots, subKeyedStateMetaSnapshots);
+			new InternalBackendSerializationProxy(keyedStateMetaSnapshots, subKeyedStateMetaSnapshots, true);
 
 		byte[] serialized;
 		try (ByteArrayOutputStreamWithPos out = new ByteArrayOutputStreamWithPos()) {
@@ -112,6 +112,8 @@ public class SerializationProxiesTest {
 		try (ByteArrayInputStreamWithPos in = new ByteArrayInputStreamWithPos(serialized)) {
 			serializationProxy.read(new DataInputViewStreamWrapper(in));
 		}
+
+		Assert.assertTrue(serializationProxy.isUsingKeyGroupCompression());
 
 		Assert.assertEquals(keyedStateMetaSnapshots, serializationProxy.getKeyedStateMetaSnapshots());
 		Assert.assertEquals(subKeyedStateMetaSnapshots, serializationProxy.getSubKeyedStateMetaSnapshots());
@@ -190,7 +192,7 @@ public class SerializationProxiesTest {
 		);
 
 		InternalBackendSerializationProxy serializationProxy =
-			new InternalBackendSerializationProxy(keyedStateMetaSnapshots, subKeyedStateMetaSnapshots);
+			new InternalBackendSerializationProxy(keyedStateMetaSnapshots, subKeyedStateMetaSnapshots, true);
 
 		byte[] serialized;
 		try (ByteArrayOutputStreamWithPos out = new ByteArrayOutputStreamWithPos()) {
@@ -214,6 +216,8 @@ public class SerializationProxiesTest {
 		try (ByteArrayInputStreamWithPos in = new ByteArrayInputStreamWithPos(serialized)) {
 			serializationProxy.read(new DataInputViewStreamWrapper(in));
 		}
+
+		Assert.assertTrue(serializationProxy.isUsingKeyGroupCompression());
 
 		for (StateMetaInfoSnapshot meta : serializationProxy.getKeyedStateMetaSnapshots()) {
 			Assert.assertTrue(meta.getKeySerializer() instanceof UnloadableDummyTypeSerializer);

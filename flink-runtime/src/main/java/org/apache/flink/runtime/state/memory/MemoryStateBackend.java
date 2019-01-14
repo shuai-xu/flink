@@ -350,7 +350,9 @@ public class MemoryStateBackend extends AbstractFileStateBackend implements Conf
 				env.getUserClassLoader(),
 				env.getTaskStateManager().createLocalRecoveryConfig(),
 				env.getTaskKvStateRegistry(),
-				isUsingAsynchronousSnapshots());
+				isUsingAsynchronousSnapshots(),
+				env.getExecutionConfig()
+			);
 	}
 
 	// ------------------------------------------------------------------------

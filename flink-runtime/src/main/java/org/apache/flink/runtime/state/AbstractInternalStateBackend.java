@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.state;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.keyed.KeyedListState;
@@ -124,6 +125,11 @@ public abstract class AbstractInternalStateBackend implements
 	protected final Map<String, RegisteredStateMetaInfo> registeredStateMetaInfos;
 
 	/**
+	 * Decorates the input and output streams to write key-groups compressed.
+	 */
+	protected final StreamCompressionDecorator keyGroupCompressionDecorator;
+
+	/**
 	 * Subclasses should implement this method to release unused resources.
 	 */
 	protected void closeImpl() {}
@@ -150,7 +156,8 @@ public abstract class AbstractInternalStateBackend implements
 		int numberOfGroups,
 		KeyGroupRange keyGroupRange,
 		ClassLoader userClassLoader,
-		TaskKvStateRegistry kvStateRegistry) {
+		TaskKvStateRegistry kvStateRegistry,
+		ExecutionConfig executionConfig) {
 
 		this.numberOfGroups = numberOfGroups;
 		this.keyGroupRange = Preconditions.checkNotNull(keyGroupRange);
@@ -164,6 +171,15 @@ public abstract class AbstractInternalStateBackend implements
 		this.keyedStates = new HashMap<>();
 		this.subKeyedStates = new HashMap<>();
 		this.registeredStateMetaInfos = new HashMap<>();
+		this.keyGroupCompressionDecorator = determineStreamCompression(executionConfig);
+	}
+
+	private StreamCompressionDecorator determineStreamCompression(ExecutionConfig executionConfig) {
+		if (executionConfig != null && executionConfig.isUseSnapshotCompression()) {
+			return SnappyStreamCompressionDecorator.INSTANCE;
+		} else {
+			return UncompressedStreamCompressionDecorator.INSTANCE;
+		}
 	}
 
 	@Override
@@ -426,5 +442,9 @@ public abstract class AbstractInternalStateBackend implements
 	@Override
 	public Map<String, StateStorage> getStateStorages() {
 		return stateStorages;
+	}
+
+	public StreamCompressionDecorator getKeyGroupCompressionDecorator() {
+		return keyGroupCompressionDecorator;
 	}
 }
