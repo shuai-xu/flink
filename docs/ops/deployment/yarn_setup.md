@@ -446,7 +446,7 @@ YARN shuffle service provides an external endpoint for serving the intermediate 
 
 YARN shuffle service acts as a plugin of the NodeManager and you first need to start it on each NodeManager in your YARN cluster:
 
-1. Locate the shuffle service jar. If you build Flink from source, the shuffle service jar is located at `$FLINK_SOURCE/build-target/opt/yarn-shuffle/flink-shuffle-service-<version>.jar`. If your are using pre-packaged distribution, The shuffle service jar is located at `$FLINK_DIST_HOME//opt/yarn-shuffle//flink-shuffle-service-<version>.jar`.
+1. Locate the shuffle service jar. If you build Flink from source, the shuffle service jar is located at `$FLINK_SOURCE/build-target/opt/yarn-shuffle/flink-shuffle-service-<version>.jar`. If your are using pre-packaged distribution, The shuffle service jar is located at `$FLINK_DIST_HOME/opt/yarn-shuffle//flink-shuffle-service-<version>.jar`.
 2. Add this jar to the CLASSPATH of all the NodeManagers in your YARN cluster. 
 3. Add the following configuration in the `yarn-site.xml`:
     ```$xslt
@@ -467,7 +467,7 @@ YARN shuffle service acts as a plugin of the NodeManager and you first need to s
 After the shuffle service has started, you can create batch jobs with the Table API to use the shuffle service. Batch jobs can be declared with the Table API by setting
 
 ```$xslt
-sql.exec.all.data-exchange-mode.batch: true
+sql.exec.data-exchange-mode.all-batch: true
 ```
 
 By default, the intermediate data of the batch jobs are served by the embedded endpoint in the TaskManager. To change the endpoint to the YARN shuffle service, you need to set the following configuration:
@@ -491,7 +491,14 @@ YARN shuffle service supports using multiple directories to store the intermedia
 
 YARN shuffle service maintains a group of threads to read data from each directory. Suitable number of read threads may differ for directories with different disk types, therefore, YARN shuffle service allows user to specify the disk types of each directory and configure different thread number for each disk type.
 
-By default YARN shuffle service treats all the directories to be on HDD, and the default number of threads is configured by `flink.shuffle-service.default-io-thread-number-per-disk`. To change the default behavior, you can configure the directory disk types with `flink.shuffle-service.local-dirs` and configure the thread numbers for each disk type by `flink.shuffle-service.io-thread-number-for-disk-type`. For example, suppose the NodeManager local directories are `/disk/1/nm-local,/disk/2/nm-local` and `/disk/1` locates on SSD, `flink.shuffle-service.local-dirs` can be configured to `[SSD]/disk/1/nm-local,/disk/2/nm-local`. If you want to use 20 thread to read data from SSD, you can configure `flink.shuffle-service.io-thread-number-for-disk-type` to `SSD: 20`.
+By default YARN shuffle service treats all the directories to be on HDD, and the default number of threads is configured by `flink.shuffle-service.default-io-thread-number-per-disk`. To change the default behavior, you can configure the directory disk types with `flink.shuffle-service.local-dirs` and configure the thread numbers for each disk type by `flink.shuffle-service.io-thread-number-for-disk-type`. 
+
+For example, suppose the NodeManager local directories are `/disk/1/nm-local,/disk/2/nm-local` and `/disk/1` locates on SSD, if you want the YARN shuffle service to be aware of the disk types, you need to 
+
+1. Configure `flink.shuffle-service.local-dirs` to `[SSD]/disk/1/nm-local,/disk/2/nm-local`.
+2. Configure `flink.shuffle-service.io-thread-number-for-disk-type` to `SSD: 20` to start 20 IO thread for each root directory on SSD.
+
+When the YARN shuffle service is aware of the disk types, you can also configure to use directories on specific type of disks, as described in [Configure the jobs using external shuffle services]({{site.baseurl}}/ops/config.html#configure-the-disk-type-preferred).
 
 #### Configure the  memory
 The total direct and heap memory consumed by the YARN shuffle service is configured by `flink.shuffle-service.direct-memory-limit-in-mb` and `flink.shuffle-service.heap-memory-limit-in-mb`. The direct and heap memory of the NodeManager should also be increased accordingly.
@@ -505,10 +512,10 @@ YARN shuffle service cleans the intermediate data in two ways:
 
 YARN shuffle service classify the intermediate data directories into four types and each type of directories can be configure separately:
 
-1. Consumed: All the reduce side tasks have read the intermediate data.
-2. Partial-consumed: Parts of the reduce side tasks have read the intermediate data.
-3. Unconsumed: None of the reduce side tasks have read the intermediate data.
-4. Unfinished: The intermediate data is still being written.
+- Consumed: All the reduce side tasks have read the intermediate data.
+- Partial-consumed: Parts of the reduce side tasks have read the intermediate data.
+- Unconsumed: None of the reduce side tasks have read the intermediate data.
+- Unfinished: The intermediate data is still being written.
 
 
 #### Full references 

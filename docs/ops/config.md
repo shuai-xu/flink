@@ -488,13 +488,23 @@ When starting a Flink application, users can supply the default number of slots 
 
 ### Configure the jobs using external shuffle services
 
+<div class="alert alert-warning">
+  <strong>Note:</strong> The jobs using the external shuffle services should run in the corresponding environments. For example, the jobs using the YARN shuffle service should be <a href="deployment/yarn_setup.html">submitted to a YARN cluster</a>.
+</div>
+
 External shuffle services provide alternative mechanism to shuffle intermediate data for batch jobs. To declare batch jobs with the Table API, the following configuration need to be set:
 
-- `sql.exec.all.data-exchange-mode.batch`: When set to `true`, the job will be executed in batch mode (DEFAULT: `false`).
+- `sql.exec.data-exchange-mode.all-batch`: When set to `true`, the job will be executed in batch mode (DEFAULT: `false`).
 
 By default batch jobs will use TaskManager to shuffle the intermediate data. To use the External shuffle service, add the following configuration:
 
 - `task.blocking.shuffle.type`: Currently only `TM` or `YARN` are supported (DEFAULT: `TM`).
+
+#### Configure the disk type preferred
+
+If there are multiple available root directories, by default Flink will randomly choose one from them to write the shuffle data. If you want to only use directories on specific type of disks, you can configure 
+
+- `taskmanager.output.local-disk.type`: The disk type preferred to write the shuffle data. The corresponding shuffle services should be configured to be aware of the disk types, like the one described in [Configure the root directories]({{site.baseurl}}/ops/deployment/yarn_setup.html#configure-the-root-directories) for the YARN shuffle service.
 
 #### Configure the map-side tasks
 
@@ -509,7 +519,7 @@ The merge writer writes the data to different reduce-side tasks to the same file
 - `taskmanager.output.merge.merge-to-one-file`: Whether to merge to one file finally. If not, the merge stops once the number of files are less than `taskmanager.output.merge.factor`.
 - `taskmanager.output.merge.enable-async-merge`: Whether to merge while writing has not been finished.
 
-#### Configure the reduce side tasks:
+#### Configure the reduce side tasks
 
 For the reduce-side tasks, it is better to limit the number of concurrent request to assign more receive buffers to a single request. This is because the shuffle service stops serving a request once it has no receive buffers, a large receive buffer will reduce the number of switches and increase the overall throughput. For the reduce-side tasks:
 
