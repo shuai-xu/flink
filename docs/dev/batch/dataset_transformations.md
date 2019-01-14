@@ -1761,7 +1761,15 @@ DataSet<Tuple2<String, Integer>>
 <div data-lang="scala" markdown="1">
 
 {% highlight scala %}
-Not supported.
+case class Rating(name: String, category: String, points: Int)
+
+val ratings: DataSet[Ratings] = // [...]
+val weights: DataSet[(String, Double)] = // [...]
+
+val weightedRatings = ratings.leftOuterJoin(weights).where("category").equalTo(0) {
+  (rating, weight, out: Collector[(String, Double)]) =>
+    if (weight._2 > 0.1) out.collect(rating.name, rating.points * weight._2)
+}
 {% endhighlight %}
 
 </div>
@@ -2028,10 +2036,10 @@ Similar to Reduce, GroupReduce, and Join, keys can be defined using the differen
 
 #### CoGroup on DataSets
 
+The example shows how to group by Field Position Keys (Tuple DataSets only). You can do the same with Pojo-types and key expressions.
+
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
-
-The example shows how to group by Field Position Keys (Tuple DataSets only). You can do the same with Pojo-types and key expressions.
 
 {% highlight java %}
 // Some CoGroupFunction definition
