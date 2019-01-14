@@ -88,7 +88,7 @@ class FinalizeCsvSink(
   }
 
   override def getOutputType: RowType = {
-    new RowType(classOf[BaseRow], getFieldTypes, true)
+    new RowType(getFieldTypes: _*)
   }
 
 }

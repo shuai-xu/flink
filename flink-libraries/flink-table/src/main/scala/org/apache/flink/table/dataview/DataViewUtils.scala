@@ -21,7 +21,7 @@ import java.util
 import org.apache.flink.api.common.functions.Comparator
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.common.typeutils.CompositeType
-import org.apache.flink.api.java.typeutils.{PojoField, PojoTypeInfo}
+import org.apache.flink.api.java.typeutils.{PojoField, PojoTypeInfo, RowTypeInfo}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.dataview._
@@ -83,11 +83,11 @@ object DataViewUtils {
         (new PojoTypeInfo(externalAccTypeInfo.getTypeClass, newPojoFields),
             accumulatorSpecs.toArray)
 
-      case bt: BaseRowTypeInfo[_] if acc.isInstanceOf[GenericRow] =>
+      // RowType's ExternalTypeInfo is RowTypeInfo
+      // so we add another check => acc.isInstanceOf[GenericRow]
+      case r: RowTypeInfo if acc.isInstanceOf[GenericRow] =>
         val accInstance = acc.asInstanceOf[GenericRow]
-        val arity = bt.getArity
-        val fieldNames = bt.getFieldNames
-        val fieldTypes = bt.getFieldTypes
+        val (arity, fieldNames, fieldTypes) = (r.getArity, r.getFieldNames, r.getFieldTypes)
         val newFieldTypes = for (i <- 0 until arity) yield {
           val fieldName = fieldNames(i)
           val fieldInstance = accInstance.getField(i)
@@ -105,7 +105,7 @@ object DataViewUtils {
           newTypeInfo
         }
 
-        val newType = new RowType(bt.getTypeClass, newFieldTypes, bt.getFieldNames, true)
+        val newType = new RowType(classOf[GenericRow], newFieldTypes, fieldNames)
         (newType, accumulatorSpecs.toArray)
       case ct: CompositeType[_] if includesDataView(ct) =>
         throw new TableException(
@@ -147,7 +147,11 @@ object DataViewUtils {
         val newTypeInfo = if (mapView != null && mapView.keyType != null &&
           mapView.valueType != null) {
 
-          new MapViewTypeInfo(mapView.keyType, mapView.valueType)
+          // use external type for DataView of udaf.
+          // todo support analysis the DataView generic class of udaf.
+          new MapViewTypeInfo(
+            TypeConverters.createExternalTypeInfoFromDataType(mapView.keyType),
+            TypeConverters.createExternalTypeInfoFromDataType(mapView.valueType))
         } else {
           map
         }
@@ -177,6 +181,8 @@ object DataViewUtils {
           (TypeConverters.createInternalTypeFromTypeInfo(map.keyType),
               TypeConverters.createInternalTypeFromTypeInfo(map.valueType))
         }
+
+        // todo support analysis the DataView generic class of udaf.
         val newTypeInfo = if (isStateBackedDataViews) {
           new SortedMapViewTypeInfo(
             OrderedTypeUtils.createComparatorFromDataType(
@@ -203,10 +209,10 @@ object DataViewUtils {
         }
         newTypeInfo
 
-
       case list: ListViewTypeInfo[_] =>
         val listView = instance.asInstanceOf[ListView[_]]
         val newTypeInfo = if (listView != null && listView.elementType != null) {
+          // todo support analysis the DataView generic class of udaf.
           new ListViewTypeInfo(
             TypeConverters.createExternalTypeInfoFromDataType(listView.elementType))
         } else {

@@ -139,8 +139,7 @@ object TypeConverters {
       new RowType(
         br.getTypeClass,
         br.getFieldTypes.map(new TypeInfoWrappedDataType(_)).toArray[DataType],
-        br.getFieldNames,
-        true)
+        br.getFieldNames)
 
     // unknown type info, treat as generic.
     case _ => DataTypes.createGenericType(typeInfo)
@@ -219,14 +218,8 @@ object TypeConverters {
 
       // composite types
       case br: RowType =>
-        if (br.isUseBaseRow) {
-          new BaseRowTypeInfo(
-            br.getInternalTypeClass,
-            br.getFieldInternalTypes.map(createExternalTypeInfoFromDataType), br.getFieldNames)
-        } else {
-          new RowTypeInfo(br.getFieldTypes.map(
-            createExternalTypeInfoFromDataType), br.getFieldNames)
-        }
+        new RowTypeInfo(br.getFieldTypes.map(
+          createExternalTypeInfoFromDataType), br.getFieldNames)
 
       case gt: GenericType[_] => gt.getTypeInfo
 

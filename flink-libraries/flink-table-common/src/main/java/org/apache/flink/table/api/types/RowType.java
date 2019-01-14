@@ -42,11 +42,6 @@ public class RowType extends InternalType {
 
 	private final String[] fieldNames;
 
-	/**
-	 * Default useBaseRow is false, user use Row in Source/Sink/Udx.
-	 */
-	private final boolean useBaseRow;
-
 	public RowType(DataType... types) {
 		this(BaseRow.class, types, getFieldNames(types.length));
 	}
@@ -60,19 +55,9 @@ public class RowType extends InternalType {
 	}
 
 	public RowType(Class<? extends BaseRow> internalTypeClass, DataType[] types, String[] fieldNames) {
-		this(internalTypeClass, types, fieldNames, false);
-	}
-
-	public RowType(Class<? extends BaseRow> internalTypeClass, DataType[] types, boolean useBaseRow) {
-		this(internalTypeClass, types, getFieldNames(types.length), useBaseRow);
-	}
-
-	public RowType(Class<? extends BaseRow> internalTypeClass, DataType[] types, String[] fieldNames, boolean useBaseRow) {
 		this.internalTypeClass = internalTypeClass;
 		this.types = types;
 		this.fieldNames = fieldNames;
-//		this.useBaseRow = false;
-		this.useBaseRow = useBaseRow;
 	}
 
 	private static String[] getFieldNames(int length) {
@@ -116,10 +101,6 @@ public class RowType extends InternalType {
 		return -1;
 	}
 
-	public boolean isUseBaseRow() {
-		return useBaseRow;
-	}
-
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -131,17 +112,13 @@ public class RowType extends InternalType {
 
 		RowType that = (RowType) o;
 
-		return internalTypeClass.equals(that.internalTypeClass) &&
-				Arrays.equals(getFieldInternalTypes(), that.getFieldInternalTypes()) &&
-				Arrays.equals(fieldNames, that.fieldNames);
+		// RowType comparisons should not compare names and are compatible with the behavior of CompositeTypeInfo.
+		return Arrays.equals(getFieldInternalTypes(), that.getFieldInternalTypes());
 	}
 
 	@Override
 	public int hashCode() {
-		int result = internalTypeClass.hashCode();
-		result = 31 * result + Arrays.hashCode(types);
-		result = 31 * result + Arrays.hashCode(fieldNames);
-		return result;
+		return Arrays.hashCode(types);
 	}
 
 	@Override
@@ -150,7 +127,6 @@ public class RowType extends InternalType {
 				"internalTypeClass=" + internalTypeClass +
 				", types=" + Arrays.toString(getFieldInternalTypes()) +
 				", fieldNames=" + Arrays.toString(fieldNames) +
-				", useBaseRow=" + useBaseRow +
 				'}';
 	}
 }

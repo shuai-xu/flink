@@ -23,7 +23,7 @@ import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.dataview.MapView
-import org.apache.flink.table.api.types.{DataType, InternalType, TypeConverters}
+import org.apache.flink.table.api.types.{DataType, InternalType, RowType}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
 import org.apache.flink.table.codegen.CodeGenUtils.newName
@@ -32,7 +32,6 @@ import org.apache.flink.table.codegen.GeneratedExpression._
 import org.apache.flink.table.dataformat.GenericRow
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.util.DistinctInfo
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.Preconditions
 import org.apache.flink.util.Preconditions.checkArgument
 
@@ -364,14 +363,14 @@ class DistinctAggCodeGen(
     // the key expression of MapView
     if (fieldExprs.length > 1) {
       val keyTerm = newName(DISTINCT_KEY_TERM)
-      val valueType = new BaseRowTypeInfo(
+      val valueType = new RowType(
         classOf[GenericRow],
-        fieldExprs.map(_.resultType).map(TypeConverters.createExternalTypeInfoFromDataType): _*)
+        fieldExprs.map(_.resultType): _*)
 
       // always create a new result row
       generator.generateResultExpression(
         fieldExprs,
-        valueType.toInternalType,
+        valueType,
         outRow = keyTerm,
         reusedOutRow = false)
     } else {

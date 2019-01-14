@@ -51,7 +51,7 @@ class ParquetTableSink(
   }
 
   override def getOutputType: DataType =
-    new RowType(classOf[BaseRow], getFieldTypes, true)
+    new RowType(getFieldTypes: _*)
 
   /** Emits the BoundedStream. */
   override def emitBoundedStream(boundedStream: DataStream[BaseRow],

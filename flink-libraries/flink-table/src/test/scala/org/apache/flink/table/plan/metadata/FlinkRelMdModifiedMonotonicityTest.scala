@@ -18,8 +18,11 @@
 
 package org.apache.flink.table.plan.metadata
 
-import org.apache.flink.table.functions.sql.AggSqlFunctions
+import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.table.api.functions.ScalarFunction
+import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.functions.sql.AggSqlFunctions
+import org.apache.flink.table.functions.utils.AggSqlFunction
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
 
 import org.apache.calcite.rel.core.JoinRelType

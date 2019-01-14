@@ -403,7 +403,7 @@ final class TestingUpsertTableSink(keys: Array[Int])
   }
 
   override def getOutputType: DataType =
-    new RowType(classOf[BaseRow], fTypes, fNames, true)
+    new RowType(classOf[BaseRow], fTypes, fNames)
 
   override def emitDataStream(dataStream: DataStream[BaseRow]) = {
     dataStream.addSink(sink)

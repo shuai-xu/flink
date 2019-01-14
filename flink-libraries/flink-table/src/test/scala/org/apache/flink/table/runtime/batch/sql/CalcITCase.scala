@@ -489,31 +489,31 @@ class CalcITCase extends QueryTest {
     executeQuery(parseQuery(
       "SELECT ROW(1, 'Hi', true) FROM SmallTable3"
     )).foreach { record =>
-      val baseRow = record.getField(0).asInstanceOf[BaseRow]
-      assertEquals(1, baseRow.getInt(0))
-      assertEquals("Hi", baseRow.getString(1))
-      assertEquals(true, baseRow.getBoolean(2))
+      val baseRow = record.getField(0).asInstanceOf[Row]
+      assertEquals(1, baseRow.getField(0))
+      assertEquals("Hi", baseRow.getField(1))
+      assertEquals(true, baseRow.getField(2))
     }
 
     // primitive type
     executeQuery(parseQuery(
       "SELECT ROW(1, a, b) FROM SmallTable3"
     )).zipWithIndex.foreach { case (record, idx) =>
-      val baseRow = record.getField(0).asInstanceOf[BaseRow]
-      assertEquals(1, baseRow.getInt(0))
-      assertEquals(smallData3(idx).getField(0), baseRow.getInt(1))
-      assertEquals(smallData3(idx).getField(1), baseRow.getLong(2))
+      val baseRow = record.getField(0).asInstanceOf[Row]
+      assertEquals(1, baseRow.getField(0))
+      assertEquals(smallData3(idx).getField(0), baseRow.getField(1))
+      assertEquals(smallData3(idx).getField(1), baseRow.getField(2))
     }
 
     // non-primitive type
-    val d = Decimal.castFrom(2.0002, 5, 4)
+    val d = Decimal.castFrom(2.0002, 5, 4).toBigDecimal
     executeQuery(parseQuery(
       "SELECT ROW(CAST(2.0002 AS DECIMAL(5, 4)), a, c) FROM SmallTable3"
     )).zipWithIndex.foreach { case (record, idx) =>
-      val baseRow = record.getField(0).asInstanceOf[BaseRow]
-      assertEquals(d, baseRow.getDecimal(0, 5, 4))
-      assertEquals(smallData3(idx).getField(0), baseRow.getInt(1))
-      assertEquals(smallData3(idx).getField(2), baseRow.getString(2))
+      val baseRow = record.getField(0).asInstanceOf[Row]
+      assertEquals(d, baseRow.getField(0))
+      assertEquals(smallData3(idx).getField(0), baseRow.getField(1))
+      assertEquals(smallData3(idx).getField(2), baseRow.getField(2))
     }
   }
   
@@ -593,10 +593,10 @@ class CalcITCase extends QueryTest {
       "WHERE (a, b, c) = ('foo', 12, TIMESTAMP '1984-07-12 14:34:24')")
     val result = executeQuery(table)
 
-    val baseRow = result.head.getField(0).asInstanceOf[BaseRow]
-    assertEquals(data.head.getField(0), baseRow.getString(0))
-    assertEquals(data.head.getField(1), baseRow.getInt(1))
-    assertEquals(data.head.getField(2), new Timestamp(baseRow.getLong(2)))
+    val baseRow = result.head.getField(0).asInstanceOf[Row]
+    assertEquals(data.head.getField(0), baseRow.getField(0))
+    assertEquals(data.head.getField(1), baseRow.getField(1))
+    assertEquals(data.head.getField(2), baseRow.getField(2))
 
     val arr = result.head.getField(1).asInstanceOf[Array[Integer]]
     assertEquals(12, arr(0))
@@ -662,9 +662,9 @@ class CalcITCase extends QueryTest {
     val results = result.collect()
     results.zipWithIndex.foreach {
       case (row, i) =>
-        val baseRow = row.getField(0).asInstanceOf[BaseRow]
-        assertEquals(i, baseRow.getLong(0))
-        assertEquals(i, baseRow.getLong(1))
+        val baseRow = row.getField(0).asInstanceOf[Row]
+        assertEquals(i, baseRow.getField(0).asInstanceOf[java.lang.Long].toInt)
+        assertEquals(i, baseRow.getField(1).asInstanceOf[java.lang.Long].toInt)
         assertEquals(i.toString, row.getField(1))
     }
   }

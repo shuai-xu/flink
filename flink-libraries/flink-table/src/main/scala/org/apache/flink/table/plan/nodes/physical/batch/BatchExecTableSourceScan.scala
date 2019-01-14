@@ -23,6 +23,7 @@ import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.nodes.common.CommonScan
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
@@ -86,8 +87,8 @@ class BatchExecTableSourceScan(
     assignSourceResourceAndParallelism(tableEnv, input)
 
     // check that declared and actual type of table source DataSet are identical
-    if (input.getOutputType !=
-        TypeConverters.createExternalTypeInfoFromDataType(tableSource.getReturnType)) {
+    if (TypeConverters.createInternalTypeFromTypeInfo(input.getOutputType) !=
+        tableSource.getReturnType.toInternalType) {
       throw new TableException(s"TableSource of type ${tableSource.getClass.getCanonicalName} " +
           s"returned a DataSet of type ${input.getOutputType} that does not match with the " +
           s"type ${tableSource.getReturnType} declared by the TableSource.getReturnType() " +
@@ -117,7 +118,8 @@ class BatchExecTableSourceScan(
       isStreamTable = false,
       None)
     hasTimeAttributeField(fieldIndexes) ||
-        needsConversion(tableSource.getReturnType, extractTableSourceTypeClass(tableSource))
+        needsConversion(tableSource.getReturnType,
+          CommonScan.extractTableSourceTypeClass(tableSource))
   }
 
   override private[flink] def getSourceTransformation(

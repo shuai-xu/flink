@@ -77,5 +77,5 @@ class OrcTableSink(
     * @return The type expected by this [[org.apache.flink.table.sinks.TableSink]].
     */
   override def getOutputType: RowType =
-    new RowType(classOf[BaseRow], getFieldTypes, true)
+    new RowType(getFieldTypes: _*)
 }

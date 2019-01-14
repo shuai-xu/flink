@@ -21,7 +21,7 @@ import org.apache.flink.streaming.api.bundle.CountBundleTrigger
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes._
-import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, RowType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, RowType, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException, Types}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
@@ -331,7 +331,8 @@ object AggregateUtil extends Enumeration {
       }
 
       val accTypeInfo = new MapViewTypeInfo(
-        d.keyType,
+        // distinct is internal code gen, use internal type serializer.
+        TypeConverters.createInternalTypeInfoFromDataType(d.keyType),
         valueType,
         isStateBackedDataViews,
         // the mapview serializer should handle null keys
@@ -379,7 +380,7 @@ object AggregateUtil extends Enumeration {
             TableErrors.INST.sqlAggFunctionDataTypeNotSupported("Distinct", t.toString))
       }
     } else {
-      new RowType(classOf[BaseRow], argTypes, true)
+      new RowType(argTypes: _*)
     }
   }
 

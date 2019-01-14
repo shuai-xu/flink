@@ -167,7 +167,7 @@ public class CountDistinct {
 				DataTypes.createGenericType(MapView.class),
 			};
 			String[] fieldNames = new String[]{"count", "map"};
-			return new RowType(GenericRow.class, fieldTypes, fieldNames, true);
+			return new RowType(GenericRow.class, fieldTypes, fieldNames);
 		}
 	}
 

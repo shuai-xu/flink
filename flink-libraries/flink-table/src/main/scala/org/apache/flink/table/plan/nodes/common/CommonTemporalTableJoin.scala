@@ -40,6 +40,7 @@ import org.apache.flink.streaming.api.operators.ProcessOperator
 import org.apache.flink.streaming.api.operators.async.AsyncWaitOperator
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.functions.{AsyncTableFunction, TableFunction, UserDefinedFunction}
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, InternalType, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
@@ -147,6 +148,7 @@ abstract class CommonTemporalTableJoin(
     val resultBaseRowTypeInfo = resultSchema.typeInfo(classOf[JoinedRow])
     val tableReturnTypeInfo =
       TypeConverters.createExternalTypeInfoFromDataType(tableSource.getReturnType)
+    val tableReturnClass = CommonScan.extractTableSourceTypeClass(tableSource)
 
     // validate whether the node is valid and supported.
     validate(
@@ -228,6 +230,7 @@ abstract class CommonTemporalTableJoin(
         inputBaseRowType,
         resultBaseRowType,
         tableReturnTypeInfo,
+        tableReturnClass,
         checkedIndexInOrder,
         lookupKey2InputFieldIndex,
         lookupKeysFromConstant,
@@ -312,6 +315,7 @@ abstract class CommonTemporalTableJoin(
         inputBaseRowType,
         resultBaseRowType,
         tableReturnTypeInfo,
+        tableReturnClass,
         checkedIndexInOrder,
         lookupKey2InputFieldIndex,
         lookupKeysFromConstant,
@@ -381,19 +385,13 @@ abstract class CommonTemporalTableJoin(
       TypeConverters.toBaseRowTypeInfo(resultBaseRowType),
       inputTransformation.getParallelism)
   }
-  
+
   private def rowTypeEquals(expected: TypeInformation[_], actual: TypeInformation[_]): Boolean = {
-    expected match {
-      case _: BaseRowTypeInfo[_] =>
-        val clazz = actual.getTypeClass
-        actual.isInstanceOf[BaseRowTypeInfo[_]] ||
-          clazz == classOf[BaseRow] || clazz == classOf[GenericRow] || clazz == classOf[BinaryRow]
-      case _: RowTypeInfo =>
-        val clazz = actual.getTypeClass
-        actual.isInstanceOf[RowTypeInfo] || clazz == classOf[Row]
-    }
-//    TypeConverters.createInternalTypeFromTypeInfo(expected) ==
-//        TypeConverters.createInternalTypeFromTypeInfo(actual)
+    // check internal and external type, cause we will auto convert external class to internal
+    // class (eg: Row => BaseRow).
+    // check both type because GenericType<Row> and GenericType<BaseRow>.
+    TypeUtils.getExternalClassForType(expected) == TypeUtils.getExternalClassForType(actual) ||
+        TypeUtils.getInternalClassForType(expected) == TypeUtils.getInternalClassForType(actual)
   }
 
   private def getSignatureMatchedEvalMethod(

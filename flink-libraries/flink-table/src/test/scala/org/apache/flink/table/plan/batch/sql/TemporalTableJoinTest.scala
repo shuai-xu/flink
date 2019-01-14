@@ -284,8 +284,7 @@ class TemporalTableJoinTest extends TableTestBase {
       new RowType(
         classOf[BaseRow],
         Array[DataType](DataTypes.INT, DataTypes.STRING, DataTypes.INT),
-        Array("id", "name", "age"),
-        true)
+        Array("id", "name", "age"))
     }
 
     override def getTableSchema: TableSchema = {

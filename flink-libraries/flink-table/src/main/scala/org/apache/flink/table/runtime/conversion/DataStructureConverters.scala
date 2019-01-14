@@ -186,17 +186,13 @@ object DataStructureConverters {
     }
 
     override def toExternalImpl(baseRow: BaseRow): Any = {
-      if (t.isUseBaseRow) {
-        baseRow
-      } else {
-        val row = new Row(baseRow.getArity)
-        var idx = 0
-        while (idx < baseRow.getArity) {
-          row.setField(idx, converters(idx).toExternal(baseRow, idx))
-          idx += 1
-        }
-        row
+      val row = new Row(baseRow.getArity)
+      var idx = 0
+      while (idx < baseRow.getArity) {
+        row.setField(idx, converters(idx).toExternal(baseRow, idx))
+        idx += 1
       }
+      row
     }
   }
 

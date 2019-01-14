@@ -131,9 +131,7 @@ object CodeGenUtils {
     case at: ArrayType if at.isPrimitive =>
       s"${primitiveTypeTermForType(at.getElementInternalType)}[]"
     case at: ArrayType => s"${externalBoxedTermForType(at.getElementType)}[]"
-    case bt: RowType =>
-      if (bt.isUseBaseRow) bt.getInternalTypeClass.getCanonicalName
-      else classOf[Row].getCanonicalName
+    case bt: RowType => classOf[Row].getCanonicalName
     case _: MapType => classOf[java.util.Map[_, _]].getCanonicalName
     case _: TimestampType if t != DataTypes.INTERVAL_MILLIS => classOf[Timestamp].getCanonicalName
     case _: DateType if t != DataTypes.INTERVAL_MONTHS => classOf[Date].getCanonicalName
@@ -193,20 +191,13 @@ object CodeGenUtils {
     case _ => "null"
   }
 
-  def isInternalClass(clazz: Class[_], t: DataType): Boolean = t match {
-    case DataTypes.STRING => clazz == classOf[BinaryString]
-    case _: DecimalType => clazz == classOf[Decimal]
-    case DataTypes.DATE => clazz == classOf[Integer] || clazz == Integer.TYPE
-    case DataTypes.TIME => clazz == classOf[Integer] || clazz == Integer.TYPE
-    case DataTypes.TIMESTAMP => clazz == classOf[java.lang.Long] || clazz == java.lang.Long.TYPE
-
-    case _: ArrayType => clazz == classOf[BaseArray]
-    case _: MapType => clazz == classOf[BaseMap]
-    case _: RowType => classOf[BaseRow].isAssignableFrom(clazz)
-    case _: GenericType[_] => true
-    case _: ExternalType => false
-    case _ => true // internal equalTo external class.
-  }
+  /**
+    * If it's internally compatible, don't need to DataStructure converter.
+    * clazz != classOf[Row] => Row can only infer GenericType[Row].
+    */
+  def isInternalClass(clazz: Class[_], t: DataType): Boolean =
+    clazz != classOf[Object] && clazz != classOf[Row] &&
+      clazz == TypeConverters.createInternalTypeInfoFromDataType(t).getTypeClass
 
   def qualifyMethod(method: Method): String =
     method.getDeclaringClass.getCanonicalName + "." + method.getName

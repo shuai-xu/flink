@@ -28,6 +28,7 @@ import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.sources.{RowtimeAttributeDescriptor, StreamTableSource, TableSourceUtil}
 import org.apache.flink.streaming.api.functions.{AssignerWithPeriodicWatermarks, AssignerWithPunctuatedWatermarks}
 import org.apache.flink.streaming.api.watermark.Watermark
+import org.apache.flink.table.plan.nodes.common.CommonScan
 import org.apache.flink.table.sources.wmstrategies.{PeriodicWatermarkAssigner, PreserveWatermarks, PunctuatedWatermarkAssigner}
 
 import org.apache.calcite.plan._
@@ -141,7 +142,8 @@ class StreamExecTableSourceScan(
       isStreamTable = false,
       None)
     hasTimeAttributeField(fieldIndexes) ||
-        needsConversion(tableSource.getReturnType, extractTableSourceTypeClass(tableSource))
+        needsConversion(tableSource.getReturnType,
+          CommonScan.extractTableSourceTypeClass(tableSource))
   }
 }
 

@@ -485,7 +485,10 @@ class ImperativeAggCodeGen(
         case _ =>
       }
 
-      if (iterableTypeClass != TypeUtils.getExternalClassForType(externalAccType)) {
+      if (iterableTypeClass != TypeUtils.getExternalClassForType(externalAccType) &&
+          // iterableTypeClass can be GenericRow, so classOf[BaseRow] is assignable from it.
+          !TypeUtils.getInternalClassForType(externalAccType).isAssignableFrom(
+            iterableTypeClass.asInstanceOf[Class[_]])) {
         throw new CodeGenException(
           s"merge method in AggregateFunction ${function.getClass.getCanonicalName} does not " +
             s"have the correct Iterable type. Actually: $iterableTypeClass. " +

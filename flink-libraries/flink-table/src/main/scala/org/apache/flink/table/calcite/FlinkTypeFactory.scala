@@ -522,7 +522,7 @@ object FlinkTypeFactory {
     // field names
     val logicalFieldNames = logicalRowType.getFieldNames.asScala
     new RowType(
-      referType, logicalFieldTypes.toArray[DataType], logicalFieldNames.toArray, true)
+      referType, logicalFieldTypes.toArray[DataType], logicalFieldNames.toArray)
   }
 
   def toInternalFieldTypes(logicalRowType: RelDataType): Seq[InternalType] = {

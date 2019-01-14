@@ -78,10 +78,10 @@ class ParquetVectorizedColumnRowTableSource(
   }
 
   override def getReturnType: RowType = new RowType(
-    classOf[ColumnarRow], this.fieldTypes.toArray[DataType], this.fieldNames, true)
+    classOf[ColumnarRow], this.fieldTypes.toArray[DataType], this.fieldNames)
 
   def getPhysicalType: BaseRowTypeInfo[ColumnarRow] =
-    TypeConverters.createExternalTypeInfoFromDataType(getReturnType)
+    TypeConverters.toBaseRowTypeInfo(getReturnType)
         .asInstanceOf[BaseRowTypeInfo[ColumnarRow]]
 
   override protected def createTableSource(

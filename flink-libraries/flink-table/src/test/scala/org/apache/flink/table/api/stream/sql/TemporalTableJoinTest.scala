@@ -138,14 +138,8 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
 
     val temporalTable6 = new TestInvalidTemporalTable(new InvalidAsyncTableFunctionResultType)
     streamUtil.tableEnv.registerTableSource("temporalTable6", temporalTable6)
-    expectExceptionThrown(
-      "SELECT * FROM T AS T JOIN temporalTable6 " +
-        "FOR SYSTEM_TIME AS OF T.proc AS D ON T.a = D.id AND T.b = D.name AND T.ts = D.ts",
-      "The TableSource [TestInvalidTemporalTable(id, name, age, ts)] return type " +
-        "Row(id: Integer, name: String, age: Integer, ts: Timestamp) do not match " +
-        "its lookup function extracted return type GenericType<org.apache.flink.types.Row>",
-      classOf[TableException]
-    )
+    streamUtil.explainSql("SELECT * FROM T AS T JOIN temporalTable6 " +
+        "FOR SYSTEM_TIME AS OF T.proc AS D ON T.a = D.id AND T.b = D.name AND T.ts = D.ts")
 
     val temporalTable7 = new TestInvalidTemporalTable(new InvalidAsyncTableFunctionEvalSignature1)
     streamUtil.tableEnv.registerTableSource("temporalTable7", temporalTable7)
@@ -329,8 +323,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
       new RowType(
         classOf[BaseRow],
         Array[DataType](DataTypes.INT, DataTypes.STRING, DataTypes.INT),
-        Array("id", "name", "age"),
-        true)
+        Array("id", "name", "age"))
     }
 
     override def getTableSchema: TableSchema = {
@@ -373,8 +366,7 @@ class TestInvalidTemporalTable private(
     new RowType(
       classOf[BaseRow],
       Array[DataType](DataTypes.INT, DataTypes.STRING, DataTypes.INT, DataTypes.TIMESTAMP),
-      Array("id", "name", "age", "ts"),
-      true)
+      Array("id", "name", "age", "ts"))
   }
 
   override def getTableSchema: TableSchema = {

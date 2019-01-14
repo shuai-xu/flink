@@ -48,8 +48,7 @@ import scala.collection.JavaConversions._
 trait CommonScan[T] {
 
   private[flink] def needsConversion(dataType: DataType, clz: Class[_]): Boolean = dataType match {
-    case bt: RowType => !bt.isUseBaseRow
-//    case r: RowType => !CodeGenUtils.isInternalClass(clz, r)
+    case r: RowType => !CodeGenUtils.isInternalClass(clz, r)
     case t: TypeInfoWrappedDataType if t.getTypeInfo.isInstanceOf[BaseRowTypeInfo[_]] => false
     case _ => true
   }
@@ -106,22 +105,18 @@ trait CommonScan[T] {
     val convertName = "SourceConversion"
     // type convert
     val inputTerm = DEFAULT_INPUT1_TERM
-    val (inputTermConverter, internalInputType: InternalType) =
-      if (!inputType.isInstanceOf[RowType] ||
-          !inputType.asInstanceOf[RowType].isUseBaseRow) {
-        val convertFunc = genToInternal(ctx, inputType)
-        if (inputType.toInternalType.isInstanceOf[RowType]) {
-          (convertFunc, inputType.toInternalType)
-        } else {
-          (
-              (record: String) =>
-                s"${classOf[GenericRow].getCanonicalName}.wrap(${convertFunc(record)})",
-              new RowType(inputType.toInternalType)
-          )
-        }
+    val (inputTermConverter, internalInputType: InternalType) = {
+      val convertFunc = genToInternal(ctx, inputType)
+      if (inputType.toInternalType.isInstanceOf[RowType]) {
+        (convertFunc, inputType.toInternalType)
       } else {
-        ((record: String) => record, inputType)
+        (
+            (record: String) =>
+              s"${classOf[GenericRow].getCanonicalName}.wrap(${convertFunc(record)})",
+            new RowType(inputType.toInternalType)
+        )
       }
+    }
 
     var codeSplit = GeneratedSplittableExpression.UNSPLIT_EXPRESSION
     val (inputTypes, inputNames) = inputType.toInternalType match {
@@ -203,4 +198,32 @@ trait CommonScan[T] {
       TypeConverters.toBaseRowTypeInfo(outputRowType),
       input.getParallelism)
   }
+}
+
+object CommonScan {
+
+  /**
+    * TableSource has no generic type, so we need match XXTableSources...
+    */
+  private[flink] def extractTableSourceTypeClass(source: TableSource): Class[_] = {
+    try {
+      source match {
+        case _: BatchTableSource[_] =>
+          TypeExtractor.createTypeInfo(source, classOf[BatchTableSource[_]], source.getClass, 0)
+              .getTypeClass.asInstanceOf[Class[_]]
+        case _: StreamTableSource[_] =>
+          TypeExtractor.createTypeInfo(source, classOf[StreamTableSource[_]], source.getClass, 0)
+              .getTypeClass.asInstanceOf[Class[_]]
+        case _: LookupableTableSource[_] =>
+          TypeExtractor.createTypeInfo(
+            source, classOf[LookupableTableSource[_]], source.getClass, 0)
+              .getTypeClass.asInstanceOf[Class[_]]
+        case _ => throw new RuntimeException(s"Unknown source: $source")
+      }
+    } catch {
+      case _: InvalidTypesException =>
+        classOf[Object]
+    }
+  }
+
 }

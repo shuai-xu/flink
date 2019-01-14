@@ -192,7 +192,7 @@ abstract class LastValueWithRetractAggFunction[T]
       // it will be replaced to SortedMapViewType
       DataTypes.createGenericType(classOf[SortedMapView[_, _]]))
     val fieldNames = Array("lastValue", "lastOrder", "dataMap", "sortedDataMap")
-    new RowType(classOf[GenericRow], fieldTypes, fieldNames, true)
+    new RowType(classOf[GenericRow], fieldTypes, fieldNames)
   }
 }
 

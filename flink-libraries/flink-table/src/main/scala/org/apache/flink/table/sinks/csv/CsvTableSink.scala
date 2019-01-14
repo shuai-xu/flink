@@ -202,7 +202,6 @@ class CsvTableSink(
   }
 
   override def getOutputType: DataType = {
-    new RowType(classOf[BaseRow], getFieldTypes, true)
-//    new RowType(getFieldTypes: _*)
+    new RowType(getFieldTypes: _*)
   }
 }

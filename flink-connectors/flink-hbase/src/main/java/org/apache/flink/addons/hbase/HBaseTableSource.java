@@ -118,7 +118,7 @@ public class HBaseTableSource implements BatchTableSource<GenericRow>, Projectab
 				GenericRow.class,
 				Arrays.stream(getFieldTypes()).map((Function<TypeInformation, DataType>) TypeInfoWrappedDataType::new)
 						.toArray(DataType[]::new),
-				getFieldNames(), true);
+				getFieldNames());
 	}
 
 	@Override

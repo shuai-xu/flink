@@ -125,7 +125,7 @@ class ConcatAggFunction extends AggregateFunction[BinaryString, GenericRow] {
       // it will be replaced to ListViewType
       DataTypes.createGenericType(classOf[ListView[_]]))
     val fieldNames = Array("list", "retractList")
-    new RowType(classOf[GenericRow], fieldTypes, fieldNames, true)
+    new RowType(classOf[GenericRow], fieldTypes, fieldNames)
   }
 }
 

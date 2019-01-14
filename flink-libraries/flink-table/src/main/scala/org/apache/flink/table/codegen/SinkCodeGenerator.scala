@@ -27,7 +27,7 @@ import org.apache.flink.api.scala.createTuple2TypeInformation
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, RowType, TypeConverters}
+import org.apache.flink.table.api.types.{DataType, GenericType, RowType, TimestampType, TypeConverters}
 import org.apache.flink.table.api.{Table, TableConfig, TableException, Types}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
@@ -36,9 +36,9 @@ import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.conversion.DataStructureConverters.genToExternal
-import org.apache.flink.table.sinks.TableSink
+import org.apache.flink.table.sinks.{DataStreamTableSink, TableSink}
 import org.apache.flink.table.typeutils.TypeUtils.getCompositeTypes
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TimeIndicatorTypeInfo}
+import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TimeIndicatorTypeInfo, TypeUtils}
 import org.apache.flink.types.Row
 
 import org.apache.calcite.rel.`type`.RelDataType
@@ -49,8 +49,13 @@ object SinkCodeGenerator {
 
   private[flink] def extractTableSinkTypeClass(sink: TableSink[_]): Class[_] = {
     try {
-      TypeExtractor.createTypeInfo(sink, classOf[TableSink[_]], sink.getClass, 0)
-          .getTypeClass.asInstanceOf[Class[_]]
+      sink match {
+        // DataStreamTableSink has no generic class, so we need get the type to get type class.
+        case sink: DataStreamTableSink[_] =>
+          TypeConverters.createExternalTypeInfoFromDataType(sink.getOutputType).getTypeClass
+        case _ => TypeExtractor.createTypeInfo(sink, classOf[TableSink[_]], sink.getClass, 0)
+            .getTypeClass.asInstanceOf[Class[_]]
+      }
     } catch {
       case _: InvalidTypesException =>
         classOf[Object]
@@ -76,10 +81,7 @@ object SinkCodeGenerator {
     val typeClass = extractTableSinkTypeClass(sink)
 
     //row needs no conversion
-    if (resultType.isInstanceOf[BaseRowTypeInfo[_]] ||
-        (resultType.isInstanceOf[GenericTypeInfo[_]] &&
-            resultType.getTypeClass == classOf[BaseRow])) {
-//    if (CodeGenUtils.isInternalClass(typeClass, dataType.toInternalType)) {
+    if (CodeGenUtils.isInternalClass(typeClass, dataType.toInternalType)) {
       return (None, resultType)
     }
 
@@ -208,8 +210,12 @@ object SinkCodeGenerator {
 
     // validate that at least the field types of physical and logical type match
     // we do that here to make sure that plan translation was correct
-    val types = relType.getFieldList map { f => FlinkTypeFactory.toTypeInfo(f.getType) }
-    if (inputTypeInfo.getFieldTypes.toList != types) {
+    val types = relType.getFieldList map { f => FlinkTypeFactory.toInternalType(f.getType) }
+    if (inputTypeInfo.getFieldTypes.map(_.toInternalType).toList.zip(types).exists {
+      // let TIME_INDICATOR and Timestamp switch to each other
+      case (_: TimestampType, _: TimestampType) => false
+      case (inputT, expectT) => inputT != expectT
+    }) {
       throw new TableException(
         s"The field types of physical and logical row types do not match. " +
             s"Physical type is [$relType], Logical type is [$inputTypeInfo]. " +

@@ -34,7 +34,6 @@ import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.runtime.collector.TableFunctionCollector
 import org.apache.flink.table.runtime.conversion.DataStructureConverters.RowConverter
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.types.Row
 import org.apache.flink.util.{Collector, Preconditions}
 
@@ -49,6 +48,7 @@ object TemporalJoinCodeGenerator {
     inputType: InternalType,
     returnType: InternalType,
     tableReturnTypeInfo: TypeInformation[_],
+    tableReturnClass: Class[_],
     lookupKeyInOrder: Array[Int],
     lookupKeysFromInput: Map[Int, Int], // lookup key index -> input field index
     lookupKeysFromConstant: Map[Int, RexLiteral],  // lookup key index -> constant value
@@ -69,16 +69,16 @@ object TemporalJoinCodeGenerator {
 
     val lookupFunctionTerm = ctx.addReusableFunction(lookupFunction)
 
-    val setCollectorCode = tableReturnTypeInfo match {
-      case r: RowTypeInfo =>
-        val converterCollector = new RowToBaseRowCollector(r)
-        val term = ctx.addReusableObject(converterCollector, "collector")
-        s"""
-           |$term.setCollector(${CodeGeneratorContext.DEFAULT_COLLECTOR_TERM});
-           |$lookupFunctionTerm.setCollector($term);
+    val setCollectorCode = if (tableReturnClass == classOf[Row]) {
+      val converterCollector =
+        new RowToBaseRowCollector(tableReturnTypeInfo.asInstanceOf[RowTypeInfo])
+      val term = ctx.addReusableObject(converterCollector, "collector")
+      s"""
+         |$term.setCollector(${CodeGeneratorContext.DEFAULT_COLLECTOR_TERM});
+         |$lookupFunctionTerm.setCollector($term);
          """.stripMargin
-      case _: BaseRowTypeInfo[_] =>
-        s"$lookupFunctionTerm.setCollector(${CodeGeneratorContext.DEFAULT_COLLECTOR_TERM});"
+    } else {
+      s"$lookupFunctionTerm.setCollector(${CodeGeneratorContext.DEFAULT_COLLECTOR_TERM});"
     }
 
     val body =
@@ -107,6 +107,7 @@ object TemporalJoinCodeGenerator {
     inputType: InternalType,
     returnType: InternalType,
     tableReturnTypeInfo: TypeInformation[_],
+    tableReturnClass: Class[_],
     lookupKeyInOrder: Array[Int],
     lookupKeysFromInput: Map[Int, Int], // lookup key index -> input field index
     lookupKeysFromConstant: Map[Int, RexLiteral],
@@ -127,14 +128,14 @@ object TemporalJoinCodeGenerator {
     val lookupFunctionTerm = ctx.addReusableFunction(asyncLookupFunction)
 
     var futureTerm: String = null
-    val setFutureCode = tableReturnTypeInfo match {
-      case r: RowTypeInfo =>
-        val converterFuture = new RowToBaseRowResultFuture(r)
-        futureTerm = ctx.addReusableObject(converterFuture, "future")
-        s"$futureTerm.setFuture(${CodeGeneratorContext.DEFAULT_COLLECTOR_TERM});"
-      case _: BaseRowTypeInfo[_] =>
-        futureTerm = CodeGeneratorContext.DEFAULT_COLLECTOR_TERM
-        ""
+    val setFutureCode = if (tableReturnClass == classOf[Row]) {
+      val converterFuture =
+        new RowToBaseRowResultFuture(tableReturnTypeInfo.asInstanceOf[RowTypeInfo])
+      futureTerm = ctx.addReusableObject(converterFuture, "future")
+      s"$futureTerm.setFuture(${CodeGeneratorContext.DEFAULT_COLLECTOR_TERM});"
+    } else {
+      futureTerm = CodeGeneratorContext.DEFAULT_COLLECTOR_TERM
+      ""
     }
 
     val body =
