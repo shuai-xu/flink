@@ -644,7 +644,6 @@ abstract class TableEnvironment(
     * @param tableName The table name under which the table is registered in [[TableEnvironment]].
     *                  tableName must be a single name(e.g. "MyTable") associated with a table.
     * @return Statistics of a table if the statistics is available, else return null.
-    * @Experimental
     */
   @Experimental
   def getTableStats(tableName: String): TableStats = {
@@ -662,7 +661,6 @@ abstract class TableEnvironment(
     *                  table , or can be a nest names (e.g. Array("MyCatalog", "MyDb", "MyTable"))
     *                  associated with a table registered as member of a [[ReadableCatalog]].
     * @return Statistics of a table if the statistics is available, else return null.
-    * @Experimental
     */
   @Experimental
   def getTableStats(tablePath: Array[String]): TableStats = {
@@ -721,7 +719,6 @@ abstract class TableEnvironment(
     * @param tableName The table name under which the table is registered in [[TableEnvironment]].
     *                  tableName must be a single name(e.g. "MyTable") associated with a table.
     * @param tableStats The [[TableStats]] to update.
-    * @Experimental
     */
   @Experimental
   def alterTableStats(tableName: String, tableStats: Option[TableStats]): Unit = {
@@ -737,7 +734,6 @@ abstract class TableEnvironment(
     *                  table , or can be a nest names (e.g. Array("MyCatalog", "MyDb", "MyTable"))
     *                  associated with a table registered as member of a [[ReadableCatalog]].
     * @param tableStats The [[TableStats]] to update.
-    * @Experimental
     */
   @Experimental
   def alterTableStats(tablePath: Array[String], tableStats: Option[TableStats]): Unit = {
