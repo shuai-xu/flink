@@ -2,7 +2,7 @@
 title:  "Flink-Hive Examples"
 nav-title: Flink-Hive Examples
 nav-parent_id: examples
-nav-pos: 20
+nav-pos: 35
 ---
 <!--
 Licensed to the Apache Software Foundation (ASF) under one

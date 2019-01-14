@@ -108,7 +108,7 @@ Add,hello,3
 Add,world,1
 {% endhighlight %}
 
-This example also support read and write from Hadoop, just change `path` of source and sink table to hdfs://host:port/tmp/input.csv.
+Note that non-local file systems require a schema prefix, such as hdfs://.
 
 For more information please refer to [SQL]({{ site.baseurl }}/dev/table/sql.html) and [SQL Client]({{ site.baseurl }}/dev/table/sqlClient.html).
 

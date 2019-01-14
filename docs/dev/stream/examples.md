@@ -137,32 +137,32 @@ The {% gh_link flink-examples/flink-examples-streaming/src/main/scala/org/apache
 SocketWindowWordCount implements a streaming windowed version of the "WordCount" program.
 
 This program connects to a server socket and reads strings from the socket.
-The easiest way to try this out is to open a text server (Take port 12345 as example)
+The easiest way to try this out is to open a text server (Take port 9000 as example)
 
 The {% gh_link flink-examples/flink-examples-streaming/src/main/java/org/apache/flink/streaming/examples/socket/SocketWindowWordCount.java "TopSpeedWindowing java program" %} and {% gh_link flink-examples/flink-examples-streaming/src/main/scala/org/apache/flink/streaming/scala/examples/socket/SocketWindowWordCount.scala "TopSpeedWindowing scala program" %} is the source code.
 
 Using the <i>netcat</i> tool via
 
 {% highlight bash %}
-$ nc -l 12345
+$ nc -l 9000
 {% endhighlight %}
   
 If you get an error “Ncat: socket: Address family not supported by protocol QUITTING”. Use the following command:
 
 {% highlight bash %}
-$ nc -l 0.0.0.0 12345
+$ nc -l 0.0.0.0 9000
 {% endhighlight %}
   
 and run this example with the hostname and the port as arguments.
 
 {% highlight bash %}
-$ ./bin/flink run ./examples/streaming/SocketWindowWordCount.jar
+$ ./bin/flink run ./examples/streaming/SocketWindowWordCount.jar --port 9000
 {% endhighlight %}
 
 Then, you can input data in nc shell terminal:
 
 {% highlight bash %}
-$ nc -l 12345
+$ nc -l 9000
 lorem ipsum
 ipsum ipsum ipsum
 bye
@@ -282,12 +282,14 @@ The .out file will print the counts of words, e.g.:
 
 {% highlight bash %}
 $ tail -f ./log/flink-*-taskexecutor-*.out
+...
 (0,100,99344.44444444515,1545987198444)
 (0,100,99344.44444444515,1545987198444)
 (1,70,103626.38888889013,1545987199375)
 (0,100,99344.44444444515,1545987198444)
 (0,100,99344.44444444515,1545987198444)
 (1,70,103626.38888889013,1545987199375)
+...
 {% endhighlight %}
 
 {% top %}
