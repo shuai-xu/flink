@@ -226,5 +226,21 @@
 			<destName>flink-connector-kafka-base_${scala.binary.version}-${project.version}.jar</destName>
 			<fileMode>0644</fileMode>
 		</file>
+
+		<!-- Hive Connector -->
+		<file>
+			<source>../flink-connectors/flink-connector-hive/target/flink-connector-hive_${scala.binary.version}-${project.version}.jar</source>
+			<outputDirectory>opt/connectors/</outputDirectory>
+			<destName>flink-connector-hive_${scala.binary.version}-${project.version}.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
+
+		<!-- Hadoop Connector -->
+		<file>
+			<source>../flink-connectors/flink-hadoop-compatibility/target/flink-hadoop-compatibility_${scala.binary.version}-${project.version}.jar</source>
+			<outputDirectory>opt/connectors/</outputDirectory>
+			<destName>flink-connector-hadoop-compatibility_${scala.binary.version}-${project.version}.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
 	</files>
 </assembly>

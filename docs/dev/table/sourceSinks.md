@@ -48,7 +48,7 @@ A custom `TableSource` can be defined by implementing the `BatchTableSource` or 
 | `Kafka08JsonTableSource` | `flink-connector-kafka-0.8` | N | Y | A `TableSource` for flat Json-encoded Kafka 0.8 topics.
 | `CsvTableSource` | `flink-table` | Y | Y | A simple `TableSource` for CSV files.
 | `OrcTableSource` | `flink-orc` | Y | N | A `TableSource` for ORC files.
-| `HiveTableSource`(beta) | `flink-connector-hive_2.11` | Y | N | A `TableSource` for hive table
+| `HiveTableSource`(beta) | `flink-connector-hive` and `flink-hadoop-compatibility` | Y | N | A `TableSource` for hive table
 
 All sources that come with the `flink-table` dependency are directly available for Table API or SQL programs. For all other table sources, you have to add the respective dependency in addition to the `flink-table` dependency.
 

@@ -128,7 +128,7 @@ Note that, if users are using Flink yarn-session mode, you'll get the sessionId 
 
 If users are using Flink local mode, no other config is required.
 
-Make sure all the required jars are in the `/lib` dir, including `flink-connector-hive` jar.
+Make sure all the required jars are in the `/lib` dir, including jars of `flink-connector-hive` and `flink-hadoop-compatibility`.
 
 Get Flink SQL Cli running by execute command
 

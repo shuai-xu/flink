@@ -93,7 +93,13 @@ To access hive data, add the following dependency to your flink project:
 {% highlight xml %}
 <dependency>
   <groupId>org.apache.flink</groupId>
-  <artifactId>flink-connector-hive_2.11</artifactId>
+  <artifactId>flink-connector-hive{{ site.scala_version_suffix }}</artifactId>
+  <version>{{site.version}}</version>
+</dependency>
+
+<dependency>
+  <groupId>org.apache.flink</groupId>
+  <artifactId>flink-hadoop-compatibility{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version}}</version>
 </dependency>
 {% endhighlight %}
