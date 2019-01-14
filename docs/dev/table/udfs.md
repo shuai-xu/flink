@@ -164,7 +164,9 @@ public class Split extends TableFunction<Tuple2<String, Integer>> {
     }
 }
 
-BatchTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
+BatchTableEnvironment tableEnv = TableEnvironment.getBatchTableEnvironment(env);
+// or
+// StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
 Table myTable = ...         // table schema: [a: String]
 
 // Register the function.
@@ -192,7 +194,9 @@ class Split(separator: String) extends TableFunction[(String, Int)] {
   }
 }
 
-val tableEnv = TableEnvironment.getTableEnvironment(env)
+val tableEnv = TableEnvironment.getBatchTableEnvironment(env)
+// or
+// val tableEnv = TableEnvironment.getTableEnvironment(env)
 val myTable = ...         // table schema: [a: String]
 
 // Use the table function in the Scala Table API (Note: No registration required in Scala Table API).
@@ -267,7 +271,7 @@ class CustomTypeSplit extends TableFunction[Row] {
 Aggregation Functions
 ---------------------
 
-User-Defined Aggregate Functions (UDAGGs) aggregate a table (one ore more rows with one or more attributes) to a scalar value. 
+User-Defined Aggregate Functions (UDAGGs) aggregate a table (one or more rows with one or more attributes) to a scalar value. 
 
 <center>
 <img alt="UDAGG mechanism" src="{{ site.baseurl }}/fig/udagg-mechanism.png" width="80%">
@@ -826,7 +830,9 @@ public class HashCode extends ScalarFunction {
 }
 
 ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-BatchTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
+BatchTableEnvironment tableEnv = TableEnvironment.getBatchTableEnvironment(env);
+// or
+// StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
 
 // set job parameter
 Configuration conf = new Configuration();
