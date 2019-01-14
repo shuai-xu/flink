@@ -74,7 +74,7 @@ import org.apache.flink.table.api.scala._
 
 // environment configuration
 val env = StreamExecutionEnvironment.getExecutionEnvironment
-val tEnv = TableEnvironment.getTableEnvironment(env)
+val tEnv = TableEnvironment.getBatchTableEnvironment(env)
 
 // register Orders table in table environment
 // ...
@@ -340,7 +340,8 @@ Table orders = tableEnv.scan("Orders");
 Table result = orders
     .window(Tumble.over("5.minutes").on("rowtime").as("w")) // define window
     .groupBy("a, w") // group by key and window
-    .select("a, w.start, w.end, w.rowtime, b.sum as d"); // access window properties and aggregate
+    // access window properties and aggregate
+    .select("a, w.start, w.end, w.rowtime, b.sum as d"); 
 {% endhighlight %}
       </td>
     </tr>
@@ -361,9 +362,48 @@ Table result = orders
       .preceding("UNBOUNDED_RANGE")
       .following("CURRENT_RANGE")
       .as("w"))
-    .select("a, b.avg over w, b.max over w, b.min over w"); // sliding aggregate
+    .select("a, b.avg over w, b.max over w, b.min over w"); 
 {% endhighlight %}
        <p><b>Note:</b> All aggregates must be defined over the same window, i.e., same partitioning, sorting, and range. Currently, only windows with PRECEDING (UNBOUNDED and bounded) to CURRENT ROW range are supported. Ranges with FOLLOWING are not supported yet. ORDER BY must be specified on a single <a href="streaming.html#time-attributes">time attribute</a>.</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <strong>Distinct Aggregation</strong><br>
+        <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span> <br>
+        <span class="label label-info">Result Updating</span>
+      </td>
+      <td>
+        <p>Similar to a SQL DISTINCT aggregation clause such as COUNT(DISTINCT a). Distinct aggregation declares that an aggregation function (built-in or user-defined) is only applied on distinct input values. Distinct can be applied to <b>GroupBy Aggregation</b>, <b>GroupBy Window Aggregation</b> and <b>Over Window Aggregation</b>.</p>
+{% highlight java %}
+Table orders = tableEnv.scan("Orders");
+// Distinct aggregation on group by
+Table groupByDistinctResult = orders
+    .groupBy("a")
+    .select("a, b.sum.distinct as d");
+// Distinct aggregation on time window group by
+Table groupByWindowDistinctResult = orders
+    .window(Tumble.over("5.minutes").on("rowtime").as("w")).groupBy("a, w")
+    .select("a, b.sum.distinct as d");
+// Distinct aggregation on over window
+Table result = orders
+    .window(Over
+        .partitionBy("a")
+        .orderBy("rowtime")
+        .preceding("UNBOUNDED_RANGE")
+        .as("w"))
+    .select("a, b.avg.distinct over w, b.max over w, b.min over w");
+{% endhighlight %}
+        <p>User-defined aggregation function can also be used with DISTINCT modifiers. To calculate the aggregate results only for distinct values, simply add the distinct modifier towards the aggregation function. </p>
+{% highlight java %}
+Table orders = tEnv.scan("Orders");
+
+// Use distinct aggregation for user-defined aggregate functions
+tEnv.registerFunction("myUdagg", new MyUdagg());
+orders.groupBy("users")
+.select("users, myUdagg.distinct(points) as myDistinctResult");
+{% endhighlight %}
+        <p><b>Note:</b> For streaming queries the required state to compute the query result might grow infinitely depending on the number of distinct fields. Please provide a query configuration with valid retention interval to prevent excessive state size. See <a href="streaming.html">Streaming Concepts</a> for details.</p>
       </td>
     </tr>
     <tr>
@@ -423,7 +463,8 @@ val orders: Table = tableEnv.scan("Orders")
 val result: Table = orders
     .window(Tumble over 5.minutes on 'rowtime as 'w) // define window
     .groupBy('a, 'w) // group by key and window
-    .select('a, w.start, 'w.end, 'w.rowtime, 'b.sum as 'd) // access window properties and aggregate
+    // access window properties and aggregate
+    .select('a, w.start, 'w.end, 'w.rowtime, 'b.sum as 'd) 
 {% endhighlight %}
       </td>
     </tr>
@@ -444,9 +485,47 @@ val result: Table = orders
       preceding UNBOUNDED_RANGE
       following CURRENT_RANGE
       as 'w)
-    .select('a, 'b.avg over 'w, 'b.max over 'w, 'b.min over 'w) // sliding aggregate
+    .select('a, 'b.avg over 'w, 'b.max over 'w, 'b.min over 'w)
 {% endhighlight %}
        <p><b>Note:</b> All aggregates must be defined over the same window, i.e., same partitioning, sorting, and range. Currently, only windows with PRECEDING (UNBOUNDED and bounded) to CURRENT ROW range are supported. Ranges with FOLLOWING are not supported yet. ORDER BY must be specified on a single <a href="streaming.html#time-attributes">time attribute</a>.</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <strong>Distinct Aggregation</strong><br>
+        <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span> <br>
+        <span class="label label-info">Result Updating</span>
+      </td>
+      <td>
+        <p>Similar to a SQL DISTINCT AGGREGATION clause such as COUNT(DISTINCT a). Distinct aggregation declares that an aggregation function (built-in or user-defined) is only applied on distinct input values. Distinct can be applied to <b>GroupBy Aggregation</b>, <b>GroupBy Window Aggregation</b> and <b>Over Window Aggregation</b>.</p>
+{% highlight scala %}
+val orders: Table = tableEnv.scan("Orders");
+// Distinct aggregation on group by
+val groupByDistinctResult = orders
+    .groupBy('a)
+    .select('a, 'b.sum.distinct as 'd)
+// Distinct aggregation on time window group by
+val groupByWindowDistinctResult = orders
+    .window(Tumble over 5.minutes on 'rowtime as 'w).groupBy('a, 'w)
+    .select('a, 'b.sum.distinct as 'd)
+// Distinct aggregation on over window
+val result = orders
+    .window(Over
+        partitionBy 'a
+        orderBy 'rowtime
+        preceding UNBOUNDED_RANGE
+        as 'w)
+    .select('a, 'b.avg.distinct over 'w, 'b.max over 'w, 'b.min over 'w)
+{% endhighlight %}
+        <p>User-defined aggregation function can also be used with DISTINCT modifiers. To calculate the aggregate results only for distinct values, simply add the distinct modifier towards the aggregation function. </p>
+{% highlight scala %}
+val orders: Table = tEnv.scan("Orders");
+
+// Use distinct aggregation for user-defined aggregate functions
+val myUdagg = new MyUdagg();
+orders.groupBy('users).select('users, myUdagg.distinct('points) as 'myDistinctResult);
+{% endhighlight %}
+        <p><b>Note:</b> For streaming queries the required state to compute the query result might grow infinitely depending on the number of distinct fields. Please provide a query configuration with valid retention interval to prevent excessive state size. See <a href="streaming.html">Streaming Concepts</a> for details.</p>
       </td>
     </tr>
     <tr>
@@ -502,8 +581,10 @@ Table result = left.join(right).where("a = d").select("a, b, e");
 
     <tr>
       <td>
-        <strong>Outer Joins</strong><br>
+        <strong>Outer Join</strong><br>
         <span class="label label-primary">Batch</span>
+        <span class="label label-primary">Streaming</span>
+        <span class="label label-info">Result Updating</span>
       </td>
       <td>
         <p>Similar to SQL LEFT/RIGHT/FULL OUTER JOIN clauses. Joins two tables. Both tables must have distinct field names and at least one equality join predicate must be defined.</p>
@@ -511,10 +592,19 @@ Table result = left.join(right).where("a = d").select("a, b, e");
 Table left = tableEnv.fromBoundedStream(bs1, "a, b, c");
 Table right = tableEnv.fromBoundedStream(bs2, "d, e, f");
 
-Table leftOuterResult = left.leftOuterJoin(right, "a = d").select("a, b, e");
-Table rightOuterResult = left.rightOuterJoin(right, "a = d").select("a, b, e");
-Table fullOuterResult = left.fullOuterJoin(right, "a = d").select("a, b, e");
+Table leftOuterResult = left
+.leftOuterJoin(right, "a = d")
+.select("a, b, e");
+
+Table rightOuterResult = left
+.rightOuterJoin(right, "a = d")
+.select("a, b, e");
+
+Table fullOuterResult = left
+.fullOuterJoin(right, "a = d")
+.select("a, b, e");
 {% endhighlight %}
+<p><b>Note:</b> For streaming queries the required state to compute the query result might grow infinitely depending on the number of distinct input rows. Please provide a query configuration with valid retention interval to prevent excessive state size. See <a href="streaming/query_configuration.html">Query Configuration</a> for details.</p>
       </td>
     </tr>
     <tr>
@@ -600,7 +690,8 @@ Table result = orders
 {% highlight java %}
 Table ratesHistory = tableEnv.scan("RatesHistory");
 // register temporal table function
-TemporalTableFunction rates = ratesHistory.createTemporalTableFunction("r_proctime", "r_currency");
+TemporalTableFunction rates = 
+ratesHistory.createTemporalTableFunction("r_proctime", "r_currency");
 tableEnv.registerFunction("rates", rates);
 
 // join
@@ -643,8 +734,10 @@ val result = left.join(right).where('a === 'd).select('a, 'b, 'e)
     </tr>
     <tr>
       <td>
-        <strong>Outer Joins</strong><br>
+        <strong>Outer Join</strong><br>
         <span class="label label-primary">Batch</span>
+        <span class="label label-primary">Streaming</span>
+        <span class="label label-info">Result Updating</span>
       </td>
       <td>
         <p>Similar to SQL LEFT/RIGHT/FULL OUTER JOIN clauses. Joins two tables. Both tables must have distinct field names and at least one equality join predicate must be defined.</p>
@@ -652,10 +745,19 @@ val result = left.join(right).where('a === 'd).select('a, 'b, 'e)
 val left = tableEnv.fromBoundedStream(ds1, 'a, 'b, 'c)
 val right = tableEnv.fromBoundedStream(ds2, 'd, 'e, 'f)
 
-val leftOuterResult = left.leftOuterJoin(right, 'a === 'd).select('a, 'b, 'e)
-val rightOuterResult = left.rightOuterJoin(right, 'a === 'd).select('a, 'b, 'e)
-val fullOuterResult = left.fullOuterJoin(right, 'a === 'd).select('a, 'b, 'e)
+val leftOuterResult = left
+.leftOuterJoin(right, 'a === 'd)
+.select('a, 'b, 'e)
+
+val rightOuterResult = left
+.rightOuterJoin(right, 'a === 'd)
+.select('a, 'b, 'e)
+
+val fullOuterResult = left
+.fullOuterJoin(right, 'a === 'd)
+.select('a, 'b, 'e)
 {% endhighlight %}
+<p><b>Note:</b> For streaming queries the required state to compute the query result might grow infinitely depending on the number of distinct input rows. Please provide a query configuration with valid retention interval to prevent excessive state size. See <a href="streaming.html">Streaming Concepts</a> for details.</p>
       </td>
     </tr>
     <tr>
@@ -1044,10 +1146,12 @@ Table in = tableEnv.fromBoundedStream(bs, "a, b, c");
 // returns the first 5 records from the sorted result
 Table result1 = in.orderBy("a.asc").fetch(5); 
 
-// skips the first 3 records and returns all following records from the sorted result
+// skips the first 3 records and returns all following 
+// records from the sorted result
 Table result2 = in.orderBy("a.asc").offset(3);
 
-// skips the first 10 records and returns the next 5 records from the sorted result
+// skips the first 10 records and returns the next 5 records 
+// from the sorted result
 Table result3 = in.orderBy("a.asc").offset(10).fetch(5);
 {% endhighlight %}
       </td>
@@ -1093,10 +1197,12 @@ val in = ds.toTable(tableEnv, 'a, 'b, 'c)
 // returns the first 5 records from the sorted result
 val result1: Table = in.orderBy('a.asc).fetch(5)
 
-// skips the first 3 records and returns all following records from the sorted result
+// skips the first 3 records and returns all following 
+// records from the sorted result
 val result2: Table = in.orderBy('a.asc).offset(3)
 
-// skips the first 10 records and returns the next 5 records from the sorted result
+// skips the first 10 records and returns the next 5 records 
+// from the sorted result
 val result3: Table = in.orderBy('a.asc).offset(10).fetch(5)
 {% endhighlight %}
       </td>
@@ -1478,13 +1584,15 @@ The `OverWindow` defines a range of rows over which aggregates are computed. `Ov
     </tr>
     <tr>
       <td><code>preceding</code></td>
-      <td>Required</td>
+      <td>Optional</td>
       <td>
         <p>Defines the interval of rows that are included in the window and precede the current row. The interval can either be specified as time or row-count interval.</p>
 
         <p><a href="tableApi.html#bounded-over-windows">Bounded over windows</a> are specified with the size of the interval, e.g., <code>10.minutes</code> for a time interval or <code>10.rows</code> for a row-count interval.</p>
 
         <p><a href="tableApi.html#unbounded-over-windows">Unbounded over windows</a> are specified using a constant, i.e., <code>UNBOUNDED_RANGE</code> for a time interval or <code>UNBOUNDED_ROW</code> for a row-count interval. Unbounded over windows start with the first row of a partition.</p>
+      
+        <p>If the <code>preceding</code> clause is omitted, <code>UNBOUNDED_RANGE</code> and <code>CURRENT_RANGE</code> are used as the default <code>preceding</code> and <code>following</code> for the window.</p>
       </td>
     </tr>
     <tr>
@@ -1648,7 +1756,7 @@ suffixed = interval | cast | as | if | functionCall ;
 
 interval = timeInterval | rowInterval ;
 
-timeInterval = composite , "." , ("year" | "years" | "quarter" | "quarters" |  "month" | "months" | "day" | "days" | "hour" | "hours" | "minute" | "minutes" | "second" | "seconds" | "milli" | "millis") ;
+timeInterval = composite , "." , ("year" | "years" | "quarter" | "quarters" |  "month" | "months" | "week" | "weeks" | "day" | "days" | "hour" | "hours" | "minute" | "minutes" | "second" | "seconds" | "milli" | "millis") ;
 
 rowInterval = composite , "." , "rows" ;
 
@@ -2235,6 +2343,29 @@ NUMERIC.atan()
         <p>Calculates the arc tangent of a given number.</p>
       </td>
     </tr>
+
+    <tr>
+      <td>
+        {% highlight java %}
+atan2(NUMERIC1, NUMERIC2)
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Returns the arc tangent of a coordinate <i>(NUMERIC1, NUMERIC2)</i>.</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        {% highlight java %}
+NUMERIC.cosh()
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Returns the hyperbolic cosine of <i>NUMERIC</i>.</p> 
+        <p>Return value type is <i>DOUBLE</i>.</p>
+      </td>
+    </tr>
     
     <tr>
       <td>
@@ -2534,23 +2665,50 @@ STRING.rpad(len INT, pad STRING)
 
     <tr>
       <td>
-        {% highlight text %}
-concat(string1, string2,...)
+        {% highlight java %}
+STRING.fromBase64()
+{% endhighlight %}
+      </td>
+
+      <td>
+        <p>Returns the base string decoded with base64, if string is null, returns null. E.g. "aGVsbG8gd29ybGQ=".fromBase64() returns "hello world".</p>
+      </td>
+    </tr>
+
+    
+    <tr>
+      <td>
+        {% highlight java %}
+STRING.toBase64()
 {% endhighlight %}
       </td>
       <td>
-        <p>Returns the string that results from concatenating the arguments. Returns NULL if any argument is NULL. E.g. <code>concat("AA", "BB", "CC")</code> returns <code>AABBCC</code>.</p>
+        <p>Returns the base64-encoded result of <i>STRING</i>; retruns NULL if <i>STRING</i> is NULL.</p>
+         <p>E.g., <code>"hello world".toBase64()</code> returns "aGVsbG8gd29ybGQ=".</p>
+      </td>
+    </tr>
+    
+    <tr>
+      <td>
+        {% highlight java %}
+concat(STRING1, STRING2, ...)
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Returns a string that concatenates <i>STRING1, STRING2, ...</i>. Returns NULL if any argument is NULL.</p>
+        <p>E.g., <code>concat('AA', 'BB', 'CC')</code> returns "AABBCC".</p>
       </td>
     </tr>
 
     <tr>
       <td>
-        {% highlight text %}
-concat_ws(separator, string1, string2,...)
+        {% highlight java %}
+concat_ws(STRING1, STRING2, STRING3, ...)
 {% endhighlight %}
       </td>
       <td>
-        <p>Returns the string that results from concatenating the arguments using a separator. The separator is added between the strings to be concatenated. Returns NULL If the separator is NULL. concat_ws() does not skip empty strings. However, it does skip any NULL argument. E.g. <code>concat_ws("~", "AA", "BB", "", "CC")</code> returns <code>AA~BB~~CC</code></p>
+        <p>Returns a string that concatenates <i>STRING2, STRING3, ...</i> with a separator <i>STRING1</i>. The separator is added between the strings to be concatenated. Returns NULL If <i>STRING1</i> is NULL. Compared with <code>concat()</code>, <code>concat_ws()</code> automatically skips NULL arguments.</p> 
+        <p>E.g., <code>concat_ws('~', 'AA', Null(STRING), 'BB', '', 'CC')</code> returns "AA~BB~~CC".</p>
       </td>
     </tr>
 
@@ -2683,6 +2841,18 @@ NUMERIC.years
         <p>Creates an interval of months for a given number of years.</p>
       </td>
     </tr>
+    
+    <tr>
+      <td>
+        {% highlight java %}
+NUMERIC.quarter
+NUMERIC.quarters
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Creates an interval of months for <i>NUMERIC</i> quarters.</p>
+      </td>
+    </tr>
 
     <tr>
       <td>
@@ -2696,6 +2866,18 @@ NUMERIC.months
       </td>
     </tr>
 
+    <tr>
+      <td>
+        {% highlight java %}
+NUMERIC.week
+NUMERIC.weeks
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Creates an interval of milliseconds for <i>NUMERIC</i> weeks.</p>
+      </td>
+    </tr>
+    
     <tr>
       <td>
         {% highlight java %}
@@ -2841,17 +3023,6 @@ TIMEPOINT.ceil(TIMEINTERVALUNIT)
       </td>
       <td>
         <p>Rounds a time point up to the given unit. E.g. <code>'12:44:31'.toTime.floor(MINUTE)</code> leads to 12:45:00.</p>
-      </td>
-    </tr>
-
-    <tr>
-      <td>
-        {% highlight java %}
-DATE.quarter()
-{% endhighlight %}
-      </td>
-      <td>
-        <p>Returns the quarter of a year from a SQL date. E.g. <code>'1994-09-27'.toDate.quarter()</code> leads to 3.</p>
       </td>
     </tr>
 
@@ -3425,6 +3596,36 @@ ANY.in(TABLE)
         <p>Returns true if an expression exists in a given table sub-query. The sub-query table must consist of one column. This column must have the same data type as the expression. Note: This operation is not supported in a streaming environment yet.</p>
       </td>
     </tr>
+    
+    <tr>
+      <td>
+        {% highlight scala %}
+ANY1.between(ANY2, ANY3)
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Returns TRUE if <i>ANY1</i> is greater than or equal to <i>ANY2</i> and less than or equal to <i>ANY3</i>.
+          When either <i>ANY2</i> or <i>ANY3</i> is NULL, returns FALSE or UNKNOWN.</p>
+          <p>E.g., <code>12.between(15, 12)</code> returns FALSE;
+          <code>12.between(10, Null(Types.INT))</code> returns UNKNOWN;
+          <code>12.between(Null(Types.INT), 10)</code> returns FALSE.</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        {% highlight scala %}
+ANY1.notBetween(ANY2, ANY3)
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Returns TRUE if <i>ANY1</i> is less than <i>ANY2</i> or greater than <i>ANY3</i>.
+          When either <i>ANY2</i> or <i>ANY3</i> is NULL, returns TRUE or UNKNOWN.</p>
+          <p>E.g., <code>12.notBetween(15, 12)</code> returns TRUE;
+          <code>12.notBetween(Null(Types.INT), 15)</code> returns UNKNOWN;
+          <code>12.notBetween(15, Null(Types.INT))</code> returns TRUE.</p>
+      </td>
+    </tr>
 
   </tbody>
 </table>
@@ -3805,7 +4006,28 @@ NUMERIC.atan()
         <p>Calculates the tangent of a given number.</p>
       </td>
     </tr>
+    <tr>
+      <td>
+        {% highlight scala %}
+atan2(NUMERIC1, NUMERIC2)
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Returns the arc tangent of a coordinate <i>(NUMERIC1, NUMERIC2)</i>.</p>
+      </td>
+    </tr>
 
+    <tr>
+      <td>
+        {% highlight scala %}
+NUMERIC.cosh()
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Returns the hyperbolic cosine of <i>NUMERIC</i>.</p> 
+        <p>Return value type is <i>DOUBLE</i>.</p>
+      </td>
+    </tr>
     <tr>
       <td>
         {% highlight scala %}
@@ -4066,6 +4288,78 @@ STRING.initCap()
       </td>
     </tr>
 
+    <tr>
+      <td>
+        {% highlight scala %}
+concat(STRING1, STRING2, ...)
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Returns a string that concatenates <i>STRING1, STRING2, ...</i>. Returns NULL if any argument is NULL.</p>
+        <p>E.g., <code>concat("AA", "BB", "CC")</code> returns "AABBCC".</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        {% highlight scala %}
+concat_ws(STRING1, STRING2, STRING3, ...)
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Returns a string that concatenates <i>STRING2, STRING3, ...</i> with a separator <i>STRING1</i>. The separator is added between the strings to be concatenated. Returns NULL If <i>STRING1</i> is NULL. Compared with <code>concat()</code>, <code>concat_ws()</code> automatically skips NULL arguments.</p> 
+        <p>E.g., <code>concat_ws("~", "AA", Null(Types.STRING), "BB", "", "CC")</code> returns "AA~BB~~CC".</p>
+      </td>
+    </tr>
+    
+    <tr>
+      <td>
+        {% highlight scala %}
+STRING1.lpad(INT, STRING2)
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Returns a new string from <i>STRING1</i> left-padded with <i>STRING2</i> to a length of <i>INT</i> characters. If the length of <i>STRING1</i> is shorter than <i>INT</i>, returns <i>STRING1</i> shortened to <i>INT</i> characters.</p> 
+        <p>E.g., <code>"hi".lpad(4, "??")</code> returns "??hi";  <code>"hi".lpad(1, "??")</code> returns "h".</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        {% highlight scala %}
+STRING1.rpad(INT, STRING2)
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Returns a new string from <i>STRING1</i> right-padded with <i>STRING2</i> to a length of <i>INT</i> characters. If the length of <i>STRING1</i> is shorter than <i>INT</i>, returns <i>STRING1</i> shortened to <i>INT</i> characters.</p> 
+        <p>E.g., <code>"hi".rpad(4, "??")</code> returns "hi??";  <code>"hi".rpad(1, "??")</code> returns "h".</p>
+      </td>
+    </tr>
+    
+    <tr>
+      <td>
+        {% highlight scala %}
+STRING.fromBase64()
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Returns the base64-decoded result from <i>STRING</i>; returns null If <i>STRING</i> is NULL.</p> 
+        <p>E.g., <code>"aGVsbG8gd29ybGQ=".fromBase64()</code> returns "hello world".</p>
+      </td>
+    </tr>
+    
+    <tr>
+      <td>
+        {% highlight scala %}
+STRING.toBase64()
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Returns the base64-encoded result from <i>STRING</i>; returns NULL if <i>STRING</i> is NULL.</p>
+         <p>E.g., <code>"hello world".toBase64()</code> returns "aGVsbG8gd29ybGQ=".</p>
+      </td>
+    </tr>
+
   </tbody>
 </table>
 
@@ -4199,6 +4493,18 @@ NUMERIC.years
     <tr>
       <td>
         {% highlight scala %}
+NUMERIC.quarter
+NUMERIC.quarters
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Creates an interval of months for <i>NUMERIC</i> quarters.</p>
+      </td>
+    </tr>
+    
+    <tr>
+      <td>
+        {% highlight scala %}
 NUMERIC.month
 NUMERIC.months
 {% endhighlight %}
@@ -4208,6 +4514,18 @@ NUMERIC.months
       </td>
     </tr>
 
+    <tr>
+      <td>
+        {% highlight scala %}
+NUMERIC.week
+NUMERIC.weeks
+{% endhighlight %}
+      </td>
+      <td>
+        <p>Creates an interval of milliseconds for <i>NUMERIC</i> weeks.</p>
+      </td>
+    </tr>
+    
     <tr>
       <td>
         {% highlight scala %}
@@ -4353,17 +4671,6 @@ TIMEPOINT.ceil(TimeIntervalUnit)
       </td>
       <td>
         <p>Rounds a time point up to the given unit. E.g. <code>"12:44:31".toTime.floor(TimeIntervalUnit.MINUTE)</code> leads to 12:45:00.</p>
-      </td>
-    </tr>
-
-    <tr>
-      <td>
-        {% highlight scala %}
-DATE.quarter()
-{% endhighlight %}
-      </td>
-      <td>
-        <p>Returns the quarter of a year from a SQL date. E.g. <code>"1994-09-27".toDate.quarter()</code> leads to 3.</p>
       </td>
     </tr>
 
