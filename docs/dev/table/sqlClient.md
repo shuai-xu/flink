@@ -197,18 +197,22 @@ execution:
 deployment:
   response-timeout: 5000
 
+# Catalogs
+
 catalogs:
-   - name: MyHive
+   - name: MyHive_1
      catalog:
       type: hive
       connector:
         hive.metastore.uris: thrift://localhost:9083
-        hive.metastore.username: flink
-      is-default: true
-      default-db: mydb
-   - name: MyInmemory
+      is-default: false
+      default-db: mydb_1
+   - name: MyHive_2
      catalog:
-      type: flink_in_memory
+       type: hive
+       connector:
+         hive.metastore.uris: thrift://localhost:9084
+       default-db: mydb_2
 {% endhighlight %}
 
 This configuration:
@@ -217,8 +221,7 @@ This configuration:
 - specifies a parallelism of 1 for queries executed in this environment,
 - specifies an even-time characteristic, and
 - runs queries in the `table` result mode.
-- creates two catalogs, one HiveCatalog (type: hive) named `MyHive` which is set to the default catalog and the default database is `mydb`,
-and one FlinkInMemoryCatalog (type: flink_in_memory).
+- creates two `HiveCatalog` (type: hive) named with their own default databases
 
 Depending on the use case, a configuration can be split into multiple files. Therefore, environment files can be created for general purposes (*defaults environment file* using `--defaults`) as well as on a per-session basis (*session environment file* using `--environment`). Every CLI session is initialized with the default properties followed by the session properties. For example, the defaults environment file could specify all table sources that should be available for querying in every session whereas the session environment file only declares a specific state retention time and parallelism. Both default and session environment files can be passed when starting the CLI application. If no default environment file has been specified, the SQL Client searches for `./conf/sql-client-defaults.yaml` in Flink's configuration directory.
 
@@ -574,11 +577,31 @@ Make sure to download the [JSON SQL JAR](sqlClient.html#dependencies) file and p
 
 
 Catalogs
---------------------
+--------
 
+Catalogs can be defined as a set of yaml properties and are automatically registered to the environment upon starting SQL Cli.
+
+{% highlight yaml %}
+catalogs:
+   - name: MyHive_1
+     catalog:
+      type: hive
+      connector:
+        hive.metastore.uris: thrift://localhost:9083
+      is-default: false
+      default-db: mydb_1
+   - name: MyHive_2
+     catalog:
+       type: hive
+       connector:
+         hive.metastore.uris: thrift://localhost:9084
+       default-db: mydb_2
+{% endhighlight %}
+       
 Currently Flink supports two types of catalog - `FlinkInMemoryCatalog` and `HiveCatalog`.
 
-For more information about integration with Hive metastore, see [Hive Compatibility]({{ site.baseurl }}/dev/batch/hive_compatibility.html)
+For more information about integration with Hive metastore, see [Catalogs]({{ site.baseurl }}/dev/table/catalog.html) and [Hive Compatibility]({{ site.baseurl }}/dev/batch/hive_compatibility.html)
+
 
 SQL language supports
 --------------------

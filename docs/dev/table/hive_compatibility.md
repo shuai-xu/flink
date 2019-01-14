@@ -59,7 +59,7 @@ For how to use `HiveCatalog` and `GenericHiveMetastoreCatalog` in Flink, see [Ca
 Hive Data Integration
 ---------------------
 
-Please refer to [Connecting to other systems]({{ site.baseurl }}/dev/batch/connectors.html) for how to connect an existing Hive service with Flink. 
+Please refer to [Connecting to other systems]({{ site.baseurl }}/dev/batch/connectors.html) for how to connect an existing Hive service with Flink using Flink's Hive data connector. 
 
 
 Example
@@ -69,7 +69,7 @@ Here we present a quick example of querying Hive metadata and data in Flink.
 
 Environment :
 
-Assume all physical machines mentioned can be accessed in the work environment, and the following components have been successfully setup:
+Assume all physical machines can be accessed in the working environment, and the following components have been successfully setup:
 
 - Hadoop Cluster (HDFS + YARN)
 - Hive 2.3.4
@@ -82,7 +82,7 @@ Assume all physical machines mentioned can be accessed in the work environment, 
 Start a yarn session
 
 ```
-$ ./bin/yarn-session.sh -n 4 -qu root.default -s 4 -tm 2048 -nm test_session_001`
+$ ./bin/yarn-session.sh -n 4 -qu root.default -s 4 -tm 2048 -nm test_session_001
 ```
 
 ### Setup Flink cluster in local mode
@@ -95,13 +95,15 @@ $ ./bin/start-cluster.sh
 
 ### Setup Flink SQL Cli
 
-Let's set the SQL Cli yaml config file
+Let's set the SQL Cli yaml config file. For more detailed instructions on Flink SQL Cli, see [Flink SQL CLI]({{ site.baseurl }}/dev/table/sqlClient.html).
 
 ```yaml
 execution:
+    # Use batch mode
     type: batch
     time-characteristic: event-time
     periodic-watermarks-interval: 200
+    # Use table result mode
     result-mode: table
     parallelism: 1
     max-parallelism: 12
@@ -138,7 +140,7 @@ $ ./bin/sql-client.sh embedded
 
 ### Prepare Hive
 
-Assuming that Hive 2.3.4 has been successfully set up, let's prepare some data in Hive.
+Assuming that Hive has been successfully set up and running, let's prepare some data in Hive.
 
 First, we locate the current database in Hive, which is `default` in this case, and make sure no table exists in the database at this time.
 
@@ -207,19 +209,22 @@ Time taken: 0.097 seconds, Fetched: 10 row(s)
 In Flink SQL Cli, we can start using Hive.
 
 ```
-// See the catalog 'myhive' in the yaml config file is registered successfully and showing up here
+# ------ See the catalog 'myhive' in the yaml config file is registered successfully and showing up here ------
+
 Flink SQL> show catalogs;
 myhive
 builtin
 
-// Set the default catalog and database to be 'myhive' catalog and the 'default' database
+# ------ Set the default catalog and database to be 'myhive' catalog and the 'default' database ------
+
 Flink SQL> use myhive.default;
 
-// See the previously registered table 'mytable'
+# ------ See the previously registered table 'mytable' ------
+
 Flink SQL> show tables;
 mytable
 
-// The table schema that Flink sees are the same that we created in Hive,  two columns - name as string and value as double 
+# ------ The table schema that Flink sees is the same that we created in Hive, two columns - name as string and value as double ------ 
 Flink SQL> describe mytable;
 root
  |-- name: name
@@ -232,7 +237,8 @@ root
 
 Flink SQL> select * from mytable;
 
-______name ______vaue
+      name      value
+__________ __________
 
       Tom        4.72
       John	     8.0
@@ -303,4 +309,4 @@ from
 
 ## Limitations & Future
 
-Integrations of both Hive metadata and data are still in progress.
+Integrations of both Hive metadata and data are still in progress. Flink currently only supports reading metadata and data from Hive.

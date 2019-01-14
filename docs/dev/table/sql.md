@@ -475,6 +475,10 @@ Operations
 			{% highlight sql %}
 			Use mycatalog.mydb
 			{% endhighlight %}
+			<p>Set the default database in the current default catalog</p>
+            {% highlight sql %}
+            Use mydb
+            {% endhighlight %}
       </td>
     </tr>
   </tbody>

@@ -1,8 +1,8 @@
 ---
 title: "Catalog"
+is_beta: true
 nav-parent_id: tableapi
 nav-pos: 100
-is_beta: true
 ---
 <!--
 Licensed to the Apache Software Foundation (ASF) under one
@@ -23,20 +23,43 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-A catalog can provide information about databases and tables such as their name, schema, statistics, and information for how to access data stored in a database, table, or file. Once registered to a `TableEnvironment`, all tables defined the catalog can be accessed from Table API or SQL queries.
+A catalog can provide information about databases and tables such as their name, schema, statistics, and information for how to access data stored in a database, table, or file. Once a catalog is registered to a `TableEnvironment`, all meta-objects including databases and tables defined in a catalog can be accessed from Table API or SQL queries.
 
-Flink's catalogs uses a strict two-level strcture, that is, catalogs contain databases, and databases contain meta-objects. Thus, the full name of a meta-object is always structured as `catalogName`.`databaseName`.`objectName`.
-
-Catalogs are categorized into `ReadableCatalog` and `ReadableWritableCatalog`. The former one can only read meta-objects from the catalog system, and the later one can do both read and write.
-
-All registered catalogs are managed by a `CatalogManager` instance in a `TableEnvironment`. In order to ease access to meta-objects, `CatalogManager` has a concept of default catalog and default database. Usually how users access meta-objects in a catalog is to specify its full name in the format of `catalogName`.`databaseName`.`objectName`. By setting default catalog and default database, users can use just the meta-object's name in their queries. This greatly simplifies user experience.
-
-For example, a previous query as `select * from mycatalog.mydb.myTable` can be shortened as `select * from myTable`. Querying tables in a different databases under the default catalog would be `select * from mydb2.myTable`.
-
-`CatalogManager` always has a built-in `FlinkInMemoryCatalog` with name of `builtin` and a built-in default database `default`. If no catalog is explicitly set as default catalog, this built-in one will be the default catalog. All temp meta-objects will be registered in this catalog. Users can set default catalog and database via `TableEnvironment.setDefaultDatabase()` in Table API or `use catalog.db` in Flink SQL Cli.
 
 * This will be replaced by the TOC
 {:toc}
+
+
+Catalog Interface
+-----------------
+
+Catalogs are categorized into `ReadableCatalog` and `ReadableWritableCatalog`. The former one can only read meta-objects from the catalog system, and the later one can do both read and write.
+
+
+Naming Structure in Catalog
+---------------------------
+
+Flink's catalogs use a strict two-level structure, that is, catalogs contain databases, and databases contain meta-objects. Thus, the full name of a meta-object is always structured as `catalogName`.`databaseName`.`objectName`.
+
+All registered catalogs are managed by a `CatalogManager` instance in a `TableEnvironment`. In order to ease access to meta-objects, `CatalogManager` has a concept of default catalog and default database. Usually how users access meta-objects in a catalog is to specify its full name in the format of `catalogName`.`databaseName`.`objectName`. By setting default catalog and default database, users can use just the meta-object's name in their queries. This greatly simplifies user experience. For example, a previous query as 
+
+```sql
+select * from mycatalog.mydb.myTable
+```
+ 
+can be shortened as 
+
+```sql
+select * from myTable
+```
+
+Querying tables in a different databases under the default catalog would be 
+
+```
+select * from mydb2.myTable
+```
+
+`CatalogManager` always has a built-in `FlinkInMemoryCatalog` with name of `builtin`, which has a built-in default database named `default`. If no catalog is explicitly set as default catalog, they will be the default catalog and default database. All temp meta-objects will be registered to this catalog. Users can set default catalog and database via `TableEnvironment.setDefaultDatabase()` in Table API or `use catalog.db` in Flink SQL Cli.
 
  
 Catalog Types
@@ -56,11 +79,11 @@ The ultimate goal for `HiveCatalog` is that:
 
 2. meta-objects created by `HiveCatalog` can be written back to Hive metastore such that Hive and other Hive-compatibile applications can consume.
 
-To query Hive data with `HiveCatalog`, users have to use Flink's batch mode by either using `BatchTableEnvironment` in Table APIs or setting `execution.type` as `batch` in Flink SQL Cli.
+To query Hive data with `HiveCatalog`, users have to use Flink's `batch` mode by either using `BatchTableEnvironment` in Table APIs or setting `execution.type` as `batch` in Flink SQL Cli.
 
 Note that currently `HiveCatalog` only offers capabilities of reading Hive metastore metadata, including databases, tables, table partitions, simple data types, table stats, and table columns stats. Other meta-objects read and write capabilities are under either experiment or active development.
 
-Also note that currently only registering `HiveCatalog` thru Table APIs allows users to customize their `HiveConf` with additional Hive connection parameters. Users need to make sure Flink can connect to their Hive metastore within the network.
+Also note that currently only registering `HiveCatalog` through Table APIs allows users to customize their `HiveConf` with additional Hive connection parameters. Users need to make sure Flink can connect to their Hive metastore within their environment.
  
 ## GenericHiveMetastoreCatalog
 
@@ -71,7 +94,7 @@ Also note that currently only registering `HiveCatalog` thru Table APIs allows u
 
 ## Hive Compatibility
 
-For Hive compatibility, see [Hive Compatibility]({{ site.baseurl }}/dev/batch/hive_compatibility.html)
+For Hive compatibility and versions, see [Hive Compatibility]({{ site.baseurl }}/dev/batch/hive_compatibility.html)
 
 {% top %}
 
@@ -80,7 +103,7 @@ Catalog Module
 
 `FlinkInMemoryCatalog` is built in `flink-table` module.
 
-In order to use Hive-metastore-backed catalogs in Flink, users need to put the extra `flink-connector-hive` jar files in your lib directory or include it in your project.
+In order to use Hive-metastore-backed catalogs in Flink, users need to include `flink-connector-hive` jar in their projects.
 
 {% highlight xml %}
 <dependency>
@@ -179,7 +202,7 @@ myHive1.listPartitions(myTablePath);
 
 ## Use HiveCatalog in Flink SQL Cli
 
-Users can specify catalogs in the yaml config file of Flink SQL Cli. For more details of how to set up Flink SQL Cli, see [SQL Cli]({{ site.baseurl }}/dev/table/sqlClient.html)
+Users can specify catalogs in the yaml config file of Flink SQL Cli. See [SQL Cli]({{ site.baseurl }}/dev/table/sqlClient.html) for more details.
 
 ```yaml
 catalogs:
