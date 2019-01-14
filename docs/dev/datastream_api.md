@@ -504,7 +504,7 @@ env.generateSequence(1,10).map(new MyMapper()).setBufferTimeout(timeoutMillis);
 </div>
 <div data-lang="scala" markdown="1">
 {% highlight scala %}
-val env: LocalStreamEnvironment = StreamExecutionEnvironment.createLocalEnvironment
+val env = StreamExecutionEnvironment.createLocalEnvironment()
 env.setBufferTimeout(timeoutMillis)
 
 env.generateSequence(1,10).map(myMap).setBufferTimeout(timeoutMillis)
