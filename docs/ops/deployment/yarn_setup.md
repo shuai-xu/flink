@@ -437,8 +437,6 @@ The *JobManager* and AM are running in the same container. Once they successfull
 
 After that, the AM starts allocating the containers for Flink's TaskManagers, which will download the required jars and the modified configuration from the HDFS. In session mode, TaskManagers are allocated based on configuration which defines the resource and number of TaskManagers, once these steps are completed, Flink is set up and ready to accept Jobs. In per-job mode, TaskManagers are allocated based on the job graph retrieved from distributed cache, Flink ResourceManager can internally combine several tiny slots with the same resource profile in one container to enhance scheduling efficiency.
 
-{% top %}
-
 ## YARN shuffle service
 ### Run batch jobs with YARN shuffle service
 
@@ -520,3 +518,5 @@ YARN shuffle service classify the intermediate data directories into four types 
 
 #### Full references 
 {% include generated/external_block_shuffle_service_configuration.html %}
+
+{% top %}
