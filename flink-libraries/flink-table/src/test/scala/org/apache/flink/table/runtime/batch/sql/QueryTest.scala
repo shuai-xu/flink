@@ -26,7 +26,7 @@ import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => Scala
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnv}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv}
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
+import org.apache.flink.table.api.types.TypeConverters
 import org.apache.flink.table.api.{SqlParserException, Table, TableConfig, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.dataformat.{BinaryRow, BinaryRowWriter}
@@ -38,6 +38,7 @@ import org.apache.flink.table.util.ExecResourceUtil.InferMode
 import org.apache.flink.table.util.{DiffRepository, ExecResourceUtil}
 import org.apache.flink.types.Row
 
+import org.apache.calcite.rel.RelNode
 import org.apache.calcite.runtime.CalciteContextException
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.sql.parser.SqlParseException
@@ -85,15 +86,7 @@ class QueryTest {
     */
   def explainLogical(table: Table): String = {
     val ast = table.getRelNode
-    val optimizedPlan = tEnv.optimize(ast)
-    val logicalPlan = optimizedPlan match {
-      case rel: BatchExecRel[_] =>
-        val optimizedNodes = tEnv.translateToExecNodeDag(Seq(rel))
-        require(optimizedNodes.length == 1)
-        FlinkNodeOptUtil.treeToString(optimizedNodes.head)
-      case _ =>
-        FlinkRelOptUtil.toString(optimizedPlan)
-    }
+    val logicalPlan = getPlan(ast)
 
     s"== Abstract Syntax Tree ==" +
       System.lineSeparator +
@@ -150,17 +143,7 @@ class QueryTest {
 
   def verifyPlan(table: Table): Unit = {
     val relNode = table.getRelNode
-    val optimized = tEnv.optimize(relNode)
-    val actual = optimized match {
-      case rel: BatchExecRel[_] =>
-        val optimizedNodes = tEnv.translateToExecNodeDag(Seq(rel))
-        require(optimizedNodes.length == 1)
-        SystemUtils.LINE_SEPARATOR +
-          FlinkNodeOptUtil.treeToString(optimizedNodes.head, SqlExplainLevel.EXPPLAN_ATTRIBUTES)
-      case _ =>
-        SystemUtils.LINE_SEPARATOR +
-          FlinkRelOptUtil.toString(optimized, SqlExplainLevel.EXPPLAN_ATTRIBUTES)
-    }
+    val actual = SystemUtils.LINE_SEPARATOR + getPlan(relNode)
     assertEqualsOrExpand("planAfter", actual.toString, expand = false)
   }
 
@@ -177,6 +160,18 @@ class QueryTest {
     } else {
       // expected does not exist, update
       diffRepository.expand(this.name.getMethodName, tag, actual)
+    }
+  }
+
+  private def getPlan(relNode: RelNode): String = {
+    val optimized = tEnv.optimize(relNode)
+    optimized match {
+      case rel: BatchExecRel[_] =>
+        val optimizedNodes = tEnv.translateNodeDag(Seq(rel))
+        require(optimizedNodes.length == 1)
+        FlinkNodeOptUtil.treeToString(optimizedNodes.head, SqlExplainLevel.EXPPLAN_ATTRIBUTES)
+      case _ =>
+        FlinkRelOptUtil.toString(optimized, SqlExplainLevel.EXPPLAN_ATTRIBUTES)
     }
   }
 
@@ -216,7 +211,6 @@ class QueryTest {
           throw new RuntimeException(s"Error did not match expected [$expectedMsgPattern] while "
             + s"parsing query [$sqlQuery]", spe)
         }
-        return
       case thrown: Throwable =>
         var actualExp = thrown
         var actualMsg = actualExp.getMessage

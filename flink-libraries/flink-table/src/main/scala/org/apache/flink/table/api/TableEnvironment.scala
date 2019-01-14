@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.api
 
-import org.apache.flink.annotation.{Experimental, Internal}
+import org.apache.flink.annotation.{Experimental, Internal, VisibleForTesting}
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.common.typeinfo.TypeInformation
@@ -27,10 +27,9 @@ import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment =>
 import org.apache.flink.streaming.api.graph.StreamGraph
 import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => ScalaStreamExecEnv}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnvironment, StreamTableEnvironment => JavaStreamTableEnv}
-import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnvironment, StreamTableEnvironment => ScalaStreamTableEnv}
+import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnvironment, StreamTableEnvironment => ScalaStreamTableEnv, _}
 import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite._
 import org.apache.flink.table.catalog._
@@ -38,15 +37,19 @@ import org.apache.flink.table.codegen._
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.{Alias, Expression, TimeAttribute, UnresolvedFieldReference}
+import org.apache.flink.table.factories.TableFactoryUtil
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
-import org.apache.flink.table.plan.logical.{CatalogNode, LogicalNode, LogicalRelNode}
+import org.apache.flink.table.plan.logical.{CatalogNode, LogicalNode, LogicalRelNode, SinkNode}
+import org.apache.flink.table.plan.nodes.exec.ExecNode
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.TableSource
+import org.apache.flink.table.temptable.FlinkTableServiceManager
 import org.apache.flink.table.typeutils.TypeUtils
+import org.apache.flink.table.util.TableProperties
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, FunctionCatalog}
 
 import org.apache.calcite.config.Lex
@@ -65,9 +68,6 @@ import org.apache.commons.lang3.StringUtils
 import _root_.java.lang.reflect.Modifier
 import _root_.java.util
 import _root_.java.util.concurrent.atomic.AtomicInteger
-import org.apache.flink.table.factories.TableFactoryUtil
-import org.apache.flink.table.temptable.FlinkTableServiceManager
-import org.apache.flink.table.util.TableProperties
 
 import _root_.scala.annotation.varargs
 import _root_.scala.collection.JavaConversions._
@@ -92,7 +92,7 @@ abstract class TableEnvironment(
   private val typeFactory: FlinkTypeFactory = new FlinkTypeFactory(new FlinkTypeSystem)
 
   // Table API/SQL function catalog (built in, does not contain external functions)
-  private val functionCatalog: FunctionCatalog = BuiltInFunctionCatalog.withBuiltIns
+  private val functionCatalog: FunctionCatalog = BuiltInFunctionCatalog.withBuiltIns()
 
   // Table API/SQL function catalog built in function catalog.
   private[flink] lazy val chainedFunctionCatalog: FunctionCatalog =
@@ -119,7 +119,7 @@ abstract class TableEnvironment(
   private[flink] val tableNamePrefix = "_TempTable_"
 
   // sink nodes collection
-  private[flink] val sinkNodes = new mutable.MutableList[LogicalNode]
+  private[flink] val sinkNodes = new mutable.MutableList[SinkNode]
 
   private[flink] val transformations = new ArrayBuffer[StreamTransformation[_]]
 
@@ -149,9 +149,32 @@ abstract class TableEnvironment(
 
   /**
     * Compile the sink [[org.apache.flink.table.plan.logical.LogicalNode]] to
-    * [[org.apache.flink.streaming.api.transformations.StreamTransformation]]。
+    * [[org.apache.flink.streaming.api.transformations.StreamTransformation]].
     */
-  protected def compile(): Unit = ???
+  protected def compile(): Unit = {
+    if (config.getSubsectionOptimization) {
+      // optimize rel node, and translate to node dag
+      val nodeDag = optimizeAndTranslateNodeDag(true, sinkNodes: _*)
+      // translate to transformation
+      val sinkTransformations = translate(nodeDag)
+      transformations.addAll(sinkTransformations)
+    }
+  }
+
+  /**
+    * Optimize the RelNode tree (or DAG), and translate the result to [[ExecNode]] tree (or DAG).
+    */
+  @VisibleForTesting
+  private[flink] def optimizeAndTranslateNodeDag(
+      dagOptimizeEnabled: Boolean, logicalNodes: LogicalNode*): Seq[ExecNode[_, _]]
+
+  /**
+    * Translates a [[ExecNode]] DAG into a [[StreamTransformation]] DAG.
+    *
+    * @param sinks The node DAG to translate.
+    * @return The [[StreamTransformation]] DAG that corresponds to the node DAG.
+    */
+  protected def translate(sinks: Seq[ExecNode[_, _]]): Seq[StreamTransformation[_]]
 
   /**
     * Generate a [[StreamGraph]] from this table environment, this will also
@@ -355,14 +378,14 @@ abstract class TableEnvironment(
     val catalogSchema = catalogManager.getRootSchema.getSubSchema(catalogName)
 
     if (catalogSchema == null) {
-      return Option.empty
+      Option.empty
     } else {
       val dbSchema = catalogSchema.getSubSchema(dbName)
 
       if (dbSchema == null) {
-        return Option.empty
+        Option.empty
       } else {
-        return Option(dbSchema.getTable(tableName))
+        Option(dbSchema.getTable(tableName))
       }
     }
   }
@@ -495,7 +518,7 @@ abstract class TableEnvironment(
 
     checkValidTableName(name)
     val tableTable = new RelTable(table.getRelNode)
-    registerTableInternal(name, tableTable, false)
+    registerTableInternal(name, tableTable, replace = false)
   }
 
   /**
@@ -514,7 +537,7 @@ abstract class TableEnvironment(
 
     checkValidTableName(name)
     val tableTable = new RelTable(table.getRelNode)
-    registerTableInternal(name, tableTable, true)
+    registerTableInternal(name, tableTable, replace = true)
   }
 
 
@@ -1619,11 +1642,6 @@ object TableEnvironment {
     * The key for external catalog
     */
   val DEFAULT_SCHEMA: String = "hive"
-
-  /**
-    * The key mapping query plan in GlobalJobParameters.
-    */
-  val QUERY_PLAN_KEY = "__query__.__plan__"
 
   /**
     * Returns a [[BatchTableEnvironment]] for a Java [[JavaStreamExecEnv]].

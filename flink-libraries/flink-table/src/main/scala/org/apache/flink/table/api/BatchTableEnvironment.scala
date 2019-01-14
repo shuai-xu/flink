@@ -38,7 +38,7 @@ import org.apache.flink.table.expressions.{Expression, TimeAttribute}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
 import org.apache.flink.table.plan.cost.{FlinkBatchCost, FlinkCostFactory}
 import org.apache.flink.table.plan.logical.{LogicalNode, SinkNode}
-import org.apache.flink.table.plan.nodes.exec.BatchExecNode
+import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode}
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExecSink}
 import org.apache.flink.table.plan.nodes.process.DAGProcessContext
 import org.apache.flink.table.plan.optimize.{BatchOptimizeContext, FlinkBatchPrograms}
@@ -103,8 +103,6 @@ class BatchTableEnvironment(
   // prefix for unique table names.
   override private[flink] val tableNamePrefix = "_DataStreamTable_"
 
-  private val queryPlans = new ArrayBuffer[String]()
-
   /**
    * `expand` is set as false, and each sub-query becomes a [[org.apache.calcite.rex.RexSubQuery]].
    */
@@ -127,7 +125,7 @@ class BatchTableEnvironment(
     */
   override def execute(jobName: String): JobExecutionResult = {
     tableServiceManager.startTableServiceJob()
-    val sinkNodesBak = new mutable.MutableList[LogicalNode]
+    val sinkNodesBak = new mutable.MutableList[SinkNode]
     sinkNodesBak ++= sinkNodes
     Try {
       val streamGraph = generateStreamGraph(jobName)
@@ -161,12 +159,6 @@ class BatchTableEnvironment(
     val res = execute(jobName.getOrElse(DEFAULT_JOB_NAME))
     val accResult: JArrayList[Array[Byte]] = res.getAccumulatorResult(id)
     SerializedListAccumulator.deserializeList(accResult, typeSerializer).asScala
-  }
-
-  override def generateStreamGraph (jobName: String): StreamGraph = {
-    val streamGraph = super.generateStreamGraph(jobName)
-    setQueryPlan()
-    streamGraph
   }
 
   protected override def translateStreamGraph(
@@ -219,26 +211,6 @@ class BatchTableEnvironment(
     }
   }
 
-  /**
-    * Set up the [[queryPlans]] concatenated string to [[streamEnv]]. This will clear
-    * the [[queryPlans]].
-    */
-  private def setQueryPlan(): Unit = {
-    val queryPlan = queryPlans.mkString("\n")
-    require(queryPlan.nonEmpty)
-    queryPlans.clear()
-
-    // TODO use a more reasonable way to store queryPlan
-    val parameters = new Configuration()
-    if (streamEnv.getConfig.getGlobalJobParameters != null) {
-      streamEnv.getConfig.getGlobalJobParameters.toMap.asScala.foreach {
-        kv => parameters.setString(kv._1, kv._2)
-      }
-    }
-    parameters.setString(TableEnvironment.QUERY_PLAN_KEY, queryPlan)
-    streamEnv.getConfig.setGlobalJobParameters(parameters)
-  }
-
   override private[table] def writeToSink[T](
       table: Table,
       sink: TableSink[T],
@@ -249,32 +221,6 @@ class BatchTableEnvironment(
     } else {
       val transformation = translate(table, sink, sinkName)
       transformations.add(transformation)
-    }
-  }
-
-  protected override def compile(): Unit = {
-    if (config.getSubsectionOptimization) {
-      if (sinkNodes.isEmpty) {
-        throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
-      }
-
-      val optSinkNodes = tableServiceManager.cachePlanBuilder.buildPlanIfNeeded(sinkNodes)
-      // optimize dag
-      val sinks = BatchDAGOptimizer.optimize(optSinkNodes, this)
-      // convert to node dag
-      val nodeDag = translateToExecNodeDag(sinks)
-      // translate to transformation
-      val sinkTransformations = translateExecNodeDag(nodeDag)
-      transformations.addAll(sinkTransformations)
-    }
-  }
-
-  private def translateExecNodeDag(sinks: Seq[BatchExecNode[_]]): Seq[StreamTransformation[_]] = {
-    sinks.map {
-      case n: BatchExecSink[_] =>
-        val outputType = n.sink.getOutputType
-        translate(n, outputType)
-      case _ => throw new TableException(TableErrors.INST.sqlCompileSinkNodeRequired())
     }
   }
 
@@ -393,22 +339,26 @@ class BatchTableEnvironment(
   private def translate[A](
       table: Table,
       sink: TableSink[A],
-      sinkName: String): StreamTransformation[_] = {
+      sinkName: String,
+      dagOptimizeEnabled: Boolean = false): StreamTransformation[_] = {
     val sinkNode = SinkNode(table.logicalPlan, sink, sinkName)
-    val sinkTable = new Table(this, sinkNode)
-    val originTree = sinkTable.getRelNode
-    val optimizedTree = optimize(originTree)
-    addQueryPlan(originTree, optimizedTree)
-
-    val nodeDag = translateToExecNodeDag(Seq(optimizedTree))
-    require(nodeDag.size() == 1)
+    val nodeDag = optimizeAndTranslateNodeDag(dagOptimizeEnabled, sinkNode)
     nodeDag.head match {
-      case batchExecSink: BatchExecSink[A] =>
-        translate(batchExecSink, sink.getOutputType)
-      case _ =>
-        throw new TableException(
-          s"Cannot generate BoundedStream due to an invalid logical plan. " +
-            "This is a bug and should not happen. Please file an issue.")
+      case batchExecSink: BatchExecSink[A] => translate(batchExecSink, sink.getOutputType)
+      case _ => throw new TableException(TableErrors.INST.sqlCompileSinkNodeRequired())
+    }
+  }
+
+  /**
+    * Translates a [[ExecNode]] DAG into a [[StreamTransformation]] DAG.
+    *
+    * @param sinks The node DAG to translate.
+    * @return The [[StreamTransformation]] DAG that corresponds to the node DAG.
+    */
+  override protected def translate(sinks: Seq[ExecNode[_, _]]): Seq[StreamTransformation[_]] = {
+    sinks.map {
+      case n: BatchExecSink[_] => translate(n, n.sink.getOutputType)
+      case _ => throw new TableException(TableErrors.INST.sqlCompileSinkNodeRequired())
     }
   }
 
@@ -419,7 +369,7 @@ class BatchTableEnvironment(
    * @param node        The plan to translate.
    * @param resultType  The [[DataType]] of the elements that result from resulting
    *                    [[StreamTransformation]].
-   * @return The [[StreamTransformation]] that corresponds to the translated [[Table]].
+   * @return The [[StreamTransformation]] that corresponds to the given node.
    */
   private def translate[OUT](
       node: BatchExecNode[OUT],
@@ -439,20 +389,6 @@ class BatchTableEnvironment(
   }
 
   /**
-    * Adds original relNode plan and optimized relNode plan to `queryPlans`.
-    */
-  private[flink] def addQueryPlan(originalNode: RelNode, optimizedNode: RelNode): Unit = {
-    val queryPlan =
-      s"""
-         |== Abstract Syntax Tree ==
-         |${FlinkRelOptUtil.toString(originalNode)}
-         |== Optimized Logical Plan ==
-         |${FlinkRelOptUtil.toString(optimizedNode, detailLevel = SqlExplainLevel.ALL_ATTRIBUTES)}
-      """.stripMargin
-    queryPlans += queryPlan
-  }
-
-  /**
    * Generates the optimized [[RelNode]] tree from the original relational node tree.
    *
    * @param relNode The original [[RelNode]] tree
@@ -469,29 +405,59 @@ class BatchTableEnvironment(
       override def getRelOptPlanner: RelOptPlanner = getPlanner
     })
 
-    // Rewrite same rel object to different rel objects.
+    // Rewrite same rel object to different rel objects
+    // in order to get the correct dag (dag reuse is based on object not digest)
     optimizedPlan.accept(new SameRelObjectShuttle())
   }
 
   /**
-    * translate [[BatchExecRel]] DAG to [[BatchExecNode]] DAG.
+    * Convert [[BatchExecRel]] DAG to [[BatchExecNode]] DAG and translate them.
     */
-  private[flink] def translateToExecNodeDag(nodes: Seq[RelNode]): Seq[BatchExecNode[_]] = {
-    require(nodes.nonEmpty && nodes.forall(_.isInstanceOf[BatchExecRel[_]]))
+  @VisibleForTesting
+  private[flink] def translateNodeDag(rels: Seq[RelNode]): Seq[BatchExecNode[_]] = {
+    require(rels.nonEmpty && rels.forall(_.isInstanceOf[BatchExecRel[_]]))
     // reuse subplan
-    val reusedPlan = SubplanReuseUtil.reuseSubplan(nodes, config)
+    val reusedPlan = SubplanReuseUtil.reuseSubplan(rels, config)
     // TODO convert to ExecNode dag
     // breakup deadlock
     val postOptimizedPlan = new DeadlockBreakupProcessor().process(reusedPlan)
     val nodeDag = postOptimizedPlan.map(_.asInstanceOf[BatchExecNode[_]])
 
-    // TODO calc resource here
-
     val dagProcessors = getConfig.getBatchDAGProcessors
+    require(dagProcessors != null)
     val context = new DAGProcessContext(this)
-    dagProcessors.process(nodeDag, context)
+    val postNodeDag = dagProcessors.process(nodeDag, context)
 
-    dumpOptimizedPlanIfNeed(nodeDag)
+    dumpOptimizedPlanIfNeed(postNodeDag)
+    postNodeDag.map(_.asInstanceOf[BatchExecNode[_]])
+  }
+
+  /**
+    * Optimize the RelNode tree (or DAG), and translate the result to ExecNode tree (or DAG).
+    */
+  @VisibleForTesting
+  private[flink] override def optimizeAndTranslateNodeDag(
+      dagOptimizeEnabled: Boolean,
+      logicalNodes: LogicalNode*): Seq[ExecNode[_, _]] = {
+    if (logicalNodes.isEmpty) {
+      throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
+    }
+    val nodeDag = if (dagOptimizeEnabled) {
+      val optLogicalNodes = tableServiceManager.cachePlanBuilder.buildPlanIfNeeded(logicalNodes)
+      // optimize dag
+      val optRelNodes = BatchDAGOptimizer.optimize(optLogicalNodes, this)
+      // translate node dag
+      translateNodeDag(optRelNodes)
+    } else {
+      require(logicalNodes.size == 1)
+      val sinkTable = new Table(this, logicalNodes.head)
+      val originTree = sinkTable.getRelNode
+      // optimize tree
+      val optimizedTree = optimize(originTree)
+      // translate node tree
+      translateNodeDag(Seq(optimizedTree))
+    }
+    require(nodeDag.size() == logicalNodes.size)
     nodeDag
   }
 
@@ -553,8 +519,7 @@ class BatchTableEnvironment(
     name: String,
     tableSource: TableSource,
     statistic: FlinkStatistic,
-    replace: Boolean = false)
-  : Unit = {
+    replace: Boolean = false): Unit = {
 
     tableSource match {
 
@@ -646,9 +611,10 @@ class BatchTableEnvironment(
     registerTableSinkInternal(name, configuredSink, replace)
   }
 
-  protected def registerTableSinkInternal(name: String,
-                                          configuredSink: TableSink[_],
-                                          replace: Boolean): Unit = {
+  protected def registerTableSinkInternal(
+      name: String,
+      configuredSink: TableSink[_],
+      replace: Boolean): Unit = {
     // validate
     checkValidTableName(name)
     if (configuredSink.getFieldNames == null || configuredSink.getFieldTypes == null) {
@@ -730,10 +696,9 @@ class BatchTableEnvironment(
    */
   private[flink] def explain(table: Table, extended: Boolean): String = {
     val ast = table.getRelNode
-    val optimizedPlan = optimize(ast)
-    val nodeDag = translateToExecNodeDag(Seq(optimizedPlan))
-    require(nodeDag.size() == 1)
-    val optimizedNode = nodeDag.head
+    // explain as simple tree, ignore dag optimization if it's enabled
+    val optimizedNode = optimizeAndTranslateNodeDag(false, table.logicalPlan)
+      .head.asInstanceOf[BatchExecNode[_]]
 
     val fieldTypes = ast.getRowType.getFieldList.asScala
       .map(field => FlinkTypeFactory.toInternalType(field.getType))
@@ -770,9 +735,7 @@ class BatchTableEnvironment(
         "please check your TableConfig.")
     }
 
-    if (sinkNodes.isEmpty) {
-      throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
-    }
+    val sinkExecNodes = optimizeAndTranslateNodeDag(true, sinkNodes: _*)
 
     val sb = new StringBuilder
     sb.append("== Abstract Syntax Tree ==")
@@ -784,11 +747,6 @@ class BatchTableEnvironment(
       sb.append(System.lineSeparator)
     }
 
-    val optSinkNodes = tableServiceManager.cachePlanBuilder.buildPlanIfNeeded(sinkNodes)
-    // optimize dag
-    val sinkRelNodes = BatchDAGOptimizer.optimize(optSinkNodes, this)
-    val sinkExecNodes = translateToExecNodeDag(sinkRelNodes)
-
     sb.append("== Optimized Logical Plan ==")
     sb.append(System.lineSeparator)
     val (explainLevel, withResource, withMemCost) = if (extended) {
@@ -798,7 +756,7 @@ class BatchTableEnvironment(
     }
     sb.append(FlinkNodeOptUtil.dagToString(sinkExecNodes, explainLevel, withResource, withMemCost))
 
-    val sinkTransformations = translateExecNodeDag(sinkExecNodes)
+    val sinkTransformations = translate(sinkExecNodes)
     val streamGraph = StreamGraphGenerator.generate(
       StreamGraphGenerator.Context.buildBatchProperties(streamEnv), sinkTransformations)
     val sqlPlan = PlanUtil.explainPlan(streamGraph)
@@ -830,7 +788,7 @@ class BatchTableEnvironment(
     *
     * @param optimizedNodes optimized plan
     */
-  private[this] def dumpOptimizedPlanIfNeed(optimizedNodes: Seq[BatchExecNode[_]]): Unit = {
+  private[this] def dumpOptimizedPlanIfNeed(optimizedNodes: Seq[ExecNode[_, _]]): Unit = {
     val dumpFilePath = config.getConf.getString(TableConfigOptions.SQL_OPTIMIZER_PLAN_DUMP_PATH)
     val planDump = config.getConf.getBoolean(TableConfigOptions.SQL_OPTIMIZER_PLAN_DUMP_ENABLED)
 

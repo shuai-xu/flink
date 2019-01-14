@@ -113,10 +113,8 @@ abstract class TpcHBatchExecPlanTest(
     val sqlQuery = TpcUtils.getTpcHQuery(caseName)
     if (printOptimizedResult) {
       val table = tEnv.sqlQuery(sqlQuery)
-      val optimized = tEnv.optimize(table.getRelNode)
-      val optimizedNodes = tEnv.translateToExecNodeDag(Seq(optimized))
-      require(optimizedNodes.length == 1)
-      val result =  FlinkNodeOptUtil.treeToString(optimizedNodes.head, detailLevel = explainLevel)
+      val optimizedNode = tEnv.optimizeAndTranslateNodeDag(false, table.logicalPlan).head
+      val result = FlinkNodeOptUtil.treeToString(optimizedNode, detailLevel = explainLevel)
       println(s"caseName:$caseName, factor: $factor, statsMode:$statsMode\n$result")
     } else {
       util.verifyPlan(sqlQuery, explainLevel)

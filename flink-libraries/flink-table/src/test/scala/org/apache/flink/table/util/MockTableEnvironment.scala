@@ -20,10 +20,13 @@ package org.apache.flink.table.util
 
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.api._
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
 import org.apache.flink.table.plan.cost.{FlinkCostFactory, FlinkStreamCost}
+import org.apache.flink.table.plan.logical.LogicalNode
+import org.apache.flink.table.plan.nodes.exec.ExecNode
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
@@ -90,9 +93,9 @@ class MockTableEnvironment extends TableEnvironment(
     * @param replace     Whether to replace this [[TableSource]]
     */
   override protected def registerTableSourceInternal(name: String,
-                                                     tableSource: TableSource,
-                                                     tableStats: FlinkStatistic,
-                                                     replace: Boolean): Unit = ???
+      tableSource: TableSource,
+      tableStats: FlinkStatistic,
+      replace: Boolean): Unit = ???
 
   /**
     * Registers or replace an external [[TableSink]] with given field names and types in this
@@ -106,10 +109,10 @@ class MockTableEnvironment extends TableEnvironment(
     * @param replace    Whether replace this [[TableSink]].
     */
   override protected def registerTableSinkInternal(name: String,
-                                                   fieldNames: Array[String],
-                                                   fieldTypes: Array[DataType],
-                                                   tableSink: TableSink[_],
-                                                   replace: Boolean): Unit = ???
+      fieldNames: Array[String],
+      fieldTypes: Array[DataType],
+      tableSink: TableSink[_],
+      replace: Boolean): Unit = ???
 
   /**
     * Registers an external [[TableSink]] with already configured field names and field types in
@@ -120,6 +123,22 @@ class MockTableEnvironment extends TableEnvironment(
     * @param configuredSink The configured [[TableSink]] to register.
     */
   override protected def registerTableSinkInternal(name: String,
-                                                   configuredSink: TableSink[_],
-                                                   replace: Boolean): Unit = ???
+      configuredSink: TableSink[_],
+      replace: Boolean): Unit = ???
+
+  /**
+    * Optimize the RelNode tree (or DAG), and translate the result to [[ExecNode]] tree (or DAG).
+    */
+  override private[flink] def optimizeAndTranslateNodeDag(
+      dagOptimizeEnabled: Boolean,
+      logicalNodes: LogicalNode*) = ???
+
+  /**
+    * Translates a [[ExecNode]] DAG into a [[StreamTransformation]] DAG.
+    *
+    * @param sinks The node DAG to translate.
+    * @return The [[StreamTransformation]] DAG that corresponds to the node DAG.
+    */
+  override protected def translate(
+      sinks: Seq[ExecNode[_, _]]): Seq[StreamTransformation[_]] = ???
 }

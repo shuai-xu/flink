@@ -29,33 +29,30 @@ import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironm
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JBatchTableEnvironment, StreamTableEnvironment => JStreamTableEnvironment}
-import org.apache.flink.table.api.scala.{StreamTableEnvironment, _}
+import org.apache.flink.table.api.scala.{BatchTableEnvironment, StreamTableEnvironment, _}
 import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, TypeConverters}
 import org.apache.flink.table.errorcode.TableErrors
 
 import java.util.{ArrayList => JArrayList, HashSet => JHashSet}
-import org.apache.flink.table.api.{TableEnvironment, TableSchema, _}
-import org.apache.flink.table.api.scala.BatchTableEnvironment
-import org.apache.flink.table.api.{Table, TableException, _}
+import org.apache.flink.table.api.{Table, TableEnvironment, TableException, TableSchema, _}
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExecSink}
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
-import org.apache.flink.table.plan.subplan.BatchDAGOptimizer
 import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil}
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSource}
 import org.apache.flink.types.Row
 
 import org.apache.calcite.plan.hep.HepMatchOrder
+import org.apache.calcite.rel.RelNode
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.tools.RuleSet
 import org.apache.calcite.util.ImmutableBitSet
-import org.junit.Assert.{assertEquals, _}
 import org.apache.commons.lang3.SystemUtils
-import org.junit.Assert._
+import org.junit.Assert.{assertEquals, _}
 import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}
 import org.mockito.Mockito.{mock, when}
@@ -364,7 +361,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
     val physicalSchema = TableSchemaUtil.fromDataType(typeInfo)
     val (fieldNames, fieldIdxs) =
       tableEnv.getFieldInfo(typeInfo, fields.toArray)
-    val fieldTypes = fieldIdxs.map(physicalSchema.getType)
+    val fieldTypes: Array[InternalType] = fieldIdxs.map(physicalSchema.getType)
     val tableSchema = new TableSchema(fieldNames, fieldTypes)
     val mapping = fieldNames.zipWithIndex.map {
       case (name: String, idx: Int) =>
@@ -382,16 +379,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
   }
 
   def verifyTableNotExpected(resultTable: Table, notExpected: String*): Unit = {
-    val relNode = resultTable.getRelNode
-    val optimized = tableEnv.optimize(relNode)
-    val actual = optimized match {
-      case rel: BatchExecRel[_] =>
-        val optimizedNodes = tableEnv.translateToExecNodeDag(Seq(rel))
-        require(optimizedNodes.length == 1)
-        FlinkNodeOptUtil.treeToString(optimizedNodes.head)
-      case _ =>
-        FlinkRelOptUtil.toString(optimized)
-    }
+    val actual = getPlan(resultTable.getRelNode)
     val result = notExpected.forall(!actual.contains(_))
     assertTrue(s"\n actual: \n$actual \n not expected: \n${notExpected.mkString(", ")}", result)
   }
@@ -475,33 +463,8 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
       assertEqualsOrExpand("planBefore", planBefore)
     }
 
-    val optimized = tableEnv.optimize(relNode)
-
-    val ruKeeper = new RunningUnitKeeper(tableEnv)
-    val actual = optimized match {
-      case batchExecRel: BatchExecRel[_] =>
-        val optimizedNodes = tableEnv.translateToExecNodeDag(Seq(batchExecRel))
-        require(optimizedNodes.length == 1)
-        val optimizedNode = optimizedNodes.head
-        // TODO refactor
-        ruKeeper.buildRUs(batchExecRel)
-        if (printResource) {
-          ruKeeper.calculateNodeResource(optimized.asInstanceOf[BatchExecRel[_]])
-        }
-        if (printRunningUnit) {
-          val ruList = ruKeeper.getRunningUnits.map(x => x.toString)
-          ruList.sorted
-          val ruString = SystemUtils.LINE_SEPARATOR + String.join("\n", ruList)
-          assertEqualsOrExpand("runningUnit", ruString)
-        }
-
-        SystemUtils.LINE_SEPARATOR +
-          FlinkNodeOptUtil.treeToString(optimizedNode, explainLevel, withResource = printResource)
-      case _ =>
-        SystemUtils.LINE_SEPARATOR +
-          FlinkRelOptUtil.toString(optimized, explainLevel)
-    }
-
+    val actual = SystemUtils.LINE_SEPARATOR +
+      getPlan(relNode, explainLevel, printResource, printRunningUnit)
     assertEqualsOrExpand("planAfter", actual.toString, expand = false)
   }
 
@@ -530,10 +493,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
 
     val optSinkNodes = tableEnv.tableServiceManager.cachePlanBuilder
       .buildPlanIfNeeded(tableEnv.sinkNodes)
-
-    // optimize dag
-    val sinks = BatchDAGOptimizer.optimize(optSinkNodes, tableEnv)
-    val sinkExecNodes = tableEnv.translateToExecNodeDag(sinks)
+    val sinkExecNodes = tableEnv.optimizeAndTranslateNodeDag(true, optSinkNodes: _*)
 
     tableEnv.sinkNodes.clear()
 
@@ -541,9 +501,9 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
     val planAfter = if (printResultPartitionCount) {
       val planWithResource = new StringBuilder()
       val ruKeeper = new RunningUnitKeeper(tableEnv)
-      // TODO refactor
       sinkExecNodes.map {
         case node: BatchExecSink[_] =>
+          // TODO refactor
           ruKeeper.buildRUs(node)
           ruKeeper.calculateNodeResource(node)
           planWithResource.append(System.lineSeparator)
@@ -583,24 +543,49 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
   def printTable(
       resultTable: Table,
       explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES): Unit = {
-    val relNode = resultTable.getRelNode
-    val optimized = tableEnv.optimize(relNode)
-    val str = optimized match {
-      case batchExecRel: BatchExecRel[_] =>
-        val optimizedNodes = tableEnv.translateToExecNodeDag(Seq(batchExecRel))
-        require(optimizedNodes.length == 1)
-        val optimizedNode = optimizedNodes.head
-        FlinkNodeOptUtil.treeToString(optimizedNode, detailLevel = explainLevel)
-      case _ =>
-        FlinkRelOptUtil.toString(optimized, detailLevel = explainLevel)
-    }
-    println(str)
+    println(getPlan(resultTable.getRelNode, explainLevel))
   }
 
   def printSql(
       query: String,
       explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES): Unit = {
     printTable(tableEnv.sqlQuery(query), explainLevel)
+  }
+
+  private def getPlan(
+      relNode: RelNode,
+      explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
+      printResource: Boolean = false,
+      printRunningUnit: Boolean = false): String = {
+    val optimized = tableEnv.optimize(relNode)
+    optimized match {
+      case batchExecRel: BatchExecRel[_] =>
+        val optimizedNodes = tableEnv.translateNodeDag(Seq(batchExecRel))
+
+        if (printResource || printRunningUnit) {
+          // TODO refactor
+          val ruKeeper = new RunningUnitKeeper(tableEnv)
+          ruKeeper.buildRUs(batchExecRel)
+          if (printResource) {
+            ruKeeper.calculateNodeResource(batchExecRel)
+          }
+          if (printRunningUnit) {
+            val ruList = ruKeeper.getRunningUnits.map(x => x.toString)
+            ruList.sorted
+            val ruString = SystemUtils.LINE_SEPARATOR + String.join("\n", ruList)
+            assertEqualsOrExpand("runningUnit", ruString)
+          }
+        }
+
+        require(optimizedNodes.length == 1)
+        val optimizedNode = optimizedNodes.head
+        FlinkNodeOptUtil.treeToString(
+            optimizedNode,
+            detailLevel = explainLevel,
+            withResource = printResource)
+      case _ =>
+        FlinkRelOptUtil.toString(optimized, detailLevel = explainLevel)
+    }
   }
 }
 

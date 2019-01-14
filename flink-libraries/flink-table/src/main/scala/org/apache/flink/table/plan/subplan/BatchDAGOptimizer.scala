@@ -49,10 +49,9 @@ object BatchDAGOptimizer extends AbstractDAGOptimizer[BatchTableEnvironment] {
 
     val originTree = block.getPlan
     val optimizedTree = tEnv.optimize(originTree)
-    tEnv.addQueryPlan(originTree, optimizedTree)
 
     optimizedTree match {
-      case n: BatchExecSink[_] => // ignore
+      case _: BatchExecSink[_] => // ignore
       case _ =>
         val name = tEnv.createUniqueTableName()
         registerIntermediateTable(tEnv, name, optimizedTree)

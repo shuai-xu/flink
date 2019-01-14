@@ -73,7 +73,7 @@ abstract class TpcDsBatchExecPlanTest(
       TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED, false)
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_ENABLED, true)
     tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_HASH_JOIN_BROADCAST_THRESHOLD,
-                                            10 * 1024 * 1024)
+      10 * 1024 * 1024)
   }
 
   // create a new ParquetTableSource to override `createTableSource` and `getTableStats` methods
@@ -118,10 +118,8 @@ abstract class TpcDsBatchExecPlanTest(
     InsertRuntimeFilterRule.resetBroadcastIdCounter()
     if (printOptimizedResult) {
       val table = tEnv.sqlQuery(sqlQuery)
-      val optimized = tEnv.optimize(table.getRelNode)
-      val optimizedNodes = tEnv.translateToExecNodeDag(Seq(optimized))
-      require(optimizedNodes.length == 1)
-      val result =  FlinkNodeOptUtil.treeToString(optimizedNodes.head, detailLevel = explainLevel)
+      val optimizedNode = tEnv.optimizeAndTranslateNodeDag(false, table.logicalPlan).head
+      val result = FlinkNodeOptUtil.treeToString(optimizedNode, detailLevel = explainLevel)
       println(s"caseName:$caseName, factor: $factor, statsMode:$statsMode\n$result")
     } else {
       util.verifyPlan(sqlQuery, explainLevel, printPlanBefore = false)

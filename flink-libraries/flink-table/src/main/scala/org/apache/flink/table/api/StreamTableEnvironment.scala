@@ -36,9 +36,10 @@ import org.apache.flink.table.expressions._
 import org.apache.flink.table.factories.{TableFactoryService, TableFactoryUtil, TableSourceParserFactory}
 import org.apache.flink.table.plan.`trait`._
 import org.apache.flink.table.plan.cost.{FlinkCostFactory, FlinkStreamCost}
-import org.apache.flink.table.plan.logical.{LogicalRelNode, SinkNode}
+import org.apache.flink.table.plan.logical.{LogicalNode, LogicalRelNode, SinkNode}
 import org.apache.flink.table.plan.nodes.calcite._
-import org.apache.flink.table.plan.nodes.exec.StreamExecNode
+import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode, StreamExecNode}
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
 import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.nodes.process.DAGProcessContext
 import org.apache.flink.table.plan.optimize.{FlinkStreamPrograms, StreamOptimizeContext}
@@ -54,7 +55,7 @@ import org.apache.flink.util.Preconditions
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
-import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFieldImpl}
+import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexBuilder
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.sql2rel.SqlToRelConverter
@@ -64,8 +65,6 @@ import _root_.java.util
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable.ArrayBuffer
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.`type`.RelDataType
 
 /**
   * The base class for stream TableEnvironments.
@@ -146,27 +145,7 @@ abstract class StreamTableEnvironment(
 
   protected override def compile(): Unit = {
     mergeParameters()
-
-    if (config.getSubsectionOptimization) {
-      if (sinkNodes.isEmpty) {
-        throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
-      }
-      // optimize dag
-      val sinks = StreamDAGOptimizer.optimize(sinkNodes, this)
-      // convert to node dag
-      val nodeDag = translateToExecNodeDag(sinks)
-      // translate to transformation
-      val sinkTransformations = translateExecNodeDag(nodeDag)
-      transformations.addAll(sinkTransformations)
-    }
-  }
-
-  private def translateExecNodeDag(sinks: Seq[StreamExecNode[_]]): Seq[StreamTransformation[_]] = {
-    // translates sinks RelNodeBlock into transformations
-    sinks.map {
-      case sink: StreamExecSink[_] => translate(sink)
-      case _ => throw new TableException(TableErrors.INST.sqlCompileSinkNodeRequired())
-    }
+    super.compile()
   }
 
   /**
@@ -422,11 +401,9 @@ abstract class StreamTableEnvironment(
     if (config.getSubsectionOptimization) {
       sinkNodes += sinkNode
     } else {
-      val table = new Table(this, sinkNode)
-      val optimizedPlan = optimize(table.getRelNode)
-      val optimizedNodes = translateToExecNodeDag(Seq(optimizedPlan))
-      require(optimizedNodes.size() == 1)
-      transformations.add(translate(optimizedNodes.head))
+      val optimizedNode = optimizeAndTranslateNodeDag(false, sinkNode)
+        .head.asInstanceOf[StreamExecNode[_]]
+      transformations.add(translate(optimizedNode))
     }
   }
 
@@ -849,23 +826,49 @@ abstract class StreamTableEnvironment(
       override def isSinkNode: Boolean = isSinkBlock
     })
 
-    // Rewrite same rel object to different rel objects.
+    // Rewrite same rel object to different rel objects
+    // in order to get the correct dag (dag reuse is based on object not digest)
     optimizeNode.accept(new SameRelObjectShuttle())
   }
 
   /**
-    * translate [[StreamExecRel]] DAG to [[StreamExecNode]] DAG.
+    * Convert [[BatchExecRel]] DAG to [[BatchExecNode]] DAG and translate them.
     */
-  private[flink] def translateToExecNodeDag(nodes: Seq[RelNode]): Seq[StreamExecNode[_]] = {
-    require(nodes.nonEmpty && nodes.forall(_.isInstanceOf[StreamExecRel[_]]))
-    val nodeDag = nodes.map(_.asInstanceOf[StreamExecNode[_]])
-
-    // TODO calc resource here
-
+  private[flink] def translateNodeDag(rels: Seq[RelNode]): Seq[StreamExecNode[_]] = {
+    require(rels.nonEmpty && rels.forall(_.isInstanceOf[StreamExecRel[_]]))
+    // convert BatchExecRel DAG to ExecNode DAG
+    val nodeDag = rels.map(_.asInstanceOf[StreamExecNode[_]])
     val dagProcessors = getConfig.getStreamDAGProcessors
     val context = new DAGProcessContext(this)
-    dagProcessors.process(nodeDag, context)
+    val postNodeDag = dagProcessors.process(nodeDag, context)
 
+    postNodeDag.map(_.asInstanceOf[StreamExecNode[_]])
+  }
+
+  /**
+    * Optimize the RelNode tree (or DAG), and translate the result to ExecNode tree (or DAG).
+    */
+  private[flink] override def optimizeAndTranslateNodeDag(
+      dagOptimizeEnabled: Boolean,
+      logicalNodes: LogicalNode*): Seq[ExecNode[_, _]] = {
+    if (logicalNodes.isEmpty) {
+      throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
+    }
+    val nodeDag = if (dagOptimizeEnabled) {
+      // optimize dag
+      val optRelNodes = StreamDAGOptimizer.optimize(logicalNodes, this)
+      // translate node dag
+      translateNodeDag(optRelNodes)
+    } else {
+      require(logicalNodes.size == 1)
+      val sinkTable = new Table(this, logicalNodes.head)
+      val originTree = sinkTable.getRelNode
+      // optimize tree
+      val optimizedTree = optimize(originTree)
+      // translate node tree
+      translateNodeDag(Seq(optimizedTree))
+    }
+    require(nodeDag.size() == logicalNodes.size)
     nodeDag
   }
 
@@ -893,26 +896,40 @@ abstract class StreamTableEnvironment(
     val sinkName = createUniqueTableName()
     val sinkNode = LogicalSink.create(table.getRelNode, sink, sinkName)
     val optimizedPlan = optimize(sinkNode)
-    val optimizedNodes = translateToExecNodeDag(Seq(optimizedPlan))
+    val optimizedNodes = translateNodeDag(Seq(optimizedPlan))
     require(optimizedNodes.size() == 1)
     val transformation = translate(optimizedNodes.head)
     new DataStream(execEnv, transformation).asInstanceOf[DataStream[A]]
   }
 
-    /**
-      * Translates a [[StreamExecNode]] plan into a [[StreamTransformation]].
-      *
-      * @param node The plan to translate.
-      * @return The [[StreamTransformation]] of type [[BaseRow]].
-      */
-    private def translate(node: StreamExecNode[_]): StreamTransformation[_] = {
-      node match {
-        case node: StreamExecRel[_] => node.translateToPlan(this)
-        case _ =>
-          throw new TableException("Cannot generate DataStream due to an invalid logical plan. " +
-            "This is a bug and should not happen. Please file an issue.")
-      }
+  /**
+    * Translates a [[ExecNode]] DAG into a [[StreamTransformation]] DAG.
+    *
+    * @param sinks The node DAG to translate.
+    * @return The [[StreamTransformation]] DAG that corresponds to the node DAG.
+    */
+  protected override def translate(sinks: Seq[ExecNode[_, _]]): Seq[StreamTransformation[_]] = {
+    // translates ExecNodes into transformations
+    sinks.map {
+      case sink: StreamExecSink[_] => translate(sink)
+      case _ => throw new TableException(TableErrors.INST.sqlCompileSinkNodeRequired())
     }
+  }
+
+  /**
+    * Translates a [[StreamExecNode]] plan into a [[StreamTransformation]].
+    *
+    * @param node The plan to translate.
+    * @return The [[StreamTransformation]] of type [[BaseRow]].
+    */
+  private def translate(node: StreamExecNode[_]): StreamTransformation[_] = {
+    node match {
+      case node: StreamExecRel[_] => node.translateToPlan(this)
+      case _ =>
+        throw new TableException("Cannot generate DataStream due to an invalid logical plan. " +
+          "This is a bug and should not happen. Please file an issue.")
+    }
+  }
 
   /**
     * Returns the AST of the specified Table API and SQL queries and the execution plan to compute
@@ -922,15 +939,11 @@ abstract class StreamTableEnvironment(
     */
   def explain(table: Table): String = {
     val ast = table.getRelNode
-    val optimizedPlan = optimize(ast)
-    val optimizedNodes = translateToExecNodeDag(Seq(optimizedPlan))
-    require(optimizedNodes.size() == 1)
-    val optimizedNode = optimizedNodes.head
-
+    // explain as simple tree, ignore dag optimization if it's enabled
+    val optimizedNode = optimizeAndTranslateNodeDag(false, table.logicalPlan)
+      .head.asInstanceOf[StreamExecNode[_]]
     val transformStream = translate(optimizedNode)
-
     val streamGraph = translateStreamGraph(ArrayBuffer(transformStream), None)
-
     val executionPlan = PlanUtil.explainPlan(streamGraph)
 
     s"== Abstract Syntax Tree ==" +
@@ -952,9 +965,7 @@ abstract class StreamTableEnvironment(
         "please check your TableConfig.")
     }
 
-    if (sinkNodes.isEmpty) {
-      throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
-    }
+    val sinkExecNodes = optimizeAndTranslateNodeDag(true, sinkNodes: _*)
 
     val sb = new StringBuilder
     sb.append("== Abstract Syntax Tree ==")
@@ -965,10 +976,6 @@ abstract class StreamTableEnvironment(
       sb.append(FlinkRelOptUtil.toString(ast))
       sb.append(System.lineSeparator)
     }
-
-    // optimize dag
-    val sinkRelNodes = StreamDAGOptimizer.optimize(sinkNodes, this)
-    val sinkExecNodes = translateToExecNodeDag(sinkRelNodes)
 
     sb.append("== Optimized Logical Plan ==")
     sb.append(System.lineSeparator)
@@ -982,7 +989,7 @@ abstract class StreamTableEnvironment(
     sb.append(System.lineSeparator)
 
     // translate relNodes to StreamTransformations
-    val sinkTransformations = translateExecNodeDag(sinkExecNodes)
+    val sinkTransformations = translate(sinkExecNodes)
     val sqlPlan = PlanUtil.explainPlan(StreamGraphGenerator.generate(
       StreamGraphGenerator.Context.buildBatchProperties(execEnv), sinkTransformations))
     sb.append("== Physical Execution Plan ==")

@@ -396,7 +396,6 @@ class ExplainTest extends TableTestBase {
     assertEquals(expected, actual)
   }
 
-
   @Test
   def testMultiSinksSplitOnUnion1(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
