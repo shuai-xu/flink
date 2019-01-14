@@ -27,9 +27,12 @@ import org.apache.flink.runtime.state.InternalBackendSerializationProxy;
 import org.apache.flink.runtime.state.KeyGroupsStateSnapshot;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.RegisteredStateMetaInfo;
+import org.apache.flink.runtime.state.SnappyStreamCompressionDecorator;
 import org.apache.flink.runtime.state.StateAccessException;
 import org.apache.flink.runtime.state.StateMetaInfoSnapshot;
+import org.apache.flink.runtime.state.StreamCompressionDecorator;
 import org.apache.flink.runtime.state.StreamStateHandle;
+import org.apache.flink.runtime.state.UncompressedStreamCompressionDecorator;
 import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.Preconditions;
 
@@ -56,6 +59,9 @@ public class RocksDBFullRestoreOperation {
 	private final RocksDBInternalStateBackend stateBackend;
 
 	private final Map<Integer, String> id2StateName = new HashMap<>();
+
+	/** The compression decorator that was used for writing the state, as determined by the meta data. */
+	private StreamCompressionDecorator keyGroupStreamCompressionDecorator;
 
 	RocksDBFullRestoreOperation(RocksDBInternalStateBackend stateBackend) {
 		this.stateBackend = stateBackend;
@@ -96,6 +102,9 @@ public class RocksDBFullRestoreOperation {
 				InternalBackendSerializationProxy serializationProxy =
 					new InternalBackendSerializationProxy(stateBackend.getUserClassLoader(), false);
 				serializationProxy.read(inputView);
+
+				this.keyGroupStreamCompressionDecorator = serializationProxy.isUsingKeyGroupCompression() ?
+					SnappyStreamCompressionDecorator.INSTANCE : UncompressedStreamCompressionDecorator.INSTANCE;
 
 				List<StateMetaInfoSnapshot> keyedStateMetaInfos = serializationProxy.getKeyedStateMetaSnapshots();
 				for (StateMetaInfoSnapshot keyedStateMetaSnapshot : keyedStateMetaInfos) {
@@ -168,7 +177,7 @@ public class RocksDBFullRestoreOperation {
 			inputStream.seek(offset);
 
 			if (numEntries != 0) {
-				try (InputStream compressedKgIn = stateBackend.getKeyGroupCompressionDecorator().decorateWithCompression(inputStream)) {
+				try (InputStream compressedKgIn = keyGroupStreamCompressionDecorator.decorateWithCompression(inputStream)) {
 					DataInputViewStreamWrapper compressedKgInputView = new DataInputViewStreamWrapper(compressedKgIn);
 					for (int i = 0; i < numEntries; ++i) {
 						Integer id = IntSerializer.INSTANCE.deserialize(compressedKgInputView);

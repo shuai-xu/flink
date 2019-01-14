@@ -248,6 +248,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		stateBackend.dispose();
 
 		// Restores the stateBackend from the snapshot
+		executionConfig.setUseSnapshotCompression(false);
 		stateBackend = createStateBackend(
 			maxParallelism,
 			getGroupsForSubtask(maxParallelism, initParallelism, initSubtaskIndex),
@@ -307,6 +308,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		stateBackend.dispose();
 
 		// Restores the stateBackend from the snapshot
+		executionConfig.setUseSnapshotCompression(true);
 		stateBackend = createStateBackend(
 			maxParallelism,
 			getGroupsForSubtask(maxParallelism, initParallelism, initSubtaskIndex),
@@ -407,6 +409,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		KeyedStateHandle firstSnapshot1 = snapshot1.getIntersection(firstGroups1);
 
 		// Restores the stateBackend from the snapshot
+		executionConfig.setUseSnapshotCompression(false);
 		stateBackend = createStateBackend(maxParallelism, firstGroups1, classLoader, localRecoveryConfig, executionConfig);
 		stateBackend.restore(Collections.singleton(firstSnapshot1));
 
@@ -527,6 +530,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		KeyedStateHandle thirdSnapshot1 = snapshot1.getIntersection(thirdGroups1);
 
 		// Restores the stateBackend from the snapshot
+		executionConfig.setUseSnapshotCompression(true);
 		stateBackend = createStateBackend(maxParallelism, thirdGroups1, classLoader, localRecoveryConfig, executionConfig);
 		stateBackend.restore(Collections.singleton(thirdSnapshot1));
 
@@ -585,6 +589,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		// Merge the local states
 		KeyGroupRange leftGroups3 = getGroupsForSubtask(maxParallelism, 2, 0);
 		KeyGroupRange rightGroups3 = getGroupsForSubtask(maxParallelism, 2, 1);
+		executionConfig.setUseSnapshotCompression(false);
 		InternalStateBackend newLeftBackend = createStateBackend(maxParallelism, leftGroups3, classLoader, localRecoveryConfig, executionConfig);
 		InternalStateBackend newRightBackend = createStateBackend(maxParallelism, rightGroups3, classLoader, localRecoveryConfig, executionConfig);
 
