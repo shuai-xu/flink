@@ -24,6 +24,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.api.common.{ExecutionMode, JobExecutionResult}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.runtime.client.JobExecutionException
+import org.apache.flink.runtime.schedule.VertexInputTracker.{InputDependencyConstraint, VertexInputTrackerOptions}
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.{StreamGraph, StreamGraphGenerator}
@@ -167,6 +168,15 @@ class BatchTableEnvironment(
     mergeParameters()
     val context = StreamGraphGenerator.Context.buildBatchProperties(streamEnv)
     if (getConfig.getConf.getBoolean(TableConfigOptions.SQL_EXEC_DATA_EXCHANGE_MODE_ALL_BATCH)) {
+      val constraint = getConfig.getConf.getValue(
+        VertexInputTrackerOptions.INPUT_DEPENDENCY_CONSTRAINT)
+      // When the user does not set this value,
+      // in batch mode, use ALL to avoid deadlock and resource utilization rate.
+      if (constraint == null) {
+        getConfig.getConf.setString(
+          VertexInputTrackerOptions.INPUT_DEPENDENCY_CONSTRAINT,
+          InputDependencyConstraint.ALL.toString)
+      }
       context.getExecutionConfig.setExecutionMode(ExecutionMode.BATCH)
     } else {
       context.getExecutionConfig.setExecutionMode(ExecutionMode.PIPELINED)

@@ -18,21 +18,17 @@
 
 package org.apache.flink.table.sources.parquet
 
-import java.nio.file.Files
-import java.util
-
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.{FileStatus, Path}
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.api.java.BatchTableEnvironment
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
-import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.dataformat.Decimal
-import org.apache.flink.table.runtime.utils.TableProgramsTestBase.TableConfigMode
-import org.apache.flink.table.runtime.utils.{CommonTestData, TableProgramsCollectionTestBase}
+import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.sinks.parquet.ParquetTableSink
 import org.apache.flink.table.util.ExecResourceUtil
 import org.apache.flink.test.util.TestBaseUtils
+
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapreduce.lib.input.FileSplit
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl
@@ -41,23 +37,16 @@ import org.apache.parquet.example.data.GroupValueSource
 import org.apache.parquet.hadoop.example.ExampleInputFormat
 import org.junit.Assert.assertEquals
 import org.junit.{Assert, Before, Test}
-import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
+
+import java.nio.file.Files
+import java.util
 
 import scala.collection.JavaConversions._
 
-@RunWith(classOf[Parameterized])
-class ParquetTableSinkITCase(configMode: TableConfigMode)
-  extends TableProgramsCollectionTestBase(configMode) {
-
-  var env: StreamExecutionEnvironment = _
-  var tEnv: BatchTableEnvironment = _
+class ParquetTableSinkITCase extends QueryTest {
 
   @Before
-  def setUp(): Unit =
-  {
-    env = StreamExecutionEnvironment.getExecutionEnvironment
-    tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig)
+  def setUp(): Unit = {
     tEnv.getConfig.getConf.setString(
       TableConfigOptions.SQL_RESOURCE_INFER_MODE,
       ExecResourceUtil.InferMode.ONLY_SOURCE.toString)

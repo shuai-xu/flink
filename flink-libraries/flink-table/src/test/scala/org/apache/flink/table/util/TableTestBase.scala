@@ -290,6 +290,8 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
   val javaTableEnv: JBatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(javaEnv)
   val env = new StreamExecutionEnvironment(javaEnv)
   val tableEnv: BatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(env)
+  tableEnv.getConfig.getConf.setBoolean(
+    TableConfigOptions.SQL_EXEC_DATA_EXCHANGE_MODE_ALL_BATCH, false)
   tableEnv.getConfig.setCalciteConfig(CalciteConfig.createBuilder().build())
   tableEnv.getConfig.setSubsectionOptimization(true)
 

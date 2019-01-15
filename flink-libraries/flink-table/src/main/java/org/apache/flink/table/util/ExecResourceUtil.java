@@ -36,19 +36,6 @@ public class ExecResourceUtil {
 	 */
 	public static final long SIZE_IN_MB =  1024L * 1024;
 
-	/**
-	 * Sets the HashTable preferred memory for hashJoin operator. It defines the upper limit.
-	 */
-	public static final ConfigOption<Integer> SQL_EXEC_HASH_JOIN_TABLE_PREFER_MEM =
-			key("sql.exec.hash-join.table-prefer-memory-mb")
-			.defaultValue(-1)
-			.withDescription("Sets the HashTable preferred memory for hashJoin operator. It defines the upper limit.");
-
-	public static final ConfigOption<Integer> SQL_EXEC_HASH_AGG_TABLE_PREFER_MEM =
-			key("sql.exec.hash-agg.table-prefer-memory-mb")
-			.defaultValue(-1)
-			.withDescription("Sets the table preferred memory size of hashAgg operator. It defines the upper limit.");
-
 	public static final ConfigOption<Integer> SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM =
 			key("sql.exec.infer-resource.operator.min-parallelism")
 			.defaultValue(1)
@@ -139,8 +126,7 @@ public class ExecResourceUtil {
 	 * @return the prefer managedMemory for sort buffer.
 	 */
 	public static int getSortBufferManagedPreferredMemory(Configuration tableConf) {
-		return tableConf.getInteger(
-				TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM_PREFER);
+		return tableConf.getInteger(TableConfigOptions.SQL_EXEC_SORT_BUFFER_PREFER_MEM);
 	}
 
 	/**
@@ -149,8 +135,7 @@ public class ExecResourceUtil {
 	 * @return the max managedMemory for sort buffer.
 	 */
 	public static int getSortBufferManagedMaxMemory(Configuration tableConf) {
-		return tableConf.getInteger(
-				TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM_MAX);
+		return tableConf.getInteger(TableConfigOptions.SQL_EXEC_SORT_BUFFER_MAX_MEM);
 	}
 
 	/**
@@ -303,9 +288,22 @@ public class ExecResourceUtil {
 	 * @return the preferred managedMemory for hashJoin table.
 	 */
 	public static int getHashJoinTableManagedPreferredMemory(Configuration tableConf) {
-		int memory = tableConf.getInteger(SQL_EXEC_HASH_JOIN_TABLE_PREFER_MEM);
+		int memory = tableConf.getInteger(TableConfigOptions.SQL_EXEC_HASH_JOIN_TABLE_PREFER_MEM);
 		if (memory <= 0) {
 			memory = getHashJoinTableManagedMemory(tableConf);
+		}
+		return memory;
+	}
+
+	/**
+	 * Gets the max managedMemory for hashJoin table.
+	 * @param tableConf Configuration.
+	 * @return the max managedMemory for hashJoin table.
+	 */
+	public static int getHashJoinTableManagedMaxMemory(Configuration tableConf) {
+		int memory = tableConf.getInteger(TableConfigOptions.SQL_EXEC_HASH_JOIN_TABLE_MAX_MEM);
+		if (memory <= 0) {
+			memory = getHashJoinTableManagedPreferredMemory(tableConf);
 		}
 		return memory;
 	}
@@ -316,9 +314,22 @@ public class ExecResourceUtil {
 	 * @return the preferred managedMemory for hashAgg.
 	 */
 	public static int getHashAggManagedPreferredMemory(Configuration tableConf) {
-		int memory = tableConf.getInteger(SQL_EXEC_HASH_AGG_TABLE_PREFER_MEM);
+		int memory = tableConf.getInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_PREFER_MEM);
 		if (memory <= 0) {
 			memory = getHashAggManagedMemory(tableConf);
+		}
+		return memory;
+	}
+
+	/**
+	 * Gets the max managedMemory for hashAgg.
+	 * @param tableConf Configuration.
+	 * @return the max managedMemory for hashAgg.
+	 */
+	public static int getHashAggManagedMaxMemory(Configuration tableConf) {
+		int memory = tableConf.getInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MAX_MEM);
+		if (memory <= 0) {
+			memory = getHashAggManagedPreferredMemory(tableConf);
 		}
 		return memory;
 	}

@@ -18,32 +18,21 @@
 
 package org.apache.flink.table.sources.orc
 
-import java.nio.file.Files
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.Path
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.api.java.BatchTableEnvironment
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
-import org.apache.flink.table.api.{TableConfig, TableEnvironment}
-import org.apache.flink.table.runtime.utils.TableProgramsCollectionTestBase
-import org.apache.flink.table.runtime.utils.TableProgramsTestBase.TableConfigMode
+import org.apache.flink.table.api.types.TypeConverters
+import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.sinks.orc.OrcTableSink
 import org.apache.flink.test.util.TestBaseUtils
 
-import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
 import org.junit.{Assert, Test}
+
+import java.nio.file.Files
 
 import scala.collection.JavaConversions._
 
-@RunWith(classOf[Parameterized])
-class OrcTableSinkITCase(configMode: TableConfigMode)
-  extends TableProgramsCollectionTestBase(configMode) {
-
-  val conf: TableConfig = config
-  val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-  val tEnv: BatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(env, conf)
+class OrcTableSinkITCase extends QueryTest {
 
   @Test
   def testOrcTableSinkOverwrite(): Unit = {

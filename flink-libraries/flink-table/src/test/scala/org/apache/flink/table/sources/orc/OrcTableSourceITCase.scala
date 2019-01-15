@@ -18,24 +18,15 @@
 
 package org.apache.flink.table.sources.orc
 
-import java.util
-
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.{TableConfigOptions, TableEnvironment}
-import org.apache.flink.table.runtime.utils.{TableProgramsCollectionTestBase, TableProgramsTestBase}
-import org.apache.flink.table.runtime.utils.TableProgramsTestBase.TableConfigMode
-import org.apache.flink.table.sources.orc.OrcTableSourceITCase.CopyMode
+import org.apache.flink.table.api.TableConfigOptions
+import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.test.util.TestBaseUtils
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
 
-import scala.collection.JavaConversions._
+import org.junit.Test
+
 import scala.collection.JavaConverters._
 
-@RunWith(classOf[Parameterized])
-class OrcTableSourceITCase(configMode: TableConfigMode, copyToFlink: CopyMode)
-  extends TableProgramsCollectionTestBase(configMode) {
+class OrcTableSourceITCase extends QueryTest {
 
   @Test
   def testBatchExecOrcTableSource(): Unit = {
@@ -50,7 +41,7 @@ class OrcTableSourceITCase(configMode: TableConfigMode, copyToFlink: CopyMode)
       "8,Kelly,Williams,2.34").mkString("\n")
 
     val vectorColumnRowTable =
-      CommonOrcTestData.getOrcVectorizedColumnRowTableSource(copyToFlink.copyMode)
+      CommonOrcTestData.getOrcVectorizedColumnRowTableSource(false)
     val vectorColumnRowTableName = "vectorColumnRowTable"
     val vectorColumnRowSql = "SELECT id, `first`, `last`, score FROM vectorColumnRowTable"
     checkBatchExecOrcSource(vectorColumnRowTable,
@@ -70,7 +61,7 @@ class OrcTableSourceITCase(configMode: TableConfigMode, copyToFlink: CopyMode)
       "8,Kelly,Williams").mkString("\n")
 
     val vectorColumnRowTable =
-      CommonOrcTestData.getOrcVectorizedColumnRowTableSource(copyToFlink.copyMode)
+      CommonOrcTestData.getOrcVectorizedColumnRowTableSource(false)
     val vectorColumnRowTableName = "vectorColumnRowTable"
     val vectorColumnRowSql = "SELECT id, `first`, `last` FROM vectorColumnRowTable"
     checkBatchExecOrcSource(vectorColumnRowTable,
@@ -86,7 +77,7 @@ class OrcTableSourceITCase(configMode: TableConfigMode, copyToFlink: CopyMode)
 
     // The reader will fetch first 1000 rows for Row stride must be at least 1000
     val vectorColumnRowTable =
-      CommonOrcTestData.getBigOrcVectorizedColumnRowTableSource(copyToFlink.copyMode)
+      CommonOrcTestData.getBigOrcVectorizedColumnRowTableSource(false)
     val vectorColumnRowTableName = "vectorColumnRowTable"
     val vectorColumnRowSql =
       "SELECT id, `first`, `last` FROM vectorColumnRowTable " +
@@ -102,7 +93,7 @@ class OrcTableSourceITCase(configMode: TableConfigMode, copyToFlink: CopyMode)
     ).mkString("\n")
 
     val vectorColumnRowTable =
-      CommonOrcTestData.getOrcVectorizedColumnRowTableSourceFromPeopleFile(copyToFlink.copyMode)
+      CommonOrcTestData.getOrcVectorizedColumnRowTableSourceFromPeopleFile(false)
     val vectorColumnRowTableName = "vectorColumnRowTable"
     val sql = "SELECT name FROM vectorColumnRowTable WHERE age BETWEEN 13 AND 19"
     checkBatchExecOrcSource(vectorColumnRowTable,
@@ -118,7 +109,7 @@ class OrcTableSourceITCase(configMode: TableConfigMode, copyToFlink: CopyMode)
     ).mkString("\n")
 
     val vectorColumnRowTable =
-      CommonOrcTestData.getOrcVectorizedColumnRowTableSourceFromPeopleFile(copyToFlink.copyMode)
+      CommonOrcTestData.getOrcVectorizedColumnRowTableSourceFromPeopleFile(false)
     val vectorColumnRowTableName = "vectorColumnRowTable"
     val sql = "SELECT name FROM vectorColumnRowTable"
     checkBatchExecOrcSource(vectorColumnRowTable,
@@ -130,30 +121,10 @@ class OrcTableSourceITCase(configMode: TableConfigMode, copyToFlink: CopyMode)
       name: String,
       sql: String,
       expected: String): Unit = {
-
-    val tableConfig = config
-    tableConfig.getConf.setInteger(
+    conf.getConf.setInteger(
       TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_PARALLELISM_MAX, 1)
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getBatchTableEnvironment(env, tableConfig)
     tEnv.registerTableSource(name, table)
     val results = tEnv.sqlQuery(sql).collect()
     TestBaseUtils.compareResultAsText(results.asJava, expected)
-  }
-}
-
-object OrcTableSourceITCase {
-
-  case class CopyMode(copyMode: Boolean)
-
-  val copyToFlinkOn = CopyMode(true)
-  val copyToFlinkOff = CopyMode(false)
-
-  @Parameterized.Parameters(name = "Table config = {0}, copyToFlink = {1}")
-  def parameters(): util.Collection[Array[java.lang.Object]] = {
-    Seq[Array[AnyRef]](
-      Array(TableProgramsTestBase.DEFAULT, copyToFlinkOn),
-      Array(TableProgramsTestBase.DEFAULT, copyToFlinkOff))
   }
 }

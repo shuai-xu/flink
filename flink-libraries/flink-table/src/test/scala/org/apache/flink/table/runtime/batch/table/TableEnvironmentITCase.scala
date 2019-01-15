@@ -18,18 +18,15 @@
 
 package org.apache.flink.table.runtime.batch.table
 
-import java.util
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes, TypeInfoWrappedDataType}
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.utils.TableProgramsTestBase
 import org.apache.flink.table.util.{CollectionBatchExecTable, MemoryTableSourceSinkUtil}
 import org.apache.flink.test.util.TestBaseUtils
 
 import org.junit.Assert.assertEquals
 import org.junit._
-import org.junit.runners.Parameterized
 
 import scala.collection.JavaConverters._
 
@@ -154,16 +151,6 @@ class TableEnvironmentITCase extends QueryTest {
     tEnv.registerTable("s", tEnv.fromCollection(data, "a, b, c, d"))
     tEnv.sqlUpdate("insert into console select * from s")
     tEnv.execute()
-  }
-}
-
-object TableEnvironmentITCase {
-
-  @Parameterized.Parameters(name = "Table config = {0}")
-  def parameters(): util.Collection[Array[java.lang.Object]] = {
-    Seq[Array[AnyRef]](
-      Array(TableProgramsTestBase.DEFAULT)
-    ).asJava
   }
 }
 

@@ -21,21 +21,18 @@ package org.apache.flink.table.temptable
 import java.io.File
 import java.nio.file.Files
 import java.util.UUID
-
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.api.common.restartstrategy.RestartStrategies
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.TableEnvironment
+import org.apache.flink.table.runtime.batch.sql.QueryTest
+
 import org.junit.{Assert, Test}
 
-class TableServiceExceptionTest {
+class TableServiceExceptionTest extends QueryTest {
 
   @Test
   def testTableServiceUnavailable(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setRestartStrategy(RestartStrategies.fixedDelayRestart(3, 1000))
-    val tEnv = TableEnvironment.getBatchTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
     val rootPath = Files.createTempDirectory(UUID.randomUUID().toString)
       .toAbsolutePath.toString

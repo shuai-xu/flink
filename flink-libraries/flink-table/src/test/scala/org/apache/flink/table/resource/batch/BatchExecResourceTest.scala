@@ -265,7 +265,7 @@ object BatchExecResourceTest {
       33
     )
     tableConfig.getConf.setInteger(
-      ExecResourceUtil.SQL_EXEC_HASH_AGG_TABLE_PREFER_MEM,
+      TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_PREFER_MEM,
       37
     )
     tableConfig.getConf.setInteger(
@@ -273,7 +273,7 @@ object BatchExecResourceTest {
       43
     )
     tableConfig.getConf.setInteger(
-      ExecResourceUtil.SQL_EXEC_HASH_JOIN_TABLE_PREFER_MEM,
+      TableConfigOptions.SQL_EXEC_HASH_JOIN_TABLE_PREFER_MEM,
       47
     )
     tableConfig.getConf.setInteger(
@@ -281,11 +281,11 @@ object BatchExecResourceTest {
       53
     )
     tableConfig.getConf.setInteger(
-      TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM_PREFER,
+      TableConfigOptions.SQL_EXEC_SORT_BUFFER_PREFER_MEM,
       57
     )
     tableConfig.getConf.setInteger(
-      TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM_MAX,
+      TableConfigOptions.SQL_EXEC_SORT_BUFFER_MAX_MEM,
       57
     )
     tableConfig.getConf.setLong(

@@ -60,6 +60,8 @@ class QueryTest {
 
   TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
   val conf: TableConfig = QueryTest.initConfigForTest(new TableConfig)
+  //TODO test batch mode
+  conf.getConf.setBoolean(TableConfigOptions.SQL_EXEC_DATA_EXCHANGE_MODE_ALL_BATCH, false)
   val jobConfig = new Configuration()
   val env: ScalaExecEnv = generatorScalaTestEnv
   val javaEnv: StreamExecutionEnvironment = generatorTestEnv

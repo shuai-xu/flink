@@ -29,7 +29,6 @@ import org.apache.flink.table.dataformat.Decimal
 import org.apache.flink.table.expressions.Literal
 import org.apache.flink.table.expressions.utils.{Func13, SplitUDF}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.utils.TableProgramsTestBase
 import org.apache.flink.table.util.CollectionBatchExecTable
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.test.util.TestBaseUtils
@@ -558,16 +557,6 @@ class CalcITCase extends QueryTest {
 
     val expected = List("a,a,d,d,e,e", "x,x,z,z,z,z").mkString("\n")
     TestBaseUtils.compareResultAsText(results.asJava, expected)
-  }
-}
-
-object CalcITCase {
-
-  @Parameterized.Parameters(name = "Table config = {0}")
-  def parameters(): util.Collection[Array[java.lang.Object]] = {
-    Seq[Array[AnyRef]](
-      Array(TableProgramsTestBase.DEFAULT),
-      Array(TableProgramsTestBase.NO_NULL)).asJava
   }
 }
 

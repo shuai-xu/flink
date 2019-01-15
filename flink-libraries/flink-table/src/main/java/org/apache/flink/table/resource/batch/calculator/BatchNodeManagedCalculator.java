@@ -112,14 +112,16 @@ public class BatchNodeManagedCalculator extends BatchExecNodeVisitor {
 		visitChildren(hashAgg);
 		int	reservedMem = ExecResourceUtil.getHashAggManagedMemory(tableConf);
 		int	preferMem = ExecResourceUtil.getHashAggManagedPreferredMemory(tableConf);
-		hashAgg.getResource().setManagedMem(reservedMem, preferMem, preferMem);
+		int	maxMem = ExecResourceUtil.getHashAggManagedMaxMemory(tableConf);
+		hashAgg.getResource().setManagedMem(reservedMem, preferMem, maxMem);
 	}
 
 	private void calculateHashWindowAgg(BatchExecHashWindowAggregateBase hashWindowAgg) {
 		visitChildren(hashWindowAgg);
 		int reservedMem = ExecResourceUtil.getHashAggManagedMemory(tableConf);
 		int preferMem = ExecResourceUtil.getHashAggManagedPreferredMemory(tableConf);
-		hashWindowAgg.getResource().setManagedMem(reservedMem, preferMem, preferMem);
+		int	maxMem = ExecResourceUtil.getHashAggManagedMaxMemory(tableConf);
+		hashWindowAgg.getResource().setManagedMem(reservedMem, preferMem, maxMem);
 	}
 
 	@Override
@@ -137,20 +139,22 @@ public class BatchNodeManagedCalculator extends BatchExecNodeVisitor {
 		visitChildren(hashJoin);
 		int reservedMem = ExecResourceUtil.getHashJoinTableManagedMemory(tableConf);
 		int preferMem = ExecResourceUtil.getHashJoinTableManagedPreferredMemory(tableConf);
-		hashJoin.getResource().setManagedMem(reservedMem, preferMem, preferMem);
+		int maxMem = ExecResourceUtil.getHashJoinTableManagedMaxMemory(tableConf);
+		hashJoin.getResource().setManagedMem(reservedMem, preferMem, maxMem);
 	}
 
 	@Override
 	public void visit(BatchExecSortMergeJoinBase sortMergeJoin) {
 		visitChildren(sortMergeJoin);
-		int externalBufferMemoryMb = ExecResourceUtil.getExternalBufferManagedMemory(
-				tableConf) * sortMergeJoin.getExternalBufferNum();
+		int externalBufferMemoryMb = ExecResourceUtil.getExternalBufferManagedMemory(tableConf) *
+				sortMergeJoin.getExternalBufferNum();
 		int sortMemory = ExecResourceUtil.getSortBufferManagedMemory(tableConf);
 		int reservedMemory = sortMemory * 2 + externalBufferMemoryMb;
-		int preferSortMemory = ExecResourceUtil.getSortBufferManagedPreferredMemory(
-				tableConf);
+		int preferSortMemory = ExecResourceUtil.getSortBufferManagedPreferredMemory(tableConf);
 		int preferMemory = preferSortMemory * 2 + externalBufferMemoryMb;
-		sortMergeJoin.getResource().setManagedMem(reservedMemory, preferMemory, preferMemory);
+		int maxSortMemory = ExecResourceUtil.getSortBufferManagedMaxMemory(tableConf);
+		int maxMemory = maxSortMemory * 2 + externalBufferMemoryMb;
+		sortMergeJoin.getResource().setManagedMem(reservedMemory, preferMemory, maxMemory);
 	}
 
 	@Override

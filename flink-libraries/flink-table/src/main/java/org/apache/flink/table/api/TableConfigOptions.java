@@ -344,7 +344,7 @@ public class TableConfigOptions {
 
 	public static final ConfigOption<Boolean> SQL_EXEC_DATA_EXCHANGE_MODE_ALL_BATCH =
 			key("sql.exec.data-exchange-mode.all-batch")
-			.defaultValue(false)
+			.defaultValue(true)
 			.withDescription("Sets Whether all data-exchange-mode is batch.");
 
 	public static final ConfigOption<Boolean> SQL_EXEC_OPERATOR_METRIC_DUMP_ENABLED =
@@ -373,38 +373,62 @@ public class TableConfigOptions {
 
 	public static final ConfigOption<Integer> SQL_RESOURCE_HASH_AGG_TABLE_MEM =
 			key("sql.resource.hash-agg.table.memory.mb")
-			.defaultValue(128)
+			.defaultValue(32)
 			.withDescription("Sets the table reserved memory size of hashAgg operator. It defines the lower limit.");
 
 	public static final ConfigOption<Integer> SQL_RESOURCE_HASH_JOIN_TABLE_MEM =
 			key("sql.resource.hash-join.table.memory.mb")
-			.defaultValue(512)
+			.defaultValue(32)
 			.withDescription("Sets the HashTable reserved memory for hashJoin operator. It defines the lower limit for.");
 
 	public static final ConfigOption<Integer> SQL_RESOURCE_SORT_BUFFER_MEM =
 			key("sql.resource.sort.buffer.memory.mb")
-			.defaultValue(256)
+			.defaultValue(32)
 			.withDescription("Sets the buffer reserved memory size for sort. It defines the lower limit for the sort.");
-
-	public static final ConfigOption<Integer> SQL_RESOURCE_SORT_BUFFER_MEM_PREFER =
-			key("sql.resource.sort.buffer.memory.prefer.mb")
-			.defaultValue(512)
-			.withDescription("Sets the preferred buffer memory size for sort. " +
-				"It defines the applied memory for the sort.");
-
-	public static final ConfigOption<Integer> SQL_RESOURCE_SORT_BUFFER_MEM_MAX =
-			key("sql.resource.sort.buffer.memory.max.mb")
-			.defaultValue(1024)
-			.withDescription("Sets the max buffer memory size for sort. It defines the upper memory for the sort.");
 
 	public static final ConfigOption<Integer> SQL_RESOURCE_EXTERNAL_BUFFER_MEM =
 			key("sql.resource.external-buffer.memory.mb")
-			.defaultValue(128)
+			.defaultValue(10)
 			.withDescription("Sets the externalBuffer memory size that is used in sortMergeJoin and overWindow.");
+
+	// ------------------------------------------------------------------------
+	//  prefer and max memory resource Options
+	// ------------------------------------------------------------------------
+
+	public static final ConfigOption<Integer> SQL_EXEC_SORT_BUFFER_PREFER_MEM =
+			key("sql.exec.sort.buffer-prefer-memory-mb")
+					.defaultValue(128)
+					.withDescription("Sets the preferred buffer memory size for sort. " +
+							"It defines the applied memory for the sort.");
+
+	public static final ConfigOption<Integer> SQL_EXEC_SORT_BUFFER_MAX_MEM =
+			key("sql.exec.sort.buffer-max-memory-mb")
+					.defaultValue(512)
+					.withDescription("Sets the max buffer memory size for sort. It defines the upper memory for the sort.");
+
+	public static final ConfigOption<Integer> SQL_EXEC_HASH_JOIN_TABLE_PREFER_MEM =
+			key("sql.exec.hash-join.table-prefer-memory-mb")
+					.defaultValue(128)
+					.withDescription("Sets the HashTable preferred memory for hashJoin operator. It defines the upper limit.");
+
+	public static final ConfigOption<Integer> SQL_EXEC_HASH_JOIN_TABLE_MAX_MEM =
+			key("sql.exec.hash-join.table-max-memory-mb")
+					.defaultValue(512)
+					.withDescription("Sets the HashTable max memory for hashJoin operator. It defines the upper limit.");
+
+	public static final ConfigOption<Integer> SQL_EXEC_HASH_AGG_TABLE_PREFER_MEM =
+			key("sql.exec.hash-agg.table-prefer-memory-mb")
+					.defaultValue(128)
+					.withDescription("Sets the table preferred memory size of hashAgg operator. It defines the upper limit.");
+
+	public static final ConfigOption<Integer> SQL_EXEC_HASH_AGG_TABLE_MAX_MEM =
+			key("sql.exec.hash-agg.table-max-memory-mb")
+					.defaultValue(512)
+					.withDescription("Sets the table max memory size of hashAgg operator. It defines the upper limit.");
 
 	public static final ConfigOption<Integer> SQL_RESOURCE_SINK_DEFAULT_MEM =
 			key("sql.resource.sink.default.memory.mb")
-			.defaultValue(128)
+			.defaultValue(32)
 			.withDescription("Sets the heap memory size of sink operator.");
 
 	public static final ConfigOption<Integer> SQL_RESOURCE_SINK_PARALLELISM =
@@ -415,7 +439,7 @@ public class TableConfigOptions {
 
 	public static final ConfigOption<Integer> SQL_RESOURCE_SOURCE_DEFAULT_MEM =
 			key("sql.resource.source.default.memory.mb")
-			.defaultValue(128)
+			.defaultValue(32)
 			.withDescription("Sets the heap memory size of source operator.");
 
 	public static final ConfigOption<Integer> SQL_RESOURCE_DEFAULT_PARALLELISM =
@@ -437,7 +461,7 @@ public class TableConfigOptions {
 
 	public static final ConfigOption<Integer> SQL_RESOURCE_DEFAULT_MEM =
 			key("sql.resource.default.memory.mb")
-			.defaultValue(64)
+			.defaultValue(32)
 			.withDescription("Default heap memory size for each operator.");
 
 	public static final ConfigOption<Long> SQL_RESOURCE_INFER_ROWS_PER_PARTITION =
@@ -453,7 +477,7 @@ public class TableConfigOptions {
 
 	public static final ConfigOption<Integer> SQL_RESOURCE_INFER_SOURCE_MB_PER_PARTITION =
 			key("sql.resource.infer.source.mb-per-partition")
-			.defaultValue(Integer.MAX_VALUE)
+			.defaultValue(100)
 			.withDescription("Sets how many data size in MB one partition processes. We will infer the source parallelism" +
 				" according to source data size.");
 

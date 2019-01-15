@@ -18,20 +18,15 @@
 
 package org.apache.flink.table.sources.parquet
 
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.{TableConfigOptions, TableEnvironment}
-import org.apache.flink.table.runtime.utils.TableProgramsCollectionTestBase
-import org.apache.flink.table.runtime.utils.TableProgramsTestBase.TableConfigMode
+import org.apache.flink.table.api.TableConfigOptions
+import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.test.util.TestBaseUtils
+
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
 
 import scala.collection.JavaConverters._
 
-@RunWith(classOf[Parameterized])
-class ParquetTableSourceITCase(configMode: TableConfigMode)
-  extends TableProgramsCollectionTestBase(configMode) {
+class ParquetTableSourceITCase extends QueryTest {
 
   @Test
   def testBatchExecParquetTableSource(): Unit = {
@@ -67,7 +62,7 @@ class ParquetTableSourceITCase(configMode: TableConfigMode)
 
   @Test
   def testDecimalType(): Unit = {
-    config.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
     val expected = Seq(
       "0.00,0,0.0000,0E-9,0,0.0,0E-10,0,0.00000,0E-18,0,0,0.000",
       "1.23,999999999,12345.6700,1E-9,2147483648,12345678.9,1E-10,999999999999999999," +
@@ -90,7 +85,7 @@ class ParquetTableSourceITCase(configMode: TableConfigMode)
 
   @Test
   def testDecimalTypeWithDictionary(): Unit = {
-    config.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
+    conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
     val expected = Seq(
       "0.00,0,0.0000,0E-9,0,0.0,0E-10,0,0.00000,0E-18,0,0,0.000",
       "1.23,999999999,12345.6700,1E-9,2147483648,12345678.9,1E-10,999999999999999999," +
@@ -265,8 +260,6 @@ class ParquetTableSourceITCase(configMode: TableConfigMode)
       name: String,
       sql: String,
       expected: String): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getBatchTableEnvironment(env, config)
     tEnv.registerTableSource(name, table)
     val results = tEnv.sqlQuery(sql).collect()
     TestBaseUtils.compareResultAsText(results.asJava, expected)
