@@ -827,11 +827,11 @@ FROM
 {% highlight sql %}
 SELECT *
 FROM Orders WHERE Orders.productId IN 
-(SELECT Product.id FROM Product) AND Orders.ordertime IS NOT NULL
+(SELECT Product.id FROM Product) [AND Orders.ordertime IS NOT NULL]
 
 SELECT *
 FROM Orders WHERE EXISTS 
-(SELECT * FROM Product WHERE Orders.productId = Product.id) AND Orders.ordertime IS NOT NULL
+(SELECT * FROM Product WHERE Orders.productId = Product.id) [AND Orders.ordertime IS NOT NULL]
 {% endhighlight %}
       </td>
     </tr>
@@ -846,11 +846,11 @@ FROM Orders WHERE EXISTS
 {% highlight sql %}
 SELECT *
 FROM Orders WHERE Orders.productId NOT IN 
-(SELECT Product.id FROM Product) AND Orders.ordertime IS NOT NULL
+(SELECT Product.id FROM Product) [AND Orders.ordertime IS NOT NULL]
 
 SELECT *
 FROM Orders WHERE NOT EXISTS 
-(SELECT * FROM Product WHERE Orders.productId = Product.id) AND Orders.ordertime IS NOT NULL
+(SELECT * FROM Product WHERE Orders.productId = Product.id) [AND Orders.ordertime IS NOT NULL]
 {% endhighlight %}
       </td>
     </tr>

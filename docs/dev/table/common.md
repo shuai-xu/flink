@@ -1074,7 +1074,21 @@ val table: Table = tableEnv.fromDataStream(stream, 'name as 'myName)
 Query Optimization
 ------------------
 
-Apache Flink leverages Apache Calcite to optimize and translate queries. The optimization currently performed include projection and filter push-down, subquery decorrelation, and other kinds of query rewriting. Flink optimizes the order of joins based on cost if join-reorder is enabled (`sql.optimizer.join-reorder.enabled` is true), otherwise executes them in the same order as defined in the query (order of Tables in the `FROM` clause and/or order of join predicates in the `WHERE` clause).
+The foundation of Apache Flink query optimization is Apache Calcite. In addition to apply Calcite in optimization, Flink also does a lot to enhance it.
+
+Fist of all, Flink does a series of rule-based optimization and cost-based optimization including:
+* special subquery rewriting, including two part: 1. converts IN and EXISTS into left semi-join 2.converts NOT IN and NOT EXISTS into left anti-join. Note: only IN/EXISTS/NOT IN/NOT EXISTS in conjunctive condition is supported.
+* normal subquery decorrelation based on Calcite
+* projection pruning
+* filter push down
+* partition pruning
+* join reorder if it is enabled (`sql.optimizer.join-reorder.enabled` is true)
+* skew join rewriting if skew information is available, pick the skewed values to join separately, and then union the result with the non-skew value join
+* other kinds of query rewriting
+
+Secondly, Flink introduces rich statistics of data source and propagate those statistics up to the whole plan based on all kinds of extended `MetadataHandler`s. Optimizer could choose better plan based on those metadata.
+
+Finally, Flink provides fine-grain cost of each operator, which takes io, cpu, network and memory into account. Cost-based optimization could choose better plan based on fine-grain cost definition .
 
 It is possible to customize optimization programs referencing to `FlinkBatchPrograms`(default optimization programs for batch) or `FlinkStreamPrograms`(default optimization programs for stream), and replace the default optimization programs by providing a `CalciteConfig` object. This can be created via a builder by calling `CalciteConfig.createBuilder())` and is provided to the TableEnvironment by calling `tableEnv.getConfig.setCalciteConfig(calciteConfig)`. 
 
