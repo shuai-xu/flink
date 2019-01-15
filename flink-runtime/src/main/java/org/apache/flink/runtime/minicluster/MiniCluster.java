@@ -395,7 +395,10 @@ public class MiniCluster implements JobExecutorService, AutoCloseableAsync {
 				dispatcherLeaderRetriever.start(dispatcherGatewayRetriever);
 
 				this.healthManager = new HealthManager(
-						configuration, dispatcherRestEndpoint.getRestBaseUrl());
+						dispatcherRestEndpoint.getRestBaseUrl(),
+						metricRegistry,
+						configuration
+				);
 				this.healthManager.start();
 			}
 			catch (Exception e) {

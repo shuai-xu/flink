@@ -22,9 +22,11 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.healthmanager.metrics.HealthManagerMetricGroup;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.metrics.RestServerMetricProvider;
 import org.apache.flink.runtime.jobgraph.JobStatus;
+import org.apache.flink.runtime.metrics.MetricRegistry;
 import org.apache.flink.runtime.util.ExecutorThreadFactory;
 
 import org.slf4j.Logger;
@@ -38,7 +40,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * Health manager monitors status of the jobs.
@@ -65,14 +66,23 @@ public class HealthManager {
 	/** All job Running. */
 	private Map<JobID, HealthMonitor> jobMonitors = new HashMap<>();
 
+	/** Handler of the job checker timed task. */
 	private ScheduledFuture timedTaskHandler;
 
-	public HealthManager(Configuration config, String restServerAddress) throws Exception {
+	/** MetricsGroup for HealthManager. */
+	private HealthManagerMetricGroup metricGroup;
+
+	public HealthManager(
+			String restServerAddress,
+			MetricRegistry metricRegistry,
+			Configuration config) throws Exception {
 
 		this.config = config;
 
 		this.executorService = new ScheduledThreadPoolExecutor(
 				4, new ExecutorThreadFactory("health-manager"));
+
+		this.metricGroup = new HealthManagerMetricGroup(metricRegistry);
 
 		this.restServerClient = new RestServerClientImpl(restServerAddress, config, executorService);
 
@@ -93,11 +103,17 @@ public class HealthManager {
 		if (timedTaskHandler != null) {
 			timedTaskHandler.cancel(true);
 		}
+
 		for (HealthMonitor monitor : jobMonitors.values()) {
 			monitor.stop();
 		}
+
 		jobMonitors.clear();
 		executorService.shutdown();
+
+		if (metricGroup != null) {
+			metricGroup.close();
+		}
 	}
 
 	/**
@@ -108,45 +124,53 @@ public class HealthManager {
 		@Override
 		public void run() {
 
-			List<JobID> runningIds = null;
+			Map<JobID, String> runningIds = new HashMap<>();
 
 			try {
-				runningIds = restServerClient.listJob()
+				restServerClient.listJob()
 						.stream()
 						.filter(status -> status.getJobState().equals(JobStatus.RUNNING))
-						.map(status -> status.getJobId()).collect(Collectors.toList());
-			} catch (Exception e) {
+						.forEach(status -> runningIds.put(status.getJobId(), status.getJobName()));
+			} catch (Throwable e) {
 				// skip current round check since some wrong in rest server.
 				LOGGER.warn("Wait rest server to be ready", e);
 				return;
 			}
+			try {
+				for (JobID id : runningIds.keySet()) {
+					if (!jobMonitors.containsKey(id)) {
+						LOGGER.info("New job submitted, id:" + id);
+						HealthMonitor newMonitor = new HealthMonitor(
+								id,
+								metricProvider,
+								restServerClient,
+								metricGroup.addJob(id, runningIds.get(id)),
+								executorService, config);
+						try {
+							newMonitor.start();
+						} catch (Exception e) {
+							LOGGER.info("Fail to start monitor for job:" + id, e);
+							continue;
+						}
 
-			for (JobID id: runningIds) {
-				if (!jobMonitors.containsKey(id)) {
-					LOGGER.info("New job submitted, id:" + id);
-					HealthMonitor newMonitor = new HealthMonitor(
-							id, metricProvider, restServerClient, executorService, config);
-					try {
-						newMonitor.start();
-					} catch (Exception e) {
-						LOGGER.info("Fail to start monitor for job:" + id);
-						continue;
+						jobMonitors.put(id, newMonitor);
 					}
-
-					jobMonitors.put(id, newMonitor);
 				}
-			}
 
-			List<JobID> finishedJob = new LinkedList<>();
-			for (JobID id : jobMonitors.keySet()) {
-				if (!runningIds.contains(id)) {
-					LOGGER.info("New job finished or failed, id:" + id);
-					finishedJob.add(id);
+				List<JobID> finishedJob = new LinkedList<>();
+				for (JobID id : jobMonitors.keySet()) {
+					if (!runningIds.containsKey(id)) {
+						LOGGER.info("New job finished or failed, id:" + id);
+						finishedJob.add(id);
+						metricGroup.removeJob(id);
+					}
 				}
-			}
 
-			for (JobID id : finishedJob) {
-				jobMonitors.remove(id).stop();
+				for (JobID id : finishedJob) {
+					jobMonitors.remove(id).stop();
+				}
+			} catch (Throwable e) {
+				LOGGER.warn("Exception caught in job checker", e);
 			}
 		}
 	}

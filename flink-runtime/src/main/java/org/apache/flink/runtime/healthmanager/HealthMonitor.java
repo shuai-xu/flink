@@ -18,10 +18,14 @@
 
 package org.apache.flink.runtime.healthmanager;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.metrics.Gauge;
+import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.runtime.healthmanager.metrics.HealthMonitorMetricGroup;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.plugins.Action;
 import org.apache.flink.runtime.healthmanager.plugins.ActionSelector;
@@ -95,6 +99,7 @@ public class HealthMonitor {
 
 	private MetricProvider metricProvider;
 	private RestServerClient restServerClient;
+	private HealthMonitorMetricGroup metricGroup;
 	private ScheduledExecutorService executorService;
 
 	private ScheduledFuture timedTaskHandler;
@@ -104,10 +109,24 @@ public class HealthMonitor {
 
 	private volatile long lastExecution = 0;
 
+	private volatile long successActionCount = 0;
+	private volatile long failedActionCount = 0;
+
+	@VisibleForTesting
 	public HealthMonitor(
 			JobID jobID,
 			MetricProvider metricProvider,
 			RestServerClient visitor,
+			ScheduledExecutorService executorService,
+			Configuration config) {
+		this(jobID, metricProvider, visitor, null, executorService, config);
+	}
+
+	public HealthMonitor(
+			JobID jobID,
+			MetricProvider metricProvider,
+			RestServerClient visitor,
+			HealthMonitorMetricGroup metricGroup,
 			ScheduledExecutorService executorService,
 			Configuration config) {
 
@@ -116,6 +135,7 @@ public class HealthMonitor {
 		this.metricProvider = metricProvider;
 		this.restServerClient = visitor;
 		this.config = config.clone();
+		this.metricGroup = metricGroup;
 	}
 
 	public void start() throws Exception {
@@ -132,6 +152,22 @@ public class HealthMonitor {
 			loadActionSelector();
 			timedTaskHandler = executorService.scheduleAtFixedRate(
 					new HealthChecker(), 0, checkInterval, TimeUnit.MILLISECONDS);
+		}
+
+		if (metricGroup != null) {
+			MetricGroup actionMetrics = metricGroup.addGroup("action");
+			actionMetrics.gauge("success", new Gauge<Long>() {
+				@Override
+				public Long getValue() {
+					return successActionCount;
+				}
+			});
+			actionMetrics.gauge("failure", new Gauge<Long>() {
+				@Override
+				public Long getValue() {
+					return failedActionCount;
+				}
+			});
 		}
 	}
 
@@ -232,8 +268,8 @@ public class HealthMonitor {
 				Symptom symptom = null;
 				try {
 					symptom = detector.detect();
-				} catch (Exception e) {
-					e.printStackTrace();
+				} catch (Throwable e) {
+					LOGGER.warn("Exception caught in detector " + detector, e);
 				}
 				if (symptom != null) {
 					symptoms.add(symptom);
@@ -243,9 +279,13 @@ public class HealthMonitor {
 			// 2. diagnose and generate resolve action.
 			List<Action> actions = new LinkedList<>();
 			for (Resolver resolver : resolvers) {
-				Action action = resolver.resolve(symptoms);
-				if (action != null) {
-					actions.add(action);
+				try {
+					Action action = resolver.resolve(symptoms);
+					if (action != null) {
+						actions.add(action);
+					}
+				} catch (Throwable e) {
+					LOGGER.warn("Exception caught in resolver " + resolver, e);
 				}
 			}
 
@@ -254,7 +294,12 @@ public class HealthMonitor {
 			}
 
 			// 3. select an action to execute.
-			Action action = actionSelector.accept(actions);
+			Action action = null;
+			try {
+				action = actionSelector.accept(actions);
+			} catch (Throwable e) {
+				LOGGER.warn("Exception caught in action selector", e);
+			}
 
 			if (action != null) {
 				try {
@@ -277,14 +322,18 @@ public class HealthMonitor {
 
 						// 7. notify failure of an action.
 						actionSelector.actionFailed(action);
+						failedActionCount++;
 					} else {
 						LOGGER.info("Action {} validate succeed.", action);
 
 						// 6. notify success of an action.
 						actionSelector.actionSucceed(action);
+						successActionCount++;
 					}
 				} catch (Throwable e) {
+					LOGGER.warn("Action " + action + " execution failed.", e);
 					actionSelector.actionFailed(action);
+					failedActionCount++;
 				}
 
 				lastExecution = System.currentTimeMillis();

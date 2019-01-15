@@ -23,6 +23,7 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.client.JobStatusMessage;
 import org.apache.flink.runtime.healthmanager.metrics.RestServerMetricProvider;
 import org.apache.flink.runtime.jobgraph.JobStatus;
+import org.apache.flink.runtime.metrics.NoOpMetricRegistry;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -73,7 +74,11 @@ public class HealthManagerTest {
 		config.setLong("healthmanager.job.check.interval.ms", 100);
 		String restURL  = "http://localhost:12345";
 
-		HealthManager healthManager = new HealthManager(config, restURL);
+		HealthManager healthManager = new HealthManager(
+				restURL,
+				NoOpMetricRegistry.INSTANCE,
+				config
+		);
 		healthManager.start();
 		Thread.sleep(1000);
 		Mockito.verify(mockRestClient, Mockito.atLeast(3)).listJob();

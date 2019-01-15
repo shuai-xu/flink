@@ -378,7 +378,10 @@ public abstract class ClusterEntrypoint implements FatalErrorHandler, LeaderShip
 			dispatcherLeaderRetrievalService.start(dispatcherGatewayRetriever);
 
 			LOG.debug("Starting HeathManager");
-			healthManager = new HealthManager(configuration, webMonitorEndpoint.getRestBaseUrl());
+			healthManager = new HealthManager(
+					webMonitorEndpoint.getRestBaseUrl(),
+					metricRegistry,
+					configuration);
 			healthManager.start();
 		}
 	}
