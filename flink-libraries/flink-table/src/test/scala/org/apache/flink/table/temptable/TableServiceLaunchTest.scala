@@ -20,7 +20,6 @@ package org.apache.flink.table.temptable
 
 import java.io.File
 import java.nio.file.Files
-import java.util.UUID
 
 import org.apache.flink.streaming.api.environment.{RemoteStreamEnvironment, StreamExecutionEnvironment}
 import org.apache.flink.table.api.TableEnvironment
@@ -37,7 +36,8 @@ class TableServiceLaunchTest(env: StreamExecutionEnvironment) {
   def testLaunchTableService(): Unit = {
     val tEnv = TableEnvironment.getBatchTableEnvironment(env)
     val descriptor = tEnv.tableServiceManager.getTableServiceDescriptor().get
-    val rootPath = Files.createTempDirectory(UUID.randomUUID().toString)
+    val rootPath = Files.createTempDirectory(
+      "testLaunchTableService_" + System.nanoTime())
       .toAbsolutePath.toString
     val rootDir = new File(rootPath)
     rootDir.delete()

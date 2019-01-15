@@ -52,7 +52,7 @@ public class TableStorageTest {
 	}
 
 	private File createTempDir(String dirPrefix) throws Exception {
-		File dir = File.createTempFile(dirPrefix, System.currentTimeMillis() + "");
+		File dir = File.createTempFile(dirPrefix, System.nanoTime() + "");
 		if (dir.exists()) {
 			dir.delete();
 		}

@@ -20,7 +20,6 @@ package org.apache.flink.table.temptable
 
 import java.io.File
 import java.nio.file.Files
-import java.util.UUID
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.api.common.restartstrategy.RestartStrategies
@@ -35,7 +34,7 @@ class TableServiceExceptionTest extends QueryTest {
     env.setParallelism(1)
     env.setRestartStrategy(RestartStrategies.fixedDelayRestart(3, 1000))
     tEnv.getConfig.setSubsectionOptimization(true)
-    val rootPath = Files.createTempDirectory(UUID.randomUUID().toString)
+    val rootPath = Files.createTempDirectory("testTableServiceUnavailable_" + System.nanoTime())
       .toAbsolutePath.toString
     val descriptor = tEnv.getConfig.getTableServiceDescriptor()
     descriptor.getConfiguration.setString(

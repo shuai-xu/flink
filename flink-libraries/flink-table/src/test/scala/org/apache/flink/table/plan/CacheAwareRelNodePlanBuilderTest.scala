@@ -43,7 +43,7 @@ import org.apache.flink.test.util.TestBaseUtils
 import org.junit.Assert._
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import org.junit.{After, Before, Ignore, Test}
+import org.junit.{After, Before, Test}
 
 import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable
@@ -188,7 +188,7 @@ class CacheAwareRelNodePlanBuilderTest(
     join.cache()
 
     val res0 = join.select('Artist1)
-    val sink0 = new CsvTableSink(CacheAwareRelNodePlanBuilderTest.tmpDir + "result0.csv", ",")
+    val sink0 = new CsvTableSink(CacheAwareRelNodePlanBuilderTest.tmpDir + "result3.csv", ",")
     res0.writeToSink(sink0)
     tableEnv.execute("write to sink 0")
 
@@ -197,11 +197,11 @@ class CacheAwareRelNodePlanBuilderTest(
       .select('Artist1, 'Album2, 'Song1, 'Year3)
 
     val res1 = join2.where('Year3 > 2000)
-    val sink1 = new CsvTableSink(CacheAwareRelNodePlanBuilderTest.tmpDir + "result1.csv", ",")
+    val sink1 = new CsvTableSink(CacheAwareRelNodePlanBuilderTest.tmpDir + "result4.csv", ",")
     res1.writeToSink(sink1)
 
     val res2 = join2.where('Year3 < 2000)
-    val sink2 = new CsvTableSink(CacheAwareRelNodePlanBuilderTest.tmpDir + "result2.csv", ",")
+    val sink2 = new CsvTableSink(CacheAwareRelNodePlanBuilderTest.tmpDir + "result5.csv", ",")
     res2.writeToSink(sink2)
 
     tableEnv.execute("write to sink 1/2")
@@ -219,7 +219,7 @@ class CacheAwareRelNodePlanBuilderTest(
     val tmp = join.select('Artist1, 'Album2, 'Song1)
     tmp.cache()
 
-    val sink0 = new CsvTableSink(CacheAwareRelNodePlanBuilderTest.tmpDir + "result0.csv", ",")
+    val sink0 = new CsvTableSink(CacheAwareRelNodePlanBuilderTest.tmpDir + "result6.csv", ",")
 
     tmp.select('Artist1)
       .writeToSink(sink0)
