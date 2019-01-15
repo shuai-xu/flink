@@ -104,35 +104,46 @@ public class RestServerClientImpl implements RestServerClient {
 				JobsOverviewHeaders.getInstance(),
 				EmptyMessageParameters.getInstance(),
 				EmptyRequestBody.getInstance()).thenApply(
-						(multipleJobsDetails) -> multipleJobsDetails
-								.getJobs()
-								.stream()
-								.map(detail -> new JobStatusMessage(
-										detail.getJobId(),
-										detail.getJobName(),
-										detail.getStatus(),
-										detail.getStartTime()))
-								.collect(Collectors.toList())).get();
+						(multipleJobsDetails) -> {
+							if (multipleJobsDetails != null && multipleJobsDetails.getJobs().size() > 0){
+								return multipleJobsDetails
+										.getJobs()
+										.stream()
+										.map(detail -> new JobStatusMessage(
+											detail.getJobId(),
+											detail.getJobName(),
+											detail.getStatus(),
+											detail.getStartTime()))
+										.collect(Collectors.toList());
+							} else {
+								return new ArrayList<JobStatusMessage>();
+							}
+						}).get();
 	}
 
 	//依赖 jobGraph， 可以先用伪接口实现
 	@Override
 	public JobConfig getJobConfig(JobID jobId) {
 		final JobGraphOverviewHeaders header = JobGraphOverviewHeaders.getInstance();
-		final JobMessageParameters parameters = header.getUnresolvedMessageParameters();
+		JobMessageParameters parameters = header.getUnresolvedMessageParameters();
 		parameters.jobPathParameter.resolve(jobId);
+		parameters.isResolved();
 		try {
 			return sendRequest(header, parameters, EmptyRequestBody.getInstance()).thenApply(
-				(JobGraphOverviewInfo jobGraphOverviewInfo) -> {
+				jobGraphOverviewInfo -> {
 					Map<JobVertexID, VertexConfig> vertexConfigs = new HashMap<>();
-					Map<JobVertexID, List<JobVertexID>> inputNodes = jobGraphOverviewInfo.getInputNodes();
-					for (Map.Entry<JobVertexID, JobGraphOverviewInfo.VertexConfigInfo> vertexId2Config: jobGraphOverviewInfo.getVertexConfigs().entrySet()) {
+					Map<JobVertexID, List<JobVertexID>> inputNodes = new HashMap<>();
+					for (Map.Entry<String, JobGraphOverviewInfo.VertexConfigInfo> vertexId2Config: jobGraphOverviewInfo.getVertexConfigs().entrySet()) {
 						JobGraphOverviewInfo.VertexConfigInfo jobGraphVertexConfig = vertexId2Config.getValue();
+						JobVertexID vertexID = JobVertexID.fromHexString(vertexId2Config.getKey());
 						VertexConfig vertexConfig = new VertexConfig(jobGraphVertexConfig.getParallelism(), jobGraphVertexConfig.getMaxParallelism(),
 							jobGraphVertexConfig.getResourceSpec(), jobGraphVertexConfig.getNodeIds());
-						vertexConfigs.put(vertexId2Config.getKey(), vertexConfig);
+						vertexConfigs.put(vertexID, vertexConfig);
+						List<JobVertexID> inputVertexIds = jobGraphOverviewInfo.getInputNodes().get(vertexId2Config.getKey()).stream().map(vertexIdStr -> JobVertexID.fromHexString(vertexIdStr)).collect(Collectors.toList());
+						inputNodes.put(vertexID, inputVertexIds);
 					}
-					return new JobConfig(jobGraphOverviewInfo.getConfig(), vertexConfigs, inputNodes);
+					Configuration configuration = new Configuration();
+					return new JobConfig(configuration, vertexConfigs, inputNodes);
 				}
 			).get();
 		} catch (Exception ignore) {
@@ -143,12 +154,11 @@ public class RestServerClientImpl implements RestServerClient {
 	//JobAllSubtaskCurrentAttemptsHandler
 	@Override
 	public JobStatus getJobStatus(JobID jobId) throws Exception {
-		final JobAllSubtaskCurrentAttemptsInfoHeaders jobAllSubtaskCurrentAttemptsInfoHeaders =
+		final JobAllSubtaskCurrentAttemptsInfoHeaders headers =
 			JobAllSubtaskCurrentAttemptsInfoHeaders.getInstance();
-		final JobMessageParameters jobMessageParameters = jobAllSubtaskCurrentAttemptsInfoHeaders
-			.getUnresolvedMessageParameters();
-		jobMessageParameters.jobPathParameter.resolve(jobId);
-		return sendRequest(jobAllSubtaskCurrentAttemptsInfoHeaders, jobMessageParameters, EmptyRequestBody.getInstance()).thenApply(
+		JobMessageParameters parameters = headers.getUnresolvedMessageParameters();
+		parameters.jobPathParameter.resolve(jobId);
+		return sendRequest(headers, parameters, EmptyRequestBody.getInstance()).thenApply(
 			(JobSubtaskCurrentAttemptsInfo subtasksInfo) -> {
 				Collection<SubtaskExecutionAttemptInfo> subtasks = subtasksInfo.getSubtaskInfos();
 				Map<ExecutionVertexID, ExecutionState> taskStatus = new HashMap<>();

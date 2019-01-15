@@ -87,12 +87,12 @@ public class ResourceSpec implements Serializable {
 	 * @param extendedResources The extended resources, associated with the resource manager used
 	 */
 	protected ResourceSpec(
-			double cpuCores,
-			int heapMemoryInMB,
-			int directMemoryInMB,
-			int nativeMemoryInMB,
-			int stateSizeInMB,
-			Resource... extendedResources) {
+		double cpuCores,
+		int heapMemoryInMB,
+		int directMemoryInMB,
+		int nativeMemoryInMB,
+		int stateSizeInMB,
+		Resource... extendedResources) {
 		this.cpuCores = cpuCores;
 		this.heapMemoryInMB = heapMemoryInMB;
 		this.directMemoryInMB = directMemoryInMB;
@@ -114,11 +114,11 @@ public class ResourceSpec implements Serializable {
 	 */
 	public ResourceSpec merge(ResourceSpec other) {
 		ResourceSpec target = new ResourceSpec(
-				Math.max(this.cpuCores, other.cpuCores),
-				this.heapMemoryInMB + other.heapMemoryInMB,
-				this.directMemoryInMB + other.directMemoryInMB,
-				this.nativeMemoryInMB + other.nativeMemoryInMB,
-				this.stateSizeInMB + other.stateSizeInMB);
+			Math.max(this.cpuCores, other.cpuCores),
+			this.heapMemoryInMB + other.heapMemoryInMB,
+			this.directMemoryInMB + other.directMemoryInMB,
+			this.nativeMemoryInMB + other.nativeMemoryInMB,
+			this.stateSizeInMB + other.stateSizeInMB);
 		target.extendedResources.putAll(extendedResources);
 		for (Resource resource : other.extendedResources.values()) {
 			target.extendedResources.merge(resource.getName(), resource, (v1, v2) -> v1.merge(v2));
@@ -166,7 +166,7 @@ public class ResourceSpec implements Serializable {
 	 */
 	public boolean isValid() {
 		if (this.cpuCores >= 0 && this.heapMemoryInMB >= 0 && this.directMemoryInMB >= 0 &&
-				this.nativeMemoryInMB >= 0 && this.stateSizeInMB >= 0) {
+			this.nativeMemoryInMB >= 0 && this.stateSizeInMB >= 0) {
 			for (Resource resource : extendedResources.values()) {
 				if (resource.getValue() < 0) {
 					return false;
@@ -195,7 +195,7 @@ public class ResourceSpec implements Serializable {
 			for (Resource resource : extendedResources.values()) {
 				if (!other.extendedResources.containsKey(resource.getName()) ||
 					other.extendedResources.get(resource.getName()).getResourceAggregateType() != resource.getResourceAggregateType() ||
-						other.extendedResources.get(resource.getName()).getValue() < resource.getValue()) {
+					other.extendedResources.get(resource.getName()).getValue() < resource.getValue()) {
 					return false;
 				}
 			}
@@ -211,11 +211,11 @@ public class ResourceSpec implements Serializable {
 		} else if (obj != null && obj.getClass() == ResourceSpec.class) {
 			ResourceSpec that = (ResourceSpec) obj;
 			return this.cpuCores == that.cpuCores &&
-					this.heapMemoryInMB == that.heapMemoryInMB &&
-					this.directMemoryInMB == that.directMemoryInMB &&
-					this.nativeMemoryInMB == that.nativeMemoryInMB &&
-					this.stateSizeInMB == that.stateSizeInMB &&
-					Objects.equals(this.extendedResources, that.extendedResources);
+				this.heapMemoryInMB == that.heapMemoryInMB &&
+				this.directMemoryInMB == that.directMemoryInMB &&
+				this.nativeMemoryInMB == that.nativeMemoryInMB &&
+				this.stateSizeInMB == that.stateSizeInMB &&
+				Objects.equals(this.extendedResources, that.extendedResources);
 		} else {
 			return false;
 		}
@@ -244,12 +244,12 @@ public class ResourceSpec implements Serializable {
 			extend = stringBuilder.toString();
 		}
 		return "ResourceSpec{" +
-				"cpuCores=" + cpuCores +
-				", heapMemoryInMB=" + heapMemoryInMB +
-				", directMemoryInMB=" + directMemoryInMB +
-				", nativeMemoryInMB=" + nativeMemoryInMB +
-				", stateSizeInMB=" + stateSizeInMB + extend +
-				'}';
+			"cpuCores=" + cpuCores +
+			", heapMemoryInMB=" + heapMemoryInMB +
+			", directMemoryInMB=" + directMemoryInMB +
+			", nativeMemoryInMB=" + nativeMemoryInMB +
+			", stateSizeInMB=" + stateSizeInMB + extend +
+			'}';
 	}
 
 	public static Builder newBuilder() {

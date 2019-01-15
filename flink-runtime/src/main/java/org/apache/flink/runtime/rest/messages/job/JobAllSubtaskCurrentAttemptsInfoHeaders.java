@@ -62,8 +62,8 @@ public class JobAllSubtaskCurrentAttemptsInfoHeaders implements MessageHeaders<E
 	}
 
 	@Override
-	public SubtaskMessageParameters getUnresolvedMessageParameters() {
-		return new SubtaskMessageParameters();
+	public JobMessageParameters getUnresolvedMessageParameters() {
+		return new JobMessageParameters();
 	}
 
 	public static JobAllSubtaskCurrentAttemptsInfoHeaders getInstance() {

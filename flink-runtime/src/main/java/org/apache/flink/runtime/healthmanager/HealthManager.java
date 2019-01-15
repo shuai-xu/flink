@@ -72,7 +72,7 @@ public class HealthManager {
 		this.config = config;
 
 		this.executorService = new ScheduledThreadPoolExecutor(
-				1, new ExecutorThreadFactory("health-manager"));
+				4, new ExecutorThreadFactory("health-manager"));
 
 		this.restServerClient = new RestServerClientImpl(restServerAddress, config, executorService);
 

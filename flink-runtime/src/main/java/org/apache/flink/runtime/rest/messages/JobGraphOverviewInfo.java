@@ -21,7 +21,7 @@ package org.apache.flink.runtime.rest.messages;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
-import org.apache.flink.runtime.rest.handler.job.JobVertexDetailsHandler;
+import org.apache.flink.runtime.rest.handler.job.JobGraphOverviewHandler;
 import org.apache.flink.runtime.rest.messages.json.JobVertexIDDeserializer;
 import org.apache.flink.runtime.rest.messages.json.JobVertexIDSerializer;
 
@@ -38,7 +38,7 @@ import java.util.Objects;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * Response type of the {@link JobVertexDetailsHandler}.
+ * Response type of the {@link JobGraphOverviewHandler}.
  */
 public class JobGraphOverviewInfo implements ResponseBody {
 	public static final String FIELD_NAME_JOB_CONFIG = "config";
@@ -49,33 +49,30 @@ public class JobGraphOverviewInfo implements ResponseBody {
 	private final Configuration config;
 
 	@JsonProperty(FIELD_NAME_VERTEX_CONFIG)
-	private final Map<JobVertexID, VertexConfigInfo> vertexConfigs;
+	private final Map<String, VertexConfigInfo> vertexConfigs;
 
 	@JsonProperty(FIELD_NAME_INPUT_NODES)
-	private final Map<JobVertexID, List<JobVertexID>> inputNodes;
+	private final Map<String, List<String>> inputNodes;
 
 	@JsonCreator
 	public JobGraphOverviewInfo(
 			@JsonProperty(FIELD_NAME_JOB_CONFIG) Configuration config,
-			@JsonProperty(FIELD_NAME_VERTEX_CONFIG) Map<JobVertexID, VertexConfigInfo> vertexConfigs,
-			@JsonProperty(FIELD_NAME_INPUT_NODES) Map<JobVertexID, List<JobVertexID>> inputNodes) {
+			@JsonProperty(FIELD_NAME_VERTEX_CONFIG) Map<String, VertexConfigInfo> vertexConfigs,
+			@JsonProperty(FIELD_NAME_INPUT_NODES) Map<String, List<String>> inputNodes) {
 		this.config = config;
 		this.vertexConfigs = vertexConfigs;
 		this.inputNodes = inputNodes;
 	}
 
-	@JsonIgnore
 	public Configuration getConfig() {
 		return config;
 	}
 
-	@JsonIgnore
-	public Map<JobVertexID, VertexConfigInfo> getVertexConfigs() {
+	public Map<String, VertexConfigInfo> getVertexConfigs() {
 		return vertexConfigs;
 	}
 
-	@JsonIgnore
-	public Map<JobVertexID, List<JobVertexID>> getInputNodes() {
+	public Map<String, List<String>> getInputNodes() {
 		return inputNodes;
 	}
 

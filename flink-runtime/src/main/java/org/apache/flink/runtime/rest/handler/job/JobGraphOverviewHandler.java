@@ -69,8 +69,8 @@ public class JobGraphOverviewHandler extends AbstractRestHandler<RestfulGateway,
 		return gateway.requestJobGraph(jobID, timeout).thenApply(
 			(JobGraph jobGraph) -> {
 				Configuration config = jobGraph.getJobConfiguration();
-				Map<JobVertexID, JobGraphOverviewInfo.VertexConfigInfo> vertexConfigs = new HashMap<>();
-				Map<JobVertexID, List<JobVertexID>> inputNodes = new HashMap<>();
+				Map<String, JobGraphOverviewInfo.VertexConfigInfo> vertexConfigs = new HashMap<>();
+				Map<String, List<String>> inputNodes = new HashMap<>();
 				for (JobVertex vertex : jobGraph.getVertices()) {
 					List<Integer> nodeIds;
 					JobVertexID vertexID = vertex.getID();
@@ -79,17 +79,17 @@ public class JobGraphOverviewHandler extends AbstractRestHandler<RestfulGateway,
 					} else {
 						nodeIds = new ArrayList<>();
 					}
-					List<JobVertexID> inputVertexId;
+					List<String> inputVertexId;
 					if (vertex.getInputs() != null) {
-						inputVertexId = vertex.getInputs().stream().map(edge -> edge.getSource().getProducer().getID()).collect(Collectors.toList());
+						inputVertexId = vertex.getInputs().stream().map(edge -> edge.getSource().getProducer().getID().toString()).collect(Collectors.toList());
 					} else {
 						inputVertexId = new ArrayList<>();
 					}
 					JobGraphOverviewInfo.VertexConfigInfo vertexConfigInfo = new JobGraphOverviewInfo.VertexConfigInfo(vertexID, vertex.getName(),
 						vertex.getParallelism(), vertex.getMaxParallelism(), vertex.getMinResources(), nodeIds
 						);
-					vertexConfigs.put(vertexID, vertexConfigInfo);
-					inputNodes.put(vertexID, inputVertexId);
+					vertexConfigs.put(vertexID.toString(), vertexConfigInfo);
+					inputNodes.put(vertexID.toString(), inputVertexId);
 				}
 				return new JobGraphOverviewInfo(config, vertexConfigs, inputNodes);
 			}
