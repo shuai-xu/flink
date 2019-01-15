@@ -1083,7 +1083,7 @@ Fist of all, Flink does a series of rule-based optimization and cost-based optim
 * filter push down
 * partition pruning
 * join reorder if it is enabled (`sql.optimizer.join-reorder.enabled` is true)
-* skew join rewriting if skew information is available, pick the skewed values to join separately, and then union the result with the non-skew value join
+* skew join optimization
 * other kinds of query rewriting
 
 Secondly, Flink introduces rich statistics of data source and propagate those statistics up to the whole plan based on all kinds of extended `MetadataHandler`s. Optimizer could choose better plan based on those metadata.
