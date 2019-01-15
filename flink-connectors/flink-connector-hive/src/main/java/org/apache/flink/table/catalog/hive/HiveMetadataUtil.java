@@ -95,6 +95,7 @@ import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TA
  * Utils for meta objects conversion between Flink and Hive.
  */
 public class HiveMetadataUtil {
+
 	/**
 	 * The number of milliseconds in a day.
 	 */
@@ -333,7 +334,7 @@ public class HiveMetadataUtil {
 			hiveTypes[i] = fieldSchemas.get(i).getType();
 		}
 		prop.put(HIVE_TABLE_FIELD_NAMES, StringUtils.join(colNames, ","));
-		prop.put(HIVE_TABLE_FIELD_TYPES, StringUtils.join(hiveTypes, ","));
+		prop.put(HIVE_TABLE_FIELD_TYPES, StringUtils.join(hiveTypes, "/"));
 		prop.put(HIVE_TABLE_DB_NAME, table.getDbName());
 		prop.put(HIVE_TABLE_TABLE_NAME, table.getTableName());
 		prop.put(HIVE_TABLE_PARTITION_FIELDS, String.valueOf(

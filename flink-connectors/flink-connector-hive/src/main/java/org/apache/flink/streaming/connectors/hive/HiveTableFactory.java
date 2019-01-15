@@ -77,7 +77,7 @@ public class HiveTableFactory implements BatchTableSourceFactory<GenericRow>, Ta
 			hiveConf.set(prop.getKey(), prop.getValue());
 		}
 		String[] fieldNames = props.get(HIVE_TABLE_FIELD_NAMES).split(",");
-		String[] hiveFieldTypes = props.get(HIVE_TABLE_FIELD_TYPES).split(",");
+		String[] hiveFieldTypes = props.get(HIVE_TABLE_FIELD_TYPES).split("/");
 		InternalType[] colTypes = new InternalType[fieldNames.length];
 		TypeInformation[] typeInformations = new TypeInformation[fieldNames.length];
 		for (int i = 0; i < hiveFieldTypes.length; i++) {
@@ -143,11 +143,13 @@ public class HiveTableFactory implements BatchTableSourceFactory<GenericRow>, Ta
 		properties.add(StatsSetupConst.TOTAL_SIZE);
 		properties.add(StatsSetupConst.RAW_DATA_SIZE);
 		properties.add(StatsSetupConst.ROW_COUNT);
+		properties.add(StatsSetupConst.COLUMN_STATS_ACCURATE);
 
 		properties.add(HiveTableConfig.HIVE_TABLE_DB_NAME);
 		properties.add(HiveTableConfig.HIVE_TABLE_TABLE_NAME);
 		properties.add(HiveTableConfig.HIVE_TABLE_PARTITION_FIELDS);
 		properties.add(HiveConf.ConfVars.METASTOREURIS.varname);
+
 		return properties;
 	}
 }

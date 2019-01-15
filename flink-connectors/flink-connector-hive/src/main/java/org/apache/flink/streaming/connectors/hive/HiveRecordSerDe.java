@@ -18,6 +18,11 @@
 
 package org.apache.flink.streaming.connectors.hive;
 
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.DecimalType;
+import org.apache.flink.table.runtime.conversion.DataStructureConverters;
+import org.apache.flink.table.runtime.conversion.DataStructureConverters.DecimalConverter;
+
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.hive.serde2.objectinspector.ListObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.MapObjectInspector;
@@ -25,17 +30,24 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
 import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.HiveDecimalObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.TimestampObjectInspector;
+import org.apache.hadoop.hive.serde2.typeinfo.DecimalTypeInfo;
 
+import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 
 /**
  * Class used to serialize to and from raw hdfs file type.
  * Highly inspired by HCatRecordSerDe (almost copied from this class)in hive-catalog-core.
  */
 public class HiveRecordSerDe {
+
 	/**
 	 * Return underlying Java Object from an object-representation
 	 * that is readable by a provided ObjectInspector.
@@ -44,7 +56,7 @@ public class HiveRecordSerDe {
 			throws SerDeException {
 		Object res;
 		if (fieldObjectInspector.getCategory() == ObjectInspector.Category.PRIMITIVE) {
-			res = serializePrimitiveField(field, fieldObjectInspector);
+			res = serializePrimitiveField(field, (PrimitiveObjectInspector) fieldObjectInspector);
 		} else if (fieldObjectInspector.getCategory() == ObjectInspector.Category.STRUCT) {
 			res = serializeStruct(field, (StructObjectInspector) fieldObjectInspector);
 		} else if (fieldObjectInspector.getCategory() == ObjectInspector.Category.LIST) {
@@ -118,13 +130,32 @@ public class HiveRecordSerDe {
 		}
 	}
 
-	// todo: Comparing to original HCatRecordSerDe.java, we may need add more type converter according to conf.
-	private static Object serializePrimitiveField(Object field, ObjectInspector fieldObjectInspector) {
+	/**
+	 * This method actually convert java objects of Hive's scalar data types to those of Flink's internal data types.
+	 * @param field field value
+	 * @param primitiveObjectInspector Hive's primitive object inspector for the field
+	 * @return the java objects conforming to Flink's internal data types.
+	 *
+	 * TODO: Comparing to original HCatRecordSerDe.java, we may need add more type converter according to conf.
+	 */
+	private static Object serializePrimitiveField(Object field, PrimitiveObjectInspector primitiveObjectInspector) {
 		if (field == null) {
 			return null;
 		}
-		Object f = ((PrimitiveObjectInspector) fieldObjectInspector).getPrimitiveJavaObject(field);
-		return f;
+
+		switch(primitiveObjectInspector.getPrimitiveCategory()) {
+			case DECIMAL:
+				DecimalTypeInfo decimalTypeInfo = (DecimalTypeInfo) primitiveObjectInspector.getTypeInfo();
+				HiveDecimalObjectInspector decimalOI = (HiveDecimalObjectInspector) primitiveObjectInspector;
+				BigDecimal bigDecimal = decimalOI.getPrimitiveJavaObject(field).bigDecimalValue();
+				DecimalType decimalType = new DecimalType(decimalTypeInfo.precision(), decimalTypeInfo.scale());
+				return new DecimalConverter(decimalType).toInternal(bigDecimal);
+			case TIMESTAMP:
+				Timestamp ts = ((TimestampObjectInspector) primitiveObjectInspector).getPrimitiveJavaObject(field);
+				return DataStructureConverters.getConverterForType(DataTypes.TIMESTAMP).toInternal(ts);
+			default:
+				return primitiveObjectInspector.getPrimitiveJavaObject(field);
+		}
 	}
 
 	/**
