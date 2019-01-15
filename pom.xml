@@ -93,7 +93,6 @@ under the License.
 
 	<properties>
 		<!-- When updating the Calcite version, make sure to update the dependency exclusions -->
-		<connectors.version>blink-3.0-SNAPSHOT</connectors.version>
 		<calcite.version>1.17.0-flink-r2</calcite.version>
 		<hive.version>2.3.4</hive.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
