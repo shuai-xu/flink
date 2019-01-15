@@ -19,6 +19,8 @@
 package org.apache.flink.table.temptable
 
 import java.io.File
+import java.nio.file.Files
+import java.util.UUID
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
@@ -35,6 +37,14 @@ class TableServiceExceptionTest {
     env.setRestartStrategy(RestartStrategies.fixedDelayRestart(3, 1000))
     val tEnv = TableEnvironment.getBatchTableEnvironment(env)
     tEnv.getConfig.setSubsectionOptimization(true)
+    val rootPath = Files.createTempDirectory(UUID.randomUUID().toString)
+      .toAbsolutePath.toString
+    val descriptor = tEnv.getConfig.getTableServiceDescriptor()
+    descriptor.getConfiguration.setString(
+      TableServiceOptions.TABLE_SERVICE_STORAGE_ROOT_PATH,
+      rootPath
+    )
+    tEnv.getConfig.setTableServiceDescriptor(descriptor)
 
     val data = List[(Int, Int)] (
       (1, 1),
@@ -53,8 +63,8 @@ class TableServiceExceptionTest {
 
     val cachedName = tEnv.tableServiceManager.getCachedTableName(filteredTable.logicalPlan).get
 
-    val baseDir =
-      new File(System.getProperty("user.dir") + File.separator + "table_service")
+
+    val baseDir = new File(rootPath)
 
     val currentTableServiceDir = searchDir(baseDir, cachedName)
 
@@ -85,7 +95,11 @@ class TableServiceExceptionTest {
 
   private def searchDir(base: File, tableName: String): File = {
     base.listFiles.find(
-      subDir => subDir.listFiles().exists(f => f.isDirectory && f.getName == tableName)
+      subDir => if (subDir.isDirectory) {
+        subDir.listFiles().exists(f => f.isDirectory && f.getName == tableName)
+      } else {
+        false
+      }
     ).get
   }
 

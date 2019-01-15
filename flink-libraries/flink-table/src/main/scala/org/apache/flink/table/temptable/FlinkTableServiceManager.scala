@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.temptable
 
+import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.api.common.JobSubmissionResult
 import org.apache.flink.api.common.restartstrategy.RestartStrategies
 import org.apache.flink.service.ServiceDescriptor
@@ -40,9 +41,9 @@ class FlinkTableServiceManager(tEnv: TableEnvironment) {
 
   private[flink] val cachedTables = new java.util.IdentityHashMap[LogicalNode, String]
 
-  private var tableServiceStarted = false
+  private[flink] var tableServiceStarted = false
 
-  private var submitResult: JobSubmissionResult = _
+  private[flink] var submitResult: JobSubmissionResult = _
 
   private var tableServiceEnv: StreamExecutionEnvironment = _
 
@@ -106,11 +107,18 @@ class FlinkTableServiceManager(tEnv: TableEnvironment) {
   }
 
   def startTableServiceJob(): Unit = {
-    if(!tableServiceStarted && !toBeCachedTables.isEmpty){
+    if(!toBeCachedTables.isEmpty){
+      val descriptor = getTableServiceDescriptor().get
+      startTableServiceJobInternally(descriptor)
+    }
+  }
+
+  @VisibleForTesting
+  private[flink] def startTableServiceJobInternally(descriptor: ServiceDescriptor): Unit = {
+    if (!tableServiceStarted) {
       val executionEnv = StreamExecutionEnvironment.getExecutionEnvironment
       executionEnv.setRestartStrategy(
         RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE, 500L))
-      val descriptor = getTableServiceDescriptor().get
       TableServiceUtil.createTableServiceJob(executionEnv, descriptor)
       submitResult = executionEnv.submit("FlinkTableServiceJob")
       tableServiceEnv = executionEnv

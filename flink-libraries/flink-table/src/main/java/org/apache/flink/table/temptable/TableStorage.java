@@ -58,9 +58,10 @@ public class TableStorage implements LifeCycleAware {
 	public void open(Configuration config) {
 		String tableServiceId = config.getString(TableServiceOptions.TABLE_SERVICE_ID, UUID.randomUUID().toString());
 		String rootPath = config.getString(TableServiceOptions.TABLE_SERVICE_STORAGE_ROOT_PATH, System.getProperty("user.dir"));
-		storagePath = rootPath + File.separator + "table_service" + File.separator + tableServiceId;
+		storagePath = rootPath + File.separator + "tableservice_" + tableServiceId;
 		maxSegmentSize = config.getInteger(TableServiceOptions.TABLE_SERVICE_STORAGE_SEGMENT_MAX_SIZE);
 		deleteAll(storagePath);
+		createDirs(storagePath);
 		partitionSegmentTracker = new ConcurrentHashMap<>();
 		logger.info("TableStorage opened with storage path: " + storagePath);
 	}
@@ -72,21 +73,32 @@ public class TableStorage implements LifeCycleAware {
 	}
 
 	private void deleteAll(String root) {
-		logger.info("delete file under: " + root);
-		File file = new File(root);
-		if (file.exists()) {
-			File[] subFiles = file.listFiles();
-			if (subFiles != null) {
-				for (File subFile : subFiles) {
-					if (subFile.isDirectory()) {
-						deleteAll(subFile.getAbsolutePath());
-					} else {
-						subFile.delete();
+		synchronized (TableStorage.class) {
+			logger.info("delete file under: " + root);
+			File file = new File(root);
+			if (file.exists()) {
+				File[] subFiles = file.listFiles();
+				if (subFiles != null) {
+					for (File subFile : subFiles) {
+						if (subFile.isDirectory()) {
+							deleteAll(subFile.getAbsolutePath());
+						} else {
+							subFile.delete();
+						}
 					}
 				}
+				logger.info("delete file:" + root);
+				file.delete();
 			}
-			logger.info("delete file:" + root);
-			file.delete();
+		}
+	}
+
+	private void createDirs(String root) {
+		synchronized (TableStorage.class) {
+			File dir = new File(root);
+			if (!dir.exists()) {
+				dir.mkdirs();
+			}
 		}
 	}
 

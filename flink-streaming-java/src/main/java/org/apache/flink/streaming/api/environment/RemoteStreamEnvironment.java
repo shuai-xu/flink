@@ -46,9 +46,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * A {@link StreamExecutionEnvironment} for executing on a cluster.
@@ -72,8 +70,6 @@ public class RemoteStreamEnvironment extends StreamExecutionEnvironment {
 
 	/** The classpaths that need to be attached to each job. */
 	private final List<URL> globalClasspaths;
-
-	private final Map<JobID, ClusterClient> submittedJobs = new HashMap<>();
 
 	/**
 	 * Creates a new RemoteStreamEnvironment that points to the master
@@ -213,7 +209,12 @@ public class RemoteStreamEnvironment extends StreamExecutionEnvironment {
 		ClusterClient<?> client = null;
 		try {
 			client = prepareClusterClient(detached);
-			return client.run(streamGraph, jarFiles, globalClasspaths, usercodeClassLoader, savepointRestoreSettings, detached).getJobExecutionResult();
+			JobSubmissionResult submissionResult = client.run(streamGraph, jarFiles, globalClasspaths, usercodeClassLoader, savepointRestoreSettings, detached);
+			if (detached) {
+				return submissionResult;
+			} else {
+				return submissionResult.getJobExecutionResult();
+			}
 		} catch (ProgramInvocationException e) {
 			throw e;
 		} catch (Exception e) {
@@ -258,9 +259,18 @@ public class RemoteStreamEnvironment extends StreamExecutionEnvironment {
 
 	@Override
 	public void stopJob(JobID jobID) throws Exception {
-		ClusterClient clusterClient = submittedJobs.get(jobID);
-		clusterClient.stop(jobID);
-		clusterClient.shutdown();
+		ClusterClient clusterClient = null;
+		try {
+			clusterClient = prepareClusterClient(true);
+			clusterClient.stop(jobID);
+		} catch (Exception e) {
+			LOG.error("Stop Job Fails with JobID = " + jobID, e);
+			throw e;
+		} finally {
+			if (clusterClient != null) {
+				clusterClient.shutdown();
+			}
+		}
 	}
 
 	@Override
