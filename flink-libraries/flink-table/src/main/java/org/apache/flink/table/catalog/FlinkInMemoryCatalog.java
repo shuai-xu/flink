@@ -25,12 +25,13 @@ import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.api.exceptions.PartitionAlreadyExistException;
 import org.apache.flink.table.api.exceptions.PartitionNotExistException;
 import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
+import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.StringUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -55,10 +56,10 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 		Preconditions.checkArgument(!StringUtils.isNullOrWhitespaceOnly(name), "name cannot be null or empty");
 
 		this.catalogName = name;
-		this.databases = new HashMap<>();
+		this.databases = new LinkedHashMap<>();
 		this.databases.put(DEFAULT_DB, new CatalogDatabase());
-		this.tables = new HashMap<>();
-		this.partitions = new HashMap<>();
+		this.tables = new LinkedHashMap<>();
+		this.partitions = new LinkedHashMap<>();
 	}
 
 	@Override
@@ -99,7 +100,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 			tables.put(tableName, table);
 
 			if (table.isPartitioned()) {
-				partitions.put(tableName, new HashMap<>());
+				partitions.put(tableName, new LinkedHashMap<>());
 			}
 		}
 	}
@@ -164,6 +165,49 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	@Override
 	public boolean tableExists(ObjectPath path) {
 		return dbExists(path.getDbName()) && tables.containsKey(path);
+	}
+
+	// ------ table and column stats ------
+
+	@Override
+	public TableStats getTableStats(ObjectPath path) throws TableNotExistException {
+		if (!tableExists(path)) {
+			throw new TableNotExistException(catalogName, path.getFullName());
+		} else {
+			if (!isTablePartitioned(path)) {
+				return tables.get(path).getTableStats();
+			} else {
+				return new TableStats();
+			}
+		}
+	}
+
+	@Override
+	public void alterTableStats(ObjectPath tablePath, TableStats newtTableStats, boolean ignoreIfNotExists) throws TableNotExistException {
+		if (tableExists(tablePath)) {
+			if (!isTablePartitioned(tablePath)) {
+				CatalogTable oldTable = tables.get(tablePath);
+
+				tables.put(tablePath, new CatalogTable(
+					oldTable.getTableType(),
+					oldTable.getTableSchema(),
+					oldTable.getProperties(),
+					oldTable.getRichTableSchema(),
+					newtTableStats,
+					oldTable.getComment(),
+					oldTable.getPartitionColumnNames(),
+					oldTable.isPartitioned(),
+					oldTable.getComputedColumns(),
+					oldTable.getRowTimeField(),
+					oldTable.getWatermarkOffset(),
+					oldTable.getCreateTime(),
+					oldTable.getLastAccessTime(),
+					oldTable.isStreaming()
+				));
+			}
+		} else if (!ignoreIfNotExists) {
+			throw new TableNotExistException(catalogName, tablePath.getFullName());
+		}
 	}
 
 	// ------ databases ------

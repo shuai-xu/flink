@@ -22,6 +22,7 @@ import org.apache.flink.table.api.DatabaseNotExistException;
 import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.api.exceptions.PartitionNotExistException;
 import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
+import org.apache.flink.table.plan.stats.TableStats;
 
 import java.io.Closeable;
 import java.util.List;
@@ -103,11 +104,22 @@ public interface ReadableCatalog extends Closeable {
 	CatalogTable getTable(ObjectPath tableName) throws TableNotExistException;
 
 	/**
-	 * Check if a table exists in this catalog.
+	 * Checks if a table exists in this catalog.
 	 *
 	 * @param path			Path of the table.
 	 */
 	boolean tableExists(ObjectPath path);
+
+	// ------ tables ------
+
+	/**
+	 * Gets TableStats of a table. This only works for non-partitioned tables.
+	 *
+	 * @param tablePath		Path of the table.
+	 * @return TableStats of the requested table.
+	 * @throws TableNotExistException    thrown if the table does not exist in the catalog.
+	 */
+	TableStats getTableStats(ObjectPath tablePath) throws TableNotExistException;
 
 	// ------ partitions ------
 

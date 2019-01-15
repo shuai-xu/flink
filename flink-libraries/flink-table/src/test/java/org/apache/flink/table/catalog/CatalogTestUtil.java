@@ -48,16 +48,12 @@ public class CatalogTestUtil {
 		return data;
 	}
 
-	public static CatalogTable createCatalogTable() {
-		return createCatalogTable(getTestData(), true);
+	public static CatalogTable createCatalogTableWithPrimaryKey(boolean isStreaming) {
+		return createCatalogTableWithPrimaryKey(getTestData(), isStreaming);
 	}
 
-	public static CatalogTable createCatalogTable(boolean isStreaming) {
-		return createCatalogTable(getTestData(), isStreaming);
-	}
-
-	public static CatalogTable createCatalogTable(List<Row> data, boolean isStreaming) {
-		TableSchema tableSchema = TableSchemaUtil.fromDataType(new TypeInfoWrappedDataType(getRowTypeInfo()), Option.empty());
+	public static CatalogTable createCatalogTableWithPrimaryKey(List<Row> data, boolean isStreaming) {
+	TableSchema tableSchema = TableSchemaUtil.fromDataType(new TypeInfoWrappedDataType(getRowTypeInfo()), Option.empty());
 
 		RichTableSchema richTableSchema = new RichTableSchema(tableSchema.getFieldNames(), tableSchema.getFieldTypes());
 		richTableSchema.setPrimaryKey("a");
@@ -103,26 +99,18 @@ public class CatalogTestUtil {
 		TableSchema schema,
 		Map<String, String> tableProperties) {
 
-		return new CatalogTable(
+		return createCatalogTable(
 			tableType,
 			schema,
-			tableProperties,
-			new RichTableSchema(schema.getFieldNames(), schema.getFieldTypes()),
 			new TableStats(),
-			null,
-			new LinkedHashSet<>(),
-			false,
-			null,
-			null,
-			-1L,
-			0L,
-			-1L,
-			true);
+			tableProperties,
+			new LinkedHashSet<>());
 	}
 
 	public static CatalogTable createCatalogTable(
 		String tableType,
 		TableSchema schema,
+		TableStats stats,
 		Map<String, String> tableProperties,
 		LinkedHashSet<String> partitionCols) {
 
@@ -131,10 +119,10 @@ public class CatalogTestUtil {
 			schema,
 			tableProperties,
 			new RichTableSchema(schema.getFieldNames(), schema.getFieldTypes()),
-			new TableStats(),
+			stats,
 			null,
 			partitionCols,
-			true,
+			partitionCols != null && !partitionCols.isEmpty(),
 			null,
 			null,
 			-1L,

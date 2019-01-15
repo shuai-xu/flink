@@ -31,6 +31,7 @@ import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.ReadableWritableCatalog;
+import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.util.StringUtils;
 
@@ -40,6 +41,7 @@ import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.IMetaStoreClient;
 import org.apache.hadoop.hive.metastore.RetryingMetaStoreClient;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
+import org.apache.hadoop.hive.metastore.api.ColumnStatisticsObj;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
@@ -50,7 +52,9 @@ import org.apache.thrift.TException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
@@ -97,7 +101,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 				HiveMetaStoreClient.class.getName(),
 				true);
 		} catch (MetaException e) {
-			throw new FlinkHiveException("Failed creating Hive metastore client", e);
+			throw new FlinkHiveException("Failed to create Hive metastore client", e);
 		}
 	}
 
@@ -134,38 +138,44 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	public CatalogTable getTable(ObjectPath path) throws TableNotExistException {
 		Table hiveTable = getHiveTable(path);
 
-		TableSchema tableSchema = HiveMetadataUtil.createTableSchema(hiveTable.getSd().getCols(),
-																	hiveTable.getPartitionKeys());
+		TableSchema tableSchema = HiveMetadataUtil.createTableSchema(hiveTable.getSd().getCols(), hiveTable.getPartitionKeys());
 
-		TableStats tableStats = new TableStats();
 		// Get the column statistics for a set of columns in a table. This only works for non-partitioned tables.
-		// For partitioned tables, get partition columns stats from HiveCatalog.getPartition()
+		Map<String, ColumnStats> colStats = new HashMap<>();
 		if (hiveTable.getPartitionKeysSize() == 0) {
-			List<String> cols = Arrays.asList(tableSchema.getFieldNames());
-			try {
-				tableStats = HiveMetadataUtil.createTableStats(
-					getRowCount(hiveTable),
-					client.getTableColumnStatistics(path.getDbName(), path.getObjectName(), cols));
-			} catch (TException e) {
-				throw new FlinkHiveException(
-					String.format("Failed getting table column stats for columns %s of table %s", cols, path));
-			}
+			colStats = HiveMetadataUtil.createColumnStats(
+				getHiveTableColumnStats(path.getDbName(), path.getObjectName(), Arrays.asList(tableSchema.getFieldNames())));
 		}
+
+		TableStats tableStats = new TableStats(getRowCount(hiveTable), colStats);
 
 		CatalogTable catalogTable = HiveMetadataUtil.createCatalogTable(hiveTable, tableSchema, tableStats);
 		catalogTable.getProperties().put(HiveConf.ConfVars.METASTOREURIS.varname,
-												hiveConf.get(HiveConf.ConfVars.METASTOREURIS.varname));
+			hiveConf.get(HiveConf.ConfVars.METASTOREURIS.varname));
 		return catalogTable;
 	}
 
-	private Table getHiveTable(ObjectPath path) {
+	/**
+	 * Get the column statistics for a set of columns in a table. This only works for non-partitioned tables.
+	 */
+	private List<ColumnStatisticsObj> getHiveTableColumnStats(String dbName, String tableName, List<String> cols) {
+		try {
+			return client.getTableColumnStatistics(dbName, tableName, cols);
+		} catch (TException e) {
+			throw new FlinkHiveException(
+				String.format("Failed to get table column stats for columns %s of table %s", cols,
+					new ObjectPath(dbName, tableName)));
+		}
+	}
+
+	private Table getHiveTable(ObjectPath path) throws TableNotExistException {
 		try {
 			return client.getTable(path.getDbName(), path.getObjectName());
 		} catch (NoSuchObjectException e) {
 			throw new TableNotExistException(catalogName, path.getFullName());
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed getting table %s", path.getFullName()), e);
+				String.format("Failed to get table %s", path.getFullName()), e);
 		}
 	}
 
@@ -187,7 +197,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			throw new DatabaseNotExistException(catalogName, dbName);
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed listing tables in database %s", dbName), e);
+				String.format("Failed to list tables in database %s", dbName), e);
 		}
 	}
 
@@ -223,7 +233,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			}
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed creating table %s", path.getFullName()), e);
+				String.format("Failed to create table %s", path.getFullName()), e);
 		}
 	}
 
@@ -237,7 +247,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			}
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed dropping table %s", path.getFullName()), e);
+				String.format("Failed to drop table %s", path.getFullName()), e);
 		}
 	}
 
@@ -251,7 +261,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			}
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed creating table %s", path.getFullName()), e);
+				String.format("Failed to alter table %s", path.getFullName()), e);
 		}
 	}
 
@@ -269,7 +279,57 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			return false;
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed check if table %s exists in database %s", path.getObjectName(), path.getDbName()), e);
+				String.format("Failed to check if table %s exists in database %s", path.getObjectName(), path.getDbName()), e);
+		}
+	}
+
+	// ------ table and column stats ------
+
+	@Override
+	public TableStats getTableStats(ObjectPath path) throws TableNotExistException {
+		Table hiveTable = getHiveTable(path);
+
+		// Get the column statistics for a set of columns in a table. This only works for non-partitioned tables.
+		// For partitioned tables, get partition columns stats from HiveCatalog.getPartition()
+		Map<String, ColumnStats> colStats = new HashMap<>();
+
+		if (!isTablePartitioned(hiveTable)) {
+			colStats = HiveMetadataUtil.createColumnStats(
+				getHiveTableColumnStats(
+					path.getDbName(),
+					path.getObjectName(),
+					hiveTable.getSd().getCols().stream()
+						.map(fs -> fs.getName())
+						.collect(Collectors.toList())
+				));
+		}
+
+		return new TableStats(getRowCount(hiveTable), colStats);
+	}
+
+	@Override
+	public void alterTableStats(ObjectPath path, TableStats newtTableStats, boolean ignoreIfNotExists) throws TableNotExistException {
+		try {
+			Table hiveTable = getHiveTable(path);
+
+			// Set table column stats. This only works for non-partitioned tables.
+			if (!isTablePartitioned(hiveTable)) {
+				client.updateTableColumnStatistics(HiveMetadataUtil.createColumnStats(hiveTable, newtTableStats.colStats()));
+			}
+
+			// Set table stats
+			String oldRowCount = hiveTable.getParameters().getOrDefault(StatsSetupConst.ROW_COUNT, "0");
+			if (newtTableStats.rowCount() != Long.parseLong(oldRowCount)) {
+				hiveTable.getParameters().put(StatsSetupConst.ROW_COUNT, String.valueOf(newtTableStats.rowCount()));
+				client.alter_table(path.getDbName(), path.getObjectName(), hiveTable);
+			}
+		} catch (TableNotExistException e) {
+			if (!ignoreIfNotExists) {
+				throw new TableNotExistException(catalogName, path.getFullName());
+			}
+		} catch (TException e) {
+			throw new FlinkHiveException(
+				String.format("Failed to alter table %s", path.getFullName()), e);
 		}
 	}
 
@@ -284,7 +344,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 				throw new DatabaseAlreadyExistException(catalogName, dbName);
 			}
 		} catch (TException e) {
-			throw new FlinkHiveException(String.format("Failed creating database %s", dbName), e);
+			throw new FlinkHiveException(String.format("Failed to create database %s", dbName), e);
 		}
 	}
 
@@ -297,7 +357,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 				throw new DatabaseNotExistException(catalogName, dbName);
 			}
 		} catch (TException e) {
-			throw new FlinkHiveException(String.format("Failed dropping database %s", dbName), e);
+			throw new FlinkHiveException(String.format("Failed to drop database %s", dbName), e);
 		}
 	}
 
@@ -310,7 +370,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 				throw new DatabaseNotExistException(catalogName, dbName);
 			}
 		} catch (TException e) {
-			throw new FlinkHiveException(String.format("Failed altering database %s", dbName), e);
+			throw new FlinkHiveException(String.format("Failed to alter database %s", dbName), e);
 		}
 	}
 
@@ -326,7 +386,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			return client.getAllDatabases();
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed listing all databases in HiveCatalog %s", catalogName));
+				String.format("Failed to list all databases in HiveCatalog %s", catalogName));
 		}
 	}
 
@@ -340,7 +400,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			throw new DatabaseNotExistException(catalogName, dbName);
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed getting database %s from HiveCatalog %s", dbName, catalogName), e);
+				String.format("Failed to get database %s from HiveCatalog %s", dbName, catalogName), e);
 		}
 
 		return HiveMetadataUtil.createCatalogDatabase(hiveDb);
@@ -354,7 +414,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			return false;
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed getting database %s", dbName), e);
+				String.format("Failed to get database %s", dbName), e);
 		}
 	}
 
@@ -379,7 +439,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			}
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed creating partition %s of table %s", partition.getPartitionSpec(), path));
+				String.format("Failed to create partition %s of table %s", partition.getPartitionSpec(), path));
 		}
 	}
 
@@ -401,7 +461,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			}
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed dropping partition %s of table %s", partitionSpec, path));
+				String.format("Failed to drop partition %s of table %s", partitionSpec, path));
 		}
 	}
 
@@ -425,7 +485,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 				);
 			} catch (TException e) {
 				throw new FlinkHiveException(
-					String.format("Failed altering existing partition with new partition %s of table %s", newPartition.getPartitionSpec(), path), e);
+					String.format("Failed to alter existing partition with new partition %s of table %s", newPartition.getPartitionSpec(), path), e);
 			}
 		} else if (!ignoreIfNotExists) {
 			throw new PartitionNotExistException(catalogName, path, newPartition.getPartitionSpec());
@@ -448,7 +508,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 				.collect(Collectors.toList());
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed listing partitions of table %s", path), e);
+				String.format("Failed to list partitions of table %s", path), e);
 		}
 	}
 
@@ -468,7 +528,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 				.collect(Collectors.toList());
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed listing partitions of table %s", path), e);
+				String.format("Failed to list partitions of table %s", path), e);
 		}
 	}
 
@@ -490,7 +550,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			throw new PartitionNotExistException(catalogName, path, partitionSpec);
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed getting partition %s of table %s", partitionSpec, path), e);
+				String.format("Failed to get partition %s of table %s", partitionSpec, path), e);
 		}
 	}
 
@@ -503,7 +563,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			return false;
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed getting partition %s of table %s", partitionSpec, path), e);
+				String.format("Failed to get partition %s of table %s", partitionSpec, path), e);
 		}
 	}
 

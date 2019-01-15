@@ -81,7 +81,7 @@ The ultimate goal for `HiveCatalog` is that:
 
 To query Hive data with `HiveCatalog`, users have to use Flink's `batch` mode by either using `BatchTableEnvironment` in Table APIs or setting `execution.type` as `batch` in Flink SQL Cli.
 
-Note that currently `HiveCatalog` only offers capabilities of reading Hive metastore metadata, including databases, tables, table partitions, simple data types, table stats, and table columns stats. Other meta-objects read and write capabilities are under either experiment or active development.
+Note that currently `HiveCatalog` only offers capabilities of reading Hive metastore metadata, including databases, tables, table partitions, simple data types, and table and column stats. Other meta-objects read and write capabilities are under either experiment or active development.
 
 Also note that currently only registering `HiveCatalog` through Table APIs allows users to customize their `HiveConf` with additional Hive connection parameters. Users need to make sure Flink can connect to their Hive metastore within their environment.
  

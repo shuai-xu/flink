@@ -224,9 +224,9 @@ public class CatalogTable {
 		return "CatalogTable{" +
 			"tableType='" + tableType + '\'' +
 			", tableSchema=" + tableSchema +
+			", tableStats=" + tableStats +
 			", properties=" + properties +
 			", richTableSchema=" + richTableSchema +
-			", tableStats=" + tableStats +
 			", comment='" + comment + '\'' +
 			", partitionColumnNames=" + partitionColumnNames +
 			", isPartitioned=" + isPartitioned +

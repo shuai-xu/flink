@@ -161,7 +161,7 @@ class TableEnvironmentTest extends TableTestBase {
 
     catalog.asInstanceOf[ReadableWritableCatalog].createTable(
       new ObjectPath(tEnv.getDefaultDatabaseName(), "t1"),
-      CatalogTestUtil.createCatalogTable,
+      CatalogTestUtil.createCatalogTableWithPrimaryKey(true),
       false)
   }
 

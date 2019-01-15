@@ -28,9 +28,12 @@ import org.apache.flink.table.api.exceptions.PartitionNotExistException;
 import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.plan.stats.ColumnStats;
+import org.apache.flink.table.plan.stats.TableStats;
 
 import org.junit.Test;
 
+import java.sql.Date;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -187,7 +190,7 @@ public abstract class CatalogTestBase {
 		CatalogTable table = createTable();
 		catalog.createTable(path1, table, false);
 
-		assertEquals(catalog.getTable(path1), table);
+		assertEquals(table, catalog.getTable(path1));
 
 		CatalogTable newTable = createAnotherTable();
 		catalog.alterTable(path1, newTable, false);
@@ -204,6 +207,21 @@ public abstract class CatalogTestBase {
 		assertEquals(catalog.getTable(path1), table);
 
 		newTable = createAnotherPartitionedTable();
+		catalog.alterTable(path1, newTable, false);
+
+		assertNotEquals(table, catalog.getTable(path1));
+		assertEquals(newTable, catalog.getTable(path1));
+	}
+
+	@Test
+	public void testAlterTable_withTableStats() {
+		CatalogTable table = createTable();
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, table, false);
+
+		assertEquals(catalog.getTable(path1), table);
+
+		CatalogTable newTable = createAnotherTable();
 		catalog.alterTable(path1, newTable, false);
 
 		assertNotEquals(table, catalog.getTable(path1));
@@ -232,6 +250,118 @@ public abstract class CatalogTestBase {
 		catalog.createTable(path1, createTable(), false);
 
 		assertTrue(catalog.tableExists(path1));
+	}
+
+	// ------ table and column stats ------
+
+	@Test (expected = TableNotExistException.class)
+	public void testGetTableStats_TableNotExistException() {
+		catalog.createDatabase(db1, createDb(), false);
+
+		catalog.getTableStats(path1);
+	}
+
+	@Test
+	public void testAlterTableStats() {
+		// Non-partitioned table
+		catalog.createDatabase(db1, createDb(), false);
+
+		// TODO: [BLINK-18699290] support table stats for CHAR, DECIMAL AND TIMESTAMP type in HiveCatalog
+		TableSchema schema = new TableSchema(
+			new String[] {
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9"
+			},
+			new InternalType[]{
+				DataTypes.STRING,
+				DataTypes.BOOLEAN,
+				DataTypes.INT,
+				DataTypes.SHORT,
+				DataTypes.LONG,
+				DataTypes.BYTE,
+				DataTypes.FLOAT,
+				DataTypes.DOUBLE,
+				DataTypes.DATE
+			}
+		);
+
+		CatalogTable table = CatalogTestUtil.createCatalogTable(
+			getTableType(),
+			schema,
+			getTableProperties());
+		catalog.createTable(path1, table, false);
+
+		assertEquals(table, catalog.getTable(path1));
+
+		TableStats tableStats = createTableStats();
+
+		catalog.alterTableStats(path1, tableStats, false);
+		TableStats actual = catalog.getTableStats(path1);
+
+		assertEquals(tableStats.toString(), actual.toString());
+	}
+
+	private TableStats createTableStats() {
+		return new TableStats(100L, new HashMap<String, ColumnStats>() {{
+			// DataTypes.STRING
+			put("1", new ColumnStats(11L, 1L, 1.1, 1, null, null));
+			// DataTypes.BOOLEAN,
+			put("2", new ColumnStats(null, 2L, null, null, null, null));
+			// DataTypes.BYTE
+			put("3", new ColumnStats(13L, 3L, null, null, 4, 3));
+			// DataTypes.INT
+			put("4", new ColumnStats(14L, 4L, null, null, 5, 4));
+			// DataTypes.SHORT
+			put("5", new ColumnStats(15L, 5L, null, null, 6, 5));
+			// DataTypes.LONG
+			put("6", new ColumnStats(16L, 7L, null, null, 7, 6));
+			// DataTypes.FLOAT
+			put("7", new ColumnStats(17L, 8L, null, null, 8.8, 7.7));
+			// DataTypes.DOUBLE
+			put("8", new ColumnStats(18L, 9L, null, null, 9.9, 8.8));
+			// DataTypes.DATE
+			put("9", new ColumnStats(19L, 10L, null, null, new Date(1547529235000L), new Date(1540529200000L)));
+		}});
+	}
+
+	@Test
+	public void testAlterTableStats_partitionedTable() {
+		// alterTableStats() should do nothing for partitioned tables
+		// getTableStats() should return empty column stats for partitioned tables
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createPartitionedTable(), false);
+
+		TableStats stats = new TableStats(0L, new HashMap<String, ColumnStats>() {{
+			put("first", new ColumnStats(11L, 1L, 1.1, 1, null, null));
+			put("second", new ColumnStats(14L, 4L, null, null, 5, 4));
+			put("third", new ColumnStats(11L, 1L, 1.1, 1, null, null));
+		}});
+
+		catalog.alterTableStats(path1, stats, false);
+
+		assertEquals(new TableStats().toString(), catalog.getTableStats(path1).toString());
+	}
+
+	@Test (expected = TableNotExistException.class)
+	public void testAlterTableStats_TableNotExistException() {
+		catalog.alterTableStats(new ObjectPath(catalog.getDefaultDatabaseName(), "nonexist"), null, false);
+	}
+
+	@Test (expected = TableNotExistException.class)
+	public void testAlterTableStats_TableNotExistExceptio_2() {
+		catalog.alterTableStats(new ObjectPath("non", "exist"), null, false);
+	}
+
+	@Test
+	public void testAlterTableStats_TableNotExistExceptio_ignore() {
+		catalog.alterTableStats(new ObjectPath("non", "exist"), null, true);
 	}
 
 	// ------ databases ------
@@ -518,6 +648,7 @@ public abstract class CatalogTestBase {
 		return CatalogTestUtil.createCatalogTable(
 			getTableType(),
 			createTableSchema(),
+			new TableStats(),
 			getTableProperties(),
 			createPartitionCols());
 	}
@@ -526,37 +657,38 @@ public abstract class CatalogTestBase {
 		return CatalogTestUtil.createCatalogTable(
 			getTableType(),
 			createAnotherTableSchema(),
+			new TableStats(),
 			getTableProperties(),
 			createPartitionCols());
 	}
 
 	private LinkedHashSet<String> createPartitionCols() {
 		return new LinkedHashSet<String>() {{
-			add("name");
-			add("year");
+			add("second");
+			add("third");
 		}};
 	}
 
 	protected CatalogPartition.PartitionSpec createPartitionSpec() {
 		return new CatalogPartition.PartitionSpec(
 			new HashMap<String, String>() {{
-				put("year", "2000");
-				put("name", "bob");
+				put("third", "2000");
+				put("second", "bob");
 			}});
 	}
 
 	protected CatalogPartition.PartitionSpec createAnotherPartitionSpec() {
 		return new CatalogPartition.PartitionSpec(
 			new HashMap<String, String>() {{
-				put("year", "2010");
-				put("name", "bob");
+				put("third", "2010");
+				put("second", "bob");
 			}});
 	}
 
 	protected CatalogPartition.PartitionSpec createPartitionSpecSubset() {
 		return new CatalogPartition.PartitionSpec(
 			new HashMap<String, String>() {{
-				put("name", "bob");
+				put("second", "bob");
 			}});
 	}
 
@@ -586,7 +718,7 @@ public abstract class CatalogTestBase {
 
 	private TableSchema createTableSchema() {
 		return new TableSchema(
-			new String[] {"first", "name", "year"},
+			new String[] {"first", "second", "third"},
 			new InternalType[]{
 				DataTypes.STRING,
 				DataTypes.INT,
@@ -597,7 +729,7 @@ public abstract class CatalogTestBase {
 
 	private TableSchema createAnotherTableSchema() {
 		return new TableSchema(
-			new String[] {"first2", "name", "year"},
+			new String[] {"first2", "second", "third"},
 			new InternalType[]{
 				DataTypes.STRING,
 				DataTypes.STRING,  // different from create table instance.

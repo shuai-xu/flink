@@ -25,6 +25,7 @@ import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.api.exceptions.PartitionAlreadyExistException;
 import org.apache.flink.table.api.exceptions.PartitionNotExistException;
 import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
+import org.apache.flink.table.plan.stats.TableStats;
 
 /**
  * An interface responsible for manipulating catalog metadata.
@@ -89,6 +90,8 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 
 	/**
 	 * Adds a table.
+	 * Note that TableStats in the CatalogTable will not be used for creation.
+	 * Use {@link #alterTableStats(ObjectPath, TableStats, boolean)} to alter table stats.
 	 *
 	 * @param tableName      Path of the table to add.
 	 * @param table          The table to add.
@@ -114,6 +117,8 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 
 	/**
 	 * Modifies an existing newTable.
+	 * Note that TableStats in the CatalogTable will not be used for alteration.
+	 * Use {@link #alterTableStats(ObjectPath, TableStats, boolean)} to alter table stats.
 	 *
 	 * @param tableName         Path of the table to modify.
 	 * @param newTable             The new table which replaces the existing table.
@@ -139,6 +144,21 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists)
 		throws TableNotExistException, DatabaseNotExistException;
 
+
+	// ------ table and column stats ------
+
+	/**
+	 * Alter table stats. This only works for non-partitioned tables.
+	 *
+	 * @param tablePath		Path of the table.
+	 * @param newtTableStats	The new TableStats.
+	 * @param ignoreIfNotExists    Flag to specify behavior if the table does not exist:
+	 *                           if set to false, throw an exception,
+	 *                           if set to true, nothing happens.
+	 * @throws TableNotExistException thrown if the table does not exist
+	 */
+	void alterTableStats(ObjectPath tablePath, TableStats newtTableStats, boolean ignoreIfNotExists)
+		throws TableNotExistException;
 
 	// ------ partitions ------
 

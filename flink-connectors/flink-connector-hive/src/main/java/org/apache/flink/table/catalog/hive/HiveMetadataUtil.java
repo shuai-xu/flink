@@ -48,7 +48,9 @@ import org.apache.flink.util.PropertiesUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hive.metastore.api.BinaryColumnStatsData;
 import org.apache.hadoop.hive.metastore.api.BooleanColumnStatsData;
+import org.apache.hadoop.hive.metastore.api.ColumnStatistics;
 import org.apache.hadoop.hive.metastore.api.ColumnStatisticsData;
+import org.apache.hadoop.hive.metastore.api.ColumnStatisticsDesc;
 import org.apache.hadoop.hive.metastore.api.ColumnStatisticsObj;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.DateColumnStatsData;
@@ -146,6 +148,8 @@ public class HiveMetadataUtil {
 		hiveTable.setDbName(tablePath.getDbName());
 		hiveTable.setTableName(tablePath.getObjectName());
 		hiveTable.setCreateTime((int) (System.currentTimeMillis() / 1000));
+
+		// Create Hive table doesn't include TableStats
 		hiveTable.setParameters(table.getProperties());
 
 		return hiveTable;
@@ -210,11 +214,12 @@ public class HiveMetadataUtil {
 	}
 
 	/**
-	 * Create Flink TableStats from the given Hive column stats.
+	 * Create a map of Flink column stats from the given Hive column stats.
 	 */
-	public static TableStats createTableStats(Long rowCount, List<ColumnStatisticsObj> hiveColStats) {
+	public static Map<String, ColumnStats> createColumnStats(List<ColumnStatisticsObj> hiveColStats) {
 		Map<String, ColumnStats> colStats = new HashMap<>();
-		if (colStats != null && !colStats.isEmpty()) {
+
+		if (hiveColStats != null) {
 			for (ColumnStatisticsObj colStatsObj : hiveColStats) {
 				ColumnStats columnStats = createTableColumnStats(colStatsObj.getStatsData());
 
@@ -224,7 +229,82 @@ public class HiveMetadataUtil {
 			}
 		}
 
-		return new TableStats(rowCount, colStats);
+		return colStats;
+	}
+
+	/**
+	 * Create a map of Flink column stats from the given Hive column stats.
+	 */
+	public static ColumnStatistics createColumnStats(Table hiveTable, Map<String, ColumnStats> colStats) {
+		ColumnStatisticsDesc desc = new ColumnStatisticsDesc(true, hiveTable.getDbName(), hiveTable.getTableName());
+
+		List<ColumnStatisticsObj> colStatsList = new ArrayList<>();
+
+		for (FieldSchema field : hiveTable.getSd().getCols()) {
+			String hiveColName = field.getName();
+			String hiveColType = field.getType();
+
+			if (colStats.containsKey(hiveColName)) {
+				ColumnStats flinkColStat = colStats.get(field.getName());
+
+				ColumnStatisticsData statsData = getColumnStatisticsData(hiveColType, flinkColStat);
+				ColumnStatisticsObj columnStatisticsObj = new ColumnStatisticsObj(hiveColName, hiveColType, statsData);
+				colStatsList.add(columnStatisticsObj);
+			}
+		}
+
+		return new ColumnStatistics(desc, colStatsList);
+	}
+
+	private static ColumnStatisticsData getColumnStatisticsData(String colType, ColumnStats colStat) {
+		switch (colType) {
+			case serdeConstants.BOOLEAN_TYPE_NAME:
+				BooleanColumnStatsData boolStats = new BooleanColumnStatsData(0, 0, colStat.nullCount());
+
+				return ColumnStatisticsData.booleanStats(boolStats);
+			case serdeConstants.TINYINT_TYPE_NAME:
+			case serdeConstants.SMALLINT_TYPE_NAME:
+			case serdeConstants.INT_TYPE_NAME:
+			case serdeConstants.BIGINT_TYPE_NAME:
+				LongColumnStatsData longStats = new LongColumnStatsData(colStat.nullCount(), colStat.ndv());
+				longStats.setHighValue(((Number) colStat.max()).longValue());
+				longStats.setLowValue(((Number) colStat.min()).longValue());
+
+				return ColumnStatisticsData.longStats(longStats);
+			case serdeConstants.FLOAT_TYPE_NAME:
+			case serdeConstants.DOUBLE_TYPE_NAME:
+				DoubleColumnStatsData doubleStats = new DoubleColumnStatsData(colStat.nullCount(), colStat.ndv());
+				doubleStats.setHighValue((Double) colStat.max());
+				doubleStats.setLowValue((Double) colStat.min());
+
+				return ColumnStatisticsData.doubleStats(doubleStats);
+			case serdeConstants.STRING_TYPE_NAME:
+//			case serdeConstants.CHAR_TYPE_NAME: TODO: ADD Char type back
+				return ColumnStatisticsData.stringStats(
+					new StringColumnStatsData(colStat.maxLen(), colStat.avgLen(), colStat.nullCount(), colStat.ndv()));
+			case serdeConstants.DATE_TYPE_NAME:
+			case serdeConstants.DATETIME_TYPE_NAME:
+			case serdeConstants.TIMESTAMP_TYPE_NAME:
+				DateColumnStatsData dateStats = new DateColumnStatsData(colStat.nullCount(), colStat.ndv());
+
+				dateStats.setHighValue(new org.apache.hadoop.hive.metastore.api.Date(
+					((Date) colStat.max()).getTime() / MILLIS_PER_DAY));
+				dateStats.setLowValue(new org.apache.hadoop.hive.metastore.api.Date(
+					((Date) colStat.min()).getTime() / MILLIS_PER_DAY));
+
+				return ColumnStatisticsData.dateStats(dateStats);
+			case serdeConstants.DECIMAL_TYPE_NAME:
+				DecimalColumnStatsData decimalStats =
+					new DecimalColumnStatsData(colStat.nullCount(), colStat.ndv());
+
+				decimalStats.setHighValue((Decimal) colStat.max());
+				decimalStats.setLowValue((Decimal) colStat.min());
+
+				return ColumnStatisticsData.decimalStats(decimalStats);
+			default:
+				// TODO: add warn logging
+				return new ColumnStatisticsData();
+		}
 	}
 
 	/**
