@@ -204,7 +204,7 @@ def selectFirst[T](input: DataSet[(T, _)]) : DataSet[T] = {
   input.map { v => v._1 }
 }
 
-val data : DataSet[(String, Long) = ...
+val data : DataSet[(String, Long)] = ...
 
 val result = selectFirst(data)
 {% endhighlight %}
@@ -238,7 +238,7 @@ as possible via reflection, using the few bits that Java preserves (mainly funct
 This logic also contains some simple type inference for cases where the return type of a function depends on its input type:
 
 {% highlight java %}
-public class AppendOne<T> extends MapFunction<T, Tuple2<T, Long>> {
+public class AppendOne<T> implements MapFunction<T, Tuple2<T, Long>> {
 
     public Tuple2<T, Long> map(T value) {
         return new Tuple2<T, Long>(value, 1L);
