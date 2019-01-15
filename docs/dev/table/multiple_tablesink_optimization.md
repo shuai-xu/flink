@@ -24,13 +24,8 @@ under the License.
 
 Multiple TableSinks are needed if we want to emit multiple results to different external storage in a Flink job. It's better if we can define multiple TableSinks without having common operators executed repeatedly.
 
-* This will be replaced by the TOC
-{:toc}
-
-### How to define multiple TableSinks And avoid executing common operators repeatedly
-The following example shows how to define multiple TableSinks in a Flink job.
-
-**Note**: It is important to enable subsection optimization if there are multiple TableSinks in a job. In the following example, operators to compute revenue for all French customers will be reused if enable subsection optimization.
+### How to avoid executing common operators repeatedly if there are multiple TableSinks in a job.
+The following example shows a Flink job which has multiple TableSinks.
 
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
@@ -123,19 +118,11 @@ tEnv.execute()
 </div>
 </div>
 
-{% top %}
+**Note**: It's important to enable subsection optimization if there are multiple TableSinks in a job. In the above example, operators to compute revenue for all French customers will be reused if enable subsection optimization. The following picture shows difference between the job enable subsection optimization and the one not.
 
-### Difference between a Flink job enable subsection optimization and the one not
-As it is known to all, Table API and SQL queries are translated to `StreamGraph` no matter whether their input is a streaming or batch input.
-
-If disable subsection optimization, the translation will happen immediately once emit a result `Table` into a `TableSink` by calling `Table.writeToSink()` or `Table.insertInto()`. The emitted `Table` is internally represented as a logical query plan and is translated in two phases:
-1. optimize logical plan. The logical plan is a simple RelNode tree which only has one root node.
-2. translate physical plan into into a `StreamGraph`.
-
-If enable subsection optimization, the translation will not happen immediately when emit a result `Table` into a `TableSink`. The translation will only happened after `TableEnvironment` has whole picture of the Flink Job by calling `TableEnvironment.execute`. The translation will be completed in three phases:
-1. generate logical plan. If there are multiple `TableSink` in the Flink job, it's logical plan is a RelNode DAG instead of a simple RelNode tree. A RelNode DAG has multiple root nodes. A RelNode Dag can be decomposed into multiple RelNode trees. All common subplans are represented as the same RelNode tree in the RelNode DAG.
-2. optimize logical plan. Output of optimization is physical plan.
-3. translate physical plan into into a `StreamGraph`.
+<div style="text-align: center">
+  <img src="{{ site.baseurl }}/fig/multiple_sink.png" width="50%" height="50%" />
+</div>
 
 {% top %}
 
