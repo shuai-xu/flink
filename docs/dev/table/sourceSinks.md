@@ -47,6 +47,8 @@ A custom `TableSource` can be defined by implementing the `BatchTableSource` or 
 | `Kafka08AvroTableSource` | `flink-connector-kafka-0.8` | N | Y | A `TableSource` for Avro-encoded Kafka 0.8 topics.
 | `Kafka08JsonTableSource` | `flink-connector-kafka-0.8` | N | Y | A `TableSource` for flat Json-encoded Kafka 0.8 topics.
 | `CsvTableSource` | `flink-table` | Y | Y | A simple `TableSource` for CSV files.
+| `OrcVectorizedColumnRowTableSource` | `flink-table` | Y | Y | A vectorized `TableSource` for ORC files.
+| `ParquetVectorizedColumnRowTableSource` | `flink-table` | Y | Y | A vectorized `TableSource` for Parquet files.
 | `OrcTableSource` | `flink-orc` | Y | N | A `TableSource` for ORC files.
 | `HiveTableSource`(beta) | `flink-connector-hive` and `flink-hadoop-compatibility` | Y | N | A `TableSource` for hive table
 
@@ -532,6 +534,43 @@ val csvTableSource = CsvTableSource
 {% endhighlight %}
 </div>
 </div>
+
+{% top %}
+
+### OrcVectorizedColumnRowTableSource and ParquetVectorizedColumnRowTableSource
+
+The `OrcVectorizedColumnRowTableSource` reads [ORC files](https://orc.apache.org) and `ParquetVectorizedColumnRowTableSource` reads [Parquet files](https://parquet.apache.org/). Both return ColumnarRow.
+
+They are already include in `flink-table` without additional dependencies.
+
+<div data-lang="scala" markdown="1">
+{% highlight scala %}
+val names = Array("first", "id", "score", "last")
+val types: Array[InternalType] = Array(
+  StringType.INSTANCE,
+  IntType.INSTANCE,
+  DoubleType.INSTANCE,
+  StringType.INSTANCE
+)
+
+// create OrcVectorizedColumnRowTableSource
+val orcTable = new OrcVectorizedColumnRowTableSource(
+  new Path("/path/to/your/file.orc"),
+  types,
+  names,
+  true)
+
+// create ParquetVectorizedColumnRowTableSource
+val parquetTable = new ParquetVectorizedColumnRowTableSource(
+  new Path("/path/to/your/file.parquet"),
+  types,
+  names,
+  true)
+{% endhighlight %}
+</div>
+</div>
+
+**Note:** The `OrcVectorizedColumnRowTableSource` and `ParquetVectorizedColumnRowTableSource` do not support complex type yet.
 
 {% top %}
 
