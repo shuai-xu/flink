@@ -38,7 +38,7 @@ import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.runtime.TwoInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.util.ResettableExternalBuffer
 import org.apache.flink.table.typeutils.BinaryRowSerializer
-import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.NodeResourceUtil
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.core._
@@ -145,7 +145,7 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
     val isFirstRow = newName("isFirstRow")
     val isBinaryRow = newName("isBinaryRow")
 
-    val externalBufferMemorySize = getResource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB
+    val externalBufferMemorySize = getResource.getReservedManagedMem * NodeResourceUtil.SIZE_IN_MB
 
     if (singleRowJoin) {
       ctx.addReusableMember(s"$BASE_ROW $buildRow = null;")

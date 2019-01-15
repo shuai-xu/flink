@@ -16,30 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.resource.batch.calculator;
+package org.apache.flink.table.resource.batch.parallelism;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
-import org.apache.flink.table.resource.batch.ShuffleStage;
-import org.apache.flink.table.util.ExecResourceUtil;
-
-import org.apache.calcite.rel.metadata.RelMetadataQuery;
+import org.apache.flink.table.util.NodeResourceUtil;
 
 import java.util.Set;
 
 /**
  * Default parallelism calculator for shuffleStages.
  */
-public class BatchParallelismCalculator extends ShuffleStageParallelismCalculator {
+public class BatchParallelismCalculatorOnConfig extends BatchShuffleStageParallelismCalculator {
 
-	public BatchParallelismCalculator(RelMetadataQuery mq, Configuration tableConf, int envParallelism) {
-		super(mq, tableConf, envParallelism);
+	public BatchParallelismCalculatorOnConfig(Configuration tableConf, int envParallelism) {
+		super(tableConf, envParallelism);
 	}
 
 	@Override
 	protected void calculate(ShuffleStage shuffleStage) {
-		if (shuffleStage.isParallelismFinal()) {
+		if (shuffleStage.isFinalParallelism()) {
 			return;
 		}
 		Set<ExecNode<?, ?>> nodeSet = shuffleStage.getExecNodeSet();
@@ -53,9 +50,9 @@ public class BatchParallelismCalculator extends ShuffleStageParallelismCalculato
 			}
 		}
 		if (maxSourceParallelism > 0) {
-			shuffleStage.setResultParallelism(maxSourceParallelism, false);
+			shuffleStage.setParallelism(maxSourceParallelism, false);
 		} else {
-			shuffleStage.setResultParallelism(ExecResourceUtil.getOperatorDefaultParallelism(getTableConf(), envParallelism), false);
+			shuffleStage.setParallelism(NodeResourceUtil.getOperatorDefaultParallelism(getTableConf(), envParallelism), false);
 		}
 	}
 }

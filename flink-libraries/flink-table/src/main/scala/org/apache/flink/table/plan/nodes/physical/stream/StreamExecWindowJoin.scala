@@ -207,6 +207,11 @@ class StreamExecWindowJoin(
     }
   }
 
+  private def setTransformationRes(streamTransformation: StreamTransformation[_]): Unit = {
+    streamTransformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
+  }
+
   def createNegativeWindowSizeJoin(
     joinType: FlinkJoinRelType,
     leftDataStream: StreamTransformation[BaseRow],
@@ -246,6 +251,7 @@ class StreamExecWindowJoin(
       new StreamFlatMap[BaseRow, BaseRow](allFilter),
       returnTypeInfo,
       leftP)
+    setTransformationRes(filterAllLeftStream)
 
     val filterAllRightStream = new OneInputTransformation[BaseRow, BaseRow](
       rightDataStream,
@@ -253,6 +259,7 @@ class StreamExecWindowJoin(
       new StreamFlatMap[BaseRow, BaseRow](allFilter),
       returnTypeInfo,
       rightP)
+    setTransformationRes(filterAllRightStream)
 
     val padLeftStream = new OneInputTransformation[BaseRow, BaseRow](
       leftDataStream,
@@ -261,6 +268,7 @@ class StreamExecWindowJoin(
       returnTypeInfo,
       leftP
     )
+    setTransformationRes(padLeftStream)
 
     val padRightStream = new OneInputTransformation[BaseRow, BaseRow](
       rightDataStream,
@@ -269,6 +277,7 @@ class StreamExecWindowJoin(
       returnTypeInfo,
       rightP
     )
+    setTransformationRes(padRightStream)
     joinType match {
       case FlinkJoinRelType.INNER =>
         new UnionTransformation(
@@ -321,13 +330,14 @@ class StreamExecWindowJoin(
       new KeyedCoProcessOperator(procJoinFunc).
         asInstanceOf[TwoInputStreamOperator[BaseRow,BaseRow,BaseRow]],
       returnTypeInfo,
-      tableEnv.execEnv.getParallelism
+      leftDataStream.getParallelism
     )
 
     if (leftKeys.isEmpty) {
       ret.setParallelism(1)
       ret.setMaxParallelism(1)
     }
+    setTransformationRes(ret)
     // set KeyType and Selector for state
     ret.setStateKeySelectors(leftSelect, rightSelect)
     ret.setStateKeyType(leftSelect.getProducedType)
@@ -371,8 +381,10 @@ class StreamExecWindowJoin(
       new KeyedCoProcessOperatorWithWatermarkDelay(rowJoinFunc, rowJoinFunc.getMaxOutputDelay)
         .asInstanceOf[TwoInputStreamOperator[BaseRow,BaseRow,BaseRow]],
       returnTypeInfo,
-      tableEnv.execEnv.getParallelism
+      leftDataStream.getParallelism
     )
+
+    setTransformationRes(ret)
 
     if (leftKeys.isEmpty) {
       ret.setMaxParallelism(1)

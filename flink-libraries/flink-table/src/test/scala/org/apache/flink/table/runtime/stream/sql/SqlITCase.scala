@@ -201,7 +201,7 @@ class SqlITCase extends StreamingTestBase {
     val sqlQuery = "SELECT a FROM T UNION SELECT b FROM T"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List(
@@ -221,7 +221,7 @@ class SqlITCase extends StreamingTestBase {
     val sqlQuery = "SELECT a FROM T UNION SELECT b FROM T"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1","null")
@@ -238,7 +238,7 @@ class SqlITCase extends StreamingTestBase {
     val sqlQuery = "SELECT b FROM T UNION SELECT a FROM T"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1","null")
@@ -254,7 +254,7 @@ class SqlITCase extends StreamingTestBase {
     val sqlQuery = "SELECT a FROM T INTERSECT SELECT b FROM T"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List(
@@ -273,7 +273,7 @@ class SqlITCase extends StreamingTestBase {
     val sqlQuery = "SELECT a FROM T INTERSECT SELECT b FROM T"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List()
@@ -290,7 +290,7 @@ class SqlITCase extends StreamingTestBase {
     val sqlQuery = "SELECT b FROM T INTERSECT SELECT a FROM T"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List()
@@ -306,7 +306,7 @@ class SqlITCase extends StreamingTestBase {
     val sqlQuery = "SELECT a FROM T EXCEPT SELECT b FROM T"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List(
@@ -325,7 +325,7 @@ class SqlITCase extends StreamingTestBase {
     val sqlQuery = "SELECT a FROM T EXCEPT SELECT b FROM T"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List(
@@ -344,7 +344,7 @@ class SqlITCase extends StreamingTestBase {
     val sqlQuery = "SELECT b FROM T EXCEPT SELECT a FROM T"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List(

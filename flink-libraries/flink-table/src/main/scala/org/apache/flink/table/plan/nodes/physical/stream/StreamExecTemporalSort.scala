@@ -30,7 +30,7 @@ import org.apache.flink.table.runtime.NullBinaryRowKeySelector
 import org.apache.flink.table.runtime.aggregate._
 import org.apache.flink.table.runtime.sort.{OnlyRowTimeSortOperator, ProcTimeSortOperator, RowTimeSortOperator}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.NodeResourceUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelFieldCollation.Direction
@@ -100,8 +100,8 @@ class StreamExecTemporalSort(
       throw new TableException(
         TableErrors.INST.sqlSortOrderError())}
 
-    val managedMemory = ExecResourceUtil.getSortBufferManagedMemory(tableEnv.getConfig.getConf)
-    val mangedMemorySize = managedMemory * ExecResourceUtil.SIZE_IN_MB
+    val managedMemory = NodeResourceUtil.getSortBufferManagedMemory(tableEnv.getConfig.getConf)
+    val mangedMemorySize = managedMemory * NodeResourceUtil.SIZE_IN_MB
 
     // enable to extend for other types of aggregates that will not be implemented in a window
     timeType match {
@@ -186,6 +186,9 @@ class StreamExecTemporalSort(
     val selector = new NullBinaryRowKeySelector
     ret.setStateKeySelector(selector)
     ret.setStateKeyType(selector.getProducedType)
+
+    ret.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
     ret
   }
 }

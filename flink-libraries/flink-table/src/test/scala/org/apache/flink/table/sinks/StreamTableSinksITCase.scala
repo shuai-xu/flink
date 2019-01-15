@@ -21,11 +21,9 @@ package org.apache.flink.table.sinks
 import java.util.TimeZone
 
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TableEnvironment, TableException}
+import org.apache.flink.table.api.TableException
 import org.apache.flink.table.runtime.utils._
-import org.apache.flink.test.util.AbstractTestBase
 import org.apache.flink.api.scala._
 import org.apache.flink.types.Row
 import org.junit.Assert._
@@ -33,15 +31,12 @@ import org.junit.{Ignore, Test}
 
 import scala.collection.mutable
 
-class StreamTableSinksITCase extends AbstractTestBase {
+class StreamTableSinksITCase extends StreamingTestBase {
 
   TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
 
   @Test(expected = classOf[TableException])
   def testAppendSinkOnUpdatingTable(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val t = StreamTestData.get3TupleDataStream(env).toTable(tEnv, 'id, 'num, 'text)
 
     t.groupBy('text)
@@ -75,9 +70,7 @@ class StreamTableSinksITCase extends AbstractTestBase {
 
   @Test
   def testAppendSinkOnAppendTable(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val t = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._1.toLong)
@@ -103,9 +96,7 @@ class StreamTableSinksITCase extends AbstractTestBase {
 
   @Test
   def testRetractSinkOnUpdatingTable(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val t = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._1.toLong)
@@ -115,7 +106,7 @@ class StreamTableSinksITCase extends AbstractTestBase {
     t.select('id, 'num, 'text.charLength() as 'len)
       .groupBy('len)
       .select('len, 'id.count, 'num.sum)
-      .toRetractStream[Row].addSink(tableSink)
+      .toRetractStream[Row].addSink(tableSink).setParallelism(1)
 
     env.execute()
 
@@ -132,9 +123,7 @@ class StreamTableSinksITCase extends AbstractTestBase {
 
   @Test
   def testRetractSinkOnAppendTable(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val t = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._1.toLong)
@@ -144,7 +133,7 @@ class StreamTableSinksITCase extends AbstractTestBase {
     t.window(Tumble over 5.millis on 'rowtime as 'w)
       .groupBy('w)
       .select('w.end, 'id.count, 'num.sum)
-      .toRetractStream[Row].addSink(tableSink)
+      .toRetractStream[Row].addSink(tableSink).setParallelism(1)
 
     env.execute()
 
@@ -160,9 +149,7 @@ class StreamTableSinksITCase extends AbstractTestBase {
 
   @Test
   def testUpsertSinkOnUpdatingTableWithFullKey(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val t = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._1.toLong)
@@ -188,9 +175,7 @@ class StreamTableSinksITCase extends AbstractTestBase {
   @Ignore
   @Test(expected = classOf[TableException])
   def testUpsertSinkOnUpdatingTableWithoutFullKey(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val t = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._1.toLong)
@@ -208,9 +193,7 @@ class StreamTableSinksITCase extends AbstractTestBase {
 
   @Test
   def testUpsertSinkOnAppendingTableWithFullKey1(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val t = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._1.toLong)
@@ -239,9 +222,7 @@ class StreamTableSinksITCase extends AbstractTestBase {
 
   @Test
   def testUpsertSinkOnAppendingTableWithFullKey2(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val t = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._1.toLong)
@@ -270,9 +251,7 @@ class StreamTableSinksITCase extends AbstractTestBase {
 
   @Test
   def testUpsertSinkOnAppendingTableWithoutFullKey1(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val t = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._1.toLong)
@@ -302,9 +281,7 @@ class StreamTableSinksITCase extends AbstractTestBase {
 
   @Test
   def testUpsertSinkOnAppendingTableWithoutFullKey2(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val t = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._1.toLong)
@@ -334,8 +311,6 @@ class StreamTableSinksITCase extends AbstractTestBase {
 
   @Test
   def testPartitinalSink(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     def get3TupleData: Seq[(Int, Long, String)] = {
       val data = new mutable.MutableList[(Int, Long, String)]
       data.+=((3, 1L, "Hi"))

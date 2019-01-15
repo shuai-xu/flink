@@ -27,7 +27,7 @@ import org.apache.flink.table.plan.stats.ValueInterval
 import org.apache.flink.table.plan.util.AggregateUtil._
 import org.apache.flink.table.plan.util.FlinkRelMdUtil._
 import org.apache.flink.table.plan.util.{FlinkRelMdUtil, FlinkRelOptUtil}
-import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.NodeResourceUtil
 
 import org.apache.calcite.adapter.enumerable.EnumerableLimit
 import org.apache.calcite.plan.volcano.RelSubset
@@ -125,7 +125,7 @@ class FlinkRelMdRowCount private extends MetadataHandler[BuiltInMetadata.RowCoun
     } else {
       val childRowCount = mq.getRowCount(rel.getInput)
       val tableConfig = FlinkRelOptUtil.getTableConfig(rel)
-      val nParallelism = ExecResourceUtil.calOperatorParallelism(childRowCount, tableConfig.getConf)
+      val nParallelism = NodeResourceUtil.calOperatorParallelism(childRowCount, tableConfig.getConf)
       if (nParallelism == 1) {
         ndvOfGroupKeysOnGlobalAgg
       } else if (grouping.isEmpty) {

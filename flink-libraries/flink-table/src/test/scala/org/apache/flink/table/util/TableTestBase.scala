@@ -38,7 +38,8 @@ import org.apache.flink.table.api.{Table, TableEnvironment, TableException, Tabl
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExecSink}
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
+import org.apache.flink.table.plan.nodes.process.ChainedDAGProcessors
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil}
@@ -419,13 +420,6 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
     doVerifyPlan(resultTable, explainLevel = explainLevel, printPlanBefore = printPlanBefore)
   }
 
-  def verifyResultPartitionCount(): Unit = {
-    doVerifyPlanWithSubsectionOptimization(
-      explainLevel = SqlExplainLevel.NO_ATTRIBUTES,
-      printResultPartitionCount = true,
-      printPlanBefore = false)
-  }
-
   def verifyResource(sql: String): Unit = {
     assertEqualsOrExpand("sql", sql)
     doVerifyPlan(
@@ -435,10 +429,9 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
       printPlanBefore = false)
   }
 
-  def verifyResultPartitionCount(resultTable: Table): Unit = {
-    doVerifyPlan(
-      resultTable,
-      explainLevel = SqlExplainLevel.NO_ATTRIBUTES,
+  def verifyResourceWithSubsectionOptimization(): Unit = {
+    doVerifyPlanWithSubsectionOptimization(
+      explainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
       printResource = true,
       printPlanBefore = false)
   }
@@ -466,13 +459,13 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
     }
 
     val actual = SystemUtils.LINE_SEPARATOR +
-      getPlan(relNode, explainLevel, printResource, printRunningUnit)
+        getPlan(relNode, explainLevel, printResource, printRunningUnit)
     assertEqualsOrExpand("planAfter", actual.toString, expand = false)
   }
 
   private def doVerifyPlanWithSubsectionOptimization(
       explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
-      printResultPartitionCount: Boolean = false,
+      printResource: Boolean = false,
       printPlanBefore: Boolean = true): Unit = {
     if (!tableEnv.getConfig.getSubsectionOptimization) {
       throw new TableException(
@@ -495,34 +488,16 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
 
     val optSinkNodes = tableEnv.tableServiceManager.cachePlanBuilder
       .buildPlanIfNeeded(tableEnv.sinkNodes)
+    if (!printResource) {
+      tableEnv.getConfig.setBatchDAGProcessors(new ChainedDAGProcessors)
+    }
     val sinkExecNodes = tableEnv.optimizeAndTranslateNodeDag(true, optSinkNodes: _*)
 
     tableEnv.sinkNodes.clear()
 
     // set resource
-    val planAfter = if (printResultPartitionCount) {
-      val planWithResource = new StringBuilder()
-      val ruKeeper = new RunningUnitKeeper(tableEnv)
-      sinkExecNodes.map {
-        case node: BatchExecSink[_] =>
-          // TODO refactor
-          ruKeeper.buildRUs(node)
-          ruKeeper.calculateNodeResource(node)
-          planWithResource.append(System.lineSeparator)
-          planWithResource.append("[[Sink]]")
-          planWithResource.append(System.lineSeparator)
-          planWithResource.append(FlinkNodeOptUtil.treeToString(
-            node,
-            detailLevel = explainLevel,
-            withResource = true))
-          planWithResource.append(System.lineSeparator)
-        case _ => // ignore
-      }
-      planWithResource.deleteCharAt(planWithResource.length - 1)
-      planWithResource.toString
-    } else {
-      FlinkNodeOptUtil.dagToString(sinkExecNodes, detailLevel = explainLevel)
-    }
+    val planAfter =  FlinkNodeOptUtil.dagToString(sinkExecNodes, detailLevel = explainLevel,
+      withResource = printResource)
     assertEqualsOrExpand("planAfter", planAfter, expand = false)
   }
 
@@ -562,21 +537,16 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
     val optimized = tableEnv.optimize(relNode)
     optimized match {
       case batchExecRel: BatchExecRel[_] =>
+        if (!printResource) {
+          tableEnv.getConfig.setBatchDAGProcessors(new ChainedDAGProcessors())
+        }
         val optimizedNodes = tableEnv.translateNodeDag(Seq(batchExecRel))
 
-        if (printResource || printRunningUnit) {
-          // TODO refactor
-          val ruKeeper = new RunningUnitKeeper(tableEnv)
-          ruKeeper.buildRUs(batchExecRel)
-          if (printResource) {
-            ruKeeper.calculateNodeResource(batchExecRel)
-          }
-          if (printRunningUnit) {
-            val ruList = ruKeeper.getRunningUnits.map(x => x.toString)
+        if (printRunningUnit) {
+            val ruList = tableEnv.getRUKeeper.getRunningUnits.map(x => x.toString)
             ruList.sorted
             val ruString = SystemUtils.LINE_SEPARATOR + String.join("\n", ruList)
             assertEqualsOrExpand("runningUnit", ruString)
-          }
         }
 
         require(optimizedNodes.length == 1)

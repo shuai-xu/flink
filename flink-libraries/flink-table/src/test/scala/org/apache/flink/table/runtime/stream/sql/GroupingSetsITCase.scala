@@ -47,7 +47,7 @@ class GroupingSetsITCase(mode: StateBackendMode) extends StreamingWithStateTestB
       "  group by grouping sets (gid)"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = mutable.MutableList(
       "1,1.0,0,0,0",
@@ -68,7 +68,7 @@ class GroupingSetsITCase(mode: StateBackendMode) extends StreamingWithStateTestB
     val sqlQuery = "select gid, count(*) as c from A group by grouping sets ((), (gid))"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = mutable.MutableList(
       "1,1",
@@ -90,7 +90,7 @@ class GroupingSetsITCase(mode: StateBackendMode) extends StreamingWithStateTestB
     val sqlQuery = "select gid + 1, count(*) as c from A group by grouping sets ((), (gid + 1))"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = mutable.MutableList(
       "2,1",
@@ -112,7 +112,7 @@ class GroupingSetsITCase(mode: StateBackendMode) extends StreamingWithStateTestB
     val sqlQuery = "select gid + 1, count(*) as c from A group by cube(gid, comment)"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = mutable.MutableList("2,1", "2,1", "3,1", "3,1", "3,2", "4,1",
       "4,1", "4,1", "4,3", "5,1", "5,1", "5,1", "5,1", "5,4", "6,1", "6,1", "6,1",
@@ -132,7 +132,7 @@ class GroupingSetsITCase(mode: StateBackendMode) extends StreamingWithStateTestB
     val sqlQuery = "select gid + 1, count(*) as c from A group by rollup(gid)"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = mutable.MutableList(
       "2,1",
@@ -154,7 +154,7 @@ class GroupingSetsITCase(mode: StateBackendMode) extends StreamingWithStateTestB
     val sqlQuery = "select gid + 1, count(*) as c from A group by rollup(gid, comment)"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = mutable.MutableList("2,1", "2,1", "3,1", "3,1", "3,2", "4,1",
       "4,1", "4,1", "4,3", "5,1", "5,1", "5,1", "5,1", "5,4", "6,1", "6,1", "6,1",
@@ -171,7 +171,7 @@ class GroupingSetsITCase(mode: StateBackendMode) extends StreamingWithStateTestB
     val sqlQuery = "select gid + 1, count(*) as c from A group by rollup(gid) having count(*) > 3"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = mutable.MutableList("5,4", "6,5", "7,6", "null,21")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
@@ -186,7 +186,7 @@ class GroupingSetsITCase(mode: StateBackendMode) extends StreamingWithStateTestB
     val sqlQuery = "select distinct count(*) from A group by rollup(gid, comment)"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = mutable.MutableList("1", "2", "3", "4", "5", "6", "21")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
@@ -206,7 +206,7 @@ class GroupingSetsITCase(mode: StateBackendMode) extends StreamingWithStateTestB
       "  group by rollup(gid, comment)"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = mutable.MutableList(
       "5,Comment#5,0,1",
@@ -228,7 +228,7 @@ class GroupingSetsITCase(mode: StateBackendMode) extends StreamingWithStateTestB
     val sqlQuery = "select count(*) as c, gid, grouping(gid) as g from A group by rollup(gid)"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = mutable.MutableList(
       "1,1,0",
@@ -256,7 +256,7 @@ class GroupingSetsITCase(mode: StateBackendMode) extends StreamingWithStateTestB
       "  having gid > 5"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = mutable.MutableList(
       "6,Comment#10,0,0,0,0,0,1",
@@ -279,7 +279,7 @@ class GroupingSetsITCase(mode: StateBackendMode) extends StreamingWithStateTestB
     val sqlQuery = "select gid + 1, gid + 1 - 1, count(*) from A group by rollup(gid + 1)"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = mutable.MutableList(
       "2,1,1",
@@ -302,7 +302,7 @@ class GroupingSetsITCase(mode: StateBackendMode) extends StreamingWithStateTestB
       "  group by cube(mod(gid, 4), comment) having mod(gid, 4) = 3"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = mutable.MutableList(
       "3,Hello world, how are you?,1",
@@ -321,7 +321,7 @@ class GroupingSetsITCase(mode: StateBackendMode) extends StreamingWithStateTestB
     val sqlQuery = "select count(*) as c from A group by rollup(1)"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1).setParallelism(1)
     env.execute()
     val expected = mutable.MutableList("21", "21")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)

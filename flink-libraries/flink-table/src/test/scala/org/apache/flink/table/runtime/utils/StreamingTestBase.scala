@@ -21,11 +21,11 @@ import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.api.scala.StreamTableEnvironment
-import org.apache.flink.test.util.AbstractTestBase
+
 import org.junit.{Before, Rule}
 import org.junit.rules.{ExpectedException, TemporaryFolder}
 
-class StreamingTestBase extends AbstractTestBase {
+class StreamingTestBase {
 
   var env: StreamExecutionEnvironment = _
   var tEnv: StreamTableEnvironment = _
@@ -44,11 +44,11 @@ class StreamingTestBase extends AbstractTestBase {
   def before(): Unit = {
     StreamTestSink.clear()
     this.env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setParallelism(1)
     this.env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     if (enableObjectReuse) {
       this.env.getConfig.enableObjectReuse()
     }
     this.tEnv = TableEnvironment.getTableEnvironment(env)
   }
-
 }

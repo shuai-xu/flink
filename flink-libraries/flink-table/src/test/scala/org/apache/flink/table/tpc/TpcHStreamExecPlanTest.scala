@@ -86,7 +86,7 @@ class TpcHStreamExecPlanTest(caseName: String, twoStageAgg: Boolean) {
     val sql = TpcUtils.getStreamTpcHQuery(caseName)
     val sink = new TestingRetractSink
     val result = tEnv.sqlQuery(sql).toRetractStream[Row]
-      .addSink(sink)
+      .addSink(sink).setParallelism(1)
     if (retractSinkCase.contains(caseName)) {
       result.setParallelism(1)
     }

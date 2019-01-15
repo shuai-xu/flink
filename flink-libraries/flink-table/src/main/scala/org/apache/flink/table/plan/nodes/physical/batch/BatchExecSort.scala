@@ -32,7 +32,7 @@ import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.sort.SortOperator
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.NodeResourceUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
 import org.apache.calcite.rel.core.Sort
@@ -102,12 +102,12 @@ class BatchExecSort(
     // sort code gen
     val (comparators, serializers, codeGen) = getSortInfo(tableEnv.getConfig)
 
-    val reservedMangedMemorySize = getResource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB
+    val reservedMangedMemorySize = getResource.getReservedManagedMem * NodeResourceUtil.SIZE_IN_MB
 
-    val preferMangedMemorySize = getResource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB
+    val preferMangedMemorySize = getResource.getMaxManagedMem * NodeResourceUtil.SIZE_IN_MB
     val perRequestSize =
-      ExecResourceUtil.getPerRequestManagedMemory(
-        tableEnv.getConfig.getConf)* ExecResourceUtil.SIZE_IN_MB
+      NodeResourceUtil.getPerRequestManagedMemory(
+        tableEnv.getConfig.getConf)* NodeResourceUtil.SIZE_IN_MB
 
     val operator = new SortOperator(
       reservedMangedMemorySize,

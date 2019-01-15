@@ -29,7 +29,7 @@ import org.apache.flink.types.Row
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
 
-class CodeGenCommonSubexpressionEliminationITCase {
+class CodeGenCommonSubexpressionEliminationITCase extends StreamingTestBase {
 
   val sourceData = List(
     (1, "Pink Floyd"),
@@ -53,12 +53,10 @@ class CodeGenCommonSubexpressionEliminationITCase {
 
   @Test
   def testIf(): Unit = {
-    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val configs = Array(new TableConfig, new TableConfig)
     configs(0).getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX,1)
 
     configs.foreach { config =>
-
       val tEnv = TableEnvironment.getTableEnvironment(env, config)
       val t1 = env.fromCollection(sourceData)
         .toTable(tEnv)
@@ -93,7 +91,6 @@ class CodeGenCommonSubexpressionEliminationITCase {
 
   @Test
   def testIfWithDifferentScope(): Unit = {
-    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val configs = Array(new TableConfig(), new TableConfig)
 
     configs(0).getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX,1)
@@ -138,9 +135,6 @@ class CodeGenCommonSubexpressionEliminationITCase {
 
   @Test
   def testCaseWhen(): Unit = {
-    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env)
-
     tEnv.registerFunction("UpperUdf", new UpperUdf)
     tEnv.registerFunction("LowerUdf", new LowerUdf)
 
@@ -176,9 +170,6 @@ class CodeGenCommonSubexpressionEliminationITCase {
 
   @Test
   def testCoalesce(): Unit = {
-    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env)
-
     tEnv.registerFunction("UpperUdf", new UpperUdf)
     tEnv.registerFunction("LowerUdf", new LowerUdf)
 
@@ -214,8 +205,6 @@ class CodeGenCommonSubexpressionEliminationITCase {
 
   @Test
   def testNonDeterministic(): Unit = {
-    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env)
     tEnv.registerFunction("NonDeterministicUdf", new NonDeterministicUdf)
 
     val t1 = env.fromCollection(sourceData)
@@ -246,8 +235,7 @@ class CodeGenCommonSubexpressionEliminationITCase {
 
   @Test
   def testJoin(): Unit = {
-    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env)
+    env.getConfig.disableObjectReuse()
     tEnv.registerFunction("UpperUdf", new UpperUdf)
     tEnv.registerFunction("LowerUdf", new LowerUdf)
 
@@ -285,7 +273,6 @@ class CodeGenCommonSubexpressionEliminationITCase {
 
   @Test
   def testSubexpressionEliminationWithCodeSplit(): Unit = {
-    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val configs = Array(new TableConfig(), new TableConfig)
 
     configs(0).getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX,1)
@@ -324,11 +311,7 @@ class CodeGenCommonSubexpressionEliminationITCase {
 
   @Test
   def testMapArray(): Unit = {
-    val config = new TableConfig()
-    config.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX,1)
-
-    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env, config)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX,1)
 
     val t1 = env.fromCollection(albumsData)
       .toTable(tEnv)

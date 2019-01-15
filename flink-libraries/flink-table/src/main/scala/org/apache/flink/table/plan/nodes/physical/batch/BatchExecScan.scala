@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
@@ -28,27 +27,10 @@ import org.apache.flink.table.plan.nodes.common.CommonScan
 import org.apache.flink.table.util.Logging
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 
 import scala.collection.JavaConversions._
 
 trait BatchExecScan extends CommonScan[BinaryRow] with RowBatchExecRel with Logging {
-
-  private[flink] var sourceResSpec: ResourceSpec = _
-  private[flink] var conversionResSpec: ResourceSpec = _
-
-  // This rel needs two resourceSpec, so we should set detail transformations res here.
-  // TODO split BatchExecScan to every rel only do a work.
-  def setResForSourceAndConversion(
-      sourceResSpec: ResourceSpec,
-      conversionResSpec: ResourceSpec): Unit = {
-    this.sourceResSpec = sourceResSpec
-    this.conversionResSpec = conversionResSpec
-  }
-
-  // get source transformation.
-  private[flink] def getSourceTransformation(
-      streamEnv: StreamExecutionEnvironment): StreamTransformation[_]
 
    /**
     * Assign source for transformation.

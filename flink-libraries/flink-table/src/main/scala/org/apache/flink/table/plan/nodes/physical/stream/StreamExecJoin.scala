@@ -432,12 +432,14 @@ class StreamExecJoin(
       JoinUtil.joinToString(joinRowType, joinCondition, joinType, getExpressionString),
       operator,
       returnType,
-      tableEnv.execEnv.getParallelism)
+      leftTransform.getParallelism)
 
     if (leftKeys.isEmpty) {
       ret.setParallelism(1)
       ret.setMaxParallelism(1)
     }
+    ret.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
 
     // set KeyType and Selector for state
     ret.setStateKeySelectors(leftSelect, rightSelect)

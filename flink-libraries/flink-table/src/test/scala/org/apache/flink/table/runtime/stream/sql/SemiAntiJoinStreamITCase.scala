@@ -75,7 +75,7 @@ class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = "SELECT a, b, c FROM ds1 WHERE a in (SELECT d from ds2 WHERE d < 3)"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,1,Hi", "2,2,Hello")
@@ -115,7 +115,7 @@ class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = "SELECT a FROM ds1 WHERE a in (SELECT sum(c) from ds2 GROUP BY d)"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = Seq("1", "2", "10", "6", "8")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
@@ -149,7 +149,7 @@ class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val result = tEnv.sqlQuery(query)
 
     val sink = new TestingRetractSink
-    result.toRetractStream[Row].addSink(sink)
+    result.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1", "2", "10", "6", "8")
@@ -165,7 +165,7 @@ class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = "SELECT c FROM ds1 WHERE NOT EXISTS (SELECT * from ds2 WHERE b = g)"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = Seq("2", "3", "4", "5")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
@@ -208,7 +208,7 @@ class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val result = tEnv.sqlQuery(query)
 
     val sink = new TestingRetractSink
-    result.toRetractStream[Row].addSink(sink)
+    result.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = Seq("11,f")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
@@ -264,7 +264,7 @@ class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val result = tEnv.sqlQuery(query)
 
     val sink = new TestingRetractSink
-    result.toRetractStream[Row].addSink(sink)
+    result.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = Seq("8,f")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
@@ -276,7 +276,7 @@ class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
         val result = tEnv.sqlQuery(query)
 
     val sink = new TestingRetractSink
-    result.toRetractStream[Row].addSink(sink)
+    result.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,1,Hi", "2,2,Hello", "3,2,Hello world")
@@ -289,7 +289,7 @@ class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
         val result = tEnv.sqlQuery(query)
 
     val sink = new TestingRetractSink
-    result.toRetractStream[Row].addSink(sink)
+    result.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("2,2,Hello", "3,2,Hello world")
@@ -304,7 +304,7 @@ class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val result = tEnv.sqlQuery(query)
 
     val sink = new TestingRetractSink
-    result.toRetractStream[Row].addSink(sink)
+    result.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("2,3", "2,2")
@@ -318,7 +318,7 @@ class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val result = tEnv.sqlQuery(query)
 
     val sink = new TestingRetractSink
-    result.toRetractStream[Row].addSink(sink)
+    result.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("2,2", "2,3")
@@ -333,7 +333,7 @@ class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val result = tEnv.sqlQuery(query)
 
     val sink = new TestingRetractSink
-    result.toRetractStream[Row].addSink(sink)
+    result.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     assertEquals(0, sink.getRetractResults.size)
@@ -345,7 +345,7 @@ class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val result = tEnv.sqlQuery(query)
 
     val sink = new TestingRetractSink
-    result.toRetractStream[Row].addSink(sink)
+    result.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     assertEquals(0, sink.getRetractResults.size)
@@ -357,7 +357,7 @@ class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val result = tEnv.sqlQuery(query)
 
     val sink = new TestingRetractSink
-    result.toRetractStream[Row].addSink(sink)
+    result.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,1,Hi")
@@ -373,7 +373,7 @@ class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val result = tEnv.sqlQuery(query)
 
     val sink = new TestingRetractSink
-    result.toRetractStream[Row].addSink(sink)
+    result.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,1")
@@ -388,7 +388,7 @@ class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val result = tEnv.sqlQuery(query)
 
     val sink = new TestingRetractSink
-    result.toRetractStream[Row].addSink(sink)
+    result.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("2,2", "1,1", "2,3")
@@ -404,7 +404,7 @@ class SemiAntiJoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val result = tEnv.sqlQuery(query)
 
     val sink = new TestingRetractSink
-    result.toRetractStream[Row].addSink(sink)
+    result.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,1", "2,3", "2,2")

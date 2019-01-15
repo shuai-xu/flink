@@ -80,11 +80,14 @@ class StreamExecTemporalTableJoin(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val inputTransformation = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
-    translateToPlanInternal(
+    val transformation = translateToPlanInternal(
       inputTransformation,
       tableEnv.execEnv,
       tableEnv.config,
       tableEnv.getRelBuilder)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
+    transformation
   }
 
 }

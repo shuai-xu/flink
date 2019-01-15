@@ -34,6 +34,7 @@ import org.apache.calcite.plan.RelTraitSet
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 
+import java.lang.{Double => JDouble}
 import java.util
 
 import scala.collection.JavaConversions._
@@ -65,25 +66,27 @@ trait BatchExecRel[T] extends FlinkPhysicalRel with BatchExecNode[T] with Loggin
   }
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
-}
 
-trait RowBatchExecRel extends BatchExecRel[BaseRow]
+  override def getEstimatedRowCount: JDouble = getCluster.getMetadataQuery.getRowCount(this)
 
-
-object BatchExecRel {
-
-  //we aim for a 200% utilization of the bucket table.
-  val HASH_COLLISION_WEIGHT = 2
-
-  // TODO move this function
-  private[flink] def getBatchExecMemCost(relNode: BatchExecRel[_]): Double = {
-    val mq = FlinkRelMetadataQuery.reuseOrCreate(relNode.getCluster.getMetadataQuery)
-    val relCost = mq.getNonCumulativeCost(relNode)
+  override def getEstimatedTotalMem: JDouble = {
+    val relCost = getCluster.getMetadataQuery.getNonCumulativeCost(this)
     relCost match {
       case execCost: FlinkBatchCost => execCost.memory
       case _ => 0d
     }
   }
+
+  override def getEstimatedAverageRowSize: JDouble =
+    getCluster.getMetadataQuery.getAverageRowSize(this)
+}
+
+trait RowBatchExecRel extends BatchExecRel[BaseRow]
+
+object BatchExecRel {
+
+  //we aim for a 200% utilization of the bucket table.
+  val HASH_COLLISION_WEIGHT = 2
 
   private[flink] def calcNeedMemoryForSort(mq: RelMetadataQuery, input: RelNode): Double = {
     //TODO It's hard to make sure that the normailized key's length is accurate in optimized stage.

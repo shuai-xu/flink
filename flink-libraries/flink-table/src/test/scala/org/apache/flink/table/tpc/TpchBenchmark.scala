@@ -24,7 +24,7 @@ import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.sources.parquet.ParquetVectorizedColumnRowTableSource
 import org.apache.flink.table.tpc.TpcUtils.getTpcHQuery
-import org.apache.flink.table.util.ExecResourceUtil.InferMode
+import org.apache.flink.table.util.NodeResourceUtil.InferMode
 import org.junit.{Before, Ignore}
 
 @Ignore

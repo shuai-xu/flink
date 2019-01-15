@@ -66,7 +66,7 @@ class MiniBatchLastRowFunction(
   }
 
   override def addInput(value: BaseRow, input: BaseRow): BaseRow = {
-    if (isLastRow(value, input, rowtimeIndex)) {
+    if (value == null || isLastRow(value, input, rowtimeIndex)) {
       // put the input into buffer
       ser.copy(input)
     } else {

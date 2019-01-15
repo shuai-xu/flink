@@ -258,7 +258,7 @@ abstract class TableEnvironment(
       .withConvertTableAccess(false)
       .build()
 
-  def getCatalogManager(): CatalogManager = {
+  def getCatalogManager: CatalogManager = {
     catalogManager
   }
 

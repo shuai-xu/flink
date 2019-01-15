@@ -30,7 +30,7 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
-import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.NodeResourceUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode
@@ -113,7 +113,7 @@ class BatchExecSortWindowAggregate(
       .asInstanceOf[StreamTransformation[BaseRow]]
     val outputRowType = FlinkTypeFactory.toInternalRowType(getRowType)
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
-    val groupBufferLimitSize = ExecResourceUtil.getWindowAggBufferLimitSize(
+    val groupBufferLimitSize = NodeResourceUtil.getWindowAggBufferLimitSize(
       tableEnv.getConfig.getConf)
 
     val inputType = TypeConverters.createInternalTypeFromTypeInfo(

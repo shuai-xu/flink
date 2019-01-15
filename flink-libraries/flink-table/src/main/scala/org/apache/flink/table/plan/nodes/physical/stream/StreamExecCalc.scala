@@ -104,11 +104,14 @@ class StreamExecCalc(
       retainHeader = true,
       ruleDescription = ruleDescription
     )
-    new OneInputTransformation(
+    val transformation = new OneInputTransformation(
       inputTransform,
       CalcUtil.calcToString(calcProgram, getExpressionString),
       substituteStreamOperator,
       FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType),
       inputTransform.getParallelism)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
+    transformation
   }
 }

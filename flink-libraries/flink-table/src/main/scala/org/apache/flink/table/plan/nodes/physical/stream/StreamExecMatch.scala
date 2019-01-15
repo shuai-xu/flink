@@ -206,12 +206,14 @@ class StreamExecMatch(
       // copy the rowtime field into the StreamRecord timestamp field
       val timeIdx = rowtimeFields.head.getIndex
 
-      new OneInputTransformation(
+      val transformation = new OneInputTransformation(
         inputTransform,
         s"rowtime field: (${rowtimeFields.head})",
         new ProcessOperator(new BaseRowRowtimeProcessFunction(timeIdx, inputTypeInfo)),
         inputTypeInfo,
         inputTransform.getParallelism)
+      setTransformationRes(transformation)
+      transformation
     } else {
       inputTransform
     }
@@ -352,6 +354,11 @@ class StreamExecMatch(
     }
   }
 
+  private def setTransformationRes(streamTransformation: StreamTransformation[_]) {
+    streamTransformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
+  }
+
   private def setKeySelector(
       transform: OneInputTransformation[BaseRow, _],
       inputTypeInfo: BaseRowTypeInfo): Unit = {
@@ -394,6 +401,7 @@ class StreamExecMatch(
         timeoutOutputTag),
       outputTypeInfo,
       inputTransform.getParallelism)
+    setTransformationRes(patternStreamTransform)
 
     patternStreamTransform.setChainingStrategy(ChainingStrategy.ALWAYS)
     setKeySelector(patternStreamTransform, inputTypeInfo)
@@ -426,6 +434,7 @@ class StreamExecMatch(
         timeoutOutputTag),
       outputTypeInfo,
       inputTransform.getParallelism)
+    setTransformationRes(patternStreamTransform)
 
     patternStreamTransform.setChainingStrategy(ChainingStrategy.ALWAYS)
     setKeySelector(patternStreamTransform, inputTypeInfo)
@@ -462,6 +471,7 @@ class StreamExecMatch(
         lateDataOutputTag),
       outputTypeInfo,
       inputTransform.getParallelism)
+    setTransformationRes(patternStreamTransform)
 
     patternStreamTransform.setChainingStrategy(ChainingStrategy.ALWAYS)
     setKeySelector(patternStreamTransform, inputTypeInfo)
@@ -469,14 +479,17 @@ class StreamExecMatch(
     val timeoutStreamTransform = new SideOutputTransformation(
       patternStreamTransform,
       timeoutOutputTag)
+    setTransformationRes(timeoutStreamTransform)
 
-    new TwoInputTransformation(
+    val transformation = new TwoInputTransformation(
       patternStreamTransform,
       timeoutStreamTransform,
       "CombineOutputCepOperator",
       new CoStreamMap(new CombineCepOutputCoMapFunction),
       outputTypeInfo,
       inputTransform.getParallelism)
+    setTransformationRes(transformation)
+    transformation
   }
 
   private def generateFlatSelectTimeoutTransformation(
@@ -508,6 +521,7 @@ class StreamExecMatch(
         lateDataOutputTag),
       outputTypeInfo,
       inputTransform.getParallelism)
+    setTransformationRes(patternStreamTransform)
 
     patternStreamTransform.setChainingStrategy(ChainingStrategy.ALWAYS)
     setKeySelector(patternStreamTransform, inputTypeInfo)
@@ -515,14 +529,17 @@ class StreamExecMatch(
     val timeoutStreamTransform = new SideOutputTransformation(
       patternStreamTransform,
       timeoutOutputTag)
+    setTransformationRes(timeoutStreamTransform)
 
-    new TwoInputTransformation(
+    val transformation = new TwoInputTransformation(
       patternStreamTransform,
       timeoutStreamTransform,
       "CombineOutputCepOperator",
       new CoStreamMap(new CombineCepOutputCoMapFunction),
       outputTypeInfo,
       inputTransform.getParallelism)
+    setTransformationRes(transformation)
+    transformation
   }
 }
 

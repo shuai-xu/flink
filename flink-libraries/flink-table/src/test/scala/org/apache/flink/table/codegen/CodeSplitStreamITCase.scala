@@ -20,16 +20,16 @@ package org.apache.flink.table.codegen
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
-import org.apache.flink.table.api.scala.{StreamTableEnvironment, _}
-import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableEnvironment}
+import org.apache.flink.table.api.{TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.utils.{Func18, RichFunc2}
 import org.apache.flink.table.functions.aggregate.CountAggFunction
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{CountDistinct, WeightedAvg}
 import org.apache.flink.table.runtime.utils.TemporalTableUtils.TestingTemporalTableSource
-import org.apache.flink.table.runtime.utils.{StreamTestData, StreamTestSink, TestingAppendSink, UserDefinedFunctionTestUtils}
+import org.apache.flink.table.runtime.utils.{StreamTestData, StreamTestSink, StreamingTestBase, TestingAppendSink, UserDefinedFunctionTestUtils}
 import org.apache.flink.table.util.{PojoTableFunc, TableFunc0}
 import org.apache.flink.types.Row
+
 import org.junit.Assert.assertEquals
 import org.junit.{Before, Test}
 
@@ -39,12 +39,7 @@ import scala.collection.mutable
   * copying test cases which can not pass the test during code split development
   * set 'sql.codegen.maxLength' to 1 to verify these test cases
   */
-class CodeSplitStreamITCase {
-
-  val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-  val tableConfig = new TableConfig
-  tableConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX,1)
-  val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env, tableConfig)
+class CodeSplitStreamITCase extends StreamingTestBase {
 
   val data = new mutable.MutableList[(Int, Long, String)]
   data.+=((1, 1L, "Jack#22"))
@@ -66,8 +61,9 @@ class CodeSplitStreamITCase {
     (20L, 20, null.asInstanceOf[String]))
 
   @Before
-  def clear(): Unit = {
-
+  override def before(): Unit = {
+    super.before()
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_CODEGEN_LENGTH_MAX,1)
   }
 
   @Test
@@ -231,6 +227,7 @@ class CodeSplitStreamITCase {
       (9, 12, "Hello world!"))
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setParallelism(4)
     val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)

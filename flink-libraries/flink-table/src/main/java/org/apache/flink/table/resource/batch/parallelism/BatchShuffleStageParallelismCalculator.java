@@ -16,14 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.resource.batch.calculator;
+package org.apache.flink.table.resource.batch.parallelism;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
-import org.apache.flink.table.resource.batch.ShuffleStage;
-import org.apache.flink.table.util.ExecResourceUtil;
+import org.apache.flink.table.util.NodeResourceUtil;
 
-import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,14 +32,12 @@ import java.util.Set;
 /**
  * Abstract parallelism calculator for shuffle stage.
  */
-public abstract class ShuffleStageParallelismCalculator {
-	private static final Logger LOG = LoggerFactory.getLogger(ShuffleStageParallelismCalculator.class);
-	private final RelMetadataQuery mq;
+public abstract class BatchShuffleStageParallelismCalculator {
+	private static final Logger LOG = LoggerFactory.getLogger(BatchShuffleStageParallelismCalculator.class);
 	private final Configuration tableConf;
 	protected final int envParallelism;
 
-	public ShuffleStageParallelismCalculator(RelMetadataQuery mq, Configuration tableConf, int envParallelism) {
-		this.mq = mq;
+	public BatchShuffleStageParallelismCalculator(Configuration tableConf, int envParallelism) {
 		this.tableConf = tableConf;
 		this.envParallelism = envParallelism;
 	}
@@ -54,24 +50,24 @@ public abstract class ShuffleStageParallelismCalculator {
 	protected abstract void calculate(ShuffleStage shuffleStage);
 
 	protected int calculateSource(BatchExecScan scanBatchExec) {
-		boolean infer = !ExecResourceUtil.getInferMode(tableConf).equals(ExecResourceUtil.InferMode.NONE);
+		boolean infer = !NodeResourceUtil.getInferMode(tableConf).equals(NodeResourceUtil.InferMode.NONE);
 		LOG.info("infer source partitions num: " + infer);
 		if (infer) {
-			double rowCount = mq.getRowCount(scanBatchExec);
-			double io = rowCount * mq.getAverageRowSize(scanBatchExec);
+			double rowCount = scanBatchExec.getEstimatedRowCount();
+			double io = rowCount * scanBatchExec.getEstimatedAverageRowSize();
 			LOG.info("source row count is : " + rowCount);
 			LOG.info("source data size is : " + io);
-			long rowsPerPartition = ExecResourceUtil.getRelCountPerPartition(tableConf);
-			long sizePerPartition = ExecResourceUtil.getSourceSizePerPartition(tableConf);
-			int maxNum = ExecResourceUtil.getSourceMaxParallelism(tableConf);
+			long rowsPerPartition = NodeResourceUtil.getRelCountPerPartition(tableConf);
+			long sizePerPartition = NodeResourceUtil.getSourceSizePerPartition(tableConf);
+			int maxNum = NodeResourceUtil.getSourceMaxParallelism(tableConf);
 			return Math.min(maxNum,
 					Math.max(
 							(int) Math.max(
-									io / sizePerPartition / ExecResourceUtil.SIZE_IN_MB,
+									io / sizePerPartition / NodeResourceUtil.SIZE_IN_MB,
 									rowCount / rowsPerPartition),
 							1));
 		} else {
-			return ExecResourceUtil.getSourceParallelism(tableConf, envParallelism);
+			return NodeResourceUtil.getSourceParallelism(tableConf, envParallelism);
 		}
 	}
 

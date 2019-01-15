@@ -26,7 +26,7 @@ import org.apache.flink.table.dataformat.Decimal
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.sinks.parquet.ParquetTableSink
-import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.NodeResourceUtil
 import org.apache.flink.test.util.TestBaseUtils
 
 import org.apache.hadoop.conf.Configuration
@@ -49,7 +49,7 @@ class ParquetTableSinkITCase extends QueryTest {
   def setUp(): Unit = {
     tEnv.getConfig.getConf.setString(
       TableConfigOptions.SQL_RESOURCE_INFER_MODE,
-      ExecResourceUtil.InferMode.ONLY_SOURCE.toString)
+      NodeResourceUtil.InferMode.ONLY_SOURCE.toString)
   }
 
   @Test

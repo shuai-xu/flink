@@ -166,7 +166,7 @@ class AggregateITCase(
 
     val result = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
     val sink = new TestingRetractSink
-    result.addSink(sink)
+    result.addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List(
@@ -207,7 +207,7 @@ class AggregateITCase(
       "SELECT b, count(*), count(distinct c), count(distinct a) FROM T GROUP BY b")
 
     val sink = new TestingRetractSink
-    t1.toRetractStream[Row].addSink(sink)
+    t1.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,1,1,1", "2,3,1,2", "3,4,1,3", "4,5,4,4", "5,2,2,2")
@@ -321,7 +321,7 @@ class AggregateITCase(
       "SELECT b, count(*), CntNullNonNull(DISTINCT c)  FROM T GROUP BY b")
 
     val sink = new TestingRetractSink
-    t1.toRetractStream[Row].addSink(sink)
+    t1.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,1,1|0", "2,2,1|0", "3,4,1|1", "4,7,4|1", "5,3,2|1")
@@ -349,7 +349,7 @@ class AggregateITCase(
     val t1 = tEnv.sqlQuery("SELECT b, count(c), sum(a) FROM T GROUP BY b")
 
     val sink = new TestingRetractSink
-    t1.toRetractStream[Row].addSink(sink)
+    t1.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,1,1", "2,2,5", "3,3,15", "4,4,34", "5,2,23")
@@ -386,7 +386,7 @@ class AggregateITCase(
     val t1 = tEnv.sqlQuery(sql)
 
     val sink = new TestingRetractSink
-    t1.toRetractStream[Row].addSink(sink)
+    t1.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,1,0,0", "2,2,0,0", "3,3,3,3", "4,4,2,2", "5,2,0,0")
@@ -421,7 +421,7 @@ class AggregateITCase(
 
     val t1 = tEnv.sqlQuery(sql)
     val sink = new TestingRetractSink
-    t1.toRetractStream[Row].addSink(sink)
+    t1.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,1", "2,3", "3,11", "4,27", "5,12")
@@ -460,7 +460,7 @@ class AggregateITCase(
 
     val t1 = tEnv.sqlQuery(sql)
     val sink = new TestingRetractSink
-    t1.toRetractStream[Row].addSink(sink)
+    t1.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,1,1,1,1", "3,1,15,15,3", "4,1,34,34,4", "7,2,23,5,2")
@@ -491,7 +491,7 @@ class AggregateITCase(
       """.stripMargin)
 
     val sink = new TestingRetractSink
-    t1.select('f, 'l).toRetractStream[Row].addSink(sink)
+    t1.select('f, 'l).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List(
@@ -530,7 +530,7 @@ class AggregateITCase(
       """.stripMargin)
 
     val sink = new TestingRetractSink
-    t1.toRetractStream[Row].addSink(sink)
+    t1.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("slim,null,null", "blond,null,null")
@@ -546,7 +546,7 @@ class AggregateITCase(
     val sqlQuery = "SELECT b, COUNT(a) FROM MyTable GROUP BY b"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,1", "2,2", "3,3", "4,4", "5,5", "6,6")
@@ -570,7 +570,7 @@ class AggregateITCase(
        """.stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,null")
@@ -594,7 +594,7 @@ class AggregateITCase(
        """.stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,null")
@@ -610,7 +610,7 @@ class AggregateITCase(
     tEnv.registerTable("MyTable", t)
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     // TODO: [BLINK-16716210] the string result of collect is not determinist
@@ -641,7 +641,7 @@ class AggregateITCase(
       failingDataSource(data).toTable(tEnv).as('a, 'b, 'c))
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List(
@@ -702,7 +702,7 @@ class AggregateITCase(
     val sql = "SELECT pojoToInt(pojoFunc(b)) FROM MyTable group by a"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("128")
@@ -729,7 +729,7 @@ class AggregateITCase(
       """.stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,4.00", "2,2.00")
@@ -761,7 +761,7 @@ class AggregateITCase(
       """.stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("9,9,9,9,9.0,9.0,9.00", "3,3,3,3,3.0,3.0,3.00", "6,6,6,6,6.0,6.0,6.00")
@@ -797,7 +797,7 @@ class AggregateITCase(
       """.stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,2,1", "2,10,1", "3,18,1", "7,42,2", "10,40,1")
@@ -839,7 +839,7 @@ class AggregateITCase(
     tEnv
       .sqlQuery("SELECT id, func(s, s1, s2) FROM MyTable group by id")
       .toRetractStream[Row]
-      .addSink(sink)
+      .addSink(sink).setParallelism(1)
     env.execute()
     val expected = List("1,59", "3,81")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
@@ -873,7 +873,7 @@ class AggregateITCase(
       """.stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,A,A", "2,B,BC", "3,C,DE", "4,EF,IJ")
@@ -935,7 +935,7 @@ class AggregateITCase(
       """.stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,8,2,6", "2,1,3,3", "3,null,1,5")
@@ -963,7 +963,7 @@ class AggregateITCase(
       """.stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,1.00,4.00", "2,2.00,2.00")
@@ -1002,7 +1002,7 @@ class AggregateITCase(
      """.stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sql1).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql1).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List(
@@ -1033,7 +1033,7 @@ class AggregateITCase(
     tEnv.registerTable("MyTable", t)
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("Hello world,2,2", "Hello,49,52", "Hi,100,97")
@@ -1057,7 +1057,7 @@ class AggregateITCase(
     tEnv.registerTable("MyTable", t)
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("Hello world,18,16", "Hello,9,8", "Hi,9,8")
@@ -1086,7 +1086,7 @@ class AggregateITCase(
     tEnv.registerTable("MyTable", t)
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = List("Hi\nHi\nHi\nHi\nHi\nHi\nHi\nHi\nHi\nHi,Hi-Hi-Hi-Hi-Hi-Hi-Hi-Hi-Hi-Hi," +
                           "Hi\nHi\nHi\nHi\nHi\nHi\nHi\nHi\nHi\nHi,Hi+Hi+Hi+Hi+Hi+Hi+Hi+Hi+Hi+Hi")
@@ -1106,7 +1106,7 @@ class AggregateITCase(
     tEnv.registerTable("MyTable", t)
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = List("3.0276503540974917,2.8722813232690143")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
@@ -1128,7 +1128,7 @@ class AggregateITCase(
     tEnv.registerTable("MyTable", t)
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     // TODO: define precise behavior of VAR_POP()
     val expected = List(15602500d.toString, 28888.8888888893d.toString)
@@ -1146,7 +1146,7 @@ class AggregateITCase(
     tEnv.registerTable("MyTable", t)
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,260", "2,520")
@@ -1173,7 +1173,7 @@ class AggregateITCase(
     tEnv
         .sqlQuery("SELECT func(s) FROM MyTable group by id")
         .toRetractStream[Row]
-        .addSink(sink)
+        .addSink(sink).setParallelism(1)
     env.execute()
     // 23=1L + 22L, 33=33L
     val expected = List("0|23", "0|33")
@@ -1200,7 +1200,7 @@ class AggregateITCase(
     tEnv
         .sqlQuery("SELECT func(s) FROM MyTable group by id")
         .toRetractStream[Row]
-        .addSink(sink)
+        .addSink(sink).setParallelism(1)
     env.execute()
     // 1: 33L, 2: 1L, 22L
     val expected = List("0|1", "0|2")
@@ -1228,7 +1228,7 @@ class AggregateITCase(
     val t1 = tEnv.sqlQuery("SELECT b, count(distinct c), count(distinct a) FROM T GROUP BY b")
 
     val sink = new TestingRetractSink
-    t1.toRetractStream[Row].addSink(sink)
+    t1.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,1,1", "2,1,2", "3,1,3", "4,4,4", "5,2,2")
@@ -1256,7 +1256,7 @@ class AggregateITCase(
     val t1 = tEnv.sqlQuery("SELECT b, count(distinct c), count(distinct a) FROM T GROUP BY b")
 
     val sink = new TestingRetractSink
-    t1.toRetractStream[Row].addSink(sink)
+    t1.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,1,1", "2,1,2", "3,1,3", "4,4,4", "5,2,2")
@@ -1284,7 +1284,7 @@ class AggregateITCase(
     val t1 = tEnv.sqlQuery("SELECT b, count(distinct c), count(distinct a) FROM T GROUP BY b")
 
     val sink = new TestingRetractSink
-    t1.toRetractStream[Row].addSink(sink)
+    t1.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,1,1", "2,1,2", "3,1,3", "4,4,4", "5,2,2")
@@ -1322,7 +1322,7 @@ class AggregateITCase(
 
     val t1 = tEnv.sqlQuery(sql)
     val sink = new TestingRetractSink
-    t1.toRetractStream[Row].addSink(sink)
+    t1.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,1,50", "1,ALL,50")

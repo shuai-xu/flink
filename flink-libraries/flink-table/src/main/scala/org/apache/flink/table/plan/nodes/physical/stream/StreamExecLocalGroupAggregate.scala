@@ -167,12 +167,16 @@ class StreamExecLocalGroupAggregate(
       tableEnv.getConfig.getConf.getBoolean(
         TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
-    new OneInputTransformation(
+    val transformation = new OneInputTransformation(
       inputTransformation,
       getOperatorName,
       operator,
       outRowType,
       inputTransformation.getParallelism)
+
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
+    transformation
   }
 
   private def getOperatorName: String = {

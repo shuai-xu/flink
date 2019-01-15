@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
@@ -29,7 +30,7 @@ import org.apache.calcite.rel.core.TableScan
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 
-class StreamExecIntermediateTableScan(
+class StreamExecIntermediateTableScan (
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     table: RelOptTable,
@@ -73,5 +74,7 @@ class StreamExecIntermediateTableScan(
       "needInternalConversion is not supported in StreamExecIntermediateTableScan.")
   }
 
+  // TODO need to remove
+  override private[flink] def getSourceTransformation(streamEnv: StreamExecutionEnvironment) = ???
 }
 

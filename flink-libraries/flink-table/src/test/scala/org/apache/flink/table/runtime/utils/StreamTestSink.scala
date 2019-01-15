@@ -414,7 +414,7 @@ final class TestingUpsertTableSink(keys: Array[Int])
           "null"
         }
       })")
-      .setParallelism(dataStream.getParallelism)
+      .setParallelism(1)
   }
 
   override def getFieldNames: Array[String] = fNames

@@ -16,36 +16,41 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.resource;
+package org.apache.flink.table.plan.nodes.exec;
 
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.resources.CommonExtendedResource;
 import org.apache.flink.api.common.resources.Resource;
 
 /**
- * Resource for node: parallelism, cpu, heap memory, reserved managed memory, prefer managed memory and
+ * Resource for node: parallelism, cpu, heap and direct memory, reserved managed memory, prefer managed memory and
  * max managed memory.
  * Reserved managed memory: needed when an operator init.
  * Prefer managed memory: tell the scheduler how much managed memory an operator may use.
  * Max managed memory: max managed memory that an operator can use.
+ * Node use it to build {@link ResourceSpec} to set {@link org.apache.flink.streaming.api.transformations.StreamTransformation}.
  */
 public class NodeResource {
 
+	// node parallelism
 	private int parallelism = -1;
 
-	private int maxParallelism = -1;
-
+	// node cpu
 	private double cpu;
 
+	// node heap memory
 	private int heapMem;
 
-	// reserved managed mem for node.
+	// node direct memory
+	private int directMem;
+
+	// reserved managed mem for node
 	private int reservedManagedMem;
 
-	// prefer managed mem for node.
+	// prefer managed mem for node
 	private int preferManagedMem;
 
-	// max managed mem for node.
+	// max managed mem for node
 	private int maxManagedMem;
 
 	public void setCpu(double cpu) {
@@ -74,10 +79,6 @@ public class NodeResource {
 		return preferManagedMem;
 	}
 
-	public int getHeapMem() {
-		return heapMem;
-	}
-
 	public int getParallelism() {
 		return parallelism;
 	}
@@ -86,23 +87,19 @@ public class NodeResource {
 		return maxManagedMem;
 	}
 
-	public void setParallelism(int parallelism, int maxParallelism) {
-		this.parallelism = parallelism;
-		this.maxParallelism = maxParallelism;
-	}
-
 	public void setParallelism(int parallelism) {
 		this.parallelism = parallelism;
 	}
 
-	public boolean isParallelismMax() {
-		return parallelism > 0 && maxParallelism > 0 && parallelism == maxParallelism;
+	public void setDirectMem(int directMem) {
+		this.directMem = directMem;
 	}
 
 	public ResourceSpec getReservedResourceSpec() {
 		ResourceSpec.Builder builder = ResourceSpec.newBuilder();
 		builder.setCpuCores(cpu);
 		builder.setHeapMemoryInMB(heapMem);
+		builder.setDirectMemoryInMB(directMem);
 		builder.addExtendedResource(new CommonExtendedResource(
 				ResourceSpec.MANAGED_MEMORY_NAME,
 				getReservedManagedMem(),
@@ -118,6 +115,7 @@ public class NodeResource {
 		ResourceSpec.Builder builder = ResourceSpec.newBuilder();
 		builder.setCpuCores(cpu);
 		builder.setHeapMemoryInMB(heapMem);
+		builder.setDirectMemoryInMB(directMem);
 		builder.addExtendedResource(new CommonExtendedResource(
 				ResourceSpec.MANAGED_MEMORY_NAME,
 				getPreferManagedMem(),
@@ -136,6 +134,9 @@ public class NodeResource {
 		}
 		if (heapMem > 0) {
 			sb.append(", heapMem=").append(heapMem);
+		}
+		if (directMem > 0) {
+			sb.append(", directMem=").append(directMem);
 		}
 		if (reservedManagedMem > 0) {
 			sb.append(", reservedManagedMem=").append(reservedManagedMem);
@@ -163,13 +164,13 @@ public class NodeResource {
 		if (parallelism != resource.parallelism) {
 			return false;
 		}
-		if (maxParallelism != resource.maxParallelism) {
-			return false;
-		}
 		if (Double.compare(resource.cpu, cpu) != 0) {
 			return false;
 		}
 		if (heapMem != resource.heapMem) {
+			return false;
+		}
+		if (directMem != resource.directMem) {
 			return false;
 		}
 		if (reservedManagedMem != resource.reservedManagedMem) {
@@ -186,10 +187,10 @@ public class NodeResource {
 		int result;
 		long temp;
 		result = parallelism;
-		result = 31 * result + maxParallelism;
 		temp = Double.doubleToLongBits(cpu);
 		result = 31 * result + (int) (temp ^ (temp >>> 32));
 		result = 31 * result + heapMem;
+		result = 31 * result + directMem;
 		result = 31 * result + reservedManagedMem;
 		result = 31 * result + preferManagedMem;
 		result = 31 * result + maxManagedMem;

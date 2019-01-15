@@ -18,6 +18,8 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
+import org.apache.flink.api.common.operators.ResourceSpec
+
 import java.util
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
@@ -28,12 +30,14 @@ import org.apache.flink.table.plan.nodes.calcite.Sink
 import org.apache.flink.table.plan.util.{SinkUtil, UpdatingPlanChecker}
 import org.apache.flink.table.sinks._
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
+import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.SinkCodeGenerator.generateRowConverterOperator
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.AbstractProcessStreamOperator
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
+import org.apache.flink.table.util.NodeResourceUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode
@@ -116,7 +120,7 @@ class StreamExecSink[T](
       convertTransformation
     } else {
       val stream = new DataStream(tableEnv.execEnv, convertTransformation)
-      emitDataStream(stream).getTransformation
+      emitDataStream(tableEnv.getConfig.getConf, stream).getTransformation
     }
     resultTransformation.asInstanceOf[StreamTransformation[Any]]
   }
@@ -196,13 +200,18 @@ class StreamExecSink[T](
 
     val convertTransformation = converterOperator match {
       case None => parTransformation
-      case Some(operator) => new OneInputTransformation(
-        parTransformation,
-        s"SinkConversion to ${TypeUtils.getExternalClassForType(resultType).getSimpleName}",
-        operator,
-        outputType,
-        parTransformation.getParallelism
-      )
+      case Some(operator) => {
+        val transformation = new OneInputTransformation(
+          parTransformation,
+          s"SinkConversion to ${TypeUtils.getExternalClassForType(resultType).getSimpleName}",
+          operator,
+          outputType,
+          parTransformation.getParallelism
+        )
+        val defaultRes = NodeResourceUtil.getDefaultResourceSpec(tableEnv.getConfig.getConf)
+        transformation.setResources(defaultRes, defaultRes)
+        transformation
+      }
     }
     convertTransformation.asInstanceOf[StreamTransformation[T]]
   }
@@ -212,8 +221,10 @@ class StreamExecSink[T](
     *
     * @param dataStream The [[DataStream]] to emit.
     */
-  private def emitDataStream(dataStream: DataStream[T]) : DataStreamSink[_] = {
-    sink match {
+  private def emitDataStream(
+      tableConf: Configuration,
+      dataStream: DataStream[T]) : DataStreamSink[_] = {
+    val boundedSink = sink match {
 
       case retractSink: BaseRetractStreamTableSink[T] =>
         // Give the DataStream to the TableSink to emit it.
@@ -231,5 +242,14 @@ class StreamExecSink[T](
         throw new TableException("Stream Tables can only be emitted by AppendStreamTableSink, " +
                                    "RetractStreamTableSink, or UpsertStreamTableSink.")
     }
+    val sinkTransformation = boundedSink.getTransformation
+    val resourceSpec = sinkTransformation.getMinResources
+    if (resourceSpec == null || resourceSpec == ResourceSpec.DEFAULT) {
+      val heapMem = NodeResourceUtil.getSinkMem(tableConf)
+      val directMem = NodeResourceUtil.getSinkDirectMem(tableConf)
+      val resource = NodeResourceUtil.getResourceSpec(tableConf, heapMem, directMem)
+      sinkTransformation.setResources(resource, resource)
+    }
+    boundedSink
   }
 }

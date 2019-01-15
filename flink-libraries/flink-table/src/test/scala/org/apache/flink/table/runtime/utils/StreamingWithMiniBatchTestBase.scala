@@ -18,10 +18,10 @@
 package org.apache.flink.table.runtime.utils
 
 import java.util
-
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.{MiniBatchMode, MiniBatchOff, MiniBatchOn}
+
 import org.junit.runners.Parameterized
 
 import scala.collection.JavaConversions._
@@ -43,7 +43,6 @@ abstract class StreamingWithMiniBatchTestBase(miniBatch: MiniBatchMode, state: S
         tableConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
     }
   }
-
 }
 
 object StreamingWithMiniBatchTestBase {
@@ -69,4 +68,5 @@ object StreamingWithMiniBatchTestBase {
       Array(MiniBatchOn, HEAP_BACKEND),
       Array(MiniBatchOn, ROCKSDB_BACKEND))
   }
+
 }

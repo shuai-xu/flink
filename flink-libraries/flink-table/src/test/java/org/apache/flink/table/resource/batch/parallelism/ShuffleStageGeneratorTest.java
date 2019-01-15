@@ -16,18 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.resource;
+package org.apache.flink.table.resource.batch.parallelism;
 
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
-import org.apache.flink.table.resource.batch.ShuffleStage;
-import org.apache.flink.table.resource.batch.ShuffleStageGenerator;
+import org.apache.flink.table.resource.MockNodeTestBase;
 
+import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -41,7 +43,15 @@ import static org.mockito.Mockito.mock;
  */
 public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 
+	private Map<ExecNode<?, ?>, Integer> finalParallelismNodeMap;
+
+	@Before
+	public void setUp() {
+		finalParallelismNodeMap = new HashMap<>();
+	}
+
 	@Test
+	@SuppressWarnings("unchecked")
 	public void testGenerateShuffleStags() {
 		/**
 		 *
@@ -69,13 +79,14 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 		connect(7, 5, 6);
 		connect(8, 7);
 
-		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(nodeList.get(8));
+		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(Arrays.asList(nodeList.get(8)), finalParallelismNodeMap);
 
 		assertSameShuffleStage(nodeShuffleStageMap, 7, 8);
 		assertSameShuffleStage(nodeShuffleStageMap, 0, 1, 3, 4);
 	}
 
 	@Test
+	@SuppressWarnings("unchecked")
 	public void testMultiOutput() {
 		/**
 		 *
@@ -112,13 +123,14 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 		connect(15, 11);
 		connect(16, 15, 14);
 
-		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(nodeList.get(16));
+		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(Arrays.asList(nodeList.get(16)), finalParallelismNodeMap);
 
 		assertSameShuffleStage(nodeShuffleStageMap, 0, 1, 8, 3, 2, 9, 5, 4, 10, 11, 14, 16);
 		assertSameShuffleStage(nodeShuffleStageMap, 6);
 	}
 
 	@Test
+	@SuppressWarnings("unchecked")
 	public void testWithFinalParallelism() {
 		/**
 		 *
@@ -134,9 +146,9 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 		ExecNode<?, ?> scan0 = mock(BatchExecScan.class);
 		ExecNode<?, ?>scan1 = mock(BatchExecScan.class);
 		updateNode(0, scan0);
-		scan0.getResource().setParallelism(10, 10);
+		finalParallelismNodeMap.put(scan0, 10);
 		updateNode(2, scan1);
-		scan1.getResource().setParallelism(11, 11);
+		finalParallelismNodeMap.put(scan1, 11);
 		updateNode(4, mock(BatchExecUnion.class));
 		updateNode(5, mock(BatchExecCalc.class));
 		updateNode(6, mock(BatchExecScan.class));
@@ -145,13 +157,14 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 		connect(4, 1, 3, 6);
 		connect(5, 4);
 
-		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(nodeList.get(5));
+		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(Arrays.asList(nodeList.get(5)), finalParallelismNodeMap);
 
 		assertSameShuffleStage(nodeShuffleStageMap, 0, 1);
 		assertSameShuffleStage(nodeShuffleStageMap, 2, 3, 6, 5);
 	}
 
 	@Test
+	@SuppressWarnings("unchecked")
 	public void testWithFinalParallelism1() {
 		/**
 		 *
@@ -167,19 +180,19 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 		ExecNode<?, ?> scan0 = mock(BatchExecScan.class);
 		ExecNode<?, ?> scan1 = mock(BatchExecScan.class);
 		updateNode(0, scan0);
-		scan0.getResource().setParallelism(10, 10);
+		finalParallelismNodeMap.put(scan0, 10);
 		updateNode(2, scan1);
-		scan1.getResource().setParallelism(11, 11);
+		finalParallelismNodeMap.put(scan1, 11);
 		updateNode(4, mock(BatchExecUnion.class));
 		ExecNode<?, ?> calc = mock(BatchExecCalc.class);
 		updateNode(5, calc);
-		calc.getResource().setParallelism(12, 12);
+		finalParallelismNodeMap.put(calc, 12);
 		connect(1, 0);
 		connect(3, 2);
 		connect(4, 1, 3);
 		connect(5, 4);
 
-		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(nodeList.get(5));
+		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(Arrays.asList(nodeList.get(5)), finalParallelismNodeMap);
 
 		assertSameShuffleStage(nodeShuffleStageMap, 0, 1);
 		assertSameShuffleStage(nodeShuffleStageMap, 2, 3);
@@ -187,6 +200,7 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 	}
 
 	@Test
+	@SuppressWarnings("unchecked")
 	public void testWithFinalParallelism2() {
 		/**
 		 *
@@ -204,13 +218,13 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 		ExecNode<?, ?> scan0 = mock(BatchExecScan.class);
 		ExecNode<?, ?> scan1 = mock(BatchExecScan.class);
 		updateNode(0, scan0);
-		scan0.getResource().setParallelism(10, 10);
+		finalParallelismNodeMap.put(scan0, 10);
 		updateNode(2, scan1);
-		scan1.getResource().setParallelism(11, 11);
+		finalParallelismNodeMap.put(scan1, 11);
 		updateNode(3, mock(BatchExecExchange.class));
 		ExecNode<?, ?> calc = mock(BatchExecCalc.class);
 		updateNode(4, calc);
-		calc.getResource().setParallelism(1, 1);
+		finalParallelismNodeMap.put(calc, 1);
 		updateNode(5, mock(BatchExecUnion.class));
 		connect(1, 0);
 		connect(3, 2);
@@ -218,7 +232,7 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 		connect(5, 1, 4);
 		connect(6, 5);
 
-		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(nodeList.get(6));
+		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(Arrays.asList(nodeList.get(6)), finalParallelismNodeMap);
 
 		assertSameShuffleStage(nodeShuffleStageMap, 0, 1, 6);
 		assertSameShuffleStage(nodeShuffleStageMap, 2);
@@ -226,6 +240,7 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 	}
 
 	@Test
+	@SuppressWarnings("unchecked")
 	public void testWithFinalParallelism3() {
 		/**
 		 *
@@ -241,12 +256,12 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 		ExecNode<?, ?> scan0 = mock(BatchExecScan.class);
 		ExecNode<?, ?> scan1 = mock(BatchExecScan.class);
 		updateNode(0, scan0);
-		scan0.getResource().setParallelism(11, 11);
+		finalParallelismNodeMap.put(scan0, 11);
 		updateNode(2, scan1);
-		scan1.getResource().setParallelism(5, 5);
+		finalParallelismNodeMap.put(scan1, 5);
 		ExecNode<?, ?> union4 = mock(BatchExecUnion.class);
 		updateNode(4, union4);
-		union4.getResource().setParallelism(5, 5);
+		finalParallelismNodeMap.put(union4, 5);
 		updateNode(5, mock(BatchExecCalc.class));
 		updateNode(6, mock(BatchExecScan.class));
 		updateNode(7, mock(BatchExecScan.class));
@@ -255,13 +270,14 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 		connect(4, 1, 3, 6, 7);
 		connect(5, 4);
 
-		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(nodeList.get(5));
+		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(Arrays.asList(nodeList.get(5)), finalParallelismNodeMap);
 
 		assertSameShuffleStage(nodeShuffleStageMap, 0, 1);
 		assertSameShuffleStage(nodeShuffleStageMap, 2, 3, 6, 5, 7);
 	}
 
 	@Test
+	@SuppressWarnings("unchecked")
 	public void testWithFinalParallelism4() {
 		/**
 		 *
@@ -277,19 +293,19 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 		ExecNode<?, ?> scan0 = mock(BatchExecScan.class);
 		ExecNode<?, ?> scan1 = mock(BatchExecScan.class);
 		updateNode(0, scan0);
-		scan0.getResource().setParallelism(11, 11);
+		finalParallelismNodeMap.put(scan0, 11);
 		updateNode(2, scan1);
-		scan1.getResource().setParallelism(5, 5);
+		finalParallelismNodeMap.put(scan1, 5);
 		ExecNode<?, ?> union4 = mock(BatchExecUnion.class);
 		updateNode(4, union4);
-		union4.getResource().setParallelism(3, 3);
+		finalParallelismNodeMap.put(union4, 3);
 		updateNode(5, mock(BatchExecCalc.class));
 		connect(1, 0);
 		connect(3, 2);
 		connect(4, 1, 3);
 		connect(5, 4);
 
-		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(nodeList.get(5));
+		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(Arrays.asList(nodeList.get(5)), finalParallelismNodeMap);
 
 		assertSameShuffleStage(nodeShuffleStageMap, 0, 1);
 		assertSameShuffleStage(nodeShuffleStageMap, 2, 3);

@@ -25,7 +25,7 @@ import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.tpc.{STATS_MODE, TpcHSchemaProvider, TpchTableStatsProvider}
-import org.apache.flink.table.util.{ExecResourceUtil, TableTestBase}
+import org.apache.flink.table.util.{NodeResourceUtil, TableTestBase}
 
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -107,9 +107,9 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBase {
         DataTypes.STRING))
 
     val colStatsOfTable3 = TableStats(100L, Map[java.lang.String, ColumnStats](
-      "a" -> ColumnStats(3L, 1L, 10000D * ExecResourceUtil.SIZE_IN_MB, 8, 5, -5),
-      "b" -> ColumnStats(5L, 0L, 10000D * ExecResourceUtil.SIZE_IN_MB, 32, 6.1D, 0D),
-      "c" -> ColumnStats(5L, 0L, 10000D * ExecResourceUtil.SIZE_IN_MB, 32, 6.1D, 0D)))
+      "a" -> ColumnStats(3L, 1L, 10000D * NodeResourceUtil.SIZE_IN_MB, 8, 5, -5),
+      "b" -> ColumnStats(5L, 0L, 10000D * NodeResourceUtil.SIZE_IN_MB, 32, 6.1D, 0D),
+      "c" -> ColumnStats(5L, 0L, 10000D * NodeResourceUtil.SIZE_IN_MB, 32, 6.1D, 0D)))
     util.addTableSource("Table3", table3Schema, true, colStatsOfTable3)
 
     val sqlQuery = "SELECT sum(a) as sum_a, g FROM " +
@@ -127,7 +127,7 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBase {
     val result2 = table.select('sum_a.min as 'total_min)
     result1.writeToSink(new CsvTableSink("/tmp/1"))
     result2.writeToSink(new CsvTableSink("/tmp/2"))
-    util.verifyResultPartitionCount()
+    util.verifyResourceWithSubsectionOptimization()
   }
 
   @Test
@@ -224,9 +224,9 @@ object BatchExecResourceTest {
 
   @Parameterized.Parameters(name = "{0}")
   def parameters(): JCollection[String] = JArrays.asList(
-    ExecResourceUtil.InferMode.NONE.toString,
-    ExecResourceUtil.InferMode.ONLY_SOURCE.toString,
-    ExecResourceUtil.InferMode.ALL.toString)
+    NodeResourceUtil.InferMode.NONE.toString,
+    NodeResourceUtil.InferMode.ONLY_SOURCE.toString,
+    NodeResourceUtil.InferMode.ALL.toString)
 
   def setResourceConfig(tableConfig: TableConfig): Unit = {
     tableConfig.getConf.setInteger(
@@ -245,7 +245,7 @@ object BatchExecResourceTest {
       TableConfigOptions.SQL_RESOURCE_INFER_OPERATOR_PARALLELISM_MAX,
       800)
     tableConfig.getConf.setInteger(
-      ExecResourceUtil.SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM,
+      NodeResourceUtil.SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM,
       20
     )
     tableConfig.getConf.setDouble(
@@ -255,6 +255,14 @@ object BatchExecResourceTest {
     tableConfig.getConf.setInteger(
       TableConfigOptions.SQL_RESOURCE_SOURCE_DEFAULT_MEM,
       52
+    )
+    tableConfig.getConf.setInteger(
+      TableConfigOptions.SQL_RESOURCE_SOURCE_DIRECT_MEM,
+      24
+    )
+    tableConfig.getConf.setInteger(
+      TableConfigOptions.SQL_RESOURCE_DEFAULT_DIRECT_MEM,
+      35
     )
     tableConfig.getConf.setInteger(
       TableConfigOptions.SQL_RESOURCE_DEFAULT_MEM,
@@ -293,7 +301,7 @@ object BatchExecResourceTest {
       1000000
     )
     tableConfig.getConf.setDouble(
-      ExecResourceUtil.SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT,
+      NodeResourceUtil.SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT,
       0.5
     )
     tableConfig.getConf.setInteger(
@@ -301,7 +309,7 @@ object BatchExecResourceTest {
       470
     )
     tableConfig.getConf.setInteger(
-      ExecResourceUtil.SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB,
+      NodeResourceUtil.SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB,
       32
     )
   }

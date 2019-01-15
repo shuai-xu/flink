@@ -59,7 +59,7 @@ class RetractionITCase(mode: StateBackendMode) extends StreamingWithStateTestBas
       .select('count, 'count.count as 'frequency)
 
     val sink = new TestingRetractSink
-    resultTable.toRetractStream[Row].addSink(sink)
+    resultTable.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,2", "2,1", "6,1")
@@ -95,7 +95,7 @@ class RetractionITCase(mode: StateBackendMode) extends StreamingWithStateTestBas
       .select('count, 'count.count)
 
     val sink = new TestingRetractSink
-    resultTable.toRetractStream[Row].addSink(sink)
+    resultTable.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("10,1")
@@ -157,7 +157,7 @@ class RetractionITCase(mode: StateBackendMode) extends StreamingWithStateTestBas
       .select('cnt, 'word.count as 'frequency)
 
     val sink = new TestingRetractSink
-    resultTable.toRetractStream[Row].addSink(sink)
+    resultTable.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,2", "2,1", "6,1")

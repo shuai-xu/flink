@@ -105,6 +105,7 @@ class StreamingWithStateTestBase(state: StateBackendMode) extends StreamingTestB
   def failingDataSource[T: TypeInformation](data: Seq[T]): DataStream[T] = {
     env.enableCheckpointing(100, CheckpointingMode.EXACTLY_ONCE)
     env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, 0))
+    env.setParallelism(1)
     // reset failedBefore flag to false
     FailingCollectionSource.reset()
 

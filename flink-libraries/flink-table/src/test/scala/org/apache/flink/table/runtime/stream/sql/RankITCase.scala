@@ -136,7 +136,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       """.stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List(
@@ -171,7 +171,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       """.stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List(
@@ -492,7 +492,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       """.stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List(
@@ -533,7 +533,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       """.stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List(

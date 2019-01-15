@@ -37,7 +37,7 @@ import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToB
 import org.apache.flink.table.plan.util.{AggregateUtil, FlinkRelOptUtil, OverAggregateUtil}
 import org.apache.flink.table.runtime.overagg._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.NodeResourceUtil
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelDistribution.Type._
@@ -328,7 +328,7 @@ class BatchExecOverAggregate(
     } else {
       val windowFrames = createOverWindowFrames(tableEnv, inputRowType)
       val operator = new BufferDataOverWindowOperator(
-        (getResource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB).toInt,
+        (getResource.getReservedManagedMem * NodeResourceUtil.SIZE_IN_MB).toInt,
         windowFrames,
         generatorSort)
       val transformation = new OneInputTransformation(input, "OverAggregate", operator,

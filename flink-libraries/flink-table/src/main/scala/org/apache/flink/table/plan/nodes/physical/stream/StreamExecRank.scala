@@ -226,12 +226,14 @@ class StreamExecRank(
       rankOpName,
       operator,
       outputBaseInfo,
-      tableEnv.execEnv.getParallelism)
+      inputTransform.getParallelism)
 
     if (partitionKey.isEmpty) {
       ret.setParallelism(1)
       ret.setMaxParallelism(1)
     }
+    ret.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
 
     // set KeyType and Selector for state
     ret.setStateKeySelector(selector)

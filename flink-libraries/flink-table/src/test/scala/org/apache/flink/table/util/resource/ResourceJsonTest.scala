@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.util.resource
 
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.resource.batch.BatchExecResourceTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest
@@ -39,6 +40,8 @@ class ResourceJsonTest extends QueryTest {
   @Test
   def testGenerateJson(): Unit = {
     BatchExecResourceTest.setResourceConfig(tEnv.getConfig)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_SOURCE_DIRECT_MEM, 0)
+    tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_DIRECT_MEM, 0)
     val sqlQuery = "SELECT sum(a) as sum_a, c FROM SmallTable3 group by c order by c limit 2"
     val table = tEnv.sqlQuery(sqlQuery)
     val tmpFile = new File("/tmp/test")

@@ -157,7 +157,7 @@ abstract class AggregateFunctionTestBase {
       tableEnv.getFrameworkConfig,
       tableEnv.getConfig,
       tableEnv.getTypeFactory,
-      catalogManager = tableEnv.getCatalogManager())
+      catalogManager = tableEnv.getCatalogManager)
     val plan = Aggregate(
       Nil,
       aggExprs.zipWithIndex.map { case (agg, index) => Alias(agg, "agg" + index) },

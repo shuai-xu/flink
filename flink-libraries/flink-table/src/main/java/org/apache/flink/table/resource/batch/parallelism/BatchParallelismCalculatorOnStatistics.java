@@ -16,16 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.resource.batch.calculator;
+package org.apache.flink.table.resource.batch.parallelism;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.api.TableException;
+import org.apache.flink.table.plan.nodes.exec.BatchExecNode;
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
-import org.apache.flink.table.resource.batch.ShuffleStage;
-import org.apache.flink.table.util.ExecResourceUtil;
-
-import org.apache.calcite.rel.metadata.RelMetadataQuery;
+import org.apache.flink.table.util.NodeResourceUtil;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -34,26 +32,23 @@ import java.util.Set;
 /**
  * Infer result partition count according to statistics.
  */
-public class ParallelismCalculatorOnStatistics extends ShuffleStageParallelismCalculator {
-	private final RelMetadataQuery mq;
+public class BatchParallelismCalculatorOnStatistics extends BatchShuffleStageParallelismCalculator {
 	private final Map<ExecNode<?, ?>, Integer> calculatedResultMap = new HashMap<>();
 
-	public ParallelismCalculatorOnStatistics(
-			RelMetadataQuery mq,
+	public BatchParallelismCalculatorOnStatistics(
 			Configuration tableConf,
 			int envParallelism) {
-		super(mq, tableConf, envParallelism);
-		this.mq = mq;
+		super(tableConf, envParallelism);
 	}
 
 	@Override
 	protected void calculate(ShuffleStage shuffleStage) {
-		if (shuffleStage.isParallelismFinal()) {
+		if (shuffleStage.isFinalParallelism()) {
 			return;
 		}
 		Set<ExecNode<?, ?>> nodeSet = shuffleStage.getExecNodeSet();
 		for (ExecNode<?, ?> node : nodeSet) {
-			shuffleStage.setResultParallelism(calculate(node), false);
+			shuffleStage.setParallelism(calculate(node), false);
 		}
 	}
 
@@ -76,14 +71,14 @@ public class ParallelismCalculatorOnStatistics extends ShuffleStageParallelismCa
 	}
 
 	private int calculateSingleNode(ExecNode<?, ?> singleNode) {
-		double rowCount = mq.getRowCount(singleNode.getInputNodes().get(0).getFlinkPhysicalRel());
-		return ExecResourceUtil.calOperatorParallelism(rowCount, getTableConf());
+		double rowCount = ((BatchExecNode) singleNode.getInputNodes().get(0)).getEstimatedRowCount();
+		return NodeResourceUtil.calOperatorParallelism(rowCount, getTableConf());
 	}
 
 	private int calculateBiNode(ExecNode<?, ?> twoInputNode) {
-		double maxRowCount = Math.max(mq.getRowCount(twoInputNode.getInputNodes().get(0).getFlinkPhysicalRel()),
-				mq.getRowCount(twoInputNode.getInputNodes().get(1).getFlinkPhysicalRel()));
-		return ExecResourceUtil.calOperatorParallelism(maxRowCount, getTableConf());
+		double maxRowCount = Math.max(((BatchExecNode) twoInputNode.getInputNodes().get(0)).getEstimatedRowCount(),
+				((BatchExecNode) twoInputNode.getInputNodes().get(1)).getEstimatedRowCount());
+		return NodeResourceUtil.calOperatorParallelism(maxRowCount, getTableConf());
 	}
 
 }

@@ -19,13 +19,14 @@
 package org.apache.flink.table.plan.nodes.common
 
 import org.apache.flink.api.common.functions.InvalidTypesException
+import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.api.java.typeutils.TypeExtractor
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 
 import java.util.{List => JList}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite.FlinkTypeFactory
@@ -38,7 +39,7 @@ import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.conversion.DataStructureConverters.genToInternal
 import org.apache.flink.table.sources.{BatchTableSource, LookupableTableSource, StreamTableSource, TableSource}
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import scala.collection.JavaConversions._
 
@@ -46,6 +47,22 @@ import scala.collection.JavaConversions._
   * Common class for batch and stream scans.
   */
 trait CommonScan[T] {
+
+  // because source resourceSpec may cannot convert to {@link NodeResource}
+  // TODO conversionResSpec will be instead of conversion heap.
+  private[flink] var sourceResSpec: ResourceSpec = _
+  private[flink] var conversionResSpec: ResourceSpec = _
+
+  def setResForSourceAndConversion(
+      sourceResSpec: ResourceSpec,
+      conversionResSpec: ResourceSpec): Unit = {
+    this.sourceResSpec = sourceResSpec
+    this.conversionResSpec = conversionResSpec
+  }
+
+  // get source transformation.
+  private[flink] def getSourceTransformation(
+      streamEnv: StreamExecutionEnvironment): StreamTransformation[_]
 
   private[flink] def needsConversion(dataType: DataType, clz: Class[_]): Boolean = dataType match {
     case r: RowType => !CodeGenUtils.isInternalClass(clz, r)

@@ -100,7 +100,7 @@ class StreamExecCorrelate(
       .asInstanceOf[StreamTransformation[BaseRow]]
     val operatorCtx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
       .setOperatorBaseClass(classOf[AbstractProcessStreamOperator[_]])
-    CorrelateCodeGenerator.generateCorrelateTransformation(
+    val transformation = CorrelateCodeGenerator.generateCorrelateTransformation(
       tableEnv,
       operatorCtx,
       inputTransformation,
@@ -114,5 +114,8 @@ class StreamExecCorrelate(
       retainHeader = true,
       getExpressionString,
       ruleDescription)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
+    transformation
   }
 }

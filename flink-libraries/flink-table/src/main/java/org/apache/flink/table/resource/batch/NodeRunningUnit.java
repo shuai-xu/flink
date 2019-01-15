@@ -29,6 +29,13 @@ import java.util.Set;
 /**
  * NodeRunningUnit contains some batchExecNodeStages that run at the same time. It can be considered
  * as schedule unit.
+ *
+ * <p>e.g. source -> calc1 -> sort -> calc2
+ *
+ * <p>When cal2 begin to receive data from sort, source1 and calc1 finish running.
+ * It will be divide to two runningUnits:
+ *  1. source -> calc1 -> sort
+ *  2. sort -> calc2
  */
 public class NodeRunningUnit implements Serializable {
 

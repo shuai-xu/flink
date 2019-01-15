@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.resource.batch;
+package org.apache.flink.table.resource.batch.parallelism;
 
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
 
@@ -29,8 +29,12 @@ import java.util.Set;
 public class ShuffleStage {
 
 	private final Set<ExecNode<?, ?>> execNodeSet = new LinkedHashSet<>();
-	private int resultParallelism = -1;
-	private boolean isParallelismFinal = false;
+
+	// parallelism of this shuffleStage.
+	private int parallelism = -1;
+
+	// whether this parallelism is final, if it is final, it can not be changed.
+	private boolean isFinalParallelism = false;
 
 	public void addNode(ExecNode<?, ?> node) {
 		execNodeSet.add(node);
@@ -48,27 +52,27 @@ public class ShuffleStage {
 		return this.execNodeSet;
 	}
 
-	public int getResultParallelism() {
-		return resultParallelism;
+	public int getParallelism() {
+		return parallelism;
 	}
 
-	public void setResultParallelism(int resultParallelism, boolean finalParallelism) {
-		if (this.isParallelismFinal) {
-			if (finalParallelism && this.resultParallelism != resultParallelism) {
-				throw new IllegalArgumentException("both fixed parallelism are not equal, old: " + this.resultParallelism + ", new: " + resultParallelism);
+	public void setParallelism(int parallelism, boolean finalParallelism) {
+		if (this.isFinalParallelism) {
+			if (finalParallelism && this.parallelism != parallelism) {
+				throw new IllegalArgumentException("both fixed parallelism are not equal, old: " + this.parallelism + ", new: " + parallelism);
 			}
 		} else {
 			if (finalParallelism) {
-				this.resultParallelism = resultParallelism;
-				this.isParallelismFinal = true;
+				this.parallelism = parallelism;
+				this.isFinalParallelism = true;
 			} else {
-				this.resultParallelism = Math.max(this.resultParallelism, resultParallelism);
+				this.parallelism = Math.max(this.parallelism, parallelism);
 			}
 		}
 	}
 
-	public boolean isParallelismFinal() {
-		return isParallelismFinal;
+	public boolean isFinalParallelism() {
+		return isFinalParallelism;
 	}
 
 }

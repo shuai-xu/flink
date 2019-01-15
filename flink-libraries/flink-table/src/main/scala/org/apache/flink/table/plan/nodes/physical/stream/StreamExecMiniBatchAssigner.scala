@@ -56,11 +56,14 @@ class StreamExecMiniBatchAssigner(
     val intervalMs = tableEnv.getConfig.getConf.getLong(
       TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
 
-    new OneInputTransformation[BaseRow, BaseRow](
+    val transformation = new OneInputTransformation[BaseRow, BaseRow](
       inputTransformation,
       s"MiniBatchAssigner(intervalMs: $intervalMs)",
       new MiniBatchAssignerOperator(intervalMs),
       FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType),
       inputTransformation.getParallelism)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
+    transformation
   }
 }

@@ -21,9 +21,8 @@ package org.apache.flink.table.runtime.stream.sql
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.watermark.Watermark
-import org.apache.flink.table.api.TableEnvironment
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.Null
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
@@ -31,6 +30,7 @@ import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBack
 import org.apache.flink.table.runtime.utils._
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.types.Row
+
 import org.junit.Assert._
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -80,8 +80,6 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   /** test proctime inner join **/
   @Test
   def testProcessTimeInnerJoin(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setParallelism(1)
 
     val sqlQuery =
@@ -122,8 +120,6 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   /** test proctime inner join with other condition **/
   @Test
   def testProcessTimeInnerJoinWithOtherConditions(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setParallelism(2)
 
     val sqlQuery =
@@ -170,9 +166,9 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   /** test rowtime inner join **/
   @Test
   def testRowTimeInnerJoin(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
+    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
     val sqlQuery =
       """
         |SELECT t2.key, t2.id, t1.id
@@ -221,9 +217,10 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   /** test row time inner join with equi-times **/
   @Test
   def testRowTimeInnerJoinWithEquiTimeAttrs(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
+    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
 
     val sqlQuery =
       """
@@ -270,9 +267,9 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   /** test rowtime inner join with other conditions **/
   @Test
   def testRowTimeInnerJoinWithOtherConditions(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
+    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
 
     val sqlQuery =
       """
@@ -330,9 +327,9 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   /** test rowtime inner join with another time condition **/
   @Test
   def testRowTimeInnerJoinWithOtherTimeCondition(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
+    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
 
     val sqlQuery =
       """
@@ -384,9 +381,9 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   /** test rowtime inner join with window aggregation **/
   @Test
   def testRowTimeInnerJoinWithWindowAggregateOnFirstTime(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
+    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
 
     val sqlQuery =
       """
@@ -441,9 +438,9 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   /** test row time inner join with window aggregation **/
   @Test
   def testRowTimeInnerJoinWithWindowAggregateOnSecondTime(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
+    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
 
     val sqlQuery =
       """
@@ -494,8 +491,6 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   /** Tests for left outer join **/
   @Test
   def testProcTimeLeftOuterJoin(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setParallelism(1)
 
     val sqlQuery =
@@ -537,9 +532,9 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   /** Tests row time left outer join **/
   @Test
   def testRowTimeLeftOuterJoin(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
+    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
 
     val sqlQuery =
       """
@@ -603,9 +598,9 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
 
   @Test
   def testRowTimeLeftOuterJoinNegativeWindowSize(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
+    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
 
     val sqlQuery =
       """
@@ -653,8 +648,6 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   //Test for right outer join
   @Test
   def testProcTimeRightOuterJoin(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setParallelism(1)
 
     val sqlQuery =
@@ -693,9 +686,9 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
 
   @Test
   def testRowTimeRightOuterJoin(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
+    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
 
     val sqlQuery =
       """
@@ -756,9 +749,9 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
 
   @Test
   def testRowTimeRightOuterJoinNegativeWindowSize(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
+    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
 
     val sqlQuery =
       """
@@ -806,8 +799,6 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   //Tests for full outer join
   @Test
   def testProcTimeFullOuterJoin(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setParallelism(1)
 
     val sqlQuery =
@@ -845,9 +836,9 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
 
   @Test
   def testRowTimeFullOuterJoin(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
+    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
 
     val sqlQuery =
       """
@@ -910,9 +901,9 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
 
   @Test
   def testRowTimeFullOuterJoinNegativeWindowSize(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
+    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
 
     val sqlQuery =
       """
@@ -1071,7 +1062,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     tEnv.registerTable("Table5", ds2)
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("Hi,Hallo", "Hello,Hallo Welt", "Hello world,Hallo Welt")
@@ -1099,7 +1090,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = "SELECT a1, b1 FROM A JOIN B ON a1 = b1"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("3,3", "1,1", "3,3", "2,2", "3,3", "2,2")
@@ -1118,7 +1109,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     tEnv.registerTable("Table5", ds2)
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("Hi,Hallo")
@@ -1137,7 +1128,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     tEnv.registerTable("Table5", ds2)
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("Hello world, how are you?,Hallo Welt wie", "I am fine.,Hallo Welt wie")
@@ -1156,7 +1147,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     tEnv.registerTable("Table5", ds2)
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -1179,7 +1170,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     tEnv.registerTable("Table5", ds2)
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,Hi", "2,Hello", "1,Hello",
@@ -1215,7 +1206,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = "SELECT b, c, e, g FROM ds1 LEFT OUTER JOIN ds2 ON b = e"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,Hi,null,null", "2,Hello world,null,null", "2,Hello,null,null")
@@ -1231,7 +1222,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = "SELECT b, c, e, g FROM ds1 LEFT OUTER JOIN ds2 ON b = e"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,Hi,1,Hallo", "2,Hello world,2,Hallo Welt", "2,Hello,2,Hallo Welt")
@@ -1303,7 +1294,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     tEnv.registerTable("Table5", ds2)
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("Hi,Hallo", "Hello,Hallo Welt", "Hello world,Hallo Welt",
@@ -1325,7 +1316,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     tEnv.registerTable("Table5", ds2)
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("Hi,Hallo", "Hello,Hallo Welt", "Hello world,Hallo Welt",
@@ -1347,7 +1338,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     tEnv.registerTable("Table5", ds2)
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("Hi,Hallo", "Hello,Hallo Welt", "Hello world,Hallo Welt",
@@ -1366,7 +1357,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, b1 FROM ($query1) JOIN ($query2) ON a1 = b1"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,1", "2,2", "3,3")
@@ -1380,7 +1371,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, a2, b1, b2 FROM ($query1) JOIN ($query2) ON a2 = b2"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,1,1,1")
@@ -1392,7 +1383,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = "SELECT a1, b1 FROM A LEFT JOIN B ON a1 = b1 AND a2 > b2"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("3,null", "1,null", "2,null")
@@ -1406,7 +1397,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, b1 FROM ($query1) LEFT JOIN ($query2) ON a1 = b1 AND a2 > b2"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,null", "3,null", "2,null")
@@ -1419,7 +1410,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, b1 FROM ($query1) LEFT JOIN B ON a1 = b1 AND a2 > b2"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,null", "3,null", "2,null")
@@ -1433,7 +1424,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, a2, b1, b2 FROM ($query1) LEFT JOIN ($query2) ON a2 = b2 AND a1 > b1"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,1,null,null", "3,2,null,null", "2,2,null,null")
@@ -1445,7 +1436,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = "SELECT a1, b1 FROM A LEFT JOIN B ON a1 = b1"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,1", "2,2", "3,3", "2,2", "3,3", "3,3")
@@ -1459,7 +1450,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, b1 FROM ($query1) LEFT JOIN ($query2) ON a1 = b1"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("2,2", "1,1", "3,3")
@@ -1472,7 +1463,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, b1 FROM ($query1) LEFT JOIN B ON a1 = b1"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("3,3", "3,3", "3,3", "2,2", "2,2", "1,1")
@@ -1486,7 +1477,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, a2, b1, b2 FROM ($query1) LEFT JOIN ($query2) ON a2 = b2"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,1,1,1", "3,2,null,null", "2,2,null,null")
@@ -1498,7 +1489,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = "SELECT a1, b1 FROM A RIGHT JOIN B ON a1 = b1 AND a2 > b2"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("null,2", "null,1", "null,3", "null,3", "null,2", "null,5", "null,3",
@@ -1513,7 +1504,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, b1 FROM ($query1) RIGHT JOIN ($query2) ON a1 = b1 AND a2 > b2"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("null,1", "null,3", "null,2", "null,5", "null,4")
@@ -1526,7 +1517,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, b1 FROM ($query1) RIGHT JOIN B ON a1 = b1 AND a2 > b2"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("null,2", "null,1", "null,3", "null,2", "null,3", "null,5", "null,5",
@@ -1542,7 +1533,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
 
     env.setParallelism(1)
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("null,null,3,15", "null,null,4,34", "null,null,2,5", "null,null,5,65",
@@ -1555,7 +1546,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = "SELECT a1, b1 FROM A RIGHT JOIN B ON a1 = b1"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("2,2", "3,3", "3,3", "2,2", "3,3", "null,5", "null,4", "1,1", "null,5",
@@ -1570,7 +1561,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, b1 FROM ($query1) RIGHT JOIN ($query2) ON a1 = b1"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,1", "2,2", "null,5", "3,3", "null,4")
@@ -1583,7 +1574,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, b1 FROM ($query1) RIGHT JOIN B ON a1 = b1"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("null,4", "null,4", "null,4", "null,4", "null,5", "null,5", "null,5",
@@ -1598,7 +1589,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, a2, b1, b2 FROM ($query1) RIGHT JOIN ($query2) ON a2 = b2"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("null,null,3,15", "null,null,4,34", "null,null,5,65",
@@ -1611,7 +1602,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = "SELECT a1, b1 FROM A FULL JOIN B ON a1 = b1 AND a2 > b2"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,null", "3,null", "2,null", "null,3", "null,2", "null,2", "null,3",
@@ -1627,7 +1618,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, b1 FROM ($query1) FULL JOIN ($query2) ON a1 = b1 AND a2 > b2"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("null,2", "null,5", "null,3", "null,4", "3,null", "1,null", "null,1", "2," +
@@ -1641,7 +1632,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, b1 FROM ($query1) FULL JOIN B ON a1 = b1 AND a2 > b2"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("null,2", "null,1", "null,2", "null,5", "null,5", "null,5", "null,5",
@@ -1658,7 +1649,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
 
     env.setParallelism(1)
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,1,null,null", "null,null,5,65", "null,null,2,5", "2,2,null,null", "3,2," +
@@ -1671,7 +1662,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = "SELECT a1, b1 FROM A FULL JOIN B ON a1 = b1"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,1", "null,5", "null,5", "null,5", "null,4", "null,5", "null,4", "null," +
@@ -1686,7 +1677,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, b1 FROM ($query1) FULL JOIN ($query2) ON a1 = b1"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("null,4", "1,1", "3,3", "2,2", "null,5")
@@ -1699,7 +1690,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, b1 FROM ($query1) FULL JOIN B ON a1 = b1"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("null,4", "null,4", "null,4", "null,4", "null,5", "null,5", "null,5",
@@ -1714,7 +1705,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val query = s"SELECT a1, a2, b1, b2 FROM ($query1) FULL JOIN ($query2) ON a2 = b2"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(query).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("null,null,3,15", "null,null,4,34", "null,null,5,65", "3,2,null,null", "2," +
@@ -1749,7 +1740,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
         |""".stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = mutable.MutableList(
@@ -1789,7 +1780,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
         |""".stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = mutable.MutableList(
@@ -1828,7 +1819,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
         |""".stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = mutable.MutableList(
@@ -1868,7 +1859,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
         |""".stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = mutable.MutableList(
@@ -1907,7 +1898,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
         |""".stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = mutable.MutableList(
@@ -1949,7 +1940,7 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
         |""".stripMargin
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = mutable.MutableList(

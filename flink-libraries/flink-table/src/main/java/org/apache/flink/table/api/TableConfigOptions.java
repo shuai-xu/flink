@@ -432,6 +432,11 @@ public class TableConfigOptions {
 			.defaultValue(32)
 			.withDescription("Sets the heap memory size of sink operator.");
 
+	public static final ConfigOption<Integer> SQL_RESOURCE_SINK_DIRECT_MEM =
+			key("sql.resource.sink.default.direct.memory.mb")
+			.defaultValue(0)
+			.withDescription("Sets the default direct memory size of sink operator.");
+
 	public static final ConfigOption<Integer> SQL_RESOURCE_SINK_PARALLELISM =
 			key("sql.resource.sink.parallelism")
 			.defaultValue(-1)
@@ -442,6 +447,11 @@ public class TableConfigOptions {
 			key("sql.resource.source.default.memory.mb")
 			.defaultValue(32)
 			.withDescription("Sets the heap memory size of source operator.");
+
+	public static final ConfigOption<Integer> SQL_RESOURCE_SOURCE_DIRECT_MEM =
+			key("sql.resource.source.default.direct.memory.mb")
+			.defaultValue(0)
+			.withDescription("Sets the default direct memory size of source operator.");
 
 	public static final ConfigOption<Integer> SQL_RESOURCE_DEFAULT_PARALLELISM =
 			key("sql.resource.default.parallelism")
@@ -464,6 +474,11 @@ public class TableConfigOptions {
 			key("sql.resource.default.memory.mb")
 			.defaultValue(32)
 			.withDescription("Default heap memory size for each operator.");
+
+	public static final ConfigOption<Integer> SQL_RESOURCE_DEFAULT_DIRECT_MEM =
+			key("sql.resource.default.direct.memory.mb")
+			.defaultValue(0)
+			.withDescription("Default direct memory size for each operator.");
 
 	public static final ConfigOption<Long> SQL_RESOURCE_INFER_ROWS_PER_PARTITION =
 			key("sql.resource.infer.rows-per-partition")

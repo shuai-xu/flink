@@ -18,7 +18,6 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
@@ -262,12 +261,14 @@ class StreamExecOverAggregate(
       getOperatorName,
       operator,
       returnTypeInfo,
-      tableEnv.execEnv.getParallelism)
+      inputDS.getParallelism)
 
     if (partitionKeys.isEmpty) {
       ret.setParallelism(1)
       ret.setMaxParallelism(1)
     }
+    ret.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
 
     // set KeyType and Selector for state
     ret.setStateKeySelector(selector)

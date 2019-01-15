@@ -243,7 +243,7 @@ class AsyncTemporalTableJoinITCase(backend: StateBackendMode)
       "for system_time as of PROCTIME() AS D ON t1.id = D.id"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sql2).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql2).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(

@@ -20,11 +20,16 @@ package org.apache.flink.table.resource;
 
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
+import org.apache.flink.table.plan.nodes.exec.NodeResource;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan;
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecDataStreamScan;
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecTableSourceScan;
 
 import org.apache.calcite.rel.BiRel;
+import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.SingleRel;
 
@@ -55,6 +60,17 @@ public class MockNodeTestBase {
 		} else if (node instanceof BatchExecBoundedStreamScan) {
 			StreamTransformation transformation = mock(StreamTransformation.class);
 			when(((BatchExecBoundedStreamScan) node).getSourceTransformation(any())).thenReturn(transformation);
+		} else if (node instanceof StreamExecTableSourceScan) {
+			StreamTransformation transformation = mock(StreamTransformation.class);
+			when(((StreamExecTableSourceScan) node).getSourceTransformation(any())).thenReturn(transformation);
+			when(transformation.getMaxParallelism()).thenReturn(-1);
+		} else if (node instanceof StreamExecDataStreamScan) {
+			StreamTransformation transformation = mock(StreamTransformation.class);
+			when(((StreamExecDataStreamScan) node).getSourceTransformation(any())).thenReturn(transformation);
+		} else if (node instanceof BatchExecExchange) {
+			RelDistribution distribution = mock(RelDistribution.class);
+			when(distribution.getType()).thenReturn(RelDistribution.Type.BROADCAST_DISTRIBUTED);
+			when(((BatchExecExchange) node).getDistribution()).thenReturn(distribution);
 		}
 	}
 

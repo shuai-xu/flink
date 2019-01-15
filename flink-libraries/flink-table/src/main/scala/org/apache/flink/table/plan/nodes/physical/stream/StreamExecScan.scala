@@ -43,8 +43,10 @@ trait StreamExecScan extends CommonScan[BaseRow] with RowStreamExecRel {
       classOf[AbstractProcessStreamOperator[BaseRow]])
 
     if (needInternalConversion) {
-      convertToInternalRow(
+      val conversion = convertToInternalRow(
         ctx, input, fieldIdx, dataType, outRowType, getTable.getQualifiedName, config, rowtimeExpr)
+      conversion.setResources(conversionResSpec, conversionResSpec)
+      conversion
     } else {
       input.asInstanceOf[StreamTransformation[BaseRow]]
     }

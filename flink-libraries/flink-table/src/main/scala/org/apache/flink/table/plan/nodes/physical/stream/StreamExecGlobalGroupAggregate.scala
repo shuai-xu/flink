@@ -19,7 +19,7 @@ package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.types.{DataType, DataTypes, TypeConverters}
+import org.apache.flink.table.api.types.{DataType, TypeConverters}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
@@ -30,7 +30,7 @@ import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRul
 import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateNameUtil, AggregateUtil, FlinkRexUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.aggregate.MiniBatchGlobalGroupAggFunction
 import org.apache.flink.table.runtime.bundle.KeyedBundleOperator
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
@@ -215,12 +215,14 @@ class StreamExecGlobalGroupAggregate(
       getOperatorName,
       operator,
       outRowType,
-      tableEnv.execEnv.getParallelism)
+      inputTransformation.getParallelism)
 
     if (groupings.isEmpty) {
       ret.setParallelism(1)
       ret.setMaxParallelism(1)
     }
+    ret.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
 
     // set KeyType and Selector for state
     ret.setStateKeySelector(selector)

@@ -29,7 +29,7 @@ import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistri
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.util.AggregateNameUtil
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
-import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.NodeResourceUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
 import org.apache.calcite.rel.RelDistribution.Type
@@ -152,8 +152,8 @@ class BatchExecLocalHashAggregate(
         inputType, outputRowType, "NoGrouping")
     } else {
       val managedMem = getResource.getReservedManagedMem *
-          ExecResourceUtil.SIZE_IN_MB
-      val maxManagedMem = getResource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB
+          NodeResourceUtil.SIZE_IN_MB
+      val maxManagedMem = getResource.getMaxManagedMem * NodeResourceUtil.SIZE_IN_MB
       codegenWithKeys(ctx, tableEnv, inputType, outputRowType, managedMem,
         maxManagedMem)
     }

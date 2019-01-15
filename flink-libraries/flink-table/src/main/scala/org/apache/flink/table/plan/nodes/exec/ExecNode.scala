@@ -20,7 +20,6 @@ package org.apache.flink.table.plan.nodes.exec
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
-import org.apache.flink.table.resource.NodeResource
 
 import java.util
 

@@ -57,7 +57,7 @@ class SubQueryITCase(mode: StateBackendMode)
 
     val sink = new TestingRetractSink
     val results = result.toRetractStream[Row]
-    results.addSink(sink)
+    results.addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -94,7 +94,7 @@ class SubQueryITCase(mode: StateBackendMode)
 
     val sink = new TestingRetractSink
     val results = result.toRetractStream[Row]
-    results.addSink(sink)
+    results.addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -136,7 +136,7 @@ class SubQueryITCase(mode: StateBackendMode)
 
     val sink = new TestingRetractSink
     val results = result.toRetractStream[Row]
-    results.addSink(sink)
+    results.addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(

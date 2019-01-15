@@ -33,26 +33,26 @@ import java.util.Set;
 
 /**
  * Describe which stage of a batchExecNode.
- * e.g. SortAggNode has two stages, the first stage process input data and the second stage
+ * e.g. SortAgg node has two stages, the first stage process input data and the second stage
  * output results. There is a pause between them and the second stage works after the first ends.
  *
- * <p>e.g. CalcNode has only a stage, it receives input data and output result in a stage.
+ * <p>e.g. Calc node has only a stage, it receives input data and output result in a stage.
  *
- * <p>BatchExecNodeStage has three elements: batchExecNode, stageID, other nodeStages that the stage
+ * <p>BatchExecNodeStage has three elements: {@link BatchExecNode}, stageID, other nodeStages that the stage
  * depends on.
  * There are two depend type: DATA_TRIGGER, PRIORITY.
  *
  * <p>e.g. When the first stage of sortAggNode ends, the node needs to output data, trigger the second
  * stage to run. So its depend type is DATA_TRIGGER.
  *
- * <p>e.g. SortAggNode output data to a calcNode, but the exchangeMode between them is batch mode(spilling
- * data to disk), so the calcNode stage depends on the second stage of sortAggNode. Depend type is DATA_TRIGGER.
+ * <p>e.g. SortAgg node output data to a calc node, but the exchangeMode between them is batch mode(spilling
+ * data to disk), so the calc node stage depends on the second stage of sortAgg node. Depend type is DATA_TRIGGER.
  *
- * <p>e.g. HashJoinNode has two stages: build stage(receive build input and build hashTable) and
- * probe stage(receive probe input and output result). The hashJoinNode prefers to read build input
+ * <p>e.g. HashJoin node has two stages: build stage(receive build input and build hashTable) and
+ * probe stage(receive probe input and output result). The hashJoin node prefers to read build input
  * if its build and probe inputs are all ready. So the depend type is PRIORITY.
  *
- * <p>e.g. SortMergeJoinNode has three stages: two input stages and output stage. its two input stages
+ * <p>e.g. SortMergeJoin node has three stages: two input stages and output stage. its two input stages
  * are parallel. So the output stage depend on two input stages and depend type is DATA_TRIGGER.
  */
 public class BatchExecNodeStage implements Serializable {

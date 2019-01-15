@@ -32,6 +32,7 @@ class TableServiceExceptionTest extends QueryTest {
 
   @Test
   def testTableServiceUnavailable(): Unit = {
+    env.setParallelism(1)
     env.setRestartStrategy(RestartStrategies.fixedDelayRestart(3, 1000))
     tEnv.getConfig.setSubsectionOptimization(true)
     val rootPath = Files.createTempDirectory(UUID.randomUUID().toString)

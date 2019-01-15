@@ -208,12 +208,14 @@ class StreamExecGroupWindowAggregate(
       operatorName,
       operator,
       outRowType,
-      tableEnv.execEnv.getParallelism)
+      inputTransform.getParallelism)
 
     if (grouping.isEmpty) {
       transformation.setParallelism(1)
       transformation.setMaxParallelism(1)
     }
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
 
     // set KeyType and Selector for state
     transformation.setStateKeySelector(selector)

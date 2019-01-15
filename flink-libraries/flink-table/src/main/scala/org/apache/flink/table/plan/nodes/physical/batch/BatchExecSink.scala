@@ -33,7 +33,7 @@ import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.util.SinkUtil
 import org.apache.flink.table.sinks.{BatchCompatibleStreamTableSink, BatchTableSink, TableSink}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.NodeResourceUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode
@@ -111,16 +111,17 @@ class BatchExecSink[T](
     tableConfig: TableConfig) {
     val sinkTransformation = boundedSink.getTransformation
     val streamTransformation = boundedStream.getTransformation
-    val preferredResources = sinkTransformation.getPreferredResources
-    if (preferredResources == null) {
-      val heapMem = ExecResourceUtil.getSinkMem(tableConfig.getConf)
-      val resource = ExecResourceUtil.getResourceSpec(tableConfig.getConf, heapMem)
+    val resourceSpec = sinkTransformation.getMinResources
+    if (resourceSpec == null) {
+      val heapMem = NodeResourceUtil.getSinkMem(tableConfig.getConf)
+      val directMem = NodeResourceUtil.getSinkDirectMem(tableConfig.getConf)
+      val resource = NodeResourceUtil.getResourceSpec(tableConfig.getConf, heapMem, directMem)
       sinkTransformation.setResources(resource, resource)
     }
     if (sinkTransformation.getMaxParallelism > 0) {
       sinkTransformation.setParallelism(sinkTransformation.getMaxParallelism)
     } else {
-      val configSinkParallelism = ExecResourceUtil.getSinkParallelism(tableConfig.getConf)
+      val configSinkParallelism = NodeResourceUtil.getSinkParallelism(tableConfig.getConf)
       if (configSinkParallelism > 0) {
         sinkTransformation.setParallelism(configSinkParallelism)
       } else if (streamTransformation.getParallelism > 0) {
@@ -203,7 +204,7 @@ class BatchExecSink[T](
           operator,
           outputTypeInfo,
           input.getParallelism)
-        val defaultResource = ExecResourceUtil.getDefaultResourceSpec(config.getConf)
+        val defaultResource = NodeResourceUtil.getDefaultResourceSpec(config.getConf)
         transformation.setResources(defaultResource, defaultResource)
         transformation
     }

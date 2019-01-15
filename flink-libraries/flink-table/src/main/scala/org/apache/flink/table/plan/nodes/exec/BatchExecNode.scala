@@ -21,6 +21,8 @@ import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 
+import java.lang.{Double => JDouble}
+
 trait BatchExecNode[T] extends ExecNode[BatchTableEnvironment, T] {
 
   /**
@@ -34,4 +36,20 @@ trait BatchExecNode[T] extends ExecNode[BatchTableEnvironment, T] {
     * @param visitor BatchExecNodeVisitor
     */
   def accept(visitor: BatchExecNodeVisitor): Unit
+
+  /**
+    * Gets estimated row count it need process.
+    */
+  def getEstimatedRowCount: JDouble
+
+  /**
+    * Gets estimated total mem when it processes.
+    */
+  def getEstimatedTotalMem: JDouble
+
+  /**
+    * Gets estimated row average size it process.
+    */
+  def getEstimatedAverageRowSize: JDouble
+
 }

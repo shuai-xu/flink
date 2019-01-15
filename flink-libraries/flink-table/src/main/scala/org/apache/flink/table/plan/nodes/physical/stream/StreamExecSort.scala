@@ -28,7 +28,7 @@ import org.apache.flink.table.runtime.NullBinaryRowKeySelector
 import org.apache.flink.table.runtime.aggregate._
 import org.apache.flink.table.runtime.sort.StreamSortOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.NodeResourceUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel._
@@ -106,8 +106,8 @@ class StreamExecSort(
       .asInstanceOf[StreamTransformation[BaseRow]]
 
     val mangedMemorySize =
-      ExecResourceUtil.getPerRequestManagedMemory(
-        tableEnv.getConfig.getConf)* ExecResourceUtil.SIZE_IN_MB
+      NodeResourceUtil.getPerRequestManagedMemory(
+        tableEnv.getConfig.getConf)* NodeResourceUtil.SIZE_IN_MB
 
     createSort(inputTransformation, mangedMemorySize)
   }
@@ -137,6 +137,9 @@ class StreamExecSort(
     }
     val ret = new OneInputTransformation(
       input, "SortOperator", sortOperator, returnTypeInfo, 1)
+    ret.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
+
     val selector = new NullBinaryRowKeySelector
     ret.setStateKeySelector(selector)
     ret.setStateKeyType(selector.getProducedType)

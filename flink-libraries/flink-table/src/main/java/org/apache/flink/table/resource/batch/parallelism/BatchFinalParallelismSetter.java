@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.resource.batch.calculator;
+package org.apache.flink.table.resource.batch.parallelism;
 
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
-import org.apache.flink.table.api.BatchTableEnvironment;
+import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
@@ -28,23 +28,33 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
 
 import org.apache.calcite.rel.RelDistribution;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
- * Set final parallelism if needed at the beginning time.
+ * Set final parallelism if needed at the beginning time, if parallelism of a node is set to be final,
+ * it will not be changed by other parallelism calculator.
  */
-public class NodeFinalParallelismSetter {
+public class BatchFinalParallelismSetter {
 
-	private final BatchTableEnvironment tEnv;
+	private final TableEnvironment tEnv;
 	private Set<ExecNode<?, ?>> calculatedNodeSet = new HashSet<>();
+	private Map<ExecNode<?, ?>, Integer> finalParallelismNodeMap = new HashMap<>();
 
-	private NodeFinalParallelismSetter(BatchTableEnvironment tEnv) {
+	private BatchFinalParallelismSetter(TableEnvironment tEnv) {
 		this.tEnv = tEnv;
 	}
 
-	public static void calculate(BatchTableEnvironment tEnv, ExecNode<?, ?> rootNode) {
-		new NodeFinalParallelismSetter(tEnv).calculate(rootNode);
+	/**
+	 * Finding nodes that need to set final parallelism.
+	 */
+	public static Map<ExecNode<?, ?>, Integer> calculate(TableEnvironment tEnv, List<ExecNode<?, ?>> sinkNodes) {
+		BatchFinalParallelismSetter setter = new BatchFinalParallelismSetter(tEnv);
+		sinkNodes.forEach(setter::calculate);
+		return setter.finalParallelismNodeMap;
 	}
 
 	private void calculate(ExecNode<?, ?> batchExecNode) {
@@ -66,22 +76,22 @@ public class NodeFinalParallelismSetter {
 
 	private void calculateTableSource(BatchExecTableSourceScan tableSourceScan) {
 		if (tableSourceScan.canLimitPushedDown()) {
-			tableSourceScan.getResource().setParallelism(1, 1);
+			finalParallelismNodeMap.put(tableSourceScan, 1);
 		} else {
-			StreamTransformation transformation = tableSourceScan.getSourceTransformation(tEnv.streamEnv());
+			StreamTransformation transformation = tableSourceScan.getSourceTransformation(tEnv.execEnv());
 			if (transformation.getMaxParallelism() > 0) {
-				tableSourceScan.getResource().setParallelism(transformation.getMaxParallelism(), transformation.getMaxParallelism());
+				finalParallelismNodeMap.put(tableSourceScan, transformation.getMaxParallelism());
 			}
 		}
 	}
 
 	private void calculateBoundedStreamScan(BatchExecBoundedStreamScan boundedStreamScan) {
-		StreamTransformation transformation = boundedStreamScan.getSourceTransformation(tEnv.streamEnv());
+		StreamTransformation transformation = boundedStreamScan.getSourceTransformation(tEnv.execEnv());
 		int parallelism = transformation.getParallelism();
 		if (parallelism <= 0) {
-			parallelism = tEnv.streamEnv().getParallelism();
+			parallelism = tEnv.execEnv().getParallelism();
 		}
-		boundedStreamScan.getResource().setParallelism(parallelism, parallelism);
+		finalParallelismNodeMap.put(boundedStreamScan, parallelism);
 	}
 
 	private void calculateSingle(ExecNode<?, ?> singleNode) {
@@ -89,14 +99,13 @@ public class NodeFinalParallelismSetter {
 		ExecNode<?, ?> inputNode = singleNode.getInputNodes().get(0);
 		if (inputNode instanceof BatchExecExchange) {
 			if (((BatchExecExchange) inputNode).getDistribution().getType() == RelDistribution.Type.SINGLETON) {
-				singleNode.getResource().setParallelism(1, 1);
-				inputNode.getResource().setParallelism(1, 1);
+				finalParallelismNodeMap.put(singleNode, 1);
 			}
 		}
 	}
 
 	private void calculateValues(BatchExecValues valuesBatchExec) {
-		valuesBatchExec.getResource().setParallelism(1, 1);
+		finalParallelismNodeMap.put(valuesBatchExec, 1);
 	}
 
 	private void calculateInputs(ExecNode<?, ?> node) {

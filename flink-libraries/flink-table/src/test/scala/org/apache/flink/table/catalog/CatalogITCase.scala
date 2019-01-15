@@ -63,6 +63,7 @@ class ExternalCatalogITCase {
   @Test
   def testComputedColumn(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setParallelism(4)
     val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
 
     var catalog = new FlinkInMemoryCatalog(builtin)
@@ -133,6 +134,7 @@ class ExternalCatalogITCase {
   @Test
   def testProctime(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setParallelism(4)
     val tableEnv = TableEnvironment.getTableEnvironment(env, new TableConfig())
 
     var catalog = new FlinkInMemoryCatalog(builtin)
@@ -200,6 +202,7 @@ class ExternalCatalogITCase {
   @Test
   def testRowtime(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setParallelism(4)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tableEnv = TableEnvironment.getTableEnvironment(env, new TableConfig())
 
@@ -273,6 +276,7 @@ class ExternalCatalogITCase {
   @Test
   def testProctimeInBatch(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setParallelism(4)
     val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
 
     var catalog = new FlinkInMemoryCatalog(builtin)
@@ -339,6 +343,7 @@ class ExternalCatalogITCase {
   @Test
   def testRowtimeInBatch(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
+
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
 

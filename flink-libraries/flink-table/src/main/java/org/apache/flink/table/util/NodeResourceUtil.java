@@ -27,9 +27,9 @@ import org.apache.flink.table.api.TableConfigOptions;
 import static org.apache.flink.configuration.ConfigOptions.key;
 
 /**
- * Deal with resource config.
+ * Deal with resource config for {@link org.apache.flink.table.plan.nodes.exec.ExecNode}.
  */
-public class ExecResourceUtil {
+public class NodeResourceUtil {
 
 	/**
 	 * How many Bytes per MB.
@@ -87,6 +87,7 @@ public class ExecResourceUtil {
 		ResourceSpec.Builder builder = new ResourceSpec.Builder();
 		builder.setCpuCores(getDefaultCpu(tableConf));
 		builder.setHeapMemoryInMB(getDefaultHeapMem(tableConf));
+		builder.setDirectMemoryInMB(getDefaultDirectMem(tableConf));
 		return builder.build();
 	}
 
@@ -98,16 +99,33 @@ public class ExecResourceUtil {
 	 */
 	public static ResourceSpec getResourceSpec(
 			Configuration tableConf,
-			int heapMemory) {
+			int heapMemory,
+			int directMemory) {
 		ResourceSpec.Builder builder = new ResourceSpec.Builder();
 		builder.setCpuCores(getDefaultCpu(tableConf));
 		builder.setHeapMemoryInMB(heapMemory);
+		builder.setDirectMemoryInMB(directMemory);
 		return builder.build();
 	}
 
+	/**
+	 * Gets the config direct heap memory for operator.
+	 * @param tableConf Configuration.
+	 * @return the config direct heap memory for operator.
+	 */
 	public static int getDefaultHeapMem(Configuration tableConf) {
 		return tableConf.getInteger(
 				TableConfigOptions.SQL_RESOURCE_DEFAULT_MEM);
+	}
+
+	/**
+	 * Gets the config direct memory for operator.
+	 * @param tableConf Configuration.
+	 * @return the config direct memory for operator.
+	 */
+	public static int getDefaultDirectMem(Configuration tableConf) {
+		return tableConf.getInteger(
+				TableConfigOptions.SQL_RESOURCE_DEFAULT_DIRECT_MEM);
 	}
 
 	/**
@@ -158,13 +176,23 @@ public class ExecResourceUtil {
 	}
 
 	/**
-	 * Gets the config memory for source.
+	 * Gets the config heap memory for source.
 	 * @param tableConf Configuration.
-	 * @return the config memory for source.
+	 * @return the config heap memory for source.
 	 */
 	public static int getSourceMem(Configuration tableConf) {
 		return tableConf.getInteger(
 				TableConfigOptions.SQL_RESOURCE_SOURCE_DEFAULT_MEM);
+	}
+
+	/**
+	 * Gets the config direct memory for source.
+	 * @param tableConf Configuration.
+	 * @return the config direct memory for source.
+	 */
+	public static int getSourceDirectMem(Configuration tableConf) {
+		return tableConf.getInteger(
+				TableConfigOptions.SQL_RESOURCE_SOURCE_DIRECT_MEM);
 	}
 
 	/**
@@ -191,13 +219,23 @@ public class ExecResourceUtil {
 	}
 
 	/**
-	 * Gets the config memory for sink.
+	 * Gets the config heap memory for sink.
 	 * @param tableConf Configuration.
-	 * @return the config memory for sink.
+	 * @return the config heap memory for sink.
 	 */
 	public static int getSinkMem(Configuration tableConf) {
 		return tableConf.getInteger(
 				TableConfigOptions.SQL_RESOURCE_SINK_DEFAULT_MEM);
+	}
+
+	/**
+	 * Gets the config direct memory for sink.
+	 * @param tableConf Configuration.
+	 * @return the config direct memory for sink.
+	 */
+	public static int getSinkDirectMem(Configuration tableConf) {
+		return tableConf.getInteger(
+				TableConfigOptions.SQL_RESOURCE_SINK_DIRECT_MEM);
 	}
 
 	/**

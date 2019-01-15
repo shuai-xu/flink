@@ -22,7 +22,6 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableEnvironment, Types}
 import org.apache.flink.table.calcite.CalciteConfig
@@ -38,7 +37,7 @@ import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
 import org.apache.calcite.runtime.SqlFunctions.{internalToTimestamp => toTimestamp}
 import org.apache.calcite.tools.RuleSets
 import org.junit.Assert.assertEquals
-import org.junit.Test
+import org.junit.{Before, Test}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
@@ -50,15 +49,15 @@ import scala.collection.mutable
 class LastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   extends StreamingWithMiniBatchTestBase(miniBatch, mode) {
 
+  @Before
   override def before(): Unit = {
+    super.before()
     FailingCollectionSource.failedBefore = true
   }
 
   @Test
   def testWithPkUpdateGenerateRetraction(): Unit = {
     val tableName = "MyTable"
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     injectLastRowRule(tEnv)
 
@@ -75,7 +74,7 @@ class LastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
       .groupBy('pk)
       .select('pk, 'a.count)
       .toRetractStream[Row]
-      .addSink(sink)
+      .addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = mutable.MutableList("1,1", "2,1", "3,1", "4,1", "5,1", "6,1")
@@ -85,8 +84,6 @@ class LastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   @Test
   def testWithPkUpdateWithoutGenerateRetraction(): Unit = {
     val tableName = "MyTable"
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     injectLastRowRule(tEnv)
 
@@ -109,8 +106,6 @@ class LastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   @Test
   def testWithPkOrderUpdateWithRetraction(): Unit = {
     val tableName = "MyTable"
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
 
     injectLastRowRule(tEnv)
@@ -149,7 +144,7 @@ class LastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
       .groupBy('pk)
       .select('pk, 'd.sum)
       .toRetractStream[Row]
-      .addSink(sink)
+      .addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = mutable.MutableList("1,1", "2,3", "3,6", "4,10")
@@ -159,8 +154,6 @@ class LastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   @Test
   def testWithPkOrderUpdateWithoutRetraction(): Unit = {
     val tableName = "MyTable"
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
 
     injectLastRowRule(tEnv)

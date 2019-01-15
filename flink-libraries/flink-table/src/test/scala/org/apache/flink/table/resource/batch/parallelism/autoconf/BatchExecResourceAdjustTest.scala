@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.resource.batch.autoconf
+package org.apache.flink.table.resource.batch.parallelism.autoconf
 
 import org.apache.flink.table.api.{TableConfigOptions, TableSchema}
 import org.apache.flink.table.resource.batch.BatchExecResourceTest
 import org.apache.flink.table.tpc.{STATS_MODE, TpcHSchemaProvider, TpchTableStatsProvider}
-import org.apache.flink.table.util.{BatchTableTestUtil, ExecResourceUtil, TableTestBase}
+import org.apache.flink.table.util.{BatchTableTestUtil, NodeResourceUtil, TableTestBase}
 
 import org.junit.{Before, Test}
 
@@ -35,7 +35,7 @@ class BatchExecResourceAdjustTest extends TableTestBase {
     util.getTableEnv.getConfig.setSubsectionOptimization(false)
     util.getTableEnv.getConfig.getConf.setString(
       TableConfigOptions.SQL_RESOURCE_INFER_MODE,
-      ExecResourceUtil.InferMode.ALL.toString
+      NodeResourceUtil.InferMode.ALL.toString
     )
     BatchExecResourceTest.setResourceConfig(util.getTableEnv.getConfig)
   }

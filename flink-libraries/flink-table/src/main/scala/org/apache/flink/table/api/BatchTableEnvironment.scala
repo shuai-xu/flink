@@ -387,10 +387,7 @@ class BatchTableEnvironment(
     TableEnvironment.validateType(resultType)
 
     node match {
-      // TODO refactor
       case node: BatchExecRel[OUT] =>
-        ruKeeper.buildRUs(node)
-        ruKeeper.calculateNodeResource(node)
         node.translateToPlan(this)
       case _ =>
         throw new TableException("Cannot generate BoundedStream due to an invalid logical plan. " +
@@ -429,12 +426,14 @@ class BatchTableEnvironment(
     // reuse subplan
     val reusedPlan = SubplanReuseUtil.reuseSubplan(rels, config)
     val nodeDag = reusedPlan.map(_.asInstanceOf[BatchExecNode[_]])
-    val context = new DAGProcessContext(this)
     // breakup deadlock
-    val nodeDagWithoutDeadlock = new DeadlockBreakupProcessor().process(nodeDag, context)
+    val nodeDagWithoutDeadlock = new DeadlockBreakupProcessor().process(
+      nodeDag, new DAGProcessContext(this))
     val dagProcessors = getConfig.getBatchDAGProcessors
     require(dagProcessors != null)
-    val postNodeDag = dagProcessors.process(nodeDagWithoutDeadlock, context)
+    nodeDagWithoutDeadlock.foreach(n => ruKeeper.buildRUs(n.asInstanceOf[BatchExecNode[_]]))
+    val postNodeDag = dagProcessors.process(nodeDagWithoutDeadlock,
+      new DAGProcessContext(this, ruKeeper.getRunningUnitMap))
     dumpOptimizedPlanIfNeed(postNodeDag)
     postNodeDag.map(_.asInstanceOf[BatchExecNode[_]])
   }

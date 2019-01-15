@@ -16,22 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.resource.batch.calculator;
+package org.apache.flink.table.resource.calculator;
 
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
-import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.plan.nodes.common.CommonScan;
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
+import org.apache.flink.table.plan.nodes.exec.NodeResource;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecDataStreamScan;
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecTableSourceScan;
 import org.apache.flink.table.plan.nodes.process.DAGProcessContext;
 import org.apache.flink.table.plan.nodes.process.DAGProcessor;
-import org.apache.flink.table.resource.NodeResource;
-import org.apache.flink.table.util.ExecResourceUtil;
+import org.apache.flink.table.util.NodeResourceUtil;
 
 import org.apache.calcite.rel.RelDistribution;
 
@@ -40,24 +42,14 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Cpu and heap memory calculator for execNode.
+ *  Calculating partial resource for for {@link ExecNode}. Here Cpu, heap and direct memory
+ *  will be calculated, parallelism, managed memory and other resource need to be calculated by
+ *  other {@link DAGProcessor}s.
  */
-public class NodeCpuHeapMemCalculator implements DAGProcessor {
+public class NodePartialResProcessor implements DAGProcessor {
 
 	private final Set<ExecNode> calculatedNodeSet = new HashSet<>();
 	private TableEnvironment tEnv;
-
-	public static void calculate(BatchTableEnvironment tEnv, ExecNode<?, ?> rootNode) {
-		new NodeCpuHeapMemCalculator(tEnv).calculate(rootNode);
-	}
-
-	public NodeCpuHeapMemCalculator() {
-	}
-
-	// TODO
-	public NodeCpuHeapMemCalculator(BatchTableEnvironment tEnv) {
-		this.tEnv = tEnv;
-	}
 
 	@Override
 	public List<ExecNode<?, ?>> process(List<ExecNode<?, ?>> sinkNodes, DAGProcessContext context) {
@@ -65,76 +57,75 @@ public class NodeCpuHeapMemCalculator implements DAGProcessor {
 		for (ExecNode sinkNode : sinkNodes) {
 			calculate(sinkNode);
 		}
-
 		return sinkNodes;
 	}
 
-	private void calculateInputs(ExecNode<?, ?> node) {
-		node.getInputNodes().forEach(this::calculate);
-	}
-
-	public void calculate(ExecNode execNode) {
+	private void calculate(ExecNode<?, ?> execNode) {
 		if (!calculatedNodeSet.add(execNode)) {
 			return;
 		}
-		if (execNode instanceof BatchExecBoundedStreamScan) {
-			calculateBoundedStreamScan((BatchExecBoundedStreamScan) execNode);
-		} else if (execNode instanceof BatchExecTableSourceScan) {
-			calculateTableSourceScan((BatchExecTableSourceScan) execNode);
-		} else if (execNode instanceof BatchExecUnion) {
-			calculateInputs(execNode);
+		calculateInputs(execNode);
+		if (execNode instanceof BatchExecBoundedStreamScan || execNode instanceof StreamExecDataStreamScan) {
+			calculateStreamScan((CommonScan) execNode);
+		} else if (execNode instanceof BatchExecTableSourceScan || execNode instanceof StreamExecTableSourceScan) {
+			calculateTableSourceScan((CommonScan) execNode);
 		} else if (execNode instanceof BatchExecExchange) {
 			calculateExchange((BatchExecExchange) execNode);
-		} else {
+		} else if (!(execNode instanceof BatchExecSink || execNode instanceof BatchExecUnion)) {
 			calculateDefaultNode(execNode);
 		}
 	}
 
-	private void calculateBoundedStreamScan(BatchExecBoundedStreamScan scanBatchExec) {
-		StreamTransformation transformation = scanBatchExec.getSourceTransformation(tEnv.execEnv());
+	private void calculateStreamScan(CommonScan streamScan) {
+		StreamTransformation transformation = streamScan.getSourceTransformation(tEnv.execEnv());
 		ResourceSpec sourceRes = transformation.getMinResources();
 		if (sourceRes == null) {
 			sourceRes = ResourceSpec.DEFAULT;
 		}
-		calculateBatchScan(scanBatchExec, sourceRes);
+		calculateCommonScan(streamScan, sourceRes);
 	}
 
-	private void calculateTableSourceScan(BatchExecTableSourceScan tableSourceScan) {
+	private void calculateTableSourceScan(CommonScan tableSourceScan) {
 		// user may have set resource for source transformation.
 		StreamTransformation transformation = tableSourceScan.getSourceTransformation(tEnv.execEnv());
 		ResourceSpec sourceRes = transformation.getMinResources();
 		if (sourceRes == ResourceSpec.DEFAULT || sourceRes == null) {
-			int heap = ExecResourceUtil.getSourceMem(tEnv.getConfig().getConf());
-			sourceRes = ExecResourceUtil.getResourceSpec(tEnv.getConfig().getConf(), heap);
+			int heap = NodeResourceUtil.getSourceMem(tEnv.getConfig().getConf());
+			int direct = NodeResourceUtil.getSourceDirectMem(tEnv.getConfig().getConf());
+			sourceRes = NodeResourceUtil.getResourceSpec(tEnv.getConfig().getConf(), heap, direct);
 		}
-		calculateBatchScan(tableSourceScan, sourceRes);
+		calculateCommonScan(tableSourceScan, sourceRes);
 	}
 
-	private void calculateBatchScan(BatchExecScan batchExecScan, ResourceSpec sourceRes) {
+	private void calculateCommonScan(CommonScan commonScan, ResourceSpec sourceRes) {
 		ResourceSpec conversionRes = ResourceSpec.DEFAULT;
-		if (batchExecScan.needInternalConversion()) {
-			conversionRes = ExecResourceUtil.getDefaultResourceSpec(tEnv.getConfig().getConf());
+		if (commonScan.needInternalConversion()) {
+			conversionRes = NodeResourceUtil.getDefaultResourceSpec(tEnv.getConfig().getConf());
 		}
-		batchExecScan.setResForSourceAndConversion(sourceRes, conversionRes);
+		commonScan.setResForSourceAndConversion(sourceRes, conversionRes);
 	}
 
 	private void calculateDefaultNode(ExecNode node) {
-		calculateInputs(node);
 		setDefaultRes(node.getResource());
 	}
 
 	// set resource for rangePartition exchange
 	private void calculateExchange(BatchExecExchange execExchange) {
-		calculateInputs(execExchange);
 		if (execExchange.getDistribution().getType() == RelDistribution.Type.RANGE_DISTRIBUTED) {
 			setDefaultRes(execExchange.getResource());
 		}
 	}
 
 	private void setDefaultRes(NodeResource resource) {
-		double cpu = ExecResourceUtil.getDefaultCpu(tEnv.getConfig().getConf());
-		int heap = ExecResourceUtil.getDefaultHeapMem(tEnv.getConfig().getConf());
+		double cpu = NodeResourceUtil.getDefaultCpu(tEnv.getConfig().getConf());
+		int heap = NodeResourceUtil.getDefaultHeapMem(tEnv.getConfig().getConf());
+		int direct = NodeResourceUtil.getDefaultDirectMem(tEnv.getConfig().getConf());
 		resource.setCpu(cpu);
 		resource.setHeapMem(heap);
+		resource.setDirectMem(direct);
+	}
+
+	private void calculateInputs(ExecNode<?, ?> node) {
+		node.getInputNodes().forEach(this::calculate);
 	}
 }

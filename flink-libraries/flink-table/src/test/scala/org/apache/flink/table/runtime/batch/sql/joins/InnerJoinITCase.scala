@@ -20,7 +20,6 @@ package org.apache.flink.table.runtime.batch.sql.joins
 
 import java.math.{BigDecimal => JBigDecimal}
 import java.util
-
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
@@ -32,8 +31,9 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.InsertRuntimeFilterRule
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
-import org.apache.flink.table.util.ExecResourceUtil.InferMode
-import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.NodeResourceUtil
+import org.apache.flink.table.util.NodeResourceUtil.InferMode
+
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Before, Test}
@@ -166,7 +166,7 @@ class InnerJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITC
 
     conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM, 1)
     conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_HASH_JOIN_TABLE_MEM, 2)
-    tEnv.getConfig.getConf.setInteger(ExecResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 2)
+    tEnv.getConfig.getConf.setInteger(NodeResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 2)
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
 
     val bigData = Random.shuffle(

@@ -231,7 +231,10 @@ class StreamExecGroupAggregate(
       getOperatorName,
       operator,
       outRowType,
-      tableEnv.execEnv.getParallelism)
+      inputTransformation.getParallelism)
+
+    ret.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
 
     if (groupings.isEmpty) {
       ret.setParallelism(1)

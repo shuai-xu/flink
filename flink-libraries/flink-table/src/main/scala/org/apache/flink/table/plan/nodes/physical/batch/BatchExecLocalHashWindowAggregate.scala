@@ -30,7 +30,7 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
-import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.NodeResourceUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode
@@ -110,7 +110,7 @@ class BatchExecLocalHashWindowAggregate(
       .asInstanceOf[StreamTransformation[BaseRow]]
     val outputRowType = FlinkTypeFactory.toInternalRowType(getRowType)
 
-    val groupBufferLimitSize = ExecResourceUtil.getWindowAggBufferLimitSize(
+    val groupBufferLimitSize = NodeResourceUtil.getWindowAggBufferLimitSize(
       tableEnv.getConfig.getConf)
 
     val (windowSize: Long, slideSize: Long) = getWindowDef(window)
@@ -119,8 +119,8 @@ class BatchExecLocalHashWindowAggregate(
     val generatedOperator = codegen(ctx, tableEnv,
       TypeConverters.createInternalTypeFromTypeInfo(
         input.getOutputType).asInstanceOf[RowType], outputRowType,
-      groupBufferLimitSize, getResource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB,
-      getResource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB,
+      groupBufferLimitSize, getResource.getReservedManagedMem * NodeResourceUtil.SIZE_IN_MB,
+      getResource.getMaxManagedMem * NodeResourceUtil.SIZE_IN_MB,
       windowStart, windowSize, slideSize)
 
     val operator = new OneInputSubstituteStreamOperator[BaseRow, BaseRow](

@@ -36,7 +36,7 @@ import org.apache.flink.table.plan.util.JoinUtil
 import org.apache.flink.table.runtime.join.batch.hashtable.BinaryHashBucketArea
 import org.apache.flink.table.runtime.join.batch.{HashJoinOperator, HashJoinType}
 import org.apache.flink.table.typeutils.BinaryRowSerializer
-import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.NodeResourceUtil
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.core._
@@ -167,9 +167,9 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
 
     val keyType = new RowType(leftKeys.map(lType.getFieldTypes()(_)): _*)
     val managedMemorySize = getResource.getReservedManagedMem *
-        ExecResourceUtil.SIZE_IN_MB
+        NodeResourceUtil.SIZE_IN_MB
     val maxMemorySize = getResource.getMaxManagedMem *
-        ExecResourceUtil.SIZE_IN_MB
+        NodeResourceUtil.SIZE_IN_MB
     val condFunc = generateConditionFunction(config, lType, rType)
 
     // projection for equals
@@ -185,7 +185,7 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
         (rInput, lInput, rProj, lProj, rType, lType, true)
       }
     val perRequestSize =
-      ExecResourceUtil.getPerRequestManagedMemory(config.getConf) * ExecResourceUtil.SIZE_IN_MB
+      NodeResourceUtil.getPerRequestManagedMemory(config.getConf) * NodeResourceUtil.SIZE_IN_MB
     val mq = getCluster.getMetadataQuery
 
     val buildRowSize = Util.first(mq.getAverageRowSize(buildRel), 24).toInt

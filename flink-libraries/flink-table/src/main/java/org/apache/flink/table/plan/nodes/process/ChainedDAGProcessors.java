@@ -19,7 +19,9 @@
 package org.apache.flink.table.plan.nodes.process;
 
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
-import org.apache.flink.table.resource.batch.calculator.NodeCpuHeapMemCalculator;
+import org.apache.flink.table.resource.batch.managedmem.BatchManagedMemoryProcessor;
+import org.apache.flink.table.resource.batch.parallelism.BatchParallelismProcessor;
+import org.apache.flink.table.resource.calculator.NodePartialResProcessor;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -29,21 +31,24 @@ import java.util.List;
  */
 public class ChainedDAGProcessors {
 
-	List<DAGProcessor> dagProcessorList = new LinkedList<>();
+	public ChainedDAGProcessors() {
+
+	}
+
+	private List<DAGProcessor> dagProcessorList = new LinkedList<>();
 
 	public static ChainedDAGProcessors buildBatchProcessors() {
 		ChainedDAGProcessors processors = new ChainedDAGProcessors();
+		processors.addProcessor(new NodePartialResProcessor());
+		processors.addProcessor(new BatchParallelismProcessor());
+		processors.addProcessor(new BatchManagedMemoryProcessor());
 		return processors;
 	}
 
 	public static ChainedDAGProcessors buildStreamProcessors() {
 		ChainedDAGProcessors processors = new ChainedDAGProcessors();
-		processors.addProcessor(new NodeCpuHeapMemCalculator());
+		processors.addProcessor(new NodePartialResProcessor());
 		return processors;
-	}
-
-	public ChainedDAGProcessors() {
-
 	}
 
 	public void addProcessor(DAGProcessor dagProcessorList) {
@@ -51,6 +56,9 @@ public class ChainedDAGProcessors {
 	}
 
 	public List<ExecNode<?, ?>> process(List<ExecNode<?, ?>> sinkNodes, DAGProcessContext context) {
+		for (DAGProcessor processor : dagProcessorList) {
+			sinkNodes = processor.process(sinkNodes, context);
+		}
 		return sinkNodes;
 	}
 }

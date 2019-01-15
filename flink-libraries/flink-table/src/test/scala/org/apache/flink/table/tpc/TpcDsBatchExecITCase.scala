@@ -22,7 +22,7 @@ import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.sources.csv.CsvTableSource
-import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.NodeResourceUtil
 
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -69,7 +69,7 @@ class TpcDsBatchExecITCase(
   @Before
   def before(): Unit = {
     //dynamic allocate memory.
-    conf.getConf.setInteger(ExecResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 1)
+    conf.getConf.setInteger(NodeResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 1)
     for ((tableName, schema) <- TpcDsSchemaProvider.schemaMap) {
       val tableSource = CsvTableSource.builder()
           .path(getDataFile(tableName))

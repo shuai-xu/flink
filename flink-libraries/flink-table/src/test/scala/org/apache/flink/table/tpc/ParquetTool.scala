@@ -22,7 +22,7 @@ import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.sinks.parquet.ParquetTableSink
 import org.apache.flink.table.sources.csv.CsvTableSource
-import org.apache.flink.table.util.ExecResourceUtil.InferMode
+import org.apache.flink.table.util.NodeResourceUtil.InferMode
 import org.junit.Ignore
 
 @Ignore

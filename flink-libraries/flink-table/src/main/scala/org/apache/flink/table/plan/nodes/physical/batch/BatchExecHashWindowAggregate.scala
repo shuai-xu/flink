@@ -18,19 +18,16 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.functions.UserDefinedFunction
 import org.apache.flink.table.api.types.{RowType, TypeConverters}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
-import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
-import org.apache.flink.table.util.ExecResourceUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode
@@ -39,6 +36,9 @@ import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.tools.RelBuilder
 
 import java.util
+import org.apache.flink.runtime.operators.DamBehavior
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.util.NodeResourceUtil
 
 class BatchExecHashWindowAggregate(
     window: LogicalWindow,
@@ -116,7 +116,7 @@ class BatchExecHashWindowAggregate(
     val outputRowType = FlinkTypeFactory.toInternalRowType(getRowType)
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
 
-    val groupBufferLimitSize = ExecResourceUtil.getWindowAggBufferLimitSize(
+    val groupBufferLimitSize = NodeResourceUtil.getWindowAggBufferLimitSize(
       tableEnv.getConfig.getConf)
 
     val inputType = TypeConverters.createInternalTypeFromTypeInfo(
@@ -124,8 +124,8 @@ class BatchExecHashWindowAggregate(
     val generatedOperator = codegen(ctx, tableEnv,
       inputType, outputRowType,
       groupBufferLimitSize,
-      getResource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB,
-      getResource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB,
+      getResource.getReservedManagedMem * NodeResourceUtil.SIZE_IN_MB,
+      getResource.getMaxManagedMem * NodeResourceUtil.SIZE_IN_MB,
       windowStart,
       windowSize,
       slideSize)

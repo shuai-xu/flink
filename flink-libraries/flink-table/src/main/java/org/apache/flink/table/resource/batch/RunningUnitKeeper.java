@@ -25,25 +25,12 @@ import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.api.TableConfigOptions;
 import org.apache.flink.table.plan.nodes.exec.BatchExecNode;
-import org.apache.flink.table.plan.nodes.exec.ExecNode;
-import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink;
-import org.apache.flink.table.resource.batch.autoconf.NodeManagedCalculatorOnStatistics;
-import org.apache.flink.table.resource.batch.autoconf.NodeParallelismAdjuster;
-import org.apache.flink.table.resource.batch.calculator.BatchNodeManagedCalculator;
-import org.apache.flink.table.resource.batch.calculator.BatchParallelismCalculator;
-import org.apache.flink.table.resource.batch.calculator.BatchResultPartitionCalculator;
-import org.apache.flink.table.resource.batch.calculator.NodeCpuHeapMemCalculator;
-import org.apache.flink.table.resource.batch.calculator.NodeFinalParallelismSetter;
-import org.apache.flink.table.resource.batch.calculator.ParallelismCalculatorOnStatistics;
-import org.apache.flink.table.resource.batch.calculator.ShuffleStageParallelismCalculator;
 import org.apache.flink.table.resource.batch.schedule.RunningUnitGraphManagerPlugin;
-import org.apache.flink.table.util.ExecResourceUtil;
-import org.apache.flink.table.util.ExecResourceUtil.InferMode;
+import org.apache.flink.table.util.NodeResourceUtil;
 import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.InstantiationUtil;
 
-import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,7 +94,7 @@ public class RunningUnitKeeper {
 
 	public void setScheduleConfig(StreamGraphGenerator.Context context) {
 		if (supportRunningUnit &&
-				ExecResourceUtil.enableRunningUnitSchedule(getTableConf()) &&
+				NodeResourceUtil.enableRunningUnitSchedule(getTableConf()) &&
 				!getTableConf().getBoolean(TableConfigOptions.SQL_EXEC_DATA_EXCHANGE_MODE_ALL_BATCH)) {
 			context.getConfiguration().setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, RunningUnitGraphManagerPlugin.class.getName());
 			try {
@@ -115,54 +102,6 @@ public class RunningUnitKeeper {
 			} catch (IOException e) {
 				throw new FlinkRuntimeException("Could not serialize runningUnits to streamGraph config.", e);
 			}
-		}
-	}
-
-	public void calculateNodeResource(BatchExecNode<?> rootNode) {
-		if (rootNode instanceof BatchExecSink<?>) {
-			rootNode = (BatchExecNode<?>) ((BatchExecSink) rootNode).getInput();
-		}
-		RelMetadataQuery mq = rootNode.getFlinkPhysicalRel().getCluster().getMetadataQuery();
-		NodeCpuHeapMemCalculator.calculate(tableEnv, rootNode);
-		if (!supportRunningUnit) {
-			// if runningUnit cannot be build, or no statics, we set resource according to config.
-			// we are not able to set resource according to statics when runningUnits are not build.
-			BatchResultPartitionCalculator.calculate(tableEnv, mq, rootNode);
-			rootNode.accept(new BatchNodeManagedCalculator(getTableConf()));
-			return;
-		}
-		InferMode inferMode = ExecResourceUtil.getInferMode(getTableConf());
-		NodeFinalParallelismSetter.calculate(tableEnv, rootNode);
-		Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = ShuffleStageGenerator.generate(rootNode);
-		getShuffleStageParallelismCalculator(mq, getTableConf(), inferMode).calculate(nodeShuffleStageMap.values());
-		Double cpuLimit = getTableConf().getDouble(TableConfigOptions.SQL_RESOURCE_RUNNING_UNIT_CPU_TOTAL);
-		if (cpuLimit > 0) {
-			NodeParallelismAdjuster.adjustParallelism(cpuLimit, nodeRunningUnitMap, nodeShuffleStageMap);
-		}
-		for (ExecNode<?, ?> node : nodeShuffleStageMap.keySet()) {
-			node.getResource().setParallelism(nodeShuffleStageMap.get(node).getResultParallelism());
-		}
-		rootNode.accept(getNodeManagedCalculator(inferMode, mq));
-	}
-
-	private ShuffleStageParallelismCalculator getShuffleStageParallelismCalculator(
-			RelMetadataQuery mq,
-			Configuration tableConf,
-			InferMode inferMode) {
-		int envParallelism = tableEnv.streamEnv().getParallelism();
-		if (inferMode.equals(InferMode.ALL)) {
-			return new ParallelismCalculatorOnStatistics(mq, tableConf, envParallelism);
-		} else {
-			return new BatchParallelismCalculator(mq, tableConf, envParallelism);
-		}
-	}
-
-	private BatchExecNodeVisitor getNodeManagedCalculator(
-			InferMode inferMode, RelMetadataQuery mq) {
-		if (inferMode.equals(InferMode.ALL)) {
-			return new NodeManagedCalculatorOnStatistics(getTableConf(), mq);
-		} else {
-			return new BatchNodeManagedCalculator(getTableConf());
 		}
 	}
 
@@ -181,6 +120,10 @@ public class RunningUnitKeeper {
 				nodeStagesMap.computeIfAbsent(stage.getBatchExecNode(), k -> new LinkedHashSet<>()).add(stage);
 			}
 		}
+	}
+
+	public Map<BatchExecNode<?>, Set<NodeRunningUnit>> getRunningUnitMap() {
+		return nodeRunningUnitMap;
 	}
 
 	public List<NodeRunningUnit> getRunningUnits() {

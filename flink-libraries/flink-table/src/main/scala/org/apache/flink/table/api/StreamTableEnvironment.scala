@@ -991,7 +991,7 @@ abstract class StreamTableEnvironment(
     // translate relNodes to StreamTransformations
     val sinkTransformations = translate(sinkExecNodes)
     val sqlPlan = PlanUtil.explainPlan(StreamGraphGenerator.generate(
-      StreamGraphGenerator.Context.buildBatchProperties(execEnv), sinkTransformations))
+      StreamGraphGenerator.Context.buildStreamProperties(execEnv), sinkTransformations))
     sb.append("== Physical Execution Plan ==")
     sb.append(System.lineSeparator)
     sb.append(sqlPlan)

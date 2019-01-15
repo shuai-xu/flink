@@ -16,11 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.resource.batch;
+package org.apache.flink.table.resource.batch.parallelism;
 
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
+
+import org.apache.calcite.rel.RelDistribution;
 
 import java.util.Comparator;
 import java.util.HashSet;
@@ -32,17 +35,21 @@ import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 
-
 /**
  * Build shuffleStages.
  */
 public class ShuffleStageGenerator {
 
 	private final Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap = new LinkedHashMap<>();
+	private final Map<ExecNode<?, ?>, Integer> nodeToFinalParallelismMap;
 
-	public static Map<ExecNode<?, ?>, ShuffleStage> generate(ExecNode<?, ?> rootNode) {
-		ShuffleStageGenerator generator = new ShuffleStageGenerator();
-		generator.buildShuffleStages(rootNode);
+	private ShuffleStageGenerator(Map<ExecNode<?, ?>, Integer> nodeToFinalParallelismMap) {
+		this.nodeToFinalParallelismMap = nodeToFinalParallelismMap;
+	}
+
+	public static Map<ExecNode<?, ?>, ShuffleStage> generate(List<ExecNode<?, ?>> sinkNodes, Map<ExecNode<?, ?>, Integer> finalParallelismNodeMap) {
+		ShuffleStageGenerator generator = new ShuffleStageGenerator(finalParallelismNodeMap);
+		sinkNodes.forEach(generator::buildShuffleStages);
 		Map<ExecNode<?, ?>, ShuffleStage> result = generator.getNodeShuffleStageMap();
 		result.values().forEach(s -> {
 			List<ExecNode<?, ?>> virtualNodeList = s.getExecNodeSet().stream().filter(ShuffleStageGenerator::isVirtualNode).collect(toList());
@@ -68,35 +75,40 @@ public class ShuffleStageGenerator {
 			// source node
 			ShuffleStage shuffleStage = new ShuffleStage();
 			shuffleStage.addNode(execNode);
-			if (execNode.getResource().isParallelismMax()) {
-				shuffleStage.setResultParallelism(execNode.getResource().getParallelism(), true);
+			if (nodeToFinalParallelismMap.containsKey(execNode)) {
+				shuffleStage.setParallelism(nodeToFinalParallelismMap.get(execNode), true);
 			}
 			nodeShuffleStageMap.put(execNode, shuffleStage);
-		} else if (!(execNode instanceof BatchExecExchange)) {
+		} else if (execNode instanceof BatchExecExchange && !(((BatchExecExchange) execNode).getDistribution().getType() == RelDistribution.Type.RANGE_DISTRIBUTED)) {
+			// do nothing
+		} else if (execNode instanceof BatchExecSink) {
+			// do nothing
+		} else {
 			Set<ShuffleStage> inputShuffleStages = getInputShuffleStages(execNode);
-			ShuffleStage inputShuffleStage = mergeInputShuffleStages(inputShuffleStages, execNode.getResource().getParallelism());
+			Integer parallelism = nodeToFinalParallelismMap.get(execNode);
+			ShuffleStage inputShuffleStage = mergeInputShuffleStages(inputShuffleStages, parallelism);
 			inputShuffleStage.addNode(execNode);
 			nodeShuffleStageMap.put(execNode, inputShuffleStage);
 		}
 	}
 
-	private ShuffleStage mergeInputShuffleStages(Set<ShuffleStage> shuffleStageSet, int parallelism) {
-		if (parallelism > 0) {
+	private ShuffleStage mergeInputShuffleStages(Set<ShuffleStage> shuffleStageSet, Integer parallelism) {
+		if (parallelism != null) {
 			ShuffleStage resultShuffleStage = new ShuffleStage();
-			resultShuffleStage.setResultParallelism(parallelism, true);
+			resultShuffleStage.setParallelism(parallelism, true);
 			for (ShuffleStage shuffleStage : shuffleStageSet) {
-				if (!shuffleStage.isParallelismFinal() || shuffleStage.getResultParallelism() == parallelism) {
+				if (!shuffleStage.isFinalParallelism() || shuffleStage.getParallelism() == parallelism) {
 					mergeShuffleStage(resultShuffleStage, shuffleStage);
 				}
 			}
 			return resultShuffleStage;
 		} else {
 			ShuffleStage resultShuffleStage = shuffleStageSet.stream()
-					.filter(ShuffleStage::isParallelismFinal)
-					.max(Comparator.comparing(ShuffleStage::getResultParallelism))
+					.filter(ShuffleStage::isFinalParallelism)
+					.max(Comparator.comparing(ShuffleStage::getParallelism))
 					.orElse(new ShuffleStage());
 			for (ShuffleStage shuffleStage : shuffleStageSet) {
-				if (!shuffleStage.isParallelismFinal() || shuffleStage.getResultParallelism() == resultShuffleStage.getResultParallelism()) {
+				if (!shuffleStage.isFinalParallelism() || shuffleStage.getParallelism() == resultShuffleStage.getParallelism()) {
 					mergeShuffleStage(resultShuffleStage, shuffleStage);
 				}
 			}

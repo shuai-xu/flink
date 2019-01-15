@@ -140,8 +140,10 @@ class StreamExecLastRow(
       getOperatorName,
       operator,
       rowTypeInfo,
-      tableEnv.execEnv.getParallelism
+      inputTransform.getParallelism
     )
+    ret.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
 
     val selector = StreamExecUtil.getKeySelector(uniqueKeys, rowTypeInfo)
     ret.setStateKeySelector(selector)

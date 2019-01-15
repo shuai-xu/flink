@@ -23,7 +23,7 @@ import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.AggMode
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
-import org.apache.flink.table.runtime.utils.{CommonTestData, StreamingWithAggTestBase, StreamingWithMiniBatchTestBase, TestingRetractSink}
+import org.apache.flink.table.runtime.utils.{CommonTestData, StreamingWithAggTestBase, TestingRetractSink}
 import org.apache.flink.types.Row
 
 import org.junit.Assert.assertEquals

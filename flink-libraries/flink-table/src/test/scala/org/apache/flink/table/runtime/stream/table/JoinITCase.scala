@@ -100,7 +100,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val results = ds1.join(ds2, 'a < 'd).select('a, 'd)
 
     val sink = new TestingRetractSink
-    results.toRetractStream[Row].addSink(sink)
+    results.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = Seq("6,10")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
@@ -116,7 +116,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joined = ds1.leftOuterJoin(table1, 'a === 'c)
 
     val sink = new TestingRetractSink
-    joined.toRetractStream[Row].addSink(sink)
+    joined.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,left,null,null", "2,left,2,right")
@@ -130,7 +130,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.leftOuterJoin(ds2, 'b === 'e).select('b, 'c, 'e, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,Hi,null,null", "2,Hello world,null,null", "2,Hello,null,null")
@@ -144,7 +144,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.leftOuterJoin(ds2, 'b === 'e).select('b, 'c, 'e, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -198,7 +198,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
       .select('leftPk, 'leftA.count)
 
     val sink = new TestingRetractSink
-    resultTable.toRetractStream[Row].addSink(sink)
+    resultTable.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,2")
@@ -279,7 +279,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
       .where('leftPk === 'rightPk)
 
     val sink = new TestingRetractSink
-    resultTable.toRetractStream[Row].addSink(sink)
+    resultTable.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,5,1,2")
@@ -354,7 +354,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
         .where('leftPk === 'rightPk)
 
     val sink = new TestingRetractSink
-    resultTable.toRetractStream[Row].addSink(sink)
+    resultTable.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,4,1,2", "1,5,1,2")
@@ -392,7 +392,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
       .select('leftPk, 'leftA.count)
 
     val sink = new TestingRetractSink
-    resultTable.toRetractStream[Row].addSink(sink)
+    resultTable.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,2")
@@ -550,7 +550,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
       .toRetractStream[Row]
 
     val sink = new TestingRetractSink
-    result.addSink(sink)
+    result.addSink(sink).setParallelism(1)
     env.execute()
     val expected = Seq("1,1,1,1", "1,1,1,1", "1,1,1,1", "1,1,1,1", "2,2,2,2", "3,3,3,3",
                        "5,5,5,5", "5,5,5,5")
@@ -611,7 +611,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.join(ds2).where('b === 'e).select('c, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("Hi,Hallo", "Hello,Hallo Welt", "Hello world,Hallo Welt")
@@ -628,7 +628,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.join(ds2).where('b === 'e && 'b < 2).select('c, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("Hi,Hallo")
@@ -645,7 +645,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.join(ds2).where('b === 'e && 'a < 6).select('c, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -664,7 +664,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.join(ds2).where('b === 'e && 'a < 6 && 'h < 'b).select('c, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("Hello world, how are you?,Hallo Welt wie", "I am fine.,Hallo Welt wie")
@@ -681,7 +681,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.join(ds2).filter('a === 'd && 'b === 'h).select('c, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -720,7 +720,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
       .select('b.sum, 'g.count)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("6,3", "4,2", "1,1")
@@ -743,7 +743,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
       .select('a, 'f, 'l)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("2,1,Hello", "2,1,Hello world", "1,0,Hi")
@@ -760,7 +760,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.join(ds2).filter('a === 'd && ('b === 'e || 'b === 'e - 10)).select('c, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("Hi,Hallo", "Hello,Hallo Welt", "I am fine.,IJK")
@@ -777,7 +777,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.join(ds2).filter('b === 'h + 1 && 'a - 1 === 'd + 2).select('c, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("I am fine.,Hallo Welt", "Luke Skywalker,Hallo Welt wie gehts?",
@@ -797,7 +797,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.leftOuterJoin(ds2, 'a === 'd && 'b === 'h).select('c, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -821,7 +821,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.leftOuterJoin(ds2, 'a === 'd && 'b <= 'h).select('c, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -844,7 +844,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.leftOuterJoin(ds2, 'a === 'd && 'b === 2).select('c, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -867,7 +867,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.rightOuterJoin(ds2, 'a === 'd && 'b === 'h).select('c, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -888,7 +888,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.rightOuterJoin(ds2, 'a === 'd && 'b <= 'h).select('c, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -911,7 +911,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.rightOuterJoin(ds2, 'a === 'd && 'b === 2).select('c, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -934,7 +934,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.fullOuterJoin(ds2, 'a === 'd && 'b === 'h).select('c, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -960,7 +960,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.fullOuterJoin(ds2, 'a === 'd && 'b <= 'h).select('c, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -988,7 +988,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.fullOuterJoin(ds2, 'a === 'd && 'b >= 2 && 'h === 1).select('c, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -1076,7 +1076,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
         .where('leftA === 'rightA)
 
     val sink = new TestingRetractSink
-    resultTable.toRetractStream[Row].addSink(sink)
+    resultTable.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("4,1,1,1", "4,1,2,1")
@@ -1093,7 +1093,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.leftOuterJoin(ds2, 'b === 'e).select('b, 'e)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,null", "2,null")
@@ -1109,7 +1109,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.leftOuterJoin(ds2, 'b === 'e).select('b, 'e, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,null,null", "2,null,null")
@@ -1125,7 +1125,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.leftOuterJoin(ds2, 'b === 'e && 'a < 'b).select('b, 'e, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,null,null", "2,null,null")
@@ -1140,7 +1140,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.leftOuterJoin(ds2, 'b === 'e).select('b, 'c, 'e, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,Hi,null,null", "2,Hello world,null,null", "2,Hello,null,null")
@@ -1155,7 +1155,7 @@ class JoinITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val joinT = ds1.leftOuterJoin(ds2, 'b === 'e && 'a < 'd).select('a, 'b, 'c, 'e, 'g)
 
     val sink = new TestingRetractSink
-    joinT.toRetractStream[Row].addSink(sink)
+    joinT.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,1,Hi,null,null", "2,2,Hello,null,null", "3,2,Hello world,null,null")

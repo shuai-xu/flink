@@ -24,7 +24,6 @@ import java.sql.{Date => SqlDate, Time => SqlTime, Timestamp => SqlTimestamp}
 import java.text.SimpleDateFormat
 import java.util
 import java.util.{TimeZone, UUID}
-
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
@@ -32,12 +31,13 @@ import org.apache.flink.streaming.api.functions.sink.SinkFunction
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.types.{DataType, DataTypes}
-import org.apache.flink.table.api.{TableConfig, TableEnvironment, Types}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableEnvironment, Types}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.flink.table.runtime.utils.{StreamingTestBase, TestingAppendSink}
 import org.apache.flink.table.util.MemoryTableSourceSinkUtil
 import org.apache.flink.types.Row
+
 import org.junit.Assert._
 import org.junit._
 
@@ -417,10 +417,6 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
     val data = new mutable.MutableList[(String, Boolean, Int, Double, SqlDate)]
     data.+=(("Hello", true, 123, 123.45, SqlDate.valueOf("2018-08-08")))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT CONCAT(f1, f2, f3, f4, f5) from T1"
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'f1, 'f2, 'f3, 'f4, 'f5, 'proctime.proctime)
@@ -491,10 +487,6 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
     data.+=((null, "Hello", true, 123, 123.45, SqlDate.valueOf("2018-08-08")))
     data.+=(("|", "Hello", true, 123, 123.45, SqlDate.valueOf("2018-08-08")))
     data.+=(("\t", "Hello", true, 123, 123.45, SqlDate.valueOf("2018-08-08")))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val sqlQuery = "SELECT CONCAT_WS(sep, f1, f2, f3, f4, f5) from T1"
 
@@ -1971,7 +1963,9 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
       val testZone = TimeZone.getTimeZone(zoneId);
       tableConfig.setTimeZone(testZone)
 
+      tableConfig.getConf.setDouble(TableConfigOptions.SQL_RESOURCE_DEFAULT_CPU, 0.001)
       val env = StreamExecutionEnvironment.getExecutionEnvironment
+      env.setParallelism(4)
       val tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
 
       val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'proctime.proctime)

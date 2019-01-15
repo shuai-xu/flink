@@ -45,7 +45,7 @@ class SetOperatorsITCase(mode: StateBackendMode) extends StreamingWithStateTestB
     val sqlQuery = "SELECT a1, a2, a3 from A INTERSECT SELECT b1, b2, b3 from B"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = mutable.MutableList(
       "1,1,Hi",
@@ -79,7 +79,7 @@ class SetOperatorsITCase(mode: StateBackendMode) extends StreamingWithStateTestB
     val sqlQuery = "SELECT a3 from T1 EXCEPT SELECT b3 from T2"
 
     val sink = new TestingRetractSink
-    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
     val expected = mutable.MutableList(
       "Hi5", "Hi6", "Hi8", "Hi9"

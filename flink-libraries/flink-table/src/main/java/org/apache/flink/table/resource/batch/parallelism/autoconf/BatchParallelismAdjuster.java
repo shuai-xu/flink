@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.resource.batch.autoconf;
+package org.apache.flink.table.resource.batch.parallelism.autoconf;
 
 import org.apache.flink.table.plan.nodes.exec.BatchExecNode;
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.resource.batch.NodeRunningUnit;
-import org.apache.flink.table.resource.batch.ShuffleStage;
+import org.apache.flink.table.resource.batch.parallelism.ShuffleStage;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -29,9 +29,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Adjust parallelism according to total cpu limit.
+ * Adjust parallelism according to total cpu limit for batch node.
  */
-public class NodeParallelismAdjuster {
+public class BatchParallelismAdjuster {
 
 	private final double totalCpu;
 	private Map<ShuffleStage, Set<NodeRunningUnit>> overlapRunningUnits = new LinkedHashMap<>();
@@ -40,10 +40,10 @@ public class NodeParallelismAdjuster {
 	public static void adjustParallelism(double totalCpu,
 			Map<BatchExecNode<?>, Set<NodeRunningUnit>> nodeRunningUnitMap,
 			Map<ExecNode<?, ?>, ShuffleStage> nodeShuffleStageMap) {
-		new NodeParallelismAdjuster(totalCpu).adjust(nodeRunningUnitMap, nodeShuffleStageMap);
+		new BatchParallelismAdjuster(totalCpu).adjust(nodeRunningUnitMap, nodeShuffleStageMap);
 	}
 
-	private NodeParallelismAdjuster(double totalCpu) {
+	private BatchParallelismAdjuster(double totalCpu) {
 		this.totalCpu = totalCpu;
 	}
 
@@ -51,18 +51,18 @@ public class NodeParallelismAdjuster {
 		buildOverlap(nodeRunningUnitMap, nodeShuffleStageMap);
 
 		for (ShuffleStage shuffleStage : nodeShuffleStageMap.values()) {
-			if (shuffleStage.isParallelismFinal()) {
+			if (shuffleStage.isFinalParallelism()) {
 				continue;
 			}
 
-			int parallelism = shuffleStage.getResultParallelism();
+			int parallelism = shuffleStage.getParallelism();
 			for (NodeRunningUnit runningUnit : overlapRunningUnits.get(shuffleStage)) {
-				int result = calculateParallelism(overlapShuffleStages.get(runningUnit), shuffleStage.getResultParallelism());
+				int result = calculateParallelism(overlapShuffleStages.get(runningUnit), shuffleStage.getParallelism());
 				if (result < parallelism) {
 					parallelism = result;
 				}
 			}
-			shuffleStage.setResultParallelism(parallelism, true);
+			shuffleStage.setParallelism(parallelism, true);
 		}
 	}
 
@@ -93,11 +93,11 @@ public class NodeParallelismAdjuster {
 		double remain = totalCpu;
 		double need = 0d;
 		for (ShuffleStage shuffleStage : shuffleStages) {
-			if (shuffleStage.isParallelismFinal()) {
-				remain -= getCpu(shuffleStage, shuffleStage.getResultParallelism());
+			if (shuffleStage.isFinalParallelism()) {
+				remain -= getCpu(shuffleStage, shuffleStage.getParallelism());
 			} else {
 				remain -= getCpu(shuffleStage, 1);
-				need += getCpu(shuffleStage, shuffleStage.getResultParallelism() - 1);
+				need += getCpu(shuffleStage, shuffleStage.getParallelism() - 1);
 			}
 		}
 		if (remain < 0) {

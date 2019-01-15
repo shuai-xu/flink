@@ -162,7 +162,7 @@ class AggregateITCase(
       .select('b, 'a.max)
 
     val sink = new TestingRetractSink
-    t.toRetractStream[Row].addSink(sink)
+    t.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,1", "2,3", "3,6", "4,10", "5,15", "6,21")
@@ -178,7 +178,7 @@ class AggregateITCase(
       .select('cnt, 'b.count as 'freq)
 
     val sink = new TestingRetractSink
-    t.toRetractStream[Row].addSink(sink)
+    t.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,1", "2,1", "3,1", "4,1", "5,1", "6,1")
@@ -196,7 +196,7 @@ class AggregateITCase(
     val results = t.toRetractStream[Row]
     val sink = new TestingRetractSink
 
-    results.addSink(sink)
+    results.addSink(sink).setParallelism(1)
 
     env.execute()
     val expected = List("1,1,1", "2,3,2", "3,6,4", "4,10,7", "5,15,11")
@@ -211,7 +211,7 @@ class AggregateITCase(
       .select('c.min, 'e, 'a.avg, 'd.count)
 
     val sink = new TestingRetractSink
-    t.toRetractStream[Row].addSink(sink)
+    t.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = mutable.MutableList(
@@ -228,7 +228,7 @@ class AggregateITCase(
         .select('b, 'a.collect)
 
     val sink = new TestingRetractSink
-    t.toRetractStream[Row].addSink(sink)
+    t.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List(
@@ -264,7 +264,7 @@ class AggregateITCase(
       .select('b, distinct('c), testAgg('c, 'b))
 
     val sink = new TestingRetractSink
-    t.toRetractStream[Row].addSink(sink)
+    t.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = List("1,1,2", "2,1,5", "3,1,10", "4,4,20", "5,2,12")

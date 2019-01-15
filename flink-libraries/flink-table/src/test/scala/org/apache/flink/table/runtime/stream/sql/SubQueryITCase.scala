@@ -65,7 +65,7 @@ class SubQueryITCase(mode: StateBackendMode)
 
     val sink = new TestingRetractSink
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
-    results.addSink(sink)
+    results.addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -77,6 +77,7 @@ class SubQueryITCase(mode: StateBackendMode)
 
   @Test
   def testInUncorrelatedWithConditionAndAgg(): Unit = {
+    env.setParallelism(1)
     val sqlQuery =
       s"""
          |SELECT * FROM tableA
@@ -107,7 +108,7 @@ class SubQueryITCase(mode: StateBackendMode)
 
     val sink = new TestingRetractSink
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
-    results.addSink(sink)
+    results.addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -156,7 +157,7 @@ class SubQueryITCase(mode: StateBackendMode)
 
     val sink = new TestingRetractSink
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
-    results.addSink(sink)
+    results.addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -181,7 +182,7 @@ class SubQueryITCase(mode: StateBackendMode)
     tEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED, true) // enable values source input
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
-    results.addSink(sink)
+    results.addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("-1,1", "2,2", "-3,3")
@@ -202,7 +203,7 @@ class SubQueryITCase(mode: StateBackendMode)
     val sink = new TestingRetractSink
     // default disable values source input
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
-    results.addSink(sink)
+    results.addSink(sink).setParallelism(1)
     env.execute()
   }
 
@@ -232,7 +233,7 @@ class SubQueryITCase(mode: StateBackendMode)
 
     val sink = new TestingRetractSink
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
-    results.addSink(sink)
+    results.addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq("1,1")
@@ -266,7 +267,7 @@ class SubQueryITCase(mode: StateBackendMode)
 
     val sink = new TestingRetractSink
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
-    results.addSink(sink)
+    results.addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(
@@ -305,7 +306,7 @@ class SubQueryITCase(mode: StateBackendMode)
 
     val sink = new TestingRetractSink
     val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
-    results.addSink(sink)
+    results.addSink(sink).setParallelism(1)
     env.execute()
 
     val expected = Seq(

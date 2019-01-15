@@ -19,6 +19,7 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.api.types.{DataTypes, RowType}
@@ -121,4 +122,7 @@ class StreamExecDataStreamScan(
     getRowtimeExpression().isDefined ||
       needsConversion(dataStreamTable.dataType, dataStreamTable.dataStream.getType.getTypeClass)
   }
+
+  override private[flink] def getSourceTransformation(streamEnv: StreamExecutionEnvironment) =
+    dataStreamTable.dataStream.getTransformation
 }

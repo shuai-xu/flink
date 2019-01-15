@@ -34,8 +34,8 @@ import org.apache.flink.table.expressions.{Expression, ExpressionParser}
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
 import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.ExecResourceUtil.InferMode
-import org.apache.flink.table.util.{DiffRepository, ExecResourceUtil}
+import org.apache.flink.table.util.NodeResourceUtil.InferMode
+import org.apache.flink.table.util.{DiffRepository, NodeResourceUtil}
 import org.apache.flink.types.Row
 
 import org.apache.calcite.rel.RelNode
@@ -482,7 +482,7 @@ object QueryTest {
     conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_MEM, 1)
     conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_EXTERNAL_BUFFER_MEM, 2)
     //dynamic allocate memory.
-    conf.getConf.setInteger(ExecResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 1)
+    conf.getConf.setInteger(NodeResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 1)
     conf
   }
 

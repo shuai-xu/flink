@@ -57,11 +57,14 @@ class StreamExecWatermarkAssigner (
     val rowtimeIndex = getRowType.getFieldNames.indexOf(rowtimeField)
     val watermarkOperator = new WatermarkAssignerOperator(rowtimeIndex, watermarkOffset)
 
-    new OneInputTransformation[BaseRow, BaseRow](
+    val transformation = new OneInputTransformation[BaseRow, BaseRow](
         inputTransformation,
         s"WatermarkAssigner(rowtime: $rowtimeField, offset: $watermarkOffset)",
         watermarkOperator,
-        FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType),
-        inputTransformation.getParallelism)
+    FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType),
+      inputTransformation.getParallelism)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
+    transformation
   }
 }

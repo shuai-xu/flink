@@ -92,6 +92,8 @@ class StreamExecExpand(
       substituteStreamOperator,
       outputType,
       inputTransformation.getParallelism)
+    transformation.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
     transformation
   }
 

@@ -133,7 +133,10 @@ class StreamExecTemporalTableFunctionJoin(
       joinOpName,
       joinOperator,
       returnType.asInstanceOf[BaseRowTypeInfo],
-      tableEnv.execEnv.getParallelism)
+      leftTransform.getParallelism)
+
+    ret.setResources(getResource.getReservedResourceSpec,
+      getResource.getPreferResourceSpec)
 
     // set KeyType and Selector for state
     ret.setStateKeySelectors(leftKeySelector, rightKeySelector)

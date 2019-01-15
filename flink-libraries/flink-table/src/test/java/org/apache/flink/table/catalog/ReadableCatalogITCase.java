@@ -25,6 +25,7 @@ import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableSourceParser;
 import org.apache.flink.table.api.java.StreamTableEnvironment;
+import org.apache.flink.table.runtime.utils.StreamingTestBase;
 import org.apache.flink.types.Row;
 
 import org.junit.Before;
@@ -39,7 +40,7 @@ import static org.junit.Assert.assertEquals;
 /**
  * IT case for ReadableCatalog.
  */
-public class ReadableCatalogITCase {
+public class ReadableCatalogITCase extends StreamingTestBase {
 
 	private StreamExecutionEnvironment env;
 	private StreamTableEnvironment streamEnv;
@@ -52,6 +53,7 @@ public class ReadableCatalogITCase {
 	@Before
 	public void init() {
 		env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setParallelism(4);
 		streamEnv = TableEnvironment.getTableEnvironment(env, new TableConfig());
 		batchEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
 

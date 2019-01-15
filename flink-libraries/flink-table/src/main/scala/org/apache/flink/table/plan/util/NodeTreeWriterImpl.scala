@@ -261,7 +261,8 @@ class NodeTreeWriterImpl(
   }
 
   private def resourceSpecToString(resourceSpec: ResourceSpec): String = {
-    val s = "Resource: {cpu=" + resourceSpec.getCpuCores + ", heap=" + resourceSpec.getHeapMemory
+    val s = "ResourceSpec: {cpu=" + resourceSpec.getCpuCores + ", heap=" +
+        resourceSpec.getHeapMemory + ", direct=" + resourceSpec.getDirectMemory
     try {
       if (!resourceSpec.getExtendedResources.containsKey(ResourceSpec.MANAGED_MEMORY_NAME) ||
         resourceSpec.getExtendedResources

@@ -36,8 +36,8 @@ import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.join.batch.{MergeJoinOperator, OneSideSortMergeJoinOperator, SortMergeJoinOperator}
 import org.apache.flink.table.runtime.sort.BinaryExternalSorter
 import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.table.util.ExecResourceUtil
-import org.apache.flink.table.util.ExecResourceUtil.InferMode
+import org.apache.flink.table.util.NodeResourceUtil
+import org.apache.flink.table.util.NodeResourceUtil.InferMode
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.core._
@@ -211,18 +211,18 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
 
     val condFunc = generateConditionFunction(config, leftType, rightType)
 
-    val externalBufferMemory = ExecResourceUtil.getExternalBufferManagedMemory(config.getConf)
-    val externalBufferMemorySize = externalBufferMemory * ExecResourceUtil.SIZE_IN_MB
+    val externalBufferMemory = NodeResourceUtil.getExternalBufferManagedMemory(config.getConf)
+    val externalBufferMemorySize = externalBufferMemory * NodeResourceUtil.SIZE_IN_MB
 
     val perRequestSize =
-      ExecResourceUtil.getPerRequestManagedMemory(config.getConf)* ExecResourceUtil.SIZE_IN_MB
-    val infer = ExecResourceUtil.getInferMode(config.getConf).equals(InferMode.ALL)
+      NodeResourceUtil.getPerRequestManagedMemory(config.getConf)* NodeResourceUtil.SIZE_IN_MB
+    val infer = NodeResourceUtil.getInferMode(config.getConf).equals(InferMode.ALL)
 
     val totalReservedSortMemory = (getResource.getReservedManagedMem -
-      externalBufferMemory * getExternalBufferNum) * ExecResourceUtil.SIZE_IN_MB
+      externalBufferMemory * getExternalBufferNum) * NodeResourceUtil.SIZE_IN_MB
 
     val totalMaxSortMemory = (getResource.getMaxManagedMem -
-      externalBufferMemory * getExternalBufferNum) * ExecResourceUtil.SIZE_IN_MB
+      externalBufferMemory * getExternalBufferNum) * NodeResourceUtil.SIZE_IN_MB
 
     val leftRatio = if (infer) inferLeftRowCountRatio else 0.5d
 

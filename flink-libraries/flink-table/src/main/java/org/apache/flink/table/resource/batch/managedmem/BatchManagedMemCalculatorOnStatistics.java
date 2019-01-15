@@ -16,13 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.resource.batch.autoconf;
+package org.apache.flink.table.resource.batch.managedmem;
 
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.plan.nodes.exec.BatchExecNode;
-import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
@@ -40,9 +38,6 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecLocalSortWindow
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecNestedLoopJoinBase;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRank;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel$;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSort;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortLimit;
@@ -52,27 +47,22 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTemporalTableJoin;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
-import org.apache.flink.table.util.ExecResourceUtil;
+import org.apache.flink.table.util.NodeResourceUtil;
 import org.apache.flink.util.Preconditions;
 
-import org.apache.calcite.rel.metadata.RelMetadataQuery;
-
 import static org.apache.flink.table.runtime.sort.BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM;
-import static org.apache.flink.table.util.ExecResourceUtil.SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB;
+import static org.apache.flink.table.util.NodeResourceUtil.SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB;
 
 /**
- * Managed memory calculator on statistics for nodeNode.
+ * Managed memory calculator on statistics for batch node.
  */
-public class NodeManagedCalculatorOnStatistics extends BatchExecNodeVisitor {
+public class BatchManagedMemCalculatorOnStatistics extends BatchExecNodeVisitor {
 
 	private final Configuration tableConf;
-	private final RelMetadataQuery mq;
 
-	public NodeManagedCalculatorOnStatistics(
-			Configuration tableConf,
-			RelMetadataQuery mq) {
+	public BatchManagedMemCalculatorOnStatistics(
+			Configuration tableConf) {
 		this.tableConf = tableConf;
-		this.mq = mq;
 	}
 
 	private int getResultPartitionCount(BatchExecNode<?> batchExecNode) {
@@ -80,7 +70,7 @@ public class NodeManagedCalculatorOnStatistics extends BatchExecNodeVisitor {
 	}
 
 	private void calculateNoManagedMem(BatchExecNode<?> batchExecNode) {
-		visitChildren(batchExecNode);
+		super.visitInputs(batchExecNode);
 		batchExecNode.getResource().setManagedMem(0, 0, 0);
 	}
 
@@ -111,7 +101,7 @@ public class NodeManagedCalculatorOnStatistics extends BatchExecNodeVisitor {
 
 	@Override
 	public void visit(BatchExecExchange exchange) {
-		visitChildren(exchange);
+		super.visitInputs(exchange);
 	}
 
 	@Override
@@ -119,11 +109,11 @@ public class NodeManagedCalculatorOnStatistics extends BatchExecNodeVisitor {
 		calculateNoManagedMem(expand);
 	}
 
-	private void calculateHashAgg(BatchExecRel<?> hashAgg) {
-		visitChildren(hashAgg);
-		double memoryInBytes = BatchExecRel$.MODULE$.getBatchExecMemCost(hashAgg);
-		Tuple3<Integer, Integer, Integer> managedMem = ExecResourceUtil.reviseAndGetInferManagedMem(
-				tableConf, (int) (memoryInBytes / ExecResourceUtil.SIZE_IN_MB / getResultPartitionCount(hashAgg)));
+	private void calculateHashAgg(BatchExecNode<?> hashAgg) {
+		super.visitInputs(hashAgg);
+		double memoryInBytes = hashAgg.getEstimatedTotalMem();
+		Tuple3<Integer, Integer, Integer> managedMem = NodeResourceUtil.reviseAndGetInferManagedMem(
+				tableConf, (int) (memoryInBytes / NodeResourceUtil.SIZE_IN_MB / getResultPartitionCount(hashAgg)));
 		hashAgg.getResource().setManagedMem(managedMem.f0, managedMem.f1, managedMem.f2);
 	}
 
@@ -139,28 +129,28 @@ public class NodeManagedCalculatorOnStatistics extends BatchExecNodeVisitor {
 
 	@Override
 	public void visit(BatchExecHashJoinBase hashJoin) {
-		visitChildren(hashJoin);
-		int shuffleCount = hashJoin.shuffleBuildCount(mq);
-		int memCostInMb = (int) (BatchExecRel$.MODULE$.getBatchExecMemCost(hashJoin) /
-				shuffleCount / ExecResourceUtil.SIZE_IN_MB);
-		Tuple3<Integer, Integer, Integer> managedMem = ExecResourceUtil.reviseAndGetInferManagedMem(
+		super.visitInputs(hashJoin);
+		int shuffleCount = hashJoin.shuffleBuildCount(hashJoin.getFlinkPhysicalRel().getCluster().getMetadataQuery());
+		int memCostInMb = (int) (hashJoin.getEstimatedTotalMem() /
+				shuffleCount / NodeResourceUtil.SIZE_IN_MB);
+		Tuple3<Integer, Integer, Integer> managedMem = NodeResourceUtil.reviseAndGetInferManagedMem(
 				tableConf, memCostInMb / getResultPartitionCount(hashJoin));
 		hashJoin.getResource().setManagedMem(managedMem.f0, managedMem.f1, managedMem.f2);
 	}
 
 	@Override
 	public void visit(BatchExecSortMergeJoinBase sortMergeJoin) {
-		visitChildren(sortMergeJoin);
-		int externalBufferMemoryMb = ExecResourceUtil.getExternalBufferManagedMemory(
+		super.visitInputs(sortMergeJoin);
+		int externalBufferMemoryMb = NodeResourceUtil.getExternalBufferManagedMemory(
 				tableConf) * sortMergeJoin.getExternalBufferNum();
-		double memoryInBytes = BatchExecRel$.MODULE$.getBatchExecMemCost(sortMergeJoin);
-		Tuple3<Integer, Integer, Integer> managedMem = ExecResourceUtil.reviseAndGetInferManagedMem(
+		double memoryInBytes = sortMergeJoin.getEstimatedTotalMem();
+		Tuple3<Integer, Integer, Integer> managedMem = NodeResourceUtil.reviseAndGetInferManagedMem(
 				tableConf,
-				(int) (memoryInBytes / ExecResourceUtil.SIZE_IN_MB / getResultPartitionCount(sortMergeJoin)));
+				(int) (memoryInBytes / NodeResourceUtil.SIZE_IN_MB / getResultPartitionCount(sortMergeJoin)));
 		int reservedMemory = managedMem.f0 + externalBufferMemoryMb;
 		int preferMemory = managedMem.f1 + externalBufferMemoryMb;
-		int configMinMemory = ExecResourceUtil.getOperatorMinManagedMem(tableConf);
-		int minSortMemory = (int) (SORTER_MIN_NUM_SORT_MEM * 2 / ExecResourceUtil.SIZE_IN_MB) + 1;
+		int configMinMemory = NodeResourceUtil.getOperatorMinManagedMem(tableConf);
+		int minSortMemory = (int) (SORTER_MIN_NUM_SORT_MEM * 2 / NodeResourceUtil.SIZE_IN_MB) + 1;
 		Preconditions.checkArgument(configMinMemory >= externalBufferMemoryMb + minSortMemory,
 				SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB +
 						" should >= externalBufferMemoryMb(" +
@@ -175,11 +165,11 @@ public class NodeManagedCalculatorOnStatistics extends BatchExecNodeVisitor {
 		if (nestedLoopJoin.singleRowJoin()) {
 			calculateNoManagedMem(nestedLoopJoin);
 		} else {
-			visitChildren(nestedLoopJoin);
-			int shuffleCount = nestedLoopJoin.shuffleBuildCount(mq);
-			double memCostInMb = BatchExecRel$.MODULE$.getBatchExecMemCost(nestedLoopJoin) /
-					shuffleCount / ExecResourceUtil.SIZE_IN_MB;
-			Tuple3<Integer, Integer, Integer> managedMem = ExecResourceUtil.reviseAndGetInferManagedMem(
+			super.visitInputs(nestedLoopJoin);
+			int shuffleCount = nestedLoopJoin.shuffleBuildCount(nestedLoopJoin.getFlinkPhysicalRel().getCluster().getMetadataQuery());
+			double memCostInMb = nestedLoopJoin.getEstimatedTotalMem() /
+					shuffleCount / NodeResourceUtil.SIZE_IN_MB;
+			Tuple3<Integer, Integer, Integer> managedMem = NodeResourceUtil.reviseAndGetInferManagedMem(
 					tableConf, (int) (memCostInMb / getResultPartitionCount(nestedLoopJoin)));
 			nestedLoopJoin.getResource().setManagedMem(managedMem.f0, managedMem.f1, managedMem.f2);
 		}
@@ -228,8 +218,8 @@ public class NodeManagedCalculatorOnStatistics extends BatchExecNodeVisitor {
 		if (!needBuffer) {
 			calculateNoManagedMem(overWindowAgg);
 		} else {
-			visitChildren(overWindowAgg);
-			int externalBufferMemory = ExecResourceUtil.getExternalBufferManagedMemory(tableConf);
+			super.visitInputs(overWindowAgg);
+			int externalBufferMemory = NodeResourceUtil.getExternalBufferManagedMemory(tableConf);
 			overWindowAgg.getResource().setManagedMem(externalBufferMemory, externalBufferMemory, externalBufferMemory);
 		}
 	}
@@ -241,10 +231,10 @@ public class NodeManagedCalculatorOnStatistics extends BatchExecNodeVisitor {
 
 	@Override
 	public void visit(BatchExecSort sort) {
-		visitChildren(sort);
-		double memoryInBytes = BatchExecRel$.MODULE$.getBatchExecMemCost(sort);
-		Tuple3<Integer, Integer, Integer> managedMem = ExecResourceUtil.reviseAndGetInferManagedMem(
-				tableConf, (int) (memoryInBytes / ExecResourceUtil.SIZE_IN_MB / getResultPartitionCount(sort)));
+		super.visitInputs(sort);
+		double memoryInBytes = sort.getEstimatedTotalMem();
+		Tuple3<Integer, Integer, Integer> managedMem = NodeResourceUtil.reviseAndGetInferManagedMem(
+				tableConf, (int) (memoryInBytes / NodeResourceUtil.SIZE_IN_MB / getResultPartitionCount(sort)));
 		sort.getResource().setManagedMem(managedMem.f0, managedMem.f1, managedMem.f2);
 	}
 
@@ -260,22 +250,11 @@ public class NodeManagedCalculatorOnStatistics extends BatchExecNodeVisitor {
 
 	@Override
 	public void visit(BatchExecUnion union) {
-		visitChildren(union);
+		super.visitInputs(union);
 	}
 
 	@Override
 	public void visit(BatchExecTemporalTableJoin joinTable) {
 		calculateNoManagedMem(joinTable);
-	}
-
-	@Override
-	public void visit(BatchExecSink<?> sink) {
-		throw new TableException("could not reach sink here.");
-	}
-
-	private void visitChildren(BatchExecNode<?> rowBatchExec) {
-		for (ExecNode<?, ?> input: rowBatchExec.getInputNodes()) {
-			((BatchExecNode<?>) input).accept(this);
-		}
 	}
 }

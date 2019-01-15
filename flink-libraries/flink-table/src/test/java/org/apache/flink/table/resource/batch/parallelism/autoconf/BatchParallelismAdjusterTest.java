@@ -16,15 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.resource.batch.autoconf;
+package org.apache.flink.table.resource.batch.parallelism.autoconf;
 
 import org.apache.flink.table.plan.nodes.exec.BatchExecNode;
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
+import org.apache.flink.table.plan.nodes.exec.NodeResource;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
-import org.apache.flink.table.resource.NodeResource;
 import org.apache.flink.table.resource.batch.BatchExecNodeStage;
 import org.apache.flink.table.resource.batch.NodeRunningUnit;
-import org.apache.flink.table.resource.batch.ShuffleStage;
+import org.apache.flink.table.resource.batch.parallelism.ShuffleStage;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -41,9 +41,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Test for {@link NodeParallelismAdjuster}.
+ * Test for {@link BatchParallelismAdjuster}.
  */
-public class NodeParallelismAdjusterTest {
+public class BatchParallelismAdjusterTest {
 
 	private double totalCpu = 100;
 	private List<BatchExecNode<?>> nodeList;
@@ -74,12 +74,12 @@ public class NodeParallelismAdjusterTest {
 		setNodeCpu(3, 0.5);
 		setNodeCpu(4, 0.5);
 
-		NodeParallelismAdjuster.adjustParallelism(totalCpu, nodeRunningUnitMap, nodeShuffleStageMap);
-		assertEquals(4, nodeShuffleStageMap.get(nodeList.get(0)).getResultParallelism());
-		assertEquals(4, nodeShuffleStageMap.get(nodeList.get(1)).getResultParallelism());
-		assertEquals(5, nodeShuffleStageMap.get(nodeList.get(2)).getResultParallelism());
-		assertEquals(5, nodeShuffleStageMap.get(nodeList.get(3)).getResultParallelism());
-		assertEquals(7, nodeShuffleStageMap.get(nodeList.get(4)).getResultParallelism());
+		BatchParallelismAdjuster.adjustParallelism(totalCpu, nodeRunningUnitMap, nodeShuffleStageMap);
+		assertEquals(4, nodeShuffleStageMap.get(nodeList.get(0)).getParallelism());
+		assertEquals(4, nodeShuffleStageMap.get(nodeList.get(1)).getParallelism());
+		assertEquals(5, nodeShuffleStageMap.get(nodeList.get(2)).getParallelism());
+		assertEquals(5, nodeShuffleStageMap.get(nodeList.get(3)).getParallelism());
+		assertEquals(7, nodeShuffleStageMap.get(nodeList.get(4)).getParallelism());
 	}
 
 	@Test
@@ -111,16 +111,16 @@ public class NodeParallelismAdjusterTest {
 		setNodeCpu(7, 0.35);
 		setNodeCpu(8, 0.25);
 
-		NodeParallelismAdjuster.adjustParallelism(totalCpu, nodeRunningUnitMap, nodeShuffleStageMap);
-		assertEquals(3, nodeShuffleStageMap.get(nodeList.get(0)).getResultParallelism());
-		assertEquals(3, nodeShuffleStageMap.get(nodeList.get(1)).getResultParallelism());
-		assertEquals(82, nodeShuffleStageMap.get(nodeList.get(2)).getResultParallelism());
-		assertEquals(82, nodeShuffleStageMap.get(nodeList.get(3)).getResultParallelism());
-		assertEquals(79, nodeShuffleStageMap.get(nodeList.get(4)).getResultParallelism());
-		assertEquals(79, nodeShuffleStageMap.get(nodeList.get(5)).getResultParallelism());
-		assertEquals(91, nodeShuffleStageMap.get(nodeList.get(6)).getResultParallelism());
-		assertEquals(91, nodeShuffleStageMap.get(nodeList.get(7)).getResultParallelism());
-		assertEquals(46, nodeShuffleStageMap.get(nodeList.get(8)).getResultParallelism());
+		BatchParallelismAdjuster.adjustParallelism(totalCpu, nodeRunningUnitMap, nodeShuffleStageMap);
+		assertEquals(3, nodeShuffleStageMap.get(nodeList.get(0)).getParallelism());
+		assertEquals(3, nodeShuffleStageMap.get(nodeList.get(1)).getParallelism());
+		assertEquals(82, nodeShuffleStageMap.get(nodeList.get(2)).getParallelism());
+		assertEquals(82, nodeShuffleStageMap.get(nodeList.get(3)).getParallelism());
+		assertEquals(79, nodeShuffleStageMap.get(nodeList.get(4)).getParallelism());
+		assertEquals(79, nodeShuffleStageMap.get(nodeList.get(5)).getParallelism());
+		assertEquals(91, nodeShuffleStageMap.get(nodeList.get(6)).getParallelism());
+		assertEquals(91, nodeShuffleStageMap.get(nodeList.get(7)).getParallelism());
+		assertEquals(46, nodeShuffleStageMap.get(nodeList.get(8)).getParallelism());
 	}
 
 	@Test
@@ -141,12 +141,12 @@ public class NodeParallelismAdjusterTest {
 		setNodeCpu(3, 0.5);
 		setNodeCpu(4, 0.5);
 
-		NodeParallelismAdjuster.adjustParallelism(totalCpu, nodeRunningUnitMap, nodeShuffleStageMap);
-		assertEquals(25, nodeShuffleStageMap.get(nodeList.get(0)).getResultParallelism());
-		assertEquals(25, nodeShuffleStageMap.get(nodeList.get(1)).getResultParallelism());
-		assertEquals(50, nodeShuffleStageMap.get(nodeList.get(2)).getResultParallelism());
-		assertEquals(50, nodeShuffleStageMap.get(nodeList.get(3)).getResultParallelism());
-		assertEquals(125, nodeShuffleStageMap.get(nodeList.get(4)).getResultParallelism());
+		BatchParallelismAdjuster.adjustParallelism(totalCpu, nodeRunningUnitMap, nodeShuffleStageMap);
+		assertEquals(25, nodeShuffleStageMap.get(nodeList.get(0)).getParallelism());
+		assertEquals(25, nodeShuffleStageMap.get(nodeList.get(1)).getParallelism());
+		assertEquals(50, nodeShuffleStageMap.get(nodeList.get(2)).getParallelism());
+		assertEquals(50, nodeShuffleStageMap.get(nodeList.get(3)).getParallelism());
+		assertEquals(125, nodeShuffleStageMap.get(nodeList.get(4)).getParallelism());
 	}
 
 	@Test
@@ -165,13 +165,13 @@ public class NodeParallelismAdjusterTest {
 		setNodeCpu(3, 0.5);
 		setNodeCpu(4, 0.6);
 
-		NodeParallelismAdjuster.adjustParallelism(totalCpu, nodeRunningUnitMap, nodeShuffleStageMap);
+		BatchParallelismAdjuster.adjustParallelism(totalCpu, nodeRunningUnitMap, nodeShuffleStageMap);
 
-		assertEquals(166, nodeShuffleStageMap.get(nodeList.get(0)).getResultParallelism());
-		assertEquals(166, nodeShuffleStageMap.get(nodeList.get(1)).getResultParallelism());
-		assertEquals(166, nodeShuffleStageMap.get(nodeList.get(2)).getResultParallelism());
-		assertEquals(166, nodeShuffleStageMap.get(nodeList.get(3)).getResultParallelism());
-		assertEquals(166, nodeShuffleStageMap.get(nodeList.get(4)).getResultParallelism());
+		assertEquals(166, nodeShuffleStageMap.get(nodeList.get(0)).getParallelism());
+		assertEquals(166, nodeShuffleStageMap.get(nodeList.get(1)).getParallelism());
+		assertEquals(166, nodeShuffleStageMap.get(nodeList.get(2)).getParallelism());
+		assertEquals(166, nodeShuffleStageMap.get(nodeList.get(3)).getParallelism());
+		assertEquals(166, nodeShuffleStageMap.get(nodeList.get(4)).getParallelism());
 	}
 
 	private void putSameRunningUnit(int... indexes) {
@@ -187,7 +187,7 @@ public class NodeParallelismAdjusterTest {
 	}
 
 	private void setShuffleStageParallelism(int nodeIndex, int parallelism) {
-		nodeShuffleStageMap.get(nodeList.get(nodeIndex)).setResultParallelism(parallelism, false);
+		nodeShuffleStageMap.get(nodeList.get(nodeIndex)).setParallelism(parallelism, false);
 	}
 
 	public void putSameShuffleStage(int... indexes) {

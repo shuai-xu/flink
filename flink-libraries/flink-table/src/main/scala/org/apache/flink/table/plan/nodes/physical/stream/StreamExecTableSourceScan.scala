@@ -19,6 +19,7 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
@@ -100,6 +101,8 @@ class StreamExecTableSourceScan(
       DataTypes.TIMESTAMP
     )
 
+    inputDataStream.getTransformation.setResources(sourceResSpec, sourceResSpec)
+
     val ingestedTable = new DataStream(
       tableEnv.execEnv,
       convertToInternalRow(
@@ -133,6 +136,8 @@ class StreamExecTableSourceScan(
       ingestedTable
     }
 
+    withWatermarks.getTransformation.setResources(conversionResSpec, conversionResSpec)
+
     withWatermarks.getTransformation
   }
 
@@ -144,6 +149,10 @@ class StreamExecTableSourceScan(
     hasTimeAttributeField(fieldIndexes) ||
         needsConversion(tableSource.getReturnType,
           CommonScan.extractTableSourceTypeClass(tableSource))
+  }
+
+  override private[flink] def getSourceTransformation(streamEnv: StreamExecutionEnvironment) = {
+    tableSource.asInstanceOf[StreamTableSource[_]].getDataStream(streamEnv).getTransformation
   }
 }
 
