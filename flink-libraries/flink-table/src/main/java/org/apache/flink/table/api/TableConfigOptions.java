@@ -119,7 +119,8 @@ public class TableConfigOptions {
 	public static final ConfigOption<Boolean> SQL_OPTIMIZER_DATA_SKEW_DISTINCT_AGG =
 			key("sql.optimizer.data-skew.distinct-agg")
 			.defaultValue(false)
-			.withDescription("Tell the optimizer whether there exists data skew in distinct aggregation.");
+			.withDescription("Tell the optimizer whether there exists data skew in distinct aggregation\n"
+				+ "so as to enable the aggregation split optimization.");
 
 	public static final ConfigOption<Integer> SQL_OPTIMIZER_DATA_SKEW_DISTINCT_AGG_BUCKET =
 			key("sql.optimizer.data-skew.distinct-agg.bucket")
@@ -285,12 +286,12 @@ public class TableConfigOptions {
 	public static final ConfigOption<Long> SQL_EXEC_MINIBATCH_ALLOW_LATENCY =
 			key("sql.exec.mini-batch.allow-latency.ms")
 			.defaultValue(Long.MIN_VALUE)
-			.withDescription("MiniBatch allow latency(ms).");
+			.withDescription("MiniBatch allow latency(ms). Value > 0 means MiniBatch enabled.");
 
 	public static final ConfigOption<Long> SQL_EXEC_MINIBATCH_SIZE =
 			key("sql.exec.mini-batch.size")
 			.defaultValue(Long.MIN_VALUE)
-			.withDescription("MiniBatch size.");
+			.withDescription("The maximum number of inputs that MiniBatch buffer can accommodate.");
 
 	public static final ConfigOption<Boolean> SQL_EXEC_MINIBATCH_JOIN_ENABLED =
 			key("sql.exec.mini-batch.join.enabled")
