@@ -24,13 +24,33 @@ import { JobService } from 'flink-services';
   styleUrls  : [ './job-checkpoints-detail.component.less' ]
 })
 export class JobCheckpointsDetailComponent implements OnInit {
-  @Input() checkPoint;
+  _checkPoint;
+  @Input()
+  set checkPoint(value) {
+    this._checkPoint = value;
+    this.refresh();
+  }
+
+  get checkPoint() {
+    return this._checkPoint;
+  }
+
   checkPointDetail;
   listOfVertex = [];
   isLoading = true;
 
   trackVertexBy(index, node) {
     return node.id;
+  }
+
+  refresh() {
+    this.isLoading = true;
+    if (this.jobService.jobDetail.jid) {
+      this.jobService.loadCheckpointDetails(this.jobService.jobDetail.jid, this.checkPoint.id).subscribe(detail => {
+        this.checkPointDetail = detail;
+        this.isLoading = false;
+      });
+    }
   }
 
   constructor(private jobService: JobService) {
@@ -41,10 +61,7 @@ export class JobCheckpointsDetailComponent implements OnInit {
       first()
     ).subscribe(data => {
       this.listOfVertex = data.vertices;
-      this.jobService.loadCheckpointDetails(this.jobService.jobDetail.jid, this.checkPoint.id).subscribe(detail => {
-        this.checkPointDetail = detail;
-        this.isLoading = false;
-      });
+      this.refresh();
     });
   }
 

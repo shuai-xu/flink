@@ -53,5 +53,4 @@ export class JobCheckpointsComponent implements OnInit {
       this.checkPointConfig = data;
     });
   }
-
 }

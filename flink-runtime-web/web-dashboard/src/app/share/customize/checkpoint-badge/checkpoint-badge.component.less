@@ -14,27 +14,11 @@
  *   limitations under the License.
  */
 
-import { Injectable } from '@angular/core';
-
-@Injectable({
-  providedIn: 'root'
-})
-export class ConfigService {
-  theme: 'light' | 'dark' = 'light';
-  LONG_MIN_VALUE = -9223372036854776000;
-  COLOR_MAP = {
-    TOTAL      : '#112641',
-    RUNNING    : '#52c41a',
-    FAILED     : '#f5222d',
-    FINISHED   : '#1890ff',
-    CANCELED   : '#fa8c16',
-    CANCELING  : '#faad14',
-    CREATED    : '#2f54eb',
-    DEPLOYING  : '#13c2c2',
-    RECONCILING: '#eb2f96',
-    SCHEDULED  : '#722ed1',
-    IN_PROGRESS: '#faad14',
-    COMPLETED  : '#1890ff'
-  };
-  BASE_URL = '.';
+span {
+  font-weight: 700;
+  text-align: center;
+  color: #fff;
+  width: 30px;
+  padding: 3px 5px;
+  cursor: default;
 }

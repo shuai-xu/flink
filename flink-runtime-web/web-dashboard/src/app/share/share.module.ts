@@ -18,6 +18,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { CheckpointBadgeComponent } from 'flink-share/customize/checkpoint-badge/checkpoint-badge.component';
 import { NgZorroAntdModule } from 'ng-zorro-antd';
 import { NgZorroPlusModule } from '@ng-zorro/ng-plus';
 import { PaginationComponent } from './common/pagination/pagination.component';
@@ -41,6 +42,7 @@ import { DagreModule } from 'flink-share/common/dagre/dagre.module';
     JobBadgeComponent,
     JobListComponent,
     JobChartComponent,
+    CheckpointBadgeComponent,
     PaginationComponent
   ],
   exports     : [
@@ -49,6 +51,7 @@ import { DagreModule } from 'flink-share/common/dagre/dagre.module';
     JobListComponent,
     JobChartComponent,
     PaginationComponent,
+    CheckpointBadgeComponent,
     DagreModule
   ]
 })

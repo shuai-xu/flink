@@ -39,45 +39,6 @@
             </td>
           </tr>
           <tr>
-            <td><strong>Latest Failed Checkpoint</strong></td>
-            <td *ngIf="checkPointStats['latest']['failed']">
-              <span><strong>ID: </strong> {{ checkPointStats['latest']['failed']['id'] }}</span>
-              <nz-divider nzType="vertical"></nz-divider>
-              <span><strong>Failure Time: </strong> {{ checkPointStats['latest']['failed']['failure_timestamp'] | date:'HH:mm:ss' }}</span>
-              <nz-divider nzType="vertical"></nz-divider>
-              <span><strong *ngIf="checkPointStats['latest']['failed']['failure_message']">Cause: </strong> {{ checkPointStats['latest']['failed']['failure_message'] }}</span>
-              <span *ngIf="!checkPointStats['latest']['failed']['failure_message']"><strong>Cause:</strong> n/a</span>
-            </td>
-            <td *ngIf="!checkPointStats['latest']['failed']">None</td>
-          </tr>
-          <tr>
-            <td><strong>Latest Savepoint</strong></td>
-            <td *ngIf="checkPointStats['latest']['savepoint']">
-              <span><strong>ID: </strong> {{ checkPointStats['latest']['savepoint']['id'] }}</span>
-              <nz-divider nzType="vertical"></nz-divider>
-              <span><strong>Completion Time: </strong> {{ checkPointStats['latest']['savepoint']['latest_ack_timestamp'] | date:'HH:mm:ss' }}</span>
-              <nz-divider nzType="vertical"></nz-divider>
-              <span><strong>State Size: </strong> {{ checkPointStats['latest']['savepoint']['state_size'] | nzHumanizeBytes }}</span>
-              <nz-divider nzType="vertical"></nz-divider>
-              <span><strong>Path: </strong> {{ checkPointStats['latest']['savepoint']['external_path'] }}</span>
-            </td>
-            <td *ngIf="!checkPointStats['latest']['savepoint']">None</td>
-          </tr>
-          <tr>
-            <td><strong>Latest Restore</strong></td>
-            <td *ngIf="checkPointStats['latest']['restored']">
-              <span><strong>ID: </strong> {{ checkPointStats['latest']['restored']['id'] }}</span>
-              <nz-divider nzType="vertical"></nz-divider>
-              <span><strong>Restore Time: </strong> {{ checkPointStats['latest']['restored']['restore_timestamp'] | date:'HH:mm:ss' }}</span>
-              <nz-divider nzType="vertical"></nz-divider>
-              <span *ngIf="checkPointStats['latest']['restored']['is_savepoint']"><strong>Type:</strong> Savepoint</span>
-              <span *ngIf="!checkPointStats['latest']['restored']['is_savepoint']"><strong>Type:</strong> Checkpoint</span>
-              <nz-divider nzType="vertical"></nz-divider>
-              <span><strong *ngIf="checkPointStats['latest']['restored']['external_path']">Path: </strong> {{ checkPointStats['latest']['restored']['external_path'] }}</span>
-            </td>
-            <td *ngIf="!checkPointStats['latest']['restored']">None</td>
-          </tr>
-          <tr>
             <td><strong>Latest Completed Checkpoint</strong></td>
             <td *ngIf="checkPointStats['latest']['completed']">
               <span><strong>ID: </strong> {{ checkPointStats['latest']['completed']['id'] }}</span>
@@ -95,7 +56,55 @@
               <flink-job-checkpoints-detail [checkPoint]="checkPointStats['latest']['completed']"></flink-job-checkpoints-detail>
             </td>
           </tr>
-          <tr></tr>
+          <tr>
+            <td><strong>Latest Failed Checkpoint</strong></td>
+            <td *ngIf="checkPointStats['latest']['failed']">
+              <span><strong>ID: </strong> {{ checkPointStats['latest']['failed']['id'] }}</span>
+              <nz-divider nzType="vertical"></nz-divider>
+              <span><strong>Failure Time: </strong> {{ checkPointStats['latest']['failed']['failure_timestamp'] | date:'HH:mm:ss' }}</span>
+              <nz-divider nzType="vertical"></nz-divider>
+              <span><strong *ngIf="checkPointStats['latest']['failed']['failure_message']">Cause: </strong> {{ checkPointStats['latest']['failed']['failure_message'] }}</span>
+              <span *ngIf="!checkPointStats['latest']['failed']['failure_message']"><strong>Cause:</strong> n/a</span>
+            </td>
+            <td *ngIf="!checkPointStats['latest']['failed']">None</td>
+          </tr>
+          <tr *ngIf="checkPointStats['latest']['failed']">
+            <td colspan="2" class="collapse-td">
+              <flink-job-checkpoints-detail [checkPoint]="checkPointStats['latest']['failed']"></flink-job-checkpoints-detail>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Latest Savepoint</strong></td>
+            <td *ngIf="checkPointStats['latest']['savepoint']">
+              <span><strong>ID: </strong> {{ checkPointStats['latest']['savepoint']['id'] }}</span>
+              <nz-divider nzType="vertical"></nz-divider>
+              <span><strong>Completion Time: </strong> {{ checkPointStats['latest']['savepoint']['latest_ack_timestamp'] | date:'HH:mm:ss' }}</span>
+              <nz-divider nzType="vertical"></nz-divider>
+              <span><strong>State Size: </strong> {{ checkPointStats['latest']['savepoint']['state_size'] | nzHumanizeBytes }}</span>
+              <nz-divider nzType="vertical"></nz-divider>
+              <span><strong>Path: </strong> {{ checkPointStats['latest']['savepoint']['external_path'] }}</span>
+            </td>
+            <td *ngIf="!checkPointStats['latest']['savepoint']">None</td>
+          </tr>
+          <tr *ngIf="checkPointStats['latest']['savepoint']">
+            <td colspan="2" class="collapse-td">
+              <flink-job-checkpoints-detail [checkPoint]="checkPointStats['latest']['savepoint']"></flink-job-checkpoints-detail>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Latest Restore</strong></td>
+            <td *ngIf="checkPointStats['latest']['restored']">
+              <span><strong>ID: </strong> {{ checkPointStats['latest']['restored']['id'] }}</span>
+              <nz-divider nzType="vertical"></nz-divider>
+              <span><strong>Restore Time: </strong> {{ checkPointStats['latest']['restored']['restore_timestamp'] | date:'HH:mm:ss' }}</span>
+              <nz-divider nzType="vertical"></nz-divider>
+              <span *ngIf="checkPointStats['latest']['restored']['is_savepoint']"><strong>Type:</strong> Savepoint</span>
+              <span *ngIf="!checkPointStats['latest']['restored']['is_savepoint']"><strong>Type:</strong> Checkpoint</span>
+              <nz-divider nzType="vertical"></nz-divider>
+              <span><strong *ngIf="checkPointStats['latest']['restored']['external_path']">Path: </strong> {{ checkPointStats['latest']['restored']['external_path'] }}</span>
+            </td>
+            <td *ngIf="!checkPointStats['latest']['restored']">None</td>
+          </tr>
         </ng-container>
       </tbody>
     </nz-table>
@@ -126,8 +135,10 @@
             <td nzShowExpand [(nzExpand)]="checkpoint.expand"></td>
             <td>{{ checkpoint['id'] }}</td>
             <td>
-              {{ checkpoint['status'] }}
-              <i *ngIf="checkpoint['is_savepoint']" nz-icon type="save"></i>
+              <flink-checkpoint-badge [state]="checkpoint['status']">
+                {{ checkpoint['status'] }}
+                <em *ngIf="checkpoint['is_savepoint']">[Savepoint]</em>
+              </flink-checkpoint-badge>
             <td>
               {{ checkpoint['num_acknowledged_subtasks'] }}/{{ checkpoint['num_subtasks'] }}
               <span *ngIf="checkpoint['status'] == 'IN_PROGRESS'">({{ (checkpoint['num_acknowledged_subtasks']/checkpoint['num_subtasks']) | percent }})</span>

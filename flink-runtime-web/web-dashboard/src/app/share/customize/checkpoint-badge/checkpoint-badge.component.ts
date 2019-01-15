@@ -14,27 +14,25 @@
  *   limitations under the License.
  */
 
-import { Injectable } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
+import { ConfigService } from 'flink-services';
 
-@Injectable({
-  providedIn: 'root'
+@Component({
+  selector   : 'flink-checkpoint-badge',
+  templateUrl: './checkpoint-badge.component.html',
+  styleUrls  : [ './checkpoint-badge.component.less' ]
 })
-export class ConfigService {
-  theme: 'light' | 'dark' = 'light';
-  LONG_MIN_VALUE = -9223372036854776000;
-  COLOR_MAP = {
-    TOTAL      : '#112641',
-    RUNNING    : '#52c41a',
-    FAILED     : '#f5222d',
-    FINISHED   : '#1890ff',
-    CANCELED   : '#fa8c16',
-    CANCELING  : '#faad14',
-    CREATED    : '#2f54eb',
-    DEPLOYING  : '#13c2c2',
-    RECONCILING: '#eb2f96',
-    SCHEDULED  : '#722ed1',
-    IN_PROGRESS: '#faad14',
-    COMPLETED  : '#1890ff'
-  };
-  BASE_URL = '.';
+export class CheckpointBadgeComponent implements OnInit {
+  @Input() state: string;
+
+  get colorMap() {
+    return this.configService.COLOR_MAP;
+  }
+
+  constructor(private configService: ConfigService) {
+  }
+
+  ngOnInit() {
+  }
+
 }
