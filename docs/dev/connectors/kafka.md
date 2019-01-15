@@ -106,7 +106,7 @@ Flink's Kafka consumer is called `FlinkKafkaConsumer08` (or `09` for Kafka 0.9.0
 
 The constructor accepts the following arguments:
 
-1. The topic name / list of topic names
+1. The topic name/list of topic names
 2. A DeserializationSchema / KeyedDeserializationSchema for deserializing the data from Kafka
 3. Properties for the Kafka consumer.
   The following properties are required:
@@ -276,7 +276,7 @@ its Kafka offsets, together with the state of other operations, in a consistent 
 the streaming program to the state of the latest checkpoint and re-consume the records from Kafka, starting from the offsets that were
 stored in the checkpoint.
 
-The interval of drawing checkpoints therefore defines how much the program may have to go back at most, in case of a failure.
+The interval of drawing checkpoints, therefore, defines how much the program may have to go back at most, in case of a failure.
 
 To use fault tolerant Kafka Consumers, checkpointing of the topology needs to be enabled at the execution environment:
 
@@ -295,9 +295,9 @@ env.enableCheckpointing(5000) // checkpoint every 5000 msecs
 </div>
 </div>
 
-Also note that Flink can only restart the topology if enough processing slots are available to restart the topology.
+Also, note that Flink can only restart the topology if enough processing slots are available to restart the topology.
 So if the topology fails due to loss of a TaskManager, there must still be enough slots available afterwards.
-Flink on YARN supports automatic restart of lost YARN containers.
+Flink on YARN supports the automatic restart of lost YARN containers.
 
 If checkpointing is not enabled, the Kafka consumer will periodically commit the offsets to Zookeeper.
 
@@ -305,7 +305,7 @@ If checkpointing is not enabled, the Kafka consumer will periodically commit the
 
 #### Partition discovery
 
-The Flink Kafka Consumer supports discovering dynamically created Kafka partitions, and consumes them with
+The Flink Kafka Consumer supports discovering dynamically created Kafka partitions and consumes them with
 exactly-once guarantees. All partitions discovered after the initial retrieval of partition metadata (i.e., when the
 job starts running) will be consumed from the earliest possible offset.
 
@@ -320,7 +320,7 @@ then restore again from that.
 
 #### Topic discovery
 
-At a higher-level, the Flink Kafka Consumer is also capable of discovering topics, based on pattern matching on the
+At a higher level, the Flink Kafka Consumer is also capable of discovering topics, based on pattern matching on the
 topic names using regular expressions. See the below for an example:
 
 <div class="codetabs" markdown="1">
@@ -390,7 +390,7 @@ whether or not checkpointing is enabled for the job.
  - *Checkpointing enabled:* if checkpointing is enabled, the Flink Kafka
  Consumer will commit the offsets stored in the checkpointed states when
  the checkpoints are completed. This ensures that the committed offsets
- in Kafka brokers is consistent with the offsets in the checkpointed states.
+ in Kafka brokers are consistent with the offsets in the checkpointed states.
  Users can choose to disable or enable offset committing by calling the
  `setCommitOffsetsOnCheckpoints(boolean)` method on the consumer (by default,
  the behaviour is `true`).
@@ -514,7 +514,7 @@ are other constructor variants that allow providing the following:
  Please see [Kafka Producer Partitioning Scheme](#kafka-producer-partitioning-scheme) for more details.
  * *Advanced serialization schema*: Similar to the consumer,
  the producer also allows using an advanced serialization schema called `KeyedSerializationSchema`,
- which allows serializing the key and value separately. It also allows to override the target topic,
+ which allows serializing the key and value separately. It also allows overriding the target topic,
  so that one producer instance can send data to multiple topics.
  
 ### Kafka Producer Partitioning Scheme
@@ -529,7 +529,7 @@ Note that the partitioner implementation must be serializable, as they will be t
 Also, keep in mind that any state in the partitioner will be lost on job failures since the partitioner
 is not part of the producer's checkpointed state.
 
-It is also possible to completely avoid using and kind of partitioner, and simply let Kafka partition
+It is also possible to completely avoid using any kind of partitioner, and simply let Kafka partition
 the written records by their attached key (as determined for each record using the provided serialization schema).
 To do this, provide a `null` custom partitioner when instantiating the producer. It is important
 to provide `null` as the custom partitioner; as explained above, if a custom partitioner is not specified
@@ -569,12 +569,12 @@ the producer fails immediately on errors, including leader changes. The value is
 duplicate messages in the target topic that are caused by retries. For most production environments with frequent broker changes,
 we recommend setting the number of retries to a higher value.
 
-**Note**: There is currently no transactional producer for Kafka, so Flink can not guarantee exactly-once delivery
+**Note**: There is currently no transactional producer for Kafka, so Flink cannot guarantee exactly-once delivery
 into a Kafka topic.
 
 <div class="alert alert-warning">
   <strong>Attention:</strong> Depending on your Kafka configuration, even after Kafka acknowledges
-  writes you can still experience data loss. In particular keep in mind the following Kafka settings:
+  writes you can still experience data loss. In particular, keep in mind the following Kafka settings:
   <ul>
     <li><tt>acks</tt></li>
     <li><tt>log.flush.interval.messages</tt></li>
@@ -591,7 +591,7 @@ With Flink's checkpointing enabled, the `FlinkKafkaProducer011` can provide
 exactly-once delivery guarantees.
 
 Besides enabling Flink's checkpointing, you can also choose three different modes of operating
-chosen by passing appropriate `semantic` parameter to the `FlinkKafkaProducer011`:
+chosen by passing an appropriate `semantic` parameter to the `FlinkKafkaProducer011`:
 
  * `Semantic.NONE`: Flink will not guarantee anything. Produced records can be lost or they can
  be duplicated.
@@ -604,7 +604,7 @@ chosen by passing appropriate `semantic` parameter to the `FlinkKafkaProducer011
 
 <div class="alert alert-warning">
   <strong>Attention:</strong> Depending on your Kafka configuration, even after Kafka acknowledges
-  writes you can still experience data losses. In particular keep in mind about following properties
+  writes you can still experience data losses. In particular, keep in mind about following properties
   in Kafka config:
   <ul>
     <li><tt>acks</tt></li>
@@ -627,24 +627,24 @@ Having this in mind, please configure your transaction timeout appropriately to 
 times.
 
 Kafka brokers by default have `transaction.max.timeout.ms` set to 15 minutes. This property will
-not allow to set transaction timeouts for the producers larger then it's value.
+not allow setting transaction timeouts for the producers larger then it's value.
 `FlinkKafkaProducer011` by default sets the `transaction.timeout.ms` property in producer config to
 1 hour, thus `transaction.max.timeout.ms` should be increased before using the
 `Semantic.EXACTLY_ONCE` mode.
 
-In `read_committed` mode of `KafkaConsumer`, any transactions that were not finished
+In the `read_committed` mode of `KafkaConsumer`, any transactions that were not finished
 (neither aborted nor completed) will block all reads from the given Kafka topic past any
 un-finished transaction. In other words after following sequence of events:
 
-1. User started `transaction1` and written some records using it
-2. User started `transaction2` and written some further records using it
+1. The user started `transaction1` and written some records using it
+2. The user started `transaction2` and written some further records using it
 3. User committed `transaction2`
 
 Even if records from `transaction2` are already committed, they will not be visible to
 the consumers until `transaction1` is committed or aborted. This has two implications:
 
- * First of all, during normal working of Flink applications, user can expect a delay in visibility
- of the records produced into Kafka topics, equal to average time between completed checkpoints.
+ * First of all, during normal working of Flink applications, a user can expect a delay in the visibility
+ of the records produced into Kafka topics, equal to the average time between completed checkpoints.
  * Secondly in case of Flink application failure, topics into which this application was writing,
  will be blocked for the readers until the application restarts or the configured transaction 
  timeout time will pass. This remark only applies for the cases when there are multiple
@@ -658,9 +658,9 @@ number of concurrent checkpoints accordingly.
 
 **Note**: `Semantic.EXACTLY_ONCE` takes all possible measures to not leave any lingering transactions
 that would block the consumers from reading from Kafka topic more then it is necessary. However in the
-event of failure of Flink application before first checkpoint, after restarting such application there
+event of failure of Flink application before the first checkpoint, after restarting such application there
 is no information in the system about previous pool sizes. Thus it is unsafe to scale down Flink
-application before first checkpoint completes, by factor larger then `FlinkKafkaProducer011.SAFE_SCALE_DOWN_FACTOR`.
+application before the first checkpoint completes, by factor larger than `FlinkKafkaProducer011.SAFE_SCALE_DOWN_FACTOR`.
 
 ## Using Kafka timestamps and Flink event time in Kafka 0.10
 
@@ -713,10 +713,10 @@ With checkpointing, the commit happens once all operators in the streaming topol
 This provides users with at-least-once semantics for the offsets committed to Zookeeper or the broker. For offsets checkpointed to Flink, the system 
 provides exactly once guarantees.
 
-The offsets committed to ZK or the broker can also be used to track the read progress of the Kafka consumer. The difference between
+The offsets committed to ZK or the broker can also be used to track the reading progress of the Kafka consumer. The difference between
 the committed offset and the most recent offset in each partition is called the *consumer lag*. If the Flink topology is consuming
 the data slower from the topic than new data is added, the lag will increase and the consumer will fall behind.
-For large production deployments we recommend monitoring that metric to avoid increasing latency.
+For large production deployments, we recommend monitoring that metric to avoid increasing latency.
 
 ## Enabling Kerberos Authentication (for versions 0.9+ and above only)
 
