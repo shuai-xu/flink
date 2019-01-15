@@ -124,7 +124,7 @@ can run time application from the JAR file without additionally specifying the m
 Write your application!
 
 If you are writing a streaming application and you are looking for inspiration what to write,
-take a look at the [Stream Processing Application Tutorial]({{ site.baseurl }}/quickstart/run_example_quickstart.html#writing-a-flink-program).
+take a look at the [Stream Application Examples]({{ site.baseurl }}/dev/stream/examples.html).
 
 If you are writing a batch processing application and you are looking for inspiration what to write,
 take a look at the [Batch Application Examples]({{ site.baseurl }}/dev/batch/examples.html).
