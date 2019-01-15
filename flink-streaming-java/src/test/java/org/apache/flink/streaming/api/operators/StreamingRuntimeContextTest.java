@@ -30,10 +30,13 @@ import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.ReducingStateDescriptor;
+import org.apache.flink.api.common.state.SortedMapState;
+import org.apache.flink.api.common.state.SortedMapStateDescriptor;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateBinder;
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.typeutils.BytewiseComparator;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.common.typeutils.base.ListSerializer;
@@ -261,6 +264,47 @@ public class StreamingRuntimeContextTest {
 		assertFalse(value.iterator().hasNext());
 	}
 
+	@Test
+	public void testSortedMapStateInstantiation() throws Exception {
+
+		final ExecutionConfig config = new ExecutionConfig();
+		config.registerKryoType(Path.class);
+
+		final AtomicReference<Object> descriptorCapture = new AtomicReference<>();
+
+		StreamingRuntimeContext context = new StreamingRuntimeContext(
+			createDescriptorCapturingMockOp(descriptorCapture, config),
+			createMockEnvironment());
+
+		SortedMapStateDescriptor<Long, TaskInfo> descr =
+			new SortedMapStateDescriptor<>("name", BytewiseComparator.LONG_INSTANCE, Long.class, TaskInfo.class);
+
+		context.getSortedMapState(descr);
+
+		SortedMapStateDescriptor<?, ?> descrIntercepted = (SortedMapStateDescriptor<?, ?>) descriptorCapture.get();
+		TypeSerializer<?> valueSerializer = descrIntercepted.getValueSerializer();
+
+		// check that the Path class is really registered, i.e., the execution config was applied
+		assertTrue(valueSerializer instanceof KryoSerializer);
+		assertTrue(((KryoSerializer<?>) valueSerializer).getKryo().getRegistration(Path.class).getId() > 0);
+	}
+
+	@Test
+	public void testSortedMapStateReturnsEmptyMapByDefault() throws Exception {
+
+		StreamingRuntimeContext context = new StreamingRuntimeContext(
+			createMapPlainMockOp(),
+			createMockEnvironment());
+
+		SortedMapStateDescriptor<Integer, String> descr =
+			new SortedMapStateDescriptor<>("name", BytewiseComparator.INT_INSTANCE, Integer.class, String.class);
+		MapState<Integer, String> state = context.getSortedMapState(descr);
+
+		Iterable<Map.Entry<Integer, String>> value = state.entries();
+		assertNotNull(value);
+		assertFalse(value.iterator().hasNext());
+	}
+
 	// ------------------------------------------------------------------------
 	//
 	// ------------------------------------------------------------------------
@@ -369,6 +413,17 @@ public class StreamingRuntimeContextTest {
 				return contextStateHelper.getPartitionedState(VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, descr);
 			}
 		}).when(keyedStateStore).getPartitionedState(any(MapStateDescriptor.class));
+
+		doAnswer(new Answer<SortedMapState<Integer, String>>() {
+
+			@Override
+			public SortedMapState<Integer, String> answer(InvocationOnMock invocationOnMock) throws Throwable {
+				SortedMapStateDescriptor<Integer, String> descr =
+					(SortedMapStateDescriptor<Integer, String>) invocationOnMock.getArguments()[0];
+				keyContext.setCurrentKey(0);
+				return contextStateHelper.getPartitionedState(VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, descr);
+			}
+		}).when(keyedStateStore).getSortedMapState(any(SortedMapStateDescriptor.class));
 
 		when(operatorMock.getKeyedStateStore()).thenReturn(keyedStateStore);
 		when(operatorMock.getOperatorID()).thenReturn(new OperatorID());

@@ -30,9 +30,11 @@ import org.apache.flink.util.Preconditions;
 
 /**
  * used for folding state.
- * @param <N>
- * @param <T>
- * @param <ACC>
+ *
+ * @param <K> The type of key the state is associated to
+ * @param <N> The type of the namespace
+ * @param <T> Type of the values folded into the state
+ * @param <ACC> Type of the value in the state
  */
 public class ContextSubKeyedFoldingState<K, N, T, ACC>
 	implements ContextSubKeyedAppendingState<K, N, T, ACC, ACC>, InternalFoldingState<K, N, T, ACC> {

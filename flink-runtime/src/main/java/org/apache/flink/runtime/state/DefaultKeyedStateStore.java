@@ -31,6 +31,8 @@ import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.ReducingState;
 import org.apache.flink.api.common.state.ReducingStateDescriptor;
+import org.apache.flink.api.common.state.SortedMapState;
+import org.apache.flink.api.common.state.SortedMapStateDescriptor;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateBinder;
 import org.apache.flink.api.common.state.StateDescriptor;
@@ -117,6 +119,17 @@ public class DefaultKeyedStateStore implements KeyedStateStore {
 			stateProperties.initializeSerializerUnlessSet(executionConfig);
 			MapState<UK, UV> originalState = getPartitionedState(stateProperties);
 			return new UserFacingMapState<>(originalState);
+		} catch (Exception e) {
+			throw new RuntimeException("Error while getting state", e);
+		}
+	}
+
+	@Override
+	public <UK, UV> SortedMapState<UK, UV> getSortedMapState(SortedMapStateDescriptor<UK, UV> stateProperties) {
+		requireNonNull(stateProperties, "The state properties must not be null");
+		try {
+			stateProperties.initializeSerializerUnlessSet(executionConfig);
+			return getPartitionedState(stateProperties);
 		} catch (Exception e) {
 			throw new RuntimeException("Error while getting state", e);
 		}

@@ -26,10 +26,8 @@ import org.apache.flink.runtime.state.internal.InternalMapState;
 import org.apache.flink.runtime.state.keyed.KeyedSortedMapState;
 import org.apache.flink.runtime.state.keyed.KeyedState;
 
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.SortedMap;
 
 /**
  * An implementation of {@link SortedMapState} which is backed by a
@@ -83,11 +81,6 @@ public class ContextSortedMapState<K, UK, UV>
 	}
 
 	@Override
-	public boolean isEmpty() {
-		return !keyedState.contains(keyContext.getCurrentKey());
-	}
-
-	@Override
 	public boolean contains(UK key) {
 		return keyedState.contains(keyContext.getCurrentKey(), key);
 	}
@@ -95,16 +88,6 @@ public class ContextSortedMapState<K, UK, UV>
 	@Override
 	public UV get(UK key) {
 		return keyedState.get(keyContext.getCurrentKey(), key);
-	}
-
-	@Override
-	public UV getOrDefault(UK key, UV defaultValue) {
-		return keyedState.getOrDefault(keyContext.getCurrentKey(), key, defaultValue);
-	}
-
-	@Override
-	public Map<UK, UV> getAll(Collection<? extends UK> keys) {
-		return keyedState.getAll(keyContext.getCurrentKey(), keys);
 	}
 
 	@Override
@@ -120,11 +103,6 @@ public class ContextSortedMapState<K, UK, UV>
 	@Override
 	public void remove(UK key) {
 		keyedState.remove(keyContext.getCurrentKey(), key);
-	}
-
-	@Override
-	public void removeAll(Collection<? extends UK> keys) {
-		keyedState.removeAll(keyContext.getCurrentKey(), keys);
 	}
 
 	@Override
@@ -170,11 +148,6 @@ public class ContextSortedMapState<K, UK, UV>
 				}
 			};
 		};
-	}
-
-	@Override
-	public SortedMap<UK, UV> value() {
-		return keyedState.get(keyContext.getCurrentKey());
 	}
 
 	@Override

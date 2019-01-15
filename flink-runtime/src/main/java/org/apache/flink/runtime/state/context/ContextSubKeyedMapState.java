@@ -30,9 +30,11 @@ import java.util.Map;
 
 /**
  * used for map state.
- * @param <N>
- * @param <UK>
- * @param <UV>
+ *
+ * @param <K> The type of key the state is associated to.
+ * @param <N> The type of the namespace.
+ * @param <UK> Type of the values folded into the state.
+ * @param <UV> Type of the value in the state.
  */
 public class ContextSubKeyedMapState<K, N, UK, UV>
 	implements ContextSubKeyedState<K, N, Map<UK, UV>>, InternalMapState<K, N, UK, UV> {

@@ -26,7 +26,6 @@ import org.apache.flink.queryablestate.client.state.serialization.KvStateSeriali
 import org.apache.flink.util.Preconditions;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
@@ -144,37 +143,8 @@ public class ImmutableSortedMapState<K, V> extends ImmutableState implements Sor
 	}
 
 	@Override
-	public boolean isEmpty() {
-		return state.isEmpty();
-	}
-
-	@Override
-	public V getOrDefault(K key, V defaultValue) {
-		return state.getOrDefault(key, defaultValue);
-	}
-
-	@Override
-	public Map<K, V> getAll(Collection<? extends K> keys) {
-		SortedMap<K, V> values = new TreeMap<>();
-		for (K key : keys) {
-			values.put(key, state.get(key));
-		}
-		return Collections.unmodifiableSortedMap(values);
-	}
-
-	@Override
 	public void putAll(Map<K, V> map) {
 		throw MODIFICATION_ATTEMPT_ERROR;
-	}
-
-	@Override
-	public void removeAll(Collection<? extends K> keys) {
-		throw MODIFICATION_ATTEMPT_ERROR;
-	}
-
-	@Override
-	public SortedMap<K, V> value() {
-		return Collections.unmodifiableSortedMap(state);
 	}
 
 	@Override

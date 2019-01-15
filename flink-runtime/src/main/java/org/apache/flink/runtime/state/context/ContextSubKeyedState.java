@@ -23,7 +23,10 @@ import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
 
 /**
  * used to get current key and namespace.
- * @param <N>
+ *
+ * @param <K> The type of key the state is associated to.
+ * @param <N> The type of the namespace.
+ * @param <V> The type of values kept internally in state.
  */
 public interface ContextSubKeyedState<K, N, V> extends InternalKvState<K, N, V> {
 

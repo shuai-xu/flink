@@ -37,6 +37,8 @@ import java.util.List;
  * of the keyContext. That is, when the current key of the keyContext changes, the
  * values accessed will be changed as well.
  *
+ * <p> This class exposes empty state properly as an empty list.
+ *
  * @param <E> The type of the elements in the state.
  */
 public class ContextListState<K, E>

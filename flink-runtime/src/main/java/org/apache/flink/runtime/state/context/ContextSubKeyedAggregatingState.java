@@ -31,10 +31,12 @@ import java.util.Collection;
 
 /**
  * used for aggregating state.
- * @param <N>
- * @param <IN>
- * @param <ACC>
- * @param <OUT>
+ *
+ * @param <K> The type of key the state is associated to
+ * @param <N> The type of the namespace
+ * @param <IN> Type of the value added to the state
+ * @param <ACC> The type of elements in the state
+ * @param <OUT> Type of the value extracted from the state
  */
 public class ContextSubKeyedAggregatingState<K, N, IN, ACC, OUT>
 	implements ContextSubKeyedAppendingState<K, N, IN, ACC, OUT>, InternalAggregatingState<K, N, IN, ACC, OUT> {

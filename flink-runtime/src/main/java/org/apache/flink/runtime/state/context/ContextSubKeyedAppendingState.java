@@ -22,9 +22,12 @@ import org.apache.flink.api.common.state.AppendingState;
 
 /**
  * used for appending state.
- * @param <N>
- * @param <IN>
- * @param <OUT>
+ *
+ * @param <K> The type of key the state is associated to.
+ * @param <N> The type of the namespace.
+ * @param <IN> Type of the value added to the state.
+ * @param <SV> The type of elements in the state.
+ * @param <OUT> Type of the value extracted from the state.
  */
 public interface ContextSubKeyedAppendingState<K, N, IN, SV, OUT> extends ContextSubKeyedState<K, N, SV>, AppendingState<IN, OUT> {
 }

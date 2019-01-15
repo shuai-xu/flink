@@ -21,7 +21,6 @@ package org.apache.flink.api.common.state;
 import org.apache.flink.api.common.functions.Comparator;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.base.MapSerializer;
 import org.apache.flink.api.common.typeutils.base.SortedMapSerializer;
 import org.apache.flink.api.java.typeutils.SortedMapTypeInfo;
 import org.apache.flink.util.Preconditions;
@@ -129,7 +128,7 @@ public final class SortedMapStateDescriptor<K, V> extends StateDescriptor<Sorted
 	 */
 	public TypeSerializer<K> getKeySerializer() {
 		final TypeSerializer<SortedMap<K, V>> rawSerializer = getSerializer();
-		if (!(rawSerializer instanceof MapSerializer)) {
+		if (!(rawSerializer instanceof SortedMapSerializer)) {
 			throw new IllegalStateException("Unexpected serializer type.");
 		}
 
@@ -143,7 +142,7 @@ public final class SortedMapStateDescriptor<K, V> extends StateDescriptor<Sorted
 	 */
 	public TypeSerializer<V> getValueSerializer() {
 		final TypeSerializer<SortedMap<K, V>> rawSerializer = getSerializer();
-		if (!(rawSerializer instanceof MapSerializer)) {
+		if (!(rawSerializer instanceof SortedMapSerializer)) {
 			throw new IllegalStateException("Unexpected serializer type.");
 		}
 

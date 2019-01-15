@@ -29,8 +29,10 @@ import java.util.List;
 
 /**
  * used for ListState.
- * @param <N>
- * @param <E>
+ *
+ * @param <K> The type of key the state is associated to.
+ * @param <N> The type of the namespace.
+ * @param <E> The type of elements in the list.
  */
 public class ContextSubKeyedListState<K, N, E>
 	implements ContextSubKeyedAppendingState<K, N, E, List<E>, Iterable<E>>, InternalListState<K, N, E> {

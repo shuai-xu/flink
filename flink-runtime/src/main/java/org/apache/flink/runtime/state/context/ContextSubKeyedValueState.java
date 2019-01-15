@@ -29,8 +29,10 @@ import java.io.IOException;
 
 /**
  * A helper class to get SubKeyedValueState.
- * @param <V>
- * @param <N>
+ *
+ * @param <K> The type of key the state is associated to.
+ * @param <N> The type of the namespace.
+ * @param <V> The type of values kept internally in state.
  */
 public class ContextSubKeyedValueState<K, N, V>
 	implements ContextSubKeyedState<K, N, V>, InternalValueState<K, N, V> {

@@ -20,7 +20,6 @@ package org.apache.flink.api.common.state;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.SortedMap;
 
 /**
  * Interface for {@link State}s whose values are key-value pairs and the pairs
@@ -29,7 +28,7 @@ import java.util.SortedMap;
  * @param <K> The type of the keys in the state.
  * @param <V> The type of the values in the state.
  */
-public interface SortedMapState<K, V> extends AbstractMapState<K, V, SortedMap<K, V>> {
+public interface SortedMapState<K, V> extends MapState<K, V> {
 
 	/**
 	 * Returns the entry with the smallest map key.

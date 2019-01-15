@@ -31,8 +31,10 @@ import java.util.Collection;
 
 /**
  * used for reducing state.
- * @param <N>
- * @param <T>
+ *
+ * @param <K> The type of key the state is associated to
+ * @param <N> The type of the namespace
+ * @param <T> The type of elements in the aggregated by the ReduceFunction
  */
 public class ContextSubKeyedReducingState<K, N, T>
 	implements ContextSubKeyedAppendingState<K, N, T, T, T>, InternalReducingState<K, N, T> {
