@@ -58,11 +58,11 @@ public class LocalSampleOperatorTest {
 			data.add(newRow(String.valueOf(i), String.valueOf(i + 1)));
 		}
 		TableConfig config = new TableConfig();
-		BaseRowTypeInfo inTypeInfo = new BaseRowTypeInfo<>(BinaryRow.class, STRING_TYPE_INFO, STRING_TYPE_INFO);
+		BaseRowTypeInfo inTypeInfo = new BaseRowTypeInfo(STRING_TYPE_INFO, STRING_TYPE_INFO);
 		GeneratedProjection generatedProjection = ProjectionCodeGenerator.generateProjection(
 				CodeGeneratorContext.apply(config, false), "localSample",
 				(RowType) TypeConverters.createInternalTypeFromTypeInfo(inTypeInfo),
-				new RowType(BinaryRow.class, DataTypes.STRING, DataTypes.STRING), new int[]{1, 0},
+				new RowType(DataTypes.STRING, DataTypes.STRING), new int[]{1, 0},
 				CodeGeneratorContext.DEFAULT_INPUT1_TERM(),
 				CodeGeneratorContext.DEFAULT_OUT_RECORD_TERM(),
 				CodeGeneratorContext.DEFAULT_OUT_RECORD_WRITER_TERM(), false, true);
@@ -72,7 +72,7 @@ public class LocalSampleOperatorTest {
 		TypeInformation<IntermediateSampleData> outTypeInfo =
 				TypeExtractor.getForClass(IntermediateSampleData.class);
 		OneInputStreamTaskTestHarness<BinaryRow, IntermediateSampleData> testHarness =
-				new OneInputStreamTaskTestHarness<>(OneInputStreamTask::new, 2, 2, inTypeInfo, outTypeInfo);
+				new OneInputStreamTaskTestHarness<>(OneInputStreamTask::new, 2, 2, (TypeInformation) inTypeInfo, outTypeInfo);
 
 		testHarness.setupOutputForSingletonOperatorChain();
 		testHarness.getStreamConfig().setStreamOperator(operator);

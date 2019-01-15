@@ -49,7 +49,7 @@ trait CommonScan[T] {
 
   private[flink] def needsConversion(dataType: DataType, clz: Class[_]): Boolean = dataType match {
     case r: RowType => !CodeGenUtils.isInternalClass(clz, r)
-    case t: TypeInfoWrappedDataType if t.getTypeInfo.isInstanceOf[BaseRowTypeInfo[_]] => false
+    case t: TypeInfoWrappedDataType if t.getTypeInfo.isInstanceOf[BaseRowTypeInfo] => false
     case _ => true
   }
 
@@ -99,7 +99,7 @@ trait CommonScan[T] {
       config: TableConfig,
       rowtimeExpr: Option[RexNode] = None): StreamTransformation[BaseRow] = {
 
-    val outputRowType = FlinkTypeFactory.toInternalRowType(outRowType, classOf[GenericRow])
+    val outputRowType = FlinkTypeFactory.toInternalRowType(outRowType)
 
     // conversion
     val convertName = "SourceConversion"
@@ -141,7 +141,7 @@ trait CommonScan[T] {
         val inputTypeTerm = boxedTypeTermForType(internalInputType)
 
         val conversion = resultGenerator.generateConverterResultExpression(
-          outputRowType, rowtimeExpression = rowtimeExpr)
+          outputRowType, classOf[GenericRow], rowtimeExpression = rowtimeExpr)
 
         codeSplit = CodeGenUtils.generateSplitFunctionCalls(
           conversion.codeBuffer,

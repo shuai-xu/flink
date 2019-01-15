@@ -537,7 +537,7 @@ class BatchTableEnvironment(
     * in a range from `start` to `end` (exclusive) with step value 1.
     */
   def range(start: Long, end: Long): Table = {
-    val typeInfo = new BaseRowTypeInfo[BoxedWrapperRow](classOf[BoxedWrapperRow], Types.LONG)
+    val typeInfo = new BaseRowTypeInfo(Types.LONG)
     val boundedStream = streamEnv.createInput(new RangeInputFormat(start, end),
       typeInfo, getCallLocationName())
     boundedStream.setParallelism(1)

@@ -108,7 +108,7 @@ class StreamExecUnion(
     val transformations = getInputNodes.map {
       input => input.translateToPlan(tableEnv).asInstanceOf[StreamTransformation[BaseRow]]
     }
-    val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BinaryRow])
-    new UnionTransformation(transformations, outputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
+    val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType)
+    new UnionTransformation(transformations, outputRowType.asInstanceOf[BaseRowTypeInfo])
   }
 }

@@ -18,6 +18,8 @@
 
 package org.apache.flink.table.sources.parquet
 
+import org.apache.flink.api.common.typeinfo.TypeInformation
+
 import java.util.{Set => JSet}
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.DataStream
@@ -78,11 +80,11 @@ class ParquetVectorizedColumnRowTableSource(
   }
 
   override def getReturnType: RowType = new RowType(
-    classOf[ColumnarRow], this.fieldTypes.toArray[DataType], this.fieldNames)
+    this.fieldTypes.toArray[DataType], this.fieldNames)
 
-  def getPhysicalType: BaseRowTypeInfo[ColumnarRow] =
+  def getPhysicalType: TypeInformation[ColumnarRow] =
     TypeConverters.toBaseRowTypeInfo(getReturnType)
-        .asInstanceOf[BaseRowTypeInfo[ColumnarRow]]
+        .asInstanceOf[TypeInformation[ColumnarRow]]
 
   override protected def createTableSource(
       fieldTypes: Array[InternalType],

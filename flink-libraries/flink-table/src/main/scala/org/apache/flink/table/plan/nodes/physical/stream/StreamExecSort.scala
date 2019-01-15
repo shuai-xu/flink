@@ -118,9 +118,9 @@ class StreamExecSort(
   def createSort(
     input: StreamTransformation[BaseRow],
     memorySize: Double): StreamTransformation[BaseRow] = {
-    val returnTypeInfo = outputSchema.typeInfo(classOf[BaseRow])
-      .asInstanceOf[BaseRowTypeInfo[BaseRow]]
-    val inputTypeInfo = input.getOutputType.asInstanceOf[BaseRowTypeInfo[BaseRow]]
+    val returnTypeInfo = outputSchema.typeInfo()
+      .asInstanceOf[BaseRowTypeInfo]
+    val inputTypeInfo = input.getOutputType.asInstanceOf[BaseRowTypeInfo]
     val sortOperator = {
       val (sortFields, sortDirections, nullsIsLast) = SortUtil.getKeysAndOrders(
         sortCollation.getFieldCollations.asScala)

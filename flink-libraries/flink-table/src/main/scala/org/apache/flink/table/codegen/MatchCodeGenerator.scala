@@ -416,9 +416,9 @@ class MatchCodeGenerator(
     val resultExpression = resultCodeGenerator.generateResultExpression(
       resultExprs,
       new RowType(
-        classOf[GenericRow],
         returnSchema.fieldTypeInfos,
-        returnSchema.fieldNames.toArray))
+        returnSchema.fieldNames.toArray),
+      classOf[GenericRow])
 
     aggregatesPerVariable.values.foreach(_.generateAggFunction())
 
@@ -462,9 +462,9 @@ class MatchCodeGenerator(
     val resultExpression = resultCodeGenerator.generateResultExpression(
       resultExprs,
       new RowType(
-        classOf[GenericRow],
         returnSchema.fieldTypeInfos,
-        returnSchema.fieldNames.toArray))
+        returnSchema.fieldNames.toArray),
+      classOf[GenericRow])
 
     val resultCode = {
       addReusablePatternNames()

@@ -247,12 +247,12 @@ class StreamExecOverAggregate(
     }
 
     val partitionKeys: Array[Int] = overWindow.keys.toArray
-    val inputTypeInfo = inputSchema.typeInfo(classOf[BaseRow])
+    val inputTypeInfo = inputSchema.typeInfo()
 
     val selector = StreamExecUtil.getKeySelector(partitionKeys, inputTypeInfo)
 
-    val returnTypeInfo = outputSchema.typeInfo(classOf[BaseRow])
-      .asInstanceOf[BaseRowTypeInfo[BaseRow]]
+    val returnTypeInfo = outputSchema.typeInfo()
+      .asInstanceOf[BaseRowTypeInfo]
     // partitioned aggregation
 
     val operator = new KeyedProcessOperator(overProcessFunction)

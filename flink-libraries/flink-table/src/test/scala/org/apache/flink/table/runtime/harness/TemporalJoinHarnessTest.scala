@@ -593,7 +593,6 @@ class TemporalJoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mo
     val leftType = joinInfo.leftRowType
     val rightType = joinInfo.rightRowType
     val joinType = new RowType(
-      classOf[GenericRow],
       (leftType.getFieldTypes ++ rightType.getFieldTypes)
           .map(new TypeInfoWrappedDataType(_)).toArray[DataType],
       leftType.getFieldNames ++ rightType.getFieldNames)

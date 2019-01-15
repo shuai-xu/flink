@@ -54,7 +54,6 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
   private val baseRow = classOf[BaseRow].getCanonicalName
 
   private val rowType = new BaseRowTypeInfo(
-    classOf[BaseRow],
     BasicTypeInfo.INT_TYPE_INFO,
     BasicTypeInfo.STRING_TYPE_INFO)
 
@@ -76,7 +75,6 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
   def testMiniBatchSemiJoin() {
 
     val joinReturnType = new BaseRowTypeInfo(
-      classOf[BaseRow],
       BasicTypeInfo.INT_TYPE_INFO,
       BasicTypeInfo.STRING_TYPE_INFO,
       BasicTypeInfo.INT_TYPE_INFO,
@@ -150,12 +148,10 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
   def testRightOuterJoin() {
 
     val rowType = new BaseRowTypeInfo(
-      classOf[BaseRow],
       BasicTypeInfo.LONG_TYPE_INFO,
       BasicTypeInfo.INT_TYPE_INFO)
 
     val joinReturnType = new BaseRowTypeInfo(
-      classOf[BaseRow],
       BasicTypeInfo.LONG_TYPE_INFO,
       BasicTypeInfo.INT_TYPE_INFO,
       BasicTypeInfo.LONG_TYPE_INFO,
@@ -179,8 +175,8 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
     val pkProject = ProjectionCodeGenerator.generateProjection(
       CodeGeneratorContext.apply(config, false),
       "pkProject",
-      new RowType(classOf[BinaryRow], DataTypes.LONG, DataTypes.INT),
-      new RowType(classOf[BinaryRow], DataTypes.INT),
+      new RowType(DataTypes.LONG, DataTypes.INT),
+      new RowType(DataTypes.INT),
       Array(1),
       "in1",
       "out",
@@ -260,12 +256,10 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
   def testRightOuterJoinWithJoinKeyNotContainPrimaryKeyMatchStateHandler() {
 
     val rowType = new BaseRowTypeInfo(
-      classOf[BaseRow],
       BasicTypeInfo.LONG_TYPE_INFO,
       BasicTypeInfo.INT_TYPE_INFO)
 
     val joinReturnType = new BaseRowTypeInfo(
-      classOf[BaseRow],
       BasicTypeInfo.LONG_TYPE_INFO,
       BasicTypeInfo.INT_TYPE_INFO,
       BasicTypeInfo.LONG_TYPE_INFO,
@@ -289,8 +283,8 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
     val pkProject = ProjectionCodeGenerator.generateProjection(
       CodeGeneratorContext.apply(config, false),
       "pkProject",
-      new RowType(classOf[BinaryRow], DataTypes.LONG, DataTypes.INT),
-      new RowType(classOf[BinaryRow], DataTypes.LONG),
+      new RowType(DataTypes.LONG, DataTypes.INT),
+      new RowType(DataTypes.LONG),
       Array(0),
       "in1",
       "out",

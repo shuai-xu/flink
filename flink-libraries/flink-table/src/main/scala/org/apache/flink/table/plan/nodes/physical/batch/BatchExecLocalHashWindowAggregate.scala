@@ -23,6 +23,7 @@ import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.functions.UserDefinedFunction
 import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
+import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.logical.LogicalWindow
@@ -103,7 +104,7 @@ class BatchExecLocalHashWindowAggregate(
 
     val input = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
-    val outputRowType = getOutputType
+    val outputRowType = FlinkTypeFactory.toInternalRowType(getRowType)
 
     val groupBufferLimitSize = ExecResourceUtil.getWindowAggBufferLimitSize(
       tableEnv.getConfig.getConf)

@@ -48,25 +48,17 @@ class BaseRowSchema(private val logicalRowType: RelDataType) {
   /**
     * Returns the [[TypeInformation]] of of the schema
     */
-  def typeInfo[T <: BaseRow](cls: Class[T]): BaseRowTypeInfo[_] = {
+  def typeInfo(): BaseRowTypeInfo = {
     val logicalFieldNames = logicalRowType.getFieldNames.asScala
-    if (cls == classOf[BinaryRow]) {
-      new BaseRowTypeInfo(classOf[BinaryRow], fieldTypeInfos.toArray, logicalFieldNames.toArray)
-    } else {
-      new BaseRowTypeInfo(cls, fieldTypeInfos.toArray, logicalFieldNames.toArray)
-    }
+    new BaseRowTypeInfo(fieldTypeInfos.toArray, logicalFieldNames.toArray)
   }
 
-  def internalType[T <: BaseRow](cls: Class[T]): RowType = {
+  def internalType(): RowType = {
     val logicalFieldNames = logicalRowType.getFieldNames.asScala
     val types = logicalRowType.getFieldList.asScala.map {
       f => FlinkTypeFactory.toInternalType(f.getType)
     }.toArray[DataType]
-    if (cls == classOf[BinaryRow]) {
-      new RowType(classOf[BinaryRow], types, logicalFieldNames.toArray)
-    } else {
-      new RowType(cls, types, logicalFieldNames.toArray)
-    }
+    new RowType(types, logicalFieldNames.toArray)
   }
 
   /**

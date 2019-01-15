@@ -31,11 +31,6 @@ import java.util.Arrays;
 public class RowType extends InternalType {
 
 	/**
-	 * Internal type class to BaseRow.
-	 */
-	private final Class<? extends BaseRow> internalTypeClass;
-
-	/**
 	 * Use DataType instead of InternalType to convert to Row (if a Pojo in Row).
 	 */
 	private final DataType[] types;
@@ -43,19 +38,10 @@ public class RowType extends InternalType {
 	private final String[] fieldNames;
 
 	public RowType(DataType... types) {
-		this(BaseRow.class, types, getFieldNames(types.length));
-	}
-
-	public RowType(Class<? extends BaseRow> internalTypeClass, DataType... types) {
-		this(internalTypeClass, types, getFieldNames(types.length));
+		this(types, getFieldNames(types.length));
 	}
 
 	public RowType(DataType[] types, String[] fieldNames) {
-		this(BaseRow.class, types, fieldNames);
-	}
-
-	public RowType(Class<? extends BaseRow> internalTypeClass, DataType[] types, String[] fieldNames) {
-		this.internalTypeClass = internalTypeClass;
 		this.types = types;
 		this.fieldNames = fieldNames;
 	}
@@ -70,10 +56,6 @@ public class RowType extends InternalType {
 
 	public int getArity() {
 		return types.length;
-	}
-
-	public Class<? extends BaseRow> getInternalTypeClass() {
-		return internalTypeClass;
 	}
 
 	public DataType[] getFieldTypes() {
@@ -124,7 +106,6 @@ public class RowType extends InternalType {
 	@Override
 	public String toString() {
 		return "RowType{" +
-				"internalTypeClass=" + internalTypeClass +
 				", types=" + Arrays.toString(getFieldInternalTypes()) +
 				", fieldNames=" + Arrays.toString(fieldNames) +
 				'}';

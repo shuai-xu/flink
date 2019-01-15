@@ -139,11 +139,11 @@ final class TestingAppendPojoSink extends AbstractExactlyOnceSink[Pojo1] {
   def getAppendResults: List[String] = getResults
 }
 
-final class TestingAppendBaseRowSink(rowTypeInfo: BaseRowTypeInfo[_])
+final class TestingAppendBaseRowSink(rowTypeInfo: BaseRowTypeInfo)
   extends AbstractExactlyOnceSink[BaseRow] {
   def invoke(value: BaseRow): Unit = localResults += baseRowToString(value, rowTypeInfo)
   def getAppendResults: List[String] = getResults
-  def baseRowToString(value: BaseRow, rowTypeInfo: BaseRowTypeInfo[_]): String = {
+  def baseRowToString(value: BaseRow, rowTypeInfo: BaseRowTypeInfo): String = {
     val config = new ExecutionConfig
     val fieldTypes = rowTypeInfo.getFieldTypes
     val fieldSerializers = fieldTypes.map(_.createSerializer(config))
@@ -403,7 +403,7 @@ final class TestingUpsertTableSink(keys: Array[Int])
   }
 
   override def getOutputType: DataType =
-    new RowType(classOf[BaseRow], fTypes, fNames)
+    new RowType(fTypes, fNames)
 
   override def emitDataStream(dataStream: DataStream[BaseRow]) = {
     dataStream.addSink(sink)

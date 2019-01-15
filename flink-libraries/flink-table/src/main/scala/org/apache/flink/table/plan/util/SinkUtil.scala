@@ -30,10 +30,10 @@ object SinkUtil {
 
   def keyPartition(
       input: StreamTransformation[BaseRow],
-      typeInfo: BaseRowTypeInfo[_],
+      typeInfo: BaseRowTypeInfo,
       keys: Array[Int]): StreamTransformation[BaseRow] = {
 
-    val baseRowTypeInfo = typeInfo.asInstanceOf[BaseRowTypeInfo[BaseRow]]
+    val baseRowTypeInfo = typeInfo.asInstanceOf[BaseRowTypeInfo]
     val partitioner = new BinaryHashPartitioner(baseRowTypeInfo, keys)
     val transformation = new PartitionTransformation(input, partitioner)
     transformation.setOutputType(baseRowTypeInfo)
@@ -52,7 +52,7 @@ object SinkUtil {
             throw new TableException("partitionBy field must be in the schema")
           } else {
             keyPartition(
-              input, input.getOutputType.asInstanceOf[BaseRowTypeInfo[_]], Array(pkIndex))
+              input, input.getOutputType.asInstanceOf[BaseRowTypeInfo], Array(pkIndex))
           }
         } else {
           input

@@ -95,7 +95,6 @@ class StreamingWithStateTestBase(state: StateBackendMode) extends StreamingTestB
       case _ => throw new UnsupportedOperationException
     }
     val newTypeInfo = new BaseRowTypeInfo(
-      classOf[BinaryRow],
       (0 until typeInfo.getArity).map(typeInfo.getTypeAt).toArray: _*)
     failingDataSource(result)(newTypeInfo.asInstanceOf[TypeInformation[BaseRow]])
   }

@@ -71,9 +71,8 @@ class ProcTimeBoundedRowsOver(
 
     // input element are all binary row as they are came from network
     val inputType = new BaseRowTypeInfo(
-      classOf[BaseRow],
       inputFieldTypes.map(TypeConverters.createExternalTypeInfoFromDataType): _*)
-      .asInstanceOf[BaseRowTypeInfo[BaseRow]]
+      .asInstanceOf[BaseRowTypeInfo]
     // We keep the elements received in a Map state keyed
     // by the ingestion time in the operator.
     // we also keep counter of processed elements
@@ -87,7 +86,7 @@ class ProcTimeBoundedRowsOver(
         rowListTypeInfo)
     inputState = ctx.getKeyedMapState(mapStateDescriptor)
 
-    val accTypeInfo = new BaseRowTypeInfo(classOf[BaseRow],
+    val accTypeInfo = new BaseRowTypeInfo(
       accTypes.map(TypeConverters.createExternalTypeInfoFromDataType): _*)
     val accStateDesc = new ValueStateDescriptor[BaseRow]("accState", accTypeInfo)
     accState = ctx.getKeyedValueState(accStateDesc)

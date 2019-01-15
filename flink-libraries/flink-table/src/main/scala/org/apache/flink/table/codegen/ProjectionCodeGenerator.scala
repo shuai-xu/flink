@@ -59,20 +59,15 @@ object ProjectionCodeGenerator {
 
     val expression = resultGenerator.generateResultExpression(
       accessExprs,
-      outType.toInternalType.asInstanceOf[RowType],
+      outType,
+      classOf[BinaryRow],
       outRow = outRecordTerm,
       outRowWriter = Option(outRecordWriterTerm),
       reusedOutRow = reusedOutRecord)
 
-    val outTerm = if (outType.getInternalTypeClass == classOf[BinaryRow]) {
-      BINARY_ROW
-    }  else {
-      BASE_ROW
-    }
-
     val code =
       j"""
-      public class $className extends ${baseClass.getCanonicalName}<$BASE_ROW, $outTerm> {
+      public class $className extends ${baseClass.getCanonicalName}<$BASE_ROW, $BINARY_ROW> {
 
         ${ctx.reuseMemberCode()}
 
@@ -81,7 +76,7 @@ object ProjectionCodeGenerator {
         }
 
         @Override
-        public $outTerm apply($BASE_ROW $inputTerm) {
+        public $BINARY_ROW apply($BASE_ROW $inputTerm) {
           ${ctx.reuseFieldCode()}
           ${expression.code}
           return ${expression.resultTerm};
@@ -103,14 +98,6 @@ object ProjectionCodeGenerator {
       inputMapping: Array[Int]): GeneratedProjection =
     generateProjection(
       ctx, name, inputType, outputType, inputMapping, inputTerm = DEFAULT_INPUT1_TERM)
-
-  def generateNonNullProjection(
-      ctx: CodeGeneratorContext,
-      name: String,
-      inputType: RowType,
-      outputType: RowType,
-      inputMapping: Array[Int]): GeneratedProjection =
-    generateProjection(ctx, name, inputType, outputType, inputMapping, nullCheck = false)
 }
 
 abstract class Projection[IN <: BaseRow, OUT <: BaseRow] {

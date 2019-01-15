@@ -87,7 +87,7 @@ class ImperativeAggCodeGen(
     * Currently we only support GenericRow as internal acc type */
   val isAccTypeInternal: Boolean = externalAccType match {
     // current we only support GenericRow as internal ACC type
-    case t: RowType if t.getInternalTypeClass == classOf[GenericRow] => true
+    case t: RowType => true
     case _ => false
   }
 
@@ -344,6 +344,7 @@ class ImperativeAggCodeGen(
               .bindInput(fieldType, inputTerm = expr.resultTerm)
             val converted = exprGenerator.generateConverterResultExpression(
               fieldType,
+              classOf[GenericRow],
               outRecordTerm = newName("acc"),
               reusedOutRow = false,
               fieldCopy = inputFieldCopy)

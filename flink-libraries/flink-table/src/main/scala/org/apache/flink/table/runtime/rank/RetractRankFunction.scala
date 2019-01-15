@@ -41,8 +41,8 @@ import org.apache.flink.table.util.{Logging, StateUtil}
 import org.apache.flink.util.Collector
 
 class RetractRankFunction(
-    inputRowType: BaseRowTypeInfo[_],
-    sortKeyType: BaseRowTypeInfo[_],
+    inputRowType: BaseRowTypeInfo,
+    sortKeyType: BaseRowTypeInfo,
     var gSorter: GeneratedSorter,
     sortKeySelector: KeySelector[BaseRow, BaseRow],
     outputArity: Int,
@@ -77,19 +77,19 @@ class RetractRankFunction(
   override def open(ctx: ExecutionContext): Unit = {
     super.open(ctx)
     val valueTypeInfo = new ListTypeInfo[BaseRow](
-        inputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
+        inputRowType.asInstanceOf[BaseRowTypeInfo])
     val mapStateDescriptor = new MapStateDescriptor[BaseRow, JList[BaseRow]](
       "data-state",
-      new BaseRowTypeInfo(classOf[BaseRow], sortKeyType.getFieldTypes: _*)
-        .asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      new BaseRowTypeInfo(sortKeyType.getFieldTypes: _*)
+        .asInstanceOf[BaseRowTypeInfo],
       valueTypeInfo)
     dataState = ctx.getKeyedMapState(mapStateDescriptor)
 
     val valueStateDescriptor = new ValueStateDescriptor[util.SortedMap[BaseRow, Long]](
       "sorted-map",
       new SortedMapTypeInfo(
-        new BaseRowTypeInfo(classOf[BaseRow], sortKeyType.getFieldTypes: _*)
-          .asInstanceOf[BaseRowTypeInfo[BaseRow]],
+        new BaseRowTypeInfo(sortKeyType.getFieldTypes: _*)
+          .asInstanceOf[BaseRowTypeInfo],
         BasicTypeInfo.LONG_TYPE_INFO,
         sortKeyComparator))
     treeMap = ctx.getKeyedValueState(valueStateDescriptor)

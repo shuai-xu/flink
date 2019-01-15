@@ -451,9 +451,9 @@ object WindowJoinUtil {
     val ctx = CodeGeneratorContext(config)
     val collectorTerm = CodeGeneratorContext.DEFAULT_COLLECTOR_TERM
 
-    val returnTypeInfo = FlinkTypeFactory.toInternalRowType(returnType, classOf[JoinedRow])
+    val returnTypeInfo = FlinkTypeFactory.toInternalRowType(returnType)
     val joinedRow = "joinedRow"
-    ctx.addOutputRecord(returnTypeInfo, joinedRow)
+    ctx.addOutputRecord(returnTypeInfo, classOf[JoinedRow], joinedRow)
 
     val exprGenerator = new ExprCodeGenerator(ctx, nullCheck, config.getNullCheck)
       .bindInput(leftType)

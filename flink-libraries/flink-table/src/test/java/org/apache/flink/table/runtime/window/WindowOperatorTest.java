@@ -73,9 +73,9 @@ public class WindowOperatorTest {
 	private static AtomicInteger closeCalled = new AtomicInteger(0);
 
 	private InternalType[] inputFieldTypes = new InternalType[]{DataTypes.STRING, DataTypes.INT, DataTypes.LONG};
-	private BaseRowTypeInfo<BaseRow> inputType = new BaseRowTypeInfo<>(BaseRow.class,
+	private BaseRowTypeInfo inputType = new BaseRowTypeInfo(
 			TypeConverters.createExternalTypeInfoFromDataTypes(inputFieldTypes));
-	private BaseRowTypeInfo<BaseRow> outputType = new BaseRowTypeInfo<>(BaseRow.class,
+	private BaseRowTypeInfo outputType = new BaseRowTypeInfo(
 		Types.STRING(), Types.LONG(), Types.LONG(), Types.LONG(), Types.LONG(), Types.LONG());
 	private InternalType[] aggResultTypes = new InternalType[]{DataTypes.LONG, DataTypes.LONG};
 	private InternalType[] accTypes = new InternalType[]{DataTypes.LONG, DataTypes.LONG};

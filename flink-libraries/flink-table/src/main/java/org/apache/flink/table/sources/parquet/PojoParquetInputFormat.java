@@ -43,6 +43,7 @@ public class PojoParquetInputFormat<OUT> extends ParquetInputFormat<OUT, Row> {
 	private final Class<OUT> pojoTypeClass;
 	private final TypeSerializer<OUT> pojoSerializer;
 	private transient Field[] pojoFields;
+	private transient OUT reuse;
 
 	public PojoParquetInputFormat(Path filePath, PojoTypeInfo<OUT> pojoTypeInfo) {
 		this(filePath, pojoTypeInfo, pojoTypeInfo.getFieldNames());
@@ -83,7 +84,7 @@ public class PojoParquetInputFormat<OUT> extends ParquetInputFormat<OUT, Row> {
 	}
 
 	@Override
-	public OUT convert(Row current, OUT reuse) {
+	public OUT convert(Row current) {
 		if (reuse == null) {
 			reuse = pojoSerializer.createInstance();
 		}

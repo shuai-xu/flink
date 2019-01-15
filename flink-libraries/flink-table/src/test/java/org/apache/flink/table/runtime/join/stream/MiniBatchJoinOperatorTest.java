@@ -45,7 +45,7 @@ import static org.junit.Assert.assertThat;
  */
 public class MiniBatchJoinOperatorTest {
 
-	private BaseRowTypeInfo rowType = new BaseRowTypeInfo(BaseRow.class,
+	private BaseRowTypeInfo rowType = new BaseRowTypeInfo(
 		BasicTypeInfo.LONG_TYPE_INFO, BasicTypeInfo.STRING_TYPE_INFO);
 	private KeySelector<BaseRow, BaseRow> leftKeySelector =
 			StreamExecUtil.getKeySelector(new int[]{0}, rowType);

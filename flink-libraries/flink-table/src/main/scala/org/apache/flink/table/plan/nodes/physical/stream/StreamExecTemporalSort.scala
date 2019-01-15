@@ -121,9 +121,9 @@ class StreamExecTemporalSort(
       input: StreamTransformation[BaseRow],
       memorySize: Double): StreamTransformation[BaseRow] = {
 
-    val returnTypeInfo = outputSchema.typeInfo(classOf[BaseRow])
-      .asInstanceOf[BaseRowTypeInfo[BaseRow]]
-    val inputTypeInfo = input.getOutputType.asInstanceOf[BaseRowTypeInfo[BaseRow]]
+    val returnTypeInfo = outputSchema.typeInfo()
+      .asInstanceOf[BaseRowTypeInfo]
+    val inputTypeInfo = input.getOutputType.asInstanceOf[BaseRowTypeInfo]
     // if the order has secondary sorting fields in addition to the proctime
     if (sortCollation.getFieldCollations.size() > 1) {
 
@@ -160,9 +160,9 @@ class StreamExecTemporalSort(
       input: StreamTransformation[BaseRow],
       memorySize: Double): StreamTransformation[BaseRow] = {
     val rowtimeIdx = sortCollation.getFieldCollations.get(0).getFieldIndex
-    val returnTypeInfo = outputSchema.typeInfo(classOf[BaseRow])
-      .asInstanceOf[BaseRowTypeInfo[BaseRow]]
-    val inputTypeInfo = input.getOutputType.asInstanceOf[BaseRowTypeInfo[BaseRow]]
+    val returnTypeInfo = outputSchema.typeInfo()
+      .asInstanceOf[BaseRowTypeInfo]
+    val inputTypeInfo = input.getOutputType.asInstanceOf[BaseRowTypeInfo]
     val sortOperator = if (sortCollation.getFieldCollations.size() > 1) {
       // strip off time collation
       val (sortFields, sortDirections, nullsIsLast) = SortUtil.getKeysAndOrders(

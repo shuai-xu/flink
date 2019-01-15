@@ -148,7 +148,7 @@ object TypeCheckUtils {
       // proper hashCode/equals methods around an immutable type
       validateEqualsHashCode(name, pt.getClass)
     // BinaryRow direct hash in bytes, no need to check field types.
-    case bt: BaseRowTypeInfo[_] if bt.getTypeClass == classOf[BinaryRow] =>
+    case bt: BaseRowTypeInfo =>
     // recursively check composite types
     case ct: CompositeType[_] =>
       validateEqualsHashCode(name, t.getTypeClass)

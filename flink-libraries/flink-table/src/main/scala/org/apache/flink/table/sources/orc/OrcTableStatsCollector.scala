@@ -249,7 +249,7 @@ object OrcTableStatsCollector extends Logging {
 
     val inputFormat = new OrcInputFormat[Any, Any](filePath, fieldTypes, fieldNames) {
 
-      override protected def convert(current: Any, reuse: Any): AnyRef = ???
+      override protected def convert(current: Any): AnyRef = ???
 
       def listFileStatus(path: Path, files: util.List[FileStatus]): Unit = {
         val fs: FileSystem = path.getFileSystem

@@ -76,22 +76,6 @@ trait BatchExecJoinBase extends Join with RowBatchExecRel {
 
   val description: String
 
-  def getOutputType: BaseRowTypeInfo[BaseRow] = {
-    val outputType = if (flinkJoinType.equals(SEMI) || flinkJoinType.equals(ANTI)) {
-      FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BaseRow])
-    } else {
-      FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[JoinedRow])
-    }
-    outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]]
-  }
-
-  def getOutputRowType: RowType =
-    if (flinkJoinType.equals(SEMI) || flinkJoinType.equals(ANTI)) {
-      FlinkTypeFactory.toInternalRowType(getRowType, classOf[BaseRow])
-    } else {
-      FlinkTypeFactory.toInternalRowType(getRowType, classOf[JoinedRow])
-    }
-
   /**
     * Try to push down hash distribution into Non-BroadcastJoin (including SortMergeJoin and
     * Non-Broadcast HashJoin).

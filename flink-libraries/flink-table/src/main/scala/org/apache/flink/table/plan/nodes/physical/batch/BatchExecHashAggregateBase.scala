@@ -23,7 +23,7 @@ import org.apache.flink.table.api.types.{DataType, RowType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.BatchExecHashAggregateCodeGen
-import org.apache.flink.table.dataformat.{BinaryRow, GenericRow, JoinedRow}
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, GenericRow, JoinedRow}
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
@@ -64,7 +64,7 @@ abstract class BatchExecHashAggregateBase(
   with BatchExecHashAggregateCodeGen {
 
   lazy val aggBufferRowType: RowType = new RowType(
-    classOf[BinaryRow], aggBufferTypes.flatten.toArray[DataType], aggBufferNames.flatten)
+    aggBufferTypes.flatten.toArray[DataType], aggBufferNames.flatten)
 
   override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
     val numOfGroupKey = grouping.length
@@ -92,13 +92,8 @@ abstract class BatchExecHashAggregateBase(
     costFactory.makeCost(mq.getRowCount(this), cpuCost, 0, 0, memCost)
   }
 
-  override def getOutputRowType: RowType = {
-    if (grouping.isEmpty) {
-      FlinkTypeFactory.toInternalRowType(getRowType, classOf[GenericRow])
-    } else {
-      FlinkTypeFactory.toInternalRowType(getRowType, classOf[JoinedRow])
-    }
-  }
+  def getOutputRowClass: Class[_ <: BaseRow] =
+    if (grouping.isEmpty) classOf[GenericRow] else classOf[JoinedRow]
 
   def codegenWithKeys(
       ctx: CodeGeneratorContext,

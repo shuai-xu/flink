@@ -79,16 +79,16 @@ public abstract class MiniBatchJoinStreamOperator
 
 	private static final long serialVersionUID = 1L;
 
-	protected final BaseRowTypeInfo<BaseRow> leftType;
-	protected final BaseRowTypeInfo<BaseRow> rightType;
+	protected final BaseRowTypeInfo leftType;
+	protected final BaseRowTypeInfo rightType;
 
 	protected GeneratedJoinConditionFunction condFuncCode;
 
 	protected final KeySelector<BaseRow, BaseRow> leftKeySelector;
 	protected final KeySelector<BaseRow, BaseRow> rightKeySelector;
 
-	protected final BaseRowTypeInfo<BaseRow> leftKeyType;
-	protected final BaseRowTypeInfo<BaseRow> rightKeyType;
+	protected final BaseRowTypeInfo leftKeyType;
+	protected final BaseRowTypeInfo rightKeyType;
 
 	protected GeneratedProjection leftPkProjectCode;
 	protected GeneratedProjection rightPkProjectCode;
@@ -122,8 +122,8 @@ public abstract class MiniBatchJoinStreamOperator
 	protected int[] nullFilterKeys;
 
 	public MiniBatchJoinStreamOperator(
-			BaseRowTypeInfo<BaseRow> leftType,
-			BaseRowTypeInfo<BaseRow> rightType,
+			BaseRowTypeInfo leftType,
+			BaseRowTypeInfo rightType,
 			GeneratedJoinConditionFunction condFuncCode,
 			KeySelector<BaseRow, BaseRow> leftKeySelector,
 			KeySelector<BaseRow, BaseRow> rightKeySelector,
@@ -144,8 +144,8 @@ public abstract class MiniBatchJoinStreamOperator
 		this.condFuncCode = condFuncCode;
 		this.leftKeySelector = leftKeySelector;
 		this.rightKeySelector = rightKeySelector;
-		this.leftKeyType = (BaseRowTypeInfo<BaseRow>) ((ResultTypeQueryable) leftKeySelector).getProducedType();
-		this.rightKeyType = (BaseRowTypeInfo<BaseRow>) ((ResultTypeQueryable) rightKeySelector).getProducedType();
+		this.leftKeyType = (BaseRowTypeInfo) ((ResultTypeQueryable) leftKeySelector).getProducedType();
+		this.rightKeyType = (BaseRowTypeInfo) ((ResultTypeQueryable) rightKeySelector).getProducedType();
 		this.leftPkProjectCode = leftPkProjectCode;
 		this.rightPkProjectCode = rightPkProjectCode;
 		this.leftJoinStateType = leftJoinStateType;
@@ -205,9 +205,9 @@ public abstract class MiniBatchJoinStreamOperator
 		}
 	}
 
-	protected JoinStateHandler createJoinStateHandler(BaseRowTypeInfo<BaseRow> recordType,
+	protected JoinStateHandler createJoinStateHandler(BaseRowTypeInfo recordType,
 			JoinStateHandler.Type type, String name, KeySelector<BaseRow, BaseRow> keySelector,
-			BaseRowTypeInfo<BaseRow> keyType, GeneratedProjection pkProjectCode) throws Exception {
+			BaseRowTypeInfo keyType, GeneratedProjection pkProjectCode) throws Exception {
 
 		JoinStateHandler state;
 
@@ -270,8 +270,8 @@ public abstract class MiniBatchJoinStreamOperator
 		return state;
 	}
 
-	protected JoinMatchStateHandler createMatchStateHandler(BaseRowTypeInfo<BaseRow> recordType,
-			JoinMatchStateHandler.Type type, BaseRowTypeInfo<BaseRow> keyType, String name,
+	protected JoinMatchStateHandler createMatchStateHandler(BaseRowTypeInfo recordType,
+			JoinMatchStateHandler.Type type, BaseRowTypeInfo keyType, String name,
 			GeneratedProjection pkProjectCode) throws Exception {
 
 		JoinMatchStateHandler state;

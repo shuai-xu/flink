@@ -37,7 +37,7 @@ class CorrelateProcessRunner(
   var processCode: String,
   collectorName: String,
   var collectorCode: String,
-  @transient var returnType: BaseRowTypeInfo[BaseRow])
+  @transient var returnType: BaseRowTypeInfo)
   extends ProcessFunction[BaseRow, BaseRow]
     with ResultTypeQueryable[BaseRow]
     with Compiler[Any]
@@ -83,7 +83,7 @@ class CorrelateProcessRunner(
       out)
   }
 
-  override def getProducedType: BaseRowTypeInfo[BaseRow] = returnType
+  override def getProducedType: BaseRowTypeInfo = returnType
 
   override def close(): Unit = {
     FunctionUtils.closeFunction(function)

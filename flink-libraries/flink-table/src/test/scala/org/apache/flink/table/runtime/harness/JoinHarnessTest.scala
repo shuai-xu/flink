@@ -45,7 +45,6 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
     new TableConfig().withIdleStateRetentionTime(Time.milliseconds(2), Time.milliseconds(4))
 
   private val rowType = new BaseRowTypeInfo(
-    classOf[BaseRow],
     BasicTypeInfo.INT_TYPE_INFO,
     BasicTypeInfo.STRING_TYPE_INFO)
 
@@ -54,7 +53,6 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
   private val baseRow = classOf[BaseRow].getCanonicalName
 
   private val joinReturnType = new BaseRowTypeInfo(
-    classOf[BaseRow],
     BasicTypeInfo.INT_TYPE_INFO,
     BasicTypeInfo.STRING_TYPE_INFO,
     BasicTypeInfo.INT_TYPE_INFO,

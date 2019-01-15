@@ -43,8 +43,7 @@ abstract class PatternTranslatorTestBase extends TestLogger{
   def thrown: ExpectedException = expectedException
 
   // setup test utils
-  private val testTableTypeInfo = new BaseRowTypeInfo(
-    classOf[BaseRow], BasicTypeInfo.INT_TYPE_INFO)
+  private val testTableTypeInfo = new BaseRowTypeInfo(BasicTypeInfo.INT_TYPE_INFO)
   private val tableName = "testTable"
   private val context = prepareContext(testTableTypeInfo)
   private val planner = {

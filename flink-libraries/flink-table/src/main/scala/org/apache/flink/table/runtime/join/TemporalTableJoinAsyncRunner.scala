@@ -37,7 +37,7 @@ class TemporalTableJoinAsyncRunner(
     capacity: Int,
     leftOuterJoin: Boolean,
     inputFieldTypes: Array[InternalType],
-    @transient returnType: BaseRowTypeInfo[_])
+    @transient returnType: BaseRowTypeInfo)
   extends RichAsyncFunction[BaseRow, BaseRow]
   with ResultTypeQueryable[BaseRow]
   with Compiler[Any]
@@ -95,8 +95,8 @@ class TemporalTableJoinAsyncRunner(
     collectorClass.newInstance()
   }
 
-  override def getProducedType: BaseRowTypeInfo[BaseRow] =
-    returnType.asInstanceOf[BaseRowTypeInfo[BaseRow]]
+  override def getProducedType: BaseRowTypeInfo =
+    returnType.asInstanceOf[BaseRowTypeInfo]
 
   override def close(): Unit = {
     FunctionUtils.closeFunction(fetcher)

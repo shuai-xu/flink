@@ -294,7 +294,7 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<GenericRow
 
 	@Override
 	public TypeInformation getProducedType() {
-		return new BaseRowTypeInfo(GenericRow.class, rowTypeInfo.getFieldTypes(), rowTypeInfo.getFieldNames());
+		return new BaseRowTypeInfo(rowTypeInfo.getFieldTypes(), rowTypeInfo.getFieldNames());
 	}
 
 	// --------------------------------------------------------------------------------------------

@@ -42,7 +42,7 @@ import scala.collection.{Seq, mutable}
 class BatchTableSinksITCase extends QueryTest {
 
   val dataType = new BaseRowTypeInfo(
-    classOf[BinaryRow], INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO)
+    INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO)
 
   val data = Seq(
     binaryRow(dataType, 1, 1L, fromString("Hi")),

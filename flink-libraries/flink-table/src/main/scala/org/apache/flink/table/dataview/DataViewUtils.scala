@@ -105,7 +105,7 @@ object DataViewUtils {
           newTypeInfo
         }
 
-        val newType = new RowType(classOf[GenericRow], newFieldTypes, fieldNames)
+        val newType = new RowType(newFieldTypes, fieldNames)
         (newType, accumulatorSpecs.toArray)
       case ct: CompositeType[_] if includesDataView(ct) =>
         throw new TableException(

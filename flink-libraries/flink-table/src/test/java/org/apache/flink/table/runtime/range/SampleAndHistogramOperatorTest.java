@@ -82,7 +82,7 @@ public class SampleAndHistogramOperatorTest {
 
 		//sort fields:
 		// ddd, efg, gfi,hkl, jkl, mkl, njk, oji, sdf, xyz
-		BaseRowTypeInfo typeInfo = new BaseRowTypeInfo<>(BinaryRow.class, STRING_TYPE_INFO, STRING_TYPE_INFO);
+		BaseRowTypeInfo typeInfo = new BaseRowTypeInfo(STRING_TYPE_INFO, STRING_TYPE_INFO);
 		RowType type = (RowType) TypeConverters.createInternalTypeFromTypeInfo(typeInfo);
 		int[] keys = new int[]{0};
 		boolean[] orders = new boolean[]{true};

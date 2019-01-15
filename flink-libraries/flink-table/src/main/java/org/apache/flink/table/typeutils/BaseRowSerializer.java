@@ -86,7 +86,7 @@ public class BaseRowSerializer<T extends BaseRow> extends AbstractRowSerializer<
 	}
 
 	public static GeneratedProjection genProjection(TypeInformation[] types) {
-		BaseRowTypeInfo baseType = new BaseRowTypeInfo(BaseRow.class, types);
+		BaseRowTypeInfo baseType = new BaseRowTypeInfo(types);
 		int[] mapping = new int[types.length];
 		for (int i = 0; i < types.length; i++) {
 			mapping[i] = i;
@@ -94,7 +94,7 @@ public class BaseRowSerializer<T extends BaseRow> extends AbstractRowSerializer<
 		return ProjectionCodeGenerator.generateProjection(
 				CodeGeneratorContext.apply(null, false), "BaseRowSerializerProjection",
 				(RowType) TypeConverters.createInternalTypeFromTypeInfo(baseType),
-				(RowType) TypeConverters.createInternalTypeFromTypeInfo(new BaseRowTypeInfo<>(BinaryRow.class, types)),
+				(RowType) TypeConverters.createInternalTypeFromTypeInfo(new BaseRowTypeInfo(types)),
 				mapping);
 	}
 

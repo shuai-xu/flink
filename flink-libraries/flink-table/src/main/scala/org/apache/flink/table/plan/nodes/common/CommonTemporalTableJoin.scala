@@ -142,10 +142,10 @@ abstract class CommonTemporalTableJoin(
     val inputSchema = new BaseRowSchema(input.getRowType)
     val tableSchema = new BaseRowSchema(tableRowType)
     val resultSchema = new BaseRowSchema(getRowType)
-    val inputBaseRowType = inputSchema.internalType(classOf[BaseRow])
-    val tableBaseRowType = tableSchema.internalType(classOf[GenericRow])
-    val resultBaseRowType = resultSchema.internalType(classOf[JoinedRow])
-    val resultBaseRowTypeInfo = resultSchema.typeInfo(classOf[JoinedRow])
+    val inputBaseRowType = inputSchema.internalType()
+    val tableBaseRowType = tableSchema.internalType()
+    val resultBaseRowType = resultSchema.internalType()
+    val resultBaseRowTypeInfo = resultSchema.typeInfo()
     val tableReturnTypeInfo =
       TypeConverters.createExternalTypeInfoFromDataType(tableSource.getReturnType)
     val tableReturnClass = CommonScan.extractTableSourceTypeClass(tableSource)
@@ -239,7 +239,7 @@ abstract class CommonTemporalTableJoin(
       val asyncFunc = if (tableCalcProgram.isDefined) {
         // a projection or filter after table source scan
         val calcSchema = new BaseRowSchema(tableCalcProgram.get.getOutputRowType)
-        val rightTypeInfo = calcSchema.internalType(classOf[GenericRow])
+        val rightTypeInfo = calcSchema.internalType
         val collector = generateAsyncCollector(
           config,
           inputBaseRowType,
@@ -326,7 +326,7 @@ abstract class CommonTemporalTableJoin(
       val processFunc = if (tableCalcProgram.isDefined) {
         // a projection or filter after table source scan
         val calcSchema = new BaseRowSchema(tableCalcProgram.get.getOutputRowType)
-        val rightTypeInfo = calcSchema.internalType(classOf[GenericRow])
+        val rightTypeInfo = calcSchema.internalType()
         val collector = generateCollector(
           ctx,
           config,
@@ -725,7 +725,7 @@ abstract class CommonTemporalTableJoin(
 
     val tableReturnType = TypeConverters.createExternalTypeInfoFromDataType(
       tableSource.getReturnType)
-    if (!tableReturnType.isInstanceOf[BaseRowTypeInfo[_]] &&
+    if (!tableReturnType.isInstanceOf[BaseRowTypeInfo] &&
       !tableReturnType.isInstanceOf[RowTypeInfo]) {
       throw new TableException(
         "Temporal table join only support Row or BaseRow type as return type of temporal table." +
@@ -778,7 +778,7 @@ abstract class CommonTemporalTableJoin(
           s"The TableSource [$tableDesc] return type $tableReturnTypeInfo " +
             s"do not match its lookup function return type $udtfReturnTypeInfo")
       }
-      if (!udtfReturnTypeInfo.isInstanceOf[BaseRowTypeInfo[_]] &&
+      if (!udtfReturnTypeInfo.isInstanceOf[BaseRowTypeInfo] &&
         !udtfReturnTypeInfo.isInstanceOf[RowTypeInfo]) {
         throw new TableException(
           "Result type of the async lookup TableFunction of TableSource " +

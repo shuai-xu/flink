@@ -282,7 +282,6 @@ class TemporalTableJoinTest extends TableTestBase {
 
     override def getReturnType: DataType = {
       new RowType(
-        classOf[BaseRow],
         Array[DataType](DataTypes.INT, DataTypes.STRING, DataTypes.INT),
         Array("id", "name", "age"))
     }

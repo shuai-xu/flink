@@ -31,7 +31,7 @@ import org.apache.flink.util.Collector
   */
 class BaseRowRowtimeProcessFunction(
   val rowtimeIdx: Int,
-  @transient var returnType: BaseRowTypeInfo[BaseRow])
+  @transient var returnType: BaseRowTypeInfo)
   extends ProcessFunction[BaseRow, BaseRow]
     with ResultTypeQueryable[BaseRow] {
 
@@ -45,5 +45,5 @@ class BaseRowRowtimeProcessFunction(
     out.collect(in)
   }
 
-  override def getProducedType: BaseRowTypeInfo[BaseRow] = returnType
+  override def getProducedType: BaseRowTypeInfo = returnType
 }

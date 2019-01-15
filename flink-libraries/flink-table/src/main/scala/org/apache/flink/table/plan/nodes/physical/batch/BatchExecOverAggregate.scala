@@ -263,12 +263,12 @@ class BatchExecOverAggregate(
       tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
     val input = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
-    val outputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[JoinedRow])
+    val outputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType)
 
     //The generated sort is used for generating the comparator among partitions.
     //So here not care the ASC or DESC for the grouping fields.
     val collation = grouping.map(_ => (true, false))
-    val inputRowType = FlinkTypeFactory.toInternalRowType(inputRelDataType, classOf[BaseRow])
+    val inputRowType = FlinkTypeFactory.toInternalRowType(inputRelDataType)
     val (comparators, serializers) = TypeUtils.flattenComparatorAndSerializer(
       inputRowType.getArity, grouping, collation.map(_._1),
       inputRowType.getFieldTypes.map(_.toInternalType))
@@ -316,7 +316,7 @@ class BatchExecOverAggregate(
       }.toArray
       val operator = new OverWindowOperator(aggHandlers, needResets, generatorSort)
       val transformation = new OneInputTransformation(input, "OverAggregate", operator,
-        outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]], getResource.getParallelism)
+        outputType, getResource.getParallelism)
       tableEnv.getRUKeeper.addTransformation(this, transformation)
       transformation.setResources(getResource.getReservedResourceSpec,
         getResource.getPreferResourceSpec)
@@ -328,7 +328,7 @@ class BatchExecOverAggregate(
         windowFrames,
         generatorSort)
       val transformation = new OneInputTransformation(input, "OverAggregate", operator,
-        outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]], getResource.getParallelism)
+        outputType, getResource.getParallelism)
       tableEnv.getRUKeeper.addTransformation(this, transformation)
       transformation.setResources(getResource.getReservedResourceSpec,
         getResource.getPreferResourceSpec)

@@ -33,8 +33,8 @@ import org.apache.flink.util.Collector
   * as, rank a count(*) stream
   */
 class UpdateRankFunction(
-    inputRowType: BaseRowTypeInfo[_],
-    rowKeyType: BaseRowTypeInfo[_],
+    inputRowType: BaseRowTypeInfo,
+    rowKeyType: BaseRowTypeInfo,
     rowKeySelector: KeySelector[BaseRow, BaseRow],
     gSorter: GeneratedSorter,
     sortKeySelector: KeySelector[BaseRow, BaseRow],

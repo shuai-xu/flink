@@ -95,7 +95,7 @@ class BatchExecSort(
       tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
     val input = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
-    val binaryType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BinaryRow])
+    val binaryType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType)
 
     // sort code gen
     val (comparators, serializers, codeGen) = getSortInfo(tableEnv.getConfig)
@@ -120,7 +120,7 @@ class BatchExecSort(
       input,
       s"Sort(${SortUtil.sortFieldsToString(collations, getRowType)})",
       operator.asInstanceOf[OneInputStreamOperator[BaseRow, BaseRow]],
-      binaryType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      binaryType,
       getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setDamBehavior(DamBehavior.FULL_DAM)
@@ -131,7 +131,7 @@ class BatchExecSort(
 
   private def getSortInfo(tableConfig: TableConfig)
     : (Array[TypeComparator[_]], Array[TypeSerializer[_]], SortCodeGenerator) = {
-    val inputRowType = FlinkTypeFactory.toInternalRowType(input.getRowType, classOf[BaseRow])
+    val inputRowType = FlinkTypeFactory.toInternalRowType(input.getRowType)
     // sort code gen
     val keyTypes = keys.map(inputRowType.getFieldInternalTypes()(_))
     val compAndSers = keyTypes.zip(orders).map { case (internalType, order) =>

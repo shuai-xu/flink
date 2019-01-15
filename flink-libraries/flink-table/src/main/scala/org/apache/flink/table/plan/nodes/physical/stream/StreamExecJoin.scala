@@ -203,7 +203,7 @@ class StreamExecJoin(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val tableConfig = tableEnv.getConfig
 
-    val returnType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[JoinedRow])
+    val returnType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType)
 
     // get the equality keys
     val (leftKeys, rightKeys) =
@@ -214,8 +214,8 @@ class StreamExecJoin(
     val rightTransform = getInputNodes.get(1).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
 
-    val leftType = leftTransform.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
-    val rightType = rightTransform.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
+    val leftType = leftTransform.getOutputType.asInstanceOf[BaseRowTypeInfo]
+    val rightType = rightTransform.getOutputType.asInstanceOf[BaseRowTypeInfo]
 
     val leftSelect = StreamExecUtil.getKeySelector(leftKeys.toArray, leftType)
     val rightSelect = StreamExecUtil.getKeySelector(rightKeys.toArray, rightType)
@@ -238,8 +238,8 @@ class StreamExecJoin(
       joinType match {
         case FlinkJoinRelType.INNER =>
           new MiniBatchInnerJoinStreamOperator(
-            leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
-            rightType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+            leftType,
+            rightType,
             condFunc,
             leftSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
             rightSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
@@ -257,8 +257,8 @@ class StreamExecJoin(
               TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.LEFT =>
           new MiniBatchLeftOuterJoinStreamOperator(
-            leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
-            rightType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+            leftType,
+            rightType,
             condFunc,
             leftSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
             rightSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
@@ -278,8 +278,8 @@ class StreamExecJoin(
               TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.RIGHT =>
           new MiniBatchRightOuterJoinStreamOperator(
-            leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
-            rightType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+            leftType,
+            rightType,
             condFunc,
             leftSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
             rightSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
@@ -299,8 +299,8 @@ class StreamExecJoin(
               TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.FULL =>
           new MiniBatchFullOuterJoinStreamOperator(
-            leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
-            rightType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+            leftType,
+            rightType,
             condFunc,
             leftSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
             rightSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
@@ -320,8 +320,8 @@ class StreamExecJoin(
               TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.ANTI | FlinkJoinRelType.SEMI =>
           new MiniBatchAntiSemiJoinStreamOperator(
-            leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
-            rightType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+            leftType,
+            rightType,
             condFunc,
             leftSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
             rightSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
@@ -346,8 +346,8 @@ class StreamExecJoin(
       joinType match {
         case FlinkJoinRelType.INNER =>
           new InnerJoinStreamOperator(
-            leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
-            rightType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+            leftType,
+            rightType,
             condFunc,
             leftSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
             rightSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
@@ -360,8 +360,8 @@ class StreamExecJoin(
             filterNulls)
         case FlinkJoinRelType.LEFT =>
           new LeftOuterJoinStreamOperator(
-            leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
-            rightType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+            leftType,
+            rightType,
             condFunc,
             leftSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
             rightSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
@@ -376,8 +376,8 @@ class StreamExecJoin(
             filterNulls)
         case FlinkJoinRelType.RIGHT =>
           new RightOuterJoinStreamOperator(
-            leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
-            rightType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+            leftType,
+            rightType,
             condFunc,
             leftSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
             rightSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
@@ -392,8 +392,8 @@ class StreamExecJoin(
             filterNulls)
         case FlinkJoinRelType.FULL =>
           new FullOuterJoinStreamOperator(
-            leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
-            rightType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+            leftType,
+            rightType,
             condFunc,
             leftSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
             rightSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
@@ -408,8 +408,8 @@ class StreamExecJoin(
             filterNulls)
         case FlinkJoinRelType.ANTI | FlinkJoinRelType.SEMI =>
           new SemiAntiJoinStreamOperator(
-            leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
-            rightType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+            leftType,
+            rightType,
             condFunc,
             leftSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
             rightSelect.asInstanceOf[KeySelector[BaseRow, BaseRow]],
@@ -431,7 +431,7 @@ class StreamExecJoin(
       rightTransform,
       JoinUtil.joinToString(joinRowType, joinCondition, joinType, getExpressionString),
       operator,
-      returnType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      returnType,
       tableEnv.execEnv.getParallelism)
 
     if (leftKeys.isEmpty) {
@@ -466,7 +466,7 @@ class StreamExecJoin(
   private[flink] def generatePrimaryKeyProjection(
       config: TableConfig,
       input: RelNode,
-      inputType: BaseRowTypeInfo[_], keys: Array[Int]): GeneratedProjection = {
+      inputType: BaseRowTypeInfo, keys: Array[Int]): GeneratedProjection = {
 
     val isMiniBatchEnabled = config.getConf.contains(
       TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
@@ -475,7 +475,7 @@ class StreamExecJoin(
     if (pk.nonEmpty) {
       val pkType = {
         val types = inputType.getFieldTypes
-        new BaseRowTypeInfo(classOf[BinaryRow], pk.get.map(types(_)): _*)
+        new BaseRowTypeInfo(pk.get.map(types(_)): _*)
       }
       generateProjection(
         CodeGeneratorContext(config),
@@ -491,8 +491,8 @@ class StreamExecJoin(
 
   private[flink] def generateConditionFunction(
       config: TableConfig,
-      leftType: BaseRowTypeInfo[_],
-      rightType: BaseRowTypeInfo[_]): GeneratedJoinConditionFunction = {
+      leftType: BaseRowTypeInfo,
+      rightType: BaseRowTypeInfo): GeneratedJoinConditionFunction = {
     val ctx = CodeGeneratorContext(config)
     // should consider null fields
     val exprGenerator = new ExprCodeGenerator(ctx, false, true)

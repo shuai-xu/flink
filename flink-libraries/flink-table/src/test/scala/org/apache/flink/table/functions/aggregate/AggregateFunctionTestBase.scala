@@ -60,11 +60,11 @@ abstract class AggregateFunctionTestBase {
 
   def testAggregateFunctions(
       inputData: Seq[BinaryRow],
-      inputDataType: BaseRowTypeInfo[_],
+      inputDataType: BaseRowTypeInfo,
       aggExprs: Seq[Expression],
-      localResultType: BaseRowTypeInfo[_],
+      localResultType: BaseRowTypeInfo,
       expectedFinalResult: BinaryRow,
-      expectedFinalResultType: BaseRowTypeInfo[_]): Unit = {
+      expectedFinalResultType: BaseRowTypeInfo): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
 
@@ -90,11 +90,11 @@ abstract class AggregateFunctionTestBase {
 
   def testWithFixLengthString(
       inputData: Seq[BinaryRow],
-      inputDataType: BaseRowTypeInfo[_],
+      inputDataType: BaseRowTypeInfo,
       aggExprs: Seq[Expression],
-      localResultType: BaseRowTypeInfo[_],
+      localResultType: BaseRowTypeInfo,
       expectedFinalResult: BinaryRow,
-      expectedFinalResultType: BaseRowTypeInfo[_]): Unit = {
+      expectedFinalResultType: BaseRowTypeInfo): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
 
@@ -114,7 +114,7 @@ abstract class AggregateFunctionTestBase {
     )
   }
 
-  private[flink] def row(tpe: BaseRowTypeInfo[_], fields: Any*): BinaryRow = {
+  private[flink] def row(tpe: BaseRowTypeInfo, fields: Any*): BinaryRow = {
     assertEquals(
       "Filed count inconsistent with type information",
       fields.length,
@@ -147,11 +147,11 @@ abstract class AggregateFunctionTestBase {
   private def verifyAggregateFunctions(
       tableEnv: BatchTableEnvironment,
       inputData: Seq[BinaryRow],
-      inputDataType: BaseRowTypeInfo[_],
+      inputDataType: BaseRowTypeInfo,
       aggExprs: Seq[Expression],
-      localResultType: BaseRowTypeInfo[_],
+      localResultType: BaseRowTypeInfo,
       expectedFinalResult: BinaryRow,
-      expectedFinalResultType: BaseRowTypeInfo[_]): Unit = {
+      expectedFinalResultType: BaseRowTypeInfo): Unit = {
     // convert to logical aggregate plan
     val builder = FlinkRelBuilder.create(
       tableEnv.getFrameworkConfig,
@@ -203,9 +203,9 @@ abstract class AggregateFunctionTestBase {
       inputRelDataType: RelDataType,
       outputRelDataType: RelDataType,
       inputData: Seq[BinaryRow],
-      inputDataType: BaseRowTypeInfo[_],
+      inputDataType: BaseRowTypeInfo,
       expectedFinalResult: BinaryRow,
-      expectedFinalResultType: BaseRowTypeInfo[_]): Unit = {
+      expectedFinalResultType: BaseRowTypeInfo): Unit = {
     val agg = new BatchExecSortAggregate(
       cluster = FlinkRelOptClusterFactory.create(tableEnv.getPlanner, builder.getRexBuilder),
       relBuilder = tableEnv.getRelBuilder,
@@ -218,7 +218,7 @@ abstract class AggregateFunctionTestBase {
       auxGrouping = Array(),
       isMerge = false)
     val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(
-      outputRelDataType, classOf[GenericRow])
+      outputRelDataType)
     val ctx = CodeGeneratorContext(tableEnv.getConfig, true)
     val generatedOperator = agg.codegenWithoutKeys(
       isMerge = false,
@@ -236,10 +236,10 @@ abstract class AggregateFunctionTestBase {
     checkOperatorResult(
       operator,
       inputData,
-      inputDataType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      inputDataType.asInstanceOf[BaseRowTypeInfo],
       Seq(expectedFinalResult),
-      expectedFinalResultType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
-      outputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
+      expectedFinalResultType.asInstanceOf[BaseRowTypeInfo],
+      outputRowType.asInstanceOf[BaseRowTypeInfo])
   }
 
   private def verifyTwoPhaseAggregation(
@@ -249,10 +249,10 @@ abstract class AggregateFunctionTestBase {
       inputRelDataType: RelDataType,
       outputRelDataType: RelDataType,
       inputData: Seq[BinaryRow],
-      inputDataType: BaseRowTypeInfo[_],
-      localResultType: BaseRowTypeInfo[_],
+      inputDataType: BaseRowTypeInfo,
+      localResultType: BaseRowTypeInfo,
       expectedFinalResult: BinaryRow,
-      expectedFinalResultType: BaseRowTypeInfo[_]): Unit = {
+      expectedFinalResultType: BaseRowTypeInfo): Unit = {
     val localOutputRelDataType = builder.getTypeFactory.buildLogicalRowType(
       localResultType.getFieldNames,
       localResultType.getFieldTypes)
@@ -268,7 +268,7 @@ abstract class AggregateFunctionTestBase {
       grouping = Array(),
       auxGrouping = Array())
     val localOutputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(
-      localOutputRelDataType, classOf[GenericRow])
+      localOutputRelDataType)
     val config = tableEnv.getConfig
     val localOperator = {
       val ctx = CodeGeneratorContext(config, true)
@@ -290,14 +290,14 @@ abstract class AggregateFunctionTestBase {
     val localOutput1 = getLocalResult(
       localOperator,
       localInput1,
-      inputDataType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
-      localOutputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]]
+      inputDataType.asInstanceOf[BaseRowTypeInfo],
+      localOutputRowType.asInstanceOf[BaseRowTypeInfo]
       )
     val localOutput2 = getLocalResult(
       localOperator,
       localInput2,
-      inputDataType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
-      localOutputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
+      inputDataType.asInstanceOf[BaseRowTypeInfo],
+      localOutputRowType.asInstanceOf[BaseRowTypeInfo])
 
     val globalAgg = new BatchExecSortAggregate(
       cluster = FlinkRelOptClusterFactory.create(tableEnv.getPlanner, builder.getRexBuilder),
@@ -311,7 +311,7 @@ abstract class AggregateFunctionTestBase {
       auxGrouping = Array(),
       isMerge = true)
     val gloablOutRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(
-      outputRelDataType, classOf[GenericRow])
+      outputRelDataType)
     val ctx = CodeGeneratorContext(config, true)
     val generatedGlobalOperator = globalAgg.codegenWithoutKeys(
       isMerge = true,
@@ -330,19 +330,19 @@ abstract class AggregateFunctionTestBase {
     checkOperatorResult(
       globalOperator,
       localOutput1 ++ localOutput2,
-      localOutputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      localOutputRowType.asInstanceOf[BaseRowTypeInfo],
       Seq(expectedFinalResult),
-      expectedFinalResultType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
-      gloablOutRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
+      expectedFinalResultType.asInstanceOf[BaseRowTypeInfo],
+      gloablOutRowType.asInstanceOf[BaseRowTypeInfo])
   }
 
   private def checkOperatorResult(
       operator: StreamOperator[BaseRow],
       inputData: Seq[BaseRow],
-      inputType: BaseRowTypeInfo[BaseRow],
+      inputType: BaseRowTypeInfo,
       expectedOutputData: Seq[BaseRow],
-      expectedOutputType: BaseRowTypeInfo[BaseRow],
-      actualOutputType: BaseRowTypeInfo[BaseRow]): Unit = {
+      expectedOutputType: BaseRowTypeInfo,
+      actualOutputType: BaseRowTypeInfo): Unit = {
     val result = getLocalResult(operator, inputData, inputType, actualOutputType)
     Assert.assertEquals("Output was not correct.", expectedOutputData.size, result.size)
     val config = new ExecutionConfig

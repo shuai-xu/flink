@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.sources.parquet;
 
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.api.types.InternalType;
@@ -38,6 +39,7 @@ public class VectorizedGenericRowInputParquetFormat extends ParquetInputFormat<G
 
 	private static final long serialVersionUID = -2569974518641072883L;
 	private BaseRowSerializer<BaseRow> serializer;
+	private transient GenericRow reuse;
 
 	public VectorizedGenericRowInputParquetFormat(Path filePath, InternalType[] fieldTypes, String[] fieldNames) {
 		super(filePath, fieldTypes, fieldNames);
@@ -50,12 +52,12 @@ public class VectorizedGenericRowInputParquetFormat extends ParquetInputFormat<G
 	}
 
 	@Override
-	public BaseRowTypeInfo<GenericRow> getProducedType() {
-		return new BaseRowTypeInfo<GenericRow>(GenericRow.class, TypeConverters.createExternalTypeInfoFromDataTypes(fieldTypes));
+	public TypeInformation<GenericRow> getProducedType() {
+		return (TypeInformation) new BaseRowTypeInfo(TypeConverters.createExternalTypeInfoFromDataTypes(fieldTypes));
 	}
 
 	@Override
-	protected GenericRow convert(GenericRow current, GenericRow reuse) {
+	protected GenericRow convert(GenericRow current) {
 		if (reuse == null) {
 			return (GenericRow) serializer.copy(current);
 		} else {

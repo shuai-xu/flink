@@ -69,7 +69,7 @@ abstract class LastValueAggFunction[T] extends AggregateFunction[T, GenericRow] 
   override def getAccumulatorType: DataType = {
     val fieldTypes: Array[DataType] = Array(getInternalValueType, DataTypes.LONG)
     val fieldNames = Array("value", "time")
-    new RowType(classOf[GenericRow], fieldTypes, fieldNames)
+    new RowType(fieldTypes, fieldNames)
   }
 
   /**

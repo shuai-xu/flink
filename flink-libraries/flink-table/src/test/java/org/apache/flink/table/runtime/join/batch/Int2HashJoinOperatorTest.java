@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.runtime.join.batch;
 
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.streaming.api.operators.StreamOperator;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
@@ -208,12 +209,12 @@ public class Int2HashJoinOperatorTest {
 			int expectOutSize,
 			int expectOutKeySize,
 			int expectOutVal) throws Exception {
-		BaseRowTypeInfo typeInfo = new BaseRowTypeInfo<>(BinaryRow.class, INT_TYPE_INFO, INT_TYPE_INFO);
-		BaseRowTypeInfo<JoinedRow> baseRowType = new BaseRowTypeInfo<>(
-			JoinedRow.class, INT_TYPE_INFO, INT_TYPE_INFO, INT_TYPE_INFO, INT_TYPE_INFO);
+		BaseRowTypeInfo typeInfo = new BaseRowTypeInfo(INT_TYPE_INFO, INT_TYPE_INFO);
+		BaseRowTypeInfo baseRowType = new BaseRowTypeInfo(
+			INT_TYPE_INFO, INT_TYPE_INFO, INT_TYPE_INFO, INT_TYPE_INFO);
 		TwoInputStreamTaskTestHarness<BinaryRow, BinaryRow, JoinedRow> testHarness =
 			new TwoInputStreamTaskTestHarness<>(TwoInputStreamTask::new,
-				2, 1, new int[]{1, 2}, typeInfo, typeInfo, baseRowType);
+				2, 1, new int[]{1, 2}, typeInfo, (TypeInformation) typeInfo, baseRowType);
 		testHarness.memorySize = 36 * 1024 * 1024;
 		testHarness.getExecutionConfig().enableObjectReuse();
 		testHarness.setupOutputForSingletonOperatorChain();

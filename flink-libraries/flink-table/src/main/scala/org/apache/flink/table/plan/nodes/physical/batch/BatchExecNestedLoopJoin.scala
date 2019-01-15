@@ -22,12 +22,13 @@ import org.apache.flink.streaming.api.transformations.TwoInputTransformation.Rea
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
+import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.newName
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.{FIRST, SECOND, generatorCollect}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
-import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
@@ -237,7 +238,7 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
       rightInput,
       getOperatorName,
       substituteStreamOperator,
-      getOutputType,
+      FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType),
       getResource.getParallelism
     )
     tableEnv.getRUKeeper.addTransformation(this, transformation)
@@ -326,7 +327,8 @@ class BatchExecNestedLoopJoin(
     val isFull: Boolean = flinkJoinType == FlinkJoinRelType.FULL
     val probeOuter = flinkJoinType.isOuter
 
-    ctx.addOutputRecord(getOutputRowType, joinedRow)
+    ctx.addOutputRecord(
+      FlinkTypeFactory.toInternalRowType(getRowType), classOf[JoinedRow], joinedRow)
     ctx.addReusableNullRow(buildNullRow, buildArity)
 
     val bitSetTerm = classOf[util.BitSet].getCanonicalName

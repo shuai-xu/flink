@@ -24,7 +24,6 @@ import org.apache.flink.api.common.typeinfo.{BasicArrayTypeInfo, BasicTypeInfo, 
 import org.apache.flink.api.java.typeutils.{MapTypeInfo, MultisetTypeInfo, ObjectArrayTypeInfo, PojoField, PojoTypeInfo, RowTypeInfo, TupleTypeInfo}
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.table.api.TableException
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.typeutils.{BaseArrayTypeInfo, BaseMapTypeInfo, BaseRowTypeInfo, BinaryStringTypeInfo, DecimalTypeInfo, RowIntervalTypeInfo, TimeIndicatorTypeInfo, TimeIntervalTypeInfo}
 
 /**
@@ -53,7 +52,6 @@ object TypeConverters {
     // built-in composite type info. (Need to be converted to RowType)
     case rt: RowTypeInfo =>
       new RowType(
-        classOf[BaseRow],
         rt.getFieldTypes.map(new TypeInfoWrappedDataType(_)).toArray[DataType],
         rt.getFieldNames)
 
@@ -135,9 +133,8 @@ object TypeConverters {
     case mp: BaseMapTypeInfo =>
       DataTypes.createMapType(mp.getKeyType, mp.getValueType)
 
-    case br: BaseRowTypeInfo[_] =>
+    case br: BaseRowTypeInfo =>
       new RowType(
-        br.getTypeClass,
         br.getFieldTypes.map(new TypeInfoWrappedDataType(_)).toArray[DataType],
         br.getFieldNames)
 
@@ -273,7 +270,6 @@ object TypeConverters {
 
       // composite types
       case br: RowType => new BaseRowTypeInfo(
-        br.getInternalTypeClass,
         br.getFieldInternalTypes.map(createExternalTypeInfoFromDataType), br.getFieldNames)
 
       case gt: GenericType[_] => gt.getTypeInfo
@@ -288,9 +284,8 @@ object TypeConverters {
   def createExternalTypeInfoFromDataTypes(types: Array[DataType]): Array[TypeInformation[_]] =
     types.map(createExternalTypeInfoFromDataType)
 
-  def toBaseRowTypeInfo(t: RowType): BaseRowTypeInfo[BaseRow] = {
-    new BaseRowTypeInfo[BaseRow](
-      t.getInternalTypeClass.asInstanceOf[Class[BaseRow]],
+  def toBaseRowTypeInfo(t: RowType): BaseRowTypeInfo = {
+    new BaseRowTypeInfo(
       t.getFieldInternalTypes.map(createExternalTypeInfoFromDataType),
       t.getFieldNames)
   }

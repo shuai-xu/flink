@@ -144,7 +144,7 @@ class BatchExecSink[T](
         val convertTransformation =
           getConversionMapper[BaseRow, T](
             parTransformation,
-            parTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]],
+            parTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo],
             inputNode.getFlinkPhysicalRel.getRowType,
             "BoundedStreamSinkConversion",
             withChangeFlag,
@@ -172,7 +172,7 @@ class BatchExecSink[T](
     */
   private def getConversionMapper[IN, OUT](
     input: StreamTransformation[IN],
-    physicalTypeInfo: BaseRowTypeInfo[_],
+    physicalTypeInfo: BaseRowTypeInfo,
     relType: RelDataType,
     name: String,
     withChangeFlag: Boolean,

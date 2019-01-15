@@ -68,8 +68,8 @@ import org.apache.flink.util.Collector
   *  b. single sort key, because keyed-sorted-map-state can't handle complex key type.
   */
 class UnarySortUpdateRankFunction[K](
-    inputRowType: BaseRowTypeInfo[_],
-    rowKeyType: BaseRowTypeInfo[_],
+    inputRowType: BaseRowTypeInfo,
+    rowKeyType: BaseRowTypeInfo,
     sortKeyType: DataType,
     rowKeySelector: KeySelector[BaseRow, BaseRow],
     genSortKeyExtractor: GeneratedFieldExtractor,
@@ -151,7 +151,7 @@ class UnarySortUpdateRankFunction[K](
       genSortKeyExtractor.name,
       genSortKeyExtractor.code).newInstance.asInstanceOf[FieldAccess[BaseRow,K]]
 
-    val rowKeyBaseRowType = new BaseRowTypeInfo(classOf[BaseRow], rowKeyType.getFieldTypes: _*)
+    val rowKeyBaseRowType = new BaseRowTypeInfo(rowKeyType.getFieldTypes: _*)
         .asInstanceOf[TypeInformation[BaseRow]]
 
     // get keyed sorted state

@@ -20,7 +20,6 @@ package org.apache.flink.table.typeutils;
 
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.table.dataformat.BinaryRow;
 
 import org.junit.Test;
 
@@ -38,23 +37,23 @@ public class BinaryRowTypeInfoTest {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testWrongNumberOfFieldNames() {
-		new BaseRowTypeInfo<>(BinaryRow.class, typeList, new String[]{"int", "string", "int"});
+		new BaseRowTypeInfo(typeList, new String[]{"int", "string", "int"});
 		// number of field names should be equal to number of types, go fail
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testDuplicateCustomFieldNames() {
-		new BaseRowTypeInfo<>(BinaryRow.class, typeList, new String[]{"int", "int"});
+		new BaseRowTypeInfo(typeList, new String[]{"int", "int"});
 		// field names should not be the same, go fail
 	}
 
 	@Test
 	public void testBinaryRowTypeInfoEquality() {
-		BaseRowTypeInfo typeInfo1 = new BaseRowTypeInfo<>(BinaryRow.class,
+		BaseRowTypeInfo typeInfo1 = new BaseRowTypeInfo(
 				BasicTypeInfo.INT_TYPE_INFO,
 				BasicTypeInfo.STRING_TYPE_INFO);
 
-		BaseRowTypeInfo typeInfo2 = new BaseRowTypeInfo<>(BinaryRow.class,
+		BaseRowTypeInfo typeInfo2 = new BaseRowTypeInfo(
 				BasicTypeInfo.INT_TYPE_INFO,
 				BasicTypeInfo.STRING_TYPE_INFO);
 
@@ -64,11 +63,11 @@ public class BinaryRowTypeInfoTest {
 
 	@Test
 	public void testBinaryRowTypeInfoInequality() {
-		BaseRowTypeInfo typeInfo1 = new BaseRowTypeInfo<>(BinaryRow.class,
+		BaseRowTypeInfo typeInfo1 = new BaseRowTypeInfo(
 				BasicTypeInfo.INT_TYPE_INFO,
 				BasicTypeInfo.STRING_TYPE_INFO);
 
-		BaseRowTypeInfo typeInfo2 = new BaseRowTypeInfo<>(BinaryRow.class,
+		BaseRowTypeInfo typeInfo2 = new BaseRowTypeInfo(
 				BasicTypeInfo.INT_TYPE_INFO,
 				BasicTypeInfo.BOOLEAN_TYPE_INFO);
 

@@ -176,7 +176,7 @@ class HarnessTestBase(mode: StateBackendMode) extends StreamingTestBase {
   }
 
   def convertStreamRecordToGenericRow(
-    output: ConcurrentLinkedQueue[AnyRef], joinTypes: BaseRowTypeInfo[BaseRow])
+    output: ConcurrentLinkedQueue[AnyRef], joinTypes: BaseRowTypeInfo)
   : ConcurrentLinkedQueue[Object] = {
     val outputList = new ConcurrentLinkedQueue[Object]
     val iter = output.iterator()

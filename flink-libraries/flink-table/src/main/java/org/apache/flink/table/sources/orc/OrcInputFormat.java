@@ -55,7 +55,7 @@ import java.util.stream.Collectors;
 
 /**
  * The base InputFormat class to read from Orc files.
- * For specific input types the {@link #convert(Object, Object)} method need to be implemented.
+ * For specific input types the {@link #convert(Object)} method need to be implemented.
  */
 public abstract class OrcInputFormat<T, R> extends FileInputFormat<T> {
 
@@ -187,7 +187,7 @@ public abstract class OrcInputFormat<T, R> extends FileInputFormat<T> {
 	@Override
 	public T nextRecord(T reuse) throws IOException {
 		R next = readerIterator.next();
-		return convert(next, reuse);
+		return convert(next);
 	}
 
 	/**
@@ -196,7 +196,7 @@ public abstract class OrcInputFormat<T, R> extends FileInputFormat<T> {
 	 * so the implementation of this method should copy the values of `current` to `reuse` instead of return
 	 * `current` directly.
 	 */
-	protected abstract T convert(R current, T reuse);
+	protected abstract T convert(R current);
 
 	protected RecordReader createReader(
 			FileInputSplit fileSplit, TaskAttemptContext taskAttemptContext) throws IOException {

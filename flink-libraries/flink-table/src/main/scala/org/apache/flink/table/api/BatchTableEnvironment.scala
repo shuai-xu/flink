@@ -702,7 +702,7 @@ class BatchTableEnvironment(
 
     val fieldTypes = ast.getRowType.getFieldList.asScala
       .map(field => FlinkTypeFactory.toInternalType(field.getType))
-    val transformation = translate(optimizedNode, new RowType(classOf[BinaryRow], fieldTypes: _*))
+    val transformation = translate(optimizedNode, new RowType(fieldTypes: _*))
     val streamGraph = translateStreamGraph(ArrayBuffer(transformation), None)
 
     val executionPlan = PlanUtil.explainPlan(streamGraph)

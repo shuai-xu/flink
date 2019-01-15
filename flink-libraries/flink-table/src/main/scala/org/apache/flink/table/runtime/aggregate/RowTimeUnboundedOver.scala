@@ -73,12 +73,12 @@ abstract class RowTimeUnboundedOver(
     // initialize accumulator state
     val accStateDesc = new ValueStateDescriptor[BaseRow](
       "accState",
-      TypeConverters.toBaseRowTypeInfo(new RowType(classOf[BaseRow], accTypes: _*)))
+      TypeConverters.toBaseRowTypeInfo(new RowType(accTypes: _*)))
     accState = ctx.getKeyedValueState(accStateDesc)
 
     // input element are all binary row as they are came from network
     val rowListTypeInfo = new ListTypeInfo[BaseRow](
-      TypeConverters.toBaseRowTypeInfo(new RowType(classOf[BaseRow], inputFieldTypes: _*)))
+      TypeConverters.toBaseRowTypeInfo(new RowType(inputFieldTypes: _*)))
     val inputStateDesc = new MapStateDescriptor[JLong, JList[BaseRow]](
       "inputState",
       Types.LONG,

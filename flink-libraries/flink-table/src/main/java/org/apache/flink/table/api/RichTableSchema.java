@@ -24,7 +24,6 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.api.types.TypeConverters;
-import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.sources.IndexKey;
 
 import java.io.Serializable;
@@ -219,8 +218,8 @@ public class RichTableSchema implements Serializable {
 	 * Returns the final result type info of this table.
 	 * This type info including the computed columns (if exist) and exclude proctime field.
 	 */
-	public <T extends BaseRow> RowType getResultType(Class<T> rowType) {
-		return new RowType(rowType, getColumnTypes(), getColumnNames());
+	public RowType getResultType() {
+		return new RowType(getColumnTypes(), getColumnNames());
 	}
 
 	/**

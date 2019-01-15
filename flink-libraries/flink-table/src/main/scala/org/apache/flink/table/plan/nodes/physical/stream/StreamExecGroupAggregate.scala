@@ -163,8 +163,8 @@ class StreamExecGroupAggregate(
     val inputTransformation = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
 
-    val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType, classOf[BaseRow])
-    val inputRowType = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
+    val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType)
+    val inputRowType = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo]
 
     val generateRetraction = StreamExecRetractionRules.isAccRetract(this)
     val needRetraction = StreamExecRetractionRules.isAccRetract(getInput)
@@ -198,8 +198,7 @@ class StreamExecGroupAggregate(
         groupings.isEmpty)
 
       // input element are all binary row as they are came from network
-      val inputType = new BaseRowTypeInfo(classOf[BaseRow], inputRowType.getFieldTypes: _*)
-        .asInstanceOf[BaseRowTypeInfo[BaseRow]]
+      val inputType = new BaseRowTypeInfo(inputRowType.getFieldTypes: _*)
       // miniBatch group agg stores list of input as bundle buffer value
       val valueType = new ListTypeInfo[BaseRow](inputType)
 

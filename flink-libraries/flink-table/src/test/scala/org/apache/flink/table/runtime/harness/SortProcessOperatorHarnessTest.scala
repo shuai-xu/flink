@@ -47,7 +47,6 @@ class SortProcessOperatorHarnessTest(mode: StateBackendMode) extends HarnessTest
   @Test
   def testSortProcTimeHarnessPartitioned(): Unit = {
     val rT = new BaseRowTypeInfo(
-      classOf[GenericRow],
       Array[TypeInformation[_]](
         INT_TYPE_INFO,
         LONG_TYPE_INFO,
@@ -68,7 +67,7 @@ class SortProcessOperatorHarnessTest(mode: StateBackendMode) extends HarnessTest
         TypeConverters.createInternalTypeFromTypeInfo), indexes, booleanOrders, nullsIsLast)
 
     val sortOperator = new ProcTimeSortOperator(
-      rT.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      rT.asInstanceOf[BaseRowTypeInfo],
       generatedSorter,
       1 * 1024 * 1024)
 
@@ -143,7 +142,6 @@ class SortProcessOperatorHarnessTest(mode: StateBackendMode) extends HarnessTest
   def testSortRowTimeHarnessPartitioned(): Unit = {
 
     val rT = new BaseRowTypeInfo(
-      classOf[GenericRow],
       Array[TypeInformation[_]](
         INT_TYPE_INFO,
         LONG_TYPE_INFO,
@@ -163,7 +161,7 @@ class SortProcessOperatorHarnessTest(mode: StateBackendMode) extends HarnessTest
         TypeConverters.createInternalTypeFromTypeInfo), indexes, booleanOrders, nullsIsLast)
 
     val processOperator = new RowTimeSortOperator(
-      rT.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      rT.asInstanceOf[BaseRowTypeInfo],
       generatedSorter,
       4,
       1 * 1024 * 1024)

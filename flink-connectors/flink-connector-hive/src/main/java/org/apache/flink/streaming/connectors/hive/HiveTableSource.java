@@ -259,7 +259,6 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 	@Override
 	public DataType getReturnType() {
 		return TypeConverters.createInternalTypeFromTypeInfo(new BaseRowTypeInfo(
-					GenericRow.class,
 					rowTypeInfo.getFieldTypes(),
 					rowTypeInfo.getFieldNames()));
 	}

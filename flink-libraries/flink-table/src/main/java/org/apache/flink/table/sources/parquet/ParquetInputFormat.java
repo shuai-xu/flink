@@ -53,7 +53,7 @@ import java.util.Map;
 
 /**
  * The base InputFormat class to read from Parquet files.
- * For specific input types the {@link #convert(Object, Object)} method need to be implemented.
+ * For specific input types the {@link #convert(Object)} method need to be implemented.
  *
  * <p>Using {@link ParquetRecordReader} to read files instead of {@link org.apache.flink.core.fs.FSDataInputStream},
  * we override {@link #open(FileInputSplit)} and {@link #close()} to change the behaviors.
@@ -171,7 +171,7 @@ public abstract class ParquetInputFormat<T, R> extends FileInputFormat<T> {
 	@Override
 	public T nextRecord(T reuse) throws IOException {
 		R next = readerIterator.next();
-		return convert(next, reuse);
+		return convert(next);
 	}
 
 	/**
@@ -180,7 +180,7 @@ public abstract class ParquetInputFormat<T, R> extends FileInputFormat<T> {
 	 * so the implementation of this method should copy the values of `current` to `reuse` instead of return
 	 * `current` directly.
 	 */
-	protected abstract T convert(R current, T reuse);
+	protected abstract T convert(R current);
 
 	/**
 	 * Check whether Parquet schema matches the given Flink schema.

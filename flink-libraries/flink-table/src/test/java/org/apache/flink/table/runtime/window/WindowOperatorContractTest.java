@@ -181,7 +181,7 @@ public class WindowOperatorContractTest {
 		SubKeyedAggsHandleFunction<W> aggregationsFunction,
 		long allowedLateness) throws Exception {
 
-		BaseRowTypeInfo<BaseRow> inputType = new BaseRowTypeInfo<>(BaseRow.class, Types.STRING(), Types.INT());
+		BaseRowTypeInfo inputType = new BaseRowTypeInfo(Types.STRING(), Types.INT());
 		RowType inputT = (RowType) TypeConverters.createInternalTypeFromTypeInfo(inputType);
 		BaseRowKeySelector keySelector = StreamExecUtil.getKeySelector(new int[]{0}, inputType);
 		TypeInformation<BaseRow> keyType = keySelector.getProducedType();

@@ -502,27 +502,24 @@ object FlinkTypeFactory {
   /**
     * Converts a Calcite logical record into a Flink BaseRow information.
     */
-  def toInternalBaseRowTypeInfo[T <: BaseRow](
-      logicalRowType: RelDataType, referType: Class[T]): BaseRowTypeInfo[T] = {
+  def toInternalBaseRowTypeInfo(logicalRowType: RelDataType): BaseRowTypeInfo = {
     // convert to type information
     val logicalFieldTypes = logicalRowType.getFieldList.asScala map { relDataType =>
       FlinkTypeFactory.toTypeInfo(relDataType.getType)
     }
     // field names
     val logicalFieldNames = logicalRowType.getFieldNames.asScala
-    new BaseRowTypeInfo(referType, logicalFieldTypes.toArray, logicalFieldNames.toArray)
+    new BaseRowTypeInfo(logicalFieldTypes.toArray, logicalFieldNames.toArray)
   }
 
-  def toInternalRowType[T <: BaseRow](
-      logicalRowType: RelDataType, referType: Class[T]): RowType = {
+  def toInternalRowType(logicalRowType: RelDataType): RowType = {
     // convert to type information
     val logicalFieldTypes = logicalRowType.getFieldList.asScala map { relDataType =>
       FlinkTypeFactory.toInternalType(relDataType.getType)
     }
     // field names
     val logicalFieldNames = logicalRowType.getFieldNames.asScala
-    new RowType(
-      referType, logicalFieldTypes.toArray[DataType], logicalFieldNames.toArray)
+    new RowType(logicalFieldTypes.toArray[DataType], logicalFieldNames.toArray)
   }
 
   def toInternalFieldTypes(logicalRowType: RelDataType): Seq[InternalType] = {
@@ -531,9 +528,9 @@ object FlinkTypeFactory {
     }
   }
 
-  def newBaseRowTypeInfo[T <: BaseRow](
-      types: Array[TypeInformation[_]], referType: Class[T]): BaseRowTypeInfo[T] = {
-    new BaseRowTypeInfo(referType, types: _*)
+  def newBaseRowTypeInfo(
+      types: Array[TypeInformation[_]]): BaseRowTypeInfo = {
+    new BaseRowTypeInfo(types: _*)
   }
 
   def isProctimeIndicatorType(relDataType: RelDataType): Boolean = relDataType match {
@@ -625,7 +622,7 @@ object FlinkTypeFactory {
 
     case ROW if relDataType.isInstanceOf[RelRecordType] =>
       val relRecordType = relDataType.asInstanceOf[RelRecordType]
-      new BaseRowSchema(relRecordType).typeInfo(classOf[BaseRow])
+      new BaseRowSchema(relRecordType).typeInfo()
 
     // CURSOR for UDTF case, whose type info will never be used, just a placeholder
     case CURSOR => new NothingTypeInfo

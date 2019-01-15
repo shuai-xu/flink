@@ -61,7 +61,7 @@ class StreamExecWatermarkAssigner (
         inputTransformation,
         s"WatermarkAssigner(rowtime: $rowtimeField, offset: $watermarkOffset)",
         watermarkOperator,
-        FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BaseRow]),
+        FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType),
         inputTransformation.getParallelism)
   }
 }

@@ -305,7 +305,7 @@ object ParquetTableStatsCollector extends Logging {
 
     // create a ParquetInputFormat for reusing `acceptFile` method
     val inputFormat = new ParquetInputFormat[Any, Any](filePath, fieldTypes, fieldNames) {
-      override def convert(r: Any, t: Any): AnyRef = ???
+      override def convert(r: Any): AnyRef = ???
 
       @throws[IOException]
       def listFileStatus(path: Path, files: util.List[FileStatus]): Unit = {

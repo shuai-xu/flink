@@ -49,18 +49,18 @@ object CalcCodeGenerator {
     condition: Option[RexNode],
     retainHeader: Boolean = false,
     ruleDescription: String
-  ): (OneInputSubstituteStreamOperator[BaseRow, BaseRow], BaseRowTypeInfo[BaseRow]) = {
+  ): OneInputSubstituteStreamOperator[BaseRow, BaseRow] = {
     val inputType = TypeConverters.createInternalTypeFromTypeInfo(
       inputTransform.getOutputType).asInstanceOf[RowType]
     // filter out time attributes
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
-    val possibleOutputType = FlinkTypeFactory.toInternalRowType(
-      outRowType, classOf[BoxedWrapperRow])
-    val (processCode, codeSplit, filterCodeSplit, outputType) = generateProcessCode(
+    val outputType = FlinkTypeFactory.toInternalRowType(outRowType)
+    val (processCode, codeSplit, filterCodeSplit) = generateProcessCode(
       ctx,
       inputType,
-      possibleOutputType,
-      possibleOutputType.getFieldNames,
+      outputType,
+      classOf[BoxedWrapperRow],
+      outputType.getFieldNames,
       config,
       calcProgram,
       condition,
@@ -79,18 +79,17 @@ object CalcCodeGenerator {
         filterSplitFunc = filterCodeSplit,
         lazyInputUnboxingCode = true)
 
-    val substituteStreamOperator = new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
+    new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
       genOperatorExpression.name,
       genOperatorExpression.code,
       references = ctx.references)
-
-    (substituteStreamOperator, TypeConverters.toBaseRowTypeInfo(outputType))
   }
 
   private[flink] def generateFunction[T <: Function](
       inputType: RowType,
       ruleDescription: String,
       returnType: RowType,
+      outRowClass: Class[_ <: BaseRow],
       calcProjection: RexProgram,
       calcCondition: Option[RexNode],
       config: TableConfig,
@@ -98,10 +97,11 @@ object CalcCodeGenerator {
     val ctx = CodeGeneratorContext(config)
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
     val collectorTerm = CodeGeneratorContext.DEFAULT_OPERATOR_COLLECTOR_TERM
-    val (processCode, codeSplit, filterCodeSplit, _) = generateProcessCode(
+    val (processCode, codeSplit, filterCodeSplit) = generateProcessCode(
       ctx,
       inputType,
       returnType,
+      outRowClass,
       returnType.getFieldNames,
       config,
       calcProjection,
@@ -128,6 +128,7 @@ object CalcCodeGenerator {
       ctx: CodeGeneratorContext,
       inputType: RowType,
       outRowType: RowType,
+      outRowClass: Class[_ <: BaseRow],
       resultFieldNames: Seq[String],
       config: TableConfig,
       calcProgram: RexProgram,
@@ -136,7 +137,7 @@ object CalcCodeGenerator {
       collectorTerm: String = CodeGeneratorContext.DEFAULT_OPERATOR_COLLECTOR_TERM,
       retainHeader: Boolean = false,
       outputDirectly: Boolean = false
-  ): (String, GeneratedSplittableExpression, GeneratedSplittableExpression, RowType) = {
+  ): (String, GeneratedSplittableExpression, GeneratedSplittableExpression) = {
 
     val projection = calcProgram.getProjectList.map(calcProgram.expandLocalRef)
     val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck)
@@ -146,7 +147,6 @@ object CalcCodeGenerator {
       projection.zipWithIndex.forall { case (rexNode, index) =>
         rexNode.isInstanceOf[RexInputRef] && rexNode.asInstanceOf[RexInputRef].getIndex == index
       }
-    val outputType = if (onlyFilter) inputType else outRowType
     var splitFunc: GeneratedSplittableExpression =
       GeneratedSplittableExpression.UNSPLIT_EXPRESSION
     var filterSplitFunc: GeneratedSplittableExpression =
@@ -162,7 +162,8 @@ object CalcCodeGenerator {
       val projectionExprs = projection.map(exprGenerator.generateExpression)
       val projectionExpression = exprGenerator.generateResultExpression(
         projectionExprs,
-        outputType)
+        outRowType,
+        outRowClass)
 
       val inputTypeTerm = boxedTypeTermForType(inputType)
 
@@ -296,6 +297,6 @@ object CalcCodeGenerator {
            |""".stripMargin
       }
     }
-    (processCode, splitFunc, filterSplitFunc, outputType)
+    (processCode, splitFunc, filterSplitFunc)
   }
 }

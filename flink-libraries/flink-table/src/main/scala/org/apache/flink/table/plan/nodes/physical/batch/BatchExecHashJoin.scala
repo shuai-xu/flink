@@ -22,6 +22,7 @@ import org.apache.flink.streaming.api.transformations.TwoInputTransformation.Rea
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
+import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
 import org.apache.flink.table.codegen.operator.LongHashJoinGenerator
@@ -158,8 +159,7 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
     val rType = TypeConverters.createInternalTypeFromTypeInfo(
       rInput.getOutputType).asInstanceOf[RowType]
 
-    val keyType = new RowType(
-      classOf[BinaryRow], leftKeys.map(lType.getFieldTypes()(_)): _*)
+    val keyType = new RowType(leftKeys.map(lType.getFieldTypes()(_)): _*)
     val managedMemorySize = getResource.getReservedManagedMem *
         ExecResourceUtil.SIZE_IN_MB
     val maxMemorySize = getResource.getMaxManagedMem *
@@ -227,7 +227,7 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
       probe,
       getOperatorName,
       operator,
-      getOutputType,
+      FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType),
       getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setDamBehavior(

@@ -60,7 +60,7 @@ class StreamExecMiniBatchAssigner(
       inputTransformation,
       s"MiniBatchAssigner(intervalMs: $intervalMs)",
       new MiniBatchAssignerOperator(intervalMs),
-      FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BaseRow]),
+      FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType),
       inputTransformation.getParallelism)
   }
 }

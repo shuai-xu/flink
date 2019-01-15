@@ -245,7 +245,6 @@ public class DataTypes {
 	 * {@code DataTypes.String} => Serializer for {@link String}.
 	 * {@link DecimalType} => Serializer for {@link BigDecimal}.
 	 * {@link RowType} => Serializer for {@link Row}.
-	 * {@link RowType} with {@link RowType#useBaseRow} => Serializer for {@link BaseRow}.
 	 */
 	public static TypeSerializer createExternalSerializer(DataType type) {
 		return TypeConverters.createExternalTypeInfoFromDataType(type).createSerializer(new ExecutionConfig());

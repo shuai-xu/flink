@@ -73,14 +73,6 @@ abstract class BatchExecSortAggregateBase(
     costFactory.makeCost(mq.getRowCount(this), cpuCost, 0, 0, memCost)
   }
 
-  override def getOutputRowType: RowType = {
-    if (grouping.isEmpty) {
-      FlinkTypeFactory.toInternalRowType(getRowType, classOf[GenericRow])
-    } else {
-      FlinkTypeFactory.toInternalRowType(getRowType, classOf[JoinedRow])
-    }
-  }
-
   private[flink] def codegenWithKeys(
       ctx: CodeGeneratorContext,
       tableEnv: BatchTableEnvironment,
@@ -108,7 +100,7 @@ abstract class BatchExecSortAggregateBase(
       aggBufferNames, aggBufferTypes, outputType)
 
     val joinedRow = "joinedRow"
-    ctx.addOutputRecord(outputType.toInternalType, joinedRow)
+    ctx.addOutputRecord(outputType, classOf[JoinedRow], joinedRow)
     val binaryRow = classOf[BinaryRow].getName
     ctx.addReusableMember(s"$binaryRow $lastKeyTerm = null;")
 

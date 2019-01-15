@@ -38,7 +38,7 @@ import org.apache.flink.table.util.Logging
 import scala.collection.mutable
 
 class StreamSortOperator(
-     inputRowType: BaseRowTypeInfo[BaseRow],
+     inputRowType: BaseRowTypeInfo,
      gSorter: GeneratedSorter,
      memorySize: Double)
   extends AbstractStreamOperator[BaseRow]

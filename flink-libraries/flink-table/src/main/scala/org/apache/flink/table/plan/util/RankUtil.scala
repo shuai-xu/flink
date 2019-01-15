@@ -328,13 +328,13 @@ object RankUtil {
 
   def createSortKeyTypeAndSorter(
       inputSchema: BaseRowSchema,
-      fieldCollations: Seq[RelFieldCollation]): (BaseRowTypeInfo[_], GeneratedSorter) = {
+      fieldCollations: Seq[RelFieldCollation]): (BaseRowTypeInfo, GeneratedSorter) = {
 
     val (sortFields, sortDirections, nullsIsLast) = SortUtil.getKeysAndOrders(fieldCollations)
 
     val inputFieldTypes = inputSchema.fieldTypeInfos
     val fieldTypes = sortFields.map(inputFieldTypes(_))
-    val sortKeyTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], fieldTypes: _*)
+    val sortKeyTypeInfo = new BaseRowTypeInfo(fieldTypes: _*)
 
     val logicalKeyFields = fieldTypes.indices.toArray
 
@@ -355,7 +355,7 @@ object RankUtil {
     if (sortFields.isEmpty) {
       new NullBinaryRowKeySelector
     } else {
-      new BinaryRowKeySelector(sortFields, inputSchema.typeInfo(classOf[BaseRow]))
+      new BinaryRowKeySelector(sortFields, inputSchema.typeInfo())
     }
   }
 
@@ -368,7 +368,7 @@ object RankUtil {
       throw new TableException("[rank util] This shouldn't happen. Please file an issue.")
     }
 
-    val inputType: BaseRowTypeInfo[_] = inputSchema.typeInfo(classOf[BaseRow])
+    val inputType: BaseRowTypeInfo = inputSchema.typeInfo()
 
     FieldAccessCodeGenerator.generateRowFieldExtractor(
       CodeGeneratorContext.apply(new TableConfig, supportReference = false),
@@ -379,10 +379,10 @@ object RankUtil {
 
   def createRowKeyType(
       primaryKeys: Array[Int],
-      inputSchema: BaseRowSchema): BaseRowTypeInfo[_] = {
+      inputSchema: BaseRowSchema): BaseRowTypeInfo = {
 
     val fieldTypes = primaryKeys.map(inputSchema.fieldTypeInfos(_))
-    new BaseRowTypeInfo(classOf[BaseRow], fieldTypes: _*)
+    new BaseRowTypeInfo(fieldTypes: _*)
   }
 
   def createKeySelector(
@@ -391,7 +391,7 @@ object RankUtil {
     if (keys.isEmpty) {
       new NullBinaryRowKeySelector
     } else {
-      new BinaryRowKeySelector(keys, inputSchema.typeInfo(classOf[BaseRow]))
+      new BinaryRowKeySelector(keys, inputSchema.typeInfo())
     }
   }
 

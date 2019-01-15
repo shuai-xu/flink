@@ -133,8 +133,8 @@ class StreamExecLocalGroupAggregate(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val inputTransformation = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
-    val inputRowType = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
-    val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType, classOf[BaseRow])
+    val inputRowType = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo]
+    val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType)
 
     val needRetraction = StreamExecRetractionRules.isAccRetract(getInput)
 
@@ -153,10 +153,9 @@ class StreamExecLocalGroupAggregate(
     val accTypes = aggInfoList.getAccTypes
     // serialize as GenericRow, deserialize as BinaryRow
     val valueTypeInfo = new BaseRowTypeInfo(
-      classOf[BaseRow],
       accTypes.map(TypeConverters.createExternalTypeInfoFromDataType): _*)
 
-    val inputTypeInfo = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[BaseRow]]
+    val inputTypeInfo = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo]
     val selector = StreamExecUtil.getKeySelector(groupings, inputTypeInfo)
 
     val operator = new BundleOperator(

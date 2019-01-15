@@ -33,7 +33,7 @@ import scala.collection.Seq
 class UnionITCase extends QueryTest {
 
   val type6 = new BaseRowTypeInfo(
-    classOf[BinaryRow], INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO)
+    INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO)
 
   val data6 = Seq(
     binaryRow(type6, 1, 1L, fromString("Hi")),

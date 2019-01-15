@@ -35,6 +35,8 @@ public class VectorizedRowInputParquetFormat extends ParquetInputFormat<Row, Row
 
 	private static final long serialVersionUID = -2569974518641072883L;
 
+	private transient Row reuse;
+
 	public VectorizedRowInputParquetFormat(Path filePath, InternalType[] fieldTypes, String[] fieldNames) {
 		super(filePath, fieldTypes, fieldNames);
 	}
@@ -50,7 +52,7 @@ public class VectorizedRowInputParquetFormat extends ParquetInputFormat<Row, Row
 	}
 
 	@Override
-	protected Row convert(Row current, Row reuse) {
+	protected Row convert(Row current) {
 		if (reuse == null) {
 			return Row.copy(current);
 		} else {

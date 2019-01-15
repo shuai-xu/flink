@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.sources.orc
 
+import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
@@ -117,8 +118,7 @@ class OrcVectorizedColumnRowTableSource(
 
   def getPhysicalType = {
     val typeInfos = this.fieldTypes.map(x => TypeConverters.createExternalTypeInfoFromDataType(x))
-    new BaseRowTypeInfo[ColumnarRow](
-      classOf[ColumnarRow], typeInfos, this.fieldNames)
+    new BaseRowTypeInfo(typeInfos, this.fieldNames).asInstanceOf[TypeInformation[ColumnarRow]]
   }
 
   override def explainSource(): String = {

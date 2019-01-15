@@ -91,7 +91,6 @@ object TemporalTableUtils {
     override def getReturnType: DataType =
       TypeConverters.createInternalTypeFromTypeInfo(
         new BaseRowTypeInfo(
-          classOf[GenericRow],
           Array(Types.INT, Types.INT, Types.STRING).asInstanceOf[Array[TypeInformation[_]]],
           Array( "age", "id", "name")))
 

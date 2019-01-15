@@ -198,8 +198,8 @@ class BatchExecExchange(
 
     val exchangeMode = getDataExchangeModeForDeadlockBreakup(tableEnv.getConfig.getConf)
 
-    val inputType = input.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
-    val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BinaryRow])
+    val inputType = input.getOutputType.asInstanceOf[BaseRowTypeInfo]
+    val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType)
 
     relDistribution.getType match {
       case RelDistribution.Type.ANY =>
@@ -207,7 +207,7 @@ class BatchExecExchange(
           input,
           null, // Let StreamGraph choose specific partitioner
           exchangeMode)
-        transformation.setOutputType(outputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
+        transformation.setOutputType(outputRowType)
         transformation
 
       case RelDistribution.Type.SINGLETON =>
@@ -215,7 +215,7 @@ class BatchExecExchange(
           input,
           new GlobalPartitioner[BaseRow],
           exchangeMode)
-        transformation.setOutputType(outputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
+        transformation.setOutputType(outputRowType)
         transformation
 
       case RelDistribution.Type.RANGE_DISTRIBUTED =>
@@ -226,7 +226,7 @@ class BatchExecExchange(
           input,
           new RebalancePartitioner[BaseRow],
           exchangeMode)
-        transformation.setOutputType(outputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
+        transformation.setOutputType(outputRowType)
         transformation
 
       case RelDistribution.Type.BROADCAST_DISTRIBUTED =>
@@ -234,20 +234,20 @@ class BatchExecExchange(
           input,
           new BroadcastPartitioner[BaseRow],
           exchangeMode)
-        transformation.setOutputType(outputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
+        transformation.setOutputType(outputRowType)
         transformation
 
       case _ => // hash shuffle
         // TODO Eliminate duplicate keys
         val keys = relDistribution.getKeys.asScala
         val partitioner = new BinaryHashPartitioner(
-          inputType.asInstanceOf[BaseRowTypeInfo[_ <: BaseRow]],
+          inputType,
           keys.map(_.intValue()).toArray)
         val transformation = new PartitionTransformation(
           input,
           partitioner,
           exchangeMode)
-        transformation.setOutputType(outputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
+        transformation.setOutputType(outputRowType)
         transformation
     }
   }
@@ -266,7 +266,7 @@ class BatchExecExchange(
     * so the the sample and histogram process stream does not care about requiredExchangeMode.
     */
   protected def getRangePartitionPlan(
-      inputType: BaseRowTypeInfo[_],
+      inputType: BaseRowTypeInfo,
       tableEnvironment: TableEnvironment,
       input: StreamTransformation[BaseRow]): StreamTransformation[BaseRow] = {
     val tableEnv = tableEnvironment.asInstanceOf[BatchTableEnvironment]
@@ -283,7 +283,7 @@ class BatchExecExchange(
       case None =>
         // 1. Fixed size sample in each partitions.
         val localSampleOutRowType = TypeConverters.createInternalTypeFromTypeInfo(
-          new BaseRowTypeInfo(classOf[GenericRow], keys.map(types(_)): _ *))
+          new BaseRowTypeInfo(keys.map(types(_)): _ *))
             .asInstanceOf[RowType]
 
         val localSampleProjection = ProjectionCodeGenerator.generateProjection(
@@ -307,7 +307,7 @@ class BatchExecExchange(
         // 2. Fixed size sample in a single coordinator
         // and use sampled data to build range boundaries.
         val sampleType = TypeConverters.createInternalTypeFromTypeInfo(
-          new BaseRowTypeInfo(classOf[BinaryRow], keys.map(types(_)): _*))
+          new BaseRowTypeInfo(keys.map(types(_)): _*))
             .asInstanceOf[RowType]
         val ctx = CodeGeneratorContext(tableEnv.getConfig)
         val copyToBinaryRow = ProjectionCodeGenerator.generateProjection(
@@ -366,7 +366,7 @@ class BatchExecExchange(
     // 4. Take range boundaries as broadcast input and take the tuple of partition id and
     // record as output.
     // TwoInputTransformation, it must be binaryRow.
-    val binaryType = new BaseRowTypeInfo(classOf[BinaryRow], types: _*)
+    val binaryType = new BaseRowTypeInfo(types: _*)
     val preparePartition = {
       val (comparators, _) = TypeUtils.flattenComparatorAndSerializer(
         binaryType.getArity, keys, orders, binaryType.getFieldTypes)
@@ -395,7 +395,7 @@ class BatchExecExchange(
       rangePartition,
       PR_NAME,
       new RemoveRangeIndexOperator(),
-      binaryType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      binaryType,
       getResource.getParallelism)
     removeIdTransformation.setResources(reservedResSpec, preferResSpec)
     removeIdTransformation

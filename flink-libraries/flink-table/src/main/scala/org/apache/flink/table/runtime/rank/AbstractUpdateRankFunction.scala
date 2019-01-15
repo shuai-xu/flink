@@ -44,8 +44,8 @@ import org.apache.flink.table.util.{LRUMap, Logging}
 import org.apache.flink.util.Collector
 
 abstract class AbstractUpdateRankFunction(
-    inputRowType: BaseRowTypeInfo[_],
-    rowKeyType: BaseRowTypeInfo[_],
+    inputRowType: BaseRowTypeInfo,
+    rowKeyType: BaseRowTypeInfo,
     gSorter: GeneratedSorter,
     sortKeySelector: KeySelector[BaseRow, BaseRow],
     outputArity: Int,
@@ -99,8 +99,8 @@ abstract class AbstractUpdateRankFunction(
     val valueTypeInfo = new TupleTypeInfo[Tuple2[BaseRow, JInt]](inputRowType, Types.INT)
     val mapStateDescriptor = new MapStateDescriptor[BaseRow, Tuple2[BaseRow, JInt]](
       "data-state-with-update",
-      new BaseRowTypeInfo(classOf[BaseRow], rowKeyType.getFieldTypes: _*)
-        .asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      new BaseRowTypeInfo(rowKeyType.getFieldTypes: _*)
+        .asInstanceOf[BaseRowTypeInfo],
       valueTypeInfo)
     dataState = ctx.getKeyedMapState(mapStateDescriptor)
 

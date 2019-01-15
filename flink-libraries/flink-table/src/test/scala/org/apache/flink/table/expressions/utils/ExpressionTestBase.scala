@@ -141,11 +141,10 @@ abstract class ExpressionTestBase {
     val stringTestExprs = testExprs.map(expr => relBuilder.cast(expr._1, VARCHAR))
 
     // generate code
-    val resultType = new RowType(
-      classOf[BinaryRow], Seq.fill(testExprs.size)(DataTypes.STRING): _*)
+    val resultType = new RowType(Seq.fill(testExprs.size)(DataTypes.STRING): _*)
 
     val exprs = stringTestExprs.map(exprGenerator.generateExpression)
-    val genExpr = exprGenerator.generateResultExpression(exprs, resultType)
+    val genExpr = exprGenerator.generateResultExpression(exprs, resultType, classOf[BinaryRow])
 
     val bodyCode =
       s"""

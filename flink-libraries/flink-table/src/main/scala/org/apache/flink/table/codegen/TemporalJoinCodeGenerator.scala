@@ -30,7 +30,7 @@ import org.apache.flink.table.api.functions.{AsyncTableFunction, TableFunction}
 import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils._
-import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
+import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.runtime.collector.TableFunctionCollector
 import org.apache.flink.table.runtime.conversion.DataStructureConverters.RowConverter
@@ -219,7 +219,8 @@ object TemporalJoinCodeGenerator {
     val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck)
       .bindInput(tableType, inputTerm = tableInputTerm)
 
-    val tableResultExpr = exprGenerator.generateConverterResultExpression(tableType)
+    val tableResultExpr = exprGenerator.generateConverterResultExpression(
+      tableType, classOf[GenericRow])
 
     val body =
       s"""
@@ -277,10 +278,11 @@ object TemporalJoinCodeGenerator {
     val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck)
       .bindInput(udtfTypeInfo, inputTerm = udtfInputTerm, inputFieldMapping = pojoFieldMapping)
 
-    val udtfResultExpr = exprGenerator.generateConverterResultExpression(udtfTypeInfo)
+    val udtfResultExpr = exprGenerator.generateConverterResultExpression(
+      udtfTypeInfo, classOf[GenericRow])
 
     val joinedRowTerm = CodeGenUtils.newName("joinedRow")
-    ctx.addOutputRecord(resultType, joinedRowTerm)
+    ctx.addOutputRecord(resultType, classOf[JoinedRow], joinedRowTerm)
 
     val header = if (retainHeader) {
       s"$joinedRowTerm.setHeader($inputTerm.getHeader());"
@@ -435,9 +437,10 @@ object TemporalJoinCodeGenerator {
       None
     }
     CalcCodeGenerator.generateFunction(
-      tableSourceSchema.internalType(classOf[BaseRow]),
+      tableSourceSchema.internalType,
       "TableCalcMapFunction",
-      FlinkTypeFactory.toInternalRowType(program.getOutputRowType, classOf[GenericRow]),
+      FlinkTypeFactory.toInternalRowType(program.getOutputRowType),
+      classOf[GenericRow],
       program,
       condition,
       config,

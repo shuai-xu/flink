@@ -282,25 +282,26 @@ class CodeGeneratorContext(val tableConfig: TableConfig, val supportReference: B
    */
   def addOutputRecord(
       t: InternalType,
+      clazz: Class[_],
       outRecordTerm: String,
       outRecordWriterTerm: Option[String] = None,
       reused: Boolean = true): String = {
     val statement = t match {
-      case rt: RowType if rt.getInternalTypeClass == classOf[BinaryRow] =>
+      case rt: RowType if clazz == classOf[BinaryRow] =>
         val writerTerm = outRecordWriterTerm.getOrElse(
           throw new CodeGenException("No writer is specified when writing BinaryRow record.")
         )
         val binaryRowWriter = classOf[BinaryRowWriter].getName
-        val typeTerm = rt.getInternalTypeClass.getCanonicalName
+        val typeTerm = clazz.getCanonicalName
         s"""
            |final $typeTerm $outRecordTerm = new $typeTerm(${rt.getArity});
            |final $binaryRowWriter $writerTerm = new $binaryRowWriter($outRecordTerm);
            |""".stripMargin.trim
-      case rt: RowType if classOf[ObjectArrayRow].isAssignableFrom(rt.getInternalTypeClass) =>
-        val typeTerm = rt.getInternalTypeClass.getCanonicalName
+      case rt: RowType if classOf[ObjectArrayRow].isAssignableFrom(clazz) =>
+        val typeTerm = clazz.getCanonicalName
         s"final $typeTerm $outRecordTerm = new $typeTerm(${rt.getArity});"
-      case rt: RowType if rt.getInternalTypeClass == classOf[JoinedRow] =>
-        val typeTerm = rt.getInternalTypeClass.getCanonicalName
+      case rt: RowType if clazz == classOf[JoinedRow] =>
+        val typeTerm = clazz.getCanonicalName
         s"final $typeTerm $outRecordTerm = new $typeTerm();"
       case _ =>
         val typeTerm = boxedTypeTermForType(t)
@@ -320,8 +321,8 @@ class CodeGeneratorContext(val tableConfig: TableConfig, val supportReference: B
   def addReusableNullRow(rowTerm: String, arity: Int): String = {
     addOutputRecord(
       new RowType(
-        classOf[GenericRow],
         (0 until arity).map(_ => DataTypes.INT): _*),
+      classOf[GenericRow],
       rowTerm)
   }
 

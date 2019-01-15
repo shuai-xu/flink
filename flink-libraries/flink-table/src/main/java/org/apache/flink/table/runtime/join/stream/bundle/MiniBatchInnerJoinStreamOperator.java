@@ -52,8 +52,8 @@ public class MiniBatchInnerJoinStreamOperator extends MiniBatchJoinStreamOperato
 	private static final long serialVersionUID = 1L;
 
 	public MiniBatchInnerJoinStreamOperator(
-			BaseRowTypeInfo<BaseRow> leftType,
-			BaseRowTypeInfo<BaseRow> rightType, GeneratedJoinConditionFunction condFuncCode,
+			BaseRowTypeInfo leftType,
+			BaseRowTypeInfo rightType, GeneratedJoinConditionFunction condFuncCode,
 			KeySelector<BaseRow, BaseRow> leftKeySelector,
 			KeySelector<BaseRow, BaseRow> rightKeySelector,
 			GeneratedProjection leftPkProjectCode, GeneratedProjection rightPkProjectCode,

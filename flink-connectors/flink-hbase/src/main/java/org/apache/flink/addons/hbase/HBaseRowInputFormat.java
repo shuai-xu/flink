@@ -185,7 +185,7 @@ public class HBaseRowInputFormat extends AbstractTableInputFormat<GenericRow> im
 			typeInfos[i] = new RowTypeInfo(schema.getQualifierTypes(family), schema.getQualifierNames(family));
 			i++;
 		}
-		return new BaseRowTypeInfo(GenericRow.class, typeInfos, famNames);
+		return (TypeInformation) new BaseRowTypeInfo(typeInfos, famNames);
 	}
 
 	private Object deserialize(byte[] value, int typeIdx) {

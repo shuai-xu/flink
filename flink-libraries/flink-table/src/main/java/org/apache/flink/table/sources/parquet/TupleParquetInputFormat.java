@@ -39,6 +39,8 @@ public class TupleParquetInputFormat<OUT> extends ParquetInputFormat<OUT, Row> {
 
 	private final TupleSerializerBase<OUT> tupleSerializer;
 
+	private transient OUT reuse;
+
 	public TupleParquetInputFormat(Path filePath, TupleTypeInfoBase<OUT> tupleTypeInfo, String[] fieldNames) {
 		this(filePath, tupleTypeInfo, fieldNames, new ExecutionConfig());
 	}
@@ -50,7 +52,7 @@ public class TupleParquetInputFormat<OUT> extends ParquetInputFormat<OUT, Row> {
 	}
 
 	@Override
-	public OUT convert(Row current, OUT reuse) {
+	public OUT convert(Row current) {
 		Object[] values = new Object[current.getArity()];
 		for (int i = 0; i < current.getArity(); ++i) {
 			values[i] = current.getField(i);

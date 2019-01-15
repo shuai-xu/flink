@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.StreamTableEnvironment
-import org.apache.flink.table.calcite.RelTimeIndicatorConverter
+import org.apache.flink.table.calcite.{FlinkTypeFactory, RelTimeIndicatorConverter}
 import org.apache.flink.table.codegen.{CalcCodeGenerator, CodeGeneratorContext}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalCalc
@@ -92,7 +92,7 @@ class StreamExecCalc(
     }
     val ctx = CodeGeneratorContext(config, supportReference = true).setOperatorBaseClass(
       classOf[AbstractProcessStreamOperator[BaseRow]])
-    val (substituteStreamOperator, outputType) = CalcCodeGenerator.generateCalcOperator(
+    val substituteStreamOperator = CalcCodeGenerator.generateCalcOperator(
       ctx,
       cluster,
       input.getRowType,
@@ -108,7 +108,7 @@ class StreamExecCalc(
       inputTransform,
       CalcUtil.calcToString(calcProgram, getExpressionString),
       substituteStreamOperator,
-      outputType,
+      FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType),
       inputTransform.getParallelism)
   }
 }

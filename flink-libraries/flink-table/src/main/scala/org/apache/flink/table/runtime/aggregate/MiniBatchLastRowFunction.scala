@@ -40,7 +40,7 @@ import org.apache.flink.util.Collector
   * @param tableConfig        the table config.
   */
 class MiniBatchLastRowFunction(
-    rowTypeInfo: BaseRowTypeInfo[BaseRow],
+    rowTypeInfo: BaseRowTypeInfo,
     generateRetraction: Boolean,
     rowtimeIndex: Int,
     tableConfig: TableConfig)

@@ -43,7 +43,7 @@ import scala.collection.JavaConverters._
 class ExpressionReducer(config: TableConfig)
   extends RelOptPlanner.Executor with Compiler[RichMapFunction[GenericRow, GenericRow]] {
 
-  private val EMPTY_ROW_TYPE = new RowType(classOf[GenericRow])
+  private val EMPTY_ROW_TYPE = new RowType()
   private val EMPTY_ROW = new GenericRow(0)
 
   override def reduce(
@@ -64,7 +64,7 @@ class ExpressionReducer(config: TableConfig)
     }
 
     val literalTypes = literals.map(e => FlinkTypeFactory.toInternalType(e.getType))
-    val resultType =  new RowType(classOf[GenericRow], literalTypes: _*)
+    val resultType =  new RowType(literalTypes: _*)
 
     // generate MapFunction
     val ctx = new ConstantCodeGeneratorContext(config)
@@ -73,7 +73,8 @@ class ExpressionReducer(config: TableConfig)
         .bindInput(EMPTY_ROW_TYPE)
 
     val literalExprs = literals.map(exprGenerator.generateExpression)
-    val result = exprGenerator.generateResultExpression(literalExprs, resultType)
+    val result = exprGenerator.generateResultExpression(
+      literalExprs, resultType, classOf[GenericRow])
 
     val generatedFunction = generateFunction[MapFunction[GenericRow, GenericRow], GenericRow](
       ctx,

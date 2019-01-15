@@ -199,15 +199,15 @@ class StreamExecGroupWindowAggregate(
       aggValueTypes,
       timeIdx)
 
-    val inputRowType = inputTransform.getOutputType.asInstanceOf[BaseRowTypeInfo[BaseRow]]
+    val inputRowType = inputTransform.getOutputType.asInstanceOf[BaseRowTypeInfo]
     val selector = StreamExecUtil.getKeySelector(grouping, inputRowType)
 
-    val outRowType = outputSchema.typeInfo(classOf[BaseRow])
+    val outRowType = outputSchema.typeInfo()
     val transformation = new OneInputTransformation(
       inputTransform,
       operatorName,
       operator,
-      outRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      outRowType,
       tableEnv.execEnv.getParallelism)
 
     if (grouping.isEmpty) {

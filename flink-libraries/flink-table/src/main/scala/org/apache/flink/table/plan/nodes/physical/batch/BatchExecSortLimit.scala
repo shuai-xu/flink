@@ -151,9 +151,9 @@ class BatchExecSortLimit(
 
     val input = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
-    val inputType = input.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
+    val inputType = input.getOutputType.asInstanceOf[BaseRowTypeInfo]
     val types = inputType.getFieldTypes
-    val binaryType = new BaseRowTypeInfo(classOf[BinaryRow], types: _*)
+    val binaryType = new BaseRowTypeInfo(types: _*)
 
     // generate comparator
     val (comparators, serializers) = TypeUtils.flattenComparatorAndSerializer(
@@ -176,7 +176,7 @@ class BatchExecSortLimit(
       input,
       getOperatorName,
       operator,
-      inputType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      inputType,
       getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setDamBehavior(DamBehavior.FULL_DAM)

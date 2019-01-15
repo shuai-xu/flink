@@ -93,7 +93,7 @@ class StreamExecLastRow(
     val inputTransform = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
 
-    val rowTypeInfo = inputTransform.getOutputType.asInstanceOf[BaseRowTypeInfo[BaseRow]]
+    val rowTypeInfo = inputTransform.getOutputType.asInstanceOf[BaseRowTypeInfo]
 
     val generateRetraction = StreamExecRetractionRules.isAccRetract(this)
 

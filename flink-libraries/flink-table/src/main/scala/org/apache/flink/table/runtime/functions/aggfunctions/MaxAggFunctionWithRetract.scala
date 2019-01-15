@@ -254,7 +254,7 @@ abstract class MaxWithRetractAggFunction[T](implicit ord: Ordering[T])
       // it will be replaced to MapViewType
       DataTypes.createGenericType(classOf[MapView[_, _]]))
     val fieldNames = Array("max", "map", "retractMap")
-    new RowType(classOf[GenericRow], fieldTypes, fieldNames)
+    new RowType(fieldTypes, fieldNames)
   }
 }
 

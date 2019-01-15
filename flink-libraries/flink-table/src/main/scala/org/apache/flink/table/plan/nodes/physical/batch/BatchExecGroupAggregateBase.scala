@@ -25,7 +25,7 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.BatchExecAggregateCodeGen
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCollect
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedOperator}
-import org.apache.flink.table.dataformat.BinaryRow
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, GenericRow, JoinedRow}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
 import org.apache.flink.table.plan.util.{AggregateNameUtil, AggregateUtil, FlinkRelOptUtil}
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
@@ -86,7 +86,6 @@ abstract class BatchExecGroupAggregateBase(
   }.toArray[Array[InternalType]]
 
   lazy val groupKeyRowType = new RowType(
-    classOf[BinaryRow],
     grouping.map { index =>
       FlinkTypeFactory.toDataType(inputRelDataType.getFieldList.get(index).getType)
     }, grouping.map(inputRelDataType.getFieldNames.get(_)))
@@ -108,8 +107,6 @@ abstract class BatchExecGroupAggregateBase(
   def getAggCallList: Seq[AggregateCall] = aggCallToAggFunction.map(_._1)
 
   def getAggCallToAggFunction: Seq[(AggregateCall, UserDefinedFunction)] = aggCallToAggFunction
-
-  def getOutputRowType: RowType
 
   private[flink] def getAggOperatorName(prefix: String): String = {
     val groupingStr = if (grouping.nonEmpty) {

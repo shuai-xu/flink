@@ -236,14 +236,14 @@ class BatchExecRank(
 
     val input = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
-    val outputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[JoinedRow])
+    val outputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType)
     val partitionBySortingKeys = partitionKey.toArray
     // The collation for the partition-by fields is inessential here, we only use the
     // comparator to distinguish different groups.
     // (order[is_asc], null_is_last)
     val partitionBySortCollation = partitionBySortingKeys.map(_ => (true, true))
 
-    val inputRowType = FlinkTypeFactory.toInternalRowType(getInput.getRowType, classOf[BaseRow])
+    val inputRowType = FlinkTypeFactory.toInternalRowType(getInput.getRowType)
     val (partitionByComparators, partitionBySerializers) = TypeUtils.flattenComparatorAndSerializer(
       inputRowType.getArity,
       partitionBySortingKeys,
@@ -291,7 +291,7 @@ class BatchExecRank(
       input,
       getOperatorName,
       operator,
-      outputType.asInstanceOf[TypeInformation[BaseRow]],
+      outputType,
       getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setResources(getResource.getReservedResourceSpec,

@@ -130,6 +130,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
    */
   def generateConverterResultExpression(
       returnType: RowType,
+      returnTypeClazz: Class[_ <: BaseRow],
       outRecordTerm: String = CodeGeneratorContext.DEFAULT_OUT_RECORD_TERM,
       outRecordWriterTerm: String = CodeGeneratorContext.DEFAULT_OUT_RECORD_WRITER_TERM,
       reusedOutRow: Boolean = true,
@@ -180,6 +181,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
     generateResultExpression(
       input1AccessExprs ++ input2AccessExprs,
       returnType,
+      returnTypeClazz,
       outRow = outRecordTerm,
       outRowWriter = Some(outRecordWriterTerm),
       reusedOutRow = reusedOutRow)
@@ -201,13 +203,14 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
   def generateResultExpression(
       fieldExprs: Seq[GeneratedExpression],
       returnType: RowType,
+      returnTypeClazz: Class[_ <: BaseRow],
       outRow: String = CodeGeneratorContext.DEFAULT_OUT_RECORD_TERM,
       outRowWriter: Option[String] = Some(CodeGeneratorContext.DEFAULT_OUT_RECORD_WRITER_TERM),
       reusedOutRow: Boolean = true,
       outRowAlreadyExists: Boolean = false): GeneratedExpression = {
     val fieldExprIdxToOutputRowPosMap = fieldExprs.indices.map(i => i -> i).toMap
-    generateResultExpression(fieldExprs, fieldExprIdxToOutputRowPosMap, returnType, outRow,
-      outRowWriter, reusedOutRow, outRowAlreadyExists)
+    generateResultExpression(fieldExprs, fieldExprIdxToOutputRowPosMap, returnType,
+      returnTypeClazz, outRow, outRowWriter, reusedOutRow, outRowAlreadyExists)
   }
 
   /**
@@ -229,6 +232,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
       fieldExprs: Seq[GeneratedExpression],
       fieldExprIdxToOutputRowPosMap: Map[Int, Int],
       returnType: RowType,
+      returnTypeClazz: Class[_ <: BaseRow],
       outRow: String,
       outRowWriter: Option[String],
       reusedOutRow: Boolean,
@@ -273,7 +277,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
       val initReturnRecord = if (outRowAlreadyExists) {
         ""
       } else {
-        ctx.addOutputRecord(returnType, outRow, reused = reusedOutRow)
+        ctx.addOutputRecord(returnType, returnTypeClazz, outRow, reused = reusedOutRow)
       }
       val resultBuffer: Seq[String] = fieldExprs.zipWithIndex map {
         case (fieldExpr, i) =>
@@ -306,14 +310,14 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
         codeBuffer = resultBuffer, preceding = s"$initReturnRecord")
     }
 
-    returnType.getInternalTypeClass match {
+    returnTypeClazz match {
       case cls if cls == classOf[BinaryRow] =>
         outRowWriter match {
           case Some(writer) => // binary row writer.
             val initReturnRecord = if (outRowAlreadyExists) {
               ""
             } else {
-              ctx.addOutputRecord(returnType, outRow, outRowWriter, reusedOutRow)
+              ctx.addOutputRecord(returnType, returnTypeClazz, outRow, outRowWriter, reusedOutRow)
             }
             val resetWriter = if (nullCheck) s"$writer.reset();" else s"$writer.resetCursor();"
             val completeWriter: String = s"$writer.complete();"

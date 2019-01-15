@@ -33,12 +33,11 @@ abstract class BaseRowKeySelector
 
 class BinaryRowKeySelector(
   keyFields: Array[Int],
-  inputType: BaseRowTypeInfo[_])
+  inputType: BaseRowTypeInfo)
   extends BaseRowKeySelector {
 
-  @transient lazy private val returnType: BaseRowTypeInfo[BaseRow] =
-    new BaseRowTypeInfo(classOf[BinaryRow], keyFields.map(inputType.getFieldTypes()(_)): _*)
-      .asInstanceOf[BaseRowTypeInfo[BaseRow]]
+  @transient lazy private val returnType: BaseRowTypeInfo =
+    new BaseRowTypeInfo(keyFields.map(inputType.getFieldTypes()(_)): _*)
 
   @transient lazy private val gProjection: GeneratedProjection = ProjectionCodeGenerator
     .generateProjection(CodeGeneratorContext.apply(new TableConfig, supportReference = false),
@@ -60,12 +59,11 @@ class BinaryRowKeySelector(
 
   override def getKey(value: BaseRow): BaseRow = projection(value).copy()
 
-  override def getProducedType: BaseRowTypeInfo[BaseRow] = returnType
+  override def getProducedType: BaseRowTypeInfo = returnType
 }
 
 class NullBinaryRowKeySelector extends BaseRowKeySelector {
-  @transient lazy val returnType: BaseRowTypeInfo[BaseRow] = new BaseRowTypeInfo(
-    classOf[BinaryRow]).asInstanceOf[BaseRowTypeInfo[BaseRow]]
+  @transient lazy val returnType: BaseRowTypeInfo = new BaseRowTypeInfo()
 
   @transient lazy val row: BinaryRow = BinaryRowUtil.EMPTY_ROW
 
@@ -73,7 +71,7 @@ class NullBinaryRowKeySelector extends BaseRowKeySelector {
   validateEqualsHashCode("grouping", returnType)
 
   override def getKey(value: BaseRow): BaseRow = row
-  override def getProducedType: BaseRowTypeInfo[BaseRow] = returnType
+  override def getProducedType: BaseRowTypeInfo = returnType
 }
 
 

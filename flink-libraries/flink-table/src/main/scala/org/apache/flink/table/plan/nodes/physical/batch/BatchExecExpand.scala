@@ -82,13 +82,13 @@ class BatchExecExpand(
     val input = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
     val inputType = TypeConverters.createInternalTypeFromTypeInfo(input.getOutputType)
-    val outputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[GenericRow])
+    val outputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType)
 
     val ctx = CodeGeneratorContext(config)
     val substituteStreamOperator = ExpandCodeGenerator.generateExpandOperator(
       ctx,
       inputType,
-      outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      outputType,
       config,
       projects,
       ruleDescription)
@@ -97,7 +97,7 @@ class BatchExecExpand(
       input,
       getOperatorName,
       substituteStreamOperator,
-      outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      outputType,
       getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setResources(getResource.getReservedResourceSpec,

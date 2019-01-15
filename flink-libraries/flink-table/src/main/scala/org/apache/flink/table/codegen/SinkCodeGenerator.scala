@@ -43,6 +43,8 @@ import org.apache.flink.types.Row
 
 import org.apache.calcite.rel.`type`.RelDataType
 
+import java.util
+
 import scala.collection.JavaConversions._
 
 object SinkCodeGenerator {
@@ -66,7 +68,7 @@ object SinkCodeGenerator {
   def generateRowConverterOperator[IN, OUT](
       config: TableConfig,
       ctx: CodeGeneratorContext,
-      inputTypeInfo: BaseRowTypeInfo[_],
+      inputTypeInfo: BaseRowTypeInfo,
       relType: RelDataType,
       operatorName: String,
       rowtimeField: Option[Int],
@@ -112,8 +114,8 @@ object SinkCodeGenerator {
     val convertOutputType = requestedTypeInfo match {
       case gt: GenericTypeInfo[Row] if gt.getTypeClass == classOf[Row] =>
         new RowTypeInfo(
-          inputTypeInfo.asInstanceOf[BaseRowTypeInfo[_]].getFieldTypes,
-          inputTypeInfo.asInstanceOf[BaseRowTypeInfo[_]].getFieldNames)
+          inputTypeInfo.getFieldTypes,
+          inputTypeInfo.getFieldNames)
       case _ => requestedTypeInfo
     }
 
@@ -138,7 +140,8 @@ object SinkCodeGenerator {
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
     var afterIndexModify = inputTerm
     val fieldIndexProcessCode =
-      if (getCompositeTypes(convertOutputType) sameElements inputTypeInfo.getFieldTypes) {
+      if (getCompositeTypes(convertOutputType).map(_.toInternalType) sameElements
+          inputTypeInfo.getFieldTypes.map(_.toInternalType)) {
         ""
       } else {
         // field index change (pojo)
@@ -147,7 +150,8 @@ object SinkCodeGenerator {
             name =>
               val index = inputTypeInfo.getFieldIndex(name)
               if (index < 0) {
-                throw new TableException(s"$name is not found in ${inputTypeInfo.getFieldNames}")
+                throw new TableException(
+                  s"$name is not found in ${inputTypeInfo.getFieldNames.mkString(", ")}")
               }
               index
           }
@@ -158,10 +162,10 @@ object SinkCodeGenerator {
           TypeConverters.createInternalTypeFromTypeInfo(inputTypeInfo),
           inputTerm,
           inputFieldMapping = Option(mapping))
-        val outputBaseRowType = new BaseRowTypeInfo(
-          classOf[GenericRow], getCompositeTypes(convertOutputType): _*)
+        val outputBaseRowType = new BaseRowTypeInfo(getCompositeTypes(convertOutputType): _*)
         val conversion = resultGenerator.generateConverterResultExpression(
-          TypeConverters.createInternalTypeFromTypeInfo(outputBaseRowType).asInstanceOf[RowType])
+          TypeConverters.createInternalTypeFromTypeInfo(outputBaseRowType).asInstanceOf[RowType],
+          classOf[GenericRow])
         afterIndexModify = CodeGenUtils.newName("afterIndexModify")
         s"""
            |${conversion.code}
@@ -204,7 +208,7 @@ object SinkCodeGenerator {
   }
 
   private def checkRowConverterValid[OUT](
-      inputTypeInfo: BaseRowTypeInfo[_],
+      inputTypeInfo: BaseRowTypeInfo,
       relType: RelDataType,
       requestedTypeInfo: TypeInformation[OUT]): Unit = {
 
@@ -271,16 +275,13 @@ object SinkCodeGenerator {
           case (fieldTypeInfo, i) =>
             val requestedTypeInfo = tt.getTypeAt(i)
             validateFieldType(requestedTypeInfo)
-            if (fieldTypeInfo != requestedTypeInfo &&
+            if (fieldTypeInfo.toInternalType != requestedTypeInfo.toInternalType &&
                 !requestedTypeInfo.isInstanceOf[GenericTypeInfo[Object]]) {
               val fieldNames = tt.getFieldNames
               throw new TableException(s"Result field '${fieldNames(i)}' does not match requested" +
                   s" type. Requested: $requestedTypeInfo; Actual: $fieldTypeInfo")
             }
         }
-
-      //The result type is BaseRow which is the same to input type, so here don't convert.
-      case _: BaseRowTypeInfo[_] =>
 
       // Atomic type requested
       case at: AtomicType[_] =>

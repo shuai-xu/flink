@@ -115,7 +115,6 @@ public class HBaseTableSource implements BatchTableSource<GenericRow>, Projectab
 	@Override
 	public RowType getReturnType() {
 		return new RowType(
-				GenericRow.class,
 				Arrays.stream(getFieldTypes()).map((Function<TypeInformation, DataType>) TypeInfoWrappedDataType::new)
 						.toArray(DataType[]::new),
 				getFieldNames());
@@ -135,7 +134,7 @@ public class HBaseTableSource implements BatchTableSource<GenericRow>, Projectab
 		TypeInformation[] fieldTypes = new TypeInformation[hBaseSchema.getFamilyNames().length];
 		int i = 0;
 		for (String family : famNames) {
-			fieldTypes[i] = new BaseRowTypeInfo(GenericRow.class, hBaseSchema.getQualifierTypes(family), hBaseSchema.getQualifierNames(family));
+			fieldTypes[i] = new BaseRowTypeInfo(hBaseSchema.getQualifierTypes(family), hBaseSchema.getQualifierNames(family));
 			i++;
 		}
 		return fieldTypes;
@@ -145,7 +144,7 @@ public class HBaseTableSource implements BatchTableSource<GenericRow>, Projectab
 	public DataStream<GenericRow> getBoundedStream(StreamExecutionEnvironment streamEnv) {
 		return streamEnv.createInput(
 			new HBaseRowInputFormat(conf, tableName, hBaseSchema),
-				(BaseRowTypeInfo) TypeConverters.toBaseRowTypeInfo(getReturnType()),
+			(TypeInformation) TypeConverters.toBaseRowTypeInfo(getReturnType()),
 			explainSource());
 	}
 

@@ -24,7 +24,7 @@ object StreamExecUtil {
 
   def getKeySelector(
     keyFields: Array[Int],
-    rowType: BaseRowTypeInfo[_]): BaseRowKeySelector = {
+    rowType: BaseRowTypeInfo): BaseRowKeySelector = {
 
     if (keyFields.nonEmpty) {
       new BinaryRowKeySelector(keyFields, rowType)

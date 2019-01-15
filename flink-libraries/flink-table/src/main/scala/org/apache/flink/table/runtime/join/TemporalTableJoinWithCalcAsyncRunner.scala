@@ -42,7 +42,7 @@ class TemporalTableJoinWithCalcAsyncRunner(
     capacity: Int,
     leftOuterJoin: Boolean,
     inputFieldTypes: Array[InternalType],
-    @transient returnType: BaseRowTypeInfo[_])
+    @transient returnType: BaseRowTypeInfo)
   extends TemporalTableJoinAsyncRunner(
     fetcherName,
     fetcherCode,

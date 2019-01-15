@@ -88,7 +88,7 @@ class CsvTableSource(
   }
 
   private val returnType = new RowType(
-    classOf[GenericRow], fieldTypes.toArray[DataType], fieldNames)
+    fieldTypes.toArray[DataType], fieldNames)
   private val returnTypeInfo = TypeConverters.toBaseRowTypeInfo(returnType)
 
   private var selectedFields: Array[Int] = fieldTypes.indices.toArray

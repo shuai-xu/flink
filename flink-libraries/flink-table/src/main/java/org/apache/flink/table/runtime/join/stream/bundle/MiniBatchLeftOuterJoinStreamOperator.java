@@ -37,8 +37,8 @@ import java.util.Map;
 public class MiniBatchLeftOuterJoinStreamOperator extends MiniBatchOuterJoinStreamOperator {
 
 	public MiniBatchLeftOuterJoinStreamOperator(
-			BaseRowTypeInfo<BaseRow> leftType,
-			BaseRowTypeInfo<BaseRow> rightType,
+			BaseRowTypeInfo leftType,
+			BaseRowTypeInfo rightType,
 			GeneratedJoinConditionFunction condFuncCode,
 			KeySelector<BaseRow, BaseRow> leftKeySelector,
 			KeySelector<BaseRow, BaseRow> rightKeySelector,

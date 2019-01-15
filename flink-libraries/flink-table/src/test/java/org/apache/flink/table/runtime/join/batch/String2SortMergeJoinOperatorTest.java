@@ -18,6 +18,7 @@
 package org.apache.flink.table.runtime.join.batch;
 
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.streaming.api.operators.StreamOperator;
@@ -56,10 +57,10 @@ import static org.apache.flink.table.runtime.join.batch.String2HashJoinOperatorT
 public class String2SortMergeJoinOperatorTest {
 
 	private boolean leftIsSmall;
-	BaseRowTypeInfo typeInfo = new BaseRowTypeInfo<>(BinaryRow.class,
+	BaseRowTypeInfo typeInfo = new BaseRowTypeInfo(
 			BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.STRING_TYPE_INFO);
-	private BaseRowTypeInfo<JoinedRow> joinedInfo = new BaseRowTypeInfo<>(
-			JoinedRow.class, STRING_TYPE_INFO, STRING_TYPE_INFO, STRING_TYPE_INFO, STRING_TYPE_INFO);
+	private BaseRowTypeInfo joinedInfo = new BaseRowTypeInfo(
+			STRING_TYPE_INFO, STRING_TYPE_INFO, STRING_TYPE_INFO, STRING_TYPE_INFO);
 
 	public String2SortMergeJoinOperatorTest(boolean leftIsSmall) {
 		this.leftIsSmall = leftIsSmall;
@@ -138,7 +139,7 @@ public class String2SortMergeJoinOperatorTest {
 	private TwoInputStreamTaskTestHarness<BinaryRow, BinaryRow, JoinedRow> buildSortMergeJoin(StreamOperator operator) throws Exception {
 		final TwoInputStreamTaskTestHarness<BinaryRow, BinaryRow, JoinedRow> testHarness =
 				new TwoInputStreamTaskTestHarness<>(TwoInputStreamTask::new, 2, 2,
-					new int[]{1, 2}, typeInfo, typeInfo, joinedInfo);
+					new int[]{1, 2}, typeInfo, (TypeInformation) typeInfo, joinedInfo);
 
 		testHarness.memorySize = 36 * 1024 * 1024;
 		testHarness.setupOutputForSingletonOperatorChain();

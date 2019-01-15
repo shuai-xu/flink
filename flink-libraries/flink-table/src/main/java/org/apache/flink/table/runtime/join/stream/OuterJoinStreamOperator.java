@@ -56,8 +56,8 @@ abstract class OuterJoinStreamOperator extends JoinStreamOperator {
 	protected transient BaseRow rightSideNullRow;
 
 	public OuterJoinStreamOperator(
-			BaseRowTypeInfo<BaseRow> leftType,
-			BaseRowTypeInfo<BaseRow> rightType, GeneratedJoinConditionFunction condFuncCode,
+			BaseRowTypeInfo leftType,
+			BaseRowTypeInfo rightType, GeneratedJoinConditionFunction condFuncCode,
 			KeySelector<BaseRow, BaseRow> leftKeySelector,
 			KeySelector<BaseRow, BaseRow> rightKeySelector,
 			GeneratedProjection leftPkProjectCode, GeneratedProjection rightPkProjectCode,

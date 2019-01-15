@@ -86,10 +86,9 @@ abstract class BatchExecHashWindowAggregateBase(
   with BatchExecHashAggregateCodeGen {
 
   lazy val aggBufferRowType: RowType = new RowType(
-    classOf[BinaryRow], aggBufferTypes.flatten.toArray[DataType], aggBufferNames.flatten)
+    aggBufferTypes.flatten.toArray[DataType], aggBufferNames.flatten)
 
   lazy val aggMapKeyRowType: RowType = new RowType(
-    classOf[BinaryRow],
     groupKeyRowType.getFieldTypes :+ timestampInternalType,
     groupKeyRowType.getFieldNames :+ "assignedTs")
 
@@ -345,6 +344,7 @@ abstract class BatchExecHashWindowAggregateBase(
         idx => generateFieldAccess(
           ctx, inputType, inputTerm, idx, nullCheck = true)) :+ expr,
       currentKeyType.asInstanceOf[RowType],
+      classOf[BinaryRow],
       outRow = currentKeyTerm,
       outRowWriter = Some(currentKeyWriterTerm))
   }
@@ -476,6 +476,7 @@ abstract class BatchExecHashWindowAggregateBase(
     val buildWindowsGroupingElementExpr = exprCodegen.generateResultExpression(
       accessExprs,
       windowElementType,
+      classOf[BinaryRow],
       outRow = bufferWindowElementTerm,
       outRowWriter = Some(bufferWindowElementWriterTerm))
 
@@ -572,7 +573,7 @@ abstract class BatchExecHashWindowAggregateBase(
       argsMapping: Array[Array[(Int, InternalType)]],
       aggBuffMapping: Array[Array[(Int, InternalType)]]): String = {
     val outputTerm = "hashAggOutput"
-    ctx.addOutputRecord(outputType, outputTerm)
+    ctx.addOutputRecord(outputType, getOutputRowClass, outputTerm)
     val (reuseAggMapEntryTerm, reuseAggMapKeyTerm, reuseAggBufferTerm) =
       prepareTermForAggMapIteration(
         ctx, outputTerm, outputType, aggMapKeyRowType, aggBufferRowType)

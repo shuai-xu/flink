@@ -149,7 +149,7 @@ class StreamExecGlobalGroupAggregate(
     val inputTransformation = getInputNodes.get(0).translateToPlan(tableEnv)
     .asInstanceOf[StreamTransformation[BaseRow]]
 
-    val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType, classOf[BaseRow])
+    val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType)
 
     val generateRetraction = StreamExecRetractionRules.isAccRetract(this)
 
@@ -195,7 +195,7 @@ class StreamExecGlobalGroupAggregate(
       val localAccTypes = localAggInfoList.getAccTypes.map(
         TypeConverters.createExternalTypeInfoFromDataType)
       // the bundle buffer value type is local acc type which contains mapview type
-      val valueTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], localAccTypes: _*)
+      val valueTypeInfo = new BaseRowTypeInfo(localAccTypes: _*)
       new KeyedBundleOperator(
         aggFunction,
         AggregateUtil.getMiniBatchTrigger(tableConfig),
@@ -206,7 +206,7 @@ class StreamExecGlobalGroupAggregate(
       throw new TableException("Local-Global optimization is only worked in miniBatch mode")
     }
 
-    val inputTypeInfo = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[BaseRow]]
+    val inputTypeInfo = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo]
     val selector = StreamExecUtil.getKeySelector(groupings, inputTypeInfo)
 
     // partitioned aggregation

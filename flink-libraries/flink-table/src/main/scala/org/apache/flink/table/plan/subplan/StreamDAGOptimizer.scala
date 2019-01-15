@@ -199,7 +199,7 @@ object StreamDAGOptimizer extends AbstractDAGOptimizer[StreamTableEnvironment] {
       isAccRetract: Boolean,
       fields: Array[Expression]): Unit = {
     val rowType = relNode.getRowType
-    val streamType = FlinkTypeFactory.toInternalRowType(rowType, classOf[BaseRow])
+    val streamType = FlinkTypeFactory.toInternalRowType(rowType)
 
     // validate and extract time attributes
     val (rowtime, _) = tEnv.validateAndExtractTimeAttributes(streamType, fields)

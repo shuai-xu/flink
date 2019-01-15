@@ -36,6 +36,7 @@ public class RowOrcInputFormat extends OrcInputFormat<Row, OrcStruct> {
 	private static final long serialVersionUID = -6522628444326366947L;
 
 	private OrcDeserializer orcDeserializer;
+	private transient Row reuse;
 
 	public RowOrcInputFormat(Path filePath, InternalType[] fieldTypes, String[] fieldNames) {
 		super(filePath, fieldTypes, fieldNames);
@@ -49,7 +50,7 @@ public class RowOrcInputFormat extends OrcInputFormat<Row, OrcStruct> {
 	}
 
 	@Override
-	public Row convert(OrcStruct current, Row reuse) {
+	public Row convert(OrcStruct current) {
 		if (reuse == null) {
 			return orcDeserializer.deserialize(current, new Row(fieldNames.length));
 		}

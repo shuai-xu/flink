@@ -79,9 +79,9 @@ public class SortOperatorTest {
 	public void test(List<BinaryRow> rawData) throws Exception {
 		TestSortOperator operator = new TestSortOperator();
 
-		BaseRowTypeInfo typeInfo = new BaseRowTypeInfo<>(BinaryRow.class, STRING_TYPE_INFO, STRING_TYPE_INFO);
+		BaseRowTypeInfo typeInfo = new BaseRowTypeInfo(STRING_TYPE_INFO, STRING_TYPE_INFO);
 		OneInputStreamTaskTestHarness<BinaryRow, BinaryRow> testHarness =
-				new OneInputStreamTaskTestHarness<>(OneInputStreamTask::new, 2, 2, typeInfo, typeInfo);
+				new OneInputStreamTaskTestHarness<>(OneInputStreamTask::new, 2, 2, (TypeInformation) typeInfo, typeInfo);
 
 		testHarness.setupOutputForSingletonOperatorChain();
 		StreamConfig streamConfig = testHarness.getStreamConfig();

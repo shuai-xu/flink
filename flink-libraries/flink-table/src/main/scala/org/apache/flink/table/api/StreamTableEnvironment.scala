@@ -501,7 +501,7 @@ abstract class StreamTableEnvironment(
       uniqueKeys: util.Set[_ <: util.Set[String]],
       monotonicity: RelModifiedMonotonicity): Unit = {
 
-    val inputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(rowType, classOf[BaseRow])
+    val inputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(rowType)
 
     // validate and extract time attributes
     val (rowtime, proctime) = validateAndExtractTimeAttributes(inputType, fields)

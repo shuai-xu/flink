@@ -43,7 +43,7 @@ class JoinedRowAsyncCollector(
   val nullRow: GenericRow = new GenericRow(rightArity)
   val delegate = new DelegateResultFuture
   private val rightSer = DataTypes.createInternalSerializer(
-    new RowType(classOf[GenericRow], rightTypes: _*)).asInstanceOf[BaseRowSerializer[BaseRow]]
+    new RowType(rightTypes: _*)).asInstanceOf[BaseRowSerializer[BaseRow]]
 
   def reset(row: BaseRow, realOutput: ResultFuture[BaseRow]): Unit = {
     this.realOutput = realOutput

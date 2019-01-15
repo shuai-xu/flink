@@ -30,12 +30,14 @@ public class RowParquetInputFormat extends ParquetInputFormat<Row, Row> {
 
 	private static final long serialVersionUID = -2569974518641072339L;
 
+	private transient Row reuse;
+
 	public RowParquetInputFormat(Path filePath, InternalType[] fieldTypes, String[] fieldNames) {
 		super(filePath, fieldTypes, fieldNames);
 	}
 
 	@Override
-	public Row convert(Row current, Row reuse) {
+	public Row convert(Row current) {
 		if (reuse == null) {
 			return Row.copy(current);
 		} else {

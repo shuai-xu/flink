@@ -31,7 +31,7 @@ import org.apache.flink.table.codegen.GeneratedExpression.{NEVER_NULL, NO_CODE}
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.BatchExecAggregateCodeGen
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCollect
-import org.apache.flink.table.dataformat.{BinaryRow, GenericRow, JoinedRow}
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, GenericRow, JoinedRow}
 import org.apache.flink.table.expressions.ExpressionUtils.isTimeIntervalLiteral
 import org.apache.flink.table.expressions.{Expression, If, Literal}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
@@ -108,7 +108,6 @@ abstract class BatchExecWindowAggregateBase(
   }.toArray[Array[InternalType]]
 
   lazy val groupKeyRowType = new RowType(
-    classOf[BinaryRow],
     grouping.map { index =>
       FlinkTypeFactory.toInternalType(inputRelDataType.getFieldList.get(index).getType)
     }.toArray[DataType], grouping.map(inputRelDataType.getFieldNames.get(_)))
@@ -120,7 +119,6 @@ abstract class BatchExecWindowAggregateBase(
       .asInstanceOf[Map[AggregateFunction[_, _], String]]
 
   lazy val windowedGroupKeyType: RowType = new RowType(
-    classOf[BinaryRow],
     groupKeyRowType.getFieldTypes :+ timestampInternalType,
     groupKeyRowType.getFieldNames :+ "assignedTs$")
 
@@ -148,13 +146,8 @@ abstract class BatchExecWindowAggregateBase(
 
   override def isDeterministic: Boolean = AggregateUtil.isDeterministic(getAggCallList)
 
-  def getOutputType: RowType = {
-    if (namedProperties.isEmpty && grouping.isEmpty) {
-      FlinkTypeFactory.toInternalRowType(getRowType, classOf[GenericRow])
-    } else {
-      FlinkTypeFactory.toInternalRowType(getRowType, classOf[JoinedRow])
-    }
-  }
+  def getOutputRowClass: Class[_ <: BaseRow] =
+    if (namedProperties.isEmpty && grouping.isEmpty) classOf[GenericRow] else classOf[JoinedRow]
 
   private[flink] def getWindowsGroupingElementInfo(
       enablePreAccumulate: Boolean = true): RowType = {
@@ -164,11 +157,10 @@ abstract class BatchExecWindowAggregateBase(
       val (aggBuffNames, aggBuffTypes) =
         (aggBufferNames.flatten, aggBufferTypes.flatten)
       new RowType(
-        classOf[BinaryRow],
         (groupKeyTypes :+ timestampInternalType) ++ aggBuffTypes,
         (groupKeyNames :+ "assignedTs$") ++ aggBuffNames)
     } else {
-      FlinkTypeFactory.toInternalRowType(inputRelDataType, classOf[BinaryRow])
+      FlinkTypeFactory.toInternalRowType(inputRelDataType)
     }
   }
 
@@ -278,7 +270,6 @@ abstract class BatchExecWindowAggregateBase(
     } else {
       // output assigned window and agg buffer
       val valueRowType = new RowType(
-        classOf[GenericRow],
         timestampInternalType +: aggBufferExprs.map(_.resultType): _*)
       val wStartCode = if (timestampIsDate) {
         convertToIntValue(s"$currentWindow.getStart()")
@@ -289,6 +280,7 @@ abstract class BatchExecWindowAggregateBase(
         s"$wStartCode", NEVER_NULL, NO_CODE, timestampInternalType, literal = true) +:
           aggBufferExprs,
         valueRowType,
+        classOf[GenericRow],
         outRow = valueRow)
     }
 
@@ -298,7 +290,7 @@ abstract class BatchExecWindowAggregateBase(
       case Some(key) =>
         // generate agg result
         val windowAggResultTerm = CodeGenUtils.newName("windowAggResult")
-        ctx.addOutputRecord(outputType.toInternalType, windowAggResultTerm)
+        ctx.addOutputRecord(outputType, classOf[JoinedRow], windowAggResultTerm)
         val output =
           s"""
              |${setValueResult.code}
@@ -420,7 +412,8 @@ abstract class BatchExecWindowAggregateBase(
     ctx.addReusableMember(s"transient long $lastTimestampTerm = -1;")
     val preAccResult = CodeGenUtils.newName("prepareWinElement")
     val preAccResultWriter = CodeGenUtils.newName("prepareWinElementWriter")
-    ctx.addOutputRecord(windowElementType, preAccResult, Some(preAccResultWriter))
+    ctx.addOutputRecord(
+      windowElementType, classOf[BinaryRow], preAccResult, Some(preAccResultWriter))
 
     val timeWindowType = classOf[TimeWindow].getName
     val currentWindow = newName("currentWindow")
@@ -449,7 +442,7 @@ abstract class BatchExecWindowAggregateBase(
           (GeneratedExpression(lastTimestampTerm, NEVER_NULL, NO_CODE, DataTypes.LONG,
             literal = true) +: aggBufferExprs)
         val setPanedAggResultExpr = exprCodegen.generateResultExpression(
-          setResultExprs, windowElementType.toInternalType.asInstanceOf[RowType],
+          setResultExprs, windowElementType, classOf[BinaryRow],
           preAccResult, Some(preAccResultWriter))
 
         // using windows grouping buffer to merge paned agg results
@@ -577,12 +570,12 @@ abstract class BatchExecWindowAggregateBase(
       val lastFieldPos = outputFields.size - 1
       val propFields =
         for (offset <- lastFieldPos - propSize + 1 to lastFieldPos) yield outputFields(offset)
-      val propOutputType = new RowType(classOf[GenericRow], propFields: _*)
+      val propOutputType = new RowType(propFields: _*)
       // reusable row to set window property fields
       val propTerm = CodeGenUtils.newName("windowProp")
-      ctx.addOutputRecord(propOutputType.toInternalType, propTerm)
+      ctx.addOutputRecord(propOutputType, classOf[GenericRow], propTerm)
       val windowAggResultWithPropTerm = CodeGenUtils.newName("windowAggResultWithProperty")
-      ctx.addOutputRecord(outputType.toInternalType, windowAggResultWithPropTerm)
+      ctx.addOutputRecord(outputType, classOf[JoinedRow], windowAggResultWithPropTerm)
 
       // set window start, end property according to window type
       val (startPos, endPos, rowTimePos) = AggregateUtil.computeWindowPropertyPos(namedProperties)

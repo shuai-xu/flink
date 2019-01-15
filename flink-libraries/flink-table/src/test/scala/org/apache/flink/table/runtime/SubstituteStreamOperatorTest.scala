@@ -41,7 +41,7 @@ class SubstituteStreamOperatorTest {
   def testCodegenOneInputStreamOperator(): Unit = {
     val processCode = "in1.setInt(0, 2);"
     val generatedOperator = OperatorCodeGenerator.generateOneInputStreamOperator[Date, Date](
-      ctx, operatorName, processCode, "", new RowType(classOf[BaseRow], DataTypes.DATE),
+      ctx, operatorName, processCode, "", new RowType(DataTypes.DATE),
       new TableConfig)
     val substituteOperator = new OneInputSubstituteStreamOperator[Date, Date](
       generatedOperator.name, generatedOperator.code)

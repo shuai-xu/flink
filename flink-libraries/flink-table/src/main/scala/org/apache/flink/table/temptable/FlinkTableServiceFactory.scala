@@ -47,7 +47,7 @@ class FlinkTableServiceFactory extends BatchTableSinkFactory[BaseRow]
   }
 
   private def toRowType(schema: RichTableSchema): RowType = new RowType(
-    classOf[BaseRow], schema.getColumnTypes.toArray[DataType], schema.getColumnNames)
+    schema.getColumnTypes.toArray[DataType], schema.getColumnNames)
 
   override def createBatchTableSource(
     properties: java.util.Map[String, String]): BatchTableSource[BaseRow] = {

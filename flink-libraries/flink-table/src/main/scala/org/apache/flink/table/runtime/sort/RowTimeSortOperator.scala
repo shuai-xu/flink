@@ -39,7 +39,7 @@ import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowTypeInfo,
   * @param memorySize        The size of in memory buffer.
   */
 class RowTimeSortOperator(
-    private val inputRowType: BaseRowTypeInfo[BaseRow],
+    private val inputRowType: BaseRowTypeInfo,
     private var gSorter: GeneratedSorter,
     private val rowtimeIdx: Int,
     private val memorySize: Double)

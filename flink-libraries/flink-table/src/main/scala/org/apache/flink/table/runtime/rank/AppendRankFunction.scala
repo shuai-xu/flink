@@ -43,8 +43,8 @@ import org.apache.flink.util.Collector
   * as, rank an append input stream
   */
 class AppendRankFunction(
-    inputRowType: BaseRowTypeInfo[_],
-    sortKeyType: BaseRowTypeInfo[_],
+    inputRowType: BaseRowTypeInfo,
+    sortKeyType: BaseRowTypeInfo,
     gSorter: GeneratedSorter,
     sortKeySelector: KeySelector[BaseRow, BaseRow],
     outputArity: Int,
@@ -85,11 +85,11 @@ class AppendRankFunction(
     LOG.info("Top{} operator is using LRU caches key-size: {}", getDefaultTopSize, lruCacheSize)
 
     val valueTypeInfo = new ListTypeInfo[BaseRow](
-      inputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
+      inputRowType.asInstanceOf[BaseRowTypeInfo])
     val mapStateDescriptor = new MapStateDescriptor[BaseRow, JList[BaseRow]](
       "data-state-with-append",
-      new BaseRowTypeInfo(classOf[BaseRow], sortKeyType.getFieldTypes: _*)
-        .asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      new BaseRowTypeInfo(sortKeyType.getFieldTypes: _*)
+        .asInstanceOf[BaseRowTypeInfo],
       valueTypeInfo)
     dataState = ctx.getKeyedMapState(mapStateDescriptor)
 

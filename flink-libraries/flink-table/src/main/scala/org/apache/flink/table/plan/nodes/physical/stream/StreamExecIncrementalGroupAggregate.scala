@@ -120,8 +120,8 @@ class StreamExecIncrementalGroupAggregate(
     val inputTransformation = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
 
-    val inputRowType = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
-    val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType, classOf[BaseRow])
+    val inputRowType = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo]
+    val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType)
     val opName = getOperatorName
 
     val partialAggsHandler = generateAggsHandler(
@@ -147,7 +147,7 @@ class StreamExecIncrementalGroupAggregate(
     val shuffleKeySelector = StreamExecUtil.getKeySelector(shuffleKey, inputRowType)
     val groupKeySelector = StreamExecUtil.getKeySelector(
       groupKey,
-      shuffleKeySelector.getProducedType.asInstanceOf[BaseRowTypeInfo[_]])
+      shuffleKeySelector.getProducedType.asInstanceOf[BaseRowTypeInfo])
 
     val aggFunction = new MiniBatchIncrementalGroupAggFunction(
       partialAggsHandler,
@@ -157,7 +157,7 @@ class StreamExecIncrementalGroupAggregate(
     val partialAccTypes = partialAggInfoList.getAccTypes.map(
       TypeConverters.createExternalTypeInfoFromDataType)
     // the bundle buffer value type is partial acc type which contains mapview type
-    val valueTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], partialAccTypes: _*)
+    val valueTypeInfo = new BaseRowTypeInfo(partialAccTypes: _*)
     val operator = new KeyedBundleOperator(
       aggFunction,
       AggregateUtil.getMiniBatchTrigger(tableEnv.getConfig),

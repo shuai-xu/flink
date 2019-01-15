@@ -67,7 +67,7 @@ object TypeUtils {
 
   def isInternalCompositeType(t: TypeInformation[_]): Boolean = {
     t match {
-      case _: BaseRowTypeInfo[_] |
+      case _: BaseRowTypeInfo |
            _: RowTypeInfo |
            _: PojoTypeInfo[_] |
            _: TupleTypeInfo[_] |
@@ -132,7 +132,7 @@ object TypeUtils {
 
   def createInternalComparator(t: TypeInformation[_], order: Boolean)
     : TypeComparator[_] = t match {
-    case rt: BaseRowTypeInfo[_] => new BaseRowComparator(rt.getFieldTypes, order)
+    case rt: BaseRowTypeInfo => new BaseRowComparator(rt.getFieldTypes, order)
     case rt: RowTypeInfo => new BaseRowComparator(rt.getFieldTypes, order)
     case pj: PojoTypeInfo[_] => new BaseRowComparator((0 until pj.getArity).map(
       pj.getPojoFieldAt).map{field: PojoField => field.getTypeInformation}.toArray, order)

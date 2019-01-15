@@ -44,7 +44,6 @@ class CalcITCase extends StreamingTestBase {
 
     implicit val tpe: TypeInformation[GenericRow] =
       new BaseRowTypeInfo(
-        classOf[GenericRow],
         BasicTypeInfo.INT_TYPE_INFO,
         BasicTypeInfo.INT_TYPE_INFO,
         BasicTypeInfo.LONG_TYPE_INFO).asInstanceOf[TypeInformation[GenericRow]]
@@ -55,7 +54,6 @@ class CalcITCase extends StreamingTestBase {
     tEnv.registerTable("MyTableRow", t)
 
     val outputType = new BaseRowTypeInfo(
-      classOf[BaseRow],
       BasicTypeInfo.INT_TYPE_INFO,
       BasicTypeInfo.INT_TYPE_INFO,
       BasicTypeInfo.LONG_TYPE_INFO)
@@ -89,7 +87,6 @@ class CalcITCase extends StreamingTestBase {
     tEnv.registerTable("MyTableRow", t)
 
     val outputType = new BaseRowTypeInfo(
-      classOf[BaseRow],
       BasicTypeInfo.STRING_TYPE_INFO,
       BasicTypeInfo.STRING_TYPE_INFO,
       BasicTypeInfo.INT_TYPE_INFO)
@@ -116,7 +113,6 @@ class CalcITCase extends StreamingTestBase {
 
     implicit val tpe: TypeInformation[GenericRow] =
       new BaseRowTypeInfo(
-        classOf[GenericRow],
         BasicTypeInfo.INT_TYPE_INFO,
         BasicTypeInfo.INT_TYPE_INFO,
         BasicTypeInfo.LONG_TYPE_INFO).asInstanceOf[TypeInformation[GenericRow]]

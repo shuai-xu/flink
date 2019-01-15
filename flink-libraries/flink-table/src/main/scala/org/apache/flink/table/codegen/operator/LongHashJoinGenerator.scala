@@ -177,7 +177,7 @@ object LongHashJoinGenerator {
     ctx.addReusableInnerClass(tableTerm, tableCode)
 
     ctx.addReusableNullRow("buildSideNullRow", buildSer.getNumFields)
-    ctx.addOutputRecord(new RowType(classOf[JoinedRow]), "joinedRow")
+    ctx.addOutputRecord(new RowType(), classOf[JoinedRow], "joinedRow")
     ctx.addReusableMember(s"$tableTerm table;")
     ctx.addReusableOpenStatement(s"table = new $tableTerm();")
 

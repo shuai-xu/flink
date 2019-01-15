@@ -167,7 +167,7 @@ class StreamExecSink[T](
           s"DataStream by casting all other fields to TIMESTAMP.")
     } else if (rowtimeFields.size == 1) {
 
-      val origRowType = parTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
+      val origRowType = parTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo]
       val convFieldTypes = origRowType.getFieldTypes.map { t =>
         if (FlinkTypeFactory.isRowtimeIndicatorType(t)) {
           SqlTimeTypeInfo.TIMESTAMP
@@ -175,7 +175,7 @@ class StreamExecSink[T](
           t
         }
       }
-      new BaseRowTypeInfo(classOf[BaseRow], convFieldTypes, origRowType.getFieldNames)
+      new BaseRowTypeInfo(convFieldTypes, origRowType.getFieldNames)
     } else {
       parTransformation.getOutputType
     }
@@ -186,7 +186,7 @@ class StreamExecSink[T](
     val (converterOperator, outputType) = generateRowConverterOperator[BaseRow, T](
       config,
       ctx,
-      convType.asInstanceOf[BaseRowTypeInfo[_]],
+      convType.asInstanceOf[BaseRowTypeInfo],
       logicalType,
       "DataStreamSinkConversion",
       optionRowTimeField,

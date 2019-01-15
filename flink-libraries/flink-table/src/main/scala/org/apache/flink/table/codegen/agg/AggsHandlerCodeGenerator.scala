@@ -47,7 +47,7 @@ class AggsHandlerCodeGenerator(
     nullCheck: Boolean,
     copyInputField: Boolean) {
 
-  private val inputType = new RowType(classOf[BaseRow], inputFieldTypes: _*)
+  private val inputType = new RowType(inputFieldTypes: _*)
 
   /** constant expressions that act like a second input in the parameter indices. */
   private var constantExprs: Seq[GeneratedExpression] = Seq()
@@ -164,7 +164,6 @@ class AggsHandlerCodeGenerator(
   private def initialAggregateInformation(aggInfoList: AggregateInfoList): Unit = {
 
     this.accTypeInfo = new RowType(
-      classOf[GenericRow],
       aggInfoList.getAccTypes.map(_.toInternalType): _*)
     this.aggBufferSize = accTypeInfo.getArity
     var aggBufferOffset: Int = 0
@@ -478,7 +477,8 @@ class AggsHandlerCodeGenerator(
     val accTerm = newName("acc")
     val resultExpr = exprGenerator.generateResultExpression(
       initAccExprs,
-      accTypeInfo.toInternalType.asInstanceOf[RowType],
+      accTypeInfo,
+      classOf[GenericRow],
       outRow = accTerm,
       reusedOutRow = false)
 
@@ -500,7 +500,8 @@ class AggsHandlerCodeGenerator(
     // always create a new accumulator row
     val resultExpr = exprGenerator.generateResultExpression(
       accExprs,
-      accTypeInfo.toInternalType.asInstanceOf[RowType],
+      accTypeInfo,
+      classOf[GenericRow],
       outRow = accTerm,
       reusedOutRow = false)
 
@@ -595,9 +596,9 @@ class AggsHandlerCodeGenerator(
         // the padding types will be ignored
         val padding = Array.range(0, mergedAccOffset).map(_ => DataTypes.INT)
         val typeInfo = padding ++ mergedAccExternalTypes
-        new RowType(classOf[GenericRow], typeInfo.map(_.toInternalType): _*)
+        new RowType(typeInfo.map(_.toInternalType): _*)
       } else {
-        new RowType(classOf[GenericRow], mergedAccExternalTypes.map(_.toInternalType): _*)
+        new RowType(mergedAccExternalTypes.map(_.toInternalType): _*)
       }
 
       // bind input1 as otherAcc
@@ -653,12 +654,13 @@ class AggsHandlerCodeGenerator(
     }
 
     val aggValueTerm = newName("aggValue")
-    valueType = new RowType(classOf[GenericRow], valueExprs.map(_.resultType): _*)
+    valueType = new RowType(valueExprs.map(_.resultType): _*)
 
     // always create a new result row
     val resultExpr = exprGenerator.generateResultExpression(
       valueExprs,
       valueType,
+      classOf[GenericRow],
       outRow = aggValueTerm,
       reusedOutRow = false)
 

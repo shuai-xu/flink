@@ -63,8 +63,8 @@ public class SemiAntiJoinStreamOperator extends JoinStreamOperator {
 	private boolean rightNotEmitRetraction;
 
 	public SemiAntiJoinStreamOperator(
-			BaseRowTypeInfo<BaseRow> leftType,
-			BaseRowTypeInfo<BaseRow> rightType, GeneratedJoinConditionFunction condFuncCode,
+			BaseRowTypeInfo leftType,
+			BaseRowTypeInfo rightType, GeneratedJoinConditionFunction condFuncCode,
 			KeySelector<BaseRow, BaseRow> leftKeySelector,
 			KeySelector<BaseRow, BaseRow> rightKeySelector,
 			GeneratedProjection leftPkProjectCode, GeneratedProjection rightPkProjectCode,

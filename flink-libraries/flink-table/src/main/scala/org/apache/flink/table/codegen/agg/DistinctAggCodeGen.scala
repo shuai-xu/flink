@@ -364,13 +364,13 @@ class DistinctAggCodeGen(
     if (fieldExprs.length > 1) {
       val keyTerm = newName(DISTINCT_KEY_TERM)
       val valueType = new RowType(
-        classOf[GenericRow],
         fieldExprs.map(_.resultType): _*)
 
       // always create a new result row
       generator.generateResultExpression(
         fieldExprs,
         valueType,
+        classOf[GenericRow],
         outRow = keyTerm,
         reusedOutRow = false)
     } else {

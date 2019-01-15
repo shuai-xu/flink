@@ -142,7 +142,7 @@ class StreamExecRank(
     val inputTransform = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
 
-    val inputRowTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], inputSchema.fieldTypeInfos: _*)
+    val inputRowTypeInfo = new BaseRowTypeInfo(inputSchema.fieldTypeInfos: _*)
     val fieldCollation = sortCollation.getFieldCollations.asScala
     val sortKeySelector = createSortKeySelector(fieldCollation, inputSchema)
     val (sortKeyType, sorter) = createSortKeyTypeAndSorter(inputSchema, fieldCollation)
@@ -213,10 +213,10 @@ class StreamExecRank(
           generateRetraction,
           tableConfig)
     }
-    val outputBaseInfo = schema.typeInfo(classOf[BaseRow]).asInstanceOf[BaseRowTypeInfo[BaseRow]]
+    val outputBaseInfo = schema.typeInfo().asInstanceOf[BaseRowTypeInfo]
     val rankOpName = getOperatorName
 
-    val inputTypeInfo = inputSchema.typeInfo(classOf[BaseRow])
+    val inputTypeInfo = inputSchema.typeInfo()
     val selector = StreamExecUtil.getKeySelector(partitionKey, inputTypeInfo)
 
     val operator = new KeyedProcessOperator(processFunction)

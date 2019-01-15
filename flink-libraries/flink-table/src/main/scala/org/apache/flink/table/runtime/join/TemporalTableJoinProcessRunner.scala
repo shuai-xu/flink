@@ -37,7 +37,7 @@ class TemporalTableJoinProcessRunner(
     var collectorCode: String,
     leftOuterJoin: Boolean,
     inputFieldTypes: Array[InternalType],
-    @transient returnType: BaseRowTypeInfo[_])
+    @transient returnType: BaseRowTypeInfo)
   extends ProcessFunction[BaseRow, BaseRow]
   with ResultTypeQueryable[BaseRow]
   with Compiler[Any]
@@ -93,8 +93,8 @@ class TemporalTableJoinProcessRunner(
 
   def getFetcherCollector: Collector[BaseRow] = collector
 
-  override def getProducedType: BaseRowTypeInfo[BaseRow] =
-    returnType.asInstanceOf[BaseRowTypeInfo[BaseRow]]
+  override def getProducedType: BaseRowTypeInfo =
+    returnType.asInstanceOf[BaseRowTypeInfo]
 
   override def close(): Unit = {
     FunctionUtils.closeFunction(fetcher)

@@ -21,6 +21,7 @@ import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
+import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
@@ -197,7 +198,7 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       rightInput.getOutputType).asInstanceOf[RowType]
 
     val keyType = new RowType(
-      classOf[BinaryRow], leftAllKey.map(leftType.getFieldTypes()(_)): _*)
+      leftAllKey.map(leftType.getFieldTypes()(_)): _*)
 
     val condFunc = generateConditionFunction(config, leftType, rightType)
 
@@ -285,7 +286,7 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       rightInput,
       getOperatorName,
       operator,
-      getOutputType,
+      FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType),
       getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     if (!leftSorted && !rightSorted) {

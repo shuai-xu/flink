@@ -22,6 +22,7 @@ import org.apache.flink.streaming.api.transformations.{OneInputTransformation, S
 import org.apache.flink.table.api.functions.UserDefinedFunction
 import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions}
+import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
@@ -151,7 +152,7 @@ class BatchExecHashAggregate(
     val input = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
-    val outputRowType = getOutputRowType
+    val outputRowType = FlinkTypeFactory.toInternalRowType(getRowType)
     val inputType = TypeConverters.createInternalTypeFromTypeInfo(
       input.getOutputType).asInstanceOf[RowType]
     val generatedOperator = if (grouping.isEmpty) {

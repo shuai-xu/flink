@@ -33,7 +33,7 @@ class TemporalTableJoinWithCalcProcessRunner(
     collectorCode: String,
     leftOuterJoin: Boolean,
     inputFieldTypes: Array[InternalType],
-  @transient returnType: BaseRowTypeInfo[_])
+  @transient returnType: BaseRowTypeInfo)
   extends TemporalTableJoinProcessRunner(
     fetcherName,
     fetcherCode,

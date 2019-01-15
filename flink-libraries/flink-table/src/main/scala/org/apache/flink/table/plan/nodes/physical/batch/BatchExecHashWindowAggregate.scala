@@ -39,6 +39,7 @@ import org.apache.calcite.tools.RelBuilder
 
 import java.util
 import org.apache.flink.runtime.operators.DamBehavior
+import org.apache.flink.table.calcite.FlinkTypeFactory
 
 class BatchExecHashWindowAggregate(
     window: LogicalWindow,
@@ -109,7 +110,7 @@ class BatchExecHashWindowAggregate(
 
     val input = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
-    val outputRowType = getOutputType
+    val outputRowType = FlinkTypeFactory.toInternalRowType(getRowType)
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
 
     val groupBufferLimitSize = ExecResourceUtil.getWindowAggBufferLimitSize(

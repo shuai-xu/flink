@@ -28,7 +28,7 @@ import org.junit.{Ignore, Test}
 
 class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
 
-  val testDataType = new BaseRowTypeInfo(classOf[BinaryRow],
+  val testDataType = new BaseRowTypeInfo(
                                          Types.BOOLEAN,
                                          Types.BYTE,
                                          Types.SHORT,
@@ -87,8 +87,8 @@ class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
 
   val emptyData: Seq[BinaryRow] = Nil
 
-  private def getTestResultType: BaseRowTypeInfo[BinaryRow] = {
-    new BaseRowTypeInfo(classOf[BinaryRow],
+  private def getTestResultType: BaseRowTypeInfo = {
+    new BaseRowTypeInfo(
                         Types.BOOLEAN,
                         Types.BYTE,
                         Types.SHORT,
@@ -102,7 +102,7 @@ class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
                         Types.SQL_TIMESTAMP)
   }
 
-  private def getNullRowForResultType(resultType: BaseRowTypeInfo[BinaryRow]): BinaryRow = {
+  private def getNullRowForResultType(resultType: BaseRowTypeInfo): BinaryRow = {
     row(resultType, null, null, null, null, null, null, null, null, null, null, null)
   }
 
@@ -230,7 +230,7 @@ class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
       Seq('f1.sum, 'f2.sum, 'f3.sum, 'f4.sum, 'f5.sum, 'f6.sum)
     }
 
-    val resultType = new BaseRowTypeInfo(classOf[BinaryRow],
+    val resultType = new BaseRowTypeInfo(
                                          Types.BYTE,
                                          Types.SHORT,
                                          Types.INT,
@@ -272,7 +272,7 @@ class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
       Seq('f1.sum0, 'f2.sum0, 'f3.sum0, 'f4.sum0, 'f5.sum0, 'f6.sum0)
     }
 
-    val resultType = new BaseRowTypeInfo(classOf[BinaryRow],
+    val resultType = new BaseRowTypeInfo(
                                          Types.BYTE,
                                          Types.SHORT,
                                          Types.INT,
@@ -314,7 +314,7 @@ class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
       Seq('f1.incr_sum, 'f2.incr_sum, 'f3.incr_sum, 'f4.incr_sum, 'f5.incr_sum, 'f6.incr_sum)
     }
 
-    val resultType = new BaseRowTypeInfo(classOf[BinaryRow],
+    val resultType = new BaseRowTypeInfo(
                                          Types.BYTE,
                                          Types.SHORT,
                                          Types.INT,
@@ -352,7 +352,7 @@ class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
 
   @Test
   def testAvg(): Unit = {
-    val localResultType = new BaseRowTypeInfo(classOf[BinaryRow],
+    val localResultType = new BaseRowTypeInfo(
                                               Types.LONG,
                                               Types.LONG,
                                               Types.LONG,
@@ -366,7 +366,7 @@ class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
                                               BigDecimalTypeInfo.of(38, 0),
                                               Types.LONG)
 
-    val resultType = new BaseRowTypeInfo(classOf[BinaryRow],
+    val resultType = new BaseRowTypeInfo(
                                          Types.DOUBLE,
                                          Types.DOUBLE,
                                          Types.DOUBLE,
@@ -405,7 +405,7 @@ class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
 
   @Test @Ignore
   def testCount(): Unit = {
-    val resultType = new BaseRowTypeInfo(classOf[BinaryRow],
+    val resultType = new BaseRowTypeInfo(
       Types.LONG,
       Types.LONG,
       Types.LONG,
@@ -469,7 +469,7 @@ class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
   }
 
   def testSingleValueInner(inputData: Seq[BinaryRow]): Unit = {
-    val localResultType = new BaseRowTypeInfo(classOf[BinaryRow],
+    val localResultType = new BaseRowTypeInfo(
                                               Types.BOOLEAN,
                                               Types.INT,
 
@@ -517,7 +517,7 @@ class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
 
   @Test
   def testMinMaxWithFixLengthString(): Unit = {
-    val inputDataType = new BaseRowTypeInfo(classOf[BinaryRow],
+    val inputDataType = new BaseRowTypeInfo(
       Types.STRING
     )
     val inputData = Seq(
@@ -526,7 +526,7 @@ class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
       row(inputDataType, "WORLD"),
       row(inputDataType, "")
     )
-    val resultType = new BaseRowTypeInfo(classOf[BinaryRow],
+    val resultType = new BaseRowTypeInfo(
       Types.STRING,
       Types.STRING
     )
@@ -545,7 +545,7 @@ class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
 
   @Test
   def testConcatAgg(): Unit = {
-    val inputDataType = new BaseRowTypeInfo(classOf[BinaryRow],
+    val inputDataType = new BaseRowTypeInfo(
       Types.STRING,
       Types.STRING
     )
@@ -555,11 +555,11 @@ class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
       row(inputDataType, "-", "T"),
       row(inputDataType, "-", "T")
     )
-    val localResultType = new BaseRowTypeInfo(classOf[BinaryRow],
+    val localResultType = new BaseRowTypeInfo(
       Types.STRING,
       Types.STRING
     )
-    val resultType = new BaseRowTypeInfo(classOf[BinaryRow],
+    val resultType = new BaseRowTypeInfo(
       Types.STRING
     )
 

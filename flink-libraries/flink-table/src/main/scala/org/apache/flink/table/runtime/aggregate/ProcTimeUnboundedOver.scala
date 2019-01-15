@@ -55,7 +55,7 @@ class ProcTimeUnboundedOver(
 
     output = new JoinedRow()
 
-    val accTypeInfo = new BaseRowTypeInfo(classOf[BaseRow],
+    val accTypeInfo = new BaseRowTypeInfo(
       accTypes.map(TypeConverters.createExternalTypeInfoFromDataType): _*)
     val stateDescriptor = new ValueStateDescriptor("accState", accTypeInfo)
     accState = ctx.getKeyedValueState(stateDescriptor)

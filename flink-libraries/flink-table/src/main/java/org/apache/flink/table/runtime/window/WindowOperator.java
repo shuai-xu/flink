@@ -271,7 +271,7 @@ public class WindowOperator<K, W extends Window>
 		triggerContext = new TriggerContext();
 		triggerContext.open();
 
-		RowType accTypeInfo = new RowType(BaseRow.class, accumulatorTypes);
+		RowType accTypeInfo = new RowType(accumulatorTypes);
 		SubKeyedValueStateDescriptor<K, W, BaseRow> windowStateDescriptor = new SubKeyedValueStateDescriptor<>(
 			"window-aggs",
 			keySerializer,
@@ -282,7 +282,7 @@ public class WindowOperator<K, W extends Window>
 
 		if (sendRetraction) {
 			InternalType[] valueTypes = ArrayUtils.addAll(aggResultTypes, windowPropertyTypes);
-			RowType prevAggResultType = new RowType(BaseRow.class, valueTypes);
+			RowType prevAggResultType = new RowType(valueTypes);
 			SubKeyedValueStateDescriptor<K, W, BaseRow> previousStateDescriptor = new SubKeyedValueStateDescriptor<>(
 				"previous-aggs",
 				keySerializer,

@@ -34,7 +34,7 @@ import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
   * @param rowtimeIdx   The index of the rowtime field.
   */
 class OnlyRowTimeSortOperator(
-    private val inputRowType: BaseRowTypeInfo[BaseRow],
+    private val inputRowType: BaseRowTypeInfo,
     private val rowtimeIdx: Int) extends SortBaseOperator {
 
   @transient private var timeListState: KeyedListState[JLong, BaseRow] = _

@@ -74,13 +74,13 @@ class StreamExecExpand(
     val inputTransformation = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
     val inputType = TypeConverters.createInternalTypeFromTypeInfo(inputTransformation.getOutputType)
-    val outputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[GenericRow])
+    val outputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType)
 
     val ctx = CodeGeneratorContext(config)
     val substituteStreamOperator = ExpandCodeGenerator.generateExpandOperator(
       ctx,
       inputType,
-      outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      outputType,
       config,
       projects,
       ruleDescription,
@@ -90,7 +90,7 @@ class StreamExecExpand(
       inputTransformation,
       getOperatorName,
       substituteStreamOperator,
-      outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      outputType,
       inputTransformation.getParallelism)
     transformation
   }

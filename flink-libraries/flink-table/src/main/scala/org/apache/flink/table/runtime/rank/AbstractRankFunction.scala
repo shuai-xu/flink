@@ -37,7 +37,7 @@ import org.apache.flink.util.Collector
 abstract class AbstractRankFunction(
     tableConfig: TableConfig,
     rankRange: RankRange,
-    inputRowType: BaseRowTypeInfo[_],
+    inputRowType: BaseRowTypeInfo,
     inputArity: Int,
     outputArity: Int,
     generateRetraction: Boolean)
@@ -257,7 +257,7 @@ abstract class AbstractRankFunction(
     */
   protected def getMaxSortMapSize: Long
 
-  private def createEqualiser(inputRowType: BaseRowTypeInfo[_]): GeneratedRecordEqualiser = {
+  private def createEqualiser(inputRowType: BaseRowTypeInfo): GeneratedRecordEqualiser = {
     val inputTypes = inputRowType.getFieldTypes.map(TypeConverters.createInternalTypeFromTypeInfo)
     val generator = new EqualiserCodeGenerator(inputTypes)
     generator.generateRecordEqualiser("RankValueEqualiser")

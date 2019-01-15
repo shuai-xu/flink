@@ -54,7 +54,7 @@ public class VectorizedColumnRowInputOrcFormat extends OrcInputFormat<ColumnarRo
 	}
 
 	@Override
-	protected ColumnarRow convert(ColumnarRow current, ColumnarRow reuse) {
+	protected ColumnarRow convert(ColumnarRow current) {
 		return current;
 	}
 
@@ -69,6 +69,6 @@ public class VectorizedColumnRowInputOrcFormat extends OrcInputFormat<ColumnarRo
 			Arrays.stream(this.fieldTypes)
 				.map(TypeConverters::createExternalTypeInfoFromDataType)
 				.toArray(TypeInformation[]::new);
-		return new BaseRowTypeInfo<ColumnarRow>(ColumnarRow.class, typeInfos);
+		return (TypeInformation) new BaseRowTypeInfo(typeInfos);
 	}
 }

@@ -29,7 +29,7 @@ import org.apache.flink.table.util.Logging
 class ValuesInputFormat(
     name: String,
     var code: String,
-    @transient var returnType: BaseRowTypeInfo[BaseRow])
+    @transient var returnType: BaseRowTypeInfo)
   extends GenericInputFormat[BaseRow]
   with NonParallelInput
   with ResultTypeQueryable[BaseRow]
@@ -50,5 +50,5 @@ class ValuesInputFormat(
 
   override def nextRecord(reuse: BaseRow): BaseRow = format.nextRecord(reuse)
 
-  override def getProducedType: BaseRowTypeInfo[BaseRow] = returnType
+  override def getProducedType: BaseRowTypeInfo = returnType
 }

@@ -254,7 +254,7 @@ object MatchUtil {
       orderKeys: RelCollation,
       inputSchema: BaseRowSchema): EventComparator[BaseRow] = {
     val sorter = SorterHelper.createSorter(
-      inputSchema.internalType(classOf[BaseRow]),
+      inputSchema.internalType(),
       orderKeys.getFieldCollations.asScala.tail) // strip off time collation
 
     new CustomEventComparator(sorter)
@@ -264,7 +264,7 @@ object MatchUtil {
       orderKeys: RelCollation,
       inputSchema: BaseRowSchema): EventComparator[BaseRow] = {
     val sorter = SorterHelper.createSorter(
-      inputSchema.internalType(classOf[BaseRow]),
+      inputSchema.internalType(),
       orderKeys.getFieldCollations.asScala.tail) // strip off time collation
 
     new CustomEventComparator(sorter)

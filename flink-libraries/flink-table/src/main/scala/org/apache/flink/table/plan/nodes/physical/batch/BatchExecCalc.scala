@@ -20,6 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CalcCodeGenerator, CodeGeneratorContext}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef, TraitSetHelper}
@@ -152,7 +153,7 @@ class BatchExecCalc(
       None
     }
     val ctx = CodeGeneratorContext(config, supportReference = true)
-    val (substituteStreamOperator, outputType) = CalcCodeGenerator.generateCalcOperator(
+    val substituteStreamOperator = CalcCodeGenerator.generateCalcOperator(
       ctx,
       cluster,
       input.getRowType,
@@ -168,7 +169,7 @@ class BatchExecCalc(
       inputTransform,
       CalcUtil.calcToString(calcProgram, getExpressionString),
       substituteStreamOperator,
-      outputType,
+      FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType),
       getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation.setResources(getResource.getReservedResourceSpec,

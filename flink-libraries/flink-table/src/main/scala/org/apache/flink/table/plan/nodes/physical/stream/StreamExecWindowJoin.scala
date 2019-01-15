@@ -142,9 +142,9 @@ class StreamExecWindowJoin(
     val rightKeys = joinInfo.rightKeys.toIntArray
     val relativeWindowSize = leftUpperBound - leftLowerBound
 
-    val leftType = leftRowSchema.internalType(classOf[BinaryRow])
-    val rightType = rightRowSchema.internalType(classOf[BinaryRow])
-    val returnType = outputRowSchema.internalType(classOf[BaseRow])
+    val leftType = leftRowSchema.internalType()
+    val rightType = rightRowSchema.internalType()
+    val returnType = outputRowSchema.internalType()
 
     // generate join function
     val joinFunction = WindowJoinUtil.generateJoinFunction(
@@ -213,7 +213,7 @@ class StreamExecWindowJoin(
     rightDataStream: StreamTransformation[BaseRow],
     leftArity: Int,
     rightArity: Int,
-    returnTypeInfo: BaseRowTypeInfo[BaseRow]): StreamTransformation[BaseRow] = {
+    returnTypeInfo: BaseRowTypeInfo): StreamTransformation[BaseRow] = {
 
     val allFilter = new FlatMapFunction[BaseRow, BaseRow] with ResultTypeQueryable[BaseRow] {
       override def flatMap(value: BaseRow, out: Collector[BaseRow]): Unit = {}
@@ -290,15 +290,15 @@ class StreamExecWindowJoin(
     joinType: FlinkJoinRelType,
     leftDataStream: StreamTransformation[BaseRow],
     rightDataStream: StreamTransformation[BaseRow],
-    returnTypeInfo: BaseRowTypeInfo[BaseRow],
+    returnTypeInfo: BaseRowTypeInfo,
     joinFunctionName: String,
     joinFunctionCode: String,
     leftKeys: Array[Int],
     rightKeys: Array[Int]
   ): StreamTransformation[BaseRow] = {
 
-    val leftType = leftRowSchema.internalType(classOf[BaseRow])
-    val rightType = rightRowSchema.internalType(classOf[BaseRow])
+    val leftType = leftRowSchema.internalType()
+    val rightType = rightRowSchema.internalType()
     val leftTypeInfo = TypeConverters.toBaseRowTypeInfo(leftType)
     val rightTypeInfo = TypeConverters.toBaseRowTypeInfo(rightType)
     val procJoinFunc = new ProcTimeBoundedStreamJoin(
@@ -339,14 +339,14 @@ class StreamExecWindowJoin(
     joinType: FlinkJoinRelType,
     leftDataStream: StreamTransformation[BaseRow],
     rightDataStream: StreamTransformation[BaseRow],
-    returnTypeInfo: BaseRowTypeInfo[BaseRow],
+    returnTypeInfo: BaseRowTypeInfo,
     joinFunctionName: String,
     joinFunctionCode: String,
     leftKeys: Array[Int],
     rightKeys: Array[Int]
   ): StreamTransformation[BaseRow] = {
-    val leftType = leftRowSchema.internalType(classOf[BaseRow])
-    val rightType = rightRowSchema.internalType(classOf[BaseRow])
+    val leftType = leftRowSchema.internalType()
+    val rightType = rightRowSchema.internalType()
     val leftTypeInfo = TypeConverters.toBaseRowTypeInfo(leftType)
     val rightTypeInfo = TypeConverters.toBaseRowTypeInfo(rightType)
     val rowJoinFunc = new RowTimeBoundedStreamJoin(

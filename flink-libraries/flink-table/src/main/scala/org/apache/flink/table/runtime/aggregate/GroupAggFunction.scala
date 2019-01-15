@@ -77,7 +77,7 @@ class GroupAggFunction(
 
     // serialize as GenericRow, deserialize as BinaryRow
     val accTypeInfo = new BaseRowTypeInfo(
-      classOf[BaseRow], accTypes.map(TypeConverters.createExternalTypeInfoFromDataType): _*)
+      accTypes.map(TypeConverters.createExternalTypeInfoFromDataType): _*)
     val accDesc = new ValueStateDescriptor("accState", accTypeInfo)
     accState = ctx.getKeyedValueState(accDesc)
 

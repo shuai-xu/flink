@@ -41,7 +41,7 @@ public class VectorizedBatchParquetInputFormat extends ParquetInputFormat<Vector
 
 	@Override
 	protected VectorizedColumnBatch convert(
-		VectorizedColumnBatch current, VectorizedColumnBatch reuse) {
+		VectorizedColumnBatch current) {
 		return current;
 	}
 

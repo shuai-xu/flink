@@ -75,7 +75,7 @@ abstract class PartitionPruner extends Compiler[FlatMapFunction[GenericRow, Bool
 
     // TODO use TableEnvironment's config
     val config = new TableConfig
-    val rowType = new BaseRowTypeInfo(classOf[GenericRow], partitionFieldTypes, partitionFieldNames)
+    val rowType = new BaseRowTypeInfo(partitionFieldTypes, partitionFieldNames)
     val returnType = BasicTypeInfo.BOOLEAN_TYPE_INFO.asInstanceOf[TypeInformation[Any]]
 
     val ctx = CodeGeneratorContext(config)

@@ -78,7 +78,7 @@ class MiniBatchGroupAggFunction(
     function.open(ctx)
 
     // serialize as GenericRow, deserialize as BinaryRow
-    val accTypeInfo = new BaseRowTypeInfo(classOf[BaseRow],
+    val accTypeInfo = new BaseRowTypeInfo(
       accTypes.map(TypeConverters.createExternalTypeInfoFromDataType): _*)
     val accDesc = new ValueStateDescriptor("accState", accTypeInfo)
     accState = ctx.getKeyedValueState(accDesc)

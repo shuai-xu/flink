@@ -63,8 +63,8 @@ class StreamExecExchange(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val input = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
-    val inputType = input.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
-    val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BaseRow])
+    val inputType = input.getOutputType.asInstanceOf[BaseRowTypeInfo]
+    val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType)
 
     relDistribution.getType match {
       case RelDistribution.Type.SINGLETON =>
@@ -73,19 +73,19 @@ class StreamExecExchange(
           input,
           partitioner.asInstanceOf[StreamPartitioner[BaseRow]],
           DataExchangeMode.PIPELINED)
-        transformation.setOutputType(outputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
+        transformation.setOutputType(outputRowType)
         transformation
       case RelDistribution.Type.HASH_DISTRIBUTED =>
         // TODO Eliminate duplicate keys
         val selector = StreamExecUtil.getKeySelector(
           relDistribution.getKeys.map(_.toInt).toArray,
-          inputType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
+          inputType)
         val partitioner = new KeyGroupStreamPartitioner(selector, DEFAULT_MAX_PARALLELISM)
         val transformation = new PartitionTransformation(
           input,
           partitioner.asInstanceOf[StreamPartitioner[BaseRow]],
           DataExchangeMode.PIPELINED)
-        transformation.setOutputType(outputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
+        transformation.setOutputType(outputRowType)
         transformation
       case _ =>
         throw new UnsupportedOperationException(

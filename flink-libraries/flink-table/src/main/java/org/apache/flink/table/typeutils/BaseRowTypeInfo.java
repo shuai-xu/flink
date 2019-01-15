@@ -27,7 +27,6 @@ import org.apache.flink.api.java.typeutils.TupleTypeInfoBase;
 import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.dataformat.BaseRow;
-import org.apache.flink.table.dataformat.BinaryRow;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -38,26 +37,18 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 /**
  * Base row type info.
  */
-public class BaseRowTypeInfo<T extends BaseRow> extends TupleTypeInfoBase<T> {
+public class BaseRowTypeInfo extends TupleTypeInfoBase<BaseRow> {
 
 	private static final long serialVersionUID = 1L;
 
 	protected final String[] fieldNames;
 
-	public BaseRowTypeInfo(Class<T> rowType, TypeInformation<?>... types) {
-		this(rowType, types, getFieldNames(types));
+	public BaseRowTypeInfo(TypeInformation<?>... types) {
+		this(types, getFieldNames(types));
 	}
 
-	private static String[] getFieldNames(TypeInformation<?>[] types) {
-		String[] fieldNames = new String[types.length];
-		for (int i = 0; i < types.length; i++) {
-			fieldNames[i] = "f" + i;
-		}
-		return fieldNames;
-	}
-
-	public BaseRowTypeInfo(Class<T> rowType, TypeInformation<?>[] types, String[] fieldNames) {
-		super(rowType, types);
+	public BaseRowTypeInfo(TypeInformation<?>[] types, String[] fieldNames) {
+		super(BaseRow.class, types);
 		checkNotNull(fieldNames, "FieldNames should not be null.");
 		checkArgument(
 			types.length == fieldNames.length,
@@ -68,18 +59,26 @@ public class BaseRowTypeInfo<T extends BaseRow> extends TupleTypeInfoBase<T> {
 		this.fieldNames = Arrays.copyOf(fieldNames, fieldNames.length);
 	}
 
+	private static String[] getFieldNames(TypeInformation<?>[] types) {
+		String[] fieldNames = new String[types.length];
+		for (int i = 0; i < types.length; i++) {
+			fieldNames[i] = "f" + i;
+		}
+		return fieldNames;
+	}
+
 	@Override
 	public <X> TypeInformation<X> getTypeAt(String fieldExpression) {
 		throw new UnsupportedOperationException("Not support!");
 	}
 
 	@Override
-	public TypeComparator<T> createComparator(
+	public TypeComparator<BaseRow> createComparator(
 		int[] logicalKeyFields,
 		boolean[] orders,
 		int logicalFieldOffset,
 		ExecutionConfig config) {
-		return (TypeComparator) new BaseRowComparator(types, orders[0]);
+		return new BaseRowComparator(types, orders[0]);
 	}
 
 	@Override
@@ -140,21 +139,17 @@ public class BaseRowTypeInfo<T extends BaseRow> extends TupleTypeInfoBase<T> {
 	}
 
 	@Override
-	public CompositeType.TypeComparatorBuilder<T> createTypeComparatorBuilder() {
+	public CompositeType.TypeComparatorBuilder<BaseRow> createTypeComparatorBuilder() {
 		throw new UnsupportedOperationException("Not support!");
 	}
 
 	@Override
-	public TypeSerializer<T> createSerializer(ExecutionConfig config) {
+	public TypeSerializer<BaseRow> createSerializer(ExecutionConfig config) {
 		return createSerializer();
 	}
 
-	public AbstractRowSerializer<T> createSerializer() {
-		if (getTypeClass() == BinaryRow.class) {
-			return (AbstractRowSerializer<T>) new BinaryRowSerializer(types);
-		} else {
-			return new BaseRowSerializer<>(getTypeClass(), types);
-		}
+	public AbstractRowSerializer<BaseRow> createSerializer() {
+		return new BaseRowSerializer<>(getTypeClass(), types);
 	}
 
 	public RowType toInternalType() {

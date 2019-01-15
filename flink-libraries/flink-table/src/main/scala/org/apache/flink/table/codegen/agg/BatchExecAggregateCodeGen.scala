@@ -247,7 +247,7 @@ trait BatchExecAggregateCodeGen {
       }
     }.map { idx =>
       CodeGenUtils.generateFieldAccess(
-        ctx, inputType.toInternalType, inputTerm, idx, nullCheck = true)
+        ctx, inputType, inputTerm, idx, nullCheck = true)
     }
 
     val initAggCallBufferExprs = aggregates.flatMap {
@@ -523,11 +523,13 @@ trait BatchExecAggregateCodeGen {
       val getValueExprs = genGetValueFromFlatAggregateBuffer(
         isMerge, ctx, config, builder, auxGrouping, aggregates, udaggs, argsMapping,
         aggBufferNames, aggBufferTypes, outputType)
-      val valueRowType = new RowType(classOf[GenericRow], getValueExprs.map(_.resultType): _*)
-      resultCodegen.generateResultExpression(getValueExprs, valueRowType, valueRow)
+      val valueRowType = new RowType(getValueExprs.map(_.resultType): _*)
+      resultCodegen.generateResultExpression(
+        getValueExprs, valueRowType, classOf[GenericRow], valueRow)
     } else {
-      val valueRowType = new RowType(classOf[GenericRow], aggBufferExprs.map(_.resultType): _*)
-      resultCodegen.generateResultExpression(aggBufferExprs, valueRowType, valueRow)
+      val valueRowType = new RowType(aggBufferExprs.map(_.resultType): _*)
+      resultCodegen.generateResultExpression(
+        aggBufferExprs, valueRowType, classOf[GenericRow], valueRow)
     }
   }
 
@@ -583,7 +585,7 @@ trait BatchExecAggregateCodeGen {
       name,
       processCode,
       endInputCode,
-      FlinkTypeFactory.toInternalRowType(inputRelDataType, classOf[BaseRow]),
+      FlinkTypeFactory.toInternalRowType(inputRelDataType),
       config,
       lazyInputUnboxingCode = true)
   }

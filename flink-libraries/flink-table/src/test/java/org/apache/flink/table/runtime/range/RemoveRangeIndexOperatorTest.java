@@ -19,6 +19,7 @@
 package org.apache.flink.table.runtime.range;
 
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.TupleTypeInfo;
 import org.apache.flink.runtime.jobgraph.OperatorID;
@@ -52,12 +53,12 @@ public class RemoveRangeIndexOperatorTest {
 		}
 		RemoveRangeIndexOperator operator = new RemoveRangeIndexOperator();
 
-		BaseRowTypeInfo typeInfo = new BaseRowTypeInfo<>(BinaryRow.class, STRING_TYPE_INFO, STRING_TYPE_INFO);
+		BaseRowTypeInfo typeInfo = new BaseRowTypeInfo(STRING_TYPE_INFO, STRING_TYPE_INFO);
 		TupleTypeInfo<Tuple2<Integer, BinaryRow>> inTypeInfo =
 				new TupleTypeInfo(BasicTypeInfo.INT_TYPE_INFO, typeInfo);
 		OneInputStreamTaskTestHarness<Tuple2<Integer, BinaryRow>, BinaryRow> testHarness =
 				new OneInputStreamTaskTestHarness<>(
-						OneInputStreamTask::new, 2, 2, inTypeInfo, typeInfo);
+						OneInputStreamTask::new, 2, 2, (TypeInformation) inTypeInfo, typeInfo);
 
 		testHarness.setupOutputForSingletonOperatorChain();
 		testHarness.getStreamConfig().setStreamOperator(operator);

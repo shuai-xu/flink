@@ -95,10 +95,10 @@ public class Kafka010TableFactory extends KafkaBaseTableFactory implements
 		if (!StringUtils.isNullOrWhitespaceOnly(topicStr)) {
 			List<String> topics = Arrays.asList(topicStr.split(","));
 			return new Kafka010TableSource(topics, null, prop, getStartupMode(properties), startInMs, isBatchMode,
-					TypeConverters.toBaseRowTypeInfo(schema.getResultType(GenericRow.class)));
+					TypeConverters.toBaseRowTypeInfo(schema.getResultType()));
 		} else if (!StringUtils.isNullOrWhitespaceOnly(topicPatternStr)) {
 			return new Kafka010TableSource(null, topicPatternStr, prop, getStartupMode(properties), startInMs, isBatchMode,
-					TypeConverters.toBaseRowTypeInfo(schema.getResultType(GenericRow.class)));
+					TypeConverters.toBaseRowTypeInfo(schema.getResultType()));
 		} else {
 			throw new RuntimeException("No sufficient parameters for Kafka010." +
 				"topic or topic pattern needed.");

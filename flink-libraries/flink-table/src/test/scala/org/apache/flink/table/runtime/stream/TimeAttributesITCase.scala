@@ -607,7 +607,6 @@ class TimeAttributesITCase extends StreamingTestBase {
 
     implicit val typeInfo: TypeInformation[BaseRow] =
       new BaseRowTypeInfo(
-        classOf[BinaryRow],
         Array(Types.INT, Types.LONG).asInstanceOf[Array[TypeInformation[_]]],
         Array("c", "a")).asInstanceOf[TypeInformation[BaseRow]]
     val stream = env

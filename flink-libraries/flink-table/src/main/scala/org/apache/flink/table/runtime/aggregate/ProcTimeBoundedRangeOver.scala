@@ -69,9 +69,8 @@ class ProcTimeBoundedRangeOver(
 
     // input element are all binary row as they are came from network
     val inputType = new BaseRowTypeInfo(
-      classOf[BaseRow],
       inputFieldTypes.map(TypeConverters.createExternalTypeInfoFromDataType): _*)
-      .asInstanceOf[BaseRowTypeInfo[BaseRow]]
+      .asInstanceOf[BaseRowTypeInfo]
     // we keep the elements received in a map state indexed based on their ingestion time
     val rowListTypeInfo = new ListTypeInfo[BaseRow](inputType)
     val mapStateDescriptor: MapStateDescriptor[JLong, JList[BaseRow]] =
@@ -81,7 +80,7 @@ class ProcTimeBoundedRangeOver(
         rowListTypeInfo)
     inputState = ctx.getKeyedMapState(mapStateDescriptor)
 
-    val accTypeInfo = new BaseRowTypeInfo(classOf[BaseRow],
+    val accTypeInfo = new BaseRowTypeInfo(
       accTypes.map(TypeConverters.createExternalTypeInfoFromDataType): _*)
     val stateDescriptor: ValueStateDescriptor[BaseRow] =
       new ValueStateDescriptor[BaseRow]("accState", accTypeInfo)

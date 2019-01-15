@@ -94,16 +94,15 @@ class RowTimeBoundedRowsOver(
       Types.LONG)
     counterState = ctx.getKeyedValueState(dataCountStateDescriptor)
 
-    val accTypeInfo = new BaseRowTypeInfo(classOf[BaseRow],
+    val accTypeInfo = new BaseRowTypeInfo(
       accTypes.map(TypeConverters.createExternalTypeInfoFromDataType): _*)
     val accStateDesc = new ValueStateDescriptor[BaseRow]("accState", accTypeInfo)
     accState = ctx.getKeyedValueState(accStateDesc)
 
     // input element are all binary row as they are came from network
     val inputType = new BaseRowTypeInfo(
-      classOf[BaseRow],
       inputFieldTypes.map(TypeConverters.createExternalTypeInfoFromDataType): _*)
-      .asInstanceOf[BaseRowTypeInfo[BaseRow]]
+      .asInstanceOf[BaseRowTypeInfo]
     val rowListTypeInfo = new ListTypeInfo[BaseRow](inputType)
     val inputStateDesc = new MapStateDescriptor[JLong, JList[BaseRow]](
       "inputState",

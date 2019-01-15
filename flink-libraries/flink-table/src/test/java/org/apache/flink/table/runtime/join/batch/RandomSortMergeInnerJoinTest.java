@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.runtime.join.batch;
 
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.IntComparator;
@@ -244,12 +245,12 @@ public class RandomSortMergeInnerJoinTest {
 			MutableObjectIterator<Tuple2<Integer, String>> input1,
 			MutableObjectIterator<Tuple2<Integer, String>> input2,
 			boolean input1First) throws Exception {
-		BaseRowTypeInfo typeInfo = new BaseRowTypeInfo<>(BinaryRow.class, INT_TYPE_INFO, STRING_TYPE_INFO);
-		BaseRowTypeInfo<JoinedRow> joinedInfo = new BaseRowTypeInfo<>(
-				JoinedRow.class, INT_TYPE_INFO, STRING_TYPE_INFO, INT_TYPE_INFO, STRING_TYPE_INFO);
+		BaseRowTypeInfo typeInfo = new BaseRowTypeInfo(INT_TYPE_INFO, STRING_TYPE_INFO);
+		BaseRowTypeInfo joinedInfo = new BaseRowTypeInfo(
+				INT_TYPE_INFO, STRING_TYPE_INFO, INT_TYPE_INFO, STRING_TYPE_INFO);
 		final TwoInputStreamTaskTestHarness<BinaryRow, BinaryRow, JoinedRow> testHarness =
 			new TwoInputStreamTaskTestHarness<>(
-				TwoInputStreamTask::new, 2, 1, new int[]{1, 2}, typeInfo, typeInfo,
+				TwoInputStreamTask::new, 2, 1, new int[]{1, 2}, typeInfo, (TypeInformation) typeInfo,
 				joinedInfo);
 
 		// Deep pit!!! Cause in TwoInputStreamTaskTestHarness, one record one buffer.

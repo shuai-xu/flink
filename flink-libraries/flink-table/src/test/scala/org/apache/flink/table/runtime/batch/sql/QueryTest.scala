@@ -452,7 +452,7 @@ object QueryTest {
     row
   }
 
-  def binaryRow(tpe: BaseRowTypeInfo[_], fields: Any*): BinaryRow = {
+  def binaryRow(tpe: BaseRowTypeInfo, fields: Any*): BinaryRow = {
     assertEquals(
       "Filed count inconsistent with type information",
       fields.length,

@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.runtime.join.batch;
 
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.streaming.api.operators.StreamOperator;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
@@ -49,9 +50,9 @@ import static org.apache.flink.api.common.typeinfo.BasicTypeInfo.STRING_TYPE_INF
  */
 public class String2HashJoinOperatorTest {
 
-	private BaseRowTypeInfo typeInfo = new BaseRowTypeInfo<>(BinaryRow.class, STRING_TYPE_INFO, STRING_TYPE_INFO);
-	private BaseRowTypeInfo<JoinedRow> joinedInfo = new BaseRowTypeInfo<>(
-			JoinedRow.class, STRING_TYPE_INFO, STRING_TYPE_INFO, STRING_TYPE_INFO, STRING_TYPE_INFO);
+	private BaseRowTypeInfo typeInfo = new BaseRowTypeInfo(STRING_TYPE_INFO, STRING_TYPE_INFO);
+	private BaseRowTypeInfo joinedInfo = new BaseRowTypeInfo(
+			STRING_TYPE_INFO, STRING_TYPE_INFO, STRING_TYPE_INFO, STRING_TYPE_INFO);
 	private TwoInputStreamTaskTestHarness<BinaryRow, BinaryRow, JoinedRow> testHarness;
 	private ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<>();
 	private long initialTime = 0L;
@@ -79,7 +80,7 @@ public class String2HashJoinOperatorTest {
 		HashJoinType type = HashJoinType.of(buildLeft, leftOut, rightOut);
 		StreamOperator operator = new TestHashJoinOperator(33 * 32 * 1024, type, !buildLeft);
 		testHarness = new TwoInputStreamTaskTestHarness<>(
-				TwoInputStreamTask::new, 2, 2, new int[]{1, 2}, typeInfo, typeInfo, joinedInfo);
+				TwoInputStreamTask::new, 2, 2, new int[]{1, 2}, typeInfo, (TypeInformation) typeInfo, joinedInfo);
 		testHarness.memorySize = 36 * 1024 * 1024;
 		testHarness.getExecutionConfig().enableObjectReuse();
 		testHarness.setupOutputForSingletonOperatorChain();

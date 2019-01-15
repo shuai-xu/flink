@@ -23,7 +23,7 @@ import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.codegen.CodeGenUtils.boxedTypeTermForType
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.{ELEMENT, STREAM_RECORD}
-import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
@@ -37,7 +37,7 @@ object ExpandCodeGenerator {
   def generateExpandOperator(
       ctx: CodeGeneratorContext,
       inputType: InternalType,
-      outputType: BaseRowTypeInfo[BaseRow],
+      outputType: BaseRowTypeInfo,
       config: TableConfig,
       projects: java.util.List[java.util.List[RexNode]],
       ruleDescription: String,
@@ -52,7 +52,7 @@ object ExpandCodeGenerator {
     projects.foreach { project =>
       val projectionExprs = project.map(exprGenerator.generateExpression)
       val projectionResultExpr = exprGenerator.generateResultExpression(
-        projectionExprs, outputType.toInternalType)
+        projectionExprs, outputType.toInternalType, classOf[GenericRow])
       val header = if (retainHeader) {
         s"${projectionResultExpr.resultTerm}.setHeader($inputTerm.getHeader());"
       } else {

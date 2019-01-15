@@ -77,7 +77,7 @@ object CorrelateCodeGenerator {
         .asInstanceOf[FlinkTableFunction]
         .getExternalResultType(arguments, argTypes)
     val pojoFieldMapping = Some(UserDefinedFunctionUtils.getFieldInfo(udtfExternalType)._2)
-    val inputType = FlinkTypeFactory.toInternalRowType(inputRelType, classOf[BaseRow])
+    val inputType = FlinkTypeFactory.toInternalRowType(inputRelType)
     val (returnType, swallowInputOnly ) = if (projectProgram.isDefined) {
       val program = projectProgram.get
       val selects = program.getProjectList.map(_.getIndex)
@@ -85,10 +85,10 @@ object CorrelateCodeGenerator {
       val swallowInputOnly = selects(0) > inputFieldCnt &&
         (inputFieldCnt - outDataType.getFieldCount == inputRelType.getFieldCount)
       // partial output or output right only
-      (FlinkTypeFactory.toInternalRowType(outDataType, classOf[GenericRow]), swallowInputOnly)
+      (FlinkTypeFactory.toInternalRowType(outDataType), swallowInputOnly)
     } else {
       // completely output left input + right
-      (FlinkTypeFactory.toInternalRowType(outDataType, classOf[JoinedRow]), false)
+      (FlinkTypeFactory.toInternalRowType(outDataType), false)
     }
     // adjust indicies of InputRefs to adhere to schema expected by generator
     val changeInputRefIndexShuttle = new RexShuttle {
@@ -193,7 +193,7 @@ object CorrelateCodeGenerator {
       if (swallowInputOnly) {
         // and the returned row table function is empty, collect a null
         val nullRowTerm = CodeGenUtils.newName("nullRow")
-        ctx.addOutputRecord(toGenericRowType(udtfType), nullRowTerm)
+        ctx.addOutputRecord(toRowType(udtfType), classOf[GenericRow], nullRowTerm)
         ctx.addReusableNullRow(nullRowTerm, TypeUtils.getArity(udtfType))
         val header = if (retainHeader) {
           s"$nullRowTerm.setHeader(${exprGenerator.input1Term}.getHeader());"
@@ -211,7 +211,7 @@ object CorrelateCodeGenerator {
       } else if (projectProgram.isDefined) {
         // output partial fields of left and right
         val outputTerm = CodeGenUtils.newName("projectOut")
-        ctx.addOutputRecord(returnType, outputTerm)
+        ctx.addOutputRecord(returnType, classOf[GenericRow], outputTerm)
 
         val header = if (retainHeader) {
           s"$outputTerm.setHeader(${CodeGeneratorContext.DEFAULT_INPUT1_TERM}.getHeader());"
@@ -245,7 +245,7 @@ object CorrelateCodeGenerator {
         // fill all fields of row with null
         val joinedRowTerm = CodeGenUtils.newName("joinedRow")
         val nullRowTerm = CodeGenUtils.newName("nullRow")
-        ctx.addOutputRecord(returnType, joinedRowTerm)
+        ctx.addOutputRecord(returnType, classOf[JoinedRow], joinedRowTerm)
         ctx.addReusableNullRow(nullRowTerm, TypeUtils.getArity(udtfType))
         val header = if (retainHeader) {
           s"$joinedRowTerm.setHeader(${exprGenerator.input1Term}.getHeader());"
@@ -280,11 +280,11 @@ object CorrelateCodeGenerator {
       references = ctx.references)
   }
 
-  private def toGenericRowType(fromType: InternalType): RowType = {
+  private def toRowType(fromType: InternalType): RowType = {
     val tableSchema = TableSchemaUtil.fromDataType(fromType)
     val fieldNames = tableSchema.getColumnNames
     val fieldTypes = tableSchema.getTypes
-    new RowType(classOf[GenericRow], fieldTypes.toArray[DataType], fieldNames)
+    new RowType(fieldTypes.toArray[DataType], fieldNames)
   }
 
   private def generateProjectResultExpr(
@@ -304,7 +304,7 @@ object CorrelateCodeGenerator {
       ctx.addReusableNullRow(udtfNullRow, TypeUtils.getArity(udtfType))
 
       projectExprGenerator.bindSecondInput(
-        toGenericRowType(udtfType),
+        toRowType(udtfType),
         udtfNullRow,
         inputFieldMapping = udtfPojoFieldMapping)
     } else {
@@ -314,7 +314,8 @@ object CorrelateCodeGenerator {
     }
     val projection = program.getProjectList.map(program.expandLocalRef)
     val projectionExprs = projection.map(projectExprGenerator.generateExpression)
-    projectExprGenerator.generateResultExpression(projectionExprs, returnType, outputTerm)
+    projectExprGenerator.generateResultExpression(
+      projectionExprs, returnType, classOf[GenericRow], outputTerm)
   }
 
   /**
@@ -338,8 +339,9 @@ object CorrelateCodeGenerator {
     val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck).bindInput(
       udtfType, inputTerm = udtfInputTerm, inputFieldMapping = pojoFieldMapping)
 
-    val udtfBaseRowType = toGenericRowType(udtfType)
-    val udtfResultExpr = exprGenerator.generateConverterResultExpression(udtfBaseRowType)
+    val udtfBaseRowType = toRowType(udtfType)
+    val udtfResultExpr = exprGenerator.generateConverterResultExpression(
+      udtfBaseRowType, classOf[GenericRow])
 
     val body = if (projectProgram.isDefined) {
       // partial output
@@ -357,7 +359,7 @@ object CorrelateCodeGenerator {
         """.stripMargin
       } else {
         val outputTerm = CodeGenUtils.newName("projectOut")
-        ctx.addOutputRecord(resultType, outputTerm)
+        ctx.addOutputRecord(resultType, classOf[GenericRow], outputTerm)
 
         val header = if (retainHeader) {
           s"$outputTerm.setHeader($inputTerm.getHeader());"
@@ -384,7 +386,7 @@ object CorrelateCodeGenerator {
     } else {
       // completely output left input + right
       val joinedRowTerm = CodeGenUtils.newName("joinedRow")
-      ctx.addOutputRecord(resultType, joinedRowTerm)
+      ctx.addOutputRecord(resultType, classOf[JoinedRow], joinedRowTerm)
 
       val header = if (retainHeader) {
         s"$joinedRowTerm.setHeader($inputTerm.getHeader());"

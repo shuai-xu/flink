@@ -138,7 +138,7 @@ class StreamExecMatch(
     val config = tableEnv.config
     val relBuilder = tableEnv.getRelBuilder
     val inputTypeInfo =
-      inputSchema.typeInfo(classOf[BaseRow]).asInstanceOf[BaseRowTypeInfo[BaseRow]]
+      inputSchema.typeInfo()
 
     val inputTransform = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
@@ -168,7 +168,7 @@ class StreamExecMatch(
 
   private def translateOrder(
       inputTransform: StreamTransformation[BaseRow],
-      inputTypeInfo: BaseRowTypeInfo[BaseRow],
+      inputTypeInfo: BaseRowTypeInfo,
       orderKeys: RelCollation): (StreamTransformation[BaseRow], EventComparator[BaseRow]) = {
 
     if (orderKeys.getFieldCollations.size() == 0) {
@@ -223,7 +223,7 @@ class StreamExecMatch(
       config: TableConfig,
       relBuilder: RelBuilder,
       inputTransform: StreamTransformation[BaseRow],
-      inputTypeInfo: BaseRowTypeInfo[BaseRow],
+      inputTypeInfo: BaseRowTypeInfo,
       cepPattern: Pattern[BaseRow, BaseRow],
       comparator: EventComparator[BaseRow],
       patternNames: Seq[String]): StreamTransformation[BaseRow] = {
@@ -231,7 +231,7 @@ class StreamExecMatch(
       .getFieldList.filter(f => FlinkTypeFactory.isRowtimeIndicatorType(f.getType))
     val isProcessingTime = rowtimeFields.isEmpty
 
-    val outputTypeInfo = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BaseRow])
+    val outputTypeInfo = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType)
 
     // define the select function to the detected pattern sequence
     val rowsPerMatchLiteral =
@@ -354,7 +354,7 @@ class StreamExecMatch(
 
   private def setKeySelector(
       transform: OneInputTransformation[BaseRow, _],
-      inputTypeInfo: BaseRowTypeInfo[_]): Unit = {
+      inputTypeInfo: BaseRowTypeInfo): Unit = {
     val logicalKeys = logicalMatch.partitionKeys.map {
       case inputRef: RexInputRef => inputRef.getIndex
     }.toArray
@@ -375,8 +375,8 @@ class StreamExecMatch(
       comparator: EventComparator[BaseRow],
       patternSelectFunction: PatternSelectFunction[BaseRow, BaseRow],
       isProcessingTime: Boolean,
-      inputTypeInfo: BaseRowTypeInfo[BaseRow],
-      outputTypeInfo: BaseRowTypeInfo[BaseRow]): StreamTransformation[BaseRow] = {
+      inputTypeInfo: BaseRowTypeInfo,
+      outputTypeInfo: BaseRowTypeInfo): StreamTransformation[BaseRow] = {
     val inputSerializer = inputTypeInfo.createSerializer(new ExecutionConfig)
     val nfaFactory = NFACompiler.compileFactory(cepPattern, true)
     val timeoutOutputTag = new OutputTag(UUID.randomUUID.toString, outputTypeInfo)
@@ -407,8 +407,8 @@ class StreamExecMatch(
       comparator: EventComparator[BaseRow],
       patternFlatSelectFunction: PatternFlatSelectFunction[BaseRow, BaseRow],
       isProcessingTime: Boolean,
-      inputTypeInfo: BaseRowTypeInfo[BaseRow],
-      outputTypeInfo: BaseRowTypeInfo[BaseRow]): StreamTransformation[BaseRow] = {
+      inputTypeInfo: BaseRowTypeInfo,
+      outputTypeInfo: BaseRowTypeInfo): StreamTransformation[BaseRow] = {
     val inputSerializer = inputTypeInfo.createSerializer(new ExecutionConfig)
     val nfaFactory = NFACompiler.compileFactory(cepPattern, true)
     val timeoutOutputTag = new OutputTag(UUID.randomUUID.toString, outputTypeInfo)
@@ -440,8 +440,8 @@ class StreamExecMatch(
       patternSelectFunction: PatternSelectFunction[BaseRow, BaseRow],
       patternTimeoutFunction: PatternTimeoutFunction[BaseRow, BaseRow],
       isProcessingTime: Boolean,
-      inputTypeInfo: BaseRowTypeInfo[BaseRow],
-      outputTypeInfo: BaseRowTypeInfo[BaseRow]): StreamTransformation[BaseRow] = {
+      inputTypeInfo: BaseRowTypeInfo,
+      outputTypeInfo: BaseRowTypeInfo): StreamTransformation[BaseRow] = {
     val inputSerializer = inputTypeInfo.createSerializer(new ExecutionConfig)
     val nfaFactory = NFACompiler.compileFactory(cepPattern, true)
     val timeoutOutputTag = new OutputTag(UUID.randomUUID.toString, outputTypeInfo)
@@ -486,8 +486,8 @@ class StreamExecMatch(
       patternFlatSelectFunction: PatternFlatSelectFunction[BaseRow, BaseRow],
       patternFlatTimeoutFunction: PatternFlatTimeoutFunction[BaseRow, BaseRow],
       isProcessingTime: Boolean,
-      inputTypeInfo: BaseRowTypeInfo[BaseRow],
-      outputTypeInfo: BaseRowTypeInfo[BaseRow]): StreamTransformation[BaseRow] = {
+      inputTypeInfo: BaseRowTypeInfo,
+      outputTypeInfo: BaseRowTypeInfo): StreamTransformation[BaseRow] = {
     val inputSerializer = inputTypeInfo.createSerializer(new ExecutionConfig)
     val nfaFactory = NFACompiler.compileFactory(cepPattern, true)
     val timeoutOutputTag = new OutputTag(UUID.randomUUID.toString, outputTypeInfo)

@@ -39,7 +39,7 @@ import org.apache.flink.util.Collector
   * @param tableConfig        the table config.
   */
 class LastRowFunction(
-   rowTypeInfo: BaseRowTypeInfo[BaseRow],
+   rowTypeInfo: BaseRowTypeInfo,
    generateRetraction: Boolean,
    rowtimeIndex: Int,
    tableConfig: TableConfig)

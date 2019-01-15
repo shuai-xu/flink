@@ -50,6 +50,8 @@ public class BaseRowCsvInputFormat extends AbstractRowCsvInputFormat<BaseRow> {
 
 	private static final long serialVersionUID = 1L;
 
+	private transient GenericRow reuseRow;
+
 	public BaseRowCsvInputFormat(
 			Path filePath, InternalType[] fieldTypes, String lineDelimiter,
 			String fieldDelimiter, int[] selectedFields, boolean emptyColumnAsNull) {
@@ -90,12 +92,9 @@ public class BaseRowCsvInputFormat extends AbstractRowCsvInputFormat<BaseRow> {
 	}
 
 	@Override
-	protected BaseRow fillRecord(BaseRow reuse, Object[] parsedValues) {
-		GenericRow reuseRow;
-		if (reuse == null) {
+	protected BaseRow fillRecord(BaseRow ignore, Object[] parsedValues) {
+		if (reuseRow == null) {
 			reuseRow = new GenericRow(arity);
-		} else {
-			reuseRow = (GenericRow) reuse;
 		}
 		for (int i = 0; i < parsedValues.length; i++) {
 			reuseRow.update(i, parsedValues[i]);
@@ -105,7 +104,7 @@ public class BaseRowCsvInputFormat extends AbstractRowCsvInputFormat<BaseRow> {
 
 	@Override
 	public TypeInformation<BaseRow> getProducedType() {
-		return (TypeInformation) new BaseRowTypeInfo(GenericRow.class, this.fieldTypeInfos);
+		return new BaseRowTypeInfo(this.fieldTypeInfos);
 	}
 
 	/**

@@ -39,13 +39,14 @@ object ValuesCodeGenerator {
       tuples: ImmutableList[ImmutableList[RexLiteral]],
       description: String): ValuesInputFormat = {
     val config = tableEnv.getConfig
-    val outputType = FlinkTypeFactory.toInternalRowType(rowType, classOf[GenericRow])
+    val outputType = FlinkTypeFactory.toInternalRowType(rowType)
 
     val ctx = CodeGeneratorContext(config)
     val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck)
     // generate code for every record
     val generatedRecords = tuples.map { r =>
-      exprGenerator.generateResultExpression(r.map(exprGenerator.generateExpression), outputType)
+      exprGenerator.generateResultExpression(
+        r.map(exprGenerator.generateExpression), outputType, classOf[GenericRow])
     }
 
     // generate input format

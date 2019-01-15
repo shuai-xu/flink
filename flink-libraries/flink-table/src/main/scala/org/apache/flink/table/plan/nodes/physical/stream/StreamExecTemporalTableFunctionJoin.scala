@@ -101,12 +101,12 @@ class StreamExecTemporalTableFunctionJoin(
 
     validateKeyTypes()
 
-    val returnType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[JoinedRow])
+    val returnType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType)
 
     val joinTranslator = StreamExecTemporalJoinToCoProcessTranslator.create(
       this.toString,
       tableEnv.getConfig,
-      schema.internalType(classOf[GenericRow]),
+      schema.internalType(),
       leftSchema,
       rightSchema,
       joinInfo,
@@ -132,7 +132,7 @@ class StreamExecTemporalTableFunctionJoin(
       rightTransform,
       joinOpName,
       joinOperator,
-      returnType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      returnType.asInstanceOf[BaseRowTypeInfo],
       tableEnv.execEnv.getParallelism)
 
     // set KeyType and Selector for state
@@ -184,13 +184,13 @@ class StreamExecTemporalJoinToCoProcessTranslator private (
   def getLeftKeySelector(): BaseRowKeySelector = {
     new BinaryRowKeySelector(
       joinInfo.leftKeys.toIntArray,
-      leftSchema.typeInfo(classOf[BaseRow]))
+      leftSchema.typeInfo())
   }
 
   def getRightKeySelector(): BaseRowKeySelector = {
     new BinaryRowKeySelector(
       joinInfo.rightKeys.toIntArray,
-      rightSchema.typeInfo(classOf[BaseRow]))
+      rightSchema.typeInfo())
   }
 
   def getJoinOperator(
@@ -198,8 +198,8 @@ class StreamExecTemporalJoinToCoProcessTranslator private (
     returnFieldNames: Seq[String],
     ruleDescription: String): TwoInputStreamOperator[BaseRow, BaseRow, BaseRow] = {
 
-    val leftType = leftSchema.internalType(classOf[BaseRow])
-    val rightType = rightSchema.internalType(classOf[BaseRow])
+    val leftType = leftSchema.internalType()
+    val rightType = rightSchema.internalType()
 
     // input must not be nullable, because the runtime join function will make sure
     // the code-generated function won't process null inputs
@@ -211,7 +211,8 @@ class StreamExecTemporalJoinToCoProcessTranslator private (
       .bindInput(leftType)
       .bindSecondInput(rightType)
 
-    val conversion = exprGenerator.generateConverterResultExpression(returnType)
+    val conversion = exprGenerator.generateConverterResultExpression(
+      returnType, classOf[GenericRow])
 
     val body = if (nonEquiJoinPredicates.isEmpty) {
       // only equality condition
@@ -255,8 +256,8 @@ class StreamExecTemporalJoinToCoProcessTranslator private (
       case FlinkJoinRelType.INNER =>
         if (rightTimeAttributeInputReference.isDefined) {
           new TemporalRowtimeJoin(
-            leftSchema.typeInfo(classOf[BaseRow]).asInstanceOf[TypeInformation[BaseRow]],
-            rightSchema.typeInfo(classOf[BaseRow]).asInstanceOf[TypeInformation[BaseRow]],
+            leftSchema.typeInfo().asInstanceOf[TypeInformation[BaseRow]],
+            rightSchema.typeInfo().asInstanceOf[TypeInformation[BaseRow]],
             joinFunction.name,
             joinFunction.code,
             leftTimeAttributeInputReference,
@@ -264,8 +265,8 @@ class StreamExecTemporalJoinToCoProcessTranslator private (
         }
         else {
           new TemporalProcessTimeJoin(
-            leftSchema.typeInfo(classOf[BaseRow]).asInstanceOf[TypeInformation[BaseRow]],
-            rightSchema.typeInfo(classOf[BaseRow]).asInstanceOf[TypeInformation[BaseRow]],
+            leftSchema.typeInfo().asInstanceOf[TypeInformation[BaseRow]],
+            rightSchema.typeInfo().asInstanceOf[TypeInformation[BaseRow]],
             joinFunction.name,
             joinFunction.code)
         }
