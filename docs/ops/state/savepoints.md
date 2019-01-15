@@ -36,6 +36,11 @@ For more details on how Flink handles state and failures in general, check out t
 <strong>Attention:</strong> In order to allow upgrades between programs and Flink versions, it is important to check out the following section about <a href="#assigning-operator-ids">assigning IDs to your operators</a>.
 </div>
 
+<div class="alert alert-warning">
+<strong>Attention:</strong> If you decided to migrate to current version, you cannot recover from 
+your existing savepoint made before the migration.
+</div>
+
 ## Assigning Operator IDs
 
 It is **highly recommended** that you adjust your programs as described in this section in order to be able to upgrade your programs in the future. The main required change is to manually specify operator IDs via the **`uid(String)`** method. These IDs are used to scope the state of each operator.

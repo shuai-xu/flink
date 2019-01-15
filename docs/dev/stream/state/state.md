@@ -143,7 +143,8 @@ To get a state handle, you have to create a `StateDescriptor`. This holds the na
 that you can reference them), the type of the values that the state holds, and possibly
 a user-specified function, such as a `ReduceFunction`. Depending on what type of state you
 want to retrieve, you create either a `ValueStateDescriptor`, a `ListStateDescriptor`,
-a `ReducingStateDescriptor`, a `FoldingStateDescriptor` or a `MapStateDescriptor`.
+a `ReducingStateDescriptor`, a `FoldingStateDescriptor`, a `AggregatingStateDescriptor`,
+a `MapStateDescriptor` or a `SortedMapStateDescriptor`.
 
 State is accessed using the `RuntimeContext`, so it is only possible in *rich functions*.
 Please see [here]({{ site.baseurl }}/dev/api_concepts.html#rich-functions) for
