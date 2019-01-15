@@ -170,19 +170,11 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	}
 
 	private Long getRowCount(Table hiveTable) {
-		Long rowCount = null;
 		if (hiveTable.getParameters().get(StatsSetupConst.ROW_COUNT) != null) {
-			rowCount = Long.parseLong(hiveTable.getParameters().get(StatsSetupConst.ROW_COUNT));
-
-			// TODO: [BLINK-18554394] Flink planner cannot generate execution plan for table joins when
-			//  TableStats's rowCount is 0 or 1
-			// When BLINK-18554394 is fixed, rowCount should be set to 1 when it's less than 1
-			if (rowCount <= 1L) {
-				rowCount = null;
-			}
+			return Math.max(0L, Long.parseLong(hiveTable.getParameters().get(StatsSetupConst.ROW_COUNT)));
+		} else {
+			return 0L;
 		}
-
-		return rowCount;
 	}
 
 	@Override

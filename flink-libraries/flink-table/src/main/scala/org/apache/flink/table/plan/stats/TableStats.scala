@@ -31,7 +31,7 @@ case class TableStats(
   rowCount: Long,
   colStats: util.Map[String, ColumnStats] = new util.HashMap()) {
 
-  def this() = this(null, new util.HashMap())
+  def this() = this(0, new util.HashMap())
 
   override def toString = {
     s"TableStats{rowCount=$rowCount, colStats=$colStats}"
