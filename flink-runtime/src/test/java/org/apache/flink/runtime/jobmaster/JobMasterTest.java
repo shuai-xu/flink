@@ -468,9 +468,11 @@ public class JobMasterTest extends TestLogger {
 		jobGraph.getSerializedExecutionConfig().deserializeValue(JobMasterTest.class.getClassLoader()).enableForceTaskExclusivePlacement();
 		jobGraph.addPlacementConstraint(mock(PlacementConstraint.class));
 		source.addTag(new SlotTag(source.getID().toString(), jobGraph.getJobID()));
+		Configuration caseConfig = new Configuration(configuration);
+		caseConfig.setBoolean(JobManagerOptions.SLOT_ENABLE_TAG_MATCHING, true);
 
 		final JobMaster jobMaster = createJobMaster(
-				configuration,
+				caseConfig,
 				jobGraph,
 				haServices,
 				new TestingJobManagerSharedServicesBuilder().build(),

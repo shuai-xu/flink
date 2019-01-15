@@ -142,6 +142,8 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 
 	private Boolean enableSharedSlot;
 
+	private boolean enableSlotTagMatching;
+
 	// ------------------------------------------------------------------------
 
 	@VisibleForTesting
@@ -153,7 +155,8 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			SystemClock.getInstance(),
 			AkkaUtils.getDefaultTimeout(),
 			Time.milliseconds(JobManagerOptions.SLOT_IDLE_TIMEOUT.defaultValue()),
-			true);
+			true,
+			false);
 	}
 
 	@VisibleForTesting
@@ -172,7 +175,8 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			clock,
 			rpcTimeout,
 			idleSlotTimeout,
-			true);
+			true,
+			false);
 	}
 
 	public SlotPool(
@@ -182,7 +186,8 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			Clock clock,
 			Time rpcTimeout,
 			Time idleSlotTimeout,
-			Boolean enableSharedSlot) {
+			Boolean enableSharedSlot,
+			boolean enableSlotTagMatching) {
 
 		super(rpcService);
 
@@ -206,6 +211,10 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 		this.jobMasterId = null;
 		this.resourceManagerGateway = null;
 		this.jobManagerAddress = null;
+
+		if (enableSlotTagMatching) {
+			availableSlots.enableSlotTagMatching();
+		}
 	}
 
 	// ------------------------------------------------------------------------
@@ -1253,7 +1262,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 		// try the requests sent to the resource manager first
 		for (PendingRequest request : pendingRequests.values()) {
 			if (slotResources.isMatching(request.getResourceProfile()) &&
-					slot.getTags().equals(request.getTags())) {
+					(!enableSlotTagMatching || slot.getTags().equals(request.getTags()))) {
 				pendingRequests.removeKeyA(request.getSlotRequestId());
 				return request;
 			}
@@ -1262,7 +1271,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 		// try the requests waiting for a resource manager connection next
 		for (PendingRequest request : waitingForResourceManager.values()) {
 			if (slotResources.isMatching(request.getResourceProfile()) &&
-					slot.getTags().equals(request.getTags())) {
+					(!enableSlotTagMatching || slot.getTags().equals(request.getTags()))) {
 				waitingForResourceManager.remove(request.getSlotRequestId());
 				return request;
 			}
@@ -1807,10 +1816,21 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 		/** The available slots, with the time when they were inserted. */
 		private final HashMap<AllocationID, SlotAndTimestamp> availableSlots;
 
+		/** Whether tags should be considered when match with slot. */
+		private boolean enableSlotTagMatching = false;
+
 		AvailableSlots() {
 			this.availableSlotsByTaskManager = new HashMap<>();
 			this.availableSlotsByHost = new HashMap<>();
 			this.availableSlots = new HashMap<>();
+		}
+
+		void enableSlotTagMatching() {
+			enableSlotTagMatching = true;
+		}
+
+		void disableSlotTagMatching() {
+			enableSlotTagMatching = false;
 		}
 
 		/**
@@ -1884,7 +1904,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 				SlotAndTimestamp::slot,
 				(SlotAndTimestamp slot) -> {
 					return slot.slot().getResourceProfile().isMatching(slotProfile.getResourceProfile()) &&
-							slot.slot().getTags().equals(slotProfile.getTags());
+							(!enableSlotTagMatching || slot.slot().getTags().equals(slotProfile.getTags()));
 				},
 				(SlotAndTimestamp slotAndTimestamp, Locality locality) -> {
 					AllocatedSlot slot = slotAndTimestamp.slot();

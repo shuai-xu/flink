@@ -98,7 +98,8 @@ public class SlotPoolResource extends ExternalResource {
 			SystemClock.getInstance(),
 			TestingUtils.infiniteTime(),
 			TestingUtils.infiniteTime(),
-			enableSharedSlot);
+			enableSharedSlot,
+			false);
 
 		slotPool.start(JobMasterId.generate(), "foobar");
 

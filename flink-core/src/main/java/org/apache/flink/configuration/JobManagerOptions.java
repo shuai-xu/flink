@@ -169,6 +169,11 @@ public class JobManagerOptions {
 			.defaultValue(true)
 			.withDescription("Whether to enable slot sharing group when allocating slots in Slot Pool.");
 
+	public static final ConfigOption<Boolean> SLOT_ENABLE_TAG_MATCHING =
+		key("slot.enable-tag-matching")
+			.defaultValue(false)
+			.withDescription("Whether to consider slot tags when tries to match slots with requests.");
+
 	public static final ConfigOption<Long> JOB_RECONCILE_TIMEOUT =
 		key("jobmanager.failover.reconcile-timeout")
 			.defaultValue(60L)

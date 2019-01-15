@@ -53,19 +53,23 @@ public class DefaultSlotPoolFactory implements SlotPoolFactory {
 	@Nonnull
 	private final Boolean enableSharedSlot;
 
+	private final boolean enableSlotTagMatching;
+
 	public DefaultSlotPoolFactory(
 			@Nonnull RpcService rpcService,
 			@Nonnull SchedulingStrategy schedulingStrategy,
 			@Nonnull Clock clock,
 			@Nonnull Time rpcTimeout,
 			@Nonnull Time slotIdleTimeout,
-			@Nonnull Boolean enableSharedSlot) {
+			@Nonnull Boolean enableSharedSlot,
+			boolean enableSlotTagMatching) {
 		this.rpcService = rpcService;
 		this.schedulingStrategy = schedulingStrategy;
 		this.clock = clock;
 		this.rpcTimeout = rpcTimeout;
 		this.slotIdleTimeout = slotIdleTimeout;
 		this.enableSharedSlot = enableSharedSlot;
+		this.enableSlotTagMatching = enableSlotTagMatching;
 	}
 
 	@Override
@@ -78,7 +82,8 @@ public class DefaultSlotPoolFactory implements SlotPoolFactory {
 			clock,
 			rpcTimeout,
 			slotIdleTimeout,
-			enableSharedSlot);
+			enableSharedSlot,
+			enableSlotTagMatching);
 	}
 
 	public static DefaultSlotPoolFactory fromConfiguration(
@@ -90,6 +95,7 @@ public class DefaultSlotPoolFactory implements SlotPoolFactory {
 
 		final SchedulingStrategy schedulingStrategy = selectSchedulingStrategy(configuration);
 		final Boolean enableSharedSlot = configuration.getBoolean(JobManagerOptions.SLOT_ENABLE_SHARED_SLOT);
+		final boolean enableSlotTagMatching = configuration.getBoolean(JobManagerOptions.SLOT_ENABLE_TAG_MATCHING);
 
 		return new DefaultSlotPoolFactory(
 			rpcService,
@@ -97,7 +103,8 @@ public class DefaultSlotPoolFactory implements SlotPoolFactory {
 			SystemClock.getInstance(),
 			rpcTimeout,
 			slotIdleTimeout,
-			enableSharedSlot);
+			enableSharedSlot,
+			enableSlotTagMatching);
 	}
 
 	private static SchedulingStrategy selectSchedulingStrategy(Configuration configuration) {
