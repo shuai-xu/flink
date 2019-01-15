@@ -42,8 +42,9 @@ object TpcDs10TBatchExecWithPartStatsModePlanTest {
     val joinReorderEnabled = true
     val printResult = false
     util.Arrays.asList(
+      // "q16", "q98",
       "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10",
-      "q11", "q12", "q13", "q14a", "q14b", "q15", "q16", "q17", "q18", "q19", "q20",
+      "q11", "q12", "q13", "q14a", "q14b", "q15", "q17", "q18", "q19", "q20",
       "q21", "q22", "q23a", "q23b", "q24a", "q24b", "q25", "q26", "q27", "q28", "q29", "q30",
       "q31", "q32", "q33", "q34", "q35", "q36", "q37", "q38", "q39a", "q39b", "q40",
       "q41", "q42", "q43", "q44", "q45", "q46", "q47", "q48", "q49", "q50",
@@ -53,7 +54,7 @@ object TpcDs10TBatchExecWithPartStatsModePlanTest {
       // FIXME BLINK-16809034, https://aone.alibaba-inc.com/issue/16809034
       // "q80",
       "q81", "q82", "q83", "q84", "q85", "q86", "q87", "q88", "q89", "q90",
-      "q91", "q92", "q93", "q94", "q95", "q96", "q97", "q98", "q99"
+      "q91", "q92", "q93", "q94", "q95", "q96", "q97", "q99"
     ).map(Array(_, explainLevel, joinReorderEnabled, printResult))
   }
 
