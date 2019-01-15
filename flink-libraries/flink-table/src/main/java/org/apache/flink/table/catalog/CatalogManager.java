@@ -24,6 +24,8 @@ import org.apache.flink.util.StringUtils;
 
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,6 +48,8 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * query parsing and analysis.)
  */
 public class CatalogManager {
+	private static final Logger LOG = LoggerFactory.getLogger(CatalogManager.class);
+
 	public static final String BUILTIN_CATALOG_NAME = "builtin";
 
 	// The catalog to hold all registered and translated tables
@@ -61,6 +65,7 @@ public class CatalogManager {
 	private String defaultDbName;
 
 	public CatalogManager() {
+		LOG.info("Initializing CatalogManager");
 		catalogs = new HashMap<>();
 
 		FlinkInMemoryCatalog inMemoryCatalog = new FlinkInMemoryCatalog(BUILTIN_CATALOG_NAME);
@@ -104,6 +109,7 @@ public class CatalogManager {
 		if (!defaultCatalogName.equals(catalogName)) {
 			defaultCatalogName = catalogName;
 			defaultDbName = catalogs.get(catalogName).getDefaultDatabaseName();
+			LOG.info("Set default catalog as '{}' and default database as '{}'", defaultCatalogName, defaultDbName);
 		}
 	}
 
@@ -125,6 +131,8 @@ public class CatalogManager {
 
 		defaultCatalogName = catalogName;
 		defaultDbName = dbName;
+
+		LOG.info("Set default catalog as '{}' and default database as '{}'", defaultCatalogName, defaultDbName);
 	}
 
 	public String getDefaultDatabaseName() {

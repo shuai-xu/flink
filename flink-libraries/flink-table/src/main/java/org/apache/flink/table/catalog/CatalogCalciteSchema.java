@@ -133,6 +133,7 @@ public class CatalogCalciteSchema implements Schema {
 		String catalogName,
 		ReadableCatalog catalog) {
 
+		LOGGER.info("Register catalog '{}' to Calcite", catalogName);
 		SchemaPlus catalogSchema = parentSchema.getSubSchema(catalogName);
 
 		if (catalogSchema != null) {
@@ -167,7 +168,10 @@ public class CatalogCalciteSchema implements Schema {
 		@Override
 		public Table getTable(String tableName) {
 			try {
+				LOGGER.info("Getting table '{}' from catalog '{}'", tableName, catalogName);
 				CatalogTable table = catalog.getTable(new ObjectPath(dbName, tableName));
+
+				LOGGER.info("Successfully got table '{}' from catalog '{}'", tableName, catalogName);
 
 				if (table instanceof FlinkTempTable) {
 					return ((FlinkTempTable) table).getAbstractTable();

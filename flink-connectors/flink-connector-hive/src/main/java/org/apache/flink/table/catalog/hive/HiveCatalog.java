@@ -49,6 +49,8 @@ import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.api.UnknownDBException;
 import org.apache.parquet.Strings;
 import org.apache.thrift.TException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,6 +66,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * A catalog that connects to Hive MetaStore and reads/writes Hive tables.
  */
 public class HiveCatalog implements ReadableWritableCatalog {
+	private static final Logger LOG = LoggerFactory.getLogger(HiveCatalog.class);
 
 	private static final String DEFAULT_DB = "default";
 
@@ -82,6 +85,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 		this.catalogName = catalogName;
 
 		this.hiveConf = checkNotNull(hiveConf, "hiveConf cannot be null");
+		LOG.info("Created HiveCatalog '{}'", catalogName);
 	}
 
 	private static HiveConf getHiveConf(String hiveMetastoreURI) {
@@ -121,6 +125,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 	public void open() {
 		if (client == null) {
 			client = getMetastoreClient(hiveConf);
+			LOG.info("Connect to Hive metastore");
 		}
 	}
 
@@ -129,6 +134,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 		if (client != null) {
 			client.close();
 			client = null;
+			LOG.info("Close connection to Hive metastore");
 		}
 	}
 
