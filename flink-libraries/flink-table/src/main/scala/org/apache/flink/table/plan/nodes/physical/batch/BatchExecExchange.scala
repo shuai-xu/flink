@@ -26,7 +26,7 @@ import org.apache.flink.runtime.io.network.DataExchangeMode
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, PartitionTransformation, StreamTransformation, TwoInputTransformation}
 import org.apache.flink.streaming.runtime.partitioner._
-import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
+import org.apache.flink.table.api.types.{RowType, TypeConverters}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
@@ -160,17 +160,19 @@ class BatchExecExchange(
 
   //~ ExecNode methods -----------------------------------------------------------
 
-  override def isBarrierNode: Boolean = {
+  override def getDamBehavior: DamBehavior = {
     val tableConfig = FlinkRelOptUtil.getTableConfig(this)
     val exchangeMode = getDataExchangeModeForDeadlockBreakup(tableConfig.getConf)
     if (exchangeMode eq DataExchangeMode.BATCH) {
-      return true
+      return DamBehavior.FULL_DAM
     }
     distribution.getType match {
-      case RelDistribution.Type.RANGE_DISTRIBUTED => true
-      case _ => false
+      case RelDistribution.Type.RANGE_DISTRIBUTED => DamBehavior.FULL_DAM
+      case _ => DamBehavior.PIPELINED
     }
   }
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
 
   /**
     * Currently, PartitionTransformation wont been reused,
@@ -401,8 +403,5 @@ class BatchExecExchange(
     removeIdTransformation
   }
 
-  override def accept(visitor: BatchExecNodeVisitor): Unit = {
-    visitor.visit(this)
-  }
 }
 

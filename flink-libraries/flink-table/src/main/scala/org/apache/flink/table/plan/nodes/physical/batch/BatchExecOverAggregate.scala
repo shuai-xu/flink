@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.functions.UserDefinedFunction
 import org.apache.flink.table.api.types._
@@ -30,7 +31,6 @@ import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
-import org.apache.flink.table.plan.nodes.exec.ExecNodeVisitor
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.nodes.physical.batch.OverWindowMode.OverWindowMode
 import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToBatchAggregateInfoList}
@@ -253,6 +253,10 @@ class BatchExecOverAggregate(
 
   //~ ExecNode methods -----------------------------------------------------------
 
+  override def getDamBehavior: DamBehavior = DamBehavior.PIPELINED
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
+
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
     * into a Batch operator.
@@ -334,10 +338,6 @@ class BatchExecOverAggregate(
         getResource.getPreferResourceSpec)
       transformation
     }
-  }
-
-  override def accept(visitor: BatchExecNodeVisitor): Unit = {
-    visitor.visit(this)
   }
 
   def createOverWindowFrames(tableEnv: BatchTableEnvironment, inType: RowType)

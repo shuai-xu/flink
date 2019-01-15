@@ -17,16 +17,16 @@
  */
 package org.apache.flink.table.plan.nodes.exec
 
+import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 
 trait BatchExecNode[T] extends ExecNode[BatchTableEnvironment, T] {
 
   /**
-    * Returns true if this node is a barrier node, else false.
-    * TODO remove default value
+    * Returns [[DamBehavior]] of this node.
     */
-  def isBarrierNode: Boolean = false
+  def getDamBehavior: DamBehavior
 
   /**
     * Accepts a visit from a [[BatchExecNodeVisitor]].

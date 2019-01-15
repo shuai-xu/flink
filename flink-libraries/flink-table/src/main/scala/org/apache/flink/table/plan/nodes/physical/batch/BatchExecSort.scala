@@ -83,7 +83,9 @@ class BatchExecSort(
 
   //~ ExecNode methods -----------------------------------------------------------
 
-  override def isBarrierNode: Boolean = true
+  override def getDamBehavior: DamBehavior = DamBehavior.FULL_DAM
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
 
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
@@ -123,7 +125,7 @@ class BatchExecSort(
       binaryType,
       getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
-    transformation.setDamBehavior(DamBehavior.FULL_DAM)
+    transformation.setDamBehavior(getDamBehavior)
     transformation.setResources(getResource.getReservedResourceSpec,
       getResource.getPreferResourceSpec)
     transformation
@@ -144,7 +146,4 @@ class BatchExecSort(
     (comps, sers, codeGen)
   }
 
-  override def accept(visitor: BatchExecNodeVisitor): Unit = {
-    visitor.visit(this)
-  }
 }

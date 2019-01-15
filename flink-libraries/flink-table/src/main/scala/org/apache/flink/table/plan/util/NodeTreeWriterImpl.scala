@@ -37,6 +37,9 @@ import java.util.{ArrayList => JArrayList, List => JList}
 
 import scala.collection.JavaConversions._
 
+/**
+  * Convert node tree to string as a tree style.
+  */
 class NodeTreeWriterImpl(
     node: ExecNode[_, _],
     pw: PrintWriter,
@@ -49,6 +52,9 @@ class NodeTreeWriterImpl(
     reuseInfoMap: Option[util.IdentityHashMap[ExecNode[_, _], (Integer, Boolean)]] = None)
   extends RelWriterImpl(pw, explainLevel, false) {
 
+  require((stopExplainNodes.isEmpty && reuseInfoMap.isEmpty) ||
+    (stopExplainNodes.isDefined && reuseInfoMap.isDefined))
+
   // use reuse info based on `reuseInfoMap` if it's not None,
   // else rebuild it using `ReuseInfoBuilder`
   class ReuseInfo {
@@ -58,28 +64,33 @@ class NodeTreeWriterImpl(
 
     if (reuseInfoMap.isEmpty) {
       reuseInfoBuilder = new ReuseInfoBuilder()
-      reuseInfoBuilder.go(node.getFlinkPhysicalRel)
+      reuseInfoBuilder.visit(node)
       mapNodeToVisitedTimes = Maps.newIdentityHashMap[ExecNode[_, _], Int]()
     }
 
+    /**
+      * Returns reuse id if the given node is a reuse node, else None.
+      */
     def getReuseId(node: ExecNode[_, _]): Option[Integer] = {
       reuseInfoMap match {
-        case Some(map) =>
-          if (map.containsKey(node)) Some(map.get(node)._1) else None
-        case _ =>
-          reuseInfoBuilder.getReuseId(node)
+        case Some(map) => if (map.containsKey(node)) Some(map.get(node)._1) else None
+        case _ => reuseInfoBuilder.getReuseId(node)
       }
     }
 
+    /**
+      * Returns true if the given node is first visited, else false.
+      */
     def isFirstVisited(node: ExecNode[_, _]): Boolean = {
       reuseInfoMap match {
-        case Some(map) =>
-          if (map.containsKey(node)) map.get(node)._2 else true
-        case _ =>
-          mapNodeToVisitedTimes.get(node) == 1
+        case Some(map) => if (map.containsKey(node)) map.get(node)._2 else true
+        case _ => mapNodeToVisitedTimes.get(node) == 1
       }
     }
 
+    /**
+      * Updates visited times for given node if `reuseInfoMap` is None.
+      */
     def addVisitedTimes(node: ExecNode[_, _]): Unit = {
       reuseInfoMap match {
         case Some(_) => // do nothing
@@ -100,6 +111,7 @@ class NodeTreeWriterImpl(
     val node = rel.asInstanceOf[ExecNode[_, _]]
     reuseInfo.addVisitedTimes(node)
     val inputs = rel.getInputs
+    // whether explain input nodes of current node
     val explainInputs = needExplainInputs(node)
     val mq = rel.getCluster.getMetadataQuery
     if (explainInputs && !mq.isVisibleInExplain(rel, explainLevel)) {
@@ -119,7 +131,7 @@ class NodeTreeWriterImpl(
     val reuseId = reuseInfo.getReuseId(node)
     val isReuseNode = reuseId.isDefined
     val isFirstVisited = reuseInfo.isFirstVisited(node)
-    // output detail
+    // whether output detail
     val printDetail = !isReuseNode || isFirstVisited
 
     if (isReuseNode && !isFirstVisited) {
@@ -233,8 +245,7 @@ class NodeTreeWriterImpl(
   }
 
   /**
-    * Returns true if `stopVisitNodes` is not None and contains the given node, else false.
-    * true means the input of the given node was visited before.
+    * Returns true if `stopExplainNodes` is not None and contains the given node, else false.
     */
   private def needExplainInputs(node: ExecNode[_, _]): Boolean = {
     stopExplainNodes match {

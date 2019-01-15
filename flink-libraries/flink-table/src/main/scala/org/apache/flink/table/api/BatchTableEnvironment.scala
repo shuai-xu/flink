@@ -418,16 +418,13 @@ class BatchTableEnvironment(
     require(rels.nonEmpty && rels.forall(_.isInstanceOf[BatchExecRel[_]]))
     // reuse subplan
     val reusedPlan = SubplanReuseUtil.reuseSubplan(rels, config)
-    // TODO convert to ExecNode dag
+    val nodeDag = reusedPlan.map(_.asInstanceOf[BatchExecNode[_]])
+    val context = new DAGProcessContext(this)
     // breakup deadlock
-    val postOptimizedPlan = new DeadlockBreakupProcessor().process(reusedPlan)
-    val nodeDag = postOptimizedPlan.map(_.asInstanceOf[BatchExecNode[_]])
-
+    val nodeDagWithoutDeadlock = new DeadlockBreakupProcessor().process(nodeDag, context)
     val dagProcessors = getConfig.getBatchDAGProcessors
     require(dagProcessors != null)
-    val context = new DAGProcessContext(this)
-    val postNodeDag = dagProcessors.process(nodeDag, context)
-
+    val postNodeDag = dagProcessors.process(nodeDagWithoutDeadlock, context)
     dumpOptimizedPlanIfNeed(postNodeDag)
     postNodeDag.map(_.asInstanceOf[BatchExecNode[_]])
   }

@@ -137,6 +137,12 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
 
   //~ ExecNode methods -----------------------------------------------------------
 
+  override def getDamBehavior: DamBehavior = {
+    if (hashJoinType.buildLeftSemiOrAnti()) DamBehavior.FULL_DAM else DamBehavior.MATERIALIZING
+  }
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
+
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
     * into a Batch operator.
@@ -230,16 +236,11 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
       FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType),
       getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
-    transformation.setDamBehavior(
-      if (hashJoinType.buildLeftSemiOrAnti()) DamBehavior.FULL_DAM else DamBehavior.MATERIALIZING)
+    transformation.setDamBehavior(getDamBehavior)
     transformation.setReadOrderHint(ReadOrder.INPUT1_FIRST)
     transformation.setResources(getResource.getReservedResourceSpec,
       getResource.getPreferResourceSpec)
     transformation
-  }
-
-  override def accept(visitor: BatchExecNodeVisitor): Unit = {
-    visitor.visit(this)
   }
 
   private def getOperatorName: String = {
@@ -305,8 +306,6 @@ class BatchExecHashSemiJoin(
     override var haveInsertRf: Boolean = false)
   extends SemiJoin(cluster, traitSet, left, right, joinCondition, leftKeys, rightKeys, isAntiJoin)
   with BatchExecHashJoinBase {
-
-  override def isBarrierNode: Boolean = if (leftIsBuild) true else false
 
   override def copy(
       traitSet: RelTraitSet,

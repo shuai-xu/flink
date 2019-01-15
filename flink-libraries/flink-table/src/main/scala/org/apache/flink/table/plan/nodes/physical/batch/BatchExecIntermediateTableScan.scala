@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
@@ -63,6 +64,8 @@ class BatchExecIntermediateTableScan(
   override def isDeterministic: Boolean = true
 
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getDamBehavior: DamBehavior = DamBehavior.PIPELINED
 
   /**
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.

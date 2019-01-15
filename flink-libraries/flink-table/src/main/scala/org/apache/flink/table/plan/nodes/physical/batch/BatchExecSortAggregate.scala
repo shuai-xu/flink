@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
+import org.apache.flink.table.api.types.{RowType, TypeConverters}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
@@ -30,7 +30,6 @@ import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.util.{AggregateNameUtil, FlinkRelOptUtil}
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
-import org.apache.flink.table.typeutils.TypeUtils
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
 import org.apache.calcite.rel.RelDistribution.Type._
@@ -149,7 +148,11 @@ class BatchExecSortAggregate(
 
   //~ ExecNode methods -----------------------------------------------------------
 
-  override def isBarrierNode: Boolean = true
+  override def getDamBehavior: DamBehavior = {
+    if (grouping.length == 0) DamBehavior.FULL_DAM else DamBehavior.PIPELINED
+  }
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
 
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
@@ -182,9 +185,7 @@ class BatchExecSortAggregate(
       TypeConverters.toBaseRowTypeInfo(outputRowType),
       getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
-    if (grouping.length == 0) {
-      transformation.setDamBehavior(DamBehavior.FULL_DAM)
-    }
+    transformation.setDamBehavior(getDamBehavior)
     transformation.setResources(getResource.getReservedResourceSpec,
       getResource.getPreferResourceSpec)
     transformation
@@ -193,10 +194,6 @@ class BatchExecSortAggregate(
   private def getOperatorName = {
     val aggregateNamePrefix = if (isMerge) "Global" else "Complete"
     aggregateNamePrefix + "SortAggregate"
-  }
-
-  override def accept(visitor: BatchExecNodeVisitor): Unit = {
-    visitor.visit(this)
   }
 
 }

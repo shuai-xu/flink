@@ -17,6 +17,7 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.types.TypeConverters
@@ -69,6 +70,10 @@ class BatchExecExpand(
 
   //~ ExecNode methods -----------------------------------------------------------
 
+  override def getDamBehavior: DamBehavior = DamBehavior.PIPELINED
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
+
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
     * into a Batch operator.
@@ -109,7 +114,4 @@ class BatchExecExpand(
     s"BatchExecExpand: ${getRowType.getFieldList.map(_.getName).mkString(", ")}"
   }
 
-  override def accept(visitor: BatchExecNodeVisitor): Unit = {
-    visitor.visit(this)
-  }
 }

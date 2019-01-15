@@ -18,10 +18,9 @@
 package org.apache.flink.table.plan.util
 
 import org.apache.flink.table.plan.nodes.calcite.Sink
-import org.apache.flink.table.plan.nodes.exec.ExecNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNode, ExecNodeVisitor}
 
 import com.google.common.collect.{Maps, Sets}
-import org.apache.calcite.rel.{RelNode, RelVisitor}
 import org.apache.calcite.sql.SqlExplainLevel
 
 import java.io.{PrintWriter, StringWriter}
@@ -61,7 +60,7 @@ object FlinkNodeOptUtil {
   }
 
   /**
-    * Converts an [[ExecNode]] DAG to a string.
+    * Converts an [[ExecNode]] DAG to a string as a tree style.
     *
     * @param nodes              the ExecNodes to convert
     * @param detailLevel        detailLevel defines detail levels for EXPLAIN PLAN.
@@ -92,7 +91,7 @@ object FlinkNodeOptUtil {
     }
 
     val reuseInfoBuilder = new ReuseInfoBuilder()
-    nodes.map(node => reuseInfoBuilder.go(node.getFlinkPhysicalRel))
+    nodes.foreach(reuseInfoBuilder.visit)
     // node sets that stop explain when meet them
     val stopExplainNodes = Sets.newIdentityHashSet[ExecNode[_, _]]()
     // mapping node to reuse info, the map value is a tuple2,
@@ -102,18 +101,16 @@ object FlinkNodeOptUtil {
     // mapping node object to visited times
     val mapNodeToVisitedTimes = Maps.newIdentityHashMap[ExecNode[_, _], Int]()
     val sb = new StringBuilder()
-    // TODO use ExecNode visitor
-    val visitor = new RelVisitor {
-      override def visit(rel: RelNode, ordinal: Int, parent: RelNode): Unit = {
-        val node = rel.asInstanceOf[ExecNode[_, _]]
+    val visitor = new ExecNodeVisitor {
+      override def visit(node: ExecNode[_, _]): Unit = {
         val visitedTimes = mapNodeToVisitedTimes.getOrDefault(node, 0) + 1
         mapNodeToVisitedTimes.put(node, visitedTimes)
         if (visitedTimes == 1) {
-          super.visit(rel, ordinal, parent)
+          super.visit(node)
         }
         val reuseId = reuseInfoBuilder.getReuseId(node)
         val isReuseNode = reuseId.isDefined
-        if (rel.isInstanceOf[Sink] || (isReuseNode && !reuseInfoMap.containsKey(node))) {
+        if (node.isInstanceOf[Sink] || (isReuseNode && !reuseInfoMap.containsKey(node))) {
           if (isReuseNode) {
             reuseInfoMap.put(node, (reuseId.get, true))
           }
@@ -136,7 +133,7 @@ object FlinkNodeOptUtil {
       }
     }
 
-    nodes.foreach(node => visitor.go(node.getFlinkPhysicalRel))
+    nodes.foreach(visitor.visit)
 
     if (sb.length() > 0) {
       // delete last line separator
@@ -173,26 +170,24 @@ object FlinkNodeOptUtil {
 
   /**
     * build reuse id in an ExecNode DAG.
-    * TODO use ExecNode visitor
     */
-  class ReuseInfoBuilder extends RelVisitor {
+  class ReuseInfoBuilder extends ExecNodeVisitor {
     // visited node set
     private val visitedNodes = Sets.newIdentityHashSet[ExecNode[_, _]]()
     // mapping reuse node to its reuse id
     private val mapReuseNodeToReuseId = Maps.newIdentityHashMap[ExecNode[_, _], Integer]()
-    private val reuseIdCounter = new AtomicInteger(0)
+    private val reuseIdGenerator = new AtomicInteger(0)
 
-    override def visit(rel: RelNode, ordinal: Int, parent: RelNode): Unit = {
-      val node = rel.asInstanceOf[ExecNode[_, _]]
+    override def visit(node: ExecNode[_, _]): Unit = {
       // if a node is visited more than once, this node is a reusable node
       if (visitedNodes.contains(node)) {
         if (!mapReuseNodeToReuseId.containsKey(node)) {
-          val reuseId = reuseIdCounter.incrementAndGet()
+          val reuseId = reuseIdGenerator.incrementAndGet()
           mapReuseNodeToReuseId.put(node, reuseId)
         }
       } else {
         visitedNodes.add(node)
-        super.visit(rel, ordinal, parent)
+        super.visit(node)
       }
     }
 

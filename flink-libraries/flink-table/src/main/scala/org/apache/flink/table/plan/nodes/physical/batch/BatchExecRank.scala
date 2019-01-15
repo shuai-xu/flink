@@ -19,6 +19,7 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
@@ -225,6 +226,10 @@ class BatchExecRank(
 
   //~ ExecNode methods -----------------------------------------------------------
 
+  override def getDamBehavior: DamBehavior = DamBehavior.PIPELINED
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
+
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
     * into a Batch operator.
@@ -297,10 +302,6 @@ class BatchExecRank(
     transformation.setResources(getResource.getReservedResourceSpec,
       getResource.getPreferResourceSpec)
     transformation
-  }
-
-  override def accept(visitor: BatchExecNodeVisitor): Unit = {
-    visitor.visit(this)
   }
 
   private def getOperatorName: String = {

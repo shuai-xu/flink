@@ -19,14 +19,17 @@
 package org.apache.flink.table.plan.util
 
 import org.apache.flink.runtime.io.network.DataExchangeMode
+import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
-import org.apache.flink.table.plan.nodes.exec.{ExecNode, ExecNodeVisitor}
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecBoundedStreamScan, _}
+import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode, ExecNodeVisitor}
+import org.apache.flink.table.plan.nodes.physical.batch._
+import org.apache.flink.table.plan.nodes.process.{DAGProcessContext, DAGProcessor}
 
+import com.google.common.base.Preconditions
 import com.google.common.collect.{Maps, Sets}
-import org.apache.calcite.rel.{RelNode, RelVisitor}
 
 import java.util
 
@@ -34,14 +37,14 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 
 /**
-  * A DeadlockBreakupHandler that finds out all deadlocks in the plan, and resolves them.
+  * A DeadlockBreakupProcessor that finds out all deadlocks in the DAG, and resolves them.
   *
-  * NOTES: This program can be only applied on [[BatchExecRel]] DAG.
+  * NOTES: This processor can be only applied on [[BatchExecNode]] DAG.
   *
-  * Reused node (may be a [[BatchExecRel]] which has more than one outputs or
+  * Reused node (may be a [[BatchExecNode]] which has more than one outputs or
   * a [[BatchExecBoundedStreamScan]] which transformation is used for different scan)
-  * might lead to a deadlock when HashJoin or NestedLoopJoin have same reused inputs.
-  * Sets Exchange node(if it does not exist, add one) as BATCH mode to break up the deadlock.
+  * might lead to a deadlock when a HashJoin or NestedLoopJoin have same reused inputs.
+  * Sets Exchange node(if it does not exist, add new one) as BATCH mode to break up the deadlock.
   *
   * e.g. SQL: WITH r AS (SELECT a, b FROM x limit 10)
   * SELECT r1.a FROM r r1, r r2 WHERE r1.a = r2.a AND r1.b > 10 AND r2.b < 20
@@ -64,57 +67,57 @@ import scala.collection.mutable
   * build side has finished, so the Exchange node in HashJoin's left input requires BATCH mode
   * to block the stream. After this handler is applied, The simplified plan is:
   * {{{
+  *                   Calc(select=[a])
+  *                     |
+  *                 HashJoin
+  *     (build side)/      \(probe side)
+  *    (broadcast)Exchange Exchange(exchange_mode=[BATCH]) add BATCH Exchange to breakup deadlock
+  *                |        |
+  *             Calc(b>10) Calc(b<20)
+  *                 \      /
+  *                 Limit(global=[true], reuse_id=[1]))
+  *                     |
+  *                 Exchange(single)
+  *                     |
+  *                 Limit(global=[false])
+  *                     |
   *                ScanTableSource
-  *                    |
-  *                Limit(global=[false])
-  *                    |
-  *                Exchange(single)
-  *                    |
-  *                Limit(global=[true], reuse_id=[1]))
-  *                /      \
-  *        Calc(b>10)     Calc(b<20)
-  *               |        |
-  * (broadcast)Exchange   Exchange(exchange_mode=[BATCH]) add BATCH Exchange to breakup deadlock
-  *    (build side)\       /(probe side)
-  *                HashJoin
-  *                   |
-  *               Calc(select=[a])
   * }}}
   */
-class DeadlockBreakupProcessor {
+class DeadlockBreakupProcessor extends DAGProcessor{
 
-  // TODO change arguments to sinks: Seq[BatchExecNode[_]]
-  def process(sinks: Seq[RelNode]): Seq[RelNode] = {
-    // TODO remove this
-    require(sinks.head.isInstanceOf[BatchExecRel[_]])
-
+  override def process(
+      sinkNodes: util.List[ExecNode[_, _]],
+      context: DAGProcessContext): util.List[ExecNode[_, _]] = {
+    if (!sinkNodes.forall(_.isInstanceOf[BatchExecNode[_]])) {
+      throw new TableException("Only BatchExecNode DAG is supported now")
+    }
     val finder = new ReuseNodeFinder()
-    sinks.foreach(sink => finder.go(sink))
-    sinks.foreach(
-      sink => sink.asInstanceOf[BatchExecRel[_]].accept(new DeadlockBreakupShuttleImpl(finder))
-    )
-    sinks
+    sinkNodes.foreach(finder.visit)
+    sinkNodes.foreach(_.asInstanceOf[BatchExecNode[_]].accept(new DeadlockBreakupVisitor(finder)))
+    sinkNodes
   }
 
   /**
     * Find reuse node.
-    * A reuse node has more than one output or is BatchExecBoundedStreamScan which DataStream
-    * object is held by different BatchExecBoundedStreamScans.
+    * A reuse node has more than one output or is a [[BatchExecBoundedStreamScan]]
+    * which [[DataStream]] object is held by different [[BatchExecBoundedStreamScan]]s.
     */
-  class ReuseNodeFinder extends RelVisitor {
-    // map a node object to its visited times. the visited times of a reused node is more than one
-    private val visitedTimes = Maps.newIdentityHashMap[RelNode, Integer]()
+  class ReuseNodeFinder extends ExecNodeVisitor {
+    // map a node object to its visited times.
+    // the visited times of a reused node is greater than one
+    private val visitedTimes = Maps.newIdentityHashMap[ExecNode[_, _], Integer]()
     // different BatchExecBoundedStreamScans may have same DataStream object
     // map DataStream object to BatchExecBoundedStreamScans
     private val mapDataStreamToScan =
-    Maps.newIdentityHashMap[DataStream[_], util.List[BatchExecBoundedStreamScan]]()
+        Maps.newIdentityHashMap[DataStream[_], util.List[BatchExecBoundedStreamScan]]()
 
     /**
-      * Return true if the visited time of the given node is more than one,
-      * or the node is a [[BatchExecBoundedStreamScan]] and its [[DataStream]] object is hold
+      * Return true if the visited time of the given node is greater than one,
+      * or the node is a [[BatchExecBoundedStreamScan]] and its [[DataStream]] object is held
       * by different [[BatchExecBoundedStreamScan]]s. else false.
       */
-    def isReusedNode(node: RelNode): Boolean = {
+    def isReusedNode(node: ExecNode[_, _]): Boolean = {
       if (visitedTimes.getOrDefault(node, 0) > 1) {
         true
       } else {
@@ -128,7 +131,7 @@ class DeadlockBreakupProcessor {
       }
     }
 
-    override def visit(node: RelNode, ordinal: Int, parent: RelNode): Unit = {
+    override def visit(node: ExecNode[_, _]): Unit = {
       val times = visitedTimes.getOrDefault(node, 0)
       visitedTimes.put(node, times + 1)
       node match {
@@ -139,21 +142,19 @@ class DeadlockBreakupProcessor {
           scans.add(scan)
         case _ => // do nothing
       }
-      super.visit(node, ordinal, parent)
+      super.visit(node)
     }
   }
 
-  class DeadlockBreakupShuttleImpl(finder: ReuseNodeFinder) extends BatchExecNodeVisitor {
+  class DeadlockBreakupVisitor(finder: ReuseNodeFinder) extends BatchExecNodeVisitor {
 
     private def rewriteJoin(
         join: BatchExecJoinBase,
         leftIsBuild: Boolean,
-        distribution: FlinkRelDistribution): BatchExecRel[_] = {
-      val (buildNode, probeNode) = if (leftIsBuild) {
-        (join.getLeft.asInstanceOf[BatchExecRel[_]], join.getRight.asInstanceOf[BatchExecRel[_]])
-      } else {
-        (join.getRight.asInstanceOf[BatchExecRel[_]], join.getLeft.asInstanceOf[BatchExecRel[_]])
-      }
+        distribution: FlinkRelDistribution): Unit = {
+      val (buildSideIndex, probeSideIndex) = if (leftIsBuild) (0, 1) else (1, 0)
+      val buildNode = join.getInputNodes.get(buildSideIndex)
+      val probeNode = join.getInputNodes.get(probeSideIndex)
 
       // 1. find all reused nodes in build side of join.
       val reusedNodesInBuildSide = findReusedNodesInBuildSide(buildNode, finder)
@@ -168,17 +169,17 @@ class DeadlockBreakupProcessor {
             // TODO create a cloned BatchExecExchange for PIPELINE output
             e.setRequiredDataExchangeMode(DataExchangeMode.BATCH)
           case _ =>
-            val traitSet = probeNode.getTraitSet.replace(distribution)
+            val probeRel = probeNode.getFlinkPhysicalRel
+            val traitSet = probeRel.getTraitSet.replace(distribution)
             val e = new BatchExecExchange(
-              probeNode.getCluster,
+              probeRel.getCluster,
               traitSet,
-              probeNode,
+              probeRel,
               distribution)
             e.setRequiredDataExchangeMode(DataExchangeMode.BATCH)
             join.replaceInputNode(if (leftIsBuild) 1 else 0, e)
         }
       }
-      join
     }
 
     override def visit(hashJoin: BatchExecHashJoinBase): Unit = {
@@ -199,16 +200,15 @@ class DeadlockBreakupProcessor {
     * Find all reused nodes in build side of join.
     */
   private def findReusedNodesInBuildSide(
-      buildNode: BatchExecRel[_],
-      finder: ReuseNodeFinder): Set[BatchExecRel[_]] = {
-    val nodesInBuildSide = Sets.newIdentityHashSet[BatchExecRel[_]]()
+      buildNode: ExecNode[_, _],
+      finder: ReuseNodeFinder): Set[ExecNode[_, _]] = {
+    val nodesInBuildSide = Sets.newIdentityHashSet[ExecNode[_, _]]()
     buildNode.accept(new ExecNodeVisitor {
-      override protected def visitInputs(batchExecNode: ExecNode[_, _]): Unit = {
-        val batchExecRel = batchExecNode.asInstanceOf[BatchExecRel[_]]
-        if (finder.isReusedNode(batchExecRel)) {
-          nodesInBuildSide.add(batchExecRel)
+      override def visit(node: ExecNode[_, _]): Unit = {
+        if (finder.isReusedNode(node)) {
+          nodesInBuildSide.add(node)
         }
-        super.visitInputs(batchExecNode)
+        super.visit(node)
       }
     })
     nodesInBuildSide.toSet
@@ -219,48 +219,47 @@ class DeadlockBreakupProcessor {
     * which are in `reusedNodesInBuildSide` collection.
     * e.g. (sub-plan reused is enabled)
     * {{{
-    *           table source
-    *                |
-    *              calc1 (reusedId=1)
-    *              /   \
-    *           agg1  reused
-    *             |    |
-    *           calc2 agg2
-    * (build side) \   / (probe side)
     *            hash join
+    * (build side) /   \ (probe side)
+    *           calc2 agg2
+    *             |    |
+    *           agg1  reused
+    *              \   /
+    *             calc1 (reuse_id=1)
+    *                |
+    *           table source
     * }}}
     * the input-path of join's probe side is [agg2, reused, calc1].
     *
     * e.g. (sub-plan reused is disabled)
     * {{{
-    *             scan table
-    *              /   \
-    *           calc1   calc2
-    * (build side) \   / (probe side)
     *            hash join
+    * (build side) /   \ (probe side)
+    *           calc1   calc2
+    *              \   /
+    *             scan table
     * }}}
     * the input-path of join's probe side is [calc2, scan].
     */
   private def buildInputPathsOfProbeSide(
-      probeNode: BatchExecRel[_],
-      reusedNodesInBuildSide: Set[BatchExecRel[_]],
-      finder: ReuseNodeFinder): List[Array[BatchExecRel[_]]] = {
-    val result = new mutable.ListBuffer[Array[BatchExecRel[_]]]()
-    val stack = new mutable.Stack[BatchExecRel[_]]()
+      probeNode: ExecNode[_, _],
+      reusedNodesInBuildSide: Set[ExecNode[_, _]],
+      finder: ReuseNodeFinder): List[Array[ExecNode[_, _]]] = {
+    val result = new mutable.ListBuffer[Array[ExecNode[_, _]]]()
+    val stack = new mutable.Stack[ExecNode[_, _]]()
 
     if (reusedNodesInBuildSide.isEmpty) {
       return result.toList
     }
 
     probeNode.accept(new ExecNodeVisitor {
-      override protected def visitInputs(batchExecNode: ExecNode[_, _]): Unit = {
-        val batchExecRel = batchExecNode.asInstanceOf[BatchExecRel[_]]
-        stack.push(batchExecRel)
-        if (finder.isReusedNode(batchExecRel) &&
-          isReusedNodeInBuildSide(batchExecRel, reusedNodesInBuildSide)) {
+      override def visit(node: ExecNode[_, _]): Unit = {
+        stack.push(node)
+        if (finder.isReusedNode(node) &&
+          isReusedNodeInBuildSide(node, reusedNodesInBuildSide)) {
           result.add(stack.toArray.reverse)
         } else {
-          super.visitInputs(batchExecRel)
+          super.visit(node)
         }
         stack.pop()
       }
@@ -271,17 +270,17 @@ class DeadlockBreakupProcessor {
   }
 
   /**
-    * Returns true if the given rel is in `reusedNodesInBuildSide`, else false.
+    * Returns true if the given node is in `reusedNodesInBuildSide`, else false.
     * NOTES: We treat different [[BatchExecBoundedStreamScan]]s with same [[DataStream]]
     * object as the same.
     */
   private def isReusedNodeInBuildSide(
-      batchExecRel: BatchExecRel[_],
-      reusedNodesInBuildSide: Set[BatchExecRel[_]]): Boolean = {
-    if (reusedNodesInBuildSide.contains(batchExecRel)) {
+      execNode: ExecNode[_, _],
+      reusedNodesInBuildSide: Set[ExecNode[_, _]]): Boolean = {
+    if (reusedNodesInBuildSide.contains(execNode)) {
       true
     } else {
-      batchExecRel match {
+      execNode match {
         case scan: BatchExecBoundedStreamScan =>
           reusedNodesInBuildSide.exists {
             case reusedScan: BatchExecBoundedStreamScan =>
@@ -297,14 +296,14 @@ class DeadlockBreakupProcessor {
     * Returns true if all input-paths have barrier node (e.g. agg, sort), otherwise false.
     */
   private def hasBarrierNodeInInputPaths(
-      inputPathsOfProbeSide: List[Array[BatchExecRel[_]]]): Boolean = {
+      inputPathsOfProbeSide: List[Array[ExecNode[_, _]]]): Boolean = {
     require(inputPathsOfProbeSide.nonEmpty)
 
     /** Return true if the successor of join in the input-path is build node, otherwise false */
     def checkJoinBuildSide(
-        buildNode: RelNode,
+        buildNode: ExecNode[_, _],
         idxOfJoin: Int,
-        inputPath: Array[BatchExecRel[_]]): Boolean = {
+        inputPath: Array[ExecNode[_, _]]): Boolean = {
       if (idxOfJoin < inputPath.length - 1) {
         val nextNode = inputPath(idxOfJoin + 1)
         // next node is build node of hash join
@@ -317,26 +316,30 @@ class DeadlockBreakupProcessor {
     inputPathsOfProbeSide.forall {
       inputPath =>
         var idx = 0
-        var hasBarrierNode = false
+        var hasFullDamNode = false
         // should exclude the reused node (at last position in path)
-        while (!hasBarrierNode && idx < inputPath.length - 1) {
+        while (!hasFullDamNode && idx < inputPath.length - 1) {
           val node = inputPath(idx)
-          hasBarrierNode = if (node.isBarrierNode) {
+          val nodeDamBehavior = node.asInstanceOf[BatchExecNode[_]].getDamBehavior
+          hasFullDamNode = if (nodeDamBehavior == DamBehavior.FULL_DAM) {
             true
           } else {
             node match {
               case h: BatchExecHashJoinBase =>
-                val buildNode = if (h.leftIsBuild) h.getLeft else h.getRight
+                val buildSideIndex = if (h.leftIsBuild) 0 else 1
+                val buildNode = h.getInputNodes.get(buildSideIndex)
                 checkJoinBuildSide(buildNode, idx, inputPath)
               case n: BatchExecNestedLoopJoinBase =>
-                val buildNode = if (n.leftIsBuild) n.getLeft else n.getRight
+                val buildSideIndex = if (n.leftIsBuild) 0 else 1
+                val buildNode = n.getInputNodes.get(buildSideIndex)
                 checkJoinBuildSide(buildNode, idx, inputPath)
               case _ => false
             }
           }
           idx += 1
         }
-        hasBarrierNode
+        hasFullDamNode
     }
   }
+
 }

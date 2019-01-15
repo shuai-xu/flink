@@ -110,13 +110,12 @@ NestedLoopJoin(where=[=(he1, he2)], join=[hs1, he1, c1, s1, hs2, he2, c2, s2], j
 :           +- LocalHashWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 3600000.millis, 60000.millis)], properties=[w$start, w$end, w$rowtime], select=[Partial_COUNT(*) AS count$0, Partial_SUM(c) AS sum$1])
 :              +- Calc(select=[rowtime, c])
 :                 +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c, rowtime])
-+- Exchange(distribution=[any], exchange_mode=[BATCH])
-   +- Calc(select=[CAST(w$start) AS hs2, CAST(w$end) AS he2, c2, s2])
-      +- HashWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 86400000.millis, 60000.millis)], properties=[w$start, w$end, w$rowtime], select=[Final_COUNT(count$0) AS c2, Final_SUM(sum$1) AS s2])
-         +- Exchange(distribution=[single])
-            +- LocalHashWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 86400000.millis, 60000.millis)], properties=[w$start, w$end, w$rowtime], select=[Partial_COUNT(*) AS count$0, Partial_SUM(c) AS sum$1])
-               +- Calc(select=[rowtime, c])
-                  +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c, rowtime])
++- Calc(select=[CAST(w$start) AS hs2, CAST(w$end) AS he2, c2, s2])
+   +- HashWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 86400000.millis, 60000.millis)], properties=[w$start, w$end, w$rowtime], select=[Final_COUNT(count$0) AS c2, Final_SUM(sum$1) AS s2])
+      +- Exchange(distribution=[single])
+         +- LocalHashWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 86400000.millis, 60000.millis)], properties=[w$start, w$end, w$rowtime], select=[Partial_COUNT(*) AS count$0, Partial_SUM(c) AS sum$1])
+            +- Calc(select=[rowtime, c])
+               +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c, rowtime])
 ]]>
     </Resource>
   </TestCase>
@@ -146,10 +145,26 @@ HashWindowAggregate(window=[SlidingGroupWindow('w$, 'ts, 5400000.millis, 900000.
     <Resource name="sql">
       <![CDATA[SELECT   c, d,   SESSION_START(ts, INTERVAL '12' HOUR),   SESSION_END(ts, INTERVAL '12' HOUR),   SESSION_ROWTIME(ts, INTERVAL '12' HOUR),   SUM(a) AS sumA,   MIN(b) AS minB FROM T GROUP BY SESSION(ts, INTERVAL '12' HOUR), c, d]]>
     </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(c=[$1], d=[$2], EXPR$2=[SESSION_START($0)], EXPR$3=[SESSION_END($0)], EXPR$4=[SESSION_ROWTIME($0)], sumA=[$3], minB=[$4])
++- LogicalAggregate(group=[{0, 1, 2}], sumA=[SUM($3)], minB=[MIN($4)])
+   +- LogicalProject($f0=[SESSION($4, 43200000)], c=[$2], d=[$3], a=[$0], b=[$1])
+      +- LogicalTableScan(table=[[builtin, default, T]])
+]]>
+    </Resource>
   </TestCase>
   <TestCase name="testNonPartitionedSessionWindow">
     <Resource name="sql">
       <![CDATA[SELECT COUNT(*) AS cnt FROM T GROUP BY SESSION(ts, INTERVAL '30' MINUTE)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(cnt=[$1])
++- LogicalAggregate(group=[{0}], cnt=[COUNT()])
+   +- LogicalProject($f0=[SESSION($3, 1800000)])
+      +- LogicalTableScan(table=[[builtin, default, T]])
+]]>
     </Resource>
   </TestCase>
   <TestCase name="testNonPartitionedTumbleWindow">

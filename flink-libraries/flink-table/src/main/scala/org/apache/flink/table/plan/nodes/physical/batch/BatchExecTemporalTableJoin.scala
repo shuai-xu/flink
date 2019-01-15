@@ -17,6 +17,7 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.dataformat.BaseRow
@@ -68,7 +69,18 @@ class BatchExecTemporalTableJoin(
       joinType)
   }
 
+  override def isDeterministic: Boolean = {
+    TemporalJoinUtil.isDeterministic(
+      tableCalcProgram,
+      period,
+      joinInfo.getRemaining(cluster.getRexBuilder))
+  }
+
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getDamBehavior: DamBehavior = DamBehavior.PIPELINED
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
 
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
@@ -88,16 +100,6 @@ class BatchExecTemporalTableJoin(
       tableEnv.getRelBuilder)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
     transformation
-  }
-
-  override def isDeterministic: Boolean = {
-    TemporalJoinUtil.isDeterministic(
-      tableCalcProgram,
-      period,
-      joinInfo.getRemaining(cluster.getRexBuilder))
-  }
-  override def accept(visitor: BatchExecNodeVisitor): Unit = {
-    visitor.visit(this)
   }
 
 }

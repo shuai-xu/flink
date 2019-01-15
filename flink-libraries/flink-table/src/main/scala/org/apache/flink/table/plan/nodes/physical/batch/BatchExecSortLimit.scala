@@ -19,7 +19,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
+import org.apache.flink.table.api.types.TypeConverters
 import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
 import org.apache.flink.table.codegen.{GeneratedSorter, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
@@ -134,7 +134,9 @@ class BatchExecSortLimit(
 
   //~ ExecNode methods -----------------------------------------------------------
 
-  override def isBarrierNode: Boolean = true
+  override def getDamBehavior: DamBehavior = DamBehavior.FULL_DAM
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
 
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
@@ -179,7 +181,7 @@ class BatchExecSortLimit(
       inputType,
       getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
-    transformation.setDamBehavior(DamBehavior.FULL_DAM)
+    transformation.setDamBehavior(getDamBehavior)
     transformation.setResources(getResource.getReservedResourceSpec,
       getResource.getPreferResourceSpec)
     transformation
@@ -190,10 +192,6 @@ class BatchExecSortLimit(
         s"orderBy: [${SortUtil.sortFieldsToString(collations, getRowType)}], " +
         s"offset: $offsetToString, " +
         s"limit: $limitToString)"
-  }
-
-  override def accept(visitor: BatchExecNodeVisitor): Unit = {
-    visitor.visit(this)
   }
 
 }

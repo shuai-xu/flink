@@ -18,10 +18,11 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
+import org.apache.flink.table.api.types.{RowType, TypeConverters}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
@@ -29,7 +30,6 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
-import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.ExecResourceUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
@@ -93,6 +93,10 @@ class BatchExecLocalHashWindowAggregate(
 
   //~ ExecNode methods -----------------------------------------------------------
 
+  override def getDamBehavior: DamBehavior = DamBehavior.MATERIALIZING
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
+
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
     * into a Batch operator.
@@ -133,10 +137,6 @@ class BatchExecLocalHashWindowAggregate(
     transformation.setResources(getResource.getReservedResourceSpec,
       getResource.getPreferResourceSpec)
     transformation
-  }
-
-  override def accept(visitor: BatchExecNodeVisitor): Unit = {
-    visitor.visit(this)
   }
 
   private def getOperatorName = "LocalWindowHashAggregateBatchExec"

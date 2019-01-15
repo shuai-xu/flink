@@ -19,7 +19,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.functions.{AggregateFunction, UserDefinedFunction}
-import org.apache.flink.table.api.types.{DataTypes, RowType}
+import org.apache.flink.table.api.types.RowType
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator._
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedOperator}

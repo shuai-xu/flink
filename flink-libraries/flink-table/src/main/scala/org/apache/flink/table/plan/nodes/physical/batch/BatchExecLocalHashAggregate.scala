@@ -21,7 +21,7 @@ import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
+import org.apache.flink.table.api.types.{RowType, TypeConverters}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
@@ -127,6 +127,12 @@ class BatchExecLocalHashAggregate(
 
   //~ ExecNode methods -----------------------------------------------------------
 
+  override def getDamBehavior: DamBehavior = {
+    if (grouping.length == 0) DamBehavior.FULL_DAM else DamBehavior.MATERIALIZING
+  }
+
+  override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
+
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
     * into a Batch operator.
@@ -162,16 +168,10 @@ class BatchExecLocalHashAggregate(
       TypeConverters.toBaseRowTypeInfo(outputRowType),
       getResource.getParallelism)
     tableEnv.getRUKeeper.addTransformation(this, transformation)
-    if (grouping.length == 0) {
-      transformation.setDamBehavior(DamBehavior.FULL_DAM)
-    }
+    transformation.setDamBehavior(getDamBehavior)
     transformation.setResources(getResource.getReservedResourceSpec,
       getResource.getPreferResourceSpec)
     transformation
-  }
-
-  override def accept(visitor: BatchExecNodeVisitor): Unit = {
-    visitor.visit(this)
   }
 
   private def getOperatorName = getAggOperatorName("LocalHashAggregate")

@@ -22,7 +22,7 @@ import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.runtime.operators.sort.QuickSort
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType, TypeConverters}
+import org.apache.flink.table.api.types.{DataType, InternalType, RowType, TypeConverters}
 import org.apache.flink.table.api.window.TimeWindow
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, Types}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
