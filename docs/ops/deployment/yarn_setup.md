@@ -36,7 +36,7 @@ export HADOOP_CONF_DIR=/etc/hadoop/conf/
 
 On Linux systems, you can add such line to .bashrc file under $HOME directory to make it permanently for all future bash sessions.
 
-### Run a Flink job on YARN (per-job mode)
+### Run a single Flink job on YARN (per-job mode)
 
 {% highlight bash %}
 # get the hadoop2 package from the Flink download page at
@@ -206,9 +206,9 @@ If you do not want to keep the Flink YARN client running all the time, it's also
 The parameter for that is called `-d` or `--detached`.
 
 In that case, the Flink YARN client will only submit Flink to the cluster and then close itself.
-Note that in this case its not possible to stop the YARN session using Flink.
+Note that in this case it's not possible to stop the YARN session using Flink.
 
-Use the YARN utilities (`yarn application -kill <appId>`) to stop the YARN session.
+Use the YARN utilities (`yarn application -kill <appId>`) or attach to the session to stop the YARN session.
 
 #### Attach to an existing Session
 
@@ -238,7 +238,7 @@ Attaching to a running session uses YARN ResourceManager to determine Job Manage
 
 Stop the YARN session by stopping the unix process (using CTRL+C) or by entering 'stop' into the client.
 
-### Submit Job to Flink
+### Submit Job to an existing Session
 
 Use the following command to submit a Flink program to the YARN cluster:
 
@@ -294,7 +294,7 @@ Action "run" compiles and runs a program.
                                       $namenode_address/tmp/dependency2.jar)
 {% endhighlight %}
 
-Use the *run* action to submit a job to YARN. The client is able to determine the address of the JobManager. In the rare event of a problem, you can also pass the YARN applicationId using the `-yid` argument. The applicationId is visible in the YARN console.
+Use the *run* action to submit a job to an existing Session. The client is able to determine the address of the JobManager. In the rare event of a problem, you can also pass the YARN applicationId using the `-yid` argument. The applicationId is visible in the YARN console.
 
 **Example**
 
@@ -316,18 +316,9 @@ You can check the number of TaskManagers in the JobManager web interface. The ad
 
 If the TaskManagers do not show up after a minute, you should investigate the issue using the log files.
 
-### Submit Job to Existed YARN Session
-You can get session appId from yarn, then submit flink job use `-yid`. 
-
-{% highlight bash %}
-./bin/flink run -m yarn-cluster -yid ${appId} ./examples/streaming/WordCount.jar
-{% endhighlight %}
-
 ## Run a single Flink job on YARN
 
-The documentation above describes how to start a Flink cluster within a Hadoop YARN environment. It is also possible to launch Flink within YARN only for executing a single job.
-
-Please note that the client then expects the `-yn` value to be set (number of TaskManagers) in attach mode.
+The documentation above describes how to start a Flink session cluster within a Hadoop YARN environment. It is also possible to launch Flink within YARN only for executing a single job.
 
 ***Example:***
 
@@ -336,6 +327,8 @@ Please note that the client then expects the `-yn` value to be set (number of Ta
 {% endhighlight %}
 
 The command line options of the YARN session are also available with the `./bin/flink` tool. They are prefixed with a `y` or `yarn` (for the long argument options).
+
+Note: The client expects the `-yn` value to be set (number of TaskManagers) in attach mode.
 
 Note: You can use a different configuration directory per job by setting the environment variable `FLINK_CONF_DIR`. To use this copy the `conf` directory from the Flink distribution and modify, for example, the logging settings on a per-job basis.
 
@@ -508,7 +501,7 @@ YARN shuffle service cleans the intermediate data in two ways:
 1. When one application finishes, YARN will clear its local directory and the intermediate data under the local directory will be cleared meanwhile.
 2. Every intermediate data directory also has a TTL, once the interval since the intermediate data directory get inactive exceeds the TTL, the intermediate data directory will be cleared. The TTL is useful for jobs running on a long live session whose corresponding application will not finish before the session stops.
 
-YARN shuffle service classify the intermediate data directories into four types and each type of directories can be configure separately:
+YARN shuffle service classify the intermediate data directories into four types and each type of directories can be configured separately:
 
 - Consumed: All the reduce side tasks have read the intermediate data.
 - Partial-consumed: Parts of the reduce side tasks have read the intermediate data.
