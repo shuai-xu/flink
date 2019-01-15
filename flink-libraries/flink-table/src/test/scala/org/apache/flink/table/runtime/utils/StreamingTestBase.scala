@@ -44,7 +44,7 @@ class StreamingTestBase {
   def before(): Unit = {
     StreamTestSink.clear()
     this.env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setParallelism(1)
+    env.setParallelism(4)
     this.env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     if (enableObjectReuse) {
       this.env.getConfig.enableObjectReuse()
