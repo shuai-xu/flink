@@ -89,7 +89,7 @@ public class HealthMonitor {
 			ConfigOptions.key("healthmonitor.resolver.classes")
 					.defaultValue(HeapMemoryAdjuster.class.getCanonicalName() + ","
 						+ DirectMemoryAdjuster.class.getCanonicalName() + ","
-						+ NativeMemoryAdjuster.class.getCanonicalName() + " "
+						+ NativeMemoryAdjuster.class.getCanonicalName() + ","
 						+ ParallelismScaler.class.getCanonicalName());
 
 	private JobID jobID;
