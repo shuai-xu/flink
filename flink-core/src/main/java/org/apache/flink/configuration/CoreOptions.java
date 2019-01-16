@@ -225,7 +225,7 @@ public class CoreOptions {
 	 */
 	public static final ConfigOption<Integer> DEFAULT_RESOURCE_HEAP_MEMORY = ConfigOptions
 			.key("resource.heap.mb.default")
-			.defaultValue(32)
+			.defaultValue(16)
 			.withDescription("Java heap size (in megabytes) for operators.");
 
 	// ------------------------------------------------------------------------

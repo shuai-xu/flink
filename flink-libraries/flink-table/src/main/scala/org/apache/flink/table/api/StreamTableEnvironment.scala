@@ -131,6 +131,7 @@ abstract class StreamTableEnvironment(
       jobName: Option[String]): StreamGraph = {
     mergeParameters()
     val context = StreamGraphGenerator.Context.buildStreamProperties(execEnv)
+    context.setSlotSharingEnabled(false)
 
     jobName match {
       case Some(jn) => context.setJobName(jn)

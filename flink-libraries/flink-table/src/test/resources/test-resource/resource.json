@@ -6,7 +6,7 @@
     "parallelism" : 1,
     "maxParallelism" : 1,
     "vcore" : 0.01,
-    "heap_memory" : 32
+    "heap_memory" : 16
   }, {
     "uid" : "table-1",
     "name" : "SourceConversion(table:[builtin, default, SmallTable3], fields:(a, b, c))",
@@ -74,7 +74,7 @@
     "parallelism" : 1,
     "maxParallelism" : 32768,
     "vcore" : 0.01,
-    "heap_memory" : 32
+    "heap_memory" : 16
   } ],
   "links" : [ {
     "source" : "table-0",

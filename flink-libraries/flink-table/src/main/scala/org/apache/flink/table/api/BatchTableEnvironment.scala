@@ -180,6 +180,7 @@ class BatchTableEnvironment(
     } else {
       context.getExecutionConfig.setExecutionMode(ExecutionMode.PIPELINED)
     }
+    context.setSlotSharingEnabled(false)
 
     ruKeeper.setScheduleConfig(context)
     jobName match {
