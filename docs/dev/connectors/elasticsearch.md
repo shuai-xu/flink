@@ -198,7 +198,7 @@ The configuration keys are documented in the Elasticsearch documentation
 Especially important is the `cluster.name` parameter that must correspond to
 the name of your cluster.
 
-Also note that the example only demonstrates performing a single index
+Also, note that the example only demonstrates performing a single index
 request for each incoming element. Generally, the `ElasticsearchSinkFunction`
 can be used to perform multiple requests of different types (ex.,
 `DeleteRequest`, `UpdateRequest`, etc.). 
@@ -215,7 +215,7 @@ With Flink’s checkpointing enabled, the Flink Elasticsearch Sink guarantees
 at-least-once delivery of action requests to Elasticsearch clusters. It does
 so by waiting for all pending action requests in the `BulkProcessor` at the
 time of checkpoints. This effectively assures that all requests before the
-checkpoint was triggered have been successfully acknowledged by Elasticsearch, before
+checkpoint were triggered have been successfully acknowledged by Elasticsearch, before
 proceeding to process more records sent to the sink.
 
 More details on checkpoints and fault tolerance are in the [fault tolerance docs]({{site.baseurl}}/internals/stream_checkpointing.html).
@@ -379,7 +379,7 @@ input.addSink(new ElasticsearchSink(
 
 The above example will let the sink re-add requests that failed due to
 queue capacity saturation and drop requests with malformed documents, without
-failing the sink. For all other failures, the sink will fail. If a `ActionRequestFailureHandler`
+failing the sink. For all other failures, the sink will fail. If an `ActionRequestFailureHandler`
 is not provided to the constructor, the sink will fail for any kind of error.
 
 Note that `onFailure` is called for failures that still occur only after the
@@ -418,9 +418,9 @@ The internal `BulkProcessor` can be further configured for its behaviour
 on how buffered action requests are flushed, by setting the following values in
 the provided `Map<String, String>`:
 
- * **bulk.flush.max.actions**: Maximum amount of actions to buffer before flushing.
- * **bulk.flush.max.size.mb**: Maximum size of data (in megabytes) to buffer before flushing.
- * **bulk.flush.interval.ms**: Interval at which to flush regardless of the amount or size of buffered actions.
+ * **bulk.flush.max.actions**: The maximum amount of actions to buffer before flushing.
+ * **bulk.flush.max.size.mb**: The maximum size of data (in megabytes) to buffer before flushing.
+ * **bulk.flush.interval.ms**: The interval at which to flush regardless of the amount or size of buffered actions.
  
 For versions 2.x and above, configuring how temporary request errors are
 retried is also supported:
@@ -430,7 +430,7 @@ retried is also supported:
  * **bulk.flush.backoff.type**: The type of backoff delay, either `CONSTANT` or `EXPONENTIAL`
  * **bulk.flush.backoff.delay**: The amount of delay for backoff. For constant backoff, this
  is simply the delay between each retry. For exponential backoff, this is the initial base delay.
- * **bulk.flush.backoff.retries**: The amount of backoff retries to attempt.
+ * **bulk.flush.backoff.retries**: The number of backoff retries to attempt.
 
 More information about Elasticsearch can be found [here](https://elastic.co).
 
