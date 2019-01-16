@@ -99,9 +99,9 @@ Example:
 {% highlight java %}
 DataStream<Tuple2<IntWritable,Text>> input = ...;
 
-BucketingSink<String> sink = new BucketingSink<String>("/base/path");
-sink.setBucketer(new DateTimeBucketer<String>("yyyy-MM-dd--HHmm"));
-sink.setWriter(new SequenceFileWriter<IntWritable, Text>());
+BucketingSink<Tuple2<IntWritable, Text>> sink = new BucketingSink<String>("/base/path");
+sink.setBucketer(new DateTimeBucketer<>("yyyy-MM-dd--HHmm"));
+sink.setWriter(new SequenceFileWriter<>());
 sink.setBatchSize(1024 * 1024 * 400); // this is 400 MB,
 
 input.addSink(sink);
@@ -112,9 +112,9 @@ input.addSink(sink);
 {% highlight scala %}
 val input: DataStream[Tuple2[IntWritable, Text]] = ...
 
-val sink = new BucketingSink[String]("/base/path")
-sink.setBucketer(new DateTimeBucketer[String]("yyyy-MM-dd--HHmm"))
-sink.setWriter(new SequenceFileWriter[IntWritable, Text]())
+val sink = new BucketingSink[Tuple2[IntWritable, Text]]("/base/path")
+sink.setBucketer(new DateTimeBucketer[Tuple2[IntWritable, Text]]("yyyy-MM-dd--HHmm"))
+sink.setWriter(new SequenceFileWriter[Tuple2[IntWritable, Text]]())
 sink.setBatchSize(1024 * 1024 * 400) // this is 400 MB,
 
 input.addSink(sink)
