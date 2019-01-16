@@ -118,7 +118,8 @@ tEnv.execute()
 </div>
 </div>
 
-**Note**: It's important to enable subsection optimization if there are multiple TableSinks in a job. In the above example, operators to compute revenue for all French customers will be reused if enable subsection optimization. The following picture shows difference between the job enable subsection optimization and the one not.
+**Note: It's important to enable subsection optimization if there are multiple TableSinks in a job.**
+In the above example, operators to compute revenue for all French customers will be reused if enable subsection optimization. The following picture shows difference between the job enable subsection optimization and the one not.
 
 <div style="text-align: center">
   <img src="{{ site.baseurl }}/fig/multiple_sink.png" width="50%" height="50%" />
