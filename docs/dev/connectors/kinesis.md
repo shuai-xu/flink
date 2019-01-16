@@ -56,7 +56,7 @@ mvn clean install -Pinclude-kinesis -DskipTests
 used by default in the Kinesis connectors, KPL 0.12.5, is no longer supported by AWS Kinesis Streams
 (see [here](https://docs.aws.amazon.com/streams/latest/dev/kinesis-kpl-upgrades.html)).
 This means that when building the Kinesis connector, you will need to specify a higher version KPL client (above 0.12.6)
-in order for the Flink Kinesis Producer to work. You can do this by speciyfing the preferred version via the
+in order for the Flink Kinesis Producer to work. You can do this by specifying the preferred version via the
 `aws.kinesis-kpl.version` property, like so:
 {% highlight bash %}
 mvn clean install -Pinclude-kinesis -Daws.kinesis-kpl.version=0.12.6 -DskipTests
@@ -67,12 +67,12 @@ execution [here]({{site.baseurl}}/dev/linking.html).
 
 ## Using the Amazon Kinesis Streams Service
 Follow the instructions from the [Amazon Kinesis Streams Developer Guide](https://docs.aws.amazon.com/streams/latest/dev/learning-kinesis-module-one-create-stream.html)
-to setup Kinesis streams. Make sure to create the appropriate IAM policy and user to read / write to the Kinesis streams.
+to setup Kinesis streams. Make sure to create the appropriate IAM policy and user to read/write to the Kinesis streams.
 
 ## Kinesis Consumer
 
 The `FlinkKinesisConsumer` is an exactly-once parallel streaming data source that subscribes to multiple AWS Kinesis
-streams within the same AWS service region, and can transparently handle resharding of streams while the job is running. Each subtask of the consumer is
+streams within the same AWS service region, and can transparently handle re-sharding of streams while the job is running. Each subtask of the consumer is
 responsible for fetching data records from multiple Kinesis shards. The number of shards fetched by each subtask will
 change as shards are closed and created by Kinesis.
 
@@ -128,8 +128,8 @@ then some consumer subtasks will simply be idle and wait until it gets assigned
 new shards (i.e., when the streams are resharded to increase the
 number of shards for higher provisioned Kinesis service throughput).
 
-Also note that the assignment of shards to subtasks may not be optimal when
-shard IDs are not consecutive (as result of dynamic re-sharding in Kinesis).
+Also, note that the assignment of shards to subtasks may not be optimal when
+shard IDs are not consecutive (as the result of dynamic re-sharding in Kinesis).
 For cases where skew in the assignment leads to significant imbalanced consumption,
 a custom implementation of `KinesisShardAssigner` can be set on the consumer.
 
@@ -143,9 +143,9 @@ one of the following values in the provided configuration properties (the naming
 - `AT_TIMESTAMP`: read all shards of all streams starting from a specified timestamp. The timestamp must also be specified in the configuration
 properties by providing a value for `ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP`, in one of the following date pattern :
     - a non-negative double value representing the number of seconds that has elapsed since the Unix epoch (for example, `1459799926.480`).
-    - a user defined pattern, which is a valid pattern for `SimpleDateFormat` provided by `ConsumerConfigConstants.STREAM_TIMESTAMP_DATE_FORMAT`.
+    - a user-defined pattern, which is a valid pattern for `SimpleDateFormat` provided by `ConsumerConfigConstants.STREAM_TIMESTAMP_DATE_FORMAT`.
     If `ConsumerConfigConstants.STREAM_TIMESTAMP_DATE_FORMAT` is not defined then the default pattern will be `yyyy-MM-dd'T'HH:mm:ss.SSSXXX`
-    (for example, timestamp value is `2016-04-04` and pattern is `yyyy-MM-dd` given by user or timestamp value is `2016-04-04T19:58:46.480-00:00` without given a pattern).
+    (for example, the timestamp value is `2016-04-04` and pattern is `yyyy-MM-dd` given by the user or timestamp value is `2016-04-04T19:58:46.480-00:00` without giving a pattern).
 
 ### Fault Tolerance for Exactly-Once User-Defined State Update Semantics
 
@@ -154,7 +154,7 @@ periodically checkpoint each shard's progress. In case of a job failure, Flink w
 state of the latest complete checkpoint and re-consume the records from Kinesis shards, starting from the progress that
 was stored in the checkpoint.
 
-The interval of drawing checkpoints therefore defines how much the program may have to go back at most, in case of a failure.
+The interval of drawing checkpoints, therefore, defines how much the program may have to go back at most, in case of a failure.
 
 To use fault tolerant Kinesis Consumers, checkpointing of the topology needs to be enabled at the execution environment:
 
@@ -173,9 +173,9 @@ env.enableCheckpointing(5000) // checkpoint every 5000 msecs
 </div>
 </div>
 
-Also note that Flink can only restart the topology if enough processing slots are available to restart the topology.
+Also, note that Flink can only restart the topology if enough processing slots are available to restart the topology.
 Therefore, if the topology fails due to loss of a TaskManager, there must still be enough slots available afterwards.
-Flink on YARN supports automatic restart of lost YARN containers.
+Flink on YARN supports the automatic restart of lost YARN containers.
 
 ### Event Time for Consumed Records
 
@@ -227,11 +227,11 @@ The Flink Kinesis Consumer uses multiple threads for shard discovery and data co
 
 For shard discovery, each parallel consumer subtask will have a single thread that constantly queries Kinesis for shard
 information even if the subtask initially did not have shards to read from when the consumer was started. In other words, if
-the consumer is run with a parallelism of 10, there will be a total of 10 threads constantly querying Kinesis regardless
+the consumer is run with parallelism of 10, there will be a total of 10 threads constantly querying Kinesis regardless
 of the total amount of shards in the subscribed streams.
 
 For data consumption, a single thread will be created to consume each discovered shard. Threads will terminate when the
-shard it is responsible of consuming is closed as a result of stream resharding. In other words, there will always be
+shard is responsible for consuming is closed as a result of stream resharding. In other words, there will always be
 one thread per open shard.
 
 ### Internally Used Kinesis APIs
@@ -239,29 +239,29 @@ one thread per open shard.
 The Flink Kinesis Consumer uses the [AWS Java SDK](http://aws.amazon.com/sdk-for-java/) internally to call Kinesis APIs
 for shard discovery and data consumption. Due to Amazon's [service limits for Kinesis Streams](http://docs.aws.amazon.com/streams/latest/dev/service-sizes-and-limits.html)
 on the APIs, the consumer will be competing with other non-Flink consuming applications that the user may be running.
-Below is a list of APIs called by the consumer with description of how the consumer uses the API, as well as information
+Below is a list of APIs called by the consumer with the description of how the consumer uses the API, as well as information
 on how to deal with any errors or warnings that the Flink Kinesis Consumer may have due to these service limits.
 
 - *[DescribeStream](http://docs.aws.amazon.com/kinesis/latest/APIReference/API_DescribeStream.html)*: this is constantly called
 by a single thread in each parallel consumer subtask to discover any new shards as a result of stream resharding. By default,
-the consumer performs the shard discovery at an interval of 10 seconds, and will retry indefinitely until it gets a result
+the consumer performs the shard discovery at an interval of 10 seconds and will retry indefinitely until it gets a result
 from Kinesis. If this interferes with other non-Flink consuming applications, users can slow down the consumer of
 calling this API by setting a value for `ConsumerConfigConstants.SHARD_DISCOVERY_INTERVAL_MILLIS` in the supplied
 configuration properties. This sets the discovery interval to a different value. Note that this setting directly impacts
 the maximum delay of discovering a new shard and starting to consume it, as shards will not be discovered during the interval.
 
 - *[GetShardIterator](http://docs.aws.amazon.com/kinesis/latest/APIReference/API_GetShardIterator.html)*: this is called
-only once when per shard consuming threads are started, and will retry if Kinesis complains that the transaction limit for the
+only once when per shard consuming threads are started and will retry if Kinesis complains that the transaction limit for the
 API has exceeded, up to a default of 3 attempts. Note that since the rate limit for this API is per shard (not per stream),
 the consumer itself should not exceed the limit. Usually, if this happens, users can either try to slow down any other
-non-Flink consuming applications of calling this API, or modify the retry behaviour of this API call in the consumer by
+non-Flink consuming applications of calling this API or modify the retry behaviour of this API call in the consumer by
 setting keys prefixed by `ConsumerConfigConstants.SHARD_GETITERATOR_*` in the supplied configuration properties.
 
 - *[GetRecords](http://docs.aws.amazon.com/kinesis/latest/APIReference/API_GetRecords.html)*: this is constantly called
 by per shard consuming threads to fetch records from Kinesis. When a shard has multiple concurrent consumers (when there
 are any other non-Flink consuming applications running), the per shard rate limit may be exceeded. By default, on each call
-of this API, the consumer will retry if Kinesis complains that the data size / transaction limit for the API has exceeded,
-up to a default of 3 attempts. Users can either try to slow down other non-Flink consuming applications, or adjust the throughput
+of this API, the consumer will retry if Kinesis complains that the data size/transaction limit for the API has exceeded,
+up to a default of 3 attempts. Users can either try to slow down other non-Flink consuming applications or adjust the throughput
 of the consumer by setting the `ConsumerConfigConstants.SHARD_GETRECORDS_MAX` and
 `ConsumerConfigConstants.SHARD_GETRECORDS_INTERVAL_MILLIS` keys in the supplied configuration properties. Setting the former
 adjusts the maximum number of records each consuming thread tries to fetch from shards on each call (default is 10,000), while
@@ -343,7 +343,7 @@ The above is a simple example of using the producer. To initialize `FlinkKinesis
 
 If users don't specify any KPL configs and values, `FlinkKinesisProducer` will use default config values of KPL, except `RateLimit`. `RateLimit` limits the maximum allowed put rate for a shard, as a percentage of the backend limits. KPL's default value is 150 but it makes KPL throw `RateLimitExceededException` too frequently and breaks Flink sink as a result. Thus `FlinkKinesisProducer` overrides KPL's default value to 100.
 
-Instead of a `SerializationSchema`, it also supports a `KinesisSerializationSchema`. The `KinesisSerializationSchema` allows to send the data to multiple streams. This is
+Instead of a `SerializationSchema`, it also supports a `KinesisSerializationSchema`. The `KinesisSerializationSchema` allows sending the data to multiple streams. This is
 done using the `KinesisSerializationSchema.getTargetStream(T element)` method. Returning `null` there will instruct the producer to write the element to the default stream.
 Otherwise, the returned stream name is used.
 
@@ -351,7 +351,7 @@ Otherwise, the returned stream name is used.
 
 Since Flink 1.4.0, `FlinkKinesisProducer` switches its default underlying KPL from a one-thread-per-request mode to a thread-pool mode. KPL in thread-pool mode uses a queue and thread pool to execute requests to Kinesis. This limits the number of threads that KPL's native process may create, and therefore greatly lowers CPU utilization and improves efficiency. **Thus, We highly recommend Flink users use thread-pool model.** The default thread pool size is `10`. Users can set the pool size in `java.util.Properties` instance with key `ThreadPoolSize`, as shown in the above example.
 
-Users can still switch back to one-thread-per-request mode by setting a key-value pair of `ThreadingModel` and `PER_REQUEST` in `java.util.Properties`, as shown in the code commented out in above example.
+Users can still switch back to the one-thread-per-request mode by setting a key-value pair of `ThreadingModel` and `PER_REQUEST` in `java.util.Properties`, as shown in the code commented out in the above example.
 
 ### Backpressure
 
@@ -359,7 +359,7 @@ By default, `FlinkKinesisProducer` does not backpressure. Instead, records that
 cannot be sent because of the rate restriction of 1 MB per second per shard are
 buffered in an unbounded queue and dropped when their `RecordTtl` expires.
 
-To avoid data loss, you can enable backpressuring by restricting the size of the
+To avoid data loss, you can enable back pressuring by restricting the size of the
 internal queue:
 
 ```
@@ -389,7 +389,7 @@ It is sometimes desirable to have Flink operate as a consumer or producer agains
 [Kinesalite](https://github.com/mhart/kinesalite); this is especially useful when performing functional testing of a Flink
 application. The AWS endpoint that would normally be inferred by the AWS region set in the Flink configuration must be overridden via a configuration property.
 
-To override the AWS endpoint, taking the producer for example, set the `AWSConfigConstants.AWS_ENDPOINT` property in the
+To override the AWS endpoint, taking the producer, for example, set the `AWSConfigConstants.AWS_ENDPOINT` property in the
 Flink configuration, in addition to the `AWSConfigConstants.AWS_REGION` required by Flink. Although the region is
 required, it will not be used to determine the AWS endpoint URL.
 
