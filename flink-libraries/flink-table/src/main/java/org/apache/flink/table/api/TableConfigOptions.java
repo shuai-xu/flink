@@ -398,34 +398,34 @@ public class TableConfigOptions {
 
 	public static final ConfigOption<Integer> SQL_EXEC_SORT_BUFFER_PREFER_MEM =
 			key("sql.exec.sort.buffer-prefer-memory-mb")
-					.defaultValue(128)
-					.withDescription("Sets the preferred buffer memory size for sort. " +
-							"It defines the applied memory for the sort.");
+			.defaultValue(128)
+			.withDescription("Sets the preferred buffer memory size for sort. " +
+				"It defines the applied memory for the sort.");
 
 	public static final ConfigOption<Integer> SQL_EXEC_SORT_BUFFER_MAX_MEM =
 			key("sql.exec.sort.buffer-max-memory-mb")
-					.defaultValue(512)
-					.withDescription("Sets the max buffer memory size for sort. It defines the upper memory for the sort.");
+			.defaultValue(512)
+			.withDescription("Sets the max buffer memory size for sort. It defines the upper memory for the sort.");
 
 	public static final ConfigOption<Integer> SQL_EXEC_HASH_JOIN_TABLE_PREFER_MEM =
 			key("sql.exec.hash-join.table-prefer-memory-mb")
-					.defaultValue(128)
-					.withDescription("Sets the HashTable preferred memory for hashJoin operator. It defines the upper limit.");
+			.defaultValue(128)
+			.withDescription("Sets the HashTable preferred memory for hashJoin operator. It defines the upper limit.");
 
 	public static final ConfigOption<Integer> SQL_EXEC_HASH_JOIN_TABLE_MAX_MEM =
 			key("sql.exec.hash-join.table-max-memory-mb")
-					.defaultValue(512)
-					.withDescription("Sets the HashTable max memory for hashJoin operator. It defines the upper limit.");
+			.defaultValue(512)
+			.withDescription("Sets the HashTable max memory for hashJoin operator. It defines the upper limit.");
 
 	public static final ConfigOption<Integer> SQL_EXEC_HASH_AGG_TABLE_PREFER_MEM =
 			key("sql.exec.hash-agg.table-prefer-memory-mb")
-					.defaultValue(128)
-					.withDescription("Sets the table preferred memory size of hashAgg operator. It defines the upper limit.");
+			.defaultValue(128)
+			.withDescription("Sets the table preferred memory size of hashAgg operator. It defines the upper limit.");
 
 	public static final ConfigOption<Integer> SQL_EXEC_HASH_AGG_TABLE_MAX_MEM =
 			key("sql.exec.hash-agg.table-max-memory-mb")
-					.defaultValue(512)
-					.withDescription("Sets the table max memory size of hashAgg operator. It defines the upper limit.");
+			.defaultValue(512)
+			.withDescription("Sets the table max memory size of hashAgg operator. It defines the upper limit.");
 
 	public static final ConfigOption<Integer> SQL_RESOURCE_SINK_DEFAULT_MEM =
 			key("sql.resource.sink.default.memory.mb")
