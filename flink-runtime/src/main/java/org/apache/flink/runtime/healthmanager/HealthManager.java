@@ -96,6 +96,8 @@ public class HealthManager {
 			timedTaskHandler = executorService.scheduleAtFixedRate(
 					new RunningJobListChecker(), 0, interval, TimeUnit.MILLISECONDS);
 		}
+
+		this.metricProvider.open();
 	}
 
 	public void stop() {
@@ -103,6 +105,8 @@ public class HealthManager {
 		if (timedTaskHandler != null) {
 			timedTaskHandler.cancel(true);
 		}
+
+		metricProvider.close();
 
 		for (HealthMonitor monitor : jobMonitors.values()) {
 			monitor.stop();

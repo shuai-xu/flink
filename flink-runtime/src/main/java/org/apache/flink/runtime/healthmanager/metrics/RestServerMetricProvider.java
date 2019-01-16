@@ -27,6 +27,9 @@ import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -41,8 +44,10 @@ import java.util.concurrent.TimeUnit;
  */
 public class RestServerMetricProvider implements MetricProvider {
 
+	private static final Logger LOGGER = LoggerFactory.getLogger(RestServerMetricProvider.class);
+
 	private static final ConfigOption<Long> METRIC_FETCH_INTERVAL_OPTION =
-			ConfigOptions.key("metric.provider.fetch.interval.ms").defaultValue(20_000L);
+			ConfigOptions.key("metric.provider.fetch.interval.ms").defaultValue(10_000L);
 
 	private Configuration config;
 	private RestServerClient restServerClient;
@@ -176,36 +181,46 @@ public class RestServerMetricProvider implements MetricProvider {
 		@Override
 		public void run() {
 			synchronized (RestServerMetricProvider.this) {
-				for (Map.Entry<JobID, Map<JobVertexID, Map<String, List<TaskMetricSubscription>>>> jobEntry : taskMetricSubscriptions.entrySet()) {
-					for (Map.Entry<JobVertexID, Map<String, List<TaskMetricSubscription>>> vertexEntry : jobEntry.getValue().entrySet()) {
-						Map<String, Map<Integer, Tuple2<Long, Double>>> values =
-								restServerClient.getTaskMetrics(jobEntry.getKey(), vertexEntry.getKey(), vertexEntry.getValue().keySet());
-						for (Map.Entry<String, List<TaskMetricSubscription>> metricEntry : vertexEntry.getValue().entrySet()) {
-							for (TaskMetricSubscription subscription : metricEntry.getValue()) {
-								subscription.addValue(values.get(metricEntry.getKey()));
+				try {
+					for (Map.Entry<JobID, Map<JobVertexID, Map<String, List<TaskMetricSubscription>>>> jobEntry : taskMetricSubscriptions.entrySet()) {
+						for (Map.Entry<JobVertexID, Map<String, List<TaskMetricSubscription>>> vertexEntry : jobEntry.getValue().entrySet()) {
+							Map<String, Map<Integer, Tuple2<Long, Double>>> values =
+									restServerClient.getTaskMetrics(jobEntry.getKey(), vertexEntry.getKey(), vertexEntry.getValue().keySet());
+							for (Map.Entry<String, List<TaskMetricSubscription>> metricEntry : vertexEntry.getValue().entrySet()) {
+								for (TaskMetricSubscription subscription : metricEntry.getValue()) {
+									if (values.containsKey(metricEntry.getKey())) {
+										subscription.addValue(values.get(metricEntry.getKey()));
+									}
+								}
 							}
 						}
 					}
-				}
 
-				for (Map.Entry<JobID, Map<String, List<JobTMMetricSubscription>>> jobEntry : jobTMMetricSubscriptions.entrySet()) {
-					Map<String, Map<String, Tuple2<Long, Double>>> values =
-							restServerClient.getTaskManagerMetrics(jobEntry.getKey(), jobEntry.getValue().keySet());
-					for (Map.Entry<String, List<JobTMMetricSubscription>> metricEntry : jobEntry.getValue().entrySet()) {
-						for (JobTMMetricSubscription subscription : metricEntry.getValue()) {
-							subscription.addValue(values.get(metricEntry.getKey()));
+					for (Map.Entry<JobID, Map<String, List<JobTMMetricSubscription>>> jobEntry : jobTMMetricSubscriptions.entrySet()) {
+						Map<String, Map<String, Tuple2<Long, Double>>> values =
+								restServerClient.getTaskManagerMetrics(jobEntry.getKey(), jobEntry.getValue().keySet());
+						for (Map.Entry<String, List<JobTMMetricSubscription>> metricEntry : jobEntry.getValue().entrySet()) {
+							for (JobTMMetricSubscription subscription : metricEntry.getValue()) {
+								if (values.containsKey(metricEntry.getKey())) {
+									subscription.addValue(values.get(metricEntry.getKey()));
+								}
+							}
 						}
 					}
-				}
 
-				for (Map.Entry<String, Map<String, List<TaskManagerMetricSubscription>>> tmEntry : tmMetricSubscriptions.entrySet()) {
-					Map<String, Map<String, Tuple2<Long, Double>>> values =
-							restServerClient.getTaskManagerMetrics(Collections.singleton(tmEntry.getKey()), tmEntry.getValue().keySet());
-					for (Map.Entry<String, List<TaskManagerMetricSubscription>> metricEntry : tmEntry.getValue().entrySet()) {
-						for (TaskManagerMetricSubscription subscription : metricEntry.getValue()) {
-							subscription.addValue(values.get(metricEntry.getKey()).get(tmEntry.getKey()));
+					for (Map.Entry<String, Map<String, List<TaskManagerMetricSubscription>>> tmEntry : tmMetricSubscriptions.entrySet()) {
+						Map<String, Map<String, Tuple2<Long, Double>>> values =
+								restServerClient.getTaskManagerMetrics(Collections.singleton(tmEntry.getKey()), tmEntry.getValue().keySet());
+						for (Map.Entry<String, List<TaskManagerMetricSubscription>> metricEntry : tmEntry.getValue().entrySet()) {
+							for (TaskManagerMetricSubscription subscription : metricEntry.getValue()) {
+								if (values.containsKey(metricEntry.getKey())) {
+									subscription.addValue(values.get(metricEntry.getKey()).get(tmEntry.getKey()));
+								}
+							}
 						}
 					}
+				} catch (Throwable e) {
+					LOGGER.warn("Fail to fetch metrics", e);
 				}
 			}
 		}

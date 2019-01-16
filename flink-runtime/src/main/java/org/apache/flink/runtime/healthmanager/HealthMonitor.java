@@ -48,6 +48,7 @@ import org.apache.flink.runtime.healthmanager.plugins.resolvers.HeapMemoryAdjust
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.NativeMemoryAdjuster;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.ParallelismScaler;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -140,6 +141,8 @@ public class HealthMonitor {
 
 	public void start() throws Exception {
 
+		LOGGER.info("Starting to monitor job {}", jobID);
+
 		for (String key : getJobConfig().getConfig().keySet()) {
 			this.config.setString(key , getJobConfig().getConfig().getString(key, null));
 		}
@@ -196,11 +199,13 @@ public class HealthMonitor {
 	private void loadActionSelector() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
 		this.actionSelector =
 				(ActionSelector) Class.forName(config.getString(ACTION_SELECTOR_CLASS)).newInstance();
+		LOGGER.info("Load action selector:" + actionSelector);
 		this.actionSelector.open(this);
 	}
 
 	private void loadDetectors() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
 		String[] detectorClazzs = config.getString(DETECTOR_CLASSES).split(",");
+		LOGGER.info("Load detectors:" + StringUtils.join(detectorClazzs, ","));
 		this.detectors = new ArrayList<>(detectorClazzs.length);
 		for (String clazz : detectorClazzs) {
 			Detector detector = (Detector) Class.forName(clazz.trim()).newInstance();
@@ -213,6 +218,7 @@ public class HealthMonitor {
 
 	private void loadResolvers() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
 		String[] clazzs = config.getString(RESOLVER_CLASSES).split(",");
+		LOGGER.info("Load resolvers:" + StringUtils.join(clazzs, ","));
 		this.resolvers = new ArrayList<>(clazzs.length);
 		for (String clazz : clazzs) {
 			Resolver resolver = (Resolver) Class.forName(clazz.trim()).newInstance();
@@ -260,6 +266,8 @@ public class HealthMonitor {
 
 		@Override
 		public void run() {
+
+			LOGGER.debug("Start to check job {}.", jobID);
 
 			List<Symptom> symptoms = new LinkedList<>();
 
