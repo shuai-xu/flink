@@ -195,7 +195,7 @@ public class ReadableCatalogITCase extends StreamingTestBase {
 
 	@Test
 	public void testStreamSourceParser() {
-		catalog.createTable(new ObjectPath(dbName, "t1"), CatalogTestUtil.createCatalogTableWithPrimaryKey(false), false);
+		catalog.createTable(new ObjectPath(dbName, "t1"), CatalogTestUtil.createCatalogTableWithPrimaryKey(true), false);
 
 		List<String> parameters = new ArrayList<>();
 		parameters.add("b");
