@@ -1,8 +1,8 @@
 ---
-title: "SQL Examples"
-nav-title: SQL Examples
+title: "Stream SQL Examples"
+nav-title: Stream SQL Examples
 nav-parent_id: examples
-nav-pos: 25
+nav-pos: 24
 ---
 <!--
 Licensed to the Apache Software Foundation (ASF) under one
@@ -26,7 +26,7 @@ under the License.
 * This will be replaced by the TOC
 {:toc}
 
-## SQL Client Examples
+## Submit SQL Query by SQL Client
 
 Start local cluster first:
 
@@ -84,29 +84,23 @@ group by a;
 
 After press 'Enter' the sql will be submitted to the standalone cluster. The log will print on the shell.
 
-{% highlight bash %}
-[INFO] Submitting SQL update statement to the cluster...
-[INFO] Table update statement has been successfully submitted to the cluster:
-Cluster ID: StandaloneClusterId
-Job ID: 8dd216ca2cd64df4976c828ad473bee7
-Web interface: http://localhost:8081
-{% endhighlight %}
+<a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-wordcount-run.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-wordcount-run.png" alt="SQLClient Example: WordCount run"/></a>
 
-Open http://localhost:8081 and you can see the job information.
+Open [http://localhost:8081](http://localhost:8081) and you can see the dashboard.
 
-<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-sqlclient-wordcount.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-sqlclient-wordcount.png" alt="SQL Example: WordCount"/></a>
+<a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-wordcount-web1.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-wordcount-web1.png" alt="SQL Example: WordCount web"/></a>
 
-And the result will output to file.
+Clink the job name: "default: insert into...", and you can see the detailed info page:
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-wordcount-web2.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-wordcount-web2.png" alt="SQL Example: WordCount detail"/></a>
+
+And run the following command to see the output result:
 
 {% highlight bash %}
 $ cat /tmp/output.csv
-Add,hello,1
-Add,flink,1
-Add,hello,2
-Add,sql,1
-Add,hello,3
-Add,world,1
 {% endhighlight %}
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-wordcount-result.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-wordcount-result.png" alt="SQL Example: WordCount result"/></a>
 
 Note that non-local file systems require a schema prefix, such as hdfs://.
 
@@ -212,11 +206,16 @@ To run the StreamJoinSQLExample, issue the following command:
 $ ./bin/flink run ./examples/table/StreamJoinSQLExample.jar
 {% endhighlight %}
 
-To see the output log:
+Open [http://localhost:8081](http://localhost:8081) and you can see the dashboard.
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-stream-join-sql.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-stream-join-sql.png" alt="SQL Example: Stream Join SQL web"/></a>
+
+And run the following command to see the result:
+
 {% highlight bash %}
-$ tail -f ./log/flink-*-taskexecutor-*.out
-2018-10-15 09:05:02.0,9,3,2018-10-15 09:11:00.0
-2018-10-15 10:55:01.0,8,5,2018-10-15 11:31:10.0
+$ tailf ./log/flink-*-taskexecutor*.out
 {% endhighlight %}
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-stream-join-sql-result.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-stream-join-sql-result.png" alt="Stream SQL Example: Stream Join SQL result"/></a>
 
 {% top %}

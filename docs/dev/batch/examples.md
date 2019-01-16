@@ -1,6 +1,6 @@
 ---
-title:  "Batch Examples"
-nav-title: Batch Examples
+title:  "DataSet Examples"
+nav-title: DataSet Examples
 nav-parent_id: examples
 nav-pos: 20
 ---
@@ -121,6 +121,22 @@ The {% gh_link /flink-examples/flink-examples-batch/src/main/scala/org/apache/fl
 
 </div>
 </div>
+
+To run the WordCount example, issue the following command:
+
+{% highlight bash %}
+$ ./bin/flink run ./examples/streaming/WordCount.jar
+{% endhighlight %}
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-batch-example-wordcount-run.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-batch-example-wordcount-run.png" alt="SQL Example: WordCount run"/></a>
+
+And the result will print to shell.
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-batch-example-wordcount-run2.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-batch-example-wordcount-run2.png" alt="SQL Example: WordCount result"/></a>
+
+Also you can see the web [http://localhost:8081](http://localhost:8081):
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-batch-example-wordcount-web.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-batch-example-wordcount-web.png" alt="SQL Example: WordCount web"/></a>
 
 ## Page Rank
 
@@ -284,6 +300,14 @@ Input files are plain text files and must be formatted as follows:
 
 For this simple implementation it is required that each page has at least one incoming and one outgoing link (a page can point to itself).
 
+To run the WordCount example, issue the following command:
+
+{% highlight bash %}
+$ ./bin/flink run ./examples/batch/PageRank.jar
+{% endhighlight %}
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-batch-example-pagerank-run.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-batch-example-pagerank-run.png" alt="SQL Example: pagerank"/></a>
+
 ## Connected Components
 
 The Connected Components algorithm identifies parts of a larger graph which are connected by assigning all vertices in the same connected part the same component ID. Similar to PageRank, Connected Components is an iterative algorithm. In each step, each vertex propagates its current component ID to all its neighbors. A vertex accepts the component ID from a neighbor, if it is smaller than its own component ID.
@@ -419,6 +443,14 @@ Input files are plain text files and must be formatted as follows:
     * For example `"1\n2\n12\n42\n63\n"` gives five vertices with (1), (2), (12), (42), and (63).
 - Edges are represented as pairs for vertex IDs which are separated by space characters. Edges are separated by new-line characters:
     * For example `"1 2\n2 12\n1 12\n42 63\n"` gives four (undirected) links (1)-(2), (2)-(12), (1)-(12), and (42)-(63).
+
+To run the WordCount example, issue the following command:
+
+{% highlight bash %}
+$ ./bin/flink run ./examples/batch/ConnectedComponents.jar
+{% endhighlight %}
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-batch-example-connected-components-run.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-batch-example-connected-components-run.png" alt="SQL Example: ConnectedComponents"/></a>
 
 ## Relational Query
 

@@ -1,6 +1,6 @@
 ---
-title:  "Stream Examples"
-nav-title: Stream Examples
+title:  "DataStream Examples"
+nav-title: DataStream Examples
 nav-parent_id: examples
 nav-pos: 15
 ---
@@ -133,49 +133,80 @@ The {% gh_link flink-examples/flink-examples-streaming/src/main/scala/org/apache
 </div>
 </div>
 
+To run the WordCount example, issue the following command:
+
+{% highlight bash %}
+$ ./bin/flink run ./examples/streaming/WordCount.jar
+{% endhighlight %}
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-wordcount-run.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-wordcount-run.png" alt="Stream SQL Example: WordCount run"/></a>
+
+Open the web: [http://localhost:8081](http://localhost:8081), and you can see the job was finished quickly.
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-wordcount-web1.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-wordcount-web1.png" alt="SQL Example: WordCount web dashboard"/></a>
+
+Clink the job name: "Streaming WordCount", and you can see the detailed info page:
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-wordcount-web2.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-wordcount-web2.png" alt="SQL Example: WordCount web detail"/></a>
+
+And run the following command to see the result:
+
+{% highlight bash %}
+$ tailf ./log/flink-*-taskexecutor*.out
+{% endhighlight %}
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-wordcount-result.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-wordcount-result.png" alt="Stream SQL Example: WordCount result"/></a>
+
 ## Socket Window Word Count
 SocketWindowWordCount implements a streaming windowed version of the "WordCount" program.
 
 This program connects to a server socket and reads strings from the socket.
-The easiest way to try this out is to open a text server (Take port 9000 as example)
+The easiest way to try this out is to open a text server (Take port 1234 as example)
 
 The {% gh_link flink-examples/flink-examples-streaming/src/main/java/org/apache/flink/streaming/examples/socket/SocketWindowWordCount.java "TopSpeedWindowing java program" %} and {% gh_link flink-examples/flink-examples-streaming/src/main/scala/org/apache/flink/streaming/scala/examples/socket/SocketWindowWordCount.scala "TopSpeedWindowing scala program" %} is the source code.
 
-Using the <i>netcat</i> tool via
+First, using the <i>netcat</i> tool via
 
 {% highlight bash %}
-$ nc -l 9000
+$ nc -l 1234
 {% endhighlight %}
   
 If you get an error “Ncat: socket: Address family not supported by protocol QUITTING”. Use the following command:
 
 {% highlight bash %}
-$ nc -l 0.0.0.0 9000
+$ nc -l 0.0.0.0 1234
 {% endhighlight %}
   
-and run this example with the hostname and the port as arguments.
+Then, run this example with the hostname and the port as arguments.
 
 {% highlight bash %}
-$ ./bin/flink run ./examples/streaming/SocketWindowWordCount.jar --port 9000
+$ ./bin/flink run ./examples/streaming/SocketWindowWordCount.jar --port 1234
 {% endhighlight %}
+
+Open the web: [http://localhost:8081](http://localhost:8081)
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-socketwordcount-web-run1.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-socketwordcount-web-run1.png" alt="SQL Example: WordCount web dashboard"/></a>
+
+Clink the job name: "Socket Window WordCount", and you can see the detailed info page:
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-socketwordcount-web-run2.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-socketwordcount-web-run2.png" alt="SQL Example: WordCount web detail"/></a>
 
 Then, you can input data in nc shell terminal:
 
 {% highlight bash %}
-$ nc -l 9000
-lorem ipsum
-ipsum ipsum ipsum
-bye
+$ nc -l 1234
+hello flink hello world
 {% endhighlight %}
 
-The .out file will print the counts of words, e.g.:
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-socketwordcount-input.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-socketwordcount-input.png" alt="SQL Example: SocketWordCount input"/></a>
+
+And run the following command to see the result:
 
 {% highlight bash %}
-$ tail -f log/flink-*-taskexecutor-*.out
-lorem : 1
-bye : 1
-ipsum : 4
+$ tailf ./log/flink-*-taskexecutor*.out
 {% endhighlight %}
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-socketwordcount-output.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-socketwordcount-output.png" alt="SQL Example: SocketWordCount output"/></a>
 
 ## Top Speed Windowing
 
@@ -278,18 +309,22 @@ Run the example
 $ ./bin/flink run ./examples/streaming/TopSpeedWindowing.jar
 {% endhighlight %}
 
-The .out file will print the counts of words, e.g.:
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-cartopspeedwindow-run.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-cartopspeedwindow-run.png" alt="SQL Example: cartopspeedwindow run"/></a>
+
+Open the web: [http://localhost:8081](http://localhost:8081)
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-cartopspeedwindow-web1.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-cartopspeedwindow-web1.png" alt="SQL Example: cartopspeedwindow web dashboard"/></a>
+
+Clink the job name: "CarTopSpeedWindowingExample", and you can see the detailed info page:
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-cartopspeedwindow-web2.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-cartopspeedwindow-web2.png" alt="SQL Example: cartopspeedwindow web detail"/></a>
+
+And run the following command to see the continuous updated result:
 
 {% highlight bash %}
-$ tail -f ./log/flink-*-taskexecutor-*.out
-...
-(0,100,99344.44444444515,1545987198444)
-(0,100,99344.44444444515,1545987198444)
-(1,70,103626.38888889013,1545987199375)
-(0,100,99344.44444444515,1545987198444)
-(0,100,99344.44444444515,1545987198444)
-(1,70,103626.38888889013,1545987199375)
-...
+$ tailf ./log/flink-*-taskexecutor*.out
 {% endhighlight %}
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-cartopspeedwindow-result.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-stream-example-cartopspeedwindow-result.png" alt="SQL Example: cartopspeedwindow result"/></a>
 
 {% top %}
