@@ -127,7 +127,7 @@ public class HiveTableSourceExample {
     tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_SINK_PARALLELISM, 1);
     tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1);
     // use hiveCatalog to obtain properties from hive metastore
-    HiveCatalog hiveCatalog = new HiveCatalog("myHive","thrift://10.101.72.41:9083");
+    HiveCatalog hiveCatalog = new HiveCatalog("myHive","thrift://<ip1>:<port1>;thrift://<ip2>:<port2>;...");
     hiveCatalog.open();
     BatchTableSource hiveTableSource = new HiveTableFactory().createBatchTableSource(hiveCatalog.getTable
         (new ObjectPath("default", "products")).getProperties());
