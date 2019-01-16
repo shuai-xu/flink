@@ -47,6 +47,7 @@ export class JobOverviewComponent implements OnInit, OnDestroy {
   selectedNode = null;
   verticesNodeComponent;
   jobId: string;
+  canToggleExpand = true;
   @ViewChild(NzGraphComponent) graphComponent: NzGraphComponent;
 
   onNodeClick(node: NodesItemCorrectInterface) {
@@ -97,6 +98,8 @@ export class JobOverviewComponent implements OnInit, OnDestroy {
       if (!data || !data.plan || !data.verticesDetail) {
         return;
       }
+      this.canToggleExpand  = data.verticesDetail.operators && data.verticesDetail.operators.length > 0;
+      data.verticesDetail = this.jobService.fillEmptyOperators(data.plan.nodes, data.verticesDetail);
       if (data.plan.jid !== this.jobId) {
         this.jobId = data.plan.jid;
         this.selectedNode = null;

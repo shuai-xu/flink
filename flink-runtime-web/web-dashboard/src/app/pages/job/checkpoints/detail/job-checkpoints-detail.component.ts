@@ -49,6 +49,8 @@ export class JobCheckpointsDetailComponent implements OnInit {
       this.jobService.loadCheckpointDetails(this.jobService.jobDetail.jid, this.checkPoint.id).subscribe(detail => {
         this.checkPointDetail = detail;
         this.isLoading = false;
+      }, () => {
+        this.isLoading = false;
       });
     }
   }

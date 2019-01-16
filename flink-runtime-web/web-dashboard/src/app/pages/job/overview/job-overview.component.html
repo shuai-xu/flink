@@ -17,13 +17,16 @@
 <div class="container" [style.height.px]="top">
   <div class="graph-action" [class.hied]="selectedNode">
     <a (click)="graphComponent?.fit()"><i nz-icon type="pic-center" theme="outline"></i> Fit Window</a>
-    <nz-divider nzType="vertical"></nz-divider>
-    <a (click)="expandAll()"><i nz-icon type="arrows-alt" theme="outline"></i> Expand All</a>
-    <nz-divider nzType="vertical"></nz-divider>
-    <a (click)="collapseAll()"><i nz-icon type="shrink" theme="outline"></i> Collapse All</a>
+    <ng-container *ngIf="canToggleExpand">
+      <nz-divider nzType="vertical"></nz-divider>
+      <a (click)="expandAll()"><i nz-icon type="arrows-alt" theme="outline"></i> Expand All</a>
+      <nz-divider nzType="vertical"></nz-divider>
+      <a (click)="collapseAll()"><i nz-icon type="shrink" theme="outline"></i> Collapse All</a>
+    </ng-container>
   </div>
   <nz-graph [class.selected]="selectedNode"
     [nodePortal]="verticesNodeComponent"
+    [beforeToggleExpand]="jobOverviewGraphService.canToggleExpand"
     [edgeLabelFunction]="jobOverviewGraphService.getLabelForEdge"
     [edgesLayoutFunction]="jobOverviewGraphService.edgesLayoutFunction"
     [opNodeHeightFunction]="jobOverviewGraphService.opNodeHeightFunction"

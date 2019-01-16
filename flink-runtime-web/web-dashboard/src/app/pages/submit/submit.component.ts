@@ -142,6 +142,8 @@ export class SubmitComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         this.listOfJar = data.files;
         this.address = data.address;
+      }, () => {
+        this.isLoading = false;
       });
     }
   }

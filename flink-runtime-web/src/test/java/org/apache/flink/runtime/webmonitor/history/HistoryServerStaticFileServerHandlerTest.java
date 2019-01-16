@@ -24,8 +24,8 @@ import org.apache.flink.runtime.webmonitor.utils.WebFrontendBootstrap;
 import org.apache.flink.shaded.netty4.io.netty.handler.codec.http.router.Router;
 
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +39,7 @@ public class HistoryServerStaticFileServerHandlerTest {
 	@Rule
 	public TemporaryFolder tmp = new TemporaryFolder();
 
-	@Ignore
+	@Test
 	public void testRespondWithFile() throws Exception {
 		File webDir = tmp.newFolder("webDir");
 		Router router = new Router()
@@ -62,7 +62,7 @@ public class HistoryServerStaticFileServerHandlerTest {
 			// verify that a) a file can be loaded using the ClassLoader and b) that the HistoryServer
 			// index_hs.html is injected
 			String index = HistoryServerTest.getFromHTTP("http://localhost:" + port + "/index.html");
-			Assert.assertTrue(index.contains("Completed Jobs"));
+			Assert.assertTrue(index.contains("Apache Flink Web Dashboard"));
 
 			// verify that index.html is appended if the request path ends on '/'
 			String index2 = HistoryServerTest.getFromHTTP("http://localhost:" + port + "/");

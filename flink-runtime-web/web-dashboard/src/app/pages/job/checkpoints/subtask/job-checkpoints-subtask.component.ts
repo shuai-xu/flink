@@ -64,6 +64,8 @@ export class JobCheckpointsSubtaskComponent implements OnInit {
         this.subTaskCheckPoint = data;
         this.listOfSubTaskCheckPoint = (data && data[ 'subtasks' ]) || [];
         this.isLoading = false;
+      }, () => {
+        this.isLoading = false;
       });
     });
   }

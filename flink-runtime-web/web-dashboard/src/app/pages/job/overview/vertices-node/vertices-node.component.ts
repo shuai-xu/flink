@@ -35,6 +35,8 @@ export class VerticesNodeComponent implements OnInit, OnDestroy {
   nodeselect$ = Subscription.EMPTY;
   verticesDetail: ViewVerticesDetail;
   operatorsDetail: ViewOperatorsDetail;
+  canToggleExpand = true;
+
   constructor(
     @Optional() @Inject(RENDER_NODE_INFO) public nodeInfo: RenderGroupNodeInfo,
     @Optional() @Inject(RENDER_NODE_INFO_CHANGE) public nodeInfoChange: Subject<RenderGroupNodeInfo>,
@@ -65,6 +67,7 @@ export class VerticesNodeComponent implements OnInit, OnDestroy {
   update() {
     if (this.nodeInfo.node.isGroupNode) {
       this.verticesDetail = this.jobOverviewGraphService.getVerticesDetail(this.nodeInfo);
+      this.canToggleExpand = this.jobOverviewGraphService.canToggleExpand(this.nodeInfo);
     } else {
       this.operatorsDetail = this.jobOverviewGraphService.getOperatorsDetail(this.nodeInfo);
     }

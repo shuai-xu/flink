@@ -46,8 +46,8 @@ import org.apache.flink.shaded.netty4.io.netty.handler.codec.http.HttpResponseSt
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import org.apache.curator.test.TestingServer;
-import org.junit.Ignore;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
@@ -88,7 +88,7 @@ public class WebRuntimeMonitorITCase extends TestLogger {
 	/**
 	 * Tests operation of the monitor in standalone operation.
 	 */
-	@Ignore
+	@Test
 	public void testStandaloneWebRuntimeMonitor() throws Exception {
 		final Deadline deadline = TEST_TIMEOUT.fromNow();
 
@@ -119,14 +119,6 @@ public class WebRuntimeMonitorITCase extends TestLogger {
 				assertEquals(HttpResponseStatus.OK, response.getStatus());
 				assertEquals(response.getType(), MimeTypes.getMimeTypeForExtension("html"));
 				assertEquals(expected, response.getContent());
-
-				// Simple overview request
-				client.sendGetRequest("/overview", deadline.timeLeft());
-
-				response = client.getNextResponse(deadline.timeLeft());
-				assertEquals(HttpResponseStatus.OK, response.getStatus());
-				assertEquals("application/json; charset=UTF-8", response.getType());
-				assertTrue(response.getContent().contains("\"taskmanagers\":1"));
 			}
 		}
 		finally {
@@ -139,7 +131,7 @@ public class WebRuntimeMonitorITCase extends TestLogger {
 	/**
 	 * Tests that the monitor associated with the following job manager redirects to the leader.
 	 */
-	@Ignore
+	@Test
 	public void testRedirectToLeader() throws Exception {
 		final Deadline deadline = TEST_TIMEOUT.fromNow();
 
@@ -265,15 +257,6 @@ public class WebRuntimeMonitorITCase extends TestLogger {
 				assertEquals(HttpResponseStatus.OK, response.getStatus());
 				assertEquals(response.getType(), MimeTypes.getMimeTypeForExtension("html"));
 				assertEquals(expected, response.getContent());
-
-				// Simple overview request
-				followingClient.sendGetRequest("/overview", deadline.timeLeft());
-
-				response = followingClient.getNextResponse(deadline.timeLeft());
-				assertEquals(HttpResponseStatus.OK, response.getStatus());
-				assertEquals("application/json; charset=UTF-8", response.getType());
-				assertTrue(response.getContent().contains("\"taskmanagers\":1") ||
-						response.getContent().contains("\"taskmanagers\":0"));
 			} finally {
 				lrs.stop();
 			}
@@ -295,7 +278,7 @@ public class WebRuntimeMonitorITCase extends TestLogger {
 		}
 	}
 
-	@Ignore
+	@Test
 	public void testLeaderNotAvailable() throws Exception {
 		final Deadline deadline = TEST_TIMEOUT.fromNow();
 
@@ -358,7 +341,7 @@ public class WebRuntimeMonitorITCase extends TestLogger {
 	 * then served from there. Only allow to access files in this temporary
 	 * directory.
 	 */
-	@Ignore
+	@Test
 	public void testNoEscape() throws Exception {
 		final Deadline deadline = TEST_TIMEOUT.fromNow();
 
@@ -422,7 +405,7 @@ public class WebRuntimeMonitorITCase extends TestLogger {
 	 * Files are copied from the flink-dist jar to a temporary directory and
 	 * then served from there. Only allow to copy files from <code>flink-dist.jar:/web</code>
 	 */
-	@Ignore
+	@Test
 	public void testNoCopyFromJar() throws Exception {
 		final Deadline deadline = TEST_TIMEOUT.fromNow();
 

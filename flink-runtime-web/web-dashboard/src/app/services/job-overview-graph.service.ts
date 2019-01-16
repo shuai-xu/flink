@@ -34,6 +34,7 @@ export interface ViewVerticesDetail {
   inQueue: number;
   outQueue: number;
   displayName: string;
+  name: string;
 }
 
 export interface ViewOperatorsDetail {
@@ -84,6 +85,17 @@ const opNodeHeightFunction = (renderNodeInfo: RenderNodeInfo): number => {
   return heightRange(Math.ceil((nameLength + 3) / 28));
 };
 
+const canToggleExpand = (renderNodeInfo: RenderGroupNodeInfo): boolean => {
+  const nodes = renderNodeInfo.node.metagraph.nodes();
+  if (nodes.length === 1) {
+    const ids = nodes[ 0 ].split('/');
+    if (ids[ 0 ] === ids[ 1 ]) {
+      return false;
+    }
+  }
+  return true;
+};
+
 export const graphTimeoutRange = scaleLinear().domain([ 50, 100, 300, 500 ])
 .range([ 250, 500, 800, 1000 ] as ReadonlyArray<number>).clamp(true);
 
@@ -103,6 +115,7 @@ export class JobOverviewGraphService {
   getLabelForEdge = getLabelForEdge;
   edgesLayoutFunction = edgesLayoutFunction;
   opNodeHeightFunction = opNodeHeightFunction;
+  canToggleExpand = canToggleExpand;
   groupNodeHeightFunction = () => 165;
 
   constructor() {
@@ -176,8 +189,9 @@ export class JobOverviewGraphService {
     const nodes = [];
     const getNamespaces = operatorId => {
       const op = data.verticesDetail.operators.find(e => e.operator_id === operatorId);
-      return `${op.vertex_id}/${op.operator_id}`;
+      return op.vertex_id ? `${op.vertex_id}/${op.operator_id}` : op.operator_id;
     };
+
     data.verticesDetail.operators.forEach(op => {
       nodes.push({
         name  : getNamespaces(op.operator_id),
@@ -190,6 +204,7 @@ export class JobOverviewGraphService {
         attr  : { ...op }
       });
     });
+
     this.graphDef = {
       nodes
     };
@@ -238,6 +253,7 @@ export class JobOverviewGraphService {
 
     this.verticesDetailsCache.set(nodeRenderInfo, {
       displayName,
+      name       : vertices.name,
       inQueue    : Number.isFinite(inQueue) ? inQueue : null,
       outQueue   : Number.isFinite(outQueue) ? outQueue : null,
       parallelism: this.parseFloat(vertices.parallelism) || vertices.subtask_metrics.length

@@ -16,18 +16,20 @@
 
 <ng-container *ngIf="nodeInfo.node.isGroupNode">
   <div class="group-wrapper"
-    [class.danger-node]="verticesDetail.inQueue >=1 || verticesDetail.outQueue >=1"
+    [class.danger-node]="verticesDetail?.inQueue >=1 || verticesDetail?.outQueue >=1"
     [class.expanded]="nodeInfo.expanded">
     <div class="group-header">
       <h4 class="node-title">
       <span class="action-title">
-        <span *ngIf="!nodeInfo.expanded">Vertex ({{nodeInfo.node.cardinality}} Operators)</span>
+        <span *ngIf="!nodeInfo.expanded">
+          Vertex<ng-container *ngIf="canToggleExpand">({{nodeInfo.node.cardinality}} Operators)</ng-container>
+        </span>
         <span *ngIf="nodeInfo.expanded">
-          Parallel: {{verticesDetail.parallelism}} <nz-divider nzType="vertical"></nz-divider> InQ: {{(verticesDetail.inQueue | percent) || '-'}} <nz-divider nzType="vertical"></nz-divider> OutQ: {{(verticesDetail.outQueue | percent) || '-'}}
+          Parallel: {{verticesDetail?.parallelism}} <nz-divider nzType="vertical"></nz-divider> InQ: {{(verticesDetail?.inQueue | percent) || '-'}} <nz-divider nzType="vertical"></nz-divider> OutQ: {{(verticesDetail?.outQueue | percent) || '-'}}
         </span>
       </span>
       </h4>
-      <div class="toggle-expand" (click)="toggleExpand($event)">
+      <div *ngIf="canToggleExpand" class="toggle-expand" (click)="toggleExpand($event)">
         <a>
           <i *ngIf="!nodeInfo.expanded" nz-icon type="plus" theme="outline"></i>
           <i *ngIf="nodeInfo.expanded" nz-icon type="minus" theme="outline"></i>
@@ -35,14 +37,26 @@
       </div>
     </div>
     <div class="group-body">
-      <h5 class="sub-title">{{verticesDetail.displayName}}</h5>
+      <h5 class="sub-title" *ngIf="!canToggleExpand && verticesDetail?.name && verticesDetail?.name.length > 125; else fullVerticesName"
+        nz-popover
+        nzOverlayClassName="op-name-popover"
+        [nzOverlayStyle]="{
+          'max-width': '600px',
+          'max-height': '400px'
+        }"
+        [nzContent]="verticesDetail?.name">
+        {{verticesDetail?.displayName}}
+      </h5>
+      <ng-template #fullVerticesName>
+        <h5 class="sub-title">{{verticesDetail?.displayName}}</h5>
+      </ng-template>
       <div class="attr-wrap">
-        <p class="attr"><span class="attr-name">Parallelism</span>: {{verticesDetail.parallelism}} </p>
-        <p class="attr" [class.danger-attr]="verticesDetail.inQueue  >= 1">
-          <span class="attr-name">In Queue</span>: {{(verticesDetail.inQueue | percent) || '-'}}
+        <p class="attr"><span class="attr-name">Parallelism</span>: {{verticesDetail?.parallelism}} </p>
+        <p class="attr" [class.danger-attr]="verticesDetail?.inQueue  >= 1">
+          <span class="attr-name">In Queue</span>: {{(verticesDetail?.inQueue | percent) || '-'}}
         </p>
-        <p class="attr" [class.danger-attr]="verticesDetail.outQueue  >= 1">
-          <span class="attr-name">Out Queue</span>: {{(verticesDetail.outQueue | percent) || '-'}}
+        <p class="attr" [class.danger-attr]="verticesDetail?.outQueue  >= 1">
+          <span class="attr-name">Out Queue</span>: {{(verticesDetail?.outQueue | percent) || '-'}}
         </p>
       </div>
     </div>

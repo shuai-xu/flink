@@ -45,7 +45,6 @@ import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -116,11 +115,11 @@ public class WebFrontendITCase extends TestLogger {
 		BlockingInvokable.reset();
 	}
 
-	@Ignore
+	@Test
 	public void getFrontPage() {
 		try {
 			String fromHTTP = TestBaseUtils.getFromHTTP("http://localhost:" + CLUSTER.getWebUIPort() + "/index.html");
-			String text = "Apache Flink Dashboard";
+			String text = "Apache Flink Web Dashboard";
 			assertTrue("Startpage should contain " + text, fromHTTP.contains(text));
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -211,7 +210,6 @@ public class WebFrontendITCase extends TestLogger {
 		assertTrue(logs.contains("job manager out"));
 	}
 
-	@Ignore
 	@Test
 	public void getTaskManagerLogAndStdoutFiles() {
 		try {

@@ -75,6 +75,8 @@ export class TaskManagerListComponent implements OnInit, OnDestroy {
     ).subscribe(data => {
       this.isLoading = false;
       this.listOfTaskManager = data;
+    }, () => {
+      this.isLoading = false;
     });
   }
 

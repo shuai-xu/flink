@@ -20,10 +20,12 @@ import { ConfigService } from './config.service';
 import { forkJoin, ReplaySubject } from 'rxjs';
 import { flatMap, map } from 'rxjs/operators';
 import {
-  JobBackpressureInterface, JobMetricsStatus,
-  JobOverviewInterface, JobPendingSlotsInterface,
+  JobBackpressureInterface,
+  JobOverviewInterface,
+  JobPendingSlotsInterface,
   JobsItemInterface,
   NodesItemCorrectInterface,
+  NodesItemInterface,
   VerticesDetailInterface
 } from 'flink-interfaces';
 import {
@@ -100,6 +102,28 @@ export class JobService {
       ...job,
       verticesDetail: vertices
     })));
+  }
+
+  fillEmptyOperators(nodes: NodesItemInterface[], verticesDetail: VerticesDetailInterface): VerticesDetailInterface {
+    if (verticesDetail.operators.length === 0) {
+      verticesDetail.operators = [];
+      nodes.forEach(node => {
+        verticesDetail.operators.push({
+          operator_id: node.id,
+          vertex_id  : node.id,
+          name       : node.description,
+          metric_name: null,
+          inputs     : node.inputs ? node.inputs.map(i => {
+            return {
+              operator_id: i.id,
+              partitioner: i.ship_strategy,
+              type_number: i.num
+            };
+          }) : []
+        });
+      });
+    }
+    return verticesDetail;
   }
 
   loadJob(jobId) {
