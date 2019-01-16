@@ -26,7 +26,7 @@ under the License.
 * This will be replaced by the TOC
 {:toc}
 
-## Submit SQL Query by SQL Client
+## Submit SQL Query via SQL Client
 
 First, modify the sql client config file ./conf/sql-client-defaults.yaml to set execution type to `batch`.
 

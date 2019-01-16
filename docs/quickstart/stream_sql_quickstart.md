@@ -26,7 +26,10 @@ under the License.
 * This will be replaced by the TOC
 {:toc}
 
-## Submit SQL Query by SQL Client
+## Submit SQL Query via SQL Client
+
+The following example programs showcase different applications of Flink SQL
+from simple word counting to pv-uv statistics via SQL Client and running on local standalone cluster.
 
 Start local cluster first:
 
@@ -36,7 +39,11 @@ $ ./bin/start-cluster.sh
 
 Check the web at http://localhost:8081 and make sure everything is up and running. The web frontend should report a single available TaskManager instance.
 
+<b>Note</b>: Before running examples below, you need to make sure the local cluster is up and running.
+
+### Word Count
 Prepare the input data:
+
 {% highlight bash %}
 $ cat /tmp/input.csv
 hello
@@ -103,6 +110,82 @@ $ cat /tmp/output.csv
 <a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-wordcount-result.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-wordcount-result.png" alt="SQL Example: WordCount result"/></a>
 
 Note that non-local file systems require a schema prefix, such as hdfs://.
+
+### PV-UV Statistics (Input: Kafka)
+
+This example reads the access data of the website in the following format from kafka, and gather statistics of pv-uv in real time.
+
+
+
+Start SQL Client shell:
+
+{% highlight bash %}
+$ ./bin/sql-client.sh embedded
+{% endhighlight %}
+
+You can see the welcome message for flink sql client.
+
+Paste the following sql text into the shell.
+
+{% highlight bash %}
+create table kafka_source (
+  messageKey varbinary, 
+  message varbinary, 
+  topic varchar,
+  `partition` int,
+  `offset` bigint
+) with (
+  type = 'kafka010',   
+  topic = 'pvuv_demo',
+  bootstrap.servers = 'YOUR_BROKER_IP:YOUR_BROKER_PORT',
+  `group.id` = 'kafka_consumer_demo_group'
+);
+
+select
+    date_format (visit_time, 'yyyy-MM-dd HH:mm') as `visit_time`,
+    count (user_id) as pv,
+    count (distinct user_id) as uv
+from (
+        select
+            split_index (cast(message as varchar), ',', 0) as visit_time,
+            split_index (cast(message as varchar), ',', 1) as user_id,
+            split_index (cast(message as varchar), ',', 2) as visit_page,
+            split_index (cast(message as varchar), ',', 3) as browser_type
+        from
+            kafka_source
+    )
+group by
+    date_format (visit_time, 'yyyy-MM-dd HH:mm');
+{% endhighlight %}
+
+After press 'Enter' the sql will be submitted to the standalone cluster. Since there is no data in kafka topic at this time, no output.
+
+Then run kafka-console-producer.sh script under your local kafka installation package: 
+(Remember to replace the broker information with your own environment)
+
+{% highlight bash %}
+$ ./bin/kafka-console-producer.sh --topic pvuv_demo --broker-list YOUR_BROKER_IP:YOUR_BROKER_PORT
+1 >2018-10-16 09:00:00,1001,/page1,chrome
+2 >2018-10-16 09:00:02,1001,/page2,safari
+3 >2018-10-16 09:00:07,1005,/page1,safari
+4 >2018-10-16 09:01:30,1001,/page1,chrome
+{% endhighlight %}
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-kafka-pvuv-input.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-kafka-pvuv-input.png" alt="PV-UV Statistics (Input: Kafka) input"/></a>
+
+You can see output like this:
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-kafka-pvuv-output.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-kafka-pvuv-output.png" alt="PV-UV Statistics (Input: Kafka) output"/></a>
+
+Open [http://localhost:8081](http://localhost:8081) and you can see the dashboard.
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-kafka-pvuv-web1.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-kafka-pvuv-web1.png" alt="SQL Example: PV-UV Statistics (Input: Kafka) web"/></a>
+
+Clink the job name: "default: insert into...", and you can see the detailed info page:
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-kafka-pvuv-web2.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-kafka-pvuv-web2.png" alt="SQL Example: PV-UV Statistics (Input: Kafka) detail"/></a>
+
+TODO: 插入动图
 
 For more information please refer to [SQL]({{ site.baseurl }}/dev/table/sql.html) and [SQL Client]({{ site.baseurl }}/dev/table/sqlClient.html).
 
