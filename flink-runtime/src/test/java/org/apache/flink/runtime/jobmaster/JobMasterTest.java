@@ -538,7 +538,7 @@ public class JobMasterTest extends TestLogger {
 	public void testSlotRequestTimeoutWhenNoSlotOffering() throws Exception {
 		final JobGraph restartingJobGraph = createSingleVertexJobWithRestartStrategy();
 
-		final long slotRequestTimeout = 10L;
+		final long slotRequestTimeout = 1000L;
 		configuration.setLong(JobManagerOptions.SLOT_REQUEST_TIMEOUT, slotRequestTimeout);
 
 		final JobMaster jobMaster = createJobMaster(
@@ -611,7 +611,7 @@ public class JobMasterTest extends TestLogger {
 		jobVertex.setInvokableClass(NoOpInvokable.class);
 
 		final ExecutionConfig executionConfig = new ExecutionConfig();
-		executionConfig.setRestartStrategy(RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE, 0L));
+		executionConfig.setRestartStrategy(RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE, 1000L));
 
 		final JobGraph jobGraph = new JobGraph(jobVertex);
 		jobGraph.setAllowQueuedScheduling(true);
