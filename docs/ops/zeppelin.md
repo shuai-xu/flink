@@ -857,7 +857,7 @@ Here's a list of properties that could be configured to customize Flink interpre
   <tr>
     <td>zeppelin.flink.scala.color</td>
     <td>true</td>
-    <td>Whether to enable color output of scala repl</td>
+    <td>Whether to enable color output of Scala Shell</td>
   </tr>                     
 </table>
 

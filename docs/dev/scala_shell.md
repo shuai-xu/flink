@@ -1,5 +1,5 @@
 ---
-title: "Scala REPL"
+title: "Scala Shell"
 nav-parent_id: start
 nav-pos: 5
 ---
@@ -88,11 +88,11 @@ Note, that in the Streaming case, the print operation does not trigger execution
 
 ### Table API
 
-Scala shell also support Table API. Users can execute a streaming Table program with `stenv` and 
+Scala Shell also support Table API. Users can execute a streaming Table program with `stenv` and 
 a batch Table program with `btenv`. 
 
 The `Table` API supports interactive programming, which allows users to cache an intermediate 
-table for later usage. For example, in the following scala shell command sequence, table `t1` 
+table for later usage. For example, in the following Scala Shell command sequence, table `t1` 
 is cached and the result may be reused in later code.
 
 {% highlight scala %}
@@ -121,7 +121,7 @@ Scala> val t3 = t1.groupBy('color).select('color, 'amount.avg as 'avg)
 Scala> val res3 = t3.print
 {% endhighlight %}
 
-Note: The cached tables will be cleaned up when the scala shell exit.
+Note: The cached tables will be cleaned up when the Scala Shell exit.
 
 ### SQL Query
 In Scala Shell, users can also execute SQL queries calling sqlQuery() as following code shows:
@@ -174,7 +174,7 @@ bin/start-scala-shell.sh local
 
 ### Remote
 
-To use it with a running cluster start the scala shell with the keyword `remote`
+To use it with a running cluster start the Scala Shell with the keyword `remote`
 and supply the host and port of the JobManager with:
 
 {% highlight bash %}
@@ -186,7 +186,7 @@ Such as:
 {% highlight bash %}
 bin/start-scala-shell.sh remote localhost 6123
 {% endhighlight %}
-In this way, the scala shell will be started in local standalone cluster.
+In this way, the Scala Shell will be started in local standalone cluster.
 
 ### Yarn Scala Shell cluster
 
@@ -225,11 +225,11 @@ Flink Scala Shell
 Usage: start-scala-shell.sh [local|remote|yarn] [options] <args>...
 
 Command: local [options]
-Starts Flink scala shell with a local Flink cluster
+Starts Flink Scala Shell with a local Flink cluster
   -a <path/to/jar> | --addclasspath <path/to/jar>
         Specifies additional jars to be used in Flink
 Command: remote [options] <host> <port>
-Starts Flink scala shell connecting to a remote cluster
+Starts Flink Scala Shell connecting to a remote cluster
   <host>
         Remote host name as string
   <port>
@@ -238,7 +238,7 @@ Starts Flink scala shell connecting to a remote cluster
   -a <path/to/jar> | --addclasspath <path/to/jar>
         Specifies additional jars to be used in Flink
 Command: yarn [options]
-Starts Flink scala shell connecting to a yarn cluster
+Starts Flink Scala Shell connecting to a yarn cluster
   -n arg | --container arg
         Number of YARN container to allocate (= Number of TaskManagers)
   -jm arg | --jobManagerMemory arg

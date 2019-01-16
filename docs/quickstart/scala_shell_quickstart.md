@@ -26,6 +26,6 @@ under the License.
 * This will be replaced by the TOC
 {:toc}
 
-Please refer to [Scala REPL]({{ site.baseurl }}/dev/scala_shell.html).
+Please refer to [Scala Shell]({{ site.baseurl }}/dev/scala_shell.html).
 
 {% top %}
