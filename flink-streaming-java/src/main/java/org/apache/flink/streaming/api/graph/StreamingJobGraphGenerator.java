@@ -536,14 +536,13 @@ public class StreamingJobGraphGenerator {
 		// infer the read priority of each edge from bottom to top of the topology
 
 		List<StreamEdge> lackPriorEdges = new ArrayList<>();
-		ExecutionMode executionMode = streamGraph.getExecutionConfig().getExecutionMode();
 		for (int i = sortedChainingNodes.size() - 1; i >= 0; i--) {
 			ChainingStreamNode chainingNode = sortedChainingNodes.get(i);
 			Integer nodeId = chainingNode.getNodeId();
 			StreamNode node = streamGraph.getStreamNode(nodeId);
 
 			for (StreamEdge inEdge : node.getInEdges()) {
-				if (getEdgeResultPartitionType(inEdge.getDataExchangeMode(), executionMode) == ResultPartitionType.BLOCKING) {
+				if (inEdge.getDataExchangeMode() == DataExchangeMode.BATCH) {
 					lackPriorEdges.add(inEdge);
 					continue;
 				}
@@ -1669,7 +1668,7 @@ public class StreamingJobGraphGenerator {
 				&& (edge.getPartitioner() instanceof ForwardPartitioner ||
 					(downStreamNode.getParallelism() == 1 && chainEagerlyEnabled))
 				&& downStreamNode.getParallelism() == upstreamNode.getParallelism()
-				&& getEdgeResultPartitionType(edge.getDataExchangeMode(), executionMode) == ResultPartitionType.PIPELINED;
+				&& edge.getDataExchangeMode() != DataExchangeMode.BATCH;
 		}
 	}
 

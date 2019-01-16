@@ -169,6 +169,6 @@ public class StreamEdge implements Serializable {
 	public String toString() {
 		return "(" + sourceId + " -> " + targetId + ", typeNumber=" + typeNumber
 				+ ", selectedNames=" + selectedNames + ", outputPartitioner=" + outputPartitioner
-				+ ", outputTag=" + outputTag + ", dataExchangeMode" + dataExchangeMode + ", edgeID=" + edgeID + ')';
+				+ ", outputTag=" + outputTag + ", dataExchangeMode=" + dataExchangeMode + ", edgeID=" + edgeID + ')';
 	}
 }

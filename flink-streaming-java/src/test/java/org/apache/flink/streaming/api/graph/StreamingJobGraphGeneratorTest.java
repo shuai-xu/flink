@@ -609,6 +609,69 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 	}
 
 	@Test
+	public void testAutoDataExchangeEdgeChained() {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setParallelism(5);
+
+		// fromElements -> Map -> Print
+		env.fromElements(1, 2, 3).name("source1")
+				.map((MapFunction<Integer, Integer>) value -> value).name("map1")
+				.print().name("print1");
+
+		// set BATCH execution mode
+		{
+			env.getConfig().setExecutionMode(ExecutionMode.BATCH);
+			StreamGraph streamGraph = env.getStreamGraph();
+			for (StreamNode node : streamGraph.getStreamNodes()) {
+				for (StreamEdge inEdge : node.getInEdges()) {
+					inEdge.setDataExchangeMode(DataExchangeMode.AUTO);
+				}
+			}
+			JobGraph jobGraph = createJobGraph(streamGraph);
+
+			List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+			assertEquals(2, verticesSorted.size());
+
+			JobVertex sourceVertex = verticesSorted.get(0);
+			assertEquals("Source: source1", sourceVertex.getName());
+			assertEquals(1, sourceVertex.getParallelism());
+
+			JobVertex mapPrintVertex = verticesSorted.get(1);
+			assertEquals("map1 -> Sink: print1", mapPrintVertex.getName());
+			assertEquals(5, mapPrintVertex.getParallelism());
+
+			assertEquals(1, sourceVertex.getProducedDataSets().size());
+			assertEquals(ResultPartitionType.BLOCKING, sourceVertex.getProducedDataSets().get(0).getResultType());
+		}
+
+		// set PIPELINED execution mode
+		{
+			env.getConfig().setExecutionMode(ExecutionMode.PIPELINED);
+			StreamGraph streamGraph = env.getStreamGraph();
+			for (StreamNode node : streamGraph.getStreamNodes()) {
+				for (StreamEdge inEdge : node.getInEdges()) {
+					inEdge.setDataExchangeMode(DataExchangeMode.AUTO);
+				}
+			}
+			JobGraph jobGraph = createJobGraph(streamGraph);
+
+			List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+			assertEquals(2, verticesSorted.size());
+
+			JobVertex sourceVertex = verticesSorted.get(0);
+			assertEquals("Source: source1", sourceVertex.getName());
+			assertEquals(1, sourceVertex.getParallelism());
+
+			JobVertex mapPrintVertex = verticesSorted.get(1);
+			assertEquals("map1 -> Sink: print1", mapPrintVertex.getName());
+			assertEquals(5, mapPrintVertex.getParallelism());
+
+			assertEquals(1, sourceVertex.getProducedDataSets().size());
+			assertEquals(ResultPartitionType.PIPELINED, sourceVertex.getProducedDataSets().get(0).getResultType());
+		}
+	}
+
+	@Test
 	public void testSubstituteStreamOperatorChaining() {
 		// chained
 		{

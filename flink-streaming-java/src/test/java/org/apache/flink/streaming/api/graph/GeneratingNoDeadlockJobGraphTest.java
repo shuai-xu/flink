@@ -129,7 +129,7 @@ public class GeneratingNoDeadlockJobGraphTest {
 								new TestEdge(process1.getId(), process2.getId()).setReadPriority(ReadPriority.HIGHER),
 								new TestEdge(filter1.getId(), process2.getId()).setReadPriority(ReadPriority.LOWER),
 								new TestEdge(map1.getId(), process1.getId()).setReadPriority(ReadPriority.HIGHER),
-								new TestEdge(source1.getId(), map1.getId()).setReadPriority(ReadPriority.LOWER),
+								new TestEdge(source1.getId(), map1.getId()).setReadPriority(ReadPriority.HIGHER),
 								new TestEdge(source1.getId(), filter1.getId()).setReadPriority(ReadPriority.LOWER)
 						));
 			}
