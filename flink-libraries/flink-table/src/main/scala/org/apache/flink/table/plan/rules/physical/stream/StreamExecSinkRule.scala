@@ -29,13 +29,13 @@ import org.apache.calcite.rel.convert.ConverterRule
 class StreamExecSinkRule extends ConverterRule(
   classOf[FlinkLogicalSink],
   FlinkConventions.LOGICAL,
-  FlinkConventions.STREAMEXEC,
+  FlinkConventions.STREAM_PHYSICAL,
   "StreamExecSinkRule") {
 
   def convert(rel: RelNode): RelNode = {
     val sinkNode = rel.asInstanceOf[FlinkLogicalSink]
-    val newTrait = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
-    val newInput = RelOptRule.convert(sinkNode.getInput, FlinkConventions.STREAMEXEC)
+    val newTrait = rel.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
+    val newInput = RelOptRule.convert(sinkNode.getInput, FlinkConventions.STREAM_PHYSICAL)
     new StreamExecSink(
       rel.getCluster,
       newTrait,

@@ -19,28 +19,30 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.api.common.operators.ResourceSpec
-
-import java.util
+import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
+import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{StreamTableEnvironment, Table, TableException}
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.codegen.CodeGeneratorContext
+import org.apache.flink.table.codegen.SinkCodeGenerator.generateRowConverterOperator
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{AccMode, AccModeTraitDef}
 import org.apache.flink.table.plan.nodes.FlinkRelNode
 import org.apache.flink.table.plan.nodes.calcite.Sink
+import org.apache.flink.table.plan.nodes.exec.{BaseStreamExecNode, RowStreamExecNode}
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.{SinkUtil, UpdatingPlanChecker}
-import org.apache.flink.table.sinks._
-import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
-import org.apache.flink.configuration.Configuration
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.codegen.SinkCodeGenerator.generateRowConverterOperator
-import org.apache.flink.table.codegen.CodeGeneratorContext
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.AbstractProcessStreamOperator
+import org.apache.flink.table.sinks._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.NodeResourceUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode
+
+import java.util
 
 import scala.collection.JavaConversions._
 
@@ -54,7 +56,8 @@ class StreamExecSink[T](
     sink: TableSink[T],
     sinkName: String)
   extends Sink(cluster, traitSet, input, sink, sinkName)
-  with StreamExecRel[Any] {
+  with StreamPhysicalRel
+  with BaseStreamExecNode[Any] {
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
     new StreamExecSink(cluster, traitSet, inputs.get(0), sink, sinkName)
@@ -72,6 +75,8 @@ class StreamExecSink[T](
   private val isDataStreamTableSink: Boolean = sink.isInstanceOf[DataStreamTableSink[T]]
 
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   /**
     * Translates the FlinkRelNode into a Flink operator.
@@ -145,8 +150,8 @@ class StreamExecSink[T](
 
     // get BaseRow plan
     val translateStream = inputNode match {
-      // Sink's input must be RowStreamExecRel now.
-      case node: RowStreamExecRel =>
+      // Sink's input must be RowStreamExecNode now.
+      case node: RowStreamExecNode =>
         node.translateToPlan(tableEnv)
       case _ =>
         throw new TableException("Cannot generate DataStream due to an invalid logical plan. " +

@@ -25,8 +25,10 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CalcCodeGenerator, CodeGeneratorContext}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef, TraitSetHelper}
+import org.apache.flink.table.plan.nodes.exec.{RowBatchExecNode, ExecNode}
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalCalc
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.CalcUtil
 
 import org.apache.calcite.plan._
@@ -51,7 +53,8 @@ class BatchExecCalc(
     calcProgram: RexProgram,
     val ruleDescription: String)
   extends Calc(cluster, traitSet, input, calcProgram)
-  with RowBatchExecRel {
+  with BatchPhysicalRel
+  with RowBatchExecNode {
 
   override def deriveRowType(): RelDataType = rowRelDataType
 
@@ -139,6 +142,8 @@ class BatchExecCalc(
   override def getDamBehavior: DamBehavior = DamBehavior.PIPELINED
 
   override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]

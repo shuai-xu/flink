@@ -28,7 +28,6 @@ import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode, ExecNode
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.nodes.process.{DAGProcessContext, DAGProcessor}
 
-import com.google.common.base.Preconditions
 import com.google.common.collect.{Maps, Sets}
 
 import java.util
@@ -177,7 +176,10 @@ class DeadlockBreakupProcessor extends DAGProcessor{
               probeRel,
               distribution)
             e.setRequiredDataExchangeMode(DataExchangeMode.BATCH)
-            join.replaceInputNode(if (leftIsBuild) 1 else 0, e)
+            // replace join rel's input
+            join.replaceInput(probeSideIndex, e)
+            // replace join node's input
+            join.replaceInputNode(probeSideIndex, e)
         }
       }
     }

@@ -18,7 +18,8 @@
 
 package org.apache.flink.table.resource.batch.schedule;
 
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
+import org.apache.flink.table.plan.nodes.exec.RowBatchExecNode;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchPhysicalRel;
 import org.apache.flink.table.resource.batch.BatchExecNodeStage;
 
 import org.junit.Test;
@@ -34,8 +35,9 @@ public class BatchExecNodeStageTest {
 
 	@Test
 	public void testDependStages() {
-		RowBatchExecRel node = mock(RowBatchExecRel.class);
-		when(node.getFlinkPhysicalRel()).thenReturn(node);
+		RowBatchExecNode node = mock(RowBatchExecNode.class);
+		BatchPhysicalRel rel = mock(BatchPhysicalRel.class);
+		when(node.getFlinkPhysicalRel()).thenReturn(rel);
 		BatchExecNodeStage nodeStage = new BatchExecNodeStage(node, 0);
 		BatchExecNodeStage nodeStage1 = new BatchExecNodeStage(node, 1);
 		nodeStage.addDependStage(nodeStage1, BatchExecNodeStage.DependType.DATA_TRIGGER);

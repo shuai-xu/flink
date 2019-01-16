@@ -40,7 +40,7 @@ object FlinkNodeOptUtil {
     *                           BatchExecNode node at present)
     * @param withRelNodeId      whether including ID of the RelNode corresponding to an ExecNode
     * @param withRetractTraits  whether including Retraction Traits of RelNode corresponding to
-    *                           an ExecNode (only apply to StreamExecRel node at present)
+    *                           an ExecNode (only apply to StreamPhysicalRel node at present)
     * @return                   explain plan of ExecNode
     */
   def treeToString(
@@ -70,7 +70,7 @@ object FlinkNodeOptUtil {
     *                           BatchExecNode node at present)
     * @param withRelNodeId      whether including ID of the RelNode corresponding to an ExecNode
     * @param withRetractTraits  whether including Retraction Traits of RelNode corresponding to
-    *                           an ExecNode (only apply to StreamExecRel node at present)
+    *                           an ExecNode (only apply to StreamPhyscialRel node at present)
     * @return                   explain plan of ExecNode
     */
   def dagToString(

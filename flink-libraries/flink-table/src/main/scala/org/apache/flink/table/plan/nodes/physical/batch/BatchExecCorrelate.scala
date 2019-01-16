@@ -24,8 +24,10 @@ import org.apache.flink.table.codegen.{CodeGeneratorContext, CorrelateCodeGenera
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.functions.utils.TableSqlFunction
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef, TraitSetHelper}
+import org.apache.flink.table.plan.nodes.exec.RowBatchExecNode
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.CorrelateUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
@@ -51,7 +53,8 @@ class BatchExecCorrelate(
     joinType: SemiJoinType,
     ruleDescription: String)
   extends SingleRel(cluster, traitSet, inputNode)
-  with RowBatchExecRel {
+  with BatchPhysicalRel
+  with RowBatchExecNode {
 
   require(joinType == SemiJoinType.INNER || joinType == SemiJoinType.LEFT)
 
@@ -172,6 +175,8 @@ class BatchExecCorrelate(
   override def getDamBehavior: DamBehavior = DamBehavior.PIPELINED
 
   override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]

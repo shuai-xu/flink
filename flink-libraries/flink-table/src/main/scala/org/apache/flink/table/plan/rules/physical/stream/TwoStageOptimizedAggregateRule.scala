@@ -140,7 +140,7 @@ class TwoStageOptimizedAggregateRule extends RelOptRule(
     }
 
     val newInput = satisfyDistribution(
-      FlinkConventions.STREAMEXEC, localHashAgg, globalDistribution)
+      FlinkConventions.STREAM_PHYSICAL, localHashAgg, globalDistribution)
     val globalAggProvidedTraitSet = agg.getTraitSet
 
     val globalHashAgg = new StreamExecGlobalGroupAggregate(

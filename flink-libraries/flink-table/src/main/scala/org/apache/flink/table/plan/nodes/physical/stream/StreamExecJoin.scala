@@ -23,13 +23,15 @@ import org.apache.flink.api.common.operators.base.JoinOperatorBase.JoinHint
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
-import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
+import org.apache.flink.table.api.types.{RowType, TypeConverters}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, JoinedRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
+import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.util.{FlinkRexUtil, JoinUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.join.stream._
@@ -68,7 +70,8 @@ class StreamExecJoin(
     joinHint: JoinHint,
     ruleDescription: String)
   extends BiRel(cluster, traitSet, leftNode, rightNode)
-  with RowStreamExecRel {
+  with StreamPhysicalRel
+  with RowStreamExecNode {
 
   override def deriveRowType(): RelDataType = rowRelDataType
 
@@ -192,6 +195,8 @@ class StreamExecJoin(
   }
 
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   /**
    * Translates the StreamExecNode into a Flink operator.

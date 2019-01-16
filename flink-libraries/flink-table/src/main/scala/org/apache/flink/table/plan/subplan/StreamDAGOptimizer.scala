@@ -27,7 +27,7 @@ import org.apache.flink.table.plan.`trait`.{AccMode, AccModeTraitDef, UpdateAsRe
 import org.apache.flink.table.plan.logical.LogicalNode
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.calcite.Sink
-import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecDataStreamScan, StreamExecIntermediateTableScan, StreamExecRel}
+import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecDataStreamScan, StreamExecIntermediateTableScan, StreamPhysicalRel}
 import org.apache.flink.table.plan.schema.IntermediateRelNodeTable
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sinks.BaseRetractStreamTableSink
@@ -160,7 +160,7 @@ object StreamDAGOptimizer extends AbstractDAGOptimizer[StreamTableEnvironment] {
               retractionBlocks.head.setUpdateAsRetraction(true)
             }
           }
-        case ser: StreamExecRel[_] => ser.getInputs.foreach(e => {
+        case ser: StreamPhysicalRel => ser.getInputs.foreach(e => {
           if (ser.needsUpdatesAsRetraction(e) || (updateAsRetraction && !ser.consumesRetractions)) {
             shipUpdateAsRetraction(e, updateAsRetraction = true)
           } else {

@@ -22,6 +22,8 @@ import org.apache.flink.streaming.api.transformations.{OneInputTransformation, S
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.{AggregateUtil, StreamExecUtil}
@@ -50,7 +52,8 @@ class StreamExecLastRow(
     uniqueKeys: Array[Int],
     ruleDescription: String)
   extends SingleRel(cluster, traitSet, input)
-  with RowStreamExecRel {
+  with StreamPhysicalRel
+  with RowStreamExecNode {
 
   override def deriveRowType(): RelDataType = outputSchema.relDataType
 
@@ -84,6 +87,8 @@ class StreamExecLastRow(
   }
 
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

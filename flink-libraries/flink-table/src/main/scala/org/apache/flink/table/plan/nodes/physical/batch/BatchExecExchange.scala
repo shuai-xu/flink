@@ -30,10 +30,12 @@ import org.apache.flink.table.api.types.{RowType, TypeConverters}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, GenericRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.common.CommonExchange
+import org.apache.flink.table.plan.nodes.exec.RowBatchExecNode
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.{FlinkRelOptUtil, SortUtil}
 import org.apache.flink.table.runtime.BinaryHashPartitioner
 import org.apache.flink.table.runtime.range._
@@ -98,7 +100,8 @@ class BatchExecExchange(
     relNode: RelNode,
     relDistribution: RelDistribution)
   extends CommonExchange(cluster, traitSet, relNode, relDistribution)
-  with RowBatchExecRel {
+  with BatchPhysicalRel
+  with RowBatchExecNode {
 
   private val SIP_NAME = "RangePartition: LocalSample"
   private val SIC_NAME = "RangePartition: SampleAndHistogram"
@@ -174,6 +177,8 @@ class BatchExecExchange(
 
   override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
 
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
   /**
     * Currently, PartitionTransformation wont been reused,
     * its input transformation will been reused if this is reusable.
@@ -183,7 +188,7 @@ class BatchExecExchange(
   }
 
   /**
-    * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
+    * Internal method, translates the [[BatchPhysicalRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
     */

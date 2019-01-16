@@ -27,8 +27,9 @@ import org.apache.flink.table.plan.nodes.physical.stream.StreamExecTemporalTable
 import org.apache.flink.table.plan.schema.TableSourceTable
 import org.apache.flink.table.plan.util.TemporalJoinUtil.containsTemporalJoinCondition
 import org.apache.flink.table.sources.LookupableTableSource
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
+
 import org.apache.calcite.plan.RelOptRule.{any, operand}
+import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.core.TableScan
 import org.apache.calcite.rex.{RexNode, RexProgram}
 
@@ -121,8 +122,8 @@ object StreamExecTemporalTableJoinRule {
     val tableSource = tableScan.tableSource
     val tableRowType = typeFactory.buildLogicalRowType(tableSource.getTableSchema, true)
 
-    val providedTrait = join.getTraitSet.replace(FlinkConventions.STREAMEXEC)
-    var requiredTrait = input.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+    val providedTrait = join.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
+    var requiredTrait = input.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
 
     // if partitioning enabled, use the join key as partition key
     tableSource match {

@@ -243,7 +243,7 @@ abstract class ExpressionTestBase {
                                             ImmutableList.of(), ImmutableList.of())
 
     // convert to dataset plan
-    val physicalProps = converted.getTraitSet.replace(FlinkConventions.BATCHEXEC).simplify()
+    val physicalProps = converted.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL).simplify()
     val dataSetCalc = dataSetOptProgram.run(context._2.getPlanner, logicalCalc, physicalProps,
       ImmutableList.of(), ImmutableList.of())
 
@@ -278,7 +278,8 @@ abstract class ExpressionTestBase {
       ImmutableList.of(), ImmutableList.of())
 
     // convert to dataset plan
-    val flinkPhysicalProps = converted.getTraitSet.replace(FlinkConventions.BATCHEXEC).simplify()
+    val flinkPhysicalProps = converted.getTraitSet
+      .replace(FlinkConventions.BATCH_PHYSICAL).simplify()
     val dataSetCalc = dataSetOptProgram.run(context._2.getPlanner, logicalCalc, flinkPhysicalProps,
       ImmutableList.of(), ImmutableList.of())
 

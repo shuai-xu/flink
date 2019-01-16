@@ -92,7 +92,7 @@ class FlinkRelMdHandlerTestBase {
     batchExecTraits = relBuilder
       .getCluster
       .traitSetOf(Convention.NONE)
-      .replace(FlinkConventions.BATCHEXEC)
+      .replace(FlinkConventions.BATCH_PHYSICAL)
     logicalTraits = relBuilder
       .getCluster
       .traitSetOf(Convention.NONE)

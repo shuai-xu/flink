@@ -18,21 +18,22 @@
 
 package org.apache.flink.table.plan.rules.physical.stream
 
-import org.apache.calcite.plan.volcano.RelSubset
-import org.apache.calcite.plan.RelOptRule
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecOverAggregate
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalOverWindow
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecOverAggregate
 import org.apache.flink.table.plan.schema.BaseRowSchema
+
+import org.apache.calcite.plan.RelOptRule
+import org.apache.calcite.plan.volcano.RelSubset
+import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.convert.ConverterRule
 
 class StreamExecOverAggregateRule
   extends ConverterRule(
     classOf[FlinkLogicalOverWindow],
     FlinkConventions.LOGICAL,
-    FlinkConventions.STREAMEXEC,
+    FlinkConventions.STREAM_PHYSICAL,
     "StreamExecOverAggregateRule") {
 
   override def convert(rel: RelNode): RelNode = {
@@ -46,8 +47,8 @@ class StreamExecOverAggregateRule
       FlinkRelDistribution.SINGLETON
     }
     val requiredTraitSet = logicWindow.getInput.getTraitSet.replace(
-      FlinkConventions.STREAMEXEC).replace(requiredDistribution)
-    val providedTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+      FlinkConventions.STREAM_PHYSICAL).replace(requiredDistribution)
+    val providedTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
     val convertInput: RelNode =
       RelOptRule.convert(logicWindow.getInput, requiredTraitSet)
     val inputRowType = convertInput.asInstanceOf[RelSubset].getOriginal.getRowType

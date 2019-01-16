@@ -29,12 +29,13 @@ import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.plan.FlinkJoinRelType
+import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.{FlinkRexUtil, JoinUtil, StreamExecUtil, UpdatingPlanChecker}
 import org.apache.flink.table.runtime.KeyedCoProcessOperatorWithWatermarkDelay
 import org.apache.flink.table.runtime.join._
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.Logging
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.Collector
 
 import org.apache.calcite.plan._
@@ -66,8 +67,8 @@ class StreamExecWindowJoin(
     remainCondition: Option[RexNode],
     ruleDescription: String)
   extends BiRel(cluster, traitSet, leftNode, rightNode)
-  with RowStreamExecRel
-  with Logging {
+  with StreamPhysicalRel
+  with RowStreamExecNode {
 
   override def deriveRowType(): RelDataType = outputRowSchema.relDataType
 
@@ -118,6 +119,8 @@ class StreamExecWindowJoin(
   }
 
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

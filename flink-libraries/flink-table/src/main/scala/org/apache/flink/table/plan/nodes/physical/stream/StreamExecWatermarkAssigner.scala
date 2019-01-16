@@ -23,6 +23,8 @@ import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.calcite.WatermarkAssigner
+import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.runtime.WatermarkAssignerOperator
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
@@ -37,7 +39,8 @@ class StreamExecWatermarkAssigner (
     rowtimeField: String,
     watermarkOffset: Long)
   extends WatermarkAssigner(cluster, traits, inputNode, rowtimeField, watermarkOffset)
-  with RowStreamExecRel {
+  with StreamPhysicalRel
+  with RowStreamExecNode {
 
   override def copy(
     traitSet: RelTraitSet,
@@ -48,6 +51,8 @@ class StreamExecWatermarkAssigner (
   override def isDeterministic: Boolean = true
 
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

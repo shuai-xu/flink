@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.stream
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
+import org.apache.flink.table.api.types.TypeConverters
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
@@ -28,6 +28,8 @@ import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.PartialFinalType
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.util.AggregateUtil.transformToStreamAggregateInfoList
 import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateNameUtil, AggregateUtil, StreamExecUtil}
@@ -35,7 +37,6 @@ import org.apache.flink.table.runtime.KeyedProcessOperator
 import org.apache.flink.table.runtime.aggregate.{GroupAggFunction, MiniBatchGroupAggFunction}
 import org.apache.flink.table.runtime.bundle.KeyedBundleOperator
 import org.apache.flink.table.typeutils._
-import org.apache.flink.table.util.Logging
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
@@ -70,8 +71,8 @@ class StreamExecGroupAggregate(
     groupSet: ImmutableBitSet,
     var partialFinal: PartialFinalType = PartialFinalType.NORMAL)
   extends SingleRel(cluster, traitSet, inputNode)
-  with RowStreamExecRel
-  with Logging {
+  with StreamPhysicalRel
+  with RowStreamExecNode {
 
   override def deriveRowType(): RelDataType = outputDataType
 
@@ -149,6 +150,8 @@ class StreamExecGroupAggregate(
   override def isDeterministic: Boolean = AggregateUtil.isDeterministic(aggCalls)
 
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

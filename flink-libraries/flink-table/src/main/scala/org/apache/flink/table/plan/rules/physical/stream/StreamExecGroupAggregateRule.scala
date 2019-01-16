@@ -18,23 +18,28 @@
 
 package org.apache.flink.table.plan.rules.physical.stream
 
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalAggregate
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecGroupAggregate
+
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.logical.LogicalAggregate
-import org.apache.flink.table.api.TableException
-import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecGroupAggregate
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalAggregate
 
 import scala.collection.JavaConversions._
 
 /**
   * Rule to convert a [[LogicalAggregate]] into a [[StreamExecGroupAggregate]].
   */
-class StreamExecGroupAggregateRule extends ConverterRule(classOf[FlinkLogicalAggregate],
-  FlinkConventions.LOGICAL, FlinkConventions.STREAMEXEC, "StreamExecGroupAggregateRule") {
+class StreamExecGroupAggregateRule
+  extends ConverterRule(
+    classOf[FlinkLogicalAggregate],
+    FlinkConventions.LOGICAL,
+    FlinkConventions.STREAM_PHYSICAL,
+    "StreamExecGroupAggregateRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val agg: FlinkLogicalAggregate = call.rel(0).asInstanceOf[FlinkLogicalAggregate]
@@ -56,8 +61,8 @@ class StreamExecGroupAggregateRule extends ConverterRule(classOf[FlinkLogicalAgg
       FlinkRelDistribution.SINGLETON
     }
     val requiredTraitSet = rel.getCluster.getPlanner.emptyTraitSet().replace(
-      FlinkConventions.STREAMEXEC).replace(requiredDistribution)
-    val providedTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+      FlinkConventions.STREAM_PHYSICAL).replace(requiredDistribution)
+    val providedTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
     val convInput: RelNode = RelOptRule.convert(agg.getInput, requiredTraitSet)
 
     new StreamExecGroupAggregate(

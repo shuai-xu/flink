@@ -29,13 +29,13 @@ class BatchExecExpandRule
   extends ConverterRule(
     classOf[FlinkLogicalExpand],
     FlinkConventions.LOGICAL,
-    FlinkConventions.BATCHEXEC,
+    FlinkConventions.BATCH_PHYSICAL,
     "BatchExecExpandRule") {
 
   def convert(rel: RelNode): RelNode = {
     val expand = rel.asInstanceOf[FlinkLogicalExpand]
-    val newTrait = rel.getTraitSet.replace(FlinkConventions.BATCHEXEC)
-    val newInput = RelOptRule.convert(expand.getInput, FlinkConventions.BATCHEXEC)
+    val newTrait = rel.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
+    val newInput = RelOptRule.convert(expand.getInput, FlinkConventions.BATCH_PHYSICAL)
     new BatchExecExpand(
       rel.getCluster,
       newTrait,

@@ -18,7 +18,7 @@
 package org.apache.flink.table.plan.util
 
 import org.apache.flink.table.plan.`trait`.{AccModeTraitDef, UpdateAsRetractionTraitDef}
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRel
+import org.apache.flink.table.plan.nodes.physical.stream.StreamPhysicalRel
 
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.externalize.RelWriterImpl
@@ -74,7 +74,7 @@ class RelTreeWriterImpl(
     }
     if (withRetractTraits) {
       rel match {
-        case streamRel: StreamExecRel[_] =>
+        case streamRel: StreamPhysicalRel =>
           val traitSet = streamRel.getTraitSet
           printValues.add(
             Pair.of("retract", traitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE)))

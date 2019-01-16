@@ -55,7 +55,7 @@ object FlinkRelOptUtil {
     * @param detailLevel        detailLevel defines detail levels for EXPLAIN PLAN.
     * @param withRelNodeId      whether including ID of RelNode
     * @param withRetractTraits  whether including Retraction Traits of RelNode (only apply to
-    *                           StreamExecRel node at present)
+    *                           StreamPhysicalRel node at present)
     * @return explain plan of RelNode
     */
   def toString(

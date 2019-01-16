@@ -23,7 +23,7 @@ import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
@@ -157,10 +157,10 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     // assume memory is big enough, so sort process and mergeJoin process will not spill to disk.
     var sortMemCost = 0D
     if (!leftSorted) {
-      sortMemCost += BatchExecRel.calcNeedMemoryForSort(mq, getLeft)
+      sortMemCost += SortUtil.calcNeedMemoryForSort(mq, getLeft)
     }
     if (!rightSorted) {
-      sortMemCost += BatchExecRel.calcNeedMemoryForSort(mq, getRight)
+      sortMemCost += SortUtil.calcNeedMemoryForSort(mq, getRight)
     }
     costFactory.makeCost(mq.getRowCount(this), cpuCost, 0, 0, sortMemCost)
   }

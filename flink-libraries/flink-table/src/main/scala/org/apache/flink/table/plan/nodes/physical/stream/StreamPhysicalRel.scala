@@ -18,19 +18,15 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import org.apache.flink.table.api.StreamTableEnvironment
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.FlinkRelNode
-import org.apache.flink.table.plan.nodes.exec.{ExecNode, StreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 
 import org.apache.calcite.rel.RelNode
 
-import java.util
-
-import scala.collection.JavaConversions._
-
-trait StreamExecRel[T] extends FlinkPhysicalRel with StreamExecNode[T] {
+/**
+  * Base class for stream physical node.
+  */
+trait StreamPhysicalRel extends FlinkPhysicalRel {
 
   /**
     * Whether the [[FlinkRelNode]] produces update and delete changes.
@@ -53,20 +49,4 @@ trait StreamExecRel[T] extends FlinkPhysicalRel with StreamExecNode[T] {
     */
   def producesRetractions: Boolean = false
 
-  //~ ExecNode methods -----------------------------------------------------------
-
-  override def getInputNodes: util.List[ExecNode[StreamTableEnvironment, _]] = {
-    getInputs.map(_.asInstanceOf[StreamExecRel[_]])
-  }
-
-  override def replaceInputNode(
-      ordinalInParent: Int,
-      newInputNode: ExecNode[StreamTableEnvironment, _]): Unit = {
-    require(ordinalInParent >= 0 && ordinalInParent < getInputs.size())
-    replaceInput(ordinalInParent, newInputNode.asInstanceOf[StreamExecRel[_]])
-  }
-
-  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 }
-
-trait RowStreamExecRel extends StreamExecRel[BaseRow]

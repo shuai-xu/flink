@@ -27,16 +27,18 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.newName
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.{AggsHandlerCodeGenerator, BatchExecAggregateCodeGen}
-import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
+import org.apache.flink.table.plan.nodes.exec.RowBatchExecNode
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.nodes.physical.batch.OverWindowMode.OverWindowMode
 import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToBatchAggregateInfoList}
 import org.apache.flink.table.plan.util.{AggregateUtil, FlinkRelOptUtil, OverAggregateUtil}
 import org.apache.flink.table.runtime.overagg._
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.NodeResourceUtil
 
 import org.apache.calcite.plan._
@@ -74,7 +76,8 @@ class BatchExecOverAggregate(
     logicWindow: Window)
   extends SingleRel(cluster, traitSet, inputNode)
   with BatchExecAggregateCodeGen
-  with RowBatchExecRel {
+  with BatchPhysicalRel
+  with RowBatchExecNode {
 
   private lazy val modeToGroupToAggCallToAggFunction: Seq[(OverWindowMode, Window.Group, Seq[
       (AggregateCall, UserDefinedFunction)])] = splitOutOffsetOrInsensitiveGroup
@@ -256,6 +259,8 @@ class BatchExecOverAggregate(
   override def getDamBehavior: DamBehavior = DamBehavior.PIPELINED
 
   override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]

@@ -21,7 +21,7 @@ package org.apache.flink.table.resource.batch.parallelism;
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.resource.MockNodeTestBase;
 
@@ -143,15 +143,15 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 		 *               5, Calc
 		 */
 		createNodeList(7);
-		ExecNode<?, ?> scan0 = mock(BatchExecScan.class);
-		ExecNode<?, ?>scan1 = mock(BatchExecScan.class);
+		ExecNode<?, ?> scan0 = mock(BatchExecTableSourceScan.class);
+		ExecNode<?, ?>scan1 = mock(BatchExecTableSourceScan.class);
 		updateNode(0, scan0);
 		finalParallelismNodeMap.put(scan0, 10);
 		updateNode(2, scan1);
 		finalParallelismNodeMap.put(scan1, 11);
 		updateNode(4, mock(BatchExecUnion.class));
 		updateNode(5, mock(BatchExecCalc.class));
-		updateNode(6, mock(BatchExecScan.class));
+		updateNode(6, mock(BatchExecTableSourceScan.class));
 		connect(1, 0);
 		connect(3, 2);
 		connect(4, 1, 3, 6);
@@ -177,8 +177,8 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 		 *               5, Calc
 		 */
 		createNodeList(7);
-		ExecNode<?, ?> scan0 = mock(BatchExecScan.class);
-		ExecNode<?, ?> scan1 = mock(BatchExecScan.class);
+		ExecNode<?, ?> scan0 = mock(BatchExecTableSourceScan.class);
+		ExecNode<?, ?> scan1 = mock(BatchExecTableSourceScan.class);
 		updateNode(0, scan0);
 		finalParallelismNodeMap.put(scan0, 10);
 		updateNode(2, scan1);
@@ -215,8 +215,8 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 		 *               6, Calc
 		 */
 		createNodeList(7);
-		ExecNode<?, ?> scan0 = mock(BatchExecScan.class);
-		ExecNode<?, ?> scan1 = mock(BatchExecScan.class);
+		ExecNode<?, ?> scan0 = mock(BatchExecTableSourceScan.class);
+		ExecNode<?, ?> scan1 = mock(BatchExecTableSourceScan.class);
 		updateNode(0, scan0);
 		finalParallelismNodeMap.put(scan0, 10);
 		updateNode(2, scan1);
@@ -253,8 +253,8 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 		 *               5, Calc
 		 */
 		createNodeList(8);
-		ExecNode<?, ?> scan0 = mock(BatchExecScan.class);
-		ExecNode<?, ?> scan1 = mock(BatchExecScan.class);
+		ExecNode<?, ?> scan0 = mock(BatchExecTableSourceScan.class);
+		ExecNode<?, ?> scan1 = mock(BatchExecTableSourceScan.class);
 		updateNode(0, scan0);
 		finalParallelismNodeMap.put(scan0, 11);
 		updateNode(2, scan1);
@@ -263,8 +263,8 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 		updateNode(4, union4);
 		finalParallelismNodeMap.put(union4, 5);
 		updateNode(5, mock(BatchExecCalc.class));
-		updateNode(6, mock(BatchExecScan.class));
-		updateNode(7, mock(BatchExecScan.class));
+		updateNode(6, mock(BatchExecTableSourceScan.class));
+		updateNode(7, mock(BatchExecTableSourceScan.class));
 		connect(1, 0);
 		connect(3, 2);
 		connect(4, 1, 3, 6, 7);
@@ -290,8 +290,8 @@ public class ShuffleStageGeneratorTest extends MockNodeTestBase {
 		 *               5, Calc
 		 */
 		createNodeList(6);
-		ExecNode<?, ?> scan0 = mock(BatchExecScan.class);
-		ExecNode<?, ?> scan1 = mock(BatchExecScan.class);
+		ExecNode<?, ?> scan0 = mock(BatchExecTableSourceScan.class);
+		ExecNode<?, ?> scan1 = mock(BatchExecTableSourceScan.class);
 		updateNode(0, scan0);
 		finalParallelismNodeMap.put(scan0, 11);
 		updateNode(2, scan1);

@@ -22,10 +22,11 @@ import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.api.types.TypeConverters
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExpandCodeGenerator}
-import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.calcite.Expand
+import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.ExpandUtil
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
@@ -45,7 +46,8 @@ class StreamExecExpand(
     expandIdIndex: Int,
     ruleDescription: String)
   extends Expand(cluster, traitSet, input, outputRowType, projects, expandIdIndex)
-  with RowStreamExecRel {
+  with StreamPhysicalRel
+  with RowStreamExecNode {
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
     new StreamExecExpand(
@@ -67,6 +69,8 @@ class StreamExecExpand(
   override def isDeterministic: Boolean = ExpandUtil.isDeterministic(projects)
 
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

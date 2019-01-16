@@ -18,21 +18,21 @@
 
 package org.apache.flink.table.plan.rules.physical.stream
 
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalNativeTableScan
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecDataStreamScan
+import org.apache.flink.table.plan.schema.DataStreamTable
+
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelTraitSet}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecDataStreamScan
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalNativeTableScan
-import org.apache.flink.table.plan.schema.DataStreamTable
 
 class StreamExecScanRule
   extends ConverterRule(
     classOf[FlinkLogicalNativeTableScan],
     FlinkConventions.LOGICAL,
-    FlinkConventions.STREAMEXEC,
-    "StreamExecScanRule")
-{
+    FlinkConventions.STREAM_PHYSICAL,
+    "StreamExecScanRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val scan: FlinkLogicalNativeTableScan = call.rel(0).asInstanceOf[FlinkLogicalNativeTableScan]
@@ -47,7 +47,7 @@ class StreamExecScanRule
 
   def convert(rel: RelNode): RelNode = {
     val scan: FlinkLogicalNativeTableScan = rel.asInstanceOf[FlinkLogicalNativeTableScan]
-    val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+    val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
 
     new StreamExecDataStreamScan(
       rel.getCluster,

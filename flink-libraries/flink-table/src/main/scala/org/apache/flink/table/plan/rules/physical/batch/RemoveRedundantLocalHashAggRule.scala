@@ -18,11 +18,12 @@
 
 package org.apache.flink.table.plan.rules.physical.batch
 
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
-import org.apache.calcite.plan.RelOptRule._
-import org.apache.calcite.rel.RelNode
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashAggregate, BatchExecLocalHashAggregate, BatchExecRel}
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashAggregate, BatchExecLocalHashAggregate}
+
+import org.apache.calcite.plan.RelOptRule._
+import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
+import org.apache.calcite.rel.RelNode
 
 /**
   * There maybe exists a subTree like localHashAggregate -> globalHashAggregate which the middle
@@ -31,7 +32,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashAggregate,
 class RemoveRedundantLocalHashAggRule extends RelOptRule(
   operand(classOf[BatchExecHashAggregate],
     operand(classOf[BatchExecLocalHashAggregate],
-      operand(classOf[RelNode], FlinkConventions.BATCHEXEC, any))),
+      operand(classOf[RelNode], FlinkConventions.BATCH_PHYSICAL, any))),
   "RemoveRedundantLocalHashAggRule") {
 
   override def onMatch(call: RelOptRuleCall): Unit = {

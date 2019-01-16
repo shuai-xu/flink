@@ -126,7 +126,7 @@ class BatchExecWindowAggregateRule
     val aggregates = aggCallToAggFunction.map(_._2).toArray
 
     // TODO aggregate include projection now, so do not provide new trait will be safe
-    val aggProvidedTraitSet = input.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+    val aggProvidedTraitSet = input.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
     val inputTimestampIndex = timeFieldIndex(input.getRowType, call.builder(), window.timeAttribute)
     val inputTimestampType = agg.getInput.getRowType.getFieldList.get(inputTimestampIndex).getType
     val isDate = inputTimestampType.getSqlTypeName == SqlTypeName.DATE
@@ -136,7 +136,7 @@ class BatchExecWindowAggregateRule
     if (!isEnforceOnePhaseAgg(call) && supportLocalAgg) {
       val windowType = if (isDate) IntType.INSTANCE else LongType.INSTANCE
       // local
-      var localRequiredTraitSet = input.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+      var localRequiredTraitSet = input.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
       // local win-agg output order: groupSet + assignTs + auxGroupSet + aggCalls
       val localAggRelType = inferLocalWindowAggType(enableAssignPane, input.getRowType, agg,
         groupSet, auxGroupSet, windowType, aggregates, aggBufferTypes)
@@ -249,7 +249,7 @@ class BatchExecWindowAggregateRule
     }
     // disable one-phase agg if prefer two-phase agg
     if (!isEnforceTwoPhaseAgg(call) || !supportLocalAgg) {
-      var requiredTraitSet = agg.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+      var requiredTraitSet = agg.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
       // distribute by grouping keys
       requiredTraitSet = if (agg.getGroupCount != 0) {
         requiredTraitSet.replace(

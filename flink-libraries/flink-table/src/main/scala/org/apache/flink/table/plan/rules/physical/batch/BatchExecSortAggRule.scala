@@ -57,14 +57,14 @@ class BatchExecSortAggRule
     val groupSet = agg.getGroupSet.toArray
     val aggCallToAggFunction = aggCallsWithoutAuxGroupCalls.zip(aggregates)
     // TODO aggregate include projection now, so do not provide new trait will be safe
-    val aggProvidedTraitSet = agg.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+    val aggProvidedTraitSet = agg.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
 
     if (isTwoPhaseAggWorkable(aggregates, call)) {
       val localAggRelType = inferLocalAggType(
         input.getRowType, agg, groupSet, auxGroupSet, aggregates,
         aggBufferTypes.map(_.map(_.toInternalType)))
       //localSortAgg
-      var localRequiredTraitSet = input.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+      var localRequiredTraitSet = input.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
       if (agg.getGroupCount != 0) {
         localRequiredTraitSet = localRequiredTraitSet.replace(createRelCollation(groupSet))
       }
@@ -124,7 +124,7 @@ class BatchExecSortAggRule
         Seq(FlinkRelDistribution.SINGLETON)
       }
       requiredDistributions.foreach { requiredDistribution =>
-        var requiredTraitSet = input.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+        var requiredTraitSet = input.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
             .replace(requiredDistribution)
         if (agg.getGroupCount != 0) {
           requiredTraitSet = requiredTraitSet.replace(createRelCollation(groupSet))

@@ -36,6 +36,8 @@ import org.apache.flink.table.expressions.ExpressionUtils.isTimeIntervalLiteral
 import org.apache.flink.table.expressions.{Expression, If, Literal}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
 import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, TumblingGroupWindow}
+import org.apache.flink.table.plan.nodes.exec.RowBatchExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.AggregateUtil.asLong
 import org.apache.flink.table.plan.util.{AggregateNameUtil, AggregateUtil}
 import org.apache.flink.table.runtime.functions.DateTimeFunctions
@@ -71,7 +73,8 @@ abstract class BatchExecWindowAggregateBase(
     val isFinal: Boolean)
   extends SingleRel(cluster, traitSet, inputNode)
   with BatchExecAggregateCodeGen
-  with RowBatchExecRel {
+  with BatchPhysicalRel
+  with RowBatchExecNode {
 
   if (grouping.isEmpty && auxGrouping.nonEmpty) {
     throw new TableException("auxGrouping should be empty if grouping is emtpy.")
@@ -714,4 +717,6 @@ abstract class BatchExecWindowAggregateBase(
       inputTerm
     }
   }
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 }

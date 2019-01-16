@@ -32,7 +32,6 @@ import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
-import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescriptor}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.{Expression, TimeAttribute}
@@ -40,7 +39,7 @@ import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
 import org.apache.flink.table.plan.cost.{FlinkBatchCost, FlinkCostFactory}
 import org.apache.flink.table.plan.logical.{LogicalNode, SinkNode}
 import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode}
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExecSink}
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecSink, BatchPhysicalRel}
 import org.apache.flink.table.plan.nodes.process.DAGProcessContext
 import org.apache.flink.table.plan.optimize.{BatchOptimizeContext, FlinkBatchPrograms}
 import org.apache.flink.table.plan.schema._
@@ -382,16 +381,15 @@ class BatchTableEnvironment(
    * @return The [[StreamTransformation]] that corresponds to the given node.
    */
   private def translate[OUT](
-      node: BatchExecNode[OUT],
+      node: ExecNode[_, OUT],
       resultType: DataType): StreamTransformation[OUT] = {
     TableEnvironment.validateType(resultType)
 
     node match {
-      case node: BatchExecRel[OUT] =>
-        node.translateToPlan(this)
+      case node: BatchExecNode[OUT] => node.translateToPlan(this)
       case _ =>
         throw new TableException("Cannot generate BoundedStream due to an invalid logical plan. " +
-            "This is a bug and should not happen. Please file an issue.")
+          "This is a bug and should not happen. Please file an issue.")
     }
   }
 
@@ -418,22 +416,27 @@ class BatchTableEnvironment(
   }
 
   /**
-    * Convert [[BatchExecRel]] DAG to [[BatchExecNode]] DAG and translate them.
+    * Convert [[BatchPhysicalRel]] DAG to [[BatchExecNode]] DAG and translate them.
     */
   @VisibleForTesting
   private[flink] def translateNodeDag(rels: Seq[RelNode]): Seq[BatchExecNode[_]] = {
-    require(rels.nonEmpty && rels.forall(_.isInstanceOf[BatchExecRel[_]]))
+    require(rels.nonEmpty && rels.forall(_.isInstanceOf[BatchPhysicalRel]))
     // reuse subplan
     val reusedPlan = SubplanReuseUtil.reuseSubplan(rels, config)
+    // convert BatchPhysicalRel DAG to BatchExecNode DAG
     val nodeDag = reusedPlan.map(_.asInstanceOf[BatchExecNode[_]])
     // breakup deadlock
+    // TODO move DeadlockBreakupProcessor into batch DAGProcessors
     val nodeDagWithoutDeadlock = new DeadlockBreakupProcessor().process(
       nodeDag, new DAGProcessContext(this))
+    // build running units
+    nodeDagWithoutDeadlock.foreach(n => ruKeeper.buildRUs(n.asInstanceOf[BatchExecNode[_]]))
+    // call processors
     val dagProcessors = getConfig.getBatchDAGProcessors
     require(dagProcessors != null)
-    nodeDagWithoutDeadlock.foreach(n => ruKeeper.buildRUs(n.asInstanceOf[BatchExecNode[_]]))
-    val postNodeDag = dagProcessors.process(nodeDagWithoutDeadlock,
-      new DAGProcessContext(this, ruKeeper.getRunningUnitMap))
+    val postNodeDag = dagProcessors.process(
+      nodeDagWithoutDeadlock, new DAGProcessContext(this, ruKeeper.getRunningUnitMap))
+
     dumpOptimizedPlanIfNeed(postNodeDag)
     postNodeDag.map(_.asInstanceOf[BatchExecNode[_]])
   }
@@ -703,8 +706,7 @@ class BatchTableEnvironment(
   private[flink] def explain(table: Table, extended: Boolean): String = {
     val ast = table.getRelNode
     // explain as simple tree, ignore dag optimization if it's enabled
-    val optimizedNode = optimizeAndTranslateNodeDag(false, table.logicalPlan)
-      .head.asInstanceOf[BatchExecNode[_]]
+    val optimizedNode = optimizeAndTranslateNodeDag(false, table.logicalPlan).head
 
     val fieldTypes = ast.getRowType.getFieldList.asScala
       .map(field => FlinkTypeFactory.toInternalType(field.getType))

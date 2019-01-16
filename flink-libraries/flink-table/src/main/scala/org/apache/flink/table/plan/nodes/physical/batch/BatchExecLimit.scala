@@ -23,7 +23,9 @@ import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
+import org.apache.flink.table.plan.nodes.exec.RowBatchExecNode
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.sort.LimitOperator
 
@@ -48,7 +50,8 @@ class BatchExecLimit(
     traitSet.getTrait(RelCollationTraitDef.INSTANCE),
     limitOffset,
     limit)
-  with RowBatchExecRel {
+  with BatchPhysicalRel
+  with RowBatchExecNode {
 
   val limitStart: Long = if (offset != null) RexLiteral.intValue(offset) else 0L
   val limitEnd: Long = if (limit != null) {
@@ -106,6 +109,8 @@ class BatchExecLimit(
   override def getDamBehavior: DamBehavior = DamBehavior.PIPELINED
 
   override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]

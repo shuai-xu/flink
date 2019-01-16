@@ -28,7 +28,8 @@ import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.schedule.VertexScheduler;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
+import org.apache.flink.table.plan.nodes.exec.BatchExecNode;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchPhysicalRel;
 import org.apache.flink.table.resource.batch.BatchExecNodeStage;
 import org.apache.flink.table.resource.batch.NodeRunningUnit;
 import org.apache.flink.util.TestLogger;
@@ -202,8 +203,9 @@ public class RunningUnitGraphManagerPluginTest extends TestLogger {
 
 	private void createNodeStages(int num) {
 		for (int i = 0; i < num; i++) {
-			BatchExecRel batchExecNode = mock(BatchExecRel.class);
-			when(batchExecNode.getFlinkPhysicalRel()).thenReturn(batchExecNode);
+			BatchExecNode<?> batchExecNode = mock(BatchExecNode.class);
+			BatchPhysicalRel batchRel = mock(BatchPhysicalRel.class);
+			when(batchExecNode.getFlinkPhysicalRel()).thenReturn(batchRel);
 			nodeStageList.add(new BatchExecNodeStage(batchExecNode, 0));
 		}
 	}

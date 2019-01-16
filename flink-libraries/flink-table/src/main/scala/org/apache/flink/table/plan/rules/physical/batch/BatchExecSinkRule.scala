@@ -29,13 +29,13 @@ import org.apache.calcite.rel.convert.ConverterRule
 class BatchExecSinkRule extends ConverterRule(
   classOf[FlinkLogicalSink],
   FlinkConventions.LOGICAL,
-  FlinkConventions.BATCHEXEC,
+  FlinkConventions.BATCH_PHYSICAL,
   "BatchExecSinkRule") {
 
   def convert(rel: RelNode): RelNode = {
     val sinkNode = rel.asInstanceOf[FlinkLogicalSink]
-    val newTrait = rel.getTraitSet.replace(FlinkConventions.BATCHEXEC)
-    val newInput = RelOptRule.convert(sinkNode.getInput, FlinkConventions.BATCHEXEC)
+    val newTrait = rel.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
+    val newInput = RelOptRule.convert(sinkNode.getInput, FlinkConventions.BATCH_PHYSICAL)
     new BatchExecSink(
       rel.getCluster,
       newTrait,

@@ -18,19 +18,20 @@
 
 package org.apache.flink.table.plan.rules.physical.stream
 
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
+import org.apache.flink.table.plan.logical.MatchRecognize
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalMatch
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecMatch
+import org.apache.flink.table.plan.schema.BaseRowSchema
+import org.apache.flink.table.plan.util.{MatchUtil, RexDefaultVisitor}
+
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rex.{RexCall, RexInputRef, RexNode}
 import org.apache.calcite.sql.SqlAggFunction
-import org.apache.flink.table.api.TableException
-import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
-import org.apache.flink.table.plan.logical.MatchRecognize
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecMatch
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalMatch
-import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.plan.util.{MatchUtil, RexDefaultVisitor}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -39,7 +40,7 @@ class StreamExecMatchRule
   extends ConverterRule(
     classOf[FlinkLogicalMatch],
     FlinkConventions.LOGICAL,
-    FlinkConventions.STREAMEXEC,
+    FlinkConventions.STREAM_PHYSICAL,
     "StreamExecMatchRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
@@ -63,8 +64,8 @@ class StreamExecMatchRule
       FlinkRelDistribution.ANY
     }
     val requiredTraitSet = logicalMatch.getInput.getTraitSet.replace(
-      FlinkConventions.STREAMEXEC).replace(requiredDistribution)
-    val providedTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+      FlinkConventions.STREAM_PHYSICAL).replace(requiredDistribution)
+    val providedTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
 
     val convertInput: RelNode =
       RelOptRule.convert(logicalMatch.getInput, requiredTraitSet)

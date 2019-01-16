@@ -21,12 +21,12 @@ import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.TwoInputTransformation.ReadOrder
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
-import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
+import org.apache.flink.table.api.types.{RowType, TypeConverters}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
 import org.apache.flink.table.codegen.operator.LongHashJoinGenerator
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
@@ -91,7 +91,10 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
       return null
     }
     val toRestrictHashDistributionByKeys = (distribution: FlinkRelDistribution) =>
-      getCluster.getPlanner.emptyTraitSet.replace(FlinkConventions.BATCHEXEC).replace(distribution)
+      getCluster.getPlanner
+        .emptyTraitSet
+        .replace(FlinkConventions.BATCH_PHYSICAL)
+        .replace(distribution)
     val leftRequiredTrait = toRestrictHashDistributionByKeys(leftDistribution)
     val rightRequiredTrait = toRestrictHashDistributionByKeys(rightDistribution)
     val newLeft = RelOptRule.convert(getLeft, leftRequiredTrait)
@@ -110,13 +113,13 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
     // count in network cost of Exchange node before build size child here
     val cpuCost = HASH_CPU_COST * (leftRowCnt + rightRowCnt)
     val (buildRowCount, buildRowSize) = if (leftIsBuild) {
-      (leftRowCnt, BatchExecRel.binaryRowAverageSize(getLeft))
+      (leftRowCnt, BatchPhysicalRel.binaryRowAverageSize(getLeft))
     } else {
-      (rightRowCnt,  BatchExecRel.binaryRowAverageSize(getRight))
+      (rightRowCnt,  BatchPhysicalRel.binaryRowAverageSize(getRight))
     }
     // We aim for a 200% utilization of the bucket table when all the partition buffers are full.
     val bucketSize =
-      buildRowCount * BinaryHashBucketArea.RECORD_BYTES / BatchExecRel.HASH_COLLISION_WEIGHT
+      buildRowCount * BinaryHashBucketArea.RECORD_BYTES / BatchPhysicalRel.HASH_COLLISION_WEIGHT
     val recordSize = buildRowCount * (buildRowSize + BinaryRowSerializer.LENGTH_SIZE_IN_BYTES)
     val memCost = (bucketSize + recordSize) * shuffleBuildCount(mq)
     val costFactory = planner.getCostFactory.asInstanceOf[FlinkCostFactory]

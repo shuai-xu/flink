@@ -18,27 +18,23 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.schema.IntermediateRelNodeTable
 import org.apache.flink.table.plan.util.UpdatingPlanChecker
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptTable, RelTraitSet}
-import org.apache.calcite.rel.core.TableScan
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.TableScan
 
-class StreamExecIntermediateTableScan (
+class StreamExecIntermediateTableScan(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     table: RelOptTable,
     relDataType: RelDataType)
   extends TableScan(cluster, traitSet, table)
-  with StreamExecScan {
+  with StreamPhysicalRel {
 
-  val intermediateTable:IntermediateRelNodeTable =
+  val intermediateTable: IntermediateRelNodeTable =
     getTable.unwrap(classOf[IntermediateRelNodeTable])
 
   override def deriveRowType(): RelDataType = relDataType
@@ -51,30 +47,10 @@ class StreamExecIntermediateTableScan (
   override def producesRetractions: Boolean = producesUpdates && isAccRetract
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    new StreamExecIntermediateTableScan(
-      cluster,
-      traitSet,
-      getTable,
-      relDataType
-    )
+    new StreamExecIntermediateTableScan(cluster, traitSet, getTable, relDataType)
   }
 
   override def isDeterministic: Boolean = true
 
-  //~ ExecNode methods -----------------------------------------------------------
-
-  override def translateToPlanInternal(
-      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
-    throw new TableException(
-      "translateToPlan is not supported in StreamExecIntermediateTableScan.")
-  }
-
-  override def needInternalConversion: Boolean = {
-    throw new TableException(
-      "needInternalConversion is not supported in StreamExecIntermediateTableScan.")
-  }
-
-  // TODO need to remove
-  override private[flink] def getSourceTransformation(streamEnv: StreamExecutionEnvironment) = ???
 }
 

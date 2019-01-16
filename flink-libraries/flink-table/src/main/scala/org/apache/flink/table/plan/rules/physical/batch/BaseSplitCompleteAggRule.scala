@@ -97,8 +97,8 @@ abstract class BaseSplitCompleteAggRule(
     val distributionOfExchange = FlinkRelDistribution.hash(
       distributionFields, requireStrict = true)
     val traitSetOfExchange = completeAgg.getCluster.getPlanner.emptyTraitSet
-                             .replace(FlinkConventions.BATCHEXEC)
-                             .replace(distributionOfExchange)
+      .replace(FlinkConventions.BATCH_PHYSICAL)
+      .replace(distributionOfExchange)
     new BatchExecExchange(
       completeAgg.getCluster, traitSetOfExchange, input, distributionOfExchange)
   }
@@ -126,7 +126,7 @@ abstract class BaseSplitCompleteAggRule(
       aggregates,
       aggBufferTypes.map(_.map(_.toInternalType)))
     val traitSet = completeAgg.getCluster.getPlanner.emptyTraitSet
-                   .replace(FlinkConventions.BATCHEXEC)
+      .replace(FlinkConventions.BATCH_PHYSICAL)
     completeAgg match {
       case _: BatchExecHashAggregate =>
         new BatchExecLocalHashAggregate(

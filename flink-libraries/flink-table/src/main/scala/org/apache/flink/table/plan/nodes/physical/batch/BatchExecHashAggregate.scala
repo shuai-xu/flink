@@ -27,6 +27,7 @@ import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.{AggregateNameUtil, FlinkRelOptUtil}
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.util.NodeResourceUtil
@@ -140,6 +141,8 @@ class BatchExecHashAggregate(
   override def getDamBehavior: DamBehavior = DamBehavior.FULL_DAM
 
   override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]

@@ -23,7 +23,9 @@ import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.{FlinkTypeFactory, RelTimeIndicatorConverter}
 import org.apache.flink.table.codegen.{CalcCodeGenerator, CodeGeneratorContext}
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalCalc
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.CalcUtil
 import org.apache.flink.table.runtime.AbstractProcessStreamOperator
 
@@ -45,7 +47,8 @@ class StreamExecCalc(
     calcProgram: RexProgram,
     val ruleDescription: String)
   extends Calc(cluster, traitSet, input, calcProgram)
-  with RowStreamExecRel {
+  with StreamPhysicalRel
+  with RowStreamExecNode {
 
   override def deriveRowType(): RelDataType = relDataType
 
@@ -74,6 +77,8 @@ class StreamExecCalc(
   }
 
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

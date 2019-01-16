@@ -21,7 +21,7 @@ package org.apache.flink.table.plan.rules.physical.batch
 import org.apache.flink.table.api.OperatorType
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution.BROADCAST_DISTRIBUTED
-import org.apache.flink.table.plan.nodes.FlinkConventions.BATCHEXEC
+import org.apache.flink.table.plan.nodes.FlinkConventions.BATCH_PHYSICAL
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalJoin, FlinkLogicalSemiJoin}
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecNestedLoopJoin, BatchExecNestedLoopSemiJoin}
 import org.apache.flink.table.plan.rules.physical.batch.BatchExecNestedLoopJoinRule.transformToNestedLoopJoin
@@ -98,8 +98,8 @@ object BatchExecNestedLoopJoinRule {
       right: RelNode,
       description: String,
       singleRowJoin: Boolean): RelNode = {
-    var leftRequiredTrait = join.getTraitSet.replace(BATCHEXEC)
-    var rightRequiredTrait = join.getTraitSet.replace(BATCHEXEC)
+    var leftRequiredTrait = join.getTraitSet.replace(BATCH_PHYSICAL)
+    var rightRequiredTrait = join.getTraitSet.replace(BATCH_PHYSICAL)
 
     if (join.getJoinType == JoinRelType.FULL) {
       leftRequiredTrait = leftRequiredTrait.replace(FlinkRelDistribution.SINGLETON)
@@ -114,7 +114,7 @@ object BatchExecNestedLoopJoinRule {
 
     val newLeft = RelOptRule.convert(left, leftRequiredTrait)
     val newRight = RelOptRule.convert(right, rightRequiredTrait)
-    val providedTraitSet = join.getTraitSet.replace(BATCHEXEC)
+    val providedTraitSet = join.getTraitSet.replace(BATCH_PHYSICAL)
 
     join match {
       case sj: SemiJoin =>

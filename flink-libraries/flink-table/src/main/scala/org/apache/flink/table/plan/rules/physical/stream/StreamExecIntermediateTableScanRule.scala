@@ -30,12 +30,12 @@ class StreamExecIntermediateTableScanRule
   extends ConverterRule(
     classOf[FlinkLogicalIntermediateTableScan],
     FlinkConventions.LOGICAL,
-    FlinkConventions.STREAMEXEC,
+    FlinkConventions.STREAM_PHYSICAL,
     "StreamExecIntermediateTableScanRule") {
 
   def convert(rel: RelNode): RelNode = {
     val scan = rel.asInstanceOf[FlinkLogicalIntermediateTableScan]
-    val newTrait = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+    val newTrait = rel.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
     new StreamExecIntermediateTableScan(rel.getCluster, newTrait, scan.getTable, rel.getRowType)
   }
 }

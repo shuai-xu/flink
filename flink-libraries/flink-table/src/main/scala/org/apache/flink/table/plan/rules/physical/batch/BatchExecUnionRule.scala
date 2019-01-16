@@ -31,7 +31,7 @@ class BatchExecUnionRule
   extends ConverterRule(
     classOf[FlinkLogicalUnion],
     FlinkConventions.LOGICAL,
-    FlinkConventions.BATCHEXEC,
+    FlinkConventions.BATCH_PHYSICAL,
     "BatchExecUnionRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
@@ -40,8 +40,8 @@ class BatchExecUnionRule
 
   def convert(rel: RelNode): RelNode = {
     val union = rel.asInstanceOf[FlinkLogicalUnion]
-    val traitSet = rel.getTraitSet.replace(FlinkConventions.BATCHEXEC)
-    val relNodes = union.getInputs.map(RelOptRule.convert(_, FlinkConventions.BATCHEXEC))
+    val traitSet = rel.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
+    val relNodes = union.getInputs.map(RelOptRule.convert(_, FlinkConventions.BATCH_PHYSICAL))
 
     new BatchExecUnion(
       rel.getCluster,

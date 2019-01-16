@@ -105,14 +105,14 @@ class StreamExecJoinRule
         FlinkRelDistribution.hash(columns)
       }
       inputTraitSets.
-        replace(FlinkConventions.STREAMEXEC).
+        replace(FlinkConventions.STREAM_PHYSICAL).
         replace(distribution)
     }
     val (leftRequiredTrait, rightRequiredTrait) = (
       toHashTraitByColumns(joinInfo.leftKeys, join.getLeft.getTraitSet),
       toHashTraitByColumns(joinInfo.rightKeys, join.getRight.getTraitSet))
 
-    val providedTraitSet = join.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+    val providedTraitSet = join.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
 
     val convLeft: RelNode = RelOptRule.convert(join.getInput(0), leftRequiredTrait)
     val convRight: RelNode = RelOptRule.convert(join.getInput(1), rightRequiredTrait)

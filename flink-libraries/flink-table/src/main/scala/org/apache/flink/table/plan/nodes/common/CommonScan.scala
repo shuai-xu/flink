@@ -22,13 +22,9 @@ import org.apache.flink.api.common.functions.InvalidTypesException
 import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.api.java.typeutils.TypeExtractor
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-
-import java.util.{List => JList}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.api.types._
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext._
@@ -40,6 +36,11 @@ import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.conversion.DataStructureConverters.genToInternal
 import org.apache.flink.table.sources.{BatchTableSource, LookupableTableSource, StreamTableSource, TableSource}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rex.RexNode
+
+import java.util.{List => JList}
 
 import scala.collection.JavaConversions._
 

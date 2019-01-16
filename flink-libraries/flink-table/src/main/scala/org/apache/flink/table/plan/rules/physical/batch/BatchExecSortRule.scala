@@ -46,8 +46,8 @@ class BatchExecSortRule extends RelOptRule(
       FlinkRelDistribution.SINGLETON
     }
     val (requiredTraitSet, providedTraitSet) =
-      (sort.getInput.getTraitSet.replace(distribution).replace(FlinkConventions.BATCHEXEC),
-        sort.getTraitSet.replace(distribution).replace(FlinkConventions.BATCHEXEC))
+      (sort.getInput.getTraitSet.replace(distribution).replace(FlinkConventions.BATCH_PHYSICAL),
+        sort.getTraitSet.replace(distribution).replace(FlinkConventions.BATCH_PHYSICAL))
     val newInput = RelOptRule.convert(sort.getInput, requiredTraitSet)
     call.transformTo(
       new BatchExecSort(

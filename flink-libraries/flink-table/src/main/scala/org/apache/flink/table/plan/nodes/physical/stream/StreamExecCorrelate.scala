@@ -22,7 +22,9 @@ import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.codegen.{CodeGeneratorContext, CorrelateCodeGenerator}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.functions.utils.TableSqlFunction
+import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.CorrelateUtil
 import org.apache.flink.table.runtime.AbstractProcessStreamOperator
 
@@ -46,7 +48,8 @@ class StreamExecCorrelate(
     joinType: SemiJoinType,
     ruleDescription: String)
   extends SingleRel(cluster, traitSet, child)
-  with RowStreamExecRel {
+  with StreamPhysicalRel
+  with RowStreamExecNode {
 
   require(joinType == SemiJoinType.INNER || joinType == SemiJoinType.LEFT)
 
@@ -92,6 +95,8 @@ class StreamExecCorrelate(
   override def isDeterministic: Boolean = CorrelateUtil.isDeterministic(scan, condition)
 
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

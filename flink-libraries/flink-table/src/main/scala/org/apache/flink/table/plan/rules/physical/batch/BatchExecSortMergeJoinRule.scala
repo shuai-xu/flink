@@ -38,7 +38,8 @@ class BatchExecSortMergeJoinRule(joinClass: Class[_ <: Join])
   extends RelOptRule(
     operand(
       joinClass,
-      operand(classOf[RelNode], any)), s"BatchExecSortMergeJoinRule_${joinClass.getSimpleName}")
+      operand(classOf[RelNode], any)),
+    s"BatchExecSortMergeJoinRule_${joinClass.getSimpleName}")
   with BatchExecJoinRuleBase {
 
   override def matches(call: RelOptRuleCall): Boolean = {
@@ -75,7 +76,7 @@ class BatchExecSortMergeJoinRule(joinClass: Class[_ <: Join])
         requireStrict: Boolean,
         requireCollation: Boolean): RelTraitSet = {
       var traitSet = call.getPlanner.emptyTraitSet()
-        .replace(FlinkConventions.BATCHEXEC)
+        .replace(FlinkConventions.BATCH_PHYSICAL)
         .replace(FlinkRelDistribution.hash(shuffleKeys, requireStrict))
       if (requireCollation) {
         val fieldCollations = shuffleKeys.map(RelFieldCollations.of(_))
@@ -99,7 +100,9 @@ class BatchExecSortMergeJoinRule(joinClass: Class[_ <: Join])
       val newLeft = RelOptRule.convert(left, leftRequiredTrait)
       val newRight = RelOptRule.convert(right, rightRequiredTrait)
 
-      val providedTraitSet = call.getPlanner.emptyTraitSet().replace(FlinkConventions.BATCHEXEC)
+      val providedTraitSet = call.getPlanner
+        .emptyTraitSet()
+        .replace(FlinkConventions.BATCH_PHYSICAL)
       val newJoin = join match {
         case sj: SemiJoin =>
           new BatchExecSortMergeSemiJoin(

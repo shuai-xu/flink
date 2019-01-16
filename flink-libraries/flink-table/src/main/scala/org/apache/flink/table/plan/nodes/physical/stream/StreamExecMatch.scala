@@ -18,16 +18,16 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import java.lang.{Boolean => JBoolean, Long => JLong}
-import java.util
-import java.util.UUID
-
+import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.api.common.ExecutionConfig
+import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.cep._
+import org.apache.flink.cep.nfa.AfterMatchSkipStrategy
 import org.apache.flink.cep.nfa.compiler.NFACompiler
 import org.apache.flink.cep.operator.{FlatSelectCepOperator, FlatSelectTimeoutCepOperator, SelectCepOperator, SelectTimeoutCepOperator}
 import org.apache.flink.cep.pattern.Pattern
 import org.apache.flink.cep.pattern.Quantifier.QuantifierProperty
+import org.apache.flink.cep.pattern.conditions.BooleanConditions
 import org.apache.flink.streaming.api.operators.co.CoStreamMap
 import org.apache.flink.streaming.api.operators.{ChainingStrategy, ProcessOperator}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, SideOutputTransformation, StreamTransformation, TwoInputTransformation}
@@ -37,6 +37,8 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.logical.MatchRecognize
 import org.apache.flink.table.plan.nodes.common.CommonMatchRecognize
+import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util._
@@ -44,6 +46,7 @@ import org.apache.flink.table.runtime.BaseRowRowtimeProcessFunction
 import org.apache.flink.table.runtime.`match`._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.{MathUtils, OutputTag}
+
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelFieldCollation.Direction
 import org.apache.calcite.rel._
@@ -51,13 +54,13 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.SqlMatchRecognize.{AfterOption, RowsPerMatchOption}
+import org.apache.calcite.sql.`type`.SqlTypeFamily
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.tools.RelBuilder
-import org.apache.calcite.sql.`type`.SqlTypeFamily
-import org.apache.flink.annotation.VisibleForTesting
-import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.cep.nfa.AfterMatchSkipStrategy
-import org.apache.flink.cep.pattern.conditions.BooleanConditions
+
+import java.lang.{Boolean => JBoolean, Long => JLong}
+import java.util
+import java.util.UUID
 
 import _root_.scala.collection.JavaConversions._
 
@@ -73,7 +76,8 @@ class StreamExecMatch(
     inputSchema: BaseRowSchema)
   extends SingleRel(cluster, traitSet, input)
   with CommonMatchRecognize
-  with RowStreamExecRel {
+  with StreamPhysicalRel
+  with RowStreamExecNode {
 
   override def deriveRowType(): RelDataType = outputSchema.relDataType
 
@@ -123,6 +127,8 @@ class StreamExecMatch(
   }
 
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

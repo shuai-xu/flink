@@ -21,6 +21,8 @@ import org.apache.flink.streaming.api.transformations.{OneInputTransformation, S
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.runtime.bundle.MiniBatchAssignerOperator
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
@@ -34,7 +36,8 @@ class StreamExecMiniBatchAssigner(
     inputNode: RelNode,
     intervalMs: Long)
   extends SingleRel(cluster, traits, inputNode)
-  with RowStreamExecRel {
+  with StreamPhysicalRel
+  with RowStreamExecNode {
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
     new StreamExecMiniBatchAssigner(cluster, traitSet, inputs.get(0), intervalMs)
@@ -47,6 +50,8 @@ class StreamExecMiniBatchAssigner(
   override def isDeterministic: Boolean = true
 
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

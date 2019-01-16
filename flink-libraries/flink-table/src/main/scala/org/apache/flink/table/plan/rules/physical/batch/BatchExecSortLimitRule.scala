@@ -30,7 +30,7 @@ class BatchExecSortLimitRule
   extends ConverterRule(
     classOf[FlinkLogicalSort],
     FlinkConventions.LOGICAL,
-    FlinkConventions.BATCHEXEC,
+    FlinkConventions.BATCH_PHYSICAL,
     "BatchExecSortLimitRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
@@ -42,7 +42,7 @@ class BatchExecSortLimitRule
     val sort = rel.asInstanceOf[FlinkLogicalSort]
     val input = sort.getInput
     //convert localSortLimit --> globalSortLimit if limit is not null
-    val localRequiredTrait = input.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+    val localRequiredTrait = input.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
     val localInput = RelOptRule.convert(sort.getInput, localRequiredTrait)
     val providedLocalTraitSet = localRequiredTrait.replace(sort.getCollation)
     val localSortLimit = new BatchExecSortLimit(
@@ -58,7 +58,7 @@ class BatchExecSortLimitRule
 
     //global
     val requiredTrait = rel.getCluster.getPlanner.emptyTraitSet()
-      .replace(FlinkConventions.BATCHEXEC)
+      .replace(FlinkConventions.BATCH_PHYSICAL)
       .replace(FlinkRelDistribution.SINGLETON)
 
     val newInput = RelOptRule.convert(localSortLimit, requiredTrait)

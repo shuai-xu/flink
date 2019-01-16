@@ -196,7 +196,7 @@ object FlinkStreamPrograms {
       PHYSICAL,
       FlinkVolcanoProgramBuilder.newBuilder
         .add(FlinkStreamExecRuleSets.STREAM_EXEC_OPT_RULES)
-        .setTargetTraits(Array(FlinkConventions.STREAMEXEC))
+        .setTargetTraits(Array(FlinkConventions.STREAM_PHYSICAL))
         .build())
 
     // physical rewrite

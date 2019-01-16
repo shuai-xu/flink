@@ -24,6 +24,8 @@ import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
+import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToStreamAggregateInfoList}
@@ -32,7 +34,6 @@ import org.apache.flink.table.runtime.KeyedProcessOperator
 import org.apache.flink.table.runtime.aggregate._
 import org.apache.flink.table.runtime.functions.ProcessFunction
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.Logging
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
 import org.apache.calcite.rel.RelFieldCollation.Direction.ASCENDING
@@ -56,8 +57,8 @@ class StreamExecOverAggregate(
     outputSchema: BaseRowSchema,
     inputSchema: BaseRowSchema)
   extends SingleRel(cluster, traitSet, inputNode)
-  with RowStreamExecRel
-  with Logging {
+  with StreamPhysicalRel
+  with RowStreamExecNode {
 
   override def needsUpdatesAsRetraction(input: RelNode) = true
 
@@ -120,6 +121,8 @@ class StreamExecOverAggregate(
   override def isDeterministic: Boolean = OverAggregateUtil.isDeterministic(logicWindow.groups)
 
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

@@ -18,23 +18,23 @@
 
 package org.apache.flink.table.plan.rules.physical.stream
 
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableSourceScan
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecTableSourceScan
+import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
+import org.apache.flink.table.sources.StreamTableSource
+
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelTraitSet}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.core.TableScan
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecTableSourceScan
-import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableSourceScan
-import org.apache.flink.table.sources.StreamTableSource
 
 class StreamExecTableSourceScanRule
   extends ConverterRule(
     classOf[FlinkLogicalTableSourceScan],
     FlinkConventions.LOGICAL,
-    FlinkConventions.STREAMEXEC,
-    "StreamExecTableSourceScanRule")
-{
+    FlinkConventions.STREAM_PHYSICAL,
+    "StreamExecTableSourceScanRule") {
 
   /** Rule must only match if TableScan targets a [[StreamTableSource]] */
   override def matches(call: RelOptRuleCall): Boolean = {
@@ -55,7 +55,7 @@ class StreamExecTableSourceScanRule
 
   def convert(rel: RelNode): RelNode = {
     val scan: FlinkLogicalTableSourceScan = rel.asInstanceOf[FlinkLogicalTableSourceScan]
-    val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+    val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
 
     new StreamExecTableSourceScan(
       rel.getCluster,

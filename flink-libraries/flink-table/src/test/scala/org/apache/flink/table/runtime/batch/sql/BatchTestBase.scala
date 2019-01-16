@@ -31,7 +31,7 @@ import org.apache.flink.table.api.{SqlParserException, Table, TableConfig, Table
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.dataformat.{BinaryRow, BinaryRowWriter}
 import org.apache.flink.table.expressions.{Expression, ExpressionParser}
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
+import org.apache.flink.table.plan.nodes.exec.BatchExecNode
 import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.NodeResourceUtil.InferMode
@@ -168,8 +168,8 @@ class BatchTestBase {
   private def getPlan(relNode: RelNode): String = {
     val optimized = tEnv.optimize(relNode)
     optimized match {
-      case rel: BatchExecRel[_] =>
-        val optimizedNodes = tEnv.translateNodeDag(Seq(rel))
+      case node: BatchExecNode[_] =>
+        val optimizedNodes = tEnv.translateNodeDag(Seq(node))
         require(optimizedNodes.length == 1)
         FlinkNodeOptUtil.treeToString(optimizedNodes.head, SqlExplainLevel.EXPPLAN_ATTRIBUTES)
       case _ =>

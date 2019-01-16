@@ -18,15 +18,13 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.{RowType}
-import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.api.types.RowType
 import org.apache.flink.table.codegen._
-import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
-import org.apache.flink.table.plan.FlinkJoinRelType._
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
+import org.apache.flink.table.plan.nodes.exec.RowBatchExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.{FlinkRexUtil, JoinUtil}
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.apache.calcite.plan.{RelOptRule, RelTraitSet}
 import org.apache.calcite.rel.RelDistribution.Type._
@@ -43,7 +41,7 @@ import java.util.Collections
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-trait BatchExecJoinBase extends Join with RowBatchExecRel {
+trait BatchExecJoinBase extends Join with BatchPhysicalRel with RowBatchExecNode {
 
   lazy val (joinInfo, filterNulls) = {
     val filterNulls = new util.ArrayList[java.lang.Boolean]
@@ -256,4 +254,5 @@ trait BatchExecJoinBase extends Join with RowBatchExecRel {
       body, config)
   }
 
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 }

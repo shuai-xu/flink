@@ -63,7 +63,7 @@ class StreamExecTemporalTableFunctionJoinRule
     val left = call.rel[FlinkLogicalRel](1)
     val right = call.rel[FlinkLogicalRel](2)
 
-    val traitSet: RelTraitSet = join.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+    val traitSet: RelTraitSet = join.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
     val joinInfo = join.analyzeCondition
 
     def toHashTraitByColumns(columns: util.Collection[_ <: Number], inputTraitSets: RelTraitSet) = {
@@ -73,7 +73,7 @@ class StreamExecTemporalTableFunctionJoinRule
         FlinkRelDistribution.hash(columns)
       }
       inputTraitSets.
-      replace(FlinkConventions.STREAMEXEC).
+      replace(FlinkConventions.STREAM_PHYSICAL).
       replace(distribution)
     }
     val (leftRequiredTrait, rightRequiredTrait) = (

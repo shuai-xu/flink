@@ -18,11 +18,12 @@
 
 package org.apache.flink.table.plan.rules.physical.batch
 
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptRuleOperand}
-import org.apache.calcite.plan.RelOptRule._
-import org.apache.calcite.rel.RelNode
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecLocalSortAggregate, BatchExecRel, BatchExecSort, BatchExecSortAggregate}
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecLocalSortAggregate, BatchExecSort, BatchExecSortAggregate}
+
+import org.apache.calcite.plan.RelOptRule._
+import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptRuleOperand}
+import org.apache.calcite.rel.RelNode
 
 /**
   * There maybe exists a subTree like localSortAggregate -> globalSortAggregate, or
@@ -62,7 +63,7 @@ abstract class RemoveRedundantLocalSortAggRule(
 class RemoveRedundantLocalSortAggWithoutSortRule extends RemoveRedundantLocalSortAggRule(
   operand(classOf[BatchExecSortAggregate],
     operand(classOf[BatchExecLocalSortAggregate],
-      operand(classOf[RelNode], FlinkConventions.BATCHEXEC, any))),
+      operand(classOf[RelNode], FlinkConventions.BATCH_PHYSICAL, any))),
   "RemoveRedundantLocalSortAggWithoutSortRule") {
 
   override private[table] def getOriginalGlobalAgg(call: RelOptRuleCall): BatchExecSortAggregate = {
@@ -83,7 +84,7 @@ class RemoveRedundantLocalSortAggWithSortRule extends RemoveRedundantLocalSortAg
   operand(classOf[BatchExecSortAggregate],
     operand(classOf[BatchExecSort],
       operand(classOf[BatchExecLocalSortAggregate],
-        operand(classOf[RelNode], FlinkConventions.BATCHEXEC, any)))),
+        operand(classOf[RelNode], FlinkConventions.BATCH_PHYSICAL, any)))),
   "RemoveRedundantLocalSortAggWithSortRule") {
 
   override private[table] def getOriginalGlobalAgg(call: RelOptRuleCall): BatchExecSortAggregate = {

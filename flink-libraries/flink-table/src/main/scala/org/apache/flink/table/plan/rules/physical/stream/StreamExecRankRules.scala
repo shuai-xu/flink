@@ -17,19 +17,20 @@
  */
 package org.apache.flink.table.plan.rules.physical.stream
 
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalRank, FlinkLogicalSort}
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRank
+import org.apache.flink.table.plan.schema.BaseRowSchema
+import org.apache.flink.table.plan.util.ConstantRankRange
+
 import org.apache.calcite.plan.volcano.RelSubset
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rex.RexLiteral
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
-import org.apache.flink.table.api.TableException
-import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRank
-import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalRank, FlinkLogicalSort}
-import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.plan.util.ConstantRankRange
 
 object StreamExecRankRules {
   val SORT_INSTANCE: RelOptRule = new StreamExecRankFromSortRule
@@ -39,7 +40,7 @@ object StreamExecRankRules {
     extends ConverterRule(
       classOf[FlinkLogicalSort],
       FlinkConventions.LOGICAL,
-      FlinkConventions.STREAMEXEC,
+      FlinkConventions.STREAM_PHYSICAL,
       "StreamExecRankFromSortRule") {
 
     override def matches(call: RelOptRuleCall): Boolean = {
@@ -59,9 +60,9 @@ object StreamExecRankRules {
       val requiredDistribution = FlinkRelDistribution.SINGLETON
 
       val requiredTraitSet = sort.getInput.getTraitSet
-        .replace(FlinkConventions.STREAMEXEC)
+        .replace(FlinkConventions.STREAM_PHYSICAL)
         .replace(requiredDistribution)
-      val providedTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+      val providedTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
 
       val convInput: RelNode = RelOptRule.convert(sort.getInput(0), requiredTraitSet)
 
@@ -98,7 +99,7 @@ object StreamExecRankRules {
     extends ConverterRule(
       classOf[FlinkLogicalRank],
       FlinkConventions.LOGICAL,
-      FlinkConventions.STREAMEXEC,
+      FlinkConventions.STREAM_PHYSICAL,
       "StreamExecRankFromRankRule") {
 
     override def convert(rel: RelNode): RelNode = {
@@ -110,9 +111,9 @@ object StreamExecRankRules {
         FlinkRelDistribution.SINGLETON
       }
       val requiredTraitSet = rank.getInput.getTraitSet
-        .replace(FlinkConventions.STREAMEXEC)
+        .replace(FlinkConventions.STREAM_PHYSICAL)
         .replace(requiredDistribution)
-      val providedTraitSet = rank.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+      val providedTraitSet = rank.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
       val convInput: RelNode = RelOptRule.convert(rank.getInput, requiredTraitSet)
       val inputRowType = convInput.asInstanceOf[RelSubset].getOriginal.getRowType
 

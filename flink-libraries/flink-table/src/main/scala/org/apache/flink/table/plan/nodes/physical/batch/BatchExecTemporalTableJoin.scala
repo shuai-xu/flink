@@ -22,9 +22,11 @@ import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonTemporalTableJoin
+import org.apache.flink.table.plan.nodes.exec.RowBatchExecNode
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.TemporalJoinUtil
 import org.apache.flink.table.sources.TableSource
-import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode
@@ -54,7 +56,8 @@ class BatchExecTemporalTableJoin(
     period,
     joinInfo,
     joinType)
-  with RowBatchExecRel {
+  with BatchPhysicalRel
+  with RowBatchExecNode {
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
     new BatchExecTemporalTableJoin(
@@ -81,6 +84,8 @@ class BatchExecTemporalTableJoin(
   override def getDamBehavior: DamBehavior = DamBehavior.PIPELINED
 
   override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]

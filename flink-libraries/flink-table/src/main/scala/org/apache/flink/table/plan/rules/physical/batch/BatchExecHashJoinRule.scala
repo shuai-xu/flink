@@ -98,7 +98,7 @@ class BatchExecHashJoinRule(joinClass: Class[_ <: Join])
     def transformToEquiv(leftRequiredTrait: RelTraitSet, rightRequiredTrait: RelTraitSet): Unit = {
       val newLeft = RelOptRule.convert(left, leftRequiredTrait)
       val newRight = RelOptRule.convert(right, rightRequiredTrait)
-      val providedTraitSet = join.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+      val providedTraitSet = join.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
 
       call.transformTo(join match {
         case sj: SemiJoin =>
@@ -130,8 +130,8 @@ class BatchExecHashJoinRule(joinClass: Class[_ <: Join])
     }
 
     if (isBroadcast) {
-      val probeTrait = join.getTraitSet.replace(FlinkConventions.BATCHEXEC)
-      val buildTrait = join.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+      val probeTrait = join.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
+      val buildTrait = join.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
           .replace(FlinkRelDistribution.BROADCAST_DISTRIBUTED)
       if (leftIsBroadcast) {
         transformToEquiv(buildTrait, probeTrait)
@@ -141,7 +141,7 @@ class BatchExecHashJoinRule(joinClass: Class[_ <: Join])
     } else {
       val toHashTraitByColumns = (columns: util.Collection[_ <: Number]) =>
         join.getCluster.getPlanner.emptyTraitSet.
-            replace(FlinkConventions.BATCHEXEC).
+            replace(FlinkConventions.BATCH_PHYSICAL).
             replace(FlinkRelDistribution.hash(columns))
       transformToEquiv(
         toHashTraitByColumns(joinInfo.leftKeys),

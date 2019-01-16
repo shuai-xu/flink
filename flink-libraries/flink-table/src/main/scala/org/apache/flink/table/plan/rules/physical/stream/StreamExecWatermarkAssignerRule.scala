@@ -28,13 +28,13 @@ class StreamExecWatermarkAssignerRule
   extends ConverterRule(
     classOf[FlinkLogicalWatermarkAssigner],
     FlinkConventions.LOGICAL,
-    FlinkConventions.STREAMEXEC,
+    FlinkConventions.STREAM_PHYSICAL,
     "StreamExecWatermarkAssignerRule") {
 
   override def convert(rel: RelNode): RelNode = {
     val logicalNode = rel.asInstanceOf[FlinkLogicalWatermarkAssigner]
-    val convertInput = RelOptRule.convert(logicalNode.getInput, FlinkConventions.STREAMEXEC)
-    val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+    val convertInput = RelOptRule.convert(logicalNode.getInput, FlinkConventions.STREAM_PHYSICAL)
+    val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
 
     new StreamExecWatermarkAssigner(
       logicalNode.getCluster,

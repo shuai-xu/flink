@@ -39,7 +39,7 @@ class StreamExecWindowJoinRule
   extends ConverterRule(
     classOf[FlinkLogicalJoin],
     FlinkConventions.LOGICAL,
-    FlinkConventions.STREAMEXEC,
+    FlinkConventions.STREAM_PHYSICAL,
     "StreamExecWindowJoinRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
@@ -81,8 +81,8 @@ class StreamExecWindowJoinRule
   override def convert(rel: RelNode): RelNode = {
 
     val join: FlinkLogicalJoin = rel.asInstanceOf[FlinkLogicalJoin]
-    val convLeft: RelNode = RelOptRule.convert(join.getInput(0), FlinkConventions.STREAMEXEC)
-    val convRight: RelNode = RelOptRule.convert(join.getInput(1), FlinkConventions.STREAMEXEC)
+    val convLeft: RelNode = RelOptRule.convert(join.getInput(0), FlinkConventions.STREAM_PHYSICAL)
+    val convRight: RelNode = RelOptRule.convert(join.getInput(1), FlinkConventions.STREAM_PHYSICAL)
     val joinInfo = join.analyzeCondition
 
     def toHashTraitByColumns(columns: util.Collection[_ <: Number], inputTraitSet: RelTraitSet) = {
@@ -92,7 +92,7 @@ class StreamExecWindowJoinRule
         FlinkRelDistribution.hash(columns)
       }
       inputTraitSet.
-        replace(FlinkConventions.STREAMEXEC).
+        replace(FlinkConventions.STREAM_PHYSICAL).
         replace(distribution)
     }
 
@@ -102,7 +102,7 @@ class StreamExecWindowJoinRule
 
     val newLeft = RelOptRule.convert(convLeft, leftRequiredTrait)
     val newRight = RelOptRule.convert(convRight, rightRequiredTrait)
-    val providedTraitSet = join.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+    val providedTraitSet = join.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
 
     val leftRowType = convLeft.getRowType
     val rightRowType = convRight.getRowType

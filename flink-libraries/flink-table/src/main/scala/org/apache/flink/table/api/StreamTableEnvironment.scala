@@ -38,8 +38,7 @@ import org.apache.flink.table.plan.`trait`._
 import org.apache.flink.table.plan.cost.{FlinkCostFactory, FlinkStreamCost}
 import org.apache.flink.table.plan.logical.{LogicalNode, LogicalRelNode, SinkNode}
 import org.apache.flink.table.plan.nodes.calcite._
-import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode, StreamExecNode}
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
+import org.apache.flink.table.plan.nodes.exec.{ExecNode, StreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.nodes.process.DAGProcessContext
 import org.apache.flink.table.plan.optimize.{FlinkStreamPrograms, StreamOptimizeContext}
@@ -54,8 +53,8 @@ import org.apache.flink.table.util._
 import org.apache.flink.util.Preconditions
 
 import org.apache.calcite.plan._
-import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
 import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
 import org.apache.calcite.rex.RexBuilder
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.sql2rel.SqlToRelConverter
@@ -337,7 +336,7 @@ abstract class StreamTableEnvironment(
     // register
     configuredSink match {
 
-      // check for proper batch table sink
+      // check for proper stream table sink
       case _: StreamTableSink[_] =>
 
         // check if a table (source or sink) is registered
@@ -401,8 +400,7 @@ abstract class StreamTableEnvironment(
     if (config.getSubsectionOptimization) {
       sinkNodes += sinkNode
     } else {
-      val optimizedNode = optimizeAndTranslateNodeDag(false, sinkNode)
-        .head.asInstanceOf[StreamExecNode[_]]
+      val optimizedNode = optimizeAndTranslateNodeDag(false, sinkNode).head
       transformations.add(translate(optimizedNode))
     }
   }
@@ -482,7 +480,6 @@ abstract class StreamTableEnvironment(
       statistic)
     registerTableInternal(name, dataStreamTable)
   }
-
 
   /**
     * Registers a dummy [[DataStream]] with row type as a table under a given name with field names
@@ -832,15 +829,16 @@ abstract class StreamTableEnvironment(
   }
 
   /**
-    * Convert [[BatchExecRel]] DAG to [[BatchExecNode]] DAG and translate them.
+    * Convert [[StreamPhysicalRel]] DAG to [[StreamExecNode]] DAG and translate them.
     */
   private[flink] def translateNodeDag(rels: Seq[RelNode]): Seq[StreamExecNode[_]] = {
-    require(rels.nonEmpty && rels.forall(_.isInstanceOf[StreamExecRel[_]]))
-    // convert BatchExecRel DAG to ExecNode DAG
+    require(rels.nonEmpty && rels.forall(_.isInstanceOf[StreamExecNode[_]]))
+    // convert StreamPhysicalRel DAG to StreamExecNode DAG
     val nodeDag = rels.map(_.asInstanceOf[StreamExecNode[_]])
+    // call processors
     val dagProcessors = getConfig.getStreamDAGProcessors
-    val context = new DAGProcessContext(this)
-    val postNodeDag = dagProcessors.process(nodeDag, context)
+    require(dagProcessors != null)
+    val postNodeDag = dagProcessors.process(nodeDag,  new DAGProcessContext(this))
 
     postNodeDag.map(_.asInstanceOf[StreamExecNode[_]])
   }
@@ -922,9 +920,9 @@ abstract class StreamTableEnvironment(
     * @param node The plan to translate.
     * @return The [[StreamTransformation]] of type [[BaseRow]].
     */
-  private def translate(node: StreamExecNode[_]): StreamTransformation[_] = {
+  private def translate(node: ExecNode[_, _]): StreamTransformation[_] = {
     node match {
-      case node: StreamExecRel[_] => node.translateToPlan(this)
+      case node: StreamExecNode[_] => node.translateToPlan(this)
       case _ =>
         throw new TableException("Cannot generate DataStream due to an invalid logical plan. " +
           "This is a bug and should not happen. Please file an issue.")
@@ -940,8 +938,7 @@ abstract class StreamTableEnvironment(
   def explain(table: Table): String = {
     val ast = table.getRelNode
     // explain as simple tree, ignore dag optimization if it's enabled
-    val optimizedNode = optimizeAndTranslateNodeDag(false, table.logicalPlan)
-      .head.asInstanceOf[StreamExecNode[_]]
+    val optimizedNode = optimizeAndTranslateNodeDag(false, table.logicalPlan).head
     val transformStream = translate(optimizedNode)
     val streamGraph = translateStreamGraph(ArrayBuffer(transformStream), None)
     val executionPlan = PlanUtil.explainPlan(streamGraph)

@@ -23,6 +23,8 @@ import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.errorcode.TableErrors
+import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
@@ -33,11 +35,9 @@ import org.apache.calcite.rel.{RelNode, RelWriter}
 import java.util.{List => JList}
 
 import scala.collection.JavaConversions._
-import scala.collection.JavaConverters._
 
 /**
   * Flink RelNode which matches along with Union.
-  *
   */
 class StreamExecUnion(
     cluster: RelOptCluster,
@@ -46,7 +46,8 @@ class StreamExecUnion(
     outputRowType: RelDataType,
     all: Boolean)
   extends Union(cluster, traitSet, relList, all)
-  with RowStreamExecRel {
+  with StreamPhysicalRel
+  with RowStreamExecNode {
 
   require(all, "Only support union all")
 
@@ -70,17 +71,19 @@ class StreamExecUnion(
 
   //~ ExecNode methods -----------------------------------------------------------
 
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val inputs = getInputs
     val firstInputRowType = inputs.head.getRowType
-    val firstInputFields = firstInputRowType.getFieldList.asScala.map(
+    val firstInputFields = firstInputRowType.getFieldList.map(
       t => (t.getName, FlinkTypeFactory.toTypeInfo(t.getType)))
     val firstInputFieldsCnt = firstInputRowType.getFieldCount
     val fieldsCntMismatchInputs = inputs.drop(1).filter(r =>
       r.getRowType.getFieldCount != firstInputFieldsCnt)
     if (fieldsCntMismatchInputs.nonEmpty) {
-      val mismatchFields = fieldsCntMismatchInputs.head.getRowType.getFieldList.asScala.map(
+      val mismatchFields = fieldsCntMismatchInputs.head.getRowType.getFieldList.map(
         t => (t.getName, FlinkTypeFactory.toTypeInfo(t.getType))
       )
       throw new IllegalArgumentException(
@@ -93,7 +96,7 @@ class StreamExecUnion(
       !FlinkTypeFactory.toTypeInfo(r.getRowType).equals(
         FlinkTypeFactory.toTypeInfo(firstInputRowType)))
     if (fieldsTypeMismatchInputs.nonEmpty) {
-      val mismatchFields = fieldsTypeMismatchInputs.head.getRowType.getFieldList.asScala.map(
+      val mismatchFields = fieldsTypeMismatchInputs.head.getRowType.getFieldList.map(
         t => (t.getName, FlinkTypeFactory.toTypeInfo(t.getType))
       )
       val diffFields = firstInputFields.zip(mismatchFields).filter {

@@ -18,24 +18,25 @@
 
 package org.apache.flink.table.plan.rules.physical.stream
 
+import org.apache.flink.table.plan.`trait`._
+import org.apache.flink.table.plan.nodes.physical.stream._
+
 import org.apache.calcite.plan.RelOptRule.{operand, _}
 import org.apache.calcite.plan.hep.HepRelVertex
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
-import org.apache.flink.table.plan.`trait`._
-import org.apache.flink.table.plan.nodes.physical.stream._
 
 import scala.collection.JavaConverters._
 
 /**
-  * Collection of rules to annotate [[StreamExecRel]] nodes with retraction information.
+  * Collection of rules to annotate [[StreamPhysicalRel]] nodes with retraction information.
   *
   * The rules have to be applied in the following order:
   * - [[StreamExecRetractionRules.DEFAULT_RETRACTION_INSTANCE]]
   * - [[StreamExecRetractionRules.UPDATES_AS_RETRACTION_INSTANCE]]
   * - [[StreamExecRetractionRules.ACCMODE_INSTANCE]]
   *
-  * The rules will assign a [[AccModeTrait]] to each [[StreamExecRel]] node of the plan. The
+  * The rules will assign a [[AccModeTrait]] to each [[StreamPhysicalRel]] node of the plan. The
   * trait defines the [[AccMode]] a node.
   * - [[AccMode.Acc]] defines that the node produces only accumulate messages, i.e., all types of
   * modifications (insert, update, delete) are encoded as accumulate messages.
@@ -47,17 +48,17 @@ import scala.collection.JavaConverters._
 object StreamExecRetractionRules {
 
   /**
-    * Rule instance that assigns default retraction to [[StreamExecRel]] nodes.
+    * Rule instance that assigns default retraction to [[StreamPhysicalRel]] nodes.
     */
   val DEFAULT_RETRACTION_INSTANCE = new AssignDefaultRetractionRule()
 
   /**
-    * Rule instance that checks if [[StreamExecRel]] nodes need to ship updates as retractions.
+    * Rule instance that checks if [[StreamPhysicalRel]] nodes need to ship updates as retractions.
     */
   val UPDATES_AS_RETRACTION_INSTANCE = new SetUpdatesAsRetractionRule()
 
   /**
-    * Rule instance that assigns the [[AccMode]] to [[StreamExecRel]] nodes.
+    * Rule instance that assigns the [[AccMode]] to [[StreamPhysicalRel]] nodes.
     */
   val ACCMODE_INSTANCE = new SetAccModeRule()
 
@@ -77,7 +78,7 @@ object StreamExecRetractionRules {
     * @param node The node to check.
     * @return True if the node ships updates as retractions, false otherwise.
     */
-  def shipUpdatesAsRetraction(node: StreamExecRel[_]): Boolean = {
+  def shipUpdatesAsRetraction(node: StreamPhysicalRel): Boolean = {
     containUpdatesAsRetraction(node) && !node.consumesRetractions
   }
 
@@ -95,16 +96,16 @@ object StreamExecRetractionRules {
   }
 
   /**
-    * Rule that assigns the default retraction information to [[StreamExecRel]] nodes.
+    * Rule that assigns the default retraction information to [[StreamPhysicalRel]] nodes.
     * The default is to not publish updates as retraction messages and [[AccMode.Acc]].
     */
   class AssignDefaultRetractionRule extends RelOptRule(
     operand(
-      classOf[StreamExecRel[_]], none()),
+      classOf[StreamPhysicalRel], none()),
     "AssignDefaultRetractionRule") {
 
     override def onMatch(call: RelOptRuleCall): Unit = {
-      val rel = call.rel(0).asInstanceOf[StreamExecRel[_]]
+      val rel = call.rel(0).asInstanceOf[StreamPhysicalRel]
       val traits = rel.getTraitSet
 
       // init AccModeTrait
@@ -129,22 +130,22 @@ object StreamExecRetractionRules {
   }
 
   /**
-    * Rule that annotates all [[StreamExecRel]] nodes that need to sent out update changes with
+    * Rule that annotates all [[StreamPhysicalRel]] nodes that need to sent out update changes with
     * retraction messages.
     */
   class SetUpdatesAsRetractionRule extends RelOptRule(
     operand(
-      classOf[StreamExecRel[_]], none()),
+      classOf[StreamPhysicalRel], none()),
     "SetUpdatesAsRetractionRule") {
 
     /**
-      * Checks if a [[StreamExecRel]] requires that update changes are sent with retraction
+      * Checks if a [[StreamPhysicalRel]] requires that update changes are sent with retraction
       * messages.
       */
-    def needsUpdatesAsRetraction(node: StreamExecRel[_], input: RelNode): Boolean = {
+    def needsUpdatesAsRetraction(node: StreamPhysicalRel, input: RelNode): Boolean = {
       node match {
         case _ if shipUpdatesAsRetraction(node) => true
-        case dsr: StreamExecRel[_] => dsr.needsUpdatesAsRetraction(input)
+        case dsr: StreamPhysicalRel => dsr.needsUpdatesAsRetraction(input)
       }
     }
 
@@ -169,7 +170,7 @@ object StreamExecRetractionRules {
       *
       */
     override def onMatch(call: RelOptRuleCall): Unit = {
-      val parent = call.rel(0).asInstanceOf[StreamExecRel[_]]
+      val parent = call.rel(0).asInstanceOf[StreamPhysicalRel]
 
       val children = getChildRelNodes(parent)
       // check if children need to sent out retraction messages
@@ -189,11 +190,11 @@ object StreamExecRetractionRules {
   }
 
   /**
-    * Sets the [[AccMode]] of [[StreamExecRel]] nodes.
+    * Sets the [[AccMode]] of [[StreamPhysicalRel]] nodes.
     */
   class SetAccModeRule extends RelOptRule(
     operand(
-      classOf[StreamExecRel[_]], none()),
+      classOf[StreamPhysicalRel], none()),
     "SetAccModeRule") {
 
     /**
@@ -205,16 +206,16 @@ object StreamExecRetractionRules {
     }
 
     /**
-      * Checks if a [[StreamExecRel]] produces retraction messages.
+      * Checks if a [[StreamPhysicalRel]] produces retraction messages.
       */
-    def producesRetractions(node: StreamExecRel[_]): Boolean = {
+    def producesRetractions(node: StreamPhysicalRel): Boolean = {
       containUpdatesAsRetraction(node) && node.producesUpdates || node.producesRetractions
     }
 
     /**
-      * Checks if a [[StreamExecRel]] forwards retraction messages from its children.
+      * Checks if a [[StreamPhysicalRel]] forwards retraction messages from its children.
       */
-    def forwardsRetractions(parent: StreamExecRel[_], children: Seq[RelNode]): Boolean = {
+    def forwardsRetractions(parent: StreamPhysicalRel, children: Seq[RelNode]): Boolean = {
       children.exists(c => isAccRetract(c)) && !parent.consumesRetractions
     }
 
@@ -222,7 +223,7 @@ object StreamExecRetractionRules {
       * Updates the [[AccMode]] of a [[RelNode]] and its children if necessary.
       */
     override def onMatch(call: RelOptRuleCall): Unit = {
-      val parent = call.rel(0).asInstanceOf[StreamExecRel[_]]
+      val parent = call.rel(0).asInstanceOf[StreamPhysicalRel]
       val children = getChildRelNodes(parent)
 
       // check if the AccMode of the parent needs to be updated

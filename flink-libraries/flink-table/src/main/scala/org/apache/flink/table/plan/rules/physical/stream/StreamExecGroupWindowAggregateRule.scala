@@ -37,7 +37,7 @@ class StreamExecGroupWindowAggregateRule
   extends ConverterRule(
     classOf[FlinkLogicalWindowAggregate],
     FlinkConventions.LOGICAL,
-    FlinkConventions.STREAMEXEC,
+    FlinkConventions.STREAM_PHYSICAL,
     "StreamExecGroupWindowAggregateRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
@@ -60,8 +60,8 @@ class StreamExecGroupWindowAggregateRule
       FlinkRelDistribution.SINGLETON
     }
     val requiredTraitSet = agg.getInput.getTraitSet.replace(
-      FlinkConventions.STREAMEXEC).replace(requiredDistribution)
-    val providedTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+      FlinkConventions.STREAM_PHYSICAL).replace(requiredDistribution)
+    val providedTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
     val convInput: RelNode = RelOptRule.convert(agg.getInput, requiredTraitSet)
 
     val config = rel.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])

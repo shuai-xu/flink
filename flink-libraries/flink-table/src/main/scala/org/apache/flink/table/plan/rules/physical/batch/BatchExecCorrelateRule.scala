@@ -30,7 +30,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate
 class BatchExecCorrelateRule extends ConverterRule(
   classOf[FlinkLogicalCorrelate],
   FlinkConventions.LOGICAL,
-  FlinkConventions.BATCHEXEC,
+  FlinkConventions.BATCH_PHYSICAL,
   "BatchExecCorrelateRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
@@ -50,8 +50,8 @@ class BatchExecCorrelateRule extends ConverterRule(
 
   override def convert(rel: RelNode): RelNode = {
     val join = rel.asInstanceOf[FlinkLogicalCorrelate]
-    val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.BATCHEXEC)
-    val convInput: RelNode = RelOptRule.convert(join.getInput(0), FlinkConventions.BATCHEXEC)
+    val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
+    val convInput: RelNode = RelOptRule.convert(join.getInput(0), FlinkConventions.BATCH_PHYSICAL)
     val right: RelNode = join.getInput(1)
 
     def convertToCorrelate(relNode: RelNode, condition: Option[RexNode]): BatchExecCorrelate = {

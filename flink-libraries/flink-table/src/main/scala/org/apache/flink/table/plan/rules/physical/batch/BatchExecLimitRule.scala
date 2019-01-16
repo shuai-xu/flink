@@ -18,20 +18,21 @@
 
 package org.apache.flink.table.plan.rules.physical.batch
 
+import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalSort
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecLimit
+
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rex.RexLiteral
-import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecLimit
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalSort
 
 class BatchExecLimitRule
     extends ConverterRule(
       classOf[FlinkLogicalSort],
       FlinkConventions.LOGICAL,
-      FlinkConventions.BATCHEXEC,
+      FlinkConventions.BATCH_PHYSICAL,
       "BatchExecLimitRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
@@ -44,7 +45,7 @@ class BatchExecLimitRule
   override def convert(rel: RelNode): RelNode = {
     val sort = rel.asInstanceOf[FlinkLogicalSort]
     val input = sort.getInput
-    val traitSet = input.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+    val traitSet = input.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
     val newLocalInput = RelOptRule.convert(input, traitSet)
     val providedLocalTraitSet = traitSet
     val localLimit = new BatchExecLimit(

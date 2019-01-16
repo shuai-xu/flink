@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.types.{DataTypes, InternalType}
+import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.api.window.{CountWindow, TimeWindow}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
@@ -29,12 +29,13 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.ExpressionUtils.{isTimeIntervalLiteral, _}
 import org.apache.flink.table.plan.logical._
+import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util._
 import org.apache.flink.table.runtime.window.{WindowOperator, WindowOperatorBuilder}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.Logging
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
@@ -59,8 +60,8 @@ class StreamExecGroupWindowAggregate(
     inputTimestampIndex: Int,
     emitStrategy: EmitStrategy)
   extends SingleRel(cluster, traitSet, inputNode)
-    with RowStreamExecRel
-    with Logging {
+  with StreamPhysicalRel
+  with RowStreamExecNode {
 
   override def deriveRowType(): RelDataType = outputSchema.relDataType
 
@@ -108,6 +109,8 @@ class StreamExecGroupWindowAggregate(
   override def isDeterministic: Boolean = AggregateUtil.isDeterministic(aggCalls)
 
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

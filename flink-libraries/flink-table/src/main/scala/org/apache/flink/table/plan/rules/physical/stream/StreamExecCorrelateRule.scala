@@ -17,21 +17,22 @@
  */
 package org.apache.flink.table.plan.rules.physical.stream
 
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalCalc, FlinkLogicalCorrelate, FlinkLogicalTableFunctionScan}
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecCorrelate
+
 import org.apache.calcite.plan.volcano.RelSubset
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelTraitSet}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rex.{RexNode, RexProgram, RexProgramBuilder}
-import org.apache.flink.table.api.TableException
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecCorrelate
-import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalCalc, FlinkLogicalCorrelate, FlinkLogicalTableFunctionScan}
 
 class StreamExecCorrelateRule
   extends ConverterRule(
     classOf[FlinkLogicalCorrelate],
     FlinkConventions.LOGICAL,
-    FlinkConventions.STREAMEXEC,
+    FlinkConventions.STREAM_PHYSICAL,
     "StreamExecCorrelateRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
@@ -59,8 +60,8 @@ class StreamExecCorrelateRule
 
   override def convert(rel: RelNode): RelNode = {
     val join: FlinkLogicalCorrelate = rel.asInstanceOf[FlinkLogicalCorrelate]
-    val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
-    val convInput: RelNode = RelOptRule.convert(join.getInput(0), FlinkConventions.STREAMEXEC)
+    val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
+    val convInput: RelNode = RelOptRule.convert(join.getInput(0), FlinkConventions.STREAM_PHYSICAL)
     val right: RelNode = join.getInput(1)
 
 

@@ -25,6 +25,7 @@ import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.expressions.{Cast, Expression}
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.schema.DataStreamTable
 
 import org.apache.calcite.plan._
@@ -44,6 +45,7 @@ class StreamExecDataStreamScan(
     table: RelOptTable,
     relDataType: RelDataType)
   extends TableScan(cluster, traitSet, table)
+  with StreamPhysicalRel
   with StreamExecScan {
 
   val dataStreamTable: DataStreamTable[Any] = getTable.unwrap(classOf[DataStreamTable[Any]])
@@ -70,6 +72,8 @@ class StreamExecDataStreamScan(
 
   //~ ExecNode methods -----------------------------------------------------------
 
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
@@ -84,6 +88,7 @@ class StreamExecDataStreamScan(
       dataStreamTable.fieldIndexes,
       getRowType,
       dataStreamTable.dataType,
+      getTable.getQualifiedName,
       config,
       rowtimeExpr)
   }

@@ -31,11 +31,12 @@ import org.apache.flink.table.codegen.CodeGeneratorContext.DEFAULT_COLLECTOR_TER
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, FunctionCodeGenerator, GeneratedFunction}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
-import org.apache.flink.table.plan.util.TemporalJoinUtil
-import org.apache.flink.table.plan.util.TemporalJoinUtil.TEMPORAL_JOIN_CONDITION
+import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.JoinUtil.{joinConditionToString, joinSelectionToString, joinTypeToString}
-import org.apache.flink.table.plan.util.{FlinkRexUtil, JoinUtil, RexDefaultVisitor}
+import org.apache.flink.table.plan.util.TemporalJoinUtil.TEMPORAL_JOIN_CONDITION
+import org.apache.flink.table.plan.util.{FlinkRexUtil, JoinUtil, RexDefaultVisitor, TemporalJoinUtil}
 import org.apache.flink.table.runtime.join.{TemporalProcessTimeJoin, TemporalRowtimeJoin}
 import org.apache.flink.table.runtime.{BaseRowKeySelector, BinaryRowKeySelector}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -65,7 +66,8 @@ class StreamExecTemporalTableFunctionJoin(
     joinType: FlinkJoinRelType,
     ruleDescription: String)
   extends BiRel(cluster, traitSet, leftNode, rightNode)
-  with RowStreamExecRel {
+  with StreamPhysicalRel
+  with RowStreamExecNode {
 
   override def deriveRowType(): RelDataType = schema.relDataType
 
@@ -95,6 +97,8 @@ class StreamExecTemporalTableFunctionJoin(
   }
 
   override def isDeterministic: Boolean = FlinkRexUtil.isDeterministicOperator(joinCondition)
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   override def translateToPlanInternal(
     tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

@@ -59,7 +59,7 @@ class SplitCompleteSortAggRule
     sortKeys: Array[Int]): BatchExecSort = {
     val collation = createRelCollation(sortKeys)
     val emptyTraitSet = cluster.getPlanner.emptyTraitSet
-    val traitSet = emptyTraitSet.replace(FlinkConventions.BATCHEXEC).replace(collation)
+    val traitSet = emptyTraitSet.replace(FlinkConventions.BATCH_PHYSICAL).replace(collation)
     new BatchExecSort(
       cluster,
       traitSet,

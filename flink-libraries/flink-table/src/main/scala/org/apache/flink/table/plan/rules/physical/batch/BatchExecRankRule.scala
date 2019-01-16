@@ -36,7 +36,7 @@ class BatchExecRankRule
   extends ConverterRule(
     classOf[FlinkLogicalRank],
     FlinkConventions.LOGICAL,
-    FlinkConventions.BATCHEXEC,
+    FlinkConventions.BATCH_PHYSICAL,
     "BatchExecRankRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
@@ -54,7 +54,7 @@ class BatchExecRankRule
 
     val cluster = rel.getCluster
     val emptyBatchExecTraits = cluster.getPlanner.emptyTraitSet()
-      .replace(FlinkConventions.BATCHEXEC)
+      .replace(FlinkConventions.BATCH_PHYSICAL)
     val sortFieldCollations = rank.partitionKey.asList().map(RelFieldCollations.of(_)) ++
       rank.sortCollation.getFieldCollations
     val sortCollation = RelCollations.of(sortFieldCollations: _*)

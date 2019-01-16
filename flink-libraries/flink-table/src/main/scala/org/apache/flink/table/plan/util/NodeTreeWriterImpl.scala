@@ -21,8 +21,8 @@ import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.table.plan.`trait`.{AccModeTraitDef, UpdateAsRetractionTraitDef}
 import org.apache.flink.table.plan.cost.FlinkBatchCost
 import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode}
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecExchange, BatchExecHashJoinBase, BatchExecNestedLoopJoinBase, BatchExecRel, BatchExecScan, BatchExecUnion}
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRel
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashJoinBase, BatchExecNestedLoopJoinBase, BatchExecScan, BatchPhysicalRel}
+import org.apache.flink.table.plan.nodes.physical.stream.StreamPhysicalRel
 import org.apache.flink.table.plan.util.FlinkNodeOptUtil.ReuseInfoBuilder
 
 import com.google.common.collect.Maps
@@ -172,7 +172,7 @@ class NodeTreeWriterImpl(
       }
       if (withMemCost || withResource) {
         rel match {
-          case batchRel: BatchExecRel[_] =>
+          case batchRel: BatchPhysicalRel =>
             val memCost = mq.getNonCumulativeCost(batchRel).asInstanceOf[FlinkBatchCost].memory
             printValues.add(Pair.of("memCost", memCost.asInstanceOf[AnyRef]))
             printValues.add(Pair.of("rowcount", mq.getRowCount(rel)))
@@ -188,7 +188,7 @@ class NodeTreeWriterImpl(
 
       if (withRetractTraits) {
         rel match {
-          case streamRel: StreamExecRel[_] =>
+          case streamRel: StreamPhysicalRel =>
             val traitSet = streamRel.getTraitSet
             printValues.add(
               Pair.of("retract", traitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE)))

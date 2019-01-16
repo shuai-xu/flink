@@ -25,13 +25,15 @@ import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{GeneratedSorter, SortCodeGenerator}
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
+import org.apache.flink.table.plan.nodes.exec.RowBatchExecNode
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.sort.SortOperator
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.NodeResourceUtil
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
@@ -48,7 +50,8 @@ class BatchExecSort(
     inp: RelNode,
     collations: RelCollation)
   extends Sort(cluster, traitSet, inp, collations)
-  with RowBatchExecRel {
+  with BatchPhysicalRel
+  with RowBatchExecNode {
 
   private val (keys, orders, nullsIsLast) = SortUtil.getKeysAndOrders(collations.getFieldCollations)
 
@@ -74,7 +77,7 @@ class BatchExecSort(
     }
     val numOfSort = collations.getFieldCollations.size()
     val cpuCost = COMPARE_CPU_COST * numOfSort * rowCount * Math.max(Math.log(rowCount), 1.0)
-    val memCost = BatchExecRel.calcNeedMemoryForSort(mq, input)
+    val memCost = SortUtil.calcNeedMemoryForSort(mq, input)
     val costFactory = planner.getCostFactory.asInstanceOf[FlinkCostFactory]
     costFactory.makeCost(rowCount, cpuCost, 0, 0, memCost)
   }
@@ -86,6 +89,8 @@ class BatchExecSort(
   override def getDamBehavior: DamBehavior = DamBehavior.FULL_DAM
 
   override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]

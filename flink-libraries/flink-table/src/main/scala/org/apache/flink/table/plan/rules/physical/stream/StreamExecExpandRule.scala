@@ -18,24 +18,25 @@
 
 package org.apache.flink.table.plan.rules.physical.stream
 
-import org.apache.calcite.plan.RelOptRule
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalExpand
 import org.apache.flink.table.plan.nodes.physical.stream.StreamExecExpand
+
+import org.apache.calcite.plan.RelOptRule
+import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.convert.ConverterRule
 
 class StreamExecExpandRule
   extends ConverterRule(
     classOf[FlinkLogicalExpand],
     FlinkConventions.LOGICAL,
-    FlinkConventions.STREAMEXEC,
+    FlinkConventions.STREAM_PHYSICAL,
     "StreamExecExpandRule") {
 
   def convert(rel: RelNode): RelNode = {
     val expand = rel.asInstanceOf[FlinkLogicalExpand]
-    val newTrait = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
-    val newInput = RelOptRule.convert(expand.getInput, FlinkConventions.STREAMEXEC)
+    val newTrait = rel.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
+    val newInput = RelOptRule.convert(expand.getInput, FlinkConventions.STREAM_PHYSICAL)
     new StreamExecExpand(
       rel.getCluster,
       newTrait,

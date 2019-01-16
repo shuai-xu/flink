@@ -21,10 +21,15 @@ package org.apache.flink.table.plan.util
 import org.apache.flink.api.common.operators.Order
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.calcite.FlinkPlannerImpl
+import org.apache.flink.table.codegen.SortCodeGenerator
+import org.apache.flink.table.plan.nodes.physical.batch.BatchPhysicalRel
+import org.apache.flink.table.runtime.sort.BinaryIndexedSortable
+import org.apache.flink.table.typeutils.BinaryRowSerializer
 
 import org.apache.calcite.rel.RelFieldCollation.Direction
 import org.apache.calcite.rel.`type`._
-import org.apache.calcite.rel.{RelCollation, RelFieldCollation, RelWriter}
+import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.rel.{RelCollation, RelFieldCollation, RelNode, RelWriter}
 import org.apache.calcite.rex.{RexLiteral, RexNode}
 
 import scala.collection.JavaConverters._
@@ -178,5 +183,15 @@ object SortUtil {
     pw.item("orderBy", sortFieldsToString(sortCollation, rowRelDataType))
       .itemIf("offset", offsetToString(sortOffset), sortOffset != null)
       .itemIf("fetch", fetchToString(sortFetch, sortOffset), sortFetch != null)
+  }
+
+  def calcNeedMemoryForSort(mq: RelMetadataQuery, input: RelNode): Double = {
+    //TODO It's hard to make sure that the normalized key's length is accurate in optimized stage.
+    val normalizedKeyBytes = SortCodeGenerator.MAX_NORMALIZED_KEY_LEN
+    val rowCount = mq.getRowCount(input)
+    val averageRowSize = BatchPhysicalRel.binaryRowAverageSize(input)
+    val recordAreaInBytes = rowCount * (averageRowSize + BinaryRowSerializer.LENGTH_SIZE_IN_BYTES)
+    val indexAreaInBytes = rowCount * (normalizedKeyBytes + BinaryIndexedSortable.OFFSET_LEN)
+    recordAreaInBytes + indexAreaInBytes
   }
 }

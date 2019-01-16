@@ -19,14 +19,15 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
-import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
+import org.apache.flink.table.api.types.{InternalType, RowType}
 import org.apache.flink.table.api.{AggPhaseEnforcer, BatchTableEnvironment, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.BatchExecAggregateCodeGen
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCollect
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedOperator}
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, GenericRow, JoinedRow}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
+import org.apache.flink.table.plan.nodes.exec.RowBatchExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.{AggregateNameUtil, AggregateUtil, FlinkRelOptUtil}
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
 
@@ -52,7 +53,8 @@ abstract class BatchExecGroupAggregateBase(
     val isFinal: Boolean)
   extends SingleRel(cluster, traitSet, inputNode)
   with BatchExecAggregateCodeGen
-  with RowBatchExecRel {
+  with BatchPhysicalRel
+  with RowBatchExecNode {
 
   if (grouping.isEmpty && auxGrouping.nonEmpty) {
     throw new TableException("auxGrouping should be empty if grouping is emtpy.")
@@ -199,4 +201,6 @@ abstract class BatchExecGroupAggregateBase(
       TableConfigOptions.SQL_OPTIMIZER_AGG_PHASE_ENFORCER)
     AggPhaseEnforcer.TWO_PHASE.toString.equalsIgnoreCase(aggConfig)
   }
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 }

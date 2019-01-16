@@ -227,7 +227,7 @@ object FlinkBatchPrograms {
       PHYSICAL,
       FlinkVolcanoProgramBuilder.newBuilder
         .add(FlinkBatchExecRuleSets.BATCH_EXEC_OPT_RULES)
-        .setTargetTraits(Array(FlinkConventions.BATCHEXEC))
+        .setTargetTraits(Array(FlinkConventions.BATCH_PHYSICAL))
         .build())
 
     // physical rewrite

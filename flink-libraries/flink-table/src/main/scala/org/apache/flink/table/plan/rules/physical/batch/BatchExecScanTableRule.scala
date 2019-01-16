@@ -30,7 +30,7 @@ class BatchExecScanTableRule
   extends ConverterRule(
     classOf[FlinkLogicalNativeTableScan],
     FlinkConventions.LOGICAL,
-    FlinkConventions.BATCHEXEC,
+    FlinkConventions.BATCH_PHYSICAL,
     "BatchExecScanTableRule") {
 
   /**
@@ -47,7 +47,7 @@ class BatchExecScanTableRule
 
   def convert(rel: RelNode): RelNode = {
     val scan = rel.asInstanceOf[FlinkLogicalNativeTableScan]
-    val newTrait = rel.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+    val newTrait = rel.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
     new BatchExecBoundedStreamScan(rel.getCluster, newTrait, scan.getTable, rel.getRowType)
   }
 }

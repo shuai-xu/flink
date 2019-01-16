@@ -18,11 +18,10 @@
 package org.apache.flink.table.plan.rules.physical.batch
 
 import org.apache.flink.table.api.{OperatorType, TableConfig}
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashAggregate, BatchExecLocalHashAggregate}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalAggregate
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashAggregate, BatchExecLocalHashAggregate}
 import org.apache.flink.table.plan.util.{AggregateUtil, FlinkRelOptUtil}
 
 import org.apache.calcite.plan.RelOptRule.{any, operand}
@@ -58,13 +57,13 @@ class BatchExecHashAggRule
 
     val aggCallToAggFunction = aggCallsWithoutAuxGroupCalls.zip(aggregates)
     val groupSet = agg.getGroupSet.toArray
-    val aggProvidedTraitSet = agg.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+    val aggProvidedTraitSet = agg.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
     if (isTwoPhaseAggWorkable(aggregates, call)) {
       //localHashAgg
       val localAggRelType = inferLocalAggType(
         input.getRowType, agg, groupSet, auxGroupSet, aggregates,
         aggBufferTypes.map(_.map(_.toInternalType)))
-      val localRequiredTraitSet = input.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+      val localRequiredTraitSet = input.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
       val newInput = RelOptRule.convert(input, localRequiredTraitSet)
       val providedTraitSet = localRequiredTraitSet
 
@@ -117,7 +116,7 @@ class BatchExecHashAggRule
       }
       requiredDistributions.foreach { requiredDistribution =>
         val newInput = RelOptRule.convert(input,
-          input.getTraitSet.replace(FlinkConventions.BATCHEXEC).replace(requiredDistribution))
+          input.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL).replace(requiredDistribution))
         val hashAgg = new BatchExecHashAggregate(
           agg.getCluster,
           call.builder(),

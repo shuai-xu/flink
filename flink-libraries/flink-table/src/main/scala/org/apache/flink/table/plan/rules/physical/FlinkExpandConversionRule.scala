@@ -17,23 +17,25 @@
  */
 package org.apache.flink.table.plan.rules.physical
 
-import org.apache.calcite.plan.RelOptRule._
-import org.apache.calcite.plan.volcano.AbstractConverter
-import org.apache.calcite.plan._
-import org.apache.calcite.rel.RelDistribution.Type._
-import org.apache.calcite.rel.{RelCollation, RelCollationTraitDef, RelCollations, RelNode}
 import org.apache.flink.table.plan.`trait`.{AccModeTraitDef, FlinkRelDistribution, FlinkRelDistributionTraitDef, UpdateAsRetractionTraitDef}
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecExchange, BatchExecRel, BatchExecSort}
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecExchange, BatchExecSort, BatchPhysicalRel}
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecExchange, StreamExecSort}
 import org.apache.flink.table.plan.rules.physical.FlinkExpandConversionRule._
 import org.apache.flink.table.plan.schema.BaseRowSchema
+
+import org.apache.calcite.plan.RelOptRule._
+import org.apache.calcite.plan._
+import org.apache.calcite.plan.volcano.AbstractConverter
+import org.apache.calcite.rel.RelDistribution.Type._
+import org.apache.calcite.rel.{RelCollation, RelCollationTraitDef, RelCollations, RelNode}
 
 class FlinkExpandConversionRule(flinkConvention: Convention)
   extends RelOptRule(
     operand(
       classOf[AbstractConverter],
-      operand(classOf[RelNode], any)), "FlinkExpandConversionRule") {
+      operand(classOf[RelNode], any)),
+    "FlinkExpandConversionRule") {
 
 
   override def matches(call: RelOptRuleCall): Boolean = {
@@ -76,7 +78,7 @@ class FlinkExpandConversionRule(flinkConvention: Convention)
       requiredTraits: RelTraitSet,
       call: RelOptRuleCall): Unit = {
     node match {
-      case batchRel: BatchExecRel[_] =>
+      case batchRel: BatchPhysicalRel =>
         var otherChoice = batchRel.satisfyTraitsByInput(requiredTraits)
         if (otherChoice != null) {
           // It is possible only push down distribution instead of push down both distribution and
@@ -101,8 +103,8 @@ class FlinkExpandConversionRule(flinkConvention: Convention)
 }
 
 object FlinkExpandConversionRule {
-  val BATCH_INSTANCE = new FlinkExpandConversionRule(FlinkConventions.BATCHEXEC)
-  val STREAM_INSTANCE = new FlinkExpandConversionRule(FlinkConventions.STREAMEXEC)
+  val BATCH_INSTANCE = new FlinkExpandConversionRule(FlinkConventions.BATCH_PHYSICAL)
+  val STREAM_INSTANCE = new FlinkExpandConversionRule(FlinkConventions.STREAM_PHYSICAL)
 
   def satisfyDistribution(
       flinkConvention: Convention,
@@ -114,7 +116,7 @@ object FlinkExpandConversionRule {
       requiredDistribution.getType match {
         case SINGLETON | HASH_DISTRIBUTED | RANGE_DISTRIBUTED |
              BROADCAST_DISTRIBUTED | RANDOM_DISTRIBUTED =>
-          if (flinkConvention.equals(FlinkConventions.BATCHEXEC)) {
+          if (flinkConvention.equals(FlinkConventions.BATCH_PHYSICAL)) {
             //replace collation with empty since distribution destroy collation
             new BatchExecExchange(
               node.getCluster,
@@ -152,7 +154,7 @@ object FlinkExpandConversionRule {
       requiredCollation: RelCollation): RelNode = {
     val fromCollation = node.getTraitSet.getTrait(RelCollationTraitDef.INSTANCE)
     if (!fromCollation.satisfies(requiredCollation)) {
-      if (flinkConvention.equals(FlinkConventions.BATCHEXEC)) {
+      if (flinkConvention.equals(FlinkConventions.BATCH_PHYSICAL)) {
         new BatchExecSort(
           node.getCluster,
           node.getTraitSet.replace(requiredCollation).replace(flinkConvention),

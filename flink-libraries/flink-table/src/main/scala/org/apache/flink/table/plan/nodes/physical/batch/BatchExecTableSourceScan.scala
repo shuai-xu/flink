@@ -26,7 +26,7 @@ import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonScan
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
-import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
+import org.apache.flink.table.plan.nodes.physical.{FlinkPhysicalRel, PhysicalTableSourceScan}
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSourceUtil}
 
@@ -43,6 +43,7 @@ class BatchExecTableSourceScan(
     traitSet: RelTraitSet,
     relOptTable: FlinkRelOptTable)
   extends PhysicalTableSourceScan(cluster, traitSet, relOptTable)
+  with BatchPhysicalRel
   with BatchExecScan {
 
   override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
@@ -72,6 +73,8 @@ class BatchExecTableSourceScan(
   override def getDamBehavior: DamBehavior = DamBehavior.PIPELINED
 
   override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
@@ -110,7 +113,7 @@ class BatchExecTableSourceScan(
     )
 
     convertToInternalRow(tableEnv, input, fieldIndexes,
-      getRowType, tableSource.getReturnType, config, rowtimeExpression)
+      getRowType, tableSource.getReturnType, getTable.getQualifiedName, config, rowtimeExpression)
   }
 
   override def needInternalConversion: Boolean = {

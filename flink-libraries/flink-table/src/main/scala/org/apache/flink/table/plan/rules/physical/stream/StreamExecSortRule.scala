@@ -36,7 +36,7 @@ class StreamExecSortRule
     extends ConverterRule(
       classOf[FlinkLogicalSort],
       FlinkConventions.LOGICAL,
-      FlinkConventions.STREAMEXEC,
+      FlinkConventions.STREAM_PHYSICAL,
       "StreamExecSortRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
@@ -46,8 +46,8 @@ class StreamExecSortRule
 
   override def convert(rel: RelNode): RelNode = {
     val sort: FlinkLogicalSort = rel.asInstanceOf[FlinkLogicalSort]
-    val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
-    val convInput: RelNode = RelOptRule.convert(sort.getInput(0), FlinkConventions.STREAMEXEC)
+    val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
+    val convInput: RelNode = RelOptRule.convert(sort.getInput(0), FlinkConventions.STREAM_PHYSICAL)
 
     val inputRowType = convInput.asInstanceOf[RelSubset].getOriginal.getRowType
 

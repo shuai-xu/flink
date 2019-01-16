@@ -18,11 +18,12 @@
 
 package org.apache.flink.table.plan.rules.physical.batch
 
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRank
+
 import org.apache.calcite.plan.RelOptRule._
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRank, BatchExecRel}
 
 import scala.collection.JavaConversions._
 
@@ -33,7 +34,7 @@ import scala.collection.JavaConversions._
 class RemoveRedundantLocalRankRule extends RelOptRule(
   operand(classOf[BatchExecRank],
     operand(classOf[BatchExecRank],
-      operand(classOf[RelNode], FlinkConventions.BATCHEXEC, any))),
+      operand(classOf[RelNode], FlinkConventions.BATCH_PHYSICAL, any))),
   "RemoveRedundantLocalRankRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {

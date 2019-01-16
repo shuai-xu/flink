@@ -24,7 +24,7 @@ import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
+import org.apache.flink.table.plan.nodes.physical.{FlinkPhysicalRel, PhysicalTableSourceScan}
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.sources.{RowtimeAttributeDescriptor, StreamTableSource, TableSourceUtil}
 import org.apache.flink.streaming.api.functions.{AssignerWithPeriodicWatermarks, AssignerWithPunctuatedWatermarks}
@@ -43,6 +43,7 @@ class StreamExecTableSourceScan(
     traitSet: RelTraitSet,
     relOptTable: FlinkRelOptTable)
   extends PhysicalTableSourceScan(cluster, traitSet, relOptTable)
+  with StreamPhysicalRel
   with StreamExecScan {
 
   override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
@@ -72,6 +73,8 @@ class StreamExecTableSourceScan(
   override def isDeterministic: Boolean = true
 
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
@@ -110,6 +113,7 @@ class StreamExecTableSourceScan(
         fieldIdxs,
         getRowType,
         tableSource.getReturnType,
+        getTable.getQualifiedName,
         config,
         rowtimeExpression))
 

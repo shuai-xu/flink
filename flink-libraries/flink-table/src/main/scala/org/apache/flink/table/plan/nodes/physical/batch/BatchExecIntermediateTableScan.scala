@@ -18,12 +18,6 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.flink.runtime.operators.DamBehavior
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
-import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.schema.IntermediateRelNodeTable
 
 import org.apache.calcite.plan._
@@ -40,7 +34,7 @@ class BatchExecIntermediateTableScan(
     table: RelOptTable,
     rowRelDataType: RelDataType)
   extends TableScan(cluster, traitSet, table)
-  with BatchExecScan {
+  with BatchPhysicalRel {
 
   val intermediateTable:IntermediateRelNodeTable =
     getTable.unwrap(classOf[IntermediateRelNodeTable])
@@ -62,36 +56,4 @@ class BatchExecIntermediateTableScan(
   }
 
   override def isDeterministic: Boolean = true
-
-  //~ ExecNode methods -----------------------------------------------------------
-
-  override def getDamBehavior: DamBehavior = DamBehavior.PIPELINED
-
-  /**
-    * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
-    *
-    * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    */
-  override def translateToPlanInternal(
-    tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
-    // There is no possible to go here.
-    throw new TableException(
-      "translateToPlanInternal is not supported in BatchExecIntermediateTableScan.")
-  }
-
-  override def needInternalConversion: Boolean = {
-    throw new TableException(
-      "needInternalConversion is not supported in BatchExecIntermediateTableScan.")
-  }
-
-  override private[flink] def getSourceTransformation(streamEnv: StreamExecutionEnvironment) = {
-    // There is no possible to go here.
-    throw new TableException(
-      "getSourceTransformation is not supported in BatchExecIntermediateTableScan.")
-  }
-
-  // TODO it will be removed later.
-  override def accept(visitor: BatchExecNodeVisitor): Unit = {
-    throw new TableException("this should happen.")
-  }
 }

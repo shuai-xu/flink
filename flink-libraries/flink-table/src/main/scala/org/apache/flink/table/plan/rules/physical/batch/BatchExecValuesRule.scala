@@ -28,12 +28,12 @@ import org.apache.flink.table.plan.nodes.logical.FlinkLogicalValues
 class BatchExecValuesRule extends ConverterRule(
   classOf[FlinkLogicalValues],
   FlinkConventions.LOGICAL,
-  FlinkConventions.BATCHEXEC,
+  FlinkConventions.BATCH_PHYSICAL,
   "BatchExecValuesRule") {
 
   def convert(rel: RelNode): RelNode = {
     val values: FlinkLogicalValues = rel.asInstanceOf[FlinkLogicalValues]
-    val providedTraitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+    val providedTraitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
 
     new BatchExecValues(
       rel.getCluster,

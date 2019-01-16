@@ -30,12 +30,12 @@ class BatchExecIntermediateTableScanRule
   extends ConverterRule(
     classOf[FlinkLogicalIntermediateTableScan],
     FlinkConventions.LOGICAL,
-    FlinkConventions.BATCHEXEC,
+    FlinkConventions.BATCH_PHYSICAL,
     "BatchExecIntermediateTableScanRule") {
 
   def convert(rel: RelNode): RelNode = {
     val scan = rel.asInstanceOf[FlinkLogicalIntermediateTableScan]
-    val newTrait = rel.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+    val newTrait = rel.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
     new BatchExecIntermediateTableScan(rel.getCluster, newTrait, scan.getTable, rel.getRowType)
   }
 }

@@ -18,25 +18,25 @@
 
 package org.apache.flink.table.plan.rules.physical.stream
 
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalValues
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecValues
+import org.apache.flink.table.plan.schema.BaseRowSchema
+
 import org.apache.calcite.plan.{RelOptRule, RelTraitSet}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecValues
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalValues
-import org.apache.flink.table.plan.schema.BaseRowSchema
 
 class StreamExecValuesRule
   extends ConverterRule(
     classOf[FlinkLogicalValues],
     FlinkConventions.LOGICAL,
-    FlinkConventions.STREAMEXEC,
-    "StreamExecValuesRule")
-{
+    FlinkConventions.STREAM_PHYSICAL,
+    "StreamExecValuesRule") {
 
   def convert(rel: RelNode): RelNode = {
     val values: FlinkLogicalValues = rel.asInstanceOf[FlinkLogicalValues]
-    val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
+    val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
 
     new StreamExecValues(
       rel.getCluster,

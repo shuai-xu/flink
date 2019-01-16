@@ -121,8 +121,8 @@ object BatchExecTemporalTableJoinRule {
     val tableSource = tableScan.tableSource
     val tableRowType = typeFactory.buildLogicalRowType(tableSource.getTableSchema, true)
 
-    val providedTrait = join.getTraitSet.replace(FlinkConventions.BATCHEXEC)
-    var requiredTrait = input.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+    val providedTrait = join.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
+    var requiredTrait = input.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
 
     // if partitioning enabled, use the join key as partition key
     tableSource match {

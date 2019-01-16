@@ -32,7 +32,7 @@ class BatchExecSingleRowJoinRule(joinClass: Class[_ <: Join])
   extends ConverterRule(
     joinClass,
     FlinkConventions.LOGICAL,
-    FlinkConventions.BATCHEXEC,
+    FlinkConventions.BATCH_PHYSICAL,
     s"BatchExecSingleRowJoinRule_${joinClass.getSimpleName}")
     with BatchExecJoinRuleBase {
 

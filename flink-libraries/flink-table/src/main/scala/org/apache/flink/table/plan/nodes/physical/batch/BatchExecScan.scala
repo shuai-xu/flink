@@ -24,13 +24,17 @@ import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.nodes.common.CommonScan
+import org.apache.flink.table.plan.nodes.exec.RowBatchExecNode
 import org.apache.flink.table.util.Logging
+
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
 
+import java.util.{List => JList}
+
 import scala.collection.JavaConversions._
 
-trait BatchExecScan extends CommonScan[BinaryRow] with RowBatchExecRel with Logging {
+trait BatchExecScan extends CommonScan[BinaryRow] with RowBatchExecNode with Logging {
 
    /**
     * Assign source for transformation.
@@ -51,12 +55,13 @@ trait BatchExecScan extends CommonScan[BinaryRow] with RowBatchExecRel with Logg
       fieldIdxs: Array[Int],
       outRowType: RelDataType,
       dataType: DataType,
+      qualifiedName: JList[String],
       config: TableConfig,
       rowtimeExpr: Option[RexNode]): StreamTransformation[BaseRow] = {
     if (needInternalConversion) {
       val ctx = CodeGeneratorContext(config, supportReference = true)
       val convertTransform = convertToInternalRow(
-        ctx, input, fieldIdxs, dataType, outRowType, getTable.getQualifiedName, config, rowtimeExpr)
+        ctx, input, fieldIdxs, dataType, outRowType, qualifiedName, config, rowtimeExpr)
       convertTransform.setResources(conversionResSpec, conversionResSpec)
       tableEnv.getRUKeeper.addTransformation(this, convertTransform)
       convertTransform
@@ -64,4 +69,5 @@ trait BatchExecScan extends CommonScan[BinaryRow] with RowBatchExecRel with Logg
       input.asInstanceOf[StreamTransformation[BaseRow]]
     }
   }
+
 }

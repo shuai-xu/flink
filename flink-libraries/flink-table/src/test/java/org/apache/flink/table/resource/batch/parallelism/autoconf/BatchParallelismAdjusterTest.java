@@ -21,7 +21,7 @@ package org.apache.flink.table.resource.batch.parallelism.autoconf;
 import org.apache.flink.table.plan.nodes.exec.BatchExecNode;
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
 import org.apache.flink.table.plan.nodes.exec.NodeResource;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchPhysicalRel;
 import org.apache.flink.table.resource.batch.BatchExecNodeStage;
 import org.apache.flink.table.resource.batch.NodeRunningUnit;
 import org.apache.flink.table.resource.batch.parallelism.ShuffleStage;
@@ -209,8 +209,9 @@ public class BatchParallelismAdjusterTest {
 	private void createNodeList(int num) {
 		nodeList = new LinkedList<>();
 		for (int i = 0; i < num; i++) {
-			BatchExecRel<?> node = mock(BatchExecRel.class);
-			when(node.getFlinkPhysicalRel()).thenReturn(node);
+			BatchExecNode<?> node = mock(BatchExecNode.class);
+			BatchPhysicalRel rel = mock(BatchPhysicalRel.class);
+			when(node.getFlinkPhysicalRel()).thenReturn(rel);
 			when(node.toString()).thenReturn("id: " + i);
 			nodeList.add(node);
 			NodeResource resource = new NodeResource();

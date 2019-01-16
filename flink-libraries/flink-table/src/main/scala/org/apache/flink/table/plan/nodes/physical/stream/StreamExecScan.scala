@@ -24,31 +24,35 @@ import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonScan
+import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
 import org.apache.flink.table.runtime.AbstractProcessStreamOperator
 
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
 
-trait StreamExecScan extends CommonScan[BaseRow] with RowStreamExecRel {
+import java.util.{List => JList}
+
+trait StreamExecScan extends CommonScan[BaseRow] with RowStreamExecNode {
 
   def convertToInternalRow(
       input: StreamTransformation[Any],
       fieldIdx: Array[Int],
       outRowType: RelDataType,
       dataType: DataType,
+      qualifiedName: JList[String],
       config: TableConfig,
-      rowtimeExpr: Option[RexNode]
-  ): StreamTransformation[BaseRow] = {
+      rowtimeExpr: Option[RexNode]): StreamTransformation[BaseRow] = {
     val ctx = CodeGeneratorContext(config, supportReference = true).setOperatorBaseClass(
       classOf[AbstractProcessStreamOperator[BaseRow]])
 
     if (needInternalConversion) {
       val conversion = convertToInternalRow(
-        ctx, input, fieldIdx, dataType, outRowType, getTable.getQualifiedName, config, rowtimeExpr)
+        ctx, input, fieldIdx, dataType, outRowType, qualifiedName, config, rowtimeExpr)
       conversion.setResources(conversionResSpec, conversionResSpec)
       conversion
     } else {
       input.asInstanceOf[StreamTransformation[BaseRow]]
     }
   }
+
 }

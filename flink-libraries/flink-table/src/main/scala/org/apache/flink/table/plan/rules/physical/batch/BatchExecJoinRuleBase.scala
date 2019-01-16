@@ -22,7 +22,7 @@ import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalJoin, FlinkLogicalSemiJoin}
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecLocalHashAggregate, BatchExecRel}
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecLocalHashAggregate, BatchPhysicalRel}
 import org.apache.flink.table.plan.util.FlinkRelOptUtil
 
 import org.apache.calcite.plan.RelOptRule
@@ -42,7 +42,7 @@ trait BatchExecJoinRuleBase {
       node: RelNode,
       distinctKeys: Seq[Int],
       relBuilder: RelBuilder): RelNode = {
-    val localRequiredTraitSet = node.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+    val localRequiredTraitSet = node.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
     val newInput = RelOptRule.convert(node, localRequiredTraitSet)
     val providedTraitSet = localRequiredTraitSet
 
@@ -100,7 +100,7 @@ trait BatchExecJoinRuleBase {
     if(rowCount == null) {
       null
     } else {
-      rowCount * BatchExecRel.binaryRowAverageSize(relNode)
+      rowCount * BatchPhysicalRel.binaryRowAverageSize(relNode)
     }
   }
 }

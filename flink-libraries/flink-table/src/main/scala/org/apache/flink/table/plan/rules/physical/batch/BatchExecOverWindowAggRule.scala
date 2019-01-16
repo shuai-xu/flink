@@ -92,7 +92,7 @@ class BatchExecOverWindowAggRule
         FlinkRelDistribution.SINGLETON
       }
       var requiredTrait = logicWindow.getTraitSet
-        .replace(FlinkConventions.BATCHEXEC)
+        .replace(FlinkConventions.BATCH_PHYSICAL)
         .replace(requiredDistribution)
         .replace(RelCollations.EMPTY)
       if (OverAggregateUtil.needCollationTrait(input, logicWindow, lastGroup)) {
@@ -115,7 +115,7 @@ class BatchExecOverWindowAggRule
       val outputRowType = inferOutputRowType(logicWindow.getCluster, inputRowType,
         groupToAggCallToAggFunction.flatMap(_._2).map(_._1))
 
-      val providedTraitSet = call.getPlanner.emptyTraitSet.replace(FlinkConventions.BATCHEXEC)
+      val providedTraitSet = call.getPlanner.emptyTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
       overWindowAgg = new BatchExecOverAggregate(logicWindow.getCluster, call.builder(),
         providedTraitSet ,
         newInput,

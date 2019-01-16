@@ -25,6 +25,8 @@ import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonExchange
+import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.StreamExecUtil
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
@@ -44,7 +46,8 @@ class StreamExecExchange(
     relNode: RelNode,
     relDistribution: RelDistribution)
   extends CommonExchange(cluster, traitSet, relNode, relDistribution)
-  with RowStreamExecRel {
+  with StreamPhysicalRel
+  with RowStreamExecNode {
 
   private val DEFAULT_MAX_PARALLELISM = 1 << 7
 
@@ -58,6 +61,8 @@ class StreamExecExchange(
   override def isDeterministic: Boolean = true
 
   //~ ExecNode methods -----------------------------------------------------------
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

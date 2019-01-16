@@ -18,26 +18,30 @@
 
 package org.apache.flink.table.plan.rules.physical.stream
 
-import org.apache.calcite.plan.RelOptRule._
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.flink.table.plan.`trait`.{AccModeTraitDef, UpdateAsRetractionTraitDef}
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecUnion, _}
+
+import org.apache.calcite.plan.RelOptRule._
+import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 
 import scala.collection.JavaConversions._
 
 /**
   * Planner rule that transpose a stream RelNode with specified type into a [[StreamExecUnion]].
   */
-class StreamExecUnionTransposeRule[T <: StreamExecRel[_]](
+class StreamExecUnionTransposeRule[T <: StreamPhysicalRel](
     outputClass: Class[T],
     description: String)
-  extends RelOptRule(operand(outputClass, operand(classOf[StreamExecUnion], any)), description) {
+  extends RelOptRule(
+    operand(outputClass,
+      operand(classOf[StreamExecUnion], any)),
+    description) {
 
   override def onMatch(call: RelOptRuleCall): Unit = {
-    val outputRel = call.rels(0).asInstanceOf[StreamExecRel[_]]
-    val union = call.rels(1).asInstanceOf[StreamExecUnion]
-    val outputTraiSet = outputRel.getTraitSet
-    val newInputsOfUnion = union.getInputs.map(input => outputRel.copy(outputTraiSet, Seq(input)))
+    val outputRel: StreamPhysicalRel = call.rel(0)
+    val union: StreamExecUnion = call.rel(1)
+    val outputTraitSet = outputRel.getTraitSet
+    val newInputsOfUnion = union.getInputs.map(input => outputRel.copy(outputTraitSet, Seq(input)))
 
     // union should extends original output trait set
     val accMode = outputRel.getTraitSet.getTrait(AccModeTraitDef.INSTANCE)
@@ -60,8 +64,8 @@ class StreamExecUnionTransposeRule[T <: StreamExecRel[_]](
 object StreamExecUnionTransposeRule {
 
   val CALC_INSTANCE = new StreamExecUnionTransposeRule(
-      classOf[StreamExecCalc],
-      "StreamExecUnionCalcTransposeRule")
+    classOf[StreamExecCalc],
+    "StreamExecUnionCalcTransposeRule")
 
   val EXPAND_INSTANCE = new StreamExecUnionTransposeRule(
     classOf[StreamExecExpand],

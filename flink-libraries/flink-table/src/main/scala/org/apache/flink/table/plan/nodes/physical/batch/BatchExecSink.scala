@@ -30,6 +30,8 @@ import org.apache.flink.table.codegen.SinkCodeGenerator.generateRowConverterOper
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.calcite.Sink
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
+import org.apache.flink.table.plan.nodes.exec.{BaseBatchExecNode, RowBatchExecNode}
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.SinkUtil
 import org.apache.flink.table.sinks.{BatchCompatibleStreamTableSink, BatchTableSink, TableSink}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
@@ -49,7 +51,8 @@ class BatchExecSink[T](
     sink: TableSink[T],
     sinkName: String)
   extends Sink(cluster, traitSet, input, sink, sinkName)
-  with BatchExecRel[Any] {
+  with BatchPhysicalRel
+  with BaseBatchExecNode[Any] {
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
     new BatchExecSink(cluster, traitSet, inputs.get(0), sink, sinkName)
@@ -62,6 +65,8 @@ class BatchExecSink[T](
   override def getDamBehavior: DamBehavior = DamBehavior.PIPELINED
 
   override def accept(visitor: BatchExecNodeVisitor): Unit = visitor.visit(this)
+
+  override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
   /**
     * Internal method, translates the [[org.apache.flink.table.plan.nodes.exec.BatchExecNode]]
@@ -143,8 +148,8 @@ class BatchExecSink[T](
     TableEnvironment.validateType(resultType)
     val inputNode = getInputNodes.get(0)
     inputNode match {
-      // Sink's input must be RowBatchExecRel now.
-      case node: RowBatchExecRel =>
+      // Sink's input must be RowBatchExecNode now.
+      case node: RowBatchExecNode =>
         val plan = node.translateToPlan(tableEnv)
         val parTransformation = SinkUtil.createPartitionTransformation(sink, plan)
         val convertTransformation =

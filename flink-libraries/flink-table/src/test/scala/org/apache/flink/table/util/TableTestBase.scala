@@ -38,12 +38,11 @@ import org.apache.flink.table.api.{Table, TableEnvironment, TableException, Tabl
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
+import org.apache.flink.table.plan.nodes.exec.BatchExecNode
 import org.apache.flink.table.plan.nodes.process.ChainedDAGProcessors
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil}
-import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSource}
 import org.apache.flink.types.Row
 
@@ -536,11 +535,13 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
       printRunningUnit: Boolean = false): String = {
     val optimized = tableEnv.optimize(relNode)
     optimized match {
-      case batchExecRel: BatchExecRel[_] =>
+      case batchExecNode: BatchExecNode[_] =>
         if (!printResource) {
           tableEnv.getConfig.setBatchDAGProcessors(new ChainedDAGProcessors())
         }
-        val optimizedNodes = tableEnv.translateNodeDag(Seq(batchExecRel))
+        val optimizedNodes = tableEnv.translateNodeDag(Seq(batchExecNode))
+        require(optimizedNodes.length == 1)
+        val optimizedNode = optimizedNodes.head
 
         if (printRunningUnit) {
             val ruList = tableEnv.getRUKeeper.getRunningUnits.map(x => x.toString)
@@ -549,8 +550,6 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
             assertEqualsOrExpand("runningUnit", ruString)
         }
 
-        require(optimizedNodes.length == 1)
-        val optimizedNode = optimizedNodes.head
         FlinkNodeOptUtil.treeToString(
             optimizedNode,
             detailLevel = explainLevel,

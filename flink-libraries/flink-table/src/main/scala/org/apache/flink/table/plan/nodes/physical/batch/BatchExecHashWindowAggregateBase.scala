@@ -742,8 +742,8 @@ abstract class BatchExecHashWindowAggregateBase(
     // assume memory is enough to hold hashTable to simplify the estimation because spill will not
     // happen under the assumption
     //  We aim for a 200% utilization of the bucket table.
-    val bucketSize = rowCnt * BytesHashMap.BUCKET_SIZE / BatchExecRel.HASH_COLLISION_WEIGHT
-    val recordSize = rowCnt * (BatchExecRel.binaryRowAverageSize(this) + BytesHashMap
+    val bucketSize = rowCnt * BytesHashMap.BUCKET_SIZE / BatchPhysicalRel.HASH_COLLISION_WEIGHT
+    val recordSize = rowCnt * (BatchPhysicalRel.binaryRowAverageSize(this) + BytesHashMap
         .RECORD_EXTRA_LENGTH)
     val memCost = bucketSize + recordSize
     val costFactory = planner.getCostFactory.asInstanceOf[FlinkCostFactory]
