@@ -32,6 +32,9 @@ import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexDelayIncreasing;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +46,8 @@ import java.util.Map;
  * of the same vertex is higher then the threshold.
  */
 public class DelayIncreasingDetector implements Detector {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(DelayIncreasingDetector.class);
 
 	private static final String DELAY = "fetched_delay";
 
@@ -90,6 +95,8 @@ public class DelayIncreasingDetector implements Detector {
 
 	@Override
 	public Symptom detect() throws Exception {
+		LOGGER.debug("Start detecting.");
+
 		long now = System.currentTimeMillis();
 
 		List<JobVertexID> jobVertexIDs = new ArrayList<>();
@@ -97,6 +104,7 @@ public class DelayIncreasingDetector implements Detector {
 			TaskMetricSubscription delayRateSub = delayRateSubs.get(vertexId);
 
 			if (delayRateSub.getValue() == null || now - delayRateSub.getValue().f0 > delayIncreasingCheckInterval * 2) {
+				LOGGER.debug("Skip vertex {}, metrics missing.", vertexId);
 				continue;
 			}
 
@@ -106,6 +114,7 @@ public class DelayIncreasingDetector implements Detector {
 		}
 
 		if (!jobVertexIDs.isEmpty()) {
+			LOGGER.info("Delay increasing detected for vertices {}.", jobVertexIDs);
 			return new JobVertexDelayIncreasing(jobID, jobVertexIDs);
 		}
 		return null;

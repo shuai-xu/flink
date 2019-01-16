@@ -250,6 +250,8 @@ public class ParallelismScaler implements Resolver {
 
 	@Override
 	public Action resolve(List<Symptom> symptomList) {
+		LOGGER.debug("Start resolving.");
+
 		// symptoms for parallelism rescaling
 		JobVertexFrequentFullGC jobVertexFrequentFullGC = null;
 		JobVertexFailover jobVertexFailover = null;
@@ -266,35 +268,42 @@ public class ParallelismScaler implements Resolver {
 		for (Symptom symptom : symptomList) {
 			if (symptom instanceof JobVertexFrequentFullGC) {
 				jobVertexFrequentFullGC = (JobVertexFrequentFullGC) symptom;
+				LOGGER.debug("Frequent full gc detected for vertices {}.", jobVertexFrequentFullGC.getJobVertexIDs());
 			}
 
 			if (symptom instanceof  JobVertexFailover) {
 				jobVertexFailover = (JobVertexFailover) symptom;
+				LOGGER.debug("Failover detected for vertices {}.", jobVertexFailover.getJobVertexIDs());
 			}
 
 			if (symptom instanceof JobVertexHighDelay) {
 				jobVertexHighDelay = (JobVertexHighDelay) symptom;
+				LOGGER.debug("High delay detected for vertices {}.", jobVertexHighDelay.getJobVertexIDs());
 			}
 
 			if (symptom instanceof JobVertexDelayIncreasing) {
 				jobVertexDelayIncreasing = (JobVertexDelayIncreasing) symptom;
+				LOGGER.debug("Delay increasing detected for vertices {}.", jobVertexDelayIncreasing.getJobVertexIDs());
 			}
 
 			if (symptom instanceof JobVertexBackPressure) {
 				jobVertexBackPressure = (JobVertexBackPressure) symptom;
+				LOGGER.debug("Back pressure detected for vertices {}.", jobVertexBackPressure.getJobVertexIDs());
 			}
 
 			if (symptom instanceof JobVertexLowDelay) {
 				jobVertexLowDelay = (JobVertexLowDelay) symptom;
+				LOGGER.debug("Low delay detected for vertices {}.", jobVertexLowDelay.getJobVertexIDs());
 			}
 
 			if (symptom instanceof JobVertexOverParallelized) {
 				jobVertexOverParallelized = (JobVertexOverParallelized) symptom;
+				LOGGER.debug("Over parallelized detected for vertices {}.", jobVertexOverParallelized.getJobVertexIDs());
 			}
 		}
 
 		if (jobVertexFrequentFullGC != null || jobVertexFailover != null) {
-			// job not stable, should not scale
+			LOGGER.debug("Job is not stable, should not rescale parallelism.");
 			return null;
 		}
 
@@ -302,7 +311,7 @@ public class ParallelismScaler implements Resolver {
 		boolean needUpScaleForBackPressure = jobVertexBackPressure != null;
 		boolean needDownScale = jobVertexLowDelay != null && jobVertexOverParallelized != null;
 		if (!needUpScaleForDelay && !needUpScaleForBackPressure && !needDownScale) {
-			// no need for rescale
+			LOGGER.debug("No need to rescale parallelism.");
 			return null;
 		}
 
@@ -327,6 +336,7 @@ public class ParallelismScaler implements Resolver {
 				subDagRootsToUpScale.add(vertex2SubDagRoot.get(vertexId));
 			}
 		}
+		LOGGER.debug("Roots of sub-dags need to scale up: {}.", subDagRootsToUpScale);
 
 		// find sub dags to downscale
 		Set<JobVertexID> subDagRootsToDownScale = new HashSet<>();
@@ -338,6 +348,7 @@ public class ParallelismScaler implements Resolver {
 			}
 		}
 		subDagRootsToDownScale.removeAll(subDagRootsToUpScale);
+		LOGGER.debug("Roots of sub-dags need to scale down: {}.", subDagRootsToDownScale);
 
 		// for sub dags that need to rescale, set target scale ratio
 		Map<JobVertexID, Double> subDagTargetTpsRatio = new HashMap<>();
@@ -348,16 +359,20 @@ public class ParallelismScaler implements Resolver {
 				subDagTargetTpsRatio.put(subDagRoot, downScaleTpsRatio);
 			}
 		}
+		LOGGER.debug("Target tps ratio for sub-dags before adjusting: {}.", subDagTargetTpsRatio);
 
 		// scale up downstream sub dags according to upstream sub dags
 		adjustTargetTpsRatioBetweenSubDags(subDagTargetTpsRatio, performances);
+		LOGGER.debug("Target tps ratio for sub-dags after adjusting: {}.", subDagTargetTpsRatio);
 
 		// set parallelisms
 		Map<JobVertexID, Integer> targetParallelisms = scaleParallelismWithRatio(subDagTargetTpsRatio, workloads);
+		LOGGER.debug("Target parallelism for vertices before applying constraints: {}.", targetParallelisms);
 
 		// generate action
 		if (!targetParallelisms.isEmpty()) {
 			updateTargetParallelismsSubjectToConstraints(targetParallelisms, jobConfig);
+			LOGGER.debug("Target parallelism for vertices after applying constraints: {}.", targetParallelisms);
 			RescaleJobParallelism rescaleJobParallelism = new RescaleJobParallelism(jobID, timeout);
 			for (JobVertexID vertexId : targetParallelisms.keySet()) {
 				RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(vertexId);
@@ -368,6 +383,7 @@ public class ParallelismScaler implements Resolver {
 					vertexId, vertexConfig.getParallelism(), targetParallelisms.get(vertexId), vertexConfig.getResourceSpec(), vertexConfig.getResourceSpec());
 			}
 			if (!rescaleJobParallelism.isEmpty()) {
+				LOGGER.info("RescaleJobParallelism action generated: {}.", rescaleJobParallelism);
 				return rescaleJobParallelism;
 			}
 		}

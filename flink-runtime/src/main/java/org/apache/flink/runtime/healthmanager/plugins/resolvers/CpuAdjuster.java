@@ -33,6 +33,9 @@ import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighCpu;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowCpu;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +45,8 @@ import java.util.Map;
  * If cpu high detected, increase CPU of corresponding vertices by given ratio.
  */
 public class CpuAdjuster implements Resolver {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(CpuAdjuster.class);
 
 	private static final ConfigOption<Double> CPU_SCALE_RATIO =
 		ConfigOptions.key("cpu.scale.ratio").defaultValue(0.5);
@@ -69,6 +74,7 @@ public class CpuAdjuster implements Resolver {
 
 	@Override
 	public Action resolve(List<Symptom> symptomList) {
+		LOGGER.debug("Start resolving.");
 
 		JobVertexHighCpu jobVertexHighCpu = null;
 		JobVertexLowCpu jobVertexLowCpu = null;
@@ -84,9 +90,11 @@ public class CpuAdjuster implements Resolver {
 
 		Map<JobVertexID, Double> utilities = new HashMap<>();
 		if (jobVertexHighCpu != null) {
+			LOGGER.debug("High cpu detected for vertices with max utilities {}.", jobVertexHighCpu.getUtilities());
 			utilities.putAll(jobVertexHighCpu.getUtilities());
 		}
 		if (jobVertexLowCpu != null) {
+			LOGGER.debug("Low cpu detected for vertices with max utilities {}.", jobVertexLowCpu.getUtilities());
 			utilities.putAll(jobVertexLowCpu.getUtilities());
 		}
 
@@ -103,6 +111,7 @@ public class CpuAdjuster implements Resolver {
 			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(jvId);
 			ResourceSpec currentResource = vertexConfig.getResourceSpec();
 			double targetCpu = currentResource.getCpuCores() * vertexMaxUtility.get(jvId) * (1.0 + scaleRatio);
+			LOGGER.debug("Target cpu for vertex {} is {}.", jvId, targetCpu);
 			ResourceSpec.Builder builder = new ResourceSpec.Builder()
 					.setCpuCores(targetCpu)
 					.setDirectMemoryInMB(currentResource.getDirectMemory())
@@ -117,6 +126,11 @@ public class CpuAdjuster implements Resolver {
 			adjustJobCpu.addVertex(
 				jvId, vertexConfig.getParallelism(), vertexConfig.getParallelism(), currentResource, targetResource);
 		}
-		return adjustJobCpu.isEmpty() ? null : adjustJobCpu;
+
+		if (!adjustJobCpu.isEmpty()) {
+			LOGGER.info("AdjustJobCpu action generated: {}.", adjustJobCpu);
+			return adjustJobCpu;
+		}
+		return null;
 	}
 }

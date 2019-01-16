@@ -31,6 +31,9 @@ import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobDirectMem
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexDirectOOM;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -40,6 +43,8 @@ import java.util.Set;
  * If direct oom detected, increase direct memory of corresponding vertices by given ratio.
  */
 public class DirectMemoryAdjuster implements Resolver {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(DirectMemoryAdjuster.class);
 
 	private static final ConfigOption<Double> DIRECT_SCALE_OPTION =
 		ConfigOptions.key("direct.memory.scale.ratio").defaultValue(0.5);
@@ -67,11 +72,13 @@ public class DirectMemoryAdjuster implements Resolver {
 
 	@Override
 	public Action resolve(List<Symptom> symptomList) {
+		LOGGER.debug("Start resolving.");
 
 		Set<JobVertexID> jobVertexIDs = new HashSet<>();
 		for (Symptom symptom : symptomList) {
 			if (symptom instanceof JobVertexDirectOOM) {
 				JobVertexDirectOOM jobVertexDirectOOM = (JobVertexDirectOOM) symptom;
+				LOGGER.debug("Direct OOM detected for vertices {}.", jobVertexDirectOOM.getJobVertexIDs());
 				jobVertexIDs.addAll(jobVertexDirectOOM.getJobVertexIDs());
 			}
 		}
@@ -85,9 +92,11 @@ public class DirectMemoryAdjuster implements Resolver {
 		for (JobVertexID jvId : jobVertexIDs) {
 			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(jvId);
 			ResourceSpec currentResource = vertexConfig.getResourceSpec();
+			int targetDirectMemory = (int) (currentResource.getDirectMemory() * scaleRatio);
+			LOGGER.debug("Target direct memory for vertex {} is {}.", jvId, targetDirectMemory);
 			ResourceSpec targetResource =
 				new ResourceSpec.Builder()
-					.setDirectMemoryInMB((int) (currentResource.getDirectMemory() * scaleRatio))
+					.setDirectMemoryInMB(targetDirectMemory)
 					.build()
 					.merge(currentResource);
 
@@ -95,6 +104,10 @@ public class DirectMemoryAdjuster implements Resolver {
 				jvId, vertexConfig.getParallelism(), vertexConfig.getParallelism(), currentResource, targetResource);
 		}
 
-		return adjustJobDirectMemory.isEmpty() ? null : adjustJobDirectMemory;
+		if (!adjustJobDirectMemory.isEmpty()) {
+			LOGGER.info("AdjustJobDirectMemory action generated: {}.", adjustJobDirectMemory);
+			return adjustJobDirectMemory;
+		}
+		return null;
 	}
 }

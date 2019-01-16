@@ -32,6 +32,9 @@ import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexBackPressure;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +46,8 @@ import java.util.Map;
  * of the same vertex is higher than threshold.
  */
 public class BackPressureDetector implements Detector {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(BackPressureDetector.class);
 
 	private static final String WAIT_OUTPUT_COUNT = "waitOutput.count";
 	private static final String WAIT_OUTPUT_SUM = "waitOutput.sum";
@@ -132,6 +137,8 @@ public class BackPressureDetector implements Detector {
 
 	@Override
 	public Symptom detect() throws Exception {
+		LOGGER.debug("Start detecting.");
+
 		long now = System.currentTimeMillis();
 
 		List<JobVertexID> jobVertexIDs = new ArrayList<>();
@@ -145,6 +152,7 @@ public class BackPressureDetector implements Detector {
 				waitOutputCountMinSub.getValue() == null || now - waitOutputCountMinSub.getValue().f0 > checkInterval * 2 ||
 				waitOutputSumMaxSub.getValue() == null || now - waitOutputSumMaxSub.getValue().f0 > checkInterval * 2 ||
 				waitOutputSumMinSub.getValue() == null || now - waitOutputSumMinSub.getValue().f0 > checkInterval * 2) {
+				LOGGER.debug("Skip vertex {}, metrics missing.", vertexId);
 				continue;
 			}
 
@@ -158,6 +166,7 @@ public class BackPressureDetector implements Detector {
 		}
 
 		if (!jobVertexIDs.isEmpty()) {
+			LOGGER.info("Back pressure detected for vertices {}.", jobVertexIDs);
 			return new JobVertexBackPressure(jobID, jobVertexIDs);
 		}
 		return null;

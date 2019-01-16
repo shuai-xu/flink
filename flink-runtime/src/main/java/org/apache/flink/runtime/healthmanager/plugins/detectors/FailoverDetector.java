@@ -27,6 +27,9 @@ import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFailover;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +38,9 @@ import java.util.Map;
  * FailoverDetector detects failovers of a job.
  */
 public class FailoverDetector implements Detector {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(FailoverDetector.class);
+
 	private JobID jobID;
 	private RestServerClient restServerClient;
 
@@ -56,6 +62,7 @@ public class FailoverDetector implements Detector {
 
 	@Override
 	public Symptom detect() throws Exception {
+		LOGGER.debug("Start detecting.");
 
 		long now = System.currentTimeMillis();
 
@@ -74,6 +81,7 @@ public class FailoverDetector implements Detector {
 			}
 		}
 		if (!jobVertexIDs.isEmpty()) {
+			LOGGER.info("Failover detected for vertices {}.", jobVertexIDs);
 			return new JobVertexFailover(jobID, jobVertexIDs);
 		}
 		return null;

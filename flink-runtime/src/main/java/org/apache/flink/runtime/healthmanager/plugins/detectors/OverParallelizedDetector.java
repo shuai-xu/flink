@@ -32,6 +32,9 @@ import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexOverParallelized;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +46,8 @@ import java.util.Map;
  *   current_parallelism > (input_tps * tps_ratio) * latency_per_record
  */
 public class OverParallelizedDetector implements Detector {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(OverParallelizedDetector.class);
 
 	private static final String TASK_LATENCY_COUNT = "taskLatency.count";
 	private static final String TASK_LATENCY_SUM = "taskLatency.sum";
@@ -152,6 +157,7 @@ public class OverParallelizedDetector implements Detector {
 
 	@Override
 	public Symptom detect() throws Exception {
+		LOGGER.debug("Start detecting.");
 		long now = System.currentTimeMillis();
 
 		RestServerClient.JobConfig jobConfig = restServerClient.getJobConfig(jobID);
@@ -172,6 +178,7 @@ public class OverParallelizedDetector implements Detector {
 				sumMaxSub.getValue() == null || now - sumMaxSub.getValue().f0 > checkInterval * 2 ||
 				sumMinSub.getValue() == null || now - sumMaxSub.getValue().f0 > checkInterval * 2 ||
 				inputTpsSub.getValue() == null || now - inputTpsSub.getValue().f0 > checkInterval * 2) {
+				LOGGER.debug("Skip vertex {}, metrics missing.", vertexId);
 				continue;
 			}
 
@@ -187,6 +194,7 @@ public class OverParallelizedDetector implements Detector {
 		}
 
 		if (!jobVertexIDs.isEmpty()) {
+			LOGGER.info("Over parallelized detected for vertices {}.", jobVertexIDs);
 			return new JobVertexOverParallelized(jobID, jobVertexIDs);
 		}
 		return null;

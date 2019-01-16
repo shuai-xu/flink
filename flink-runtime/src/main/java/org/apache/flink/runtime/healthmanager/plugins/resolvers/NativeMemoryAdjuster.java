@@ -31,6 +31,9 @@ import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobNativeMem
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexNativeMemOveruse;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +44,8 @@ import java.util.Map;
  *   new_direct_memory = max_among_tasks_of_same_vertex { tm_memory_overuse / num_of_tasks } * ratio + original_direct_memory
  */
 public class NativeMemoryAdjuster implements Resolver {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(NativeMemoryAdjuster.class);
 
 	private static final ConfigOption<Double> NATIVE_SCALE_OPTION =
 		ConfigOptions.key("native.memory.scale.ratio").defaultValue(0.5);
@@ -68,11 +73,14 @@ public class NativeMemoryAdjuster implements Resolver {
 
 	@Override
 	public Action resolve(List<Symptom> symptomList) {
+		LOGGER.debug("Start resolving.");
 
 		Map<JobVertexID, Double> vertexMaxOveruse = new HashMap<>();
 		for (Symptom symptom : symptomList) {
 			if (symptom instanceof JobVertexNativeMemOveruse) {
-				Map<JobVertexID, Double> overuses = ((JobVertexNativeMemOveruse) symptom).getOveruses();
+				JobVertexNativeMemOveruse jobVertexNativeMemOveruse = (JobVertexNativeMemOveruse) symptom;
+				LOGGER.debug("Native memory overuse detected for vertices with max overuses {}.", jobVertexNativeMemOveruse.getOveruses());
+				Map<JobVertexID, Double> overuses = jobVertexNativeMemOveruse.getOveruses();
 				for (JobVertexID jvId : overuses.keySet()) {
 					if (!vertexMaxOveruse.containsKey(jvId) || vertexMaxOveruse.get(jvId) < overuses.get(jvId)) {
 						vertexMaxOveruse.put(jvId, overuses.get(jvId));
@@ -90,9 +98,11 @@ public class NativeMemoryAdjuster implements Resolver {
 		for (JobVertexID jvId : vertexMaxOveruse.keySet()) {
 			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(jvId);
 			ResourceSpec currentResource = vertexConfig.getResourceSpec();
+			int targetNativeMemory = (int) (vertexMaxOveruse.get(jvId) * (1 + scaleRatio));
+			LOGGER.debug("Target native memory for vertex {} is {}.", jvId, targetNativeMemory);
 			ResourceSpec targetResource =
 				new ResourceSpec.Builder()
-					.setNativeMemoryInMB((int) (vertexMaxOveruse.get(jvId) * (1 + scaleRatio)))
+					.setNativeMemoryInMB(targetNativeMemory)
 					.build()
 					.merge(currentResource);
 
@@ -100,6 +110,10 @@ public class NativeMemoryAdjuster implements Resolver {
 				jvId, vertexConfig.getParallelism(), vertexConfig.getParallelism(), currentResource, targetResource);
 		}
 
-		return adjustJobNativeMemory.isEmpty() ? null : adjustJobNativeMemory;
+		if (!adjustJobNativeMemory.isEmpty()) {
+			LOGGER.info("AdjustJobNativeMemory action generated: {}.", adjustJobNativeMemory);
+			return adjustJobNativeMemory;
+		}
+		return null;
 	}
 }

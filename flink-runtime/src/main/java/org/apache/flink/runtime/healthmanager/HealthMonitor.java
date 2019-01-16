@@ -275,6 +275,7 @@ public class HealthMonitor {
 					symptoms.add(symptom);
 				}
 			}
+			LOGGER.debug("Detected symptoms: {}.", symptoms);
 
 			// 2. diagnose and generate resolve action.
 			List<Action> actions = new LinkedList<>();
@@ -288,6 +289,7 @@ public class HealthMonitor {
 					LOGGER.warn("Exception caught in resolver " + resolver, e);
 				}
 			}
+			LOGGER.debug("Generated actions: {}.", actions);
 
 			if (actions.size() == 0) {
 				return;
@@ -300,6 +302,7 @@ public class HealthMonitor {
 			} catch (Throwable e) {
 				LOGGER.warn("Exception caught in action selector", e);
 			}
+			LOGGER.info("Selected action: {}.", action);
 
 			if (action != null) {
 				try {
@@ -308,7 +311,7 @@ public class HealthMonitor {
 					jobConfig = null;
 
 					// 4. execute an action.
-					LOGGER.info("Executing action {}validate failed, try to roll back", action);
+					LOGGER.info("Executing action {}", action);
 
 					action.execute(restServerClient);
 

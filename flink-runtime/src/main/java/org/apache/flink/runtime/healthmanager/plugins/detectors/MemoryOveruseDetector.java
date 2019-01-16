@@ -33,6 +33,9 @@ import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexNativeMe
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +44,8 @@ import java.util.Map;
  * MemoryOveruseDetector detects TM memory overuse of a job.
  */
 public class MemoryOveruseDetector implements Detector {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(MemoryOveruseDetector.class);
 
 	private static final String TM_MEM_CAPACITY = "Status.ProcessTree.Memory.Allocated";
 	private static final String TM_MEM_USAGE_TOTAL = "Status.ProcessTree.Memory.RSS";
@@ -83,6 +88,8 @@ public class MemoryOveruseDetector implements Detector {
 
 	@Override
 	public Symptom detect() throws Exception {
+		LOGGER.debug("Start detecting.");
+
 		long now = System.currentTimeMillis();
 
 		Map<String, Tuple2<Long, Double>> tmCapacities = tmMemCapacitySubscription.getValue();
@@ -96,6 +103,7 @@ public class MemoryOveruseDetector implements Detector {
 		for (String tmId : tmCapacities.keySet()) {
 			if (now - tmCapacities.get(tmId).f0 > overuseCheckInterval * 2 ||
 				now - tmTotalUsages.get(tmId).f0 > overuseCheckInterval * 2) {
+				LOGGER.debug("Skip tm {}, metrics missing.", tmId);
 				continue;
 			}
 
@@ -119,6 +127,7 @@ public class MemoryOveruseDetector implements Detector {
 		}
 
 		if (vertexMaxOveruse != null && !vertexMaxOveruse.isEmpty()) {
+			LOGGER.info("Native memory overuse detected for vertices with max overuse {}.", vertexMaxOveruse);
 			return new JobVertexNativeMemOveruse(jobID, vertexMaxOveruse);
 		}
 		return null;

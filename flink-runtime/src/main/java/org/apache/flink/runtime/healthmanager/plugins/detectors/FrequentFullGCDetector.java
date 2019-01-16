@@ -33,6 +33,9 @@ import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequent
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -46,6 +49,8 @@ import java.util.stream.Collectors;
  * full gc occur count is higher than the threshold within the interval.
  */
 public class FrequentFullGCDetector implements Detector {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(FrequentFullGCDetector.class);
 
 	private static final String FULL_GC_COUNT_METRIC = "Status.JVM.GarbageCollector.ConcurrentMarkSweep.Count";
 
@@ -93,6 +98,8 @@ public class FrequentFullGCDetector implements Detector {
 
 	@Override
 	public Symptom detect() {
+		LOGGER.debug("Start detecting.");
+
 		long now = System.currentTimeMillis();
 
 		Map<String, Tuple2<Long, Double>> maxGC = gcMetricMaxSubscription.getValue();
@@ -104,6 +111,7 @@ public class FrequentFullGCDetector implements Detector {
 		Set<JobVertexID> jobVertexIDs = new HashSet<>();
 		for (String tmId : maxGC.keySet()) {
 			if (now - maxGC.get(tmId).f0 > gcCheckInterval * 2 || now - minGC.get(tmId).f0 > gcCheckInterval * 2) {
+				LOGGER.debug("Skip vertex {}, metrics missing.", jobVertexIDs);
 				continue;
 			}
 
@@ -118,6 +126,7 @@ public class FrequentFullGCDetector implements Detector {
 		}
 
 		if (jobVertexIDs != null && !jobVertexIDs.isEmpty()) {
+			LOGGER.info("Frequent full gc detected for vertices {}.", jobVertexIDs);
 			return new JobVertexFrequentFullGC(jobID, new ArrayList<>(jobVertexIDs));
 		}
 		return null;

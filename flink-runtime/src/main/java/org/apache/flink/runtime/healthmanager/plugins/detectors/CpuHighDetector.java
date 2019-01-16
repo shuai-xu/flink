@@ -33,9 +33,13 @@ import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighCpu;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * CpuHighDetector detects high cpu usage of a job.
@@ -43,6 +47,9 @@ import java.util.Map;
  * is higher than threshold.
  */
 public class CpuHighDetector implements Detector {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(CpuHighDetector.class);
+
 	private static final String TM_CPU_CAPACITY = "Status.ProcessTree.CPU.Allocated";
 	private static final String TM_CPU_USAGE = "Status.ProcessTree.CPU.Usage";
 
@@ -88,6 +95,8 @@ public class CpuHighDetector implements Detector {
 
 	@Override
 	public Symptom detect() throws Exception {
+		LOGGER.debug("Start detecting.");
+
 		long now = System.currentTimeMillis();
 
 		Map<String, Tuple2<Long, Double>> tmCapacities = tmCpuAllocatedSubscription.getValue();
@@ -101,6 +110,7 @@ public class CpuHighDetector implements Detector {
 		for (String tmId : tmCapacities.keySet()) {
 			if (now - tmCapacities.get(tmId).f0 > checkInterval * 2 ||
 				now - tmUsages.get(tmId).f0 > checkInterval * 2) {
+				LOGGER.debug("Skip tm {}, metrics missing.", tmId);
 				continue;
 			}
 
@@ -108,6 +118,7 @@ public class CpuHighDetector implements Detector {
 			double usage = tmUsages.get(tmId).f1;
 
 			if (capacity == 0.0) {
+				LOGGER.warn("Skip vertex {}, capacity is 0. SHOULD NOT HAPPEN!", tmId);
 				continue;
 			}
 			double utility = usage / capacity;
@@ -120,10 +131,14 @@ public class CpuHighDetector implements Detector {
 						vertexMaxUtility.put(jvId, utility);
 					}
 				}
+				LOGGER.debug("Cpu high detected for tm {}, with running tasks of vertices {}.",
+					tmId,
+					jobExecutionVertexIds.stream().map(evid -> evid.getJobVertexID()).collect(Collectors.toList()));
 			}
 		}
 
 		if (vertexMaxUtility != null && !vertexMaxUtility.isEmpty()) {
+			LOGGER.info("Cpu high detected for vertices with max utilities {}.", vertexMaxUtility);
 			return new JobVertexHighCpu(jobID, vertexMaxUtility);
 		}
 		return null;

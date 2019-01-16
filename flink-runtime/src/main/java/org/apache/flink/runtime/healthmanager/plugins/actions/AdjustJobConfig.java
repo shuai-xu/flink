@@ -29,6 +29,7 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Adjust resource config for given vertex.
@@ -118,5 +119,14 @@ public class AdjustJobConfig implements Action {
 	public Action rollback() {
 		return new AdjustJobConfig(
 				jobID, timeoutMs, targetParallelism, currentParallelism, targetResource, currentResource);
+	}
+
+	@Override
+	public String toString() {
+		String adjustments = currentParallelism.keySet().stream().map(vertexId -> "{JobVertexID:" + vertexId + ", "
+			+ "parallelism: " + currentParallelism.get(vertexId) + " -> " + targetParallelism.get(vertexId) + ", "
+			+ "resource: " + currentResource.get(vertexId) + " -> " + targetResource.get(vertexId) + "}").collect(
+			Collectors.joining(", "));
+		return "AdjustJobConfig{" + adjustments + "}";
 	}
 }

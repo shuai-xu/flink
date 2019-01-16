@@ -32,6 +32,9 @@ import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequent
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHeapOOM;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -41,6 +44,8 @@ import java.util.Set;
  * If heap oom or frequent full gc detected, increase heap memory of corresponding vertices by given ratio.
  */
 public class HeapMemoryAdjuster implements Resolver {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(HeapMemoryAdjuster.class);
 
 	private static final ConfigOption<Double> HEAP_SCALE_OPTION =
 			ConfigOptions.key("heap.memory.scale.ratio").defaultValue(0.5);
@@ -68,17 +73,20 @@ public class HeapMemoryAdjuster implements Resolver {
 
 	@Override
 	public Action resolve(List<Symptom> symptomList) {
+		LOGGER.debug("Start resolving.");
 
 		Set<JobVertexID> jobVertexIDs = new HashSet<>();
 		for (Symptom symptom : symptomList) {
 			if (symptom instanceof JobVertexHeapOOM) {
 				JobVertexHeapOOM jobVertexHeapOOM = (JobVertexHeapOOM) symptom;
+				LOGGER.debug("Heap OOM detected for vertices {}.", jobVertexHeapOOM.getJobVertexIDs());
 				jobVertexIDs.addAll(jobVertexHeapOOM.getJobVertexIDs());
 				continue;
 			}
 
 			if (symptom instanceof JobVertexFrequentFullGC) {
 				JobVertexFrequentFullGC jobVertexFrequentFullGC = (JobVertexFrequentFullGC) symptom;
+				LOGGER.debug("Frequent full gc detected for vertices {}.", jobVertexFrequentFullGC.getJobVertexIDs());
 				jobVertexIDs.addAll(jobVertexFrequentFullGC.getJobVertexIDs());
 			}
 		}
@@ -92,9 +100,10 @@ public class HeapMemoryAdjuster implements Resolver {
 		for (JobVertexID jvId : jobVertexIDs) {
 			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(jvId);
 			ResourceSpec currentResource = vertexConfig.getResourceSpec();
+			int targetHeapMemory = (int) (currentResource.getHeapMemory() * scaleRatio);
 			ResourceSpec targetResource =
 				new ResourceSpec.Builder()
-					.setHeapMemoryInMB((int) (currentResource.getHeapMemory() * scaleRatio))
+					.setHeapMemoryInMB(targetHeapMemory)
 					.build()
 					.merge(currentResource);
 
@@ -102,6 +111,10 @@ public class HeapMemoryAdjuster implements Resolver {
 				jvId, vertexConfig.getParallelism(), vertexConfig.getParallelism(), currentResource, targetResource);
 		}
 
-		return adjustJobHeapMemory.isEmpty() ? null : adjustJobHeapMemory;
+		if (!adjustJobHeapMemory.isEmpty()) {
+			LOGGER.info("AdjustJobHeapMemory action generated: {}.", adjustJobHeapMemory);
+			return adjustJobHeapMemory;
+		}
+		return null;
 	}
 }
