@@ -43,7 +43,7 @@ cluster execution.
 
 #### Installing Apache NiFi
 
-Instructions for setting up a Apache NiFi cluster can be found
+Instructions for setting up an Apache NiFi cluster can be found
 [here](https://nifi.apache.org/docs/nifi-docs/html/administration-guide.html#how-to-install-and-start-nifi).
 
 #### Apache NiFi Source
