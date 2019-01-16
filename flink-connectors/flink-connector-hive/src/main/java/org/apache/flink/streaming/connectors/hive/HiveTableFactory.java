@@ -77,7 +77,8 @@ public class HiveTableFactory implements BatchTableSourceFactory<GenericRow>, Ta
 			hiveConf.set(prop.getKey(), prop.getValue());
 		}
 		String[] fieldNames = props.get(HIVE_TABLE_FIELD_NAMES).split(",");
-		String[] hiveFieldTypes = props.get(HIVE_TABLE_FIELD_TYPES).split("/");
+		String hiveRowTypeString = props.get(HIVE_TABLE_FIELD_TYPES);
+		String[] hiveFieldTypes = hiveRowTypeString.split(":");
 		InternalType[] colTypes = new InternalType[fieldNames.length];
 		TypeInformation[] typeInformations = new TypeInformation[fieldNames.length];
 		for (int i = 0; i < hiveFieldTypes.length; i++) {
@@ -95,6 +96,7 @@ public class HiveTableFactory implements BatchTableSourceFactory<GenericRow>, Ta
 		try {
 			JobConf jobConf = new JobConf(hiveConf);
 			return new HiveTableSource(new RowTypeInfo(typeInformations, fieldNames),
+									hiveRowTypeString,
 									jobConf,
 									tableStats,
 									hiveDbName,

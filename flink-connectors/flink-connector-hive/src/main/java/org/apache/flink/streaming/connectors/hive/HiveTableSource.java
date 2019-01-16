@@ -75,6 +75,7 @@ import java.util.stream.Collectors;
 public class HiveTableSource extends PartitionableTableSource implements BatchTableSource<GenericRow> {
 	private static Logger logger = LoggerFactory.getLogger(HiveTableSource.class);
 	private RowTypeInfo rowTypeInfo;
+	private String hiveRowTypeString;
 	private JobConf jobConf;
 	private TableStats tableStats;
 	private String dbName;
@@ -131,7 +132,7 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 	@Override
 	public TableSource applyPrunedPartitionsAndPredicate(
 			boolean partitionPruned, List<Partition> prunedPartitionList, List<Expression> predicates) {
-		return new HiveTableSource(rowTypeInfo, jobConf, tableStats, dbName, tableName,
+		return new HiveTableSource(rowTypeInfo, hiveRowTypeString, jobConf, tableStats, dbName, tableName,
 								partitionColNames, true, partitionPruned, prunedPartitionList);
 	}
 
@@ -175,6 +176,7 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 				}
 			}
 		} else {
+			// TODO: we should get StorageDescriptor from Hive Metastore somehow.
 			StorageDescriptor sd = createStorageDescriptor(jobConf, rowTypeInfo);
 			jobConf.setStrings(INPUT_DIR, sd.getLocation());
 			SerDeInfo serDeInfo = sd.getSerdeInfo();
@@ -182,13 +184,7 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 			properties.setProperty(serdeConstants.SERIALIZATION_FORMAT,
 								serDeInfo.getParameters().get(serdeConstants.SERIALIZATION_FORMAT));
 			properties.setProperty(serdeConstants.LIST_COLUMNS, StringUtils.join(rowTypeInfo.getFieldNames(), ","));
-			String[] colTypes = new String[rowTypeInfo.getArity()];
-			List<FieldSchema> cols = sd.getCols();
-			int t = 0;
-			for (FieldSchema col: cols){
-				colTypes[t++] = col.getType();
-			}
-			properties.setProperty(serdeConstants.LIST_COLUMN_TYPES, StringUtils.join(colTypes, ":"));
+			properties.setProperty(serdeConstants.LIST_COLUMN_TYPES, hiveRowTypeString);
 			properties.setProperty(serdeConstants.SERIALIZATION_NULL_FORMAT, "NULL");
 			allPartitions.add(new HiveTablePartition(jobConf.get(HIVE_TABLE_INPUT_FORMAT),
 													jobConf.get(HIVE_TABLE_OUTPUT_FORMAT),
@@ -200,12 +196,14 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 	}
 
 	public HiveTableSource(RowTypeInfo rowTypeInfo,
+						String hiveRowTypeString, // the string representations of original Hive types
 						JobConf jobConf,
 						TableStats tableStats,
 						String dbName,
 						String tableName,
 						String[] partitionColNames) {
 		this.rowTypeInfo = rowTypeInfo;
+		this.hiveRowTypeString = hiveRowTypeString;
 		this.jobConf = jobConf;
 		this.tableStats = tableStats;
 		this.dbName = dbName;
@@ -217,6 +215,7 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 	}
 
 	public HiveTableSource(RowTypeInfo rowTypeInfo,
+						String hiveRowTypeString,
 						JobConf jobConf,
 						TableStats tableStats,
 						String dbName,
@@ -226,6 +225,7 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 						Boolean isPartitionPruned,
 						List<Partition> prunedPartitions) {
 		this.rowTypeInfo = rowTypeInfo;
+		this.hiveRowTypeString = hiveRowTypeString;
 		this.jobConf = jobConf;
 		this.tableStats = tableStats;
 		this.dbName = dbName;

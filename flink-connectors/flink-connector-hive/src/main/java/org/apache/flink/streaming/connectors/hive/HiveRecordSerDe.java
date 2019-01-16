@@ -23,6 +23,8 @@ import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.runtime.conversion.DataStructureConverters;
 import org.apache.flink.table.runtime.conversion.DataStructureConverters.DecimalConverter;
 
+import org.apache.hadoop.hive.common.type.HiveChar;
+import org.apache.hadoop.hive.common.type.HiveVarchar;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.hive.serde2.objectinspector.ListObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.MapObjectInspector;
@@ -30,17 +32,20 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
 import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.DateObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.HiveCharObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.HiveDecimalObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.HiveVarcharObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.TimestampObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.DecimalTypeInfo;
 
 import java.math.BigDecimal;
+import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 
 /**
  * Class used to serialize to and from raw hdfs file type.
@@ -153,6 +158,15 @@ public class HiveRecordSerDe {
 			case TIMESTAMP:
 				Timestamp ts = ((TimestampObjectInspector) primitiveObjectInspector).getPrimitiveJavaObject(field);
 				return DataStructureConverters.getConverterForType(DataTypes.TIMESTAMP).toInternal(ts);
+			case DATE:
+				Date date = ((DateObjectInspector) primitiveObjectInspector).getPrimitiveJavaObject(field);
+				return DataStructureConverters.getConverterForType(DataTypes.DATE).toInternal(date);
+			case CHAR:
+				HiveChar c = ((HiveCharObjectInspector) primitiveObjectInspector).getPrimitiveJavaObject(field);
+				return c.getStrippedValue();
+			case VARCHAR:
+				HiveVarchar vc = ((HiveVarcharObjectInspector) primitiveObjectInspector).getPrimitiveJavaObject(field);
+				return vc.getValue();
 			default:
 				return primitiveObjectInspector.getPrimitiveJavaObject(field);
 		}

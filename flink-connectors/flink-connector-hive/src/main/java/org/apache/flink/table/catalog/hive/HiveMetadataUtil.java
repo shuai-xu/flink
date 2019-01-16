@@ -414,7 +414,7 @@ public class HiveMetadataUtil {
 			hiveTypes[i] = fieldSchemas.get(i).getType();
 		}
 		prop.put(HIVE_TABLE_FIELD_NAMES, StringUtils.join(colNames, ","));
-		prop.put(HIVE_TABLE_FIELD_TYPES, StringUtils.join(hiveTypes, "/"));
+		prop.put(HIVE_TABLE_FIELD_TYPES, StringUtils.join(hiveTypes, ":"));
 		prop.put(HIVE_TABLE_DB_NAME, table.getDbName());
 		prop.put(HIVE_TABLE_TABLE_NAME, table.getTableName());
 		prop.put(HIVE_TABLE_PARTITION_FIELDS, String.valueOf(
