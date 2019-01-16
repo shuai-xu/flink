@@ -335,7 +335,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			}
 		} catch (TException e) {
 			throw new FlinkHiveException(
-				String.format("Failed to alter table %s", path.getFullName()), e);
+				String.format("Failed to alter table stats of table %s", path.getFullName()), e);
 		}
 	}
 

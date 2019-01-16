@@ -34,7 +34,6 @@ import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.LongType;
 import org.apache.flink.table.api.types.ShortType;
 import org.apache.flink.table.api.types.StringType;
-import org.apache.flink.table.api.types.TimeType;
 import org.apache.flink.table.api.types.TimestampType;
 import org.apache.flink.table.catalog.CatalogDatabase;
 import org.apache.flink.table.catalog.CatalogPartition;
@@ -256,6 +255,11 @@ public class HiveMetadataUtil {
 		return new ColumnStatistics(desc, colStatsList);
 	}
 
+	/**
+	 * Convert Flink ColumnStats to Hive ColumnStatisticsData according to Hive column type.
+	 * Note that Hive column data types considered here should be within those listed in {@link #convert(String)},
+	 * otherwise, the data type is not supported by Flink.
+	 */
 	private static ColumnStatisticsData getColumnStatisticsData(String colType, ColumnStats colStat) {
 		switch (colType) {
 			case serdeConstants.BOOLEAN_TYPE_NAME:
@@ -283,7 +287,6 @@ public class HiveMetadataUtil {
 				return ColumnStatisticsData.stringStats(
 					new StringColumnStatsData(colStat.maxLen(), colStat.avgLen(), colStat.nullCount(), colStat.ndv()));
 			case serdeConstants.DATE_TYPE_NAME:
-			case serdeConstants.DATETIME_TYPE_NAME:
 			case serdeConstants.TIMESTAMP_TYPE_NAME:
 				DateColumnStatsData dateStats = new DateColumnStatsData(colStat.nullCount(), colStat.ndv());
 
@@ -514,9 +517,11 @@ public class HiveMetadataUtil {
 
 	/**
 	 * Convert a hive type to Flink internal type.
+	 * Note that even though serdeConstants.DATETIME_TYPE_NAME exists, Hive hasn't officially support DATETIME type yet
 	 */
-
 	public static InternalType convert(String hiveType) {
+		// Note: Any type match changes should be updated in documentation of data type mapping at /dev/table/catalog.md
+
 		// First, handle types that have parameters such as CHAR(5), DECIMAL(6, 2), etc
 		if (hiveType.toLowerCase().startsWith(serdeConstants.CHAR_TYPE_NAME) ||
 			hiveType.toLowerCase().startsWith(serdeConstants.VARCHAR_TYPE_NAME)) {
@@ -545,8 +550,6 @@ public class HiveMetadataUtil {
 				return DoubleType.INSTANCE;
 			case serdeConstants.DATE_TYPE_NAME:
 				return DateType.DATE;
-			case serdeConstants.DATETIME_TYPE_NAME:
-				return TimeType.INSTANCE;
 			case serdeConstants.TIMESTAMP_TYPE_NAME:
 				return TimestampType.TIMESTAMP;
 			case serdeConstants.BINARY_TYPE_NAME:
@@ -580,8 +583,6 @@ public class HiveMetadataUtil {
 		} else if (internalType.equals(CharType.INSTANCE)) {
 			return serdeConstants.CHAR_TYPE_NAME + "(1)";
 		} else if (internalType.equals(DateType.DATE)) {
-			return serdeConstants.DATE_TYPE_NAME;
-		} else if (internalType.equals(TimeType.INSTANCE)) {
 			return serdeConstants.DATE_TYPE_NAME;
 		} else if (internalType instanceof TimestampType) {
 			return serdeConstants.TIMESTAMP_TYPE_NAME;

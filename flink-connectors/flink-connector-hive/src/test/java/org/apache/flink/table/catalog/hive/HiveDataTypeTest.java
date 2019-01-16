@@ -95,10 +95,9 @@ public class HiveDataTypeTest {
 	}
 
 	@Test
-	public void testDataTypesForCharAndTime() {
+	public void testDataTypesForChar() {
 		InternalType[] types = new InternalType[] {
-			DataTypes.CHAR,
-			DataTypes.TIME
+			DataTypes.CHAR
 		};
 
 		String[] cols = new String[types.length];
@@ -114,9 +113,8 @@ public class HiveDataTypeTest {
 		catalog.createTable(tablePath, table, true);
 		CatalogTable table1 = catalog.getTable(tablePath);
 		TableSchema tableSchema = table1.getTableSchema();
-		InternalType[] colTypes = tableSchema.getTypes();
+		InternalType[] colTypes = tableSchema.getFieldTypes();
 
 		assertTrue(colTypes[0] == DataTypes.STRING);
-		assertTrue(colTypes[1] == DataTypes.DATE);
 	}
 }

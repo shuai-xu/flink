@@ -84,6 +84,29 @@ To query Hive data with `HiveCatalog`, users have to use Flink's `batch` mode by
 Note that currently `HiveCatalog` only offers capabilities of reading Hive metastore metadata, including databases, tables, table partitions, simple data types, and table and column stats. Other meta-objects read and write capabilities are under either experiment or active development.
 
 Also note that currently only registering `HiveCatalog` through Table APIs allows users to customize their `HiveConf` with additional Hive connection parameters. Users need to make sure Flink can connect to their Hive metastore within their environment.
+
+
+### Data Type Mapping between Flink and Hive via HiveCatalog
+
+Currently `HiveCatalog` supports most simple data types. Upon reading Hive table, `HiveCatalog` will map Hive data type to Flink data type according to the following mapping:
+
+| Hive Data Type | Flink Data Type  |
+|---|---|
+| char(p)       | String |
+| varchar(p)    | String |
+| string        | String |
+| decimal(p, s) | Decimal(p, s) |
+| boolean       | Boolean |
+| tinyint       | Byte |
+| smallint      | Short |
+| int           | Int |
+| bigint        | Long |
+| float         | Float |
+| double        | Double |
+| date          | Date |
+| timestamp     | Timestamp |
+| binary        | ByteArray |
+
  
 ## GenericHiveMetastoreCatalog
 
