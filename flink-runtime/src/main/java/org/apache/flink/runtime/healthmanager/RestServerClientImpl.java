@@ -121,7 +121,6 @@ public class RestServerClientImpl implements RestServerClient {
 						}).get();
 	}
 
-	//依赖 jobGraph， 可以先用伪接口实现
 	@Override
 	public JobConfig getJobConfig(JobID jobId) {
 		final JobGraphOverviewHeaders header = JobGraphOverviewHeaders.getInstance();
@@ -137,7 +136,7 @@ public class RestServerClientImpl implements RestServerClient {
 						JobGraphOverviewInfo.VertexConfigInfo jobGraphVertexConfig = vertexId2Config.getValue();
 						JobVertexID vertexID = JobVertexID.fromHexString(vertexId2Config.getKey());
 						VertexConfig vertexConfig = new VertexConfig(jobGraphVertexConfig.getParallelism(), jobGraphVertexConfig.getMaxParallelism(),
-							jobGraphVertexConfig.getResourceSpec(), jobGraphVertexConfig.getNodeIds());
+							jobGraphVertexConfig.getResourceSpec().convertToResourceSpec(), jobGraphVertexConfig.getNodeIds());
 						vertexConfigs.put(vertexID, vertexConfig);
 						List<JobVertexID> inputVertexIds = jobGraphOverviewInfo.getInputNodes().get(vertexId2Config.getKey()).stream().map(vertexIdStr -> JobVertexID.fromHexString(vertexIdStr)).collect(Collectors.toList());
 						inputNodes.put(vertexID, inputVertexIds);

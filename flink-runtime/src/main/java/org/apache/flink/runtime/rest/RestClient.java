@@ -304,6 +304,7 @@ public class RestClient {
 			// the received response did not matched the expected response type
 
 			// lets see if it is an ErrorResponse instead
+			LOG.error("Parse Response Error", originalException.getMessage());
 			try {
 				ErrorResponseBody error = objectMapper.treeToValue(rawResponse.getJson(), ErrorResponseBody.class);
 				responseFuture.completeExceptionally(new RestClientException(error.errors.toString(), rawResponse.getHttpResponseStatus()));

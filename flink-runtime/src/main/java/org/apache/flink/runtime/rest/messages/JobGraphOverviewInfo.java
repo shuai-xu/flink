@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.rest.messages;
 
 import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.Resource;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.rest.handler.job.JobGraphOverviewHandler;
@@ -126,7 +127,7 @@ public class JobGraphOverviewInfo implements ResponseBody {
 		private final int maxParallelism;
 
 		@JsonProperty(FIELD_NAME_RESOURCE_SPEC)
-		private final ResourceSpec resourceSpec;
+		private final ResourceSpecInfo resourceSpec;
 
 		@JsonProperty(FIELD_NAME_NODE_IDS)
 		private final List<Integer> nodeIds;
@@ -137,7 +138,7 @@ public class JobGraphOverviewInfo implements ResponseBody {
 			@JsonProperty(FIELD_NAME_VERTEX_NAME) String name,
 			@JsonProperty(FIELD_NAME_PARALLELISM) int parallelism,
 			@JsonProperty(FIELD_NAME_MAX_PARALLELISM) int maxParallelism,
-			@JsonProperty(FIELD_NAME_RESOURCE_SPEC) ResourceSpec resourceSpec,
+			@JsonProperty(FIELD_NAME_RESOURCE_SPEC) ResourceSpecInfo resourceSpec,
 			@JsonProperty(FIELD_NAME_NODE_IDS) List<Integer> nodeIds) {
 			this.id = checkNotNull(id);
 			this.name = checkNotNull(name);
@@ -168,7 +169,7 @@ public class JobGraphOverviewInfo implements ResponseBody {
 		}
 
 		@JsonIgnore
-		public ResourceSpec getResourceSpec() {
+		public ResourceSpecInfo getResourceSpec() {
 			return resourceSpec;
 		}
 
@@ -198,6 +199,121 @@ public class JobGraphOverviewInfo implements ResponseBody {
 		@Override
 		public int hashCode() {
 			return Objects.hash(id, name, parallelism, resourceSpec, nodeIds);
+		}
+	}
+
+	/**
+	 * ResourceSpec Info class.
+	 */
+	public static final class ResourceSpecInfo {
+		public static final String FIELD_NAME_CPU_CORE = "cpu-cores";
+		public static final String FIELD_NAME_HEAP_MEMORY = "heap-memory";
+		public static final String FIELD_NAME_DIRECT_MEMORY = "direct-memory";
+		public static final String FIELD_NAME_NATIVE_MEMORY = "native-memory";
+		public static final String FIELD_NAME_STATE_SIZE = "state-size";
+		public static final String FIELD_NAME_EXTENDED_RESOURCES = "extended-resources";
+
+		@JsonProperty(FIELD_NAME_CPU_CORE)
+		private final double cpuCores;
+
+		@JsonProperty(FIELD_NAME_HEAP_MEMORY)
+		private final int heapMemoryInMB;
+
+		@JsonProperty(FIELD_NAME_DIRECT_MEMORY)
+		private final int directMemoryInMB;
+
+		@JsonProperty(FIELD_NAME_NATIVE_MEMORY)
+		private final int nativeMemoryInMB;
+
+		@JsonProperty(FIELD_NAME_STATE_SIZE)
+		private final int stateSizeInMB;
+
+		@JsonProperty(FIELD_NAME_EXTENDED_RESOURCES)
+		private final Map<String, Resource> extendedResources;
+
+		@JsonCreator
+		public ResourceSpecInfo(
+			@JsonProperty(FIELD_NAME_CPU_CORE) double cpuCores,
+			@JsonProperty(FIELD_NAME_HEAP_MEMORY) int heapMemoryInMB,
+			@JsonProperty(FIELD_NAME_DIRECT_MEMORY) int directMemoryInMB,
+			@JsonProperty(FIELD_NAME_NATIVE_MEMORY) int nativeMemoryInMB,
+			@JsonProperty(FIELD_NAME_STATE_SIZE) int stateSizeInMB,
+			@JsonProperty(FIELD_NAME_EXTENDED_RESOURCES) Map<String, Resource> extendedResources) {
+			this.cpuCores = cpuCores;
+			this.heapMemoryInMB = heapMemoryInMB;
+			this.nativeMemoryInMB = nativeMemoryInMB;
+			this.directMemoryInMB = directMemoryInMB;
+			this.stateSizeInMB = stateSizeInMB;
+			this.extendedResources = extendedResources;
+		}
+
+		@JsonIgnore
+		public double getCpuCores() {
+			return cpuCores;
+		}
+
+		@JsonIgnore
+		public int getHeapMemoryInMB() {
+			return heapMemoryInMB;
+		}
+
+		@JsonIgnore
+		public int getDirectMemoryInMB() {
+			return directMemoryInMB;
+		}
+
+		@JsonIgnore
+		public int getNativeMemoryInMB() {
+			return nativeMemoryInMB;
+		}
+
+		@JsonIgnore
+		public int getStateSizeInMB() {
+			return stateSizeInMB;
+		}
+
+		@JsonIgnore
+		public Map<String, Resource> getExtendedResources() {
+			return extendedResources;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+
+			if (null == o || this.getClass() != o.getClass()) {
+				return false;
+			}
+
+			ResourceSpecInfo that = (ResourceSpecInfo) o;
+			return cpuCores == that.cpuCores &&
+				heapMemoryInMB == that.heapMemoryInMB &&
+				directMemoryInMB == that.directMemoryInMB &&
+				nativeMemoryInMB == that.nativeMemoryInMB &&
+				stateSizeInMB == that.stateSizeInMB &&
+				Objects.equals(extendedResources, that.extendedResources);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(cpuCores, heapMemoryInMB, directMemoryInMB,
+				nativeMemoryInMB, stateSizeInMB, extendedResources);
+		}
+
+		public ResourceSpec convertToResourceSpec() {
+			Resource[] resources;
+			if (extendedResources != null && extendedResources.size() > 0) {
+				resources = extendedResources.values().toArray(new Resource[extendedResources.size()]);
+			} else {
+				resources = new Resource[0];
+			}
+			return ResourceSpec.newBuilder()
+				.setCpuCores(this.cpuCores)
+				.setHeapMemoryInMB(this.heapMemoryInMB)
+				.setDirectMemoryInMB(this.directMemoryInMB)
+				.setNativeMemoryInMB(this.directMemoryInMB).addExtendedResource(resources).build();
 		}
 	}
 }
