@@ -75,7 +75,7 @@ class StreamExecValues(
         description)
       val transformation = tableEnv.execEnv.
           createInput(inputFormat, inputFormat.getProducedType).getTransformation
-      transformation.setParallelism(1)
+      transformation.setParallelism(getResource.getParallelism)
       transformation.setResources(getResource.getReservedResourceSpec,
         getResource.getPreferResourceSpec)
       transformation

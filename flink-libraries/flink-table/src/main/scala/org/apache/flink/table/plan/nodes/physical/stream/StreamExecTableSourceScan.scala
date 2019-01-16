@@ -104,6 +104,7 @@ class StreamExecTableSourceScan(
       DataTypes.TIMESTAMP
     )
 
+    inputDataStream.getTransformation.setParallelism(getResource.getParallelism)
     inputDataStream.getTransformation.setResources(sourceResSpec, sourceResSpec)
 
     val ingestedTable = new DataStream(

@@ -81,5 +81,5 @@ StreamExecSink(fields=[id1, num, text1], retract=[false], accMode=[Acc])
 
 											 : Data Sink
 												content : Sink: TestingUpsertTableSink(keys=())
-												ship_strategy : FORWARD
+												ship_strategy : REBALANCE
 

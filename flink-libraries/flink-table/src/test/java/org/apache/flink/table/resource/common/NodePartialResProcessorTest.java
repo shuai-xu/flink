@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.resource.calculator;
+package org.apache.flink.table.resource.common;
 
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;

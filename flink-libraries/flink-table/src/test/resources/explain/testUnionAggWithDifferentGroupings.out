@@ -49,5 +49,5 @@ StreamExecSink(fields=[a, b, c, a_sum], retract=[false], accMode=[Acc])
 
 						 : Data Sink
 							content : Sink: TestingUpsertTableSink(keys=())
-							ship_strategy : FORWARD
+							ship_strategy : REBALANCE
 

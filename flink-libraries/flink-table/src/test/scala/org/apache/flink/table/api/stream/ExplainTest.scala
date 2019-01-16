@@ -24,8 +24,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{Table, TableConfig, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.runtime.utils.{StreamTestData, TestingAppendTableSink, TestingRetractTableSink, TestingUpsertTableSink}
 import org.apache.flink.table.sinks.csv.CsvTableSink
-import org.apache.flink.table.util.{StreamTableTestUtil, TableFunc1, TableTestBase}
-import org.apache.flink.test.util.AbstractTestBase
+import org.apache.flink.table.util.{TableFunc1, TableTestBase}
 import org.junit.Assert.assertEquals
 import org.junit._
 

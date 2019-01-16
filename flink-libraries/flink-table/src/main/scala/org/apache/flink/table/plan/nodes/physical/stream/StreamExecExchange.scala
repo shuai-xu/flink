@@ -79,7 +79,7 @@ class StreamExecExchange(
           partitioner.asInstanceOf[StreamPartitioner[BaseRow]],
           DataExchangeMode.PIPELINED)
         transformation.setOutputType(outputRowType)
-        transformation.setParallelism(1)
+        transformation.setParallelism(getResource.getParallelism)
         transformation
       case RelDistribution.Type.HASH_DISTRIBUTED =>
         // TODO Eliminate duplicate keys
@@ -92,6 +92,7 @@ class StreamExecExchange(
           partitioner.asInstanceOf[StreamPartitioner[BaseRow]],
           DataExchangeMode.PIPELINED)
         transformation.setOutputType(outputRowType)
+        transformation.setParallelism(getResource.getParallelism)
         transformation
       case _ =>
         throw new UnsupportedOperationException(
