@@ -22,6 +22,7 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.kubernetes.configuration.Constants;
 import org.apache.flink.kubernetes.configuration.KubernetesConfigOptions;
@@ -495,6 +496,12 @@ public class KubernetesResourceManager extends ResourceManager<KubernetesWorkerN
 		if (isStopped) {
 			return;
 		}
+
+		String errMsg = String.format("Container trying to request with priority %s exceeds total resource limit, give up requesting.", priority);
+		if (checkAllocateNewResourceExceedTotalResourceLimit(taskManagerResource.getContainerCpuCores(), taskManagerResource.getTotalContainerMemory(), errMsg)) {
+			return;
+		}
+
 		String taskManagerPodName = taskManagerPodNamePrefix + generateNewPodId();
 		try {
 			// init additional environments
@@ -543,6 +550,43 @@ public class KubernetesResourceManager extends ResourceManager<KubernetesWorkerN
 				priority, taskManagerPodName, taskManagerResource, e);
 			throw new ResourceManagerException(e);
 		}
+	}
+
+	private boolean checkAllocateNewResourceExceedTotalResourceLimit(double cpu, int memory, String errMsg) {
+		if (maxTotalCpuCore == Double.MAX_VALUE && maxTotalMemoryMb == Integer.MAX_VALUE) {
+			return false;
+		}
+
+		double currentTotalCpu = 0.0;
+		int currentTotalMemory = 0;
+
+		currentTotalCpu += flinkConfig.getDouble(KubernetesConfigOptions.JOB_MANAGER_CORE);
+		currentTotalMemory += flinkConfig.getInteger(JobManagerOptions.JOB_MANAGER_HEAP_MEMORY);
+
+		for (KubernetesWorkerNode workerNode : workerNodeMap.values()) {
+			int priority = workerNode.getPriority();
+			TaskManagerResource resource = priorityToResourceMap.get(priority);
+			if (resource != null) {
+				currentTotalCpu += resource.getContainerCpuCores();
+				currentTotalMemory += resource.getTotalContainerMemory();
+			}
+		}
+
+		for (Map.Entry<Integer, Set<ResourceID>> entry : pendingWorkerNodes.entrySet()) {
+			TaskManagerResource taskManagerResource = priorityToResourceMap.get(entry.getKey());
+			int num = entry.getValue().size();
+			currentTotalCpu += taskManagerResource.getContainerCpuCores() * num;
+			currentTotalMemory += taskManagerResource.getTotalContainerMemory() * num;
+		}
+
+		if (currentTotalCpu + cpu > maxTotalCpuCore || currentTotalMemory + memory > maxTotalMemoryMb) {
+			errMsg += String.format(" (new resource = <CPU:%s, MEM:%s>, current total resource = <CPU:%s, MEM:%s>, limit = <CPU:%s, MEM:%s>)",
+				cpu, memory, currentTotalCpu, currentTotalMemory, maxTotalCpuCore, maxTotalMemoryMb);
+			log.warn(errMsg);
+			tryAllocateExceedLimitExceptions.put(System.currentTimeMillis(), new ResourceManagerException(errMsg));
+			return true;
+		}
+		return false;
 	}
 
 	@Override

@@ -20,6 +20,8 @@ package org.apache.flink.yarn;
 
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.JobManagerOptions;
+import org.apache.flink.configuration.ResourceManagerOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
@@ -39,6 +41,7 @@ import org.apache.flink.runtime.resourcemanager.slotmanager.SlotManager;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.TestingRpcService;
 import org.apache.flink.util.TestLogger;
+import org.apache.flink.yarn.configuration.YarnConfigOptions;
 
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -52,6 +55,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.NMClient;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -90,12 +94,19 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 
 	@SuppressWarnings("unchecked")
 	private YarnSessionResourceManager createYarnSessionResourceManager() {
-		Configuration conf = new Configuration();
+		return createYarnSessionResourceManager(new Configuration());
+	}
+
+	@SuppressWarnings("unchecked")
+	private YarnSessionResourceManager createYarnSessionResourceManager(Configuration conf) {
 		conf.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, 128);
 		conf.setLong(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE, 256);
 		conf.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX, 64 << 20);
-		ResourceManagerConfiguration rmConfig =
-			new ResourceManagerConfiguration(Time.seconds(1), Time.seconds(10));
+		ResourceManagerConfiguration rmConfig = new ResourceManagerConfiguration(
+			Time.seconds(1),
+			Time.seconds(10),
+			conf.getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE),
+			conf.getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB));
 		final HighAvailabilityServices highAvailabilityServices = mock(HighAvailabilityServices.class);
 		when(highAvailabilityServices.getResourceManagerLeaderElectionService()).thenReturn(mock(LeaderElectionService.class));
 		final HeartbeatServices heartbeatServices = mock(HeartbeatServices.class);
@@ -268,5 +279,26 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 			assertEquals(ContainerId.newInstance(applicationAttemptId, start++), containerId);
 		}
 		assertEquals(5, yarnSessionResourceManager.getNumberAllocatedWorkers());
+	}
+
+	@Test
+	public void testTotalResourceLimit() throws Exception {
+		Configuration conf = new Configuration();
+		conf.setDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE, 3.0);
+		conf.setInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB, 3 * 4096);
+		conf.setInteger(YarnConfigOptions.JOB_APP_MASTER_CORE, 1);
+		conf.setInteger(JobManagerOptions.JOB_MANAGER_HEAP_MEMORY, 4096);
+		conf.setDouble(TaskManagerOptions.TASK_MANAGER_CORE, 1.0);
+		conf.setInteger(TaskManagerOptions.MEMORY_SEGMENT_SIZE, 0);
+
+		YarnSessionResourceManager resourceManager = createYarnSessionResourceManager(conf);
+		AMRMClientAsync yarnClient = mock(AMRMClientAsync.class);
+		resourceManager.setAMRMClient(yarnClient);
+		ArgumentCaptor<AMRMClient.ContainerRequest> containerRequestCaptor =
+			ArgumentCaptor.forClass(AMRMClient.ContainerRequest.class);
+
+		resourceManager.startClusterWorkers();
+		verify(yarnClient, times(2)).addContainerRequest(containerRequestCaptor.capture());
+		Assert.assertEquals(1, resourceManager.requestTotalResourceLimitExceptions(Time.milliseconds(1000)).get().size());
 	}
 }

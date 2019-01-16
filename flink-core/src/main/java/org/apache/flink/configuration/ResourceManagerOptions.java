@@ -104,6 +104,14 @@ public class ResourceManagerOptions {
 		.key("slotmanager.slot-placement-policy")
 		.defaultValue("RANDOM");
 
+	public static final ConfigOption<Double> MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE = ConfigOptions
+		.key("max.total-resource.limit.cpu.core")
+		.defaultValue(Double.MAX_VALUE);
+
+	public static final ConfigOption<Integer> MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB = ConfigOptions
+		.key("max.total-resource.limit.memory.mb")
+		.defaultValue(Integer.MAX_VALUE);
+
 	/**
 	 * Prefix for passing custom environment variables to Flink's master process.
 	 * For example for passing LD_LIBRARY_PATH as an env variable to the AppMaster, set:

@@ -146,6 +146,10 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 	/** All registered listeners for status updates of the ResourceManager. */
 	private ConcurrentMap<String, InfoMessageListenerRpcGateway> infoMessageListeners;
 
+	protected final double maxTotalCpuCore;
+	protected final int maxTotalMemoryMb;
+	protected ConcurrentHashMap<Long, Exception> tryAllocateExceedLimitExceptions;
+
 	public ResourceManager(
 			RpcService rpcService,
 			String resourceManagerEndpointId,
@@ -186,6 +190,10 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 		this.jmResourceIdRegistrations = new HashMap<>(4);
 		this.taskExecutors = new HashMap<>(8);
 		infoMessageListeners = new ConcurrentHashMap<>(8);
+
+		maxTotalCpuCore = resourceManagerConfiguration.getMaxTotalCpuCore();
+		maxTotalMemoryMb = resourceManagerConfiguration.getMaxTotalMemoryMb();
+		tryAllocateExceedLimitExceptions = new ConcurrentHashMap<>();
 	}
 
 
@@ -670,6 +678,11 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 		} else {
 			return taskExecutor.getTaskExecutorGateway().requestTmLogAndStdoutFileName(timeout);
 		}
+	}
+
+	@Override
+	public CompletableFuture<Map<Long, Exception>> requestTotalResourceLimitExceptions(Time timeout) {
+		return CompletableFuture.completedFuture(tryAllocateExceedLimitExceptions);
 	}
 
 	// ------------------------------------------------------------------------

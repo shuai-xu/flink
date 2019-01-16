@@ -24,6 +24,7 @@ import org.apache.flink.api.common.resources.CommonExtendedResource;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.clusterframework.ApplicationStatus;
 import org.apache.flink.runtime.clusterframework.BootstrapTools;
@@ -511,8 +512,14 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 			return;
 		}
 
-		numPendingContainerRequests.addAndGet(numContainers);
 		for (int i = 0; i < requiredWorkerNum; ++i) {
+			String errMsg = String.format("%s containers trying to request exceeds total resource limit, give up requesting.", requiredWorkerNum - i);
+			if (checkAllocateNewResourceExceedTotalResourceLimit(
+				resource.getVirtualCores() / yarnVcoreRatio, resource.getMemory(), errMsg)) {
+				break;
+			}
+
+			numPendingContainerRequests.addAndGet(1);
 			resourceManagerClient.addContainerRequest(new AMRMClient.ContainerRequest(resource, null, null, resourcePriority));
 		}
 
@@ -522,6 +529,39 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 		log.info("Requesting new container with resources {}. Number pending requests {}.",
 				resource,
 				numPendingContainerRequests);
+	}
+
+	private boolean checkAllocateNewResourceExceedTotalResourceLimit(double cpu, int memory, String errMsg) {
+		if (maxTotalCpuCore == Double.MAX_VALUE && maxTotalMemoryMb == Integer.MAX_VALUE) {
+			return false;
+		}
+
+		double currentTotalCpu = 0.0;
+		int currentTotalMemory = 0;
+
+		currentTotalCpu += flinkConfig.getInteger(YarnConfigOptions.JOB_APP_MASTER_CORE);
+		currentTotalMemory += flinkConfig.getInteger(JobManagerOptions.JOB_MANAGER_HEAP_MEMORY);
+
+		int allocatedNum = workerNodeMap.size();
+		if (allocatedNum > 0) {
+			Resource resource = workerNodeMap.values().stream().findAny().get().getContainer().getResource();
+			currentTotalCpu += resource.getVirtualCores() / yarnVcoreRatio * allocatedNum;
+			currentTotalMemory += resource.getMemory() * allocatedNum;
+
+		}
+
+		int pendingNum = numPendingContainerRequests.get();
+		currentTotalCpu += workerResource.getVirtualCores() / yarnVcoreRatio * pendingNum;
+		currentTotalMemory += workerResource.getMemory() * pendingNum;
+
+		if (currentTotalCpu + cpu > maxTotalCpuCore || currentTotalMemory + memory > maxTotalMemoryMb) {
+			errMsg += String.format(" (new resource = <CPU:%s, MEM:%s>, current total resource = <CPU:%s, MEM:%s>, limit = <CPU:%s, MEM:%s>)",
+				cpu, memory, currentTotalCpu, currentTotalMemory, maxTotalCpuCore, maxTotalMemoryMb);
+			log.warn(errMsg);
+			tryAllocateExceedLimitExceptions.put(System.currentTimeMillis(), new ResourceManagerException(errMsg));
+			return true;
+		}
+		return false;
 	}
 
 	private ContainerLaunchContext createTaskExecutorLaunchContext(Container container)
@@ -678,6 +718,15 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 				numPendingContainerRequests.decrementAndGet();
 				resourceManagerClient.removeContainerRequest(
 						new AMRMClient.ContainerRequest(workerResource, null, null, resourcePriority));
+
+				String errMsg = String.format("Container allocated with id %s exceed total resource limit, releasing container.", container.getId());
+				if (checkAllocateNewResourceExceedTotalResourceLimit(
+					container.getResource().getVirtualCores() / yarnVcoreRatio,
+					container.getResource().getMemory(),
+					errMsg)) {
+					resourceManagerClient.releaseAssignedContainer(container.getId());
+					continue;
+				}
 
 				final String containerIdStr = container.getId().toString();
 				workerNodeMap.put(new ResourceID(containerIdStr),

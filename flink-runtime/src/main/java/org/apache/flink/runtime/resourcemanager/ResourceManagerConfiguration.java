@@ -21,6 +21,7 @@ package org.apache.flink.runtime.resourcemanager;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.AkkaOptions;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.ResourceManagerOptions;
 import org.apache.flink.util.ConfigurationException;
 import org.apache.flink.util.Preconditions;
 import scala.concurrent.duration.Duration;
@@ -32,12 +33,24 @@ public class ResourceManagerConfiguration {
 
 	private final Time timeout;
 	private final Time heartbeatInterval;
+	private final double maxTotalCpuCore;
+	private final int maxTotalMemoryMb;
+
+	public ResourceManagerConfiguration(
+		Time timeout,
+		Time heartbeatInterval) {
+		this(timeout, heartbeatInterval, Double.MAX_VALUE, Integer.MAX_VALUE);
+	}
 
 	public ResourceManagerConfiguration(
 			Time timeout,
-			Time heartbeatInterval) {
+			Time heartbeatInterval,
+			double maxTotalCpuCore,
+			int maxTotalMemoryMb) {
 		this.timeout = Preconditions.checkNotNull(timeout, "timeout");
 		this.heartbeatInterval = Preconditions.checkNotNull(heartbeatInterval, "heartbeatInterval");
+		this.maxTotalCpuCore = maxTotalCpuCore;
+		this.maxTotalMemoryMb = maxTotalMemoryMb;
 	}
 
 	public Time getTimeout() {
@@ -46,6 +59,14 @@ public class ResourceManagerConfiguration {
 
 	public Time getHeartbeatInterval() {
 		return heartbeatInterval;
+	}
+
+	public double getMaxTotalCpuCore() {
+		return maxTotalCpuCore;
+	}
+
+	public int getMaxTotalMemoryMb() {
+		return maxTotalMemoryMb;
 	}
 
 	// --------------------------------------------------------------------------
@@ -73,6 +94,9 @@ public class ResourceManagerConfiguration {
 				"value " + AkkaOptions.WATCH_HEARTBEAT_INTERVAL + '.', e);
 		}
 
-		return new ResourceManagerConfiguration(timeout, heartbeatInterval);
+		double maxTotalCpuCore = configuration.getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
+		int maxTotalMemoryMb = configuration.getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
+
+		return new ResourceManagerConfiguration(timeout, heartbeatInterval, maxTotalCpuCore, maxTotalMemoryMb);
 	}
 }

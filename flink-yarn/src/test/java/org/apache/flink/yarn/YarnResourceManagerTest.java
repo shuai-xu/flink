@@ -21,6 +21,7 @@ package org.apache.flink.yarn;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.ResourceManagerOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.clusterframework.ApplicationStatus;
@@ -56,6 +57,7 @@ import org.apache.flink.runtime.taskexecutor.TaskExecutorRegistrationSuccess;
 import org.apache.flink.runtime.testutils.DirectScheduledExecutorService;
 import org.apache.flink.runtime.util.TestingFatalErrorHandler;
 import org.apache.flink.util.TestLogger;
+import org.apache.flink.yarn.configuration.YarnConfigOptions;
 
 import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableList;
 
@@ -74,6 +76,7 @@ import org.apache.hadoop.yarn.client.api.NMClient;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -254,33 +257,39 @@ public class YarnResourceManagerTest extends TestLogger {
 		 * Create mock RM dependencies.
 		 */
 		Context() throws Exception {
+			this(flinkConfig);
+		}
+
+		Context(Configuration conf) throws Exception {
 			rpcService = new TestingRpcService();
 			fatalErrorHandler = new TestingFatalErrorHandler();
 			rmServices = new MockResourceManagerRuntimeServices();
 
 			// resource manager
 			rmConfiguration = new ResourceManagerConfiguration(
-					Time.seconds(5L),
-					Time.seconds(5L));
+				Time.seconds(5L),
+				Time.seconds(5L),
+				conf.getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE),
+				conf.getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB));
 			rmResourceID = ResourceID.generate();
 			resourceManager =
-					new TestingYarnResourceManager(
-							rpcService,
-							RM_ADDRESS,
-							rmResourceID,
-							flinkConfig,
-							env,
-							rmConfiguration,
-							rmServices.highAvailabilityServices,
-							rmServices.heartbeatServices,
-							rmServices.slotManager,
-							rmServices.metricRegistry,
-							rmServices.jobLeaderIdService,
-							new ClusterInformation("localhost", 1234),
-							fatalErrorHandler,
-							null,
-							mockResourceManagerClient,
-							mockNMClient);
+				new TestingYarnResourceManager(
+					rpcService,
+					RM_ADDRESS,
+					rmResourceID,
+					conf,
+					env,
+					rmConfiguration,
+					rmServices.highAvailabilityServices,
+					rmServices.heartbeatServices,
+					rmServices.slotManager,
+					rmServices.metricRegistry,
+					rmServices.jobLeaderIdService,
+					new ClusterInformation("localhost", 1234),
+					fatalErrorHandler,
+					null,
+					mockResourceManagerClient,
+					mockNMClient);
 		}
 
 		/**
@@ -656,6 +665,59 @@ public class YarnResourceManagerTest extends TestLogger {
 			// It's now safe to access the SlotManager state since the ResourceManager has been stopped.
 			assertTrue(rmServices.slotManager.getNumberRegisteredSlots() == 0);
 			assertTrue(resourceManager.getNumberOfRegisteredTaskManagers().get() == 0);
+		}};
+	}
+
+	@Test
+	public void testTotalResourceLimit() throws Exception {
+		Configuration conf = new Configuration(flinkConfig);
+		conf.setDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE, 3.0);
+		conf.setInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB, 4 * 1024);
+		conf.setInteger(YarnConfigOptions.JOB_APP_MASTER_CORE, 1);
+		conf.setInteger(JobManagerOptions.JOB_MANAGER_HEAP_MEMORY, 1024);
+
+		new Context(conf) {{
+			startResourceManager();
+
+			// totol resource limit <3core,3GB>, JM resource <1core,1GB>.
+			// start new worker <1core,1GB>, should not exceed limits.
+			ResourceProfile resourceProfile1 = new ResourceProfile(1.0, 1024);
+			CompletableFuture<?> registerSlotRequestFuture1 = resourceManager.runInMainThread(() -> {
+				rmServices.slotManager.registerSlotRequest(
+					new SlotRequest(new JobID(), new AllocationID(), resourceProfile1, taskHost));
+				return null;
+			});
+			registerSlotRequestFuture1.get();
+
+			CompletableFuture<Map<Long, Exception>> getTotalResourceLimitExceptionsFuture1 =
+				resourceManager.requestTotalResourceLimitExceptions(TIMEOUT);
+			Assert.assertEquals(0, getTotalResourceLimitExceptionsFuture1.get().size());
+
+			// start new worker <2core,2GB>, should exceed limits.
+			ResourceProfile resourceProfile2 = new ResourceProfile(2.0, 2048);
+			CompletableFuture<?> registerSlotRequestFuture2 = resourceManager.runInMainThread(() -> {
+				rmServices.slotManager.registerSlotRequest(
+					new SlotRequest(new JobID(), new AllocationID(), resourceProfile2, taskHost));
+				return null;
+			});
+			registerSlotRequestFuture2.get();
+
+			CompletableFuture<Map<Long, Exception>> getTotalResourceLimitExceptionsFuture2 =
+				resourceManager.requestTotalResourceLimitExceptions(TIMEOUT);
+			Assert.assertEquals(1, getTotalResourceLimitExceptionsFuture2.get().size());
+
+			// start new worker <1core,1GB>, should not exceed limits.
+			ResourceProfile resourceProfile3 = new ResourceProfile(1.0, 1024);
+			CompletableFuture<?> registerSlotRequestFuture3 = resourceManager.runInMainThread(() -> {
+				rmServices.slotManager.registerSlotRequest(
+					new SlotRequest(new JobID(), new AllocationID(), resourceProfile3, taskHost));
+				return null;
+			});
+			registerSlotRequestFuture3.get();
+
+			CompletableFuture<Map<Long, Exception>> getTotalResourceLimitExceptionsFuture3 =
+				resourceManager.requestTotalResourceLimitExceptions(TIMEOUT);
+			Assert.assertEquals(1, getTotalResourceLimitExceptionsFuture3.get().size());
 		}};
 	}
 }

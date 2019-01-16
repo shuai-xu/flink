@@ -46,6 +46,7 @@ import javax.annotation.Nullable;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -292,4 +293,10 @@ public interface ResourceManagerGateway extends FencedRpcGateway<ResourceManager
 	 */
 	CompletableFuture<Tuple2<String, String>> requestTmLogAndStdoutFileName(ResourceID taskManagerId, @RpcTimeout Time timeout);
 
+	/**
+	 * Request total resource limit exceptions.
+	 * @param timeout
+	 * @return
+	 */
+	CompletableFuture<Map<Long, Exception>> requestTotalResourceLimitExceptions(@RpcTimeout Time timeout);
 }

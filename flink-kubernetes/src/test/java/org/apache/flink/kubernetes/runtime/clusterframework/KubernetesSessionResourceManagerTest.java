@@ -20,6 +20,9 @@ package org.apache.flink.kubernetes.runtime.clusterframework;
 
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.JobManagerOptions;
+import org.apache.flink.configuration.ResourceManagerOptions;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.kubernetes.configuration.Constants;
 import org.apache.flink.kubernetes.configuration.KubernetesConfigOptions;
 import org.apache.flink.kubernetes.utils.KubernetesConnectionManager;
@@ -47,6 +50,9 @@ import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodSpec;
+import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.client.Watcher;
 import org.junit.Assert;
 import org.junit.Before;
@@ -55,6 +61,7 @@ import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -86,8 +93,11 @@ public class KubernetesSessionResourceManagerTest extends KubernetesRMTestBase {
 
 	@SuppressWarnings("unchecked")
 	protected KubernetesSessionResourceManager createKubernetesSessionResourceManager(Configuration conf) {
-		ResourceManagerConfiguration rmConfig =
-			new ResourceManagerConfiguration(Time.seconds(1), Time.seconds(10));
+		ResourceManagerConfiguration rmConfig = new ResourceManagerConfiguration(
+			Time.seconds(1),
+			Time.seconds(10),
+			conf.getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE),
+			conf.getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB));
 		final HighAvailabilityServices highAvailabilityServices = Mockito.mock(HighAvailabilityServices.class);
 		Mockito.when(highAvailabilityServices.getResourceManagerLeaderElectionService()).thenReturn(Mockito.mock(LeaderElectionService.class));
 		final HeartbeatServices heartbeatServices = Mockito.mock(HeartbeatServices.class);
@@ -112,6 +122,17 @@ public class KubernetesSessionResourceManagerTest extends KubernetesRMTestBase {
 		meta.setName(APP_ID + Constants.TASK_MANAGER_LABEL_SUFFIX + Constants.NAME_SEPARATOR + podId);
 		Pod pod = new Pod();
 		pod.setMetadata(meta);
+		Map<String, Quantity> requests = new HashMap<>();
+		requests.put(Constants.RESOURCE_NAME_CPU, new Quantity(String.valueOf(1.0)));
+		requests.put(Constants.RESOURCE_NAME_MEMORY, new Quantity(String.valueOf(1024 << 20)));
+		ResourceRequirements resources = new ResourceRequirements();
+		resources.setRequests(requests);
+		Container container = new Container();
+		container.setName(meta.getName());
+		container.setResources(resources);
+		PodSpec spec = new PodSpec();
+		spec.setContainers(Arrays.asList(container));
+		pod.setSpec(spec);
 		return pod;
 	}
 
@@ -167,13 +188,27 @@ public class KubernetesSessionResourceManagerTest extends KubernetesRMTestBase {
 			new KubernetesRMTestBase.TestingKubernetesConnectionManager(flinkConf);
 		// add 2 pods as previous worker nodes
 		OwnerReference ownerReference = new OwnerReferenceBuilder().build();
-		Container container = new ContainerBuilder().build();
+
+		Map<String, Quantity> requests = new HashMap<>();
+		requests.put(Constants.RESOURCE_NAME_CPU, new Quantity(String.valueOf(1.0)));
+		requests.put(Constants.RESOURCE_NAME_MEMORY, new Quantity(String.valueOf(1024 << 20)));
+		ResourceRequirements resources = new ResourceRequirements();
+		resources.setRequests(requests);
+
+		Container container1 = new ContainerBuilder().build();
+		container1.setName(taskManagerPodNamePrefix + "1");
+		container1.setResources(resources);
 		Pod pod1 = KubernetesRMUtils
 			.createTaskManagerPod(taskManagerPodLabels, taskManagerPodNamePrefix + "1",
-				taskManagerConfigMapName, ownerReference, container, new ConfigMapBuilder().build());
+				taskManagerConfigMapName, ownerReference, container1, new ConfigMapBuilder().build());
+
+		Container container2 = new ContainerBuilder().build();
+		container2.setName(taskManagerPodNamePrefix + "2");
+		container2.setResources(resources);
 		Pod pod2 = KubernetesRMUtils
 			.createTaskManagerPod(taskManagerPodLabels, taskManagerPodNamePrefix + "2",
-				taskManagerConfigMapName, ownerReference, container, new ConfigMapBuilder().build());
+				taskManagerConfigMapName, ownerReference, container2, new ConfigMapBuilder().build());
+
 		kubernetesConnectionManager.createPod(pod1);
 		kubernetesConnectionManager.createPod(pod2);
 		KubernetesSessionResourceManager spyKubernetesSessionRM =
@@ -289,5 +324,31 @@ public class KubernetesSessionResourceManagerTest extends KubernetesRMTestBase {
 	@Test
 	public void testConnectionLostAndReachMaxRetryTimes() throws ResourceManagerException {
 		super.testConnectionLostAndReachMaxRetryTimes();
+	}
+
+	@Test
+	public void testTotalResourceLimit() throws Exception {
+		Configuration conf = new Configuration(flinkConf);
+		conf.setDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE, 3.0);
+		conf.setInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB, 3 * 4096);
+		conf.setDouble(KubernetesConfigOptions.JOB_MANAGER_CORE, 1.0);
+		conf.setInteger(JobManagerOptions.JOB_MANAGER_HEAP_MEMORY, 4096);
+		conf.setDouble(TaskManagerOptions.TASK_MANAGER_CORE, 1.0);
+		conf.setInteger(TaskManagerOptions.TASK_MANAGER_HEAP_MEMORY, 4096);
+		conf.setInteger(TaskManagerOptions.TASK_MANAGER_DIRECT_MEMORY, 0);
+		conf.setInteger(TaskManagerOptions.TASK_MANAGER_NATIVE_MEMORY, 0);
+		conf.setInteger(TaskManagerOptions.MEMORY_SEGMENT_SIZE, 0);
+		conf.setInteger(KubernetesConfigOptions.TASK_MANAGER_COUNT, 5);
+
+		KubernetesConnectionManager kubernetesConnectionManager =
+			new KubernetesRMTestBase.TestingKubernetesConnectionManager(conf);
+		KubernetesSessionResourceManager spyKubernetesSessionRM =
+			mockResourceManager(conf, kubernetesConnectionManager);
+		// TM register check always return true
+		Mockito.doNothing().when(spyKubernetesSessionRM).checkTMRegistered(Matchers.any());
+
+		// start session RM
+		spyKubernetesSessionRM.start();
+		Assert.assertEquals(1, spyKubernetesSessionRM.getPendingWorkerNodes().size());
 	}
 }

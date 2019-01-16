@@ -21,6 +21,7 @@ package org.apache.flink.kubernetes.runtime.clusterframework;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.kubernetes.configuration.Constants;
 import org.apache.flink.kubernetes.configuration.KubernetesConfigOptions;
 import org.apache.flink.kubernetes.utils.KubernetesConnectionManager;
@@ -532,6 +533,11 @@ public class KubernetesSessionResourceManager extends
 
 		try {
 			for (int i = 0; i < requiredWorkerNum; ++i) {
+				String errMsg = String.format("%s containers trying to request exceeds total resource limit, give up requesting.", requiredWorkerNum - i);
+				if (checkAllocateNewResourceExceedTotalResourceLimit(taskManagerResource.getContainerCpuCores(), taskManagerResource.getTotalContainerMemory(), errMsg)) {
+					break;
+				}
+
 				ResourceID newResourceId = requestNewWorkerNode();
 				pendingWorkerNodes.add(newResourceId);
 				log.info("Add pending worker node: {}", newResourceId);
@@ -543,6 +549,31 @@ public class KubernetesSessionResourceManager extends
 
 		log.info("Number pending requests {}. Requesting new container with resources {}. ",
 			pendingWorkerNodes.size(), taskManagerResource);
+	}
+
+	private boolean checkAllocateNewResourceExceedTotalResourceLimit(double cpu, int memory, String errMsg) {
+		if (maxTotalCpuCore == Double.MAX_VALUE && maxTotalMemoryMb == Integer.MAX_VALUE) {
+			return false;
+		}
+
+		double currentTotalCpu = 0.0;
+		int currentTotalMemory = 0;
+
+		currentTotalCpu += flinkConfig.getDouble(KubernetesConfigOptions.JOB_MANAGER_CORE);
+		currentTotalMemory += flinkConfig.getInteger(JobManagerOptions.JOB_MANAGER_HEAP_MEMORY);
+
+		int num = workerNodeMap.size() + pendingWorkerNodes.size();
+		currentTotalCpu += taskManagerResource.getContainerCpuCores() * num;
+		currentTotalMemory += taskManagerResource.getTotalContainerMemory() * num;
+
+		if (currentTotalCpu + cpu > maxTotalCpuCore || currentTotalMemory + memory > maxTotalMemoryMb) {
+			errMsg += String.format(" (new resource = <CPU:%s, MEM:%s>, current total resource = <CPU:%s, MEM:%s>, limit = <CPU:%s, MEM:%s>)",
+				cpu, memory, currentTotalCpu, currentTotalMemory, maxTotalCpuCore, maxTotalMemoryMb);
+			log.warn(errMsg);
+			tryAllocateExceedLimitExceptions.put(System.currentTimeMillis(), new ResourceManagerException(errMsg));
+			return true;
+		}
+		return false;
 	}
 
 	protected synchronized void checkTMRegistered(ResourceID resourceId) {
