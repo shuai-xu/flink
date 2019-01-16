@@ -44,7 +44,7 @@ import java.util.Map;
  */
 public class LowDelayDetector implements Detector {
 
-	private static final String DELAY = "delay";
+	private static final String DELAY = "fetched_delay";
 
 	private static final ConfigOption<Long> LOW_DELAY_CHECK_INTERVAL =
 		ConfigOptions.key("healthmonitor.low-delay.interval.ms").defaultValue(5 * 60 * 1000L);

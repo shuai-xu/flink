@@ -229,7 +229,7 @@ public class ParallelismScalerTest {
 					} else if (aggType.equals(TimelineAggType.MIN)) {
 						return v1WaitOutputSumMin;
 					}
-				} else if (metricName.equals("delay")) {
+				} else if (metricName.equals("fetched_delay")) {
 					if (aggType.equals(TimelineAggType.AVG)) {
 						return v1Delay;
 					} else if (aggType.equals(TimelineAggType.RATE)) {
@@ -265,7 +265,7 @@ public class ParallelismScalerTest {
 					} else if (aggType.equals(TimelineAggType.MIN)) {
 						return v2WaitOutputSumMin;
 					}
-				} else if (metricName.equals("delay")) {
+				} else if (metricName.equals("fetched_delay")) {
 					if (aggType.equals(TimelineAggType.AVG)) {
 						return v2Delay;
 					} else if (aggType.equals(TimelineAggType.RATE)) {
