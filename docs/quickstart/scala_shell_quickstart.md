@@ -32,16 +32,50 @@ It can be used in a local setup as well as in a cluster setup.
 To get an overview of what options the Scala Shell provides, please use
 
 {% highlight bash %}
-bin/start-scala-shell.sh --help
+$ ./bin/start-scala-shell.sh --help
+ Flink Scala Shell
+ Usage: start-scala-shell.sh [local|remote|yarn] [options] <args>...
+ 
+ Command: local [options]
+ Starts Flink scala shell with a local Flink cluster
+   -a, --addclasspath <path/to/jar>
+                            Specifies additional jars to be used in Flink
+ Command: remote [options] <host> <port>
+ Starts Flink scala shell connecting to a remote cluster
+   <host>                   Remote host name as string
+   <port>                   Remote port as integer
+ 
+   -a, --addclasspath <path/to/jar>
+                            Specifies additional jars to be used in Flink
+ Command: yarn [options]
+ Starts Flink scala shell connecting to a yarn cluster
+   -n, --container arg      Number of YARN container to allocate (= Number of TaskManagers)
+   -jm, --jobManagerMemory arg
+                            Memory for JobManager container [in MB]
+   -nm, --name <value>      Set a custom name for the application on YARN
+   -qu, --queue <arg>       Specifies YARN queue
+   -s, --slots <arg>        Number of slots per TaskManager
+   -tm, --taskManagerMemory <arg>
+                            Memory per TaskManager container [in MB]
+   -a, --addclasspath <path/to/jar>
+                            Specifies additional jars to be used in Flink
+   --configDir <value>      The configuration directory.
+   -h, --help               Prints this usage text
 {% endhighlight %}
 
 ## Setup
 
-To use the shell with an integrated Flink standalone cluster just execute:
+Run the shell with an integrated Flink standalone cluster just execute:
 
 {% highlight bash %}
 bin/start-scala-shell.sh local
 {% endhighlight %}
+
+You will see the welcome message when start shell success.
+
+<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-scala-shell-welcome.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-scala-shell-welcome.png" alt="Scala Shell Example: logo"/></a>
+
+Then, you can write the code under the scala shell.
 
 Please refer [Scala Shell Documents]({{ site.baseurl }}/dev/scala_shell.html#setup) to to run scala shell in other cluster mode.
 
