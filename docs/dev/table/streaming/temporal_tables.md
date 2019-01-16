@@ -22,11 +22,13 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-Temporal Tables represent a concept of changing table that its data with a time period during which that data is deemed to be effective or valid along some time dimension.
+Temporal Tables represent a concept of changing table that its data is deemed to be effective or valid along some time period.
 
 The changing table can be a changing history table which underlying is an append-only table and Flink can keep track of the changes and allows for accessing the table's content at a certain point in time within a query. Currently is supported by so-called [Temporal Table Function Join](joins.html#join-with-a-temporal-table-function).
 
-On the other hand, the changing table can also be a changing dimension table which underlying is a remote database and Flink allows for accessing the table's content at ProcessingTime within a query. Currently is supported by so-called [Temporal Table Join](joins.html#join-with-a-temporal-table).
+On the other hand, the changing table can also be a changing dimension table which underlying is an external database and Flink allows for accessing the table's content at ProcessingTime within a query. Currently is supported by so-called [Temporal Table Join](joins.html#join-with-a-temporal-table).
+
+The "Temporal Table Function Join" and "Temporal Table Join" is different at sql syntax and runtime execution, but they come from the same motivation. The difference is explained in the [join section](joins.html#join-with-a-temporal-table).
 
 * This will be replaced by the TOC
 {:toc}
@@ -79,7 +81,7 @@ The concept of *Temporal Tables* aims to simplify such queries, speed up their e
 
 In the above example `currency` would be a primary key for `RatesHistory` table and `rowtime` would be the timestamp attribute. In Flink, this is represented by a *Temporal Table Function*.
 
-On the other hand, we have the requirement to join a dimension table which is a remote database table. This can also be addressed by *Temporal Table Join*.
+On the other hand, we have the requirement to join a dimension table which is a external database table. This can also be addressed by *Temporal Table Join*.
 
 Let's assume that we have a table `LatestRates` (e.g. a MySQL table) that is populated with the latest rate. The above `RatesHistory` is the changelog of it. Then the content of `LatestRates` table at time `10:58` will be:
 
@@ -104,7 +106,7 @@ Euro        119
 Pounds      108
 {% endhighlight %}
 
-In Flink tables can all be recognized as Temporal Table because they are all changing over time. But generally, they do not tracks all versions of the table at specific piont in time, so that they can only be queried the current version at processing time. In Flink, this is represented by *Temporal Table*.
+In Flink, *Temporal Tables* only support to keep the current version of the table, so that they can only be queried at processing time.
 
 
 ## Temporal Table Functions
@@ -260,7 +262,7 @@ CsvTableSource rates = CsvTableSource.builder()
   .path("path/to/csv")
   .field("currency", DataTypes.STRING)
   .field("rate", DataTypes.DOUBLE)
-  .uniqueKeys(singleton(singleton("currency")))
+  .uniqueKeys(singleton(singleton("currency")))  // the unique key definition is required here for lookup
   .build();
 
 // register it into environment, then we can query it in sql
