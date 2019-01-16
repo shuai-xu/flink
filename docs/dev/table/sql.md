@@ -22,19 +22,19 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-The SQL language includes Data Definition Language (DDL), Query and Data Manipulation Language (DML), Flink has a preliminary supports for DDL, Query and DML features.
+The SQL language includes Data Definition Language (DDL), query and Data Manipulation Language (DML). Flink has a preliminary supports for DDL, query and DML features.
 
 Before the existence of the SQL CLI, queries written in the Flink SQL can only be embedded in a table program written in Java or Scala. The tables accessed in the SQL query must be registered in the TableEnvironment first. It's impossible to use SQL only to complete the work.
 
-The SQL CLI is designed to provide an easy way to write, debug, and submit Table programs without writing a single line of Java or Scala code. For SQL CLI, DDL replaces the table definition and registration process in the table programs. By passing a SQL DDL description text to the SQL CLI, it will be parsed into table objects and registered to the tableEnvironment, then follow up SQL Queries can access these tables directly.
+The SQL CLI is designed to provide an easy way to write, debug, and submit table programs without writing a single line of Java or Scala code. For SQL CLI, DDL replaces the table definition and registration process in the table programs. By passing a SQL DDL description text to the SQL CLI, it will be parsed into table objects and registered to the `TableEnvironment`, then follow up SQL queries can access these tables directly.
 
-SQL queries are specified with the `sqlQuery()` method of the `TableEnvironment`. The method returns the result of the SQL query as a `Table`. A `Table` can be used in [subsequent SQL and Table API queries](common.html#mixing-table-api-and-sql), be [converted into a DataSet or DataStream](common.html#integration-with-datastream-and-dataset-api), or [written to a TableSink](common.html#emit-a-table)). SQL and Table API queries can seamlessly mixed and are holistically optimized and translated into a single program.
+SQL queries are specified with the `sqlQuery()` method of the `TableEnvironment`. The method returns the result of the SQL query as a `Table`. A `Table` can be used in [subsequent SQL and Table API queries](common.html#mixing-table-api-and-sql), be [converted into a DataSet or DataStream](common.html#integration-with-datastream-and-dataset-api), or [written to a TableSink](common.html#emit-a-table)). SQL and Table API queries can be seamlessly mixed and are holistically optimized and translated into a single program.
 
 In order to access a table in a SQL query, it must be [registered in the TableEnvironment](common.html#register-tables-in-the-catalog). A table can be registered from a [TableSource](common.html#register-a-tablesource), [Table](common.html#register-a-table), [DataStream, or DataSet](common.html#register-a-datastream-or-dataset-as-table). Alternatively, users can also [register catalogs in a TableEnvironment](catalog.html) to specify the location of the data sources.
 
-For convenience `Table.toString()` automatically registers the table under a unique name in its `TableEnvironment` and returns the name. Hence, `Table` objects can be directly inlined into SQL queries (by string concatenation) as shown in the examples below.
+For convenience, `Table.toString()` automatically registers the table under a unique name in its `TableEnvironment` and returns the name. Hence, `Table` objects can be directly inlined into SQL queries (by string concatenation) as shown in the examples below.
 
-**Note:** The current DDL is not persistent and can not be shared, only exists in a single SQL Query (along with the life cycle of a Query), so currently only CREATE operations are supported (ALTER/DROP is not introduced). Later versions will support persistence, the corresponding DDL objects will'be saved into persistent catalog and easier to use or modify(does not need to be declared every time, and can be shared).
+**Note:** The current DDL is not persistent and can not be shared, only exists in a single SQL query (along with the life cycle of a query), so currently only CREATE operations are supported (ALTER/DROP is not introduced). Later versions will support persistence and the corresponding DDL objects will be saved into persistent catalogs and are easier to use or modify (does not need to be declared every time, and can be shared).
 For example, user `A` produced a table `T1` in a query, then `T1` can be shared as a data source in another query of user `B`. Flink's SQL support is not yet feature complete. Queries that include unsupported SQL features cause a `TableException`. The supported features of SQL on batch and streaming tables are listed in the following sections.
 
 * This will be replaced by the TOC
@@ -43,11 +43,11 @@ For example, user `A` produced a table `T1` in a query, then `T1` can be shared 
 Creating a Table
 ----------------
 
-The following examples show how to create a Table via DDL.
+The following example shows how to create a table via DDL.
 
 {% highlight sql %}
 
--- Here create a Table named `Orders` which includes a primary key, and is stored as CSV file
+-- Create a table named `Orders` which includes a primary key, and is stored as a CSV file
 CREATE TABLE Orders (
     orderId BIGINT NOT NULL,
     customId VARCHAR NOT NULL,
@@ -66,14 +66,14 @@ CREATE TABLE Orders (
 Creating a View
 ---------------
 
-The following examples show how to create a View via DDL.
+The following example shows how to create a view via DDL.
 
 {% highlight sql %}
 
--- The View `OrderItemStats_2018` stats all items' order count in the year 2018.
+-- The view `OrderItemStats_2018` stats all items' order count in the year 2018.
 CREATE VIEW BigOrders
 SELECT
-    itemId, count(*) as orderCount, sum(totalPrice) as totalSale
+    itemId, count(*) AS orderCount, sum(totalPrice) AS totalSale
 FROM Orders
 WHERE orderTime BETWEEN '2018-01-01 00:00:00' AND '2018-12-31 23:59:59'
 GROUP BY itemId
@@ -83,11 +83,11 @@ GROUP BY itemId
 Creating a Function
 -------------------
 
-The following examples show how to create a Function via DDL.
+The following example shows how to create a function via DDL.
 
 {% highlight sql %}
 
--- The function `myConcat` reference to the scalar function class `a.b.c.MyConcatScalarFunc` which written in Java code and it's jar file is included in the compilation class path.
+-- The function `myConcat` references to the scalar function class `a.b.c.MyConcatScalarFunc` which is written in Java and it's jar file is included in the compilation class path.
 CREATE FUNCTION myConcat AS 'a.b.c.MyConcatScalarFunc'
 
 {% endhighlight %}
@@ -100,76 +100,74 @@ The following BNF-grammar describes the superset of supported DDL features in ba
 ### CREATE TABLE
 {% highlight sql %}
 
-CREATE TABLE tableName
-(
-	columnDefinition [, columnDefinition]*
-	[ computedColumnDefinition [, computedColumnDefinition]* ]
-	[ tableConstraint [, tableConstraint]* ]
-	[ tableIndex [, tableIndex]* ]
-	[ WATERMARK watermarkName FOR rowtimeField AS withOffset(rowtimeField, offset) ]
-) [ WITH ( tableOption [ , tableOption]* ) ]
+createTable:
+  CREATE TABLE tablename '('
+    columnDefinition [, columnDefinition ]*
+    columnDefinition [, columnDefinition ]*
+    [ computedColumnDefinition [, computedColumnDefinition ]* ]
+    [ tableConstraint [, tableConstraint ]* ]
+    [ tableIndex [, tableIndex ]* ]
+    [ WATERMARK watermarkName FOR rowtimeField AS withOffset '(' rowtimeField, offset ')' ]
+')' [ WITH '(' tableOption [, tableOption ]* ')' ]
 
-columnDefinition :=
-	columnName dataType [ NOT NULL ]
+columnDefinition:
+  columnName dataType [ NOT NULL ]
 
-dataType  :=
-	{
-	  [ VARCHAR ]
-	  | [ BOOLEAN ]
-	  | [ TINYINT ]
-	  | [ SMALLINT ]
-	  | [ INT ]
-	  | [ BIGINT ]
-	  | [ FLOAT ]
-	  | [ DECIMAL [ ( precision, scale ) ] ]
-	  | [ DOUBLE ]
-	  | [ DATE ]
-	  | [ TIME ]
-	  | [ TIMESTAMP ]
-	  | [ VARBINARY ]
-	}
+dataType:
+  VARCHAR
+  | BOOLEAN
+  | TINYINT
+  | SMALLINT
+  | INT
+  | BIGINT
+  | FLOAT
+  | DECIMAL [ '(' precision, scale ')' ]
+  | DOUBLE
+  | DATE
+  | TIME
+  | TIMESTAMP
+  | VARBINARY
 
-computedColumnDefinition :=
-	columnName AS computedColumnExpression
+computedColumnDefinition:
+  columnName AS computedColumnExpression
 
-tableConstraint :=
-    { PRIMARY KEY | UNIQUE }
-        (columnName [, columnName]* )
+tableConstraint:
+  { PRIMARY KEY | UNIQUE } '(' columnName [, columnName ]* ')'
 
-tableIndex :=
-	[ UNIQUE ] INDEX indexName
-         (columnName [, columnName]* )
+tableIndex:
+  [ UNIQUE ] INDEX indexName '(' columnName [, columnName ]* ')'
 
-rowtimeField :=
-	columnName
+rowtimeField:
+  columnName
 
-tableOption :=
-	property=value
+tableOption:
+  property=value
 
-offset :=
-	positive integer (unit: ms)
+offset:
+  positiveInteger
 
 {% endhighlight %}
 
-DECIMAL type has a default max precision and scale: (38, 18) if not declared.
+DECIMAL type has a default max precision and scale (38, 18) if not declared.
 
 VARBINARY represents an ARRAY type of byte, and other types of ARRAY are not supported yet. Also, the MULTISET type is not supported.
 
+Computed column is a virtual column that defines a calculation (not persist in the table). The column value is calculated at runtime. A computed column can reference columns for calculation.
+
 Table constraint includes PRIMARY KEY and UNIQUE constraints, CHECK constraint is not supported yet.
 
-Table Index support declaring UNIQUE or NON-UNIQUE index column(s).
+Table index supports declaring UNIQUE or NON-UNIQUE index column(s).
 
-Computed column is a virtual column that defines a calculation ( not persist in the table). The column value is calculated at runtime. A computed column can reference columns for calculation.
+The unit of the watermark offset is millisecond (or ms).
 
 ### CREATE VIEW
 
 {% highlight sql %}
 
+createView:
 CREATE VIEW viewName
-  [
-	( columnName [, columnName]* )
-  ]
-	AS queryStatement
+  [ '(' columnName [, columnName ]* ')' ]
+  AS queryStatement
 
 {% endhighlight %}
 
@@ -179,25 +177,25 @@ View is not materialized, it is an alias of a query statement.
 
 {% highlight sql %}
 
+createFunction:
 CREATE FUNCTION functionName
-  AS 'className'
+  AS className
 
-className ::=
-    fully qualified name
+className:
+  fullyQualifiedName
 
 {% endhighlight %}
 
 Specifying a Query
 ------------------
 
-The following examples show how to specify a SQL queries on registered and inlined tables.
+The following example shows how to specify SQL queries on registered and inlined tables.
 
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
 {% highlight java %}
 StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
-
 
 // ingest a DataStream from an external source
 DataStream<Tuple3<Long, String, Integer>> ds = env.addSource(...);
@@ -274,38 +272,39 @@ The following BNF-grammar describes the superset of supported SQL features in ba
 
 {% highlight sql %}
 
-{
-  select
-  | selectWithoutFrom
-  | query UNION [ ALL ] query
-  | query EXCEPT query
-  | query INTERSECT query
-}
-[ ORDER BY orderItem [, orderItem ]* ]
-[ LIMIT { count | ALL } ]
-[ OFFSET start { ROW | ROWS } ]
-[ FETCH { FIRST | NEXT } [ count ] { ROW | ROWS } ONLY]
+query:
+  values
+  | {
+      select
+      | selectWithoutFrom
+      | query UNION [ ALL ] query
+      | query EXCEPT query
+      | query INTERSECT query
+    }
+    [ ORDER BY orderItem [, orderItem ]* ]
+    [ LIMIT { count | ALL } ]
+    [ OFFSET start { ROW | ROWS } ]
+    [ FETCH { FIRST | NEXT } [ count ] { ROW | ROWS } ONLY ]
 
 orderItem:
   expression [ ASC | DESC ]
 
 select:
   SELECT [ ALL | DISTINCT ]
-  { * | projectItem [, projectItem ]* }
-  FROM
-    { tableExpression | values }
+  { '*' | projectItem [, projectItem ]* }
+  FROM { tableExpression | values }
   [ WHERE booleanExpression ]
   [ GROUP BY { groupItem [, groupItem ]* } ]
   [ HAVING booleanExpression ]
   [ WINDOW windowName AS windowSpec [, windowName AS windowSpec ]* ]
-  
+
 selectWithoutFrom:
   SELECT [ ALL | DISTINCT ]
-  { * | projectItem [, projectItem ]* }
+  { '*' | projectItem [, projectItem ]* }
 
 projectItem:
   expression [ [ AS ] columnAlias ]
-  | tableAlias . *
+  | tableAlias . '*'
 
 tableExpression:
   tableReference [, tableReference ]*
@@ -337,92 +336,96 @@ groupItem:
   | GROUPING SETS '(' groupItem [, groupItem ]* ')'
 
 windowRef:
-    windowName
+  windowName
   | windowSpec
 
 windowSpec:
-    [ windowName ]
-    '('
-    [ ORDER BY orderItem [, orderItem ]* ]
-    [ PARTITION BY expression [, expression ]* ]
-    [
-        RANGE numericOrIntervalExpression {PRECEDING}
-      | ROWS numericExpression {PRECEDING}
-    ]
-    ')'
+  [ windowName ]
+  '('
+  [ ORDER BY orderItem [, orderItem ]* ]
+  [ PARTITION BY expression [, expression ]* ]
+  [
+    RANGE numericOrIntervalExpression [ PRECEDING ]
+    | ROWS numericExpression [ PRECEDING ]
+  ]
+  ')'
 
 matchRecognize:
-      MATCH_RECOGNIZE '('
-      [ PARTITION BY expression [, expression ]* ]
-      [ ORDER BY orderItem [, orderItem ]* ]
-      [ MEASURES measureColumn [, measureColumn ]* ]
-      [ ONE ROW PER MATCH ]
-      [ AFTER MATCH
-            ( SKIP TO NEXT ROW
-            | SKIP PAST LAST ROW
-            | SKIP TO FIRST variable
-            | SKIP TO LAST variable
-            | SKIP TO variable )
-      ]
-      PATTERN '(' pattern ')'
-      [ WITHIN intervalLiteral ]
-      DEFINE variable AS condition [, variable AS condition ]*
-      ')'
+  MATCH_RECOGNIZE '('
+  [ PARTITION BY expression [, expression ]* ]
+  [ ORDER BY orderItem [, orderItem ]* ]
+  [ MEASURES measureColumn [, measureColumn ]* ]
+  [ ONE ROW PER MATCH ]
+  [ AFTER MATCH
+    {
+      SKIP TO NEXT ROW
+      | SKIP PAST LAST ROW
+      | SKIP TO FIRST variable
+      | SKIP TO LAST variable
+      | SKIP TO variable
+    }
+  ]
+  PATTERN '(' pattern ')'
+  [ WITHIN intervalLiteral ]
+  DEFINE variable AS condition [, variable AS condition ]*
+  ')'
 
 measureColumn:
-      expression AS alias
+  expression AS alias
 
 pattern:
-      patternTerm [ '|' patternTerm ]*
+  patternTerm [ '|' patternTerm ]*
 
 patternTerm:
-      patternFactor [ patternFactor ]*
+  patternFactor [ patternFactor ]*
 
 patternFactor:
-      variable [ patternQuantifier ]
+  variable [ patternQuantifier ]
 
 patternQuantifier:
-      '*'
-  |   '*?'
-  |   '+'
-  |   '+?'
-  |   '?'
-  |   '??'
-  |   '{' { [ minRepeat ], [ maxRepeat ] } '}' ['?']
-  |   '{' repeat '}'
+  '*'
+  | '*?'
+  | '+'
+  | '+?'
+  | '?'
+  | '??'
+  | '{' { [ minRepeat ], [ maxRepeat ] } '}' [ '?' ]
+  | '{' repeat '}'
 
 {% endhighlight %}
 
-Table options can be also specified in Query statement not only in DDL.
+Table options can not only be specified in DDL but also be specified in query statements.
 
 Supported DML Syntax
 --------------------
 
 ### DML (Insert Only)
 
-The following BNF-grammar describes the superset of supported SQL features in batch and streaming queries.  Only supported for batch or streaming queries.
+The following BNF-grammar describes the superset of supported SQL features in batch and streaming queries. Currently, only INSERT operation is supported.
 
 {% highlight sql %}
 
 insert:
   INSERT INTO tableReference
   query
-  [ EMIT strategy [, strategy]* ]
+  [ EMIT strategy [, strategy ]* ]
 
-  strategy := {WITH DELAY timeInterval | WITHOUT DELAY}
-      [BEFORE WATERMARK | AFTER WATERMARK]
+strategy:
+  { WITH DELAY timeInterval | WITHOUT DELAY }
+  [ BEFORE WATERMARK | AFTER WATERMARK ]
 
-  timeInterval := 'string' timeUnit
+timeInterval:
+  'string' timeUnit
 
 {% endhighlight %}
 
-**Note:** The EMIT clause is only valid for window query currently. See more about [EMIT Strategy](sql.html#emit-strategy) in window query.
+**Note:** The EMIT clause is only valid for window queries currently. See more about [EMIT Strategy](sql.html#emit-strategy) in window queries.
 
 Flink SQL uses a lexical policy for identifier (table, attribute, function names) similar to Java:
 
 - The case of identifiers is preserved whether or not they are quoted.
 - After which, identifiers are matched case-sensitively.
-- Unlike Java, back-ticks allow identifiers to contain non-alphanumeric characters (e.g. <code>"SELECT a AS `my field` FROM t"</code>).
+- Unlike Java, back-ticks allow identifiers to contain non-alphanumeric characters (e.g. `"SELECT a AS `my field` FROM t"`).
 
 String literals must be enclosed in single quotes (e.g., `SELECT 'Hello World'`). Duplicate a single quote for escaping (e.g., `SELECT 'It''s me.'`). Unicode characters are supported in string literals. If explicit unicode code points are required, use the following syntax:
 
@@ -434,7 +437,7 @@ String literals must be enclosed in single quotes (e.g., `SELECT 'Hello World'`)
 Operations
 ----------
 
-### Show, and Use
+### Show and Use
 
 <div markdown="1">
 <table class="table table-bordered">
@@ -452,17 +455,17 @@ Operations
       </td>
   		<td>
   		<p>Show all catalogs</p>
-		{% highlight sql %}
-		SHOW CATALOGS;
-		{% endhighlight %}
+{% highlight sql %}
+SHOW CATALOGS;
+{% endhighlight %}
 		<p>Show all dbs in the default catalog</p>
-		{% highlight sql %}
-		SHOW DATABASES;
-		{% endhighlight %}
+{% highlight sql %}
+SHOW DATABASES;
+{% endhighlight %}
 		<p>Show all tables in the default db in default catalog</p>
-		{% highlight sql %}
-		SHOW TABLES;
-		{% endhighlight %}
+{% highlight sql %}
+SHOW TABLES;
+{% endhighlight %}
       </td>
   	</tr>
     <tr>
@@ -472,20 +475,16 @@ Operations
       </td>
       <td>
 			<p>Set the default catalog and default database</p>
-			{% highlight sql %}
-			Use mycatalog.mydb
-			{% endhighlight %}
-			<p>Set the default database in the current default catalog</p>
-            {% highlight sql %}
-            Use mydb
-            {% endhighlight %}
+{% highlight sql %}
+USE mycatalog.mydb
+{% endhighlight %}
       </td>
     </tr>
   </tbody>
 </table>
 </div>
 
-### Scan, Projection, and Filter
+### Scan, Projection and Filter
 
 <div markdown="1">
 <table class="table table-bordered">
@@ -528,7 +527,7 @@ SELECT * FROM Orders WHERE a % 2 = 0
         <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span>
       </td>
       <td>
-      <p>UDFs must be registered in the TableEnvironment. See the <a href="udfs.html">UDF documentation</a> for details on how to specify and register scalar UDFs.</p>
+      <p>UDFs must be registered in the <code>TableEnvironment</code>. See the <a href="udfs.html">UDF documentation</a> for details on how to specify and register scalar UDFs.</p>
 {% highlight sql %}
 SELECT PRETTY_PRINT(user) FROM Orders
 {% endhighlight %}
@@ -587,7 +586,11 @@ GROUP BY TUMBLE(rowtime, INTERVAL '1' DAY), user
         <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span>
       </td>
     	<td>
-        <p><b>Note:</b> All aggregates must be defined over the same window, i.e., same partitioning, sorting, and range. Currently, only windows with PRECEDING (UNBOUNDED and bounded) to CURRENT ROW range are supported. Ranges with FOLLOWING are not supported yet. ORDER BY must be specified on a single <a href="streaming.html#time-attributes">time attribute</a>. Besides, TopN is also implemented based on Over Window Aggregation. See <a href="streaming.html#topn"> TopN </a> for more details. </p>
+        <p>Over window aggregations are supported differently for streaming and batch queries.</p>
+        <ul>
+          <li>For streaming queries, all aggregates must be defined over the same window, i.e., same partitioning, sorting, and range. Currently, only windows with PRECEDING (UNBOUNDED and bounded) to CURRENT ROW range are supported. Ranges with FOLLOWING are not supported yet. ORDER BY must be specified on a single <a href="streaming.html#time-attributes">time attribute</a>. Besides, TOPN is also implemented based on Over Window Aggregation. See <a href="streaming.html#topn"> TOPN </a> for more details.</li>
+          <li>For batch queries, aggregates can be defined over different windows. Ranges with FOLLOWING are supported. ORDER BY can be specified on any column.</li>
+        </ul>
 {% highlight sql %}
 SELECT COUNT(amount) OVER (
   PARTITION BY user
@@ -596,11 +599,11 @@ SELECT COUNT(amount) OVER (
 FROM Orders
 
 SELECT COUNT(amount) OVER w, SUM(amount) OVER w
-FROM Orders 
+FROM Orders
 WINDOW w AS (
   PARTITION BY user
   ORDER BY proctime
-  ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)  
+  ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)
 {% endhighlight %}
       </td>
     </tr>
@@ -619,7 +622,7 @@ SELECT DISTINCT users FROM Orders
     </tr>
     <tr>
       <td>
-        <strong>Grouping sets, Rollup, Cube</strong><br>
+        <strong>Grouping Sets, Rollup, Cube</strong><br>
         <span class="label label-primary">Batch</span>
       </td>
       <td>
@@ -650,7 +653,7 @@ HAVING SUM(amount) > 50
         <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span>
       </td>
       <td>
-        <p>UDAGGs must be registered in the TableEnvironment. See the <a href="udfs.html">UDF documentation</a> for details on how to specify and register UDAGGs.</p>
+        <p>UDAGGs must be registered in the <code>TableEnvironment</code>. See the <a href="udfs.html">UDF documentation</a> for details on how to specify and register UDAGGs.</p>
 {% highlight sql %}
 SELECT MyAggregate(amount)
 FROM Orders
@@ -682,7 +685,8 @@ GROUP BY users
       </td>
       <td>
         <p>Currently, only equi-joins are supported, i.e., joins that have at least one conjunctive condition with an equality predicate. Arbitrary cross or theta joins are not supported.</p>
-        <p><b>Note:</b> The order of joins is not optimized if join-reorder is disabled(`sql.cbo.joinReorder.enabled` is false). Tables are joined in the order in which they are specified in the FROM clause. Make sure to specify tables in an order that does not yield a cross join (Cartesian product) which are not supported and would cause a query to fail. If join-reorder is enabled(`sql.cbo.joinReorder.enabled` is true), the optimizer will try to find best join order based on cost.</p>
+        <p><b>Note:</b> Joins without equality predicates are supported for batch queries (implemented with nested loop joins).</p>
+        <p><b>Note:</b> The order of joins is not optimized if join-reorder is disabled (<code>sql.cbo.joinReorder.enabled</code> is false). Tables are joined in the order in which they are specified in the FROM clause. Make sure to specify tables in an order that does not yield a cross join (Cartesian product) which are not supported and would cause a query to fail. If join-reorder is enabled(`sql.cbo.joinReorder.enabled` is true), the optimizer will try to find best join order based on cost.</p>
 {% highlight sql %}
 SELECT *
 FROM Orders INNER JOIN Product ON Orders.productId = Product.id
@@ -691,11 +695,11 @@ FROM Orders INNER JOIN Product ON Orders.productId = Product.id
       </td>
     </tr>
     <tr>
-      <td><strong>Outer Equi-join</strong><br>
+      <td><strong>Outer Join</strong><br>
         <span class="label label-primary">Batch</span>
       </td>
       <td>
-        <p>Currently, only equi-joins are supported, i.e., joins that have at least one conjunctive condition with an equality predicate. Arbitrary cross or theta joins are not supported.</p>
+        <p><b>Note:</b> Joins without equality predicates are supported for batch queries (implemented with nested loop joins).</p>
         <p><b>Note:</b> The order of joins is not optimized. Tables are joined in the order in which they are specified in the FROM clause. Make sure to specify tables in an order that does not yield a cross join (Cartesian product) which are not supported and would cause a query to fail.</p>
 {% highlight sql %}
 SELECT *
@@ -717,9 +721,9 @@ FROM Orders FULL OUTER JOIN Product ON Orders.productId = Product.id
       <td>
         <p><b>Note:</b> Time-windowed joins are a subset of regular joins that can be processed in a streaming fashion.</p>
 
-        <p>A time-windowed join requires at least one equi-join predicate and a join condition that bounds the time on both sides. Such a condition can be defined by two appropriate range predicates (<code>&lt;, &lt;=, &gt;=, &gt;</code>), a <code>BETWEEN</code> predicate, or a single equality predicate that compares <a href="streaming.html#time-attributes">time attributes</a> of the same type (i.e., processing time or event time) of both input tables.</p> 
+        <p>A time-windowed join requires at least one equi-join predicate and a join condition that bounds the time on both sides. Such a condition can be defined by two appropriate range predicates (<code>&lt;, &lt;=, &gt;=, &gt;</code>), a <code>BETWEEN</code> predicate, or a single equality predicate that compares <a href="streaming.html#time-attributes">time attributes</a> of the same type (i.e., processing time or event time) of both input tables.</p>
         <p>For example, the following predicates are valid window join conditions:</p>
-          
+
         <ul>
           <li><code>ltime = rtime</code></li>
           <li><code>ltime &gt;= rtime AND ltime &lt; rtime + INTERVAL '10' MINUTE</code></li>
@@ -755,7 +759,7 @@ FROM Orders CROSS JOIN UNNEST(tags) AS t (tag)
         <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span>
       </td>
     	<td>
-      <p>UDTFs must be registered in the TableEnvironment. See the <a href="udfs.html">UDF documentation</a> for details on how to specify and register UDTFs. </p>
+      <p>UDTFs must be registered in the <code>TableEnvironment</code>. See the <a href="udfs.html">UDF documentation</a> for details on how to specify and register UDTFs. </p>
       <p>Inner Join</p>
 {% highlight sql %}
 SELECT users, tag
@@ -776,12 +780,12 @@ FROM Orders LEFT JOIN LATERAL TABLE(unnest_udtf(tags)) t AS tag ON TRUE
         <span class="label label-primary">Streaming</span>
       </td>
       <td>
-        <p><a href="streaming/temporal_tables.html">Temporal Table Function</a> are tables that track changes over time.
+        <p><a href="streaming/temporal_tables.html">Temporal Table Functions</a> are tables that track changes over time.
         A <a href="streaming/temporal_tables.html#temporal-table-functions">Temporal Table Function</a> provides access to the state of a temporal table at a specific point in time.
-        The syntax to join a table with a temporal table function is the same as in Join with Table Functions.</p>
+        The syntax to join a table with a temporal table function is the same as in join with table functions.</p>
 
         <p>Currently only inner joins with temporal tables are supported.</p>
-        Assuming <strong>Rates</strong> is a <a href="streaming/temporal_tables.html#temporal-table-functions">Temporal Table Function</a></p>
+        <p>The following example assumes that <strong>Rates</strong> is a <a href="streaming/temporal_tables.html#temporal-table-functions">Temporal Table Function</a>.</p>
 {% highlight sql %}
 SELECT
   o_amount, r_rate
@@ -791,7 +795,7 @@ FROM
 WHERE
   r_currency = o_currency
 {% endhighlight %}
-        <p>For more information please check the more detailed <a href="streaming/temporal_tables.html">Temporal Tables concept description.</a></p>
+        <p>For more information please check the more detailed <a href="streaming/temporal_tables.html">Temporal Tables</a> concept description.</p>
       </td>
     </tr>
     <tr>
@@ -803,8 +807,8 @@ WHERE
         <p><a href="streaming/temporal_tables.html">Temporal Tables</a> are tables that track changes over time.
         A <a href="streaming/temporal_tables.html#temporal-table">Temporal Table</a> provides access to the versions of a temporal table at a specific point in time.
 
-        <p>Only support inner and left joins with temporal table. Only support processing-time temporal table joins.</p>
-        Assuming <strong>LatestRates</strong> is a <a href="streaming/temporal_tables.html#temporal-table">Temporal Table</a> which is usually a remote database table (dimension table).</p>
+        <p>Only inner and left joins with processing-time temporal tables are supported.</p>
+        <p>The following example assumes that <strong>LatestRates</strong> is a <a href="streaming/temporal_tables.html#temporal-table">Temporal Table</a> which is usually a remote database table (dimension table).</p>
 {% highlight sql %}
 SELECT
   o.amout, o.currency, r.rate, o.amount * r.rate
@@ -813,7 +817,7 @@ FROM
   JOIN LatestRates FOR SYSTEM_TIME AS OF o.proctime AS r
   ON r.currency = o.currency
 {% endhighlight %}
-        <p>For more information please check the more detailed <a href="streaming/temporal_tables.html">Temporal Tables concept description.</a></p>
+        <p>For more information please check the more detailed <a href="streaming/temporal_tables.html">Temporal Tables</a> concept description.</p>
       </td>
     </tr>
     <tr>
@@ -822,16 +826,16 @@ FROM
         <span class="label label-primary">Streaming</span>
       </td>
       <td>
-        <p>The left semi-join is a joining similar to the natural join, and only returns the rows of the left table where it can find a match in the right table. SubQuery using <b>IN</b> and <b>EXISTS</b> will be converted to left semi-join.</p>
+        <p>The left semi-join is a joining similar to the natural join, and only returns the rows of the left table where it can find a match in the right table. Sub-queries using <b>IN</b> and <b>EXISTS</b> will be converted to left semi-joins.</p>
         <p><b>Note:</b> IN and EXISTS in conjunctive condition is supported.</p>
 {% highlight sql %}
 SELECT *
-FROM Orders WHERE Orders.productId IN 
-(SELECT Product.id FROM Product) [AND Orders.ordertime IS NOT NULL]
+FROM Orders WHERE Orders.productId IN
+(SELECT Product.id FROM Product) AND Orders.ordertime IS NOT NULL
 
 SELECT *
-FROM Orders WHERE EXISTS 
-(SELECT * FROM Product WHERE Orders.productId = Product.id) [AND Orders.ordertime IS NOT NULL]
+FROM Orders WHERE EXISTS
+(SELECT * FROM Product WHERE Orders.productId = Product.id) AND Orders.ordertime IS NOT NULL
 {% endhighlight %}
       </td>
     </tr>
@@ -841,16 +845,16 @@ FROM Orders WHERE EXISTS
         <span class="label label-primary">Streaming</span>
       </td>
       <td>
-        <p>The left anti-join is a joining similar to the left semi-join, and only returns the rows of the left table where it can <b>not</b> find a match in the right table. SubQuery using <b>NOT IN</b> and <b>NOT EXISTS</b> will be converted to left anti-join.</p>
-        <p><b>Note:</b> NOT IN and NOT EXISTS in conjunctive condition is supported.</p>
+        <p>The left anti-join is a joining similar to the left semi-join, and only returns the rows of the left table where it can <b>not</b> find a match in the right table. Sub-queries using <b>NOT IN</b> and <b>NOT EXISTS</b> will be converted to left anti-joins.</p>
+        <p><b>Note:</b> NOT IN and NOT EXISTS in conjunctive condition are supported.</p>
 {% highlight sql %}
 SELECT *
-FROM Orders WHERE Orders.productId NOT IN 
-(SELECT Product.id FROM Product) [AND Orders.ordertime IS NOT NULL]
+FROM Orders WHERE Orders.productId NOT IN
+(SELECT Product.id FROM Product) AND Orders.ordertime IS NOT NULL
 
 SELECT *
-FROM Orders WHERE NOT EXISTS 
-(SELECT * FROM Product WHERE Orders.productId = Product.id) [AND Orders.ordertime IS NOT NULL]
+FROM Orders WHERE NOT EXISTS
+(SELECT * FROM Product WHERE Orders.productId = Product.id) AND Orders.ordertime IS NOT NULL
 {% endhighlight %}
       </td>
     </tr>
@@ -861,8 +865,8 @@ FROM Orders WHERE NOT EXISTS
 
 {% top %}
 
-### TopN
-TopN is used to calculate the maximal/minimal N records in a stream. It can be flexibly completed based on OVER window aggregation. The grammar is shown as below:
+### TOPN
+TOPN is used to calculate the maximum/minimum <var>N</var> records in a stream. It can be flexibly completed based on OVER window aggregation. The grammar is shown as below:
 {% highlight sql %}
 SELECT *
 FROM (
@@ -877,16 +881,16 @@ WHERE rownum <= N [AND conditions]
 **Parameter Specification**
 * ROW_NUMBER(): An over window function to calculate the row number, starting from 1.
 * PARTITION BY col1[, col2..]: Specifying the columns by which the records are partitioned.
-* ORDER BY col1\[,asc\|desc\] \[, col2 \[asc\|desc\]...\]: Specifying the columns by which the records are ordered. The ordering direction can be different on different columns.
+* ORDER BY col1\[,asc\|desc\] \[, col2 \[asc\|desc\]...\]: Specifying the columns by which the records are ordered. The ordering directions can be different on different columns.
 
-Flink SQL will sort the input data stream according to the order key, so if the topN records have been changed, the changed ones will be sent as retract records to downstream. In addition, if the TopN records needs to be stored to external storage, the result table must be defined with a primary key.
+Flink SQL will sort the input data stream according to the order key, so if the top <var>N</var> records have been changed, the changed ones will be sent as retract records to downstream. In addition, if the top <var>N</var> records need to be stored in external storage, the result table must be defined with a primary key.
 
-**NOTE**: The usage of TopN has some constraints: To enable Flink SQL recognize that this query is a TopN query, the "`where  rownum <= N`" clause is necessary for the outer sql query, and it cannot be substituted by expressions containing "rownum", for example, "`where rownum - 5 <= N`". Besides, it is free to add other conditions in where clause, but they can only be joined using "And".
+**NOTE**: The usage of TOPN has some constraints. To enable Flink SQL to recognize that this query is a TOPN query, the `where rownum <= N` clause is necessary for the outer sql query and cannot be substituted by expressions containing `rownum` (for example, `where rownum - 5 <= N`). Besides, it is free to add other conditions in the `where` clause, but they can only be joined using `and`.
 
 #### No Ranking Number Optimization
-As stated above, the "rownum" field will be written into the result table as one field of the primary key, which leads to many duplicate records being written to the result table. For example, when the 9th record is updated as the 1st, all the first 9 records will be rewritten to the result table as updating result. If the result table receives too many data, it will become the bottleneck of the SQL job.
+As stated above, the `rownum` field will be written into the result table as one field of the primary key, which leads to many duplicate records being written to the result table. For example, when the record of rank 9 is updated and its rank is changed to 1, all the first 9 records will be rewritten to the result table as updating result. If the result table receives too many data, it will become the bottleneck of the SQL job.
 
-The optimization method is discarding "rownum" field when writing records to result table. This is reasonable because the number of TopN records is usually not large, thus the consumers can sort the records themselves quickly. Without "rownum" field, in the example above, only the changed record needs to be send to downstream, which can reduce much burden of the result table.
+The optimization method is discarding `rownum` field when writing records to the result table. This is reasonable because the number of the top <var>N</var> records is usually not large, thus the consumers can sort the records themselves quickly. Without `rownum` field, in the example above, only the changed record needs to be sent to downstream, which can reduce much burden of the result table.
 
 **Grammar**
 {% highlight sql %}
@@ -899,9 +903,9 @@ FROM (
 WHERE rownum <= N [AND conditions]
 {% endhighlight %}
 
-**Note**: When this optimization is enabled, the primary keys of the result table should be consistent with keys of groupby aggregation upstream before TopN operator. Otherwise, the results may be incorrect.
+**Note**: When this optimization is enabled, the primary keys of the result table should be consistent with keys of `group by` aggregation upstream before TOPN operator. Otherwise, the results may be incorrect.
 
-The following examples show how to specify SQL queries with TopN on streaming tables.
+The following examples show how to specify SQL queries with TOPN on streaming tables.
 
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
@@ -914,7 +918,7 @@ DataStream<Tuple3<String, Long, Integer>> ds = env.addSource(...);
 // register the DataStream as table "Orders"
 tableEnv.registerDataStream("Orders", ds, "category, shopId, num");
 
-// select Top2 goods of different categories which are sold well .
+// select top-2 goods of different categories which are sold well
 Table result1 = tableEnv.sqlQuery(
   "SELECT * " +
   "FROM (" +
@@ -937,7 +941,7 @@ val ds: DataStream[(String, Long, Int)] = env.addSource(...)
 tableEnv.registerDataStream("Orders", ds, 'category, 'shopId, 'num)
 
 
-// select Top2 goods of different categories which are sold well .
+// select top-2 goods of different categories which are sold well
 val result1 = tableEnv.sqlQuery(
     """
       |SELECT *
@@ -1114,7 +1118,7 @@ LIMIT 3
         <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span>
       </td>
       <td>
-        <p>Output tables must be registered in the TableEnvironment (see <a href="common.html#register-a-tablesink">Register a TableSink</a>). Moreover, the schema of the registered table must match the schema of the query.</p>
+        <p>Output tables must be registered in the <code>TableEnvironment</code> (see <a href="common.html#register-a-tablesink">Register a TableSink</a>). Moreover, the schema of the registered table must match the schema of the query.</p>
 
 {% highlight sql %}
 INSERT INTO OutputTable
@@ -1215,20 +1219,20 @@ The start and end timestamps of group windows as well as time attributes can be 
   </tbody>
 </table>
 
-**Note:** Auxiliary functions must be called with exactly same arguments as the group window function in the `GROUP BY` clause.
+**Note:** Auxiliary functions must be called with exactly the same arguments as the group window function in the `GROUP BY` clause.
 
-#### Emit Strategy
-The emit strategy (such as the allowed latency) of aggregation result varies in different streaming sql scenarios. For example, users may desire the functionality that they can get the newest result every minute before the end of 1 hour tumble window and wait for late data for 1 day after end of the window. This kind of demands are not support in conventional ANSI SQL, thus the Flink SQL grammar is extended to include Emit strategy.
+#### EMIT Strategy
+The EMIT strategy (such as the allowed latency) of the aggregation result varies in different streaming SQL scenarios. For example, users may desire the functionality that they can get the newest result every minute before the end of an 1 hour tumble window and wait for late data for 1 day after the end of the window. This type of demands are not support in conventional ANSI SQL, thus the Flink SQL grammar is extended to include the EMIT strategy.
 
-The purpose of Emit strategy is concluded as two aspects:
-1. Control the latency: Setting the firing frequency before the end of "big" windows to enable users get newest result in time.
-2. Data Accuracy: Waiting for late data in a specified time, and updating window results on arrival of late data.
+The purpose of EMIT strategy is concluded as two aspects:
+1. Control the latency: setting the firing frequency before the end of "big" windows to enable users get newest result in time.
+2. Data accuracy: waiting for late data in a specified time, and updating window results on arrival of late data.
 
 **The Maxmium Allowed Lateness**
 
-It is necessary to specified how long the late data can be waited for by user configuration, when `AFTER` strategy is used. Flink SQL provided an parameter: `sql.exec.state.ttl.ms`, to indicate the maximum allowed lateness. For example, `blink.state.ttl.ms=3600000` means only data that arrives 1 hour late after the end of window will be discarded.
+It is necessary to specify how long the late data can be waited for by user configurations when `AFTER` strategy is used. Flink SQL provides a parameter `sql.exec.state.ttl.ms`, to indicate the maximum allowed lateness. For example, `blink.state.ttl.ms=3600000` means only data that arrives 1 hour late after the end of window will be discarded.
 
-The following examples show how to specify SQL queries with group windows and Emit strategy on streaming tables.
+The following examples show how to specify SQL queries with group windows and the EMIT strategy on streaming tables.
 
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
