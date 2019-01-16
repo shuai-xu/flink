@@ -189,16 +189,18 @@ abstract class TableEnvironment(
     * @return A [[StreamGraph]] describing the whole job.
     */
   def generateStreamGraph(jobName: String): StreamGraph = {
-    if (config.getSubsectionOptimization) {
-      compile()
-    }
-    if (transformations.isEmpty) {
-      throw new TableException("No table sinks have been created yet. " +
+    try {
+      if (config.getSubsectionOptimization) {
+        compile()
+      }
+      if (transformations.isEmpty) {
+        throw new TableException("No table sinks have been created yet. " +
           "A program needs at least one sink that consumes data. ")
+      }
+      translateStreamGraph(transformations, Option.apply(jobName))
+    } finally {
+      sinkNodes.clear()
     }
-    val streamGraph = translateStreamGraph(transformations, Option.apply(jobName))
-    sinkNodes.clear()
-    streamGraph
   }
 
   /**
