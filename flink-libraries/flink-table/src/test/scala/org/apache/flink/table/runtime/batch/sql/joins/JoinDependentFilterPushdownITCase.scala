@@ -18,14 +18,14 @@
 
 package org.apache.flink.table.runtime.batch.sql.joins
 
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.junit.{Before, Test}
 
 import scala.collection.Seq
 
-class JoinDependentFilterPushdownITCase extends QueryTest with JoinITCaseBase {
+class JoinDependentFilterPushdownITCase extends BatchTestBase with JoinITCaseBase {
 
   @Before
   def before(): Unit = {

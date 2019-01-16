@@ -23,7 +23,7 @@ import org.apache.flink.table.api.Table
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.table.util._
 import org.apache.flink.table.expressions.utils.{Func1, Func18, RichFunc2}
@@ -36,7 +36,7 @@ import org.junit.Test
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-class CorrelateITCase extends QueryTest {
+class CorrelateITCase extends BatchTestBase {
 
   @Test
   def testCrossJoin(): Unit = {

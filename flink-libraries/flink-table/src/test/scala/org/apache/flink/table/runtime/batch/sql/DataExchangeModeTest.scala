@@ -26,7 +26,7 @@ import org.apache.flink.runtime.io.network.DataExchangeMode
 import org.apache.flink.streaming.api.graph.{StreamEdge, StreamGraph, StreamNode}
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.utils.CommonTestData.createCsvTableSource
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.junit.Test
@@ -36,7 +36,7 @@ import scala.collection.JavaConverters._
 /**
   * Test for setting dataExchangeMode in streamGraph.
   */
-class DataExchangeModeTest extends QueryTest {
+class DataExchangeModeTest extends BatchTestBase {
 
   @Test
   def testReuseBatch(): Unit = {

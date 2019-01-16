@@ -29,7 +29,7 @@ import scala.collection.Seq
 /**
   * Misc tests borrowed from org.apache.spark.sql.DataFrameSuite
   */
-class MiscITCase extends QueryTest {
+class MiscITCase extends BatchTestBase {
 
   // helper methods
 

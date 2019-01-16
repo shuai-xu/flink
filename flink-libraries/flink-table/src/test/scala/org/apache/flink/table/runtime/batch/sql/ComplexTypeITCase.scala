@@ -22,12 +22,12 @@ import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, LONG_T
 import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_PRIMITIVE_ARRAY_TYPE_INFO
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData.{nullData3, nullablesOfNullData3}
 import org.apache.flink.types.Row
 import org.junit._
 
-class ComplexTypeITCase extends QueryTest {
+class ComplexTypeITCase extends BatchTestBase {
 
   @Before
   def before(): Unit = {

@@ -24,15 +24,15 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.expressions.{Rank, RowNumber}
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.util.DateTimeTestUtil.{UTCDate, UTCTime, UTCTimestamp}
 import org.apache.flink.types.Row
 import org.junit.{Assert, Before, Test}
 
 import scala.collection.Seq
 
-class OverWindowAggITCase extends QueryTest {
+class OverWindowAggITCase extends BatchTestBase {
 
   @Before
   def before(): Unit = {

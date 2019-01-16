@@ -21,7 +21,7 @@ package org.apache.flink.table.runtime.batch.table
 import java.io.File
 
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.table.api.types.DataTypes
@@ -32,7 +32,7 @@ import org.junit.Test
 
 import scala.collection.JavaConverters._
 
-class TableSourceITCase extends QueryTest {
+class TableSourceITCase extends BatchTestBase {
 
   @Test
   def testCsvTableSourceWithProjection(): Unit = {

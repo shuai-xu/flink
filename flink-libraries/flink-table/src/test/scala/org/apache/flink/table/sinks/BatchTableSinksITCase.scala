@@ -27,8 +27,8 @@ import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.dataformat.BinaryString.fromString
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.table.dataformat.BinaryRow
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.binaryRow
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.binaryRow
 import org.apache.flink.table.runtime.utils._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.types.Row
@@ -39,7 +39,7 @@ import org.junit.Assert._
 
 import scala.collection.{Seq, mutable}
 
-class BatchTableSinksITCase extends QueryTest {
+class BatchTableSinksITCase extends BatchTestBase {
 
   val dataType = new BaseRowTypeInfo(
     INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO)

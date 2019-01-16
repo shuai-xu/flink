@@ -20,14 +20,14 @@ package org.apache.flink.table.runtime.batch.sql.subquery
 
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.junit.{Before, Test}
 
 import scala.collection.Seq
 
-class ScalaSubqueryITCase extends QueryTest {
+class ScalaSubqueryITCase extends BatchTestBase {
 
   def getDataFile(tableName: String): String = {
     getClass.getResource(s"/runtime/batch/$tableName").getFile

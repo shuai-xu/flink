@@ -22,8 +22,8 @@ import java.util
 
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.batch.sql.joins.JoinType._
 import org.junit.runner.RunWith
@@ -36,7 +36,7 @@ import scala.collection.Seq
 @RunWith(classOf[Parameterized])
 class SemiJoinITCase(
     expectedJoinType: JoinType,
-    buildLeft: Boolean) extends QueryTest with JoinITCaseBase {
+    buildLeft: Boolean) extends BatchTestBase with JoinITCaseBase {
 
   @Before
   def before(): Unit = {

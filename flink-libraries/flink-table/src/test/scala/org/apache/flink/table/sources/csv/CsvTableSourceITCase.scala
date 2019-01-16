@@ -23,7 +23,7 @@ import java.util.Collections
 
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.test.util.TestBaseUtils
@@ -32,7 +32,7 @@ import org.junit.{Assert, Test}
 
 import scala.collection.JavaConverters._
 
-class CsvTableSourceITCase extends QueryTest {
+class CsvTableSourceITCase extends BatchTestBase {
 
   def createTmpCsvFile(content: String): String = {
     val file = File.createTempFile("csvTest", ".csv")

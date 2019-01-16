@@ -26,7 +26,7 @@ import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.api.java.BatchTableEnvironment;
-import org.apache.flink.table.runtime.batch.sql.QueryTest;
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase;
 import org.apache.flink.table.runtime.batch.sql.TestData;
 import org.apache.flink.types.Either;
 
@@ -44,7 +44,7 @@ import static org.apache.flink.test.util.TestBaseUtils.compareResultAsText;
 /**
  * Integration tests for {@link BatchTableEnvironment}.
  */
-public class JavaTableEnvironmentITCase extends QueryTest {
+public class JavaTableEnvironmentITCase extends BatchTestBase {
 
 	@Test
 	public void testSimpleRegister() throws Exception {

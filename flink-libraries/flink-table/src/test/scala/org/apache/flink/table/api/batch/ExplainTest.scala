@@ -20,10 +20,10 @@ package org.apache.flink.table.api.batch
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.junit._
 
-class ExplainTest extends QueryTest {
+class ExplainTest extends BatchTestBase {
 
   @Test
   def testFilterWithoutExtended(): Unit = {

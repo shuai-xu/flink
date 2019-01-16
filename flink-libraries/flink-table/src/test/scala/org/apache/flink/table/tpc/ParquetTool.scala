@@ -19,14 +19,14 @@
 package org.apache.flink.table.tpc
 
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.sinks.parquet.ParquetTableSink
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.table.util.NodeResourceUtil.InferMode
 import org.junit.Ignore
 
 @Ignore
-class ParquetTool extends QueryTest{
+class ParquetTool extends BatchTestBase{
 
   val csvPath = "/Users/zhixin/data/tpch/SF1"
   val parquetPath = "/Users/zhixin/data/tpch/parquet"

@@ -23,8 +23,8 @@ import org.apache.flink.table.api.{TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.logical.{AggregateReduceGroupingRule, FlinkAggregateJoinTransposeRule}
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData
 
@@ -35,7 +35,7 @@ import org.junit.{Before, Test}
 
 import _root_.scala.collection.JavaConverters._
 
-class FlinkAggregateJoinTransposeRuleITCase extends QueryTest {
+class FlinkAggregateJoinTransposeRuleITCase extends BatchTestBase {
 
   @Before
   def before(): Unit = {

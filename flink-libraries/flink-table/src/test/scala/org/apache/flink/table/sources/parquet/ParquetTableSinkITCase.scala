@@ -23,7 +23,7 @@ import org.apache.flink.core.fs.{FileStatus, Path}
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.dataformat.Decimal
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.sinks.parquet.ParquetTableSink
 import org.apache.flink.table.util.NodeResourceUtil
@@ -43,7 +43,7 @@ import java.util
 
 import scala.collection.JavaConversions._
 
-class ParquetTableSinkITCase extends QueryTest {
+class ParquetTableSinkITCase extends BatchTestBase {
 
   @Before
   def setUp(): Unit = {

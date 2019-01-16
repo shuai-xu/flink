@@ -21,7 +21,7 @@ package org.apache.flink.table.util.resource
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.resource.batch.BatchExecResourceTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.batch.sql.TestData.{nullablesOfSmallData3, smallData3, type3}
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.util.FileUtils
@@ -30,7 +30,7 @@ import org.junit.{Assert, Before, Test}
 
 import java.io.File
 
-class ResourceJsonTest extends QueryTest {
+class ResourceJsonTest extends BatchTestBase {
 
   @Before
   def before(): Unit = {

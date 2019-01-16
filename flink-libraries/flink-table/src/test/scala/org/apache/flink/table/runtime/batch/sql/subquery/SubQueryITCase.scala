@@ -22,14 +22,14 @@ import org.apache.flink.api.common.typeinfo.BasicTypeInfo.INT_TYPE_INFO
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.conversion.DataStructureConverters
 import org.junit._
 
 import scala.collection.Seq
 
-class SubQueryITCase extends QueryTest {
+class SubQueryITCase extends BatchTestBase {
 
   @Before
   def before(): Unit = {

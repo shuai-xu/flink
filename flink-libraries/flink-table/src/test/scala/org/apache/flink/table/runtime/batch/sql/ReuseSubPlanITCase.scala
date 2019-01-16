@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.NodeResourceUtil
@@ -32,7 +32,7 @@ import org.junit.{Before, Test}
 import scala.collection.Seq
 
 @RunWith(classOf[Parameterized])
-class ReuseSubPlanITCase(subPlanReuse: Boolean) extends QueryTest {
+class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
 
   @Before
   def before(): Unit = {

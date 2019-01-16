@@ -25,7 +25,7 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.runtime.batch.sql.joins.JoinType.{BroadcastHashJoin, HashJoin, JoinType, NestedLoopJoin, SortMergeJoin}
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.batch.sql.joins.JoinITCaseBase
 import org.junit.runner.RunWith
@@ -35,7 +35,7 @@ import org.junit.{Before, Test}
 import scala.util.Random
 
 @RunWith(classOf[Parameterized])
-class SetOperatorsITCase(joinType: JoinType) extends QueryTest with JoinITCaseBase {
+class SetOperatorsITCase(joinType: JoinType) extends BatchTestBase with JoinITCaseBase {
 
   @Before
   def before(): Unit = {

@@ -22,8 +22,8 @@ import java.util
 
 import org.apache.flink.table.api.TableConfigOptions
 import JoinType.{BroadcastHashJoin, HashJoin, JoinType, NestedLoopJoin, SortMergeJoin}
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.junit.{Before, Test}
 import org.junit.runner.RunWith
@@ -32,7 +32,7 @@ import org.junit.runners.Parameterized
 import scala.collection.Seq
 
 @RunWith(classOf[Parameterized])
-class OuterJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITCaseBase {
+class OuterJoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCaseBase {
 
   private lazy val leftT = Seq(
     row(1, 2.0),

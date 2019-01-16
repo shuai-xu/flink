@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.batch.table
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.util.CollectionBatchExecTable
 import org.apache.flink.test.util.TestBaseUtils
 import org.junit._
@@ -29,7 +29,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.util.Random
 
-class SetOperatorsITCase extends QueryTest {
+class SetOperatorsITCase extends BatchTestBase {
 
   @Test
   def testUnionAll(): Unit = {

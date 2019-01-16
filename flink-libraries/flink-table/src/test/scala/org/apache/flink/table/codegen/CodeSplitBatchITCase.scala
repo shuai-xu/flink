@@ -20,8 +20,8 @@ package org.apache.flink.table.codegen
 
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.junit.{Before, Ignore, Test}
 
@@ -31,7 +31,7 @@ import scala.collection.Seq
   * copying test cases which can not pass the test during code split development
   * set 'sql.codegen.maxLength' to 1 to verify these test cases
   */
-class CodeSplitBatchITCase extends QueryTest {
+class CodeSplitBatchITCase extends BatchTestBase {
 
   @Before
   def before(): Unit = {

@@ -56,10 +56,10 @@ import scala.collection.Seq
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Sorting
 
-class QueryTest {
+class BatchTestBase {
 
   TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
-  val conf: TableConfig = QueryTest.initConfigForTest(new TableConfig)
+  val conf: TableConfig = BatchTestBase.initConfigForTest(new TableConfig)
   //TODO test batch mode
   conf.getConf.setBoolean(TableConfigOptions.SQL_EXEC_DATA_EXCHANGE_MODE_ALL_BATCH, false)
   val jobConfig = new Configuration()
@@ -123,9 +123,9 @@ class QueryTest {
              |${
             sideBySide(
               s"== Correct Result - $expectedSize ==" +:
-                prepareResult(Seq(), isSorted = false).map(_.toString()),
+                prepareResult(Seq(), isSorted = false),
               s"== Actual Result - ${result.size} ==" +:
-                prepareResult(result, isSorted = false).map(_.toString())).mkString("\n")
+                prepareResult(result, isSorted = false)).mkString("\n")
           }
         """.stripMargin
         Some(errorMessage)
@@ -352,9 +352,9 @@ class QueryTest {
            |${
           sideBySide(
             s"== Correct Result - ${expectedResult.size} ==" +:
-              prepareResult(expectedResult, isSorted).map(_.toString()),
+              prepareResult(expectedResult, isSorted),
             s"== Actual Result - ${result.size} ==" +:
-              prepareResult(result, isSorted).map(_.toString())).mkString("\n")
+              prepareResult(result, isSorted)).mkString("\n")
         }
         """.stripMargin
       Some(errorMessage)
@@ -442,7 +442,7 @@ class QueryTest {
   }
 }
 
-object QueryTest {
+object BatchTestBase {
   def row(args: Any*): Row = {
     val values = args.toArray
     val row = new Row(values.length)

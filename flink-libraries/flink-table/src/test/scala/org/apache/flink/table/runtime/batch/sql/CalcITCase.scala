@@ -32,7 +32,7 @@ import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.{TableConfigOptions, Types, ValidationException}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString, Decimal}
 import org.apache.flink.table.expressions.utils.{RichFunc1, RichFunc2, RichFunc3, SplitUDF}
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.conversion.DataStructureConverters
 import org.apache.flink.table.runtime.utils.UserDefinedFunctionTestUtils
@@ -45,7 +45,7 @@ import org.junit._
 import scala.collection.JavaConverters._
 import scala.collection.Seq
 
-class CalcITCase extends QueryTest {
+class CalcITCase extends BatchTestBase {
 
   @Before
   def before(): Unit = {

@@ -30,7 +30,7 @@ import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.dataformat.BinaryString
 import org.apache.flink.table.expressions.utils.{Func1, Func18, RichFunc2}
 import org.apache.flink.table.plan.batch.sql.StringSplit
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.JavaUserDefinedTableFunctions.JavaTableFunc0
 import org.apache.flink.table.util.DateTimeTestUtil._
@@ -40,7 +40,7 @@ import org.junit.{Before, Test}
 
 import scala.collection.Seq
 
-class TableFunctionITCase extends QueryTest {
+class TableFunctionITCase extends BatchTestBase {
 
   @Before
   def before(): Unit = {

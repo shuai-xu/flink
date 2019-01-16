@@ -24,14 +24,14 @@ import org.apache.flink.api.scala._
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.util.CollectionBatchExecTable
 import org.apache.flink.test.util.TestBaseUtils
 import org.junit.Test
 
-class TableSinkITCase extends QueryTest {
+class TableSinkITCase extends BatchTestBase {
 
   @Test
   def testBatchTableSink(): Unit = {

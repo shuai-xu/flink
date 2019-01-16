@@ -23,14 +23,14 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.dataformat.BinaryString.fromString
 import org.apache.flink.table.dataformat.BinaryRow
-import org.apache.flink.table.runtime.batch.sql.QueryTest.{binaryRow, row}
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.{binaryRow, row}
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.junit._
 
 import scala.collection.Seq
 
-class UnionITCase extends QueryTest {
+class UnionITCase extends BatchTestBase {
 
   val type6 = new BaseRowTypeInfo(
     INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO)

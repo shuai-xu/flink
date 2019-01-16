@@ -18,8 +18,8 @@
 package org.apache.flink.table.runtime.batch.sql.agg
 
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.utils.CommonTestData
 
 import org.junit.{Before, Test}
@@ -27,7 +27,7 @@ import org.junit.{Before, Test}
 import _root_.scala.collection.JavaConverters._
 import scala.collection.Seq
 
-class FlinkAggregateRemoveRuleITCase extends QueryTest {
+class FlinkAggregateRemoveRuleITCase extends BatchTestBase {
 
   @Before
   def before(): Unit = {

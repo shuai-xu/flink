@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.batch.table
 
 import org.apache.flink.table.api.Table
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.utils.SortTestUtils._
 import org.apache.flink.table.util.CollectionBatchExecTable
 import org.apache.flink.test.util.TestBaseUtils
@@ -28,7 +28,7 @@ import org.junit._
 
 import scala.collection.JavaConverters._
 
-class SortITCase extends QueryTest {
+class SortITCase extends BatchTestBase {
 
   def compare(t: Table, expected: String): Unit = {
     TestBaseUtils.compareOrderedResultAsText(t.collect().asJava, expected)

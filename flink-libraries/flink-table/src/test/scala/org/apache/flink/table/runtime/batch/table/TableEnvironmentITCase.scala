@@ -21,7 +21,7 @@ package org.apache.flink.table.runtime.batch.table
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataType
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.util.{CollectionBatchExecTable, MemoryTableSourceSinkUtil}
 import org.apache.flink.test.util.TestBaseUtils
 
@@ -30,7 +30,7 @@ import org.junit._
 
 import scala.collection.JavaConverters._
 
-class TableEnvironmentITCase extends QueryTest {
+class TableEnvironmentITCase extends BatchTestBase {
 
   @Test
   def testSimpleRegister(): Unit = {

@@ -22,14 +22,14 @@ import org.apache.flink.table.api.Types
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.logical.FlinkAggregateJoinTransposeRule
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.rel.rules._
 import org.apache.calcite.tools.RuleSets
 import org.junit.{Before, Test}
 
-class DistinctAggOnJoinITCase extends QueryTest {
+class DistinctAggOnJoinITCase extends BatchTestBase {
 
   val t1Name = "t1"
   val t1Types = new RowTypeInfo(Types.STRING, Types.INT)

@@ -19,8 +19,8 @@ package org.apache.flink.table.runtime.batch.sql.agg
 
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.DateTimeTestUtil.UTCTimestamp
 
@@ -31,7 +31,7 @@ import java.sql.Date
 import _root_.scala.collection.JavaConverters._
 import scala.collection.Seq
 
-class AggregateReduceGroupingRuleITCase extends QueryTest {
+class AggregateReduceGroupingRuleITCase extends BatchTestBase {
 
   @Before
   def before(): Unit = {

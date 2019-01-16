@@ -18,7 +18,7 @@
 package org.apache.flink.table.tpc
 
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.table.tpc.TpcUtils.getTpcHQuery
 import org.apache.flink.test.util.TestBaseUtils
@@ -37,7 +37,7 @@ import scala.collection.JavaConversions._
 @RunWith(classOf[Parameterized])
 class TpcHBatchExecITCase(caseName: String,
     subsectionOptimization: Boolean)
-  extends QueryTest with PropertyChecks {
+  extends BatchTestBase with PropertyChecks {
 
   def getDataFile(tableName: String): String = {
     getClass.getResource(s"/tpch/data/$tableName/$tableName.tbl").getFile

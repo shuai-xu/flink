@@ -23,7 +23,7 @@ import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.sinks.CollectRowTableSink
 import org.junit._
 
-class InsertITCase extends QueryTest {
+class InsertITCase extends BatchTestBase {
 
   @Test
   def testInsertWithOrderBy(): Unit = {

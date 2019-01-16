@@ -28,7 +28,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.dataformat.Decimal
 import org.apache.flink.table.expressions.Literal
 import org.apache.flink.table.expressions.utils.{Func13, SplitUDF}
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.util.CollectionBatchExecTable
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.test.util.TestBaseUtils
@@ -42,7 +42,7 @@ import org.junit.runners.Parameterized
 import scala.collection.JavaConverters._
 import scala.collection.{Seq, mutable}
 
-class CalcITCase extends QueryTest {
+class CalcITCase extends BatchTestBase {
 
   @Test
   def testSimpleSelectAll(): Unit = {

@@ -26,7 +26,7 @@ import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes, TypeInfoWrappedDataType}
 import org.apache.flink.table.functions.aggregate.CountAggFunction
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{CountDistinctWithMergeAndReset, WeightedAvgWithMergeAndReset}
 import org.apache.flink.table.util.CollectionBatchExecTable
 import org.apache.flink.test.util.TestBaseUtils
@@ -39,7 +39,7 @@ import org.junit._
 
 import scala.collection.JavaConverters._
 
-class AggregationITCase extends QueryTest {
+class AggregationITCase extends BatchTestBase {
 
   @Test
   def testAggregationWithCaseClass(): Unit = {

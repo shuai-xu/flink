@@ -23,8 +23,8 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.types.{DataTypes, DecimalType}
 import org.apache.flink.table.api.{TableConfigOptions, TableException, Types}
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.sources.csv.CsvTableSource
@@ -38,7 +38,7 @@ import scala.collection.Seq
 /**
   * Aggregate IT case base class.
   */
-abstract class AggregateITCaseBase(testName: String) extends QueryTest {
+abstract class AggregateITCaseBase(testName: String) extends BatchTestBase {
 
   def prepareAggOp(): Unit
 

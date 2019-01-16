@@ -19,7 +19,7 @@
 package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData.numericType
 import org.junit.{Before, Test}
 
@@ -27,7 +27,7 @@ import java.math.{BigDecimal => JBigDecimal}
 
 import scala.collection.Seq
 
-class FlinkLimitRemoveRuleITCase extends QueryTest {
+class FlinkLimitRemoveRuleITCase extends BatchTestBase {
   @Before
   def before(): Unit = {
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)

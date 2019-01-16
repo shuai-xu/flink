@@ -24,8 +24,8 @@ import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.dataformat.Decimal
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.CollectionBatchExecTable
 import org.apache.flink.util.TimeConvertUtils
@@ -38,7 +38,7 @@ import scala.collection.JavaConverters._
 /**
   * Tests for [[AnalyzeStatistic]].
   */
-class AnalyzeStatisticTest extends QueryTest {
+class AnalyzeStatisticTest extends BatchTestBase {
 
   @Test
   def testGenerateTableStats_EmptyColumns(): Unit = {

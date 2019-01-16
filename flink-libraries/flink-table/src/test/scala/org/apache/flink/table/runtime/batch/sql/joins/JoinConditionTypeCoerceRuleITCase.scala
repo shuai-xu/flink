@@ -19,12 +19,12 @@
 package org.apache.flink.table.runtime.batch.sql.joins
 
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData.{nullablesOfNumericData, numericData, numericType}
 import org.junit.{Before, Test}
 
-class JoinConditionTypeCoerceRuleITCase extends QueryTest {
+class JoinConditionTypeCoerceRuleITCase extends BatchTestBase {
   @Before
   def before(): Unit = {
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)

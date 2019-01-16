@@ -22,7 +22,7 @@ import java.util
 
 import org.apache.flink.core.fs.Path
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.sources.parquet.ParquetVectorizedColumnRowTableSource
 import org.apache.flink.table.tpc.TpcUtils.getTpcHQuery
 import org.apache.flink.test.util.TestBaseUtils
@@ -32,7 +32,8 @@ import org.junit.{Before, Test}
 import org.scalatest.prop.PropertyChecks
 
 @RunWith(classOf[Parameterized])
-class TpcHBatchExecWithParquetSourceITCase(caseName: String) extends QueryTest with PropertyChecks {
+class TpcHBatchExecWithParquetSourceITCase(caseName: String)
+    extends BatchTestBase with PropertyChecks {
 
   def getDataPath(tableName: String, schema: Schema): String = {
     getClass.getResource(s"/tpch/parquet-data/$tableName/$tableName.parquet").getPath

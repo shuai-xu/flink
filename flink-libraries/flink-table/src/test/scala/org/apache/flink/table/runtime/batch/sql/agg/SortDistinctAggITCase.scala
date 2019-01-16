@@ -21,7 +21,7 @@ package org.apache.flink.table.runtime.batch.sql.agg
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.functions.aggregate.{CountAggFunction, IntSumAggFunction}
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithMergeAndReset
 import org.junit.Test
 

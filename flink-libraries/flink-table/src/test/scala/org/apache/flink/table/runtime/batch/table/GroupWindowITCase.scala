@@ -24,14 +24,14 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.functions.aggregate.CountAggFunction
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.batch.sql.TestData.{data6, type6}
 import org.apache.flink.test.util.TestBaseUtils
 import org.junit._
 
 import scala.collection.JavaConverters._
 
-class GroupWindowITCase extends QueryTest {
+class GroupWindowITCase extends BatchTestBase {
 
   val data = List(
     (1L, 1, 1d, 1f, new BigDecimal("1"), "Hi"),

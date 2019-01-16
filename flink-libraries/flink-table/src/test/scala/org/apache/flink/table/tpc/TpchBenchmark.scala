@@ -21,14 +21,14 @@ package org.apache.flink.table.tpc
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.core.fs.Path
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.sources.parquet.ParquetVectorizedColumnRowTableSource
 import org.apache.flink.table.tpc.TpcUtils.getTpcHQuery
 import org.apache.flink.table.util.NodeResourceUtil.InferMode
 import org.junit.{Before, Ignore}
 
 @Ignore
-class TpchBenchmark extends QueryTest {
+class TpchBenchmark extends BatchTestBase {
 
   // need rewrite to your data path.
   val parquetPath = "/data/tpch/parquet"

@@ -32,8 +32,8 @@ import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.{TableConfig, TableSchema, _}
 import org.apache.flink.table.functions.aggregate.{CountAggFunction, IntAvgAggFunction, IntSumAggFunction}
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.sources.BatchTableSource
 import org.apache.flink.table.util.DateTimeTestUtil.UTCTimestamp
@@ -41,7 +41,7 @@ import org.apache.flink.table.util.TableSchemaUtil
 import org.apache.flink.types.Row
 import org.junit.{Before, Test}
 
-class GroupWindowITCase extends QueryTest {
+class GroupWindowITCase extends BatchTestBase {
 
   @Before
   def before(): Unit = {

@@ -19,14 +19,14 @@
 package org.apache.flink.table.sources.parquet
 
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.test.util.TestBaseUtils
 
 import org.junit.Test
 
 import scala.collection.JavaConverters._
 
-class ParquetTableSourceITCase extends QueryTest {
+class ParquetTableSourceITCase extends BatchTestBase {
 
   @Test
   def testBatchExecParquetTableSource(): Unit = {

@@ -23,14 +23,14 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.RowsCollectTableSink
 import org.apache.flink.types.Row
 import org.apache.flink.util.AbstractID
 import org.junit.{Test, _}
 
-class StringITCase() extends QueryTest {
+class StringITCase() extends BatchTestBase {
 
   @Before
   def before(): Unit = {

@@ -22,7 +22,7 @@ import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.types.{DataTypes, DecimalType, TypeConverters}
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.types.Row
 
@@ -33,7 +33,7 @@ import scala.collection.Seq
 /**
  * Test type inference of expressions with different argument types.
  */
-class TypeInferenceTest extends QueryTest {
+class TypeInferenceTest extends BatchTestBase {
 
   private val TABLE_NAME = "TABLE_TypeInferenceTest"
 

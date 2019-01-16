@@ -28,7 +28,7 @@ import org.apache.flink.table.api.{Table, TableConfig, TableConfigOptions, Table
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.plan.rules.physical.batch.{BatchExecNestedLoopJoinRule, BatchExecSortMergeJoinRule}
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData._
 import org.apache.flink.table.sinks.{CollectRowTableSink, CollectTableSink}
@@ -49,7 +49,7 @@ import scala.io.Source
 
 class PlanUtilTest extends AbstractTestBase {
 
-  private val conf = QueryTest.initConfigForTest(new TableConfig)
+  private val conf = BatchTestBase.initConfigForTest(new TableConfig)
   private var env: StreamExecutionEnvironment = _
   private var tableEnv: BatchTableEnvironment = _
   private var tmpFile: String = _

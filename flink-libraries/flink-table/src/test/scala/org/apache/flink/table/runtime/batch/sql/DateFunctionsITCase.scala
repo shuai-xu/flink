@@ -21,13 +21,13 @@ package org.apache.flink.table.runtime.batch.sql
 import java.sql.Date
 
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData.{buildInData, buildInType}
 import org.apache.flink.table.runtime.functions.BuildInScalarFunctions
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.junit.{Assert, Before, Ignore, Test}
 
-class DateFunctionsITCase extends QueryTest {
+class DateFunctionsITCase extends BatchTestBase {
 
   @Before
   def before(): Unit = {

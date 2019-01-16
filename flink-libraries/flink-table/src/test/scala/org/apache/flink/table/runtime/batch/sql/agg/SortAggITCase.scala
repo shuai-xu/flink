@@ -30,7 +30,7 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.batch.sql.MyPojo
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.functions.aggregate.{CountAccumulator, CountAggFunction, IntSumAggFunction}
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithMergeAndReset
 import org.apache.flink.types.Row
 import org.junit.Test

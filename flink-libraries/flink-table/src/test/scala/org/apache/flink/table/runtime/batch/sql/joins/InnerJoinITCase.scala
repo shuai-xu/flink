@@ -21,8 +21,8 @@ package org.apache.flink.table.runtime.batch.sql.joins
 import java.math.{BigDecimal => JBigDecimal}
 import java.util
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import JoinType.{BroadcastHashJoin, HashJoin, JoinType, NestedLoopJoin, SortMergeJoin}
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.INT_TYPE_INFO
@@ -43,7 +43,7 @@ import scala.util.Random
 import scala.collection.JavaConverters._
 
 @RunWith(classOf[Parameterized])
-class InnerJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITCaseBase {
+class InnerJoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCaseBase {
 
   private lazy val myUpperCaseData = Seq(
     row(1, "A"),

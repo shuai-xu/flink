@@ -19,14 +19,14 @@
 package org.apache.flink.table.sources.orc
 
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.test.util.TestBaseUtils
 
 import org.junit.Test
 
 import scala.collection.JavaConverters._
 
-class OrcTableSourceITCase extends QueryTest {
+class OrcTableSourceITCase extends BatchTestBase {
 
   @Test
   def testBatchExecOrcTableSource(): Unit = {

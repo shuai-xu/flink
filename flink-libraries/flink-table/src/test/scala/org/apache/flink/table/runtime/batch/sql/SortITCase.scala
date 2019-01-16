@@ -35,7 +35,7 @@ import scala.collection.JavaConverters._
 class SortITCase extends AbstractTestBase {
 
   private val expectedException = ExpectedException.none()
-  private val conf = QueryTest.initConfigForTest(new TableConfig)
+  private val conf = BatchTestBase.initConfigForTest(new TableConfig)
 
   @Before
   def setUp(): Unit = {

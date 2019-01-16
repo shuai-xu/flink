@@ -21,14 +21,14 @@ package org.apache.flink.table.runtime.batch.table
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.Literal
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.util.{CollectionBatchExecTable, TableFunc2}
 import org.apache.flink.test.util.TestBaseUtils
 import org.junit._
 
 import scala.collection.JavaConverters._
 
-class JoinITCase extends QueryTest {
+class JoinITCase extends BatchTestBase {
 
   @Test
   def testJoin(): Unit = {

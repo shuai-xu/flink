@@ -23,7 +23,7 @@ import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.types.Row
 import org.junit._
 
-class SortLimitITCase extends QueryTest {
+class SortLimitITCase extends BatchTestBase {
 
   @Before
   def before(): Unit = {

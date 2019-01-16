@@ -32,7 +32,7 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.factories.{BatchTableSinkFactory, BatchTableSourceFactory, TableFactory}
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.subplan.BatchDAGOptimizer
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.sinks.{BatchTableSink, CollectRowTableSink}
 import org.apache.flink.table.sources.csv.CsvTableSource
@@ -90,7 +90,7 @@ class CacheCsvTableFactory extends BatchTableSourceFactory[BaseRow]
 @RunWith(classOf[Parameterized])
 class CacheAwareRelNodePlanBuilderTest(
   factory: TableFactory,
-  properties: TableProperties) extends QueryTest {
+  properties: TableProperties) extends BatchTestBase {
 
   var tableEnv: BatchTableEnvironment = null
   var table1: Table = null

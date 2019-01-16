@@ -23,11 +23,11 @@ import java.nio.file.Files
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.api.common.restartstrategy.RestartStrategies
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 
 import org.junit.{Assert, Test}
 
-class TableServiceExceptionTest extends QueryTest {
+class TableServiceExceptionTest extends BatchTestBase {
 
   @Test
   def testTableServiceUnavailable(): Unit = {

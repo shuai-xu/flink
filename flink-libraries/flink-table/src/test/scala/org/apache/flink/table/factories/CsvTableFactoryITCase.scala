@@ -30,7 +30,7 @@ import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.dataformat.BinaryString.fromString
 import org.apache.flink.table.descriptors.ConnectorDescriptorValidator
 import org.apache.flink.table.factories.csv.CsvTableFactory
-import org.apache.flink.table.runtime.batch.sql.QueryTest.binaryRow
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.binaryRow
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.TableProperties
 import org.apache.flink.test.util.TestBaseUtils

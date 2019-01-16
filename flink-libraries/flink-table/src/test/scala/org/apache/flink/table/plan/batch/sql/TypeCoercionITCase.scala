@@ -22,8 +22,8 @@ import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
 import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo._
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions, Types}
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
 import org.junit.{Before, Test}
 import org.apache.flink.table.util.DateTimeTestUtil.{UTCDate, UTCTimestamp}
@@ -33,7 +33,7 @@ import scala.collection.Seq
 /**
   * This class includes cases of type coercion.
   */
-class TypeCoercionITCase extends QueryTest {
+class TypeCoercionITCase extends BatchTestBase {
   @Before
   def before(): Unit = {
     registerCollection(

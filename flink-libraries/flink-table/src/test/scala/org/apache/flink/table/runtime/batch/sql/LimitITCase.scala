@@ -24,7 +24,7 @@ import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.util.TestLimitableTableSource
 import org.junit._
 
-class LimitITCase extends QueryTest {
+class LimitITCase extends BatchTestBase {
 
   @Before
   def before(): Unit = {

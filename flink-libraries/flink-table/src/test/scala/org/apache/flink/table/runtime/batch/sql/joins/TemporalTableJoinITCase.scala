@@ -20,18 +20,18 @@ package org.apache.flink.table.runtime.batch.sql.joins
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.utils.TemporalTableUtils._
 import org.junit.{Before, Test}
 
-class TemporalTableJoinITCase extends QueryTest {
+class TemporalTableJoinITCase extends BatchTestBase {
 
   val data = List(
-    QueryTest.row(1, 12L, "Julian"),
-    QueryTest.row(2, 15L, "Hello"),
-    QueryTest.row(3, 15L, "Fabian"),
-    QueryTest.row(8, 11L, "Hello world"),
-    QueryTest.row(9, 12L, "Hello world!"))
+    BatchTestBase.row(1, 12L, "Julian"),
+    BatchTestBase.row(2, 15L, "Hello"),
+    BatchTestBase.row(3, 15L, "Fabian"),
+    BatchTestBase.row(8, 11L, "Hello world"),
+    BatchTestBase.row(9, 12L, "Hello world!"))
 
   val typeInfo = new RowTypeInfo(INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO)
 
@@ -49,9 +49,9 @@ class TemporalTableJoinITCase extends QueryTest {
       "for system_time as of PROCTIME() AS D ON T.id = D.id"
 
     val expected = Seq(
-      QueryTest.row(1, 12, "Julian", "Julian"),
-      QueryTest.row(2, 15, "Hello", "Jark"),
-      QueryTest.row(3, 15, "Fabian", "Fabian"))
+      BatchTestBase.row(1, 12, "Julian", "Julian"),
+      BatchTestBase.row(2, 15, "Hello", "Jark"),
+      BatchTestBase.row(3, 15, "Fabian", "Fabian"))
     checkResult(sql, expected, false)
   }
 
@@ -61,8 +61,8 @@ class TemporalTableJoinITCase extends QueryTest {
         "for system_time as of PROCTIME() AS D ON T.id = D.id AND D.age > 20"
 
     val expected = Seq(
-      QueryTest.row(2, 15, "Hello", "Jark"),
-      QueryTest.row(3, 15, "Fabian", "Fabian"))
+      BatchTestBase.row(2, 15, "Hello", "Jark"),
+      BatchTestBase.row(3, 15, "Fabian", "Fabian"))
     checkResult(sql, expected, false)
   }
 
@@ -72,8 +72,8 @@ class TemporalTableJoinITCase extends QueryTest {
         "for system_time as of PROCTIME() AS D ON T.id = D.id WHERE T.len <= D.age"
 
     val expected = Seq(
-      QueryTest.row(2, 15, "Hello", "Jark", 22),
-      QueryTest.row(3, 15, "Fabian", "Fabian", 33))
+      BatchTestBase.row(2, 15, "Hello", "Jark", 22),
+      BatchTestBase.row(3, 15, "Fabian", "Fabian", 33))
     checkResult(sql, expected, false)
   }
 
@@ -83,8 +83,8 @@ class TemporalTableJoinITCase extends QueryTest {
         "for system_time as of PROCTIME() AS D ON T.id = D.id AND T.content = D.name"
 
     val expected = Seq(
-      QueryTest.row(1, 12, "Julian"),
-      QueryTest.row(3, 15, "Fabian"))
+      BatchTestBase.row(1, 12, "Julian"),
+      BatchTestBase.row(3, 15, "Fabian"))
     checkResult(sql, expected, false)
   }
 
@@ -94,8 +94,8 @@ class TemporalTableJoinITCase extends QueryTest {
         "for system_time as of PROCTIME() AS D ON T.content = D.name AND T.id = D.id"
 
     val expected = Seq(
-      QueryTest.row(1, 12, "Julian"),
-      QueryTest.row(3, 15, "Fabian"))
+      BatchTestBase.row(1, 12, "Julian"),
+      BatchTestBase.row(3, 15, "Fabian"))
     checkResult(sql, expected, false)
   }
 
@@ -105,11 +105,11 @@ class TemporalTableJoinITCase extends QueryTest {
         "for system_time as of PROCTIME() AS D ON T.id = D.id"
 
     val expected = Seq(
-      QueryTest.row(1, 12, "Julian", 11),
-      QueryTest.row(2, 15, "Jark", 22),
-      QueryTest.row(3, 15, "Fabian", 33),
-      QueryTest.row(8, 11, null, null),
-      QueryTest.row(9, 12, null, null))
+      BatchTestBase.row(1, 12, "Julian", 11),
+      BatchTestBase.row(2, 15, "Jark", 22),
+      BatchTestBase.row(3, 15, "Fabian", 33),
+      BatchTestBase.row(8, 11, null, null),
+      BatchTestBase.row(9, 12, null, null))
     checkResult(sql, expected, false)
   }
 
@@ -119,9 +119,9 @@ class TemporalTableJoinITCase extends QueryTest {
         "for system_time as of PROCTIME() AS D ON T.id = D.id"
 
     val expected = Seq(
-      QueryTest.row(1, 12, "Julian", "Julian"),
-      QueryTest.row(2, 15, "Hello", "Jark"),
-      QueryTest.row(3, 15, "Fabian", "Fabian"))
+      BatchTestBase.row(1, 12, "Julian", "Julian"),
+      BatchTestBase.row(2, 15, "Hello", "Jark"),
+      BatchTestBase.row(3, 15, "Fabian", "Fabian"))
     checkResult(sql, expected, false)
   }
 
@@ -131,8 +131,8 @@ class TemporalTableJoinITCase extends QueryTest {
         "for system_time as of PROCTIME() AS D ON T.id = D.id AND D.age > 20"
 
     val expected = Seq(
-      QueryTest.row(2, 15, "Hello", "Jark"),
-      QueryTest.row(3, 15, "Fabian", "Fabian"))
+      BatchTestBase.row(2, 15, "Hello", "Jark"),
+      BatchTestBase.row(3, 15, "Fabian", "Fabian"))
     checkResult(sql, expected, false)
   }
 
@@ -142,8 +142,8 @@ class TemporalTableJoinITCase extends QueryTest {
         "for system_time as of PROCTIME() AS D ON T.id = D.id WHERE T.len <= D.age"
 
     val expected = Seq(
-      QueryTest.row(2, 15, "Hello", "Jark", 22),
-      QueryTest.row(3, 15, "Fabian", "Fabian", 33))
+      BatchTestBase.row(2, 15, "Hello", "Jark", 22),
+      BatchTestBase.row(3, 15, "Fabian", "Fabian", 33))
     checkResult(sql, expected, false)
   }
 
@@ -155,10 +155,10 @@ class TemporalTableJoinITCase extends QueryTest {
         "WHERE T.id > 1"
 
     val expected = Seq(
-      QueryTest.row(2, 15, "Hello", null, null),
-      QueryTest.row(3, 15, "Fabian", "Fabian", 33),
-      QueryTest.row(8, 11, "Hello world", null, null),
-      QueryTest.row(9, 12, "Hello world!", null, null))
+      BatchTestBase.row(2, 15, "Hello", null, null),
+      BatchTestBase.row(3, 15, "Fabian", "Fabian", 33),
+      BatchTestBase.row(8, 11, "Hello world", null, null),
+      BatchTestBase.row(9, 12, "Hello world!", null, null))
     checkResult(sql, expected, false)
   }
 
@@ -168,8 +168,8 @@ class TemporalTableJoinITCase extends QueryTest {
         "for system_time as of PROCTIME() AS D ON T.id = D.id AND T.content = D.name"
 
     val expected = Seq(
-      QueryTest.row(1, 12, "Julian"),
-      QueryTest.row(3, 15, "Fabian"))
+      BatchTestBase.row(1, 12, "Julian"),
+      BatchTestBase.row(3, 15, "Fabian"))
     checkResult(sql, expected, false)
   }
 
@@ -179,11 +179,11 @@ class TemporalTableJoinITCase extends QueryTest {
         "for system_time as of PROCTIME() AS D ON T.id = D.id"
 
     val expected = Seq(
-      QueryTest.row(1, 12, "Julian", 11),
-      QueryTest.row(2, 15, "Jark", 22),
-      QueryTest.row(3, 15, "Fabian", 33),
-      QueryTest.row(8, 11, null, null),
-      QueryTest.row(9, 12, null, null))
+      BatchTestBase.row(1, 12, "Julian", 11),
+      BatchTestBase.row(2, 15, "Jark", 22),
+      BatchTestBase.row(3, 15, "Fabian", 33),
+      BatchTestBase.row(8, 11, null, null),
+      BatchTestBase.row(9, 12, null, null))
     checkResult(sql, expected, false)
   }
 }

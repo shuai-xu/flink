@@ -25,7 +25,7 @@ import org.junit.Test
 
 import scala.collection.JavaConverters._
 
-class TableSourceITCase extends QueryTest {
+class TableSourceITCase extends BatchTestBase {
 
   @Test
   def testCsvTableSourceWithProjectionWithCountStar(): Unit = {

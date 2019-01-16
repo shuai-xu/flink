@@ -44,7 +44,7 @@ import static org.apache.flink.test.util.TestBaseUtils.compareResultAsText;
 /**
  * Integration tests for batch SQL.
  */
-public class JavaSqlITCase extends QueryTest {
+public class JavaSqlITCase extends BatchTestBase {
 
 	public static List<Row> getResult(Table table) {
 		return JavaConverters.seqAsJavaListConverter(table.collect()).asJava();

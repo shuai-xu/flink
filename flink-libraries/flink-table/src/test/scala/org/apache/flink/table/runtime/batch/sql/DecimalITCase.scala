@@ -22,7 +22,7 @@ import java.math.{BigDecimal => JBigDecimal}
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, BigDecimalTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.types.Row
 
@@ -34,7 +34,7 @@ import scala.collection.Seq
   * Conformance test of SQL type Decimal(p,s).
   * Served also as documentation of our Decimal behaviors.
   */
-class DecimalITCase extends QueryTest {
+class DecimalITCase extends BatchTestBase {
 
   private case class Coll(colTypes: Seq[TypeInformation[_]], rows: Seq[Row])
 

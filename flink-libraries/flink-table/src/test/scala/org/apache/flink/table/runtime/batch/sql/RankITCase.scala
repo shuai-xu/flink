@@ -19,13 +19,13 @@
 package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.junit._
 
 import scala.collection.Seq
 
-class RankITCase extends QueryTest {
+class RankITCase extends BatchTestBase {
 
   @Before
   def before(): Unit = {

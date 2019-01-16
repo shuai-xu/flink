@@ -22,13 +22,13 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.{TableConfigOptions, Types}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.utils.CommonTestData.createCsvTableSource
 import org.junit.Test
 
 import scala.collection.Seq
 
-class DeadlockBreakupITCase extends QueryTest {
+class DeadlockBreakupITCase extends BatchTestBase {
 
   @Test
   def testReuseSubPlan_ReusedNodeIsNotBarrierNode(): Unit = {

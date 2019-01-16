@@ -22,12 +22,12 @@ import java.util.TimeZone
 
 import org.apache.calcite.tools.ValidationException
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.junit.{Before, Test}
 
-class BuildInFunctionsITCase extends QueryTest {
+class BuildInFunctionsITCase extends BatchTestBase {
 
   @Before
   def before(): Unit = {

@@ -20,14 +20,14 @@ package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions, Types}
-import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.junit.{Before, Test}
 
 import scala.collection.Seq
 
-class GroupingSetsITCase extends QueryTest {
+class GroupingSetsITCase extends BatchTestBase {
 
   private val TABLE_NAME = "MyTable"
   private val TABLE_WITH_NULLS_NAME = "MyTableWithNulls"

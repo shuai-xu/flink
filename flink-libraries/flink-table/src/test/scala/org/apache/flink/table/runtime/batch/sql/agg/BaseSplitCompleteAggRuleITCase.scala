@@ -20,8 +20,8 @@ package org.apache.flink.table.runtime.batch.sql.agg
 
 import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
-import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batch.sql.QueryTest._
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase._
 import org.apache.flink.table.runtime.batch.sql.TestData._
 
 import scala.collection.JavaConversions._
@@ -29,7 +29,7 @@ import scala.collection.JavaConverters._
 
 import org.junit.{Before, Test}
 
-abstract class BaseSplitCompleteAggRuleITCase extends QueryTest {
+abstract class BaseSplitCompleteAggRuleITCase extends BatchTestBase {
 
   def prepareAggOp(tableEnv: TableEnvironment): Unit
 

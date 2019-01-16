@@ -28,7 +28,7 @@ import org.apache.hadoop.hive.ql.udf.generic.GenericUDF
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
 
-class UdfITCase extends QueryTest {
+class UdfITCase extends BatchTestBase {
 
   @Before
   def before(): Unit = {
