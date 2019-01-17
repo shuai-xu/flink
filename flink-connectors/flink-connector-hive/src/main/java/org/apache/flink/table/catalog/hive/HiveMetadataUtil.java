@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.catalog.hive;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.table.api.Column;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableSchema;
@@ -40,6 +41,7 @@ import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.hive.config.HiveDbConfig;
+import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.util.PropertiesUtil;
@@ -53,7 +55,6 @@ import org.apache.hadoop.hive.metastore.api.ColumnStatisticsDesc;
 import org.apache.hadoop.hive.metastore.api.ColumnStatisticsObj;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.DateColumnStatsData;
-import org.apache.hadoop.hive.metastore.api.Decimal;
 import org.apache.hadoop.hive.metastore.api.DecimalColumnStatsData;
 import org.apache.hadoop.hive.metastore.api.DoubleColumnStatsData;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
@@ -65,10 +66,14 @@ import org.apache.hadoop.hive.metastore.api.StringColumnStatsData;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -96,6 +101,7 @@ import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TA
  * Utils for meta objects conversion between Flink and Hive.
  */
 public class HiveMetadataUtil {
+	private static final Logger LOG = LoggerFactory.getLogger(HiveMetadataUtil.class);
 
 	/**
 	 * The number of milliseconds in a day.
@@ -220,7 +226,7 @@ public class HiveMetadataUtil {
 
 		if (hiveColStats != null) {
 			for (ColumnStatisticsObj colStatsObj : hiveColStats) {
-				ColumnStats columnStats = createTableColumnStats(colStatsObj.getStatsData());
+				ColumnStats columnStats = createTableColumnStats(convert(colStatsObj.getColType()), colStatsObj.getStatsData());
 
 				if (colStats != null) {
 					colStats.put(colStatsObj.getColName(), columnStats);
@@ -246,7 +252,7 @@ public class HiveMetadataUtil {
 			if (colStats.containsKey(hiveColName)) {
 				ColumnStats flinkColStat = colStats.get(field.getName());
 
-				ColumnStatisticsData statsData = getColumnStatisticsData(hiveColType, flinkColStat);
+				ColumnStatisticsData statsData = getColumnStatisticsData(convert(hiveColType), flinkColStat);
 				ColumnStatisticsObj columnStatisticsObj = new ColumnStatisticsObj(hiveColName, hiveColType, statsData);
 				colStatsList.add(columnStatisticsObj);
 			}
@@ -257,65 +263,103 @@ public class HiveMetadataUtil {
 
 	/**
 	 * Convert Flink ColumnStats to Hive ColumnStatisticsData according to Hive column type.
-	 * Note that Hive column data types considered here should be within those listed in {@link #convert(String)},
-	 * otherwise, the data type is not supported by Flink.
+	 * Note we currently assume that, in Flink, the max and min of ColumnStats will be same type as the Flink column type.
+	 * For example, for SHORT and Long columns, the max and min of their ColumnStats should be of type SHORT and LONG.
 	 */
-	private static ColumnStatisticsData getColumnStatisticsData(String colType, ColumnStats colStat) {
-		switch (colType) {
-			case serdeConstants.BOOLEAN_TYPE_NAME:
-				BooleanColumnStatsData boolStats = new BooleanColumnStatsData(0, 0, colStat.nullCount());
+	private static ColumnStatisticsData getColumnStatisticsData(InternalType colType, ColumnStats colStat) {
+		if (colType.equals(CharType.INSTANCE)) {
+			return ColumnStatisticsData.stringStats(
+				new StringColumnStatsData(colStat.maxLen(), colStat.avgLen(), colStat.nullCount(), colStat.ndv()));
+		} else if (colType instanceof DecimalType) {
+			DecimalColumnStatsData decimalStats = new DecimalColumnStatsData(colStat.nullCount(), colStat.ndv());
 
-				return ColumnStatisticsData.booleanStats(boolStats);
-			case serdeConstants.TINYINT_TYPE_NAME:
-			case serdeConstants.SMALLINT_TYPE_NAME:
-			case serdeConstants.INT_TYPE_NAME:
-			case serdeConstants.BIGINT_TYPE_NAME:
-				LongColumnStatsData longStats = new LongColumnStatsData(colStat.nullCount(), colStat.ndv());
-				longStats.setHighValue(((Number) colStat.max()).longValue());
-				longStats.setLowValue(((Number) colStat.min()).longValue());
+			decimalStats.setHighValue(fromFlinkDecimal((Decimal) colStat.max()));
+			decimalStats.setLowValue(fromFlinkDecimal((Decimal) colStat.min()));
 
-				return ColumnStatisticsData.longStats(longStats);
-			case serdeConstants.FLOAT_TYPE_NAME:
-			case serdeConstants.DOUBLE_TYPE_NAME:
-				DoubleColumnStatsData doubleStats = new DoubleColumnStatsData(colStat.nullCount(), colStat.ndv());
-				doubleStats.setHighValue((Double) colStat.max());
-				doubleStats.setLowValue((Double) colStat.min());
+			return ColumnStatisticsData.decimalStats(decimalStats);
+		} else if (colType.equals(StringType.INSTANCE)) {
+			return ColumnStatisticsData.stringStats(
+				new StringColumnStatsData(colStat.maxLen(), colStat.avgLen(), colStat.nullCount(), colStat.ndv()));
+		} else if (colType.equals(BooleanType.INSTANCE)) {
+			BooleanColumnStatsData boolStats = new BooleanColumnStatsData(0, 0, colStat.nullCount());
 
-				return ColumnStatisticsData.doubleStats(doubleStats);
-			case serdeConstants.STRING_TYPE_NAME:
-//			case serdeConstants.CHAR_TYPE_NAME: TODO: ADD Char type back
-				return ColumnStatisticsData.stringStats(
-					new StringColumnStatsData(colStat.maxLen(), colStat.avgLen(), colStat.nullCount(), colStat.ndv()));
-			case serdeConstants.DATE_TYPE_NAME:
-			case serdeConstants.TIMESTAMP_TYPE_NAME:
-				DateColumnStatsData dateStats = new DateColumnStatsData(colStat.nullCount(), colStat.ndv());
+			return ColumnStatisticsData.booleanStats(boolStats);
+		} else if (colType.equals(ByteType.INSTANCE)) {
+			LongColumnStatsData tinyint = new LongColumnStatsData(colStat.nullCount(), colStat.ndv());
+			tinyint.setHighValue(((Byte) colStat.max()).longValue());
+			tinyint.setLowValue(((Byte) colStat.min()).longValue());
 
-				dateStats.setHighValue(new org.apache.hadoop.hive.metastore.api.Date(
-					((Date) colStat.max()).getTime() / MILLIS_PER_DAY));
-				dateStats.setLowValue(new org.apache.hadoop.hive.metastore.api.Date(
-					((Date) colStat.min()).getTime() / MILLIS_PER_DAY));
+			return ColumnStatisticsData.longStats(tinyint);
+		} else if (colType.equals(ShortType.INSTANCE)) {
+			LongColumnStatsData smallint = new LongColumnStatsData(colStat.nullCount(), colStat.ndv());
+			smallint.setHighValue(((Short) colStat.max()).longValue());
+			smallint.setLowValue(((Short) colStat.min()).longValue());
 
-				return ColumnStatisticsData.dateStats(dateStats);
-			case serdeConstants.DECIMAL_TYPE_NAME:
-				DecimalColumnStatsData decimalStats =
-					new DecimalColumnStatsData(colStat.nullCount(), colStat.ndv());
+			return ColumnStatisticsData.longStats(smallint);
+		} else if (colType.equals(IntType.INSTANCE)) {
+			LongColumnStatsData integer = new LongColumnStatsData(colStat.nullCount(), colStat.ndv());
+			integer.setHighValue(((Number) colStat.max()).longValue());
+			integer.setLowValue(((Number) colStat.min()).longValue());
 
-				decimalStats.setHighValue((Decimal) colStat.max());
-				decimalStats.setLowValue((Decimal) colStat.min());
+			return ColumnStatisticsData.longStats(integer);
+		} else if (colType.equals(LongType.INSTANCE)) {
+			LongColumnStatsData longStats = new LongColumnStatsData(colStat.nullCount(), colStat.ndv());
+			longStats.setHighValue(((Long) colStat.max()).longValue());
+			longStats.setLowValue(((Long) colStat.min()).longValue());
 
-				return ColumnStatisticsData.decimalStats(decimalStats);
-			default:
-				// TODO: add warn logging
-				return new ColumnStatisticsData();
+			return ColumnStatisticsData.longStats(longStats);
+		} else if (colType instanceof TimestampType) {
+			LongColumnStatsData timestampStats = new LongColumnStatsData(colStat.nullCount(), colStat.ndv());
+			timestampStats.setHighValue(((Timestamp) colStat.max()).getTime());
+			timestampStats.setLowValue(((Timestamp) colStat.min()).getTime());
+
+			return ColumnStatisticsData.longStats(timestampStats);
+		} else if (colType.equals(FloatType.INSTANCE)) {
+			DoubleColumnStatsData floatStats = new DoubleColumnStatsData(colStat.nullCount(), colStat.ndv());
+			floatStats.setHighValue((Float) colStat.max());
+			floatStats.setLowValue((Float) colStat.min());
+
+			return ColumnStatisticsData.doubleStats(floatStats);
+		} else if (colType.equals(DoubleType.INSTANCE)) {
+			DoubleColumnStatsData doubleStats = new DoubleColumnStatsData(colStat.nullCount(), colStat.ndv());
+			doubleStats.setHighValue((Double) colStat.max());
+			doubleStats.setLowValue((Double) colStat.min());
+
+			return ColumnStatisticsData.doubleStats(doubleStats);
+		} else if (colType.equals(DateType.DATE)) {
+			DateColumnStatsData dateStats = new DateColumnStatsData(colStat.nullCount(), colStat.ndv());
+
+			dateStats.setHighValue(new org.apache.hadoop.hive.metastore.api.Date(((Date) colStat.max()).getTime() / MILLIS_PER_DAY));
+			dateStats.setLowValue(new org.apache.hadoop.hive.metastore.api.Date(((Date) colStat.min()).getTime() / MILLIS_PER_DAY));
+
+			return ColumnStatisticsData.dateStats(dateStats);
+		} else {
+			LOG.warn("Flink does not support converting ColumnStats '{}' for Hive column type '{}' yet.", colStat, colType);
+			return new ColumnStatisticsData();
 		}
+	}
+
+	@VisibleForTesting
+	protected static Decimal fromHiveDecimal(org.apache.hadoop.hive.metastore.api.Decimal hiveDecimal) {
+		BigDecimal bigDecimal = new BigDecimal(new BigInteger(hiveDecimal.getUnscaled()), hiveDecimal.getScale());
+		return Decimal.fromBigDecimal(bigDecimal, bigDecimal.precision(), bigDecimal.scale());
+	}
+
+	@VisibleForTesting
+	protected static org.apache.hadoop.hive.metastore.api.Decimal fromFlinkDecimal(Decimal flinkDecimal) {
+		BigDecimal bigDecimal = flinkDecimal.toBigDecimal();
+		return new org.apache.hadoop.hive.metastore.api.Decimal(
+				ByteBuffer.wrap(bigDecimal.unscaledValue().toByteArray()), (short) bigDecimal.scale());
 	}
 
 	/**
 	 * Create Flink ColumnStats from Hive ColumnStatisticsData.
+	 * Note we currently assume that, in Flink, the max and min of ColumnStats will be same type as the Flink column type.
+	 * For example, for SHORT and Long columns, the max and min of their ColumnStats should be of type SHORT and LONG.
 	 */
-	private static ColumnStats createTableColumnStats(ColumnStatisticsData statsData) {
-		if (statsData.isSetBinaryStats()) {
-			BinaryColumnStatsData binaryStats = statsData.getBinaryStats();
+	private static ColumnStats createTableColumnStats(InternalType colType, ColumnStatisticsData stats) {
+		if (stats.isSetBinaryStats()) {
+			BinaryColumnStatsData binaryStats = stats.getBinaryStats();
 			return new ColumnStats(
 				null,
 				binaryStats.getNumNulls(),
@@ -323,8 +367,8 @@ public class HiveMetadataUtil {
 				(int) binaryStats.getMaxColLen(),
 				null,
 				null);
-		} else if (statsData.isSetBooleanStats()) {
-			BooleanColumnStatsData booleanStats = statsData.getBooleanStats();
+		} else if (stats.isSetBooleanStats()) {
+			BooleanColumnStatsData booleanStats = stats.getBooleanStats();
 			return new ColumnStats(
 				null,
 				booleanStats.getNumNulls(),
@@ -332,8 +376,8 @@ public class HiveMetadataUtil {
 				null,
 				null,
 				null);
-		} else if (statsData.isSetDateStats()) {
-			DateColumnStatsData dateStats = statsData.getDateStats();
+		} else if (stats.isSetDateStats()) {
+			DateColumnStatsData dateStats = stats.getDateStats();
 			return new ColumnStats(
 				dateStats.getNumDVs(),
 				dateStats.getNumNulls(),
@@ -341,39 +385,61 @@ public class HiveMetadataUtil {
 				null,
 				new Date(dateStats.getHighValue().getDaysSinceEpoch() * MILLIS_PER_DAY),
 				new Date(dateStats.getLowValue().getDaysSinceEpoch() * MILLIS_PER_DAY));
-		} else if (statsData.isSetDecimalStats()) {
-			DecimalColumnStatsData decimalStats = statsData.getDecimalStats();
-
-			Decimal highValue = decimalStats.getHighValue();
-			Decimal lowValue = decimalStats.getLowValue();
+		} else if (stats.isSetDecimalStats()) {
+			DecimalColumnStatsData decimalStats = stats.getDecimalStats();
 
 			return new ColumnStats(
 				decimalStats.getNumDVs(),
 				decimalStats.getNumNulls(),
 				null,
 				null,
-				new BigDecimal(new BigInteger(highValue.getUnscaled()), highValue.getScale()),
-				new BigDecimal(new BigInteger(lowValue.getUnscaled()), lowValue.getScale()));
-		} else if (statsData.isSetDoubleStats()) {
-			DoubleColumnStatsData doubleStats = statsData.getDoubleStats();
-			return new ColumnStats(
-				doubleStats.getNumDVs(),
-				doubleStats.getNumNulls(),
-				null,
-				null,
-				doubleStats.getHighValue(),
-				doubleStats.getLowValue());
-		} else if (statsData.isSetLongStats()) {
-			LongColumnStatsData longStats = statsData.getLongStats();
-			return new ColumnStats(
-				longStats.getNumDVs(),
-				longStats.getNumNulls(),
-				null,
-				null,
-				longStats.getHighValue(),
-				longStats.getLowValue());
-		} else if (statsData.isSetStringStats()) {
-			StringColumnStatsData stringStats = statsData.getStringStats();
+				fromHiveDecimal(decimalStats.getHighValue()),
+				fromHiveDecimal(decimalStats.getLowValue()));
+		} else if (stats.isSetDoubleStats()) {
+			if (colType.equals(FloatType.INSTANCE)) {
+				DoubleColumnStatsData floatStats = stats.getDoubleStats();
+				return new ColumnStats(
+					floatStats.getNumDVs(),
+					floatStats.getNumNulls(),
+					null,
+					null,
+					(float) floatStats.getHighValue(),
+					(float) floatStats.getLowValue());
+			} else if (colType.equals(DoubleType.INSTANCE)) {
+				DoubleColumnStatsData doubleStats = stats.getDoubleStats();
+				return new ColumnStats(
+					doubleStats.getNumDVs(),
+					doubleStats.getNumNulls(),
+					null,
+					null,
+					doubleStats.getHighValue(),
+					doubleStats.getLowValue());
+			} else {
+				LOG.warn("Flink does not support converting ColumnStatisticsData '{}' for Hive column type '{}' yet.", stats, colType);
+				return null;
+			}
+		} else if (stats.isSetLongStats()) {
+			if (colType.equals(ByteType.INSTANCE)) {
+				LongColumnStatsData tinyint = stats.getLongStats();
+				return new ColumnStats(tinyint.getNumDVs(), tinyint.getNumNulls(), null, null, new Byte(((Long) tinyint.getHighValue()).byteValue()), new Byte(((Long) tinyint.getLowValue()).byteValue()));
+			} else if (colType.equals(ShortType.INSTANCE)) {
+				LongColumnStatsData smallint = stats.getLongStats();
+				return new ColumnStats(smallint.getNumDVs(), smallint.getNumNulls(), null, null, new Short(((Long) smallint.getHighValue()).shortValue()), new Short(((Long) smallint.getLowValue()).shortValue()));
+			} else if (colType.equals(IntType.INSTANCE)) {
+				LongColumnStatsData integer = stats.getLongStats();
+				return new ColumnStats(integer.getNumDVs(), integer.getNumNulls(), null, null, new Integer(((Long) integer.getHighValue()).intValue()), new Integer(((Long) integer.getLowValue()).intValue()));
+			} else if (colType.equals(LongType.INSTANCE)) {
+				LongColumnStatsData longStats = stats.getLongStats();
+				return new ColumnStats(longStats.getNumDVs(), longStats.getNumNulls(), null, null, new Long(((Long) longStats.getHighValue()).longValue()), new Long(((Long) longStats.getLowValue()).longValue()));
+			} else if (colType instanceof TimestampType) {
+				LongColumnStatsData timestampStats = stats.getLongStats();
+				return new ColumnStats(timestampStats.getNumDVs(), timestampStats.getNumNulls(), null, null, new Timestamp(timestampStats.getHighValue()), new Timestamp(timestampStats.getLowValue()));
+			} else {
+				LOG.warn("Flink does not support converting ColumnStatisticsData '{}' for Hive column type '{}' yet.", stats, colType);
+				return null;
+			}
+		} else if (stats.isSetStringStats()) {
+			StringColumnStatsData stringStats = stats.getStringStats();
 			return new ColumnStats(
 				stringStats.getNumDVs(),
 				stringStats.getNumNulls(),
@@ -381,8 +447,10 @@ public class HiveMetadataUtil {
 				(int) stringStats.getMaxColLen(),
 				null,
 				null);
+		} else {
+			LOG.warn("Flink does not support converting ColumnStatisticsData '{}' for Hive column type '{}' yet.", stats, colType);
+			return null;
 		}
-		return null;
 	}
 
 	private static LinkedHashSet<String> getPartitionCols(Table hiveTable) {
@@ -517,17 +585,16 @@ public class HiveMetadataUtil {
 
 	/**
 	 * Convert a hive type to Flink internal type.
-	 * Note that even though serdeConstants.DATETIME_TYPE_NAME exists, Hive hasn't officially support DATETIME type yet
+	 * Note that even though serdeConstants.DATETIME_TYPE_NAME exists, Hive hasn't officially support DATETIME type yet.
 	 */
 	public static InternalType convert(String hiveType) {
 		// Note: Any type match changes should be updated in documentation of data type mapping at /dev/table/catalog.md
 
 		// First, handle types that have parameters such as CHAR(5), DECIMAL(6, 2), etc
-		if (hiveType.toLowerCase().startsWith(serdeConstants.CHAR_TYPE_NAME) ||
-			hiveType.toLowerCase().startsWith(serdeConstants.VARCHAR_TYPE_NAME)) {
+		if (isVarcharOrCharType(hiveType)) {
 			// For CHAR(p) and VARCHAR(p) types, map them to String for now because Flink doesn't yet support them.
 			return StringType.INSTANCE;
-		} else if (hiveType.toLowerCase().startsWith(serdeConstants.DECIMAL_TYPE_NAME)) {
+		} else if (isDecimalType(hiveType)) {
 			return DecimalType.of(hiveType);
 		}
 
@@ -558,6 +625,21 @@ public class HiveMetadataUtil {
 				throw new UnsupportedOperationException(
 					String.format("Flink doesn't support Hive's type %s yet.", hiveType));
 		}
+	}
+
+	/**
+	 * Check if a hive type in string is VARCHAR(p) or CHAR(p).
+	 */
+	private static boolean isVarcharOrCharType(String hiveType) {
+		return hiveType.toLowerCase().startsWith(serdeConstants.CHAR_TYPE_NAME) ||
+			hiveType.toLowerCase().startsWith(serdeConstants.VARCHAR_TYPE_NAME);
+	}
+
+	/**
+	 * Check if a hive type in string is DECIMAL(X, Y).
+	 */
+	private static boolean isDecimalType(String hiveType) {
+		return hiveType.toLowerCase().startsWith(serdeConstants.DECIMAL_TYPE_NAME);
 	}
 
 	/**

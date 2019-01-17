@@ -21,7 +21,10 @@ package org.apache.flink.table.plan.stats
 import java.lang.{Double, Long}
 
 /**
-  * column statistics
+  * Column statistics.
+  * Note we currently assume that, in Flink, the max and min of ColumnStats will be same type as
+  * the Flink column type. For example, for SHORT and Long columns, the max and min of their
+  * ColumnStats should be of type SHORT and LONG. This assumption might change in the future.
   *
   * @param ndv       number of distinct values (it may be an inaccurate value.)
   * @param nullCount number of nulls (it may be an inaccurate value.)

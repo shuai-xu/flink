@@ -27,13 +27,17 @@ import org.apache.flink.table.api.exceptions.PartitionAlreadyExistException;
 import org.apache.flink.table.api.exceptions.PartitionNotExistException;
 import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
 import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.TimestampType;
+import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
 
 import org.junit.Test;
 
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -266,7 +270,6 @@ public abstract class CatalogTestBase {
 		// Non-partitioned table
 		catalog.createDatabase(db1, createDb(), false);
 
-		// TODO: [BLINK-18699290] support table stats for CHAR, DECIMAL AND TIMESTAMP type in HiveCatalog
 		TableSchema schema = new TableSchema(
 			new String[] {
 				"1",
@@ -277,18 +280,24 @@ public abstract class CatalogTestBase {
 				"6",
 				"7",
 				"8",
-				"9"
+				"9",
+				"10",
+				"11",
+				"12"
 			},
 			new InternalType[]{
 				DataTypes.STRING,
 				DataTypes.BOOLEAN,
-				DataTypes.INT,
-				DataTypes.SHORT,
-				DataTypes.LONG,
 				DataTypes.BYTE,
+				DataTypes.SHORT,
+				DataTypes.INT,
+				DataTypes.LONG,
 				DataTypes.FLOAT,
 				DataTypes.DOUBLE,
-				DataTypes.DATE
+				DataTypes.DATE,
+				DataTypes.CHAR,
+				new DecimalType(6, 2),
+				TimestampType.TIMESTAMP,
 			}
 		);
 
@@ -298,37 +307,37 @@ public abstract class CatalogTestBase {
 			getTableProperties());
 		catalog.createTable(path1, table, false);
 
-		assertEquals(table, catalog.getTable(path1));
-
-		TableStats tableStats = createTableStats();
+		TableStats tableStats = new TableStats(100L, new HashMap<String, ColumnStats>() {{
+			// StringType
+			put("1", new ColumnStats(11L, 1L, 1.1, 1, null, null));
+			// BooleanType
+			put("2", new ColumnStats(null, 2L, null, null, null, null));
+			// ByteType
+			put("3", new ColumnStats(13L, 3L, null, null, Byte.valueOf((byte) 3), Byte.valueOf((byte) 2)));
+			// ShortType
+			put("4", new ColumnStats(15L, 5L, null, null, Short.valueOf((short) 4), Short.valueOf((short) 3)));
+			// IntType
+			put("5", new ColumnStats(14L, 4L, null, null, Integer.valueOf(5), Integer.valueOf(4)));
+			// LongType
+			put("6", new ColumnStats(16L, 7L, null, null, Long.valueOf(6L), Long.valueOf(5L)));
+			// FloatType
+			put("7", new ColumnStats(17L, 8L, null, null, Float.valueOf(8.8f), Float.valueOf(7.7f)));
+			// DoubleType
+			put("8", new ColumnStats(18L, 9L, null, null, Double.valueOf(9.9d), Double.valueOf(8.8d)));
+			// DateType
+			put("9", new ColumnStats(19L, 10L, null, null, new Date(1547529235000L), new Date(1540529200000L)));
+			// CharType
+			put("10", new ColumnStats(19L, 10L, 1.0, 1, null, null));
+			// DecimalType
+			put("11", new ColumnStats(19L, 10L, null, null, Decimal.fromLong(999999, 6, 3), Decimal.fromLong(666666, 6, 3)));
+			// TimetampType.Timestamp
+			put("12", new ColumnStats(19L, 10L, null, null, new Timestamp(1547529235000L), new Timestamp(1540529200000L)));
+		}});
 
 		catalog.alterTableStats(path1, tableStats, false);
 		TableStats actual = catalog.getTableStats(path1);
 
 		assertEquals(tableStats.toString(), actual.toString());
-	}
-
-	private TableStats createTableStats() {
-		return new TableStats(100L, new HashMap<String, ColumnStats>() {{
-			// DataTypes.STRING
-			put("1", new ColumnStats(11L, 1L, 1.1, 1, null, null));
-			// DataTypes.BOOLEAN,
-			put("2", new ColumnStats(null, 2L, null, null, null, null));
-			// DataTypes.BYTE
-			put("3", new ColumnStats(13L, 3L, null, null, 4, 3));
-			// DataTypes.INT
-			put("4", new ColumnStats(14L, 4L, null, null, 5, 4));
-			// DataTypes.SHORT
-			put("5", new ColumnStats(15L, 5L, null, null, 6, 5));
-			// DataTypes.LONG
-			put("6", new ColumnStats(16L, 7L, null, null, 7, 6));
-			// DataTypes.FLOAT
-			put("7", new ColumnStats(17L, 8L, null, null, 8.8, 7.7));
-			// DataTypes.DOUBLE
-			put("8", new ColumnStats(18L, 9L, null, null, 9.9, 8.8));
-			// DataTypes.DATE
-			put("9", new ColumnStats(19L, 10L, null, null, new Date(1547529235000L), new Date(1540529200000L)));
-		}});
 	}
 
 	@Test
