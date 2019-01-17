@@ -109,14 +109,16 @@ public class BatchManagedMemCalculatorOnConfig extends BatchExecNodeVisitor {
 		super.visitInputs(hashAgg);
 		int	reservedMem = NodeResourceUtil.getHashAggManagedMemory(tableConf);
 		int	preferMem = NodeResourceUtil.getHashAggManagedPreferredMemory(tableConf);
-		hashAgg.getResource().setManagedMem(reservedMem, preferMem, preferMem);
+		int	maxMem = NodeResourceUtil.getHashAggManagedMaxMemory(tableConf);
+		hashAgg.getResource().setManagedMem(reservedMem, preferMem, maxMem);
 	}
 
 	private void calculateHashWindowAgg(BatchExecHashWindowAggregateBase hashWindowAgg) {
 		super.visitInputs(hashWindowAgg);
 		int reservedMem = NodeResourceUtil.getHashAggManagedMemory(tableConf);
 		int preferMem = NodeResourceUtil.getHashAggManagedPreferredMemory(tableConf);
-		hashWindowAgg.getResource().setManagedMem(reservedMem, preferMem, preferMem);
+		int	maxMem = NodeResourceUtil.getHashAggManagedMaxMemory(tableConf);
+		hashWindowAgg.getResource().setManagedMem(reservedMem, preferMem, maxMem);
 	}
 
 	@Override
@@ -134,7 +136,8 @@ public class BatchManagedMemCalculatorOnConfig extends BatchExecNodeVisitor {
 		super.visitInputs(hashJoin);
 		int reservedMem = NodeResourceUtil.getHashJoinTableManagedMemory(tableConf);
 		int preferMem = NodeResourceUtil.getHashJoinTableManagedPreferredMemory(tableConf);
-		hashJoin.getResource().setManagedMem(reservedMem, preferMem, preferMem);
+		int maxMem = NodeResourceUtil.getHashJoinTableManagedMaxMemory(tableConf);
+		hashJoin.getResource().setManagedMem(reservedMem, preferMem, maxMem);
 	}
 
 	@Override

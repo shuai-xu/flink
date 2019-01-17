@@ -144,7 +144,7 @@ public class NodeResourceUtil {
 	 * @return the prefer managedMemory for sort buffer.
 	 */
 	public static int getSortBufferManagedPreferredMemory(Configuration tableConf) {
-		return tableConf.getInteger(TableConfigOptions.SQL_EXEC_SORT_BUFFER_PREFER_MEM);
+		return tableConf.getInteger(TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_PREFER_MEM);
 	}
 
 	/**
@@ -153,7 +153,7 @@ public class NodeResourceUtil {
 	 * @return the max managedMemory for sort buffer.
 	 */
 	public static int getSortBufferManagedMaxMemory(Configuration tableConf) {
-		return tableConf.getInteger(TableConfigOptions.SQL_EXEC_SORT_BUFFER_MAX_MEM);
+		return tableConf.getInteger(TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MAX_MEM);
 	}
 
 	/**
@@ -326,7 +326,7 @@ public class NodeResourceUtil {
 	 * @return the preferred managedMemory for hashJoin table.
 	 */
 	public static int getHashJoinTableManagedPreferredMemory(Configuration tableConf) {
-		int memory = tableConf.getInteger(TableConfigOptions.SQL_EXEC_HASH_JOIN_TABLE_PREFER_MEM);
+		int memory = tableConf.getInteger(TableConfigOptions.SQL_RESOURCE_HASH_JOIN_TABLE_PREFER_MEM);
 		if (memory <= 0) {
 			memory = getHashJoinTableManagedMemory(tableConf);
 		}
@@ -339,7 +339,7 @@ public class NodeResourceUtil {
 	 * @return the max managedMemory for hashJoin table.
 	 */
 	public static int getHashJoinTableManagedMaxMemory(Configuration tableConf) {
-		int memory = tableConf.getInteger(TableConfigOptions.SQL_EXEC_HASH_JOIN_TABLE_MAX_MEM);
+		int memory = tableConf.getInteger(TableConfigOptions.SQL_RESOURCE_HASH_JOIN_TABLE_MAX_MEM);
 		if (memory <= 0) {
 			memory = getHashJoinTableManagedPreferredMemory(tableConf);
 		}
@@ -352,7 +352,7 @@ public class NodeResourceUtil {
 	 * @return the preferred managedMemory for hashAgg.
 	 */
 	public static int getHashAggManagedPreferredMemory(Configuration tableConf) {
-		int memory = tableConf.getInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_PREFER_MEM);
+		int memory = tableConf.getInteger(TableConfigOptions.SQL_RESOURCE_HASH_AGG_TABLE_PREFER_MEM);
 		if (memory <= 0) {
 			memory = getHashAggManagedMemory(tableConf);
 		}
@@ -365,7 +365,7 @@ public class NodeResourceUtil {
 	 * @return the max managedMemory for hashAgg.
 	 */
 	public static int getHashAggManagedMaxMemory(Configuration tableConf) {
-		int memory = tableConf.getInteger(TableConfigOptions.SQL_EXEC_HASH_AGG_TABLE_MAX_MEM);
+		int memory = tableConf.getInteger(TableConfigOptions.SQL_RESOURCE_HASH_AGG_TABLE_MAX_MEM);
 		if (memory <= 0) {
 			memory = getHashAggManagedPreferredMemory(tableConf);
 		}
