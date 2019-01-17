@@ -28,6 +28,7 @@ import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
+import org.apache.flink.table.dataformat.TypeGetterSetters;
 import org.apache.flink.table.sources.IndexKey;
 import org.apache.flink.table.typeutils.AbstractRowSerializer;
 
@@ -197,7 +198,7 @@ public class CsvLookupFunction extends TableFunction<BaseRow> {
 		if (keys.size() == 1) {
 			int keyIdx = keys.get(0);
 			if (!input.isNullAt(keyIdx)) {
-				return input.get(keyIdx, keyTypes.get(0));
+				return TypeGetterSetters.get(input, keyIdx, keyTypes.get(0));
 			}
 			return null;
 		} else {
@@ -206,7 +207,7 @@ public class CsvLookupFunction extends TableFunction<BaseRow> {
 				int keyIdx = keys.get(i);
 				Object field = null;
 				if (!input.isNullAt(keyIdx)) {
-					field = input.get(keyIdx, keyTypes.get(i));
+					field = TypeGetterSetters.get(input, keyIdx, keyTypes.get(i));
 				}
 				if (field == null) {
 					return null;

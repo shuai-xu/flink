@@ -506,7 +506,7 @@ public class BinaryArray extends BaseArray {
 			if (isNullAt(i)) {
 				values[i] = null;
 			} else {
-				values[i] = get(i, elementType);
+				values[i] = TypeGetterSetters.get(this, i, elementType);
 			}
 		}
 		return values;
@@ -518,7 +518,7 @@ public class BinaryArray extends BaseArray {
 		T[] values = (T[]) Array.newInstance(elementClass, size);
 		for (int i = 0; i < size; i++) {
 			if (!isNullAt(i)) {
-				values[i] = (T) get(i, elementType);
+				values[i] = (T) TypeGetterSetters.get(this, i, elementType);
 			}
 		}
 		return values;

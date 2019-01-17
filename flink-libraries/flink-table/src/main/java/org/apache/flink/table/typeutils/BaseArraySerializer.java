@@ -35,6 +35,7 @@ import org.apache.flink.table.dataformat.BaseArray;
 import org.apache.flink.table.dataformat.BinaryArray;
 import org.apache.flink.table.dataformat.BinaryArrayWriter;
 import org.apache.flink.table.dataformat.GenericArray;
+import org.apache.flink.table.dataformat.TypeGetterSetters;
 import org.apache.flink.table.dataformat.util.BaseRowUtil;
 import org.apache.flink.util.InstantiationUtil;
 
@@ -113,9 +114,9 @@ public class BaseArraySerializer extends TypeSerializer<BaseArray> {
 			} else {
 				ret.setNotNullAt(i);
 				if (isPrimitive) {
-					ret.setPrimitive(i, from.get(i, eleType), eleType);
+					ret.setPrimitive(i, TypeGetterSetters.get(from, i, eleType), eleType);
 				} else {
-					Object element = from.get(i, eleType);
+					Object element = TypeGetterSetters.get(from, i, eleType);
 					if (from instanceof GenericArray) {
 						element = elementSerializer.copy(element);
 					}
@@ -158,7 +159,8 @@ public class BaseArraySerializer extends TypeSerializer<BaseArray> {
 			if (from.isNullAt(i)) {
 				reuseBinaryWriter.setNullAt(i, eleType);
 			} else {
-				BaseRowUtil.write(reuseBinaryWriter, i, from.get(i, eleType), eleType, elementSerializer);
+				BaseRowUtil.write(reuseBinaryWriter, i,
+						TypeGetterSetters.get(from, i, eleType), eleType, elementSerializer);
 			}
 		}
 		reuseBinaryWriter.complete();

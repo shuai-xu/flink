@@ -132,54 +132,6 @@ public interface TypeGetterSetters {
 	BaseMap getBaseMap(int ordinal);
 
 	/**
-	 * TODO default method is slow... modify it.
-	 */
-	default Object get(int ordinal, InternalType type) {
-		if (type.equals(Types.BOOLEAN)) {
-			return getBoolean(ordinal);
-		} else if (type.equals(Types.BYTE)) {
-			return getByte(ordinal);
-		} else if (type.equals(Types.SHORT)) {
-			return getShort(ordinal);
-		} else if (type.equals(Types.INT)) {
-			return getInt(ordinal);
-		} else if (type.equals(Types.LONG)) {
-			return getLong(ordinal);
-		} else if (type.equals(Types.FLOAT)) {
-			return getFloat(ordinal);
-		} else if (type.equals(Types.DOUBLE)) {
-			return getDouble(ordinal);
-		} else if (type instanceof DecimalType) {
-			DecimalType dt = (DecimalType) type;
-			return getDecimal(ordinal, dt.precision(), dt.scale());
-		} else if (type.equals(Types.STRING)) {
-			return getBinaryString(ordinal);
-		} else if (type.equals(Types.CHAR)) {
-			return getChar(ordinal);
-		} else if (type.equals(Types.ROWTIME_INDICATOR)) {
-			return getLong(ordinal);
-		} else if (type.equals(Types.DATE)) {
-			return getInt(ordinal);
-		} else if (type.equals(Types.TIME)) {
-			return getInt(ordinal);
-		} else if (type.equals(Types.TIMESTAMP)) {
-			return getLong(ordinal);
-		} else if (type.equals(Types.BYTE_ARRAY)) {
-			return getByteArray(ordinal);
-		} else if (type instanceof ArrayType) {
-			return getBaseArray(ordinal);
-		} else if (type instanceof MapType) {
-			return getBaseMap(ordinal);
-		} else if (type instanceof RowType) {
-			return getBaseRow(ordinal, ((RowType) type).getArity());
-		} else if (type instanceof GenericType) {
-			return getGeneric(ordinal, (GenericType) type);
-		} else {
-			throw new RuntimeException("Not support type: " + type);
-		}
-	}
-
-	/**
 	 * Set boolean value.
 	 */
 	void setBoolean(int ordinal, boolean value);
@@ -223,4 +175,49 @@ public interface TypeGetterSetters {
 	 * Set decimal value.
 	 */
 	void setDecimal(int ordinal, Decimal value, int precision, int scale);
+
+	static Object get(TypeGetterSetters row, int ordinal, InternalType type) {
+		if (type.equals(Types.BOOLEAN)) {
+			return row.getBoolean(ordinal);
+		} else if (type.equals(Types.BYTE)) {
+			return row.getByte(ordinal);
+		} else if (type.equals(Types.SHORT)) {
+			return row.getShort(ordinal);
+		} else if (type.equals(Types.INT)) {
+			return row.getInt(ordinal);
+		} else if (type.equals(Types.LONG)) {
+			return row.getLong(ordinal);
+		} else if (type.equals(Types.FLOAT)) {
+			return row.getFloat(ordinal);
+		} else if (type.equals(Types.DOUBLE)) {
+			return row.getDouble(ordinal);
+		} else if (type instanceof DecimalType) {
+			DecimalType dt = (DecimalType) type;
+			return row.getDecimal(ordinal, dt.precision(), dt.scale());
+		} else if (type.equals(Types.STRING)) {
+			return row.getBinaryString(ordinal);
+		} else if (type.equals(Types.CHAR)) {
+			return row.getChar(ordinal);
+		} else if (type.equals(Types.ROWTIME_INDICATOR)) {
+			return row.getLong(ordinal);
+		} else if (type.equals(Types.DATE)) {
+			return row.getInt(ordinal);
+		} else if (type.equals(Types.TIME)) {
+			return row.getInt(ordinal);
+		} else if (type.equals(Types.TIMESTAMP)) {
+			return row.getLong(ordinal);
+		} else if (type.equals(Types.BYTE_ARRAY)) {
+			return row.getByteArray(ordinal);
+		} else if (type instanceof ArrayType) {
+			return row.getBaseArray(ordinal);
+		} else if (type instanceof MapType) {
+			return row.getBaseMap(ordinal);
+		} else if (type instanceof RowType) {
+			return row.getBaseRow(ordinal, ((RowType) type).getArity());
+		} else if (type instanceof GenericType) {
+			return row.getGeneric(ordinal, (GenericType) type);
+		} else {
+			throw new RuntimeException("Not support type: " + type);
+		}
+	}
 }

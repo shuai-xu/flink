@@ -588,7 +588,7 @@ public final class BinaryRow implements BaseRow {
 			if (row.isNullAt(i)) {
 				build.append("null");
 			} else {
-				build.append(row.get(i, types[i]));
+				build.append(TypeGetterSetters.get(row, i, types[i]));
 			}
 		}
 		build.append(']');

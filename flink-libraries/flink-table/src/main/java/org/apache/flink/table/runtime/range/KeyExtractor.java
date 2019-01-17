@@ -22,6 +22,7 @@ import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.java.typeutils.runtime.NullAwareComparator;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.dataformat.TypeGetterSetters;
 
 import java.io.Serializable;
 import java.util.Collections;
@@ -60,7 +61,7 @@ public class KeyExtractor implements Serializable {
 		int localIndex = index;
 		for (int i = 0; i < len; i++) {
 			int pos = keyPositions[i];
-			Object element = record.isNullAt(pos) ? null : record.get(pos, types[pos]);
+			Object element = record.isNullAt(pos) ? null : TypeGetterSetters.get(record, pos, types[pos]);
 			localIndex += nullAwareComparators[i].extractKeys(element, target, localIndex);
 		}
 		return localIndex - index;

@@ -46,6 +46,7 @@ import org.apache.flink.table.dataformat.BinaryWriter;
 import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.dataformat.NestedRow;
+import org.apache.flink.table.dataformat.TypeGetterSetters;
 import org.apache.flink.table.typeutils.BaseArraySerializer;
 import org.apache.flink.table.typeutils.BaseMapSerializer;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
@@ -122,7 +123,7 @@ public final class BaseRowUtil {
 				if (baseRow.isNullAt(i)) {
 					row.update(i, null);
 				} else {
-					row.update(i, baseRow.get(i, types[i]));
+					row.update(i, TypeGetterSetters.get(baseRow, i, types[i]));
 				}
 			}
 			return row;
@@ -213,7 +214,7 @@ public final class BaseRowUtil {
 		} else if (type instanceof GenericType) {
 			return row.getGeneric(ordinal, (GenericType) type);
 		} else if (type instanceof TypeInfoWrappedDataType) {
-			return row.get(ordinal, type.toInternalType());
+			return TypeGetterSetters.get(row, ordinal, type.toInternalType());
 		} else {
 			throw new RuntimeException("Not support type: " + type);
 		}
