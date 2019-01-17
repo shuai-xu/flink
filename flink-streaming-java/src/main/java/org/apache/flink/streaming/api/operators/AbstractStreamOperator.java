@@ -256,9 +256,9 @@ public abstract class AbstractStreamOperator<OUT>
 		this.operatorStateBackend = context.operatorStateBackend();
 		this.internalStateBackend = context.internalStateBackend();
 		this.keyContext = context.keyContext();
-		contextStateHelper = new ContextStateHelper(keyContext, getExecutionConfig(), internalStateBackend);
 
 		if (keyContext != null) {
+			contextStateHelper = new ContextStateHelper(keyContext, getExecutionConfig(), internalStateBackend);
 			this.keyedStateBackend = new KeyedStateBackendWrapper(contextStateHelper);
 			this.keyedStateStore = new DefaultKeyedStateStore(contextStateHelper, getExecutionConfig());
 		}

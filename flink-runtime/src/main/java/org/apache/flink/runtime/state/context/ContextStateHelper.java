@@ -82,14 +82,17 @@ public class ContextStateHelper implements StateBinder {
 
 	private InternalKvState lastState;
 
+	private final TaskKvStateRegistry kvStateRegistry;
+
 	public ContextStateHelper(
 		KeyContextImpl keyContext,
 		ExecutionConfig executionConfig,
 		AbstractInternalStateBackend internalStateBackend) {
 
-		this.keyContext = keyContext;
-		this.executionConfig = executionConfig;
-		this.internalStateBackend = internalStateBackend;
+		this.keyContext = Preconditions.checkNotNull(keyContext);
+		this.executionConfig = Preconditions.checkNotNull(executionConfig);
+		this.internalStateBackend = Preconditions.checkNotNull(internalStateBackend);
+		this.kvStateRegistry = internalStateBackend.getKvStateRegistry();
 		this.states = new HashMap<>();
 	}
 
@@ -644,6 +647,9 @@ public class ContextStateHelper implements StateBinder {
 	}
 
 	public void dispose() {
+		if (kvStateRegistry != null) {
+			kvStateRegistry.unregisterAll();
+		}
 		states.clear();
 		lastState = null;
 		lastStateName = null;
@@ -651,7 +657,7 @@ public class ContextStateHelper implements StateBinder {
 
 	private void registerAsQueryableState(StateDescriptor stateDesc, State state) {
 		if (stateDesc.isQueryable()) {
-			TaskKvStateRegistry kvStateRegistry = internalStateBackend.getKvStateRegistry();
+			Preconditions.checkNotNull(kvStateRegistry, "Can not register queryable state, because the registry is null.");
 			kvStateRegistry.registerKvState(internalStateBackend.getKeyGroupRange(), stateDesc.getQueryableStateName(), (InternalKvState) state);
 		}
 	}

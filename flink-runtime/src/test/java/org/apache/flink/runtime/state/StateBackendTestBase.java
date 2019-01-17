@@ -65,7 +65,9 @@ import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
 import org.apache.flink.runtime.operators.testutils.DummyEnvironment;
 import org.apache.flink.runtime.query.KvStateRegistry;
 import org.apache.flink.runtime.query.KvStateRegistryListener;
+import org.apache.flink.runtime.state.context.ContextStateHelper;
 import org.apache.flink.runtime.state.heap.AbstractHeapState;
+import org.apache.flink.runtime.state.heap.KeyContextImpl;
 import org.apache.flink.runtime.state.heap.NestedMapsStateTable;
 import org.apache.flink.runtime.state.heap.StateTable;
 import org.apache.flink.runtime.state.internal.InternalAggregatingState;
@@ -176,18 +178,12 @@ public abstract class StateBackendTestBase<B extends AbstractStateBackend> exten
 			KeyGroupRange keyGroupRange,
 			Environment env) throws Exception {
 
-		AbstractKeyedStateBackend<K> backend = getStateBackend().createKeyedStateBackend(
-				env,
-				new JobID(),
-				"test_op",
-				keySerializer,
-				numberOfKeyGroups,
-				keyGroupRange,
-				env.getTaskKvStateRegistry());
-
-		backend.restore(null);
-
-		return backend;
+		AbstractInternalStateBackend internalStateBackend =
+			getStateBackend().createInternalStateBackend(env, "test-op", numberOfKeyGroups, keyGroupRange);
+		ContextStateHelper contextStateHelper =
+			new ContextStateHelper(new KeyContextImpl(keySerializer, numberOfKeyGroups, keyGroupRange), env.getExecutionConfig(), internalStateBackend);
+		internalStateBackend.restore(null);
+		return new KeyedStateBackendWrapper<>(contextStateHelper);
 	}
 
 	protected <K> AbstractKeyedStateBackend<K> restoreKeyedBackend(TypeSerializer<K> keySerializer, KeyedStateHandle state) throws Exception {
@@ -213,18 +209,14 @@ public abstract class StateBackendTestBase<B extends AbstractStateBackend> exten
 			List<KeyedStateHandle> state,
 			Environment env) throws Exception {
 
-		AbstractKeyedStateBackend<K> backend = getStateBackend().createKeyedStateBackend(
-			env,
-			new JobID(),
-			"test_op",
-			keySerializer,
-			numberOfKeyGroups,
-			keyGroupRange,
-			env.getTaskKvStateRegistry());
+		AbstractInternalStateBackend internalStateBackend =
+			getStateBackend().createInternalStateBackend(env, "test-op", numberOfKeyGroups, keyGroupRange);
+		ContextStateHelper contextStateHelper =
+			new ContextStateHelper(new KeyContextImpl(keySerializer, numberOfKeyGroups, keyGroupRange), env.getExecutionConfig(), internalStateBackend);
+		KeyedStateBackendWrapper<K> keyedStateBackendWrapper = new KeyedStateBackendWrapper<>(contextStateHelper);
+		keyedStateBackendWrapper.restore(new StateObjectCollection<>(state));
 
-		backend.restore(new StateObjectCollection<>(state));
-
-		return backend;
+		return keyedStateBackendWrapper;
 	}
 
 	@Test
@@ -2998,7 +2990,9 @@ public abstract class StateBackendTestBase<B extends AbstractStateBackend> exten
 		secondHalfBackend.dispose();
 	}
 
+	// internal state-backend would check key-serializer compatibility when registering state.
 	@Test
+	@Ignore
 	public void testRestoreWithWrongKeySerializer() throws Exception {
 		CheckpointStreamFactory streamFactory = createStreamFactory();
 
@@ -3414,7 +3408,6 @@ public abstract class StateBackendTestBase<B extends AbstractStateBackend> exten
 	 * Tests registration with the KvStateRegistry.
 	 */
 	@Test
-	@Ignore
 	public void testQueryableStateRegistration() throws Exception {
 		DummyEnvironment env = new DummyEnvironment();
 		KvStateRegistry registry = env.getKvStateRegistry();
