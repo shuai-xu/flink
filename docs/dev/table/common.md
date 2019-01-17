@@ -609,11 +609,11 @@ tableEnv.registerDataStream("myTable2", stream, 'myLong, 'myString)
 
 Instead of registering a `DataStream` into a `TableEnvironment`, it can also be directly converted into a `Table`. This is convenient if you want to use the Table in a Table API query. 
 
+#### Convert a DataStream into a table(unbounded)
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
 {% highlight java %}
 // get StreamTableEnvironment
-// registration of a bounded DataStream in a BatchTableEnvironment is equivalent
 StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
 
 DataStream<Tuple2<Long, String>> stream = ...
@@ -628,8 +628,7 @@ Table table2 = tableEnv.fromDataStream(stream, "myLong, myString");
 
 <div data-lang="scala" markdown="1">
 {% highlight scala %}
-// get TableEnvironment
-// registration of a bounded DataStream is equivalent
+// get StreamTableEnvironment
 val tableEnv = TableEnvironment.getTableEnvironment(env)
 
 val stream: DataStream[(Long, String)] = ...
@@ -639,6 +638,39 @@ val table1: Table = tableEnv.fromDataStream(stream)
 
 // convert the DataStream into a Table with fields 'myLong, 'myString
 val table2: Table = tableEnv.fromDataStream(stream, 'myLong, 'myString)
+{% endhighlight %}
+</div>
+</div>
+
+#### Convert a DataStream into a table(bounded)
+<div class="codetabs" markdown="1">
+<div data-lang="java" markdown="1">
+{% highlight java %}
+// get BatchTableEnvironment
+BatchTableEnvironment tableEnv = TableEnvironment.getBatchTableEnvironment(env);
+
+DataStream<Tuple2<Long, String>> stream = ...
+
+// Convert the DataStream into a Table with default fields "f0", "f1"
+Table table1 = tableEnv.fromBoundedStream(stream);
+
+// Convert the DataStream into a Table with fields "myLong", "myString"
+Table table2 = tableEnv.fromBoundedStream(stream, "myLong, myString");
+{% endhighlight %}
+</div>
+
+<div data-lang="scala" markdown="1">
+{% highlight scala %}
+// get BatchTableEnvironment
+val tableEnv = TableEnvironment.getBatchTableEnvironment(env)
+
+val stream: DataStream[(Long, String)] = ...
+
+// convert the DataStream into a Table with default fields '_1, '_2
+val table1: Table = tableEnv.fromBoundedStream(stream)
+
+// convert the DataStream into a Table with fields 'myLong, 'myString
+val table2: Table = tableEnv.fromBoundedStream(stream, 'myLong, 'myString)
 {% endhighlight %}
 </div>
 </div>
