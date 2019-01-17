@@ -38,6 +38,21 @@ object TypeUtils {
   def getInternalClassForType(t: DataType): Class[_] =
     TypeConverters.createInternalTypeInfoFromDataType(t).getTypeClass
 
+  def getPrimitiveInternalClassForType(t: DataType): Class[_] = {
+    val internalType = t.toInternalType
+    internalType match {
+      case DataTypes.INT | _: DateType | DataTypes.TIME | DataTypes.INTERVAL_MONTHS => classOf[Int]
+      case DataTypes.LONG | _: TimestampType | DataTypes.INTERVAL_MILLIS => classOf[Long]
+      case DataTypes.SHORT => classOf[Short]
+      case DataTypes.BYTE => classOf[Byte]
+      case DataTypes.FLOAT => classOf[Float]
+      case DataTypes.DOUBLE => classOf[Double]
+      case DataTypes.BOOLEAN => classOf[Boolean]
+      case DataTypes.CHAR => classOf[Char]
+      case _ => getInternalClassForType(t)
+    }
+  }
+
   def isPrimitive(dataType: TypeInformation[_]): Boolean = {
     dataType match {
       case BOOLEAN => true
@@ -118,7 +133,7 @@ object TypeUtils {
     for (i <- keys.indices) {
       fieldComparators += createInternalComparator(types(keys(i)), orders(i))
     }
-    (fieldComparators.toArray, fieldComparators.indices.map((index) =>
+    (fieldComparators.toArray, fieldComparators.indices.map(index =>
       DataTypes.createInternalSerializer(types(keys(index)))).toArray)
   }
 

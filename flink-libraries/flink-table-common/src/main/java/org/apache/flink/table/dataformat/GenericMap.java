@@ -29,13 +29,13 @@ import java.util.Map;
  */
 public class GenericMap implements BaseMap {
 
-	private final Map<Object, Object> map;
+	private final Map map;
 
 	public GenericMap() {
 		map = new HashMap<>();
 	}
 
-	public GenericMap(Map<Object, Object> map) {
+	public GenericMap(Map map) {
 		this.map = map;
 	}
 
@@ -45,7 +45,7 @@ public class GenericMap implements BaseMap {
 	}
 
 	@Override
-	public Map<Object, Object> toJavaMap(InternalType keyType, InternalType valueType) {
+	public Map toJavaMap(InternalType keyType, InternalType valueType) {
 		return map;
 	}
 

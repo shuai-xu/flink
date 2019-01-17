@@ -48,6 +48,7 @@ public class BaseArraySerializer extends TypeSerializer<BaseArray> {
 
 	private final boolean isPrimitive;
 	private final InternalType eleType;
+	private final Class<?> internalEleClass;
 
 	private TypeSerializer elementSerializer;
 	private BinaryArraySerializer binarySerializer;
@@ -58,6 +59,11 @@ public class BaseArraySerializer extends TypeSerializer<BaseArray> {
 	public BaseArraySerializer(boolean isPrimitive, InternalType eleType) {
 		this.isPrimitive = isPrimitive;
 		this.eleType = eleType;
+		if (isPrimitive) {
+			this.internalEleClass = TypeUtils.getPrimitiveInternalClassForType(eleType);
+		} else {
+			this.internalEleClass = TypeUtils.getInternalClassForType(eleType);
+		}
 
 		this.elementSerializer = DataTypes.createInternalSerializer(eleType);
 		this.binarySerializer = BinaryArraySerializer.INSTANCE;
@@ -83,12 +89,12 @@ public class BaseArraySerializer extends TypeSerializer<BaseArray> {
 
 	@Override
 	public BaseArray createInstance() {
-		return new GenericArray(0, isPrimitive, eleType);
+		return new GenericArray(0, isPrimitive, internalEleClass);
 	}
 
 	@Override
 	public BaseArray copy(BaseArray from) {
-		return copy(from, new GenericArray(from.numElements(), isPrimitive, eleType));
+		return copy(from, new GenericArray(from.numElements(), isPrimitive, internalEleClass));
 	}
 
 	@Override
@@ -98,7 +104,7 @@ public class BaseArraySerializer extends TypeSerializer<BaseArray> {
 		if (reuse instanceof GenericArray) {
 			ret = (GenericArray) reuse;
 		} else {
-			ret = new GenericArray(numElements, isPrimitive, eleType);
+			ret = new GenericArray(numElements, isPrimitive, internalEleClass);
 		}
 
 		for (int i = 0; i < numElements; i++) {
@@ -149,7 +155,11 @@ public class BaseArraySerializer extends TypeSerializer<BaseArray> {
 		}
 
 		for (int i = 0; i < numElements; i++) {
-			BaseRowUtil.write(reuseBinaryWriter, i, from.get(i, eleType), eleType, elementSerializer);
+			if (from.isNullAt(i)) {
+				reuseBinaryWriter.setNullAt(i, eleType);
+			} else {
+				BaseRowUtil.write(reuseBinaryWriter, i, from.get(i, eleType), eleType, elementSerializer);
+			}
 		}
 		reuseBinaryWriter.complete();
 

@@ -36,7 +36,7 @@ class RowTypeTestBase extends ExpressionTestBase {
     val specialTypeRow = new Row(3)
     specialTypeRow.setField(0, UTCDate("1984-03-12"))
     specialTypeRow.setField(1, BigDecimal("0.00000000").bigDecimal)
-    specialTypeRow.setField(2, Array(1, 2, 3))
+    specialTypeRow.setField(2, Array[java.lang.Integer](1, 2, 3))
     val testData = new Row(7)
     testData.setField(0, null)
     testData.setField(1, 1)

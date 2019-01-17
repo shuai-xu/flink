@@ -19,6 +19,7 @@
 package org.apache.flink.table.runtime.conversion
 
 import java.util.{Map => JavaMap}
+
 import org.apache.flink.api.java.typeutils.TypeExtractor
 import org.apache.flink.api.scala.createTypeInformation
 import org.apache.flink.table.api.scala._
@@ -27,8 +28,8 @@ import org.apache.flink.table.dataformat.BinaryString.fromString
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.runtime.conversion.DataStructureConverters._
+import org.apache.flink.table.typeutils.{BaseArraySerializer, BaseMapSerializer}
 import org.apache.flink.types.Row
-
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 
@@ -98,22 +99,44 @@ class DataStructureConvertersTest {
       array
     }
 
-    val intArray = Array(1, null, 100, null, 10000)
+    val intArray = Array[java.lang.Integer](1, null, 100, null, 10000)
     val intArrayType = DataTypes.createArrayType(DataTypes.INT)
     val internalIntArray = toBinaryArray(intArray, DataTypes.INT)
     assertTrue(createToExternalConverter(intArrayType)(internalIntArray).asInstanceOf[Array[Any]]
         sameElements intArray)
-    assertTrue(createToInternalConverter(intArrayType)(
-      intArray).asInstanceOf[BinaryArray] == internalIntArray)
 
-    val doubleArray = Array(1.1, null, 111.1, null, 11111.1)
+    val baseIntArray = createToInternalConverter(intArrayType)(intArray).asInstanceOf[BaseArray]
+    intArray.zipWithIndex.foreach(e =>
+      if (e._1 == null) {
+        assertTrue(baseIntArray.isNullAt(e._2))
+      } else {
+        assertEquals(e._1, baseIntArray.getInt(e._2))
+      }
+    )
+
+    val binaryIntArray = DataTypes.createInternalSerializer(intArrayType)
+      .asInstanceOf[BaseArraySerializer].baseArrayToBinary(baseIntArray)
+    assertEquals(internalIntArray, binaryIntArray)
+
+    val doubleArray = Array[java.lang.Double](1.1, null, 111.1, null, 11111.1)
     val doubleArrayType = DataTypes.createArrayType(DataTypes.DOUBLE)
     val internalDoubleArray = toBinaryArray(doubleArray, DataTypes.DOUBLE)
-    assertTrue(createToExternalConverter(doubleArrayType)(
-      internalDoubleArray
-    ).asInstanceOf[Array[Any]] sameElements doubleArray)
-    assertTrue(createToInternalConverter(doubleArrayType)(
-      doubleArray).asInstanceOf[BinaryArray] == internalDoubleArray)
+    assertTrue(createToExternalConverter(
+      doubleArrayType)(internalDoubleArray).asInstanceOf[Array[Any]] sameElements doubleArray)
+
+    val baseDoubleArray = createToInternalConverter(
+      doubleArrayType)(doubleArray).asInstanceOf[BaseArray]
+    doubleArray.zipWithIndex.foreach(e =>
+      if (e._1 == null) {
+        assertTrue(baseDoubleArray.isNullAt(e._2))
+      } else {
+        assertEquals(e._1, baseDoubleArray.getDouble(e._2))
+      }
+    )
+
+    val binaryDoubleArray = DataTypes.createInternalSerializer(doubleArrayType)
+      .asInstanceOf[BaseArraySerializer].baseArrayToBinary(baseDoubleArray)
+    assertEquals(internalDoubleArray, binaryDoubleArray)
   }
 
   @Test
@@ -183,16 +206,16 @@ class DataStructureConvertersTest {
   def testMap(): Unit = {
     val t = new MapType(DataTypes.INT, DataTypes.STRING)
     val value = Map(1 -> "haha", 5 -> "ahha", 6 -> "hehe", null.asInstanceOf[Int] -> "null")
-    val internal = createToInternalConverter(t)(value).asInstanceOf[BinaryMap]
-    assertEquals(1, internal.keyArray().getInt(0))
-    assertEquals(5, internal.keyArray().getInt(1))
-    assertEquals(6, internal.keyArray().getInt(2))
-    assertEquals(true, internal.keyArray().isNullAt(3))
-    assertEquals(fromString("haha"), internal.valueArray().getBinaryString(0))
-    assertEquals(fromString("ahha"), internal.valueArray().getBinaryString(1))
-    assertEquals(fromString("hehe"), internal.valueArray().getBinaryString(2))
-    assertEquals(fromString("null"), internal.valueArray().getBinaryString(3))
-    assertTrue(value.asJava == createToExternalConverter(t)(internal).asInstanceOf[JavaMap[_, _]])
+    val internal = createToInternalConverter(t)(value).asInstanceOf[BaseMap]
+    val javaMap = internal.toJavaMap(DataTypes.INT, DataTypes.STRING)
+    assertEquals(fromString("haha"), javaMap.get(1))
+    assertEquals(fromString("ahha"), javaMap.get(5))
+    assertEquals(fromString("hehe"), javaMap.get(6))
+    assertEquals(fromString("null"), javaMap.get(null))
+
+    val binaryMap = DataTypes.createInternalSerializer(t)
+      .asInstanceOf[BaseMapSerializer].baseMapToBinary(internal)
+    assertTrue(value.asJava == createToExternalConverter(t)(binaryMap).asInstanceOf[JavaMap[_, _]])
   }
 }
 
