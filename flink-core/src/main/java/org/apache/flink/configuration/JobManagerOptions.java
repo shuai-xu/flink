@@ -90,19 +90,27 @@ public class JobManagerOptions {
 			.withDescription("The maximum number of prior execution attempts kept in history.");
 
 	/**
-	 * The maximum number of prior execution attempts kept in history.
+	 * The strategy to handle task failures.
+	 * 'full' failover strategy will restart all tasks in the job.
+	 * 'region' failover strategy will restart the tasks in the same region with the failed task.
+	 * Regions are PIPELINED connected task groups in a job.
 	 */
 	public static final ConfigOption<String> EXECUTION_FAILOVER_STRATEGY =
 		key("jobmanager.execution.failover-strategy")
 			.defaultValue("full")
-			.withDescription("The maximum number of prior execution attempts kept in history.");
+			.withDescription("The strategy to handle task failures. " +
+				"'full' failover strategy will restart all tasks in the job. " +
+				"'region' failover strategy will restart the tasks in the same region with the failed task. " +
+				"Regions are PIPELINED connected task groups in a job.");
 
 	/**
-	 * The maximum number that a region can attempt to restart.
+	 * The maximum number that a region can attempt to restart before triggering job failures.
 	 */
 	public static final ConfigOption<Integer> EXECUTION_FAILOVER_STRATEGY_REGION_MAX_ATTEMPTS =
 		key("jobmanager.execution.failover-strategy.region.attempts")
-			.defaultValue(100);
+			.defaultValue(100)
+			.withDescription("The maximum number that a region can attempt to restart before triggering job failures. " +
+				"This only works with 'region' failover strategy.");
 
 	/**
 	 * The class name of the graph manager plugin.

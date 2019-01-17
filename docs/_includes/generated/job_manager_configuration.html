@@ -20,12 +20,12 @@
         <tr>
             <td><h5>jobmanager.execution.failover-strategy</h5></td>
             <td style="word-wrap: break-word;">"full"</td>
-            <td>The maximum number of prior execution attempts kept in history.</td>
+            <td>The strategy to handle task failures. 'full' failover strategy will restart all tasks in the job. 'region' failover strategy will restart the tasks in the same region with the failed task. Regions are PIPELINED connected task groups in a job.</td>
         </tr>
         <tr>
             <td><h5>jobmanager.execution.failover-strategy.region.attempts</h5></td>
             <td style="word-wrap: break-word;">100</td>
-            <td></td>
+            <td>The maximum number that a region can attempt to restart before triggering job failures. This only works with 'region' failover strategy.</td>
         </tr>
         <tr>
             <td><h5>jobmanager.execution.graph-manager-plugin</h5></td>
