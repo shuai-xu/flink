@@ -31,16 +31,20 @@ public class BaseRowCsvOutputFormat extends AbstractCsvOutputFormat<BaseRow> {
 	private static final long serialVersionUID = 1L;
 
 	private final InternalType[] fieldTypes;
+	private DataStructureConverters.DataStructureConverter[] converters;
 
 	public BaseRowCsvOutputFormat(Path outputPath, InternalType[] fieldTypes) {
 		super(outputPath);
 		this.fieldTypes = fieldTypes;
+		this.converters = new DataStructureConverters.DataStructureConverter[fieldTypes.length];
 	}
 
 	@Override
 	protected Object getSpecificField(BaseRow record, int n) {
-		InternalType type = fieldTypes[n];
-		return DataStructureConverters.getConverterForType(type).toExternal(record, n);
+		if (converters[n] == null) {
+			converters[n] = DataStructureConverters.getConverterForType(fieldTypes[n]);
+		}
+		return converters[n].toExternal(record, n);
 	}
 
 	@Override
