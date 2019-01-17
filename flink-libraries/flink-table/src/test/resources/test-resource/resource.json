@@ -32,7 +32,7 @@
     "vcore" : 0.3,
     "heap_memory" : 46,
     "managed_memory" : 33,
-    "floating_managed_memory" : 4
+    "floating_managed_memory" : 31
   }, {
     "uid" : "table-4",
     "name" : "GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS sum_a),)",
@@ -42,7 +42,7 @@
     "vcore" : 0.3,
     "heap_memory" : 46,
     "managed_memory" : 33,
-    "floating_managed_memory" : 4
+    "floating_managed_memory" : 31
   }, {
     "uid" : "table-5",
     "name" : "LocalSortLimit(orderBy: [c ASC], offset: 0, limit: 2)",

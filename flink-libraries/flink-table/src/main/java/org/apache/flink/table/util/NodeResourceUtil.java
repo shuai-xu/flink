@@ -36,24 +36,24 @@ public class NodeResourceUtil {
 	 */
 	public static final long SIZE_IN_MB =  1024L * 1024;
 
-	public static final ConfigOption<Integer> SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM =
-			key("sql.exec.infer-resource.operator.min-parallelism")
+	public static final ConfigOption<Integer> SQL_RESOURCE_INFER_OPERATOR_PARALLELISM_MIN =
+			key("sql.resource.infer.operator.parallelism.min")
 			.defaultValue(1)
 			.withDescription("Sets min parallelism for operators.");
 
-	public static final ConfigOption<Integer> SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB =
-			key("sql.exec.infer-resource.operator.min-memory-mb")
+	public static final ConfigOption<Integer> SQL_RESOURCE_INFER_OPERATOR_MEMORY_MIN =
+			key("sql.resource.infer.operator.memory.min.mb")
 			.defaultValue(32)
 			.withDescription("Maybe the infer's reserved manager mem is too small, so this " +
 					"setting is lower limit for the infer's manager mem.");
 
-	public static final ConfigOption<Double> SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT =
-			key("sql.exec.infer-resource.reserve-mem.discount")
+	public static final ConfigOption<Double> SQL_RESOURCE_INFER_MEM_RESERVE_PREFER_DISCOUNT =
+			key("sql.resource.infer.mem.reserve-prefer.discount")
 			.defaultValue(1.0d)
-			.withDescription("Sets reserve mem discount.");
+			.withDescription("Sets reserve discount to prefer mem.");
 
-	public static final ConfigOption<Integer> SQL_EXEC_PER_REQUEST_MEM =
-			key("sql.exec.per-request.mem-mb")
+	public static final ConfigOption<Integer> SQL_RESOURCE_PER_REQUEST_MEM =
+			key("sql.resource.per-request.mem.mb")
 			.defaultValue(32)
 			.withDescription("Sets the number of per-requested buffers when the operator " +
 					"allocates much more segments from the floating memory pool.");
@@ -304,7 +304,7 @@ public class NodeResourceUtil {
 	 * @return the config max num of operator parallelism.
 	 */
 	public static int getOperatorMinParallelism(Configuration tableConf) {
-		return tableConf.getInteger(SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM);
+		return tableConf.getInteger(SQL_RESOURCE_INFER_OPERATOR_PARALLELISM_MIN);
 	}
 
 	/**
@@ -378,7 +378,7 @@ public class NodeResourceUtil {
 	 * @return the min managedMemory.
 	 */
 	public static int getOperatorMinManagedMem(Configuration tableConf) {
-		return tableConf.getInteger(SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB);
+		return tableConf.getInteger(SQL_RESOURCE_INFER_OPERATOR_MEMORY_MIN);
 	}
 
 	/**
@@ -389,9 +389,9 @@ public class NodeResourceUtil {
 	 * @param memCostInMB the infer mem of per partition.
 	 */
 	public static Tuple3<Integer, Integer, Integer> reviseAndGetInferManagedMem(Configuration tableConf, int memCostInMB) {
-		double reservedDiscount = tableConf.getDouble(SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT);
+		double reservedDiscount = tableConf.getDouble(SQL_RESOURCE_INFER_MEM_RESERVE_PREFER_DISCOUNT);
 		if (reservedDiscount > 1 || reservedDiscount <= 0) {
-			throw new IllegalArgumentException(SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT + " should be > 0 and <= 1");
+			throw new IllegalArgumentException(SQL_RESOURCE_INFER_MEM_RESERVE_PREFER_DISCOUNT + " should be > 0 and <= 1");
 		}
 
 		int maxMem = tableConf.getInteger(
@@ -410,7 +410,7 @@ public class NodeResourceUtil {
 	 * Gets the managedMemory for per-allocating.
 	 */
 	public static int getPerRequestManagedMemory(Configuration tableConf) {
-		return tableConf.getInteger(SQL_EXEC_PER_REQUEST_MEM);
+		return tableConf.getInteger(SQL_RESOURCE_PER_REQUEST_MEM);
 	}
 
 	/**

@@ -482,7 +482,7 @@ object BatchTestBase {
     conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_MEM, 1)
     conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_EXTERNAL_BUFFER_MEM, 2)
     //dynamic allocate memory.
-    conf.getConf.setInteger(NodeResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 1)
+    conf.getConf.setInteger(NodeResourceUtil.SQL_RESOURCE_PER_REQUEST_MEM, 1)
     conf
   }
 

@@ -69,7 +69,7 @@ class TpcDsBatchExecITCase(
   @Before
   def before(): Unit = {
     //dynamic allocate memory.
-    conf.getConf.setInteger(NodeResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 1)
+    conf.getConf.setInteger(NodeResourceUtil.SQL_RESOURCE_PER_REQUEST_MEM, 1)
     for ((tableName, schema) <- TpcDsSchemaProvider.schemaMap) {
       val tableSource = CsvTableSource.builder()
           .path(getDataFile(tableName))

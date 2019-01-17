@@ -51,7 +51,7 @@ import org.apache.flink.table.util.NodeResourceUtil;
 import org.apache.flink.util.Preconditions;
 
 import static org.apache.flink.table.runtime.sort.BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM;
-import static org.apache.flink.table.util.NodeResourceUtil.SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB;
+import static org.apache.flink.table.util.NodeResourceUtil.SQL_RESOURCE_INFER_OPERATOR_MEMORY_MIN;
 
 /**
  * Managed memory calculator on statistics for batch node.
@@ -152,7 +152,7 @@ public class BatchManagedMemCalculatorOnStatistics extends BatchExecNodeVisitor 
 		int configMinMemory = NodeResourceUtil.getOperatorMinManagedMem(tableConf);
 		int minSortMemory = (int) (SORTER_MIN_NUM_SORT_MEM * 2 / NodeResourceUtil.SIZE_IN_MB) + 1;
 		Preconditions.checkArgument(configMinMemory >= externalBufferMemoryMb + minSortMemory,
-				SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB +
+				SQL_RESOURCE_INFER_OPERATOR_MEMORY_MIN +
 						" should >= externalBufferMemoryMb(" +
 						externalBufferMemoryMb +
 						"), minSortMemory(" +

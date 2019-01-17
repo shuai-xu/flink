@@ -166,7 +166,7 @@ class InnerJoinITCase(expectedJoinType: JoinType) extends BatchTestBase with Joi
 
     conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM, 1)
     conf.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_HASH_JOIN_TABLE_MEM, 2)
-    tEnv.getConfig.getConf.setInteger(NodeResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 2)
+    tEnv.getConfig.getConf.setInteger(NodeResourceUtil.SQL_RESOURCE_PER_REQUEST_MEM, 2)
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
 
     val bigData = Random.shuffle(

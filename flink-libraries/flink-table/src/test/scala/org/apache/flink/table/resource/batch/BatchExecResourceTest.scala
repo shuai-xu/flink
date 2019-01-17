@@ -245,7 +245,7 @@ object BatchExecResourceTest {
       TableConfigOptions.SQL_RESOURCE_INFER_OPERATOR_PARALLELISM_MAX,
       800)
     tableConfig.getConf.setInteger(
-      NodeResourceUtil.SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM,
+      NodeResourceUtil.SQL_RESOURCE_INFER_OPERATOR_PARALLELISM_MIN,
       20
     )
     tableConfig.getConf.setDouble(
@@ -309,7 +309,7 @@ object BatchExecResourceTest {
       1000000
     )
     tableConfig.getConf.setDouble(
-      NodeResourceUtil.SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT,
+      NodeResourceUtil.SQL_RESOURCE_INFER_MEM_RESERVE_PREFER_DISCOUNT,
       0.5
     )
     tableConfig.getConf.setInteger(
@@ -317,7 +317,7 @@ object BatchExecResourceTest {
       470
     )
     tableConfig.getConf.setInteger(
-      NodeResourceUtil.SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB,
+      NodeResourceUtil.SQL_RESOURCE_INFER_OPERATOR_MEMORY_MIN,
       32
     )
   }

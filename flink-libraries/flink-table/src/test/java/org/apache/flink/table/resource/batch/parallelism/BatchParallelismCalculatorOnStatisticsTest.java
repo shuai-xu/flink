@@ -60,7 +60,7 @@ public class BatchParallelismCalculatorOnStatisticsTest {
 		tableConf.setInteger(TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_MB_PER_PARTITION, 100);
 		tableConf.setInteger(TableConfigOptions.SQL_RESOURCE_INFER_OPERATOR_PARALLELISM_MAX, 50);
 		tableConf.setInteger(TableConfigOptions.SQL_RESOURCE_INFER_SOURCE_PARALLELISM_MAX, 100);
-		tableConf.setInteger(NodeResourceUtil.SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM, 5);
+		tableConf.setInteger(NodeResourceUtil.SQL_RESOURCE_INFER_OPERATOR_PARALLELISM_MIN, 5);
 		tableConf.setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE, NodeResourceUtil.InferMode.ALL.toString());
 
 		when(scanParallelism30.getEstimatedRowCount()).thenReturn(3000d);

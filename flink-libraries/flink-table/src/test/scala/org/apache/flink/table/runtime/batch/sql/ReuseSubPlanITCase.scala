@@ -44,7 +44,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_HASH_AGG_TABLE_MEM, 32)
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM, 32)
-    tEnv.getConfig.getConf.setInteger(NodeResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 2)
+    tEnv.getConfig.getConf.setInteger(NodeResourceUtil.SQL_RESOURCE_PER_REQUEST_MEM, 2)
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_HASH_JOIN_TABLE_MEM, 5)
 
     registerCollection("SmallTable3", smallData3, type3, "a, b, c", nullablesOfSmallData3)
