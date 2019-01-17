@@ -31,13 +31,13 @@ This page provides instructions on how to run Flink in a *fully distributed fash
 
 ### Software Requirements
 
-Flink runs on all *UNIX-like environments*, e.g. **Linux**, **Mac OS X**, and **Cygwin** (for Windows) and expects the cluster to consist of **one master node** and **one or more worker nodes**. Before you start to setup the system, make sure you have the following software installed **on each node**:
+Flink runs on all *UNIX-like environments*, e.g. **Linux**, **Mac OS X**, **Cygwin** (for Windows), and **[Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/about)** (for Windows 10) and expects the cluster to consist of **one master node** and **one or more worker nodes**. Before you start to setup the system, make sure you have the following software installed **on each node**:
 
 - **Java 1.8.x** or higher,
 - **ssh** (sshd must be running to use the Flink scripts that manage
   remote components)
 
-If your cluster does not fulfill these software requirements you will need to install/upgrade it.
+If your cluster does not fulfill these software requirements, you will need to install/upgrade it.
 
 Having __passwordless SSH__ and
 __the same directory structure__ on all your cluster nodes will allow you to use our scripts to control
@@ -66,7 +66,7 @@ cd flink-*
 
 ### Configuring Flink
 
-After having extracted the system files, you need to configure Flink for the cluster by editing *conf/flink-conf.yaml*.
+After having extracted the system files, you need to configure Flink for the cluster by editing *conf/flink-conf.yaml* .
 
 Set the `jobmanager.rpc.address` key to point to your master node. You should also define the maximum amount of main memory the JVM is allowed to allocate on each node by setting the `jobmanager.heap.mb` and `taskmanager.heap.mb` keys.
 

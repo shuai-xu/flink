@@ -25,7 +25,7 @@ under the License.
 * This will be replaced by the TOC
 {:toc}
 
-Flink programs can run distributed on clusters of many machines. There
+Flink programs can run distributedly on clusters of many machines. There
 are two ways to send a program to a cluster for execution:
 
 ## Command Line Interface

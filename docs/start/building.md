@@ -50,13 +50,44 @@ mvn clean install -DskipTests
 
 This instructs [Maven](http://maven.apache.org) (`mvn`) to first remove all existing builds (`clean`) and then create a new Flink binary (`install`).
 
-To speed up the build you can skip tests, checkstyle, and JavaDocs: `mvn clean install -DskipTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true`.
+To speed up the build you can skip tests, checkstyle, and JavaDocs:
+
+{% highlight bash %}
+mvn clean install -DskipTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true
+{% endhighlight %}
 
 The default build adds a Flink-specific JAR for Hadoop 2, to allow using Flink with HDFS and YARN.
 
 After the build is complete, you can see the compressed package **.tar.gz** and the corresponding unzipped package in the **flink-dist/target** directory.
 
 If you are building on a Linux-like system, you will see a soft link called **build-target** in the flink source root directory that links to the unzipped package of build result in the **flink-dist/target** directory.
+
+<details><summary>{% info %} Having trouble downloading maven dependencies in China? <b>CLICK ME</b> </summary>
+<br>
+If you try to build Flink from the source code in China, you may find it quite time-consuming to download its maven dependencies especially those provided by MapR's repository. You can replace <b>mirrors</b> section with the following configuration in your maven <b>settings.xml</b>.
+<br><br>
+{% highlight bash %}
+
+<mirrors>
+
+  <mirror>
+    <id>nexus-aliyun</id>
+    <mirrorOf>*,!jeecg,!jeecg-snapshots,!mapr-releases</mirrorOf>
+    <name>Nexus aliyun</name>
+    <url>http://maven.aliyun.com/nexus/content/groups/public</url>
+  </mirror>
+
+  <mirror>
+    <id>mapr-public</id>
+    <mirrorOf>mapr-releases</mirrorOf>
+    <name>mapr-releases</name>
+    <url>https://maven.aliyun.com/repository/mapr-public</url>
+  </mirror>
+
+<mirrors>
+{% endhighlight %}
+
+</details>
 
 ## Dependency Shading
 
@@ -86,11 +117,11 @@ mvn clean install
 
 Flink has dependencies to HDFS and YARN which are both dependencies from [Apache Hadoop](http://hadoop.apache.org). There exist many different versions of Hadoop (from both the upstream project and the different Hadoop distributions). If you are using a wrong combination of versions, exceptions can occur.
 
-Hadoop is only supported from version 2.4.0 upwards.
+Hadoop is only supported from version 2.6.0 upwards.
 You can also specify a specific Hadoop version to build against:
 
 {% highlight bash %}
-mvn clean install -DskipTests -Dhadoop.version=2.6.1
+mvn clean install -DskipTests -Dhadoop.version=2.8.5
 {% endhighlight %}
 
 ### Vendor-specific Versions
@@ -111,9 +142,9 @@ The `-Pvendor-repos` activates a Maven [build profile](http://maven.apache.org/g
 
 Flink has APIs, libraries, and runtime modules written in [Scala](http://scala-lang.org). Users of the Scala API and libraries may have to match the Scala version of Flink with the Scala version of their projects (because Scala is not strictly backwards compatible).
 
-Flink 1.4 currently builds only with Scala version 2.11.
+{{ site.version }} currently builds only with Scala version 2.11.
 
-We are working on supporting Scala 2.12, but certain breaking changes in Scala 2.12 make this a more involved effort. Please check out [this JIRA issue](https://issues.apache.org/jira/browse/FLINK-7811) for updates.
+{% info %} Since version 1.7 Flink builds with Scala version 2.11 and 2.12.
 
 {% top %}
 
