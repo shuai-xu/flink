@@ -225,7 +225,7 @@ lower or equal timestamp is expected.
 Join with a Temporal Table
 --------------------------
 
-A join with a temporal table joins a (append/upsert/retract) stream (left input/probe side) with a temporal table (right input/build side),
+A join with a temporal table joins an append/upsert/retract stream (left input/probe side) with a temporal table (right input/build side),
 i.e., a remote dimension table that changes over time. Please check the corresponding page for more information about [temporal tables](temporal_tables.html).
 
 The following example shows an `Orders` stream that should be joined with the continuously changing currency rates table `LatestRates`.
@@ -298,14 +298,17 @@ FROM
   ON r.currency = o.currency
 {% endhighlight %}
 
-Each record from the probe side will be joined with the current version of the build side table. In our example, the query is using processing-time notion, a newly appended order would always be joined with the most recent version of `LatestRates` when executing the operation.
+Each record from the probe side will be joined with the current version of the build side table. In our example, the query is using the processing-time notion, so a newly appended order would always be joined with the most recent version of `LatestRates` when executing the operation.
 
-In contrast to [regular joins](#regular-joins), this means that if there is any changes on the build side, it will not affect the previous results of the join. And the temporal table join operator is very lightweight which do not keep any state. The execution mode of temporal table join is very similar to Join UDTF.
+In contrast to [regular joins](#regular-joins), the previous results of the temporal table join will not be affected despite the changes on the build side. Also, the temporal table join operator is very lightweight and does not keep any state.
 
-Compared to [time-windowed joins](#time-windowed-joins), temporal table joins do not define a time window within which bounds the records will be joined.
+Compared to [time-windowed joins](#time-windowed-joins), temporal table joins do not define a time window within which the records will be joined.
 Records from the probe side are always joined with the build side's latest version at processing time. Thus, records on the build side might be arbitrarily old.
 
-Compared to [temporal table function joins](#temporal-table-function-joins), they are comes from the same motivation but has different SQL sytax and runtime implementation. The syntax of temporal table function join is a Join UDTF, but temporal table join is the regular temporal table query syntax introduced in SQL:2011. The implementation of temporal table function join is joins two streams and keeps them in state, but temporal table join accepts the only input stream and lookup database according to the key in the record.
+Both [temporal table function join](#temporal-table-function-joins) and temporal table join come from the same motivation but have different SQL syntax and runtime implementations:
+* The syntax of the temporal table function join is a join UDTF, while the temporal table join uses the regular temporal table query syntax introduced in SQL:2011.
+* The implementation of temporal table function joins actually joins two streams and keeps them in state, while temporal table joins accept the only input stream and look up the database according to the key in the record.
+* The temporal table function join is usually used to join a changelog stream, while the temporal table join is usually used to join an external table (i.e. dimension table).
 
 Such behaviour makes a temporal table join a good candidate to express stream enrichment in relational terms.
 
@@ -339,8 +342,8 @@ FROM
 </div>
 
 **Note**:
-1. Temporal Table Join only support SQL, do not support Table API currently.
-2. Flink do not support Event-time Temporal Table Joins currently.
-They will be supportd in the future.
+1. Flink only supports temporal table joins in SQL, and does not support temporal table joins in table API currently.
+2. Flink does not support event time temporal table joins currently.
+They will be supported in the future.
 
 {% top %}

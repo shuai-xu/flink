@@ -71,7 +71,7 @@ The following example shows how to create a view via DDL.
 {% highlight sql %}
 
 -- The view `OrderItemStats_2018` stats all items' order count in the year 2018.
-CREATE VIEW BigOrders
+CREATE VIEW BigOrders AS
 SELECT
     itemId, count(*) AS orderCount, sum(totalPrice) AS totalSale
 FROM Orders
