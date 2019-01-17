@@ -19,13 +19,14 @@
 package org.apache.flink.table.sinks.csv
 
 import java.util.TimeZone
+
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.java.io.AbstractCsvOutputFormat
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.functions.sink.OutputFormatSinkFunction
-import org.apache.flink.table.api._
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.types.{DataType, RowType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks._
@@ -48,7 +49,8 @@ class CsvTableSink(
     outputFieldNames: Option[Boolean],
     timezone: Option[TimeZone])
   extends TableSinkBase[BaseRow]
-    with BatchTableSink[BaseRow]
+    with BatchTableSink[BaseRow] // Use for CsvBatchTableSinkFactory.
+    with BatchCompatibleStreamTableSink[BaseRow] // Used for o.a.f.t.factories.csv.CsvTableFactory.
     with AppendStreamTableSink[BaseRow] {
 
   private val name = "csv sink: " + path
@@ -179,11 +181,14 @@ class CsvTableSink(
     }
   }
 
+  override def emitBoundedStream(boundedStream: DataStream[BaseRow],
+    tableConfig: TableConfig,
+    executionConfig: ExecutionConfig): DataStreamSink[_] = {
+    emitBoundedStream(boundedStream)
+  }
+
   /** Emits the DataStream. */
-  override def emitBoundedStream(
-      boundedStream: DataStream[BaseRow],
-      tableConfig: TableConfig,
-      executionConfig: ExecutionConfig): DataStreamSink[BaseRow] = {
+  override def emitBoundedStream(boundedStream: DataStream[BaseRow]): DataStreamSink[BaseRow] = {
     val outputFormat = newOutputFormat()
     numFiles match {
       case None => boundedStream.writeUsingOutputFormat(outputFormat).name(name)

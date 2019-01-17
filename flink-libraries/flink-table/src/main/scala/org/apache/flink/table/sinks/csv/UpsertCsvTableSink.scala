@@ -24,9 +24,8 @@ import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.runtime.functions.DateTimeFunctions
-import org.apache.flink.table.sinks.{TableSink, TableSinkBase, UpsertStreamTableSink}
+import org.apache.flink.table.sinks.{BatchCompatibleStreamTableSink, TableSink, TableSinkBase, UpsertStreamTableSink}
 import org.apache.flink.types.Row
-
 import java.lang.{Boolean => JBool}
 import java.util.TimeZone
 
@@ -51,6 +50,7 @@ class UpsertCsvTableSink(
     outputFieldNames: Option[Boolean],
     timezone: Option[TimeZone])
   extends TableSinkBase[JTuple2[JBool, Row]]
+  with BatchCompatibleStreamTableSink[JTuple2[JBool, Row]]
   with UpsertStreamTableSink[Row] {
 
   /**
@@ -176,6 +176,12 @@ class UpsertCsvTableSink(
 
   override def getRecordType: DataType = {
     DataTypes.createRowType(getFieldTypes: _*)
+  }
+
+  override def emitBoundedStream(boundedStream: DataStream[JTuple2[JBool, Row]])
+    : DataStreamSink[_] = {
+    // Reuse code cause bounded stream is also kind of DataStream.
+    emitDataStream(boundedStream)
   }
 }
 

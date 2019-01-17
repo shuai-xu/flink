@@ -26,7 +26,6 @@ import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{RichTableSchema, TableEnvironment}
-import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.dataformat.BinaryString.fromString
 import org.apache.flink.table.descriptors.ConnectorDescriptorValidator
 import org.apache.flink.table.factories.csv.CsvTableFactory
@@ -155,21 +154,29 @@ class CsvTableFactoryITCase {
       "True,4,3,Hello world, how are you?"
   }
 
-  @Test(expected = classOf[RuntimeException]) // Unsupported update mode upsert for batch env.
+  @Test
   def testBatchWithUpsertCsvSink(): Unit = {
     val tableSink = TableFactoryService
       .find(classOf[CsvTableFactory], lookUpProps("upsert"))
-      .createBatchTableSink(getCsvProps("csvTableSink", updateMode = "upsert"))
+      .createBatchCompatibleTableSink(getCsvProps("csvTableSink", updateMode = "upsert"))
     batchEnv.sqlQuery("select a, b, c from sTable").writeToSink(tableSink)
     batchEnv.execute()
+    expectedResult = "Add,1,1,Hi\n" +
+      "Add,2,2,Hello\n" +
+      "Add,3,2,Hello world\n" +
+      "Add,4,3,Hello world, how are you?"
   }
 
-  @Test(expected = classOf[RuntimeException]) // Unsupported update mode retract for batch env.
+  @Test
   def testBatchWithRetractCsvSink(): Unit = {
     val tableSink = TableFactoryService
       .find(classOf[CsvTableFactory], lookUpProps("retract"))
-      .createBatchTableSink(getCsvProps("csvTableSink", updateMode = "retract"))
+      .createBatchCompatibleTableSink(getCsvProps("csvTableSink", updateMode = "retract"))
     batchEnv.sqlQuery("select a, b, c from sTable").writeToSink(tableSink)
     batchEnv.execute()
+    expectedResult = "True,1,1,Hi\n" +
+      "True,2,2,Hello\n" +
+      "True,3,2,Hello world\n" +
+      "True,4,3,Hello world, how are you?"
   }
 }

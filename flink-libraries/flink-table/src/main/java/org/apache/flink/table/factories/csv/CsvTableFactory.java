@@ -21,11 +21,11 @@ package org.apache.flink.table.factories.csv;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.dataformat.BaseRow;
-import org.apache.flink.table.factories.BatchTableSinkFactory;
+import org.apache.flink.table.factories.BatchCompatibleTableSinkFactory;
 import org.apache.flink.table.factories.BatchTableSourceFactory;
 import org.apache.flink.table.factories.StreamTableSinkFactory;
 import org.apache.flink.table.factories.StreamTableSourceFactory;
-import org.apache.flink.table.sinks.BatchTableSink;
+import org.apache.flink.table.sinks.BatchCompatibleStreamTableSink;
 import org.apache.flink.table.sinks.StreamTableSink;
 import org.apache.flink.table.sinks.TableSink;
 import org.apache.flink.table.sinks.csv.CsvTableSink;
@@ -63,12 +63,12 @@ public class CsvTableFactory implements
 	StreamTableSourceFactory<BaseRow>,
 	BatchTableSourceFactory<BaseRow>,
 	StreamTableSinkFactory<Object>,
-	BatchTableSinkFactory<BaseRow> {
+	BatchCompatibleTableSinkFactory<Object> {
 	private static final Logger LOG = LoggerFactory.getLogger(CsvTableFactory.class);
 
 	@Override
-	public BatchTableSink<BaseRow> createBatchTableSink(Map<String, String> properties) {
-		return (BatchTableSink<BaseRow>) createCsvTableSink(properties, false);
+	public BatchCompatibleStreamTableSink<Object> createBatchCompatibleTableSink(Map<String, String> properties) {
+		return (BatchCompatibleStreamTableSink<Object>) createCsvTableSink(properties, false);
 	}
 
 	@Override
@@ -201,12 +201,6 @@ public class CsvTableFactory implements
 		final TimeZone tz = (timeZone == null) ? TimeZone.getTimeZone("UTC") : TimeZone.getTimeZone(timeZone);
 
 		final String updateMode = properties.getString(CsvOptions.OPTIONAL_UPDATE_MODE);
-		// validation
-		if (updateMode.toLowerCase().equals("upsert") || updateMode.toLowerCase().equals("retract")) {
-			if (!isStreaming) {
-				throw new RuntimeException("Unsupported update mode " + updateMode + " for batch env.");
-			}
-		}
 
 		switch (updateMode.toLowerCase()) {
 		case "append":
