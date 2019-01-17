@@ -274,7 +274,11 @@ object BatchExecResourceTest {
     )
     tableConfig.getConf.setInteger(
       TableConfigOptions.SQL_RESOURCE_HASH_AGG_TABLE_PREFER_MEM,
-      37
+      64
+    )
+    tableConfig.getConf.setInteger(
+      TableConfigOptions.SQL_RESOURCE_HASH_AGG_TABLE_MAX_MEM,
+      128
     )
     tableConfig.getConf.setInteger(
       TableConfigOptions.SQL_RESOURCE_HASH_JOIN_TABLE_MEM,
@@ -283,6 +287,10 @@ object BatchExecResourceTest {
     tableConfig.getConf.setInteger(
       TableConfigOptions.SQL_RESOURCE_HASH_JOIN_TABLE_PREFER_MEM,
       47
+    )
+    tableConfig.getConf.setInteger(
+      TableConfigOptions.SQL_RESOURCE_HASH_JOIN_TABLE_MAX_MEM,
+      128
     )
     tableConfig.getConf.setInteger(
       TableConfigOptions.SQL_RESOURCE_SORT_BUFFER_MEM,
