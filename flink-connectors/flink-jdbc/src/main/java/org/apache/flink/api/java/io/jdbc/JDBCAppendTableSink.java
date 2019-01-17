@@ -122,6 +122,8 @@ public class JDBCAppendTableSink implements AppendStreamTableSink<Row>, BatchTab
 	@Override
 	public DataStreamSink<?> emitBoundedStream(DataStream<Row> boundedStream,
 			TableConfig tableConfig, ExecutionConfig executionConfig) {
-		return null;
+		return boundedStream
+				.addSink(new JDBCSinkFunction(outputFormat))
+				.name(TableConnectorUtil.generateRuntimeName(this.getClass(), fieldNames));
 	}
 }

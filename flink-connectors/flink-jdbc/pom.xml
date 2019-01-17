@@ -66,5 +66,13 @@ under the License.
 			<version>10.10.1.1</version>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- Add for flink-table test dependency -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-streaming-scala_${scala.binary.version}</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 </project>
