@@ -128,16 +128,20 @@ public final class SqlCommandParser {
 			SINGLE_OPERAND),
 
 		CREATE_VIEW(
-			"CREATE\\s+VIEW\\s+(\\S+)\\s+AS\\s+(.*)",
+			"(CREATE\\s+VIEW\\s+(\\S+)\\s+AS\\s+(.*))",
 			(operands) -> {
-				if (operands.length < 2) {
+				if (operands.length < 3) {
 					return Optional.empty();
 				}
-				return Optional.of(new String[]{operands[0], operands[1]});
+				return Optional.of(new String[]{operands[0], operands[1], operands[2]});
 			}),
 
 		DROP_VIEW(
 			"DROP\\s+VIEW\\s+(.*)",
+			SINGLE_OPERAND),
+
+		CREATE_FUNCTION(
+			"(CREATE\\s+FUNCTION.*)",
 			SINGLE_OPERAND),
 
 		SET(

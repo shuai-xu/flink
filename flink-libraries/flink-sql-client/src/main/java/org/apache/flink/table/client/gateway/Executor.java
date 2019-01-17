@@ -130,6 +130,16 @@ public interface Executor {
 	void createTable(SessionContext session, String ddl) throws SqlExecutionException;
 
 	/**
+	 * Create a view with a DDL.
+	 */
+	void createView(SessionContext session, String ddl) throws SqlExecutionException;
+
+	/**
+	 * Create a function with a DDL.
+	 */
+	void createFunction(SessionContext session, String ddl) throws SqlExecutionException;
+
+	/**
 	 * Stops the executor.
 	 */
 	void stop(SessionContext session);

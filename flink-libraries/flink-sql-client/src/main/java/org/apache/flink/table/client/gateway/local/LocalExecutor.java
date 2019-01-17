@@ -31,14 +31,22 @@ import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.sql.parser.ddl.SqlCreateFunction;
 import org.apache.flink.sql.parser.ddl.SqlCreateTable;
+import org.apache.flink.sql.parser.ddl.SqlCreateView;
 import org.apache.flink.sql.parser.ddl.SqlNodeInfo;
 import org.apache.flink.table.api.QueryConfig;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.table.api.functions.AggregateFunction;
+import org.apache.flink.table.api.functions.FunctionService;
+import org.apache.flink.table.api.functions.ScalarFunction;
+import org.apache.flink.table.api.functions.TableFunction;
+import org.apache.flink.table.api.functions.UserDefinedFunction;
 import org.apache.flink.table.client.SqlClientException;
 import org.apache.flink.table.client.config.Environment;
+import org.apache.flink.table.client.config.entries.FunctionEntry;
 import org.apache.flink.table.client.gateway.Executor;
 import org.apache.flink.table.client.gateway.ProgramTargetDescriptor;
 import org.apache.flink.table.client.gateway.ResultDescriptor;
@@ -50,6 +58,8 @@ import org.apache.flink.table.client.gateway.local.result.ChangelogResult;
 import org.apache.flink.table.client.gateway.local.result.DynamicResult;
 import org.apache.flink.table.client.gateway.local.result.MaterializedResult;
 import org.apache.flink.table.client.utils.SqlJobUtil;
+import org.apache.flink.table.descriptors.DescriptorProperties;
+import org.apache.flink.table.descriptors.FunctionDescriptor;
 import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.StringUtils;
@@ -68,6 +78,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Executor that performs the Flink communication locally. The calls are blocking depending on the
@@ -78,6 +89,8 @@ public class LocalExecutor implements Executor {
 	private static final Logger LOG = LoggerFactory.getLogger(LocalExecutor.class);
 
 	private static final String DEFAULT_ENV_FILE = "sql-client-defaults.yaml";
+
+	private static final AtomicInteger TMP_VIEW_SEQUENCE_ID = new AtomicInteger(0);
 
 	// deployment
 
@@ -367,6 +380,90 @@ public class LocalExecutor implements Executor {
 	}
 
 	@Override
+	public void createView(SessionContext session, String ddl) throws SqlExecutionException {
+		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
+		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
+		TableEnvironment tEnv = envInst.getTableEnvironment();
+
+		try {
+			List<SqlNodeInfo> sqlNodeList = SqlJobUtil.parseSqlContext(ddl);
+			sqlNodeList
+				.stream()
+				.filter((node) -> node.getSqlNode() instanceof SqlCreateView)
+				.forEach((node) -> {
+					String subQuery = ((SqlCreateView) (node.getSqlNode())).getSubQuerySql();
+					Table view = tEnv.sqlQuery(subQuery);
+					List<String> aliasNames = ((SqlCreateView) node.getSqlNode()).getFieldNames();
+
+					if (!aliasNames.isEmpty()) {
+						String tmpView =
+							"_tmp_" + ((SqlCreateView) node.getSqlNode()).getName() +
+								"_" + TMP_VIEW_SEQUENCE_ID.incrementAndGet();
+						tEnv.registerTable(tmpView, view);
+
+						String viewSql = "SELECT * FROM" + tmpView;
+						StringBuilder aliasClause = new StringBuilder();
+						List<String> inputFields = view.getRelNode().getRowType().getFieldNames();
+						assert aliasNames.size() == inputFields.size();
+						if (aliasNames.size() != inputFields.size()) {
+							throw new RuntimeException("View definition and input fields not match: \nDef Fields: "
+								+ aliasNames.toString() + "\nInput Fields: " + inputFields.toString());
+						}
+
+						for (int idx = 0; idx < aliasNames.size(); ++idx) {
+							aliasClause.append("`" + inputFields.get(idx) + "` as `" + aliasNames.get(idx) + "`");
+							if (idx < aliasNames.size() - 1) {
+								aliasClause.append(", ");
+							}
+						}
+						view = tEnv.sqlQuery(String.format(viewSql, aliasClause.toString()));
+					}
+
+					tEnv.registerTable(((SqlCreateView) node.getSqlNode()).getName(), view);
+				});
+		} catch (Exception e) {
+			throw new SqlExecutionException("Could not create a view from ddl: " + ddl, e);
+		}
+	}
+
+	@Override
+	public void createFunction(SessionContext session, String ddl) throws SqlExecutionException {
+		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
+		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
+		TableEnvironment tEnv = envInst.getTableEnvironment();
+
+		try {
+			List<SqlNodeInfo> sqlNodeList = SqlJobUtil.parseSqlContext(ddl);
+			sqlNodeList
+				.stream()
+				.filter((node) -> node.getSqlNode() instanceof SqlCreateFunction)
+				.forEach((node) -> {
+					SqlCreateFunction sqlCreateFunction = (SqlCreateFunction) node.getSqlNode();
+					String funcName = sqlCreateFunction.getFunctionName().toString();
+					String funcDef = sqlCreateFunction.getClassName();
+
+					UserDefinedFunction func = createUserDefinedFunction(context.getClassLoader(), funcName, funcDef);
+
+					if (func instanceof TableFunction) {
+						TableFunction<?> tableFunction = (TableFunction) func;
+						tEnv.registerFunction(funcName, tableFunction);
+					} else if (func instanceof AggregateFunction) {
+						AggregateFunction<?, ?> aggregateFunction = (AggregateFunction) func;
+						tEnv.registerFunction(funcName, aggregateFunction);
+					} else if (func instanceof ScalarFunction) {
+						ScalarFunction scalarFunction = (ScalarFunction) func;
+						tEnv.registerFunction(funcName, scalarFunction);
+					} else {
+						// TODO: Support Hive UDX
+						throw new RuntimeException("Couldn't match the type of UDF class: " + funcDef);
+					}
+				});
+		} catch (Exception e) {
+			throw new SqlExecutionException("Could not create a udx from ddl: " + ddl, e);
+		}
+	}
+
+	@Override
 	public void stop(SessionContext session) {
 		resultStore.getResults().forEach((resultId) -> {
 			try {
@@ -597,4 +694,19 @@ public class LocalExecutor implements Executor {
 	private static TableSchema removeTimeAttributes(TableSchema schema) {
 		return TableSchemaUtil.withoutTimeAttributes(schema);
 	}
+
+	/**
+	 * Create user defined function.
+	 */
+	private static UserDefinedFunction createUserDefinedFunction(ClassLoader classLoader, String funcName, String funcDef) {
+		DescriptorProperties properties = new DescriptorProperties();
+		properties.putString("name", funcName);
+		properties.putString("from", "class");
+		properties.putString("class", funcDef);
+
+		final FunctionDescriptor desc = FunctionEntry.create(properties).getDescriptor();
+
+		return FunctionService.createFunction(desc, classLoader, false);
+	}
+
 }

@@ -237,5 +237,15 @@ public class CliClientTest extends TestLogger {
 		public void createTable(SessionContext session, String ddl) throws SqlExecutionException {
 			// nothing to do
 		}
+
+		@Override
+		public void createView(SessionContext session, String ddl) throws SqlExecutionException {
+			// nothing to do
+		}
+
+		@Override
+		public void createFunction(SessionContext session, String ddl) throws SqlExecutionException {
+			// nothing to do
+		}
 	}
 }

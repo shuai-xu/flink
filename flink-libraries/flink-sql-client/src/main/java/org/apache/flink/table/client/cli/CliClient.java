@@ -279,8 +279,8 @@ public class CliClient {
 			case CREATE_VIEW:
 				callCreateView(cmdCall);
 				break;
-			case DROP_VIEW:
-				callDropView(cmdCall);
+			case CREATE_FUNCTION:
+				callCreateFunction(cmdCall);
 				break;
 			case SOURCE:
 				callSource(cmdCall);
@@ -480,29 +480,26 @@ public class CliClient {
 	private void callCreateTable(SqlCommandCall cmdCall) {
 		try {
 			executor.createTable(context, cmdCall.operands[0]);
+			printInfo(CliStrings.MESSAGE_TABLE_CREATE);
 		} catch (SqlExecutionException e) {
 			printExecutionException(e);
 		}
 	}
 
 	private void callCreateView(SqlCommandCall cmdCall) {
-		final String name = cmdCall.operands[0];
-		final String query = cmdCall.operands[1];
-
-		final ViewEntry previousView = context.getViews().get(name);
-		if (previousView != null) {
-			printExecutionError(CliStrings.MESSAGE_VIEW_ALREADY_EXISTS);
-			return;
-		}
-
 		try {
-			// perform and validate change
-			context.addView(ViewEntry.create(name, query));
-			executor.validateSession(context);
+			executor.createView(context, cmdCall.operands[0]);
 			printInfo(CliStrings.MESSAGE_VIEW_CREATED);
 		} catch (SqlExecutionException e) {
-			// rollback change
-			context.removeView(name);
+			printExecutionException(e);
+		}
+	}
+
+	private void callCreateFunction(SqlCommandCall cmdCall) {
+		try {
+			executor.createFunction(context, cmdCall.operands[0]);
+			printInfo(CliStrings.MESSAGE_FUNCTION_CREATE);
+		} catch (SqlExecutionException e) {
 			printExecutionException(e);
 		}
 	}

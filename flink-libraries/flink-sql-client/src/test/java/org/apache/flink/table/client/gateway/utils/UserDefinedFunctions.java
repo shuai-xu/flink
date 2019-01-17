@@ -38,6 +38,10 @@ public class UserDefinedFunctions {
 
 		private int offset;
 
+		public ScalarUDF() {
+			this.offset = 5;
+		}
+
 		public ScalarUDF(Integer offset) {
 			this.offset = offset;
 		}
