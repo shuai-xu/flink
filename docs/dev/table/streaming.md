@@ -582,7 +582,7 @@ StreamQueryConfig qConfig = ...
 // set idle state retention time: min = 12 hour, max = 16 hours
 qConfig.withIdleStateRetentionTime(Time.hours(12), Time.hours(16));
 // set idle state retention time. min = max = 12 hours
-qConfig.withIdleStateRetentionTime(Time.hours(12);
+qConfig.withIdleStateRetentionTime(Time.hours(12));
 
 {% endhighlight %}
 </div>
@@ -594,7 +594,7 @@ val qConfig: StreamQueryConfig = ???
 // set idle state retention time: min = 12 hour, max = 16 hours
 qConfig.withIdleStateRetentionTime(Time.hours(12), Time.hours(16))
 // set idle state retention time. min = max = 12 hours
-qConfig.withIdleStateRetentionTime(Time.hours(12)
+qConfig.withIdleStateRetentionTime(Time.hours(12))
 
 {% endhighlight %}
 </div>
