@@ -51,8 +51,8 @@ public class UpdatingTriggerHeaders extends
 	}
 
 	@Override
-	public RescalingTriggerMessageParameters getUnresolvedMessageParameters() {
-		return new RescalingTriggerMessageParameters();
+	public JobMessageParameters getUnresolvedMessageParameters() {
+		return new JobMessageParameters();
 	}
 
 	@Override

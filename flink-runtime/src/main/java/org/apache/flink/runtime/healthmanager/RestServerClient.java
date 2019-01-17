@@ -110,6 +110,11 @@ public interface RestServerClient {
 	void rescale(JobID jobId, Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource) throws IOException;
 
 	/**
+	 * get all resoure limit exceptions.
+	 */
+	Map<Long, Exception> getTotalResourceLimitExceptions() throws Exception;
+
+	/**
 	 * Configuration of a vertex.
 	 */
 	class VertexConfig {

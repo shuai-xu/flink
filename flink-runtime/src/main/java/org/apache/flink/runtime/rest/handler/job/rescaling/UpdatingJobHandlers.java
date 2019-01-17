@@ -24,6 +24,7 @@ import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.messages.Acknowledge;
+import org.apache.flink.runtime.rest.ResourceSpecInfo;
 import org.apache.flink.runtime.rest.handler.HandlerRequest;
 import org.apache.flink.runtime.rest.handler.RestHandlerException;
 import org.apache.flink.runtime.rest.handler.async.AbstractAsynchronousOperationHandlers;
@@ -72,13 +73,13 @@ public class UpdatingJobHandlers extends AbstractAsynchronousOperationHandlers<A
 		@Override
 		protected CompletableFuture<Acknowledge> triggerOperation(HandlerRequest<UpdatingJobRequest, JobMessageParameters> request, RestfulGateway gateway) throws RestHandlerException {
 			final JobID jobId = request.getPathParameter(JobIDPathParameter.class);
-			final Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResources = request.getRequestBody().getVertexParallelismResource();
+			final Map<String, Tuple2<Integer, ResourceSpecInfo>> vertexParallelismResources = request.getRequestBody().getVertexParallelismResource();
 
 			List<JobUpdateAction> actions = new ArrayList<>();
 			if (vertexParallelismResources != null && !vertexParallelismResources.isEmpty()) {
-				for (Map.Entry<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource: vertexParallelismResources.entrySet()){
-					JobVertexID jobVertexID = vertexParallelismResource.getKey();
-					ResourceSpec newResourceSpec = vertexParallelismResource.getValue().f1;
+				for (Map.Entry<String, Tuple2<Integer, ResourceSpecInfo>> vertexParallelismResource: vertexParallelismResources.entrySet()){
+					JobVertexID jobVertexID = JobVertexID.fromHexString(vertexParallelismResource.getKey());
+					ResourceSpec newResourceSpec = vertexParallelismResource.getValue().f1.convertToResourceSpec();
 					int parallelism = vertexParallelismResource.getValue().f0;
 					actions.add(new JobVertexResourcesUpdateAction(jobVertexID, newResourceSpec));
 					actions.add(new JobVertexRescaleAction(jobVertexID, parallelism));

@@ -36,6 +36,7 @@ import org.apache.flink.runtime.rest.handler.cluster.ClusterConfigHandler;
 import org.apache.flink.runtime.rest.handler.cluster.ClusterOverviewHandler;
 import org.apache.flink.runtime.rest.handler.cluster.DashboardConfigHandler;
 import org.apache.flink.runtime.rest.handler.cluster.ShutdownHandler;
+import org.apache.flink.runtime.rest.handler.cluster.TotalResourceLimitExceptionsHandler;
 import org.apache.flink.runtime.rest.handler.job.JobAccumulatorsHandler;
 import org.apache.flink.runtime.rest.handler.job.JobAllSubtaskCurrentAttemptsHandler;
 import org.apache.flink.runtime.rest.handler.job.JobConfigHandler;
@@ -115,6 +116,7 @@ import org.apache.flink.runtime.rest.messages.JobsOverviewHeaders;
 import org.apache.flink.runtime.rest.messages.SubtasksAllAccumulatorsHeaders;
 import org.apache.flink.runtime.rest.messages.SubtasksTimesHeaders;
 import org.apache.flink.runtime.rest.messages.TerminationModeQueryParameter;
+import org.apache.flink.runtime.rest.messages.TotalResourceLimitExceptionInfosHeaders;
 import org.apache.flink.runtime.rest.messages.YarnCancelJobTerminationHeaders;
 import org.apache.flink.runtime.rest.messages.YarnStopJobTerminationHeaders;
 import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointConfigHeaders;
@@ -280,6 +282,15 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 			JobConfigHeaders.getInstance(),
 			executionGraphCache,
 			executor);
+
+		TotalResourceLimitExceptionsHandler totalResourceLimitExceptionsHandler = new TotalResourceLimitExceptionsHandler(
+			restAddressFuture,
+			leaderRetriever,
+			timeout,
+			responseHeaders,
+			TotalResourceLimitExceptionInfosHeaders.getInstance(),
+			resourceManagerRetriever
+		);
 
 		JobGraphOverviewHandler jobGraphOverviewHandler = new JobGraphOverviewHandler(
 			restAddressFuture,
@@ -720,6 +731,7 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 		handlers.add(Tuple2.of(jobIdsHandler.getMessageHeaders(), jobIdsHandler));
 		handlers.add(Tuple2.of(jobsOverviewHandler.getMessageHeaders(), jobsOverviewHandler));
 		handlers.add(Tuple2.of(jobConfigHandler.getMessageHeaders(), jobConfigHandler));
+		handlers.add(Tuple2.of(totalResourceLimitExceptionsHandler.getMessageHeaders(), totalResourceLimitExceptionsHandler));
 		handlers.add(Tuple2.of(jobGraphOverviewHandler.getMessageHeaders(), jobGraphOverviewHandler));
 		handlers.add(Tuple2.of(checkpointConfigHandler.getMessageHeaders(), checkpointConfigHandler));
 		handlers.add(Tuple2.of(checkpointStatisticsHandler.getMessageHeaders(), checkpointStatisticsHandler));

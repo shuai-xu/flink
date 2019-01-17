@@ -16,39 +16,52 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.rest.messages.job;
+package org.apache.flink.runtime.rest.messages;
 
-import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.runtime.rest.ResourceSpecInfo;
-import org.apache.flink.runtime.rest.messages.RequestBody;
+import org.apache.flink.runtime.rest.handler.cluster.TotalResourceLimitHandler;
 
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.annotation.Nonnull;
-
 import java.util.Map;
+import java.util.Objects;
 
 /**
- * Request body for a savepoint disposal call.
+ * Response type of the {@link TotalResourceLimitHandler}.
  */
-public class UpdatingJobRequest implements RequestBody {
+public class TotalResourceLimitInfos implements ResponseBody {
 
-	private static final String field_name_vertex_parallelism_resource = "vertex-parallelism-resource";
+	private static final String FIELD_NAME_RESOURCE_LIMIT = "resource-limits";
 
-	@JsonProperty(field_name_vertex_parallelism_resource)
-	private final Map<String, Tuple2<Integer, ResourceSpecInfo>> vertexParallelismResource;
+	@JsonProperty(FIELD_NAME_RESOURCE_LIMIT)
+	private final Map<Long, Exception> resourceLimit;
 
 	@JsonCreator
-	public UpdatingJobRequest(
-		@JsonProperty(field_name_vertex_parallelism_resource)
-		@Nonnull Map<String, Tuple2<Integer, ResourceSpecInfo>> vertexParallelismResource) {
-		this.vertexParallelismResource = vertexParallelismResource;
+	public TotalResourceLimitInfos(@JsonProperty(FIELD_NAME_RESOURCE_LIMIT) Map<Long, Exception> resourceLimit) {
+		this.resourceLimit = resourceLimit;
 	}
 
 	@JsonIgnore
-	public Map<String, Tuple2<Integer, ResourceSpecInfo>> getVertexParallelismResource() {
-		return vertexParallelismResource;
+	public Map<Long, Exception> getResourceLimit() {
+		return resourceLimit;
 	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+		TotalResourceLimitInfos that = (TotalResourceLimitInfos) o;
+		return Objects.equals(resourceLimit, that.resourceLimit);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(resourceLimit);
+	}
+
 }

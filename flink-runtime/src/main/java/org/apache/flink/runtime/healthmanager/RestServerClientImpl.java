@@ -28,6 +28,7 @@ import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.rest.ResourceSpecInfo;
 import org.apache.flink.runtime.rest.RestClient;
 import org.apache.flink.runtime.rest.RestClientConfiguration;
 import org.apache.flink.runtime.rest.handler.job.rescaling.UpdatingTriggerHeaders;
@@ -43,6 +44,8 @@ import org.apache.flink.runtime.rest.messages.MessageHeaders;
 import org.apache.flink.runtime.rest.messages.MessageParameters;
 import org.apache.flink.runtime.rest.messages.RequestBody;
 import org.apache.flink.runtime.rest.messages.ResponseBody;
+import org.apache.flink.runtime.rest.messages.TotalResourceLimitExceptionInfosHeaders;
+import org.apache.flink.runtime.rest.messages.TotalResourceLimitExceptionsInfos;
 import org.apache.flink.runtime.rest.messages.job.JobAllSubtaskCurrentAttemptsInfoHeaders;
 import org.apache.flink.runtime.rest.messages.job.JobSubtaskCurrentAttemptsInfo;
 import org.apache.flink.runtime.rest.messages.job.SubtaskExecutionAttemptInfo;
@@ -172,8 +175,6 @@ public class RestServerClientImpl implements RestServerClient {
 		).get();
 	}
 
-	//@ JobExceptionsHandler
-	// org.apache.flink.client.program.rest.RestClusterClient.rescaleJob
 	@Override
 	public Map<JobVertexID, List<JobException>> getFailover(JobID jobID, long startTime, long endTime) throws Exception {
 		final JobExceptionsHeaders jobExceptionsHeaders = JobExceptionsHeaders.getInstance();
@@ -311,9 +312,41 @@ public class RestServerClientImpl implements RestServerClient {
 
 		final UpdatingTriggerHeaders header = UpdatingTriggerHeaders.getInstance();
 		final JobMessageParameters parameters = header.getUnresolvedMessageParameters();
-		final UpdatingJobRequest updatingJobRequest = new UpdatingJobRequest(vertexParallelismResource);
+		Map<String, Tuple2<Integer, ResourceSpecInfo>> vertexParallelismResourceJsonMap = new HashMap<>();
+		for (Map.Entry<JobVertexID, Tuple2<Integer, ResourceSpec>> id2resource: vertexParallelismResource.entrySet()){
+			String idStr = id2resource.getKey().toString();
+			Tuple2<Integer, ResourceSpec> parallism2Resource = id2resource.getValue();
+			ResourceSpec resourceSpec = parallism2Resource.f1;
+			Integer parallelism = parallism2Resource.f0;
+			ResourceSpecInfo resourceSpecInfo = new ResourceSpecInfo(
+				resourceSpec.getCpuCores(),
+				resourceSpec.getHeapMemory(),
+				resourceSpec.getDirectMemory(),
+				resourceSpec.getNativeMemory(),
+				resourceSpec.getStateSize(),
+				resourceSpec.getExtendedResources()
+			);
+			vertexParallelismResourceJsonMap.put(idStr, Tuple2.of(parallelism, resourceSpecInfo));
+		}
+		final UpdatingJobRequest updatingJobRequest = new UpdatingJobRequest(vertexParallelismResourceJsonMap);
 		parameters.jobPathParameter.resolve(jobId);
 		sendRequest(header, parameters, updatingJobRequest);
+	}
+
+	@Override
+	public Map<Long, Exception> getTotalResourceLimitExceptions() throws java.lang.Exception {
+		final TotalResourceLimitExceptionInfosHeaders headers = TotalResourceLimitExceptionInfosHeaders.getInstance();
+		final EmptyMessageParameters param = headers.getUnresolvedMessageParameters();
+		Map<Long, Exception> result = new HashMap<>();
+		return sendRequest(headers, param, EmptyRequestBody.getInstance()).thenApply(
+			(TotalResourceLimitExceptionsInfos totalResourceLimitInfos) -> {
+				Map<Long, Exception> totalResourceLimit = totalResourceLimitInfos.getResourceLimit();
+				if (totalResourceLimit != null && !totalResourceLimit.isEmpty()) {
+					result.putAll(totalResourceLimit);
+				}
+				return totalResourceLimit;
+			}
+		).get();
 	}
 
 	private Map<String, Map<String, Tuple2<Long, Double>>> updateMetricFromComponentsMetricCollection(ComponentsMetricCollectionResponseBody cmc,
