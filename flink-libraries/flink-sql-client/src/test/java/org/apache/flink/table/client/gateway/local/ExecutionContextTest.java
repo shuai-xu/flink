@@ -91,9 +91,8 @@ public class ExecutionContextTest {
 		final Map<String, TableSource> sources = context.getTableSources();
 		final Map<String, TableSink<?>> sinks = context.getTableSinks();
 
-		// TODO: BLINK-18547630
 		assertEquals(
-			new HashSet<>(Arrays.asList("TableNumber1", "TableNumber2")),
+			new HashSet<>(Arrays.asList("TableSourceSink", "TableNumber1", "TableNumber2")),
 			sources.keySet());
 
 		assertEquals(

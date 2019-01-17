@@ -136,7 +136,7 @@ class PushFilterIntoTableSourceScanRule extends RelOptRule(
                         tableSourceTable.statistic.getRelModifiedMonotonicity)
     }
     val newTableSourceTable = tableSourceTable.replaceTableSource(newTableSource).copy(statistics)
-    relOptTable.copy(newTableSourceTable, relOptTable.getRowType)
+    relOptTable.copy(newTableSourceTable, tableSourceTable.getRowType(relBuilder.getTypeFactory))
   }
 
 }

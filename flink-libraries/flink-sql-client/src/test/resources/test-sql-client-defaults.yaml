@@ -69,8 +69,7 @@ tables:
       line-delimiter: "\n"
       comment-prefix: "#"
   - name: TableSourceSink
-    # TODO: BLINK-18547630
-    type: sink
+    type: both
     $VAR_UPDATE_MODE
     schema:
       - name: BooleanField
@@ -87,6 +86,8 @@ tables:
           type: BOOLEAN
         - name: StringField
           type: VARCHAR
+      line-delimiter: "\n"
+      comment-prefix: "#"
   - name: TestView2
     type: view
     query: SELECT * FROM TestView1

@@ -28,7 +28,7 @@ import org.apache.calcite.plan.{RelOptCluster, RelOptSchema, RelOptTable}
 import org.apache.calcite.prepare.Prepare.AbstractPreparingTable
 import org.apache.calcite.prepare.{CalcitePrepareImpl, RelOptTableImpl}
 import org.apache.calcite.rel._
-import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
+import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.logical.LogicalTableScan
 import org.apache.calcite.runtime.Hook
 import org.apache.calcite.schema._
@@ -38,6 +38,7 @@ import org.apache.calcite.sql2rel.{InitializerContext, NullInitializerExpression
 import org.apache.calcite.util.{ImmutableBitSet, Util}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
 import org.apache.flink.table.plan.stats.FlinkStatistic
+import org.apache.flink.table.sources.TableSource
 
 import scala.collection.JavaConversions._
 
@@ -113,19 +114,25 @@ class FlinkRelOptTable protected(
     * @return qualified name
     */
   override def getQualifiedName: JList[String] = {
+    def explainSourceAsString(ts: TableSource): JList[String] = {
+      val tsDigest = ts.explainSource()
+      if (tsDigest.nonEmpty) {
+        val builder = ImmutableList.builder[String]()
+        builder.addAll(Util.skipLast(names))
+        val completeTableName = s"${Util.last(names)}, source: [$tsDigest]"
+        builder.add(completeTableName)
+        builder.build()
+      } else {
+        names
+      }
+    }
+
     table match {
+      // At this moment, table will always be instance of TableSourceSinkTable.
+      case tsst: TableSourceSinkTable[_] if tsst.tableSourceTable.nonEmpty =>
+        explainSourceAsString(tsst.tableSourceTable.get.tableSource)
       case tst: TableSourceTable =>
-        val ts = tst.tableSource
-        val tsDigest = ts.explainSource()
-        if (tsDigest.nonEmpty) {
-          val builder = ImmutableList.builder[String]()
-          builder.addAll(Util.skipLast(names))
-          val completeTableName = s"${Util.last(names)}, source: [$tsDigest]"
-          builder.add(completeTableName)
-          builder.build()
-        } else {
-          names
-        }
+        explainSourceAsString(tst.tableSource)
       case _ => names
     }
   }
@@ -149,6 +156,8 @@ class FlinkRelOptTable protected(
       clazz.cast(this)
     } else if (clazz.isInstance(table)) {
       clazz.cast(table)
+    } else if (table.isInstanceOf[TableSourceSinkTable[_]]) {
+      table.asInstanceOf[TableSourceSinkTable[_]].unwrap(clazz)
     } else if (clazz.isInstance(initializerExpressionFactory)) {
       clazz.cast(initializerExpressionFactory)
     } else {

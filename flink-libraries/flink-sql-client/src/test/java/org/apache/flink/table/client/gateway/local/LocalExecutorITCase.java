@@ -662,6 +662,26 @@ public class LocalExecutorITCase extends TestLogger {
 	}
 
 	@Test(timeout = 30_000L)
+	public void testTableSourceSinkTableAsSource() throws Exception {
+		final URL url = getClass().getClassLoader().getResource("test-data.csv");
+		Objects.requireNonNull(url);
+
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_SOURCE_SINK_PATH", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "streaming");
+		replaceVars.put("$VAR_RESULT_MODE", "table");
+		replaceVars.put("$VAR_UPDATE_MODE", "update-mode: append");
+		replaceVars.put("$VAR_MAX_ROWS", "1");
+
+		final String query = "SELECT COUNT(*), StringField FROM TableSourceSink GROUP BY StringField";
+
+		final List<String> expectedResults = new ArrayList<>();
+		expectedResults.add("1,Hello World!!!!");
+
+		executeStreamQueryTable(replaceVars, query, expectedResults);
+	}
+
+	@Test(timeout = 30_000L)
 	public void testStreamWindowQueryExecutionFromDDL() throws Exception {
 		final String csvOutputPath = new File(tempFolder.newFolder().getAbsolutePath(), "test-out.csv").toURI().toString();
 		final URL url = getClass().getClassLoader().getResource("test-data2.csv");

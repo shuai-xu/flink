@@ -20,7 +20,6 @@ package org.apache.flink.table.calcite;
 
 import org.apache.flink.table.plan.schema.FlinkRelOptTable;
 import org.apache.flink.table.plan.schema.FlinkTable;
-import org.apache.flink.table.plan.schema.TableSourceSinkTable;
 
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.jdbc.CalciteSchema;
@@ -75,28 +74,10 @@ public class FlinkCalciteCatalogReader extends CalciteCatalogReader {
 	public Prepare.PreparingTable getTable(List<String> names) {
 		Prepare.PreparingTable originRelOptTable = super.getTable(names);
 		if (originRelOptTable == null) {
-			return originRelOptTable;
+			return null;
 		} else {
-			TableSourceSinkTable sourceSinkTable = originRelOptTable.unwrap(TableSourceSinkTable.class);
-
-			FlinkTable table;
-
-			if (sourceSinkTable != null) {
-				// unwrap the TableSourceSinkTable to TableSourceTable/TableSinkTable, cause we do not want
-				// to have mixed table type in Calcite plans, that means, we only want to see
-				// TableSourceTable/TableSinkTable in query plan.
-
-				if (!sourceSinkTable.tableSourceTable().isEmpty()) {
-					table = (FlinkTable) sourceSinkTable.tableSourceTable().get();
-				} else if (!sourceSinkTable.tableSinkTable().isEmpty()) {
-					table = (FlinkTable) sourceSinkTable.tableSinkTable().get();
-				} else {
-					table = null;
-				}
-			} else {
-				table = originRelOptTable.unwrap(FlinkTable.class);
-			}
-
+			// Wrap FlinkTable as FlinkRelOptTable to use in query optimization.
+			FlinkTable table = originRelOptTable.unwrap(FlinkTable.class);
 			if (table != null) {
 				return FlinkRelOptTable.create(
 					originRelOptTable.getRelOptSchema(),

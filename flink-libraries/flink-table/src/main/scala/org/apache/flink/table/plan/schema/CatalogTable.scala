@@ -25,10 +25,10 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.catalog.ExternalTableUtil
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.calcite.rel.`type`.RelDataTypeFactory
-import org.apache.calcite.schema.{ConfigurableTable, TemporalTable}
+import org.apache.calcite.schema.ConfigurableTable
 import org.apache.flink.table.api.TableSourceParser
 import org.apache.flink.table.sinks.TableSink
-import org.apache.flink.table.sources.{BatchTableSource, StreamTableSource, TableSource}
+import org.apache.flink.table.sources.{BatchTableSource, StreamTableSource}
 
 import scala.collection.mutable.ArrayBuffer
 

@@ -133,7 +133,7 @@ class SelectivityEstimatorTest {
       mock(classOf[TableSourceTable])
     }
     val flinkTable = mock(classOf[FlinkRelOptTable])
-    when(flinkTable, "unwrap", classOf[FlinkTable]).thenReturn(innerTable)
+    when(flinkTable, "unwrap", classOf[TableSourceTable]).thenReturn(innerTable)
     when(flinkTable, "getFlinkStatistic").thenReturn(statistic)
     when(flinkTable, "getRowType").thenReturn(relDataType)
     when(tableScan, "getTable").thenReturn(flinkTable)

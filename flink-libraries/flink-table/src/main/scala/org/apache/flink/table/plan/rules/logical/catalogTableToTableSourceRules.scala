@@ -61,7 +61,7 @@ class CatalogTableToStreamTableSourceRule
     val oldRel = call.rel(0).asInstanceOf[LogicalTableScan]
     val catalogTable = oldRel.getTable.unwrap(classOf[CatalogTable])
     val tableSource = catalogTable.streamTableSource
-    var table =oldRel.getTable.asInstanceOf[FlinkRelOptTable].copy(
+    var table = oldRel.getTable.asInstanceOf[FlinkRelOptTable].copy(
       new StreamTableSourceTable(
         tableSource, catalogTable.getStatistic()),
       TableSourceUtil.getRelDataType(

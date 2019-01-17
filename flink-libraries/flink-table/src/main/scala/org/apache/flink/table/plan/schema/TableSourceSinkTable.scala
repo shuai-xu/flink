@@ -75,4 +75,18 @@ class TableSourceSinkTable[T1](
       source.copy(statistic).asInstanceOf[TableSourceTable]),
       tableSinkTable.map(sink => sink.copy(statistic).asInstanceOf[TableSinkTable[T1]]))
   }
+
+  // Look up the tableSourceTable and tableSinkTable to find proper table type, this method must be
+  // invoked every time to decide if the table source or sink can be deterministic.
+  override def unwrap[T](clazz: Class[T]): T = {
+    if (clazz.isInstance(this)) {
+      clazz.cast(this)
+    } else if (tableSourceTable.nonEmpty && clazz.isInstance(tableSourceTable.get)) {
+      clazz.cast(tableSourceTable.get)
+    } else if (tableSinkTable.nonEmpty && clazz.isInstance(tableSinkTable.get)) {
+      clazz.cast(tableSinkTable.get)
+    } else {
+      null.asInstanceOf[T]
+    }
+  }
 }

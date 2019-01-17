@@ -53,6 +53,8 @@ abstract class CsvTableSinkFactoryBase extends TableFactory {
     properties.add(s"$FORMAT_FIELDS.#.${DescriptorProperties.TABLE_SCHEMA_TYPE}")
     properties.add(s"$FORMAT_FIELDS.#.${DescriptorProperties.TABLE_SCHEMA_NAME}")
     properties.add(FORMAT_FIELD_DELIMITER)
+    properties.add(FORMAT_LINE_DELIMITER)
+    properties.add(FORMAT_COMMENT_PREFIX)
     properties.add(CONNECTOR_PATH)
     // schema
     properties.add(s"$SCHEMA.#.${DescriptorProperties.TABLE_SCHEMA_TYPE}")
