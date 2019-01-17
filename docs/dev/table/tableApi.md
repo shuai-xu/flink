@@ -5143,13 +5143,13 @@ Table counts = orders
         .select("a, b.count as cnt");
 
 // cache the counts
-counts.cache()
+counts.cache();
 
 // print the high sales; counts is computed for the first time and is cached hereafter
-counts.filter("cnt > 10000").print()
+counts.filter("cnt > 10000").print();
 
 // print the low sales; counts does not need to be recomputed.
-counts.filter("cnt < 10").print()
+counts.filter("cnt < 10").print();
 
 {% endhighlight %}
 
@@ -5179,10 +5179,10 @@ val counts = orders
 counts.cache()
 
 // print the high sales; counts is computed for the first time and is cached hereafter
-counts.filter("cnt > 10000").print()
+counts.filter('cnt > 10000).print()
 
 // print the low sales; counts does not need to be recomputed.
-counts.filter("cnt < 10").print()          
+counts.filter('cnt < 10).print()          
 {% endhighlight %}
 
 </div>
