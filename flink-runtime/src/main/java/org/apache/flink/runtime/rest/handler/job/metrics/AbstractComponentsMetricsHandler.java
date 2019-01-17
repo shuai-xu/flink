@@ -37,7 +37,6 @@ import org.apache.flink.runtime.webmonitor.RestfulGateway;
 import org.apache.flink.runtime.webmonitor.retriever.GatewayRetriever;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -89,7 +88,7 @@ public abstract class AbstractComponentsMetricsHandler<M extends MessageParamete
 				metricStore,
 				requestedComponenets);
 
-			if (componentId2MetricStores == null) {
+			if (componentId2MetricStores == null || componentId2MetricStores.isEmpty()) {
 				return CompletableFuture.completedFuture(
 					new ComponentsMetricCollectionResponseBody(Collections.emptyList()));
 			} else {
@@ -100,7 +99,7 @@ public abstract class AbstractComponentsMetricsHandler<M extends MessageParamete
 					MetricStore.ComponentMetricStore componentMetricStore = componentId2MetricStore.getValue();
 					String componentId = componentId2MetricStore.getKey();
 					List<Metric> metrics;
-					if (componentMetricStore.metrics == null) {
+					if (componentMetricStore == null || componentMetricStore.metrics == null) {
 						continue;
 					} else if (requestedMetrics.isEmpty()) {
 						metrics = getAvailableMetrics(componentMetricStore);
@@ -118,7 +117,6 @@ public abstract class AbstractComponentsMetricsHandler<M extends MessageParamete
 	/**
 	 * Returns the {@link MetricStore.ComponentMetricStore} that should be queried for metrics.
 	 */
-	@Nullable
 	protected abstract Map<String, MetricStore.ComponentMetricStore> getComponentId2MetricStores(
 		HandlerRequest<EmptyRequestBody, M> request,
 		MetricStore metricStore,
