@@ -468,13 +468,13 @@ The number and size of network buffers can be configured with the following para
 - `taskmanager.network.numberOfBuffers`, and
 - `taskmanager.memory.segment-size`.
 
-### Configuring Temporary I/O Directories
+### Configuring Temporary I/O Directories and Threads
 
 Although Flink aims to process as much data in main memory as possible, it is not uncommon that more data needs to be processed than memory is available. Flink's runtime is designed to write temporary data to disk to handle these situations.
 
-The `taskmanager.tmp.dirs` parameter specifies a list of directories into which Flink writes temporary files. The paths of the directories need to be separated by ':' (colon character). Flink will concurrently write (or read) one temporary file to (from) each configured directory. This way, temporary I/O can be evenly distributed over multiple independent I/O devices such as hard disks to improve performance. To leverage fast I/O devices (e.g., SSD, RAID, NAS), it is possible to specify a directory multiple times.
+The `taskmanager.tmp.dirs` parameter specifies a list of directories into which Flink writes temporary files. The paths of the directories need to be separated by ':' (colon character). The `io.manager.async.num-read-write-thread` parameter specifies the number of IO threads. Flink will concurrently write (or read) one or more temporary files to (from) each configured directory. Each file will be bound to a directory and an IO thread. The directories and threads will be selected in a roundrobin way. This way, temporary I/O can be evenly distributed over multiple independent I/O devices such as hard disks to improve performance. To leverage fast I/O devices (e.g., SSD, RAID, NAS), it is possible to specify a directory multiple times.
 
-If the `taskmanager.tmp.dirs` parameter is not explicitly specified, Flink writes temporary data to the temporary directory of the operating system, such as */tmp* in Linux systems.
+If the `taskmanager.tmp.dirs` parameter is not explicitly specified, Flink writes temporary data to the temporary directory of the operating system, such as */tmp* in Linux systems. And the default value of `io.manager.async.num-read-write-thread` is 1.
 
 ### Configuring TaskManager processing slots
 
@@ -502,7 +502,7 @@ By default batch jobs will use TaskManager to shuffle the intermediate data. To 
 
 #### Configure the disk type preferred
 
-If there are multiple available root directories, by default Flink will randomly choose one from them to write the shuffle data. If you want to only use directories on specific type of disks, you can configure 
+If there are multiple available root directories, by default Flink will randomly choose one from them to write the shuffle data. If you want to only use directories on specific type of disks, you can configure
 
 - `taskmanager.output.local-disk.type`: The disk type preferred to write the shuffle data. The corresponding shuffle services should be configured to be aware of the disk types, like the one described in [Configure the root directories]({{site.baseurl}}/ops/deployment/yarn_setup.html#configure-the-root-directories) for the YARN shuffle service.
 
@@ -510,7 +510,7 @@ If there are multiple available root directories, by default Flink will randomly
 
 For the map-side tasks, the intermediate data can be write to the disks with either the hash writer or the merge writer. The hash writer writes the data to different reduce-side tasks to separate files. It is suitable when the number of reduce-side tasks is limited and there are enough write buffers to open all the files concurrently:
 
-- `taskmanager.output.hash.max-subpartitions`: The maximum number of subpartitions supported by the hash ​writer. 
+- `taskmanager.output.hash.max-subpartitions`: The maximum number of subpartitions supported by the hash ​writer.
 - `taskmanager.output.memory.mb`: The write buffer size for each output edge.​
 
 The merge writer writes the data to different reduce-side tasks to the same files and data to each reduce task is continuous in each file. These files will be merged if the number of files is larger than the threshold:
@@ -528,7 +528,7 @@ For the reduce-side tasks, it is better to limit the number of concurrent reques
 
 #### Compression
 
-Compression is supported to decrease the data written to disks and sent by network. 
+Compression is supported to decrease the data written to disks and sent by network.
 
 - `task.external.shuffle.compression.enable`: Whether to enable compression (DEFAULT: false).
 - `task.external.shuffle.compression.codec`: ​The compression algorithm to use. Currently supported codecs are `lz4`, `bzip2`,`gzip` (DEFAULT: `lz4`).
