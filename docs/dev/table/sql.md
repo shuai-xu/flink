@@ -43,7 +43,7 @@ For example, user `A` produced a table `T1` in a query, then `T1` can be shared 
 Creating a Table
 ----------------
 
-The following example shows how to create a table via DDL.
+The following example shows how to create a table via DDL. More details see [Supported DDL]({{ site.baseurl }}/dev/table/supported_ddl.html).
 
 {% highlight sql %}
 

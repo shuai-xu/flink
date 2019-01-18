@@ -22,7 +22,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-Flink SQL provides access to data which is stored in external systems (database, key-value store, message queue) or files by CREATE TABLE statement.
+Flink SQL provides access to data which is stored in external systems (database, key-value store, message queue) or files.
 
 By CREATE TABLE statement, data could be accessed as a SQL table in the following DML statements and translated to `TableSource` or `TableSink` automatically.
 
@@ -59,7 +59,7 @@ CREATE TABLE Orders (
 * **path** : locations of the CSV files.  Accepts standard Hadoop globbing expressions. To read a directory of CSV files, specify a directory.
 
 #### Optional Configuration
-* **enumerateNestedFiles** : 
+* **enumerateNestedFiles** : when set to `true`, reader descends the directory for csv files. By default `true`.
 * **fieldDelim** : the field delimiter. By default `,`, but can be set to any character.
 * **lineDelim** : the line delimiter. By default `\n`, but can be set to any character.
 * **charset** : defaults to `UTF-8`, but can be set to other valid charset names.
