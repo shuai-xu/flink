@@ -57,7 +57,7 @@ The Flink runtime consists of two types of processes:
     checkpoints, coordinate recovery on failures, etc.
 
     There is always at least one Job Manager. A high-availability setup will have multiple JobManagers, one of
-    which one is always the *leader*, and the others are *standby*.
+    which is always the *leader*, and the others are *standby*.
 
   - The **TaskManagers** (also called *workers*) execute the *tasks* (or more specifically, the subtasks) of a dataflow,
     and buffer and exchange the data *streams*.
