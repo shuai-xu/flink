@@ -66,7 +66,9 @@ SELECT 'Hello World';
 
 This query requires no table source and produces a single row result. The CLI will retrieve results from the cluster and visualize them. You can close the result view by pressing the `Q` key.
 
-The CLI supports **two modes** for maintaining and visualizing results.
+The CLI supports **two execution modes** (batch or streaming) for queries. Which you can specify in the [configuration file](sqlClient.html##environment-files)
+
+In streaming execution mode, the CLI supports **two modes** for maintaining and visualizing results.
 
 The **table mode** materializes results in memory and visualizes them in a regular, paginated table representation. It can be enabled by executing the following command in the CLI:
 
@@ -107,6 +109,14 @@ Greg, 1
 {% endhighlight %}
 
 The [configuration section](sqlClient.html#configuration) explains how to read from table sources and configure other table program properties.
+
+### SQL language supports
+
+Currently Flink has a preliminary supports for SQL language(include DDL, Query and DML features). See [SQL]({{ site.baseurl }}/dev/table/sql.html)
+
+SQL CLI provides a CREATE TABLE command to replace the table definitions in YAML configuation file. SQL users pass a SQL DDL description text to SQL CLI, it will be passed into table objects and registered to the tableEnvironment, then following SQL Querys can access these tables directly (we would reuse the tableEnvironment in a session).
+
+<span class="label label-danger">Attention</span> We strongly suggest everyone use DDL syntax to define a Table, and use DML to query or update the Table.
 
 {% top %}
 
@@ -150,15 +160,6 @@ Mode "embedded" submits Flink jobs from the local machine.
 {% endhighlight %}
 
 {% top %}
-
-SQL language supports
---------------------
-
-Currently Flink has a preliminary supports for SQL language(include DDL, Query and DML features). See [SQL]({{ site.baseurl }}/dev/table/sql.html)
-
-SQL CLI provides a CREATE TABLE command to replace the table definitions in YAML configuation file. SQL users pass a SQL DDL description text to SQL CLI, it will be passed into table objects and registered to the tableEnvironment, then following SQL Querys can access these tables directly (we would reuse the tableEnvironment in a session).
-
-<span class="label label-danger">Attention</span> We strongly suggest everyone use DDL syntax to define a Table, and use DML to query or update the Table.
 
 ### Environment Files
 
