@@ -83,6 +83,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.DEFAULT_LIST_COLUMN_TYPES_SEPARATOR;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_COMPRESSED;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_DB_NAME;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_FIELD_NAMES;
@@ -485,7 +486,7 @@ public class HiveMetadataUtil {
 			hiveTypes[i] = fieldSchemas.get(i).getType();
 		}
 		prop.put(HIVE_TABLE_FIELD_NAMES, StringUtils.join(colNames, ","));
-		prop.put(HIVE_TABLE_FIELD_TYPES, StringUtils.join(hiveTypes, ":"));
+		prop.put(HIVE_TABLE_FIELD_TYPES, StringUtils.join(hiveTypes, DEFAULT_LIST_COLUMN_TYPES_SEPARATOR));
 		prop.put(HIVE_TABLE_DB_NAME, table.getDbName());
 		prop.put(HIVE_TABLE_TABLE_NAME, table.getTableName());
 		prop.put(HIVE_TABLE_PARTITION_FIELDS, String.valueOf(

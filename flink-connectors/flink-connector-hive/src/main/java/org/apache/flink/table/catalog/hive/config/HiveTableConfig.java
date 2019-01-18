@@ -58,4 +58,6 @@ public class HiveTableConfig {
 	public static final String HIVE_TABLE_PROPERTY_TRANSIENT_LASTDDLTIME = "transient_lastddltime";
 
 	public static final String HIVE_TABLE_PROPERTY_LAST_MODIFIED_TIME = "last_modified_time";
+
+	public static final String DEFAULT_LIST_COLUMN_TYPES_SEPARATOR = ":";
 }

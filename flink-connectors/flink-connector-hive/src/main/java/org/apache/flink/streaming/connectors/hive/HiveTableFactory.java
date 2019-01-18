@@ -28,7 +28,7 @@ import org.apache.flink.table.catalog.hive.FlinkHiveException;
 import org.apache.flink.table.catalog.hive.HiveMetadataUtil;
 import org.apache.flink.table.catalog.hive.config.HiveCatalogConfig;
 import org.apache.flink.table.catalog.hive.config.HiveTableConfig;
-import org.apache.flink.table.dataformat.GenericRow;
+import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.factories.BatchTableSourceFactory;
 import org.apache.flink.table.factories.TableSourceParserFactory;
 import org.apache.flink.table.plan.stats.TableStats;
@@ -46,6 +46,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.DEFAULT_LIST_COLUMN_TYPES_SEPARATOR;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_DB_NAME;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_FIELD_NAMES;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_FIELD_TYPES;
@@ -58,7 +59,7 @@ import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CO
 /**
  * Hive table factory provides for sql to register hive table.
  */
-public class HiveTableFactory implements BatchTableSourceFactory<GenericRow>, TableSourceParserFactory {
+public class HiveTableFactory implements BatchTableSourceFactory<BaseRow>, TableSourceParserFactory {
 	private static Logger logger = LoggerFactory.getLogger(HiveTableFactory.class);
 	/**
 	 * Add this method to make some optimize rule work normally, we should delete it later.
@@ -70,7 +71,7 @@ public class HiveTableFactory implements BatchTableSourceFactory<GenericRow>, Ta
 	}
 
 	@Override
-	public BatchTableSource<GenericRow> createBatchTableSource(Map<String, String> props) {
+	public BatchTableSource<BaseRow> createBatchTableSource(Map<String, String> props) {
 		HiveConf hiveConf = new HiveConf();
 		TableStats tableStats = null;
 		for (Map.Entry<String, String> prop : props.entrySet()) {
@@ -78,7 +79,7 @@ public class HiveTableFactory implements BatchTableSourceFactory<GenericRow>, Ta
 		}
 		String[] fieldNames = props.get(HIVE_TABLE_FIELD_NAMES).split(",");
 		String hiveRowTypeString = props.get(HIVE_TABLE_FIELD_TYPES);
-		String[] hiveFieldTypes = hiveRowTypeString.split(":");
+		String[] hiveFieldTypes = hiveRowTypeString.split(DEFAULT_LIST_COLUMN_TYPES_SEPARATOR);
 		InternalType[] colTypes = new InternalType[fieldNames.length];
 		TypeInformation[] typeInformations = new TypeInformation[fieldNames.length];
 		for (int i = 0; i < hiveFieldTypes.length; i++) {

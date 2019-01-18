@@ -29,6 +29,7 @@ import org.apache.flink.core.fs.FileStatus;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.io.InputSplitAssigner;
+import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.sources.Partition;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
@@ -63,7 +64,7 @@ import static org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR;
 /**
  * The HiveTableInputFormat are inspired by the HCatInputFormat and HadoopInputFormatBase.
  */
-public class HiveTableInputFormat extends HadoopInputFormatCommonBase<GenericRow, HiveTableInputSplit>
+public class HiveTableInputFormat extends HadoopInputFormatCommonBase<BaseRow, HiveTableInputSplit>
 		implements ResultTypeQueryable {
 	private static final long serialVersionUID = 6351448428766433164L;
 	private static Logger logger = LoggerFactory.getLogger(HiveTableInputFormat.class);
@@ -103,6 +104,7 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<GenericRow
 	private transient InputFormat mapredInputFormat;
 	private transient HiveTableInputSplit hiveTableInputSplit;
 	private transient HiveTablePartition hiveTablePartition;
+	private transient GenericRow reuse;
 
 	public HiveTableInputFormat(
 			JobConf jobConf,
@@ -170,6 +172,7 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<GenericRow
 			logger.error("Error happens when deserialize from storage file.");
 			throw new RuntimeException(e);
 		}
+		reuse = new GenericRow(rowTypeInfo.getArity());
 	}
 
 	@Override
@@ -264,7 +267,7 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<GenericRow
 	}
 
 	@Override
-	public GenericRow nextRecord(GenericRow reuse) throws IOException {
+	public BaseRow nextRecord(BaseRow ignore) throws IOException {
 		if (!this.fetched) {
 			fetchNext();
 		}
@@ -273,15 +276,16 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<GenericRow
 		}
 		try {
 			Object o = deserializer.deserialize(value);
-			for (int i = 0; i < fieldRefs.size(); i++) {
-				StructField fref = fieldRefs.get(i);
-				if (null == hiveTablePartition || null == hiveTablePartition.getPartitionValues() ||
-					!hiveTablePartition.getPartitionValues().containsKey(fref.getFieldName())) {
-					reuse.update(i, HiveRecordSerDe.serializeField(
+			int index = 0;
+			for (; index < fieldRefs.size(); index++) {
+				StructField fref = fieldRefs.get(index);
+				reuse.update(index, HiveRecordSerDe.serializeField(
 							oi.getStructFieldData(o, fref),
 							fref.getFieldObjectInspector()));
-				} else {
-					reuse.update(i, hiveTablePartition.getPartitionValues().get(fref.getFieldName()));
+			}
+			if (isPartitioned) {
+				for (String partition : partitionColNames){
+					reuse.update(index++, hiveTablePartition.getPartitionValues().get(partition));
 				}
 			}
 		} catch (Exception e){

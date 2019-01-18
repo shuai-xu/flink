@@ -27,7 +27,7 @@ import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.catalog.hive.FlinkHiveException;
 import org.apache.flink.table.catalog.hive.HiveMetadataUtil;
-import org.apache.flink.table.dataformat.GenericRow;
+import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.expressions.Expression;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.sources.BatchTableSource;
@@ -52,6 +52,7 @@ import org.slf4j.LoggerFactory;
 
 import scala.Option;
 
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.DEFAULT_LIST_COLUMN_TYPES_SEPARATOR;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_COMPRESSED;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_INPUT_FORMAT;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_LOCATION;
@@ -70,9 +71,9 @@ import java.util.Properties;
 import java.util.stream.Collectors;
 
 /**
- * Hive table source class use GenericRow as inner implementation.
+ * Hive table source class use BaseRow as inner implementation.
  */
-public class HiveTableSource extends PartitionableTableSource implements BatchTableSource<GenericRow> {
+public class HiveTableSource extends PartitionableTableSource implements BatchTableSource<BaseRow> {
 	private static Logger logger = LoggerFactory.getLogger(HiveTableSource.class);
 	private RowTypeInfo rowTypeInfo;
 	private String hiveRowTypeString;
@@ -165,7 +166,7 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 												sd.getOutputFormat(),
 												sd.getSerdeInfo().getSerializationLib(),
 												sd.getLocation(),
-												createPropertiesFromSdParameters(sd.getSerdeInfo().getParameters()),
+												createPropertiesFromSdParameters(sd),
 												partitionColValues));
 				}
 			} catch (Exception e) {
@@ -179,13 +180,7 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 			// TODO: we should get StorageDescriptor from Hive Metastore somehow.
 			StorageDescriptor sd = createStorageDescriptor(jobConf, rowTypeInfo);
 			jobConf.setStrings(INPUT_DIR, sd.getLocation());
-			SerDeInfo serDeInfo = sd.getSerdeInfo();
-			Properties properties = new Properties();
-			properties.setProperty(serdeConstants.SERIALIZATION_FORMAT,
-								serDeInfo.getParameters().get(serdeConstants.SERIALIZATION_FORMAT));
-			properties.setProperty(serdeConstants.LIST_COLUMNS, StringUtils.join(rowTypeInfo.getFieldNames(), ","));
-			properties.setProperty(serdeConstants.LIST_COLUMN_TYPES, hiveRowTypeString);
-			properties.setProperty(serdeConstants.SERIALIZATION_NULL_FORMAT, "NULL");
+			Properties properties = createPropertiesFromSdParameters(sd);
 			allPartitions.add(new HiveTablePartition(jobConf.get(HIVE_TABLE_INPUT_FORMAT),
 													jobConf.get(HIVE_TABLE_OUTPUT_FORMAT),
 													jobConf.get(HIVE_TABLE_SERDE_LIBRARY),
@@ -238,7 +233,7 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 	}
 
 	@Override
-	public DataStream<GenericRow> getBoundedStream(StreamExecutionEnvironment streamEnv) {
+	public DataStream<BaseRow> getBoundedStream(StreamExecutionEnvironment streamEnv) {
 		try {
 			List<Partition> partitionList;
 			if (null == prunedPartitions || prunedPartitions.size() == 0){
@@ -309,8 +304,23 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 		return storageDescriptor;
 	}
 
-	private static Properties createPropertiesFromSdParameters(Map<String, String> parameters) {
+	private Properties createPropertiesFromSdParameters(StorageDescriptor storageDescriptor) {
+		SerDeInfo serDeInfo = storageDescriptor.getSerdeInfo();
+		Map<String, String> parameters = serDeInfo.getParameters();
 		Properties properties = new Properties();
+		properties.setProperty(serdeConstants.SERIALIZATION_FORMAT,
+							serDeInfo.getParameters().get(serdeConstants.SERIALIZATION_FORMAT));
+		List<String> colTypes = new ArrayList<>();
+		List<String> colNames = new ArrayList<>();
+		List<FieldSchema> cols = storageDescriptor.getCols();
+		for (FieldSchema col: cols){
+			colTypes.add(col.getType());
+			colNames.add(col.getName());
+		}
+		properties.setProperty(serdeConstants.LIST_COLUMNS, StringUtils.join(colNames, ","));
+		properties.setProperty(serdeConstants.COLUMN_NAME_DELIMITER, ",");
+		properties.setProperty(serdeConstants.LIST_COLUMN_TYPES, StringUtils.join(colTypes, DEFAULT_LIST_COLUMN_TYPES_SEPARATOR));
+		properties.setProperty(serdeConstants.SERIALIZATION_NULL_FORMAT, "NULL");
 		properties.putAll(parameters);
 		return properties;
 	}
