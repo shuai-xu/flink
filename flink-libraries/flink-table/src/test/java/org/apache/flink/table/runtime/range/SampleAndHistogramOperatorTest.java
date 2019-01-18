@@ -89,7 +89,7 @@ public class SampleAndHistogramOperatorTest {
 		RowType dataType = (RowType) TypeConverters.createInternalTypeFromTypeInfo(typeInfo);
 		GeneratedProjection copyToBinaryRow = ProjectionCodeGenerator.generateProjection(
 				CodeGeneratorContext.apply(config, false), "copyToBinaryRow", dataType,
-				dataType, new int[]{0, 1}, CodeGeneratorContext.DEFAULT_INPUT1_TERM(),
+				dataType, new int[]{0, 1}, BinaryRow.class, CodeGeneratorContext.DEFAULT_INPUT1_TERM(),
 				CodeGeneratorContext.DEFAULT_OUT_RECORD_TERM(),
 				CodeGeneratorContext.DEFAULT_OUT_RECORD_WRITER_TERM(), false, true);
 		Tuple2<TypeComparator<?>[], TypeSerializer<?>[]> tuple2 =

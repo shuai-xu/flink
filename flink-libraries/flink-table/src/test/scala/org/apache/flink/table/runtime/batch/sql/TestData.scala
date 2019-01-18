@@ -348,4 +348,17 @@ object TestData {
     row(null))
 
   val nullablesOfAllNulls = Seq(true)
+
+  lazy val projectionTestData = Seq(
+    row(1, 10, 100, "1", "10", "100", 1000, "1000"),
+    row(2, 20, 200, "2", "20", "200", 2000, "2000"),
+    row(3, 30, 300, "3", "30", "300", 3000, "3000"))
+
+  val projectionTestDataType =
+    new RowTypeInfo(
+      INT_TYPE_INFO, INT_TYPE_INFO, INT_TYPE_INFO,
+      STRING_TYPE_INFO, STRING_TYPE_INFO, STRING_TYPE_INFO,
+      INT_TYPE_INFO, STRING_TYPE_INFO)
+
+  val nullablesOfProjectionTestData = Seq(false, false, false, false, false, false, false, false)
 }

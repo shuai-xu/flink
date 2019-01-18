@@ -62,7 +62,7 @@ public class LocalSampleOperatorTest {
 		GeneratedProjection generatedProjection = ProjectionCodeGenerator.generateProjection(
 				CodeGeneratorContext.apply(config, false), "localSample",
 				(RowType) TypeConverters.createInternalTypeFromTypeInfo(inTypeInfo),
-				new RowType(DataTypes.STRING, DataTypes.STRING), new int[]{1, 0},
+				new RowType(DataTypes.STRING, DataTypes.STRING), new int[]{1, 0}, BinaryRow.class,
 				CodeGeneratorContext.DEFAULT_INPUT1_TERM(),
 				CodeGeneratorContext.DEFAULT_OUT_RECORD_TERM(),
 				CodeGeneratorContext.DEFAULT_OUT_RECORD_WRITER_TERM(), false, true);

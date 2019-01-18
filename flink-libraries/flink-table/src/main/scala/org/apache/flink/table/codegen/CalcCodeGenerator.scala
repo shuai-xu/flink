@@ -30,13 +30,18 @@ import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForType, newNam
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BoxedWrapperRow}
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
 object CalcCodeGenerator {
+
+  // for loop optimization will only be enabled if the number of filters does not exceed the limit
+  //
+  // TODO this value is not very well tuned and should be considered more thoroughly
+  // TODO maybe we should use (# of filter) / (# of projection) as the limit?
+  val PROJECTION_FOR_LOOP_FILTER_LIMIT: Int = 10
 
   private[flink] def generateCalcOperator(
     ctx: CodeGeneratorContext,
@@ -159,11 +164,27 @@ object CalcCodeGenerator {
     }
 
     def produceProjectionCode = {
-      val projectionExprs = projection.map(exprGenerator.generateExpression)
-      val projectionExpression = exprGenerator.generateResultExpression(
-        projectionExprs,
-        outRowType,
-        outRowClass)
+      val underFilterLimit = condition match {
+        case call: Some[RexCall] => call.get.operands.length <= PROJECTION_FOR_LOOP_FILTER_LIMIT
+        case _ => true
+      }
+      // we cannot use for-loop optimization if projection contains other calculations
+      // (for example "select id + 1 from T")
+      val simpleProjection = projection.forall { rexNode => rexNode.isInstanceOf[RexInputRef] }
+
+      val projectionExpression = if (underFilterLimit && simpleProjection) {
+        val inputMapping =
+          projection.map { rexNode => rexNode.asInstanceOf[RexInputRef].getIndex }.toArray
+        ProjectionCodeGenerator.generateProjectionExpression(
+          ctx, inputType, outRowType, inputMapping,
+          outRowClass, inputTerm, nullCheck = config.getNullCheck)
+      } else {
+        val projectionExprs = projection.map(exprGenerator.generateExpression)
+        exprGenerator.generateResultExpression(
+          projectionExprs,
+          outRowType,
+          outRowClass)
+      }
 
       val inputTypeTerm = boxedTypeTermForType(inputType)
 
@@ -285,7 +306,7 @@ object CalcCodeGenerator {
         val projectionCode = produceProjectionCode
 
         val projectionInputCode = ctx.reusableInputUnboxingExprs
-          .filter((entry) => !filterInputSet.contains(entry._1))
+          .filter(entry => !filterInputSet.contains(entry._1))
           .values.map(_.code).mkString("\n")
         s"""
            |$filterInputCode

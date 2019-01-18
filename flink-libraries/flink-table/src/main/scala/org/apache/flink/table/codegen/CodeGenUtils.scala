@@ -48,8 +48,7 @@ import org.apache.flink.table.typeutils.TypeCheckUtils.{isNumeric, isTemporal, i
 import org.apache.flink.table.typeutils._
 import org.apache.flink.table.util.Logging.CODE_LOG
 import org.apache.flink.types.Row
-import org.apache.flink.util.StringUtils
-
+import org.apache.flink.util.{Preconditions, StringUtils}
 import org.codehaus.commons.compiler.{CompileException, ICookable}
 import org.codehaus.janino.SimpleCompiler
 
@@ -1026,9 +1025,18 @@ object CodeGenUtils {
 
   def baseRowFieldReadAccess(
       ctx: CodeGeneratorContext,
+      pos: Int,
+      rowTerm: String,
+      fieldType: InternalType,
+      reuseBinaryString: Option[String]) : String =
+    baseRowFieldReadAccess(ctx, pos.toString, rowTerm, fieldType, reuseBinaryString)
+
+  def baseRowFieldReadAccess(
+      ctx: CodeGeneratorContext,
       pos: String,
       rowTerm: String,
-      fieldType: InternalType) : String =
+      fieldType: InternalType,
+      reuseBinaryString: Option[String] = None) : String =
     fieldType match {
       case DataTypes.INT => s"$rowTerm.getInt($pos)"
       case DataTypes.LONG => s"$rowTerm.getLong($pos)"
@@ -1038,8 +1046,13 @@ object CodeGenUtils {
       case DataTypes.DOUBLE => s"$rowTerm.getDouble($pos)"
       case DataTypes.BOOLEAN => s"$rowTerm.getBoolean($pos)"
       case DataTypes.STRING =>
-        val reuse = newName("reuseBString")
-        ctx.addReusableMember(s"$BINARY_STRING $reuse = new $BINARY_STRING();")
+        val reuse = reuseBinaryString match {
+          case Some(s) => s
+          case None =>
+            val s = newName("reuseBString")
+            ctx.addReusableMember(s"$BINARY_STRING $s = new $BINARY_STRING();")
+            s
+        }
         s"$rowTerm.getBinaryString($pos, $reuse)"
       case dt: DecimalType => s"$rowTerm.getDecimal($pos, ${dt.precision()}, ${dt.scale()})"
       case DataTypes.CHAR => s"$rowTerm.getChar($pos)"
@@ -1059,13 +1072,19 @@ object CodeGenUtils {
          """.stripMargin.trim
     }
 
-  def binaryWriterWriteNull(pos: Int, writerTerm: String, t: InternalType): String = t match {
+  def binaryWriterWriteNull(pos: Int, writerTerm: String, t: InternalType): String =
+    binaryWriterWriteNull(pos.toString, writerTerm, t)
+
+  def binaryWriterWriteNull(pos: String, writerTerm: String, t: InternalType): String = t match {
     case d: DecimalType if !Decimal.isCompact(d.precision()) =>
       s"$writerTerm.writeDecimal($pos, null, ${d.precision()}, ${d.scale()})"
     case _ => s"$writerTerm.setNullAt($pos)"
   }
 
-  def binaryRowSetNull(pos: Int, rowTerm: String, t: InternalType): String = t match {
+  def binaryRowSetNull(pos: Int, rowTerm: String, t: InternalType): String =
+    binaryRowSetNull(pos.toString, rowTerm, t)
+
+  def binaryRowSetNull(pos: String, rowTerm: String, t: InternalType): String = t match {
     case d: DecimalType if !Decimal.isCompact(d.precision()) =>
       s"$rowTerm.setDecimal($pos, null, ${d.precision()}, ${d.scale()})"
     case _ => s"$rowTerm.setNullAt($pos)"
@@ -1075,8 +1094,14 @@ object CodeGenUtils {
       pos: Int,
       binaryRowTerm: String,
       fieldType: InternalType,
-      fieldValTerm: String)
-    : String =
+      fieldValTerm: String): String =
+    binaryRowFieldSetAccess(pos.toString, binaryRowTerm, fieldType, fieldValTerm)
+
+  def binaryRowFieldSetAccess(
+      pos: String,
+      binaryRowTerm: String,
+      fieldType: InternalType,
+      fieldValTerm: String): String =
     fieldType match {
       case DataTypes.INT => s"$binaryRowTerm.setInt($pos, $fieldValTerm)"
       case DataTypes.LONG => s"$binaryRowTerm.setLong($pos, $fieldValTerm)"
@@ -1099,6 +1124,14 @@ object CodeGenUtils {
   def binaryWriterWriteField(
       ctx: CodeGeneratorContext,
       pos: Int,
+      fieldValTerm: String,
+      writerTerm: String,
+      fieldType: InternalType): String =
+    binaryWriterWriteField(ctx, pos.toString, fieldValTerm, writerTerm, fieldType)
+
+  def binaryWriterWriteField(
+      ctx: CodeGeneratorContext,
+      pos: String,
       fieldValTerm: String,
       writerTerm: String,
       fieldType: InternalType): String =
@@ -1157,6 +1190,13 @@ object CodeGenUtils {
 
   def boxedWrapperRowFieldUpdateAccess(
       pos: Int,
+      fieldValTerm: String,
+      rowTerm: String,
+      fieldType: InternalType): String =
+    boxedWrapperRowFieldUpdateAccess(pos.toString, fieldValTerm, rowTerm, fieldType)
+
+  def boxedWrapperRowFieldUpdateAccess(
+      pos: String,
       fieldValTerm: String,
       rowTerm: String,
       fieldType: InternalType): String =
@@ -1301,6 +1341,137 @@ object CodeGenUtils {
         s"${CodeGeneratorContext.DEFAULT_COLLECTOR_TERM}"
     } else {
       ""
+    }
+  }
+
+  def getSetFieldCodeGenerator(
+      ctx: CodeGeneratorContext,
+      outRowType: RowType,
+      outRowClass: Class[_ <: BaseRow],
+      outRow: String,
+      outRowWriter: Option[String],
+      nullCheck: Boolean,
+      reusedOutRow: Boolean,
+      outRowAlreadyExists: Boolean): (
+        (String, InternalType, String, String, String) => String,
+        Seq[String] => GeneratedExpression) = {
+
+    def getRowUpdate(idx: String, code: String, nullTerm: String, updateCode: String) =
+      if (nullCheck) {
+        s"""
+           |$code
+           |if ($nullTerm) {
+           |  $outRow.setNullAt($idx);
+           |} else {
+           |  $updateCode
+           |}
+          """.stripMargin.trim
+      } else {
+        s"""
+           |$code
+           |$updateCode
+          """.stripMargin.trim
+      }
+
+    if (outRowClass == classOf[BinaryRow]) {
+      outRowWriter match {
+        case Some(writer) => (
+          (idx, t, code, nullTerm, resultTerm) => {
+            val writeCode = binaryWriterWriteField(ctx, idx, resultTerm, writer, t)
+            if (nullCheck) {
+              s"""
+                 |$code
+                 |if ($nullTerm) {
+                 |  ${binaryWriterWriteNull(idx, writer, t)};
+                 |} else {
+                 |  $writeCode;
+                 |}
+                """.stripMargin.trim
+            } else {
+              s"""
+                 |$code
+                 |$writeCode;
+                """.stripMargin.trim
+            }
+          },
+
+          codeBuffer => {
+            val initReturnRecord = if (outRowAlreadyExists) {
+              ""
+            } else {
+              ctx.addOutputRecord(outRowType, outRowClass, outRow, outRowWriter, reusedOutRow)
+            }
+            val resetWriter = if (nullCheck) s"$writer.reset();" else s"$writer.resetCursor();"
+            val completeWriter: String = s"$writer.complete();"
+
+            val statement =
+              s"""
+                 |$initReturnRecord
+                 |$resetWriter
+                 |${codeBuffer.mkString("\n")}
+                 |$completeWriter
+                """.stripMargin.trim
+            GeneratedExpression(outRow, "false", statement, outRowType,
+              codeBuffer = codeBuffer,
+              preceding = s"$initReturnRecord\n$resetWriter",
+              flowing = s"$completeWriter")
+          })
+
+        case None =>
+          Preconditions.checkArgument(outRowAlreadyExists)
+
+          ((idx, t, code, nullTerm, resultTerm) => {
+            val writeCode = binaryRowFieldSetAccess(idx, outRow, t, resultTerm)
+            if (nullCheck) {
+              s"""
+                 |$code
+                 |if ($nullTerm) {
+                 |  ${binaryRowSetNull(idx, outRow, t)};
+                 |} else {
+                 |  $writeCode;
+                 |}
+                  """.stripMargin.trim
+            } else {
+              s"""
+                 |$code
+                 |$writeCode;
+                  """.stripMargin.trim
+            }
+          },
+
+          codeBuffer => GeneratedExpression(
+            outRow, "false", codeBuffer.mkString(""), outRowType))
+      }
+    } else {
+      val initReturnRecord = if (outRowAlreadyExists) {
+        ""
+      } else {
+        ctx.addOutputRecord(outRowType, outRowClass, outRow, reused = reusedOutRow)
+      }
+
+      val expressionGenerator = (codeBuffer: Seq[String]) => {
+        val statement =
+          s"""
+             |$initReturnRecord
+             |${codeBuffer.mkString("")}
+                """.stripMargin.trim
+        GeneratedExpression(outRow, "false", statement, outRowType,
+          codeBuffer = codeBuffer, preceding = s"$initReturnRecord")
+      }
+
+      outRowClass match {
+        case cls if cls == classOf[GenericRow] => (
+          (idx, _, code, nullTerm, resultTerm) => {
+            val updateCode = s"$outRow.update($idx, $resultTerm);"
+            getRowUpdate(idx, code, nullTerm, updateCode)
+          }, expressionGenerator)
+
+        case cls if cls == classOf[BoxedWrapperRow] => (
+          (idx, t, code, nullTerm, resultTerm) => {
+            val updateCode = boxedWrapperRowFieldUpdateAccess(idx, resultTerm, outRow, t) + ";"
+            getRowUpdate(idx, code, nullTerm, updateCode)
+          }, expressionGenerator)
+      }
     }
   }
 

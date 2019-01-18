@@ -29,7 +29,6 @@ import org.apache.flink.table.codegen.GeneratedExpression.{NEVER_NULL, NO_CODE}
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.functions.sql.{ProctimeSqlFunction, StreamRecordTimestampSqlFunction}
 import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.util.Preconditions.checkArgument
 
 import scala.collection.JavaConversions._
 
@@ -272,124 +271,16 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
       fieldExprIdxToOutputRowPosMap.getOrElse(fieldExprIdx,
         throw new CodeGenException(s"Illegal field expr index: $fieldExprIdx"))
 
-    def objectArrayRowWrite(
-        genUpdate: (Int, GeneratedExpression) => String): GeneratedExpression = {
-      val initReturnRecord = if (outRowAlreadyExists) {
-        ""
-      } else {
-        ctx.addOutputRecord(returnType, returnTypeClazz, outRow, reused = reusedOutRow)
-      }
-      val resultBuffer: Seq[String] = fieldExprs.zipWithIndex map {
-        case (fieldExpr, i) =>
-          val idx = getOutputRowPos(i)
-          if (nullCheck) {
-            s"""
-               |${fieldExpr.code}
-               |if (${fieldExpr.nullTerm}) {
-               |  $outRow.setNullAt($idx);
-               |} else {
-               |  ${genUpdate(idx, fieldExpr)};
-               |}
-               |""".stripMargin
-          }
-          else {
-            s"""
-               |${fieldExpr.code}
-               |${genUpdate(idx, fieldExpr)};
-               |""".stripMargin
-          }
-      }
-
-      val statement =
-        s"""
-           |$initReturnRecord
-           |${resultBuffer.mkString("")}
-         """.stripMargin.trim
-
-      GeneratedExpression(outRow, "false", statement, returnType,
-        codeBuffer = resultBuffer, preceding = s"$initReturnRecord")
+    val (setFieldGenerator, expressionGenerator) = getSetFieldCodeGenerator(
+      ctx, returnType, returnTypeClazz, outRow, outRowWriter,
+      nullCheck, reusedOutRow, outRowAlreadyExists)
+    val codeBuffer = fieldExprs.zipWithIndex.map { case (fieldExpr, i) =>
+      val t = returnType.getInternalTypeAt(i)
+      val idx = getOutputRowPos(i)
+      setFieldGenerator(
+        idx.toString, t, fieldExpr.code, fieldExpr.nullTerm, fieldExpr.resultTerm)
     }
-
-    returnTypeClazz match {
-      case cls if cls == classOf[BinaryRow] =>
-        outRowWriter match {
-          case Some(writer) => // binary row writer.
-            val initReturnRecord = if (outRowAlreadyExists) {
-              ""
-            } else {
-              ctx.addOutputRecord(returnType, returnTypeClazz, outRow, outRowWriter, reusedOutRow)
-            }
-            val resetWriter = if (nullCheck) s"$writer.reset();" else s"$writer.resetCursor();"
-            val completeWriter: String = s"$writer.complete();"
-            val resultBuffer = fieldExprs.zipWithIndex map {
-              case (fieldExpr, i) =>
-                val t = returnType.getInternalTypeAt(i)
-                val idx = getOutputRowPos(i)
-                val writeCode = binaryWriterWriteField(ctx, idx, fieldExpr.resultTerm, writer, t)
-                if (nullCheck) {
-                  s"""
-                     |${fieldExpr.code}
-                     |if (${fieldExpr.nullTerm}) {
-                     |  ${binaryWriterWriteNull(idx, writer, t)};
-                     |} else {
-                     |  $writeCode;
-                     |}
-                     |""".stripMargin.trim
-                } else {
-                  s"""
-                     |${fieldExpr.code}
-                     |$writeCode;
-                     |""".stripMargin.trim
-                }
-            }
-
-            val statement =
-              s"""
-                 |$initReturnRecord
-                 |$resetWriter
-                 |${resultBuffer.mkString("\n")}
-                 |$completeWriter
-                 |""".stripMargin.trim
-            GeneratedExpression(outRow, "false", statement, returnType,
-              codeBuffer = resultBuffer,
-              preceding = s"$initReturnRecord\n$resetWriter",
-              flowing = s"$completeWriter")
-
-          case None => // update to binary row (setXXX).
-            checkArgument(outRowAlreadyExists)
-            val resultBuffer = fieldExprs.zipWithIndex map {
-              case (fieldExpr, i) =>
-                val t = returnType.getInternalTypeAt(i)
-                val idx = getOutputRowPos(i)
-                val writeCode = binaryRowFieldSetAccess(idx, outRow, t, fieldExpr.resultTerm)
-                if (nullCheck) {
-                  s"""
-                     |${fieldExpr.code}
-                     |if (${fieldExpr.nullTerm}) {
-                     |  ${binaryRowSetNull(idx, outRow, t)};
-                     |} else {
-                     |  $writeCode;
-                     |}
-                     |""".stripMargin.trim
-                } else {
-                  s"""
-                     |${fieldExpr.code}
-                     |$writeCode;
-                     |""".stripMargin.trim
-                }
-            }
-            GeneratedExpression(
-              outRow, "false", resultBuffer.mkString(""), returnType)
-        }
-
-      case cls if cls == classOf[GenericRow] =>
-        objectArrayRowWrite((i: Int, expr: GeneratedExpression) =>
-        s"$outRow.update($i, ${expr.resultTerm})")
-
-      case cls if cls == classOf[BoxedWrapperRow] =>
-        objectArrayRowWrite((i: Int, expr: GeneratedExpression) =>
-          boxedWrapperRowFieldUpdateAccess(i, expr.resultTerm, outRow, expr.resultType))
-    }
+    expressionGenerator(codeBuffer)
   }
 
   override def visitInputRef(inputRef: RexInputRef): GeneratedExpression = {
@@ -528,7 +419,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
           call.getOperator.getReturnTypeInference == ReturnTypes.ARG0 =>
         generateNullLiteral(resultType, nullCheck)
 
-      case (o@_, idx) => o.accept(this)
+      case (o@_, _) => o.accept(this)
     }
 
     generateCallExpression(

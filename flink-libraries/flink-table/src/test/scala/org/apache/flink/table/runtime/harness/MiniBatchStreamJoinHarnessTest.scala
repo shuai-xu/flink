@@ -178,6 +178,7 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       new RowType(DataTypes.LONG, DataTypes.INT),
       new RowType(DataTypes.INT),
       Array(1),
+      classOf[BinaryRow],
       "in1",
       "out",
       "outWriter",
@@ -274,7 +275,7 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
          |   return true;
          |   }
          |}
-      """.stripMargin;
+      """.stripMargin
 
     val leftKeySelector = StreamExecUtil.getKeySelector(Array(1), rowType)
     val rightKeySelector = StreamExecUtil.getKeySelector(Array(1), rowType)
@@ -286,6 +287,7 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       new RowType(DataTypes.LONG, DataTypes.INT),
       new RowType(DataTypes.LONG),
       Array(0),
+      classOf[BinaryRow],
       "in1",
       "out",
       "outWriter",
