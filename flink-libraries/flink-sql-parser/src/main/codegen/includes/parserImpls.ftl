@@ -31,6 +31,8 @@ void TableColumnLine(TableTempWrapper wrapper) :
     UniqueKey(wrapper.uniqueKeysList)
     |
     IndexKey(wrapper.indexKeysList)
+    |
+    DimDetect()
 }
 
 void ComputedColumn(TableTempWrapper wrapper) :
@@ -46,6 +48,16 @@ void ComputedColumn(TableTempWrapper wrapper) :
     e = Expression(ExprContext.ACCEPT_SUB_QUERY) {
         e = SqlStdOperatorTable.AS.createCall(Span.of(var, e).pos(), e, var);
         wrapper.columnList.add(e);
+    }
+}
+
+String DimDetect() :
+{
+}
+{
+    <PERIOD> <FOR> <SYSTEM_TIME>
+    {
+        return "DIM";
     }
 }
 
