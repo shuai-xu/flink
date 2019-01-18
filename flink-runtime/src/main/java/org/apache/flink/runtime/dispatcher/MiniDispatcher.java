@@ -29,6 +29,8 @@ import org.apache.flink.runtime.executiongraph.ArchivedExecutionGraph;
 import org.apache.flink.runtime.heartbeat.HeartbeatServices;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.runtime.jobmanager.SubmittedJobGraph;
+import org.apache.flink.runtime.jobmanager.SubmittedJobGraphStore;
 import org.apache.flink.runtime.jobmaster.JobResult;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.metrics.groups.JobManagerMetricGroup;
@@ -58,6 +60,8 @@ public class MiniDispatcher extends Dispatcher {
 
 	private final CompletableFuture<ApplicationStatus> jobTerminationFuture;
 
+	private JobGraph initialJobGraph;
+
 	public MiniDispatcher(
 			RpcService rpcService,
 			String endpointId,
@@ -73,7 +77,8 @@ public class MiniDispatcher extends Dispatcher {
 			FatalErrorHandler fatalErrorHandler,
 			@Nullable String restAddress,
 			HistoryServerArchivist historyServerArchivist,
-			JobGraph jobGraph,
+			SubmittedJobGraphStore submittedJobGraphStore,
+			JobGraph initialJobGraph,
 			JobClusterEntrypoint.ExecutionMode executionMode,
 			LeaderShipLostHandler leaderShipLostHandler) throws Exception {
 		super(
@@ -81,7 +86,7 @@ public class MiniDispatcher extends Dispatcher {
 			endpointId,
 			configuration,
 			highAvailabilityServices,
-			new SingleJobSubmittedJobGraphStore(jobGraph),
+			submittedJobGraphStore,
 			resourceManagerGateway,
 			blobServer,
 			heartbeatServices,
@@ -94,8 +99,31 @@ public class MiniDispatcher extends Dispatcher {
 			historyServerArchivist,
 			leaderShipLostHandler);
 
+		this.initialJobGraph = checkNotNull(initialJobGraph);
 		this.executionMode = checkNotNull(executionMode);
 		this.jobTerminationFuture = new CompletableFuture<>();
+	}
+
+	@Override
+	public void start() throws Exception {
+		startRpcEndPoint();
+
+		// Start the job graph store first. Persist the job graph if it is not persisted.
+		// This need to be done before starting leader election.
+		submittedJobGraphStore.start(this);
+		if (initialJobGraph != null) {
+			if (!submittedJobGraphStore.getJobIds().contains(initialJobGraph.getJobID())) {
+				// upload user artifacts only when it's the first time to persist the job graph
+				JobClusterEntrypoint.uploadUserArtifactsAndUpdateJobGraph(initialJobGraph, configuration, executionMode, blobServer);
+
+				// Persist the JobGraph to SubmittedJobGraphStore if it is not there
+				submittedJobGraphStore.putJobGraph(new SubmittedJobGraph(initialJobGraph, null));
+			}
+			// Clear the initial job graph to be GC friendly
+			initialJobGraph = null;
+		}
+
+		leaderElectionService.start(this);
 	}
 
 	public CompletableFuture<ApplicationStatus> getJobTerminationFuture() {

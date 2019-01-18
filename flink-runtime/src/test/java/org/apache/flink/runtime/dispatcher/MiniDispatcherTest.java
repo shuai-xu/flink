@@ -251,6 +251,7 @@ public class MiniDispatcherTest extends TestLogger {
 			testingFatalErrorHandler,
 			null,
 			VoidHistoryServerArchivist.INSTANCE,
+			new SingleJobSubmittedJobGraphStore(jobGraph),
 			jobGraph,
 			executionMode,
 			leaderShipLostHandler);

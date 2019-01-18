@@ -98,22 +98,22 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 
 	public static final String DISPATCHER_NAME = "dispatcher";
 
-	private final Configuration configuration;
+	protected final Configuration configuration;
 
-	private final SubmittedJobGraphStore submittedJobGraphStore;
+	protected final SubmittedJobGraphStore submittedJobGraphStore;
 	private final RunningJobsRegistry runningJobsRegistry;
 
 	private final HighAvailabilityServices highAvailabilityServices;
 	private final ResourceManagerGateway resourceManagerGateway;
 	private final JobManagerSharedServices jobManagerSharedServices;
 	private final HeartbeatServices heartbeatServices;
-	private final BlobServer blobServer;
+	protected final BlobServer blobServer;
 
 	private final FatalErrorHandler fatalErrorHandler;
 
 	private final Map<JobID, JobManagerRunner> jobManagerRunners;
 
-	private final LeaderElectionService leaderElectionService;
+	protected final LeaderElectionService leaderElectionService;
 
 	private final ArchivedExecutionGraphStore archivedExecutionGraphStore;
 
@@ -234,6 +234,10 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 
 		submittedJobGraphStore.start(this);
 		leaderElectionService.start(this);
+	}
+
+	protected void startRpcEndPoint() throws Exception {
+		super.start();
 	}
 
 	//------------------------------------------------------

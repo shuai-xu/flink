@@ -34,9 +34,12 @@ import org.apache.flink.runtime.dispatcher.DispatcherGateway;
 import org.apache.flink.runtime.dispatcher.HistoryServerArchivist;
 import org.apache.flink.runtime.dispatcher.MemoryArchivedExecutionGraphStore;
 import org.apache.flink.runtime.dispatcher.MiniDispatcher;
+import org.apache.flink.runtime.dispatcher.SingleJobSubmittedJobGraphStore;
 import org.apache.flink.runtime.heartbeat.HeartbeatServices;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.runtime.jobmanager.HighAvailabilityMode;
+import org.apache.flink.runtime.jobmanager.SubmittedJobGraphStore;
 import org.apache.flink.runtime.jobmaster.MiniDispatcherRestEndpoint;
 import org.apache.flink.runtime.leaderelection.LeaderElectionService;
 import org.apache.flink.runtime.metrics.groups.JobManagerMetricGroup;
@@ -46,6 +49,7 @@ import org.apache.flink.runtime.rest.handler.RestHandlerConfiguration;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 import org.apache.flink.runtime.rpc.RpcService;
+import org.apache.flink.runtime.util.LeaderRetrievalUtils;
 import org.apache.flink.runtime.webmonitor.retriever.LeaderGatewayRetriever;
 import org.apache.flink.runtime.webmonitor.retriever.MetricQueryServiceRetriever;
 import org.apache.flink.util.FlinkException;
@@ -116,11 +120,23 @@ public abstract class JobClusterEntrypoint extends ClusterEntrypoint {
 			HistoryServerArchivist historyServerArchivist,
 			LeaderShipLostHandler leaderShipLostHandler) throws Exception {
 
-		final JobGraph jobGraph = retrieveJobGraph(configuration);
-
 		final String executionModeValue = configuration.getString(EXECUTION_MODE);
-
 		final ExecutionMode executionMode = ExecutionMode.valueOf(executionModeValue);
+
+		final JobGraph initialJobGraph = retrieveJobGraph(configuration);
+
+		final SubmittedJobGraphStore submittedJobGraphStore;
+		HighAvailabilityMode highAvailabilityMode = LeaderRetrievalUtils.getRecoveryMode(configuration);
+		if (highAvailabilityMode == HighAvailabilityMode.NONE) {
+			// upload user artifacts each time the job is started in non-HA mode
+			uploadUserArtifactsAndUpdateJobGraph(initialJobGraph, configuration, executionMode, blobServer);
+
+			// For non-HA mode, use SingleJobSubmittedJobGraphStore with the initially submitted JobGraph
+			submittedJobGraphStore = new SingleJobSubmittedJobGraphStore(initialJobGraph);
+		} else {
+			// For HA mode, use the SubmittedJobGraphStore from the HA services
+			submittedJobGraphStore = highAvailabilityServices.getSubmittedJobGraphStore();
+		}
 
 		final MiniDispatcher dispatcher = new MiniDispatcher(
 			rpcService,
@@ -137,11 +153,21 @@ public abstract class JobClusterEntrypoint extends ClusterEntrypoint {
 			fatalErrorHandler,
 			restAddress,
 			historyServerArchivist,
-			jobGraph,
+			submittedJobGraphStore,
+			initialJobGraph,
 			executionMode,
 			leaderShipLostHandler);
 
 		registerShutdownActions(dispatcher.getJobTerminationFuture());
+
+		return dispatcher;
+	}
+
+	public static void uploadUserArtifactsAndUpdateJobGraph(
+		JobGraph jobGraph,
+		Configuration configuration,
+		ExecutionMode executionMode,
+		BlobServer blobServer) throws Exception {
 
 		// Only in detach mode for perjob, need to upload user artifacts to the blob server
 		// Do not need to upload user libjars, as it has been processed with user jar files together
@@ -161,8 +187,6 @@ public abstract class JobClusterEntrypoint extends ClusterEntrypoint {
 				throw new FlinkException("Failed to upload artifacts.", e);
 			}
 		}
-
-		return dispatcher;
 	}
 
 	protected abstract JobGraph retrieveJobGraph(Configuration configuration) throws FlinkException;
