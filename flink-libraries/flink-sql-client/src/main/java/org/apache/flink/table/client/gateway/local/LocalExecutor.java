@@ -525,7 +525,10 @@ public class LocalExecutor implements Executor {
 		final String jobName = context.getSessionContext().getName() + ": " + statement;
 		final JobGraph jobGraph;
 		try {
-			jobGraph = envInst.createJobGraph(jobName);
+			// createJobGraph requires an optimization step that might reference UDFs during code compilation
+			jobGraph = context.wrapClassLoader(() -> {
+				return envInst.createJobGraph(jobName);
+			});
 		} catch (Throwable t) {
 			// catch everything such that the statement does not crash the executor
 			throw new SqlExecutionException("Invalid SQL statement.", t);
@@ -561,12 +564,11 @@ public class LocalExecutor implements Executor {
 		final String jobName = context.getSessionContext().getName() + ": " + query;
 		final JobGraph jobGraph;
 		try {
-			// writing to a sink requires an optimization step that might reference UDFs during code compilation
-			context.wrapClassLoader(() -> {
+			// createJobGraph requires an optimization step that might reference UDFs during code compilation
+			jobGraph = context.wrapClassLoader(() -> {
 				table.writeToSink(result.getTableSink(), envInst.getQueryConfig());
-				return null;
+				return envInst.createJobGraph(jobName);
 			});
-			jobGraph = envInst.createJobGraph(jobName);
 		} catch (Throwable t) {
 			// the result needs to be closed as long as
 			// it not stored in the result store
