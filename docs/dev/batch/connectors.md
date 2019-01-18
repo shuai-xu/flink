@@ -86,7 +86,7 @@ This section shows some examples for connecting Flink to other systems.
 
 ## Access Hive data in Flink（beta）
 
-Apache Flink develops a HiveTableSource which supports reading hive data from partition or non-partition table, and also support partition-pruning on given partition partition filter condition. It's implemention is based on aboved `Input/OutputFormat` wrappers for Hadoop. 
+Apache Flink develops a HiveTableSource which supports reading hive data from partition or non-partition table, and also support partition-pruning on given partition filter condition. It's implemention is based on aboved `Input/OutputFormat` wrappers for Hadoop. 
 
 To access hive data, add the following dependency to your flink project:
 
