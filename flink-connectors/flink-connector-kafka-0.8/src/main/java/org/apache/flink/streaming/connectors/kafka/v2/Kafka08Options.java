@@ -37,9 +37,9 @@ public class Kafka08Options {
 		"dual.commit.enabled", "partition.assignment.strategy", "socket.receive.buffer.bytes",
 		"fetch.min.bytes"};
 	public static final Set<String> OPTIONAL_CONSUMER_KEYS = new HashSet<>(Arrays.asList(optionalConsumerKeys));
-	public static final Set<String> ESSENTIAL_PRODUCER_KEYS = new HashSet<>(Arrays.asList("", ""));
+	public static final Set<String> ESSENTIAL_PRODUCER_KEYS = new HashSet<>(Arrays.asList("bootstrap.servers"));
 	private static final String[] optionalProducerKeys = new String[]{
-		"bootstrap.servers", "acks", "buffer.memory", "compression.type", "batch.size", "client.id",
+		"acks", "buffer.memory", "compression.type", "batch.size", "client.id",
 		"linger.ms", "max.request.size", "receive.buffer.bytes", "send.buffer.bytes", "timeout.ms",
 		"block.on.buffer.full", "metadata.fetch.timeout.ms", "metadata.max.age.ms", "metric.reporters",
 		"metrics.num.samples", "metrics.sample.window.ms", "reconnect.backoff.ms", "retry.backoff.ms",

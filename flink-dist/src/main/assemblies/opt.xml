@@ -220,12 +220,6 @@
 			<destName>flink-connector-kafka-0.11_${scala.binary.version}-${project.version}-sql-jar.jar</destName>
 			<fileMode>0644</fileMode>
 		</file>
-		<file>
-			<source>../flink-connectors/flink-connector-kafka-base/target/flink-connector-kafka-base_${scala.binary.version}-${project.version}.jar</source>
-			<outputDirectory>opt/connectors/kafkabase</outputDirectory>
-			<destName>flink-connector-kafka-base_${scala.binary.version}-${project.version}.jar</destName>
-			<fileMode>0644</fileMode>
-		</file>
 
 		<!-- Hive Connector -->
 		<file>
