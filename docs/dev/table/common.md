@@ -56,7 +56,7 @@ Table sqlResult  = tableEnv.sqlQuery("SELECT ... FROM table2 ... ");
 tapiResult.writeToSink(...);
 
 // execute
-env.execute();
+tableEnv.execute();
 
 {% endhighlight %}
 </div>
@@ -83,7 +83,7 @@ val sqlResult  = tableEnv.sqlQuery("SELECT ... FROM table2 ...")
 tapiResult.writeToSink(...)
 
 // execute
-env.execute()
+tableEnv.execute()
 
 {% endhighlight %}
 </div>
@@ -1301,23 +1301,23 @@ StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironm
 StreamTableEnvironment tEnv = TableEnvironment.getTableEnvironment(env);
 
 // Get table stats
-String tablePath = "catalog1.database1.table1"
-TableStats tableStats = tEnv.getTableStats(tablePath)
+String tablePath = "catalog1.database1.table1";
+TableStats tableStats = tEnv.getTableStats(tablePath);
 
 // modify table stats
 TableStats tableStats1 = ...
 Array<String> tablePath1 = ...
-tEnv.alterTableStats(tablePath1, tableStats1)
+tEnv.alterTableStats(tablePath1, tableStats1);
 
 // modify unique keys
 Set<Set<String>> uniqueKeys = ...
 Array<String> tablePath2 = ...
-tEnv.alterTableStats(tablePath2, uniqueKeys)
+tEnv.alterTableStats(tablePath2, uniqueKeys);
 
 // modify skew info
 Map<String, List<Object>> skewInfo = ...
 Array<String> tablePath3 = ...
-tEnv.alterTableStats(tablePath3, skewInfo)
+tEnv.alterTableStats(tablePath3, skewInfo);
 {% endhighlight %}
 </div>
 
