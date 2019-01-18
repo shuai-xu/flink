@@ -151,6 +151,15 @@ Mode "embedded" submits Flink jobs from the local machine.
 
 {% top %}
 
+SQL language supports
+--------------------
+
+Currently Flink has a preliminary supports for SQL language(include DDL, Query and DML features). See [SQL]({{ site.baseurl }}/dev/table/sql.html)
+
+SQL CLI provides a CREATE TABLE command to replace the table definitions in YAML configuation file. SQL users pass a SQL DDL description text to SQL CLI, it will be passed into table objects and registered to the tableEnvironment, then following SQL Querys can access these tables directly (we would reuse the tableEnvironment in a session).
+
+<span class="label label-danger">Attention</span> We strongly suggest everyone use DDL syntax to define a Table, and use DML to query or update the Table.
+
 ### Environment Files
 
 A SQL query needs a configuration environment in which it is executed. The so-called *environment files* define available table sources and sinks, catalogs, user-defined functions, and other properties required for execution and deployment.
@@ -601,14 +610,6 @@ catalogs:
 Currently Flink supports two types of catalog - `FlinkInMemoryCatalog` and `HiveCatalog`.
 
 For more information about integration with Hive metastore, see [Catalogs]({{ site.baseurl }}/dev/table/catalog.html) and [Hive Compatibility]({{ site.baseurl }}/dev/batch/hive_compatibility.html)
-
-
-SQL language supports
---------------------
-
-Currently Flink has a preliminary supports for SQL language(include DDL, Query and DML features). see [sql]({{ site.baseurl }}/dev/table/sql.html)
-
-SQL CLI provides a CREATE TABLE command to replace the table definitions in YAML configuation file. SQL users pass a SQL DDL description text to SQL CLI, it will be passed into table objects and registered to the tableEnvironment, then following SQL Querys can access these tables directly (we would reuse the tableEnvironment in a session).
 
 Limitations & Future
 --------------------
