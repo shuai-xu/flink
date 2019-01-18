@@ -115,8 +115,6 @@ Note that non-local file systems require a schema prefix, such as hdfs://.
 
 This example reads the access data of the website in the following format from kafka, and gather statistics of pv-uv in real time.
 
-
-
 Start SQL Client shell:
 
 {% highlight bash %}
@@ -126,6 +124,7 @@ $ ./bin/sql-client.sh embedded
 You can see the welcome message for flink sql client.
 
 Paste the following sql text into the shell.
+<b>Note</b>: Replace the **bootstrap.servers** and **group.id** with your own environment.
 
 {% highlight bash %}
 create table kafka_source (
@@ -161,7 +160,7 @@ group by
 After press 'Enter' the sql will be submitted to the standalone cluster. Since there is no data in kafka topic at this time, no output.
 
 Then run kafka-console-producer.sh script under your local kafka installation package: 
-(Remember to replace the broker information with your own environment)
+<b>Note</b>: Replace the **--broker-list** with your own environment.
 
 {% highlight bash %}
 $ ./bin/kafka-console-producer.sh --topic pvuv_demo --broker-list YOUR_BROKER_IP:YOUR_BROKER_PORT
@@ -181,11 +180,12 @@ Open [http://localhost:8081](http://localhost:8081) and you can see the dashboar
 
 <a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-kafka-pvuv-web1.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-kafka-pvuv-web1.png" alt="SQL Example: PV-UV Statistics (Input: Kafka) web"/></a>
 
-Clink the job name: "default: insert into...", and you can see the detailed info page:
+Clink the job name: "default: select date_format...", and you can see the detailed info page:
 
 <a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-kafka-pvuv-web2.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-kafka-pvuv-web2.png" alt="SQL Example: PV-UV Statistics (Input: Kafka) detail"/></a>
 
-TODO: 插入动图
+Animated demo of the example:
+<a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-demo-pv-uv-kafka.gif"><img class="offset" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-demo-pv-uv-kafka.gif" alt="Animated demo of the Flink SQL Client CLI running pv-uv sql on a cluster"  width="80%"/></a>
 
 For more information please refer to [SQL]({{ site.baseurl }}/dev/table/sql.html) and [SQL Client]({{ site.baseurl }}/dev/table/sqlClient.html).
 
