@@ -32,7 +32,8 @@ public class CheckpointingOptions {
 	public static final ConfigOption<String> STATE_BACKEND = ConfigOptions
 			.key("state.backend")
 			.noDefaultValue()
-			.withDescription("The state backend to be used to store and checkpoint state.");
+			.withDescription("The state backend to be used to store and checkpoint state. " +
+				"Supported values are 'jobmanager' for MemoryStateBackend, 'filesystem' for FsStateBackend, and 'rocksdb' for RocksDBStateBackend.");
 
 	/** The maximum number of completed checkpoints to retain.*/
 	public static final ConfigOption<Integer> MAX_RETAINED_CHECKPOINTS = ConfigOptions
