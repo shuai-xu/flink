@@ -351,17 +351,12 @@ class CalcITCase extends StreamingTestBase {
       ((2, 2), "2")
     )))
 
-    val sink = new TestingAppendRowSink
-    table.select('*).toAppendStream[Row].addSink(sink)
+    val sink = new TestingAppendTableSink
+    table.select('*).writeToSink(sink)
     env.execute()
 
-    sink.localResults.zipWithIndex.foreach {
-      case (row, i) =>
-        val baseRow = row.getField(0).asInstanceOf[BaseRow]
-        assertEquals(i, baseRow.getInt(0))
-        assertEquals(i, baseRow.getInt(1))
-        assertEquals(i.toString, row.getField(1))
-    }
+    val expected = List("0,0,0", "1,1,1", "2,2,2")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 }
 

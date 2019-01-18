@@ -23,9 +23,10 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
-import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingTestBase, TestingAppendBaseRowSink, TestingAppendRowSink, TestingAppendSink}
+import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingTestBase, TestingAppendBaseRowSink, TestingAppendSink, TestingAppendTableSink}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.types.Row
+
 import org.junit.Assert._
 import org.junit._
 
@@ -213,17 +214,12 @@ class CalcITCase extends StreamingTestBase {
 
     val result = tEnv.sqlQuery(sqlQuery)
 
-    val sink = new TestingAppendRowSink
-    result.toAppendStream[Row].addSink(sink)
+    val sink = new TestingAppendTableSink
+    result.writeToSink(sink)
     env.execute()
 
-    sink.localResults.zipWithIndex.foreach {
-      case (row, i) =>
-        val baseRow = row.getField(0).asInstanceOf[BaseRow]
-        assertEquals(i, baseRow.getInt(0))
-        assertEquals(i, baseRow.getInt(1))
-        assertEquals(i.toString, row.getField(1))
-    }
+    val expected = List("0,0,0", "1,1,1", "2,2,2")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
