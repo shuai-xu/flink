@@ -138,7 +138,7 @@ class RelDigestWriterImpl(sw: StringWriter, tableConfig: TableConfig)
       case e: Expand => ExpandUtil.isDeterministic(e.projects)
       case _: Collect | _: Correlate | _: Exchange | _: SetOp | _: Sample |
            _: TableScan | _: Uncollect | _: Values | _: Sink | _: LogicalLastRow |
-           _: WatermarkAssigner => true
+           _: WatermarkAssigner | _: Snapshot => true
       case o => throw new TableException(
         s"Unsupported RelNode: ${o.getRelTypeName}, which should be handled before this exception")
     }
