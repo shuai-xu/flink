@@ -70,7 +70,7 @@ After having extracted the system files, you need to configure Flink for the clu
 
 Set the `jobmanager.rpc.address` key to point to your master node. You should also define the maximum amount of main memory the JVM is allowed to allocate on each node by setting the `jobmanager.heap.mb` and `taskmanager.heap.mb` keys.
 
-These values are given in MB. If some worker nodes have more main memory which you want to allocate to the Flink system you can overwrite the default value by setting the environment variable `FLINK_TM_HEAP` on those specific nodes.
+Currently all the TaskManagers are started with the same resource specification and jvm arguments(-Xms, -Xmx, -Xmn, -XX:MaxDirectMemorySize, etc.). Navigate to [TaskManager Resource](../internals/taskmanager_resource.html) to figure out how the TaskManager Resources are configured. If some worker nodes have more main memory and you want to override the heap memory settings, the environment variable `FLINK_TM_HEAP` will not take effect and we recommend you to start multiple TaskManager instances on those specific nodes.
 
 Finally, you must provide a list of all nodes in your cluster which shall be used as worker nodes. Therefore, similar to the HDFS configuration, edit the file *conf/slaves* and enter the IP/host name of each worker node. Each worker node will later run a TaskManager.
 
