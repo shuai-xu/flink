@@ -23,13 +23,12 @@ import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.io.CollectionInputFormat
-import org.apache.flink.api.scala.getCallLocationName
-import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
+import org.apache.flink.api.scala.{createTypeInformation, getCallLocationName}
+import org.apache.flink.streaming.api.datastream.{DataStream => JDataStream}
+import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment, asScalaStream}
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.functions.{AggregateFunction, TableFunction}
-import org.apache.flink.table.dataformat.BoxedWrapperRow
 import org.apache.flink.table.expressions.Expression
-import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.RangeInputFormat
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
@@ -399,22 +398,22 @@ class BatchTableEnvironment(
   }
 
   /**
-    * Translates a [[Table]] into a [[DataStream]], emit the [[DataStream]] into a [[TableSink]]
-    * of a specified type and generated a new [[DataStream]].
+    * Translates a [[Table]] into a bounded [[DataStream]] of specific type.
     *
-    * The fields of the [[Table]] are mapped to [[TableSink]] fields as follows:
+    * The fields of the [[Table]] are mapped to [[DataStream]] fields as follows:
     * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
     * types: Fields are mapped by position, field types must match.
-    * - POJO [[TableSink]] types: Fields are mapped by field name, field types must match.
+    * - POJO [[DataStream]] types: Fields are mapped by field name, field types must match.
     *
     * @param table The [[Table]] to convert.
-    * @param sink  The [[TableSink]] to emit the [[Table]] into.
-    * @tparam T The type of the [[TableSink]].
-    * @return The generated [[DataStream]] operators after emit the [[DataStream]] translated by
-    *         [[Table]] into a [[TableSink]].
+    * @tparam T The type of the [[DataStream]].
+    * @return The generated [[DataStream]] operators translated by [[Table]].
     */
-  def toBoundedStream[T](table: Table, sink: TableSink[T]): DataStream[_] = {
-    new DataStream(translateToDataStream(table, sink))
+  def toBoundedStream[T: TypeInformation](table: Table): DataStream[T] = {
+    val returnType = createTypeInformation[T]
+    TableEnvironment.validateType(returnType)
+    val javaStream: JDataStream[T] = translateToDataStream(table, returnType)
+    asScalaStream(javaStream)
   }
 
   /**

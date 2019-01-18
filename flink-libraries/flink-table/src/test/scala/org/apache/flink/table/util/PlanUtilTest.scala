@@ -32,16 +32,13 @@ import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData._
 import org.apache.flink.table.sinks.{CollectRowTableSink, CollectTableSink}
-import org.apache.flink.table.typeutils.TypeUtils
 import NodeResourceUtil.InferMode
 import org.apache.flink.table.util.PlanUtil.toPlanWihMetrics
 import org.apache.flink.test.util.AbstractTestBase
 import org.apache.flink.types.Row
 import org.apache.flink.util.AbstractID
-
 import org.apache.calcite.tools.RuleSets
 import org.junit._
-
 import java.nio.file.{Files, Paths}
 
 import scala.collection.JavaConversions._
@@ -140,7 +137,11 @@ class PlanUtilTest extends AbstractTestBase {
     * @param sink        table slink to output result
     */
   private def execute(inputOfSink: Table, sink: CollectTableSink[Row]): Unit = {
-    val sinkTransformation = tableEnv.toBoundedStream(inputOfSink, sink).getTransformation
+    val boundedStream = tableEnv
+      .toBoundedStream(inputOfSink, classOf[Row])
+    val sinkTransformation = sink
+      .emitBoundedStream(boundedStream, null, null)
+      .getTransformation
     setDumpFileToConfig()
     val streamGraph = StreamGraphGenerator.generate(
       Context.buildBatchProperties(tableEnv.streamEnv),

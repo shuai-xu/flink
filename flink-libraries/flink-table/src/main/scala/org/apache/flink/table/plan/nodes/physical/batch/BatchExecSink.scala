@@ -21,8 +21,8 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-
 import java.util
+
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.codegen.CodeGeneratorContext
@@ -33,10 +33,9 @@ import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.nodes.exec.{BaseBatchExecNode, RowBatchExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.SinkUtil
-import org.apache.flink.table.sinks.{BatchCompatibleStreamTableSink, BatchTableSink, TableSink}
+import org.apache.flink.table.sinks.{BatchCompatibleStreamTableSink, BatchTableSink, DataStreamTableSink, TableSink}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.NodeResourceUtil
-
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
@@ -77,17 +76,25 @@ class BatchExecSink[T](
     */
   override def translateToPlanInternal(
     tableEnv: BatchTableEnvironment): StreamTransformation[Any] = {
-    sink match {
+    val result = sink match {
       case _: BatchTableSink[T] =>
-        val result = translate(withChangeFlag = false, tableEnv)
-        emitBoundedStreamSink(result, tableEnv).getTransformation.
-        asInstanceOf[StreamTransformation[Any]]
+        translate(withChangeFlag = false, tableEnv)
       case _: BatchCompatibleStreamTableSink[T] =>
-        val result = translate(withChangeFlag = true, tableEnv)
-        emitBoundedStreamSink(result, tableEnv).getTransformation.
-        asInstanceOf[StreamTransformation[Any]]
+        translate(withChangeFlag = true, tableEnv)
+      case streamTableSink: DataStreamTableSink[T] =>
+        translate(withChangeFlag = streamTableSink.withChangeFlag, tableEnv)
       case _ =>
         throw new TableException("Only Support BatchTableSink or BatchCompatibleStreamTableSink")
+    }
+    // In case of table to bounded stream through BatchTableEnvironment#toBoundedStream, we insert a
+    // DataStreamTableSink then wrap it as a LogicalSink, there is no real batch table sink, so
+    // we do not need to invoke TableSink#emitBoundedStream and set resource, just a translation to
+    // StreamTransformation is ok.
+    if (sink.isInstanceOf[DataStreamTableSink[T]]) {
+      result.getTransformation.asInstanceOf[StreamTransformation[Any]]
+    } else {
+      emitBoundedStreamSink(result, tableEnv).getTransformation.
+        asInstanceOf[StreamTransformation[Any]]
     }
   }
 

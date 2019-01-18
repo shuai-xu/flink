@@ -32,8 +32,7 @@ import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 import org.apache.flink.table.api._
-import org.apache.flink.table.dataformat.BoxedWrapperRow
-import org.apache.flink.table.sinks.TableSink
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.sources.RangeInputFormat
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
@@ -360,22 +359,22 @@ class BatchTableEnvironment(
   }
 
   /**
-    * Translates a [[Table]] into a [[DataStream]], emit the [[DataStream]] into a [[TableSink]]
-    * of a specified type and generated a new [[DataStream]].
+    * Translates a [[Table]] into a [[DataStream]] of a specific type.
     *
-    * The fields of the [[Table]] are mapped to [[TableSink]] fields as follows:
+    * The fields of the [[Table]] are mapped to [[DataStream]] fields as follows:
     * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
     * types: Fields are mapped by position, field types must match.
-    * - POJO [[TableSink]] types: Fields are mapped by field name, field types must match.
+    * - POJO [[DataStream]] types: Fields are mapped by field name, field types must match.
     *
     * @param table The [[Table]] to convert.
-    * @param sink The [[TableSink]] to write the [[Table]] to.
-    * @tparam T The type of the [[TableSink]].
-    * @return The generated [[DataStream]] operators after emit the [[DataStream]] translated by
-    *         [[Table]] into a [[TableSink]].
+    * @param clazz The class of the [[DataStream]] type.
+    * @tparam T The type of the [[DataStream]].
+    * @return The generated [[DataStream]] operators translated by [[Table]].
     */
-  def toBoundedStream[T](table: Table, sink: TableSink[T]): DataStream[_] = {
-    translateToDataStream(table, sink)
+  def toBoundedStream[T](table: Table, clazz: Class[T]): DataStream[T] = {
+    val resultType = DataTypes.extractDataType(clazz)
+    TableEnvironment.validateType(resultType)
+    translateToDataStream(table, resultType)
   }
 
   /**
