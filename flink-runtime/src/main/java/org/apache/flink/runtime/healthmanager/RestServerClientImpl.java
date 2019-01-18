@@ -312,7 +312,7 @@ public class RestServerClientImpl implements RestServerClient {
 
 		final UpdatingTriggerHeaders header = UpdatingTriggerHeaders.getInstance();
 		final JobMessageParameters parameters = header.getUnresolvedMessageParameters();
-		Map<String, Tuple2<Integer, ResourceSpecInfo>> vertexParallelismResourceJsonMap = new HashMap<>();
+		Map<String, UpdatingJobRequest.VertexResource> vertexParallelismResourceJsonMap = new HashMap<>();
 		for (Map.Entry<JobVertexID, Tuple2<Integer, ResourceSpec>> id2resource: vertexParallelismResource.entrySet()){
 			String idStr = id2resource.getKey().toString();
 			Tuple2<Integer, ResourceSpec> parallism2Resource = id2resource.getValue();
@@ -326,7 +326,7 @@ public class RestServerClientImpl implements RestServerClient {
 				resourceSpec.getStateSize(),
 				resourceSpec.getExtendedResources()
 			);
-			vertexParallelismResourceJsonMap.put(idStr, Tuple2.of(parallelism, resourceSpecInfo));
+			vertexParallelismResourceJsonMap.put(idStr, new UpdatingJobRequest.VertexResource(parallelism, resourceSpecInfo));
 		}
 		final UpdatingJobRequest updatingJobRequest = new UpdatingJobRequest(vertexParallelismResourceJsonMap);
 		parameters.jobPathParameter.resolve(jobId);

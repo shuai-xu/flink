@@ -18,7 +18,6 @@
 
 package org.apache.flink.runtime.rest.messages.job;
 
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.rest.ResourceSpecInfo;
 import org.apache.flink.runtime.rest.messages.RequestBody;
 
@@ -31,24 +30,56 @@ import javax.annotation.Nonnull;
 import java.util.Map;
 
 /**
- * Request body for a savepoint disposal call.
+ * Request body for a updating job.
  */
 public class UpdatingJobRequest implements RequestBody {
 
-	private static final String field_name_vertex_parallelism_resource = "vertex-parallelism-resource";
+	private static final String FIELD_NAME_VERTEX_PARALLELISM_RESOURCE = "vertex-parallelism-resource";
 
-	@JsonProperty(field_name_vertex_parallelism_resource)
-	private final Map<String, Tuple2<Integer, ResourceSpecInfo>> vertexParallelismResource;
+	@JsonProperty(FIELD_NAME_VERTEX_PARALLELISM_RESOURCE)
+	private final Map<String, VertexResource> vertexParallelismResource;
 
 	@JsonCreator
 	public UpdatingJobRequest(
-		@JsonProperty(field_name_vertex_parallelism_resource)
-		@Nonnull Map<String, Tuple2<Integer, ResourceSpecInfo>> vertexParallelismResource) {
+		@JsonProperty(FIELD_NAME_VERTEX_PARALLELISM_RESOURCE)
+		@Nonnull Map<String, VertexResource> vertexParallelismResource) {
 		this.vertexParallelismResource = vertexParallelismResource;
 	}
 
 	@JsonIgnore
-	public Map<String, Tuple2<Integer, ResourceSpecInfo>> getVertexParallelismResource() {
+	public Map<String, VertexResource> getVertexParallelismResource() {
 		return vertexParallelismResource;
 	}
+
+	/**
+	 * vertex resource for update job.
+	 */
+	public static final class VertexResource {
+		private static final String FIELD_NAME_VERTEX_PARALLELISM = "parallelism";
+		private static final String FIELD_NAME_VERTEX_RESOURCE = "resource";
+
+		@JsonProperty(FIELD_NAME_VERTEX_PARALLELISM)
+		private  final Integer parallelism;
+
+		@JsonProperty(FIELD_NAME_VERTEX_RESOURCE)
+		private  final ResourceSpecInfo resource;
+
+		@JsonCreator
+		public VertexResource(@JsonProperty(FIELD_NAME_VERTEX_PARALLELISM) Integer parallelism,
+			@JsonProperty(FIELD_NAME_VERTEX_RESOURCE) ResourceSpecInfo resource) {
+			this.parallelism = parallelism;
+			this.resource = resource;
+		}
+
+		@JsonIgnore
+		public Integer getParallelism() {
+			return parallelism;
+		}
+
+		@JsonIgnore
+		public ResourceSpecInfo getResource() {
+			return resource;
+		}
+	}
+
 }

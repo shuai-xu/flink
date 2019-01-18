@@ -21,10 +21,8 @@ package org.apache.flink.runtime.rest.handler.job.rescaling;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.time.Time;
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.messages.Acknowledge;
-import org.apache.flink.runtime.rest.ResourceSpecInfo;
 import org.apache.flink.runtime.rest.handler.HandlerRequest;
 import org.apache.flink.runtime.rest.handler.RestHandlerException;
 import org.apache.flink.runtime.rest.handler.async.AbstractAsynchronousOperationHandlers;
@@ -73,14 +71,15 @@ public class UpdatingJobHandlers extends AbstractAsynchronousOperationHandlers<A
 		@Override
 		protected CompletableFuture<Acknowledge> triggerOperation(HandlerRequest<UpdatingJobRequest, JobMessageParameters> request, RestfulGateway gateway) throws RestHandlerException {
 			final JobID jobId = request.getPathParameter(JobIDPathParameter.class);
-			final Map<String, Tuple2<Integer, ResourceSpecInfo>> vertexParallelismResources = request.getRequestBody().getVertexParallelismResource();
+			final Map<String, UpdatingJobRequest.VertexResource> vertexParallelismResources = request.getRequestBody().getVertexParallelismResource();
 
 			List<JobUpdateAction> actions = new ArrayList<>();
 			if (vertexParallelismResources != null && !vertexParallelismResources.isEmpty()) {
-				for (Map.Entry<String, Tuple2<Integer, ResourceSpecInfo>> vertexParallelismResource: vertexParallelismResources.entrySet()){
+				for (Map.Entry<String, UpdatingJobRequest.VertexResource> vertexParallelismResource: vertexParallelismResources.entrySet()){
 					JobVertexID jobVertexID = JobVertexID.fromHexString(vertexParallelismResource.getKey());
-					ResourceSpec newResourceSpec = vertexParallelismResource.getValue().f1.convertToResourceSpec();
-					int parallelism = vertexParallelismResource.getValue().f0;
+					UpdatingJobRequest.VertexResource vertexResource = vertexParallelismResource.getValue();
+					ResourceSpec newResourceSpec = vertexResource.getResource().convertToResourceSpec();
+					int parallelism = vertexResource.getParallelism();
 					actions.add(new JobVertexResourcesUpdateAction(jobVertexID, newResourceSpec));
 					actions.add(new JobVertexRescaleAction(jobVertexID, parallelism));
 				}
