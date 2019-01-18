@@ -1,6 +1,6 @@
 ---
 title: "Batch SQL Examples"
-nav-title: Batch SQL Examples(Not work)
+nav-title: Batch SQL Examples
 nav-parent_id: examples
 nav-pos: 25
 ---
@@ -86,7 +86,7 @@ After press 'Enter' the sql will be submitted to the standalone cluster. The res
 
 Open [http://localhost:8081](http://localhost:8081) and you can see the job information.
 
-<a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-sqlclient-wordcount.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-sqlclient-wordcount.png" alt="SQL Example: web"/></a>
+<a href="{{ site.baseurl }}/page/img/quickstart-example/batch-sqlclient-example-result-web.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/batch-sqlclient-example-result-web.png" alt="Batch SQL Example: web"/></a>
 
 For more information please refer to [SQL]({{ site.baseurl }}/dev/table/sql.html) and [SQL Client]({{ site.baseurl }}/dev/table/sqlClient.html).
 

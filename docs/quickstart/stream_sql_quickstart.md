@@ -97,7 +97,7 @@ Open [http://localhost:8081](http://localhost:8081) and you can see the dashboar
 
 <a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-wordcount-web1.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-wordcount-web1.png" alt="SQL Example: WordCount web"/></a>
 
-Clink the job name: "default: insert into...", and you can see the detailed info page:
+Click the job name: "default: insert into...", and you can see the detailed info page:
 
 <a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-wordcount-web2.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-wordcount-web2.png" alt="SQL Example: WordCount detail"/></a>
 
@@ -296,7 +296,7 @@ Open [http://localhost:8081](http://localhost:8081) and you can see the dashboar
 And run the following command to see the result:
 
 {% highlight bash %}
-$ tailf ./log/flink-*-taskexecutor*.out
+$ tail -f ./log/flink-*-taskexecutor*.out
 {% endhighlight %}
 
 <a href="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-stream-join-sql-result.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/stream-sqlclient-example-stream-join-sql-result.png" alt="Stream SQL Example: Stream Join SQL result"/></a>

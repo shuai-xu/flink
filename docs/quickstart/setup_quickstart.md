@@ -30,12 +30,12 @@ Get a Flink example program up and running in a few simple steps.
 
 ## Setup: Download and Start Flink
 
-Flink runs on __Linux, Mac OS X, and Windows__. To be able to run Flink, the only requirement is to have a working __Java 8.x__ installation. Windows users, please take a look at the [Flink on Windows]({{ site.baseurl }}/start/flink_on_windows.html) guide which describes how to run Flink on Windows for local setups.
+Flink runs on __Linux, Mac OS X, and Windows__. To be able to run Flink, the only requirement is to have a working __Java 1.8.x__ installation. Windows users, please take a look at the [Flink on Windows]({{ site.baseurl }}/start/flink_on_windows.html) guide which describes how to run Flink on Windows for local setups.
 
 You can check the correct installation of Java by issuing the following command:
 
 {% highlight bash %}
-java -version
+$ java -version
 {% endhighlight %}
 
 If you have Java 8, the output will look something like this:
@@ -63,17 +63,6 @@ $ cd flink-{{site.version}}
 {% endhighlight %}
 </div>
 
-<div data-lang="MacOS X" markdown="1">
-For MacOS X users, Flink can be installed through [Homebrew](https://brew.sh/).
-
-{% highlight bash %}
-$ brew install apache-flink
-...
-$ flink --version
-Version: 1.2.0, Commit ID: 1c659cf
-{% endhighlight %}
-</div>
-
 </div>
 
 {% else %}
@@ -97,6 +86,8 @@ $ ./bin/start-cluster.sh  # Start Flink
 Check the __Dispatcher's web frontend__ at [http://localhost:8081](http://localhost:8081) and make sure everything is up and running. The web frontend should report a single available TaskManager instance.
 
 <a href="{{ site.baseurl }}/page/img/quickstart-setup/jobmanager-1.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-setup/jobmanager-1.png" alt="Dispatcher: Overview"/></a>
+
+In this flink dashboard page, you can see the available task slot, running jobs and available cpu cores and memory (includes heap mem, direct mem, native mem, managed mem and network mem). For more information, please refer to [flink-conf.yaml](https://github.com/apache/flink/blob/master/flink-dist/src/main/resources/flink-conf.yaml) and [TaskManager Resource]({{ site.baseurl }}/internals/taskmanager_resource.html).
 
 You can also verify that the system is running by checking the log files in the `logs` directory:
 
