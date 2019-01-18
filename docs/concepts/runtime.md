@@ -82,7 +82,7 @@ Each worker (TaskManager) is a *JVM process*, and may execute one or more subtas
 To control how many tasks a worker accepts, a worker has so called **task slots** (at least one).
 
 Each *task slot* represents a subset of resources of the TaskManager.
-**Resource profiles** quantitatively describe the resources of each task slot: CPU cores, memory size (heap, direct, native and network), and other extended resources.
+**Resource profiles** quantitatively describe the resources of each task slot: CPU cores, memory size (heap, direct, native, network and managed).
 The resources of a task slot can be either defined at starting of the TaskManager (in *per-job* mode), or dynamically decided when scheduling tasks onto the slot (in *session* mode).
 A special *unknown* resource profile is used for task slots whose resources could not (or not yet) be decided.
 

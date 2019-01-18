@@ -78,7 +78,7 @@ Use the following configurations to set TaskManager total and fine-grained memor
 
 If the resource matching is disabled, the resources of all operators will be set to UNKNOWN. The same method as session will be used to calculate the resources of each TaskManager.
 
-If the resource matching is enabled, you could set up the resources for operator through ResourceSpec, including CpuCores, HeapMemory, DirectMemory, NativeMemory and other extended resources such as ManagedMemory. The JobManager will allocate slots with corresponding resources from ResourceManager. The ResourceManager will combine the slot requests into Yarn container or kubernetes pod requests and send to the resource management framework.
+If the resource matching is enabled, you could set up the resources for operator through ResourceSpec, including CpuCores, HeapMemory, DirectMemory, NativeMemory and ManagedMemory. The JobManager will allocate slots with corresponding resources from ResourceManager. The ResourceManager will combine the slot requests into Yarn container or kubernetes pod requests and send to the resource management framework.
 
 Using the following two configurations to control how slot requests should be combined into a container or pod.
 
