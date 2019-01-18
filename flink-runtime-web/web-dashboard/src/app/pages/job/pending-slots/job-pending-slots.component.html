@@ -35,7 +35,7 @@
       <tr>
         <td nzShowExpand [(nzExpand)]="data.expand"></td>
         <td>{{data.start_time | nzHumanizeDate: 'yyyy-MM-dd HH:mm:ss'}}</td>
-        <td>{{data.resource_profile.cpu_cores | number:'1.0-0' | nzHumanizeCheckNull}}</td>
+        <td>{{data.resource_profile.cpu_cores | number:'1.0-1' | nzHumanizeCheckNull}}</td>
         <td>{{data.resource_profile.direct_memory  | nzHumanizeBytes | nzHumanizeCheckNull}}</td>
         <td>{{data.resource_profile.heap_memory | nzHumanizeBytes | nzHumanizeCheckNull}}</td>
         <td>{{data.resource_profile.native_memory | nzHumanizeBytes | nzHumanizeCheckNull}}</td>

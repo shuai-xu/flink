@@ -23,6 +23,19 @@ import { StatusService } from 'flink-services';
   styleUrls  : [ './app.component.less' ]
 })
 export class AppComponent {
+  visible = false;
+
+  showMessage() {
+    if (this.statusService.infoList.length) {
+      this.visible = true;
+    }
+  }
+
+  clearMessage() {
+    this.statusService.infoList = [];
+    this.visible = false;
+  }
+
   constructor(public statusService: StatusService) {
   }
 }

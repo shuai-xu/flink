@@ -25,7 +25,7 @@ import { TaskManagerService } from 'flink-services';
 export class TaskManagerStatusComponent implements OnInit {
   @Input() isLoading = true;
   listOfNavigation = [
-    { pathOrParam: 'resource', title: 'Resource' },
+    { pathOrParam: 'resource', title: 'Allocated Resource' },
     { pathOrParam: 'metrics', title: 'Metrics' },
     { pathOrParam: 'log', title: 'Log' }
   ];

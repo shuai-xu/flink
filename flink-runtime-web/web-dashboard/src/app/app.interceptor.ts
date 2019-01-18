@@ -15,19 +15,21 @@
  */
 
 import { HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
+import { StatusService } from 'flink-services';
 import { throwError, Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
 @Injectable()
 export class AppInterceptor implements HttpInterceptor {
-  constructor() {
+  constructor(private injector: Injector) {
   }
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     return next.handle(req).pipe(
       catchError((res) => {
         const errorMessage = res && res.error && res.error[ 'errors' ] && res.error[ 'errors' ][ 0 ];
+        this.injector.get(StatusService).infoList.push(errorMessage);
         return throwError(errorMessage);
       }));
   }

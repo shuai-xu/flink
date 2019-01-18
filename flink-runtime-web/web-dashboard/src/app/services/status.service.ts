@@ -26,6 +26,7 @@ import { ConfigurationInterface } from 'flink-interfaces';
   providedIn: 'root'
 })
 export class StatusService {
+  infoList = [];
   // collapsed flag
   isCollapsed = false;
   // loading flag

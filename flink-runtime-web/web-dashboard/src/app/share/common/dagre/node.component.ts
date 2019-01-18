@@ -34,11 +34,21 @@ export class NodeComponent {
   _node = {} as NodesItemCorrectInterface;
   visible = false;
   description = '';
+  operator = '';
+  operator_strategy = '';
+
+  decodeHTML(value: string) {
+    const parser = new DOMParser;
+    const dom = parser.parseFromString('<!doctype html><body>' + value, 'text/html');
+    return dom.body.textContent;
+  }
 
   @Input()
   set node(value) {
     this._node = value;
-    const description = this.node.description.replace('&gt;', '>');
+    const description = this.decodeHTML(this.node.description);
+    this.operator = this.decodeHTML(this.node.operator);
+    this.operator_strategy = this.decodeHTML(this.node.operator_strategy);
     if (description.length > 300) {
       this.description = description.slice(0, 300) + '...';
     } else {

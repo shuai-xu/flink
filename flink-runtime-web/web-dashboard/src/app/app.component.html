@@ -74,6 +74,10 @@
         <span>
           <strong>Commit:</strong> {{ statusService.configuration['flink-revision'] }}
         </span>
+        <nz-divider nzType="vertical"></nz-divider>
+        <span>
+          <strong> Message:</strong><nz-badge (click)="showMessage()" nzShowZero [class.normal]="statusService.infoList.length===0" [nzCount]="statusService.infoList.length"></nz-badge>
+        </span>
       </div>
     </nz-header>
     <nz-content>
@@ -81,3 +85,13 @@
     </nz-content>
   </nz-layout>
 </nz-layout>
+
+<nz-drawer [nzVisible]="visible" [nzWidth]="500" nzPlacement="right" nzTitle="Server Response Message List" (nzOnClose)="clearMessage()">
+  <nz-alert
+    *ngFor="let info of statusService.infoList"
+    nzType="info"
+    [nzMessage]="'Server Response:'"
+    [nzDescription]="info"
+    nzShowIcon>
+  </nz-alert>
+</nz-drawer>

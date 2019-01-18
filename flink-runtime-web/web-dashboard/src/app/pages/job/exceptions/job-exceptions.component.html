@@ -16,7 +16,7 @@
 
 <nz-tabset [nzTabBarGutter]="4" [nzSize]="'small'" [nzAnimated]="{inkBar:true, tabPane:false}">
   <nz-tab nzTitle="Root Exception">
-    <nz-monaco-editor [nzValue]="rootException" [nzReadOnly]="true"  [nzTheme]="configService.theme"></nz-monaco-editor>
+    <nz-monaco-editor [nzValue]="rootException" [nzReadOnly]="true" [nzTheme]="configService.theme"></nz-monaco-editor>
   </nz-tab>
   <nz-tab nzTitle="Exception History">
     <nz-table
@@ -41,13 +41,17 @@
             <td nzShowExpand [(nzExpand)]="exception.expand"></td>
             <td>{{exception['subtask-index']}}</td>
             <td>{{exception.timestamp | date:'yyyy-MM-dd HH:mm:ss'}}</td>
-            <td><div class="name">{{exception.task}}</div></td>
+            <td>
+              <div class="name">
+                <a [routerLink]="['../','overview',exception['vertex-id'],'detail']">{{exception.task}}</a>
+              </div>
+            </td>
             <td>{{exception.location}}</td>
             <td>{{exception['attempt-num']}}</td>
           </tr>
           <tr [nzExpand]="exception.expand">
             <td colspan="6" class="expand-td">
-              <nz-monaco-editor *ngIf="exception.expand" class="subtask" [nzReadOnly]="true"  [nzValue]="exception.exception" [nzTheme]="configService.theme"></nz-monaco-editor>
+              <nz-monaco-editor *ngIf="exception.expand" class="subtask" [nzReadOnly]="true" [nzValue]="exception.exception" [nzTheme]="configService.theme"></nz-monaco-editor>
             </td>
           </tr>
         </ng-container>

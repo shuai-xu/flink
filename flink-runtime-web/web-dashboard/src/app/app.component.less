@@ -82,6 +82,27 @@ nz-header {
   padding: 0px 12px 0px 0px;
   flex: 0 0 auto;
 
+  nz-badge {
+    margin-left: 12px;
+    cursor: pointer;
+
+    ::ng-deep {
+      .ant-badge-count {
+        background: @primary-color;
+      }
+    }
+
+    &.normal {
+      cursor: default;
+
+      ::ng-deep {
+        .ant-badge-count {
+          background: @text-color;
+        }
+      }
+    }
+  }
+
   .right {
     float: right;
     height: 100%;
@@ -120,4 +141,8 @@ nz-content {
 
 .menu {
   padding: 16px 0px;
+}
+
+nz-alert {
+  margin-bottom: 12px;
 }
