@@ -22,6 +22,55 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-在这里放 DDL 支持的 source/sink/dim 表清单，然后在清单下，每个 connector 分别介绍其在 DDL with 中的参数项。
-参考这里： https://yuque.antfin-inc.com/rtcompute/doc/sql-ddl-stream-source-datahub
-@青陆
+Flink SQL provides access to data which is stored in external systems (database, key-value store, message queue) or files by CREATE TABLE statement.
+
+By CREATE TABLE statement, data could be accessed as a SQL table in the following DML statements and translated to `TableSource` or `TableSink` automatically.
+
+We use WITH clauses to describe the information necessary to access a external system.
+
+Provided Connectors
+-------------------
+
+| **Connector Type**| **Batch?** | **Streaming?** | **Source?** | **Sink?**| **Temporal Join?**
+| `CSV` | Y | Y | Y | Y | Y
+
+### CSV connector
+
+{% highlight sql %}
+
+-- Create a table named `Orders` which includes a primary key, and is stored as a CSV file
+CREATE TABLE Orders (
+    orderId BIGINT NOT NULL,
+    customId VARCHAR NOT NULL,
+    itemId BIGINT NOT NULL,
+    totalPrice BIGINT NOT NULL,
+    orderTime TIMESTAMP NOT NULL,
+    description VARCHAR,
+    PRIMARY KEY(orderId)
+) WITH (
+    type='csv',
+    path='file:///abc/csv_file1'
+)
+
+{% endhighlight %}
+
+#### Required configuration
+* **type** : use `CSV` to create a Csv Table to read CSV files or to write into CSV files.
+* **path** : locations of the CSV files.  Accepts standard Hadoop globbing expressions. To read a directory of CSV files, specify a directory.
+
+#### Optional Configuration
+* **enumerateNestedFiles** : 
+* **fieldDelim** : the field delimiter. By default `,`, but can be set to any character.
+* **lineDelim** : the line delimiter. By default `\n`, but can be set to any character.
+* **charset** : defaults to `UTF-8`, but can be set to other valid charset names.
+* **override** : when set to `true` the existing files are overwritten. By default `false`.
+* **emptyColumnAsNull** : when set to `true`, any empty column will be set as null. By default `false`.
+* **quoteCharacter** : by default no quote character, but can be set to any character.
+* **firstLineAsHeader** : when set to `true`, the first line of files are used to name columns and are not included in data. All types are assumed to be string. By default `false`.
+* **parallelism** : the number of files to write to.
+* **timeZone** : timeZone to parse DateTime columns. Defaults to `UTC`, but can be set to other valid time zones.
+* **commentsPrefix** : skip lines beginning with this character. By default no commentsPrefix, but can be set to any string.
+* **updateMode** : the ways to encode a changes of a dynamic table. By default `append`. [See Table to Stream Conversion]({{ site.baseurl }}/dev/table/streaming/dynamic_tables.html#table-to-stream-conversion)
+   * **append** : encoding INSERT changes.
+   * **upsert** : encoding INSERT and UPDATE changes as upsert message and DELETE changes as delete message.
+   * **retract** : encoding INSERT as add message and DELETE changes as retract message,  and an UPDATE change as a retract message for the updated (previous) row and an add message for the updating (new) row.

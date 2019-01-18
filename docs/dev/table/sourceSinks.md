@@ -984,7 +984,7 @@ A `TableSource` defines a [rowtime attribute](streaming.html#event-time) by impl
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
 {% highlight java %}
-DefinedRowtimeAttribute {
+DefinedRowtimeAttributes {
 
   public List<RowtimeAttributeDescriptor> getRowtimeAttributeDescriptors();
 }
