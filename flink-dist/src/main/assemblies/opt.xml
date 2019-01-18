@@ -236,5 +236,13 @@
 			<destName>flink-connector-hadoop-compatibility_${scala.binary.version}-${project.version}.jar</destName>
 			<fileMode>0644</fileMode>
 		</file>
+
+		<!-- HBase Connector -->
+		<file>
+			<source>../flink-connectors/flink-hbase/target/flink-hbase_${scala.binary.version}-${project.version}-sql-jar.jar</source>
+			<outputDirectory>opt/connectors/</outputDirectory>
+			<destName>flink-hbase_${scala.binary.version}-${project.version}.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
 	</files>
 </assembly>

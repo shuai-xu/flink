@@ -23,6 +23,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.connectors.hbase.table.HBaseTableSchema;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 

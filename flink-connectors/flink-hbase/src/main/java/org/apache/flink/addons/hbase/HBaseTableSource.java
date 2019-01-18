@@ -19,6 +19,7 @@
 package org.apache.flink.addons.hbase;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.connectors.hbase.table.HBaseTableSchema;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.TableSchema;
