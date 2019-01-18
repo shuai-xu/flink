@@ -30,7 +30,8 @@ object SubplanReuseUtil {
     val disableTableSourceReuse = !tableConfig.getConf.getBoolean(
       TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED)
     val context = new SubplanReuseContext(disableTableSourceReuse, rels: _*)
-    rels.map(_.accept(new SubplanReuseShuttle(context)))
+    val reuseShuttle = new SubplanReuseShuttle(context)
+    rels.map(_.accept(reuseShuttle))
   }
 
 }

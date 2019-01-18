@@ -32,13 +32,13 @@ import org.junit.{Before, Test}
 import scala.collection.Seq
 
 @RunWith(classOf[Parameterized])
-class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
+class SubplanReuseITCase(SubplanReuse: Boolean) extends BatchTestBase {
 
   @Before
   def before(): Unit = {
     tEnv.getConfig.setConf(new Configuration)
     tEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, subPlanReuse)
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, SubplanReuse)
     tEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED, false)
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1)
@@ -54,7 +54,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
   }
 
   @Test
-  def testReuseSubPlan_Calc(): Unit = {
+  def testSubplanReuse_Calc(): Unit = {
     checkResult(
       """
         |WITH r AS (SELECT a, b, c FROM x WHERE c LIKE 'He%')
@@ -67,7 +67,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
   }
 
   @Test
-  def testReuseSubPlan_Exchange(): Unit = {
+  def testSubplanReuse_Exchange(): Unit = {
     checkResult(
       """
         |WITH r AS (SELECT a, b, c FROM x WHERE c LIKE 'He%')
@@ -81,7 +81,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
   }
 
   @Test
-  def testReuseSubPlan_OverWindow(): Unit = {
+  def testSubplanReuse_OverWindow(): Unit = {
     checkResult(
       """
         |WITH r AS (SELECT a, b, RANK() OVER (ORDER BY c DESC) c FROM x)
@@ -93,7 +93,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
   }
 
   @Test
-  def testReuseSubPlan_ScanTable(): Unit = {
+  def testSubplanReuse_ScanTable(): Unit = {
     checkResult(
       """
         |(SELECT a FROM SmallTable3 WHERE b > 1)
@@ -105,7 +105,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
   }
 
   @Test
-  def testReuseSubPlan_HashAggregate(): Unit = {
+  def testSubplanReuse_HashAggregate(): Unit = {
     tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "SortAgg")
     checkResult(
       """
@@ -117,7 +117,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
   }
 
   @Test
-  def testReuseSubPlan_SortAggregate(): Unit = {
+  def testSubplanReuse_SortAggregate(): Unit = {
     tEnv.getConfig.getConf.setString(TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "HashAgg")
     checkResult(
       """
@@ -129,7 +129,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
   }
 
   @Test
-  def testReuseSubPlan_Sort(): Unit = {
+  def testSubplanReuse_Sort(): Unit = {
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED, true)
     checkResult(
       """
@@ -141,7 +141,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
   }
 
   @Test
-  def testReuseSubPlan_Limit(): Unit = {
+  def testSubplanReuse_Limit(): Unit = {
     checkResult(
       """
         |WITH r AS (SELECT a, b FROM x LIMIT 10)
@@ -152,7 +152,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
   }
 
   @Test
-  def testReuseSubPlan_SortLimit(): Unit = {
+  def testSubplanReuse_SortLimit(): Unit = {
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED, true)
     checkResult(
       """
@@ -164,7 +164,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
   }
 
   @Test
-  def testReuseSubPlan_SortMergeJoin(): Unit = {
+  def testSubplanReuse_SortMergeJoin(): Unit = {
     tEnv.getConfig.getConf.setString(
       TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "HashJoin,NestedLoopJoin")
     checkResult(
@@ -181,7 +181,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
   }
 
   @Test
-  def testReuseSubPlan_HashJoin(): Unit = {
+  def testSubplanReuse_HashJoin(): Unit = {
     tEnv.getConfig.getConf.setString(
       TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "NestedLoopJoin,SortMergeJoin")
     checkResult(
@@ -198,7 +198,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
   }
 
   @Test
-  def testReuseSubPlan_NestedLoopJoin(): Unit = {
+  def testSubplanReuse_NestedLoopJoin(): Unit = {
     tEnv.getConfig.getConf.setString(
       TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "HashJoin,SortMergeJoin")
     checkResult(
@@ -215,7 +215,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
   }
 
   @Test
-  def testReuseSubPlan_Union(): Unit = {
+  def testSubplanReuse_Union(): Unit = {
     checkResult(
       """
         |WITH r AS (SELECT a, c FROM x WHERE b > 1 UNION ALL SELECT a, d FROM y WHERE b < 2)
@@ -256,7 +256,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
   }
 
   @Test
-  def testNestedReusableSubPlan(): Unit = {
+  def testNestedReusableSubplan(): Unit = {
     checkResult(
       """
         |WITH v1 AS (
@@ -289,7 +289,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends BatchTestBase {
   }
 }
 
-object ReuseSubPlanITCase {
+object SubplanReuseITCase {
 
   @Parameterized.Parameters(name = "{0}")
   def parameters(): java.util.Collection[Boolean] = {

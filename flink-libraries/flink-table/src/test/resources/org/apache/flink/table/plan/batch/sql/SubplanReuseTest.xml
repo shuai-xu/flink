@@ -16,47 +16,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
-  <TestCase name="testReuseSubPlan_SortLimit">
-    <Resource name="sql">
-      <![CDATA[
-WITH r AS (SELECT c, SUM(a) a, SUM(b) b FROM x GROUP BY c ORDER BY a, b DESC LIMIT 10)
-SELECT * FROM r r1, r r2 WHERE r1.a = r2.b AND r1.a > 1 AND r2.b < 10
-      ]]>
-    </Resource>
-    <Resource name="planBefore">
-      <![CDATA[
-LogicalProject(c=[$0], a=[$1], b=[$2], c0=[$3], a0=[$4], b0=[$5])
-+- LogicalFilter(condition=[AND(=(CAST($1):BIGINT, $5), >($1, 1), <($5, 10))])
-   +- LogicalJoin(condition=[true], joinType=[inner])
-      :- LogicalSort(sort0=[$1], sort1=[$2], dir0=[ASC-nulls-first], dir1=[DESC-nulls-last], fetch=[10])
-      :  +- LogicalAggregate(group=[{0}], a=[SUM($1)], b=[SUM($2)])
-      :     +- LogicalProject(c=[$2], a=[$0], b=[$1])
-      :        +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
-      +- LogicalSort(sort0=[$1], sort1=[$2], dir0=[ASC-nulls-first], dir1=[DESC-nulls-last], fetch=[10])
-         +- LogicalAggregate(group=[{0}], a=[SUM($1)], b=[SUM($2)])
-            +- LogicalProject(c=[$2], a=[$0], b=[$1])
-               +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
-]]>
-    </Resource>
-    <Resource name="planAfter">
-      <![CDATA[
-Calc(select=[c, a, b, c0, a1 AS a0, b0])
-+- NestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right])
-   :- Exchange(distribution=[any], exchange_mode=[BATCH])
-   :  +- Calc(select=[c, a, b, CAST(a) AS a0], where=[>(a, 1)])
-   :     +- SortLimit(orderBy=[a ASC, b DESC], offset=[0], limit=[10], global=[true], reuse_id=[1])
-   :        +- Exchange(distribution=[single])
-   :           +- SortLimit(orderBy=[a ASC, b DESC], offset=[0], limit=[10], global=[false])
-   :              +- HashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b])
-   :                 +- Exchange(distribution=[hash[c]])
-   :                    +- LocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0, Partial_SUM(b) AS sum$1])
-   :                       +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
-   +- Exchange(distribution=[broadcast])
-      +- Calc(select=[c, a, b], where=[<(b, 10)])
-         +- Reused(reference_id=[1])
-]]>
-    </Resource>
-  </TestCase>
   <TestCase name="testBreakupDeadlock_HashJoin">
     <Resource name="sql">
       <![CDATA[
@@ -212,7 +171,100 @@ HashJoin(where=[=(b, e0)], join=[a, b, d, e, a0, b0, d0, e0], joinType=[InnerJoi
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReusableSubPlan_DeterministicJoinCondition">
+  <TestCase name="testNestedReusableSubplan">
+    <Resource name="sql">
+      <![CDATA[
+WITH v1 AS (
+ SELECT
+   SUM(b) sum_b,
+   AVG(SUM(b)) OVER (PARTITION BY c, e) avg_b,
+   RANK() OVER (PARTITION BY c, e ORDER BY c, e) rn,
+   c, e
+ FROM x, y
+ WHERE x.a = y.d AND c IS NOT NULl AND e > 10
+ GROUP BY c, e
+),
+   v2 AS (
+ SELECT
+    v11.c,
+    v11.e,
+    v11.avg_b,
+    v11.sum_b,
+    v12.sum_b psum,
+    v13.sum_b nsum,
+    v12.avg_b avg_b2
+  FROM v1 v11, v1 v12, v1 v13
+  WHERE v11.c = v12.c AND v11.c = v13.c AND
+    v11.e = v12.e AND v11.e = v13.e AND
+    v11.rn = v12.rn + 1 AND
+    v11.rn = v13.rn - 1
+)
+SELECT * from v2 WHERE c <> '' AND sum_b - avg_b > 3
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(c=[$0], e=[$1], avg_b=[$2], sum_b=[$3], psum=[$4], nsum=[$5], avg_b2=[$6])
++- LogicalFilter(condition=[AND(<>($0, ''), >(-($3, $2), 3))])
+   +- LogicalProject(c=[$3], e=[$4], avg_b=[$1], sum_b=[$0], psum=[$5], nsum=[$10], avg_b2=[$6])
+      +- LogicalFilter(condition=[AND(=($3, $8), =($3, $13), =($4, $9), =($4, $14), =($2, +($7, 1)), =($2, -($12, 1)))])
+         +- LogicalJoin(condition=[true], joinType=[inner])
+            :- LogicalJoin(condition=[true], joinType=[inner])
+            :  :- LogicalProject(sum_b=[$2], avg_b=[/(CAST(CASE(>(COUNT($2) OVER (PARTITION BY $0, $1 RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING), 0), CAST($SUM0($2) OVER (PARTITION BY $0, $1 RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)):BIGINT, null)):DOUBLE, COUNT($2) OVER (PARTITION BY $0, $1 RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING))], rn=[RANK() OVER (PARTITION BY $0, $1 ORDER BY $0 NULLS FIRST, $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)], c=[$0], e=[$1])
+            :  :  +- LogicalAggregate(group=[{0, 1}], sum_b=[SUM($2)])
+            :  :     +- LogicalProject(c=[$2], e=[$4], b=[$1])
+            :  :        +- LogicalFilter(condition=[AND(=($0, $3), IS NOT NULL($2), >($4, 10))])
+            :  :           +- LogicalJoin(condition=[true], joinType=[inner])
+            :  :              :- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
+            :  :              +- LogicalTableScan(table=[[builtin, default, y, source: [selectedFields=[d, e, f]]]])
+            :  +- LogicalProject(sum_b=[$2], avg_b=[/(CAST(CASE(>(COUNT($2) OVER (PARTITION BY $0, $1 RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING), 0), CAST($SUM0($2) OVER (PARTITION BY $0, $1 RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)):BIGINT, null)):DOUBLE, COUNT($2) OVER (PARTITION BY $0, $1 RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING))], rn=[RANK() OVER (PARTITION BY $0, $1 ORDER BY $0 NULLS FIRST, $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)], c=[$0], e=[$1])
+            :     +- LogicalAggregate(group=[{0, 1}], sum_b=[SUM($2)])
+            :        +- LogicalProject(c=[$2], e=[$4], b=[$1])
+            :           +- LogicalFilter(condition=[AND(=($0, $3), IS NOT NULL($2), >($4, 10))])
+            :              +- LogicalJoin(condition=[true], joinType=[inner])
+            :                 :- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
+            :                 +- LogicalTableScan(table=[[builtin, default, y, source: [selectedFields=[d, e, f]]]])
+            +- LogicalProject(sum_b=[$2], avg_b=[/(CAST(CASE(>(COUNT($2) OVER (PARTITION BY $0, $1 RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING), 0), CAST($SUM0($2) OVER (PARTITION BY $0, $1 RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)):BIGINT, null)):DOUBLE, COUNT($2) OVER (PARTITION BY $0, $1 RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING))], rn=[RANK() OVER (PARTITION BY $0, $1 ORDER BY $0 NULLS FIRST, $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)], c=[$0], e=[$1])
+               +- LogicalAggregate(group=[{0, 1}], sum_b=[SUM($2)])
+                  +- LogicalProject(c=[$2], e=[$4], b=[$1])
+                     +- LogicalFilter(condition=[AND(=($0, $3), IS NOT NULL($2), >($4, 10))])
+                        +- LogicalJoin(condition=[true], joinType=[inner])
+                           :- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
+                           +- LogicalTableScan(table=[[builtin, default, y, source: [selectedFields=[d, e, f]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+Calc(select=[c, e, avg_b, sum_b, sum_b0 AS psum, sum_b1 AS nsum, avg_b0 AS avg_b2])
++- HashJoin(where=[AND(=(c, c0), =(e, e0), =(rn, $f5))], join=[sum_b, avg_b, rn, c, e, sum_b0, avg_b0, sum_b1, c0, e0, $f5], joinType=[InnerJoin], isBroadcast=[true], build=[left])
+   :- Exchange(distribution=[broadcast])
+   :  +- Calc(select=[sum_b, avg_b, rn, c, e, sum_b0, avg_b0])
+   :     +- HashJoin(where=[AND(=(c, c0), =(e, e0), =(rn, $f5))], join=[sum_b, avg_b, rn, c, e, sum_b0, avg_b0, c0, e0, $f5], joinType=[InnerJoin], isBroadcast=[true], build=[left])
+   :        :- Exchange(distribution=[broadcast])
+   :        :  +- Calc(select=[sum_b, /(CAST(CASE(>(w0$o0, 0), CAST(w0$o1), null)), w0$o0) AS avg_b, w1$o0 AS rn, c, e], where=[AND(<>(c, ''), >(-(sum_b, /(CAST(CASE(>(w0$o0, 0), CAST(w0$o1), null)), w0$o0)), 3))])
+   :        :     +- OverAggregate(partitionBy=[c, e], orderBy=[], window#0=[COUNT(sum_b) AS w0$o0, $SUM0(sum_b) AS w0$o1 RANG BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING], window#1=[RANK(*) AS w1$o0 RANG BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[c, e, sum_b, w0$o0, w0$o1, w1$o0], reuse_id=[1])
+   :        :        +- Sort(orderBy=[c ASC, e ASC], reuse_id=[2])
+   :        :           +- HashAggregate(isMerge=[true], groupBy=[c, e], select=[c, e, Final_SUM(sum$0) AS sum_b])
+   :        :              +- Exchange(distribution=[hash[c, e]])
+   :        :                 +- LocalHashAggregate(groupBy=[c, e], select=[c, e, Partial_SUM(b) AS sum$0])
+   :        :                    +- Calc(select=[c, e, b])
+   :        :                       +- HashJoin(where=[=(a, d)], join=[a, b, c, d, e], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+   :        :                          :- Calc(select=[a, b, c], where=[IS NOT NULL(c)])
+   :        :                          :  +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+   :        :                          +- Exchange(distribution=[broadcast])
+   :        :                             +- Calc(select=[d, e], where=[>(e, 10)])
+   :        :                                +- TableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d, e]]]], fields=[d, e])
+   :        +- Exchange(distribution=[hash[c, e, $f5]], exchange_mode=[BATCH])
+   :           +- Calc(select=[sum_b, /(CAST(CASE(>(w0$o0, 0), CAST(w0$o1), null)), w0$o0) AS avg_b, c, e, +(w1$o0, 1) AS $f5])
+   :              +- Reused(reference_id=[1])
+   +- Exchange(distribution=[hash[c, e, $f5]], exchange_mode=[BATCH])
+      +- Calc(select=[sum_b, c, e, -(w0$o0, 1) AS $f5])
+         +- OverAggregate(partitionBy=[c, e], orderBy=[c ASC, e ASC], window#0=[RANK(*) AS w0$o0 RANG BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[c, e, sum_b, w0$o0])
+            +- Reused(reference_id=[2])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testReusableSubplan_DeterministicJoinCondition">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT * FROM x FULL OUTER JOIN y ON ABS(a) = ABS(d) OR c = f
@@ -254,7 +306,7 @@ Calc(select=[a, b, c, d, e, f, a1 AS a0, b0, c0, d0, e0, f0])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReusableSubPlan_DynamicFunction">
+  <TestCase name="testReusableSubplan_DynamicFunction">
     <Resource name="planBefore">
       <![CDATA[
 LogicalIntersect(all=[false])
@@ -303,7 +355,7 @@ NestedLoopSemiJoin(where=[OR(=(random, random0), AND(IS NULL(random), IS NULL(ra
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReusableSubPlan_NonDeterministicAgg_Disabled">
+  <TestCase name="testReusableSubplan_NonDeterministicAgg_Disabled">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT c, MyFirst(a) a, MyLast(b) b FROM x GROUP BY c)
@@ -340,7 +392,7 @@ Calc(select=[c, a, b, c0, a1 AS a0, b0])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReusableSubPlan_NonDeterministicAgg_Enabled">
+  <TestCase name="testReusableSubplan_NonDeterministicAgg_Enabled">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT c, MyFirst(a) a, MyLast(b) b FROM x GROUP BY c)
@@ -376,7 +428,7 @@ Calc(select=[c, a, b, c0, a1 AS a0, b0])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReusableSubPlan_NonDeterministicJoinCondition_Disabled">
+  <TestCase name="testReusableSubplan_NonDeterministicJoinCondition_Disabled">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT * FROM x FULL OUTER JOIN y ON random_udf(a) = random_udf(d) OR c = f
@@ -420,7 +472,7 @@ Calc(select=[a, b, c, d, e, f, a1 AS a0, b0, c0, d0, e0, f0])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReusableSubPlan_NonDeterministicJoinCondition_Enabled">
+  <TestCase name="testReusableSubplan_NonDeterministicJoinCondition_Enabled">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT * FROM x FULL OUTER JOIN y ON random_udf(a) = random_udf(d) OR c = f
@@ -462,7 +514,7 @@ Calc(select=[a, b, c, d, e, f, a1 AS a0, b0, c0, d0, e0, f0])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReusableSubPlan_NonDeterministicUdfOnFilter">
+  <TestCase name="testReusableSubplan_NonDeterministicUdfOnFilter">
     <Resource name="sql">
       <![CDATA[
 (SELECT a FROM x WHERE b > random_udf(a))
@@ -493,7 +545,7 @@ Union(all=[true], union=[a])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReusableSubPlan_NonDeterministicUdfOnProject">
+  <TestCase name="testReusableSubplan_NonDeterministicUdfOnProject">
     <Resource name="sql">
       <![CDATA[
 (SELECT a, random_udf() FROM x WHERE a > 10)
@@ -523,7 +575,7 @@ Union(all=[true], union=[a, EXPR$1])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReusableSubPlan_NonDeterministicUDTF_Disabled">
+  <TestCase name="testReusableSubplan_NonDeterministicUDTF_Disabled">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT a, b, c, s FROM x, LATERAL TABLE(MyTable(c)) AS T(s))
@@ -556,7 +608,7 @@ HashJoin(where=[=(c, f00)], join=[a, b, c, f0, a0, b0, c0, f00], joinType=[Inner
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReusableSubPlan_NonDeterministicUDTF_Enabled">
+  <TestCase name="testReusableSubplan_NonDeterministicUDTF_Enabled">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT a, b, c, s FROM x, LATERAL TABLE(MyTable(c)) AS T(s))
@@ -589,7 +641,7 @@ HashJoin(where=[=(c, f00)], join=[a, b, c, f0, a0, b0, c0, f00], joinType=[Inner
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReuseSubPlan_Calc">
+  <TestCase name="testSubplanReuse_Calc">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT a, b, c FROM x WHERE c LIKE 'test%')
@@ -630,7 +682,7 @@ Union(all=[true], union=[a, c, e])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReuseSubPlan_Correlate">
+  <TestCase name="testSubplanReuse_Correlate">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT a, b, c, v FROM x, LATERAL TABLE(STRING_SPLIT(c, '-')) AS T(v))
@@ -663,7 +715,7 @@ HashJoin(where=[=(f0, f00)], join=[a, b, c, f0, a0, b0, c0, f00], joinType=[Inne
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReuseSubPlan_Exchange">
+  <TestCase name="testSubplanReuse_Exchange">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT a, b, c FROM x WHERE c LIKE 'test%')
@@ -709,7 +761,43 @@ Union(all=[true], union=[a, b, c, d, e, f])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReuseSubPlan_HashJoin">
+  <TestCase name="testSubplanReuse_HashAggregate">
+    <Resource name="sql">
+      <![CDATA[
+WITH r AS (SELECT c, SUM(a) a, SUM(b) b FROM x GROUP BY c)
+SELECT * FROM r r1, r r2 WHERE r1.a = r2.b AND r2.a > 1
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(c=[$0], a=[$1], b=[$2], c0=[$3], a0=[$4], b0=[$5])
++- LogicalFilter(condition=[AND(=(CAST($1):BIGINT, $5), >($4, 1))])
+   +- LogicalJoin(condition=[true], joinType=[inner])
+      :- LogicalAggregate(group=[{0}], a=[SUM($1)], b=[SUM($2)])
+      :  +- LogicalProject(c=[$2], a=[$0], b=[$1])
+      :     +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
+      +- LogicalAggregate(group=[{0}], a=[SUM($1)], b=[SUM($2)])
+         +- LogicalProject(c=[$2], a=[$0], b=[$1])
+            +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+Calc(select=[c, a, b, c0, a1 AS a0, b0])
++- HashJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+   :- Exchange(distribution=[hash[a0]], exchange_mode=[BATCH])
+   :  +- Calc(select=[c, a, b, CAST(a) AS a0])
+   :     +- HashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b], reuse_id=[1])
+   :        +- Exchange(distribution=[hash[c]])
+   :           +- LocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0, Partial_SUM(b) AS sum$1])
+   :              +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+   +- Exchange(distribution=[broadcast])
+      +- Calc(select=[c, a, b], where=[>(a, 1)])
+         +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSubplanReuse_HashJoin">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT * FROM x, y WHERE a = d AND c LIKE 'He%')
@@ -747,7 +835,7 @@ HashJoin(where=[=(a, d0)], join=[a, b, c, d, e, f, a0, b0, c0, d0, e0, f0], join
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReuseSubPlan_Limit">
+  <TestCase name="testSubplanReuse_Limit">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT a, b FROM x LIMIT 10)
@@ -782,7 +870,7 @@ Calc(select=[a, b, a1 AS a0])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReuseSubPlan_NestedLoopJoin">
+  <TestCase name="testSubplanReuse_NestedLoopJoin">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT * FROM x, y WHERE a = d AND c LIKE 'He%')
@@ -820,7 +908,7 @@ NestedLoopJoin(where=[=(a, d0)], join=[a, b, c, d, e, f, a0, b0, c0, d0, e0, f0]
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReuseSubPlan_OverWindow">
+  <TestCase name="testSubplanReuse_OverWindow">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT a, b, RANK() OVER (ORDER BY c DESC) FROM x)
@@ -853,7 +941,45 @@ HashJoin(where=[=(a, a0)], join=[a, b, $2, a0, b0, $20], joinType=[InnerJoin], i
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReuseSubPlan_ScanTable">
+  <TestCase name="testSubplanReuse_SortAggregate">
+    <Resource name="sql">
+      <![CDATA[
+WITH r AS (SELECT c, SUM(a) a, SUM(b) b FROM x GROUP BY c)
+SELECT * FROM r r1, r r2 WHERE r1.a = r2.b AND r2.a > 1
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(c=[$0], a=[$1], b=[$2], c0=[$3], a0=[$4], b0=[$5])
++- LogicalFilter(condition=[AND(=(CAST($1):BIGINT, $5), >($4, 1))])
+   +- LogicalJoin(condition=[true], joinType=[inner])
+      :- LogicalAggregate(group=[{0}], a=[SUM($1)], b=[SUM($2)])
+      :  +- LogicalProject(c=[$2], a=[$0], b=[$1])
+      :     +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
+      +- LogicalAggregate(group=[{0}], a=[SUM($1)], b=[SUM($2)])
+         +- LogicalProject(c=[$2], a=[$0], b=[$1])
+            +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+Calc(select=[c, a, b, c0, a1 AS a0, b0])
++- HashJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+   :- Exchange(distribution=[hash[a0]], exchange_mode=[BATCH])
+   :  +- Calc(select=[c, a, b, CAST(a) AS a0])
+   :     +- SortAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b], reuse_id=[1])
+   :        +- Sort(orderBy=[c ASC])
+   :           +- Exchange(distribution=[hash[c]])
+   :              +- LocalSortAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0, Partial_SUM(b) AS sum$1])
+   :                 +- Sort(orderBy=[c ASC])
+   :                    +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+   +- Exchange(distribution=[broadcast])
+      +- Calc(select=[c, a, b], where=[>(a, 1)])
+         +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSubplanReuse_ScanTable">
     <Resource name="sql">
       <![CDATA[
 (SELECT a FROM t WHERE a > 10)
@@ -882,7 +1008,44 @@ Union(all=[true], union=[a])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReuseSubPlan_Sort">
+  <TestCase name="testSubplanReuse_SortMergeJoin">
+    <Resource name="sql">
+      <![CDATA[
+WITH r AS (SELECT * FROM x, y WHERE a = d AND c LIKE 'He%')
+SELECT * FROM r r1, r r2 WHERE r1.a = r2.d
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5], a0=[$6], b0=[$7], c0=[$8], d0=[$9], e0=[$10], f0=[$11])
++- LogicalFilter(condition=[=($0, $9)])
+   +- LogicalJoin(condition=[true], joinType=[inner])
+      :- LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5])
+      :  +- LogicalFilter(condition=[AND(=($0, $3), LIKE($2, 'He%'))])
+      :     +- LogicalJoin(condition=[true], joinType=[inner])
+      :        :- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
+      :        +- LogicalTableScan(table=[[builtin, default, y, source: [selectedFields=[d, e, f]]]])
+      +- LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5])
+         +- LogicalFilter(condition=[AND(=($0, $3), LIKE($2, 'He%'))])
+            +- LogicalJoin(condition=[true], joinType=[inner])
+               :- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
+               +- LogicalTableScan(table=[[builtin, default, y, source: [selectedFields=[d, e, f]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+SortMergeJoin(where=[=(a, d0)], join=[a, b, c, d, e, f, a0, b0, c0, d0, e0, f0], joinType=[InnerJoin], leftSorted=[true], rightSorted=[true])
+:- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[InnerJoin], reuse_id=[1])
+:  :- Exchange(distribution=[hash[a]])
+:  :  +- Calc(select=[a, b, c], where=[LIKE(c, 'He%')])
+:  :     +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+:  +- Exchange(distribution=[hash[d]])
+:     +- TableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d, e, f]]]], fields=[d, e, f])
++- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSubplanReuse_Sort">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT c, SUM(a) a, SUM(b) b FROM x GROUP BY c ORDER BY a, b DESC)
@@ -922,118 +1085,48 @@ Calc(select=[c, a, b, c0, a1 AS a0, b0])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReuseSubPlan_SortAggregate">
+  <TestCase name="testSubplanReuse_SortLimit">
     <Resource name="sql">
       <![CDATA[
-WITH r AS (SELECT c, SUM(a) a, SUM(b) b FROM x GROUP BY c)
-SELECT * FROM r r1, r r2 WHERE r1.a = r2.b AND r2.a > 1
+WITH r AS (SELECT c, SUM(a) a, SUM(b) b FROM x GROUP BY c ORDER BY a, b DESC LIMIT 10)
+SELECT * FROM r r1, r r2 WHERE r1.a = r2.b AND r1.a > 1 AND r2.b < 10
       ]]>
     </Resource>
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(c=[$0], a=[$1], b=[$2], c0=[$3], a0=[$4], b0=[$5])
-+- LogicalFilter(condition=[AND(=(CAST($1):BIGINT, $5), >($4, 1))])
++- LogicalFilter(condition=[AND(=(CAST($1):BIGINT, $5), >($1, 1), <($5, 10))])
    +- LogicalJoin(condition=[true], joinType=[inner])
-      :- LogicalAggregate(group=[{0}], a=[SUM($1)], b=[SUM($2)])
-      :  +- LogicalProject(c=[$2], a=[$0], b=[$1])
-      :     +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
-      +- LogicalAggregate(group=[{0}], a=[SUM($1)], b=[SUM($2)])
-         +- LogicalProject(c=[$2], a=[$0], b=[$1])
-            +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
+      :- LogicalSort(sort0=[$1], sort1=[$2], dir0=[ASC-nulls-first], dir1=[DESC-nulls-last], fetch=[10])
+      :  +- LogicalAggregate(group=[{0}], a=[SUM($1)], b=[SUM($2)])
+      :     +- LogicalProject(c=[$2], a=[$0], b=[$1])
+      :        +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
+      +- LogicalSort(sort0=[$1], sort1=[$2], dir0=[ASC-nulls-first], dir1=[DESC-nulls-last], fetch=[10])
+         +- LogicalAggregate(group=[{0}], a=[SUM($1)], b=[SUM($2)])
+            +- LogicalProject(c=[$2], a=[$0], b=[$1])
+               +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, a, b, c0, a1 AS a0, b0])
-+- HashJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-   :- Exchange(distribution=[hash[a0]], exchange_mode=[BATCH])
-   :  +- Calc(select=[c, a, b, CAST(a) AS a0])
-   :     +- SortAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b], reuse_id=[1])
-   :        +- Sort(orderBy=[c ASC])
-   :           +- Exchange(distribution=[hash[c]])
-   :              +- LocalSortAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0, Partial_SUM(b) AS sum$1])
-   :                 +- Sort(orderBy=[c ASC])
-   :                    +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
++- NestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right])
+   :- Exchange(distribution=[any], exchange_mode=[BATCH])
+   :  +- Calc(select=[c, a, b, CAST(a) AS a0], where=[>(a, 1)])
+   :     +- SortLimit(orderBy=[a ASC, b DESC], offset=[0], limit=[10], global=[true], reuse_id=[1])
+   :        +- Exchange(distribution=[single])
+   :           +- SortLimit(orderBy=[a ASC, b DESC], offset=[0], limit=[10], global=[false])
+   :              +- HashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b])
+   :                 +- Exchange(distribution=[hash[c]])
+   :                    +- LocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0, Partial_SUM(b) AS sum$1])
+   :                       +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
-      +- Calc(select=[c, a, b], where=[>(a, 1)])
+      +- Calc(select=[c, a, b], where=[<(b, 10)])
          +- Reused(reference_id=[1])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReuseSubPlan_SortMergeJoin">
-    <Resource name="sql">
-      <![CDATA[
-WITH r AS (SELECT * FROM x, y WHERE a = d AND c LIKE 'He%')
-SELECT * FROM r r1, r r2 WHERE r1.a = r2.d
-      ]]>
-    </Resource>
-    <Resource name="planBefore">
-      <![CDATA[
-LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5], a0=[$6], b0=[$7], c0=[$8], d0=[$9], e0=[$10], f0=[$11])
-+- LogicalFilter(condition=[=($0, $9)])
-   +- LogicalJoin(condition=[true], joinType=[inner])
-      :- LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5])
-      :  +- LogicalFilter(condition=[AND(=($0, $3), LIKE($2, 'He%'))])
-      :     +- LogicalJoin(condition=[true], joinType=[inner])
-      :        :- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
-      :        +- LogicalTableScan(table=[[builtin, default, y, source: [selectedFields=[d, e, f]]]])
-      +- LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5])
-         +- LogicalFilter(condition=[AND(=($0, $3), LIKE($2, 'He%'))])
-            +- LogicalJoin(condition=[true], joinType=[inner])
-               :- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
-               +- LogicalTableScan(table=[[builtin, default, y, source: [selectedFields=[d, e, f]]]])
-]]>
-    </Resource>
-    <Resource name="planAfter">
-      <![CDATA[
-SortMergeJoin(where=[=(a, d0)], join=[a, b, c, d, e, f, a0, b0, c0, d0, e0, f0], joinType=[InnerJoin], leftSorted=[true], rightSorted=[true])
-:- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[InnerJoin], reuse_id=[1])
-:  :- Exchange(distribution=[hash[a]])
-:  :  +- Calc(select=[a, b, c], where=[LIKE(c, 'He%')])
-:  :     +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
-:  +- Exchange(distribution=[hash[d]])
-:     +- TableSourceScan(table=[[builtin, default, y, source: [selectedFields=[d, e, f]]]], fields=[d, e, f])
-+- Reused(reference_id=[1])
-]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testReuseSubPlan_HashAggregate">
-    <Resource name="sql">
-      <![CDATA[
-WITH r AS (SELECT c, SUM(a) a, SUM(b) b FROM x GROUP BY c)
-SELECT * FROM r r1, r r2 WHERE r1.a = r2.b AND r2.a > 1
-      ]]>
-    </Resource>
-    <Resource name="planBefore">
-      <![CDATA[
-LogicalProject(c=[$0], a=[$1], b=[$2], c0=[$3], a0=[$4], b0=[$5])
-+- LogicalFilter(condition=[AND(=(CAST($1):BIGINT, $5), >($4, 1))])
-   +- LogicalJoin(condition=[true], joinType=[inner])
-      :- LogicalAggregate(group=[{0}], a=[SUM($1)], b=[SUM($2)])
-      :  +- LogicalProject(c=[$2], a=[$0], b=[$1])
-      :     +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
-      +- LogicalAggregate(group=[{0}], a=[SUM($1)], b=[SUM($2)])
-         +- LogicalProject(c=[$2], a=[$0], b=[$1])
-            +- LogicalTableScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]])
-]]>
-    </Resource>
-    <Resource name="planAfter">
-      <![CDATA[
-Calc(select=[c, a, b, c0, a1 AS a0, b0])
-+- HashJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-   :- Exchange(distribution=[hash[a0]], exchange_mode=[BATCH])
-   :  +- Calc(select=[c, a, b, CAST(a) AS a0])
-   :     +- HashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b], reuse_id=[1])
-   :        +- Exchange(distribution=[hash[c]])
-   :           +- LocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0, Partial_SUM(b) AS sum$1])
-   :              +- TableSourceScan(table=[[builtin, default, x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
-   +- Exchange(distribution=[broadcast])
-      +- Calc(select=[c, a, b], where=[>(a, 1)])
-         +- Reused(reference_id=[1])
-]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testReuseSubPlan_Union">
+  <TestCase name="testSubplanReuse_Union">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT a, c FROM x WHERE b > 10 UNION ALL SELECT d, f FROM y WHERE e < 100)
@@ -1076,7 +1169,7 @@ Calc(select=[a, c, c0])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testReuseSubPlan_Source_With_Limit">
+  <TestCase name="testSubplanReuse_Source_With_Limit">
     <Resource name="sql">
       <![CDATA[
 WITH r AS (SELECT a, b FROM x LIMIT 10)

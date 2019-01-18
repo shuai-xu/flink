@@ -36,6 +36,8 @@ import org.apache.flink.table.api.TableException
   *  Scan1   Scan2                  Scan1
   * }}}
   * After rewrote, Scan2-Project2 is replaced by Scan1-Project1.
+  *
+  * <p>NOTES: This is a stateful class, please use same shuttle object to reuse multiple trees.
   */
 class SubplanReuseShuttle(context: SubplanReuseContext) extends DefaultRelShuttle {
   private val mapDigestToNewNode = new util.HashMap[String, RelNode]()
