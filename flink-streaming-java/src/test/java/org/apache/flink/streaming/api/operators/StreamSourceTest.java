@@ -20,7 +20,6 @@ package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
-import org.apache.flink.runtime.metrics.SimpleHistogram;
 import org.apache.flink.runtime.metrics.SumAndCount;
 import org.apache.flink.runtime.state.FunctionInitializationContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
@@ -67,7 +66,6 @@ public class StreamSourceTest {
 			true,
 			1,
 			testSumAndCount,
-			new SimpleHistogram(),
 			40L
 		);
 

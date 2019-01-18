@@ -256,10 +256,12 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 		}
 		if (enableTracingMetrics) {
 			if (taskLatency == null) {
-				taskLatency = new SumAndCount(MetricNames.TASK_LATENCY, streamOperator.getMetricGroup());
+				taskLatency = new SumAndCount(
+						MetricNames.TASK_LATENCY, ((OperatorMetricGroup) streamOperator.getMetricGroup()).parent());
 			}
 			if (waitInput == null) {
-				waitInput = new SumAndCount(MetricNames.IO_WAIT_INPUT, streamOperator.getMetricGroup());
+				waitInput = new SumAndCount(
+						MetricNames.IO_WAIT_INPUT, ((OperatorMetricGroup) streamOperator.getMetricGroup()).parent());
 			}
 		}
 

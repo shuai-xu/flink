@@ -19,11 +19,10 @@ package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
-import org.apache.flink.metrics.Histogram;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.metrics.MetricNames;
-import org.apache.flink.runtime.metrics.SimpleHistogram;
 import org.apache.flink.runtime.metrics.SumAndCount;
+import org.apache.flink.runtime.metrics.groups.OperatorMetricGroup;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.api.watermark.Watermark;
@@ -58,7 +57,7 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 
 	private transient SumAndCount taskLatency;
 
-	private transient Histogram sourceLatency;
+	private transient SumAndCount sourceLatency;
 
 	public StreamSource(SRC sourceFunction) {
 		super(sourceFunction);
@@ -78,10 +77,12 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 		enableTracingMetrics = getRuntimeContext().getExecutionConfig().isTracingMetricsEnabled();
 		if (enableTracingMetrics) {
 			if (taskLatency == null) {
-				taskLatency = new SumAndCount(MetricNames.TASK_LATENCY, getRuntimeContext().getMetricGroup());
+				taskLatency = new SumAndCount(
+						MetricNames.TASK_LATENCY, ((OperatorMetricGroup) (getRuntimeContext().getMetricGroup())).parent());
 			}
 			if (sourceLatency == null) {
-				sourceLatency = getRuntimeContext().getMetricGroup().histogram(MetricNames.SOURCE_LATENCY, new SimpleHistogram());
+				sourceLatency = new SumAndCount(
+						MetricNames.SOURCE_LATENCY, ((OperatorMetricGroup) (getRuntimeContext().getMetricGroup())).parent());
 			}
 			tracingMetricsInterval = getRuntimeContext().getExecutionConfig().getTracingMetricsInterval();
 		}
@@ -134,7 +135,6 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 		boolean enableTracingMetrics,
 		int tracingMetricsInterval,
 		SumAndCount taskLatency,
-		Histogram sourceLatency,
 		long watermarkInterval) {
 
 		return getSourceContext(
@@ -142,7 +142,7 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 			processingTimeService,
 			lockingObject,
 			streamStatusMaintainer,
-			getOutputWithTaskLatency(collector, enableTracingMetrics, tracingMetricsInterval, taskLatency, sourceLatency),
+			getOutputWithTaskLatency(collector, enableTracingMetrics, tracingMetricsInterval, taskLatency),
 			watermarkInterval);
 	}
 
@@ -159,7 +159,7 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 			processingTimeService,
 			lockingObject,
 			streamStatusMaintainer,
-			getOutputWithTaskLatency(collector, enableTracingMetrics, tracingMetricsInterval, taskLatency, sourceLatency),
+			getOutputWithTaskLatency(collector, enableTracingMetrics, tracingMetricsInterval, taskLatency),
 			watermarkInterval,
 			-1);
 	}
@@ -168,8 +168,7 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 			Output<StreamRecord<OUT>> collector,
 			boolean enableTracingMetrics,
 			int tracingMetricsInterval,
-			SumAndCount taskLatency,
-			Histogram sourceLatency) {
+			SumAndCount taskLatency) {
 		return new Output<StreamRecord<OUT>>() {
 			private long lastEmitTime = 0;
 			private long emitCounter = 0;

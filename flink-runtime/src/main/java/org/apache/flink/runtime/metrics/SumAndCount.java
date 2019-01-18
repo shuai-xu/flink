@@ -21,7 +21,6 @@ package org.apache.flink.runtime.metrics;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.metrics.Gauge;
-import org.apache.flink.metrics.Histogram;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.metrics.SimpleCounter;
 
@@ -31,7 +30,11 @@ import org.apache.flink.metrics.SimpleCounter;
 public class SumAndCount {
 	private double sum;
 	private Counter count;
-	private Histogram histogram;
+
+	private static final long AVG_INTERVAL = 10_000L;
+	private long currentIntervalKey;
+	private double avgSum;
+	private int avgCount;
 
 	public SumAndCount(String name, MetricGroup metricGroup) {
 		MetricGroup group = metricGroup.addGroup(name);
@@ -42,7 +45,15 @@ public class SumAndCount {
 				return sum;
 			}
 		});
-		histogram = group.histogram("histogram", new SimpleHistogram());
+		group.gauge("avg", new Gauge<Double>() {
+			@Override
+			public Double getValue() {
+				if (System.currentTimeMillis() / AVG_INTERVAL > currentIntervalKey) {
+					return 0.0;
+				}
+				return avgCount == 0 ? 0 : avgSum / avgCount;
+			}
+		});
 	}
 
 	/**
@@ -52,7 +63,6 @@ public class SumAndCount {
 	public SumAndCount(String name) {
 		sum = 0;
 		count = new SimpleCounter();
-		histogram = new SimpleHistogram();
 	}
 
 	public void update(long value) {
@@ -62,7 +72,15 @@ public class SumAndCount {
 	public void update(long countUpdated, long value) {
 		count.inc(countUpdated);
 		sum += value;
-		histogram.update(value);
+
+		long now = System.currentTimeMillis();
+		if (now / AVG_INTERVAL > currentIntervalKey) {
+			currentIntervalKey = now / AVG_INTERVAL;
+			avgCount = 0;
+			avgSum = 0;
+		}
+		avgCount++;
+		avgSum += value;
 	}
 
 	public double getSum() {
@@ -73,7 +91,4 @@ public class SumAndCount {
 		return count;
 	}
 
-	public Histogram getHistogram() {
-		return histogram;
-	}
 }
