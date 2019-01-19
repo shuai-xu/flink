@@ -27,21 +27,21 @@ import static org.junit.Assert.assertEquals;
 /**
  * Test for HiveMetadataUtil.
  */
-public class HiveMetadataUtilTest {
+public class HiveCatalogUtilTest {
 	@Test
 	public void testDecimalConversion() {
 		// Precision = length(longValue)
 		Decimal flinkDecimal = Decimal.fromLong(111111, 6, 2);
-		org.apache.hadoop.hive.metastore.api.Decimal hiveDecimal = HiveMetadataUtil.fromFlinkDecimal(flinkDecimal);
+		org.apache.hadoop.hive.metastore.api.Decimal hiveDecimal = HiveCatalogUtil.fromFlinkDecimal(flinkDecimal);
 
-		assertEquals(flinkDecimal, HiveMetadataUtil.fromHiveDecimal(hiveDecimal));
-		assertEquals(hiveDecimal, HiveMetadataUtil.fromFlinkDecimal(flinkDecimal));
+		assertEquals(flinkDecimal, HiveCatalogUtil.fromHiveDecimal(hiveDecimal));
+		assertEquals(hiveDecimal, HiveCatalogUtil.fromFlinkDecimal(flinkDecimal));
 
 		// Precision > length(longValue)
 		flinkDecimal = Decimal.fromLong(111111, 8, 2);
-		hiveDecimal = HiveMetadataUtil.fromFlinkDecimal(flinkDecimal);
+		hiveDecimal = HiveCatalogUtil.fromFlinkDecimal(flinkDecimal);
 
-		assertEquals(flinkDecimal, HiveMetadataUtil.fromHiveDecimal(hiveDecimal));
-		assertEquals(hiveDecimal, HiveMetadataUtil.fromFlinkDecimal(flinkDecimal));
+		assertEquals(flinkDecimal, HiveCatalogUtil.fromHiveDecimal(hiveDecimal));
+		assertEquals(hiveDecimal, HiveCatalogUtil.fromFlinkDecimal(flinkDecimal));
 	}
 }

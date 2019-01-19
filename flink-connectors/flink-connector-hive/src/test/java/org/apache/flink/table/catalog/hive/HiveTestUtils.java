@@ -38,6 +38,18 @@ public class HiveTestUtils {
 	 * @throws IOException
 	 */
 	public static HiveCatalog createHiveCatalog() throws IOException {
+		return new HiveCatalog("test", getHiveConf());
+	}
+
+	/**
+	 * Create a GenericHiveMetastoreCatalog based on an embedded Hive Metastore.
+	 * @throws IOException
+	 */
+	public static GenericHiveMetastoreCatalog createGenericHiveMetastoreCatalog() throws IOException {
+		return new GenericHiveMetastoreCatalog("test2", getHiveConf());
+	}
+
+	private static HiveConf getHiveConf() throws IOException {
 		TEMPORARY_FOLDER.create();
 		warehouseDir = TEMPORARY_FOLDER.newFolder().getAbsolutePath() + "/metastore_db";
 		warehouseUri = String.format("jdbc:derby:;databaseName=%s;create=true", warehouseDir);
@@ -47,7 +59,6 @@ public class HiveTestUtils {
 		hiveConf.setVar(HiveConf.ConfVars.METASTOREWAREHOUSE, TEMPORARY_FOLDER.newFolder("hive_warehouse").getAbsolutePath());
 		hiveConf.setVar(HiveConf.ConfVars.METASTORECONNECTURLKEY, warehouseUri);
 
-		return new HiveCatalog("test", hiveConf);
+		return hiveConf;
 	}
-
 }

@@ -25,7 +25,7 @@ import org.apache.flink.table.api.TableSourceParser;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.catalog.hive.FlinkHiveException;
-import org.apache.flink.table.catalog.hive.HiveMetadataUtil;
+import org.apache.flink.table.catalog.hive.HiveCatalogUtil;
 import org.apache.flink.table.catalog.hive.config.HiveCatalogConfig;
 import org.apache.flink.table.catalog.hive.config.HiveTableConfig;
 import org.apache.flink.table.dataformat.BaseRow;
@@ -83,7 +83,7 @@ public class HiveTableFactory implements BatchTableSourceFactory<BaseRow>, Table
 		InternalType[] colTypes = new InternalType[fieldNames.length];
 		TypeInformation[] typeInformations = new TypeInformation[fieldNames.length];
 		for (int i = 0; i < hiveFieldTypes.length; i++) {
-			colTypes[i] = HiveMetadataUtil.convert(hiveFieldTypes[i]);
+			colTypes[i] = HiveCatalogUtil.convert(hiveFieldTypes[i]);
 			typeInformations[i] = TypeConverters.createExternalTypeInfoFromDataType(colTypes[i]);
 		}
 		String hiveDbName = props.get(HIVE_TABLE_DB_NAME);

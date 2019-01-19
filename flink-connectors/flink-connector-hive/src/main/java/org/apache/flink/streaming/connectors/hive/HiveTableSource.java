@@ -26,7 +26,7 @@ import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.catalog.hive.FlinkHiveException;
-import org.apache.flink.table.catalog.hive.HiveMetadataUtil;
+import org.apache.flink.table.catalog.hive.HiveCatalogUtil;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.expressions.Expression;
 import org.apache.flink.table.plan.stats.TableStats;
@@ -289,7 +289,7 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 		serDeInfo.setParameters(parameters);
 		List<FieldSchema> fieldSchemas = new ArrayList<>();
 		for (int i = 0; i < rowTypeInfo.getArity(); i++) {
-			String hiveType = HiveMetadataUtil.convert(TypeConverters.createInternalTypeFromTypeInfo(rowTypeInfo.getFieldTypes()[i]));
+			String hiveType = HiveCatalogUtil.convert(TypeConverters.createInternalTypeFromTypeInfo(rowTypeInfo.getFieldTypes()[i]));
 			if (null == hiveType) {
 				logger.error("Now we don't support flink type of " + rowTypeInfo.getFieldTypes()[i]
 							+ " converting from hive");
