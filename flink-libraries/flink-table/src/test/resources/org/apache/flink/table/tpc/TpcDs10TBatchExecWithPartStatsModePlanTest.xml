@@ -1023,83 +1023,6 @@ SortLimit(orderBy=[ca_zip ASC], offset=[0], limit=[100], global=[true])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="test[caseName=q16, joinReorder=true]">
-    <Resource name="sql">
-      <![CDATA[-- start query 16 in stream 0 using template query16.tpl
-select  
-   count(distinct cs_order_number) as `order count`
-  ,sum(cs_ext_ship_cost) as `total shipping cost`
-  ,sum(cs_net_profit) as `total net profit`
-from
-   catalog_sales cs1
-  ,date_dim
-  ,customer_address
-  ,call_center
-where
-    d_date between '1999-02-01' and
-           (cast('1999-02-01' as date) + INTERVAL '60' day)
-and cs1.cs_ship_date_sk = d_date_sk
-and cs1.cs_ship_addr_sk = ca_address_sk
-and ca_state = 'TN'
-and cs1.cs_call_center_sk = cc_call_center_sk
-and cc_county in ('Williamson County','Ziebach County','Walker County','Fairfield County',
-                  'Richland County'
-)
-and exists (select *
-            from catalog_sales cs2
-            where cs1.cs_order_number = cs2.cs_order_number
-              and cs1.cs_warehouse_sk <> cs2.cs_warehouse_sk)
-and not exists(select *
-               from catalog_returns cr1
-               where cs1.cs_order_number = cr1.cr_order_number)
-order by count(distinct cs_order_number)
-limit 100
-
--- end query 16 in stream 0 using template query16.tpl
-]]>
-    </Resource>
-    <Resource name="planAfter">
-      <![CDATA[
-SortLimit(orderBy=[order count ASC], offset=[0], limit=[100], global=[true])
-+- Exchange(distribution=[single])
-   +- SortLimit(orderBy=[order count ASC], offset=[0], limit=[100], global=[false])
-      +- SortAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS order count, Final_MIN(min$1) AS total shipping cost, Final_MIN(min$2) AS total net profit])
-         +- Exchange(distribution=[single])
-            +- LocalSortAggregate(select=[Partial_COUNT(cs_order_number) FILTER $g_0 AS count$0, Partial_MIN(total shipping cost) FILTER $g_1 AS min$1, Partial_MIN(total net profit) FILTER $g_1 AS min$2])
-               +- Calc(select=[CAST(cs_order_number) AS cs_order_number, total shipping cost, total net profit, =(CASE(=($e, 0), 0, 1), 0) AS $g_0, =(CASE(=($e, 0), 0, 1), 1) AS $g_1])
-                  +- HashAggregate(isMerge=[true], groupBy=[cs_order_number, $e], select=[cs_order_number, $e, Final_SUM(sum$0) AS total shipping cost, Final_SUM(sum$1) AS total net profit])
-                     +- Exchange(distribution=[hash[cs_order_number, $e]])
-                        +- LocalHashAggregate(groupBy=[cs_order_number, $e], select=[cs_order_number, $e, Partial_SUM(cs_ext_ship_cost) AS sum$0, Partial_SUM(cs_net_profit) AS sum$1])
-                           +- Expand(projects=[{cs_order_number, cs_ext_ship_cost, cs_net_profit, 0 AS $e}, {null AS cs_order_number, cs_ext_ship_cost, cs_net_profit, 1 AS $e}])
-                              +- Calc(select=[cs_order_number, cs_ext_ship_cost, cs_net_profit])
-                                 +- HashJoin(where=[=(cs_ship_date_sk, d_date_sk)], join=[cs_ship_date_sk, cs_order_number, cs_ext_ship_cost, cs_net_profit, d_date_sk], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-                                    :- Calc(select=[cs_ship_date_sk, cs_order_number, cs_ext_ship_cost, cs_net_profit])
-                                    :  +- HashJoin(where=[=(cs_call_center_sk, cc_call_center_sk)], join=[cs_ship_date_sk, cs_call_center_sk, cs_order_number, cs_ext_ship_cost, cs_net_profit, cc_call_center_sk], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-                                    :     :- Calc(select=[cs_ship_date_sk, cs_call_center_sk, cs_order_number, cs_ext_ship_cost, cs_net_profit])
-                                    :     :  +- HashJoin(where=[=(cs_ship_addr_sk, ca_address_sk)], join=[cs_ship_date_sk, cs_ship_addr_sk, cs_call_center_sk, cs_order_number, cs_ext_ship_cost, cs_net_profit, ca_address_sk], joinType=[InnerJoin], build=[right])
-                                    :     :     :- Exchange(distribution=[hash[cs_ship_addr_sk]])
-                                    :     :     :  +- HashSemiJoin(where=[=(cs_order_number, cr_order_number)], join=[cs_ship_date_sk, cs_ship_addr_sk, cs_call_center_sk, cs_order_number, cs_ext_ship_cost, cs_net_profit], joinType=[LeftAntiJoin], build=[right])
-                                    :     :     :     :- Calc(select=[cs_ship_date_sk, cs_ship_addr_sk, cs_call_center_sk, cs_order_number, cs_ext_ship_cost, cs_net_profit])
-                                    :     :     :     :  +- HashSemiJoin(where=[AND(=(cs_order_number, cs_order_number0), <>(cs_warehouse_sk, cs_warehouse_sk0))], join=[cs_ship_date_sk, cs_ship_addr_sk, cs_call_center_sk, cs_warehouse_sk, cs_order_number, cs_ext_ship_cost, cs_net_profit], joinType=[LeftSemiJoin], build=[right])
-                                    :     :     :     :     :- Exchange(distribution=[hash[cs_order_number]])
-                                    :     :     :     :     :  +- Calc(select=[cs_ship_date_sk, cs_ship_addr_sk, cs_call_center_sk, cs_warehouse_sk, cs_order_number, cs_ext_ship_cost, cs_net_profit], where=[IS NOT NULL(cs_ship_date_sk)])
-                                    :     :     :     :     :     +- TableSourceScan(table=[[builtin, default, catalog_sales, source: [TestParquetTableSource -> selectedFields=[cs_ship_date_sk, cs_ship_addr_sk, cs_call_center_sk, cs_warehouse_sk, cs_order_number, cs_ext_ship_cost, cs_net_profit];filterPredicates=[]]]], fields=[cs_ship_date_sk, cs_ship_addr_sk, cs_call_center_sk, cs_warehouse_sk, cs_order_number, cs_ext_ship_cost, cs_net_profit])
-                                    :     :     :     :     +- Exchange(distribution=[hash[cs_order_number]])
-                                    :     :     :     :        +- TableSourceScan(table=[[builtin, default, catalog_sales, source: [TestParquetTableSource -> selectedFields=[cs_warehouse_sk, cs_order_number];filterPredicates=[]]]], fields=[cs_warehouse_sk, cs_order_number])
-                                    :     :     :     +- Exchange(distribution=[hash[cr_order_number]])
-                                    :     :     :        +- TableSourceScan(table=[[builtin, default, catalog_returns, source: [TestParquetTableSource -> selectedFields=[cr_order_number];filterPredicates=[]]]], fields=[cr_order_number])
-                                    :     :     +- Exchange(distribution=[hash[ca_address_sk]])
-                                    :     :        +- Calc(select=[ca_address_sk], where=[=(ca_state, 'TN')])
-                                    :     :           +- TableSourceScan(table=[[builtin, default, customer_address, source: [TestParquetTableSource -> selectedFields=[ca_address_sk, ca_state];filterPredicates=[]]]], fields=[ca_address_sk, ca_state])
-                                    :     +- Exchange(distribution=[broadcast])
-                                    :        +- Calc(select=[cc_call_center_sk], where=[IN(cc_county, 'Williamson County', 'Ziebach County', 'Walker County', 'Fairfield County', 'Richland County')])
-                                    :           +- TableSourceScan(table=[[builtin, default, call_center, source: [TestParquetTableSource -> selectedFields=[cc_call_center_sk, cc_county];filterPredicates=[]]]], fields=[cc_call_center_sk, cc_county])
-                                    +- Exchange(distribution=[broadcast])
-                                       +- Calc(select=[d_date_sk], where=[AND(>=(d_date, 1999-02-01), <=(d_date, 1999-04-02))])
-                                          +- TableSourceScan(table=[[builtin, default, date_dim, source: [TestParquetTableSource -> selectedFields=[d_date_sk, d_date];filterPredicates=[]]]], fields=[d_date_sk, d_date])
-]]>
-    </Resource>
-  </TestCase>
   <TestCase name="test[caseName=q17, joinReorder=true]">
     <Resource name="sql">
       <![CDATA[-- start query 17 in stream 0 using template query17.tpl
@@ -2697,46 +2620,46 @@ Calc(select=[c_customer_id, c_salutation, c_first_name, c_last_name, c_preferred
    +- Exchange(distribution=[single])
       +- SortLimit(orderBy=[c_customer_id ASC, c_salutation ASC, c_first_name ASC, c_last_name ASC, c_preferred_cust_flag ASC, c_birth_day ASC, c_birth_month ASC, c_birth_year ASC, c_birth_country ASC, c_login ASC, c_email_address ASC, c_last_review_date ASC, ctr_total_return ASC], offset=[0], limit=[100], global=[false])
          +- HashJoin(where=[=(ca_address_sk, c_current_addr_sk)], join=[c_customer_id, c_current_addr_sk, c_salutation, c_first_name, c_last_name, c_preferred_cust_flag, c_birth_day, c_birth_month, c_birth_year, c_birth_country, c_login, c_email_address, c_last_review_date, ctr_total_return, ca_address_sk], joinType=[InnerJoin], build=[right])
-            :- Calc(select=[c_customer_id, c_current_addr_sk, c_salutation, c_first_name, c_last_name, c_preferred_cust_flag, c_birth_day, c_birth_month, c_birth_year, c_birth_country, c_login, c_email_address, c_last_review_date, ctr_total_return])
-            :  +- NestedLoopJoin(where=[=(ctr_customer_sk, c_customer_sk)], join=[c_customer_sk, c_customer_id, c_current_addr_sk, c_salutation, c_first_name, c_last_name, c_preferred_cust_flag, c_birth_day, c_birth_month, c_birth_year, c_birth_country, c_login, c_email_address, c_last_review_date, ctr_customer_sk, ctr_total_return], joinType=[InnerJoin], build=[right])
-            :     :- Exchange(distribution=[hash[c_current_addr_sk]])
-            :     :  +- TableSourceScan(table=[[builtin, default, customer, source: [TestParquetTableSource -> selectedFields=[c_customer_sk, c_customer_id, c_current_addr_sk, c_salutation, c_first_name, c_last_name, c_preferred_cust_flag, c_birth_day, c_birth_month, c_birth_year, c_birth_country, c_login, c_email_address, c_last_review_date];filterPredicates=[]]]], fields=[c_customer_sk, c_customer_id, c_current_addr_sk, c_salutation, c_first_name, c_last_name, c_preferred_cust_flag, c_birth_day, c_birth_month, c_birth_year, c_birth_country, c_login, c_email_address, c_last_review_date])
-            :     +- Exchange(distribution=[broadcast])
-            :        +- Calc(select=[ctr_customer_sk, ctr_total_return])
-            :           +- SortMergeJoin(where=[AND(=(ctr_state, ctr_state0), >(ctr_total_return, *($f1, 1.2)))], join=[ctr_customer_sk, ctr_state, ctr_total_return, ctr_state0, $f1], joinType=[InnerJoin], leftSorted=[true])
-            :              :- Sort(orderBy=[ctr_state ASC])
-            :              :  +- Exchange(distribution=[hash[ctr_state]])
-            :              :     +- HashAggregate(isMerge=[true], groupBy=[ctr_customer_sk, ctr_state], select=[ctr_customer_sk, ctr_state, Final_SUM(sum$0) AS ctr_total_return])
-            :              :        +- Exchange(distribution=[hash[ctr_customer_sk, ctr_state]])
-            :              :           +- LocalHashAggregate(groupBy=[ctr_customer_sk, ctr_state], select=[ctr_customer_sk, ctr_state, Partial_SUM(wr_return_amt) AS sum$0])
-            :              :              +- Calc(select=[wr_returning_customer_sk AS ctr_customer_sk, ca_state AS ctr_state, wr_return_amt])
-            :              :                 +- HashJoin(where=[=(wr_returned_date_sk, d_date_sk)], join=[wr_returned_date_sk, wr_returning_customer_sk, wr_return_amt, ca_state, d_date_sk], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-            :              :                    :- Calc(select=[wr_returned_date_sk, wr_returning_customer_sk, wr_return_amt, ca_state])
-            :              :                    :  +- HashJoin(where=[=(wr_returning_addr_sk, ca_address_sk)], join=[wr_returned_date_sk, wr_returning_customer_sk, wr_returning_addr_sk, wr_return_amt, ca_address_sk, ca_state], joinType=[InnerJoin], build=[right])
-            :              :                    :     :- Exchange(distribution=[hash[wr_returning_addr_sk]], reuse_id=[1])
-            :              :                    :     :  +- Calc(select=[wr_returned_date_sk, wr_returning_customer_sk, wr_returning_addr_sk, wr_return_amt], where=[IS NOT NULL(wr_returned_date_sk)])
-            :              :                    :     :     +- TableSourceScan(table=[[builtin, default, web_returns, source: [TestParquetTableSource -> selectedFields=[wr_returned_date_sk, wr_returning_customer_sk, wr_returning_addr_sk, wr_return_amt];filterPredicates=[]]]], fields=[wr_returned_date_sk, wr_returning_customer_sk, wr_returning_addr_sk, wr_return_amt])
-            :              :                    :     +- Exchange(distribution=[hash[ca_address_sk]])
-            :              :                    :        +- TableSourceScan(table=[[builtin, default, customer_address, source: [TestParquetTableSource -> selectedFields=[ca_address_sk, ca_state];filterPredicates=[]]]], fields=[ca_address_sk, ca_state])
-            :              :                    +- Exchange(distribution=[broadcast], reuse_id=[2])
-            :              :                       +- Calc(select=[d_date_sk], where=[=(d_year, 1999)])
-            :              :                          +- TableSourceScan(table=[[builtin, default, date_dim, source: [TestParquetTableSource -> selectedFields=[d_date_sk, d_year];filterPredicates=[]]]], fields=[d_date_sk, d_year])
-            :              +- HashAggregate(isMerge=[true], groupBy=[ctr_state], select=[ctr_state, Final_AVG(sum$0, count$1) AS $f1])
-            :                 +- Exchange(distribution=[hash[ctr_state]])
-            :                    +- LocalHashAggregate(groupBy=[ctr_state], select=[ctr_state, Partial_AVG(ctr_total_return) AS (sum$0, count$1)])
-            :                       +- Calc(select=[ctr_state, ctr_total_return])
-            :                          +- HashAggregate(isMerge=[true], groupBy=[ctr_customer_sk, ctr_state], select=[ctr_customer_sk, ctr_state, Final_SUM(sum$0) AS ctr_total_return])
-            :                             +- Exchange(distribution=[hash[ctr_customer_sk, ctr_state]])
-            :                                +- LocalHashAggregate(groupBy=[ctr_customer_sk, ctr_state], select=[ctr_customer_sk, ctr_state, Partial_SUM(wr_return_amt) AS sum$0])
-            :                                   +- Calc(select=[wr_returning_customer_sk AS ctr_customer_sk, ca_state AS ctr_state, wr_return_amt])
-            :                                      +- HashJoin(where=[=(wr_returned_date_sk, d_date_sk)], join=[wr_returned_date_sk, wr_returning_customer_sk, wr_return_amt, ca_state, d_date_sk], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-            :                                         :- Calc(select=[wr_returned_date_sk, wr_returning_customer_sk, wr_return_amt, ca_state])
-            :                                         :  +- HashJoin(where=[=(wr_returning_addr_sk, ca_address_sk)], join=[wr_returned_date_sk, wr_returning_customer_sk, wr_returning_addr_sk, wr_return_amt, ca_address_sk, ca_state], joinType=[InnerJoin], build=[right])
-            :                                         :     :- Reused(reference_id=[1])
-            :                                         :     +- Exchange(distribution=[hash[ca_address_sk]])
-            :                                         :        +- Calc(select=[ca_address_sk, ca_state], where=[IS NOT NULL(ca_state)])
-            :                                         :           +- TableSourceScan(table=[[builtin, default, customer_address, source: [TestParquetTableSource -> selectedFields=[ca_address_sk, ca_state];filterPredicates=[]]]], fields=[ca_address_sk, ca_state])
-            :                                         +- Reused(reference_id=[2])
+            :- Exchange(distribution=[hash[c_current_addr_sk]])
+            :  +- Calc(select=[c_customer_id, c_current_addr_sk, c_salutation, c_first_name, c_last_name, c_preferred_cust_flag, c_birth_day, c_birth_month, c_birth_year, c_birth_country, c_login, c_email_address, c_last_review_date, ctr_total_return])
+            :     +- HashJoin(where=[=(ctr_customer_sk, c_customer_sk)], join=[c_customer_sk, c_customer_id, c_current_addr_sk, c_salutation, c_first_name, c_last_name, c_preferred_cust_flag, c_birth_day, c_birth_month, c_birth_year, c_birth_country, c_login, c_email_address, c_last_review_date, ctr_customer_sk, ctr_total_return], joinType=[InnerJoin], build=[right])
+            :        :- Exchange(distribution=[hash[c_customer_sk]])
+            :        :  +- TableSourceScan(table=[[builtin, default, customer, source: [TestParquetTableSource -> selectedFields=[c_customer_sk, c_customer_id, c_current_addr_sk, c_salutation, c_first_name, c_last_name, c_preferred_cust_flag, c_birth_day, c_birth_month, c_birth_year, c_birth_country, c_login, c_email_address, c_last_review_date];filterPredicates=[]]]], fields=[c_customer_sk, c_customer_id, c_current_addr_sk, c_salutation, c_first_name, c_last_name, c_preferred_cust_flag, c_birth_day, c_birth_month, c_birth_year, c_birth_country, c_login, c_email_address, c_last_review_date])
+            :        +- Exchange(distribution=[hash[ctr_customer_sk]])
+            :           +- Calc(select=[ctr_customer_sk, ctr_total_return])
+            :              +- HashJoin(where=[AND(=(ctr_state, ctr_state0), >(ctr_total_return, *($f1, 1.2)))], join=[ctr_customer_sk, ctr_state, ctr_total_return, ctr_state0, $f1], joinType=[InnerJoin], build=[right])
+            :                 :- Exchange(distribution=[hash[ctr_state]])
+            :                 :  +- HashAggregate(isMerge=[true], groupBy=[ctr_customer_sk, ctr_state], select=[ctr_customer_sk, ctr_state, Final_SUM(sum$0) AS ctr_total_return])
+            :                 :     +- Exchange(distribution=[hash[ctr_customer_sk, ctr_state]])
+            :                 :        +- LocalHashAggregate(groupBy=[ctr_customer_sk, ctr_state], select=[ctr_customer_sk, ctr_state, Partial_SUM(wr_return_amt) AS sum$0])
+            :                 :           +- Calc(select=[wr_returning_customer_sk AS ctr_customer_sk, ca_state AS ctr_state, wr_return_amt])
+            :                 :              +- HashJoin(where=[=(wr_returned_date_sk, d_date_sk)], join=[wr_returned_date_sk, wr_returning_customer_sk, wr_return_amt, ca_state, d_date_sk], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+            :                 :                 :- Calc(select=[wr_returned_date_sk, wr_returning_customer_sk, wr_return_amt, ca_state])
+            :                 :                 :  +- HashJoin(where=[=(wr_returning_addr_sk, ca_address_sk)], join=[wr_returned_date_sk, wr_returning_customer_sk, wr_returning_addr_sk, wr_return_amt, ca_address_sk, ca_state], joinType=[InnerJoin], build=[right])
+            :                 :                 :     :- Exchange(distribution=[hash[wr_returning_addr_sk]], reuse_id=[1])
+            :                 :                 :     :  +- Calc(select=[wr_returned_date_sk, wr_returning_customer_sk, wr_returning_addr_sk, wr_return_amt], where=[IS NOT NULL(wr_returned_date_sk)])
+            :                 :                 :     :     +- TableSourceScan(table=[[builtin, default, web_returns, source: [TestParquetTableSource -> selectedFields=[wr_returned_date_sk, wr_returning_customer_sk, wr_returning_addr_sk, wr_return_amt];filterPredicates=[]]]], fields=[wr_returned_date_sk, wr_returning_customer_sk, wr_returning_addr_sk, wr_return_amt])
+            :                 :                 :     +- Exchange(distribution=[hash[ca_address_sk]])
+            :                 :                 :        +- TableSourceScan(table=[[builtin, default, customer_address, source: [TestParquetTableSource -> selectedFields=[ca_address_sk, ca_state];filterPredicates=[]]]], fields=[ca_address_sk, ca_state])
+            :                 :                 +- Exchange(distribution=[broadcast], reuse_id=[2])
+            :                 :                    +- Calc(select=[d_date_sk], where=[=(d_year, 1999)])
+            :                 :                       +- TableSourceScan(table=[[builtin, default, date_dim, source: [TestParquetTableSource -> selectedFields=[d_date_sk, d_year];filterPredicates=[]]]], fields=[d_date_sk, d_year])
+            :                 +- HashAggregate(isMerge=[true], groupBy=[ctr_state], select=[ctr_state, Final_AVG(sum$0, count$1) AS $f1])
+            :                    +- Exchange(distribution=[hash[ctr_state]])
+            :                       +- LocalHashAggregate(groupBy=[ctr_state], select=[ctr_state, Partial_AVG(ctr_total_return) AS (sum$0, count$1)])
+            :                          +- Calc(select=[ctr_state, ctr_total_return])
+            :                             +- HashAggregate(isMerge=[true], groupBy=[ctr_customer_sk, ctr_state], select=[ctr_customer_sk, ctr_state, Final_SUM(sum$0) AS ctr_total_return])
+            :                                +- Exchange(distribution=[hash[ctr_customer_sk, ctr_state]])
+            :                                   +- LocalHashAggregate(groupBy=[ctr_customer_sk, ctr_state], select=[ctr_customer_sk, ctr_state, Partial_SUM(wr_return_amt) AS sum$0])
+            :                                      +- Calc(select=[wr_returning_customer_sk AS ctr_customer_sk, ca_state AS ctr_state, wr_return_amt])
+            :                                         +- HashJoin(where=[=(wr_returned_date_sk, d_date_sk)], join=[wr_returned_date_sk, wr_returning_customer_sk, wr_return_amt, ca_state, d_date_sk], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+            :                                            :- Calc(select=[wr_returned_date_sk, wr_returning_customer_sk, wr_return_amt, ca_state])
+            :                                            :  +- HashJoin(where=[=(wr_returning_addr_sk, ca_address_sk)], join=[wr_returned_date_sk, wr_returning_customer_sk, wr_returning_addr_sk, wr_return_amt, ca_address_sk, ca_state], joinType=[InnerJoin], build=[right])
+            :                                            :     :- Reused(reference_id=[1])
+            :                                            :     +- Exchange(distribution=[hash[ca_address_sk]])
+            :                                            :        +- Calc(select=[ca_address_sk, ca_state], where=[IS NOT NULL(ca_state)])
+            :                                            :           +- TableSourceScan(table=[[builtin, default, customer_address, source: [TestParquetTableSource -> selectedFields=[ca_address_sk, ca_state];filterPredicates=[]]]], fields=[ca_address_sk, ca_state])
+            :                                            +- Reused(reference_id=[2])
             +- Exchange(distribution=[hash[ca_address_sk]])
                +- Calc(select=[ca_address_sk], where=[=(ca_state, 'TN')])
                   +- TableSourceScan(table=[[builtin, default, customer_address, source: [TestParquetTableSource -> selectedFields=[ca_address_sk, ca_state];filterPredicates=[]]]], fields=[ca_address_sk, ca_state])
@@ -7870,9 +7793,9 @@ SortLimit(orderBy=[sales_cnt_diff ASC], offset=[0], limit=[100], global=[true])
             :                          :        :  +- HashJoin(where=[=(i_item_sk, ss_item_sk)], join=[ss_sold_date_sk, ss_item_sk, ss_quantity, ss_ext_sales_price, sr_return_quantity, sr_return_amt, i_item_sk, i_brand_id, i_class_id, i_category_id, i_manufact_id], joinType=[InnerJoin], isBroadcast=[true], build=[right])
             :                          :        :     :- Calc(select=[ss_sold_date_sk, ss_item_sk, ss_quantity, ss_ext_sales_price, sr_return_quantity, sr_return_amt])
             :                          :        :     :  +- HashJoin(where=[AND(=(ss_ticket_number, sr_ticket_number), =(ss_item_sk, sr_item_sk))], join=[ss_sold_date_sk, ss_item_sk, ss_ticket_number, ss_quantity, ss_ext_sales_price, sr_item_sk, sr_ticket_number, sr_return_quantity, sr_return_amt], joinType=[LeftOuterJoin], build=[right])
-            :                          :        :     :     :- Exchange(distribution=[hash[ss_item_sk]])
+            :                          :        :     :     :- Exchange(distribution=[hash[ss_ticket_number, ss_item_sk]])
             :                          :        :     :     :  +- TableSourceScan(table=[[builtin, default, store_sales, source: [TestParquetTableSource -> selectedFields=[ss_sold_date_sk, ss_item_sk, ss_ticket_number, ss_quantity, ss_ext_sales_price];filterPredicates=[]]]], fields=[ss_sold_date_sk, ss_item_sk, ss_ticket_number, ss_quantity, ss_ext_sales_price])
-            :                          :        :     :     +- Exchange(distribution=[hash[sr_item_sk]])
+            :                          :        :     :     +- Exchange(distribution=[hash[sr_ticket_number, sr_item_sk]])
             :                          :        :     :        +- TableSourceScan(table=[[builtin, default, store_returns, source: [TestParquetTableSource -> selectedFields=[sr_item_sk, sr_ticket_number, sr_return_quantity, sr_return_amt];filterPredicates=[]]]], fields=[sr_item_sk, sr_ticket_number, sr_return_quantity, sr_return_amt])
             :                          :        :     +- Reused(reference_id=[1])
             :                          :        +- Reused(reference_id=[2])
@@ -9144,8 +9067,8 @@ SortLimit(orderBy=[EXPR$0 ASC, EXPR$1 ASC, EXPR$2 ASC, EXPR$3 ASC], offset=[0], 
                         :     :     :- Calc(select=[wr_reason_sk, wr_fee, wr_refunded_cash, ws_sold_date_sk, ws_web_page_sk, ws_quantity])
                         :     :     :  +- HashJoin(where=[AND(=(cd_marital_status0, cd_marital_status), =(cd_education_status0, cd_education_status), =(cd_demo_sk, wr_refunded_cdemo_sk), OR(AND(=(cd_marital_status0, 'U'), =(cd_education_status0, 'Unknown'), >=(ws_sales_price, 100.00), <=(ws_sales_price, 150.00)), AND(=(cd_marital_status0, 'M'), =(cd_education_status0, 'Primary'), >=(ws_sales_price, 50.00), <=(ws_sales_price, 100.00)), AND(=(cd_marital_status0, 'S'), =(cd_education_status0, 'Secondary'), >=(ws_sales_price, 150.00), <=(ws_sales_price, 200.00))))], join=[wr_refunded_cdemo_sk, wr_reason_sk, wr_fee, wr_refunded_cash, ws_sold_date_sk, ws_web_page_sk, ws_quantity, ws_sales_price, cd_marital_status, cd_education_status, cd_demo_sk, cd_marital_status0, cd_education_status0], joinType=[InnerJoin], isBroadcast=[true], build=[right])
                         :     :     :     :- Calc(select=[wr_refunded_cdemo_sk, wr_reason_sk, wr_fee, wr_refunded_cash, ws_sold_date_sk, ws_web_page_sk, ws_quantity, ws_sales_price, cd_marital_status, cd_education_status])
-                        :     :     :     :  +- NestedLoopJoin(where=[=(cd_demo_sk, wr_returning_cdemo_sk)], join=[wr_refunded_cdemo_sk, wr_returning_cdemo_sk, wr_reason_sk, wr_fee, wr_refunded_cash, ws_sold_date_sk, ws_web_page_sk, ws_quantity, ws_sales_price, cd_demo_sk, cd_marital_status, cd_education_status], joinType=[InnerJoin], build=[right])
-                        :     :     :     :     :- Exchange(distribution=[hash[ws_sold_date_sk]])
+                        :     :     :     :  +- HashJoin(where=[=(cd_demo_sk, wr_returning_cdemo_sk)], join=[wr_refunded_cdemo_sk, wr_returning_cdemo_sk, wr_reason_sk, wr_fee, wr_refunded_cash, ws_sold_date_sk, ws_web_page_sk, ws_quantity, ws_sales_price, cd_demo_sk, cd_marital_status, cd_education_status], joinType=[InnerJoin], build=[right])
+                        :     :     :     :     :- Exchange(distribution=[hash[wr_returning_cdemo_sk]])
                         :     :     :     :     :  +- Calc(select=[wr_refunded_cdemo_sk, wr_returning_cdemo_sk, wr_reason_sk, wr_fee, wr_refunded_cash, ws_sold_date_sk, ws_web_page_sk, ws_quantity, ws_sales_price])
                         :     :     :     :     :     +- HashJoin(where=[AND(=(ca_address_sk, wr_refunded_addr_sk), OR(AND(OR(=(ca_state, 'ID'), =(ca_state, 'TN'), =(ca_state, 'SD')), >=(ws_net_profit, 100), <=(ws_net_profit, 200)), AND(OR(=(ca_state, 'AL'), =(ca_state, 'SC'), =(ca_state, 'OH')), >=(ws_net_profit, 150), <=(ws_net_profit, 300)), AND(OR(=(ca_state, 'LA'), =(ca_state, 'MO'), =(ca_state, 'GA')), >=(ws_net_profit, 50), <=(ws_net_profit, 250))))], join=[wr_refunded_cdemo_sk, wr_refunded_addr_sk, wr_returning_cdemo_sk, wr_reason_sk, wr_fee, wr_refunded_cash, ws_sold_date_sk, ws_web_page_sk, ws_quantity, ws_sales_price, ws_net_profit, ca_address_sk, ca_state], joinType=[InnerJoin], build=[right])
                         :     :     :     :     :        :- Exchange(distribution=[hash[wr_refunded_addr_sk]])
@@ -9159,7 +9082,7 @@ SortLimit(orderBy=[EXPR$0 ASC, EXPR$1 ASC, EXPR$2 ASC, EXPR$3 ASC], offset=[0], 
                         :     :     :     :     :        +- Exchange(distribution=[hash[ca_address_sk]])
                         :     :     :     :     :           +- Calc(select=[ca_address_sk, ca_state], where=[AND(=(ca_country, 'United States'), OR(=(ca_state, 'ID'), =(ca_state, 'TN'), =(ca_state, 'SD'), =(ca_state, 'AL'), =(ca_state, 'SC'), =(ca_state, 'OH'), =(ca_state, 'LA'), =(ca_state, 'MO'), =(ca_state, 'GA')))])
                         :     :     :     :     :              +- TableSourceScan(table=[[builtin, default, customer_address, source: [TestParquetTableSource -> selectedFields=[ca_address_sk, ca_state, ca_country];filterPredicates=[]]]], fields=[ca_address_sk, ca_state, ca_country])
-                        :     :     :     :     +- Exchange(distribution=[broadcast])
+                        :     :     :     :     +- Exchange(distribution=[hash[cd_demo_sk]])
                         :     :     :     :        +- TableSourceScan(table=[[builtin, default, customer_demographics, source: [TestParquetTableSource -> selectedFields=[cd_demo_sk, cd_marital_status, cd_education_status];filterPredicates=[]]]], fields=[cd_demo_sk, cd_marital_status, cd_education_status])
                         :     :     :     +- Exchange(distribution=[broadcast])
                         :     :     :        +- Calc(select=[cd_demo_sk, cd_marital_status, cd_education_status], where=[OR(AND(=(cd_marital_status, 'U'), =(cd_education_status, 'Unknown')), AND(=(cd_marital_status, 'M'), =(cd_education_status, 'Primary')), AND(=(cd_marital_status, 'S'), =(cd_education_status, 'Secondary')))])
@@ -10141,72 +10064,6 @@ Limit(offset=[0], limit=[100], global=[true])
                                     :- Calc(select=[cs_sold_date_sk, cs_bill_customer_sk, cs_item_sk], where=[IS NOT NULL(cs_sold_date_sk)])
                                     :  +- TableSourceScan(table=[[builtin, default, catalog_sales, source: [TestParquetTableSource -> selectedFields=[cs_sold_date_sk, cs_bill_customer_sk, cs_item_sk];filterPredicates=[]]]], fields=[cs_sold_date_sk, cs_bill_customer_sk, cs_item_sk])
                                     +- Reused(reference_id=[1])
-]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="test[caseName=q98, joinReorder=true]">
-    <Resource name="sql">
-      <![CDATA[-- start query 98 in stream 0 using template query98.tpl
-select i_item_id
-      ,i_item_desc 
-      ,i_category 
-      ,i_class 
-      ,i_current_price
-      ,sum(ss_ext_sales_price) as itemrevenue 
-      ,sum(ss_ext_sales_price)*100/sum(sum(ss_ext_sales_price)) over
-          (partition by i_class) as revenueratio
-from	
-	store_sales
-    	,item 
-    	,date_dim
-where 
-	ss_item_sk = i_item_sk 
-  	and i_category in ('Electronics', 'Women', 'Men')
-  	and ss_sold_date_sk = d_date_sk
-	and d_date between cast('1998-01-02' as date) 
-				and (cast('1998-01-02' as date) + INTERVAL '30' day)
-group by 
-	i_item_id
-        ,i_item_desc 
-        ,i_category
-        ,i_class
-        ,i_current_price
-order by 
-	i_category
-        ,i_class
-        ,i_item_id
-        ,i_item_desc
-        ,revenueratio
-
--- end query 98 in stream 0 using template query98.tpl
-]]>
-    </Resource>
-    <Resource name="planAfter">
-      <![CDATA[
-SortLimit(orderBy=[i_category ASC, i_class ASC, i_item_id ASC, i_item_desc ASC, revenueratio ASC], offset=[0], limit=[200], global=[true])
-+- Exchange(distribution=[single])
-   +- SortLimit(orderBy=[i_category ASC, i_class ASC, i_item_id ASC, i_item_desc ASC, revenueratio ASC], offset=[0], limit=[200], global=[false])
-      +- Calc(select=[i_item_id, i_item_desc, i_category, i_class, i_current_price, itemrevenue, /($6, CASE(>(w0$o0, 0), CAST(w0$o1), null)) AS revenueratio])
-         +- OverAggregate(partitionBy=[i_class], window#0=[COUNT(itemrevenue) AS w0$o0, $SUM0(itemrevenue) AS w0$o1 RANG BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING], select=[i_item_id, i_item_desc, i_category, i_class, i_current_price, itemrevenue, $6, w0$o0, w0$o1])
-            +- Calc(select=[i_item_id, i_item_desc, i_category, i_class, i_current_price, itemrevenue, *(itemrevenue, 100) AS $6])
-               +- Sort(orderBy=[i_class ASC])
-                  +- Exchange(distribution=[hash[i_class]])
-                     +- HashAggregate(isMerge=[true], groupBy=[i_item_id, i_item_desc, i_current_price, i_class, i_category], select=[i_item_id, i_item_desc, i_current_price, i_class, i_category, Final_SUM(sum$0) AS itemrevenue])
-                        +- Exchange(distribution=[hash[i_item_id, i_item_desc, i_current_price, i_class, i_category]])
-                           +- LocalHashAggregate(groupBy=[i_item_id, i_item_desc, i_current_price, i_class, i_category], select=[i_item_id, i_item_desc, i_current_price, i_class, i_category, Partial_SUM(itemrevenue) AS sum$0])
-                              +- HashJoin(where=[=(ss_item_sk, i_item_sk)], join=[ss_item_sk, itemrevenue, i_item_sk, i_item_id, i_item_desc, i_current_price, i_class, i_category], joinType=[InnerJoin], build=[right])
-                                 :- HashAggregate(isMerge=[true], groupBy=[ss_item_sk], select=[ss_item_sk, Final_SUM(sum$0) AS itemrevenue])
-                                 :  +- Exchange(distribution=[hash[ss_item_sk]])
-                                 :     +- LocalHashAggregate(groupBy=[ss_item_sk], select=[ss_item_sk, Partial_SUM(ss_ext_sales_price) AS sum$0])
-                                 :        +- Calc(select=[ss_item_sk, ss_ext_sales_price])
-                                 :           +- HashJoin(where=[=(ss_sold_date_sk, d_date_sk)], join=[ss_sold_date_sk, ss_item_sk, ss_ext_sales_price, d_date_sk], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-                                 :              :- TableSourceScan(table=[[builtin, default, store_sales, source: [TestParquetTableSource -> selectedFields=[ss_sold_date_sk, ss_item_sk, ss_ext_sales_price];filterPredicates=[]]]], fields=[ss_sold_date_sk, ss_item_sk, ss_ext_sales_price])
-                                 :              +- Exchange(distribution=[broadcast])
-                                 :                 +- Calc(select=[d_date_sk], where=[AND(>=(d_date, 1998-01-02), <=(d_date, 1998-02-01))])
-                                 :                    +- TableSourceScan(table=[[builtin, default, date_dim, source: [TestParquetTableSource -> selectedFields=[d_date_sk, d_date];filterPredicates=[]]]], fields=[d_date_sk, d_date])
-                                 +- Exchange(distribution=[hash[i_item_sk]])
-                                    +- Calc(select=[i_item_sk, i_item_id, i_item_desc, i_current_price, i_class, i_category], where=[OR(=(i_category, 'Electronics'), =(i_category, 'Women'), =(i_category, 'Men'))])
-                                       +- TableSourceScan(table=[[builtin, default, item, source: [TestParquetTableSource -> selectedFields=[i_item_sk, i_item_id, i_item_desc, i_current_price, i_class, i_category];filterPredicates=[]]]], fields=[i_item_sk, i_item_id, i_item_desc, i_current_price, i_class, i_category])
 ]]>
     </Resource>
   </TestCase>

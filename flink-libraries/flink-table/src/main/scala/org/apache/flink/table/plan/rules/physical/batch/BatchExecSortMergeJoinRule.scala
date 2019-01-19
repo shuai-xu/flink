@@ -132,11 +132,8 @@ class BatchExecSortMergeJoinRule(joinClass: Class[_ <: Join])
       call.transformTo(newJoin)
     }
 
-    Array((false, false), (true, false), (false, true), (true, true)).foreach {
-      case (requireLeftSorted, requireRightSorted) =>
-        transformToEquiv(joinInfo.leftKeys, joinInfo.rightKeys,
-          requireLeftSorted, requireRightSorted)
-    }
+    transformToEquiv(joinInfo.leftKeys, joinInfo.rightKeys,
+      requireLeftSorted = true, requireRightSorted = true)
 
     // add more possibility to only shuffle by partial joinKeys, now only single one
     val tableConfig = FlinkRelOptUtil.getTableConfig(join)
