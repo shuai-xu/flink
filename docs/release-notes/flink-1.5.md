@@ -56,13 +56,6 @@ We removed the automatic Hadoop classpath discovery via the Hadoop binary. If yo
 export HADOOP_CLASSPATH=`hadoop classpath`.
 ```
 
-<!-- Remove once FLINK-9437 has been merged -->
-### Problems With Enabling SSL Encryption
-
-Due to a limitation in Netty's `SsLHandler` (v4.0.27), it does not work well together with GCM enabled cypher suites. 
-It can cause transmission failures between Flink TaskManager's which manifest in a `LocalTransportException`.
-Therefore, it is highly recommended to either set the `security.ssl.algorithms` configuration to `TLS_RSA_WITH_AES_128_CBC_SHA` when enabling SSL encryption or to disable SSL encryption between TaskManagers via `taskmanager.data.ssl.enabled: false`. 
-
 ### Breaking Changes of the REST API
 
 In an effort to harmonize, extend, and improve the REST API, a few handlers and return values were changed.
@@ -87,5 +80,13 @@ The Kinesis dependencies of Flink’s Kinesis connector have been updated to the
 <aws.kinesis-kpl.version>0.12.9</aws.kinesis-kcl.version>
 ```
 
+<!-- Remove once FLINK-10712 has been fixed -->
+### Limitations of failover strategies
+Flink's non-default failover strategies are still a very experimental feature which come with a set of limitations.
+You should only use this feature if you are executing a stateless streaming job.
+In any other cases, it is highly recommended to remove the config option `jobmanager.execution.failover-strategy` from your `flink-conf.yaml` or set it to `"full"`.
+
+In order to avoid future problems, this feature has been removed from the documentation until it will be fixed.
+See [FLINK-10880](https://issues.apache.org/jira/browse/FLINK-10880) for more details.
 
 {% top %}

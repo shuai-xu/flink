@@ -37,7 +37,8 @@ give you a good foundation from which to start building more complex analysis pr
 ## Setting up a Maven Project
 
 We are going to use a Flink Maven Archetype for creating our project structure. Please
-see [Java API Quickstart]({{ site.baseurl }}/dev/projectsetup/java_api_quickstart.html) for more details
+see [Java API Quickstart]({{ site.baseurl }}/quickstart/java_api_quickstart.html) for more details
+quickstart/java_api_quickstart.html
 about this. For our purposes, the command to run is this:
 
 {% highlight bash %}
