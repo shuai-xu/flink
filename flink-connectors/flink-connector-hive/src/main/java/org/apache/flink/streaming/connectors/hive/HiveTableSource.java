@@ -134,7 +134,7 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 	public TableSource applyPrunedPartitionsAndPredicate(
 			boolean partitionPruned, List<Partition> prunedPartitionList, List<Expression> predicates) {
 		return new HiveTableSource(rowTypeInfo, hiveRowTypeString, jobConf, tableStats, dbName, tableName,
-								partitionColNames, true, partitionPruned, prunedPartitionList);
+								partitionColNames, true, partitionPruned, allPartitions, prunedPartitionList);
 	}
 
 	@Override
@@ -218,6 +218,7 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 						String[] partitionColNames,
 						Boolean isFilterPushDown,
 						Boolean isPartitionPruned,
+						List<Partition> allPartitions,
 						List<Partition> prunedPartitions) {
 		this.rowTypeInfo = rowTypeInfo;
 		this.hiveRowTypeString = hiveRowTypeString;
@@ -229,6 +230,11 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 		this.partitionColNames = partitionColNames;
 		this.isFilterPushDown = isFilterPushDown;
 		this.isPartitionPruned = isPartitionPruned;
+		if (null != prunedPartitions && prunedPartitions.size() != 0) {
+			this.allPartitions = prunedPartitions;
+		} else {
+			this.allPartitions = allPartitions;
+		}
 		this.prunedPartitions = prunedPartitions;
 	}
 
