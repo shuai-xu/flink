@@ -140,7 +140,7 @@ public class SemiAntiJoinStreamOperator extends JoinStreamOperator {
 	@Override
 	public TwoInputSelection processElement1(StreamRecord<BaseRow> element) throws Exception {
 		long currentTime = internalTimerService.currentProcessingTime();
-		BaseRow input = element.getValue();
+		BaseRow input = inputSer1.copy(element.getValue());
 		BaseRow joinKey = leftKeySelector.getKey(input);
 
 		if (BaseRowUtil.isAccumulateMsg(input)) {
@@ -199,7 +199,7 @@ public class SemiAntiJoinStreamOperator extends JoinStreamOperator {
 
 	@Override
 	public TwoInputSelection processElement2(StreamRecord<BaseRow> element) throws Exception {
-		BaseRow input = element.getValue();
+		BaseRow input = inputSer2.copy(element.getValue());
 		if (isAntiJoin) {
 			processReceivedRightRow(input, leftNotEmitedStateHandler, leftEmitedStateHandler);
 		} else {

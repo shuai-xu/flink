@@ -62,16 +62,17 @@ public class InnerJoinStreamOperator extends JoinStreamOperator {
 		LOG.info("Init InnerJoinStreamOperator.");
 	}
 
-	@Override
-	public TwoInputSelection firstInputSelection() {
-		return TwoInputSelection.ANY;
-	}
-
 	// call processElement1 if input is from the left of join
 	@Override
 	public TwoInputSelection processElement1(StreamRecord<BaseRow> element) throws Exception {
-		processElement(element.getValue(), leftStateHandler, rightStateHandler, true, leftTimerState,
-				stateCleaningEnabled);
+		processElement(
+			inputSer1.copy(element.getValue()),
+			leftStateHandler,
+			rightStateHandler,
+			true,
+			leftTimerState,
+			stateCleaningEnabled);
+
 		return TwoInputSelection.ANY;
 	}
 
@@ -79,19 +80,15 @@ public class InnerJoinStreamOperator extends JoinStreamOperator {
 	// call processElement2 if input is from the right of join
 	@Override
 	public TwoInputSelection processElement2(StreamRecord<BaseRow> element) throws Exception {
-		processElement(element.getValue(), rightStateHandler, leftStateHandler, false, rightTimerState,
-				stateCleaningEnabled);
+		processElement(
+			inputSer2.copy(element.getValue()),
+			rightStateHandler,
+			leftStateHandler,
+			false,
+			rightTimerState,
+			stateCleaningEnabled);
+
 		return TwoInputSelection.ANY;
-	}
-
-	@Override
-	public void endInput1() throws Exception {
-
-	}
-
-	@Override
-	public void endInput2() throws Exception {
-
 	}
 
 	@Override

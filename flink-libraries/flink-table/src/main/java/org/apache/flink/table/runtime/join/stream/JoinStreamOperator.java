@@ -35,6 +35,7 @@ import org.apache.flink.streaming.api.operators.InternalTimer;
 import org.apache.flink.streaming.api.operators.InternalTimerService;
 import org.apache.flink.streaming.api.operators.TimestampedCollector;
 import org.apache.flink.streaming.api.operators.Triggerable;
+import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.codegen.CodeGenUtils;
@@ -56,6 +57,7 @@ import org.apache.flink.table.runtime.join.stream.state.match.JoinKeyNotContainP
 import org.apache.flink.table.runtime.join.stream.state.match.JoinMatchStateHandler;
 import org.apache.flink.table.runtime.join.stream.state.match.NonBatchOnlyEqualityConditionMatchStateHandler;
 import org.apache.flink.table.runtime.join.stream.state.match.WithoutPrimaryKeyMatchStateHandler;
+import org.apache.flink.table.typeutils.AbstractRowSerializer;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 
 import java.io.IOException;
@@ -109,6 +111,10 @@ public abstract class JoinStreamOperator extends AbstractStreamOperator<BaseRow>
 	//Should filter null keys.
 	protected boolean[] filterNullKeys;
 	protected int[] nullFilterKeys;
+
+	// Serializer for left and right input, we need RowSerializer to copy BaseRow
+	protected AbstractRowSerializer<BaseRow> inputSer1;
+	protected AbstractRowSerializer<BaseRow> inputSer2;
 
 	public JoinStreamOperator(
 			BaseRowTypeInfo leftType,
@@ -168,6 +174,9 @@ public abstract class JoinStreamOperator extends AbstractStreamOperator<BaseRow>
 
 		leftPkProjectCode = null;
 		rightPkProjectCode = null;
+
+		inputSer1 = (AbstractRowSerializer) leftType.createSerializer(getExecutionConfig());
+		inputSer2 = (AbstractRowSerializer) rightType.createSerializer(getExecutionConfig());
 	}
 
 	private boolean isNotNullSafe() {
@@ -354,5 +363,16 @@ public abstract class JoinStreamOperator extends AbstractStreamOperator<BaseRow>
 	@Override
 	public boolean requireState() {
 		return true;
+	}
+
+	@Override
+	public void endInput1() throws Exception {}
+
+	@Override
+	public void endInput2() throws Exception {}
+
+	@Override
+	public TwoInputSelection firstInputSelection() {
+		return TwoInputSelection.ANY;
 	}
 }

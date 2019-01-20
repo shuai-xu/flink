@@ -47,26 +47,28 @@ class StreamTableSinksITCase extends StreamingTestBase {
     env.execute()
   }
 
-  // todo by hequn back when join is ok
-//  @Test
-//  def testUpsertSinkOnUpdatingTableWithJoin(): Unit = {
-//    val env = StreamExecutionEnvironment.getExecutionEnvironment
-//    val tEnv = TableEnvironment.getTableEnvironment(env)
-//
-//    val t = StreamTestData.get3TupleDataStream(env).toTable(tEnv, 'id, 'num, 'text)
-//
-//    val tableSink = new TestUpsertSink(Array("a", "d"), false)
-//    val t1 = t.groupBy('text)
-//      .select('text as 'a, 'id.count as 'b, 'num.sum as 'c)
-//
-//    val t2 = t.groupBy('text)
-//      .select('text as 'd, 'id.count as 'e, 'num.sum as 'f)
-//
-//    t1.join(t2, 'b === 'e)
-//      .writeToSink(tableSink)
-//    env.execute()
-//    tableSink.getAndClearValues
-//  }
+  @Test
+  def testUpsertSinkOnUpdatingTableWithJoin(): Unit = {
+
+    val t = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv, 'id, 'num, 'text)
+
+    val tableSink = new TestingUpsertTableSink(Array(0))
+    val t1 = t.groupBy('id)
+      .select('id as 'a)
+
+    val t2 = t.groupBy('id)
+      .select('id as 'd)
+
+    t1.join(t2, 'a === 'd)
+      .writeToSink(tableSink)
+    env.execute()
+
+    val expected = List(
+      "1,1",
+      "2,2",
+      "3,3").sorted
+    assertEquals(expected, tableSink.getUpsertResults.sorted)
+  }
 
   @Test
   def testAppendSinkOnAppendTable(): Unit = {

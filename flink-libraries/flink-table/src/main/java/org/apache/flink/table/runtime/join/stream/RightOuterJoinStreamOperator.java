@@ -54,31 +54,32 @@ public class RightOuterJoinStreamOperator extends OuterJoinStreamOperator {
 	}
 
 	@Override
-	public TwoInputSelection firstInputSelection() {
-		return TwoInputSelection.ANY;
-	}
-
-	@Override
 	public TwoInputSelection processElement1(StreamRecord<BaseRow> element) throws Exception {
-		processElement(element.getValue(), leftStateHandler, rightStateHandler, leftMatchStateHandler,
-			rightMatchStateHandler, true, false, true, leftTimerState);
+		processElement(
+			inputSer1.copy(element.getValue()),
+			leftStateHandler,
+			rightStateHandler,
+			leftMatchStateHandler,
+			rightMatchStateHandler,
+			true,
+			false,
+			true,
+			leftTimerState);
 		return TwoInputSelection.ANY;
 	}
 
 	@Override
 	public TwoInputSelection processElement2(StreamRecord<BaseRow> element) throws Exception {
-		processElement(element.getValue(), rightStateHandler, leftStateHandler, rightMatchStateHandler,
-			leftMatchStateHandler, false, true, false, rightTimerState);
+		processElement(
+			inputSer2.copy(element.getValue()),
+			rightStateHandler,
+			leftStateHandler,
+			rightMatchStateHandler,
+			leftMatchStateHandler,
+			false,
+			true,
+			false,
+			rightTimerState);
 		return TwoInputSelection.ANY;
-	}
-
-	@Override
-	public void endInput1() throws Exception {
-
-	}
-
-	@Override
-	public void endInput2() throws Exception {
-
 	}
 }
