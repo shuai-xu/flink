@@ -37,7 +37,6 @@ import org.apache.flink.table.codegen._
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.{Alias, Expression, TimeAttribute, UnresolvedFieldReference}
-import org.apache.flink.table.factories.TableFactoryUtil
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
@@ -303,6 +302,16 @@ abstract class TableEnvironment(
   }
 
   /**
+    * Get the default registered catalog.
+    *
+    * @return ReadableWritableCatalog
+    */
+  @throws[CatalogNotExistException]
+  def getDefaultCatalog(): ReadableWritableCatalog = {
+    catalogManager.getCatalog(getDefaultCatalogName()).asInstanceOf[ReadableWritableCatalog]
+  }
+
+  /**
     * Get the default catalog name.
     */
   def getDefaultCatalogName(): String = {
@@ -524,6 +533,19 @@ abstract class TableEnvironment(
   }
 
   /**
+    * Registers a [[CatalogTable]] under a unique name in the TableEnvironment's default catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * @param name The name under which the table will be registered.
+    * @param catalogTable The table to register.
+    */
+  def registerTable(name: String, catalogTable: CatalogTable): Unit = {
+    val catalog = getDefaultCatalog()
+    val path = new ObjectPath(getDefaultDatabaseName(), name)
+    catalog.createTable(path, catalogTable, false)
+  }
+
+  /**
     * Registers or replace a [[Table]] under a unique name in the TableEnvironment's catalog.
     * Registered tables can be referenced in SQL queries.
     *
@@ -542,6 +564,20 @@ abstract class TableEnvironment(
     registerTableInternal(name, tableTable, replace = true)
   }
 
+  /**
+    * Registers or replace a [[CatalogTable]] under a unique name in TableEnvironment's default
+    * catalog. Registered tables can be referenced in SQL queries.
+    *
+    * @param name The name under which the table will be registered.
+    * @param catalogTable The table to register.
+    */
+  def registerOrReplaceTable(name: String, catalogTable: CatalogTable): Unit = {
+    val catalog = getDefaultCatalog()
+    val path = new ObjectPath(getDefaultDatabaseName(),name)
+
+    catalog.dropTable(path, true)
+    catalog.createTable(path, catalogTable, false)
+  }
 
   /**
     * Registers a Calcite [[AbstractTable]] in the TableEnvironment's catalog.
@@ -1292,7 +1328,7 @@ abstract class TableEnvironment(
       targetTable: schema.Table,
       targetTableName: String) = {
     val tableSink = targetTable match {
-      case s: org.apache.flink.table.plan.schema.CatalogTable => s.tableSink
+      case s: CatalogCalciteTable => s.tableSink
       case s: TableSinkTable[_] => s.tableSink
       case s: TableSourceSinkTable[_] if s.tableSinkTable.isDefined =>
         s.tableSinkTable.get.tableSink
@@ -1597,36 +1633,6 @@ abstract class TableEnvironment(
 
   def setUserClassLoader(userClassLoader: ClassLoader): Unit = {
     this.userClassloader = userClassLoader
-  }
-
-  /**
-    * Register a table source with table infos.
-    */
-  private[flink] def registerTableSource(name: String, tableInfo: TableInfo): Unit
-
-  /**
-    * Register a table sink with table infos.
-    */
-  private[flink] def registerTableSink(name: String, tableInfo: TableInfo): Unit = {
-
-    // table schema
-    val richTableSchema = new RichTableSchema(
-      tableInfo.getSchema.getFieldNames,
-      tableInfo.getSchema.getFieldTypes)
-
-    // table properties
-    val tableProperties: TableProperties = tableInfo.getProperties.toKeyLowerCase
-    tableProperties.putSchemaIntoProperties(richTableSchema)
-
-    val simpleDiscriptor = TableFactoryUtil.getDiscriptorFromTableProperties(tableProperties)
-    val tableSink = TableFactoryUtil.findAndCreateTableSink(
-      this, simpleDiscriptor, this.userClassloader)
-
-    registerTableSink(
-      name,
-      richTableSchema.getColumnNames,
-      richTableSchema.getColumnTypes.asInstanceOf[Array[DataType]],
-      tableSink)
   }
 }
 

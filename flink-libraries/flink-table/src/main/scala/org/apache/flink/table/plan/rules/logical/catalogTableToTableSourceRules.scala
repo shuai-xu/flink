@@ -50,22 +50,26 @@ import scala.collection.JavaConversions._
  * Catalog Table to stream table source rule.
  */
 class CatalogTableToStreamTableSourceRule
-    extends RelOptRule(operand(classOf[LogicalTableScan], any), "CatalogTableToStreamTableSource") {
+    extends RelOptRule(
+      operand(classOf[LogicalTableScan], any), "CatalogTableToStreamTableSource") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val rel = call.rel(0).asInstanceOf[LogicalTableScan]
-    rel.getTable.unwrap(classOf[CatalogTable]) != null
+    rel.getTable.unwrap(classOf[CatalogCalciteTable]) != null
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {
     val oldRel = call.rel(0).asInstanceOf[LogicalTableScan]
-    val catalogTable = oldRel.getTable.unwrap(classOf[CatalogTable])
+    val catalogTable = oldRel.getTable.unwrap(classOf[CatalogCalciteTable])
     val tableSource = catalogTable.streamTableSource
     var table = oldRel.getTable.asInstanceOf[FlinkRelOptTable].copy(
       new StreamTableSourceTable(
         tableSource, catalogTable.getStatistic()),
       TableSourceUtil.getRelDataType(
-        tableSource, None, true, oldRel.getCluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]))
+        tableSource,
+        None,
+        true,
+        oldRel.getCluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]))
 
     table = if (tableSource.explainSource().isEmpty) {
       val builder = ImmutableList.builder[String]()
@@ -120,22 +124,26 @@ class CatalogTableToStreamTableSourceRule
  * Catalog Table to batch table source rule.
  */
 class CatalogTableToBatchTableSourceRule
-    extends RelOptRule(operand(classOf[LogicalTableScan], any), "CatalogTableToBatchTableSource") {
+    extends RelOptRule(
+      operand(classOf[LogicalTableScan], any), "CatalogTableToBatchTableSource") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val rel = call.rel(0).asInstanceOf[LogicalTableScan]
-    rel.getTable.unwrap(classOf[CatalogTable]) != null
+    rel.getTable.unwrap(classOf[CatalogCalciteTable]) != null
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {
     val oldRel = call.rel(0).asInstanceOf[LogicalTableScan]
-    val catalogTable = oldRel.getTable.unwrap(classOf[CatalogTable])
+    val catalogTable = oldRel.getTable.unwrap(classOf[CatalogCalciteTable])
     val tableSource = catalogTable.batchTableSource
     var table = oldRel.getTable.asInstanceOf[FlinkRelOptTable].copy(
       new BatchTableSourceTable(
         tableSource, catalogTable.getStatistic()),
       TableSourceUtil.getRelDataType(
-        tableSource, None, false, oldRel.getCluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]))
+        tableSource,
+        None,
+        false,
+        oldRel.getCluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]))
 
     table = if (tableSource.explainSource().isEmpty) {
       val builder = ImmutableList.builder[String]()
@@ -190,7 +198,7 @@ object CatalogTableRules {
   val BATCH_TABLE_SCAN_RULE = new CatalogTableToBatchTableSourceRule
 
   def appendParserNode(
-      catalogTable: CatalogTable, inputNode: RelNode, relBuilder: RelBuilder):RelNode = {
+    catalogTable: CatalogCalciteTable, inputNode: RelNode, relBuilder: RelBuilder):RelNode = {
 
     val parser = catalogTable.tableSourceParser
 

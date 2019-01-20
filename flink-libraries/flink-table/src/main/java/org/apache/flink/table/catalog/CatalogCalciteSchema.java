@@ -21,6 +21,7 @@ package org.apache.flink.table.catalog;
 import org.apache.flink.table.api.CatalogAlreadyExistException;
 import org.apache.flink.table.api.DatabaseNotExistException;
 import org.apache.flink.table.api.TableNotExistException;
+import org.apache.flink.table.plan.schema.CatalogCalciteTable;
 
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.rel.type.RelDataType;
@@ -176,7 +177,8 @@ public class CatalogCalciteSchema implements Schema {
 				if (table instanceof FlinkTempTable) {
 					return ((FlinkTempTable) table).getAbstractTable();
 				} else {
-					return new org.apache.flink.table.plan.schema.CatalogTable(tableName, table, table.isStreaming());
+					return new CatalogCalciteTable(
+						tableName, table, table.isStreaming());
 				}
 			} catch (TableNotExistException e) {
 				LOGGER.warn(

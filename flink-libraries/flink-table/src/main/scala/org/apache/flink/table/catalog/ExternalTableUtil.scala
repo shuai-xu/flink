@@ -74,13 +74,13 @@ object ExternalTableUtil extends Logging {
   }
 
   /**
-   * Converts an [[CatalogTable]] instance to a [[TableSource]] instance
-   *
-   * @param name the name of the table source
-   * @param catalogTable the [[CatalogTable]] instance which to convert
-   * @param isStreaming is streaming source expected.
-   * @return converted [[TableSource]] instance from the input catalog table
-   */
+    * Converts an [[CatalogTable]] instance to a [[TableSource]] instance
+    *
+    * @param name the name of the table source
+    * @param catalogTable the [[CatalogTable]] instance which to convert
+    * @param isStreaming is streaming source expected.
+    * @return converted [[TableSource]] instance from the input catalog table
+    */
   def toTableSource(
      name: String,
      catalogTable: CatalogTable,
@@ -101,13 +101,13 @@ object ExternalTableUtil extends Logging {
   }
 
   /**
-   * Converts an [[CatalogTable]] instance to a [[TableSink]] instance
+    * Converts an [[CatalogTable]] instance to a [[TableSink]] instance
     *
     * @param name          name of the table
-   * @param externalTable the [[CatalogTable]] instance to convert
-   * @param isStreaming   is in streaming mode or not.
-   * @return
-   */
+    * @param externalTable the [[CatalogTable]] instance to convert
+    * @param isStreaming   is in streaming mode or not.
+    * @return
+    */
   def toTableSink(
                    name: String,
                    externalTable: CatalogTable,
@@ -165,7 +165,7 @@ object ExternalTableUtil extends Logging {
   private def getStorageType (tableName: String, properties: TableProperties): String = {
     val typeName = properties.getString("type", null)
     if (typeName != null) {
-      typeName.toUpperCase
+      typeName
     } else {
       throw new IllegalArgumentException("Property 'type' of table " + tableName + " is missing")
     }

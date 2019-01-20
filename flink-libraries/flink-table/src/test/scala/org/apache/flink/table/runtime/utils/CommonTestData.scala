@@ -31,7 +31,6 @@ import org.apache.flink.table.catalog._
 import org.apache.flink.table.dataformat.Decimal
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources.csv.CsvTableSource
-import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.types.Row
 
 import scala.collection.mutable
@@ -280,7 +279,7 @@ object CommonTestData {
     properties1.put("fieldDelim", "#")
     properties1.put("rowDelim", "$")
     val catalogTable1 = new CatalogTable(
-      "csv",
+      "CSV",
       new TableSchema(
         Array("a", "b", "c"),
         Array(
@@ -329,7 +328,7 @@ object CommonTestData {
     properties2.put("fieldDelim", "#")
     properties2.put("rowDelim", "$")
     val catalogTable2 = new CatalogTable(
-      "csv",
+      "CSV",
       new TableSchema(
         Array("d", "e", "f", "g", "h"),
         Array(

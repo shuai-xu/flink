@@ -19,12 +19,10 @@ limitations under the License.
   <TestCase name="testTableSchema">
     <Resource name="plan">
       <![CDATA[
-StreamExecCalc(select=[a, b, c, d], where=[>(a, 9)])
-+- StreamExecLastRow(key=[c], select=[a, b, c, d])
+StreamExecCalc(select=[a, b, c], where=[>(a, 9)])
++- StreamExecLastRow(key=[c], select=[a, b, c])
    +- StreamExecExchange(distribution=[hash[c]])
-      +- StreamExecWatermarkAssigner(fields=[[a, b, c, d]], rowtimeField=[d], watermarkOffset=[0])
-         +- StreamExecCalc(select=[a, b, c, CAST(a) AS d])
-            +- StreamExecTableSourceScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
+      +- StreamExecTableSourceScan(table=[[From, builtin, default, MyTable]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

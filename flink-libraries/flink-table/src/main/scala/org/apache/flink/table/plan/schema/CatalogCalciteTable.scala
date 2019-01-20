@@ -22,7 +22,7 @@ import java.util
 
 import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.catalog.ExternalTableUtil
+import org.apache.flink.table.catalog.{CatalogTable, ExternalTableUtil}
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.calcite.rel.`type`.RelDataTypeFactory
 import org.apache.calcite.schema.ConfigurableTable
@@ -33,7 +33,7 @@ import org.apache.flink.table.sources.{BatchTableSource, StreamTableSource}
 import scala.collection.mutable.ArrayBuffer
 
 /**
- * CatalogTable represents an CatalogTable in Calcite.
+ * CatalogCalciteTable represents an CatalogTable in Calcite.
  * 1. The isStreaming flag indicates the execution environment of the job which is used to
  * determine the schema of the table and which TableSink can be create from catalog table.
  * 2. CatalogTable will be transferred to a TableSource in TableScan and a TableSink in DML query
@@ -44,9 +44,9 @@ import scala.collection.mutable.ArrayBuffer
  * which cannot be update in dml query.
  *
  */
-class CatalogTable(
+class CatalogCalciteTable(
     val name:String,
-    val table: org.apache.flink.table.catalog.CatalogTable,
+    val table: CatalogTable,
     val isStreaming: Boolean)
     extends FlinkTable with ConfigurableTable {
 
@@ -56,7 +56,7 @@ class CatalogTable(
    * @param statistic A new FlinkStatistic.
    * @return Copy of this table, substituting statistic.
    */
-  override def copy(statistic: FlinkStatistic) = new CatalogTable(name, table, isStreaming)
+  override def copy(statistic: FlinkStatistic) = new CatalogCalciteTable(name, table, isStreaming)
 
   override def getRowType(typeFactory: RelDataTypeFactory) =
     typeFactory.asInstanceOf[FlinkTypeFactory]
@@ -66,7 +66,7 @@ class CatalogTable(
     val newProperties = new util.HashMap[String, String]()
     newProperties.putAll(table.getProperties)
     newProperties.putAll(dynamicParameters)
-    val newTable = new org.apache.flink.table.catalog.CatalogTable(
+    val newTable = new CatalogTable(
       table.getTableType,
       table.getTableSchema,
       newProperties,
@@ -81,7 +81,7 @@ class CatalogTable(
       table.getCreateTime,
       table.getLastAccessTime,
       isStreaming)
-    new CatalogTable(name, newTable, isStreaming)
+    new CatalogCalciteTable(name, newTable, isStreaming)
   }
 
   override def getStatistic(): FlinkStatistic = {

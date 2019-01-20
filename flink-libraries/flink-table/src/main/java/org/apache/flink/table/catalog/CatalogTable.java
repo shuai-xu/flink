@@ -79,6 +79,8 @@ public class CatalogTable {
 		this.tableStats = tableStats;
 		this.properties = properties;
 		this.isStreaming = isStreaming;
+		this.richTableSchema =
+			new RichTableSchema(tableSchema.getFieldNames(), tableSchema.getFieldTypes());
 	}
 
 	public CatalogTable(

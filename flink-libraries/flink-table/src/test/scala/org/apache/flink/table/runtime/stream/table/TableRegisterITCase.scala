@@ -18,12 +18,12 @@
 
 package org.apache.flink.table.runtime.stream.table
 
-import org.apache.flink.table.api.{TableInfo, TableSchema}
+import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.catalog.CatalogTable
 import org.apache.flink.table.factories.utils.TestingTableSink
 import org.apache.flink.table.runtime.utils._
-import org.apache.flink.table.util.TableProperties
 import org.junit.Assert._
 import org.junit.Test
 
@@ -32,34 +32,22 @@ import scala.collection.mutable
 class TableRegisterITCase extends StreamingTestBase {
 
   @Test
-  def testRegistration(): Unit = {
-    TestingTableSink.globalResults.clear()
+  def testRegister(): Unit = {
 
-    TableInfo.create(tEnv)
-      .withSchema(
-        new TableSchema.Builder()
-          .column("a", DataTypes.INT)
-          .column("b", DataTypes.LONG)
-          .column("c", DataTypes.STRING).build())
-      .withProperties(
-        new TableProperties()
-          .property("connector.type", "test"))
-      .registerTableSource("tableSource")
+    val catalogTable = new CatalogTable.Builder(
+      "test",
+      new TableSchema.Builder()
+        .column("a", DataTypes.INT)
+        .column("b", DataTypes.LONG)
+        .column("c", DataTypes.STRING).build(),
+      true)
+      .build();
 
-    TableInfo.create(tEnv)
-      .withSchema(
-        new TableSchema.Builder()
-          .column("a", DataTypes.INT)
-          .column("b", DataTypes.LONG)
-          .column("c", DataTypes.STRING).build())
-      .withProperties(
-        new TableProperties()
-          .property("connector.type", "test"))
-      .registerTableSink("tableSink")
+    tEnv.registerTable("MyTable", catalogTable)
 
-    tEnv.scan("tableSource")
+    tEnv.scan("MyTable")
       .where('a >= 2)
-      .insertInto("tableSink")
+      .insertInto("MyTable")
 
     tEnv.execute()
 

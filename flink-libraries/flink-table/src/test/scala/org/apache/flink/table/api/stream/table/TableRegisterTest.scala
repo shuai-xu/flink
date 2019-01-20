@@ -18,10 +18,11 @@
 
 package org.apache.flink.table.api.stream.table
 
-import org.apache.flink.table.api.{TableInfo, TableSchema}
+import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.util.{TableProperties, TableTestBase}
+import org.apache.flink.table.catalog.CatalogTable
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
 class TableRegisterTest extends TableTestBase {
@@ -30,22 +31,21 @@ class TableRegisterTest extends TableTestBase {
   def testTableSchema(): Unit = {
     val util = streamTestUtil()
 
-    val tableSource = "tableSource"
-    TableInfo.create(util.tableEnv)
-      .withSchema(
-        new TableSchema.Builder()
-          .column("a", DataTypes.INT)
-          .column("b", DataTypes.LONG)
-          .column("c", DataTypes.STRING)
-          .computedColumn("d", "a.toTimestamp")
-          .watermark("wk1", "d", 0)
-          .primaryKey("c").build())
-      .withProperties(
-        new TableProperties()
-          .property("connector.type", "test"))
-      .registerTableSource(tableSource)
+    val catalogTable = new CatalogTable.Builder(
+      "test",
+      new TableSchema.Builder()
+        .column("a", DataTypes.INT)
+        .column("b", DataTypes.LONG)
+        .column("c", DataTypes.STRING)
+        .computedColumn("d", "a.toTimestamp")
+        .watermark("wk1", "d", 0)
+        .primaryKey("c").build(),
+      true)
+      .build();
 
-    val resultTable = util.tableEnv.scan(tableSource)
+    util.tableEnv.registerTable("MyTable", catalogTable)
+
+    val resultTable = util.tableEnv.scan("MyTable")
       .where('a > 9)
 
     util.verifyPlan(resultTable)

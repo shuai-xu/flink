@@ -22,6 +22,7 @@ import org.apache.flink.table.api.CatalogAlreadyExistException;
 import org.apache.flink.table.calcite.FlinkCalciteCatalogReader;
 import org.apache.flink.table.calcite.FlinkTypeFactory;
 import org.apache.flink.table.calcite.FlinkTypeSystem;
+import org.apache.flink.table.plan.schema.CatalogCalciteTable;
 import org.apache.flink.table.runtime.utils.CommonTestData;
 import org.apache.flink.table.sources.TableSource;
 import org.apache.flink.table.sources.csv.CsvTableSource;
@@ -147,8 +148,7 @@ public class CatalogCalciteSchemaTest {
 
 		assertNotNull(relOptTable);
 
-		org.apache.flink.table.plan.schema.CatalogTable table =
-			relOptTable.unwrap(org.apache.flink.table.plan.schema.CatalogTable.class);
+		CatalogCalciteTable table = relOptTable.unwrap(CatalogCalciteTable.class);
 
 		assertNotNull(table);
 

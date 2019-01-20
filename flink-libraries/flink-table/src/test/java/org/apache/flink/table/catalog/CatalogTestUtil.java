@@ -61,7 +61,7 @@ public class CatalogTestUtil {
 		CollectionTableFactory.initData(getRowTypeInfo(), data);
 
 		return new CatalogTable(
-			"collection",
+			"COLLECTION",
 			tableSchema,
 			new HashMap<>(),
 			richTableSchema,

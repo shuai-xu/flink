@@ -91,8 +91,8 @@ class FlinkRelOptTable protected(
 
   lazy val initializerExpressionFactory = new NullInitializerExpressionFactory() {
     override def generationStrategy(table:RelOptTable, iColumn: Int):ColumnStrategy = {
-      table.unwrap(classOf[CatalogTable]) match {
-        case catalogTable: CatalogTable if
+      table.unwrap(classOf[CatalogCalciteTable]) match {
+        case catalogTable: CatalogCalciteTable if
             !catalogTable.table.getRichTableSchema.getColumnNames.contains(
                 table.getRowType.getFieldList.get(iColumn).getName) =>
           ColumnStrategy.VIRTUAL

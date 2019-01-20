@@ -82,8 +82,6 @@ class MockTableEnvironment extends TableEnvironment(
 
   override def connect(connectorDescriptor: ConnectorDescriptor): TableDescriptor = ???
 
-  override private[flink] def registerTableSource(name: String, tableMeta: TableInfo): Unit = ???
-
   /**
     * Registers an internal [[TableSource]] in this [[TableEnvironment]]'s catalog without
     * name checking. Registered tables can be referenced in SQL queries.

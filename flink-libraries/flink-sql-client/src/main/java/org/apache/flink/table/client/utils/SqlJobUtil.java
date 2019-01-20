@@ -151,7 +151,7 @@ public class SqlJobUtil {
 				now,
 				isStreaming);
 
-		ReadableWritableCatalog catalog = (ReadableWritableCatalog) tableEnv.getCatalog(tableEnv.getDefaultCatalogName());
+		ReadableWritableCatalog catalog = tableEnv.getDefaultCatalog();
 		// TODO: need to consider if a default db doesn't exist
 		catalog.createTable(
 			new ObjectPath(tableEnv.getDefaultDatabaseName(), tableName),
