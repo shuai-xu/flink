@@ -119,7 +119,9 @@ public class Kafka08TableFactory extends KafkaBaseTableFactory implements
 			.setProperties(prop)
 			.setTopic(topic)
 			.setRowTypeInfo(toRowTypeInfo(schema.getResultRowType()));
-		return new Kafka08TableSink(builder, schema);
+
+		return (Kafka08TableSink) new Kafka08TableSink(builder, schema)
+				.configure(schema.getColumnNames(), schema.getColumnTypes());
 	}
 
 	@Override

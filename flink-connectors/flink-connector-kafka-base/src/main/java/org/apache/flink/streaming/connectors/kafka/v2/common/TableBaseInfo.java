@@ -22,13 +22,16 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
 /** Tool interface for table source/sink which needs extra config info.
  *  We expect to remove this later on.
  */
-public class TableBaseInfo {
+public class TableBaseInfo implements Serializable {
+	private static final long serialVersionUID = 1L;
+
 	// use defined kv pairs with in sql with, all the keys are lowercase
 	protected Map<String, String> userParamsMap;
 	protected List<String> primaryKeys; // use defined PKs

@@ -139,7 +139,9 @@ public class Kafka010TableFactory extends KafkaBaseTableFactory implements
 			.setProperties(prop)
 			.setTopic(topic)
 			.setRowTypeInfo(toRowTypeInfo(schema.getResultRowType()));
-		return new Kafka010TableSink(builder, schema);
+
+		return (Kafka010TableSink) new Kafka010TableSink(builder, schema)
+				.configure(schema.getColumnNames(), schema.getColumnTypes());
 	}
 
 	@Override

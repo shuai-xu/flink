@@ -25,12 +25,14 @@ import org.apache.flink.types.Row;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 /** Record converter for Kafka. */
-public class DefaultKafkaConverter extends TableBaseInfo implements KafkaConverter<Row> {
+public class DefaultKafkaConverter extends TableBaseInfo implements KafkaConverter<Row>, Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private List<Integer> keyIndex;
 	private List<Integer> valueIndex;
 

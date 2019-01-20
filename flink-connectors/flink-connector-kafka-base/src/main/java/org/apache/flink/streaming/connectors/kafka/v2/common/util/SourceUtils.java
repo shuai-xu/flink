@@ -20,7 +20,7 @@ package org.apache.flink.streaming.connectors.kafka.v2.common.util;
 
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.table.api.types.DataType;
-import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
+import org.apache.flink.table.api.types.TypeConverters;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -40,6 +40,6 @@ public class SourceUtils {
 	}
 
 	public static RowTypeInfo toRowTypeInfo(DataType dataType) {
-		return (RowTypeInfo) ((TypeInfoWrappedDataType) dataType).getTypeInfo();
+		return (RowTypeInfo) TypeConverters.createExternalTypeInfoFromDataType(dataType);
 	}
 }
