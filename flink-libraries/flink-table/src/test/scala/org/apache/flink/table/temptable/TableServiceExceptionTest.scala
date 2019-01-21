@@ -34,7 +34,10 @@ class TableServiceExceptionTest extends BatchTestBase {
     env.setParallelism(1)
     env.setRestartStrategy(RestartStrategies.fixedDelayRestart(3, 1000))
     tEnv.getConfig.setSubsectionOptimization(true)
-    val rootPath = Files.createTempDirectory("testTableServiceUnavailable_" + System.nanoTime())
+    val path = new File(System.getProperty("user.dir")).toPath
+    val rootPath = Files.createTempDirectory(
+      path,
+      "testTableServiceUnavailable_" + System.nanoTime())
       .toAbsolutePath.toString
     val descriptor = tEnv.getConfig.getTableServiceDescriptor()
     descriptor.getConfiguration.setString(
@@ -73,6 +76,8 @@ class TableServiceExceptionTest extends BatchTestBase {
 
     // this action will fail due to missing cache and will fallback to original plan
     val res = result.collect()
+
+    Assert.assertTrue(res.size == 4)
 
     // cache has been re-computed by original plan.
     Assert.assertTrue(currentTableServiceDir.exists())

@@ -213,9 +213,6 @@ public class TableServiceClient implements LifeCycleAware {
 			}
 		}
 
-		if (getRegistry() != null) {
-			getRegistry().close();
-		}
 		if (channelFuture != null) {
 			try {
 				channelFuture.channel().close().sync();

@@ -45,7 +45,7 @@ public class FileSystemRegistry implements ServiceRegistry {
 
 	public static final String FILESYSTEM_REGISTRY_PATH = "flink.service.registry.filesystem.rootpath";
 
-	private static final String FILESYSTEM_REGISTRY_DEFAULT_PATH_VALUE = "/tmp/file_system_registry";
+	private static final String FILESYSTEM_REGISTRY_DEFAULT_PATH_VALUE = "file_system_registry";
 
 	private String rootPath;
 
@@ -149,12 +149,30 @@ public class FileSystemRegistry implements ServiceRegistry {
 
 	@Override
 	public void open(Configuration config) {
-		this.rootPath = config.getString(FILESYSTEM_REGISTRY_PATH, FILESYSTEM_REGISTRY_DEFAULT_PATH_VALUE);
+		this.rootPath = config.getString(
+			FILESYSTEM_REGISTRY_PATH,
+			System.getProperty("user.dir") + File.separator + FILESYSTEM_REGISTRY_DEFAULT_PATH_VALUE);
 	}
 
 	@Override
 	public void close() {
+		File rootDir = new File(rootPath);
+		synchronized (FileSystemRegistry.class) {
+			if (rootDir.exists()) {
+				deleteAll(rootDir);
+			}
+		}
+	}
 
+	private void deleteAll(File rootDir) {
+		if (rootDir.isFile()) {
+			rootDir.delete();
+		} else {
+			for (File subDir : rootDir.listFiles()) {
+				deleteAll(subDir);
+			}
+			rootDir.delete();
+		}
 	}
 }
 
