@@ -121,7 +121,7 @@ public abstract class HBaseTableFactoryBase
 			String zkQuorum = defaultConf.get(HConstants.ZOOKEEPER_QUORUM);
 			if (StringUtils.isNullOrWhitespaceOnly(zkQuorum)) {
 				throw new RuntimeException(HConstants.ZOOKEEPER_QUORUM + " should not be empty! " +
-					"Pls specify it or ensure an default hbase-site.xml is valid in current class path.");
+					"Pls specify it or ensure a default hbase-site.xml is valid in current class path.");
 			}
 		}
 	}

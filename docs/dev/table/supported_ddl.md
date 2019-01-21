@@ -74,3 +74,44 @@ CREATE TABLE Orders (
    * **append** : encoding INSERT changes.
    * **upsert** : encoding INSERT and UPDATE changes as upsert message and DELETE changes as delete message.
    * **retract** : encoding INSERT as add message and DELETE changes as retract message,  and an UPDATE change as a retract message for the updated (previous) row and an add message for the updating (new) row.
+
+### HBase Connector
+#### Support Matrix
+| Mode \ Type | Source | Sink | Temporal Join |
+| --- | --- | --- | --- |
+| Batch | I | Y | Y |
+| Streaming | N | Y | Y |
+**Legend**:
+- Y: support
+- N: not support
+- I: incoming soon
+
+{% highlight sql %}
+CREATE TABLE testSinkTable (
+     ROWKEY BIGINT,
+     `` `family1.col1` `` VARCHAR,
+     `` `family2.col1` `` INTEGER,
+     `` `family2.col2` `` VARCHAR,
+     `` `family3.col1` `` DOUBLE,
+     `` `family3.col2` `` DATE,
+     `` `family3.col3` `` BIGINT,
+     PRIMARY KEY(ROWKEY)
+) WIHT {
+    type='HBASE',
+    connector.property-version='1.4.3',
+    hbase.zookeeper.quorum='test_hostname:2181'
+}
+
+{% endhighlight %}
+
+**Note** : the HBase table schema (that used for writing or temporal joining) must have a single column primary key which named `ROWKEY` and the column name format should be `` `columnFamily.qualifier` ``.
+
+#### Required Configuration
+* **type** : use `HBASE` to create an HBase table to read/write data.
+* **connector.property-version** : specify the HBase client version, currently only '1.4.3' is available. More version(s) will'be supported later.
+* **tableName** : specify the name of the table in HBase.
+* **hbase.zookeeper.quorum** : specify the ZooKeeper quorum configuration for accessing the HBase cluster. **Note** : please specify this parameter or ensure a default `hbase-site.xml` is valid in the current classpath.
+
+#### Optional Configuration
+* **`hbase.*`** : support all the parameters that have the 'hbase.' prefix, e.g., 'hbase.client.operation.timeout'.
+
