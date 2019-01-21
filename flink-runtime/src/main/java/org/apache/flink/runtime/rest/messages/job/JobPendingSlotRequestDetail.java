@@ -18,6 +18,9 @@
 
 package org.apache.flink.runtime.rest.messages.job;
 
+import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.CommonExtendedResource;
+import org.apache.flink.api.common.resources.Resource;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.instance.SlotSharingGroupId;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -50,6 +53,8 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -71,6 +76,7 @@ public class JobPendingSlotRequestDetail implements Serializable {
 	public static final String FIELD_NAME_RESOURCE_DIRECT_MEMORY = "direct_memory";
 	public static final String FIELD_NAME_RESOURCE_NATIVE_MEMORY = "native_memory";
 	public static final String FIELD_NAME_RESOURCE_NETWORK_MEMORY = "network_memory";
+	public static final String FIELD_NAME_RESOURCE_MANAGED_MEMORY = "managed_memory";
 
 	@JsonProperty(FIELD_NAME_SLOT_REQUEST_ID)
 	@JsonSerialize(using = SlotRequestIdSerializer.class)
@@ -267,6 +273,7 @@ public class JobPendingSlotRequestDetail implements Serializable {
 			jsonGenerator.writeNumberField(FIELD_NAME_RESOURCE_DIRECT_MEMORY, convertMegabyteToByte(resourceProfile.getDirectMemoryInMB()));
 			jsonGenerator.writeNumberField(FIELD_NAME_RESOURCE_NATIVE_MEMORY, convertMegabyteToByte(resourceProfile.getNativeMemoryInMB()));
 			jsonGenerator.writeNumberField(FIELD_NAME_RESOURCE_NETWORK_MEMORY, convertMegabyteToByte(resourceProfile.getNetworkMemoryInMB()));
+			jsonGenerator.writeNumberField(FIELD_NAME_RESOURCE_MANAGED_MEMORY, convertMegabyteToByte(resourceProfile.getManagedMemoryInMB()));
 			jsonGenerator.writeEndObject();
 		}
 
@@ -303,9 +310,15 @@ public class JobPendingSlotRequestDetail implements Serializable {
 			int directMemoryInMB = convertByteToMegabyte(rootNode.get(FIELD_NAME_RESOURCE_DIRECT_MEMORY).longValue());
 			int nativeMemoryInMB = convertByteToMegabyte(rootNode.get(FIELD_NAME_RESOURCE_NATIVE_MEMORY).longValue());
 			int networkMemoryInMB = convertByteToMegabyte(rootNode.get(FIELD_NAME_RESOURCE_NETWORK_MEMORY).longValue());
+			int managedMemoryInMB = convertByteToMegabyte(rootNode.get(FIELD_NAME_RESOURCE_MANAGED_MEMORY).longValue());
+
+			Map<String, Resource> extendedResources = new HashMap<>();
+			if (managedMemoryInMB != 0) {
+				extendedResources.put(ResourceSpec.MANAGED_MEMORY_NAME, new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, managedMemoryInMB));
+			}
 
 			return new ResourceProfile(
-					cpuCores, heapMemoryInMB, directMemoryInMB, nativeMemoryInMB, networkMemoryInMB, null);
+					cpuCores, heapMemoryInMB, directMemoryInMB, nativeMemoryInMB, networkMemoryInMB, extendedResources);
 		}
 
 		private static int convertByteToMegabyte(long value) {

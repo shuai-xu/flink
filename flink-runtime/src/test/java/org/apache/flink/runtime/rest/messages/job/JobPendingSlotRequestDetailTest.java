@@ -18,6 +18,9 @@
 
 package org.apache.flink.runtime.rest.messages.job;
 
+import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.CommonExtendedResource;
+import org.apache.flink.api.common.resources.Resource;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.instance.SlotSharingGroupId;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -31,6 +34,9 @@ import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.Test;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 
@@ -46,9 +52,11 @@ public class JobPendingSlotRequestDetailTest {
 	public void testPendingSlotRequestDetailMarshalling() throws JsonProcessingException {
 		// case
 		{
+			Map<String, Resource> extendedResources = new HashMap<>();
+			extendedResources.put(ResourceSpec.MANAGED_MEMORY_NAME, new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, 56));
 			final JobPendingSlotRequestDetail expected = new JobPendingSlotRequestDetail(
 					new SlotRequestId(),
-					new ResourceProfile(0.123, 12, 23, 34, 45, null),
+					new ResourceProfile(0.123, 12, 23, 34, 45, extendedResources),
 					625L,
 					new SlotSharingGroupId(),
 					new AbstractID(),
@@ -65,9 +73,11 @@ public class JobPendingSlotRequestDetailTest {
 
 		// case
 		{
+			Map<String, Resource> extendedResources = new HashMap<>();
+			extendedResources.put(ResourceSpec.MANAGED_MEMORY_NAME, new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, 56));
 			final JobPendingSlotRequestDetail expected = new JobPendingSlotRequestDetail(
 					new SlotRequestId(),
-					new ResourceProfile(0.123, 12, 23, 34, 45, null),
+					new ResourceProfile(0.123, 12, 23, 34, 45, extendedResources),
 					625L,
 					null,
 					null,
