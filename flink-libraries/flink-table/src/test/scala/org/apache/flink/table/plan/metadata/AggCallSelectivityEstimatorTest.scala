@@ -187,7 +187,7 @@ class AggCallSelectivityEstimatorTest {
     } else {
       TableStats(rowCount.getOrElse(null.asInstanceOf[java.lang.Long]), null)
     }
-    FlinkStatistic.of(tableStats)
+    FlinkStatistic.builder.tableStats(tableStats).build()
   }
 
   @Test

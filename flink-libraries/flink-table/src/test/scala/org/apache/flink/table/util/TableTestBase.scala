@@ -400,13 +400,16 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
     val (fieldNames, fieldIdxs) =
       tableEnv.getFieldInfo(typeInfo, fields.toArray)
     val fieldTypes: Array[InternalType] = fieldIdxs.map(physicalSchema.getType)
-    val tableSchema = new TableSchema(fieldNames, fieldTypes)
+    val tableSchemaBuilder = TableSchema.builder()
+    fieldNames.zip(fieldTypes).foreach { case (fn, ft) => tableSchemaBuilder.column(fn, ft) }
+    uniqueKeys.foreach { key => tableSchemaBuilder.uniqueKey((key.toArray[String]): _*) }
+    val tableSchema = tableSchemaBuilder.build()
     val mapping = fieldNames.zipWithIndex.map {
       case (name: String, idx: Int) =>
         (name, physicalSchema.getColumnName(fieldIdxs.apply(idx)))
     }.toMap
     val ts = new TestTableSourceWithTime(tableSchema, typeInfo, Seq(), mapping = mapping)
-    tableEnv.registerTableSource(name, ts, uniqueKeys.map(_.asJava).asJava)
+    tableEnv.registerTableSource(name, ts)
     tableEnv.scan(name)
   }
 

@@ -18,22 +18,9 @@
 
 package org.apache.flink.table.tpc
 
-import org.apache.flink.core.fs.Path
-import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.api.types.{DataTypes, InternalType}
-import org.apache.flink.table.dataformat.ColumnarRow
-import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.InsertRuntimeFilterRule
-import org.apache.flink.table.plan.stats.TableStats
-import org.apache.flink.table.plan.util.FlinkNodeOptUtil
-import org.apache.flink.table.sources.parquet.{ParquetTableSource, ParquetVectorizedColumnRowTableSource}
 import org.apache.flink.table.tpc.STATS_MODE.STATS_MODE
-import org.apache.flink.table.util.TableTestBase
 
 import org.apache.calcite.sql.SqlExplainLevel
-import org.junit.{Before, Test}
-import org.scalatest.prop.PropertyChecks
-
-import scala.collection.Seq
 
 /**
   * This class is used to get optimized TPCH queries plan with TableStats.
@@ -46,78 +33,13 @@ abstract class TpcHBatchExecPlanTest(
     statsMode: STATS_MODE,
     explainLevel: SqlExplainLevel,
     joinReorderEnabled: Boolean,
-    printOptimizedResult: Boolean) extends TableTestBase with PropertyChecks {
+    printOptimizedResult: Boolean)
+  extends TpcBatchExecPlanTest(
+    caseName, factor, statsMode, explainLevel,
+    joinReorderEnabled, printOptimizedResult,
+    TpcHSchemaProvider.schemaMap,
+    TpchTableStatsProvider.getTableStatsMap(factor, statsMode)) {
 
-  private val util = batchTestUtil()
-  private val tEnv = util.tableEnv
+  def getQuery(): String = TpcUtils.getTpcHQuery(caseName)
 
-  @Before
-  def before(): Unit = {
-    for ((tableName, schema) <- TpcHSchemaProvider.schemaMap) {
-      lazy val tableSource = new TestParquetTableSource(
-        tableName,
-        schema.getFieldTypes,
-        schema.getFieldNames,
-        schema.getFieldNullables)
-      tEnv.registerTableSource(tableName, tableSource, schema.getUniqueKeys)
-    }
-    // alter TableStats
-    for ((tableName, tableStats) <- TpchTableStatsProvider.getTableStatsMap(factor, statsMode)) {
-      tEnv.alterTableStats(tableName, Some(tableStats))
-    }
-    TpcUtils.disableParquetFilterPushDown(tEnv)
-    tEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED, joinReorderEnabled)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_RUNTIME_FILTER_ENABLED, true)
-  }
-
-  // create a new ParquetTableSource to override `createTableSource` and `getTableStats` methods
-  private class TestParquetTableSource(
-      tableName: String,
-      fieldTypes: Array[InternalType],
-      fieldNames: Array[String],
-      fieldNullables: Array[Boolean]) extends ParquetVectorizedColumnRowTableSource(
-    new Path("/tmp"), fieldTypes, fieldNames, fieldNullables, true) {
-
-    override protected def createTableSource(
-        fieldTypes: Array[InternalType],
-        fieldNames: Array[String],
-        fieldNullables: Array[Boolean]): ParquetTableSource[ColumnarRow] = {
-      val tableSource = new TestParquetTableSource(
-        tableName,
-        fieldTypes,
-        fieldNames,
-        fieldNullables)
-      tableSource.setFilterPredicate(filterPredicate)
-      tableSource.setFilterPushedDown(filterPushedDown)
-      tableSource
-    }
-
-    override def getTableStats: TableStats = {
-      // the `filterPredicate` in TPCH queries can not drop any row group for current test data,
-      // we can directly use the static statistics.
-      // TODO if the test data or TPCH queries are changed, the statistics should also be updated.
-      TpchTableStatsProvider.getTableStatsMap(factor, STATS_MODE.PART).get(tableName).orNull
-    }
-
-    override def explainSource(): String = {
-      s"TestParquetTableSource -> " +
-          s"selectedFields=[${fieldNames.mkString(", ")}];" +
-          s"filterPredicates=[${if (filterPredicate == null) "" else filterPredicate.toString}]"
-    }
-  }
-
-  @Test
-  def test(): Unit = {
-    InsertRuntimeFilterRule.resetBroadcastIdCounter()
-    val sqlQuery = TpcUtils.getTpcHQuery(caseName)
-    if (printOptimizedResult) {
-      val table = tEnv.sqlQuery(sqlQuery)
-      val optimizedNode = tEnv.optimizeAndTranslateNodeDag(false, table.logicalPlan).head
-      val result = FlinkNodeOptUtil.treeToString(optimizedNode, detailLevel = explainLevel)
-      println(s"caseName:$caseName, factor: $factor, statsMode:$statsMode\n$result")
-    } else {
-      util.verifyPlan(sqlQuery, explainLevel)
-    }
-  }
 }

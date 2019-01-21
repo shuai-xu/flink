@@ -309,7 +309,7 @@ abstract class DistinctAggregateITCaseBase(testName: String) extends BatchTestBa
   @Test
   def testAggregateRemove(): Unit = {
     tEnv.registerTableSource("MyTable",
-      CommonTestData.getSmall3Source(Array("a", "b", "c")), Set(Set("a").asJava).asJava)
+      CommonTestData.getSmall3Source(Array("a", "b", "c"), Set(Set("a"))))
     checkResult(
       "SELECT a, b + 1, c, s FROM (" +
         "SELECT a, MIN(DISTINCT b) AS b, SUM(DISTINCT b) AS s, MAX(DISTINCT c) AS c" +

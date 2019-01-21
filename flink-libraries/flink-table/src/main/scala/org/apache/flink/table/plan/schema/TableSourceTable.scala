@@ -18,11 +18,11 @@
 
 package org.apache.flink.table.plan.schema
 
-import java.util
-
 import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sources.TableSource
+
+import java.util
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -43,32 +43,26 @@ abstract class TableSourceTable(
   override def getStatistic: FlinkStatistic = {
     // Currently, we could get more exact TableStats by AnalyzeStatistic#generateTableStats
     // and update it by TableEnvironment#alterTableStats.
-    // So the default statistic should be prior to the stats from TableSource.
-    if (statistic != null && statistic != FlinkStatistic.UNKNOWN) {
-      if (statistic.getTableStats != null) {
-        statistic
-      } else {
-        val stats = tableSource.getTableStats
-        FlinkStatistic.of(stats, statistic.getUniqueKeys, statistic.getSkewInfo)
-      }
+    // So the default tableStats should be prior to the stats from TableSource.
+    val stats = if (statistic != null && statistic.getTableStats != null) {
+      statistic.getTableStats
     } else {
-      val stats = tableSource.getTableStats
-      val primaryKeys = tableSource.getTableSchema.getPrimaryKeys
-      val uniqueKeys = tableSource.getTableSchema.getUniqueKeys
-      if (primaryKeys.isEmpty && uniqueKeys.isEmpty) {
-        FlinkStatistic.of(stats)
-      } else {
-        var keyBuffer = new ArrayBuffer[util.Set[String]]()
-        if (!primaryKeys.isEmpty) {
-          keyBuffer.append(ImmutableSet.copyOf(primaryKeys))
-        }
-        uniqueKeys.foreach {
-          case uniqueKey: Array[String] => keyBuffer.append(ImmutableSet.copyOf(uniqueKey))
-        }
-
-        FlinkStatistic.of(stats, ImmutableSet.copyOf(keyBuffer.toArray), null)
-      }
+      tableSource.getTableStats
     }
+    val statisticBuilder = FlinkStatistic.builder.statistic(statistic).tableStats(stats)
+    val primaryKeys = tableSource.getTableSchema.getPrimaryKeys
+    val uniqueKeys = tableSource.getTableSchema.getUniqueKeys
+    if (primaryKeys.nonEmpty || uniqueKeys.nonEmpty) {
+      val keyBuffer = new ArrayBuffer[util.Set[String]]()
+      if (!primaryKeys.isEmpty) {
+        keyBuffer.append(ImmutableSet.copyOf(primaryKeys))
+      }
+      uniqueKeys.foreach {
+        case uniqueKey: Array[String] => keyBuffer.append(ImmutableSet.copyOf(uniqueKey))
+      }
+      statisticBuilder.uniqueKeys(ImmutableSet.copyOf(keyBuffer.toArray))
+    }
+    statisticBuilder.build()
   }
 
   /**

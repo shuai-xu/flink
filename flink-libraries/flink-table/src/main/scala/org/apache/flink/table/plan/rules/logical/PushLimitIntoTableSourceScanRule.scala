@@ -78,13 +78,13 @@ class PushLimitIntoTableSourceScanRule extends RelOptRule(
     val limitedSource = tableSourceTable.tableSource.asInstanceOf[LimitableTableSource]
     val newTableSource = limitedSource.applyLimit(limit)
 
-    val flinkStatistic = relOptTable.getFlinkStatistic
-    val tableStates = flinkStatistic.getTableStats
-    val newStatistic = if (tableStates != null) {
-      val newTableStates = TableStats(Math.min(limit, tableStates.rowCount), tableStates.colStats)
-      new FlinkStatistic(Some(newTableStates), flinkStatistic.getUniqueKeys)
+    val oldStatistic = relOptTable.getFlinkStatistic
+    val tableStats = oldStatistic.getTableStats
+    val newStatistic = if (tableStats != null) {
+      val newTableStats = TableStats(Math.min(limit, tableStats.rowCount), tableStats.colStats)
+      FlinkStatistic.builder.statistic(oldStatistic).tableStats(newTableStats).build()
     } else {
-      flinkStatistic
+      oldStatistic
     }
     val newTableSourceTable = tableSourceTable.replaceTableSource(newTableSource).copy(newStatistic)
     relOptTable.copy(newTableSourceTable, relOptTable.getRowType)

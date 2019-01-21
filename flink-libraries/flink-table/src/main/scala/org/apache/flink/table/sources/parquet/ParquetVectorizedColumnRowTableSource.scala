@@ -19,17 +19,16 @@
 package org.apache.flink.table.sources.parquet
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
-
-import java.util.{Set => JSet}
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableSchema
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType, TypeConverters}
+import org.apache.flink.table.api.types.{DataType, InternalType, RowType, TypeConverters}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.ColumnarRow
 import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
+
+import _root_.java.util.{Set => JSet}
 
 import _root_.scala.collection.JavaConversions._
 

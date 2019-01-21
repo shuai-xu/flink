@@ -292,12 +292,9 @@ class FlinkRelMdRowCount private extends MetadataHandler[BuiltInMetadata.RowCoun
 
     val leftKeysAreUnique = fmq.areColumnsUnique(leftChild, leftKeySet)
     val rightKeysAreUnique = fmq.areColumnsUnique(rightChild, rightKeySet)
-    if (leftKeysAreUnique != null && rightKeysAreUnique != null) {
-      val outputRowCount = if (!leftKeysAreUnique && !rightKeysAreUnique) {
-        // if both leftKeys and rightKeys are not unique,
-        // rowCount = (leftRowCount * rightRowCount) * selectivity of non-equi
-        leftRowCount * rightRowCount * selectivityOfNonEquiPred
-      } else if (leftKeysAreUnique && rightKeysAreUnique) {
+    if (leftKeysAreUnique != null && rightKeysAreUnique != null &&
+      (leftKeysAreUnique || rightKeysAreUnique)) {
+      val outputRowCount = if (leftKeysAreUnique && rightKeysAreUnique) {
         // if both leftKeys and rightKeys are both unique,
         // rowCount = Min(leftRowCount) * selectivity of non-equi
         Math.min(leftRowCount, rightRowCount) * selectivityOfNonEquiPred

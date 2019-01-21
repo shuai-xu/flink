@@ -37,7 +37,7 @@ class DataStreamTable[T](
       fieldIndexes: Array[Int],
       fieldNames: Array[String]) {
     this(stream, false, false, fieldIndexes, fieldNames,
-      FlinkStatistic.of(TableStats(1000L)))
+         FlinkStatistic.builder.tableStats((TableStats(1000L))).build())
   }
 
   /**

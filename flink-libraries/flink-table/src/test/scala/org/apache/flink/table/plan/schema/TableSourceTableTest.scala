@@ -41,7 +41,9 @@ class TableSourceTableTest {
 
     val uniqueKeys = ImmutableSet.of(ImmutableSet.copyOf(Array[String]("a")))
     val sourceWithUniqueKeys =
-      new TestTableSourceTable(new TestTableSource, FlinkStatistic.of(uniqueKeys))
+      new TestTableSourceTable(
+        new TestTableSource,
+        FlinkStatistic.builder.uniqueKeys(uniqueKeys).build())
     assertEquals(
       sourceWithUniqueKeys.getStatistic.asInstanceOf[FlinkStatistic].getUniqueKeys, uniqueKeys)
 

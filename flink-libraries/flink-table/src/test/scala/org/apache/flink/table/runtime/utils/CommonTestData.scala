@@ -18,11 +18,6 @@
 
 package org.apache.flink.table.runtime.utils
 
-import java.io.{File, FileOutputStream, OutputStreamWriter}
-import java.math.BigDecimal
-import java.sql.Timestamp
-import java.{lang, util}
-import org.apache.calcite.avatica.util.DateTimeUtils
 import org.apache.flink.api.java.io.CsvInputFormat
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType, TypeConverters}
@@ -33,7 +28,15 @@ import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.types.Row
 
+import org.apache.calcite.avatica.util.DateTimeUtils
+
+import java.io.{File, FileOutputStream, OutputStreamWriter}
+import java.math.BigDecimal
+import java.sql.Timestamp
+import java.{lang, util}
+
 import scala.collection.mutable
+import scala.collection.JavaConverters._
 import scala.util.Random
 
 object CommonTestData {
@@ -147,7 +150,8 @@ object CommonTestData {
   }
 
   def getSmall3Source(
-      names: Array[String] = Array("_1", "_2", "_3")): CsvTableSource = {
+      names: Array[String] = Array("_1", "_2", "_3"),
+      uniqueKeys: Set[Set[String]] = null): CsvTableSource = {
 
     val data = getSmall3Data
 
@@ -163,7 +167,8 @@ object CommonTestData {
       Array(true, true, true),
       "\\|",
       "$",
-      tableStats = Some(TableStats(data.size.toLong)))
+      tableStats = Some(TableStats(data.size.toLong)),
+      uniqueKeySet = if(uniqueKeys != null) uniqueKeys.map(_.asJava).asJava else null)
   }
 
   def getSmall5Data: mutable.MutableList[(Integer, lang.Long, Integer, String, lang.Long)] = {
@@ -176,7 +181,8 @@ object CommonTestData {
   }
 
   def getSmall5Source(
-      names: Array[String] = Array("_1", "_2", "_3", "_4", "_5")): CsvTableSource = {
+    names: Array[String] = Array("_1", "_2", "_3", "_4", "_5"),
+    uniqueKeys: Set[Set[String]] = null): CsvTableSource = {
 
     val data = getSmall5Data
 
@@ -192,7 +198,8 @@ object CommonTestData {
       Array(true, true, true, true, true),
       "\\|",
       "$",
-      tableStats = Some(TableStats(data.size.toLong)))
+      tableStats = Some(TableStats(data.size.toLong)),
+      uniqueKeySet = if(uniqueKeys != null) uniqueKeys.map(_.asJava).asJava else null)
   }
 
   def get5NullDataRow(): (mutable.MutableList[Row], RowTypeInfo) = {
@@ -442,7 +449,8 @@ object CommonTestData {
       fieldTypes: Array[InternalType],
       fieldDelim: String = CsvInputFormat.DEFAULT_FIELD_DELIMITER,
       rowDelim: String = CsvInputFormat.DEFAULT_LINE_DELIMITER,
-      enableEmptyColumnAsNull: Boolean = true): CsvTableSource = {
+      enableEmptyColumnAsNull: Boolean = true,
+      uniqueKeys: Set[Set[String]] = null): CsvTableSource = {
     val contents = data.map { r =>
       (0 until r.getArity).map(i => r.getField(i)).map {
         case null => ""
@@ -458,6 +466,9 @@ object CommonTestData {
       .lineDelimiter(rowDelim)
     if (enableEmptyColumnAsNull) {
       builder.enableEmptyColumnAsNull()
+    }
+    if (uniqueKeys != null) {
+      builder.uniqueKeys(uniqueKeys.map(_.asJava).asJava)
     }
     builder.build()
   }

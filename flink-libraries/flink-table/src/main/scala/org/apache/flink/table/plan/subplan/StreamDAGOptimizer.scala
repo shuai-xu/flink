@@ -216,7 +216,7 @@ object StreamDAGOptimizer extends AbstractDAGOptimizer[StreamTableEnvironment] {
     val monotonicity = FlinkRelMetadataQuery
       .reuseOrCreate(tEnv.getRelBuilder.getCluster.getMetadataQuery)
       .getRelModifiedMonotonicity(relNode)
-    val statistic = FlinkStatistic.of(uniqueKeys, monotonicity)
+    val statistic = FlinkStatistic.builder.uniqueKeys(uniqueKeys).monotonicity(monotonicity).build()
 
     val table = new IntermediateRelNodeTable(
       relNode,

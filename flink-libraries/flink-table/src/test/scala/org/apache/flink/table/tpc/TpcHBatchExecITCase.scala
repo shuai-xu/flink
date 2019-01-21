@@ -51,8 +51,9 @@ class TpcHBatchExecITCase(caseName: String,
           .fields(schema.getFieldNames, schema.getFieldTypes, schema.getFieldNullables)
           .fieldDelimiter("|")
           .lineDelimiter("\n")
+          .uniqueKeys(schema.getUniqueKeys)
           .build()
-      tEnv.registerTableSource(tableName, tableSource, schema.getUniqueKeys)
+      tEnv.registerTableSource(tableName, tableSource)
     }
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 3)
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_DEFAULT_LIMIT, -1)

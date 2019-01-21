@@ -76,8 +76,10 @@ class TpcDsBatchExecITCase(
           .fields(schema.getFieldNames, schema.getFieldTypes, schema.getFieldNullables)
           .fieldDelimiter("|")
           .lineDelimiter("\n")
-          .enableEmptyColumnAsNull().build()
-     tEnv.registerTableSource(tableName, tableSource, schema.getUniqueKeys)
+          .enableEmptyColumnAsNull()
+          .uniqueKeys(schema.getUniqueKeys)
+          .build()
+     tEnv.registerTableSource(tableName, tableSource)
     }
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED, true)
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, true)

@@ -851,9 +851,8 @@ abstract class AggregateITCaseBase(testName: String) extends BatchTestBase {
         .enableEmptyColumnAsNull()
         .fieldDelimiter(",")
         .lineDelimiter("$")
-        .build(),
-      Set(Set("empno").asJava).asJava
-    )
+        .uniqueKeys(Set(Set("empno").asJava).asJava)
+        .build())
 
     checkResult(
       """

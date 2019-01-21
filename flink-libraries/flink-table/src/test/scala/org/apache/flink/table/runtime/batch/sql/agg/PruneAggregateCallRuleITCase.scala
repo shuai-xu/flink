@@ -23,7 +23,6 @@ import org.apache.flink.table.runtime.utils.CommonTestData
 
 import org.junit.{Before, Test}
 
-import _root_.scala.collection.JavaConverters._
 import scala.collection.Seq
 
 class PruneAggregateCallRuleITCase extends BatchTestBase {
@@ -33,7 +32,7 @@ class PruneAggregateCallRuleITCase extends BatchTestBase {
     tEnv.registerTableSource("MyTable",
       CommonTestData.getSmall3Source(Array("a", "b", "c")))
     tEnv.registerTableSource("MyTable2",
-      CommonTestData.getSmall5Source(Array("a", "b", "c", "d", "e")), Set(Set("b").asJava).asJava)
+      CommonTestData.getSmall5Source(Array("a", "b", "c", "d", "e"), Set(Set("b"))))
   }
 
   @Test

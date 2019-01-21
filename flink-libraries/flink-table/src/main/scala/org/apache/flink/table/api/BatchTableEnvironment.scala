@@ -478,52 +478,6 @@ class BatchTableEnvironment(
   }
 
   /**
-    * Registers an external [[TableSource]] in this [[TableEnvironment]]'s catalog.
-    * Registered tables can be referenced in SQL queries.
-    *
-    * @param name        The name under which the [[TableSource]] is registered.
-    * @param tableSource The [[TableSource]] to register.
-    * @param uniqueKeys  The unique keys of table.
-    *                    null means miss this information;
-    *                    empty set means does not exist unique key of the table;
-    *                    non-empty set means set of the unique keys.
-    */
-  def registerTableSource(
-      name: String,
-      tableSource: TableSource,
-      uniqueKeys: JSet[JSet[String]]): Unit = {
-    registerTableSource(name, tableSource, uniqueKeys, null)
-  }
-
-  /**
-   * Registers an external [[TableSource]] in this [[TableEnvironment]]'s catalog.
-   * Registered tables can be referenced in SQL queries.
-   *
-   * @param name        The name under which the [[TableSource]] is registered.
-   * @param tableSource The [[TableSource]] to register.
-   * @param uniqueKeys  The unique keys of table.
-   *                    null means miss this information;
-   *                    empty set means does not exist unique key of the table;
-   *                    non-empty set means set of the unique keys.
-   * @param skewInfo    statistics of skewedColNames and skewedColValues.
-   */
-  def registerTableSource(
-      name: String,
-      tableSource: TableSource,
-      uniqueKeys: JSet[JSet[String]],
-      skewInfo: JMap[String, JList[AnyRef]] = null): Unit = {
-    checkValidTableName(name)
-
-    val statistic = if (uniqueKeys != null || skewInfo != null) {
-      FlinkStatistic.of(uniqueKeys, skewInfo)
-    } else {
-      FlinkStatistic.UNKNOWN
-    }
-
-    registerTableSourceInternal(name, tableSource, statistic)
-  }
-
-  /**
     * Registers an internal [[BatchTableSource]] in this [[TableEnvironment]]'s catalog without
     * name checking. Registered tables can be referenced in SQL queries.
     *

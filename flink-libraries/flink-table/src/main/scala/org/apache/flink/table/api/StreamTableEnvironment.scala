@@ -22,13 +22,13 @@ import org.apache.flink.annotation.{InterfaceStability, VisibleForTesting}
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.{StreamGraph, StreamGraphGenerator}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
-import org.apache.flink.table.calcite.{FlinkChainContext, FlinkRelBuilder, FlinkTypeFactory}
+import org.apache.flink.table.calcite.{FlinkChainContext, FlinkRelBuilder}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescriptor}
 import org.apache.flink.table.errorcode.TableErrors
@@ -52,7 +52,6 @@ import org.apache.flink.table.util._
 import org.apache.flink.util.Preconditions
 
 import org.apache.calcite.plan._
-import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
 import org.apache.calcite.rex.RexBuilder
 import org.apache.calcite.sql.SqlExplainLevel
@@ -403,131 +402,6 @@ abstract class StreamTableEnvironment(
       val optimizedNode = optimizeAndTranslateNodeDag(false, sinkNode).head
       transformations.add(translate(optimizedNode))
     }
-  }
-
-  /**
-    * Registers a [[DataStream]] as a table under a given name in the [[TableEnvironment]]'s
-    * catalog.
-    *
-    * @param name The name under which the table is registered in the catalog.
-    * @param dataStream The [[DataStream]] to register as table in the catalog.
-    * @tparam T the type of the [[DataStream]].
-    */
-  protected def registerDataStreamInternal[T](
-    name: String,
-    dataStream: DataStream[T]): Unit = {
-
-    // get field names and types for all non-replaced fields
-    val (fieldNames, fieldIndexes) = getFieldInfo(dataStream.getType)
-
-    val dataStreamTable = new DataStreamTable[T](dataStream, false, false, fieldIndexes, fieldNames)
-    registerTableInternal(name, dataStreamTable)
-  }
-
-  /**
-    * Registers a [[DataStream]] type as a table under a given name with field
-    * names as specified by field expressions in the [[TableEnvironment]]'s catalog.
-    *
-    * @param name The name under which the table is registered in the catalog.
-    * @param isAccRetract True if input data contain retraction messages.
-    * @param dataStream The [[DataStream]] to register as table in the catalog.
-    * @param fields The field expressions to define the field names of the table.
-    * @param monotonicity the monotonicity of each field.
-    */
-  private def registerDataStreamInternal(
-      name: String,
-      producesUpdates: Boolean,
-      isAccRetract: Boolean,
-      dataStream: DataStream[_],
-      rowType: RelDataType,
-      fields: Array[Expression],
-      uniqueKeys: util.Set[_ <: util.Set[String]],
-      monotonicity: RelModifiedMonotonicity): Unit = {
-
-    if (fields.exists(_.isInstanceOf[RowtimeAttribute])
-        && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
-      throw new TableException(
-        s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
-          s"But is: ${execEnv.getStreamTimeCharacteristic}")
-    }
-
-
-    val (fieldNames, fieldIndexes) = getFieldInfo(dataStream.getType, fields)
-
-    // validate and extract time attributes
-    val (rowtime, proctime) = validateAndExtractTimeAttributes(dataStream.getType, fields)
-
-    // check if event-time is enabled
-    if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
-      throw new TableException(
-        s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
-          s"But is: ${execEnv.getStreamTimeCharacteristic}")
-    }
-
-    // adjust field indexes and field names
-    val indexesWithIndicatorFields = adjustFieldIndexes(fieldIndexes, rowtime, proctime)
-    val namesWithIndicatorFields = adjustFieldNames(fieldNames, rowtime, proctime)
-
-    val statistic = FlinkStatistic.of(uniqueKeys, monotonicity)
-
-    val dataStreamTable = new IntermediateDataStreamTable(
-      rowType,
-      dataStream,
-      producesUpdates,
-      isAccRetract,
-      indexesWithIndicatorFields,
-      namesWithIndicatorFields,
-      statistic)
-    registerTableInternal(name, dataStreamTable)
-  }
-
-  /**
-    * Registers a dummy [[DataStream]] with row type as a table under a given name with field names
-    * as specified by field expressions in the [[TableEnvironment]]'s catalog.
-    *
-    * @param name The name under which the table is registered in the catalog.
-    * @param isAccRetract True if input data contain retraction messages.
-    * @param fields The field expressions to define the field names of the table.
-    */
-  private def registerDummyDataStreamTableInternal(
-      name: String,
-      produceUpdates: Boolean,
-      isAccRetract: Boolean,
-      rowType: RelDataType,
-      fields: Array[Expression],
-      uniqueKeys: util.Set[_ <: util.Set[String]],
-      monotonicity: RelModifiedMonotonicity): Unit = {
-
-    val inputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(rowType)
-
-    // validate and extract time attributes
-    val (rowtime, proctime) = validateAndExtractTimeAttributes(inputType, fields)
-    if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
-      throw new TableException(
-        s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
-          s"But is: ${execEnv.getStreamTimeCharacteristic}")
-    }
-
-
-    val (fieldNames, fieldIndexes) = getFieldInfo(inputType, fields)
-    // adjust field indexes and field names
-    val indexesWithIndicatorFields = adjustFieldIndexes(fieldIndexes, rowtime, proctime)
-    val namesWithIndicatorFields = adjustFieldNames(fieldNames, rowtime, proctime)
-
-    // a dummy source with baseRow type
-    val dummySource = new DataStreamSource[BaseRow](execEnv, inputType, null, false, "")
-
-    val statistic = FlinkStatistic.of(uniqueKeys, monotonicity)
-
-    val dataStreamTable = new IntermediateDataStreamTable(
-      rowType,
-      dummySource,
-      produceUpdates,
-      isAccRetract,
-      indexesWithIndicatorFields,
-      namesWithIndicatorFields,
-      statistic)
-    registerTableInternal(name, dataStreamTable, false)
   }
 
   protected def registerDataStreamInternal[T](

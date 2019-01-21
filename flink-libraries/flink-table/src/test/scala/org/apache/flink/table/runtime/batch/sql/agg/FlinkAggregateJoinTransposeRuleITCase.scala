@@ -82,9 +82,9 @@ class FlinkAggregateJoinTransposeRuleITCase extends BatchTestBase {
           row(2, 3L, null),
           row(2, 4L, "Z")),
         Array("a2", "b2", "c2"),
-        Array(DataTypes.INT, DataTypes.LONG, DataTypes.STRING)
-      ),
-      Set(Set("b2").asJava).asJava
+        Array(DataTypes.INT, DataTypes.LONG, DataTypes.STRING),
+        uniqueKeys = Set(Set("b2"))
+      )
     )
   }
 

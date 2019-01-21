@@ -85,11 +85,10 @@ class CatalogCalciteTable(
   }
 
   override def getStatistic(): FlinkStatistic = {
+    val statisticBuilder = FlinkStatistic.builder.tableStats(table.getTableStats)
     val primaryKeys = table.getTableSchema.getPrimaryKeys
     val uniqueKeys = table.getTableSchema.getUniqueKeys
-    if (primaryKeys.isEmpty && uniqueKeys.isEmpty) {
-      FlinkStatistic.of(table.getTableStats)
-    } else {
+    if (primaryKeys.nonEmpty || uniqueKeys.nonEmpty) {
       val keyBuffer = new ArrayBuffer[util.Set[String]]()
       if (!primaryKeys.isEmpty) {
         keyBuffer.append(ImmutableSet.copyOf(primaryKeys))
@@ -97,9 +96,9 @@ class CatalogCalciteTable(
       uniqueKeys.foreach {
         case uniqueKey: Array[String] => keyBuffer.append(ImmutableSet.copyOf(uniqueKey))
       }
-
-      FlinkStatistic.of(table.getTableStats, ImmutableSet.copyOf(keyBuffer.toArray), null)
+      statisticBuilder.uniqueKeys(ImmutableSet.copyOf(keyBuffer.toArray))
     }
+    statisticBuilder.build()
   }
 
   /**

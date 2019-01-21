@@ -38,15 +38,15 @@ class FlinkAggregateRemoveRuleITCase extends BatchTestBase {
           row(5, 2, "B", "Hello"),
           row(6, 3, "C", "Hello world")),
         Array("a", "b", "c", "d"),
-        Array(DataTypes.INT, DataTypes.INT, DataTypes.STRING, DataTypes.STRING)
-      ),
-      Set(Set("a").asJava).asJava
+        Array(DataTypes.INT, DataTypes.INT, DataTypes.STRING, DataTypes.STRING),
+        uniqueKeys = Set(Set("a"))
+      )
     )
 
     tEnv.registerTableSource("MyTable",
-      CommonTestData.getSmall3Source(Array("a", "b", "c")), Set(Set("a").asJava).asJava)
+      CommonTestData.getSmall3Source(Array("a", "b", "c"), Set(Set("a"))))
     tEnv.registerTableSource("MyTable2",
-      CommonTestData.getSmall5Source(Array("a", "b", "c", "d", "e")), Set(Set("b").asJava).asJava)
+      CommonTestData.getSmall5Source(Array("a", "b", "c", "d", "e"), Set(Set("b"))))
   }
 
   @Test

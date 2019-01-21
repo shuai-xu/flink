@@ -42,9 +42,9 @@ class AggregateReduceGroupingRuleITCase extends BatchTestBase {
           row(5, 2, "B", "Hello"),
           row(6, 3, "C", "Hello world")),
         Array("a1", "b1", "c1", "d1"),
-        Array(DataTypes.INT, DataTypes.INT, DataTypes.STRING, DataTypes.STRING)
-      ),
-      Set(Set("a1").asJava).asJava
+        Array(DataTypes.INT, DataTypes.INT, DataTypes.STRING, DataTypes.STRING),
+        uniqueKeys =  Set(Set("a1"))
+      )
     )
 
     tEnv.registerTableSource("T2",
@@ -54,9 +54,9 @@ class AggregateReduceGroupingRuleITCase extends BatchTestBase {
           row(2, 3, null),
           row(2, 4, "Z")),
         Array("a2", "b2", "c2"),
-        Array(DataTypes.INT, DataTypes.INT, DataTypes.STRING)
-      ),
-      Set(Set("b2").asJava, Set("a2", "b2").asJava).asJava
+        Array(DataTypes.INT, DataTypes.INT, DataTypes.STRING),
+        uniqueKeys = Set(Set("b2"), Set("a2", "b2"))
+      )
     )
 
     tEnv.registerTableSource("T3",
@@ -80,9 +80,10 @@ class AggregateReduceGroupingRuleITCase extends BatchTestBase {
           row(3, 2, "B", UTCTimestamp("2018-06-01 10:15:25"), "Hello world"),
           row(4, 3, "C", UTCTimestamp("2018-06-01 10:36:49"), "I am fine.")),
         Array("a4", "b4", "c4", "d4", "e4"),
-        Array(DataTypes.INT, DataTypes.INT, DataTypes.STRING, DataTypes.TIMESTAMP, DataTypes.STRING)
-      ),
-      Set(Set("a4").asJava).asJava
+        Array(
+          DataTypes.INT, DataTypes.INT, DataTypes.STRING, DataTypes.TIMESTAMP, DataTypes.STRING),
+        uniqueKeys = Set(Set("a4"))
+      )
     )
 
     tEnv.registerTableSource("T5",
@@ -96,9 +97,9 @@ class AggregateReduceGroupingRuleITCase extends BatchTestBase {
           row(7, 2, "I", "hahaha"),
           row(6, 1, "J", "I am fine.")),
         Array("a5", "b5", "c5", "d5"),
-        Array(DataTypes.INT, DataTypes.INT, DataTypes.STRING, DataTypes.STRING)
-      ),
-      Set(Set("c5").asJava).asJava
+        Array(DataTypes.INT, DataTypes.INT, DataTypes.STRING, DataTypes.STRING),
+        uniqueKeys = Set(Set("c5"))
+      )
     )
 
     tEnv.registerTableSource("T6",
@@ -108,9 +109,9 @@ class AggregateReduceGroupingRuleITCase extends BatchTestBase {
             new Date(i + 1531820000000L))),
         Array("a6", "b6", "c6", "d6", "e6", "f6"),
         Array(DataTypes.INT, DataTypes.LONG, DataTypes.STRING, DataTypes.STRING, DataTypes.INT,
-          DataTypes.DATE)
-      ),
-      Set(Set("a6").asJava).asJava
+          DataTypes.DATE),
+        uniqueKeys = Set(Set("a6"))
+      )
     )
   }
 

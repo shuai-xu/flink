@@ -30,7 +30,7 @@ class IntermediateBoundedStreamTable[T](
     dataStream: DataStream[T],
     fieldIndexes: Array[Int],
     fieldNames: Array[String],
-    statistic: FlinkStatistic = FlinkStatistic.of(TableStats(1000L)))
+    statistic: FlinkStatistic = FlinkStatistic.builder.tableStats((TableStats(1000L))).build())
   extends DataStreamTable[T](dataStream, false, false, fieldIndexes, fieldNames, statistic) {
 
   override def getRowType(typeFactory: RelDataTypeFactory): RelDataType = {

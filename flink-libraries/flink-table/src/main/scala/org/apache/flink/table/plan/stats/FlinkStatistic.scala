@@ -18,13 +18,14 @@
 
 package org.apache.flink.table.plan.stats
 
-import java.lang.Double
-import java.util
+import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
 
 import org.apache.calcite.rel.{RelCollation, RelDistribution, RelReferentialConstraint}
 import org.apache.calcite.schema.Statistic
 import org.apache.calcite.util.ImmutableBitSet
-import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
+
+import java.lang.Double
+import java.util
 
 import scala.collection.JavaConversions._
 
@@ -38,11 +39,11 @@ import scala.collection.JavaConversions._
   *                   non-empty set means set of the unique keys.
   * @param skewInfo statistics of skewedColNames and skewedColValues.
   */
-class FlinkStatistic(tableStats: Option[TableStats],
+class FlinkStatistic private(tableStats: Option[TableStats],
     uniqueKeys: util.Set[_ <: util.Set[String]] = null,
     skewInfo: util.Map[String, util.List[AnyRef]] = null,
     monotonicity: RelModifiedMonotonicity = null)
-    extends Statistic {
+  extends Statistic {
 
   require(uniqueKeys == null || !uniqueKeys.exists(keys => keys == null || keys.isEmpty),
     "uniqueKeys contains invalid elements!")
@@ -123,79 +124,55 @@ object FlinkStatistic {
   /** Represents a FlinkStatistic that knows nothing about a table */
   val UNKNOWN: FlinkStatistic = new FlinkStatistic(None)
 
-  /**
-    * Returns a FlinkStatistic with given table statistics.
-    *
-    * @param tableStats The table statistics.
-    * @return The generated FlinkStatistic
-    */
-  def of(tableStats: TableStats): FlinkStatistic = {
-    if (tableStats != null) {
-      new FlinkStatistic(Option(tableStats))
-    } else {
-      UNKNOWN
+  class Builder {
+
+    private var tableStats: TableStats = null
+    private var uniqueKeys: util.Set[_ <: util.Set[String]] = null
+    private var skewInfo: util.Map[String, util.List[AnyRef]] = null
+    private var monotonicity: RelModifiedMonotonicity = null
+
+    def tableStats(tableStats: TableStats): Builder = {
+      this.tableStats = tableStats
+      this
+    }
+
+    def uniqueKeys(uniqueKeys: util.Set[_ <: util.Set[String]]): Builder = {
+      this.uniqueKeys = uniqueKeys
+      this
+    }
+
+    def skewInfo(skewInfo: util.Map[String, util.List[AnyRef]]): Builder = {
+      this.skewInfo = skewInfo
+      this
+    }
+
+    def monotonicity(monotonicity: RelModifiedMonotonicity): Builder = {
+      this.monotonicity = monotonicity
+      this
+    }
+
+    def statistic(statistic: FlinkStatistic): Builder = {
+      this.tableStats = statistic.getTableStats
+      this.uniqueKeys = statistic.getUniqueKeys
+      this.skewInfo = statistic.getSkewInfo
+      this.monotonicity = statistic.getRelModifiedMonotonicity
+      this
+    }
+
+    def build(): FlinkStatistic = {
+      if (tableStats == null && uniqueKeys == null && skewInfo == null && monotonicity == null) {
+        UNKNOWN
+      } else {
+        new FlinkStatistic(Option(tableStats), uniqueKeys, skewInfo, monotonicity)
+      }
     }
   }
 
   /**
-    * Returns a FlinkStatistic with given table uniqueKeys.
+    * Return a new builder that builds a [[FlinkStatistic]].
     *
-    * @param uniqueKeys unique keys of table.
-    *                   null means miss this information;
-    *                   empty set means does not exist unique key of the table;
-    *                   non-empty set means set of the unique keys.
-    * @param skewInfo statistics of skewedColNames and skewedColValues.
-    * @return The generated FlinkStatistic
+    * @return a new builder to build a [[FlinkStatistic]]
     */
-  def of(
-      uniqueKeys: util.Set[_ <: util.Set[String]],
-      skewInfo: util.Map[String, util.List[AnyRef]] = null): FlinkStatistic = {
-    if (uniqueKeys == null && skewInfo == null) {
-      UNKNOWN
-    } else {
-      new FlinkStatistic(None, uniqueKeys, skewInfo)
-    }
-  }
+  def builder(): Builder = new Builder
 
-  /**
-    * Returns a FlinkStatistic with given table statistics and uniqueKeys.
-    *
-    * @param tableStats The table statistics.
-    * @param uniqueKeys unique keys of table.
-    *                   null means miss this information;
-    *                   empty set means does not exist unique key of the table;
-    *                   non-empty set means set of the unique keys.
-    * @param skewInfo statistics of skewedColNames and skewedColValues.
-    * @return The generated FlinkStatistic
-    */
-  def of(
-      tableStats: TableStats,
-      uniqueKeys: util.Set[_ <: util.Set[String]],
-      skewInfo: util.Map[String, util.List[AnyRef]]): FlinkStatistic = {
-    if (tableStats == null && uniqueKeys == null && skewInfo == null) {
-      UNKNOWN
-    } else {
-      new FlinkStatistic(Option(tableStats), uniqueKeys, skewInfo)
-    }
-  }
-
-  /**
-    * Returns a FlinkStatistic with given table uniqueKeys.
-    *
-    * @param uniqueKeys unique keys of table.
-    *                   null means miss this information;
-    *                   empty set means does not exist unique key of the table;
-    *                   non-empty set means set of the unique keys.
-    * @param monotonicity the monotonicity of each field.
-    * @return The generated FlinkStatistic
-    */
-  def of(
-      uniqueKeys: util.Set[_ <: util.Set[String]],
-      monotonicity: RelModifiedMonotonicity): FlinkStatistic = {
-    if (uniqueKeys == null && monotonicity == null) {
-      UNKNOWN
-    } else {
-      new FlinkStatistic(None, uniqueKeys, null, monotonicity)
-    }
-  }
 }

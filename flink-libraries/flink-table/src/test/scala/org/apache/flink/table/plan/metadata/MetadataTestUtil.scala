@@ -77,6 +77,9 @@ object MetadataTestUtil {
   }
 
   def createRootSchemaWithCommonTable(): SchemaPlus = {
+    val statisticWithUniqueKeys = (key: util.Set[_ <: util.Set[String]]) =>
+      FlinkStatistic.builder.uniqueKeys(key).build()
+
     val rootSchema = CalciteSchema.createRootSchema(true, false).plus()
     val types = Array(DataTypes.INT, DataTypes.DOUBLE).asInstanceOf[Array[DataType]]
     val tableSchema = new TableSchema(
@@ -129,7 +132,7 @@ object MetadataTestUtil {
     }
     val uniqueKeysOfT2: util.Set[util.Set[String]] = ImmutableSet.of()
     rootSchema.add("t2",
-      new TestTableSourceTable(ts2, FlinkStatistic.of(uniqueKeysOfT2)))
+      new TestTableSourceTable(ts2, statisticWithUniqueKeys(uniqueKeysOfT2)))
 
     val ts3 = new TableSource {
       override def getReturnType: DataType =
@@ -141,7 +144,7 @@ object MetadataTestUtil {
       override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
     }
     val uniqueKeysOfT3 = ImmutableSet.of(ImmutableSet.of("id"))
-    rootSchema.add("t3", new TestTableSourceTable(ts3, FlinkStatistic.of(uniqueKeysOfT3)))
+    rootSchema.add("t3", new TestTableSourceTable(ts3, statisticWithUniqueKeys(uniqueKeysOfT3)))
 
     val ts4 = new TableSource {
       override def getReturnType: DataType =
@@ -197,7 +200,7 @@ object MetadataTestUtil {
       override def getTableSchema: TableSchema = TableSchemaUtil.fromDataType(getReturnType)
     }
     val uniqueKeysOfT7 = ImmutableSet.of(ImmutableSet.of("a", "b"), ImmutableSet.of("a"))
-    rootSchema.add("t7", new TestTableSourceTable(ts7, FlinkStatistic.of(uniqueKeysOfT7)))
+    rootSchema.add("t7", new TestTableSourceTable(ts7, statisticWithUniqueKeys(uniqueKeysOfT7)))
 
     val colStatsOfT8 = Map[java.lang.String, ColumnStats](
       "id" -> ColumnStats(80L, 0L, 8D, 8, 180, 101),
@@ -242,7 +245,7 @@ object MetadataTestUtil {
     }
     val uniqueKeysOfTStudent = ImmutableSet.of(ImmutableSet.of("id"))
     rootSchema.add("student",
-      new TestTableSourceTable(tStudent, FlinkStatistic.of(uniqueKeysOfTStudent)))
+      new TestTableSourceTable(tStudent, statisticWithUniqueKeys(uniqueKeysOfTStudent)))
 
     val timeTableSchema = new TableSchema(
       Array("a", "b", "c", "proctime", "rowtime"),
@@ -294,7 +297,9 @@ object MetadataTestUtil {
       override def getTableSchema: TableSchema = timeTableSchema1
     }
     rootSchema.add("temporalTable1",
-      new TestTableSourceTable(timeSourceWithUniqueKeys, FlinkStatistic.of(uniqueKeysOfTimeSource)))
+      new TestTableSourceTable(
+        timeSourceWithUniqueKeys,
+        statisticWithUniqueKeys(uniqueKeysOfTimeSource)))
 
     val bigTimeSource = new TableSource {
       override def getReturnType: DataType =
