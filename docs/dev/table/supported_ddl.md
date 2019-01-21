@@ -1,5 +1,5 @@
 ---
-title: "Supported SQL DDL Source & Sinks (Not ready)"
+title: "SQL Sources & Sinks"
 nav-parent_id: tableapi
 nav-pos: 35
 ---
