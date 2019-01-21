@@ -101,10 +101,14 @@ public class JobTaskManagersHandler extends AbstractTaskManagerHandler<RestfulGa
 			for (AccessExecutionJobVertex vertex : executionGraph.getVerticesTopologically()) {
 				for (AccessExecutionVertex task : vertex.getTaskVertices()) {
 					TaskManagerLocation taskManagerLocation = task.getCurrentAssignedResourceLocation();
-					ResourceID tmId = taskManagerLocation.getResourceID();
-					TaskManagerInfo taskManagerInfo = resourceId2taskManagerInfo.get(tmId.toString());
-					if (taskManagerInfo != null) {
-						jobTaskManagerInfos.add(taskManagerInfo);
+					if (taskManagerLocation == null) {
+						continue;
+					} else {
+						ResourceID tmId = taskManagerLocation.getResourceID();
+						TaskManagerInfo taskManagerInfo = resourceId2taskManagerInfo.get(tmId.toString());
+						if (taskManagerInfo != null) {
+							jobTaskManagerInfos.add(taskManagerInfo);
+						}
 					}
 				}
 			}

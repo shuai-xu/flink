@@ -85,8 +85,12 @@ public class JobTaskManagersComponentMetricsHandler extends AbstractJobComponent
 		for (AccessExecutionJobVertex vertex : executionGraph.getVerticesTopologically()) {
 			for (AccessExecutionVertex task : vertex.getTaskVertices()) {
 				TaskManagerLocation taskManagerLocation = task.getCurrentAssignedResourceLocation();
-				ResourceID tmId = taskManagerLocation.getResourceID();
-				taskManagerIds.add(tmId.getResourceIdString());
+				if (taskManagerLocation == null) {
+					continue;
+				} else {
+					ResourceID tmId = taskManagerLocation.getResourceID();
+					taskManagerIds.add(tmId.getResourceIdString());
+				}
 			}
 		}
 		return taskManagerIds;
