@@ -485,7 +485,7 @@ StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
 Table result = ...
 
 // create a TableSink
-TableSink sink = new CsvTableSink("/path/to/file", fieldDelim = "|");
+TableSink sink = new CsvTableSink("/path/to/file", "|");
 
 // METHOD 1:
 //   Emit the result Table to the TableSink via the writeToSink() method

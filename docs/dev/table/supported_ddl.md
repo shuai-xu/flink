@@ -77,7 +77,7 @@ CREATE TABLE Orders (
 
 ### HBase Connector
 #### Support Matrix
-| Mode \ Type | Source | Sink | Temporal Join |
+| Mode | Source | Sink | Temporal Join |
 | --- | --- | --- | --- |
 | Batch | I | Y | Y |
 | Streaming | N | Y | Y |
@@ -96,7 +96,7 @@ CREATE TABLE testSinkTable (
      `` `family3.col2` `` DATE,
      `` `family3.col3` `` BIGINT,
      PRIMARY KEY(ROWKEY)
-) WIHT {
+) WITH {
     type='HBASE',
     connector.property-version='1.4.3',
     hbase.zookeeper.quorum='test_hostname:2181'
@@ -114,4 +114,114 @@ CREATE TABLE testSinkTable (
 
 #### Optional Configuration
 * **`hbase.*`** : support all the parameters that have the 'hbase.' prefix, e.g., 'hbase.client.operation.timeout'.
+
+### PARQUET Connector
+#### Support Matrix
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th class="text-left">Stream Mode</th>
+      <th class="text-left">Source</th>
+      <th class="text-left">Sink</th>
+      <th class="text-left">Temporal Join</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th class="text-left"><strong>Batch</strong></th>
+      <th class="text-left">Y</th>
+      <th class="text-left">Y</th>
+      <th class="text-left">I</th>
+    </tr>
+    <tr>
+      <th class="text-left"><strong>Streaming</strong></th>
+      <th class="text-left">N</th>
+      <th class="text-left">N</th>
+      <th class="text-left">N</th>
+    </tr>      
+  </tbody>
+</table>
+
+**Legend**:
+- Y: support
+- N: not support
+- I: incoming soon
+
+{% highlight sql %}
+CREATE TABLE testSinkTable (
+     `` `family1.col1` `` VARCHAR,
+     `` `family2.col1` `` INTEGER,
+     `` `family2.col2` `` VARCHAR
+) WITH {
+    type='PARQUET',
+    filePath='schema://file1/file2.csv'
+}
+
+{% endhighlight %}
+
+#### Required Configuration
++ **type** : use `PARQUET` declare this data source is a parquet format.
++ **filePath** : the path to write the data to or consume from.
+
+#### Optional Configuration
++ **enumerateNestedFiles** : If to read all the data files from `filePath` recursively, default to be `true`. This only works for table source.
++ **writeMode** : If to override the file if there is already a file same name to the path to write to. Default to be `no_overwrite`, which means the file would not be overridden, so an error will thrown out if there exists same name files. This only works for table sink.
++ **compressionCodecName**: The compression codec of the parquet format, the options are `uncompressed`/`snappy`/`gzip`/`lzo` and default to be `snappy`. This only works for table sink.
+
+### ORC Connector
+#### Support Matrix
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th class="text-left">Stream Mode</th>
+      <th class="text-left">Source</th>
+      <th class="text-left">Sink</th>
+      <th class="text-left">Temporal Join</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th class="text-left"><strong>Batch</strong></th>
+      <th class="text-left">Y</th>
+      <th class="text-left">Y</th>
+      <th class="text-left">I</th>
+    </tr>
+    <tr>
+      <th class="text-left"><strong>Streaming</strong></th>
+      <th class="text-left">N</th>
+      <th class="text-left">N</th>
+      <th class="text-left">N</th>
+    </tr>      
+  </tbody>
+</table>
+
+**Legend**:
+- Y: support
+- N: not support
+- I: incoming soon
+
+{% highlight sql %}
+CREATE TABLE testSinkTable (
+     `` `family1.col1` `` VARCHAR,
+     `` `family2.col1` `` INTEGER,
+     `` `family2.col2` `` VARCHAR,
+     primary key(`` `family1.col1` ``)
+) WITH {
+    type='ORC',
+    filePath='schema://file1/file2.csv'
+}
+
+{% endhighlight %}
+
+#### Required Configuration
++ **type** : use `ORC` declare this data source is a ORC format.
++ **filePath** : the path to write the data to or consume from.
+
+#### Optional Configuration
++ **enumerateNestedFiles** : If to read all the data files from `filePath` recursively, default to be `true`. This only works for table source.
++ **writeMode** : If to override the file if there is already a file same name to the path to write to. Default to be `no_overwrite`, which means the file would not be overridden, so an error will thrown out if there exists same name files. This only works for table sink.
++ **compressionCodecName**: The compression codec of the orc format, the options are `uncompressed`/`snappy`/`gzip`/`lzo` and default to be `snappy`. This only works for table sink.
+
 
