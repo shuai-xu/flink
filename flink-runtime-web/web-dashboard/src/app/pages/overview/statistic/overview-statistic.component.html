@@ -55,11 +55,11 @@
     </div>
     <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="6" [nzXl]="6" class="col">
       <nz-card class="no-head-bottom" [nzBordered]="false" nzTitle="Available CPU Cores" [nzLoading]="isLoading">
-        <div class="total">{{ statistic['available-resources'].cpuCores | number:'1.0-0' }}</div>
+        <div class="total">{{ statistic['available-resources'].cpuCores | number:'1.0-2' }}</div>
         <div class="footer">
           <div class="field">
             <span>Total CPU Cores</span>
-            <span>{{ statistic['total-resources'].cpuCores | number:'1.0-0' }}</span>
+            <span>{{ statistic['total-resources'].cpuCores | number:'1.0-2' }}</span>
           </div>
         </div>
       </nz-card>

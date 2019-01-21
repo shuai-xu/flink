@@ -28,6 +28,7 @@
       <th>Heap MEM</th>
       <th>Native MEM</th>
       <th>Network MEM</th>
+      <th>Managed MEM</th>
     </tr>
   </thead>
   <tbody>
@@ -35,15 +36,15 @@
       <tr>
         <td nzShowExpand [(nzExpand)]="data.expand"></td>
         <td>{{data.start_time | nzHumanizeDate: 'yyyy-MM-dd HH:mm:ss'}}</td>
-        <td>{{data.resource_profile.cpu_cores | number:'1.0-1' | nzHumanizeCheckNull}}</td>
+        <td>{{data.resource_profile.cpu_cores | number:'1.0-2' | nzHumanizeCheckNull}}</td>
         <td>{{data.resource_profile.direct_memory  | nzHumanizeBytes | nzHumanizeCheckNull}}</td>
         <td>{{data.resource_profile.heap_memory | nzHumanizeBytes | nzHumanizeCheckNull}}</td>
         <td>{{data.resource_profile.native_memory | nzHumanizeBytes | nzHumanizeCheckNull}}</td>
         <td>{{data.resource_profile.network_memory | nzHumanizeBytes | nzHumanizeCheckNull}}</td>
+        <td>{{data.resource_profile.managed_memory | nzHumanizeBytes | nzHumanizeCheckNull}}</td>
       </tr>
       <tr [nzExpand]="data.expand">
-        <td></td>
-        <td colspan="6">
+        <td colspan="8">
           <nz-table
             [nzSize]="'small'"
             class="no-border small"

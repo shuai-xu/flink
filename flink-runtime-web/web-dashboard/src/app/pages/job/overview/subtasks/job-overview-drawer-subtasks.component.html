@@ -62,12 +62,12 @@
       </td>
       <td>
         <span *ngIf="task.metrics['tps-complete'];else loadingTemplate">
-          {{ task.metrics['tps'] | number:'1.0-0' | nzHumanizeCheckNull }}
+          {{ task.metrics['tps'] | number:'1.0-1' | nzHumanizeCheckNull }}
         </span>
       </td>
       <td>
         <span *ngIf="task.metrics['delay-complete'];else loadingTemplate">
-          {{ task.metrics['delay'] | number:'1.0-0' | nzHumanizeCheckNull }}
+          {{ task.metrics['delay'] | number:'1.0-1' | nzHumanizeCheckNull }}
         </span>
       </td>
       <td>
@@ -77,7 +77,7 @@
       </td>
       <td>
         <span *ngIf="task.metrics['read-records-complete'];else loadingTemplate">
-          {{ task.metrics['read-records'] | number:'1.0-0' | nzHumanizeCheckNull}}
+          {{ task.metrics['read-records'] | number:'1.0-1' | nzHumanizeCheckNull}}
         </span>
       </td>
       <td>
@@ -87,7 +87,7 @@
       </td>
       <td>
         <span *ngIf="task.metrics['write-records-complete'];else loadingTemplate">
-          {{ task.metrics['write-records'] | number:'1.0-0' | nzHumanizeCheckNull }}
+          {{ task.metrics['write-records'] | number:'1.0-1' | nzHumanizeCheckNull }}
         </span>
       </td>
       <td>{{ task.attempt + 1 }}</td>

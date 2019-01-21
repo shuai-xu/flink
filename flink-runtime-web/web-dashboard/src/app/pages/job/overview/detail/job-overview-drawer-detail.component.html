@@ -68,7 +68,7 @@
           <nz-form-control [nzSpan]="15">
             <nz-form-text>
             <span *ngIf="node.detail.metrics['tps-complete'];else loadingTemplate">
-              {{ node.detail.metrics['tps'] | number:'1.0-0' | nzHumanizeCheckNull }}
+              {{ node.detail.metrics['tps'] | number:'1.0-1' | nzHumanizeCheckNull }}
             </span>
             </nz-form-text>
           </nz-form-control>
@@ -90,7 +90,7 @@
           <nz-form-control [nzSpan]="15">
             <nz-form-text>
             <span *ngIf="node.detail.metrics['write-records-complete'];else loadingTemplate">
-              {{ node.detail.metrics['write-records'] | number:'1.0-0' | nzHumanizeCheckNull}}
+              {{ node.detail.metrics['write-records'] | number:'1.0-1' | nzHumanizeCheckNull}}
             </span>
             </nz-form-text>
           </nz-form-control>
@@ -110,7 +110,7 @@
           <nz-form-control [nzSpan]="15">
             <nz-form-text>
             <span *ngIf="node.detail.metrics['read-records-complete'];else loadingTemplate">
-              {{ node.detail.metrics['read-records'] | number:'1.0-0' | nzHumanizeCheckNull}}
+              {{ node.detail.metrics['read-records'] | number:'1.0-1' | nzHumanizeCheckNull}}
             </span>
             </nz-form-text>
           </nz-form-control>
@@ -140,7 +140,7 @@
           <nz-form-control [nzSpan]="15">
             <nz-form-text>
             <span *ngIf="node.detail.metrics['delay-complete'];else loadingTemplate">
-              {{ node.detail.metrics['delay'] | number:'1.0-0' | nzHumanizeCheckNull }} ms
+              {{ node.detail.metrics['delay'] | number:'1.0-1' | nzHumanizeCheckNull }} ms
             </span>
             </nz-form-text>
           </nz-form-control>

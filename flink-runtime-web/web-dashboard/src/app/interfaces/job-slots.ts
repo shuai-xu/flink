@@ -20,6 +20,7 @@ export interface ResourceProfile {
   direct_memory: number;
   native_memory: number;
   network_memory: number;
+  managed_memory: number;
 }
 
 export interface Task {
