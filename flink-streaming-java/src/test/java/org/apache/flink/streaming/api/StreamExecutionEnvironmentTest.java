@@ -25,10 +25,12 @@ import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.DiscardingSink;
+import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.streaming.api.functions.source.FromElementsFunction;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.api.functions.source.StatefulSequenceSource;
 import org.apache.flink.streaming.api.graph.StreamGraph;
+import org.apache.flink.streaming.api.graph.StreamGraphGenerator;
 import org.apache.flink.streaming.api.operators.AbstractUdfStreamOperator;
 import org.apache.flink.streaming.api.operators.StreamOperator;
 import org.apache.flink.util.Collector;
@@ -36,6 +38,10 @@ import org.apache.flink.util.SplittableIterator;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -46,10 +52,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
 
 /**
  * Tests for {@link StreamExecutionEnvironment}.
  */
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({StreamGraphGenerator.class, StreamGraphGenerator.Context.class})
 public class StreamExecutionEnvironmentTest {
 
 	@Test
@@ -228,6 +237,43 @@ public class StreamExecutionEnvironmentTest {
 	}
 
 	@Test
+	public void testJobType() {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+		StreamGraphGenerator.Context streamingContext = new StreamGraphGenerator.Context();
+		StreamGraphGenerator.Context batchContext = new StreamGraphGenerator.Context();
+		StreamGraph streamingGraph = new StreamGraph(null, null, 1, 0, null);
+		StreamGraph batchGraph = new StreamGraph(null, null, 1, 0, null);
+
+		PowerMockito.mockStatic(StreamGraphGenerator.class);
+		PowerMockito.mockStatic(StreamGraphGenerator.Context.class);
+		PowerMockito.when(StreamGraphGenerator.Context.buildStreamProperties(env)).thenReturn(streamingContext);
+		PowerMockito.when(StreamGraphGenerator.Context.buildBatchProperties(env)).thenReturn(batchContext);
+		PowerMockito.when(StreamGraphGenerator.generate(any(StreamGraphGenerator.Context.class), any(List.class)))
+				.thenAnswer(var1 -> {
+					StreamGraphGenerator.Context context = var1.getArgumentAt(0, StreamGraphGenerator.Context.class);
+					if (streamingContext.equals(context)) {
+						return streamingGraph;
+					} else if (batchContext.equals(context)) {
+						return batchGraph;
+					} else {
+						return null;
+					}
+				});
+
+		{
+			env.fromElements(1, 10).addSink(new NoOpSinkFunction());
+			assertEquals(streamingGraph, env.getStreamGraph());
+		}
+
+		{
+			env.fromElements(1, 10).addSink(new NoOpSinkFunction());
+			env.setJobType(StreamExecutionEnvironment.JobType.BATCH);
+			assertEquals(batchGraph, env.getStreamGraph());
+		}
+	}
+
+	@Test
 	public void testCheckpointingOnOff() {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		assertFalse(env.getCheckpointConfig().isCheckpointingEnabled());
@@ -303,5 +349,9 @@ public class StreamExecutionEnvironmentTest {
 		public SubClass(int num, String string) {
 			super(num, string);
 		}
+	}
+
+	static class NoOpSinkFunction implements SinkFunction<Integer> {
+
 	}
 }

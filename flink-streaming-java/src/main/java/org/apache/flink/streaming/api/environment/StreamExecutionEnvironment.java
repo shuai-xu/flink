@@ -156,6 +156,8 @@ public abstract class StreamExecutionEnvironment {
 
 	private ResourceSpec defaultResources = null;
 
+	private JobType jobType = JobType.STREAMING;
+
 	/** The state backend used for storing k/v state and state snapshots. */
 	private StateBackend defaultStateBackend;
 
@@ -391,7 +393,26 @@ public abstract class StreamExecutionEnvironment {
 		return this;
 	}
 
-	// ------------------------------------------------------------------------
+	/**
+	 * Sets the job type, the default value is {@link JobType#STREAMING}.
+	 * @param jobType the job type
+	 */
+	@Internal
+	public StreamExecutionEnvironment setJobType(JobType jobType) {
+		this.jobType = jobType;
+		return this;
+	}
+
+	/**
+	 * Clears all transformations in this environment.
+	 */
+	@Internal
+	public StreamExecutionEnvironment clearTransformations() {
+		this.transformations.clear();
+		return this;
+	}
+
+// ------------------------------------------------------------------------
 	//  Checkpointing Settings
 	// ------------------------------------------------------------------------
 
@@ -1921,7 +1942,14 @@ public abstract class StreamExecutionEnvironment {
 		if (transformations.size() <= 0) {
 			throw new IllegalStateException("No operators defined in streaming topology. Cannot execute.");
 		}
-		return StreamGraphGenerator.generate(StreamGraphGenerator.Context.buildStreamProperties(this), transformations);
+
+		if (JobType.STREAMING.equals(jobType)) {
+			return StreamGraphGenerator.generate(StreamGraphGenerator.Context.buildStreamProperties(this), transformations);
+		} else if (JobType.BATCH.equals(jobType)) {
+			return StreamGraphGenerator.generate(StreamGraphGenerator.Context.buildBatchProperties(this), transformations);
+		} else {
+			throw new UnsupportedOperationException("Not support the " + jobType + " job type");
+		}
 	}
 
 	/**
@@ -2222,5 +2250,15 @@ public abstract class StreamExecutionEnvironment {
 	 */
 	public void registerCachedFile(String filePath, String name, boolean executable) {
 		this.cacheFile.add(new Tuple2<>(name, new DistributedCache.DistributedCacheEntry(filePath, executable)));
+	}
+
+	/**
+	 * Defines the type of a job.
+	 */
+	@Internal
+	public enum JobType {
+		STREAMING,
+
+		BATCH
 	}
 }

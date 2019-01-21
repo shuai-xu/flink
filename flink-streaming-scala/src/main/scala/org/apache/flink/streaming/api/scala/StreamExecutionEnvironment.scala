@@ -33,6 +33,7 @@ import org.apache.flink.configuration.Configuration
 import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings
 import org.apache.flink.runtime.state.AbstractStateBackend
 import org.apache.flink.runtime.state.StateBackend
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment.JobType
 import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JavaEnv}
 import org.apache.flink.streaming.api.functions.source._
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext
@@ -163,6 +164,16 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
 
   def setDefaultResources(resources: ResourceSpec): StreamExecutionEnvironment = {
     javaEnv.setDefaultResources(resources)
+    this
+  }
+
+  def setJobType(jobType: JobType): StreamExecutionEnvironment = {
+    javaEnv.setJobType(jobType)
+    this
+  }
+
+  def clearTransformations: StreamExecutionEnvironment = {
+    javaEnv.clearTransformations();
     this
   }
 
