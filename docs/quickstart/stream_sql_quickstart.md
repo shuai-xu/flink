@@ -62,7 +62,7 @@ $ ./bin/sql-client.sh embedded
 
 You can see the welcome message for flink sql client.
 
-Paste the following sql ddl text into the shell.
+Paste the following sql ddl text into the shell. (For more information about sql ddl refer to [SQL]({{ site.baseurl }}/dev/table/sql.html) and [Supported DDL]({{ site.baseurl }}/dev/table/supported_ddl.html))
 
 {% highlight bash %}
 create table csv_source (
@@ -129,7 +129,8 @@ $ ./bin/sql-client.sh embedded
 
 You can see the welcome message for flink sql client.
 
-Paste the following sql ddl text into the shell.
+Paste the following sql ddl text into the shell. (For more information about sql ddl refer to [SQL]({{ site.baseurl }}/dev/table/sql.html) and [Supported DDL]({{ site.baseurl }}/dev/table/supported_ddl.html))
+
 <b>Note</b>: Replace the **bootstrap.servers** and **group.id** with your own environment.
 
 {% highlight bash %}
