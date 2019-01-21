@@ -31,6 +31,7 @@ import org.apache.flink.streaming.api.operators.StreamingRuntimeContext;
 import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaMetricWrapper;
 import org.apache.flink.streaming.connectors.kafka.partitioner.FlinkKafkaDelegatePartitioner;
 import org.apache.flink.streaming.connectors.kafka.partitioner.FlinkKafkaPartitioner;
+import org.apache.flink.streaming.connectors.kafka.utils.KafkaUtils;
 import org.apache.flink.streaming.util.serialization.KeyedSerializationSchema;
 import org.apache.flink.util.NetUtils;
 import org.apache.flink.util.SerializableObject;
@@ -202,7 +203,7 @@ public abstract class FlinkKafkaProducerBase<IN> extends RichSinkFunction<IN> im
 	 */
 	@VisibleForTesting
 	protected <K, V> KafkaProducer<K, V> getKafkaProducer(Properties props) {
-		return new KafkaProducer<>(props);
+		return KafkaUtils.createKafkaProducer(props);
 	}
 
 	// ----------------------------------- Utilities --------------------------

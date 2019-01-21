@@ -30,6 +30,7 @@ import org.apache.flink.streaming.connectors.kafka.internals.AbstractFetcher;
 import org.apache.flink.streaming.connectors.kafka.internals.AbstractPartitionDiscoverer;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicsDescriptor;
+import org.apache.flink.streaming.connectors.kafka.utils.KafkaUtils;
 import org.apache.flink.streaming.util.serialization.KeyedDeserializationSchema;
 import org.apache.flink.streaming.util.serialization.KeyedDeserializationSchemaWrapper;
 import org.apache.flink.util.SerializedValue;
@@ -247,8 +248,7 @@ public class FlinkKafkaConsumer010<T> extends FlinkKafkaConsumer09<T> {
 
 		// use a short-lived consumer to fetch the offsets;
 		// this is ok because this is a one-time operation that happens only on startup
-		KafkaConsumer<?, ?> consumer = new KafkaConsumer(properties);
-
+		KafkaConsumer<?, ?> consumer = KafkaUtils.createKafkaConsumer(properties);
 		Map<KafkaTopicPartition, Long> result = new HashMap<>(partitions.size());
 		for (Map.Entry<TopicPartition, OffsetAndTimestamp> partitionToOffset :
 				consumer.offsetsForTimes(partitionOffsetsRequest).entrySet()) {

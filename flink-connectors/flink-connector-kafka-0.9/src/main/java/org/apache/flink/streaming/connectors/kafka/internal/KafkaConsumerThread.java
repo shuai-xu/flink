@@ -27,6 +27,7 @@ import org.apache.flink.streaming.connectors.kafka.internals.KafkaCommitCallback
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartitionState;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartitionStateSentinel;
 import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaMetricWrapper;
+import org.apache.flink.streaming.connectors.kafka.utils.KafkaUtils;
 
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -536,7 +537,7 @@ public class KafkaConsumerThread extends Thread {
 	}
 
 	public KafkaConsumer<byte[], byte[]> getConsumer() {
-		return new KafkaConsumer<>(kafkaProperties);
+		return KafkaUtils.createKafkaConsumer(kafkaProperties);
 	}
 
 	// ------------------------------------------------------------------------

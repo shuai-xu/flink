@@ -22,6 +22,7 @@ package org.apache.flink.streaming.connectors.kafka.v2.input;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer011;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumerBase;
 import org.apache.flink.streaming.connectors.kafka.config.StartupMode;
+import org.apache.flink.streaming.connectors.kafka.utils.KafkaUtils;
 import org.apache.flink.streaming.connectors.kafka.v2.KafkaBaseTableSource;
 import org.apache.flink.streaming.connectors.kafka.v2.KafkaMessageDeserialization;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
@@ -71,7 +72,7 @@ public class Kafka011TableSource extends KafkaBaseTableSource {
 		props.putAll(properties);
 		props.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
 		props.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
-		KafkaProducer producer = new KafkaProducer(props);
+		KafkaProducer producer = KafkaUtils.createKafkaProducer(props);
 		try {
 			int size = 0;
 			for (String t : topic) {

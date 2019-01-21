@@ -20,6 +20,7 @@ package org.apache.flink.streaming.connectors.kafka.internal;
 
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.streaming.connectors.kafka.utils.KafkaUtils;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -113,7 +114,7 @@ public class FlinkKafkaProducer<K, V> implements Producer<K, V> {
 
 	public FlinkKafkaProducer(Properties properties) {
 		transactionalId = properties.getProperty(ProducerConfig.TRANSACTIONAL_ID_CONFIG);
-		kafkaProducer = new KafkaProducer<>(properties);
+		kafkaProducer = KafkaUtils.createKafkaProducer(properties);
 	}
 
 	// -------------------------------- Simple proxy method calls --------------------------------
