@@ -34,30 +34,32 @@ We use WITH clauses to describe the information necessary to access a external s
 Provided Connectors
 -------------------
 
-<table class="table table-borderd">
-    <thead>
-        <th>Mode \ Type</th>
-        <th>Source</th>
-        <th>Sink</th>
-        <th>Temporal Join</th>
-    </thead>
-    <tbody style="text-align: center; vertical-align: middle;">
-        <tr>
-            <td>Batch</td>
-            <td>Y</td>
-            <td>Y</td>
-            <td>Y</td>
-        </tr>
-        <tr>
-            <td>Streaming</td>
-            <td>Y</td>
-            <td>Y</td>
-            <td>Y</td>
-        </tr>
-    </tbody>
-</table>
-
 ### CSV connector
+#### Support Matrix
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th class="text-left">Stream Mode</th>
+      <th class="text-left">Source</th>
+      <th class="text-left">Sink</th>
+      <th class="text-left">Temporal Join</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th class="text-left"><strong>Batch</strong></th>
+      <th class="text-left">Y</th>
+      <th class="text-left">Y</th>
+      <th class="text-left">Y</th>
+    </tr>
+    <tr>
+      <th class="text-left"><strong>Streaming</strong></th>
+      <th class="text-left">Y</th>
+      <th class="text-left">Y</th>
+      <th class="text-left">Y</th>
+    </tr>      
+  </tbody>
+</table>
 
 {% highlight sql %}
 
@@ -101,27 +103,29 @@ CREATE TABLE Orders (
 ### HBase Connector
 #### Support Matrix
 
-<table class="table table-borderd">
-    <thead>
-        <th>Mode \ Type</th>
-        <th>Source</th>
-        <th>Sink</th>
-        <th>Temporal Join</th>
-    </thead>
-    <tbody style="text-align: center; vertical-align: middle;">
-        <tr>
-            <td>Batch</td>
-            <td>I</td>
-            <td>Y</td>
-            <td>Y</td>
-        </tr>
-        <tr>
-            <td>Streaming</td>
-            <td>N</td>
-            <td>Y</td>
-            <td>Y</td>
-        </tr>
-    </tbody>
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th class="text-left">Stream Mode</th>
+      <th class="text-left">Source</th>
+      <th class="text-left">Sink</th>
+      <th class="text-left">Temporal Join</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th class="text-left"><strong>Batch</strong></th>
+      <th class="text-left">I</th>
+      <th class="text-left">Y</th>
+      <th class="text-left">Y</th>
+    </tr>
+    <tr>
+      <th class="text-left"><strong>Streaming</strong></th>
+      <th class="text-left">N</th>
+      <th class="text-left">Y</th>
+      <th class="text-left">Y</th>
+    </tr>      
+  </tbody>
 </table>
 
 **Legend**:
@@ -161,27 +165,29 @@ CREATE TABLE testSinkTable (
 ### Kafka Connector
 #### Support Matrix
 
-<table class="table table-borderd">
-    <thead>
-        <th>Mode \ Type</th>
-        <th>Source</th>
-        <th>Sink</th>
-        <th>Temporal Join</th>
-    </thead>
-    <tbody style="text-align: center; vertical-align: middle;">
-        <tr>
-            <td>Batch</td>
-            <td>I</td>
-            <td>Y</td>
-            <td>N</td>
-        </tr>
-        <tr>
-            <td>Streaming</td>
-            <td>Y</td>
-            <td>Y</td>
-            <td>N</td>
-        </tr>
-    </tbody>
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th class="text-left">Stream Mode</th>
+      <th class="text-left">Source</th>
+      <th class="text-left">Sink</th>
+      <th class="text-left">Temporal Join</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th class="text-left"><strong>Batch</strong></th>
+      <th class="text-left">I</th>
+      <th class="text-left">Y</th>
+      <th class="text-left">N</th>
+    </tr>
+    <tr>
+      <th class="text-left"><strong>Streaming</strong></th>
+      <th class="text-left">Y</th>
+      <th class="text-left">Y</th>
+      <th class="text-left">N</th>
+    </tr>      
+  </tbody>
 </table>
 
 **Legend**:
@@ -242,11 +248,11 @@ CREATE TABLE kafka_source (
             <td>(Y)</td>
             <td>The regular expression for topic names to read from Kafka. 
             </td> 
-            <td>Should and only should be set if `topic` is not configured.</td>
+            <td>Should and should only be set if `topic` is not configured.</td>
         </tr>
         <tr>
             <td>zookeeper.connect</td>
-            <td>KAFKA08</td>
+            <td><tt>KAFKA08</tt></td>
             <td>Y</td>
             <td>The Zookeeper connect address.</td> 
             <td>The Zookeeper connect address. Only used by Kafka 0.8</td> 
@@ -277,7 +283,7 @@ CREATE TABLE kafka_source (
                     <li><b>Group_OFFSETS</b>: start reading from the last committed offset.</li> 
                     <li><b>LATEST(default)</b>: start reading from the latest offset</li> 
                     <li><b>TIMESTAMP</b>: start reading from the given timestamp (only supported 
-                    in `KAFKA010` and `KAFKA011`)</li>
+                    in <tt>KAFKA010</tt> and <tt>KAFKA011</tt>)</li>
                 </ul>
             </td> 
         </tr> 
