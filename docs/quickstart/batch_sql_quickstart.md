@@ -59,7 +59,7 @@ $ ./bin/sql-client.sh embedded
 
 You can see the welcome message for flink sql client.
 
-Paste the following sql text into the shell.
+Paste the following sql ddl text into the shell.
 
 {% highlight bash %}
 create table pagevisit (
@@ -71,7 +71,10 @@ create table pagevisit (
     type = 'csv',
     path = 'file:///tmp/pagevisit.csv'
 );
+{% endhighlight %}
 
+Press 'Enter' and paste the following sql dml text.
+{% highlight bash %}
 select 
   date_format(visit_time, 'yyyy-MM-dd HH:mm') as `visit_time`,
   count(user_id) as pv, 

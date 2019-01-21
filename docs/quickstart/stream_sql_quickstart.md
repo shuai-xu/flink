@@ -62,7 +62,7 @@ $ ./bin/sql-client.sh embedded
 
 You can see the welcome message for flink sql client.
 
-Paste the following sql text into the shell.
+Paste the following sql ddl text into the shell.
 
 {% highlight bash %}
 create table csv_source (
@@ -71,7 +71,10 @@ create table csv_source (
   type = 'csv',
   path = 'file:///tmp/input.csv'
 );
+{% endhighlight %}
 
+Press 'Enter', then paste the following sql ddl text.
+{% highlight bash %}
 create table csv_sink (
   a varchar,
   c bigint
@@ -80,7 +83,10 @@ create table csv_sink (
   updatemode = 'upsert',
   path = 'file:///tmp/output.csv'
 );
+{% endhighlight %}
 
+Press 'Enter' and paste the following sql dml text.
+{% highlight bash %}
 insert into csv_sink
 select
   a,
@@ -123,7 +129,7 @@ $ ./bin/sql-client.sh embedded
 
 You can see the welcome message for flink sql client.
 
-Paste the following sql text into the shell.
+Paste the following sql ddl text into the shell.
 <b>Note</b>: Replace the **bootstrap.servers** and **group.id** with your own environment.
 
 {% highlight bash %}
@@ -139,7 +145,10 @@ create table kafka_source (
   bootstrap.servers = 'YOUR_BROKER_IP:YOUR_BROKER_PORT',
   `group.id` = 'kafka_consumer_demo_group'
 );
+{% endhighlight %}
 
+Press 'Enter', then paste the following sql dml text. 
+{% highlight bash %}
 select
     date_format (visit_time, 'yyyy-MM-dd HH:mm') as `visit_time`,
     count (user_id) as pv,
