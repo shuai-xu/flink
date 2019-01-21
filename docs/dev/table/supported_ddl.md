@@ -31,8 +31,28 @@ We use WITH clauses to describe the information necessary to access a external s
 Provided Connectors
 -------------------
 
-| **Connector Type**| **Batch?** | **Streaming?** | **Source?** | **Sink?**| **Temporal Join?**
-| `CSV` | Y | Y | Y | Y | Y
+<table class="table table-borderd">
+    <thead>
+        <th>Mode \ Type</th>
+        <th>Source</th>
+        <th>Sink</th>
+        <th>Temporal Join</th>
+    </thead>
+    <tbody style="text-align: center; vertical-align: middle;">
+        <tr>
+            <td>Batch</td>
+            <td>Y</td>
+            <td>Y</td>
+            <td>Y</td>
+        </tr>
+        <tr>
+            <td>Streaming</td>
+            <td>Y</td>
+            <td>Y</td>
+            <td>Y</td>
+        </tr>
+    </tbody>
+</table>
 
 ### CSV connector
 
@@ -77,10 +97,30 @@ CREATE TABLE Orders (
 
 ### HBase Connector
 #### Support Matrix
-| Mode | Source | Sink | Temporal Join |
-| --- | --- | --- | --- |
-| Batch | I | Y | Y |
-| Streaming | N | Y | Y |
+
+<table class="table table-borderd">
+    <thead>
+        <th>Mode \ Type</th>
+        <th>Source</th>
+        <th>Sink</th>
+        <th>Temporal Join</th>
+    </thead>
+    <tbody style="text-align: center; vertical-align: middle;">
+        <tr>
+            <td>Batch</td>
+            <td>I</td>
+            <td>Y</td>
+            <td>Y</td>
+        </tr>
+        <tr>
+            <td>Streaming</td>
+            <td>N</td>
+            <td>Y</td>
+            <td>Y</td>
+        </tr>
+    </tbody>
+</table>
+
 **Legend**:
 - Y: support
 - N: not support
@@ -96,11 +136,11 @@ CREATE TABLE testSinkTable (
      `` `family3.col2` `` DATE,
      `` `family3.col3` `` BIGINT,
      PRIMARY KEY(ROWKEY)
-) WITH {
+) WITH (
     type='HBASE',
     connector.property-version='1.4.3',
     hbase.zookeeper.quorum='test_hostname:2181'
-}
+)
 
 {% endhighlight %}
 
@@ -114,6 +154,214 @@ CREATE TABLE testSinkTable (
 
 #### Optional Configuration
 * **`hbase.*`** : support all the parameters that have the 'hbase.' prefix, e.g., 'hbase.client.operation.timeout'.
+
+### Kafka Connector
+#### Support Matrix
+
+<table class="table table-borderd">
+    <thead>
+        <th>Mode \ Type</th>
+        <th>Source</th>
+        <th>Sink</th>
+        <th>Temporal Join</th>
+    </thead>
+    <tbody style="text-align: center; vertical-align: middle;">
+        <tr>
+            <td>Batch</td>
+            <td>I</td>
+            <td>Y</td>
+            <td>N</td>
+        </tr>
+        <tr>
+            <td>Streaming</td>
+            <td>Y</td>
+            <td>Y</td>
+            <td>N</td>
+        </tr>
+    </tbody>
+</table>
+
+**Legend**:
+- Y: support
+- N: not support
+- I: incoming soon
+
+#### Create Source Tables
+
+{% highlight sql %}
+CREATE TABLE kafka_source (
+     key VARBINARY, 
+     msg VARBINARY, 
+     `topic` VARCHAR, 
+     `partition` INT, 
+     `offset` BIGINT
+) WITH (
+    type = 'KAFKA010',
+    `bootstrap.servers` = 'test_hostname:9092'，
+    `group.id` = 'test-group-id',
+    `topic` = 'source-topic'
+    startupMode = 'EARLIEST'
+)
+{% endhighlight %}
+
+**Note**: At this point, the Kafka source table must be created with the above five columns.
+
+##### Kafka Source Table Configurations in WITH block
+<table class="table table-borderd"> 
+    <thead> 
+        <tr> 
+            <th>Configuration</th>
+            <th>Applicable Connector Version</th>
+            <th>Required</th>
+            <th>Description</th>
+            <th>Note</th> 
+        </tr> 
+    </thead> 
+    <tbody>
+        <tr>
+            <td>type</td>
+            <td>All</td>
+            <td>Y</td>
+            <td>The connector type, including Kafka version.</td> 
+            <td>the valid values are <tt>KAFKA08</tt>, <tt>KAFKA09</tt>, <tt>KAFKA010</tt> or 
+            <tt>KAFKA011</tt></td> 
+        </tr>
+        <tr>
+            <td>topic</td>
+            <td>All</td>
+            <td>(Y)</td>
+            <td>The single topic to read from Kafka</td>
+            <td></td> 
+        </tr> 
+        <tr> 
+            <td>topicPattern</td>
+            <td>All</td>
+            <td>(Y)</td>
+            <td>The regular expression for topic names to read from Kafka. 
+            </td> 
+            <td>Should and only should be set if `topic` is not configured.</td>
+        </tr>
+        <tr>
+            <td>zookeeper.connect</td>
+            <td>KAFKA08</td>
+            <td>Y</td>
+            <td>The Zookeeper connect address.</td> 
+            <td>The Zookeeper connect address. Only used by Kafka 0.8</td> 
+        </tr>
+        <tr>
+            <td>bootstrap.servers</td>
+            <td><tt>KAFKA09</tt>, <tt>KAFKA010</tt>, <tt>KAFKA011</tt></td>
+            <td>Y</td>
+            <td>The Kafka cluster address.</td> 
+            <td>Used by Kafka 0.9 and above</td>
+        </tr>
+        <tr> 
+            <td>group.id</td>
+            <td>All</td>
+            <td>Y</td>
+            <td>The consumer group id.</td> 
+            <td>The consumer group id will be used to commit offsets back to Kafka for 
+            reporting purpose.</td> 
+        </tr>
+        <tr>
+            <td>startupMode</td>
+            <td>All</td> 
+            <td>N</td>
+            <td>Specify the position to start reading from the Kafka topic</td> 
+            <td> 
+                <ul> 
+                    <li><b>EARLIEST</b>: start reading from the first available message.</li> 
+                    <li><b>Group_OFFSETS</b>: start reading from the last committed offset.</li> 
+                    <li><b>LATEST(default)</b>: start reading from the latest offset</li> 
+                    <li><b>TIMESTAMP</b>: start reading from the given timestamp (only supported 
+                    in `KAFKA010` and `KAFKA011`)</li>
+                </ul>
+            </td> 
+        </tr> 
+        <tr> 
+            <td>partitionDiscoveryIntervalMS</td>
+            <td>All</td>
+            <td>N</td>
+            <td>Peoriodically check if there is new partititions added to the topic</td> 
+            <td>The default value is 60 secons.</td> 
+        </tr>
+    </tbody>
+</table>
+
+##### Additional Kafka Source Table Configurations
+When defining a table from Kafka, in the with block, users can also set the configurations 
+supported by Kafka consumer from the corresponding Kafka version. See the following links for 
+all the configurations supported by Kafka consumers.
+
+[KAFKA09](https://kafka.apache.org/090/documentation.html?spm=a2c4g.11186623.2.13.63994d25uXMjnS#newconsumerconfigs)
+
+[KAFKA010](https://kafka.apache.org/0102/documentation.html?spm=a2c4g.11186623.2.14.63994d25jsbGRr#newconsumerconfigs)
+
+[KAFKA011](https://kafka.apache.org/0110/documentation.html?spm=a2c4g.11186623.2.12.63994d25uXMjnS#consumerconfigs)
+
+#### Create Sink Tables
+{% highlight sql %}
+CREATE TABLE kafka_sink (
+    messageKey VARBINARY, 
+    messageValue VARBINARY,
+    PRIMARY KEY (messageKey)) 
+with (
+    type = 'KAFKA010', 
+    topic = 'sink-topic', 
+    `bootstrap.servers` = 'test_hostname:9092', 
+    retries = '3'
+)
+{% endhighlight %}
+
+**Note**: The primary key is mandatory for Kafka table as a sink table.
+
+##### Kafka Sink Table Configurations in WITH block
+<table class="table table-borderd"> 
+    <thead> 
+        <tr> 
+            <th>Configuration</th>
+            <th>Applicable Connector Version</th>
+            <th>Required</th>
+            <th>Description</th>
+            <th>Note</th> 
+        </tr> 
+    </thead> 
+    <tbody>
+        <tr>
+            <td>type</td>
+            <td>All</td>
+            <td>Y</td>
+            <td>The connector type, including Kafka version.</td> 
+            <td>the valid values are <tt>KAFKA08</tt>, <tt>KAFKA09</tt>, <tt>KAFKA010</tt> or 
+            <tt>KAFKA011</tt></td> 
+        </tr>
+        <tr>
+            <td>topic</td>
+            <td>All</td>
+            <td>Y</td>
+            <td>The single Kafka topic to producer message</td>
+            <td></td> 
+        </tr> 
+        <tr>
+            <td>bootstrap.servers</td>
+            <td>All</td>
+            <td>Y</td>
+            <td>The Kafka cluster address.</td> 
+            <td>Used by Kafka 0.9 and above</td>
+        </tr>
+    </tbody>
+</table>
+
+##### Additional Sink Table Configurations
+When defining a table from Kafka, in the with block, users can also set the configurations 
+supported by Kafka producer from the corresponding Kafka version. See the following links for 
+all the configurations supported by Kafka producers.
+
+[KAFKA09](https://kafka.apache.org/090/documentation.html?spm=a2c4g.11186623.2.13.1f02740b30T3oC#producerconfigs)
+
+[KAFKA010](https://kafka.apache.org/0102/documentation.html?spm=a2c4g.11186623.2.13.1f02740b30T3oC#producerconfigs)
+
+[KAFKA011](https://kafka.apache.org/0110/documentation.html?spm=a2c4g.11186623.2.13.1f02740b30T3oC#producerconfigs)
 
 ### PARQUET Connector
 #### Support Matrix
