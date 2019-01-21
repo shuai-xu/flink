@@ -65,10 +65,15 @@ $ ./bin/start-scala-shell.sh --help
 
 ## Setup
 
+If the standalone cluster has already started, you need to stop it first.
+{% highlight bash %}
+$ ./bin/stop-cluster.sh
+{% endhighlight %}
+
 Run the shell with an integrated Flink standalone cluster just execute:
 
 {% highlight bash %}
-bin/start-scala-shell.sh local
+$ ./bin/start-scala-shell.sh local
 {% endhighlight %}
 
 You will see the welcome message when start shell success.
@@ -139,9 +144,7 @@ Scala> val text = benv.fromElements(
   "Whether 'tis nobler in the mind to suffer",
   "The slings and arrows of outrageous fortune",
   "Or to take arms against a sea of troubles,")
-Scala> val counts = text
-    .flatMap { _.toLowerCase.split("\\W+") }
-    .map { (_, 1) }.groupBy(0).sum(1)
+Scala> val counts = text.flatMap { _.toLowerCase.split("\\W+") }.map { (_, 1) }.groupBy(0).sum(1)
 Scala> counts.print()
 {% endhighlight %}
 
@@ -177,11 +180,14 @@ Scala> val data = Seq(
 Scala> val t = btenv.fromCollection(data).as ('country, 'color, 'amount)
 Scala> val t1 = t.filter('amount < 100)
 Scala> t1.cache
+Scala> // t1 is cached after it is generated for the first time.
 Scala> val x = t1.print
 
+Scala> // When t1 is used again to generate t2, it may not be regenerated.
 Scala> val t2 = t1.groupBy('country).select('country, 'amount.sum as 'sum)
 Scala> val res2 = t2.print
 
+Scala> // Similarly when t1 is used again to generate t2, it may not be regenerated.
 Scala> val t3 = t1.groupBy('color).select('color, 'amount.avg as 'avg)
 Scala> val res3 = t3.print
 {% endhighlight %}

@@ -54,9 +54,9 @@ Scala> val text = benv.fromElements(
   "Whether 'tis nobler in the mind to suffer",
   "The slings and arrows of outrageous fortune",
   "Or to take arms against a sea of troubles,")
-Scala> val counts = text
-    .flatMap { _.toLowerCase.split("\\W+") }
-    .map { (_, 1) }.groupBy(0).sum(1)
+Scala> val counts = text.
+    flatMap { _.toLowerCase.split("\\W+") }.
+    map { (_, 1) }.groupBy(0).sum(1)
 Scala> counts.print()
 {% endhighlight %}
 
@@ -78,9 +78,9 @@ Scala> val textStreaming = senv.fromElements(
   "Whether 'tis nobler in the mind to suffer",
   "The slings and arrows of outrageous fortune",
   "Or to take arms against a sea of troubles,")
-Scala> val countsStreaming = textStreaming
-    .flatMap { _.toLowerCase.split("\\W+") }
-    .map { (_, 1) }.keyBy(0).sum(1)
+Scala> val countsStreaming = textStreaming.
+    flatMap { _.toLowerCase.split("\\W+") }.
+    map { (_, 1) }.keyBy(0).sum(1)
 Scala> countsStreaming.print()
 Scala> senv.execute("Streaming Wordcount")
 {% endhighlight %}

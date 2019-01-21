@@ -125,7 +125,7 @@ The {% gh_link /flink-examples/flink-examples-batch/src/main/scala/org/apache/fl
 To run the WordCount example, issue the following command:
 
 {% highlight bash %}
-$ ./bin/flink run ./examples/streaming/WordCount.jar
+$ ./bin/flink run ./examples/batch/WordCount.jar
 {% endhighlight %}
 
 <a href="{{ site.baseurl }}/page/img/quickstart-example/quickstart-batch-example-wordcount-run.png" ><img class="img-responsive" src="{{ site.baseurl }}/page/img/quickstart-example/quickstart-batch-example-wordcount-run.png" alt="SQL Example: WordCount run"/></a>

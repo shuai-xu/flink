@@ -77,6 +77,11 @@ DataStream<Tuple2<String, Integer>> counts = text.flatMap(new Tokenizer()).setPa
 
 counts.writeAsText(params.get("output"));
 
+// execute program
+env.execute("Streaming WordCount");
+
+
+///////////////////////////////////////////////////////////////////////////////////////
 // User-defined functions
 public static final class Tokenizer implements FlatMapFunction<String, Tuple2<String, Integer>> {
     private static final long serialVersionUID = 1L;
@@ -95,9 +100,6 @@ public static final class Tokenizer implements FlatMapFunction<String, Tuple2<St
         }
     }
 }
-
-// execute program
-env.execute("Streaming WordCount");
 {% endhighlight %}
 
 The {% gh_link flink-examples/flink-examples-streaming/src/main/java/org/apache/flink/streaming/examples/wordcount/WordCount.java  "WordCount example" %} implements the above described algorithm with input parameters: `--input <path> --output <path>`. As test data, any text file will do.
