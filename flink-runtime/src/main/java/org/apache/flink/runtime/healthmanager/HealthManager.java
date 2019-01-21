@@ -84,6 +84,7 @@ public class HealthManager {
 
 		this.metricGroup = new HealthManagerMetricGroup(metricRegistry);
 
+		LOGGER.info("Starting Health manager with rest server:" + restServerAddress);
 		this.restServerClient = new RestServerClientImpl(restServerAddress, config, executorService);
 
 		this.metricProvider = new RestServerMetricProvider(config, restServerClient, executorService);

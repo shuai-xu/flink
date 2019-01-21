@@ -37,6 +37,7 @@ public class TaskMetricSubscription extends MetricSubscription<Tuple2<Long, Doub
 	private JobID jobID;
 	private JobVertexID jobVertexID;
 	private MetricAggFunction subtaskAggFunction;
+	private MetricAggType subtaskAggType;
 
 	private Map<Integer, TimelineAggregator> subtaskAggregators = new HashMap<>();
 
@@ -47,6 +48,7 @@ public class TaskMetricSubscription extends MetricSubscription<Tuple2<Long, Doub
 		this.jobID = jobID;
 		this.jobVertexID = jobVertexID;
 		this.subtaskAggFunction = MetricAggFunction.getMetricAggFunction(subtaskAggType);
+		this.subtaskAggType = subtaskAggType;
 	}
 
 	@Override
@@ -70,6 +72,12 @@ public class TaskMetricSubscription extends MetricSubscription<Tuple2<Long, Doub
 						TimelineAggregator.createTimelineAggregator(getTimelineAggType(), getInterval()));
 			}
 			subtaskAggregators.get(subtaskIndex).addValue(subtaskMetrics.get(subtaskIndex));
+		}
+
+		// task parallelism changed.
+		if (subtaskMetrics.size() != subtaskAggregators.size()) {
+			// remove old data.
+			subtaskAggregators.clear();
 		}
 	}
 

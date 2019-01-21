@@ -51,6 +51,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.TASK_INPUT_COUNT;
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.TASK_LATENCY_COUNT;
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.TASK_LATENCY_SUM;
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.TASK_OUTPUT_COUNT;
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.WAIT_OUTPUT_COUNT;
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.WAIT_OUTPUT_SUM;
+
 /**
  * Parallelism scaler resolves job parallelism scaling.
  * workload = calculation_time_per_record * input_tps
@@ -62,14 +69,6 @@ public class ParallelismScaler implements Resolver {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(ParallelismScaler.class);
 
-	private static final String SOURCE_INPUT_TPS = "parserTps.rate";
-	private static final String TASK_INPUT_TPS = "numRecordsInPerSecond.rate";
-	private static final String TASK_OUTPUT_TPS = "numRecordsOutPerSecond.rate";
-	private static final String TASK_LATENCY_COUNT = "taskLatency.count";
-	private static final String TASK_LATENCY_SUM = "taskLatency.sum";
-	private static final String WAIT_OUTPUT_COUNT = "waitOutput.count";
-	private static final String WAIT_OUTPUT_SUM = "waitOutput.sum";
-
 	private static final ConfigOption<Double> PARALLELISM_UP_SCALE_TPS_RATIO_OPTION =
 		ConfigOptions.key("parallelism.up-scale.tps.ratio").defaultValue(1.5);
 	private static final ConfigOption<Double> PARALLELISM_DOWN_SCALE_TPS_RATIO_OPTION =
@@ -77,7 +76,7 @@ public class ParallelismScaler implements Resolver {
 	private static final ConfigOption<Long> PARALLELISM_SCALE_TIME_OUT_OPTION =
 		ConfigOptions.key("parallelism.scale.timeout.ms").defaultValue(180000L);
 	private static final ConfigOption<Long> PARALLELISM_SCALE_INTERVAL =
-		ConfigOptions.key("parallelism.scale.interval.ms").defaultValue(5 * 60 * 1000L);
+		ConfigOptions.key("parallelism.scale.interval.ms").defaultValue(60 * 1000L);
 
 	private JobID jobID;
 	private HealthMonitor monitor;
@@ -128,23 +127,23 @@ public class ParallelismScaler implements Resolver {
 		waitOutputSumMaxSubs = new HashMap<>();
 		waitOutputSumMinSubs = new HashMap<>();
 
-		RestServerClient.JobConfig jobConfig = restServerClient.getJobConfig(jobID);
+		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 		for (JobVertexID vertexId : jobConfig.getVertexConfigs().keySet()) {
 			// input tps
 			TaskMetricSubscription inputTpsSub;
-			if (jobConfig.getInputNodes().get(vertexId).isEmpty()) {
-				// source vertex
+			if (jobConfig.getInputNodes().get(vertexId).isEmpty() &&
+					jobConfig.getVertexConfigs().get(vertexId).getOperatorIds().size() == 1) {
 				inputTpsSub = metricProvider.subscribeTaskMetric(
-					jobID, vertexId, SOURCE_INPUT_TPS, MetricAggType.SUM, checkInterval, TimelineAggType.AVG);
+					jobID, vertexId, TASK_OUTPUT_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RATE);
 			} else {
 				inputTpsSub = metricProvider.subscribeTaskMetric(
-					jobID, vertexId, TASK_INPUT_TPS, MetricAggType.SUM, checkInterval, TimelineAggType.AVG);
+					jobID, vertexId, TASK_INPUT_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RATE);
 			}
 			inputTpsSubs.put(vertexId, inputTpsSub);
 
 			// output tps
 			TaskMetricSubscription outputTps = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, TASK_OUTPUT_TPS, MetricAggType.SUM, checkInterval, TimelineAggType.AVG);
+				jobID, vertexId, TASK_OUTPUT_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RATE);
 			outputTpsSubs.put(vertexId, outputTps);
 
 			// latency count
@@ -178,6 +177,9 @@ public class ParallelismScaler implements Resolver {
 			TaskMetricSubscription waitOutputSumMinSub = metricProvider.subscribeTaskMetric(
 				jobID, vertexId, WAIT_OUTPUT_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.MIN);
 			waitOutputSumMinSubs.put(vertexId, waitOutputSumMinSub);
+
+			// analyze job graph.
+			analyzeJobGraph(jobConfig);
 		}
 	}
 
@@ -266,6 +268,7 @@ public class ParallelismScaler implements Resolver {
 		JobVertexOverParallelized jobVertexOverParallelized = null;
 
 		for (Symptom symptom : symptomList) {
+
 			if (symptom instanceof JobVertexFrequentFullGC) {
 				jobVertexFrequentFullGC = (JobVertexFrequentFullGC) symptom;
 				LOGGER.debug("Frequent full gc detected for vertices {}.", jobVertexFrequentFullGC.getJobVertexIDs());
@@ -309,16 +312,18 @@ public class ParallelismScaler implements Resolver {
 
 		boolean needUpScaleForDelay = jobVertexHighDelay != null && jobVertexDelayIncreasing != null;
 		boolean needUpScaleForBackPressure = jobVertexBackPressure != null;
-		boolean needDownScale = jobVertexLowDelay != null && jobVertexOverParallelized != null;
+		boolean needDownScale = jobVertexBackPressure == null && jobVertexOverParallelized != null;
 		if (!needUpScaleForDelay && !needUpScaleForBackPressure && !needDownScale) {
 			LOGGER.debug("No need to rescale parallelism.");
 			return null;
 		}
 
 		// calculate dag topology, performance and workload
-		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
-		analyzeJobGraph(jobConfig);
 		Map<JobVertexID, TaskPerformance> performances = getTaskPerformances();
+		if (performances == null) {
+			LOGGER.debug("Metric Not completed.");
+			return null;
+		}
 		Map<JobVertexID, Double> workloads = calculateWorkloads(performances);
 
 		// find sub dags to upscale
@@ -341,7 +346,7 @@ public class ParallelismScaler implements Resolver {
 		// find sub dags to downscale
 		Set<JobVertexID> subDagRootsToDownScale = new HashSet<>();
 		if (needDownScale) {
-			Set<JobVertexID> verticesToDownScale = new HashSet<>(jobVertexLowDelay.getJobVertexIDs());
+			Set<JobVertexID> verticesToDownScale = new HashSet<>(jobVertexOverParallelized.getJobVertexIDs());
 			verticesToDownScale.retainAll(jobVertexOverParallelized.getJobVertexIDs());
 			for (JobVertexID vertexId : verticesToDownScale) {
 				subDagRootsToDownScale.add(vertex2SubDagRoot.get(vertexId));
@@ -370,6 +375,7 @@ public class ParallelismScaler implements Resolver {
 		LOGGER.debug("Target parallelism for vertices before applying constraints: {}.", targetParallelisms);
 
 		// generate action
+		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 		if (!targetParallelisms.isEmpty()) {
 			updateTargetParallelismsSubjectToConstraints(targetParallelisms, jobConfig);
 			LOGGER.debug("Target parallelism for vertices after applying constraints: {}.", targetParallelisms);
@@ -565,7 +571,7 @@ public class ParallelismScaler implements Resolver {
 	private Map<JobVertexID, TaskPerformance> getTaskPerformances() {
 		long now = System.currentTimeMillis();
 
-		RestServerClient.JobConfig jobConfig = restServerClient.getJobConfig(jobID);
+		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 		if (jobConfig == null) {
 			return null;
 		}

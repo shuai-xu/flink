@@ -40,6 +40,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.WAIT_OUTPUT_COUNT;
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.WAIT_OUTPUT_SUM;
+
 /**
  * BackPressureDetector detects back pressure of a job.
  * Detects {@link JobVertexBackPressure} if avg waitOutput per record of tasks
@@ -49,13 +52,10 @@ public class BackPressureDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(BackPressureDetector.class);
 
-	private static final String WAIT_OUTPUT_COUNT = "waitOutput.count";
-	private static final String WAIT_OUTPUT_SUM = "waitOutput.sum";
-
 	private static final ConfigOption<Long> BACK_PRESSURE_CHECK_INTERVAL =
-		ConfigOptions.key("healthmonitor.back-pressure.interval.ms").defaultValue(5 * 60 * 1000L);
-	private static final ConfigOption<Long> BACK_PRESSURE_THRESHOLD =
-		ConfigOptions.key("healthmonitor.back-pressure.threshold.ms").defaultValue(0L);
+		ConfigOptions.key("healthmonitor.back-pressure.interval.ms").defaultValue(60 * 1000L);
+	private static final ConfigOption<Double> BACK_PRESSURE_THRESHOLD =
+		ConfigOptions.key("healthmonitor.back-pressure.threshold.ms").defaultValue(0.0);
 
 	private JobID jobID;
 	private RestServerClient restServerClient;
@@ -77,7 +77,7 @@ public class BackPressureDetector implements Detector {
 		metricProvider = monitor.getMetricProvider();
 
 		checkInterval = monitor.getConfig().getLong(BACK_PRESSURE_CHECK_INTERVAL);
-		threshold = monitor.getConfig().getLong(BACK_PRESSURE_THRESHOLD);
+		threshold = monitor.getConfig().getDouble(BACK_PRESSURE_THRESHOLD);
 
 		waitOutputCountMaxSubs = new HashMap<>();
 		waitOutputCountMinSubs = new HashMap<>();

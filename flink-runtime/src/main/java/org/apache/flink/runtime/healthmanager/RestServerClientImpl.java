@@ -63,6 +63,9 @@ import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExecutionVe
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerMessageParameters;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskmanagerAllSubtaskCurrentAttemptsInfoHeaders;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -80,6 +83,8 @@ import java.util.stream.Collectors;
  * Implementation of java sdk of rest server.
  */
 public class RestServerClientImpl implements RestServerClient {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(RestServerClientImpl.class);
 
 	private RestClient restClient;
 	private URI baseUri;
@@ -237,8 +242,9 @@ public class RestServerClientImpl implements RestServerClient {
 		metricNameList.addAll(metricNames);
 		parameters.metricsFilterParameter.resolve(metricNameList);
 		Map<String, Map<Integer, Tuple2<Long, Double>>> result = new HashMap<>();
+		LOGGER.debug("Task metrics request of {}:\n{}", jobVertexID, metricNameList);
 		try {
-			return sendRequest(header, parameters, EmptyRequestBody.getInstance()).thenApply(
+			sendRequest(header, parameters, EmptyRequestBody.getInstance()).thenApply(
 				(ComponentsMetricCollectionResponseBody cmc) -> {
 					Collection<ComponentMetric> componentMetrics = cmc.getComponentMetrics();
 					for (ComponentMetric componentMetric: componentMetrics) {
@@ -260,6 +266,7 @@ public class RestServerClientImpl implements RestServerClient {
 			).get();
 		} catch (Exception ignore) {
 		}
+		LOGGER.debug("Task metrics:\n" + result);
 		return result;
 	}
 
@@ -272,15 +279,17 @@ public class RestServerClientImpl implements RestServerClient {
 		List<String> metricNameList = new ArrayList<>();
 		metricNameList.addAll(metricNames);
 		parameters.metricsFilterParameter.resolve(metricNameList);
+		LOGGER.debug("Task Manager metrics request:\n" + metricNameList);
 		Map<String, Map<String, Tuple2<Long, Double>>> result = new HashMap<>();
 		try {
-			return sendRequest(header, parameters, EmptyRequestBody.getInstance()).thenApply(
+			sendRequest(header, parameters, EmptyRequestBody.getInstance()).thenApply(
 				(ComponentsMetricCollectionResponseBody cmc) -> {
 					return updateMetricFromComponentsMetricCollection(cmc, result);
 				}
 			).get();
 		} catch (Exception ignore) {
 		}
+		LOGGER.debug("Task Manager metrics:\n" + result);
 		return result;
 	}
 
@@ -294,15 +303,17 @@ public class RestServerClientImpl implements RestServerClient {
 		List<String> metricNameList = new ArrayList<>();
 		metricNameList.addAll(metricNames);
 		parameters.metricsFilterParameter.resolve(metricNameList);
+		LOGGER.debug("Task Manager metrics request:\n" + metricNameList);
 		Map<String, Map<String, Tuple2<Long, Double>>> result = new HashMap<>();
 		try {
-			return sendRequest(header, parameters, EmptyRequestBody.getInstance()).thenApply(
+			sendRequest(header, parameters, EmptyRequestBody.getInstance()).thenApply(
 				(ComponentsMetricCollectionResponseBody cmc) -> {
 					return updateMetricFromComponentsMetricCollection(cmc, result);
 				}
 			).get();
 		} catch (Exception ignore) {
 		}
+		LOGGER.debug("Task Manager metrics:\n" + result);
 		return result;
 	}
 

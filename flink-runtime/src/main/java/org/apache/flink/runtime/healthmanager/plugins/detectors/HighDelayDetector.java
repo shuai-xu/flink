@@ -40,6 +40,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.SOURCE_DELAY;
+
 /**
  * HighDelayDetector detects high delay of a job.
  * Detects {@link JobVertexHighDelay} if the max avg delay of tasks
@@ -48,8 +50,6 @@ import java.util.Map;
 public class HighDelayDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(HighDelayDetector.class);
-
-	private static final String DELAY = "fetched_delay";
 
 	private static final ConfigOption<Long> HIGH_DELAY_CHECK_INTERVAL =
 		ConfigOptions.key("healthmonitor.high-delay.interval.ms").defaultValue(5 * 60 * 1000L);
@@ -76,9 +76,11 @@ public class HighDelayDetector implements Detector {
 
 		delaySubs = new HashMap<>();
 		for (JobVertexID vertexId : restServerClient.getJobConfig(jobID).getVertexConfigs().keySet()) {
-			TaskMetricSubscription delaySub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, DELAY, MetricAggType.MAX, highDelayCheckInterval, TimelineAggType.AVG);
-			delaySubs.put(vertexId, delaySub);
+			if (monitor.getJobConfig().getInputNodes().get(vertexId).size() == 0) {
+				TaskMetricSubscription delaySub = metricProvider.subscribeTaskMetric(
+						jobID, vertexId, SOURCE_DELAY, MetricAggType.MAX, highDelayCheckInterval, TimelineAggType.AVG);
+				delaySubs.put(vertexId, delaySub);
+			}
 		}
 	}
 

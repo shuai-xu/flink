@@ -40,6 +40,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.SOURCE_DELAY;
+
 /**
  * DelayIncreasingDetector detects delay increasing of a job.
  * Detects {@link JobVertexDelayIncreasing} if avg delay increasing rate of tasks
@@ -48,8 +50,6 @@ import java.util.Map;
 public class DelayIncreasingDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(DelayIncreasingDetector.class);
-
-	private static final String DELAY = "fetched_delay";
 
 	private static final ConfigOption<Long> DELAY_INCREASING_CHECK_INTERVAL =
 		ConfigOptions.key("healthmonitor.delay-increasing.interval.ms").defaultValue(5 * 60 * 1000L);
@@ -75,10 +75,12 @@ public class DelayIncreasingDetector implements Detector {
 		delayIncreasingThreshold = monitor.getConfig().getLong(DELAY_INCREASING_THRESHOLD);
 
 		delayRateSubs = new HashMap<>();
-		for (JobVertexID vertexId : restServerClient.getJobConfig(jobID).getVertexConfigs().keySet()) {
-			TaskMetricSubscription delaySub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, DELAY, MetricAggType.AVG, delayIncreasingCheckInterval, TimelineAggType.RATE);
-			delayRateSubs.put(vertexId, delaySub);
+		for (JobVertexID vertexId : monitor.getJobConfig().getVertexConfigs().keySet()) {
+			if (monitor.getJobConfig().getInputNodes().get(vertexId).size() == 0) {
+				TaskMetricSubscription delaySub = metricProvider.subscribeTaskMetric(
+						jobID, vertexId, SOURCE_DELAY, MetricAggType.AVG, delayIncreasingCheckInterval, TimelineAggType.RATE);
+				delayRateSubs.put(vertexId, delaySub);
+			}
 		}
 	}
 

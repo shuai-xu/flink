@@ -36,9 +36,12 @@ import org.apache.flink.runtime.healthmanager.plugins.detectors.FrequentFullGCDe
 import org.apache.flink.runtime.healthmanager.plugins.detectors.HighDelayDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.LowDelayDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.OverParallelizedDetector;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.util.ExecutorThreadFactory;
+
+import org.apache.flink.shaded.guava18.com.google.common.collect.Lists;
 
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -86,11 +89,11 @@ public class ParallelismScalerTest {
 		// initial job vertex config.
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs1 = new HashMap<>();
 		RestServerClient.VertexConfig vertex1Config1 = new RestServerClient.VertexConfig(
-			1, 2, new ResourceSpec.Builder().build());
+			1, 2, new ResourceSpec.Builder().build(), Lists.newArrayList(1, 2));
 		RestServerClient.VertexConfig vertex2Config1 = new RestServerClient.VertexConfig(
-			1, 2, new ResourceSpec.Builder().build());
+			1, 2, new ResourceSpec.Builder().build(), Lists.newArrayList(3, 4));
 		RestServerClient.VertexConfig vertex3Config1 = new RestServerClient.VertexConfig(
-			1, 2, new ResourceSpec.Builder().build());
+			1, 2, new ResourceSpec.Builder().build(), Lists.newArrayList(5));
 		vertexConfigs1.put(vertex1, vertex1Config1);
 		vertexConfigs1.put(vertex2, vertex2Config1);
 		vertexConfigs1.put(vertex3, vertex3Config1);
@@ -181,134 +184,38 @@ public class ParallelismScalerTest {
 		TaskMetricSubscription v2WaitOutputSumMax = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(v2WaitOutputSumMax.getValue()).thenReturn(new Tuple2<>(now, 0.0));
 
-		TaskMetricSubscription v2Delay = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2Delay.getValue()).thenReturn(new Tuple2<>(now, 10 * 60 * 1000.0));
-
-		TaskMetricSubscription v2DelayRate = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2DelayRate.getValue()).thenReturn(new Tuple2<>(now, 10.0)).thenReturn(new Tuple2<>(now, 10.0)).thenReturn(new Tuple2<>(now, 10.0))
-			.thenReturn(new Tuple2<>(now, 0.0)).thenReturn(new Tuple2<>(now, 0.0)).thenReturn(new Tuple2<>(now, 0.0));
-
-		Mockito.when(metricProvider.subscribeTaskMetric(
-			Mockito.any(JobID.class),
-			Mockito.any(JobVertexID.class),
-			Mockito.anyString(),
-			Mockito.any(MetricAggType.class),
-			Mockito.anyLong(),
-			Mockito.any(TimelineAggType.class)
-		)).then((Answer<TaskMetricSubscription>) invocation -> {
-			JobVertexID vertexId = (JobVertexID) invocation.getArguments()[1];
-			String metricName = (String) invocation.getArguments()[2];
-			TimelineAggType aggType = (TimelineAggType) invocation.getArguments()[5];
-
-			if (vertexId.equals(vertex1)) {
-				if (metricName.equals("parserTps.rate") || metricName.equals("numRecordsInPerSecond.rate")) {
-					return v1InputTps;
-				} else if (metricName.equals("numRecordsOutPerSecond.rate")) {
-					return v1OutputTps;
-				} else if (metricName.equals("taskLatency.count")) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v1LatencyCountMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v1LatencyCountMin;
-					}
-				} else if (metricName.equals("taskLatency.sum")) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v1LatencySumMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v1LatencySumMin;
-					}
-				} else if (metricName.equals("waitOutput.count")) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v1WaitOutputCountMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v1WaitOutputCountMin;
-					}
-				} else if (metricName.equals("waitOutput.sum")) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v1WaitOutputSumMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v1WaitOutputSumMin;
-					}
-				} else if (metricName.equals("fetched_delay")) {
-					if (aggType.equals(TimelineAggType.AVG)) {
-						return v1Delay;
-					} else if (aggType.equals(TimelineAggType.RATE)) {
-						return v1DelayRate;
-					}
-				}
-			} else if (vertexId.equals(vertex2)) {
-				if (metricName.equals("parserTps.rate") || metricName.equals("numRecordsInPerSecond.rate")) {
-					return v2InputTps;
-				} else if (metricName.equals("numRecordsOutPerSecond.rate")) {
-					return v2OutputTps;
-				} else if (metricName.equals("taskLatency.count")) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v2LatencyCountMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v2LatencyCountMin;
-					}
-				} else if (metricName.equals("taskLatency.sum")) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v2LatencySumMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v2LatencySumMin;
-					}
-				} else if (metricName.equals("waitOutput.count")) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v2WaitOutputCountMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v2WaitOutputCountMin;
-					}
-				} else if (metricName.equals("waitOutput.sum")) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v2WaitOutputSumMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v2WaitOutputSumMin;
-					}
-				} else if (metricName.equals("fetched_delay")) {
-					if (aggType.equals(TimelineAggType.AVG)) {
-						return v2Delay;
-					} else if (aggType.equals(TimelineAggType.RATE)) {
-						return v2DelayRate;
-					}
-				}
-			}
-			return zeroSub;
-		});
-
-		JobTMMetricSubscription tmMetricSub = Mockito.mock(JobTMMetricSubscription.class);
-		Mockito.when(tmMetricSub.getValue()).thenReturn(null);
-		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class),
-			Mockito.anyString(),
-			Mockito.anyLong(),
-			Mockito.any(TimelineAggType.class)
-		)).thenReturn(tmMetricSub);
+		initMockMetrics(metricProvider, vertex1, vertex2, zeroSub,
+				v1InputTps, v1OutputTps, v1LatencyCountMin, v1LatencyCountMax, v1LatencySumMin,
+				v1LatencySumMax, v1WaitOutputCountMin, v1WaitOutputCountMax, v1WaitOutputSumMin,
+				v1WaitOutputSumMax, v1Delay, v1DelayRate,
+				v2InputTps, v2OutputTps, v2LatencyCountMin, v2LatencyCountMax, v2LatencySumMin,
+				v2LatencySumMax, v2WaitOutputCountMin, v2WaitOutputCountMax, v2WaitOutputSumMin,
+				v2WaitOutputSumMax);
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+				Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
+				Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
 		allTaskStats.put(new ExecutionVertexID(vertex3, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
+				Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
 		RestServerClient.JobStatus jobStatus = new RestServerClient.JobStatus(allTaskStats);
 
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+				Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+				Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		allTaskStats.put(new ExecutionVertexID(vertex3, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
+				Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
 		RestServerClient.JobStatus jobStatus2 = new RestServerClient.JobStatus(allTaskStats);
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats2 = new HashMap<>();
 		allTaskStats2.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+				Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		allTaskStats2.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+				Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		allTaskStats2.put(new ExecutionVertexID(vertex3, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+				Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		RestServerClient.JobStatus jobStatus3 = new RestServerClient.JobStatus(allTaskStats2);
 
 		// mock slow scheduling.
@@ -332,10 +239,126 @@ public class ParallelismScalerTest {
 		// verify rpc calls.
 		Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource = new HashMap<>();
 		vertexParallelismResource.put(vertex2, new Tuple2<>(2, ResourceSpec.newBuilder().build()));
+		System.out.println(vertex1);
+		System.out.println(vertex2);
+		System.out.println(vertex3);
 		Mockito.verify(restServerClient, Mockito.times(1))
 			.rescale(
 				Mockito.eq(jobID),
 				Mockito.eq(vertexParallelismResource));
+	}
+
+	private void initMockMetrics(MetricProvider metricProvider, JobVertexID vertex1,
+			JobVertexID vertex2, TaskMetricSubscription zeroSub, TaskMetricSubscription v1InputTps,
+			TaskMetricSubscription v1OutputTps, TaskMetricSubscription v1LatencyCountMin,
+			TaskMetricSubscription v1LatencyCountMax, TaskMetricSubscription v1LatencySumMin,
+			TaskMetricSubscription v1LatencySumMax, TaskMetricSubscription v1WaitOutputCountMin,
+			TaskMetricSubscription v1WaitOutputCountMax, TaskMetricSubscription v1WaitOutputSumMin,
+			TaskMetricSubscription v1WaitOutputSumMax, TaskMetricSubscription v1Delay,
+			TaskMetricSubscription v1DelayRate, TaskMetricSubscription v2InputTps,
+			TaskMetricSubscription v2OutputTps, TaskMetricSubscription v2LatencyCountMin,
+			TaskMetricSubscription v2LatencyCountMax, TaskMetricSubscription v2LatencySumMin,
+			TaskMetricSubscription v2LatencySumMax, TaskMetricSubscription v2WaitOutputCountMin,
+			TaskMetricSubscription v2WaitOutputCountMax, TaskMetricSubscription v2WaitOutputSumMin,
+			TaskMetricSubscription v2WaitOutputSumMax) {
+		Mockito.when(metricProvider.subscribeTaskMetric(
+			Mockito.any(JobID.class),
+			Mockito.any(JobVertexID.class),
+			Mockito.anyString(),
+			Mockito.any(MetricAggType.class),
+			Mockito.anyLong(),
+			Mockito.any(TimelineAggType.class)
+		)).then((Answer<TaskMetricSubscription>) invocation -> {
+			JobVertexID vertexId = (JobVertexID) invocation.getArguments()[1];
+			String metricName = (String) invocation.getArguments()[2];
+			TimelineAggType aggType = (TimelineAggType) invocation.getArguments()[5];
+
+			if (vertexId.equals(vertex1)) {
+				if (metricName.equals(MetricNames.TASK_INPUT_COUNT)) {
+					if (aggType.equals(TimelineAggType.RATE)) {
+						return v1InputTps;
+					}
+				} else if (metricName.equals(MetricNames.TASK_OUTPUT_COUNT)) {
+					if (aggType.equals(TimelineAggType.RATE)) {
+						return v1OutputTps;
+					}
+				} else if (metricName.equals(MetricNames.TASK_LATENCY_COUNT)) {
+					if (aggType.equals(TimelineAggType.MAX)) {
+						return v1LatencyCountMax;
+					} else if (aggType.equals(TimelineAggType.MIN)) {
+						return v1LatencyCountMin;
+					}
+				} else if (metricName.equals(MetricNames.TASK_LATENCY_SUM)) {
+					if (aggType.equals(TimelineAggType.MAX)) {
+						return v1LatencySumMax;
+					} else if (aggType.equals(TimelineAggType.MIN)) {
+						return v1LatencySumMin;
+					}
+				} else if (metricName.equals(MetricNames.WAIT_OUTPUT_COUNT)) {
+					if (aggType.equals(TimelineAggType.MAX)) {
+						return v1WaitOutputCountMax;
+					} else if (aggType.equals(TimelineAggType.MIN)) {
+						return v1WaitOutputCountMin;
+					}
+				} else if (metricName.equals(MetricNames.WAIT_OUTPUT_SUM)) {
+					if (aggType.equals(TimelineAggType.MAX)) {
+						return v1WaitOutputSumMax;
+					} else if (aggType.equals(TimelineAggType.MIN)) {
+						return v1WaitOutputSumMin;
+					}
+				} else if (metricName.equals(MetricNames.SOURCE_DELAY)) {
+					if (aggType.equals(TimelineAggType.AVG)) {
+						return v1Delay;
+					} else if (aggType.equals(TimelineAggType.RATE)) {
+						return v1DelayRate;
+					}
+				}
+			} else if (vertexId.equals(vertex2)) {
+				if (metricName.equals(MetricNames.TASK_INPUT_COUNT)) {
+					if (aggType.equals(TimelineAggType.RATE)) {
+						return v2InputTps;
+					}
+				} else if (metricName.equals(MetricNames.TASK_OUTPUT_COUNT)) {
+					if (aggType.equals(TimelineAggType.RATE)) {
+						return v2OutputTps;
+					}
+				} else if (metricName.equals(MetricNames.TASK_LATENCY_COUNT)) {
+					if (aggType.equals(TimelineAggType.MAX)) {
+						return v2LatencyCountMax;
+					} else if (aggType.equals(TimelineAggType.MIN)) {
+						return v2LatencyCountMin;
+					}
+				} else if (metricName.equals(MetricNames.TASK_LATENCY_SUM)) {
+					if (aggType.equals(TimelineAggType.MAX)) {
+						return v2LatencySumMax;
+					} else if (aggType.equals(TimelineAggType.MIN)) {
+						return v2LatencySumMin;
+					}
+				} else if (metricName.equals(MetricNames.WAIT_OUTPUT_COUNT)) {
+					if (aggType.equals(TimelineAggType.MAX)) {
+						return v2WaitOutputCountMax;
+					} else if (aggType.equals(TimelineAggType.MIN)) {
+						return v2WaitOutputCountMin;
+					}
+				} else if (metricName.equals(MetricNames.WAIT_OUTPUT_SUM)) {
+					if (aggType.equals(TimelineAggType.MAX)) {
+						return v2WaitOutputSumMax;
+					} else if (aggType.equals(TimelineAggType.MIN)) {
+						return v2WaitOutputSumMin;
+					}
+				}
+			}
+			return zeroSub;
+		});
+
+		JobTMMetricSubscription tmMetricSub = Mockito.mock(JobTMMetricSubscription.class);
+		Mockito.when(tmMetricSub.getValue()).thenReturn(null);
+		Mockito.when(metricProvider.subscribeAllTMMetric(
+			Mockito.any(JobID.class),
+			Mockito.anyString(),
+			Mockito.anyLong(),
+			Mockito.any(TimelineAggType.class)
+		)).thenReturn(tmMetricSub);
 	}
 
 	/**
@@ -368,11 +391,11 @@ public class ParallelismScalerTest {
 		// initial job vertex config.
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs1 = new HashMap<>();
 		RestServerClient.VertexConfig vertex1Config1 = new RestServerClient.VertexConfig(
-			2, 2, new ResourceSpec.Builder().build());
+			2, 2, new ResourceSpec.Builder().build(), Lists.newArrayList(1, 2));
 		RestServerClient.VertexConfig vertex2Config1 = new RestServerClient.VertexConfig(
-			2, 2, new ResourceSpec.Builder().build());
+			2, 2, new ResourceSpec.Builder().build(), Lists.newArrayList(3, 4));
 		RestServerClient.VertexConfig vertex3Config1 = new RestServerClient.VertexConfig(
-			1, 2, new ResourceSpec.Builder().build());
+			1, 2, new ResourceSpec.Builder().build(), Lists.newArrayList(5));
 		vertexConfigs1.put(vertex1, vertex1Config1);
 		vertexConfigs1.put(vertex2, vertex2Config1);
 		vertexConfigs1.put(vertex3, vertex3Config1);
@@ -380,11 +403,11 @@ public class ParallelismScalerTest {
 		// job vertex config after resale.
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs2 = new HashMap<>();
 		RestServerClient.VertexConfig vertex1Config2 = new RestServerClient.VertexConfig(
-			1, 2, new ResourceSpec.Builder().build());
+			1, 2, new ResourceSpec.Builder().build(), Lists.newArrayList(1, 2));
 		RestServerClient.VertexConfig vertex2Config2 = new RestServerClient.VertexConfig(
-			2, 2, new ResourceSpec.Builder().build());
+			2, 2, new ResourceSpec.Builder().build(), Lists.newArrayList(3, 4));
 		RestServerClient.VertexConfig vertex3Config2 = new RestServerClient.VertexConfig(
-			1, 2, new ResourceSpec.Builder().build());
+			1, 2, new ResourceSpec.Builder().build(), Lists.newArrayList(5));
 		vertexConfigs2.put(vertex1, vertex1Config2);
 		vertexConfigs2.put(vertex2, vertex2Config2);
 		vertexConfigs2.put(vertex3, vertex3Config2);
@@ -396,11 +419,6 @@ public class ParallelismScalerTest {
 		inputNodes.put(vertex3, Collections.emptyList());
 
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs1, inputNodes))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs1, inputNodes))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs1, inputNodes))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs1, inputNodes))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs1, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs1, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
 
@@ -479,94 +497,13 @@ public class ParallelismScalerTest {
 		TaskMetricSubscription v2Delay = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(v2Delay.getValue()).thenReturn(new Tuple2<>(now, 0.0));
 
-		Mockito.when(metricProvider.subscribeTaskMetric(
-			Mockito.any(JobID.class),
-			Mockito.any(JobVertexID.class),
-			Mockito.anyString(),
-			Mockito.any(MetricAggType.class),
-			Mockito.anyLong(),
-			Mockito.any(TimelineAggType.class)
-		)).then((Answer<TaskMetricSubscription>) invocation -> {
-			JobVertexID vertexId = (JobVertexID) invocation.getArguments()[1];
-			String metricName = (String) invocation.getArguments()[2];
-			TimelineAggType aggType = (TimelineAggType) invocation.getArguments()[5];
-
-			if (vertexId.equals(vertex1)) {
-				if (metricName.equals("parserTps.rate") || metricName.equals("numRecordsInPerSecond.rate")) {
-					return v1InputTps;
-				} else if (metricName.equals("numRecordsOutPerSecond.rate")) {
-					return v1OutputTps;
-				} else if (metricName.equals("taskLatency.count")) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v1LatencyCountMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v1LatencyCountMin;
-					}
-				} else if (metricName.equals("taskLatency.sum")) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v1LatencySumMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v1LatencySumMin;
-					}
-				} else if (metricName.equals("waitOutput.count")) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v1WaitOutputCountMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v1WaitOutputCountMin;
-					}
-				} else if (metricName.equals("waitOutput.sum")) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v1WaitOutputSumMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v1WaitOutputSumMin;
-					}
-				} else if (metricName.equals("delay")) {
-					return v1Delay;
-				}
-			} else if (vertexId.equals(vertex2)) {
-				if (metricName.equals("parserTps.rate") || metricName.equals("numRecordsInPerSecond.rate")) {
-					return v2InputTps;
-				} else if (metricName.equals("numRecordsOutPerSecond.rate")) {
-					return v2OutputTps;
-				} else if (metricName.equals("taskLatency.count")) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v2LatencyCountMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v2LatencyCountMin;
-					}
-				} else if (metricName.equals("taskLatency.sum")) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v2LatencySumMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v2LatencySumMin;
-					}
-				} else if (metricName.equals("waitOutput.count")) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v2WaitOutputCountMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v2WaitOutputCountMin;
-					}
-				} else if (metricName.equals("waitOutput.sum")) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v2WaitOutputSumMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v2WaitOutputSumMin;
-					}
-				} else if (metricName.equals("delay")) {
-					return v2Delay;
-				}
-			}
-			return zeroSub;
-		});
-
-		JobTMMetricSubscription tmMetricSub = Mockito.mock(JobTMMetricSubscription.class);
-		Mockito.when(tmMetricSub.getValue()).thenReturn(null);
-		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class),
-			Mockito.anyString(),
-			Mockito.anyLong(),
-			Mockito.any(TimelineAggType.class)
-		)).thenReturn(tmMetricSub);
+		initMockMetrics(metricProvider, vertex1, vertex2, zeroSub,
+				v1InputTps, v1OutputTps, v1LatencyCountMin, v1LatencyCountMax, v1LatencySumMin,
+				v1LatencySumMax, v1WaitOutputCountMin, v1WaitOutputCountMax, v1WaitOutputSumMin,
+				v1WaitOutputSumMax, v1Delay, zeroSub,
+				v2InputTps, v2OutputTps, v2LatencyCountMin, v2LatencyCountMax, v2LatencySumMin,
+				v2LatencySumMax, v2WaitOutputCountMin, v2WaitOutputCountMax, v2WaitOutputSumMin,
+				v2WaitOutputSumMax);
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),

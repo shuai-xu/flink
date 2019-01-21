@@ -30,6 +30,7 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexOverParallelized;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import org.slf4j.Logger;
@@ -49,13 +50,8 @@ public class OverParallelizedDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(OverParallelizedDetector.class);
 
-	private static final String TASK_LATENCY_COUNT = "taskLatency.count";
-	private static final String TASK_LATENCY_SUM = "taskLatency.sum";
-	private static final String TASK_INPUT_TPS = "numRecordsInPerSecond.rate";
-	private static final String SOURCE_INPUT_TPS = "parserTps.rate";
-
 	private static final ConfigOption<Long> OVER_PARALLELIZED_CHECK_INTERVAL =
-		ConfigOptions.key("healthmonitor.over-parallelized.interval.ms").defaultValue(5 * 60 * 1000L);
+		ConfigOptions.key("healthmonitor.over-parallelized.interval.ms").defaultValue(60 * 1000L);
 	private static final ConfigOption<Double> OVER_PARALLELIZED_RATIO =
 		ConfigOptions.key("healthmonitor.over-parallelized.tps.ratio").defaultValue(1.5);
 
@@ -90,29 +86,29 @@ public class OverParallelizedDetector implements Detector {
 		RestServerClient.JobConfig jobConfig = restServerClient.getJobConfig(jobID);
 		for (JobVertexID vertexId : jobConfig.getVertexConfigs().keySet()) {
 			TaskMetricSubscription latencyCountMaxSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, TASK_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.MAX);
+				jobID, vertexId, MetricNames.TASK_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.MAX);
 			latencyCountMaxSubs.put(vertexId, latencyCountMaxSub);
 
 			TaskMetricSubscription latencyCountMinSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, TASK_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.MIN);
+				jobID, vertexId, MetricNames.TASK_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.MIN);
 			latencyCountMinSubs.put(vertexId, latencyCountMinSub);
 
 			TaskMetricSubscription latencySumMaxSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, TASK_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.MAX);
+				jobID, vertexId, MetricNames.TASK_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.MAX);
 			latencySumMaxSubs.put(vertexId, latencySumMaxSub);
 
 			TaskMetricSubscription latencySumMinSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, TASK_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.MIN);
+				jobID, vertexId, MetricNames.TASK_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.MIN);
 			latencySumMinSubs.put(vertexId, latencySumMinSub);
 
 			TaskMetricSubscription inputTpsSub;
 			if (jobConfig.getInputNodes().get(vertexId).isEmpty()) {
 				// source vertex
 				inputTpsSub = metricProvider.subscribeTaskMetric(
-					jobID, vertexId, SOURCE_INPUT_TPS, MetricAggType.SUM, checkInterval, TimelineAggType.AVG);
+					jobID, vertexId, MetricNames.SOURCE_INPUT_TPS, MetricAggType.SUM, checkInterval, TimelineAggType.AVG);
 			} else {
 				inputTpsSub = metricProvider.subscribeTaskMetric(
-					jobID, vertexId, TASK_INPUT_TPS, MetricAggType.SUM, checkInterval, TimelineAggType.AVG);
+					jobID, vertexId, MetricNames.TASK_INPUT_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RATE);
 			}
 			inputTpsSubs.put(vertexId, inputTpsSub);
 		}
