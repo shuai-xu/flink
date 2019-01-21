@@ -52,7 +52,7 @@ To add new requests, one needs to
 A good example is the `org.apache.flink.runtime.rest.handler.job.JobExceptionsHandler` that uses the `org.apache.flink.runtime.rest.messages.JobExceptionsHeaders`.
 
 
-## Available Requests
+## API
 
 ### Dispatcher
 
