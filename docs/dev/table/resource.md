@@ -455,7 +455,7 @@ val json = property.toString
 </div>
 </div>
 
-Now we can ge the flowing json:
+Now we can get the flowing json:
 
 {% highlight sql %}
 {
