@@ -437,7 +437,7 @@ CsvTableSink sink = new CsvTableSink("/tmp/test", "|")
 table.writeToSink(sink)
 StreamGraph streamGraph = tEnv.generateStreamGraph()
 StreamGraphProperty property = StreamGraphPropertyGenerator.generateProperties(streamGraph)
-String json = property.toString
+String json = property.toString()
 {% endhighlight %}
 </div>
 
