@@ -16,18 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.plan.batch.table
+package org.apache.flink.table.api.stream
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.util.TableTestBase
+
 import org.junit.{Before, Test}
 
 class SubsectionOptimizationTest extends TableTestBase {
 
-  private val util = batchTestUtil()
+  private val util = streamTestUtil()
 
   @Before
   def setup(): Unit = {

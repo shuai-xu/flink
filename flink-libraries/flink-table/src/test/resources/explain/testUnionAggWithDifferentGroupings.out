@@ -17,11 +17,11 @@ StreamExecSink(fields=[a, b, c, a_sum], retract=[false], accMode=[Acc])
    :- StreamExecCalc(select=[a, b, c, TMP_0 AS a_sum], retract=[false], accMode=[Acc])
    :  +- StreamExecGroupAggregate(groupBy=[a, b, c], select=[a, b, c, SUM(a) AS TMP_0], retract=[false], accMode=[Acc])
    :     +- StreamExecExchange(distribution=[hash[a, b, c]], retract=[true], accMode=[Acc])
-   :        +- StreamExecDataStreamScan(table=[[builtin, default, t1]], retract=[true], accMode=[Acc], reuse_id=[1])
+   :        +- StreamExecDataStreamScan(table=[[builtin, default, t1]], retract=[true], accMode=[Acc])
    +- StreamExecCalc(select=[CAST(1) AS a, b, c, TMP_1 AS a_sum], retract=[false], accMode=[Acc])
       +- StreamExecGroupAggregate(groupBy=[b, c], select=[b, c, SUM(a) AS TMP_1], retract=[false], accMode=[Acc])
          +- StreamExecExchange(distribution=[hash[b, c]], retract=[true], accMode=[Acc])
-            +- Reused(reference_id=[1])
+            +- StreamExecDataStreamScan(table=[[builtin, default, t1]], retract=[true], accMode=[Acc])
 
 == Physical Execution Plan ==
  : Data Source
@@ -40,14 +40,18 @@ StreamExecSink(fields=[a, b, c, a_sum], retract=[false], accMode=[Acc])
 				ship_strategy : FORWARD
 
 				 : Operator
-					content : GroupAggregate(groupBy: (b, c), select: (b, c, SUM(a) AS TMP_1))
-					ship_strategy : HASH
+					content : SourceConversion(table:[builtin, default, t1], fields:(a, b, c))
+					ship_strategy : FORWARD
 
 					 : Operator
-						content : Calc(select: (CAST(1) AS a, b, c, TMP_1 AS a_sum))
-						ship_strategy : FORWARD
+						content : GroupAggregate(groupBy: (b, c), select: (b, c, SUM(a) AS TMP_1))
+						ship_strategy : HASH
 
-						 : Data Sink
-							content : Sink: TestingUpsertTableSink(keys=())
-							ship_strategy : REBALANCE
+						 : Operator
+							content : Calc(select: (CAST(1) AS a, b, c, TMP_1 AS a_sum))
+							ship_strategy : FORWARD
+
+							 : Data Sink
+								content : Sink: TestingUpsertTableSink(keys=())
+								ship_strategy : REBALANCE
 

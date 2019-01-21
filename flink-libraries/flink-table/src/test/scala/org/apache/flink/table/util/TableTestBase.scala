@@ -199,6 +199,10 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
     assertEquals(FlinkRelOptUtil.toString(optimized1), FlinkRelOptUtil.toString(optimized2))
   }
 
+  def verifyPlan(): Unit = {
+    doVerifyPlanWithSubsectionOptimization(explainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES)
+  }
+
   def verifyPlan(table: Table): Unit = {
     val relNode = table.getRelNode
     val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
@@ -276,6 +280,38 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
       // expected does not exist, update
       diffRepository.expand(test.name.getMethodName, tag, actual)
     }
+  }
+
+  private def doVerifyPlanWithSubsectionOptimization(
+      explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
+      printPlanBefore: Boolean = true): Unit = {
+    if (!tableEnv.getConfig.getSubsectionOptimization) {
+      throw new TableException(
+        "subsection optimization is false, please use other method to verify result.")
+    }
+    if (tableEnv.sinkNodes.isEmpty) {
+      throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
+    }
+
+    if (printPlanBefore) {
+      val planBefore = new StringBuilder
+      tableEnv.sinkNodes.foreach { sink =>
+        val table = new Table(tableEnv, sink.children.head)
+        val ast = table.getRelNode
+        planBefore.append(System.lineSeparator)
+        planBefore.append(FlinkRelOptUtil.toString(ast, SqlExplainLevel.EXPPLAN_ATTRIBUTES))
+      }
+      assertEqualsOrExpand("planBefore", planBefore.toString())
+    }
+
+    val optSinkNodes = tableEnv.tableServiceManager.cachePlanBuilder
+      .buildPlanIfNeeded(tableEnv.sinkNodes)
+    val sinkExecNodes = tableEnv.optimizeAndTranslateNodeDag(true, optSinkNodes: _*)
+
+    tableEnv.sinkNodes.clear()
+
+    val planAfter =  FlinkNodeOptUtil.dagToString(sinkExecNodes, detailLevel = explainLevel)
+    assertEqualsOrExpand("planAfter", planAfter, expand = false)
   }
 }
 

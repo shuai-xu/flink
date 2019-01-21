@@ -19,71 +19,82 @@
 package org.apache.flink.table.plan.subplan
 
 import org.apache.flink.table.api.{TableConfigOptions, TableEnvironment, TableException}
+import org.apache.flink.table.plan.logical.{LogicalNode, SinkNode}
 import org.apache.flink.table.plan.nodes.calcite.Sink
 import org.apache.flink.table.plan.schema.RelTable
-import org.apache.flink.table.plan.logical.{LogicalNode, SinkNode}
 import org.apache.flink.table.plan.util.{SubplanReuseContext, SubplanReuseShuttle}
 import org.apache.flink.util.Preconditions
 
+import com.google.common.collect.Sets
+import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.rel._
 import org.apache.calcite.rel.core.TableScan
 import org.apache.calcite.rel.logical.LogicalTableScan
-import org.apache.calcite.plan.RelOptUtil
 
-import com.google.common.collect.Sets
-
-import java.util.IdentityHashMap
+import java.util
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
 /**
   * A [[RelNodeBlock]] is a sub-tree in the [[RelNode]] plan. All [[RelNode]]s in
-  * each block have at most one parent (output) node.
+  * each block have only one [[Sink]] output.
   * The nodes in different block will be optimized independently.
   *
   * For example: (Table API)
   *
   * {{{-
-  *  val table = tEnv.scan("test_table").select('a, 'b, 'c)
-  *  table.where('a >= 70).select('a, 'b).writeToSink(sink1)
-  *  table.where('a < 70 ).select('a, 'c).writeToSink(sink2)
+  *  val sourceTable = tEnv.scan("test_table").select('a, 'b, 'c)
+  *  val leftTable = sourceTable.filter('a > 0).select('a as 'a1, 'b as 'b1)
+  *  val rightTable = sourceTable.filter('c.isNotNull).select('b as 'b2, 'c as 'c2)
+  *  val joinTable = leftTable.join(rightTable, 'a1 === 'b2)
+  *  joinTable.where('a1 >= 70).select('a1, 'b1).writeToSink(sink1)
+  *  joinTable.where('a1 < 70 ).select('a1, 'c2).writeToSink(sink2)
   * }}}
   *
   * the RelNode DAG is:
   *
   * {{{-
-  *        TableScan
-  *            |
-  *       Project(a,b,c)
-  *        /          \
-  * Filter(a>=70)  Filter(a<70)
-  *     |              |
-  * Project(a,b)  Project(a,c)
-  *     |              |
-  * Sink(sink1)   Sink(sink2)
+  * Sink(sink1)     Sink(sink2)
+  *    |               |
+  * Project(a1,b1)  Project(a1,c2)
+  *    |               |
+  * Filter(a1>=70)  Filter(a1<70)
+  *       \          /
+  *        Join(a1=b2)
+  *       /           \
+  * Project(a1,b1)  Project(b2,c2)
+  *      |             |
+  * Filter(a>0)     Filter(c is not null)
+  *      \           /
+  *      Project(a,b,c)
+  *          |
+  *       TableScan
   * }}}
   *
   * This [[RelNode]] DAG will be decomposed into three [[RelNodeBlock]]s, the break-point
-  * is a [[RelNode]] which has more than one output nodes.
-  * the first [[RelNodeBlock]] includes TableScan and Project('a,'b,'c)
-  * the second one includes Filter('a>=70), Project('a,'b) and Sink(sink1)
-  * the third one includes Filter('a<70), Project('a,'c), Sink(sink2)
-  * And the first [[RelNodeBlock]] is the child of another two.
-  * The [[RelNodeBlock]] plan is:
+  * is the [[RelNode]](`Join(a1=b2)`) which data outputs to multiple [[Sink]]s.
+  * <p>Notes: Although `Project(a,b,c)` has two parents (outputs),
+  * they eventually merged at `Join(a1=b2)`. So `Project(a,b,c)` is not a break-point.
+  * <p>the first [[RelNodeBlock]] includes TableScan, Project(a,b,c), Filter(a>0),
+  * Filter(c is not null), Project(a1,b1), Project(b2,c2) and Join(a1=b2)
+  * <p>the second one includes Filter(a1>=70), Project(a1,b1) and Sink(sink1)
+  * <p>the third one includes Filter(a1<70), Project(a1,c2) and Sink(sink2)
+  * <p>And the first [[RelNodeBlock]] is the child of another two.
   *
+  * The [[RelNodeBlock]] plan is:
   * {{{-
-  *         RelNodeBlock1
-  *          /            \
   * RelNodeBlock2  RelNodeBlock3
+  *        \            /
+  *        RelNodeBlock1
   * }}}
   *
-  * The optimizing order is from child block to parent. The optimized result (DataStream)
+  * The optimizing order is from child block to parent. The optimized result (RelNode)
   * will be registered into tables first, and then be converted to a new TableScan which is the
   * new output node of current block and is also the input of its parent blocks.
   *
   * @param outputNode A RelNode of the output in the block, which could be a [[Sink]] or
-  *                   other RelNode with more than one parent nodes.
+  * other RelNode which data outputs to multiple [[Sink]]s.
   */
 class RelNodeBlock(val outputNode: RelNode, tEnv: TableEnvironment) {
   // child (or input) blocks
@@ -124,7 +135,7 @@ class RelNodeBlock(val outputNode: RelNode, tEnv: TableEnvironment) {
 
   def isUpdateAsRetraction: Boolean = updateAsRetract
 
-  def isChildBlockOutputRelNode(node: RelNode): Option[RelNodeBlock] = {
+  def getChildBlockOutputNode(node: RelNode): Option[RelNodeBlock] = {
     val find = children.filter(_.outputNode.equals(node))
     if (find.isEmpty) {
       None
@@ -148,20 +159,18 @@ class RelNodeBlock(val outputNode: RelNode, tEnv: TableEnvironment) {
   private class RelNodeBlockShuttle extends RelShuttleImpl {
 
     override def visitChild(parent: RelNode, i: Int, child: RelNode): RelNode = {
-      val block = isChildBlockOutputRelNode(parent)
-      if (block.isDefined) {
-        block.get.getNewOutputNode.get
-      } else {
-        super.visitChild(parent, i, child)
+      val block = getChildBlockOutputNode(parent)
+      block match {
+        case Some(b) => b.getNewOutputNode.get
+        case _ => super.visitChild(parent, i, child)
       }
     }
 
     override def visitChildren(rel: RelNode): RelNode = {
-      val block = isChildBlockOutputRelNode(rel)
-      if (block.isDefined) {
-        block.get.getNewOutputNode.get
-      } else {
-        super.visitChildren(rel)
+      val block = getChildBlockOutputNode(rel)
+      block match {
+        case Some(b) => b.getNewOutputNode.get
+        case _ => super.visitChildren(rel)
       }
     }
   }
@@ -169,12 +178,67 @@ class RelNodeBlock(val outputNode: RelNode, tEnv: TableEnvironment) {
 }
 
 /**
+  * Holds information to build [[RelNodeBlock]].
+  */
+class RelNodeWrapper(relNode: RelNode) {
+  // parent nodes of `relNode`
+  private val parentNodes = Sets.newIdentityHashSet[RelNode]()
+  // output nodes of some blocks that data of `relNode` outputs to
+  private val blockOutputNodes = Sets.newIdentityHashSet[RelNode]()
+  // stores visited parent nodes when builds RelNodeBlock
+  private val visitedParentNodes = Sets.newIdentityHashSet[RelNode]()
+
+  def addParentNode(parent: Option[RelNode]): Unit = {
+    parent match {
+      case Some(p) => parentNodes.add(p)
+      case None => // Ignore
+    }
+  }
+
+  def addVisitedParentNode(parent: Option[RelNode]): Unit = {
+    parent match {
+      case Some(p) =>
+        require(parentNodes.contains(p))
+        visitedParentNodes.add(p)
+      case None => // Ignore
+    }
+  }
+
+  def addBlockOutputNode(blockOutputNode: RelNode): Unit = blockOutputNodes.add(blockOutputNode)
+
+  /**
+    * Returns true if all parent nodes had been visited, else false
+    */
+  def allParentNodesVisited: Boolean = parentNodes.size() == visitedParentNodes.size()
+
+  /**
+    * Returns true if number of `blockOutputNodes` is greater than 1, else false
+    */
+  def hasMultipleBlockOutputNodes: Boolean = blockOutputNodes.size() > 1
+
+  /**
+    * Returns the output node of the block that the `relNode` belongs to
+    */
+  def getBlockOutputNode: RelNode = {
+    if (hasMultipleBlockOutputNodes) {
+      // If has multiple block output nodes, the `relNode` is a break-point.
+      // So the `relNode` is the output node of the block that the `relNode` belongs to
+      relNode
+    } else {
+      // the `relNode` is not a break-point
+      require(blockOutputNodes.size == 1)
+      blockOutputNodes.head
+    }
+  }
+}
+
+/**
   * Builds [[RelNodeBlock]] plan
   */
-class RelNodeBlockPlanBuilder private (tEnv: TableEnvironment) {
+class RelNodeBlockPlanBuilder private(tEnv: TableEnvironment) {
 
-  private val node2Wrapper = new IdentityHashMap[RelNode, RelNodeWrapper]()
-  private val node2Block = new IdentityHashMap[RelNode, RelNodeBlock]()
+  private val node2Wrapper = new util.IdentityHashMap[RelNode, RelNodeWrapper]()
+  private val node2Block = new util.IdentityHashMap[RelNode, RelNodeBlock]()
 
   private val isUnionAllAsBreakPointDisabled = tEnv.config.getConf.getBoolean(
     TableConfigOptions.SQL_OPTIMIZER_SUBSECTION_UNIONALL_AS_BREAKPOINT_DISABLED)
@@ -189,6 +253,7 @@ class RelNodeBlockPlanBuilder private (tEnv: TableEnvironment) {
     */
   def buildRelNodeBlockPlan(sinks: Seq[RelNode]): Seq[RelNodeBlock] = {
     sinks.foreach(buildRelNodeWrappers(_, None))
+    buildBlockOutputNodes(sinks)
     sinks.map(buildBlockPlan)
   }
 
@@ -204,16 +269,16 @@ class RelNodeBlockPlanBuilder private (tEnv: TableEnvironment) {
   }
 
   private def buildBlock(
-    node: RelNode,
-    currentBlock: RelNodeBlock,
-    createNewBlock: Boolean): Unit = {
-    val hasMultipleParents = node2Wrapper(node).hasMultipleParents
-    if (isUnionAllNode(node) && isUnionAllAsBreakPointDisabled) {
+      node: RelNode,
+      currentBlock: RelNodeBlock,
+      createNewBlock: Boolean): Unit = {
+    val hasDiffBlockOutputNodes = node2Wrapper(node).hasMultipleBlockOutputNodes
+    if (isUnionAllAsBreakPointDisabled && isUnionAllNode(node)) {
       // Does not create new block for union all node, delay the creation operation to its inputs.
-      val createNewBlockForChildren = if (hasMultipleParents) true else createNewBlock
+      val createNewBlockForChildren = if (hasDiffBlockOutputNodes) true else createNewBlock
       node.getInputs.foreach(child => buildBlock(child, currentBlock, createNewBlockForChildren))
     } else {
-      if (createNewBlock || hasMultipleParents) {
+      if (createNewBlock || hasDiffBlockOutputNodes) {
         val childBlock = node2Block.getOrElseUpdate(node, new RelNodeBlock(node, tEnv))
         currentBlock.addChild(childBlock)
         node.getInputs.foreach(child => buildBlock(child, childBlock, createNewBlock = false))
@@ -226,6 +291,49 @@ class RelNodeBlockPlanBuilder private (tEnv: TableEnvironment) {
   private def isUnionAllNode(node: RelNode): Boolean = node match {
     case unionRel: org.apache.calcite.rel.core.Union => unionRel.all
     case _ => false
+  }
+
+  private def buildBlockOutputNodes(sinks: Seq[RelNode]): Unit = {
+    // init sink block output node
+    sinks.foreach(sink => node2Wrapper.get(sink).addBlockOutputNode(sink))
+
+    val unvisitedNodeQueue: util.Deque[RelNode] = new util.ArrayDeque[RelNode]()
+    unvisitedNodeQueue.addAll(sinks)
+    while (unvisitedNodeQueue.nonEmpty) {
+      val node = unvisitedNodeQueue.removeFirst()
+      val wrapper = node2Wrapper.get(node)
+      require(wrapper != null)
+      val blockOutputNode = wrapper.getBlockOutputNode
+      buildBlockOutputNodes(None, node, blockOutputNode, unvisitedNodeQueue)
+    }
+  }
+
+  private def buildBlockOutputNodes(
+      parent: Option[RelNode],
+      node: RelNode,
+      curBlockOutputNode: RelNode,
+      unvisitedNodeQueue: util.Deque[RelNode]): Unit = {
+    val wrapper = node2Wrapper.get(node)
+    require(wrapper != null)
+    wrapper.addBlockOutputNode(curBlockOutputNode)
+    wrapper.addVisitedParentNode(parent)
+
+    // the node can be visited only when its all parent nodes have been visited
+    if (wrapper.allParentNodesVisited) {
+      val newBlockOutputNode = if (wrapper.hasMultipleBlockOutputNodes) {
+        // if the node has different output node, the node is the output node of current block.
+        node
+      } else {
+        curBlockOutputNode
+      }
+      node.getInputs.foreach { input =>
+        buildBlockOutputNodes(Some(node), input, newBlockOutputNode, unvisitedNodeQueue)
+      }
+      unvisitedNodeQueue.remove(node)
+    } else {
+      // visit later
+      unvisitedNodeQueue.addLast(node)
+    }
   }
 
 }
@@ -241,8 +349,8 @@ object RelNodeBlockPlanBuilder {
     * @return Sink-RelNodeBlocks, each Sink-RelNodeBlock is a tree.
     */
   def buildRelNodeBlockPlan(
-    sinkNodes: Seq[LogicalNode],
-    tEnv: TableEnvironment): Seq[RelNodeBlock] = {
+      sinkNodes: Seq[LogicalNode],
+      tEnv: TableEnvironment): Seq[RelNodeBlock] = {
 
     // checks sink node
     sinkNodes.foreach {
@@ -296,15 +404,3 @@ object RelNodeBlockPlanBuilder {
 
 }
 
-class RelNodeWrapper(relNode: RelNode) {
-  private val parentNodes = Sets.newIdentityHashSet[RelNode]()
-
-  def addParentNode(parent: Option[RelNode]): Unit = {
-    parent match {
-      case Some(p) => parentNodes.add(p)
-      case None => // Ignore
-    }
-  }
-
-  def hasMultipleParents: Boolean = parentNodes.size > 1
-}

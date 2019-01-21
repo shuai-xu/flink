@@ -22,9 +22,8 @@ StreamExecSink(fields=[id1, num, text1], retract=[false], accMode=[Acc])
 +- StreamExecCalc(select=[id1, num, text1], retract=[false], accMode=[Acc])
    +- StreamExecJoin(where=[=(id1, id3)], join=[id3, text1, id1, num], joinType=[InnerJoin], retract=[false], accMode=[Acc])
       :- StreamExecExchange(distribution=[hash[id3]], retract=[true], accMode=[Acc])
-      :  +- StreamExecCalc(select=[id AS id3, text AS text1], where=[<(num, 5)], retract=[true], accMode=[Acc])
-      :     +- StreamExecCalc(select=[id, num, text], where=[>=(id, 0)], retract=[true], accMode=[Acc], reuse_id=[1])
-      :        +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+      :  +- StreamExecCalc(select=[id AS id3, text AS text1], where=[AND(>=(id, 0), <(num, 5))], retract=[true], accMode=[Acc])
+      :     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
       +- StreamExecExchange(distribution=[hash[id1]], retract=[true], accMode=[Acc])
          +- StreamExecCalc(select=[id1, num], retract=[true], accMode=[Acc])
             +- StreamExecJoin(where=[=(id1, id2)], join=[id1, num, id2], joinType=[InnerJoin], retract=[true], accMode=[Acc])
@@ -32,8 +31,8 @@ StreamExecSink(fields=[id1, num, text1], retract=[false], accMode=[Acc])
                :  +- StreamExecCalc(select=[id AS id1, num], where=[<=(id, 10)], retract=[true], accMode=[Acc])
                :     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
                +- StreamExecExchange(distribution=[hash[id2]], retract=[true], accMode=[Acc])
-                  +- StreamExecCalc(select=[id AS id2], where=[>=(num, 5)], retract=[true], accMode=[Acc])
-                     +- Reused(reference_id=[1])
+                  +- StreamExecCalc(select=[id AS id2], where=[AND(>=(id, 0), >=(num, 5))], retract=[true], accMode=[Acc])
+                     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 
 == Physical Execution Plan ==
  : Data Source
@@ -44,23 +43,23 @@ StreamExecSink(fields=[id1, num, text1], retract=[false], accMode=[Acc])
 		ship_strategy : FORWARD
 
 		 : Operator
-			content : Calc(where: (id >= 0), select: (id, num, text))
+			content : Calc(where: ((id >= 0) AND (num < 5)), select: (id AS id3, text AS text1))
 			ship_strategy : FORWARD
 
 			 : Operator
-				content : Calc(where: (num < 5), select: (id AS id3, text AS text1))
+				content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(id, num, text))
 				ship_strategy : FORWARD
 
 				 : Operator
-					content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(id, num, text))
+					content : Calc(where: (id <= 10), select: (id AS id1, num))
 					ship_strategy : FORWARD
 
 					 : Operator
-						content : Calc(where: (id <= 10), select: (id AS id1, num))
+						content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(id, num, text))
 						ship_strategy : FORWARD
 
 						 : Operator
-							content : Calc(where: (num >= 5), select: (id AS id2))
+							content : Calc(where: ((id >= 0) AND (num >= 5)), select: (id AS id2))
 							ship_strategy : FORWARD
 
 							 : Operator
