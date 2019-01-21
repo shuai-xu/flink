@@ -56,7 +56,7 @@ public class RightOuterJoinStreamOperator extends OuterJoinStreamOperator {
 	@Override
 	public TwoInputSelection processElement1(StreamRecord<BaseRow> element) throws Exception {
 		processElement(
-			inputSer1.copy(element.getValue()),
+			getOrCopyBaseRow(element, true),
 			leftStateHandler,
 			rightStateHandler,
 			leftMatchStateHandler,
@@ -71,7 +71,7 @@ public class RightOuterJoinStreamOperator extends OuterJoinStreamOperator {
 	@Override
 	public TwoInputSelection processElement2(StreamRecord<BaseRow> element) throws Exception {
 		processElement(
-			inputSer2.copy(element.getValue()),
+			getOrCopyBaseRow(element, false),
 			rightStateHandler,
 			leftStateHandler,
 			rightMatchStateHandler,

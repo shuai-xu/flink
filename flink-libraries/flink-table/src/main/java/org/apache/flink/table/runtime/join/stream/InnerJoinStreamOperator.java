@@ -66,7 +66,7 @@ public class InnerJoinStreamOperator extends JoinStreamOperator {
 	@Override
 	public TwoInputSelection processElement1(StreamRecord<BaseRow> element) throws Exception {
 		processElement(
-			inputSer1.copy(element.getValue()),
+			getOrCopyBaseRow(element, true),
 			leftStateHandler,
 			rightStateHandler,
 			true,
@@ -81,7 +81,7 @@ public class InnerJoinStreamOperator extends JoinStreamOperator {
 	@Override
 	public TwoInputSelection processElement2(StreamRecord<BaseRow> element) throws Exception {
 		processElement(
-			inputSer2.copy(element.getValue()),
+			getOrCopyBaseRow(element, false),
 			rightStateHandler,
 			leftStateHandler,
 			false,

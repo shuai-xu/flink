@@ -37,6 +37,7 @@ import org.apache.flink.streaming.api.operators.TimestampedCollector;
 import org.apache.flink.streaming.api.operators.Triggerable;
 import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
+import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.codegen.CodeGenUtils;
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction;
@@ -113,8 +114,9 @@ public abstract class JoinStreamOperator extends AbstractStreamOperator<BaseRow>
 	protected int[] nullFilterKeys;
 
 	// Serializer for left and right input, we need RowSerializer to copy BaseRow
-	protected AbstractRowSerializer<BaseRow> inputSer1;
-	protected AbstractRowSerializer<BaseRow> inputSer2;
+	protected AbstractRowSerializer<BaseRow> leftSer;
+	protected AbstractRowSerializer<BaseRow> rightSer;
+	private boolean isObjectReuse;
 
 	public JoinStreamOperator(
 			BaseRowTypeInfo leftType,
@@ -175,8 +177,9 @@ public abstract class JoinStreamOperator extends AbstractStreamOperator<BaseRow>
 		leftPkProjectCode = null;
 		rightPkProjectCode = null;
 
-		inputSer1 = (AbstractRowSerializer) leftType.createSerializer(getExecutionConfig());
-		inputSer2 = (AbstractRowSerializer) rightType.createSerializer(getExecutionConfig());
+		leftSer = (AbstractRowSerializer) leftType.createSerializer(getExecutionConfig());
+		rightSer = (AbstractRowSerializer) rightType.createSerializer(getExecutionConfig());
+		this.isObjectReuse = getExecutionConfig().isObjectReuseEnabled();
 	}
 
 	private boolean isNotNullSafe() {
@@ -374,5 +377,14 @@ public abstract class JoinStreamOperator extends AbstractStreamOperator<BaseRow>
 	@Override
 	public TwoInputSelection firstInputSelection() {
 		return TwoInputSelection.ANY;
+	}
+
+	// we need to copy element if object reuse enabled.
+	public BaseRow getOrCopyBaseRow(StreamRecord<BaseRow> element, Boolean isLeft) {
+		if (isLeft) {
+			return isObjectReuse ? leftSer.copy(element.getValue()) : element.getValue();
+		} else {
+			return isObjectReuse ? rightSer.copy(element.getValue()) : element.getValue();
+		}
 	}
 }
