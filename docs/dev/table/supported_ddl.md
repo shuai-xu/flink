@@ -28,6 +28,9 @@ By CREATE TABLE statement, data could be accessed as a SQL table in the followin
 
 We use WITH clauses to describe the information necessary to access a external system.
 
+* This will be replaced by the TOC
+{:toc}
+
 Provided Connectors
 -------------------
 
