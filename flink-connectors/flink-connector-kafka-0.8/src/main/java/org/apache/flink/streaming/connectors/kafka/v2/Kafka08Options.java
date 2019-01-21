@@ -43,7 +43,7 @@ public class Kafka08Options {
 		"linger.ms", "max.request.size", "receive.buffer.bytes", "send.buffer.bytes", "timeout.ms",
 		"block.on.buffer.full", "metadata.fetch.timeout.ms", "metadata.max.age.ms", "metric.reporters",
 		"metrics.num.samples", "metrics.sample.window.ms", "reconnect.backoff.ms", "retry.backoff.ms",
-		"key.serializer", "value.serializer"
+		"key.serializer", "value.serializer", "retries"
 	};
 	public static final Set<String> OPTIONAL_PRODUCER_KEYS = new HashSet<>(Arrays.asList(optionalProducerKeys));
 }

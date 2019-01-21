@@ -59,7 +59,7 @@ public class Kafka011Options {
 		"sasl.kerberos.min.time.before.relogin", "sasl.kerberos.ticket.renew.jitter",
 		"sasl.kerberos.ticket.renew.window.factor", "ssl.cipher.suites",
 		"ssl.endpoint.identification.algorithm", "ssl.keymanager.algorithm", "ssl.secure.random.implementation",
-		"ssl.trustmanager.algorithm", "transaction.timeout.ms", "transactional.id"
+		"ssl.trustmanager.algorithm", "transaction.timeout.ms", "transactional.id", "retries"
 	};
 	public static final Set<String> OPTIONAL_PRODUCER_KEYS = new HashSet<>(Arrays.asList(optionalProducerKeys));
 }

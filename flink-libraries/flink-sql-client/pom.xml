@@ -152,6 +152,106 @@ under the License.
 			<scope>test</scope>
 		</dependency>
 
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-connector-kafka-base_2.11</artifactId>
+			<version>${project.version}</version>
+			<type>test-jar</type>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.scala-lang.modules</groupId>
+					<artifactId>scala-parser-combinators_${scala.binary.version}</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.scala-lang.modules</groupId>
+					<artifactId>scala-xml_${scala.binary.version}</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.flink</groupId>
+					<artifactId>force-shading</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.kafka</groupId>
+					<artifactId>kafka_${scala.binary.version}</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-connector-kafka-0.11_2.11</artifactId>
+			<version>${project.version}</version>
+			<type>test-jar</type>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.scala-lang.modules</groupId>
+					<artifactId>scala-parser-combinators_${scala.binary.version}</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.scala-lang.modules</groupId>
+					<artifactId>scala-xml_${scala.binary.version}</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.flink</groupId>
+					<artifactId>force-shading</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.kafka</groupId>
+					<artifactId>kafka-clients</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-connector-kafka-0.11_2.11</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.scala-lang.modules</groupId>
+					<artifactId>scala-parser-combinators_${scala.binary.version}</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.scala-lang.modules</groupId>
+					<artifactId>scala-xml_${scala.binary.version}</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.flink</groupId>
+					<artifactId>force-shading</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.kafka</groupId>
+					<artifactId>kafka-clients</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<dependency>
+			<!-- include 0.11 server for tests  -->
+			<groupId>org.apache.kafka</groupId>
+			<artifactId>kafka_${scala.binary.version}</artifactId>
+			<version>0.11.0.2</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<!-- include 0.11 server for tests  -->
+			<groupId>org.apache.kafka</groupId>
+			<artifactId>kafka-clients</artifactId>
+			<version>0.11.0.2</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-metrics-jmx</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+
 	</dependencies>
 
 	<build>

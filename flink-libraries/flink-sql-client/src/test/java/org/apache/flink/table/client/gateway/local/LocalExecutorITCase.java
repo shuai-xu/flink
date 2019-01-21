@@ -28,6 +28,7 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.configuration.WebOptions;
 import org.apache.flink.runtime.jobgraph.JobStatus;
+import org.apache.flink.streaming.connectors.kafka.KafkaITService;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
@@ -45,6 +46,17 @@ import org.apache.flink.test.util.TestBaseUtils;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.TestLogger;
 
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Ignore;
@@ -63,6 +75,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -92,6 +105,9 @@ public class LocalExecutorITCase extends TestLogger {
 			NUM_TMS,
 			NUM_SLOTS_PER_TM),
 		true);
+
+	@ClassRule
+	public static final KafkaITService KAFKA_IT_SERVICE = new KafkaITService();
 
 	private static ClusterClient<?> clusterClient;
 
@@ -893,6 +909,109 @@ public class LocalExecutorITCase extends TestLogger {
 			TestBaseUtils.compareResultCollections(expectedResults, actualResults, Comparator.naturalOrder());
 		} finally {
 			executor.stop(session);
+		}
+	}
+
+	@Test(timeout = 60_000L)
+	public void testReadFromKafka() throws Exception {
+		final String sourceTopic = "testReadFromKafka";
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_EXECUTION_TYPE", "streaming");
+		replaceVars.put("$VAR_RESULT_MODE", "changelog");
+		replaceVars.put("$VAR_UPDATE_MODE", "update-mode: append");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+		String resultId = null;
+		try {
+			executor.createTable(session, String.format(
+					"CREATE TABLE t(key VARBINARY, msg VARBINARY, `topic` VARCHAR, `partition` INT, `offset`" +
+					" BIGINT) with (type = 'KAFKA010', topic = '%s', `bootstrap.servers` =" +
+					" '%s', `group.id` = 'test-group', startupMode = 'EARLIEST')",
+					sourceTopic, KafkaITService.brokerConnectionStrings()));
+			produceMessages(sourceTopic, KafkaITService.brokerConnectionStrings());
+
+			ResultDescriptor descriptor = executor.executeQuery(session,
+					"SELECT CAST(key AS VARCHAR), CAST (msg AS VARCHAR) FROM t");
+
+			TypedResult<List<Tuple2<Boolean, Row>>> result;
+			resultId = descriptor.getResultId();
+			do {
+				Thread.sleep(1);
+				result = executor.retrieveResultChanges(session, resultId);
+			} while (result.getType() == TypedResult.ResultType.EMPTY);
+
+			assertEquals("key_0", result.getPayload().get(0).f1.getField(0));
+			assertEquals("value_0", result.getPayload().get(0).f1.getField(1));
+		} finally {
+			if (resultId != null && !resultId.isEmpty()) {
+				executor.cancelQuery(session, resultId);
+			}
+		}
+	}
+
+	@Test(timeout = 60_000L)
+	public void testProduceToKafka() throws Exception {
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_EXECUTION_TYPE", "streaming");
+		replaceVars.put("$VAR_RESULT_MODE", "changelog");
+		replaceVars.put("$VAR_UPDATE_MODE", "update-mode: append");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
+
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+		final String sinkTopic = "testProduceToKafka";
+		try {
+			executor.createTable(session, String.format(
+					"CREATE TABLE kafka_sink(messageKey VARBINARY, messageValue VARBINARY, PRIMARY KEY " +
+					"(messageKey)) with (type = 'KAFKA010', topic = '%s', `bootstrap.servers` = '%s', retries = '3')",
+					sinkTopic, KafkaITService.brokerConnectionStrings()));
+			executor.executeUpdate(session,
+					"INSERT INTO kafka_sink (messageKey, messageValue) VALUES (CAST('key_0' AS VARBINARY), " +
+					"CAST('value_0' AS VARBINARY))");
+
+			// Consume from the sink topic.
+			Properties props = new Properties();
+			props.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaITService.brokerConnectionStrings());
+			props.setProperty(ConsumerConfig.GROUP_ID_CONFIG, "testGroupId");
+			props.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+			props.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+			props.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+			try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
+				consumer.subscribe(Collections.singleton(sinkTopic));
+				ConsumerRecords<String, String> consumerRecords = ConsumerRecords.empty();
+				while (consumerRecords.isEmpty()) {
+					consumerRecords = consumer.poll(1000L);
+				}
+				if (consumerRecords.isEmpty()) {
+					fail("Failed to insert into table.");
+				}
+				ConsumerRecord<String, String> record = consumerRecords.iterator().next();
+				assertEquals("key_0", record.key());
+				assertEquals("value_0", record.value());
+			}
+		} finally {
+			executor.stop(session);
+		}
+	}
+
+	private void produceMessages(String topic, String brokerConnectionStrings) {
+		KafkaITService.createTopic(topic, 1, 1);
+		Properties properties = new Properties();
+		properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerConnectionStrings);
+		properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+		properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+		properties.setProperty(ProducerConfig.RETRIES_CONFIG, "3");
+		try (Producer<String, String > producer = new KafkaProducer<>(properties)) {
+			TopicPartition tp = new TopicPartition(topic, 0);
+			for (int i = 0; i < 10; i++) {
+				producer.send(new ProducerRecord<>(tp.topic(), tp.partition(), "key_" + i, "value_" + i),
+						(recordMetadata, e) -> {
+							if (e != null) {
+								fail("Failed to send message to Kafka due to: " + e);
+							}
+						});
+			}
 		}
 	}
 

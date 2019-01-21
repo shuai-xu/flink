@@ -56,7 +56,7 @@ public class Kafka010Options {
 		"retry.backoff.ms", "sasl.kerberos.kinit.cmd", "sasl.kerberos.min.time.before.relogin",
 		"sasl.kerberos.ticket.renew.jitter", "sasl.kerberos.ticket.renew.window.factor", "ssl.cipher.suites",
 		"ssl.endpoint.identification.algorithm", "ssl.keymanager.algorithm", "ssl.secure.random.implementation",
-		"ssl.trustmanager.algorithm"
+		"ssl.trustmanager.algorithm", "retries"
 	};
 	public static final Set<String> OPTIONAL_PRODUCER_KEYS = new HashSet<>(Arrays.asList(optionalProducerKeys));
 }
