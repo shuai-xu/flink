@@ -271,9 +271,10 @@ NOTE: Use the prebound Execution Environments and Table Environment to implement
     * dataSet.writeAsText("/path/to/output")
     * benv.execute("My batch program")
     *
-    * val batchTable = btenv.fromDataSet(dataSet)
+    * val batchTable = btenv.fromElements(1,2,3,4).as('num)
     * btenv.registerTable(batchTable, "tableName")
     * val result = btenv.sqlQuery("SELECT * FROM tableName").collect
+    * result.foreach(println)
     HINT: You can use print() on a DataSet to print the contents to the shell.
 
   Streaming - Use the 'senv' and 'stenv' variable

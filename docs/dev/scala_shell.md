@@ -39,9 +39,10 @@ cluster, please see the Setup section below.
 
 ## Usage
 
-The shell supports Batch and Streaming.
-Two different ExecutionEnvironments are automatically prebound after startup.
-Use "benv" and "senv" to access the Batch and Streaming environment respectively.
+The shell supports DataSet, DataStream, Table API and SQL.
+Four different Environments are automatically prebound after startup.
+Use "benv" and "senv" to access the Batch and Streaming ExecutionEnvironment respectively.
+Use "btenv" and "stenv" to access BatchTableEnvironment and StreamTableEnvironment respectively.
 
 ### DataSet API
 
@@ -88,11 +89,56 @@ Note, that in the Streaming case, the print operation does not trigger execution
 
 ### Table API
 
-Scala Shell also support Table API. Users can execute a streaming Table program with `stenv` and 
-a batch Table program with `btenv`. 
+The example below is a wordcount program using Table API:
+<div class="codetabs" markdown="1">
+<div data-lang="stream" markdown="1">
+{% highlight scala %}
+Scala> import org.apache.flink.table.api.functions.TableFunction
+Scala> val textSource = stenv.fromDataStream(
+  senv.fromElements(
+    "To be, or not to be,--that is the question:--",
+    "Whether 'tis nobler in the mind to suffer",
+    "The slings and arrows of outrageous fortune",
+    "Or to take arms against a sea of troubles,"),
+  'text)
+Scala> class $Split extends TableFunction[String] {
+    def eval(s: String): Unit = {
+      s.toLowerCase.split("\\W+").foreach(collect)
+    }
+  }
+Scala> val split = new $Split
+Scala> textSource.join(split('text) as 'word).
+    groupBy('word).select('word, 'word.count as 'count).
+    toRetractStream[(String, Long)].print
+Scala> senv.execute("Table Wordcount")
+{% endhighlight %}
+</div>
+<div data-lang="batch" markdown="1">
+{% highlight scala %}
+Scala> import org.apache.flink.table.api.functions.TableFunction
+Scala> val textSource = btenv.fromElements("To be, or not to be,--that is the question:--",
+                 "Whether 'tis nobler in the mind to suffer",
+                 "The slings and arrows of outrageous fortune",
+                 "Or to take arms against a sea of troubles,").as('text)
+Scala> class $Split extends TableFunction[String] {
+    def eval(s: String): Unit = {
+      s.toLowerCase.split("\\W+").foreach(collect)
+    }
+  }
+Scala> val split = new $Split
+Scala> val result = textSource.join(split('text) as 'word).
+    groupBy('word).select('word, 'word.count as 'count).collect
+Scala> result.foreach(println)
+{% endhighlight %}
+</div>
+</div>
 
-The `Table` API supports interactive programming, which allows users to cache an intermediate 
-table for later usage. For example, in the following Scala Shell command sequence, table `t1` 
+Note, that using $ as a prefix for the class name of TableFunction is a workaround of the issue that scala incorrectly generated inner class name.
+
+### Interactive Programming
+
+The `Table` API supports interactive programming, which allows users to cache an intermediate
+table for later usage. For example, in the following Scala Shell command sequence, table `t1`
 is cached and the result may be reused in later code.
 
 {% highlight scala %}
@@ -121,28 +167,63 @@ Scala> val t3 = t1.groupBy('color).select('color, 'amount.avg as 'avg)
 Scala> val res3 = t3.print
 {% endhighlight %}
 
+The result will print on the shell.
+
 Note: The cached tables will be cleaned up when the Scala Shell exit.
 
-### SQL Query
-In Scala Shell, users can also execute SQL queries calling sqlQuery() as following code shows:
+### SQL
 
+The following example is a wordcount program written in SQL:
+<div class="codetabs" markdown="1">
+<div data-lang="stream" markdown="1">
 {% highlight scala %}
-Scala> val data = Seq(
-    ("US", "Red", 10),
-    ("UK", "Blue", 20),
-    ("CN", "Yellow", 30),
-    ("US", "Blue",40),
-    ("UK","Red", 50),
-    ("CN", "Red",60),
-    ("US", "Yellow", 70),
-    ("UK", "Yellow", 80),
-    ("CN", "Blue", 90),
-    ("US", "Blue", 100)
-  )
-Scala> val batchTable = btenv.fromCollection(data,'country,'color,'cnt)
-Scala> btenv.registerTable("MyTable",batchTable)
-Scala> val result = btenv.sqlQuery("SELECT * FROM MyTable WHERE cnt < 50").collect
+Scala> import org.apache.flink.table.functions.TableFunction
+Scala> val textSource = stenv.fromDataStream(
+  senv.fromElements(
+    "To be, or not to be,--that is the question:--",
+    "Whether 'tis nobler in the mind to suffer",
+    "The slings and arrows of outrageous fortune",
+    "Or to take arms against a sea of troubles,"),
+  'text)
+Scala> stenv.registerTable("text_source", textSource)
+Scala> class $Split extends TableFunction[String] {
+    def eval(s: String): Unit = {
+      s.toLowerCase.split("\\W+").foreach(collect)
+    }
+  }
+Scala> stenv.registerFunction("split", new $Split)
+Scala> val result = stenv.sqlQuery("""SELECT T.word, count(T.word) AS `count`
+    FROM text_source
+    JOIN LATERAL table(split(text)) AS T(word)
+    ON TRUE
+    GROUP BY T.word""")
+Scala> result.toRetractStream[(String, Long)].print
+Scala> senv.execute("SQL Wordcount")
 {% endhighlight %}
+</div>
+<div data-lang="batch" markdown="1">
+{% highlight scala %}
+Scala> import org.apache.flink.table.functions.TableFunction
+Scala> val textSource = btenv.fromElements("To be, or not to be,--that is the question:--",
+       "Whether 'tis nobler in the mind to suffer",
+       "The slings and arrows of outrageous fortune",
+       "Or to take arms against a sea of troubles,").as('text)
+Scala> btenv.registerTable("text_source", textSource)
+Scala> class $Split extends TableFunction[String] {
+    def eval(s: String): Unit = {
+      s.toLowerCase.split("\\W+").foreach(collect)
+    }
+  }
+Scala> btenv.registerFunction("split", new $Split)
+Scala> val result = btenv.sqlQuery("""SELECT T.word, count(T.word) AS `count`
+    FROM text_source
+    JOIN LATERAL table(split(text)) AS T(word)
+    ON TRUE
+    GROUP BY T.word""")
+Scala> result.collect.foreach(println)
+{% endhighlight %}
+</div>
+</div>
 
 ## Adding external dependencies
 
@@ -202,7 +283,7 @@ and 2 TaskManagers. Each TaskManager starts with 1024MB memory and provides 2 sl
  ./bin/start-scala-shell.sh yarn -n 2 -jm 1024 -s 2 -tm 1024 -nm flink-yarn
 {% endhighlight %}
 
-Note: Please make sure the environment variables HADOOP_HOME=/path/to/hadoop and
+Note: Please make sure the environment variables HADOOP_HOME and
 YARN_CONF_DIR=${HADOOP_HOME}/etc/hadoop have been correctly set.
 
 For all other options, see the full reference at the bottom.
