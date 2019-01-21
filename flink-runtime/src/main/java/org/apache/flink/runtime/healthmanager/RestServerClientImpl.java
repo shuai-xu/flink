@@ -163,12 +163,11 @@ public class RestServerClientImpl implements RestServerClient {
 		return sendRequest(headers, parameters, EmptyRequestBody.getInstance()).thenApply(
 			(JobSubtaskCurrentAttemptsInfo subtasksInfo) -> {
 				Collection<SubtaskExecutionAttemptInfo> subtasks = subtasksInfo.getSubtaskInfos();
-				Map<ExecutionVertexID, ExecutionState> taskStatus = new HashMap<>();
+				Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> taskStatus = new HashMap<>();
 				for (SubtaskExecutionAttemptInfo subtask: subtasks) {
 					JobVertexID jobVertexID = JobVertexID.fromHexString(subtask.getVertexId());
 					ExecutionVertexID executionVertexID = new ExecutionVertexID(jobVertexID, subtask.getSubtaskIndex());
-					ExecutionState executionState = subtask.getStatus();
-					taskStatus.put(executionVertexID, executionState);
+					taskStatus.put(executionVertexID, Tuple2.of(subtask.getCurrentStateTime(), subtask.getStatus()));
 				}
 				return new JobStatus(taskStatus);
 			}

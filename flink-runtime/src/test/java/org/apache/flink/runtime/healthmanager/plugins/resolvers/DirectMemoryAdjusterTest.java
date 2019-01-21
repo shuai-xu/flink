@@ -107,14 +107,18 @@ public class DirectMemoryAdjusterTest {
 		Mockito.when(restServerClient.getFailover(Mockito.eq(jobID), Mockito.anyLong(), Mockito.anyLong()))
 			.thenReturn(exceptions).thenReturn(exceptions).thenReturn(new HashMap<>());
 
-		Map<ExecutionVertexID, ExecutionState> allTaskStats = new HashMap<>();
-		allTaskStats.put(new ExecutionVertexID(vertex1, 0), ExecutionState.RUNNING);
-		allTaskStats.put(new ExecutionVertexID(vertex2, 0), ExecutionState.SCHEDULED);
+		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
+		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
 		RestServerClient.JobStatus jobStatus = new RestServerClient.JobStatus(allTaskStats);
 
-		Map<ExecutionVertexID, ExecutionState> allTaskStats2 = new HashMap<>();
-		allTaskStats2.put(new ExecutionVertexID(vertex1, 0), ExecutionState.RUNNING);
-		allTaskStats2.put(new ExecutionVertexID(vertex2, 0), ExecutionState.RUNNING);
+		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats2 = new HashMap<>();
+		allTaskStats2.put(new ExecutionVertexID(vertex1, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+		allTaskStats2.put(new ExecutionVertexID(vertex2, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		RestServerClient.JobStatus jobStatus2 = new RestServerClient.JobStatus(allTaskStats2);
 
 		// mock slow scheduling.

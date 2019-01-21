@@ -96,8 +96,8 @@ public class AdjustJobConfig implements Action {
 			Thread.sleep(timeoutMs / 10);
 			RestServerClient.JobStatus jobStatus = restServerClient.getJobStatus(jobID);
 			int i = 0;
-			for (ExecutionState state: jobStatus.getTaskStatus().values()) {
-				if (!state.equals(ExecutionState.RUNNING)) {
+			for (Tuple2<Long, ExecutionState> time2state: jobStatus.getTaskStatus().values()) {
+				if (!time2state.f1.equals(ExecutionState.RUNNING)) {
 					break;
 				}
 				i++;

@@ -233,13 +233,13 @@ public interface RestServerClient {
 		/**
 		 * Status of all task.
 		 */
-		private Map<ExecutionVertexID, ExecutionState> taskStatus;
+		private Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> taskStatus;
 
-		public JobStatus(Map<ExecutionVertexID, ExecutionState> taskStatus) {
+		public JobStatus(Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> taskStatus) {
 			this.taskStatus = taskStatus;
 		}
 
-		public Map<ExecutionVertexID, ExecutionState> getTaskStatus() {
+		public Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> getTaskStatus() {
 			return taskStatus;
 		}
 	}

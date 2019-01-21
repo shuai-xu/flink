@@ -285,21 +285,30 @@ public class ParallelismScalerTest {
 			Mockito.any(TimelineAggType.class)
 		)).thenReturn(tmMetricSub);
 
-		Map<ExecutionVertexID, ExecutionState> allTaskStats = new HashMap<>();
-		allTaskStats.put(new ExecutionVertexID(vertex1, 0), ExecutionState.RUNNING);
-		allTaskStats.put(new ExecutionVertexID(vertex2, 0), ExecutionState.SCHEDULED);
-		allTaskStats.put(new ExecutionVertexID(vertex3, 0), ExecutionState.SCHEDULED);
+		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
+		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
+		allTaskStats.put(new ExecutionVertexID(vertex3, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
 		RestServerClient.JobStatus jobStatus = new RestServerClient.JobStatus(allTaskStats);
 
-		allTaskStats.put(new ExecutionVertexID(vertex1, 0), ExecutionState.RUNNING);
-		allTaskStats.put(new ExecutionVertexID(vertex2, 0), ExecutionState.RUNNING);
-		allTaskStats.put(new ExecutionVertexID(vertex3, 0), ExecutionState.SCHEDULED);
+		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+		allTaskStats.put(new ExecutionVertexID(vertex3, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
 		RestServerClient.JobStatus jobStatus2 = new RestServerClient.JobStatus(allTaskStats);
 
-		Map<ExecutionVertexID, ExecutionState> allTaskStats2 = new HashMap<>();
-		allTaskStats2.put(new ExecutionVertexID(vertex1, 0), ExecutionState.RUNNING);
-		allTaskStats2.put(new ExecutionVertexID(vertex2, 0), ExecutionState.RUNNING);
-		allTaskStats2.put(new ExecutionVertexID(vertex3, 0), ExecutionState.RUNNING);
+		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats2 = new HashMap<>();
+		allTaskStats2.put(new ExecutionVertexID(vertex1, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+		allTaskStats2.put(new ExecutionVertexID(vertex2, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+		allTaskStats2.put(new ExecutionVertexID(vertex3, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		RestServerClient.JobStatus jobStatus3 = new RestServerClient.JobStatus(allTaskStats2);
 
 		// mock slow scheduling.
@@ -559,21 +568,30 @@ public class ParallelismScalerTest {
 			Mockito.any(TimelineAggType.class)
 		)).thenReturn(tmMetricSub);
 
-		Map<ExecutionVertexID, ExecutionState> allTaskStats = new HashMap<>();
-		allTaskStats.put(new ExecutionVertexID(vertex1, 0), ExecutionState.RUNNING);
-		allTaskStats.put(new ExecutionVertexID(vertex2, 0), ExecutionState.SCHEDULED);
-		allTaskStats.put(new ExecutionVertexID(vertex3, 0), ExecutionState.SCHEDULED);
+		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
+		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
+		allTaskStats.put(new ExecutionVertexID(vertex3, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
 		RestServerClient.JobStatus jobStatus = new RestServerClient.JobStatus(allTaskStats);
 
-		allTaskStats.put(new ExecutionVertexID(vertex1, 0), ExecutionState.RUNNING);
-		allTaskStats.put(new ExecutionVertexID(vertex2, 0), ExecutionState.RUNNING);
-		allTaskStats.put(new ExecutionVertexID(vertex3, 0), ExecutionState.SCHEDULED);
+		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+		allTaskStats.put(new ExecutionVertexID(vertex3, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
 		RestServerClient.JobStatus jobStatus2 = new RestServerClient.JobStatus(allTaskStats);
 
-		Map<ExecutionVertexID, ExecutionState> allTaskStats2 = new HashMap<>();
-		allTaskStats2.put(new ExecutionVertexID(vertex1, 0), ExecutionState.RUNNING);
-		allTaskStats2.put(new ExecutionVertexID(vertex2, 0), ExecutionState.RUNNING);
-		allTaskStats2.put(new ExecutionVertexID(vertex3, 0), ExecutionState.RUNNING);
+		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats2 = new HashMap<>();
+		allTaskStats2.put(new ExecutionVertexID(vertex1, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+		allTaskStats2.put(new ExecutionVertexID(vertex2, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+		allTaskStats2.put(new ExecutionVertexID(vertex3, 0),
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		RestServerClient.JobStatus jobStatus3 = new RestServerClient.JobStatus(allTaskStats2);
 
 		// mock slow scheduling.
