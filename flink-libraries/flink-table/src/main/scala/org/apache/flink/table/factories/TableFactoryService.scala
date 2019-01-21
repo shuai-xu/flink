@@ -205,7 +205,12 @@ object TableFactoryService extends Logging {
       plainContext.remove(STATISTICS_PROPERTY_VERSION)
 
       // check if required context is met
-      plainContext.forall(e => properties.contains(e._1) && properties(e._1) == e._2)
+      plainContext.forall { e =>
+        properties.contains(e._1) &&
+          ((e._1 == CONNECTOR_TYPE && // If the key is connector.type, ignore case of the value.
+            properties(e._1).equalsIgnoreCase(e._2)) ||
+          properties(e._1) == e._2)
+      }
     }
 
     if (matchingFactories.isEmpty) {

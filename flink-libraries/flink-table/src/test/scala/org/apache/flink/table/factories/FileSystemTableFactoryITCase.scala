@@ -27,8 +27,10 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{RichTableSchema, TableEnvironment}
 import org.apache.flink.table.dataformat.BinaryString.fromString
-import org.apache.flink.table.descriptors.ConnectorDescriptorValidator
+import org.apache.flink.table.descriptors.{ConnectorDescriptorValidator, FormatDescriptorValidator}
 import org.apache.flink.table.factories.csv.CsvTableFactory
+import org.apache.flink.table.factories.orc.OrcTableFactory
+import org.apache.flink.table.factories.parquet.ParquetTableFactory
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.binaryRow
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.TableProperties
@@ -39,7 +41,7 @@ import org.junit.{After, Before, Rule, Test}
 import scala.collection.JavaConversions._
 import scala.collection.Seq
 
-class CsvTableFactoryITCase {
+class FileSystemTableFactoryITCase {
 
   val dataType = new BaseRowTypeInfo(
     INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO)
@@ -178,5 +180,23 @@ class CsvTableFactoryITCase {
       "True,2,2,Hello\n" +
       "True,3,2,Hello world\n" +
       "True,4,3,Hello world, how are you?"
+  }
+
+  @Test
+  def testFindParquetSinkTableFactory(): Unit = {
+    val props = Map(
+      ConnectorDescriptorValidator.CONNECTOR_TYPE -> "filesystem",
+      FormatDescriptorValidator.FORMAT_TYPE -> "PARQUET"
+    )
+    val tableSink = TableFactoryService.find(classOf[ParquetTableFactory], props)
+  }
+
+  @Test
+  def testFindORCSinkTableFactory(): Unit = {
+    val props = Map(
+      ConnectorDescriptorValidator.CONNECTOR_TYPE -> "filesystem",
+      FormatDescriptorValidator.FORMAT_TYPE -> "ORC"
+    )
+    val tableSink = TableFactoryService.find(classOf[OrcTableFactory], props)
   }
 }

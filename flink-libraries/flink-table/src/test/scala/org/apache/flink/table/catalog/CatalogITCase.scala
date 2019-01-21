@@ -46,6 +46,7 @@ class ExternalCatalogITCase {
 
   private val builtin = "mycatalog"
   private val default = "mydb"
+  private[this] val CONNECTOR_TYPE_COLLECTION = "COLLECTION"
 
   @Before
   def before(): Unit = {
@@ -103,7 +104,7 @@ class ExternalCatalogITCase {
     catalog.createTable(
       new ObjectPath(tableEnv.getDefaultDatabaseName(),"t1"),
       new CatalogTable(
-        "COLLECTION",
+        CONNECTOR_TYPE_COLLECTION,
         tableSchemaBuilder.build(),
         new util.HashMap[String, String](),
         richTableSchema,
@@ -175,7 +176,7 @@ class ExternalCatalogITCase {
     catalog.createTable(
       new ObjectPath(tableEnv.getDefaultDatabaseName(),"t1"),
       new CatalogTable(
-        "COLLECTION",
+        CONNECTOR_TYPE_COLLECTION,
         tableSchemaBuilder.build(),
         new util.HashMap[String, String](),
         richTableSchema,
@@ -247,7 +248,7 @@ class ExternalCatalogITCase {
     catalog.createTable(
       new ObjectPath(tableEnv.getDefaultDatabaseName(),"t1"),
       new CatalogTable(
-        "COLLECTION",
+        CONNECTOR_TYPE_COLLECTION,
         tableSchemaBuilder.build(),
         new util.HashMap[String, String](),
         richTableSchema,
@@ -317,7 +318,7 @@ class ExternalCatalogITCase {
     catalog.createTable(
       new ObjectPath(tableEnv.getDefaultDatabaseName(),"t1"),
       new CatalogTable(
-        "COLLECTION",
+        CONNECTOR_TYPE_COLLECTION,
         tableSchemaBuilder.build(),
         new util.HashMap[String, String](),
         richTableSchema,
@@ -388,7 +389,7 @@ class ExternalCatalogITCase {
     catalog.createTable(
       new ObjectPath(tableEnv.getDefaultDatabaseName(),"t1"),
       new CatalogTable(
-        "COLLECTION",
+        CONNECTOR_TYPE_COLLECTION,
         tableSchemaBuilder.build(),
         new util.HashMap[String, String](),
         richTableSchema,

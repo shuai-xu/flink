@@ -26,6 +26,7 @@ import org.apache.flink.table.factories.{BatchTableSinkFactory, BatchTableSource
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.util.{Logging, TableProperties}
+import org.apache.flink.util.Preconditions
 
 import _root_.scala.collection.JavaConversions._
 
@@ -164,11 +165,9 @@ object ExternalTableUtil extends Logging {
 
   private def getStorageType (tableName: String, properties: TableProperties): String = {
     val typeName = properties.getString("type", null)
-    if (typeName != null) {
-      typeName
-    } else {
-      throw new IllegalArgumentException("Property 'type' of table " + tableName + " is missing")
-    }
+    Preconditions.checkState(typeName != null,
+      "Property of table %s is missing", typeName)
+    typeName
   }
 }
 
