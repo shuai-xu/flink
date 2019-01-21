@@ -41,7 +41,7 @@ that are common to both APIs but please see our
 writing programs with each API.
 
 **NOTE:** When showing actual examples of how the APIs can be used  we will use
-`StreamingExecutionEnvironment` and the `DataStream` API. The concepts are exactly the same
+`StreamExecutionEnvironment` and the `DataStream` API. The concepts are exactly the same
 in the `DataSet` API, just replace by `ExecutionEnvironment` and `DataSet`.
 
 * This will be replaced by the TOC
@@ -483,7 +483,7 @@ Specifying Transformation Functions
 --------------------------
 
 Most transformations require user-defined functions. This section lists different ways
-of how they can be specified
+of how they can be specified.
 
 <div class="codetabs" markdown="1">
 <div data-lang="java" markdown="1">
@@ -783,7 +783,7 @@ defined in the `write()`and `readFields()` methods will be used for serializatio
 
 You can use special types, including Scala's `Either`, `Option`, and `Try`.
 The Java API has its own custom implementation of `Either`.
-Similarly to Scala's `Either`, it represents a value of one two possible types, *Left* or *Right*.
+Similarly to Scala's `Either`, it represents a value of one of two possible types, *Left* or *Right*.
 `Either` can be useful for error handling or operators that need to output two different types of records.
 
 #### Type Erasure & Type Inference
