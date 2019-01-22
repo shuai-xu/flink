@@ -136,12 +136,12 @@ CREATE TABLE Orders (
 {% highlight sql %}
 CREATE TABLE testSinkTable (
      ROWKEY BIGINT,
-     `` `family1.col1` `` VARCHAR,
-     `` `family2.col1` `` INTEGER,
-     `` `family2.col2` `` VARCHAR,
-     `` `family3.col1` `` DOUBLE,
-     `` `family3.col2` `` DATE,
-     `` `family3.col3` `` BIGINT,
+     `family1.col1` VARCHAR,
+     `family2.col1` INTEGER,
+     `family2.col2` VARCHAR,
+     `family3.col1` DOUBLE,
+     `family3.col2` DATE,
+     `family3.col3` BIGINT,
      PRIMARY KEY(ROWKEY)
 ) WITH (
     type='HBASE',
@@ -151,7 +151,7 @@ CREATE TABLE testSinkTable (
 
 {% endhighlight %}
 
-**Note** : the HBase table schema (that used for writing or temporal joining) must have a single column primary key which named `ROWKEY` and the column name format should be `` `columnFamily.qualifier` ``.
+**Note** : the HBase table schema (that used for writing or temporal joining) must have a single column primary key which named `ROWKEY` and the column name format should be `columnFamily.qualifier`.
 
 #### Required Configuration
 * **type** : use `HBASE` to create an HBase table to read/write data.
@@ -206,9 +206,9 @@ CREATE TABLE kafka_source (
      `offset` BIGINT
 ) WITH (
     type = 'KAFKA010',
-    `bootstrap.servers` = 'test_hostname:9092'，
+    `bootstrap.servers` = 'test_hostname:9092',
     `group.id` = 'test-group-id',
-    `topic` = 'source-topic'
+    `topic` = 'source-topic',
     startupMode = 'EARLIEST'
 )
 {% endhighlight %}
@@ -407,13 +407,13 @@ all the configurations supported by Kafka producers.
 
 {% highlight sql %}
 CREATE TABLE testSinkTable (
-     `` `family1.col1` `` VARCHAR,
-     `` `family2.col1` `` INTEGER,
-     `` `family2.col2` `` VARCHAR
-) WITH {
+     `family1.col1` VARCHAR,
+     `family2.col1` INTEGER,
+     `family2.col2` VARCHAR
+) WITH (
     type='PARQUET',
     filePath='schema://file1/file2.csv'
-}
+)
 
 {% endhighlight %}
 
@@ -461,14 +461,14 @@ CREATE TABLE testSinkTable (
 
 {% highlight sql %}
 CREATE TABLE testSinkTable (
-     `` `family1.col1` `` VARCHAR,
-     `` `family2.col1` `` INTEGER,
-     `` `family2.col2` `` VARCHAR,
-     primary key(`` `family1.col1` ``)
-) WITH {
+     `family1.col1` VARCHAR,
+     `family2.col1` INTEGER,
+     `family2.col2` VARCHAR,
+     primary key(`family1.col1`)
+) WITH (
     type='ORC',
     filePath='schema://file1/file2.csv'
-}
+)
 
 {% endhighlight %}
 
