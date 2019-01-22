@@ -46,10 +46,12 @@ public class GenericHiveMetastoreCatalog extends HiveCatalogBase {
 
 	public GenericHiveMetastoreCatalog(String catalogName, String hiveMetastoreURI) {
 		super(catalogName, hiveMetastoreURI);
+		LOG.info("Created GenericHiveMetastoreCatalog '{}'", catalogName);
 	}
 
 	public GenericHiveMetastoreCatalog(String catalogName, HiveConf hiveConf) {
 		super(catalogName, hiveConf);
+		LOG.info("Created GenericHiveMetastoreCatalog '{}'", catalogName);
 	}
 
 	// ------ tables ------
@@ -84,8 +86,15 @@ public class GenericHiveMetastoreCatalog extends HiveCatalogBase {
 	}
 
 	@Override
-	public void alterTable(ObjectPath tableName, CatalogTable newTable, boolean ignoreIfNotExists) throws TableNotExistException {
-		throw new UnsupportedOperationException();
+	public void alterTable(ObjectPath path, CatalogTable newTable, boolean ignoreIfNotExists) throws TableNotExistException {
+		// alter_table() requires the table to have a valid location, which it doesn't in this case
+		// Thus we have to translate alterTable() into (dropTable() + createTable())
+		if (tableExists(path)) {
+			dropTable(path, false);
+			createTable(path, newTable, false);
+		} else if (!ignoreIfNotExists) {
+			throw new TableNotExistException(catalogName, path.getFullName());
+		}
 	}
 
 	@Override

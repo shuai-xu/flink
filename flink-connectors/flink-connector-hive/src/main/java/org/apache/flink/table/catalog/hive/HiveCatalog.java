@@ -55,6 +55,7 @@ public class HiveCatalog extends HiveCatalogBase {
 
 	public HiveCatalog(String catalogName, String hiveMetastoreURI) {
 		super(catalogName, hiveMetastoreURI);
+		LOG.info("Created HiveCatalog '{}'", catalogName);
 	}
 
 	public HiveCatalog(String catalogName, HiveConf hiveConf) {
@@ -125,6 +126,7 @@ public class HiveCatalog extends HiveCatalogBase {
 	@Override
 	public void alterTable(ObjectPath path, CatalogTable newTable, boolean ignoreIfNotExists) throws TableNotExistException {
 		try {
+			// alter_table() doesn't throw a clear exception when target table doesn't exist. Thus, check the table existence explicitly
 			if (tableExists(path)) {
 				client.alter_table(path.getDbName(), path.getObjectName(), HiveCatalogUtil.createHiveTable(path, newTable));
 			} else if (!ignoreIfNotExists) {

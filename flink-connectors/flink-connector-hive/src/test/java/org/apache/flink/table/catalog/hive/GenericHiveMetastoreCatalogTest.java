@@ -35,7 +35,6 @@ import org.apache.flink.table.plan.stats.TableStats;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -120,21 +119,21 @@ public class GenericHiveMetastoreCatalogTest {
 		catalog.dropTable(path1, false);
 
 		// TODO: enable creating partitioned table
-//		// Partitioned table
-//		table = createPartitionedTable();
-//		catalog.createHiveTable(path1, table, false);
-//
-//		assertEquals(table, catalog.getTable(path1));
-//
-//		tables = catalog.listAllTables();
-//
-//		assertEquals(1, tables.size());
-//		assertEquals(path1.getFullName(), tables.get(0).getFullName());
-//
-//		s1Tables = catalog.listTables(db1);
-//
-//		assertEquals(1, s1Tables.size());
-//		assertEquals(path1.getFullName(), tables.get(0).getFullName());
+		// Partitioned table
+		table = createPartitionedTable();
+		catalog.createTable(path1, table, false);
+
+		assertEquals(table, catalog.getTable(path1));
+
+		tables = catalog.listAllTables();
+
+		assertEquals(1, tables.size());
+		assertEquals(path1.getFullName(), tables.get(0).getFullName());
+
+		s1Tables = catalog.listTables(db1);
+
+		assertEquals(1, s1Tables.size());
+		assertEquals(path1.getFullName(), tables.get(0).getFullName());
 	}
 
 	@Test(expected = DatabaseNotExistException.class)
@@ -210,7 +209,6 @@ public class GenericHiveMetastoreCatalogTest {
 		catalog.dropTable(nonExistTablePath, true);
 	}
 
-	@Ignore
 	@Test
 	public void testAlterTable() {
 		catalog.createDatabase(db1, createDb(), false);
@@ -229,6 +227,7 @@ public class GenericHiveMetastoreCatalogTest {
 
 		catalog.dropTable(path1, false);
 
+		// TODO: enable altering partitioned table
 		// Partitioned table
 		table = createPartitionedTable();
 		catalog.createTable(path1, table, false);
@@ -242,7 +241,6 @@ public class GenericHiveMetastoreCatalogTest {
 		assertEquals(newTable, catalog.getTable(path1));
 	}
 
-	@Ignore
 	@Test
 	public void testAlterTable_withTableStats() {
 		CatalogTable table = createTable();
@@ -258,13 +256,11 @@ public class GenericHiveMetastoreCatalogTest {
 		assertEquals(newTable, catalog.getTable(path1));
 	}
 
-	@Ignore
 	@Test(expected = TableNotExistException.class)
 	public void testAlterTable_TableNotExistException() {
 		catalog.alterTable(nonExistDbPath, createTable(), false);
 	}
 
-	@Ignore
 	@Test
 	public void testAlterTable_TableNotExist_ignored() {
 		catalog.createDatabase(db1, createDb(), false);

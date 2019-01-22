@@ -27,6 +27,7 @@ import org.apache.flink.table.descriptors.Schema;
 import org.apache.flink.table.descriptors.SchemaValidator;
 import org.apache.flink.table.plan.stats.TableStats;
 
+import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.SerDeInfo;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.metastore.api.Table;
@@ -48,12 +49,15 @@ import static org.apache.flink.table.catalog.hive.config.GenericHmsTableConfig.T
  * Util for GenericHiveMetastoreCatalog.
  */
 public class GenericHiveMetastoreCatalogUtil {
+	private static final Map<String, String> EXTERNAL_TABLE_PROPERTY = new HashMap<String, String>() {{
+		put("EXTERNAL", "TRUE");
+	}};
 
 	/**
-	 * Create a Hive table from CatalogTable.
+	 * Create a Hive external table from CatalogTable.
 	 * Note that create Hive table doesn't include TableStats
 	 */
-	protected static Table createHiveTable(ObjectPath tablePath, CatalogTable table) {
+	static Table createHiveTable(ObjectPath path, CatalogTable table) {
 		Map<String, String> properties = new HashMap<>();
 		Schema schema = new Schema().schema(table.getTableSchema());
 		properties.putAll(schema.toProperties());
@@ -73,16 +77,22 @@ public class GenericHiveMetastoreCatalogUtil {
 
 		Table hiveTable = new Table();
 		hiveTable.setSd(sd);
-		hiveTable.setDbName(tablePath.getDbName());
-		hiveTable.setTableName(tablePath.getObjectName());
+		hiveTable.setDbName(path.getDbName());
+		hiveTable.setTableName(path.getObjectName());
+		hiveTable.setTableType(TableType.EXTERNAL_TABLE.name());
 		hiveTable.setCreateTime((int) (System.currentTimeMillis() / 1000));
-
+		hiveTable.setPartitionKeys(new ArrayList<>());
 		hiveTable.setParameters(properties);
+		hiveTable.getParameters().putAll(EXTERNAL_TABLE_PROPERTY);
 
 		return hiveTable;
 	}
 
-	protected static CatalogTable createCatalogTable(Table table) {
+	/**
+	 * Create a CatalogTable from Hive table.
+	 * Note that create Hive table doesn't include TableStats
+	 */
+	static CatalogTable createCatalogTable(Table table) {
 		DescriptorProperties descProp = new DescriptorProperties();
 		descProp.putProperties(getPropertiesWithStartingKey(table.getParameters(), SchemaValidator.SCHEMA()));
 

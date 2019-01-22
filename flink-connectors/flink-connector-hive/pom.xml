@@ -111,6 +111,13 @@ under the License.
 		<!-- test dependencies -->
 
 		<dependency>
+			<groupId>org.apache.hive</groupId>
+			<artifactId>hive-exec</artifactId>
+			<version>${hive.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-table-common</artifactId>
 			<version>${project.version}</version>
@@ -124,6 +131,24 @@ under the License.
 			<version>${project.version}</version>
 			<type>test-jar</type>
 			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.apache.flink</groupId>
+					<artifactId>flink-shaded-hive</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.alibaba.flink</groupId>
+					<artifactId>flink-shaded-hive</artifactId>
+				</exclusion>
+				<exclusion>
+					<artifactId>orc-core</artifactId>
+					<groupId>org.apache.orc</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>guava</artifactId>
+					<groupId>com.google.guava</groupId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<dependency>
