@@ -301,7 +301,7 @@ optionally implemented. While some of these methods allow the system more effici
 **The following methods of `AggregateFunction` are required depending on the use case:**
 
 - `retract()` is required for aggregations on bounded `OVER` windows.
-- `merge()` is required for many batch aggreagtions and session window aggregations.
+- `merge()` is required for many batch aggregations and session window aggregations.
 - `resetAccumulator()` is required for many batch aggregations.
 
 All methods of `AggregateFunction` must be declared as `public`, not `static` and named exactly as the names mentioned above. The methods `createAccumulator`, `getValue`, `getResultType`, and `getAccumulatorType` are defined in the `AggregateFunction` abstract class, while others are contracted methods. In order to define a aggregate function, one has to extend the base class `org.apache.flink.table.api.functions.AggregateFunction` and implement one (or more) `accumulate` methods. The method `accumulate` can be overloaded with different parameter types and supports variable arguments.
@@ -515,7 +515,7 @@ The following example shows how to
 - register the function in the `TableEnvironment`, and 
 - use the function in a query.  
 
-To calculate an weighted average value, the accumulator needs to store the weighted sum and count of all the data that has been accumulated. In our example we define a class `WeightedAvgAccum` to be the accumulator. Accumulators are automatically backup-ed by Flink's checkpointing mechanism and restored in case of a failure to ensure exactly-once semantics.
+To calculate a weighted average value, the accumulator needs to store the weighted sum and count of all the data that has been accumulated. In our example we define a class `WeightedAvgAccum` to be the accumulator. Accumulators are automatically backup-ed by Flink's checkpointing mechanism and restored in case of a failure to ensure exactly-once semantics.
 
 The `accumulate()` method of our `WeightedAvg` `AggregateFunction` has three inputs. The first one is the `WeightedAvgAccum` accumulator, the other two are user-defined inputs: input value `ivalue` and weight of the input `iweight`. Although the `retract()`, `merge()`, and `resetAccumulator()` methods are not mandatory for most aggregation types, we provide them below as examples. Please note that we used Java primitive types and defined `getResultType()` and `getAccumulatorType()` methods in the Scala example because Flink type extraction does not work very well for Scala types.
 
@@ -663,7 +663,7 @@ tEnv.sqlQuery("SELECT user, wAvg(points, level) AS avgPoints FROM userScores GRO
 
 DeclarativeAggregationFunction expresses in terms of `Expression` of Flink Table API, which will be used while generating the code of aggregation operator for queries.
 
-When implementing a new expression-based aggregate function, you should firstly decide how many operands your function will have by implementing `inputCount` method. And then you can use `operands` fields to represent your operand, like `operands(0)`, `operands(2)`. Then you should declare all agg buffer attributes by implementing `aggBufferAttributes`. Agg buffer is used to cache the status of the Agg like `Accumulator` in `AggregateFunction`. You should declare all buffer attributes as `UnresolvedAggBufferReference`, and make sure the name of your attributes are unique within the function. You can implement `initialValuesExpressions` to define initial value of the agg buffers and `accumulateExpressions` to update the agg buffers by accumlate the input `operands`. `mergeExpressions` is used to merge the agg buffers from partial aggs. `getValueExpression` is used to get the final value of the Agg like `getValue` in `AggregationFunction`. 
+When implementing a new expression-based aggregate function, you should firstly decide how many operands your function will have by implementing `inputCount` method. And then you can use `operands` fields to represent your operand, like `operands(0)`, `operands(2)`. Then you should declare all agg buffer attributes by implementing `aggBufferAttributes`. Agg buffer is used to cache the status of the Agg like `Accumulator` in `AggregateFunction`. You should declare all buffer attributes as `UnresolvedAggBufferReference`, and make sure the name of your attributes is unique within the function. You can implement `initialValuesExpressions` to define initial value of the agg buffers and `accumulateExpressions` to update the agg buffers by accumulate the input `operands`. `mergeExpressions` is used to merge the agg buffers from partial aggs. `getValueExpression` is used to get the final value of the Agg like `getValue` in `AggregationFunction`. 
 
 Detailed documentation for all methods of DeclarativeAggregateFunction is given below.
 
@@ -774,7 +774,7 @@ tEnv.sqlQuery("SELECT user, wAvg(points, level) AS avgPoints FROM userScores GRO
 
 ### AggregateFunction VS DeclarativeAggregateFunction
 
-1. In `DeclarativeAggregateFunction`, `Expression` is used to declare the logic of the AGG, so we can make use of the [bultin scalar functions](tableApi.html#built-in-functions) of Flink table api. It also make it possible for the optimizer to reduce duplicate computation between different
+1. In `DeclarativeAggregateFunction`, `Expression` is used to declare the logic of the AGG, so we can make use of the [builtin scalar functions](tableApi.html#built-in-functions) of Flink table api. It also make it possible for the optimizer to reduce duplicate computation between different
 AGG functions.
 2. `AggregationFunction` we can use `DataView` to store complex states of the accumulator. `DataView` will be persisted in `State` which can cache a lot of data. That is needed by AGGs like DistinctCount.
 
