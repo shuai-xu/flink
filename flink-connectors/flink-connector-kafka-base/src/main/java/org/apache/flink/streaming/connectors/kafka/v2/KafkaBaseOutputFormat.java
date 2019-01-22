@@ -26,7 +26,6 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducerBase;
 import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaMetricWrapper;
-import org.apache.flink.streaming.connectors.kafka.utils.KafkaUtils;
 import org.apache.flink.streaming.connectors.kafka.v2.common.Syncable;
 import org.apache.flink.streaming.connectors.kafka.v2.common.TupleRichOutputFormat;
 import org.apache.flink.types.Row;
@@ -183,7 +182,7 @@ public abstract class KafkaBaseOutputFormat extends TupleRichOutputFormat implem
 	 */
 	@VisibleForTesting
 	protected <K, V> KafkaProducer<K, V> getKafkaProducer(Properties props) {
-		return KafkaUtils.createKafkaProducer(props);
+		return new KafkaProducer<>(props);
 	}
 
 	@Override

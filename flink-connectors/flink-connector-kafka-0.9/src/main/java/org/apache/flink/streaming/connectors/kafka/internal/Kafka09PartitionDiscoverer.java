@@ -21,7 +21,6 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.streaming.connectors.kafka.internals.AbstractPartitionDiscoverer;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicsDescriptor;
-import org.apache.flink.streaming.connectors.kafka.utils.KafkaUtils;
 
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
@@ -56,7 +55,7 @@ public class Kafka09PartitionDiscoverer extends AbstractPartitionDiscoverer {
 
 	@Override
 	protected void initializeConnections() {
-		this.kafkaConsumer = KafkaUtils.createKafkaConsumer(kafkaProperties);
+		this.kafkaConsumer = new KafkaConsumer<>(kafkaProperties);
 	}
 
 	@Override
