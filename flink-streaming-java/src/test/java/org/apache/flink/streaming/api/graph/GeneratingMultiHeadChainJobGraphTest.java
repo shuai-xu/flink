@@ -115,7 +115,7 @@ public class GeneratingMultiHeadChainJobGraphTest extends TestLogger {
 					Collections.emptyList(),
 					Sets.newHashSet("Source: source1", "filter1", "map1", "Sink: sink1"),
 					Sets.newHashSet("Source: source1"),
-					SourceStreamTaskV2.class,
+					ArbitraryInputStreamTask.class,
 					streamGraph);
 		}
 	}
@@ -175,6 +175,48 @@ public class GeneratingMultiHeadChainJobGraphTest extends TestLogger {
 				Sets.newHashSet("Source: source1", "map1"),
 				ArbitraryInputStreamTask.class,
 				streamGraph);
+	}
+
+	/**
+	 * Tests the following topology.
+	 *
+	 * <p><pre>
+	 *     Source1 -> Filter1 -+
+	 *        |                | ->  Process1 -> Sink1
+	 *        |_   ->         -+
+	 * </pre>
+	 */
+	@Test
+	public void testSimpleTwoInputOperatorTopology() throws Exception {
+		// case: triangle
+		{
+			StreamExecutionEnvironment env = createEnv();
+
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+			DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
+			DataStream<String> process1 = filter1.connect(source1).process(new NoOpCoProcessFuntion()).name("process1");
+			process1.addSink(new NoOpSinkFunction()).name("sink1");
+
+			StreamGraph streamGraph = env.getStreamGraph();
+			for (Tuple2<Integer, StreamOperator<?>> pair : streamGraph.getOperators()) {
+				pair.f1.setChainingStrategy(ChainingStrategy.ALWAYS);
+			}
+			JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
+			List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+			assertEquals(1, jobGraph.getNumberOfVertices());
+
+			int vertexIndex = 0;
+
+			verifyVertex(
+					verticesSorted.get(vertexIndex++),
+					TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Collections.emptyList(),
+					Collections.emptyList(),
+					Sets.newHashSet("Source: source1", "filter1", "process1", "Sink: sink1"),
+					Sets.newHashSet("Source: source1"),
+					ArbitraryInputStreamTask.class,
+					streamGraph);
+		}
 	}
 
 	/**
@@ -828,7 +870,7 @@ public class GeneratingMultiHeadChainJobGraphTest extends TestLogger {
 								Tuple2.of("process1", "process2")),
 						Sets.newHashSet("map1", "filter1", "filter2", "process1"),
 						Sets.newHashSet("map1"),
-						OneInputStreamTask.class, streamGraph);
+						ArbitraryInputStreamTask.class, streamGraph);
 
 				// CHAIN(Process2 -> Map2)
 				verifyVertex(
@@ -863,7 +905,7 @@ public class GeneratingMultiHeadChainJobGraphTest extends TestLogger {
 						Collections.emptyList(),
 						Sets.newHashSet("map1", "filter1", "filter2", "process1", "process2", "map2"),
 						Sets.newHashSet("map1"),
-						OneInputStreamTask.class, streamGraph);
+						ArbitraryInputStreamTask.class, streamGraph);
 			}
 		}
 	}

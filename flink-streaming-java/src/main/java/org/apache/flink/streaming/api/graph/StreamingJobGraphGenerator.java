@@ -1008,11 +1008,14 @@ public class StreamingJobGraphGenerator {
 					userDefinedChainedOperatorVertexIds);
 		}
 
+		boolean hasNodeWithChainedMultiInputs = false;
 		for (Integer nodeId : storager.chainedNodeIdsInOrder) {
 			final byte[] hash = hashes.get(nodeId);
 			final StreamNode node = streamGraph.getStreamNode(nodeId);
 			final OperatorID operatorID = new OperatorID(hash);
 			final OperatorDescriptor operatorDescriptor = new OperatorDescriptor(node.getOperatorName(), operatorID);
+
+			int inEdgesNumInChain = 0;
 			for (StreamEdge streamEdge : node.getInEdges()) {
 				final OperatorEdgeDescriptor edgeDescriptor = new OperatorEdgeDescriptor(
 					new OperatorID(hashes.get(streamEdge.getSourceId())),
@@ -1020,16 +1023,24 @@ public class StreamingJobGraphGenerator {
 					streamEdge.getTypeNumber(),
 					streamEdge.getPartitioner() == null ? "null" : streamEdge.getPartitioner().toString());
 				operatorDescriptor.addInput(edgeDescriptor);
+
+				if (storager.chainedConfigMap.containsKey(streamEdge.getSourceId())) {
+					inEdgesNumInChain++;
+				}
 			}
 			jobVertex.addOperatorDescriptor(operatorDescriptor);
+
+			if (!hasNodeWithChainedMultiInputs && inEdgesNumInChain > 1) {
+				hasNodeWithChainedMultiInputs = true;
+			}
 		}
 
 		// set properties of job vertex
 		jobVertex.setResources(storager.chainedMinResources, storager.chainedPreferredResources);
-		if (storager.chainedHeadNodeIdsInOrder.size() < 2) {
-			jobVertex.setInvokableClass(startStreamNode.getJobVertexClass());
-		} else {
+		if (storager.chainedHeadNodeIdsInOrder.size() > 1 || hasNodeWithChainedMultiInputs) {
 			jobVertex.setInvokableClass(ArbitraryInputStreamTask.class);
+		} else {
+			jobVertex.setInvokableClass(startStreamNode.getJobVertexClass());
 		}
 
 		int parallelism = startStreamNode.getParallelism();
