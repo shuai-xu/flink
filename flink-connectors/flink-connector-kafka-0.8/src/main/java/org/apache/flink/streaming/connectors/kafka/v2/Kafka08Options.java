@@ -27,7 +27,7 @@ public class Kafka08Options {
 
 	public static final Set<String> ESSENTIAL_CONSUMER_KEYS = new HashSet<>(Arrays.asList("group.id", "zookeeper.connect"));
 	private static final String[] optionalConsumerKeys = new String[]{
-		"consumer.id", "socket.timeout.ms",
+		"bootstrap.servers", "consumer.id", "socket.timeout.ms",
 		"fetch.message.max.bytes", "num.consumer.fetchers", "auto.commit.enable", "auto.commit.interval.ms",
 		"queued.max.message.chunks", "rebalance.max.retries", "fetch.min.bytes", "fetch.wait.max.ms",
 		"rebalance.backoff.ms", "refresh.leader.backoff.ms", "auto.offset.reset", "consumer.timeout.ms",

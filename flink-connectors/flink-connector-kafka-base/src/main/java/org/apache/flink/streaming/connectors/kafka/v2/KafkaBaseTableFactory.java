@@ -40,7 +40,7 @@ public abstract class KafkaBaseTableFactory {
 		while (iterator.hasNext()) {
 			String key = iterator.next();
 			if (!properties.containsKey(key)) {
-				throw new RuntimeException("No sufficient parameters for Kafka.");
+				throw new RuntimeException("No sufficient parameters for Kafka. Missing required config: " + key);
 			} else {
 				prop.put(key, properties.getString(key, null));
 			}

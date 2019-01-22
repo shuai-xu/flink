@@ -259,10 +259,10 @@ CREATE TABLE kafka_source (
         </tr>
         <tr>
             <td>bootstrap.servers</td>
-            <td><tt>KAFKA09</tt>, <tt>KAFKA010</tt>, <tt>KAFKA011</tt></td>
+            <td>All</td>
             <td>Y</td>
             <td>The Kafka cluster address.</td> 
-            <td>Used by Kafka 0.9 and above</td>
+            <td>The Kafka cluster address.</td>
         </tr>
         <tr> 
             <td>group.id</td>
@@ -293,6 +293,13 @@ CREATE TABLE kafka_source (
             <td>N</td>
             <td>Peoriodically check if there is new partititions added to the topic</td> 
             <td>The default value is 60 secons.</td> 
+        </tr>
+        <tr> 
+            <td>extraConfig</td>
+            <td>All</td>
+            <td>N</td>
+            <td>Additional configurations to use</td> 
+            <td>The syntax is <tt>extraConfig='key1=value1;key2=value2;'</tt></td> 
         </tr>
     </tbody>
 </table>
@@ -358,6 +365,13 @@ with (
             <td>The Kafka cluster address.</td> 
             <td>Used by Kafka 0.9 and above</td>
         </tr>
+        <tr> 
+            <td>extraConfig</td>
+            <td>All</td>
+            <td>N</td>
+            <td>Additional configurations to use</td> 
+            <td>The syntax is <tt>extraConfig='key1=value1;key2=value2;'</tt></td> 
+        </tr>        
     </tbody>
 </table>
 
