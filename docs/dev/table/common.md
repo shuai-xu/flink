@@ -89,7 +89,9 @@ tableEnv.execute()
 </div>
 </div>
 
-**Note:** Table API and SQL queries can be easily integrated with and embedded into DataStream programs. Have a look at the [Integration with DataStream and DataSet API](#integration-with-datastream-and-dataset-api) section to learn how DataStreams and DataSets can be converted into Tables and vice versa.
+**Notes:** 
+1. Table API and SQL queries can be easily integrated with and embedded into DataStream programs. Have a look at the [Integration with DataStream and DataSet API](#integration-with-datastream-and-dataset-api) section to learn how DataStreams and DataSets can be converted into Tables and vice versa.
+2. For bounded stream job, we should always use `TableEnvironment.execute()` to submit and run the job.
 
 {% top %}
 
@@ -198,7 +200,7 @@ tableEnv.registerTable("projectedTable", projTable)
 </div>
 </div>
 
-**Note:** A registered `Table` is treated similarly to a `VIEW` as known from relational database systems, i.e., the query that defines the `Table` is not optimized but will be inlined when another query references the registered `Table`. If multiple queries reference the same registered `Table`, it will be inlined for each referencing query and executed multiple times, i.e., the result of the registered `Table` will *not* be shared.
+**Note:** A registered `Table` is treated similarly to a `VIEW` as known from relational database systems, i.e., the query that defines the `Table` is not optimized but will be inlined when another query references the registered `Table`. If multiple queries reference the same registered `Table`, it will be inlined for each referencing query and executed only once, i.e., the result of the registered `Table` will be shared.
 
 {% top %}
 
