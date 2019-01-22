@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.runtime.batch.table
 
-import java.io.File
+import java.io.{ByteArrayOutputStream, File, PrintStream}
 
 import org.apache.flink.api.scala._
 import org.apache.flink.core.fs.FileSystem.WriteMode
@@ -29,6 +29,7 @@ import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.util.CollectionBatchExecTable
 import org.apache.flink.test.util.TestBaseUtils
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class TableSinkITCase extends BatchTestBase {
@@ -177,6 +178,36 @@ class TableSinkITCase extends BatchTestBase {
 
     val expected3 = Seq("5|Liz|Williams").mkString("\n")
     TestBaseUtils.compareResultsByLinesInMemory(expected3, path3)
+  }
+
+  @Test
+  def testConsoleTableSink: Unit = {
+
+    env.setParallelism(1)
+
+    val input = CollectionBatchExecTable.get3TupleDataSet(tEnv, "a, b, c")
+    input
+      .where('a < 3 || 'a > 19)
+      .insertInto("console")
+
+    // output to special stream
+    val baos = new ByteArrayOutputStream
+    val ps = new PrintStream(baos)
+    val old = System.out // save output stream
+    System.setOut(ps)
+
+    tEnv.execute()
+
+    // flush
+    System.out.flush()
+    System.setOut(old) // set output stream back
+
+    val expected = List(
+      "task-1> 1,1,Hi",
+      "task-1> 2,2,Hello",
+      "task-1> 20,6,Comment#14",
+      "task-1> 21,6,Comment#15")
+    assertEquals(expected.sorted, baos.toString.split('\n').toList.sorted)
   }
 
   private def createTempFile(index: Int): String = {

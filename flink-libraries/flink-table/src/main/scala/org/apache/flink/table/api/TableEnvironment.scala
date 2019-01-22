@@ -1267,13 +1267,24 @@ abstract class TableEnvironment(
       throw new TableException(TableErrors.INST.sqlInvalidSinkTblName())
     }
 
-    if (!catalogManager.getDefaultCatalog()
-      .tableExists(new ObjectPath(catalogManager.getDefaultDatabaseName, sinkTableName))) {
-      throw new TableException(TableErrors.INST.sqlTableNotRegistered(sinkTableName))
-    }
-    val targetTable = getTable(sinkTableName).get
+    val inCatalog = catalogManager
+      .getDefaultCatalog()
+      .tableExists(new ObjectPath(catalogManager.getDefaultDatabaseName, sinkTableName))
 
-    insertInto(table, targetTable, sinkTableName)
+    if (!inCatalog && sinkTableName.equals("console")) {
+
+      val schema = table.getSchema
+      val printTableSink = new PrintTableSink(getConfig.getTimeZone).configure(
+        schema.getFieldNames, schema.getFieldTypes.asInstanceOf[Array[DataType]])
+      writeToSink(table, printTableSink, "console")
+
+    } else {
+      if (!inCatalog) {
+        throw new TableException(TableErrors.INST.sqlTableNotRegistered(sinkTableName))
+      }
+      val targetTable = getTable(sinkTableName).get
+      insertInto(table, targetTable, sinkTableName)
+    }
   }
 
   private def insertInto(

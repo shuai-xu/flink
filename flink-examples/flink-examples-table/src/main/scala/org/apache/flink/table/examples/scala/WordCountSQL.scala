@@ -50,6 +50,7 @@ object WordCountSQL {
 
     // run a SQL query on the Table and retrieve the result as a new Table
     tEnv.sqlQuery("SELECT word, SUM(frequency) FROM WordCount GROUP BY word").print()
+    tEnv.execute();
   }
 
   // *************************************************************************

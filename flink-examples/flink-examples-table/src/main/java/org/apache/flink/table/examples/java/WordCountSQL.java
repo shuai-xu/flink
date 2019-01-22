@@ -58,6 +58,7 @@ public class WordCountSQL {
 			"SELECT word, SUM(frequency) as frequency FROM WC GROUP BY word");
 
 		table.print();
+		tEnv.execute();
 	}
 
 	// *************************************************************************

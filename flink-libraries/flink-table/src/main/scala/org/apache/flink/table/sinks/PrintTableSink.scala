@@ -26,7 +26,7 @@ import java.sql.Time
 import java.sql.Timestamp
 
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
+import org.apache.flink.streaming.api.datastream.{DataStream}
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
 import org.apache.flink.streaming.api.operators.StreamingRuntimeContext
 import org.apache.flink.types.Row
@@ -45,7 +45,7 @@ class PrintTableSink(tz: TimeZone)
   with UpsertStreamTableSink[Row] {
 
   override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]]) = {
-    val sink: PrintSinkFunction = new PrintSinkFunction(tz)
+    val sink: PrintSinkFunction = new PrintSinkFunction(tz, false)
     dataStream.addSink(sink).name(sink.toString)
   }
 
@@ -59,7 +59,8 @@ class PrintTableSink(tz: TimeZone)
 
   /** Emits the DataStream. */
   override def emitBoundedStream(boundedStream: DataStream[JTuple2[JBool, Row]]) = {
-    val sink: PrintSinkFunction = new PrintSinkFunction(tz)
+    // we don't need to output flag for batch job, so set ignoreFlag to true
+    val sink: PrintSinkFunction = new PrintSinkFunction(tz, true)
     boundedStream.addSink(sink).name(sink.toString)
   }
 }
@@ -68,7 +69,9 @@ class PrintTableSink(tz: TimeZone)
   * Implementation of the SinkFunction writing every tuple to the standard output.
   *
   */
-class PrintSinkFunction(tz: TimeZone) extends RichSinkFunction[JTuple2[JBool, Row]] {
+class PrintSinkFunction(tz: TimeZone, ignoreFlag: Boolean)
+  extends RichSinkFunction[JTuple2[JBool, Row]] {
+
   private var prefix: String = _
 
   override def open(parameters: Configuration): Unit = {
@@ -95,10 +98,14 @@ class PrintSinkFunction(tz: TimeZone) extends RichSinkFunction[JTuple2[JBool, Ro
       }
     }
 
-    if (in.f0) {
-      System.out.println(prefix + "(+)" + sb.toString())
+    if (ignoreFlag) {
+      System.out.println(prefix + sb.toString())
     } else {
-      System.out.println(prefix + "(-)" + sb.toString())
+      if (in.f0) {
+        System.out.println(prefix + "(+)" + sb.toString())
+      } else {
+        System.out.println(prefix + "(-)" + sb.toString())
+      }
     }
   }
 

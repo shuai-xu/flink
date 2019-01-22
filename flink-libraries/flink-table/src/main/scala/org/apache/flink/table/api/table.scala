@@ -133,10 +133,37 @@ class Table(
     tableEnv.collect(this, configuredSink.asInstanceOf[CollectTableSink[T]], jobName)
   }
 
+  /**
+    * Returns an collection that contains all rows in this Table.
+    *
+    * Note: The difference between print() and collect() is
+    * - print() prints data on workers and collect() collects data to the client.
+    * - You have to call TableEnvironment.execute() to run the job for print(), while collect()
+    *   calls execute automatically.
+    */
   def collect(): Seq[Row] = collectSink(new CollectRowTableSink, None)
+
+  def collect(jobName: String): Seq[Row] =
+    collectSink(new CollectRowTableSink, Option.apply(jobName))
 
   def collectAsT[T](t: DataType, jobName : String = null): Seq[T] =
     collectSink(new CollectTableSink(_ => t), Option(jobName))
+
+  /**
+    * Prints the elements to the standard output stream [[System.out]] of the JVM.
+    *
+    * Note: The difference between print() and collect() is
+    * - print() prints data on workers and collect() collects data to the client.
+    * - You have to call TableEnvironment.execute() to run the job for print(), while collect()
+    *   calls execute automatically.
+    */
+  def print(): Unit = {
+    this.insertInto("console")
+  }
+
+  def print(queryConfig: QueryConfig): Unit = {
+    this.insertInto("console", queryConfig)
+  }
 
   /**
     * cache this table to builtin table service or the specified customized table service.
@@ -182,16 +209,6 @@ class Table(
       case Some(_) =>
     }
   }
-
-  private def print(jobName : Option[String] = None): Unit = {
-    for (row <- collectSink(new CollectRowTableSink, jobName)) {
-      System.out.println(row)
-    }
-  }
-
-  def print(jobName: String): Unit = print(Option.apply(jobName))
-
-  def print(): Unit = print(None)
 
   /**
     * Performs a selection operation. Similar to an SQL SELECT statement. The field expressions

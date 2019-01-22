@@ -99,7 +99,8 @@ public class BatchITCase extends AbstractTestBase {
 		Table table = tableEnv.scan("persons")
 				.select("id, first, last, score");
 
-		table.print("jobName");
+		table.print();
+		tableEnv.execute("jobName");
 	}
 
 	@Test

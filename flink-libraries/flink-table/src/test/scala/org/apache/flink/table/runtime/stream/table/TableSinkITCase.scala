@@ -18,14 +18,14 @@
 
 package org.apache.flink.table.runtime.stream.table
 
-import java.io.File
+import java.io.{ByteArrayOutputStream, File, PrintStream}
 import java.lang.{Boolean => JBool}
 import java.util.TimeZone
 
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.scala._
 import org.apache.flink.core.fs.FileSystem.WriteMode
-import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.functions.sink.SinkFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes}
@@ -101,6 +101,37 @@ class TableSinkITCase extends StreamingTestBase {
       "Comment#15,1970-01-01 00:00:00.006").mkString("\n")
 
     TestBaseUtils.compareResultsByLinesInMemory(expected, path)
+  }
+
+  @Test
+  def testConsoleTableSink(): Unit = {
+
+    env.setParallelism(1)
+
+    MemoryTableSourceSinkUtil.clear()
+    val input = StreamTestData.get3TupleDataStream(env)
+    input.toTable(tEnv, 'a, 'b, 'c)
+      .where('a < 3 || 'a > 19)
+      .insertInto("console")
+
+    // output to special stream
+    val baos = new ByteArrayOutputStream
+    val ps = new PrintStream(baos)
+    val old = System.out // save output stream
+    System.setOut(ps)
+
+    env.execute()
+
+    // flush
+    System.out.flush()
+    System.setOut(old) // set output stream back
+
+    val expected = List(
+      "task-1> (+)1,1,Hi",
+      "task-1> (+)2,2,Hello",
+      "task-1> (+)20,6,Comment#14",
+      "task-1> (+)21,6,Comment#15")
+    assertEquals(expected.sorted, baos.toString.split('\n').toList.sorted)
   }
 }
 

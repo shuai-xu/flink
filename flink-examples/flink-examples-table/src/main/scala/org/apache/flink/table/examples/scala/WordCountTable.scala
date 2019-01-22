@@ -49,6 +49,7 @@ object WordCountTable {
       .select('word, 'frequency.sum as 'frequency)
       .filter('frequency === 2)
       .print()
+    tEnv.execute();
   }
 
   // *************************************************************************
