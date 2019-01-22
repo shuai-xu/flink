@@ -199,10 +199,27 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 
 	// ------ databases ------
 
+	/**
+	 * Create a Hive database from CatalogDatabase.
+	 *
+	 * @param dbName	Name of the database
+	 * @param db		The given CatalogDatabase
+	 * @return A Hive Database
+	 */
+	protected abstract Database createHiveDatabase(String dbName, CatalogDatabase db);
+
+	/**
+	 * Create a Hive database from CatalogDatabase.
+	 *
+	 * @param hiveDb	The given Hive Database
+	 * @return	A CatalogDatabase
+	 */
+	protected abstract CatalogDatabase createCatalogDatabase(Database hiveDb);
+
 	@Override
 	public void createDatabase(String dbName, CatalogDatabase db, boolean ignoreIfExists) throws DatabaseAlreadyExistException {
 		try {
-			client.createDatabase(HiveCatalogUtil.createHiveDatabase(dbName, db));
+			client.createDatabase(createHiveDatabase(dbName, db));
 		} catch (AlreadyExistsException e) {
 			if (!ignoreIfExists) {
 				throw new DatabaseAlreadyExistException(catalogName, dbName);
@@ -216,7 +233,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 	public void alterDatabase(String dbName, CatalogDatabase newDatabase, boolean ignoreIfNotExists) throws DatabaseNotExistException {
 		try {
 			if (dbExists(dbName)) {
-				client.alterDatabase(dbName, HiveCatalogUtil.createHiveDatabase(dbName, newDatabase));
+				client.alterDatabase(dbName, createHiveDatabase(dbName, newDatabase));
 			} else if (!ignoreIfNotExists) {
 				throw new DatabaseNotExistException(catalogName, dbName);
 			}
@@ -244,7 +261,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 				String.format("Failed to get database %s from HiveCatalog %s", dbName, catalogName), e);
 		}
 
-		return HiveCatalogUtil.createCatalogDatabase(hiveDb);
+		return createCatalogDatabase(hiveDb);
 	}
 
 	@Override

@@ -36,17 +36,14 @@ import org.apache.flink.table.api.types.LongType;
 import org.apache.flink.table.api.types.ShortType;
 import org.apache.flink.table.api.types.StringType;
 import org.apache.flink.table.api.types.TimestampType;
-import org.apache.flink.table.catalog.CatalogDatabase;
 import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
-import org.apache.flink.table.catalog.hive.config.HiveDbConfig;
 import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.util.PropertiesUtil;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.BinaryColumnStatsData;
 import org.apache.hadoop.hive.metastore.api.BooleanColumnStatsData;
@@ -54,7 +51,6 @@ import org.apache.hadoop.hive.metastore.api.ColumnStatistics;
 import org.apache.hadoop.hive.metastore.api.ColumnStatisticsData;
 import org.apache.hadoop.hive.metastore.api.ColumnStatisticsDesc;
 import org.apache.hadoop.hive.metastore.api.ColumnStatisticsObj;
-import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.DateColumnStatsData;
 import org.apache.hadoop.hive.metastore.api.DecimalColumnStatsData;
 import org.apache.hadoop.hive.metastore.api.DoubleColumnStatsData;
@@ -105,18 +101,20 @@ import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TA
 public class HiveCatalogUtil {
 	private static final Logger LOG = LoggerFactory.getLogger(HiveCatalogUtil.class);
 
+	private HiveCatalogUtil() {
+	}
+
+	// ------ Utils ------
+
 	/**
 	 * The number of milliseconds in a day.
 	 */
 	private static final long MILLIS_PER_DAY = 86400000; // = 24 * 60 * 60 * 1000
 
-	private HiveCatalogUtil() {
-	}
-
 	/**
 	 * Create a Hive table from CatalogTable.
 	 */
-	protected static Table createHiveTable(ObjectPath tablePath, CatalogTable table) {
+	static Table createHiveTable(ObjectPath tablePath, CatalogTable table) {
 		Properties prop = new Properties();
 		prop.putAll(table.getProperties());
 
@@ -168,7 +166,7 @@ public class HiveCatalogUtil {
 	private static List<FieldSchema> createHiveColumns(TableSchema schema) {
 		List<FieldSchema> columns = new ArrayList<>(schema.getColumns().length);
 		for (Column column : schema.getColumns()) {
-			FieldSchema fieldSchema = new FieldSchema(column.name(), convert(column.internalType()), null);
+			FieldSchema fieldSchema = new FieldSchema(column.name(), HiveCatalogUtil.convert(column.internalType()), null);
 			columns.add(fieldSchema);
 		}
 		return columns;
@@ -177,7 +175,7 @@ public class HiveCatalogUtil {
 	/**
 	 * Create Flink's TableSchema from Hive columns.
 	 */
-	protected static TableSchema createTableSchema(List<FieldSchema> fieldSchemas, List<FieldSchema> partitionFields) {
+	static TableSchema createTableSchema(List<FieldSchema> fieldSchemas, List<FieldSchema> partitionFields) {
 		int colSize = fieldSchemas.size() + partitionFields.size();
 
 		String[] colNames = new String[colSize];
@@ -202,7 +200,7 @@ public class HiveCatalogUtil {
 	/**
 	 * Create an CatalogTable from Hive table.
 	 */
-	protected static CatalogTable createCatalogTable(Table hiveTable, TableSchema tableSchema, TableStats tableStats) {
+	static CatalogTable createCatalogTable(Table hiveTable, TableSchema tableSchema, TableStats tableStats) {
 		return new CatalogTable(
 			"hive",
 			tableSchema,
@@ -223,12 +221,12 @@ public class HiveCatalogUtil {
 	/**
 	 * Create a map of Flink column stats from the given Hive column stats.
 	 */
-	protected static Map<String, ColumnStats> createColumnStats(List<ColumnStatisticsObj> hiveColStats) {
+	static Map<String, ColumnStats> createColumnStats(List<ColumnStatisticsObj> hiveColStats) {
 		Map<String, ColumnStats> colStats = new HashMap<>();
 
 		if (hiveColStats != null) {
 			for (ColumnStatisticsObj colStatsObj : hiveColStats) {
-				ColumnStats columnStats = createTableColumnStats(convert(colStatsObj.getColType()), colStatsObj.getStatsData());
+				ColumnStats columnStats = createTableColumnStats(HiveCatalogUtil.convert(colStatsObj.getColType()), colStatsObj.getStatsData());
 
 				if (colStats != null) {
 					colStats.put(colStatsObj.getColName(), columnStats);
@@ -242,7 +240,7 @@ public class HiveCatalogUtil {
 	/**
 	 * Create a map of Flink column stats from the given Hive column stats.
 	 */
-	protected static ColumnStatistics createColumnStats(Table hiveTable, Map<String, ColumnStats> colStats) {
+	static ColumnStatistics createColumnStats(Table hiveTable, Map<String, ColumnStats> colStats) {
 		ColumnStatisticsDesc desc = new ColumnStatisticsDesc(true, hiveTable.getDbName(), hiveTable.getTableName());
 
 		List<ColumnStatisticsObj> colStatsList = new ArrayList<>();
@@ -254,7 +252,7 @@ public class HiveCatalogUtil {
 			if (colStats.containsKey(hiveColName)) {
 				ColumnStats flinkColStat = colStats.get(field.getName());
 
-				ColumnStatisticsData statsData = getColumnStatisticsData(convert(hiveColType), flinkColStat);
+				ColumnStatisticsData statsData = getColumnStatisticsData(HiveCatalogUtil.convert(hiveColType), flinkColStat);
 				ColumnStatisticsObj columnStatisticsObj = new ColumnStatisticsObj(hiveColName, hiveColType, statsData);
 				colStatsList.add(columnStatisticsObj);
 			}
@@ -351,7 +349,7 @@ public class HiveCatalogUtil {
 	protected static org.apache.hadoop.hive.metastore.api.Decimal fromFlinkDecimal(Decimal flinkDecimal) {
 		BigDecimal bigDecimal = flinkDecimal.toBigDecimal();
 		return new org.apache.hadoop.hive.metastore.api.Decimal(
-				ByteBuffer.wrap(bigDecimal.unscaledValue().toByteArray()), (short) bigDecimal.scale());
+			ByteBuffer.wrap(bigDecimal.unscaledValue().toByteArray()), (short) bigDecimal.scale());
 	}
 
 	/**
@@ -474,7 +472,7 @@ public class HiveCatalogUtil {
 		prop.put(HIVE_TABLE_COMPRESSED, String.valueOf(sd.isCompressed()));
 		prop.put(HIVE_TABLE_NUM_BUCKETS, String.valueOf(sd.getNumBuckets()));
 		prop.put(HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT,
-				String.valueOf(sd.getSerdeInfo().getParameters().get(serdeConstants.SERIALIZATION_FORMAT)));
+			String.valueOf(sd.getSerdeInfo().getParameters().get(serdeConstants.SERIALIZATION_FORMAT)));
 
 		prop.putAll(table.getParameters());
 
@@ -486,50 +484,22 @@ public class HiveCatalogUtil {
 			colNames[i] = fieldSchemas.get(i).getName();
 			hiveTypes[i] = fieldSchemas.get(i).getType();
 		}
-		prop.put(HIVE_TABLE_FIELD_NAMES, StringUtils.join(colNames, ","));
-		prop.put(HIVE_TABLE_FIELD_TYPES, StringUtils.join(hiveTypes, DEFAULT_LIST_COLUMN_TYPES_SEPARATOR));
+		prop.put(HIVE_TABLE_FIELD_NAMES, String.join(",", colNames));
+		prop.put(HIVE_TABLE_FIELD_TYPES, String.join(DEFAULT_LIST_COLUMN_TYPES_SEPARATOR, hiveTypes));
 		prop.put(HIVE_TABLE_DB_NAME, table.getDbName());
 		prop.put(HIVE_TABLE_TABLE_NAME, table.getTableName());
-		prop.put(HIVE_TABLE_PARTITION_FIELDS, String.valueOf(
-				StringUtils.join(
-						table.getPartitionKeys()
-							.stream()
-							.map(key -> key.getName().toLowerCase())
-							.collect(Collectors.toList()), ",")));
+		prop.put(HIVE_TABLE_PARTITION_FIELDS, String.join(",", table.getPartitionKeys()
+			.stream()
+			.map(key -> key.getName().toLowerCase())
+			.collect(Collectors.toList())));
 
 		return prop;
 	}
 
 	/**
-	 * Create a Hive database from CatalogDatabase.
-	 */
-	public static Database createHiveDatabase(String dbName, CatalogDatabase catalogDb) {
-		Map<String, String> prop = catalogDb.getProperties();
-
-		return new Database(
-			dbName,
-			prop.get(HiveDbConfig.HIVE_DB_DESCRIPTION),
-			prop.get(HiveDbConfig.HIVE_DB_LOCATION_URI),
-			catalogDb.getProperties());
-	}
-
-	/**
-	 * Create a Hive database from CatalogDatabase.
-	 */
-	protected static CatalogDatabase createCatalogDatabase(Database hiveDb) {
-		Map<String, String> prop = new HashMap<>(hiveDb.getParameters());
-
-		prop.put(HiveDbConfig.HIVE_DB_LOCATION_URI, hiveDb.getLocationUri());
-		prop.put(HiveDbConfig.HIVE_DB_DESCRIPTION, hiveDb.getDescription());
-		prop.put(HiveDbConfig.HIVE_DB_OWNER_NAME, hiveDb.getOwnerName());
-
-		return new CatalogDatabase(prop);
-	}
-
-	/**
 	 * Create a CatalogPartition from the given PartitionSpec and Hive partition.
 	 */
-	protected static CatalogPartition createCatalogPartition(CatalogPartition.PartitionSpec spec, Partition partition) {
+	static CatalogPartition createCatalogPartition(CatalogPartition.PartitionSpec spec, Partition partition) {
 		Map<String, String> prop = new HashMap<>(partition.getParameters());
 
 		StorageDescriptor sd = partition.getSd();
@@ -549,14 +519,14 @@ public class HiveCatalogUtil {
 	 * Create Flink PartitionSpec from Hive partition name string.
 	 * Example of Hive partition name string - "name=bob/year=2019"
 	 */
-	protected static CatalogPartition.PartitionSpec createPartitionSpec(String hivePartitionName) {
+	static CatalogPartition.PartitionSpec createPartitionSpec(String hivePartitionName) {
 		return CatalogPartition.fromStrings(Arrays.asList(hivePartitionName.split("/")));
 	}
 
 	/**
 	 * Create a Hive partition from the given Hive table and CatalogPartition.
 	 */
-	protected static Partition createHivePartition(Table hiveTable, CatalogPartition cp) {
+	static Partition createHivePartition(Table hiveTable, CatalogPartition cp) {
 		Partition partition = new Partition();
 
 		partition.setValues(cp.getPartitionSpec().getOrderedValues(getPartitionKeys(hiveTable.getPartitionKeys())));
@@ -575,7 +545,7 @@ public class HiveCatalogUtil {
 	/**
 	 * Get Hive table partition keys.
 	 */
-	protected static List<String> getPartitionKeys(List<FieldSchema> fieldSchemas) {
+	static List<String> getPartitionKeys(List<FieldSchema> fieldSchemas) {
 		List<String> partitionKeys = new ArrayList<>(fieldSchemas.size());
 
 		for (FieldSchema fs : fieldSchemas) {

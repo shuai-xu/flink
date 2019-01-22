@@ -25,7 +25,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Test for HiveMetadataUtil.
+ * Test for HiveCatalogUtil.
  */
 public class HiveCatalogUtilTest {
 	@Test

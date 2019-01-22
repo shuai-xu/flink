@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.catalog.hive;
 
+import org.apache.flink.table.api.DatabaseAlreadyExistException;
 import org.apache.flink.table.api.DatabaseNotExistException;
 import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
@@ -38,7 +39,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -278,6 +281,99 @@ public class GenericHiveMetastoreCatalogTest {
 		catalog.createTable(path1, createTable(), false);
 
 		assertTrue(catalog.tableExists(path1));
+	}
+
+	// ------ databases ------
+
+	@Test
+	public void testCreateDb() {
+		catalog.createDatabase(db2, createDb(), false);
+
+		assertEquals(2, catalog.listDatabases().size());
+	}
+
+	@Test(expected = DatabaseAlreadyExistException.class)
+	public void testCreateDb_DatabaseAlreadyExistException() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createDatabase(db1, createDb(), false);
+	}
+
+	@Test
+	public void testCreateDb_DatabaseAlreadyExist_ignored() {
+		CatalogDatabase cd1 = createDb();
+		catalog.createDatabase(db1, cd1, false);
+		List<String> dbs = catalog.listDatabases();
+
+		assertTrue(catalog.getDatabase(db1).getProperties().entrySet().containsAll(cd1.getProperties().entrySet()));
+		assertEquals(2, dbs.size());
+		assertEquals(new HashSet<>(Arrays.asList(db1, catalog.getDefaultDatabaseName())), new HashSet<>(dbs));
+
+		catalog.createDatabase(db1, createAnotherDb(), true);
+
+		assertTrue(catalog.getDatabase(db1).getProperties().entrySet().containsAll(cd1.getProperties().entrySet()));
+		assertEquals(2, dbs.size());
+		assertEquals(new HashSet<>(Arrays.asList(db1, catalog.getDefaultDatabaseName())), new HashSet<>(dbs));
+	}
+
+	@Test(expected = DatabaseNotExistException.class)
+	public void testGetDb_DatabaseNotExistException() {
+		catalog.getDatabase("nonexistent");
+	}
+
+	@Test
+	public void testDropDb() {
+		catalog.createDatabase(db1, createDb(), false);
+
+		assertTrue(catalog.listDatabases().contains(db1));
+
+		catalog.dropDatabase(db1, false);
+
+		assertFalse(catalog.listDatabases().contains(db1));
+	}
+
+	@Test (expected = DatabaseNotExistException.class)
+	public void testDropDb_DatabaseNotExistException() {
+		catalog.dropDatabase(db1, false);
+	}
+
+	@Test
+	public void testDropDb_DatabaseNotExist_Ignore() {
+		catalog.dropDatabase(db1, true);
+	}
+
+	@Test
+	public void testAlterDb() {
+		CatalogDatabase db = createDb();
+		catalog.createDatabase(db1, db, false);
+
+		assertTrue(catalog.getDatabase(db1).getProperties().entrySet().containsAll(db.getProperties().entrySet()));
+
+		CatalogDatabase newDb = createAnotherDb();
+		catalog.alterDatabase(db1, newDb, false);
+
+		assertFalse(catalog.getDatabase(db1).getProperties().entrySet().containsAll(db.getProperties().entrySet()));
+		assertTrue(catalog.getDatabase(db1).getProperties().entrySet().containsAll(newDb.getProperties().entrySet()));
+	}
+
+	@Test(expected = DatabaseNotExistException.class)
+	public void testAlterDb_DatabaseNotExistException() {
+		catalog.alterDatabase("nonexistent", createDb(), false);
+	}
+
+	@Test
+	public void testAlterDb_DatabaseNotExist_ignored() {
+		catalog.alterDatabase("nonexistent", createDb(), true);
+
+		assertFalse(catalog.dbExists("nonexistent"));
+	}
+
+	@Test
+	public void testDbExists() {
+		assertFalse(catalog.dbExists("nonexistent"));
+
+		catalog.createDatabase(db1, createDb(), false);
+
+		assertTrue(catalog.dbExists(db1));
 	}
 
 
