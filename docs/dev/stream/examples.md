@@ -173,13 +173,13 @@ First, using the <i>netcat</i> tool via
 $ nc -l 1234
 {% endhighlight %}
   
-If you get an error “Ncat: socket: Address family not supported by protocol QUITTING”. Use the following command:
+If you get an error “Ncat: socket: Address family not supported by protocol QUITTING”, try the following command:
 
 {% highlight bash %}
 $ nc -l 0.0.0.0 1234
 {% endhighlight %}
   
-Then, run this example with the hostname and the port as arguments.
+Then run this example with the hostname and the port as arguments.
 
 {% highlight bash %}
 $ ./bin/flink run ./examples/streaming/SocketWindowWordCount.jar --port 1234
