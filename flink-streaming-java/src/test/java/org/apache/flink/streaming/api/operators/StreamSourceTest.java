@@ -56,6 +56,7 @@ public class StreamSourceTest {
 		SumAndCount testSumAndCount = new SumAndCount("test");
 		assertEquals(0, testSumAndCount.getCounter().getCount());
 		assertEquals(0, testSumAndCount.getSum(), 0.000001);
+		SumAndCount sourceLatency = new SumAndCount("test2");
 
 		SourceFunction.SourceContext<Long> ctx = streamSource.getSourceContext(
 			TimeCharacteristic.IngestionTime,
@@ -66,6 +67,7 @@ public class StreamSourceTest {
 			true,
 			1,
 			testSumAndCount,
+			sourceLatency,
 			40L
 		);
 
@@ -73,6 +75,8 @@ public class StreamSourceTest {
 
 		assertEquals(1000, testSumAndCount.getCounter().getCount());
 		assertTrue(testSumAndCount.getSum() > 0);
+		assertEquals(999, sourceLatency.getCounter().getCount());
+		assertTrue(sourceLatency.getSum() > 0);
 	}
 
 	private class ExampleCountSource implements SourceFunction<Long>, CheckpointedFunction {

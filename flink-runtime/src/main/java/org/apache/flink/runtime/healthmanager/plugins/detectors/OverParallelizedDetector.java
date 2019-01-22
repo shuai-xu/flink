@@ -41,6 +41,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.SOURCE_LATENCY_COUNT;
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.SOURCE_LATENCY_SUM;
+
 /**
  * OverParallelizedDetector detects over parallelized of a job.
  * Detects {@link JobVertexOverParallelized} if:
@@ -56,61 +59,65 @@ public class OverParallelizedDetector implements Detector {
 		ConfigOptions.key("healthmonitor.over-parallelized.tps.ratio").defaultValue(1.5);
 
 	private JobID jobID;
-	private RestServerClient restServerClient;
+	private HealthMonitor monitor;
 	private MetricProvider metricProvider;
 
 	private double ratio;
 	private long checkInterval;
 
-	private Map<JobVertexID, TaskMetricSubscription> latencyCountMaxSubs;
-	private Map<JobVertexID, TaskMetricSubscription> latencyCountMinSubs;
-	private Map<JobVertexID, TaskMetricSubscription> latencySumMaxSubs;
-	private Map<JobVertexID, TaskMetricSubscription> latencySumMinSubs;
+	private Map<JobVertexID, TaskMetricSubscription> sourceLatencyCountRangeSubs;
+	private Map<JobVertexID, TaskMetricSubscription> sourceLatencySumRangeSubs;
+	private Map<JobVertexID, TaskMetricSubscription> latencyCountRangeSubs;
+	private Map<JobVertexID, TaskMetricSubscription> latencySumRangeSubs;
 	private Map<JobVertexID, TaskMetricSubscription> inputTpsSubs;
 
 	@Override
 	public void open(HealthMonitor monitor) {
-		jobID = monitor.getJobID();
-		restServerClient = monitor.getRestServerClient();
-		metricProvider = monitor.getMetricProvider();
+		this.jobID = monitor.getJobID();
+		this.monitor = monitor;
+		this.metricProvider = monitor.getMetricProvider();
 
 		ratio = monitor.getConfig().getDouble(OVER_PARALLELIZED_RATIO);
 		checkInterval = monitor.getConfig().getLong(OVER_PARALLELIZED_CHECK_INTERVAL);
 
-		latencyCountMaxSubs = new HashMap<>();
-		latencyCountMinSubs = new HashMap<>();
-		latencySumMaxSubs = new HashMap<>();
-		latencySumMinSubs = new HashMap<>();
+		sourceLatencyCountRangeSubs = new HashMap<>();
+		sourceLatencySumRangeSubs = new HashMap<>();
+		latencyCountRangeSubs = new HashMap<>();
+		latencySumRangeSubs = new HashMap<>();
 		inputTpsSubs = new HashMap<>();
 
-		RestServerClient.JobConfig jobConfig = restServerClient.getJobConfig(jobID);
+		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 		for (JobVertexID vertexId : jobConfig.getVertexConfigs().keySet()) {
-			TaskMetricSubscription latencyCountMaxSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, MetricNames.TASK_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.MAX);
-			latencyCountMaxSubs.put(vertexId, latencyCountMaxSub);
+			TaskMetricSubscription latencyCountRangeSub = metricProvider.subscribeTaskMetric(
+				jobID, vertexId, MetricNames.TASK_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RANGE);
+			latencyCountRangeSubs.put(vertexId, latencyCountRangeSub);
 
-			TaskMetricSubscription latencyCountMinSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, MetricNames.TASK_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.MIN);
-			latencyCountMinSubs.put(vertexId, latencyCountMinSub);
-
-			TaskMetricSubscription latencySumMaxSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, MetricNames.TASK_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.MAX);
-			latencySumMaxSubs.put(vertexId, latencySumMaxSub);
-
-			TaskMetricSubscription latencySumMinSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, MetricNames.TASK_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.MIN);
-			latencySumMinSubs.put(vertexId, latencySumMinSub);
+			TaskMetricSubscription latencySumRangeSub = metricProvider.subscribeTaskMetric(
+				jobID, vertexId, MetricNames.TASK_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.RANGE);
+			latencySumRangeSubs.put(vertexId, latencySumRangeSub);
 
 			TaskMetricSubscription inputTpsSub;
-			if (jobConfig.getInputNodes().get(vertexId).isEmpty()) {
+			if (jobConfig.getInputNodes().get(vertexId).isEmpty()
+					&& jobConfig.getVertexConfigs().get(vertexId).getOperatorIds().size() == 1) {
 				// source vertex
 				inputTpsSub = metricProvider.subscribeTaskMetric(
-					jobID, vertexId, MetricNames.SOURCE_INPUT_TPS, MetricAggType.SUM, checkInterval, TimelineAggType.AVG);
+					jobID, vertexId, MetricNames.TASK_OUTPUT_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RATE);
 			} else {
 				inputTpsSub = metricProvider.subscribeTaskMetric(
 					jobID, vertexId, MetricNames.TASK_INPUT_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RATE);
 			}
 			inputTpsSubs.put(vertexId, inputTpsSub);
+
+			// source latency
+			if (jobConfig.getInputNodes().get(vertexId).isEmpty()) {
+				sourceLatencyCountRangeSubs.put(vertexId,
+						metricProvider.subscribeTaskMetric(
+								jobID, vertexId, SOURCE_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RANGE));
+				sourceLatencySumRangeSubs.put(vertexId,
+						metricProvider.subscribeTaskMetric(
+								jobID, vertexId, SOURCE_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.RANGE));
+			}
+
 		}
 	}
 
@@ -120,26 +127,14 @@ public class OverParallelizedDetector implements Detector {
 			return;
 		}
 
-		if (latencyCountMaxSubs != null) {
-			for (TaskMetricSubscription sub : latencyCountMaxSubs.values()) {
+		if (latencyCountRangeSubs != null) {
+			for (TaskMetricSubscription sub : latencyCountRangeSubs.values()) {
 				metricProvider.unsubscribe(sub);
 			}
 		}
 
-		if (latencyCountMinSubs != null) {
-			for (TaskMetricSubscription sub : latencyCountMinSubs.values()) {
-				metricProvider.unsubscribe(sub);
-			}
-		}
-
-		if (latencySumMaxSubs != null) {
-			for (TaskMetricSubscription sub : latencySumMaxSubs.values()) {
-				metricProvider.unsubscribe(sub);
-			}
-		}
-
-		if (latencySumMinSubs != null) {
-			for (TaskMetricSubscription sub : latencySumMinSubs.values()) {
+		if (latencySumRangeSubs != null) {
+			for (TaskMetricSubscription sub : latencySumRangeSubs.values()) {
 				metricProvider.unsubscribe(sub);
 			}
 		}
@@ -149,6 +144,19 @@ public class OverParallelizedDetector implements Detector {
 				metricProvider.unsubscribe(sub);
 			}
 		}
+
+		if (sourceLatencyCountRangeSubs != null) {
+			for (TaskMetricSubscription sub : sourceLatencyCountRangeSubs.values()) {
+				metricProvider.unsubscribe(sub);
+			}
+		}
+
+		if (sourceLatencySumRangeSubs != null) {
+			for (TaskMetricSubscription sub : sourceLatencySumRangeSubs.values()) {
+				metricProvider.unsubscribe(sub);
+			}
+		}
+
 	}
 
 	@Override
@@ -156,41 +164,49 @@ public class OverParallelizedDetector implements Detector {
 		LOGGER.debug("Start detecting.");
 		long now = System.currentTimeMillis();
 
-		RestServerClient.JobConfig jobConfig = restServerClient.getJobConfig(jobID);
+		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 		if (jobConfig == null) {
 			return null;
 		}
 
 		List<JobVertexID> jobVertexIDs = new ArrayList<>();
-		for (JobVertexID vertexId : latencyCountMaxSubs.keySet()) {
-			TaskMetricSubscription countMaxSub = latencyCountMaxSubs.get(vertexId);
-			TaskMetricSubscription countMinSub = latencyCountMinSubs.get(vertexId);
-			TaskMetricSubscription sumMaxSub = latencySumMaxSubs.get(vertexId);
-			TaskMetricSubscription sumMinSub = latencySumMinSubs.get(vertexId);
+		for (JobVertexID vertexId : latencyCountRangeSubs.keySet()) {
+			TaskMetricSubscription sourceLatencyCountRangeSub = sourceLatencyCountRangeSubs.get(vertexId);
+			TaskMetricSubscription sourceLatencySumRangeSub = sourceLatencySumRangeSubs.get(vertexId);
+			TaskMetricSubscription countRangeSub = latencyCountRangeSubs.get(vertexId);
+			TaskMetricSubscription sumRangeSub = latencySumRangeSubs.get(vertexId);
 			TaskMetricSubscription inputTpsSub = inputTpsSubs.get(vertexId);
 
-			if (countMaxSub.getValue() == null || now - countMaxSub.getValue().f0 > checkInterval * 2 ||
-				countMinSub.getValue() == null || now - countMinSub.getValue().f0 > checkInterval * 2 ||
-				sumMaxSub.getValue() == null || now - sumMaxSub.getValue().f0 > checkInterval * 2 ||
-				sumMinSub.getValue() == null || now - sumMaxSub.getValue().f0 > checkInterval * 2 ||
-				inputTpsSub.getValue() == null || now - inputTpsSub.getValue().f0 > checkInterval * 2) {
+			if (countRangeSub.getValue() == null || now - countRangeSub.getValue().f0 > checkInterval * 2 ||
+				sumRangeSub.getValue() == null || now - sumRangeSub.getValue().f0 > checkInterval * 2 ||
+				inputTpsSub.getValue() == null || now - inputTpsSub.getValue().f0 > checkInterval * 2 ||
+					inputTpsSub.getValue().f1 < 0) {
 				LOGGER.debug("Skip vertex {}, metrics missing.", vertexId);
 				continue;
 			}
 
 			int parallelism = jobConfig.getVertexConfigs().get(vertexId).getParallelism();
-			double inputRecordCount = countMaxSub.getValue().f1 - countMinSub.getValue().f1;
+			double inputRecordCount = countRangeSub.getValue().f1;
 			double latencyPerRecord = inputRecordCount <= 0.0 ? 0.0 :
-				(sumMaxSub.getValue().f1 - sumMinSub.getValue().f1) / 1.0e9 / inputRecordCount;
+				sumRangeSub.getValue().f1 / 1.0e9 / inputRecordCount;
 			double inputTps = inputTpsSub.getValue().f1;
+
+			if (jobConfig.getInputNodes().get(vertexId).isEmpty() && sourceLatencyCountRangeSub.getValue().f1 > 0) {
+				double sourceLatency =
+						sourceLatencySumRangeSub.getValue().f1 / 1.0e9 /
+								sourceLatencyCountRangeSub.getValue().f1;
+				latencyPerRecord += sourceLatency;
+			}
+
+			LOGGER.debug("vertex {} input tps {} parallelism {} latency {}", vertexId, inputTps, parallelism, latencyPerRecord);
 
 			if (parallelism > inputTps * ratio * latencyPerRecord) {
 				jobVertexIDs.add(vertexId);
+				LOGGER.info("Over parallelized detected for vertex {} tps:{} latency:{}.", vertexId, inputTps, latencyPerRecord);
 			}
 		}
 
 		if (!jobVertexIDs.isEmpty()) {
-			LOGGER.info("Over parallelized detected for vertices {}.", jobVertexIDs);
 			return new JobVertexOverParallelized(jobID, jobVertexIDs);
 		}
 		return null;

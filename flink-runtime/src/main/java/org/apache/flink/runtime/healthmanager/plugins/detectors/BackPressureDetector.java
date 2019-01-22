@@ -40,8 +40,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.WAIT_OUTPUT_COUNT;
-import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.WAIT_OUTPUT_SUM;
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.WAIT_OUTPUT_AVG;
 
 /**
  * BackPressureDetector detects back pressure of a job.
@@ -55,52 +54,32 @@ public class BackPressureDetector implements Detector {
 	private static final ConfigOption<Long> BACK_PRESSURE_CHECK_INTERVAL =
 		ConfigOptions.key("healthmonitor.back-pressure.interval.ms").defaultValue(60 * 1000L);
 	private static final ConfigOption<Double> BACK_PRESSURE_THRESHOLD =
-		ConfigOptions.key("healthmonitor.back-pressure.threshold.ms").defaultValue(0.0);
+		ConfigOptions.key("healthmonitor.back-pressure.threshold.ms").defaultValue(0.01);
 
 	private JobID jobID;
-	private RestServerClient restServerClient;
 	private MetricProvider metricProvider;
 
 	private long checkInterval;
 	private double threshold;
 
 
-	private Map<JobVertexID, TaskMetricSubscription> waitOutputCountMaxSubs;
-	private Map<JobVertexID, TaskMetricSubscription> waitOutputCountMinSubs;
-	private Map<JobVertexID, TaskMetricSubscription> waitOutputSumMaxSubs;
-	private Map<JobVertexID, TaskMetricSubscription> waitOutputSumMinSubs;
+	private Map<JobVertexID, TaskMetricSubscription> waitOutputAvgSubs;
 
 	@Override
 	public void open(HealthMonitor monitor) {
 		jobID = monitor.getJobID();
-		restServerClient = monitor.getRestServerClient();
 		metricProvider = monitor.getMetricProvider();
 
 		checkInterval = monitor.getConfig().getLong(BACK_PRESSURE_CHECK_INTERVAL);
 		threshold = monitor.getConfig().getDouble(BACK_PRESSURE_THRESHOLD);
 
-		waitOutputCountMaxSubs = new HashMap<>();
-		waitOutputCountMinSubs = new HashMap<>();
-		waitOutputSumMaxSubs = new HashMap<>();
-		waitOutputSumMinSubs = new HashMap<>();
+		waitOutputAvgSubs = new HashMap<>();
 
-		RestServerClient.JobConfig jobConfig = restServerClient.getJobConfig(jobID);
+		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 		for (JobVertexID vertexId : jobConfig.getVertexConfigs().keySet()) {
-			TaskMetricSubscription waitOutputCountMaxSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, WAIT_OUTPUT_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.MAX);
-			waitOutputCountMaxSubs.put(vertexId, waitOutputCountMaxSub);
-
-			TaskMetricSubscription waitOutputCountMinSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, WAIT_OUTPUT_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.MIN);
-			waitOutputCountMinSubs.put(vertexId, waitOutputCountMinSub);
-
-			TaskMetricSubscription waitOutputSumMaxSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, WAIT_OUTPUT_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.MAX);
-			waitOutputSumMaxSubs.put(vertexId, waitOutputSumMaxSub);
-
-			TaskMetricSubscription waitOutputSumMinSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, WAIT_OUTPUT_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.MIN);
-			waitOutputSumMinSubs.put(vertexId, waitOutputSumMinSub);
+			TaskMetricSubscription waitOutputAvgSub = metricProvider.subscribeTaskMetric(
+					jobID, vertexId, WAIT_OUTPUT_AVG, MetricAggType.AVG, checkInterval, TimelineAggType.AVG);
+			waitOutputAvgSubs.put(vertexId, waitOutputAvgSub);
 		}
 	}
 
@@ -110,26 +89,8 @@ public class BackPressureDetector implements Detector {
 			return;
 		}
 
-		if (waitOutputCountMaxSubs != null) {
-			for (TaskMetricSubscription sub : waitOutputCountMaxSubs.values()) {
-				metricProvider.unsubscribe(sub);
-			}
-		}
-
-		if (waitOutputCountMinSubs != null) {
-			for (TaskMetricSubscription sub : waitOutputCountMinSubs.values()) {
-				metricProvider.unsubscribe(sub);
-			}
-		}
-
-		if (waitOutputSumMaxSubs != null) {
-			for (TaskMetricSubscription sub : waitOutputSumMaxSubs.values()) {
-				metricProvider.unsubscribe(sub);
-			}
-		}
-
-		if (waitOutputSumMinSubs != null) {
-			for (TaskMetricSubscription sub : waitOutputSumMinSubs.values()) {
+		if (waitOutputAvgSubs != null) {
+			for (TaskMetricSubscription sub : waitOutputAvgSubs.values()) {
 				metricProvider.unsubscribe(sub);
 			}
 		}
@@ -142,31 +103,24 @@ public class BackPressureDetector implements Detector {
 		long now = System.currentTimeMillis();
 
 		List<JobVertexID> jobVertexIDs = new ArrayList<>();
-		for (JobVertexID vertexId : waitOutputCountMaxSubs.keySet()) {
-			TaskMetricSubscription waitOutputCountMaxSub = waitOutputCountMaxSubs.get(vertexId);
-			TaskMetricSubscription waitOutputCountMinSub = waitOutputCountMinSubs.get(vertexId);
-			TaskMetricSubscription waitOutputSumMaxSub = waitOutputSumMaxSubs.get(vertexId);
-			TaskMetricSubscription waitOutputSumMinSub = waitOutputSumMinSubs.get(vertexId);
+		for (JobVertexID vertexId : waitOutputAvgSubs.keySet()) {
+			TaskMetricSubscription waitOutputAvg = waitOutputAvgSubs.get(vertexId);
 
-			if (waitOutputCountMaxSub.getValue() == null || now - waitOutputCountMaxSub.getValue().f0 > checkInterval * 2 ||
-				waitOutputCountMinSub.getValue() == null || now - waitOutputCountMinSub.getValue().f0 > checkInterval * 2 ||
-				waitOutputSumMaxSub.getValue() == null || now - waitOutputSumMaxSub.getValue().f0 > checkInterval * 2 ||
-				waitOutputSumMinSub.getValue() == null || now - waitOutputSumMinSub.getValue().f0 > checkInterval * 2) {
+			if (waitOutputAvg.getValue() == null || now - waitOutputAvg.getValue().f0 > checkInterval * 2) {
 				LOGGER.debug("Skip vertex {}, metrics missing.", vertexId);
 				continue;
 			}
 
-			double outputRecords = waitOutputCountMaxSub.getValue().f1 - waitOutputCountMinSub.getValue().f1;
-			double totalWait = waitOutputSumMaxSub.getValue().f1 - waitOutputSumMinSub.getValue().f1 / 1.0e9;
-			double waitOutputPerRecord = outputRecords == 0.0 ? 0.0 : totalWait / outputRecords;
+			double waitOutputPerRecord = waitOutputAvg.getValue().f1 * 1e-6;
+			LOGGER.debug("vertex {} wait output {}", vertexId, waitOutputPerRecord);
 
 			if (waitOutputPerRecord > threshold) {
 				jobVertexIDs.add(vertexId);
+				LOGGER.info("Back pressure detected for vertex {} waitOutput:{}.", vertexId, waitOutputPerRecord);
 			}
 		}
 
 		if (!jobVertexIDs.isEmpty()) {
-			LOGGER.info("Back pressure detected for vertices {}.", jobVertexIDs);
 			return new JobVertexBackPressure(jobID, jobVertexIDs);
 		}
 		return null;

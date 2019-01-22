@@ -64,7 +64,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class HealthMonitor {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(HealthManager.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(HealthMonitor.class);
 
 	private static final ConfigOption<Long> HEALTH_CHECK_INTERNAL =
 			ConfigOptions.key("healthmonitor.health.check.interval.ms").defaultValue(10000L);

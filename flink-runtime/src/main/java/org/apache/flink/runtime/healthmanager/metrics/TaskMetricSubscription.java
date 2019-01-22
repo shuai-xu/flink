@@ -65,6 +65,13 @@ public class TaskMetricSubscription extends MetricSubscription<Tuple2<Long, Doub
 	}
 
 	public void addValue(Map<Integer, Tuple2<Long, Double>> subtaskMetrics) {
+
+		// task parallelism changed.
+		if (subtaskMetrics.size() != subtaskAggregators.size()) {
+			// remove old data.
+			subtaskAggregators.clear();
+		}
+
 		for (Integer subtaskIndex : subtaskMetrics.keySet()) {
 			if (!subtaskAggregators.containsKey(subtaskIndex)) {
 				subtaskAggregators.put(
@@ -72,12 +79,6 @@ public class TaskMetricSubscription extends MetricSubscription<Tuple2<Long, Doub
 						TimelineAggregator.createTimelineAggregator(getTimelineAggType(), getInterval()));
 			}
 			subtaskAggregators.get(subtaskIndex).addValue(subtaskMetrics.get(subtaskIndex));
-		}
-
-		// task parallelism changed.
-		if (subtaskMetrics.size() != subtaskAggregators.size()) {
-			// remove old data.
-			subtaskAggregators.clear();
 		}
 	}
 

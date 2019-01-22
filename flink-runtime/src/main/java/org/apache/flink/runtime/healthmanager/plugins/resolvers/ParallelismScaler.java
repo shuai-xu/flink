@@ -51,6 +51,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.SOURCE_LATENCY_COUNT;
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.SOURCE_LATENCY_SUM;
 import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.TASK_INPUT_COUNT;
 import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.TASK_LATENCY_COUNT;
 import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.TASK_LATENCY_SUM;
@@ -90,19 +92,18 @@ public class ParallelismScaler implements Resolver {
 
 	private Map<JobVertexID, TaskMetricSubscription> inputTpsSubs;
 	private Map<JobVertexID, TaskMetricSubscription> outputTpsSubs;
-	private Map<JobVertexID, TaskMetricSubscription> latencyCountMaxSubs;
-	private Map<JobVertexID, TaskMetricSubscription> latencyCountMinSubs;
-	private Map<JobVertexID, TaskMetricSubscription> latencySumMaxSubs;
-	private Map<JobVertexID, TaskMetricSubscription> latencySumMinSubs;
-	private Map<JobVertexID, TaskMetricSubscription> waitOutputCountMaxSubs;
-	private Map<JobVertexID, TaskMetricSubscription> waitOutputCountMinSubs;
-	private Map<JobVertexID, TaskMetricSubscription> waitOutputSumMaxSubs;
-	private Map<JobVertexID, TaskMetricSubscription> waitOutputSumMinSubs;
+	private Map<JobVertexID, TaskMetricSubscription> sourceLatencyCountRangeSubs;
+	private Map<JobVertexID, TaskMetricSubscription> sourceLatencySumRangeSubs;
+	private Map<JobVertexID, TaskMetricSubscription> latencyCountRangeSubs;
+	private Map<JobVertexID, TaskMetricSubscription> latencySumRangeSubs;
+	private Map<JobVertexID, TaskMetricSubscription> waitOutputCountRangeSubs;
+	private Map<JobVertexID, TaskMetricSubscription> waitOutputSumRangeSubs;
 
 	private Map<JobVertexID, List<JobVertexID>> subDagRoot2SubDagVertex;
 	private Map<JobVertexID, JobVertexID> vertex2SubDagRoot;
 	private Map<JobVertexID, List<JobVertexID>> subDagRoot2UpstreamVertices;
 	private Map<JobVertexID, Boolean> isSink;
+	private Map<JobVertexID, Boolean> isSource;
 
 	@Override
 	public void open(HealthMonitor monitor) {
@@ -118,20 +119,22 @@ public class ParallelismScaler implements Resolver {
 
 		inputTpsSubs = new HashMap<>();
 		outputTpsSubs = new HashMap<>();
-		latencyCountMaxSubs = new HashMap<>();
-		latencyCountMinSubs = new HashMap<>();
-		latencySumMaxSubs = new HashMap<>();
-		latencySumMinSubs = new HashMap<>();
-		waitOutputCountMaxSubs = new HashMap<>();
-		waitOutputCountMinSubs = new HashMap<>();
-		waitOutputSumMaxSubs = new HashMap<>();
-		waitOutputSumMinSubs = new HashMap<>();
+		sourceLatencyCountRangeSubs = new HashMap<>();
+		sourceLatencySumRangeSubs = new HashMap<>();
+		latencyCountRangeSubs = new HashMap<>();
+		latencySumRangeSubs = new HashMap<>();
+		waitOutputCountRangeSubs = new HashMap<>();
+		waitOutputSumRangeSubs = new HashMap<>();
 
 		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
+		// analyze job graph.
+		analyzeJobGraph(jobConfig);
+
+		// subscribe metrics.
 		for (JobVertexID vertexId : jobConfig.getVertexConfigs().keySet()) {
 			// input tps
 			TaskMetricSubscription inputTpsSub;
-			if (jobConfig.getInputNodes().get(vertexId).isEmpty() &&
+			if (isSource.get(vertexId) &&
 					jobConfig.getVertexConfigs().get(vertexId).getOperatorIds().size() == 1) {
 				inputTpsSub = metricProvider.subscribeTaskMetric(
 					jobID, vertexId, TASK_OUTPUT_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RATE);
@@ -146,40 +149,35 @@ public class ParallelismScaler implements Resolver {
 				jobID, vertexId, TASK_OUTPUT_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RATE);
 			outputTpsSubs.put(vertexId, outputTps);
 
+			// source latency
+			if (isSource.get(vertexId)) {
+				sourceLatencyCountRangeSubs.put(vertexId,
+						metricProvider.subscribeTaskMetric(
+								jobID, vertexId, SOURCE_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RANGE));
+				sourceLatencySumRangeSubs.put(vertexId,
+						metricProvider.subscribeTaskMetric(
+								jobID, vertexId, SOURCE_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.RANGE));
+			}
 			// latency count
-			TaskMetricSubscription latencyCountMaxSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, TASK_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.MAX);
-			latencyCountMaxSubs.put(vertexId, latencyCountMaxSub);
-			TaskMetricSubscription latencyCountMinSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, TASK_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.MIN);
-			latencyCountMinSubs.put(vertexId, latencyCountMinSub);
+			TaskMetricSubscription latencyCountRangeSub = metricProvider.subscribeTaskMetric(
+				jobID, vertexId, TASK_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RANGE);
+			latencyCountRangeSubs.put(vertexId, latencyCountRangeSub);
 
 			// latency sum
-			TaskMetricSubscription latencySumMaxSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, TASK_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.MAX);
-			latencySumMaxSubs.put(vertexId, latencySumMaxSub);
-			TaskMetricSubscription latencySumMinSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, TASK_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.MIN);
-			latencySumMinSubs.put(vertexId, latencySumMinSub);
+			TaskMetricSubscription latencySumRangeSub = metricProvider.subscribeTaskMetric(
+				jobID, vertexId, TASK_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.RANGE);
+			latencySumRangeSubs.put(vertexId, latencySumRangeSub);
 
 			// wait output count
-			TaskMetricSubscription waitOutputCountMaxSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, WAIT_OUTPUT_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.MAX);
-			waitOutputCountMaxSubs.put(vertexId, waitOutputCountMaxSub);
-			TaskMetricSubscription waitOutputCountMinSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, WAIT_OUTPUT_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.MIN);
-			waitOutputCountMinSubs.put(vertexId, waitOutputCountMinSub);
+			TaskMetricSubscription waitOutputCountRangeSub = metricProvider.subscribeTaskMetric(
+				jobID, vertexId, WAIT_OUTPUT_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RANGE);
+			waitOutputCountRangeSubs.put(vertexId, waitOutputCountRangeSub);
 
 			// wait output sum
-			TaskMetricSubscription waitOutputSumMaxSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, WAIT_OUTPUT_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.MAX);
-			waitOutputSumMaxSubs.put(vertexId, waitOutputSumMaxSub);
-			TaskMetricSubscription waitOutputSumMinSub = metricProvider.subscribeTaskMetric(
-				jobID, vertexId, WAIT_OUTPUT_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.MIN);
-			waitOutputSumMinSubs.put(vertexId, waitOutputSumMinSub);
+			TaskMetricSubscription waitOutputSumRangeSub = metricProvider.subscribeTaskMetric(
+				jobID, vertexId, WAIT_OUTPUT_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.RANGE);
+			waitOutputSumRangeSubs.put(vertexId, waitOutputSumRangeSub);
 
-			// analyze job graph.
-			analyzeJobGraph(jobConfig);
 		}
 	}
 
@@ -201,50 +199,38 @@ public class ParallelismScaler implements Resolver {
 			}
 		}
 
-		if (latencyCountMaxSubs != null) {
-			for (TaskMetricSubscription sub : latencyCountMaxSubs.values()) {
+		if (sourceLatencyCountRangeSubs != null) {
+			for (TaskMetricSubscription sub : sourceLatencyCountRangeSubs.values()) {
 				metricProvider.unsubscribe(sub);
 			}
 		}
 
-		if (latencyCountMinSubs != null) {
-			for (TaskMetricSubscription sub : latencyCountMinSubs.values()) {
+		if (sourceLatencySumRangeSubs != null) {
+			for (TaskMetricSubscription sub : sourceLatencySumRangeSubs.values()) {
 				metricProvider.unsubscribe(sub);
 			}
 		}
 
-		if (latencySumMaxSubs != null) {
-			for (TaskMetricSubscription sub : latencySumMaxSubs.values()) {
+		if (latencyCountRangeSubs != null) {
+			for (TaskMetricSubscription sub : latencyCountRangeSubs.values()) {
 				metricProvider.unsubscribe(sub);
 			}
 		}
 
-		if (latencySumMinSubs != null) {
-			for (TaskMetricSubscription sub : latencySumMinSubs.values()) {
+		if (latencySumRangeSubs != null) {
+			for (TaskMetricSubscription sub : latencySumRangeSubs.values()) {
 				metricProvider.unsubscribe(sub);
 			}
 		}
 
-		if (waitOutputCountMaxSubs != null) {
-			for (TaskMetricSubscription sub : waitOutputCountMaxSubs.values()) {
+		if (waitOutputCountRangeSubs != null) {
+			for (TaskMetricSubscription sub : waitOutputCountRangeSubs.values()) {
 				metricProvider.unsubscribe(sub);
 			}
 		}
 
-		if (waitOutputCountMinSubs != null) {
-			for (TaskMetricSubscription sub : waitOutputCountMinSubs.values()) {
-				metricProvider.unsubscribe(sub);
-			}
-		}
-
-		if (waitOutputSumMaxSubs != null) {
-			for (TaskMetricSubscription sub : waitOutputSumMaxSubs.values()) {
-				metricProvider.unsubscribe(sub);
-			}
-		}
-
-		if (waitOutputSumMinSubs != null) {
-			for (TaskMetricSubscription sub : waitOutputSumMinSubs.values()) {
+		if (waitOutputSumRangeSubs != null) {
+			for (TaskMetricSubscription sub : waitOutputSumRangeSubs.values()) {
 				metricProvider.unsubscribe(sub);
 			}
 		}
@@ -401,6 +387,7 @@ public class ParallelismScaler implements Resolver {
 		vertex2SubDagRoot = new HashMap<>();
 		subDagRoot2UpstreamVertices = new HashMap<>();
 		isSink = new HashMap<>();
+		isSource = new HashMap<>();
 
 		for (JobVertexID vertexId : jobConfig.getVertexConfigs().keySet()) {
 			subDagRoot2SubDagVertex.put(vertexId, new ArrayList<>());
@@ -408,12 +395,14 @@ public class ParallelismScaler implements Resolver {
 			vertex2SubDagRoot.put(vertexId, vertexId);
 			subDagRoot2UpstreamVertices.put(vertexId, new ArrayList<>());
 			isSink.put(vertexId, true);
+			isSource.put(vertexId, false);
 		}
 
 		for (JobVertexID vertexId : jobConfig.getInputNodes().keySet()) {
 			List<JobVertexID> upstreamVertices = jobConfig.getInputNodes().get(vertexId);
 			if (upstreamVertices.isEmpty()) {
 				// source
+				isSource.put(vertexId, true);
 				continue;
 			}
 
@@ -580,40 +569,53 @@ public class ParallelismScaler implements Resolver {
 		for (JobVertexID vertexId : jobConfig.getVertexConfigs().keySet()) {
 			TaskMetricSubscription inputTpsSub = inputTpsSubs.get(vertexId);
 			TaskMetricSubscription outputTpsSub = outputTpsSubs.get(vertexId);
-			TaskMetricSubscription latencyCountMaxSub = latencyCountMaxSubs.get(vertexId);
-			TaskMetricSubscription latencyCountMinSub = latencyCountMinSubs.get(vertexId);
-			TaskMetricSubscription latencySumMaxSub = latencySumMaxSubs.get(vertexId);
-			TaskMetricSubscription latencySumMinSub = latencySumMinSubs.get(vertexId);
-			TaskMetricSubscription waitOutputCountMaxSub = waitOutputCountMaxSubs.get(vertexId);
-			TaskMetricSubscription waitOutputCountMinSub = waitOutputCountMinSubs.get(vertexId);
-			TaskMetricSubscription waitOutputSumMaxSub = waitOutputSumMaxSubs.get(vertexId);
-			TaskMetricSubscription waitOutputSumMinSub = waitOutputSumMinSubs.get(vertexId);
+			TaskMetricSubscription sourceLatencyCountRangeSub = sourceLatencyCountRangeSubs.get(vertexId);
+			TaskMetricSubscription sourceLatencySumRangeSub = sourceLatencySumRangeSubs.get(vertexId);
+			TaskMetricSubscription latencyCountRangeSub = latencyCountRangeSubs.get(vertexId);
+			TaskMetricSubscription latencySumRangeSub = latencySumRangeSubs.get(vertexId);
+			TaskMetricSubscription waitOutputCountRangeSub = waitOutputCountRangeSubs.get(vertexId);
+			TaskMetricSubscription waitOutputSumRangeSub = waitOutputSumRangeSubs.get(vertexId);
 
 			boolean isSink = this.isSink.get(vertexId);
 
 			// can not rescale without required metrics
 			if (inputTpsSub.getValue() == null || now - inputTpsSub.getValue().f0 > checkInterval * 2 ||
-				latencyCountMaxSub.getValue() == null || now - latencyCountMaxSub.getValue().f0 > checkInterval * 2 ||
-				latencyCountMinSub.getValue() == null || now - latencyCountMinSub.getValue().f0 > checkInterval * 2 ||
-				latencySumMaxSub.getValue() == null || now - latencySumMaxSub.getValue().f0 > checkInterval * 2 ||
-				latencySumMinSub.getValue() == null || now - latencySumMinSub.getValue().f0 > checkInterval * 2) {
+					inputTpsSub.getValue().f1 < 0 ||
+				latencyCountRangeSub.getValue() == null || now - latencyCountRangeSub.getValue().f0 > checkInterval * 2 ||
+				latencySumRangeSub.getValue() == null || now - latencySumRangeSub.getValue().f0 > checkInterval * 2) {
+				LOGGER.debug("input metric missing " + vertexId);
+				LOGGER.debug("tps " + inputTpsSub.getValue() + " latency count range" + latencyCountRangeSub.getValue()
+						+ "latency sum range " + latencySumRangeSub.getValue());
 				return null;
 			}
 			if (!isSink &&
 				(outputTpsSub.getValue() == null || now - outputTpsSub.getValue().f0 > checkInterval * 2 ||
-				waitOutputCountMaxSub.getValue() == null || now - waitOutputCountMaxSub.getValue().f0 > checkInterval * 2 ||
-				waitOutputCountMinSub.getValue() == null || now - waitOutputCountMinSub.getValue().f0 > checkInterval * 2 ||
-				waitOutputSumMaxSub.getValue() == null || now - waitOutputSumMaxSub.getValue().f0 > checkInterval * 2 ||
-				waitOutputSumMinSub.getValue() == null || now - waitOutputSumMinSub.getValue().f0 > checkInterval * 2)) {
+						outputTpsSub.getValue().f1 < 0 ||
+				waitOutputCountRangeSub.getValue() == null || now - waitOutputCountRangeSub.getValue().f0 > checkInterval * 2 ||
+				waitOutputSumRangeSub.getValue() == null || now - waitOutputSumRangeSub.getValue().f0 > checkInterval * 2)) {
+				LOGGER.debug("output metric missing");
+				return null;
+			}
+			if (isSource.get(vertexId) && (
+					sourceLatencyCountRangeSub.getValue() == null || now - sourceLatencyCountRangeSub.getValue().f0 > checkInterval * 2 ||
+							sourceLatencySumRangeSub.getValue() == null || now - sourceLatencySumRangeSub.getValue().f0 > checkInterval * 2
+			)) {
+				LOGGER.debug("input metric missing");
 				return null;
 			}
 
-			double inputRecords = latencyCountMaxSub.getValue().f1 - latencyCountMinSub.getValue().f1;
-			double outputRecords = isSink ? 0.0 : waitOutputCountMaxSub.getValue().f1 - waitOutputCountMinSub.getValue().f1;
-			double latency = inputRecords <= 0.0 ? 0.0 :
-				(latencySumMaxSub.getValue().f1 - latencySumMinSub.getValue().f1) / 1.0e9 / inputRecords;
+			double inputRecords = latencyCountRangeSub.getValue().f1;
+			double outputRecords = isSink ? 0.0 : waitOutputCountRangeSub.getValue().f1;
+			double latency = inputRecords <= 0.0 ? 0.0 : latencySumRangeSub.getValue().f1 / 1.0e9 / inputRecords;
 			double outputWait = outputRecords <= 0.0 ? 0.0 :
-				(waitOutputSumMaxSub.getValue().f1 - waitOutputSumMinSub.getValue().f1) / 1.0e9 / outputRecords;
+				waitOutputSumRangeSub.getValue().f1 / 1.0e9 / outputRecords;
+
+			if (isSource.get(vertexId) && sourceLatencyCountRangeSub.getValue().f1 > 0) {
+				double sourceLatency =
+						sourceLatencySumRangeSub.getValue().f1 / 1.0e9 /
+								sourceLatencyCountRangeSub.getValue().f1;
+				latency += sourceLatency;
+			}
 			TaskPerformance performance = new TaskPerformance(
 				vertexId,
 				inputTpsSub.getValue().f1,
@@ -623,6 +625,9 @@ public class ParallelismScaler implements Resolver {
 				latency,
 				outputWait
 			);
+
+			LOGGER.debug("performation of vertex {} tps {} latency {} waitOutput {}",
+					performance.jobVertexID, performance.inputTps, performance.latencyPerRecord, performance.waitOutputPerRecord);
 
 			performances.put(vertexId, performance);
 		}

@@ -135,6 +135,7 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 		boolean enableTracingMetrics,
 		int tracingMetricsInterval,
 		SumAndCount taskLatency,
+		SumAndCount sourceLatency,
 		long watermarkInterval) {
 
 		return getSourceContext(
@@ -142,7 +143,7 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 			processingTimeService,
 			lockingObject,
 			streamStatusMaintainer,
-			getOutputWithTaskLatency(collector, enableTracingMetrics, tracingMetricsInterval, taskLatency),
+			getOutputWithTaskLatency(collector, enableTracingMetrics, tracingMetricsInterval, taskLatency, sourceLatency),
 			watermarkInterval);
 	}
 
@@ -159,7 +160,7 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 			processingTimeService,
 			lockingObject,
 			streamStatusMaintainer,
-			getOutputWithTaskLatency(collector, enableTracingMetrics, tracingMetricsInterval, taskLatency),
+			getOutputWithTaskLatency(collector, enableTracingMetrics, tracingMetricsInterval, taskLatency, sourceLatency),
 			watermarkInterval,
 			-1);
 	}
@@ -168,7 +169,8 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 			Output<StreamRecord<OUT>> collector,
 			boolean enableTracingMetrics,
 			int tracingMetricsInterval,
-			SumAndCount taskLatency) {
+			SumAndCount taskLatency,
+			SumAndCount sourceLatency) {
 		return new Output<StreamRecord<OUT>>() {
 			private long lastEmitTime = 0;
 			private long emitCounter = 0;

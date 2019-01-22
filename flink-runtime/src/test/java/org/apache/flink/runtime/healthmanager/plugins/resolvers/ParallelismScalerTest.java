@@ -81,9 +81,9 @@ public class ParallelismScalerTest {
 		config.setString("parallelism.up-scale.tps.ratio", "2.0");
 		config.setString(HealthMonitor.DETECTOR_CLASSES,
 			FrequentFullGCDetector.class.getCanonicalName() + "," +
-			FailoverDetector.class.getCanonicalName() + "," +
-			HighDelayDetector.class.getCanonicalName() + "," +
-			DelayIncreasingDetector.class.getCanonicalName());
+				FailoverDetector.class.getCanonicalName() + "," +
+				HighDelayDetector.class.getCanonicalName() + "," +
+				DelayIncreasingDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, ParallelismScaler.class.getCanonicalName());
 
 		// initial job vertex config.
@@ -106,7 +106,6 @@ public class ParallelismScalerTest {
 
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs1, inputNodes));
-			//.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
 
 		long now = System.currentTimeMillis();
 
@@ -121,29 +120,17 @@ public class ParallelismScalerTest {
 		TaskMetricSubscription v1OutputTps = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(v1OutputTps.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
 
-		TaskMetricSubscription v1LatencyCountMin = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1LatencyCountMin.getValue()).thenReturn(new Tuple2<>(now, 0.0));
+		TaskMetricSubscription v1LatencyCountRange = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v1LatencyCountRange.getValue()).thenReturn(new Tuple2<>(now, 1000.0));
 
-		TaskMetricSubscription v1LatencyCountMax = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1LatencyCountMax.getValue()).thenReturn(new Tuple2<>(now, 1000.0));
+		TaskMetricSubscription v1LatencySumRange = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v1LatencySumRange.getValue()).thenReturn(new Tuple2<>(now, 1.0e9));
 
-		TaskMetricSubscription v1LatencySumMin = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1LatencySumMin.getValue()).thenReturn(new Tuple2<>(now, 0.0));
+		TaskMetricSubscription v1WaitOutputCountRange = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v1WaitOutputCountRange.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
 
-		TaskMetricSubscription v1LatencySumMax = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1LatencySumMax.getValue()).thenReturn(new Tuple2<>(now, 1.0e9));
-
-		TaskMetricSubscription v1WaitOutputCountMin = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1WaitOutputCountMin.getValue()).thenReturn(new Tuple2<>(now, 0.0));
-
-		TaskMetricSubscription v1WaitOutputCountMax = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1WaitOutputCountMax.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
-
-		TaskMetricSubscription v1WaitOutputSumMin = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1WaitOutputSumMin.getValue()).thenReturn(new Tuple2<>(now, 0.0));
-
-		TaskMetricSubscription v1WaitOutputSumMax = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1WaitOutputSumMax.getValue()).thenReturn(new Tuple2<>(now, 0.5e9));
+		TaskMetricSubscription v1WaitOutputSumRange = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v1WaitOutputSumRange.getValue()).thenReturn(new Tuple2<>(now, 0.5e9));
 
 		TaskMetricSubscription v1Delay = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(v1Delay.getValue()).thenReturn(new Tuple2<>(now, 10 * 60 * 1000.0));
@@ -160,62 +147,48 @@ public class ParallelismScalerTest {
 		TaskMetricSubscription v2OutputTps = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(v2OutputTps.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
 
-		TaskMetricSubscription v2LatencyCountMin = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2LatencyCountMin.getValue()).thenReturn(new Tuple2<>(now, 0.0));
+		TaskMetricSubscription v2LatencyCountRange = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v2LatencyCountRange.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
 
-		TaskMetricSubscription v2LatencyCountMax = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2LatencyCountMax.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
+		TaskMetricSubscription v2LatencySumRange = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v2LatencySumRange.getValue()).thenReturn(new Tuple2<>(now, 1.0e9));
 
-		TaskMetricSubscription v2LatencySumMin = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2LatencySumMin.getValue()).thenReturn(new Tuple2<>(now, 0.0));
+		TaskMetricSubscription v2WaitOutputCountRange = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v2WaitOutputCountRange.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
 
-		TaskMetricSubscription v2LatencySumMax = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2LatencySumMax.getValue()).thenReturn(new Tuple2<>(now, 1.0e9));
-
-		TaskMetricSubscription v2WaitOutputCountMin = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2WaitOutputCountMin.getValue()).thenReturn(new Tuple2<>(now, 0.0));
-
-		TaskMetricSubscription v2WaitOutputCountMax = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2WaitOutputCountMax.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
-
-		TaskMetricSubscription v2WaitOutputSumMin = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2WaitOutputSumMin.getValue()).thenReturn(new Tuple2<>(now, 0.0));
-
-		TaskMetricSubscription v2WaitOutputSumMax = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2WaitOutputSumMax.getValue()).thenReturn(new Tuple2<>(now, 0.0));
+		TaskMetricSubscription v2WaitOutputSumRange = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v2WaitOutputSumRange.getValue()).thenReturn(new Tuple2<>(now, 0.0));
 
 		initMockMetrics(metricProvider, vertex1, vertex2, zeroSub,
-				v1InputTps, v1OutputTps, v1LatencyCountMin, v1LatencyCountMax, v1LatencySumMin,
-				v1LatencySumMax, v1WaitOutputCountMin, v1WaitOutputCountMax, v1WaitOutputSumMin,
-				v1WaitOutputSumMax, v1Delay, v1DelayRate,
-				v2InputTps, v2OutputTps, v2LatencyCountMin, v2LatencyCountMax, v2LatencySumMin,
-				v2LatencySumMax, v2WaitOutputCountMin, v2WaitOutputCountMax, v2WaitOutputSumMin,
-				v2WaitOutputSumMax);
+			v1InputTps, v1OutputTps, v1LatencyCountRange, v1LatencySumRange,
+			v1WaitOutputCountRange, v1WaitOutputSumRange, v1Delay, v1DelayRate,
+			v2InputTps, v2OutputTps, v2LatencyCountRange, v2LatencySumRange,
+			v2WaitOutputCountRange, v2WaitOutputSumRange);
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
-				Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
-				Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
 		allTaskStats.put(new ExecutionVertexID(vertex3, 0),
-				Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
 		RestServerClient.JobStatus jobStatus = new RestServerClient.JobStatus(allTaskStats);
 
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
-				Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
-				Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		allTaskStats.put(new ExecutionVertexID(vertex3, 0),
-				Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
 		RestServerClient.JobStatus jobStatus2 = new RestServerClient.JobStatus(allTaskStats);
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats2 = new HashMap<>();
 		allTaskStats2.put(new ExecutionVertexID(vertex1, 0),
-				Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		allTaskStats2.put(new ExecutionVertexID(vertex2, 0),
-				Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		allTaskStats2.put(new ExecutionVertexID(vertex3, 0),
-				Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		RestServerClient.JobStatus jobStatus3 = new RestServerClient.JobStatus(allTaskStats2);
 
 		// mock slow scheduling.
@@ -249,18 +222,14 @@ public class ParallelismScalerTest {
 	}
 
 	private void initMockMetrics(MetricProvider metricProvider, JobVertexID vertex1,
-			JobVertexID vertex2, TaskMetricSubscription zeroSub, TaskMetricSubscription v1InputTps,
-			TaskMetricSubscription v1OutputTps, TaskMetricSubscription v1LatencyCountMin,
-			TaskMetricSubscription v1LatencyCountMax, TaskMetricSubscription v1LatencySumMin,
-			TaskMetricSubscription v1LatencySumMax, TaskMetricSubscription v1WaitOutputCountMin,
-			TaskMetricSubscription v1WaitOutputCountMax, TaskMetricSubscription v1WaitOutputSumMin,
-			TaskMetricSubscription v1WaitOutputSumMax, TaskMetricSubscription v1Delay,
-			TaskMetricSubscription v1DelayRate, TaskMetricSubscription v2InputTps,
-			TaskMetricSubscription v2OutputTps, TaskMetricSubscription v2LatencyCountMin,
-			TaskMetricSubscription v2LatencyCountMax, TaskMetricSubscription v2LatencySumMin,
-			TaskMetricSubscription v2LatencySumMax, TaskMetricSubscription v2WaitOutputCountMin,
-			TaskMetricSubscription v2WaitOutputCountMax, TaskMetricSubscription v2WaitOutputSumMin,
-			TaskMetricSubscription v2WaitOutputSumMax) {
+		JobVertexID vertex2, TaskMetricSubscription zeroSub, TaskMetricSubscription v1InputTps,
+		TaskMetricSubscription v1OutputTps, TaskMetricSubscription v1LatencyCountRange,
+		TaskMetricSubscription v1LatencySumRange, TaskMetricSubscription v1WaitOutputCountRange,
+		TaskMetricSubscription v1WaitOutputSumRange, TaskMetricSubscription v1Delay,
+		TaskMetricSubscription v1DelayRate, TaskMetricSubscription v2InputTps,
+		TaskMetricSubscription v2OutputTps, TaskMetricSubscription v2LatencyCountRange,
+		TaskMetricSubscription v2LatencySumRange, TaskMetricSubscription v2WaitOutputCountRange,
+		TaskMetricSubscription v2WaitOutputSumRange) {
 		Mockito.when(metricProvider.subscribeTaskMetric(
 			Mockito.any(JobID.class),
 			Mockito.any(JobVertexID.class),
@@ -283,28 +252,20 @@ public class ParallelismScalerTest {
 						return v1OutputTps;
 					}
 				} else if (metricName.equals(MetricNames.TASK_LATENCY_COUNT)) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v1LatencyCountMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v1LatencyCountMin;
+					if (aggType.equals(TimelineAggType.RANGE)) {
+						return v1LatencyCountRange;
 					}
 				} else if (metricName.equals(MetricNames.TASK_LATENCY_SUM)) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v1LatencySumMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v1LatencySumMin;
+					if (aggType.equals(TimelineAggType.RANGE)) {
+						return v1LatencySumRange;
 					}
 				} else if (metricName.equals(MetricNames.WAIT_OUTPUT_COUNT)) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v1WaitOutputCountMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v1WaitOutputCountMin;
+					if (aggType.equals(TimelineAggType.RANGE)) {
+						return v1WaitOutputCountRange;
 					}
 				} else if (metricName.equals(MetricNames.WAIT_OUTPUT_SUM)) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v1WaitOutputSumMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v1WaitOutputSumMin;
+					if (aggType.equals(TimelineAggType.RANGE)) {
+						return v1WaitOutputSumRange;
 					}
 				} else if (metricName.equals(MetricNames.SOURCE_DELAY)) {
 					if (aggType.equals(TimelineAggType.AVG)) {
@@ -323,28 +284,20 @@ public class ParallelismScalerTest {
 						return v2OutputTps;
 					}
 				} else if (metricName.equals(MetricNames.TASK_LATENCY_COUNT)) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v2LatencyCountMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v2LatencyCountMin;
+					if (aggType.equals(TimelineAggType.RANGE)) {
+						return v2LatencyCountRange;
 					}
 				} else if (metricName.equals(MetricNames.TASK_LATENCY_SUM)) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v2LatencySumMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v2LatencySumMin;
+					if (aggType.equals(TimelineAggType.RANGE)) {
+						return v2LatencySumRange;
 					}
 				} else if (metricName.equals(MetricNames.WAIT_OUTPUT_COUNT)) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v2WaitOutputCountMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v2WaitOutputCountMin;
+					if (aggType.equals(TimelineAggType.RANGE)) {
+						return v2WaitOutputCountRange;
 					}
 				} else if (metricName.equals(MetricNames.WAIT_OUTPUT_SUM)) {
-					if (aggType.equals(TimelineAggType.MAX)) {
-						return v2WaitOutputSumMax;
-					} else if (aggType.equals(TimelineAggType.MIN)) {
-						return v2WaitOutputSumMin;
+					if (aggType.equals(TimelineAggType.RANGE)) {
+						return v2WaitOutputSumRange;
 					}
 				}
 			}
@@ -383,9 +336,9 @@ public class ParallelismScalerTest {
 		config.setString("parallelism.down-scale.tps.ratio", "1.0");
 		config.setString(HealthMonitor.DETECTOR_CLASSES,
 			FrequentFullGCDetector.class.getCanonicalName() + "," +
-			FailoverDetector.class.getCanonicalName() + "," +
-			LowDelayDetector.class.getCanonicalName() + "," +
-			OverParallelizedDetector.class.getCanonicalName());
+				FailoverDetector.class.getCanonicalName() + "," +
+				LowDelayDetector.class.getCanonicalName() + "," +
+				OverParallelizedDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, ParallelismScaler.class.getCanonicalName());
 
 		// initial job vertex config.
@@ -435,29 +388,17 @@ public class ParallelismScalerTest {
 		TaskMetricSubscription v1OutputTps = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(v1OutputTps.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
 
-		TaskMetricSubscription v1LatencyCountMin = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1LatencyCountMin.getValue()).thenReturn(new Tuple2<>(now, 0.0));
+		TaskMetricSubscription v1LatencyCountRange = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v1LatencyCountRange.getValue()).thenReturn(new Tuple2<>(now, 1000.0));
 
-		TaskMetricSubscription v1LatencyCountMax = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1LatencyCountMax.getValue()).thenReturn(new Tuple2<>(now, 1000.0));
+		TaskMetricSubscription v1LatencySumRange = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v1LatencySumRange.getValue()).thenReturn(new Tuple2<>(now, 1.0e9));
 
-		TaskMetricSubscription v1LatencySumMin = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1LatencySumMin.getValue()).thenReturn(new Tuple2<>(now, 0.0));
+		TaskMetricSubscription v1WaitOutputCountRange = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v1WaitOutputCountRange.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
 
-		TaskMetricSubscription v1LatencySumMax = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1LatencySumMax.getValue()).thenReturn(new Tuple2<>(now, 1.0e9));
-
-		TaskMetricSubscription v1WaitOutputCountMin = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1WaitOutputCountMin.getValue()).thenReturn(new Tuple2<>(now, 0.0));
-
-		TaskMetricSubscription v1WaitOutputCountMax = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1WaitOutputCountMax.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
-
-		TaskMetricSubscription v1WaitOutputSumMin = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1WaitOutputSumMin.getValue()).thenReturn(new Tuple2<>(now, 0.0));
-
-		TaskMetricSubscription v1WaitOutputSumMax = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1WaitOutputSumMax.getValue()).thenReturn(new Tuple2<>(now, 0.0));
+		TaskMetricSubscription v1WaitOutputSumRange = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v1WaitOutputSumRange.getValue()).thenReturn(new Tuple2<>(now, 0.0));
 
 		TaskMetricSubscription v1Delay = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(v1Delay.getValue()).thenReturn(new Tuple2<>(now, 0.0));
@@ -470,40 +411,26 @@ public class ParallelismScalerTest {
 		TaskMetricSubscription v2OutputTps = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(v2OutputTps.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
 
-		TaskMetricSubscription v2LatencyCountMin = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2LatencyCountMin.getValue()).thenReturn(new Tuple2<>(now, 0.0));
+		TaskMetricSubscription v2LatencyCountRange = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v2LatencyCountRange.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
 
-		TaskMetricSubscription v2LatencyCountMax = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2LatencyCountMax.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
+		TaskMetricSubscription v2LatencySumRange = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v2LatencySumRange.getValue()).thenReturn(new Tuple2<>(now, 2.0e9));
 
-		TaskMetricSubscription v2LatencySumMin = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2LatencySumMin.getValue()).thenReturn(new Tuple2<>(now, 0.0));
+		TaskMetricSubscription v2WaitOutputCountRange = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v2WaitOutputCountRange.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
 
-		TaskMetricSubscription v2LatencySumMax = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2LatencySumMax.getValue()).thenReturn(new Tuple2<>(now, 2.0e9));
-
-		TaskMetricSubscription v2WaitOutputCountMin = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2WaitOutputCountMin.getValue()).thenReturn(new Tuple2<>(now, 0.0));
-
-		TaskMetricSubscription v2WaitOutputCountMax = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2WaitOutputCountMax.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
-
-		TaskMetricSubscription v2WaitOutputSumMin = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2WaitOutputSumMin.getValue()).thenReturn(new Tuple2<>(now, 0.0));
-
-		TaskMetricSubscription v2WaitOutputSumMax = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2WaitOutputSumMax.getValue()).thenReturn(new Tuple2<>(now, 0.0));
+		TaskMetricSubscription v2WaitOutputSumRange = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v2WaitOutputSumRange.getValue()).thenReturn(new Tuple2<>(now, 0.0));
 
 		TaskMetricSubscription v2Delay = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(v2Delay.getValue()).thenReturn(new Tuple2<>(now, 0.0));
 
 		initMockMetrics(metricProvider, vertex1, vertex2, zeroSub,
-				v1InputTps, v1OutputTps, v1LatencyCountMin, v1LatencyCountMax, v1LatencySumMin,
-				v1LatencySumMax, v1WaitOutputCountMin, v1WaitOutputCountMax, v1WaitOutputSumMin,
-				v1WaitOutputSumMax, v1Delay, zeroSub,
-				v2InputTps, v2OutputTps, v2LatencyCountMin, v2LatencyCountMax, v2LatencySumMin,
-				v2LatencySumMax, v2WaitOutputCountMin, v2WaitOutputCountMax, v2WaitOutputSumMin,
-				v2WaitOutputSumMax);
+			v1InputTps, v1OutputTps, v1LatencyCountRange, v1LatencySumRange,
+			v1WaitOutputCountRange, v1WaitOutputSumRange, v1Delay, zeroSub,
+			v2InputTps, v2OutputTps, v2LatencyCountRange, v2LatencySumRange,
+			v2WaitOutputCountRange, v2WaitOutputSumRange);
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),

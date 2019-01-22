@@ -22,7 +22,6 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
-import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.MetricAggType;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.metrics.TaskMetricSubscription;
@@ -57,7 +56,6 @@ public class HighDelayDetector implements Detector {
 		ConfigOptions.key("healthmonitor.high-delay.threshold").defaultValue(5 * 60 * 1000L);
 
 	private JobID jobID;
-	private RestServerClient restServerClient;
 	private MetricProvider metricProvider;
 
 	private long highDelayCheckInterval;
@@ -68,14 +66,13 @@ public class HighDelayDetector implements Detector {
 	@Override
 	public void open(HealthMonitor monitor) {
 		jobID = monitor.getJobID();
-		restServerClient = monitor.getRestServerClient();
 		metricProvider = monitor.getMetricProvider();
 
 		highDelayCheckInterval = monitor.getConfig().getLong(HIGH_DELAY_CHECK_INTERVAL);
 		highDelayThreshold = monitor.getConfig().getLong(HIGH_DELAY_THRESHOLD);
 
 		delaySubs = new HashMap<>();
-		for (JobVertexID vertexId : restServerClient.getJobConfig(jobID).getVertexConfigs().keySet()) {
+		for (JobVertexID vertexId : monitor.getJobConfig().getVertexConfigs().keySet()) {
 			if (monitor.getJobConfig().getInputNodes().get(vertexId).size() == 0) {
 				TaskMetricSubscription delaySub = metricProvider.subscribeTaskMetric(
 						jobID, vertexId, SOURCE_DELAY, MetricAggType.MAX, highDelayCheckInterval, TimelineAggType.AVG);

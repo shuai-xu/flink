@@ -32,7 +32,9 @@ public class SumAndCount {
 	private Counter count;
 
 	private static final long AVG_INTERVAL = 10_000L;
-	private long currentIntervalKey;
+	private long currentAvgTime;
+	private double currentAvg;
+	private long nextIntervalKey;
 	private double avgSum;
 	private int avgCount;
 
@@ -48,10 +50,10 @@ public class SumAndCount {
 		group.gauge("avg", new Gauge<Double>() {
 			@Override
 			public Double getValue() {
-				if (System.currentTimeMillis() / AVG_INTERVAL > currentIntervalKey) {
+				if (System.currentTimeMillis() - currentAvgTime > AVG_INTERVAL) {
 					return 0.0;
 				}
-				return avgCount == 0 ? 0 : avgSum / avgCount;
+				return currentAvg;
 			}
 		});
 	}
@@ -74,8 +76,10 @@ public class SumAndCount {
 		sum += value;
 
 		long now = System.currentTimeMillis();
-		if (now / AVG_INTERVAL > currentIntervalKey) {
-			currentIntervalKey = now / AVG_INTERVAL;
+		if (now / AVG_INTERVAL > nextIntervalKey) {
+			nextIntervalKey = now / AVG_INTERVAL;
+			currentAvgTime = nextIntervalKey * AVG_INTERVAL;
+			currentAvg = avgCount == 0 ? 0 : avgSum / avgCount;
 			avgCount = 0;
 			avgSum = 0;
 		}
