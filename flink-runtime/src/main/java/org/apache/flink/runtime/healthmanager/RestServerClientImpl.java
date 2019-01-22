@@ -28,12 +28,12 @@ import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
-import org.apache.flink.runtime.rest.ResourceSpecInfo;
 import org.apache.flink.runtime.rest.RestClient;
 import org.apache.flink.runtime.rest.RestClientConfiguration;
 import org.apache.flink.runtime.rest.handler.job.rescaling.UpdatingTriggerHeaders;
 import org.apache.flink.runtime.rest.messages.EmptyMessageParameters;
 import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
+import org.apache.flink.runtime.rest.messages.ExecutionVertexIDInfo;
 import org.apache.flink.runtime.rest.messages.JobExceptionsHeaders;
 import org.apache.flink.runtime.rest.messages.JobExceptionsInfo;
 import org.apache.flink.runtime.rest.messages.JobGraphOverviewHeaders;
@@ -43,6 +43,7 @@ import org.apache.flink.runtime.rest.messages.JobsOverviewHeaders;
 import org.apache.flink.runtime.rest.messages.MessageHeaders;
 import org.apache.flink.runtime.rest.messages.MessageParameters;
 import org.apache.flink.runtime.rest.messages.RequestBody;
+import org.apache.flink.runtime.rest.messages.ResourceSpecInfo;
 import org.apache.flink.runtime.rest.messages.ResponseBody;
 import org.apache.flink.runtime.rest.messages.TotalResourceLimitExceptionInfosHeaders;
 import org.apache.flink.runtime.rest.messages.TotalResourceLimitExceptionsInfos;
@@ -219,7 +220,10 @@ public class RestServerClientImpl implements RestServerClient {
 		try {
 			sendRequest(header, parameters, EmptyRequestBody.getInstance()).thenApply(
 				(TaskManagerExecutionVertexIdsInfo taskManagerExecutionVertexIdsInfo) -> {
-					executionVertexIDs.addAll(taskManagerExecutionVertexIdsInfo.getExecutionVertexIds());
+					List<ExecutionVertexIDInfo> executionVertexIDInfos = taskManagerExecutionVertexIdsInfo.getExecutionVertexIds();
+					if (executionVertexIDInfos != null && !executionVertexIDInfos.isEmpty()){
+						executionVertexIDs.addAll(executionVertexIDInfos.stream().map(ExecutionVertexIDInfo::convertToResourceSpec).collect(Collectors.toList()));
+					}
 					return executionVertexIDs;
 				}
 			).get();

@@ -18,7 +18,7 @@
 
 package org.apache.flink.runtime.rest.messages.taskmanager;
 
-import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
+import org.apache.flink.runtime.rest.messages.ExecutionVertexIDInfo;
 import org.apache.flink.runtime.rest.messages.ResponseBody;
 
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonCreator;
@@ -36,16 +36,16 @@ public class TaskManagerExecutionVertexIdsInfo implements ResponseBody {
 	public static final String FIELD_NAME_EXECUTION_VERTEX_ID_INFO = "execution-vertex-ids";
 
 	@JsonProperty(FIELD_NAME_EXECUTION_VERTEX_ID_INFO)
-	private final List<ExecutionVertexID> executionVertexIds;
+	private final List<ExecutionVertexIDInfo> executionVertexIds;
 
 	@JsonCreator
 	public TaskManagerExecutionVertexIdsInfo(
-		@JsonProperty(FIELD_NAME_EXECUTION_VERTEX_ID_INFO) List<ExecutionVertexID> executionVertexIds) {
+		@JsonProperty(FIELD_NAME_EXECUTION_VERTEX_ID_INFO) List<ExecutionVertexIDInfo> executionVertexIds) {
 		this.executionVertexIds = executionVertexIds;
 	}
 
 	@JsonIgnore
-	public List<ExecutionVertexID> getExecutionVertexIds() {
+	public List<ExecutionVertexIDInfo> getExecutionVertexIds() {
 		return executionVertexIds;
 	}
 

@@ -25,11 +25,11 @@ import org.apache.flink.runtime.executiongraph.AccessExecution;
 import org.apache.flink.runtime.executiongraph.AccessExecutionGraph;
 import org.apache.flink.runtime.executiongraph.AccessExecutionJobVertex;
 import org.apache.flink.runtime.executiongraph.AccessExecutionVertex;
-import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.messages.webmonitor.JobDetails;
 import org.apache.flink.runtime.messages.webmonitor.MultipleJobsDetails;
+import org.apache.flink.runtime.rest.messages.ExecutionVertexIDInfo;
 import org.apache.flink.runtime.webmonitor.RestfulGateway;
 import org.apache.flink.util.Preconditions;
 
@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * Cache for taskmanager list {@link ExecutionVertexID} which are obtained from the Flink cluster. Every cache entry
+ * Cache for taskmanager list {@link ExecutionVertexIDInfo} which are obtained from the Flink cluster. Every cache entry
  * has an associated time to live after which a new request will trigger the reloading of it.
  */
 public class TaskManagerExecutionVertexCache implements Closeable {
@@ -53,7 +53,7 @@ public class TaskManagerExecutionVertexCache implements Closeable {
 
 	private final Time timeToLive;
 
-	private final Map<ResourceID, List<ExecutionVertexID>> cachedExcutionVertixIds;
+	private final Map<ResourceID, List<ExecutionVertexIDInfo>> cachedExcutionVertixIds;
 
 	private volatile boolean running = true;
 
@@ -86,11 +86,11 @@ public class TaskManagerExecutionVertexCache implements Closeable {
 	/**
 	 * Gets the List ExecutionVertexID for the given taskmanagerId and caches it.
 	 */
-	public List<ExecutionVertexID> getTaskManagerExecutionVertex(ResourceID taskmanagerId, RestfulGateway restfulGateway, ExecutionGraphCache executionGraphCache) throws Exception {
+	public List<ExecutionVertexIDInfo> getTaskManagerExecutionVertex(ResourceID taskmanagerId, RestfulGateway restfulGateway, ExecutionGraphCache executionGraphCache) throws Exception {
 
 		Preconditions.checkState(running, "TaskManagerExecutionVertexCache is no longer running");
 
-		List<ExecutionVertexID> executionVertexIds = cachedExcutionVertixIds.get(taskmanagerId);
+		List<ExecutionVertexIDInfo> executionVertexIds = cachedExcutionVertixIds.get(taskmanagerId);
 
 		long currentTime = System.currentTimeMillis();
 
@@ -98,7 +98,7 @@ public class TaskManagerExecutionVertexCache implements Closeable {
 			return executionVertexIds;
 		} else {
 			MultipleJobsDetails jobs = restfulGateway.requestMultipleJobDetails(timeout).get();
-			Map<ResourceID, List<ExecutionVertexID>> tmId2ExcutionVertixIds = new HashMap<>();
+			Map<ResourceID, List<ExecutionVertexIDInfo>> tmId2ExcutionVertixIds = new HashMap<>();
 			if (jobs != null && jobs.getJobs().size() > 0) {
 				List<JobID> jobIds = jobs.getJobs().stream().filter(job -> job.getStatus() == JobStatus.RUNNING)
 					.map(JobDetails::getJobId).collect(Collectors.toList());
@@ -109,11 +109,11 @@ public class TaskManagerExecutionVertexCache implements Closeable {
 						for (AccessExecutionVertex executionVertex : accessExecutionJobVertex.getTaskVertices()) {
 							final AccessExecution execution = executionVertex.getCurrentExecutionAttempt();
 							final ResourceID currentTaskTaskmanagerId = execution.getAssignedResourceLocation().getResourceID();
-							List<ExecutionVertexID> tmExecutionVertexIds = tmId2ExcutionVertixIds.get(currentTaskTaskmanagerId);
+							List<ExecutionVertexIDInfo> tmExecutionVertexIds = tmId2ExcutionVertixIds.get(currentTaskTaskmanagerId);
 							if (tmExecutionVertexIds == null){
 								tmExecutionVertexIds = new ArrayList<>();
 							}
-							ExecutionVertexID executionVertexId = new ExecutionVertexID(jobVertexID, execution.getParallelSubtaskIndex());
+							ExecutionVertexIDInfo executionVertexId = new ExecutionVertexIDInfo(jobVertexID, execution.getParallelSubtaskIndex());
 							tmExecutionVertexIds.add(executionVertexId);
 							tmId2ExcutionVertixIds.put(currentTaskTaskmanagerId, tmExecutionVertexIds);
 						}

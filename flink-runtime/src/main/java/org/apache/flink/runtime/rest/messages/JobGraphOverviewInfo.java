@@ -20,7 +20,6 @@ package org.apache.flink.runtime.rest.messages;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
-import org.apache.flink.runtime.rest.ResourceSpecInfo;
 import org.apache.flink.runtime.rest.handler.job.JobGraphOverviewHandler;
 import org.apache.flink.runtime.rest.messages.json.JobVertexIDDeserializer;
 import org.apache.flink.runtime.rest.messages.json.JobVertexIDSerializer;
