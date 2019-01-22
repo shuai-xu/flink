@@ -92,7 +92,7 @@ public class YarnConfigOptions {
 		key("yarn.application-attempts")
 		.noDefaultValue()
 		.withDescription("Number of ApplicationMaster restarts. Note that that the entire Flink cluster will restart" +
-			" and the YARN Client will loose the connection. Also, the JobManager address will change and you’ll need" +
+			" and the YARN Client will lose the connection. Also, the JobManager address will change and you’ll need" +
 			" to set the JM host:port manually. It is recommended to leave this option at 1.");
 
 	/**
