@@ -284,48 +284,50 @@ The following example shows how to use SortedMapState's firstEntry to retrieve t
 <div data-lang="java" markdown="1">
 {% highlight java %}
 public class CountWindowFirstEntry extends RichFlatMapFunction<Tuple2<Long, Long>, Tuple3<Long, Long, Long>> {
+    /**
+     * The SortedMapState handle. The first field is the user key, the second field a running count.
+     */
+    private transient SortedMapState<Long, Long> state;
 
-		/**
-		 * The SortedMapState handle. The first field is the user key, the second field a running count.
-		 */
-		private transient SortedMapState<Long, Long> state;
+    @Override
+    public void flatMap(
+        Tuple2<Long, Long> input,
+        Collector<Tuple3<Long, Long, Long>> out) throws Exception {
 
-		@Override
-		public void flatMap(Tuple2<Long, Long> input, Collector<Tuple3<Long, Long, Long>> out) throws Exception {
-
-			// access the state
-			Long count = state.get(input.f1);
-			// If it hasn't been used before, it will be null
-			if (count == null) {
-				count = 0L;
-			}
-			// update the state
-			state.put(input.f1, count + 1);
-
-			out.collect(new Tuple3<>(input.f0, state.firstEntry().getKey(), state.firstEntry().getValue()));
+		// access the state
+		Long count = state.get(input.f1);
+		// If it hasn't been used before, it will be null
+		if (count == null) {
+			count = 0L;
 		}
+		// update the state
+		state.put(input.f1, count + 1);
 
-		@Override
-		public void open(Configuration config) {
-			SortedMapStateDescriptor<Long, Long> descriptor =
-				new SortedMapStateDescriptor<>(
-					"sortedmapstate", // the state name
-					BytewiseComparator.LONG_INSTANCE,
-					Long.class,
-					Long.class);
-			state = getRuntimeContext().getSortedMapState(descriptor);
+        Map.Entry<Long, Long> firstEntry = state.firstEntry();
+		out.collect(new Tuple3<>(input.f0, firstEntry.getKey(), firstEntry.getValue()));
+	}
+
+	@Override
+	public void open(Configuration config) {
+		SortedMapStateDescriptor<Long, Long> descriptor =
+			new SortedMapStateDescriptor<>(
+				"sortedmapstate", // the state name
+				BytewiseComparator.LONG_INSTANCE,
+				Long.class,
+				Long.class);
+		state = getRuntimeContext().getSortedMapState(descriptor);
 		}
 	}
 
 	public static void main(String[] args) throws Exception {
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		// this can be used in a streaming program like this (assuming we have a StreamExecutionEnvironment env)
-		env.fromElements(Tuple2.of(1L, 3L), Tuple2.of(1L, 5L), Tuple2.of(1L, 3L), Tuple2.of(1L, 7L), Tuple2.of(1L, 4L), Tuple2.of(1L, 2L),
-			Tuple2.of(1L, 2L), Tuple2.of(1L, 1L))
+		env.fromElements(Tuple2.of(1L, 3L), Tuple2.of(1L, 5L), Tuple2.of(1L, 3L), Tuple2.of(1L, 7L),
+		    Tuple2.of(1L, 4L), Tuple2.of(1L, 2L), Tuple2.of(1L, 2L), Tuple2.of(1L, 1L))
 			.keyBy(0)
 			.flatMap(new CountWindowFirstEntry())
 			.print();
-		// the printed output will be (1, 3, 1), (1, 3, 1), (1, 3, 2), (1, 3, 2), (1, 3, 2), (1, 2, 1) (1, 2, 2) and (1, 1, 1)
+		// the printed output will be (1, 3, 1), (1, 3, 1), (1, 3, 2), (1, 3, 2), (1, 3, 2),
+		//(1, 2, 1) (1, 2, 2) and (1, 1, 1)
 		env.execute();
 	}
 {% endhighlight %}
@@ -379,7 +381,8 @@ object CountWindowFirstEntry extends App {
     )).keyBy(_._1)
       .flatMap(new CountWindowFirstEntry())
       .print()
-    // the printed output will be (1, 3, 1), (1, 3, 1), (1, 3, 2), (1, 3, 2), (1, 3, 2), (1, 2, 1) (1, 2, 2) and (1, 1, 1)
+    // the printed output will be (1, 3, 1), (1, 3, 1), (1, 3, 2), (1, 3, 2), (1, 3, 2),
+    //(1, 2, 1) (1, 2, 2) and (1, 1, 1)
 
     env.execute("ExampleManagedState")
   }
