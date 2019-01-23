@@ -45,7 +45,7 @@ object UpsertPvUvSQL {
     val params = ParameterTool.fromArgs(args)
 
     // set up execution environment
-    val env = StreamExecutionEnvironment.createLocalEnvironment(4)
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val input = env.fromElements(

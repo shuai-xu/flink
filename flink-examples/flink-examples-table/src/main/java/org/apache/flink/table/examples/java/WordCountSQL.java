@@ -41,7 +41,7 @@ public class WordCountSQL {
 	public static void main(String[] args) throws Exception {
 
 		// set up execution environment
-		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(4);
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env);
 
 		DataStreamSource<WC> input = env.fromElements(

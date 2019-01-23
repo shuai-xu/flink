@@ -42,7 +42,8 @@ public class StreamJoinSQLExample {
 		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 
 		// set up execution environment
-		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(1);
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setParallelism(1);
 		StreamTableEnvironment tEnv = TableEnvironment.getTableEnvironment(env);
 
 		DataStream<Order> order = env.fromElements(

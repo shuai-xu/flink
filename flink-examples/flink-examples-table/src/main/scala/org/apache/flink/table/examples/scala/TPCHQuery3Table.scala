@@ -87,7 +87,7 @@ object TPCHQuery3Table {
     val date = "1995-03-12".toDate
 
     // get execution environment
-    val env = StreamExecutionEnvironment.createLocalEnvironment(2)
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getBatchTableEnvironment(env)
 
     val lineitems = getLineitemTable(tEnv, env)

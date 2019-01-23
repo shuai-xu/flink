@@ -48,7 +48,7 @@ public class RetractPvUvSQL {
 		final ParameterTool params = ParameterTool.fromArgs(args);
 
 		// set up execution environment
-		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(4);
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		StreamTableEnvironment tEnv = TableEnvironment.getTableEnvironment(env);
 
 		DataStreamSource<PageVisit> input = env.fromElements(

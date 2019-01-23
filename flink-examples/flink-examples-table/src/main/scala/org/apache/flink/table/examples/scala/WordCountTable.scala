@@ -40,7 +40,7 @@ object WordCountTable {
   def main(args: Array[String]): Unit = {
 
     // set up execution environment
-    val execEnv = StreamExecutionEnvironment.createLocalEnvironment(2)
+    val execEnv = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getBatchTableEnvironment(execEnv)
 
     val input = execEnv.fromElements(WC("hello", 1), WC("hello", 1), WC("ciao", 1))

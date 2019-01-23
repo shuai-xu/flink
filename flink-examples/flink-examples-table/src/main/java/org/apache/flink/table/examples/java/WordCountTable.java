@@ -38,7 +38,7 @@ public class WordCountTable {
 	// *************************************************************************
 
 	public static void main(String[] args) throws Exception {
-		StreamExecutionEnvironment execEnv = StreamExecutionEnvironment.createLocalEnvironment(4);
+		StreamExecutionEnvironment execEnv = StreamExecutionEnvironment.getExecutionEnvironment();
 		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(execEnv);
 
 		DataStreamSource<WC> input = execEnv.fromElements(
