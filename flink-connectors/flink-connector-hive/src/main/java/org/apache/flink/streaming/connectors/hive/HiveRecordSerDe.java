@@ -40,7 +40,6 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.TimestampObjectIn
 import org.apache.hadoop.hive.serde2.typeinfo.DecimalTypeInfo;
 
 import java.math.BigDecimal;
-import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -159,8 +158,8 @@ public class HiveRecordSerDe {
 				Timestamp ts = ((TimestampObjectInspector) primitiveObjectInspector).getPrimitiveJavaObject(field);
 				return DataStructureConverters.getConverterForType(DataTypes.TIMESTAMP).toInternal(ts);
 			case DATE:
-				Date date = ((DateObjectInspector) primitiveObjectInspector).getPrimitiveJavaObject(field);
-				return DataStructureConverters.getConverterForType(DataTypes.DATE).toInternal(date);
+				int days = ((DateObjectInspector) primitiveObjectInspector).getPrimitiveWritableObject(field).getDays();
+				return days;
 			case CHAR:
 				HiveChar c = ((HiveCharObjectInspector) primitiveObjectInspector).getPrimitiveJavaObject(field);
 				return c.getStrippedValue();
