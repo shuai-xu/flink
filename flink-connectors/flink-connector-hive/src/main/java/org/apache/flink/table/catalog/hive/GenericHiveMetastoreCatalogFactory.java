@@ -23,12 +23,11 @@ import org.apache.flink.table.catalog.hive.config.HiveMetastoreConfig;
 import java.util.Map;
 
 /**
- * Factory for HiveCatalog.
+ * Factory for GenericHiveMetastoreCatalog.
  */
-public class HiveCatalogFactory implements CatalogFactory<HiveCatalog> {
-
+public class GenericHiveMetastoreCatalogFactory implements CatalogFactory<GenericHiveMetastoreCatalog> {
 	@Override
-	public HiveCatalog createCatalog(String catalogName, Map<String, String> properties) {
-		return new HiveCatalog(catalogName, properties.get(HiveMetastoreConfig.HIVE_METASTORE_URIS));
+	public GenericHiveMetastoreCatalog createCatalog(String catalogName, Map<String, String> properties) {
+		return new GenericHiveMetastoreCatalog(catalogName, properties.get(HiveMetastoreConfig.HIVE_METASTORE_URIS));
 	}
 }

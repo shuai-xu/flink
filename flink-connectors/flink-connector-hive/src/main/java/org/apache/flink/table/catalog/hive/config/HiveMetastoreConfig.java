@@ -18,14 +18,9 @@
 package org.apache.flink.table.catalog.hive.config;
 
 /**
- * HiveCatalog's configs.
+ * Yaml configs in SQL CLI yaml file for catalogs backed by Hive Metastore.
  */
-public class HiveCatalogConfig {
-
-	// -------------------
-	// SQL Client yaml file configs
-	// -------------------
-
+public class HiveMetastoreConfig {
 	public static final String HIVE_METASTORE_URIS = "hive.metastore.uris";
 
 	public static final String HIVE_METASTORE_USERNAME = "hive.metastore.username";

@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.client.config.entries;
 
-import org.apache.flink.table.catalog.hive.config.HiveCatalogConfig;
+import org.apache.flink.table.catalog.hive.config.HiveMetastoreConfig;
 import org.apache.flink.table.client.SqlClientException;
 import org.apache.flink.table.client.config.ConfigUtil;
 import org.apache.flink.table.descriptors.DescriptorProperties;
@@ -39,9 +39,9 @@ public class CatalogEntry extends ConfigEntry {
 	public static final String CATALOG_DEFAULT_DB = "catalog.default-database";
 	// Hive-specific
 	public static final String CATALOG_CONNECTOR_HIVE_METASTORE_URIS =
-		CATALOG_CONNECTOR_PREFIX + "." + HiveCatalogConfig.HIVE_METASTORE_URIS;
+		CATALOG_CONNECTOR_PREFIX + "." + HiveMetastoreConfig.HIVE_METASTORE_URIS;
 	public static final String CATALOG_CONNECTOR_HIVE_METASTORE_USERNAME =
-		CATALOG_CONNECTOR_PREFIX + "." + HiveCatalogConfig.HIVE_METASTORE_USERNAME;
+		CATALOG_CONNECTOR_PREFIX + "." + HiveMetastoreConfig.HIVE_METASTORE_USERNAME;
 
 	private String name;
 	private DescriptorProperties properties;

@@ -26,7 +26,7 @@ import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.catalog.hive.FlinkHiveException;
 import org.apache.flink.table.catalog.hive.HiveCatalogUtil;
-import org.apache.flink.table.catalog.hive.config.HiveCatalogConfig;
+import org.apache.flink.table.catalog.hive.config.HiveMetastoreConfig;
 import org.apache.flink.table.catalog.hive.config.HiveTableConfig;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.factories.BatchTableSourceFactory;
@@ -123,7 +123,7 @@ public class HiveTableFactory implements BatchTableSourceFactory<BaseRow>, Table
 		properties.add(HIVE_TABLE_TYPE);
 
 		// Hive catalog configs
-		properties.add(HiveCatalogConfig.HIVE_METASTORE_USERNAME);
+		properties.add(HiveMetastoreConfig.HIVE_METASTORE_USERNAME);
 
 		// Hive table configs
 		properties.add(HiveTableConfig.HIVE_TABLE_COMPRESSED);

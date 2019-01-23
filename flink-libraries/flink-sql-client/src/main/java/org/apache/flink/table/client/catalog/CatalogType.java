@@ -22,5 +22,5 @@ package org.apache.flink.table.client.catalog;
  * Catalog types support in SQL Client.
  */
 public enum CatalogType {
-	hive, flink_in_memory
+	hive, flink_in_memory, generic_hive_metastore
 }

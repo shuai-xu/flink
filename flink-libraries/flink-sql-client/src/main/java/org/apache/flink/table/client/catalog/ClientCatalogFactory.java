@@ -21,6 +21,7 @@ package org.apache.flink.table.client.catalog;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.table.catalog.FlinkInMemoryCatalogFactory;
 import org.apache.flink.table.catalog.ReadableCatalog;
+import org.apache.flink.table.catalog.hive.GenericHiveMetastoreCatalogFactory;
 import org.apache.flink.table.catalog.hive.HiveCatalogFactory;
 import org.apache.flink.table.client.config.entries.CatalogEntry;
 
@@ -44,6 +45,8 @@ public class ClientCatalogFactory {
 				return new HiveCatalogFactory().createCatalog(catalog.getName(), cleaned);
 			case flink_in_memory:
 				return new FlinkInMemoryCatalogFactory().createCatalog(catalog.getName(), cleaned);
+			case generic_hive_metastore:
+				return new GenericHiveMetastoreCatalogFactory().createCatalog(catalog.getName(), cleaned);
 			default:
 				throw new IllegalArgumentException("Doesn't support catalog type " + type + " yet.");
 		}

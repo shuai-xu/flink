@@ -20,7 +20,7 @@ package org.apache.flink.table.client.catalog;
 
 import org.apache.flink.table.catalog.FlinkInMemoryCatalog;
 import org.apache.flink.table.catalog.ReadableCatalog;
-import org.apache.flink.table.catalog.hive.config.HiveCatalogConfig;
+import org.apache.flink.table.catalog.hive.config.HiveMetastoreConfig;
 import org.apache.flink.table.client.config.ConfigUtil;
 import org.apache.flink.table.client.config.entries.CatalogEntry;
 import org.apache.flink.table.descriptors.DescriptorProperties;
@@ -45,7 +45,7 @@ public class ClientCatalogFactoryTest {
 
 		assertEquals(
 			new HashMap<String, String>() {{
-				put(HiveCatalogConfig.HIVE_METASTORE_URIS, "");
+				put(HiveMetastoreConfig.HIVE_METASTORE_URIS, "");
 			}},
 			ClientCatalogFactory.cleanProperties(map)
 		);

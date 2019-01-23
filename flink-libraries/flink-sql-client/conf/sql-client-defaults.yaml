@@ -122,3 +122,9 @@ deployment:
 #        hive.metastore.uris: thrift://localhost:9083
 #      is-default: false
 #      default-database: default
+#  - name: mygeneric
+#    catalog:
+#      type: generic_hive_metastore
+#      connector:
+#        hive.metastore.uris: thrift://<ip>:<port>
+#      default-database: default
