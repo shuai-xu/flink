@@ -5204,6 +5204,18 @@ in a faster execution.
 used later in the code. When that happens, Flink will regenerate the table to be cached from its 
 original DAG and cache the table again.
 
+#### Prerequisite to use cached Tables in a distributed environment
+When using cached tables in a distributed environment, current default implementation of the 
+underlying table cache relies on [Apache Zookeeper](http://zookeeper.apache.org/) for service 
+discovery. In order to use the cached table in a distributed environment, users needs to provide 
+a Zookeeper ensemble. And the following configurations needs to be set along with other 
+[Configurations](/ops/config.html).
+```
+flink.service.registry.class: org.apache.flink.service.impl.ZookeeperRegistry
+flink.service.registry.zookeeper.quorum: ZK_QUORUM_ADDRESS:ZK_QUORUM_PORT
+flink.service.registry.zookeeper.rootpath: YOUR_ROOT_PATH_FOR_FLINK_TABLE_SERVICE
+```
+
 #### Lifecycle of Table Caches
 Table caches are available throughout the lifecycle of the `TableEnvironment`. *Users should close
 the Table environment to avoid leaking remote resources*. It is recommended to always invoke
