@@ -129,4 +129,19 @@ public class AdjustJobConfig implements Action {
 			Collectors.joining(", "));
 		return "AdjustJobConfig{" + adjustments + "}";
 	}
+
+	public RestServerClient.JobConfig getAppliedJobConfig(RestServerClient.JobConfig originJobConfig) {
+		RestServerClient.JobConfig appliedJobConfig = new RestServerClient.JobConfig(originJobConfig);
+		for (JobVertexID vertexId : targetResource.keySet()) {
+			RestServerClient.VertexConfig originVertexConfig = originJobConfig.getVertexConfigs().get(vertexId);
+			RestServerClient.VertexConfig appliedVertexConfig = new RestServerClient.VertexConfig(
+				targetParallelism.get(vertexId),
+				originVertexConfig.getMaxParallelism(),
+				targetResource.get(vertexId),
+				originVertexConfig.getOperatorIds(),
+				originVertexConfig.getColocationGroupId());
+			appliedJobConfig.getVertexConfigs().put(vertexId, appliedVertexConfig);
+		}
+		return appliedJobConfig;
+	}
 }

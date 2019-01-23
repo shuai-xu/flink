@@ -22,6 +22,7 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
+import org.apache.flink.configuration.ResourceManagerOptions;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.plugins.Action;
@@ -58,12 +59,17 @@ public class NativeMemoryAdjuster implements Resolver {
 	private double scaleRatio;
 	private long timeout;
 
+	private double maxCpuLimit;
+	private int maxMemoryLimit;
+
 	@Override
 	public void open(HealthMonitor monitor) {
 		this.monitor = monitor;
 		this.jobID = monitor.getJobID();
 		this.scaleRatio = monitor.getConfig().getDouble(NATIVE_SCALE_OPTION);
 		this.timeout = monitor.getConfig().getLong(NATIVE_SCALE_TIME_OUT_OPTION);
+		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
+		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
 	}
 
 	@Override
@@ -108,6 +114,17 @@ public class NativeMemoryAdjuster implements Resolver {
 
 			adjustJobNativeMemory.addVertex(
 				jvId, vertexConfig.getParallelism(), vertexConfig.getParallelism(), currentResource, targetResource);
+		}
+
+		if (maxCpuLimit != Double.MAX_VALUE || maxMemoryLimit != Integer.MAX_VALUE) {
+			RestServerClient.JobConfig targetJobConfig = adjustJobNativeMemory.getAppliedJobConfig(jobConfig);
+			double targetTotalCpu = targetJobConfig.getJobTotalCpuCores();
+			int targetTotalMem = targetJobConfig.getJobTotalMemoryMb();
+			if (targetTotalCpu > maxCpuLimit || targetTotalMem > maxMemoryLimit) {
+				LOGGER.debug("Give up adjusting: total resource of target job config <cpu, mem>=<{}, {}> exceed max limit <cpu, mem>=<{}, {}>.",
+					targetTotalCpu, targetTotalMem, maxCpuLimit, maxMemoryLimit);
+				return null;
+			}
 		}
 
 		if (!adjustJobNativeMemory.isEmpty()) {

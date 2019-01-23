@@ -21,6 +21,7 @@ package org.apache.flink.runtime.healthmanager.plugins.resolvers;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
+import org.apache.flink.configuration.ResourceManagerOptions;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.MetricAggType;
@@ -38,6 +39,7 @@ import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequent
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighDelay;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowDelay;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexOverParallelized;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MaxResourceLimitUtil;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.util.AbstractID;
 
@@ -90,6 +92,9 @@ public class ParallelismScaler implements Resolver {
 	private long timeout;
 	private long checkInterval;
 
+	private double maxCpuLimit;
+	private int maxMemoryLimit;
+
 	private Map<JobVertexID, TaskMetricSubscription> inputTpsSubs;
 	private Map<JobVertexID, TaskMetricSubscription> outputTpsSubs;
 	private Map<JobVertexID, TaskMetricSubscription> sourceLatencyCountRangeSubs;
@@ -116,6 +121,8 @@ public class ParallelismScaler implements Resolver {
 		this.downScaleTpsRatio = monitor.getConfig().getDouble(PARALLELISM_DOWN_SCALE_TPS_RATIO_OPTION);
 		this.timeout = monitor.getConfig().getLong(PARALLELISM_SCALE_TIME_OUT_OPTION);
 		this.checkInterval = monitor.getConfig().getLong(PARALLELISM_SCALE_INTERVAL);
+		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
+		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
 
 		inputTpsSubs = new HashMap<>();
 		outputTpsSubs = new HashMap<>();
@@ -374,6 +381,38 @@ public class ParallelismScaler implements Resolver {
 				rescaleJobParallelism.addVertex(
 					vertexId, vertexConfig.getParallelism(), targetParallelisms.get(vertexId), vertexConfig.getResourceSpec(), vertexConfig.getResourceSpec());
 			}
+
+			if (maxCpuLimit != Double.MAX_VALUE || maxMemoryLimit != Integer.MAX_VALUE) {
+				RestServerClient.JobConfig targetJobConfig = rescaleJobParallelism.getAppliedJobConfig(jobConfig);
+				double targetTotalCpu = targetJobConfig.getJobTotalCpuCores();
+				int targetTotalMem = targetJobConfig.getJobTotalMemoryMb();
+				if (targetTotalCpu > maxCpuLimit || targetTotalMem > maxMemoryLimit) {
+					LOGGER.debug("Try to scale down parallelism: total resource of target job config <cpu, mem>=<{}, {}> exceed max limit <cpu, mem>=<{}, {}>.",
+						targetTotalCpu, targetTotalMem, maxCpuLimit, maxMemoryLimit);
+
+					RestServerClient.JobConfig adjustedJobConfig = MaxResourceLimitUtil.scaleDownJobConfigToMaxResourceLimit(
+						targetJobConfig, maxCpuLimit, maxMemoryLimit);
+
+					if (adjustedJobConfig == null) {
+						LOGGER.debug("Give up adjusting.");
+						return null;
+					}
+
+					rescaleJobParallelism = new RescaleJobParallelism(jobID, timeout);
+					for (JobVertexID vertexId : adjustedJobConfig.getVertexConfigs().keySet()) {
+						RestServerClient.VertexConfig originVertexConfig = jobConfig.getVertexConfigs().get(vertexId);
+						RestServerClient.VertexConfig adjustedVertexConfig = adjustedJobConfig.getVertexConfigs().get(vertexId);
+						if (originVertexConfig.getParallelism() != adjustedVertexConfig.getParallelism()) {
+							rescaleJobParallelism.addVertex(vertexId,
+								originVertexConfig.getParallelism(),
+								adjustedVertexConfig.getParallelism(),
+								originVertexConfig.getResourceSpec(),
+								adjustedVertexConfig.getResourceSpec());
+						}
+					}
+				}
+			}
+
 			if (!rescaleJobParallelism.isEmpty()) {
 				LOGGER.info("RescaleJobParallelism action generated: {}.", rescaleJobParallelism);
 				return rescaleJobParallelism;

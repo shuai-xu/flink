@@ -373,6 +373,7 @@ public class ParallelismScalerTest {
 
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs1, inputNodes))
+			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs1, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
 
 		long now = System.currentTimeMillis();

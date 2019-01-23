@@ -95,6 +95,7 @@ public class DirectMemoryAdjusterTest {
 
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
+			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
 
 		Map<JobVertexID, List<JobException>> exceptions = new HashMap<>();
@@ -157,7 +158,7 @@ public class DirectMemoryAdjusterTest {
 		Mockito.verify(restServerClient, Mockito.times(3))
 			.getJobStatus(Mockito.eq(jobID));
 
-		Mockito.verify(restServerClient, Mockito.times(2))
+		Mockito.verify(restServerClient, Mockito.times(3))
 			.getJobConfig(Mockito.eq(jobID));
 	}
 }

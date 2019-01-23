@@ -36,6 +36,7 @@ import org.apache.flink.runtime.healthmanager.plugins.actionselectors.FirstValid
 import org.apache.flink.runtime.healthmanager.plugins.detectors.BackPressureDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.DelayIncreasingDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.DirectOOMDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.ExceedMaxResourceLimitDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.FailoverDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.FrequentFullGCDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.HeapOOMDetector;
@@ -44,6 +45,7 @@ import org.apache.flink.runtime.healthmanager.plugins.detectors.LowDelayDetector
 import org.apache.flink.runtime.healthmanager.plugins.detectors.MemoryOveruseDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.OverParallelizedDetector;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.DirectMemoryAdjuster;
+import org.apache.flink.runtime.healthmanager.plugins.resolvers.ExceedMaxResourceLimitResolver;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.HeapMemoryAdjuster;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.NativeMemoryAdjuster;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.ParallelismScaler;
@@ -84,14 +86,16 @@ public class HealthMonitor {
 						+ DelayIncreasingDetector.class.getCanonicalName() + ","
 						+ OverParallelizedDetector.class.getCanonicalName() + ","
 						+ FailoverDetector.class.getCanonicalName() + ","
-						+ BackPressureDetector.class.getCanonicalName());
+						+ BackPressureDetector.class.getCanonicalName() + ","
+						+ ExceedMaxResourceLimitDetector.class.getCanonicalName());
 
 	public static final ConfigOption<String> RESOLVER_CLASSES =
 			ConfigOptions.key("healthmonitor.resolver.classes")
 					.defaultValue(HeapMemoryAdjuster.class.getCanonicalName() + ","
 						+ DirectMemoryAdjuster.class.getCanonicalName() + ","
 						+ NativeMemoryAdjuster.class.getCanonicalName() + ","
-						+ ParallelismScaler.class.getCanonicalName());
+						+ ParallelismScaler.class.getCanonicalName() + ","
+						+ ExceedMaxResourceLimitResolver.class.getCanonicalName());
 
 	private JobID jobID;
 	private Configuration config;
@@ -271,6 +275,9 @@ public class HealthMonitor {
 
 			List<Symptom> symptoms = new LinkedList<>();
 
+			// reset job config.
+			jobConfig = null;
+
 			// 1. check abnormal symptoms.
 			for (Detector detector: detectors) {
 				Symptom symptom = null;
@@ -314,9 +321,6 @@ public class HealthMonitor {
 
 			if (action != null) {
 				try {
-
-					// reset job config.
-					jobConfig = null;
 
 					// 4. execute an action.
 					LOGGER.info("Executing action {}", action);

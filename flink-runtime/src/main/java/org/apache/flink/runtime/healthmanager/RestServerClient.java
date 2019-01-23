@@ -31,6 +31,7 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.util.AbstractID;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -182,6 +183,14 @@ public interface RestServerClient {
 		public AbstractID getColocationGroupId() {
 			return colocationGroupId;
 		}
+
+		public double getVertexTotalCpuCores() {
+			return resourceSpec.getCpuCores() * parallelism;
+		}
+
+		public int getVertexTotalMemoryMb() {
+			return (resourceSpec.getHeapMemory() + resourceSpec.getDirectMemory() + resourceSpec.getNativeMemory()) * parallelism;
+		}
 	}
 
 	/**
@@ -212,6 +221,12 @@ public interface RestServerClient {
 			this.inputNodes = inputNodes;
 		}
 
+		public JobConfig(JobConfig other) {
+			this.config = new Configuration(other.config);
+			this.vertexConfigs = new HashMap<>(other.vertexConfigs);
+			this.inputNodes = new HashMap<>(other.inputNodes);
+		}
+
 		public Configuration getConfig() {
 			return config;
 		}
@@ -222,6 +237,22 @@ public interface RestServerClient {
 
 		public Map<JobVertexID, List<JobVertexID>> getInputNodes() {
 			return inputNodes;
+		}
+
+		public double getJobTotalCpuCores() {
+			double cpu = 0.0;
+			for (VertexConfig vertexConfig : vertexConfigs.values()) {
+				cpu += vertexConfig.getVertexTotalCpuCores();
+			}
+			return cpu;
+		}
+
+		public int getJobTotalMemoryMb() {
+			int mem = 0;
+			for (VertexConfig vertexConfig : vertexConfigs.values()) {
+				mem += vertexConfig.getVertexTotalMemoryMb();
+			}
+			return mem;
 		}
 	}
 

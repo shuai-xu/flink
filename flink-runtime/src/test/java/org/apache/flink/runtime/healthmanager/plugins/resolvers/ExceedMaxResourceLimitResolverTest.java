@@ -22,21 +22,20 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.ResourceManagerOptions;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
-import org.apache.flink.runtime.healthmanager.metrics.JobTMMetricSubscription;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
-import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.MemoryOveruseDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.ExceedMaxResourceLimitDetector;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.resourcemanager.exceptions.ResourceManagerException;
 import org.apache.flink.runtime.util.ExecutorThreadFactory;
 
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -45,47 +44,50 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 /**
- * Tests for NativeMemoryAdjuster.
+ * Tests for ExceedMaxResourceLimitResolverTest.
  */
-public class NativeMemoryAdjusterTest {
-	/**
-	 * test native memory adjustment triggered by memory overuse.
-	 */
+public class ExceedMaxResourceLimitResolverTest {
+
 	@Test
-	public void testMemoryOveruseTriggerAdjustment() throws Exception {
+	public void testResolveExceedMaxResourceLimit() throws Exception {
 		MetricProvider metricProvider = Mockito.mock(MetricProvider.class);
+
 		RestServerClient restServerClient = Mockito.mock(RestServerClient.class);
+
 		ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(
 			1, new ExecutorThreadFactory("health-manager"));
 
 		JobID jobID = new JobID();
 		JobVertexID vertex1 = new JobVertexID();
 		JobVertexID vertex2 = new JobVertexID();
-		ExecutionVertexID executionVertexID1 = new ExecutionVertexID(vertex1, 0);
 
 		// job level configuration.
 		Configuration config = new Configuration();
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
-		config.setString("native.memory.scale.timeout.ms", "10000");
-		config.setString("native.memory.scale.ratio", "1");
-		config.setString(HealthMonitor.DETECTOR_CLASSES, MemoryOveruseDetector.class.getCanonicalName());
-		config.setString(HealthMonitor.RESOLVER_CLASSES, NativeMemoryAdjuster.class.getCanonicalName());
+		config.setString("exceed-max-total-resource.rescale.timeout.ms", "10000");
+		config.setString("exceed-max-total-resource.rescale.ratio", "0.5");
+		config.setInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB, 10);
+		config.setDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE, 10.0);
+		config.setString(HealthMonitor.DETECTOR_CLASSES, ExceedMaxResourceLimitDetector.class.getCanonicalName());
+		config.setString(HealthMonitor.RESOLVER_CLASSES, ExceedMaxResourceLimitResolver.class.getCanonicalName());
 
 		// initial job vertex config.
+		ResourceSpec resourceSpec1 = new ResourceSpec.Builder().setCpuCores(1.0).build();
+		ResourceSpec resourceSpec2 = new ResourceSpec.Builder().setHeapMemoryInMB(1).build();
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
 		RestServerClient.VertexConfig vertex1Config = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setNativeMemoryInMB(10).build());
+			15, 15, resourceSpec1);
 		RestServerClient.VertexConfig vertex2Config = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setNativeMemoryInMB(20).build());
+			15, 15, resourceSpec2);
 		vertexConfigs.put(vertex1, vertex1Config);
 		vertexConfigs.put(vertex2, vertex2Config);
 
 		// job vertex config after first round rescale.
 		Map<JobVertexID, RestServerClient.VertexConfig>  vertexConfigs2 = new HashMap<>();
 		RestServerClient.VertexConfig vertex1Config2 = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setNativeMemoryInMB(20).build());
+			10, 15, resourceSpec1);
 		RestServerClient.VertexConfig vertex2Config2 = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setNativeMemoryInMB(20).build());
+			10, 15, resourceSpec2);
 		vertexConfigs2.put(vertex1, vertex1Config2);
 		vertexConfigs2.put(vertex2, vertex2Config2);
 
@@ -98,32 +100,12 @@ public class NativeMemoryAdjusterTest {
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
 
-		long now = System.currentTimeMillis();
-		Map<String, Tuple2<Long, Double>> usage1 = new HashMap<>();
-		Map<String, Tuple2<Long, Double>> usage2 = new HashMap<>();
-		Map<String, Tuple2<Long, Double>> capacity1 = new HashMap<>();
-		Map<String, Tuple2<Long, Double>> capacity2 = new HashMap<>();
-		Map<String, Tuple2<Long, Double>> capacity3 = new HashMap<>();
-		usage1.put("tmId", Tuple2.of(now, 15.0));
-		usage2.put("tmId", Tuple2.of(now, 30.0));
-		capacity1.put("tmId", Tuple2.of(now, 10.0));
-		capacity2.put("tmId", Tuple2.of(now, 20.0));
-		capacity3.put("tmId", Tuple2.of(now, 40.0));
+		Map<Long, Exception> exceptions = new HashMap<>();
+		exceptions.put(Long.MAX_VALUE, new ResourceManagerException("exceed max resource limit"));
 
-		JobTMMetricSubscription usageSub = Mockito.mock(JobTMMetricSubscription.class);
-		JobTMMetricSubscription capacitySub = Mockito.mock(JobTMMetricSubscription.class);
-		Mockito.when(usageSub.getValue()).thenReturn(usage1).thenReturn(usage2);
-		Mockito.when(capacitySub.getValue()).thenReturn(capacity1).thenReturn(capacity2).thenReturn(capacity3);
-
-		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.Memory.RSS"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
-			.thenReturn(usageSub);
-		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.Memory.Allocated"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
-			.thenReturn(capacitySub);
-
-		Mockito.when(restServerClient.getTaskManagerTasks(Mockito.eq("tmId")))
-			.thenReturn(Arrays.asList(executionVertexID1));
+		// return oom exception twice to trigger rescale twice.
+		Mockito.when(restServerClient.getTotalResourceLimitExceptions())
+			.thenReturn(exceptions).thenReturn(exceptions).thenReturn(new HashMap<>());
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
@@ -159,14 +141,16 @@ public class NativeMemoryAdjusterTest {
 
 		// verify rpc calls.
 		Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource = new HashMap<>();
-		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setNativeMemoryInMB(20).build()));
+		vertexParallelismResource.put(vertex1, new Tuple2<>(10, resourceSpec1));
+		vertexParallelismResource.put(vertex2, new Tuple2<>(10, resourceSpec2));
 		Mockito.verify(restServerClient, Mockito.times(1))
 			.rescale(
 				Mockito.eq(jobID),
 				Mockito.eq(vertexParallelismResource));
 
 		vertexParallelismResource.clear();
-		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setNativeMemoryInMB(40).build()));
+		vertexParallelismResource.put(vertex1, new Tuple2<>(5, resourceSpec1));
+		vertexParallelismResource.put(vertex2, new Tuple2<>(5, resourceSpec2));
 		Mockito.verify(restServerClient, Mockito.times(1))
 			.rescale(
 				Mockito.eq(jobID),
@@ -175,7 +159,6 @@ public class NativeMemoryAdjusterTest {
 		Mockito.verify(restServerClient, Mockito.times(3))
 			.getJobStatus(Mockito.eq(jobID));
 
-		Mockito.verify(restServerClient, Mockito.times(3))
-			.getJobConfig(Mockito.eq(jobID));
+		Mockito.verify(restServerClient, Mockito.times(2));
 	}
 }
