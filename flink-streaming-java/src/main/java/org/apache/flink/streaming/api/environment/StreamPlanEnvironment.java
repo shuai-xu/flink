@@ -73,15 +73,7 @@ public class StreamPlanEnvironment extends StreamExecutionEnvironment {
 		StreamGraph streamGraph = getStreamGraph();
 		streamGraph.setJobName(jobName);
 
-		transformations.clear();
-
-		if (env instanceof OptimizerPlanEnvironment) {
-			((OptimizerPlanEnvironment) env).setPlan(streamGraph);
-		} else if (env instanceof PreviewPlanEnvironment) {
-			((PreviewPlanEnvironment) env).setPreview(streamGraph.getStreamingPlanAsJSON());
-		}
-
-		throw new OptimizerPlanEnvironment.ProgramAbortException();
+		return execute(streamGraph);
 	}
 
 	@Override
