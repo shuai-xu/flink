@@ -58,9 +58,11 @@ mvn clean install -DskipTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true
 
 The default build adds a Flink-specific JAR for Hadoop 2, to allow using Flink with HDFS and YARN.
 
-After the build is complete, you can see the compressed package **.tar.gz** and the corresponding unzipped package in the **flink-dist/target** directory.
+After the build is complete, you can see the compressed package **.tar.gz** and the directory of the corresponding unzipped package in the **flink-dist/target** directory.
 
-If you are building on a Linux-like system, you will see a soft link called **build-target** in the flink source root directory that links to the unzipped package of build result in the **flink-dist/target** directory.
+If you are building on a Linux-like system, you will see a soft link called **build-target** in the Flink source root directory that links to the unzipped package of build result in the **flink-dist/target** directory.
+
+The **build-target** softlink works the same as the binary downloaded from official sites. You can start a local standalone Flink cluster using `./bin/start-cluster.sh` (see [Quickstart]({{ site.baseurl }}/quickstart/setup_quickstart.html#start-a-local-flink-cluster)) .
 
 <details><summary>{% info %} Having trouble downloading maven dependencies in China? <b>CLICK ME</b> </summary>
 <br>
